@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_geo_aware_draft_night_1
+        name: draft_automation_graph
+        arguments: '{"vehicle_id": 7, "name": "Charge at midnight when Home", "trigger": {"kind": "trigger_schedule", "cron_expr": "0 0 * * *", "timezone": "UTC"}, "conditions": [{"kind": "condition_geofence", "place_id": 10, "state": "inside"}], "actions": [{"kind": "action_command", "command_name": "start_charge"}]}'
+    input_tokens: 68
+    output_tokens: 56
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_geo_aware_validate_night_1
+        name: validate_automation_graph
+        arguments: '{"vehicle_id": 7, "name": "Charge at midnight when Home", "trigger": {"kind": "trigger_schedule", "cron_expr": "0 0 * * *", "timezone": "UTC"}, "conditions": [{"kind": "condition_geofence", "place_id": 10, "state": "inside"}], "actions": [{"kind": "action_command", "command_name": "start_charge"}]}'
+    input_tokens: 132
+    output_tokens: 64
+  - finish_reason: stop
+    content: |
+      I drafted "Charge at midnight when Home" — a midnight cron
+      trigger gated by a condition_geofence that requires the car
+      to be inside the Home geofence (place_id=10 from your
+      catalog). Review the structured draft in the side panel and
+      click Save to add it.
+    input_tokens: 196
+    output_tokens: 68

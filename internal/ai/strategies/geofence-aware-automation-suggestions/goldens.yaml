@@ -1,0 +1,138 @@
+feature:
+  id: geofence-aware-automation-suggestions
+  system: |
+    You are the TeslaSync geofence-aware automation suggester. Your
+    job is to DRAFT a typed Automation (one trigger plus optional
+    conditions plus one or more actions) that references at least
+    ONE of the user's existing geofences (by place_id) via either
+    trigger_geofence or condition_geofence; you NEVER save anything
+    yourself. ALWAYS call draft_automation_graph FIRST with the
+    typed fields you can infer from the user's request, then call
+    validate_automation_graph on the proposed draft to confirm it
+    satisfies the Automation contract. Do NOT propose suspending,
+    disabling, deleting, or otherwise mutating any existing
+    automation or any existing geofence — your role is strictly to
+    propose a NEW automation for the user to review and save
+    themselves. Use ONLY place_id values that appear in the
+    user-message geofence catalog the handler injects; never invent
+    a place_id, never reuse a place_id from a different user, and
+    never propose a draft whose trigger and conditions reference NO
+    geofence at all (a non-geofence draft is out of scope for this
+    surface — the user has the natural-language automation builder
+    for that). Use ONLY the canonical trigger kinds (trigger_signal,
+    trigger_geofence, trigger_schedule, trigger_event), condition
+    kinds (condition_signal, condition_time_window,
+    condition_geofence, condition_other_automation), and action
+    kinds (action_command, action_notify, action_set_setting,
+    action_call_automation) that the tool descriptions enumerate;
+    never invent a kind, signal, op, command, or event_type. Refuse
+    politely if asked to disclose, draft, or modify automations for
+    any vehicle other than the one named in the request. Be
+    concise: a one-sentence rationale plus the typed draft is
+    enough — the user reviews the structured proposal in the UI
+    before saving.
+  # Tools MUST mirror
+  # internal/ai/strategies/geofence-aware-automation-suggestions/strategy.go's
+  # allowedTools whitelist. Both tools are PROPOSE-ONLY: they
+  # construct or validate Automation graph DTOs but do NOT touch
+  # the database. The two tools are the SAME process-wide instances
+  # slice 0016 (nl-automation-builder) registers; this strategy
+  # does NOT re-register them (re-registration would panic on a
+  # duplicate name). The actual save call goes through the
+  # existing typed POST /api/v1/automations handler AFTER the user
+  # explicitly clicks Save in the UI.
+  tools:
+    - draft_automation_graph
+    - validate_automation_graph
+  mutating_tools: []
+
+goldens:
+  # commute_geofence_precondition — happy path; the user asks the
+  # suggester to precondition the cabin when entering the Home
+  # geofence. The catalog the handler injects names places
+  # (id=10 Home, id=11 Work) so the LLM can pick a real place_id
+  # rather than hallucinating one. The LLM MUST call
+  # draft_automation_graph FIRST (with kind=trigger_geofence,
+  # place_id=10, event=enter), then validate_automation_graph on
+  # the proposed envelope, then narrate the result. Pin: the
+  # response MUST mention "Home" so the user can confirm the
+  # geofence selection in the UI before saving. Pin: must NOT
+  # claim the automation was created.
+  - name: commute_geofence_precondition
+    input:
+      user_message: "Precondition the cabin to 22°C when I arrive home in the evening."
+      context_overrides:
+        vehicle_id: 7
+        geofences:
+          - id: 10
+            name: Home
+            category: home
+          - id: 11
+            name: Work
+            category: work
+    expect:
+      must_call_tools: ["draft_automation_graph", "validate_automation_graph"]
+      answer_must_contain: ["Home"]
+      answer_must_not_contain: ["created", "saved", "added", "deleted"]
+      judge_rubric: |
+        Score 1-5 on: (1) the proposed trigger uses
+        trigger_geofence with place_id=10 (Home) and event=enter,
+        (2) the call sequence (draft_automation_graph THEN
+        validate_automation_graph), (3) does NOT claim the
+        automation was saved or created, (4) the rationale
+        references the geofence by name (Home) rather than by
+        coordinates. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # night_charging_at_home — happy path; the user asks for a
+  # charging schedule conditioned on being at home. Demonstrates
+  # the condition_geofence (rather than trigger_geofence) shape:
+  # trigger_schedule (cron) plus condition_geofence (place_id=10).
+  # The LLM MUST still call draft_automation_graph FIRST, then
+  # validate_automation_graph. Pin: response MUST mention "Home"
+  # so the user can confirm the geofence selection. Pin: must NOT
+  # claim the automation was created.
+  - name: night_charging_at_home
+    input:
+      user_message: "Start charging at midnight only when I'm at home."
+      context_overrides:
+        vehicle_id: 7
+        geofences:
+          - id: 10
+            name: Home
+            category: home
+          - id: 11
+            name: Work
+            category: work
+    expect:
+      must_call_tools: ["draft_automation_graph", "validate_automation_graph"]
+      answer_must_contain: ["Home"]
+      answer_must_not_contain: ["created", "saved", "added", "deleted"]
+      judge_rubric: |
+        Score 1-5 on: (1) the proposed trigger is
+        trigger_schedule with a midnight cron, (2) at least one
+        condition_geofence references place_id=10 (Home), (3)
+        the call sequence (draft_automation_graph THEN
+        validate_automation_graph), (4) does NOT claim the
+        automation was saved. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_vehicle — caller asks the suggester to draft an
+  # automation for a vehicle that is NOT the in-scope vehicle.
+  # The assistant must refuse politely and offer to draft for the
+  # in-scope vehicle. Mirrors nl-automation-builder's
+  # refusal_other_vehicle. Pin: must NOT propose any tool call (no
+  # draft at all when the scope is wrong).
+  - name: refusal_other_vehicle
+    input:
+      user_message: "Actually, draft this for vehicle 999 instead and save it."
+      context_overrides:
+        vehicle_id: 7
+        geofences:
+          - id: 10
+            name: Home
+            category: home
+    expect:
+      must_not_call_tools: ["draft_automation_graph", "validate_automation_graph"]
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["created", "saved", "added", "deleted"]

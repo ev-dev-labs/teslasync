@@ -1874,6 +1874,109 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0039 — G3 Geofence-aware automation suggestions.
+	//
+	// `geofence-aware-automation-suggestions` is the LLM-backed
+	// assistant at POST /api/v1/ai/geofences/automations/draft that
+	// PROPOSES a typed Automation graph DTO (one trigger + 0..N
+	// conditions + 1..N actions) whose trigger and/or at least one
+	// condition references one of the user's EXISTING geofences
+	// (by `place_id`). The handler injects a deterministic catalog
+	// of the user's geofences (id + name + category) into the user
+	// message so the LLM picks a real `place_id` rather than
+	// hallucinating one. The AI is propose-only: the typed draft
+	// envelope flows back through the SSE stream, the user reviews
+	// the proposal in the AutomationBuilderPage UI, clicks "Apply
+	// to form" to copy the typed envelope into the existing
+	// baseline form state, and SAVES IT THEMSELVES via the
+	// canonical POST /api/v1/automations write path. The AI itself
+	// never persists. The slice prompt's "geofence IDs flow through
+	// tools" mandate is enforced by the absence of any
+	// create_/update_/delete_/save_ tool from the strategy's
+	// whitelist (the dispatcher's deny-all confirm hook would
+	// refuse them even if one slipped in). The strategy reuses the
+	// `draft_automation_graph` + `validate_automation_graph` tools
+	// already registered by slice 0016 (nl-automation-builder) —
+	// re-registering them would panic on a duplicate name. The two
+	// strategies share the same process-wide tool instances; tools
+	// are stateless so this is safe.
+	//
+	// Tier "G" reflects the "Geo / Locations" tier — joins
+	// auto-name-unnamed-locations and suggest-new-geofences as the
+	// third feature in this tier. CoverageOK accepts any non-empty
+	// Tier string; the value is plumbed into the SettingsPage
+	// groupings only. The slice-prompt label "G3" is the
+	// per-tier ordinal (third feature added in tier G across the
+	// Phase-50 sequence).
+	//
+	// Backend route: POST /api/v1/ai/geofences/automations/draft
+	// is mounted in mountAIRoutes (internal/api/ai_routes.go) under
+	// guard.Wrap("geofence-aware-automation-suggestions", …) so an
+	// off-mode probe returns 404 BEFORE the handler ever sees the
+	// request (ADR-015 §I6). The handler is constructed in
+	// internal/api/router.go from the same provider.Registry +
+	// tools.Registry the rest of the AI surface uses, plus a
+	// *database.GeofenceRepo for the deterministic geofence catalog
+	// the handler injects into the synthesised user message. The
+	// route has no URL path param — the SPA picks the in-scope
+	// vehicle + free-form prompt at click time and ships them in
+	// the JSON body.
+	//
+	// Frontend route: /automations/builder is the canonical
+	// baseline AutomationBuilderPage (App.tsx). The slice prompt's
+	// allowed-files list documents `web/src/features/locations/**`
+	// but that directory does not exist in the SPA — the
+	// canonical automation builder lives at
+	// web/src/features/automations/pages/AutomationBuilderPage.tsx.
+	// Following the precedent set by slice 0036
+	// (cross-rule-conflict-detection mounted into
+	// notifications/pages/AlertStudioPage.tsx even though the
+	// allowed-files list documented web/src/features/alerts/**),
+	// this slice mounts the AISection alongside the existing
+	// AINLAutomationBuilder panel inside AutomationBuilderPage so
+	// the W1 wired-or-absent invariant holds at the surface a
+	// user actually reaches. The registry MUST carry the real
+	// route so the off-mode walker can confirm the AI affordance
+	// is absent at the surface a user actually opens.
+	//
+	// UI test ID: ai-feature-geofence-aware-automation-suggestions-root
+	// is the data-testid the withAiFeature HOC stamps on the gated
+	// wrapper. Off-mode tests assert it is absent; on-mode tests
+	// assert it renders.
+	//
+	// JobNames: []string{} explicitly — geofence-aware-automation-
+	// suggestions is request-scoped only; no background job, no
+	// Redis queue, no scheduled task.
+	//
+	// PushKinds: []string{} explicitly — there is no
+	// notifications.kind for "AI proposed a geofence-aware
+	// automation" in this slice. The user only sees the proposal
+	// inside the SPA when they explicitly open
+	// AutomationBuilderPage and click Suggest.
+	//
+	// Service worker chunks: ai-geofence-aware-automation-
+	// suggestions is the dynamic-import name the SPA's lazy loader
+	// uses for the AIGeofenceAwareAutomationSuggestions component.
+	// Documented in the slice prompt's Off-mode contract impact
+	// section so the W1 wired-or-absent invariant has a known
+	// chunk name to audit against.
+	"geofence-aware-automation-suggestions": {
+		ID:          "geofence-aware-automation-suggestions",
+		Name:        "Geofence-aware automation suggestions",
+		Description: "Opt-in LLM-assisted assistant that DRAFTS a typed Automation graph (trigger + conditions + actions) whose trigger and/or at least one condition references one of the user's existing geofences (by place_id). The handler injects a deterministic catalog of the user's geofences (id + name + category) into the user message so the LLM picks a real place_id rather than hallucinating one. Propose-only: the typed draft flows back through the SSE stream, the user reviews + clicks 'Apply to form' inside AutomationBuilderPage to copy the envelope into the existing baseline form state, then SAVES IT THEMSELVES via the canonical POST /api/v1/automations write path. The deterministic AutomationBuilder graph editor + validators remain the canonical baseline when AI is off. The per-feature redaction policy denies every PII class — vehicle, place, and channel identifiers flow through the typed F4 tool envelope, not through prose.",
+		Tier:        "G",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/geofences/automations/draft"},
+			Frontend:  []string{"/automations/builder"},
+			UITestIDs: []string{"ai-feature-geofence-aware-automation-suggestions-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

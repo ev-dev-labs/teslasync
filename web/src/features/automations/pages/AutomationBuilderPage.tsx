@@ -22,6 +22,7 @@ import { AlertBanner, DraftRecoveryBanner, EmptyState, EditConflictBanner } from
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
 import { AINLAutomationBuilder } from '@/components/ai/AINLAutomationBuilder';
+import { AIGeofenceAwareAutomationSuggestions } from '@/components/ai/AIGeofenceAwareAutomationSuggestions';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
 import { useFormDraft } from '@/hooks/useFormDraft';
@@ -610,6 +611,43 @@ export default function AutomationBuilderPage() {
 
         <FadeIn>
           <AINLAutomationBuilder vehicleId={aiVehicleId ?? undefined} />
+        </FadeIn>
+
+        <FadeIn>
+          <AIGeofenceAwareAutomationSuggestions
+            vehicleId={aiVehicleId ?? undefined}
+            onApplyDraft={(proposedDraft) => {
+              // Phase-50 / 0039 — copy the typed Automation graph
+              // proposed by the AI panel into the canonical
+              // baseline form state. The AI panel never persists
+              // directly; the user reviews the populated form and
+              // clicks Save (which goes through the canonical
+              // POST /api/v1/automations write path —
+              // useCreateAutomationFull). Re-uses the existing
+              // per-step normalizers so the typed envelope is
+              // byte-equivalent to one the canonical
+              // POST /api/v1/automations handler accepts.
+              setFormValue((previous) => ({
+                ...previous,
+                name: proposedDraft.name,
+                description: proposedDraft.description ?? '',
+                vehicle_id: proposedDraft.vehicle_id ?? null,
+                enabled: proposedDraft.enabled ?? true,
+                // The LLM-produced AutomationTriggerInput / etc.
+                // have the same wire shape as the editing-time
+                // AutomationTriggerStepInput modulo a TS-only
+                // field-omission difference; the normalizers read
+                // only the discriminated `kind` fields so the
+                // structural cast is safe and runtime-equivalent
+                // to the byte-shape POST /api/v1/automations
+                // accepts.
+                triggers: (proposedDraft.triggers as unknown as AutomationTriggerStepInput[]).map(normalizeTriggerInput),
+                conditions: (proposedDraft.conditions as unknown as AutomationConditionStepInput[]).map(normalizeConditionInput),
+                actions: (proposedDraft.actions as unknown as AutomationActionStepInput[]).map(normalizeActionInput),
+              }));
+              setDirty(true);
+            }}
+          />
         </FadeIn>
 
         <FadeIn>

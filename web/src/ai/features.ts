@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "learned-per-vehicle-anomaly-baselines" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -200,6 +200,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-drive-coaching-root"] as const),
+  }),
+  "geofence-aware-automation-suggestions": Object.freeze({
+    id: "geofence-aware-automation-suggestions",
+    name: "Geofence-aware automation suggestions",
+    description: "Opt-in LLM-assisted assistant that DRAFTS a typed Automation graph (trigger + conditions + actions) whose trigger and/or at least one condition references one of the user's existing geofences (by place_id). The handler injects a deterministic catalog of the user's geofences (id + name + category) into the user message so the LLM picks a real place_id rather than hallucinating one. Propose-only: the typed draft flows back through the SSE stream, the user reviews + clicks 'Apply to form' inside AutomationBuilderPage to copy the envelope into the existing baseline form state, then SAVES IT THEMSELVES via the canonical POST /api/v1/automations write path. The deterministic AutomationBuilder graph editor + validators remain the canonical baseline when AI is off. The per-feature redaction policy denies every PII class — vehicle, place, and channel identifiers flow through the typed F4 tool envelope, not through prose.",
+    tier: "G",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-geofence-aware-automation-suggestions-root"] as const),
   }),
   "inbox-auto-categorization": Object.freeze({
     id: "inbox-auto-categorization",
@@ -418,6 +429,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "cross-rule-conflict-detection",
   "digest-narration",
   "drive-coaching",
+  "geofence-aware-automation-suggestions",
   "inbox-auto-categorization",
   "learned-per-vehicle-anomaly-baselines",
   "ml-charging-curve-clustering",
