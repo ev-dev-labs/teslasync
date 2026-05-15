@@ -1977,6 +1977,56 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0040 — X1 Period compare narration.
+	//
+	// Opt-in LLM narrator that EXPLAINS the deterministic period-
+	// over-period delta envelope already rendered on the
+	// /period-compare SPA page (mounted as /analytics/compare alias
+	// for parity with the registry path). The narrator quotes total
+	// distance (km), total drives, energy used (kWh), average
+	// efficiency (Wh/km), total cost, and CO2 saved (kg) for two
+	// trailing-day windows (Period A vs Period B) for ONE vehicle,
+	// plus the per-metric percent change. The deterministic
+	// PeriodComparePage (selectors, six MetricCards, side-by-side
+	// BarChart, comparison DataTable, deterministic insights bullets)
+	// served by GET /api/v1/analytics/period-stats remains the
+	// canonical baseline visible to every off-mode user.
+	//
+	// Tools:
+	//   - query_period_compare — a read-only typed envelope derived
+	//     from the SAME api.ComputePeriodStats helper that backs the
+	//     canonical baseline GET /api/v1/analytics/period-stats
+	//     handler (the AI tool composes the helper twice, once for
+	//     each period window, and computes the per-metric delta +
+	//     percent change in-memory). The AI narration is therefore
+	//     grounded in the same numbers the chart / table render —
+	//     never a parallel re-implementation. No new SQL is added by
+	//     this slice.
+	//
+	// NeedsRAG: false — the slice prompt lists only the single typed
+	// tool, so the F7 retrieval entry point is intentionally not
+	// invoked.
+	//
+	// JobNames / PushKinds: explicitly empty (no background job, no
+	// notification/push channel surface). features.CoverageOK rejects
+	// nil; the empty slice is the affirmative "no surface" signal.
+	"period-compare-narration": {
+		ID:          "period-compare-narration",
+		Name:        "Period compare narration",
+		Description: "Opt-in LLM narrator that explains the deterministic period-over-period analytics already shown on the Period Comparison page — total distance, total drives, energy used, average efficiency, total cost, and CO2 saved across two trailing-day windows for one vehicle, plus the per-metric percent change. The deterministic Period Comparison selectors, metric cards, side-by-side bar chart, comparison data table, and deterministic insights bullets remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's home charger address nor the locations they regularly drive to.",
+		Tier:        "X",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/analytics/period-compare/narrate"},
+			Frontend:  []string{"/analytics/compare"},
+			UITestIDs: []string{"ai-feature-period-compare-narration-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

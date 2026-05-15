@@ -144,6 +144,7 @@ func mountAIRoutes(
 	aiLearnedAnomalyBaselines *AILearnedAnomalyBaselineHandler,
 	aiRangePrediction *AIRangePredictionHandler,
 	aiMLChargingCurveClustering *AIMLChargingCurveHandler,
+	aiPeriodCompareNarration *AIPeriodCompareNarrationHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -346,6 +347,25 @@ func mountAIRoutes(
 			costForecastNarrationHandler = aiCostForecastNarration.ServeHTTP
 		}
 		r.Post("/charging/costs/forecast/narrate", g.Wrap("cost-forecast-narration", costForecastNarrationHandler))
+
+		// period-compare-narration (Phase-50 / X1, slice 0040)
+		// narrates the deterministic period-over-period comparison
+		// the SPA's PeriodComparePage already renders from
+		// GET /api/v1/analytics/period-stats. The route lives
+		// under /ai/analytics/period-compare/narrate so it is
+		// namespaced under the /analytics family alongside
+		// /analytics/year-in-review/narrate. Same stub-fallback
+		// pattern as the other AI handlers — a nil handler is
+		// possible during partial wiring but the off-mode 404
+		// invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode. The canonical
+		// baseline route at GET /api/v1/analytics/period-stats
+		// is unchanged.
+		var periodCompareNarrationHandler http.HandlerFunc = aiPeriodCompareNarrationStubHandler
+		if aiPeriodCompareNarration != nil {
+			periodCompareNarrationHandler = aiPeriodCompareNarration.ServeHTTP
+		}
+		r.Post("/analytics/period-compare/narrate", g.Wrap("period-compare-narration", periodCompareNarrationHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1084,6 +1104,15 @@ func aiRangePredictionStubHandler(w http.ResponseWriter, _ *http.Request) {
 // 404 invariant is held by the guard, not the stub.
 func aiMLChargingCurveClusteringStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai ml-charging-curve-clustering is not yet implemented")
+}
+
+// aiPeriodCompareNarrationStubHandler mirrors
+// aiCostForecastNarrationStubHandler for the X1 slice (Phase-50 /
+// 0040 period-compare-narration). Reachable only when
+// AIPeriodCompareNarrationHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiPeriodCompareNarrationStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai period compare narration is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

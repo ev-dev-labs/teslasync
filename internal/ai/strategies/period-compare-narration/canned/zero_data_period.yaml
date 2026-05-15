@@ -1,0 +1,17 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_period_compare_zero_data_period_1
+        name: query_period_compare
+        arguments: '{"vehicle_id": 42, "days_a": 7, "days_b": 365}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Period comparison for vehicle <vehicle id='42'/>: Period A (7
+      days) recorded zero drives, so I will not invent a percent
+      change against Period B (365 days). Once the vehicle logs
+      activity in the recent window, the deterministic delta
+      envelope can return a meaningful comparison.
+    input_tokens: 240
+    output_tokens: 80

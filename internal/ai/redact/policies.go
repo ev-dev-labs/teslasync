@@ -553,3 +553,44 @@ func PolicySuggestNewGeofences() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyPeriodCompareNarration is the per-feature redaction policy for
+// the Phase-50 / 0040 — X1 period-compare-narration slice (LLM narrates
+// the deterministic period-over-period delta envelope on the
+// PeriodComparePage — total distance, total drives, energy used, average
+// efficiency, total cost, CO2 saved across two trailing-day windows for
+// one vehicle).
+//
+// The slice prompt's redaction stanza is the source of truth:
+//
+//	Policy:               PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:      ClassVehicleName only; aggregate analytics data
+//	                      is user-visible
+//	Round-trip required:  yes
+//
+// The policy therefore mirrors PolicyDigest (Allow=ClassVehicleName,
+// Mode=ModeRedactedTags). The aggregate distance / energy / cost / CO2
+// numbers are user-visible analytics the chart on /period-compare
+// already renders, so the LLM can reason about them directly. Every
+// other identifier — VIN, lat/lng, place names, street addresses,
+// charger network labels, schedule patterns — is converted to a
+// round-trip tag before the provider call and only restored in the
+// final SSE frame returned to the same authenticated user. A leaked
+// transcript therefore reveals neither the user's home charger address
+// nor the locations they regularly drive to.
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicySmartChargeScheduleSuggestion / PolicyAutoTripNaming /
+// PolicySpeedProfileInsights / PolicyChargingDiagnosis /
+// PolicyDriveCoaching / PolicyBatteryHealthForecastNarrative /
+// PolicyChargingCurveFingerprintClustering / PolicyCostForecastNarration
+// / PolicyVampireDrainExplanation so a future per-feature change to one
+// slice's allow-list does not bleed across the others — every feature
+// is independently auditable.
+func PolicyPeriodCompareNarration() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

@@ -2479,6 +2479,10 @@
           "label": "Cost forecast narration",
           "description": "Opt-in LLM narrator that explains the deterministic charging-cost forecast — historical monthly trend, projected cost / cost_low / cost_high band, home-vs-supercharger split, and the top deterministic insight — grounded in the same numeric envelope the chart renders, and honest that the band is an APPROXIMATE prediction interval rather than a strict 95% confidence interval. The deterministic cost forecast chart, summary cards, breakdown, savings calculator, monthly cost table, time-of-use analysis, lifetime summary, and environmental impact card on the Cost Analysis page remain the canonical baseline when AI is off."
         },
+        "period-compare-narration": {
+          "label": "Period compare narration",
+          "description": "Opt-in LLM narrator that explains the deterministic period-over-period analytics on the Period Compare page — which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign, and explicit honesty about zero-baseline windows and best-effort cost figures. The deterministic Period A vs Period B metric cards, side-by-side bar chart, comparison table, and insights panel remain the canonical baseline when AI is off."
+        },
         "vampire-drain-explanation": {
           "label": "Vampire-drain explanation",
           "description": "Opt-in LLM narrator that explains the deterministic vampire-drain (idle energy loss) signal — recent average / median / p95 idle drain rate per day, the worst recent idle window (start, duration, drain %, ambient temperature), and the per-event driver (Sentry on, climate on, very long parked window) most strongly correlated with elevated drain — grounded in the same numeric envelope the cards render, and honest that the per-event driver attribution is correlational rather than causal. The deterministic vampire-drain stats, per-event timeline, and typical-vs-worst cards on the Vampire Drain page remain the canonical baseline when AI is off."

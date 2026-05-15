@@ -1,0 +1,19 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_period_compare_typical_period_comparison_1
+        name: query_period_compare
+        arguments: '{"vehicle_id": 42, "days_a": 30, "days_b": 90}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Period comparison for vehicle <vehicle id='42'/>: Period A (30
+      days) drove roughly 15% more distance than Period B (90 days)
+      and consumed about 12% more energy, while average efficiency
+      stayed roughly flat across both windows. Total cost was a
+      best-effort number that may mix currencies if the vehicle has
+      multi-currency charging sessions; CO2 saved tracked the
+      distance trend almost one-to-one.
+    input_tokens: 240
+    output_tokens: 128
