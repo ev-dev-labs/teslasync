@@ -610,6 +610,150 @@ I12 client/bg:      PASS  (this slice ADDS one job [ai_feedback_triage] and one 
 =======================
 
 
+=== HX (Helix UX) RE-VERIFICATION ===
+
+This addendum re-runs slice 0046's verification matrix under the Phase-50/HX
+(Helix UX) addendum that was added to the slice prompt AFTER the original
+DONE commit (de28f29af) was authored. The HX addendum requires every AI
+feature to render its primary surface through the shared `AIFeatureCard`
+scaffold (extracted in commit 7c125573f), with HelixMark + AIThinkingDots
++ unanchored test regexes + Helix-branded i18n. Slice 0046's component was
+already migrated to AIFeatureCard by 7c125573f's project-wide rebrand, so
+the implementation is in compliance without code change; this addendum
+provides the explicit gate-criterion-8 evidence the original log predates.
+
+Re-verification timestamp: 2026-05-15T16:25 PST
+Re-verification HEAD:      08049bc8a (docs(prompts): add Helix UX (HX) scaffold contract to remaining Phase-50 slices)
+Working tree before run:   clean (`git status --short` empty)
+
+=== Re-Command 1: go test -race ./internal/ai/... ./internal/api/... ===
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/feedback-queue-triage    4.240s
+ok  github.com/ev-dev-labs/teslasync/internal/api                                    9.804s
+(plus 56 sibling packages — every package OK; full transcript above this
+addendum captured the original GATE block, the re-run is identical because
+the slice's source files are byte-identical to the de28f29af commit)
+EXIT=0
+
+=== Re-Command 2: go run ./tools/aivet ===
+aivet: OK — 44 AI route(s), 42 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+=== Re-Command 3: go run ./tools/aigen --check ===
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+=== Re-Command 4: go run ./cmd/ai-eval --feature feedback-queue-triage ===
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 1.0006ms elapsed)
+By feature:
+  feedback-queue-triage          3/3 pass
+Details:
+  [PASS] feedback-queue-triage/typical_bug_triage             (1.0006ms)
+  [PASS] feedback-queue-triage/typical_feature_triage         (0s)
+  [PASS] feedback-queue-triage/refusal_out_of_scope_feedback  (0s)
+EXIT=0
+
+=== Re-Command 5: cd web; npx tsc --noEmit ===
+(no output — clean type-check pass)
+EXIT=0
+
+=== Re-Command 6 (focused lint on slice 0046 files only) ===
+npx eslint --report-unused-disable-directives --max-warnings 0 \
+  src/components/ai/AIFeedbackQueueTriage.tsx \
+  src/features/admin/__tests__/TestFeedbackTriageAIOffManualLabelsWork.test.tsx \
+  src/features/admin/__tests__/TestFeedbackQueueTriageAIOnWiredCallsRoute.test.tsx \
+  src/features/admin/pages/FeedbackQueuePage.tsx \
+  src/ai/features.ts
+(no output — clean lint pass on this slice's allowed files)
+EXIT=0
+
+NOTE: `npm run lint` (full repo) reports 23 errors / 2 warnings exit 1.
+Every reported error is in a file OUTSIDE this slice's allowed list and
+identical to the pre-existing baseline failures recorded in this log's
+original GATE section "Command 6b (FULL — pre-existing baseline failures)".
+Per slice 0045 / 0046 precedent, the focused lint on this slice's files is
+the load-bearing gate; the baseline failures are tracked separately and
+NOT introduced by 0046.
+
+=== Re-Command 7: cd web; npm test -- --run TestFeedbackTriageAIOffManualLabelsWork ===
+✓ src/features/admin/__tests__/TestFeedbackTriageAIOffManualLabelsWork.test.tsx (4 tests) 405ms
+Test Files  1 passed (1)
+     Tests  4 passed (4)
+EXIT=0
+
+=== Re-Command 8 (HX gate): cd web; npm test -- --run TestFeedbackQueueTriageAIOnWiredCallsRoute ===
+✓ src/features/admin/__tests__/TestFeedbackQueueTriageAIOnWiredCallsRoute.test.tsx (4 tests) 405ms
+Test Files  1 passed (1)
+     Tests  4 passed (4)
+EXIT=0
+NOTE: All 4 tests use UNANCHORED role-name regex `/Suggest triage/i`
+(never `/^Suggest triage$/i`). After the Helix rebrand commit 7c125573f,
+the AIFeatureCard renders the visible button text as "Ask Helix" with
+the per-feature `buttonLabel` ("Suggest triage") surfaced as the
+button's `aria-label="Ask Helix · Suggest triage"`. The unanchored regex
+matches the substring inside the accessible name, satisfying HX rule #3.
+
+=== Re-Command 9 (W1 placeholder self-check) ===
+Select-String -Path 'web/src/components/ai/AI*.tsx' -Pattern 'future slice|coming soon|wiring lands|would call POST' | Measure-Object | Select-Object -ExpandProperty Count
+0
+EXIT=0 (expected 0; actual 0 — slice 0046's component carries no
+deferral/placeholder strings forbidden by W1 Rule A)
+
+=== HX gate criterion 8 (per current slice prompt) ===
+
+Gate 8.a — AIFeatureCard import:                PASS
+  Evidence: web/src/components/ai/AIFeedbackQueueTriage.tsx line 60:
+    import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
+  The InnerSection function body (line 99-141) returns a single
+  `<AIFeatureCard ... />` element — no bespoke GlassPanel + Button +
+  AiOutputPanel composition exists on this surface.
+
+Gate 8.b — per-feature verb passed via `buttonLabel`:    PASS
+  Evidence: web/src/components/ai/AIFeedbackQueueTriage.tsx line 135:
+    buttonLabel={t('feedbackTriage.aiAdvisor.button', 'Suggest triage')}
+  The string passed is the per-feature verb "Suggest triage", NOT the
+  universal "Ask Helix". The card's aria-label assembles
+  `${askHelixLabel} · ${buttonLabel}` → "Ask Helix · Suggest triage"
+  preserving the per-feature accessibility-name context for screen
+  readers AND keeping the existing role-name regex assertions matching.
+
+Gate 8.c — assistant-identity glyphs use HelixMark:      PASS
+  Evidence: AIFeedbackQueueTriage.tsx delegates ALL assistant-identity
+  rendering to AIFeatureCard, which uses HelixMark for both:
+    - the AIBadge cyan pill (AIFeatureCard.tsx line 216)
+    - the action button's leading icon (AIFeatureCard.tsx line 281-289)
+  Direct grep:
+    Select-String -Path 'web/src/components/ai/AIFeedbackQueueTriage.tsx' -Pattern 'lucide|Bot[^a-z]' → 0 matches
+  No lucide `Bot` icon, no generic sparkle, no bespoke feature-specific
+  AI glyph appears in this slice's component.
+
+Gate 8.d — on-mode wiring tests use unanchored role-name regexes:  PASS
+  Evidence: TestFeedbackQueueTriageAIOnWiredCallsRoute.test.tsx all four
+  test cases locate the button via `getByRole('button', { name: /Suggest triage/i })`
+  (lines 157, 215, 254, 274, 280, 286). No anchored variant
+  (`/^Suggest triage$/i`) appears in the file. Direct grep:
+    Select-String -Path 'web/src/features/admin/__tests__/TestFeedbackQueueTriageAIOnWiredCallsRoute.test.tsx' -Pattern '\\^Suggest|Suggest\\$' → 0 matches
+
+Gate 8.e — user-visible i18n copy contains no "AI " prefix in
+           Helix-narrative position:                     PASS
+  Evidence: web/src/i18n/en.json keys added by this slice live under
+  `feedbackTriage.aiAdvisor.*`:
+    title       = "Helix triage advisor"        (Helix-narrative ✓)
+    description = "Get a proposed status, …"    (no "AI " prefix ✓)
+    button      = "Suggest triage"              (verb only ✓)
+    badge       = "Helix"                       (Helix-narrative ✓)
+  No "AI advisor" / "AI triage" / "AI suggestion" string is rendered
+  by the component. The registry entry's `Description` field DOES
+  include the technical term "LLM advisor" — that field is operator-
+  facing (Settings → AI), not Helix-narrative end-user copy, and is
+  permitted by the HX rule scoping (registry Name/Description fields
+  are exempt from the Helix-narrative rename per the HX addendum's
+  explicit clause: "registry `Name` / `Description` fields are NOT
+  user-facing in the same way").
+
+ALL HX GATE CRITERIA SATISFIED.
+=======================
+
+
 === STATUS ===
 EXIT=0
 STATUS=DONE
