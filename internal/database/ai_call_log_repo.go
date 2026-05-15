@@ -42,22 +42,35 @@ func NewAICallLogRepo(db *DB) *AICallLogRepo {
 // AICallTodayAggregate is the result of Today: total volume + spend
 // for the requested user since 00:00 UTC. Zero values are valid (a
 // fresh user with no AI activity returns the zero struct).
+//
+// JSON shape mirrors the frontend AiUsageToday DTO in
+// web/src/api/hooks/useAiUsage.ts — keep both in sync. Field names
+// were normalised to `call_count` / `error_count` / `avg_latency_ms`
+// (rather than the older `calls` shorthand) so the AiUsageCard +
+// settings AIUsageCard could read the response without a remap layer.
 type AICallTodayAggregate struct {
-	Calls          int64 `json:"calls" db:"calls"`
-	InputTokens    int64 `json:"input_tokens" db:"input_tokens"`
-	OutputTokens   int64 `json:"output_tokens" db:"output_tokens"`
-	CostMicroCents int64 `json:"cost_micro_cents" db:"cost_micro_cents"`
+	Calls          int64   `json:"call_count" db:"calls"`
+	InputTokens    int64   `json:"input_tokens" db:"input_tokens"`
+	OutputTokens   int64   `json:"output_tokens" db:"output_tokens"`
+	CostMicroCents int64   `json:"cost_micro_cents" db:"cost_micro_cents"`
+	ErrorCount     int64   `json:"error_count" db:"error_count"`
+	AvgLatencyMs   float64 `json:"avg_latency_ms" db:"avg_latency_ms"`
 }
 
 // AICallFeatureRow is one entry in the ByFeature breakdown: per-feature
 // volume + spend over the requested window. The row also surfaces the
 // *latest* call timestamp so the UI can show "last used 5m ago".
+//
+// JSON shape mirrors AiUsageFeatureRow in
+// web/src/api/hooks/useAiUsage.ts.
 type AICallFeatureRow struct {
 	FeatureID      string    `json:"feature_id" db:"feature_id"`
-	Calls          int64     `json:"calls" db:"calls"`
+	Calls          int64     `json:"call_count" db:"calls"`
 	InputTokens    int64     `json:"input_tokens" db:"input_tokens"`
 	OutputTokens   int64     `json:"output_tokens" db:"output_tokens"`
 	CostMicroCents int64     `json:"cost_micro_cents" db:"cost_micro_cents"`
+	ErrorCount     int64     `json:"error_count" db:"error_count"`
+	AvgLatencyMs   float64   `json:"avg_latency_ms" db:"avg_latency_ms"`
 	LastCallAt     time.Time `json:"last_call_at" db:"last_call_at"`
 }
 
@@ -176,16 +189,19 @@ func (r *AICallLogRepo) Insert(ctx context.Context, rec *provider.AuditRecord) e
 func (r *AICallLogRepo) Today(ctx context.Context, subject string) (*AICallTodayAggregate, error) {
 	const q = `
 		SELECT
-			COUNT(*)::BIGINT                        AS calls,
-			COALESCE(SUM(input_tokens), 0)::BIGINT  AS input_tokens,
-			COALESCE(SUM(output_tokens), 0)::BIGINT AS output_tokens,
-			COALESCE(SUM(cost_micro_cents), 0)      AS cost_micro_cents
+			COUNT(*)::BIGINT                                                       AS calls,
+			COALESCE(SUM(input_tokens), 0)::BIGINT                                 AS input_tokens,
+			COALESCE(SUM(output_tokens), 0)::BIGINT                                AS output_tokens,
+			COALESCE(SUM(cost_micro_cents), 0)                                     AS cost_micro_cents,
+			COUNT(*) FILTER (WHERE error IS NOT NULL AND error <> '')::BIGINT      AS error_count,
+			COALESCE(AVG(latency_ms), 0)::DOUBLE PRECISION                         AS avg_latency_ms
 		FROM ai_call_log
 		WHERE user_subject = $1
 		  AND started_at >= date_trunc('day', now() AT TIME ZONE 'UTC')`
 	out := &AICallTodayAggregate{}
 	err := r.db.Pool.QueryRow(ctx, q, subject).Scan(
 		&out.Calls, &out.InputTokens, &out.OutputTokens, &out.CostMicroCents,
+		&out.ErrorCount, &out.AvgLatencyMs,
 	)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return nil, fmt.Errorf("ai_call_log Today: %w", err)
@@ -205,11 +221,13 @@ func (r *AICallLogRepo) ByFeature(ctx context.Context, subject string, since tim
 	const q = `
 		SELECT
 			feature_id,
-			COUNT(*)::BIGINT                        AS calls,
-			COALESCE(SUM(input_tokens), 0)::BIGINT  AS input_tokens,
-			COALESCE(SUM(output_tokens), 0)::BIGINT AS output_tokens,
-			COALESCE(SUM(cost_micro_cents), 0)      AS cost_micro_cents,
-			MAX(started_at)                         AS last_call_at
+			COUNT(*)::BIGINT                                                       AS calls,
+			COALESCE(SUM(input_tokens), 0)::BIGINT                                 AS input_tokens,
+			COALESCE(SUM(output_tokens), 0)::BIGINT                                AS output_tokens,
+			COALESCE(SUM(cost_micro_cents), 0)                                     AS cost_micro_cents,
+			COUNT(*) FILTER (WHERE error IS NOT NULL AND error <> '')::BIGINT      AS error_count,
+			COALESCE(AVG(latency_ms), 0)::DOUBLE PRECISION                         AS avg_latency_ms,
+			MAX(started_at)                                                        AS last_call_at
 		FROM ai_call_log
 		WHERE user_subject = $1
 		  AND started_at >= $2
@@ -226,7 +244,7 @@ func (r *AICallLogRepo) ByFeature(ctx context.Context, subject string, since tim
 		var rec AICallFeatureRow
 		if err := rows.Scan(
 			&rec.FeatureID, &rec.Calls, &rec.InputTokens, &rec.OutputTokens,
-			&rec.CostMicroCents, &rec.LastCallAt,
+			&rec.CostMicroCents, &rec.ErrorCount, &rec.AvgLatencyMs, &rec.LastCallAt,
 		); err != nil {
 			return nil, fmt.Errorf("ai_call_log ByFeature scan: %w", err)
 		}
