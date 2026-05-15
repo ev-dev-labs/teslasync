@@ -86,6 +86,7 @@ import (
 	batteryhealthforecastnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative"
 	chargingcurvefingerprintclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering"
 	costforecastnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration"
+	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -1107,6 +1108,56 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		costforecastnarration.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// vampire-drain-explanation (Phase-50 / C5, slice 0030).
+	// The shared rag.Retriever is constructed per-feature so the
+	// rate-limit + cost-cap decorators on the embedding provider
+	// apply per-strategy. The retriever uses the same
+	// nomic-embed-text 768-dim physical table as the other RAG
+	// slices; the per-feature source-type allowlist
+	// {idle_drain, vehicle_state, climate_state} is enforced in
+	// retrieve_idle_drain_chunks's Validate. The feature is
+	// registered as needing `ai_idle_drain_indexer` (gated
+	// indexer stub — see internal/jobs/ai_idle_drain_indexer.go);
+	// the F7 indexer fan-out point for those source types is
+	// reserved by string but not yet wired to any embedding job.
+	aiIdleDrainRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		vampiredrainexplanation.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai vampire-drain-explanation: rag.New failed during boot wiring")
+	}
+	// vampire-drain-explanation tools (Phase-50 / C5, slice 0030).
+	// Adds `retrieve_idle_drain_chunks` + `query_vampire_drain_windows`
+	// to the shared tool registry so the dispatcher can resolve
+	// them for the vampire-drain-explanation strategy. Same
+	// ordering rule as the other slice tools above: must be
+	// registered before the handler constructor below so the
+	// strategy's allowedTools resolve at boot.
+	// query_vampire_drain_windows composes the SAME
+	// *database.VampireDrainRepo.Events + .Stats methods that
+	// back the canonical baseline GET /vampire-drain + GET
+	// /vampire-drain/stats handlers — no new SQL is written by
+	// this slice.
+	tools.RegisterVampireDrainExplanationTools(aiToolRegistry, tools.VampireDrainExplanationSources{
+		Retriever: aiIdleDrainRetriever,
+		Drains:    NewAIVampireDrainSource(database.NewVampireDrainRepo(db.Pool)),
+	})
+	// vampire-drain-explanation handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiVampireDrainExplanationHandler := NewAIVampireDrainHandler(
+		aiRegistry,
+		aiToolRegistry,
+		vampiredrainexplanation.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -2788,7 +2839,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

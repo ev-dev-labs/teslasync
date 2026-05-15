@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -256,6 +256,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-trip-planner-llm-agent-root"] as const),
   }),
+  "vampire-drain-explanation": Object.freeze({
+    id: "vampire-drain-explanation",
+    name: "Vampire-drain explanation",
+    description: "Opt-in LLM narrator that explains the deterministic vampire-drain (idle-energy-loss) signal — total observed parked hours, average / median / p95 drain rate per day, the recent worst event, and the most relevant per-event driver (Sentry on, ambient temperature, very long parked window) — grounded in the same numeric envelope the Vampire Drain page already renders. The AI surface narrates drivers and offers honest, non-mutating tips; it never invents events. The deterministic Vampire Drain summary cards, drain-rate trend chart, daily-drain bar chart, drain-sessions table, and tips panel remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's home charger address nor the locations they regularly park.",
+    tier: "C",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-vampire-drain-explanation-root"] as const),
+  }),
   "yir-narration": Object.freeze({
     id: "yir-narration",
     name: "Year-in-review narration",
@@ -291,6 +302,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "smart-charge-schedule-suggestion",
   "speed-profile-insights",
   "trip-planner-llm-agent",
+  "vampire-drain-explanation",
   "yir-narration",
 ] as const);
 

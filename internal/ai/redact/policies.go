@@ -356,3 +356,26 @@ func PolicyCostForecastNarration() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyVampireDrainExplanation is the per-feature redaction policy for the
+// Phase-50 / 0030 — C5 vampire-drain-explanation slice. It mirrors PolicyDigest
+// (allow ClassVehicleName only, ModeRedactedTags so the LLM sees [LOCATION]
+// and [SCHEDULE] tags rather than raw values).
+//
+// Threat model: the prompt may contain idle-drain windows ANCHORED at home or
+// at work. ClassLocation MUST stay tagged so a leaked transcript reveals
+// neither the user's home charger address nor the addresses they regularly
+// park at. ClassSchedule MUST stay tagged so the same transcript reveals
+// neither the user's daily commute pattern nor their weekly Sentry-on
+// schedule. Allowing ClassVehicleName lets the narration say "your Model 3"
+// instead of "[VEHICLE]" — display-name leakage is acceptable.
+//
+// Kept as a distinct identifier from every prior per-feature policy so a
+// future change to one slice's allow-list does not bleed across the others —
+// every feature is independently auditable.
+func PolicyVampireDrainExplanation() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

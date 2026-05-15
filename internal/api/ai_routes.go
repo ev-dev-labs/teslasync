@@ -131,6 +131,7 @@ func mountAIRoutes(
 	aiBatteryHealth *AIBatteryHealthHandler,
 	aiChargingCurveClustering *AIChargingCurveClusteringHandler,
 	aiCostForecastNarration *AICostForecastNarrationHandler,
+	aiVampireDrainExplanation *AIVampireDrainHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -333,6 +334,30 @@ func mountAIRoutes(
 			costForecastNarrationHandler = aiCostForecastNarration.ServeHTTP
 		}
 		r.Post("/charging/costs/forecast/narrate", g.Wrap("cost-forecast-narration", costForecastNarrationHandler))
+
+		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
+		// Opt-in LLM narrator that explains the deterministic
+		// idle-energy-loss (vampire-drain) signal the SPA's
+		// VampireDrainPage already renders from
+		// GET /api/v1/vampire-drain + GET /api/v1/vampire-drain/stats.
+		// The route lives under /ai/charging/vampire-drain/explain
+		// so it is namespaced under the existing /charging family.
+		// Same stub-fallback pattern as the other AI handlers — a
+		// nil handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// canonical baseline routes at GET /api/v1/vampire-drain
+		// and /api/v1/vampire-drain/stats are unchanged.
+		//
+		// IMPORTANT: registered BEFORE
+		// /charging/{sessionID}/diagnose so chi's radix tree
+		// disambiguates the static `/charging/vampire-drain/explain`
+		// path before the wildcard.
+		var vampireDrainExplanationHandler http.HandlerFunc = aiVampireDrainExplanationStubHandler
+		if aiVampireDrainExplanation != nil {
+			vampireDrainExplanationHandler = aiVampireDrainExplanation.ServeHTTP
+		}
+		r.Post("/charging/vampire-drain/explain", g.Wrap("vampire-drain-explanation", vampireDrainExplanationHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -634,6 +659,15 @@ func aiChargingCurveClusteringStubHandler(w http.ResponseWriter, _ *http.Request
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiCostForecastNarrationStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai cost forecast narration is not yet implemented")
+}
+
+// aiVampireDrainExplanationStubHandler mirrors
+// aiCostForecastNarrationStubHandler for the C5 slice
+// (Phase-50 / 0030 vampire-drain-explanation). Reachable only when
+// AIVampireDrainHandler is nil at construction; the off-mode 404
+// invariant is held by the guard, not the stub.
+func aiVampireDrainExplanationStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai vampire-drain explanation is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

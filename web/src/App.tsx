@@ -346,6 +346,13 @@ export default function App() {
         <Route path="tire-pressure" element={<SafeRoute name="TirePressure"><TirePressure /></SafeRoute>} />
         <Route path="software-updates" element={<SafeRoute name="SoftwareUpdates"><SoftwareUpdates /></SafeRoute>} />
         <Route path="vampire-drain" element={<SafeRoute name="VampireDrain"><VampireDrain /></SafeRoute>} />
+        {/* Phase-50 / 0030 alias: the slice prompt registered the AI feature
+            against frontend route `/charging/vampire-drain`; the canonical
+            app path stays `/vampire-drain` for back-compat, but mounting the
+            same page at `/charging/vampire-drain` lets the registry's
+            RouteSet.Frontend entry land users on the deterministic
+            baseline. */}
+        <Route path="charging/vampire-drain" element={<SafeRoute name="VampireDrain"><VampireDrain /></SafeRoute>} />
         <Route path="locations" element={<SafeRoute name="Locations"><Locations /></SafeRoute>} />
         <Route path="timeline" element={<SafeRoute name="Timeline"><Timeline /></SafeRoute>} />
         <Route path="mileage" element={<SafeRoute name="Mileage"><Mileage /></SafeRoute>} />

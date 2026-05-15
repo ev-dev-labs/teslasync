@@ -1172,6 +1172,74 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0030 — C5 Vampire-drain explanation.
+	//
+	// Opt-in LLM narrator that EXPLAINS the deterministic vampire-drain
+	// (idle-energy-loss) signal already surfaced on the Vampire Drain
+	// page — total observed parked hours, average / median / p95 drain
+	// rate (% / day), the recent worst event, and the most relevant
+	// per-event driver (Sentry on, ambient temperature, very long
+	// parked window). The AI surface narrates the drivers and offers
+	// honest, non-mutating tips grounded in the user's own data; it
+	// never invents events, never persists state, and never modifies
+	// the deterministic VampireDrainStats / VampireDrainEvent
+	// envelopes the chart and table render.
+	//
+	// The deterministic VampireDrainPage (summary metrics, drain-rate
+	// trend chart, daily-drain bar chart, drain-sessions table, tips
+	// panel) and the existing GET /vampire-drain + GET
+	// /vampire-drain/stats handlers remain the canonical baseline
+	// visible to every user. The AI section is a panel rendered ABOVE
+	// the deterministic content; it is HIDDEN entirely when
+	// ai_mode='off' or the per-feature toggle is off (ADR-015 §I3,
+	// §I5, §I6).
+	//
+	// Tools:
+	//   - retrieve_idle_drain_chunks — F7 RAG retrieval over the
+	//     per-feature source-type allowlist {idle_drain, vehicle_state,
+	//     climate_state}. None of the three is wired into the F7
+	//     indexer today (slice 0008 only indexes drive_summary +
+	//     charge_session); they are reserved by string for forward-
+	//     compatibility — the gated `ai_idle_drain_indexer` job
+	//     (registered as JobNames=["ai_idle_drain_indexer"] below)
+	//     will fan out into the idle-drain corpus once a future slice
+	//     wires the per-event embeddings. Until then the retriever
+	//     simply returns zero chunks for these source types — which
+	//     is the correct behaviour: the strategy's goldens already
+	//     cover the zero-matches narration.
+	//   - query_vampire_drain_windows — a deterministic typed
+	//     envelope derived from the SAME *database.VampireDrainRepo
+	//     that backs the canonical baseline GET /vampire-drain +
+	//     GET /vampire-drain/stats handlers; the AI narration is
+	//     therefore grounded in the same numbers the chart renders,
+	//     never a parallel re-implementation. No new SQL is added by
+	//     this slice.
+	//
+	// JobNames: ["ai_idle_drain_indexer"] — gated indexer stub
+	// registered for forward-compat. Skipped (Skipped=1) whenever
+	// ai_mode='off' or vampire-drain-explanation is off, matching
+	// the F7 / I12 contract.
+	//
+	// PushKinds: explicitly empty (no notification/push channel
+	// surface). features.CoverageOK rejects nil; the empty slice is
+	// the affirmative "no surface" signal.
+	"vampire-drain-explanation": {
+		ID:          "vampire-drain-explanation",
+		Name:        "Vampire-drain explanation",
+		Description: "Opt-in LLM narrator that explains the deterministic vampire-drain (idle-energy-loss) signal — total observed parked hours, average / median / p95 drain rate per day, the recent worst event, and the most relevant per-event driver (Sentry on, ambient temperature, very long parked window) — grounded in the same numeric envelope the Vampire Drain page already renders. The AI surface narrates drivers and offers honest, non-mutating tips; it never invents events. The deterministic Vampire Drain summary cards, drain-rate trend chart, daily-drain bar chart, drain-sessions table, and tips panel remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's home charger address nor the locations they regularly park.",
+		Tier:        "C",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/charging/vampire-drain/explain"},
+			Frontend:  []string{"/charging/vampire-drain"},
+			UITestIDs: []string{"ai-feature-vampire-drain-explanation-root"},
+			JobNames:  []string{"ai_idle_drain_indexer"},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

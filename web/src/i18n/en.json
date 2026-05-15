@@ -2472,6 +2472,10 @@
         "cost-forecast-narration": {
           "label": "Cost forecast narration",
           "description": "Opt-in LLM narrator that explains the deterministic charging-cost forecast — historical monthly trend, projected cost / cost_low / cost_high band, home-vs-supercharger split, and the top deterministic insight — grounded in the same numeric envelope the chart renders, and honest that the band is an APPROXIMATE prediction interval rather than a strict 95% confidence interval. The deterministic cost forecast chart, summary cards, breakdown, savings calculator, monthly cost table, time-of-use analysis, lifetime summary, and environmental impact card on the Cost Analysis page remain the canonical baseline when AI is off."
+        },
+        "vampire-drain-explanation": {
+          "label": "Vampire-drain explanation",
+          "description": "Opt-in LLM narrator that explains the deterministic vampire-drain (idle energy loss) signal — recent average / median / p95 idle drain rate per day, the worst recent idle window (start, duration, drain %, ambient temperature), and the per-event driver (Sentry on, climate on, very long parked window) most strongly correlated with elevated drain — grounded in the same numeric envelope the cards render, and honest that the per-event driver attribution is correlational rather than causal. The deterministic vampire-drain stats, per-event timeline, and typical-vs-worst cards on the Vampire Drain page remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -4026,6 +4030,14 @@
   },
   "vampire": {
     "title": "Vampire Drain"
+  },
+  "vampireDrain": {
+    "aiNarrative": {
+      "title": "Explain the recent vampire drain",
+      "badge": "AI",
+      "description": "Ask the AI narrator to explain the deterministic vampire-drain signal — the recent average / worst idle-drain rate, the most-correlated per-event driver (Sentry, climate, long park), and whether the recent rate is in line with the typical fleet. The numbers are the same the cards below show; the narrator only explains them and surfaces the inference's correlational nature honestly.",
+      "generateButton": "Narrate drain"
+    }
   },
   "chargerTypes": {
     "supercharger": "Supercharger",
