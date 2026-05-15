@@ -1,12 +1,16 @@
 === PREFLIGHT ===
 
 Slice:  Phase-50 / Prompt 9999 — Final Gate
-Branch: feat/ai-adoption
-HEAD:   2b155124e4cdbdc302242c744d731bd362d31cf6 (feat(ai): add RAG-backed app help)
-Date:   2026-05-14 (UTC-7)
+Branch: feat/vampire-drain-explanation
+HEAD:   6372c0e64 (chore(ai): block phase-50/0065 W1 wiring - 24/64 predecessor slices missing)
+Date:   2026-05-15 (UTC-7)
 
 --- CMD: git rev-parse --abbrev-ref HEAD ---
-feat/ai-adoption
+feat/vampire-drain-explanation
+EXIT=0
+
+--- CMD: git log -1 --oneline ---
+6372c0e64 (HEAD -> feat/vampire-drain-explanation) chore(ai): block phase-50/0065 W1 wiring - 24/64 predecessor slices missing
 EXIT=0
 
 --- CMD: git status --short ---
@@ -14,11 +18,12 @@ EXIT=0
 EXIT=0
 
 --- CMD: ls .github/prompts/db-refactor/logs/phase-50-*.log | wc -l ---
-# expected: 64
-20
+# expected by §1: 64 predecessor logs (slices 0001..0064)
+# present (excluding this 9999 log and the post-0064 0065 W1 wiring log):
+40
 EXIT=0  (command succeeded; the COUNT is the failure)
 
---- CMD: list of present phase-50 slice logs ---
+--- CMD: list of present phase-50 slice logs (predecessors only, excluding 9999 + 0065) ---
 phase-50-0001-F0-ai-off-contract.log
 phase-50-0002-F1-provider-abstraction.log
 phase-50-0003-F2-settings-ui.log
@@ -39,34 +44,35 @@ phase-50-0017-nl-search.log
 phase-50-0018-drive-coaching.log
 phase-50-0019-charging-diagnosis.log
 phase-50-0020-rag-help.log
+phase-50-0021-nl-drive-search-replay.log
+phase-50-0022-speed-profile-insights.log
+phase-50-0023-route-efficiency-suggestions.log
+phase-50-0024-auto-trip-naming.log
+phase-50-0025-trip-planner-llm-agent.log
+phase-50-0026-smart-charge-schedule-suggestion.log
+phase-50-0027-battery-health-forecast-narrative.log
+phase-50-0028-charging-curve-fingerprint-clustering.log
+phase-50-0029-cost-forecast-narration.log
+phase-50-0030-vampire-drain-explanation.log
+phase-50-0031-preheat-precool-recommender.log
+phase-50-0032-cabin-temperature-impact-narrative.log
+phase-50-0033-tire-pressure-trend-reasoning.log
+phase-50-0034-alert-tuning-suggestions.log
+phase-50-0035-inbox-auto-categorization.log
+phase-50-0036-cross-rule-conflict-detection.log
+phase-50-0037-auto-name-unnamed-locations.log
+phase-50-0062-learned-per-vehicle-anomaly-baselines.log
+phase-50-0063-range-prediction-model.log
+phase-50-0064-ml-charging-curve-clustering.log
 
 --- CMD: missing predecessor slices (expected 0001..0064) ---
-0021, 0022, 0023, 0024, 0025, 0026, 0027, 0028, 0029, 0030,
-0031, 0032, 0033, 0034, 0035, 0036, 0037, 0038, 0039, 0040,
-0041, 0042, 0043, 0044, 0045, 0046, 0047, 0048, 0049, 0050,
-0051, 0052, 0053, 0054, 0055, 0056, 0057, 0058, 0059, 0060,
-0061, 0062, 0063, 0064
-Missing count: 44
-Predecessor coverage: 20 / 64  ==>  FAIL (expected 64 / 64)
+0038, 0039, 0040, 0041, 0042, 0043, 0044, 0045, 0046, 0047,
+0048, 0049, 0050, 0051, 0052, 0053, 0054, 0055, 0056, 0057,
+0058, 0059, 0060, 0061
+Missing count: 24
+Predecessor coverage: 40 / 64  ==>  FAIL (expected 64 / 64)
 
 --- CMD: corresponding prompt files that exist (no log) ---
-0021-D1-nl-drive-search-replay.prompt.md
-0022-D2-speed-profile-insights.prompt.md
-0023-D3-route-efficiency-suggestions.prompt.md
-0024-D4-auto-trip-naming.prompt.md
-0025-D5-trip-planner-llm-agent.prompt.md
-0026-C1-smart-charge-schedule-suggestion.prompt.md
-0027-C2-battery-health-forecast-narrative.prompt.md
-0028-C3-charging-curve-fingerprint-clustering.prompt.md
-0029-C4-cost-forecast-narration.prompt.md
-0030-C5-vampire-drain-explanation.prompt.md
-0031-T1-preheat-precool-recommender.prompt.md
-0032-T2-cabin-temperature-impact-narrative.prompt.md
-0033-T3-tire-pressure-trend-reasoning.prompt.md
-0034-A1-alert-tuning-suggestions.prompt.md
-0035-A2-inbox-auto-categorization.prompt.md
-0036-A3-cross-rule-conflict-detection.prompt.md
-0037-G1-auto-name-unnamed-locations.prompt.md
 0038-G2-suggest-new-geofences.prompt.md
 0039-G3-geofence-aware-automation-suggestions.prompt.md
 0040-X1-period-compare-narration.prompt.md
@@ -91,22 +97,44 @@ Predecessor coverage: 20 / 64  ==>  FAIL (expected 64 / 64)
 0059-PU3-nl-dashboard-composer.prompt.md
 0060-GEN1-trip-postcard-share-card-image-generation.prompt.md
 0061-GEN2-vehicle-paint-preview.prompt.md
-0062-ML1-learned-per-vehicle-anomaly-baselines.prompt.md
-0063-ML2-range-prediction-model.prompt.md
-0064-ML3-ml-charging-curve-clustering.prompt.md
 
---- CMD: grep -L 'STATUS=DONE' .github/prompts/db-refactor/logs/phase-50-*.log ---
-(empty — all 20 PRESENT logs end with STATUS=DONE)
+--- CMD: grep -L 'STATUS=DONE' .github/prompts/db-refactor/logs/phase-50-*.log
+            (excluding this 9999 log) ---
+phase-50-0065-spa-feature-wiring.log
+EXIT=0  (one log fails the STATUS=DONE check; it is the post-0064 W1 SPA
+         wiring slice, which is itself BLOCKED for the same reason as
+         this gate — 24/64 predecessor slices missing. 0065 is NOT in
+         the 0001..0064 dependency set this gate requires, so it does
+         not by itself block the gate; but it confirms downstream work
+         is also blocked on the same 24 missing slices.)
+
+--- CMD: grep -L 'STATUS=DONE' .github/prompts/db-refactor/logs/phase-50-*.log
+            restricted to slices 0001..0064 ---
+(empty — every PRESENT predecessor log in the 0001..0064 range ends
+ with STATUS=DONE; the failure is missing files, not failed status.)
 EXIT=0
 
 --- CMD: grep -L '=== AI-OFF CONTRACT ===' .github/prompts/db-refactor/logs/phase-50-*.log ---
-(empty — all 20 PRESENT logs include the AI-OFF CONTRACT footer)
+(empty — all 41 present logs (40 predecessors in 0001..0064 + the
+ 0065 wiring log) include the AI-OFF CONTRACT footer)
 EXIT=0
 
+--- CMD: progress since previous final-gate attempt (commit 5d387559b) ---
+Previous attempt (HEAD 2b155124e on feat/ai-adoption):
+  - Predecessors present: 20 / 64 (slices 0001..0020 only)
+  - Status: BLOCKED
+This attempt (HEAD 6372c0e64 on feat/vampire-drain-explanation):
+  - Predecessors present: 40 / 64 (added 0021..0037 + 0062..0064)
+  - Status: STILL BLOCKED (24 slices remain absent)
+  - Net forward progress since last attempt: +20 predecessor slices
+  - Slices still required before this gate can run green: 24
+    (0038..0061 — G/X/S/M/P/V/PU/GEN series)
+
 PREFLIGHT VERDICT:
-  Branch / dirty-tree:        OK   (feat/ai-adoption, clean)
-  Predecessor footer hygiene: OK   (each present log has STATUS=DONE + AI-OFF CONTRACT footer)
-  Predecessor coverage:       FAIL (20/64 — 44 slices have no log file)
+  Branch / dirty-tree:        OK   (feat/vampire-drain-explanation, clean)
+  Predecessor footer hygiene: OK   (each present log in 0001..0064 has
+                                    STATUS=DONE + AI-OFF CONTRACT footer)
+  Predecessor coverage:       FAIL (40/64 — 24 slices have no log file)
 
 Per the Honesty Covenant of this prompt:
   Rule #3 — "No skip-and-assume — can't run gate -> BLOCKED, never DONE"
@@ -123,11 +151,11 @@ The remaining gate steps (§2 Build matrix, §3 Eval gate, §4 invariant suite,
 pre-flight precondition is unmet. Running them would either:
 
   (a) Be vacuous — `features.CoverageOK()` in §4a iterates the registry, but
-      44 feature slices have not contributed their `Routes`/`UI`/`Jobs` metadata
+      24 feature slices have not contributed their `Routes`/`UI`/`Jobs` metadata
       yet, so the loop cannot prove the AI-Off Contract for the missing
       surfaces, and any "PASS" result would be a false-green covering only
-      20/64 features.
-  (b) Produce a `Slices completed: 20 / 64` audit report, which contradicts
+      40/64 features.
+  (b) Produce a `Slices completed: 40 / 64` audit report, which contradicts
       the prompt's required outcome of `Slices completed: 64 / 64` and would
       itself prove the slice cannot be DONE.
 
@@ -140,21 +168,33 @@ Surveyed before stopping:
 
 1. Phase-50 prompt directory:
    .github/prompts/db-refactor/phase-50-ai-adoption/
-     - 0000-methodology.prompt.md            (read in part — referenced for slice contract)
-     - 0001-F0 .. 0064-ML3                    (66 prompt files total incl. methodology + 9999)
-     - 9999-final-gate.prompt.md             (this slice)
+     - 0000-methodology.prompt.md            (read for slice contract)
+     - 0001-F0 .. 0064-ML3                    (64 feature/foundation prompts)
+     - 0065-W1-spa-feature-wiring.prompt.md   (post-0064 SPA wiring; not a
+                                               predecessor of the final gate
+                                               by the spec line "Depends on:
+                                               every prior slice 0001-0064")
+     - 9999-final-gate.prompt.md              (this slice)
 
 2. ADR-015 — AI-Off Contract:
    .github/prompts/db-refactor/adrs/ADR-015-ai-off-contract.md
-   Read: invariants I1–I12 plus context (privacy / cost / hardware / trust /
-   offline / regulatory refusal modes). The 12 invariants are the contract
-   this gate must prove end-to-end.
+   The 12 invariants I1..I12 are the contract this gate must prove
+   end-to-end. Cannot be proven for surfaces whose feature slices have
+   not landed.
 
-3. Predecessor logs:
-   .github/prompts/db-refactor/logs/phase-50-*.log
-   20 logs present (0001-F0 through 0020-N6=rag-help). Each carries
-   STATUS=DONE and the AI-OFF CONTRACT footer. The 44 logs for slices
-   0021..0064 are absent.
+3. Predecessor logs in .github/prompts/db-refactor/logs/:
+     - 40 present in 0001..0064 range (each STATUS=DONE,
+       each carries the AI-OFF CONTRACT footer).
+     - 24 absent: slices 0038..0061 inclusive, covering the
+       G2/G3 (geofence), X1/X2 (cross-cutting), S1..S7
+       (support/inspector), M1..M3 (maintenance), P1..P3
+       (privacy), V1/V2 (voice/wear), PU1..PU3 (power-user),
+       GEN1/GEN2 (generative) series. Their prompt files exist
+       in phase-50-ai-adoption/, so the slices are spec'd —
+       just not executed.
+     - 1 additional log present outside the predecessor range:
+       phase-50-0065-spa-feature-wiring.log (STATUS=BLOCKED,
+       blocked on the same 24 missing slices).
 
 4. Production AI scaffolding referenced by the gate spec — NOT inspected
    in detail (the slice forbids production source changes and any
@@ -167,13 +207,16 @@ Surveyed before stopping:
      - tools/aivet, tools/aigen, tools/eval-schema-check (build-matrix tools)
 
 5. Working tree:
-   `git status --short` → empty. No uncommitted edits exist that could
-   confuse the predecessor accounting.
+   `git status --short` → empty before edit, only this log staged after.
+   No uncommitted edits exist that could confuse the predecessor
+   accounting.
 
 6. Branch state:
-   `feat/ai-adoption` at HEAD `2b155124e` ("feat(ai): add RAG-backed
-   app help"), which is the head of slice 0020-N6 — consistent with
-   "20 of 64 slices done" predecessor evidence above.
+   `feat/vampire-drain-explanation` at HEAD `6372c0e64`
+   ("chore(ai): block phase-50/0065 W1 wiring - 24/64 predecessor
+   slices missing"). The branch name is historical (slice 0030 was
+   the most recent feature slice landed before the ML series); the
+   24 missing slices straddle that point.
 
 === REASONING ===
 
@@ -189,26 +232,22 @@ two responsibilities to each feature slice (0011..0064):
 
 Slices 0001..0010 build the foundation (provider abstraction, settings,
 ai_call_log, tool framework, SSE, eval harness, embeddings, redaction,
-rate limiter). Slices 0011..0020 ship 10 features (chatbot, digest
-narration, YIR narration, anomaly explanations, NL alert builder,
-NL automation builder, NL search, drive coaching, charging diagnosis,
-RAG help). Slices 0021..0064 ship the remaining 44 features (D-series
-driving, C-series charging, T-series climate, A-series alerts,
-G-series geofence, X-series cross-cutting, S-series support/inspector,
-M-series maintenance, P-series privacy, V-series voice/wear,
-PU-series power-user, GEN-series generative, ML-series predictive).
+rate limiter). Slices 0011..0037 ship 27 features (chatbot through
+auto-name unnamed locations). Slices 0062..0064 ship the 3 ML predictive
+features. That leaves slices 0038..0061 — 24 features in the
+G/X/S/M/P/V/PU/GEN series — unimplemented.
 
-Without those 44 slices landed:
+Without those 24 slices landed:
 
-- `features.Registry` is missing 44 entries.
+- `features.Registry` is missing 24 entries.
 - `features.CoverageOK()` (the explicit §4a precondition) will not
-  cover those 44 surfaces — they have no metadata, so the loop
-  silently skips them. A "PASS" with only 20 of 64 surfaces enumerated
+  cover those 24 surfaces — they have no metadata, so the loop
+  silently skips them. A "PASS" with only 40 of 64 surfaces enumerated
   is exactly the false-green this Covenant exists to prevent.
-- `TestBaselineEndpointParity` cannot prove that 44 unimplemented
+- `TestBaselineEndpointParity` cannot prove that 24 unimplemented
   surfaces leave the baseline untouched, because there is no contrast
-  to measure (off vs all-AI-on collapses to off vs 20-AI-on).
-- `TestZeroProviderEgress_OffMode` would only soak the 20 active
+  to measure (off vs all-AI-on collapses to off vs 40-AI-on).
+- `TestZeroProviderEgress_OffMode` would only soak the 40 active
   features; there is no signal it would block egress added by a
   later feature slice.
 - The audit report's headline "Slices completed: 64 / 64" is
@@ -216,16 +255,27 @@ Without those 44 slices landed:
 
 Per ADR-015 §I11 ("final-gate proof"), Phase-50 closes only when
 end-to-end auditable proof of all 12 invariants exists across all
-features. With 44 features absent, that proof literally cannot be
+features. With 24 features absent, that proof literally cannot be
 constructed. Forcing the gate to run anyway would either crash on
 missing registry entries or, worse, return a misleading PASS that
-covers only one-third of the surface area the Phase commits to
-guard.
+covers only 62.5% of the surface area the Phase commits to guard.
 
 The correct, honest action — encoded in this slice's Blocked Path —
 is to stop, log the predecessor gap, and commit only the blocked
-log so the next operator picks up at slice 0021 instead of being
-told (incorrectly) that Phase-50 is closed.
+log so the next operator picks up at slice 0038 (G2 Suggest New
+Geofences) instead of being told (incorrectly) that Phase-50 is
+closed.
+
+Forward path to unblock this gate:
+
+  1. Land slices 0038..0061 in order (24 feature slices, each
+     producing its own STATUS=DONE log + registry contribution).
+  2. Re-run slice 0065 (W1 SPA wiring) — currently blocked on the
+     same 24 missing slices; it should turn green automatically
+     once its inputs exist.
+  3. Re-run this slice (9999 final gate) — predecessor coverage
+     check will then pass at 64/64 and the §2..§5 verification
+     can execute against a complete registry.
 
 === CHANGES ===
 
@@ -237,7 +287,11 @@ Registry / i18n / golden: none (owned by the missing feature slices).
 Prompt artifacts:         none (the prompt file is unchanged; this slice
                           does not modify the methodology).
 Log:                      .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log
-                          (this file — created)
+                          (this file — overwritten with current state;
+                          previous content captured the 20/64 attempt at
+                          commit 5d387559b on branch feat/ai-adoption.
+                          This re-run captures the 40/64 state on
+                          branch feat/vampire-drain-explanation.)
 
 Allowed-files diff vs. `git status --short`: only the log file above is
 written. No drift outside the slice's Allowed-files list.
@@ -254,35 +308,61 @@ already transcribed in the PREFLIGHT section above. Their pass/fail
 verdict is:
 
   --- §1 Pre-flight ---
-  Predecessor log count:        20 / 64                 EXIT=1 (FAIL)
-  Predecessor STATUS=DONE check: 20 / 20 present pass    EXIT=0 (PASS)
-  Predecessor footer check:      20 / 20 present pass    EXIT=0 (PASS)
+  Predecessor log count:        40 / 64                  EXIT=1 (FAIL)
+  Predecessor STATUS=DONE check: 40 / 40 present pass     EXIT=0 (PASS)
+  Predecessor footer check:      41 / 41 present pass     EXIT=0 (PASS)
+                                 (40 in-range + 0065 wiring)
 
   --- §2 Build matrix ---     SKIPPED (predecessor incomplete)
+                              go build ./... — not run
+                              go vet ./... — not run
+                              go test -race ./... — not run
+                              go run ./tools/aivet — not run
+                              go run ./tools/aigen --check — not run
+                              go run ./tools/eval-schema-check — not run
+                              cd web && npx tsc --noEmit — not run
+                              cd web && npm run lint — not run
+                              cd web && npm test -- --run — not run
+                              cd web && npm run build — not run
   --- §3 Eval gate ---        SKIPPED (predecessor incomplete)
+                              make ai-eval-fast — not run
   --- §4 Invariant suite ---  SKIPPED (predecessor incomplete; would be
                                        vacuous against partial registry)
-  --- §5 Audit report ---     SKIPPED (would print "20 / 64" — by spec
+                              TestAIOffContract_AllFeatures — not added
+                              TestBaselineEndpointParity — not added
+                              TestZeroProviderEgress_OffMode — not added
+                              tests/ai-off-contract.spec.ts — not added
+                              TestPushFanout_AiKindsSuppressed_OffMode — not added
+  --- §5 Audit report ---     SKIPPED (would print "40 / 64" — by spec
                                        must be "64 / 64" for DONE)
-  --- §6 Tag + CHANGELOG ---  SKIPPED (no green result to tag)
+  --- §6 Tag + CHANGELOG ---  SKIPPED (no green result to tag;
+                                       phase-50-final-gate tag NOT created;
+                                       CHANGELOG.md NOT modified)
 
 Aggregate gate verdict: FAIL on §1; remaining steps not run.
 
 === COMMIT ===
 
-Note: the logs directory is in .gitignore (line 96 of /.gitignore:
-`/.github/prompts/db-refactor/*`). The 20 predecessor logs are
-tracked because they were force-added with `git add -f` by their
-respective slices, matching the established convention. This slice
-follows the same convention.
+Note: the logs directory is in .gitignore (lines 89-90 of /.gitignore:
+`/.github/prompts` and `/.github/prompts/db-refactor/logs`). The 41
+predecessor logs are tracked because they were force-added with
+`git add -f` by their respective slices, matching the established
+convention. This slice follows the same convention.
 
---- CMD: git add -f .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log ---
-warning: in the working copy of '.github/prompts/db-refactor/logs/phase-50-9999-final-gate.log',
-CRLF will be replaced by LF the next time Git touches it
+--- CMD: rm .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log ---
+(removed previous BLOCKED log that captured the 20/64 state)
 EXIT=0
 
+--- CMD: write .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log ---
+(this file)
+EXIT=0
+
+--- CMD: git add -f .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log ---
+EXIT=0
+(transcript captured at commit time — see post-commit diagnostics below)
+
 --- CMD: git status --short (after add) ---
-A  .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log
+M  .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log
 
   --> Only the allowed log file is staged. No drift outside this
       slice's Allowed-files list. Honesty Covenant rule #9 ("No
@@ -290,20 +370,10 @@ A  .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log
       satisfied.
 
 --- CMD: git commit (blocked-log-only) ---
-[feat/ai-adoption 5d387559] chore(ai): block phase-50 final gate - 44/64 predecessor slices missing
- 1 file changed, 340 insertions(+)
- create mode 100644 .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log
-EXIT=0
+chore(ai): block phase-50 final gate - 24/64 predecessor slices missing
 
---- CMD: git log --oneline -1 ---
-5d387559b (HEAD -> feat/ai-adoption) chore(ai): block phase-50 final gate - 44/64 predecessor slices missing
-
---- CMD: git status --short (after commit) ---
-(empty — clean working tree)
-EXIT=0
-
-Commit message body included the required Co-authored-by trailer:
-  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+(transcript captured at commit time — single-file commit recorded
+ below in the post-commit verification section.)
 
 Per Honesty Covenant rule #8 ("No commit on red — commit only the
 log when BLOCKED"): only this log file was committed. No production
@@ -327,10 +397,10 @@ I3  Non-AI baseline intact .. UNTOUCHED (no production source changed
 I4  Zero egress in off ...... NOT PROVEN this run (egress soak test
                               would be vacuous against the partial
                               registry; deferred to a re-run after
-                              slices 0021..0064 land).
+                              slices 0038..0061 land).
 I5  Hidden UI in off ........ NOT PROVEN this run (Playwright spec
-                              walks features.Registry; 44 features
-                              missing from registry means 44 surfaces
+                              walks features.Registry; 24 features
+                              missing from registry means 24 surfaces
                               would silently skip — false-green risk).
 I6  404 routes in off ....... NOT PROVEN this run (same reason as I5
                               — backend-route loop iterates registry).
@@ -344,7 +414,7 @@ I10 Type system .............. UNTOUCHED (aivet / aigen / ESLint
 I11 Final-gate proof ........ NOT ACHIEVED this run — that is exactly
                               the blocker this log records. Phase-50
                               cannot be marked closed until slices
-                              0021..0064 land and this slice re-runs
+                              0038..0061 land and this slice re-runs
                               green.
 I12 Client / background ..... UNTOUCHED (no service worker manifest,
                               client storage key, background job, or
@@ -352,7 +422,7 @@ I12 Client / background ..... UNTOUCHED (no service worker manifest,
 
 Net effect on the AI-Off Contract: zero diff, zero new risk, zero
 new proof. The contract remains exactly as the predecessor slices
-0001..0020 left it.
+0001..0037 + 0062..0064 left it.
 
 === STATUS ===
 EXIT=1
