@@ -85,6 +85,7 @@ import (
 	smartchargeschedulesuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion"
 	batteryhealthforecastnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative"
 	chargingcurvefingerprintclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering"
+	costforecastnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 
@@ -1080,6 +1081,32 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		chargingcurvefingerprintclustering.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// cost-forecast-narration tools (Phase-50 / C4, slice
+	// 0029). Adds `query_cost_forecast` to the shared tool
+	// registry so the dispatcher can resolve it for the
+	// cost-forecast-narration strategy. Same ordering rule as
+	// the other slice tools above: must be registered before the
+	// handler constructor below so the strategy's allowedTools
+	// resolve at boot. The CostForecaster adapter delegates to
+	// the same package-level api.ComputeCostForecast helper that
+	// also backs the canonical
+	// GET /api/v1/analytics/cost-forecast handler — the AI
+	// narrator quotes the SAME deterministic forecast the chart
+	// renders (no duplicated SQL).
+	tools.RegisterCostForecastNarrationTools(aiToolRegistry, tools.CostForecastNarrationSources{
+		Forecaster: NewAICostForecaster(db),
+	})
+	// cost-forecast-narration handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiCostForecastNarrationHandler := NewAICostForecastNarrationHandler(
+		aiRegistry,
+		aiToolRegistry,
+		costforecastnarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
@@ -2761,7 +2788,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

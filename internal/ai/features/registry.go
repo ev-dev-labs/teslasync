@@ -1122,6 +1122,56 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0029 — C4 Cost forecast narration.
+	//
+	// Opt-in LLM narrator that EXPLAINS the deterministic cost
+	// forecast on the Cost Analysis page — historical monthly cost
+	// totals, the next-N-month linear-regression projection with
+	// seasonal adjustment and an approximate 95% prediction interval,
+	// the home-vs-supercharger split, the gas-comparison savings
+	// numbers, and the deterministic insights the existing handler
+	// already emits. The AI surface narrates assumptions and
+	// uncertainty in plain language; it never invents numbers and
+	// never persists state.
+	//
+	// The deterministic CostAnalysisPage (CostForecastSection,
+	// CostBreakdownSection, GasComparisonSection, plus the existing
+	// insights chips) and the existing `useCostForecast` hook remain
+	// the canonical baseline visible to every user. The AI section is
+	// a panel rendered ABOVE the deterministic forecast; it is HIDDEN
+	// entirely when ai_mode='off' or the per-feature toggle is off
+	// (ADR-015 §I3, §I5, §I6).
+	//
+	// Tools: query_cost_forecast — a deterministic typed envelope
+	// derived from the SAME ComputeCostForecast helper that the
+	// canonical baseline GET /analytics/cost-forecast handler uses;
+	// the AI narration is therefore grounded in the same numbers the
+	// chart renders, never a parallel re-implementation.
+	//
+	// NeedsRAG: false — the slice prompt lists only the single typed
+	// tool, so the F7 retrieval entry point is intentionally not
+	// invoked.
+	//
+	// JobNames / PushKinds: explicitly empty (no background job, no
+	// notification/push channel surface). features.CoverageOK rejects
+	// nil; the empty slice is the affirmative "no surface" signal.
+	"cost-forecast-narration": {
+		ID:          "cost-forecast-narration",
+		Name:        "Cost forecast narration",
+		Description: "Opt-in LLM narrator that explains the deterministic cost forecast on the Cost Analysis page — historical monthly totals, the linear-regression projection with seasonal adjustment and approximate 95% prediction interval, the home-vs-supercharger split, gas-comparison savings, and the deterministic insights — with explicit assumptions and uncertainty. The deterministic cost-forecast chart and breakdown panels remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's home charger address nor the supercharger sites they regularly use.",
+		Tier:        "C",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/charging/costs/forecast/narrate"},
+			Frontend:  []string{"/charging/costs"},
+			UITestIDs: []string{"ai-feature-cost-forecast-narration-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

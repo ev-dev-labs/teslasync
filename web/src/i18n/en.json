@@ -2468,6 +2468,10 @@
         "charging-curve-fingerprint-clustering": {
           "label": "Charging-curve fingerprint clustering",
           "description": "Opt-in LLM narrator that names and explains each deterministic charging-curve cluster fingerprint — peak power tier (L1 / L2 / DC fast), session count per cluster, ramp shape, dominant charger type, and total energy per session — grounded in the same per-cluster envelope the curves render. The deterministic charging-curve charts, per-session labels, and distribution panel on the Charging Curve page remain the canonical baseline when AI is off."
+        },
+        "cost-forecast-narration": {
+          "label": "Cost forecast narration",
+          "description": "Opt-in LLM narrator that explains the deterministic charging-cost forecast — historical monthly trend, projected cost / cost_low / cost_high band, home-vs-supercharger split, and the top deterministic insight — grounded in the same numeric envelope the chart renders, and honest that the band is an APPROXIMATE prediction interval rather than a strict 95% confidence interval. The deterministic cost forecast chart, summary cards, breakdown, savings calculator, monthly cost table, time-of-use analysis, lifetime summary, and environmental impact card on the Cost Analysis page remain the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -4029,6 +4033,12 @@
     "home": "Home / AC"
   },
   "costAnalysis": {
+    "aiNarrative": {
+      "title": "Narrate the charging-cost forecast",
+      "badge": "AI",
+      "description": "Ask the AI narrator to explain the deterministic charging-cost forecast — the historical trend, the projected cost / cost_low / cost_high band, the home-vs-supercharger split, and the deterministic insight. The dollar amounts are the same the chart below shows; the narrator only explains them and is honest that the band is an APPROXIMATE prediction interval, not a strict 95% confidence interval.",
+      "generateButton": "Narrate forecast"
+    },
     "chargerType": {
       "title": "Cost by Charger Type",
       "sessions": "sessions"

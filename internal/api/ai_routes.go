@@ -130,6 +130,7 @@ func mountAIRoutes(
 	aiSmartChargeSchedule *AISmartChargeScheduleHandler,
 	aiBatteryHealth *AIBatteryHealthHandler,
 	aiChargingCurveClustering *AIChargingCurveClusteringHandler,
+	aiCostForecastNarration *AICostForecastNarrationHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -314,6 +315,24 @@ func mountAIRoutes(
 			chargingCurveClusteringHandler = aiChargingCurveClustering.ServeHTTP
 		}
 		r.Post("/charging/curves/clusters/explain", g.Wrap("charging-curve-fingerprint-clustering", chargingCurveClusteringHandler))
+
+		// cost-forecast-narration (Phase-50 / C4, slice 0029)
+		// narrates the deterministic cost forecast that the SPA's
+		// CostAnalysisPage already renders from
+		// GET /api/v1/analytics/cost-forecast. The route lives
+		// under /ai/charging/costs/forecast/narrate so it is
+		// namespaced under the existing /charging family. Same
+		// stub-fallback pattern as the other AI handlers — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// canonical baseline route at
+		// GET /api/v1/analytics/cost-forecast is unchanged.
+		var costForecastNarrationHandler http.HandlerFunc = aiCostForecastNarrationStubHandler
+		if aiCostForecastNarration != nil {
+			costForecastNarrationHandler = aiCostForecastNarration.ServeHTTP
+		}
+		r.Post("/charging/costs/forecast/narrate", g.Wrap("cost-forecast-narration", costForecastNarrationHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -606,6 +625,15 @@ func aiBatteryHealthStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiChargingCurveClusteringStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai charging-curve fingerprint clustering is not yet implemented")
+}
+
+// aiCostForecastNarrationStubHandler mirrors
+// aiChargingCurveClusteringStubHandler for the C4 slice
+// (Phase-50 / 0029 cost-forecast-narration). Reachable only when
+// AICostForecastNarrationHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiCostForecastNarrationStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai cost forecast narration is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

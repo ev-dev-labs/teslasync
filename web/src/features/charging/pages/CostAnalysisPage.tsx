@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/feedback';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { SavedViewMenu } from '@/components/data-display';
 import { PrintButton } from '@/components/ui';
+import { AICostForecastNarration } from '@/components/ai/AICostForecastNarration';
 import { useChargingSessionsPaginated, useCostForecast } from '@/api/hooks/useCharging';
 import { useSettings } from '@/hooks/useSettings';
 import { useUnits } from '@/hooks/useUnits';
@@ -151,6 +152,8 @@ export default function CostAnalysisPage() {
         <MonthlyCostTable data={monthlyData} />
 
         <TimeOfUseAnalysis hourlyData={hourlyData} touInsights={touInsights} />
+
+        <AICostForecastNarration vehicleId={vehicleId ?? undefined} />
 
         <CostForecastSection forecastData={forecastData} />
 

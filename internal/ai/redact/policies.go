@@ -318,3 +318,41 @@ func PolicyChargingCurveFingerprintClustering() Policy {
 		Mode:  ModeRedactedTags,
 	}
 }
+
+// PolicyCostForecastNarration is the per-feature redaction policy for
+// the Phase-50 / 0029 C4 cost-forecast-narration surface (LLM narrates
+// the deterministic monthly-cost forecast — historical aggregates,
+// projected next-N-month band, home-vs-supercharger split, gas
+// comparison, deterministic insights — for one vehicle).
+//
+// The slice prompt's redaction stanza is the source of truth:
+//
+//	Policy:               PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:      ClassVehicleName only; cost data is aggregate
+//	                      and user-visible
+//	Round-trip required:  yes
+//
+// The policy therefore mirrors PolicyDigest (Allow=ClassVehicleName,
+// Mode=ModeRedactedTags). Cost numbers and currency are aggregate
+// monetary values the user already sees on the chart, so the LLM can
+// reason about them directly. Every other identifier — VIN, lat/lng,
+// place names, street addresses, charger network labels — is converted
+// to a round-trip tag before the provider call and only restored in
+// the final SSE frame returned to the same authenticated user. A
+// leaked transcript therefore reveals neither the user's home charger
+// address nor the supercharger sites they regularly use.
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicySmartChargeScheduleSuggestion / PolicyAutoTripNaming /
+// PolicySpeedProfileInsights / PolicyChargingDiagnosis /
+// PolicyDriveCoaching / PolicyBatteryHealthForecastNarrative /
+// PolicyChargingCurveFingerprintClustering so a future per-feature
+// change to one slice's allow-list does not bleed across the others —
+// every feature is independently auditable.
+func PolicyCostForecastNarration() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

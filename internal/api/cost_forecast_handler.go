@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"net/http"
@@ -69,32 +70,105 @@ type gasComparison struct {
 
 // ── Handler ──────────────────────────────────────────────────
 
-// GetForecast handles GET /analytics/cost-forecast?vehicle_id=X&months=6
-func (h *CostForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
-	vehicleIDStr := r.URL.Query().Get("vehicle_id")
-	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
-		return
+// CostForecastMeta carries the analytic metadata that the deterministic
+// cost-forecast computation produces alongside the wire-shape response.
+// Slice phase-50/0029 (cost-forecast-narration): the AI narrator strategy
+// reads these fields to honestly explain how the forecast was produced and
+// what its uncertainty really represents (no inflated "95% CI" claims).
+//
+// The wire response shape (costForecastResponse) is intentionally not
+// extended: the chart page is locked to the existing JSON contract. The
+// metadata struct lives here so that BOTH the existing GetForecast handler
+// AND the AI cost-forecast adapter can call ComputeCostForecast and reuse
+// the SAME deterministic computation — never two copies of the SQL.
+type CostForecastMeta struct {
+	HistoricalMonthCount int
+	MinRequiredMonths    int
+	HasEnoughData        bool
+	DataThroughMonth     string
+	ForecastMonths       int
+	ForecastMethod       string
+	UncertaintyMethod    string
+	UncertaintyLevel     string
+	Assumptions          []string
+}
+
+// ComputeCostForecast is the canonical deterministic cost forecast used by
+// both the existing GET /analytics/cost-forecast handler and the
+// phase-50/0029 AI narrator. The wire-shape response and analytic metadata
+// are produced from a single SQL/computation path so that the AI narration
+// is grounded in the same numbers the chart renders.
+//
+// The minimum-data threshold (3 monthly aggregates) matches the silent
+// short-circuit inside computeForecast; surfacing it here lets the AI
+// narrator refuse to project on insufficient data instead of inventing a
+// trend.
+func ComputeCostForecast(ctx context.Context, db *database.DB, vehicleID int64, months int) (costForecastResponse, CostForecastMeta, error) {
+	const minRequiredMonths = 3
+
+	if months <= 0 || months > 24 {
+		months = 6
 	}
-	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
+
+	historical, err := loadCostHistorical(ctx, db, vehicleID)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
-		return
+		return costForecastResponse{}, CostForecastMeta{}, err
 	}
 
-	forecastMonths := 6
-	if m, err := strconv.Atoi(r.URL.Query().Get("months")); err == nil && m > 0 && m <= 24 {
-		forecastMonths = m
+	tmpHandler := &CostForecastHandler{db: db}
+	forecast := tmpHandler.computeForecast(historical, months)
+	breakdown := tmpHandler.computeBreakdown(ctx, vehicleID, historical)
+	gasCmp := tmpHandler.computeGasComparison(ctx, vehicleID, historical)
+	insights := generateCostInsights(historical, breakdown, gasCmp)
+
+	resp := costForecastResponse{
+		Historical:    historical,
+		Forecast:      forecast,
+		Breakdown:     breakdown,
+		GasComparison: gasCmp,
+		Insights:      insights,
 	}
 
-	ctx := r.Context()
+	dataThrough := ""
+	if len(historical) > 0 {
+		dataThrough = historical[len(historical)-1].Month
+	}
 
-	// ── 1. Monthly cost aggregation ──────────────────────────
-	// Phase-42 (000184_charging_si): SI canonical columns. cost_decimal
-	// replaces cost; total_energy_added_wh / 1000.0 yields kWh; started_at
-	// replaces the legacy timestamp column. The historicalMonth.KWh JSON shape (kWh, not Wh)
-	// is preserved by the conversion at the SQL boundary.
-	rows, err := h.db.Pool.Query(ctx, `
+	uncertaintyLevel := "approximate 95% prediction interval (t≈2)"
+	if float64(len(historical)) > 30 {
+		uncertaintyLevel = "approximate 95% prediction interval (z=1.96)"
+	}
+
+	assumptions := []string{
+		"Forecast is a least-squares linear regression over monthly cost totals.",
+		"Calendar-month seasonality is added as the deviation of each calendar month's average cost from the overall average.",
+		"Forecast kWh is a separate linear regression over monthly kWh totals.",
+		"Negative projections are clamped to zero — a downward trend cannot drive cost below zero.",
+		"Cost-low / cost-high describe an approximate prediction interval, not a strict 95% confidence interval, and assume residuals are roughly Gaussian.",
+		fmt.Sprintf("At least %d months of charging history with cost > 0 are required before any forecast is produced.", minRequiredMonths),
+	}
+
+	meta := CostForecastMeta{
+		HistoricalMonthCount: len(historical),
+		MinRequiredMonths:    minRequiredMonths,
+		HasEnoughData:        len(historical) >= minRequiredMonths,
+		DataThroughMonth:     dataThrough,
+		ForecastMonths:       months,
+		ForecastMethod:       "linear regression + calendar-month seasonal adjustment",
+		UncertaintyMethod:    "residual standard error projected through prediction-interval formula",
+		UncertaintyLevel:     uncertaintyLevel,
+		Assumptions:          assumptions,
+	}
+
+	return resp, meta, nil
+}
+
+// loadCostHistorical runs the canonical monthly-aggregation query used by
+// both the deterministic forecast and the AI narrator's tool. Extracted
+// from GetForecast so a single SQL/scan path produces the historical[]
+// slice both call sites consume.
+func loadCostHistorical(ctx context.Context, db *database.DB, vehicleID int64) ([]historicalMonth, error) {
+	rows, err := db.Pool.Query(ctx, `
 		SELECT DATE_TRUNC('month', started_at)                                AS month,
 		       SUM(cost_decimal)                                              AS total_cost,
 		       SUM(total_energy_added_wh) / 1000.0                            AS total_kwh,
@@ -104,9 +178,7 @@ func (h *CostForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request
 		WHERE vehicle_id = $1 AND cost_decimal > 0
 		GROUP BY month ORDER BY month`, vehicleID)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("cost-forecast: monthly query failed")
-		writeError(w, http.StatusInternalServerError, "failed to get cost data")
-		return
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -127,29 +199,41 @@ func (h *CostForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request
 		}
 		historical = append(historical, m)
 	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	if historical == nil {
 		historical = []historicalMonth{}
 	}
+	return historical, nil
+}
 
-	// ── 2. Forecast via linear regression + seasonal adjustment ─
-	forecast := h.computeForecast(historical, forecastMonths)
+// GetForecast handles GET /analytics/cost-forecast?vehicle_id=X&months=6
+func (h *CostForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
+	vehicleIDStr := r.URL.Query().Get("vehicle_id")
+	if vehicleIDStr == "" {
+		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		return
+	}
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		return
+	}
 
-	// ── 3. Cost breakdown (home vs supercharger) ─────────────
-	breakdown := h.computeBreakdown(ctx, vehicleID, historical)
+	forecastMonths := 6
+	if m, err := strconv.Atoi(r.URL.Query().Get("months")); err == nil && m > 0 && m <= 24 {
+		forecastMonths = m
+	}
 
-	// ── 4. Gas savings projection ────────────────────────────
-	gasCmp := h.computeGasComparison(ctx, vehicleID, historical)
+	resp, _, err := ComputeCostForecast(r.Context(), h.db, vehicleID, forecastMonths)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("cost-forecast: compute failed")
+		writeError(w, http.StatusInternalServerError, "failed to get cost data")
+		return
+	}
 
-	// ── 5. Insights ──────────────────────────────────────────
-	insights := generateCostInsights(historical, breakdown, gasCmp)
-
-	writeJSON(w, http.StatusOK, costForecastResponse{
-		Historical:    historical,
-		Forecast:      forecast,
-		Breakdown:     breakdown,
-		GasComparison: gasCmp,
-		Insights:      insights,
-	})
+	writeJSON(w, http.StatusOK, resp)
 }
 
 // ── Forecast computation ─────────────────────────────────────
@@ -267,7 +351,7 @@ func (h *CostForecastHandler) computeForecast(historical []historicalMonth, mont
 
 // ── Breakdown computation ────────────────────────────────────
 
-func (h *CostForecastHandler) computeBreakdown(ctx interface{ Deadline() (time.Time, bool); Done() <-chan struct{}; Err() error; Value(interface{}) interface{} }, vehicleID int64, historical []historicalMonth) costBreakdown {
+func (h *CostForecastHandler) computeBreakdown(ctx context.Context, vehicleID int64, historical []historicalMonth) costBreakdown {
 	var homeCost, homekWh, scCost, sckWh float64
 	var homeCount, scCount int
 
@@ -328,7 +412,7 @@ func (h *CostForecastHandler) computeBreakdown(ctx interface{ Deadline() (time.T
 
 // ── Gas comparison ───────────────────────────────────────────
 
-func (h *CostForecastHandler) computeGasComparison(ctx interface{ Deadline() (time.Time, bool); Done() <-chan struct{}; Err() error; Value(interface{}) interface{} }, vehicleID int64, historical []historicalMonth) gasComparison {
+func (h *CostForecastHandler) computeGasComparison(ctx context.Context, vehicleID int64, historical []historicalMonth) gasComparison {
 	const defaultGasPrice = 1.50 // $/L
 	const defaultConsumption = 0.085 // L/km (gas car)
 

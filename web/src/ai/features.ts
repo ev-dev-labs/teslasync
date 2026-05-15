@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "trip-planner-llm-agent" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -123,6 +123,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-chatbot-llm-root"] as const),
+  }),
+  "cost-forecast-narration": Object.freeze({
+    id: "cost-forecast-narration",
+    name: "Cost forecast narration",
+    description: "Opt-in LLM narrator that explains the deterministic cost forecast on the Cost Analysis page — historical monthly totals, the linear-regression projection with seasonal adjustment and approximate 95% prediction interval, the home-vs-supercharger split, gas-comparison savings, and the deterministic insights — with explicit assumptions and uncertainty. The deterministic cost-forecast chart and breakdown panels remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's home charger address nor the supercharger sites they regularly use.",
+    tier: "C",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-cost-forecast-narration-root"] as const),
   }),
   "digest-narration": Object.freeze({
     id: "digest-narration",
@@ -268,6 +279,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "charging-curve-fingerprint-clustering",
   "charging-diagnosis",
   "chatbot-llm",
+  "cost-forecast-narration",
   "digest-narration",
   "drive-coaching",
   "nl-alert-builder",
