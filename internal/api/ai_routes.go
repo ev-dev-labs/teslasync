@@ -136,6 +136,7 @@ func mountAIRoutes(
 	aiCabinTemperatureImpactNarrative *AICabinTemperatureImpactHandler,
 	aiTirePressureTrendReasoning *AITirePressureTrendHandler,
 	aiAlertTuning *AIAlertTuningHandler,
+	aiInboxCategorize *AIInboxCategorizationHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -449,6 +450,33 @@ func mountAIRoutes(
 			alertTuningHandler = aiAlertTuning.ServeHTTP
 		}
 		r.Post("/alerts/rules/{ruleID}/tune/draft", g.Wrap("alert-tuning-suggestions", alertTuningHandler))
+
+		// inbox-auto-categorization (Phase-50 / A2, slice 0035).
+		// Opt-in LLM that reads recent notification_log rows
+		// (last 7 days by default) for the requested vehicle +
+		// severities, buckets them into a closed taxonomy of
+		// nine categories (battery / charging / climate / tire
+		// / security / connectivity / maintenance / noise /
+		// other) using the deterministic substring mapper in
+		// internal/ai/tools/inbox_auto_categorization.go, and
+		// proposes which category buckets dominate the inbox.
+		// The route lives under /ai/alerts/inbox/categorize so
+		// it is namespaced under the existing /alerts surface
+		// family. Same stub-fallback pattern — a nil handler is
+		// possible during partial wiring but the off-mode 404
+		// invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode. The canonical
+		// baseline route (GET /api/v1/notifications/logs) is
+		// unchanged; the AI is propose-only and never persists
+		// — the user reviews the suggested category chips in
+		// InboxBody and applies them via the canonical
+		// rule_id filter on the existing baseline list endpoint
+		// (ADR-015 §I3 + §I8).
+		var inboxCategorizationHandler http.HandlerFunc = aiInboxCategorizationStubHandler
+		if aiInboxCategorize != nil {
+			inboxCategorizationHandler = aiInboxCategorize.ServeHTTP
+		}
+		r.Post("/alerts/inbox/categorize", g.Wrap("inbox-auto-categorization", inboxCategorizationHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
@@ -796,6 +824,15 @@ func aiTirePressureTrendReasoningStubHandler(w http.ResponseWriter, _ *http.Requ
 // 404 invariant is held by the guard, not the stub.
 func aiAlertTuningStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai alert tuning suggestions is not yet implemented")
+}
+
+// aiInboxCategorizationStubHandler mirrors aiAlertTuningStubHandler
+// for the A2 slice (Phase-50 / 0035 inbox-auto-categorization).
+// Reachable only when AIInboxCategorizationHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiInboxCategorizationStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai inbox auto-categorization is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

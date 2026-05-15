@@ -1,0 +1,576 @@
+=== PREFLIGHT ===
+$ git --no-pager rev-parse --abbrev-ref HEAD
+feat/vampire-drain-explanation
+EXIT=0
+
+$ git --no-pager log --oneline -1
+3b547f15e (HEAD -> feat/vampire-drain-explanation) feat(ai): add Alert tuning suggestions
+EXIT=0
+(Predecessor 0034 is the immediate parent; the branch name dates to slice 0030
+which was the original branch root. All Phase-50 work since then has been
+linear commits on this branch.)
+
+$ git --no-pager status --short
+(clean — no dirty files at start of slice; slice files added below)
+EXIT=0
+
+# Predecessor verification — every slice listed in Depends-on
+# (0001 F0 through 0010 F9) PLUS every Phase-50 slice 0011-0034
+# must have a log ending in STATUS=DONE before we may modify
+# production code (Honesty Covenant rule 7).
+
+$ Get-ChildItem '.github/prompts/db-refactor/logs/phase-50-0*.log' |
+    ForEach-Object { 'STATUS=' + (Select-String -Path $_.FullName -Pattern '^STATUS=' | Select-Object -Last 1).Line }
+phase-50-0001-F0-ai-off-contract.log                     -> STATUS=DONE
+phase-50-0002-F1-provider-abstraction.log                -> STATUS=DONE
+phase-50-0003-F2-settings-ui.log                         -> STATUS=DONE
+phase-50-0004-F3-ai-call-log.log                         -> STATUS=DONE
+phase-50-0005-F4-tool-use-framework.log                  -> STATUS=DONE
+phase-50-0006-F5-sse-streaming.log                       -> STATUS=DONE
+phase-50-0007-F6-eval-harness.log                        -> STATUS=DONE
+phase-50-0008-F7-embeddings-pgvector.log                 -> STATUS=DONE
+phase-50-0009-F8-redaction.log                           -> STATUS=DONE
+phase-50-0010-F9-rate-limiter-cost-cap.log               -> STATUS=DONE
+phase-50-0011-chatbot-llm.log                            -> STATUS=DONE
+phase-50-0012-digest-narration.log                       -> STATUS=DONE
+phase-50-0013-yir-narration.log                          -> STATUS=DONE
+phase-50-0014-anomaly-explanations.log                   -> STATUS=DONE
+phase-50-0015-nl-alert-builder.log                       -> STATUS=DONE
+phase-50-0016-nl-automation-builder.log                  -> STATUS=DONE
+phase-50-0017-nl-search.log                              -> STATUS=DONE
+phase-50-0018-drive-coaching.log                         -> STATUS=DONE
+phase-50-0019-charging-diagnosis.log                     -> STATUS=DONE
+phase-50-0020-rag-help.log                               -> STATUS=DONE
+phase-50-0021-nl-drive-search-replay.log                 -> STATUS=DONE
+phase-50-0022-speed-profile-insights.log                 -> STATUS=DONE
+phase-50-0023-route-efficiency-suggestions.log           -> STATUS=DONE
+phase-50-0024-auto-trip-naming.log                       -> STATUS=DONE
+phase-50-0025-trip-planner-llm-agent.log                 -> STATUS=DONE
+phase-50-0026-smart-charge-schedule-suggestion.log       -> STATUS=DONE
+phase-50-0027-battery-health-forecast-narrative.log      -> STATUS=DONE
+phase-50-0028-charging-curve-fingerprint-clustering.log  -> STATUS=DONE
+phase-50-0029-cost-forecast-narration.log                -> STATUS=DONE
+phase-50-0030-vampire-drain-explanation.log              -> STATUS=DONE
+phase-50-0031-preheat-precool-recommender.log            -> STATUS=DONE
+phase-50-0032-cabin-temperature-impact-narrative.log     -> STATUS=DONE
+phase-50-0033-tire-pressure-trend-reasoning.log          -> STATUS=DONE
+phase-50-0034-alert-tuning-suggestions.log               -> STATUS=DONE
+EXIT=0
+(All 34 predecessors STATUS=DONE; this slice is unblocked.)
+
+=== SURVEY ===
+
+# 1) Baseline route + page (must remain canonical when AI is off)
+
+Backend: GET /api/v1/notifications/logs (NotificationHandler.GetLogs in
+internal/api/notification_handler.go) returns a paginated list of
+NotificationLog rows for the requested vehicle / severity / rule_id /
+search / from / to / read state filter combination. The route is
+unguarded (no AI gate) and is the deterministic source of truth for
+inbox content.
+
+Frontend: /notifications/inbox renders InboxPage which delegates to
+InboxBody (web/src/features/notifications/components/InboxBody.tsx).
+InboxBody owns:
+  - URL-backed filter + view state (severity, vehicle_id, rule_id,
+    search, read state, from/to, view mode)
+  - Bulk selection + bulk actions (mark read, archive/restore, delete)
+  - Auto-mark-read on open (opt-out via localStorage)
+  - Per-row context menu
+  - Day-grouped flat list AND threaded grouped list
+
+The slice prompt's frontend route metadata (`/alerts/inbox`) is a
+canonical-name placeholder; the actual SPA mount is /notifications/inbox.
+Slice 0034 has the same divergence (registers `/alerts/studio` while the
+page mounts at /notifications/studio); we keep the convention so the
+9999 final-gate's frontend-route audit script — which only verifies
+shape, not literal mount paths — keeps working.
+
+# 2) Existing AI-feature wiring patterns (template = 0034
+#    alert-tuning-suggestions, the immediately-preceding A-tier slice)
+
+Strategy:
+  internal/ai/strategies/alert-tuning-suggestions/strategy.go declares
+  FeatureID="alert-tuning-suggestions", a system prompt that is the
+  contract for the LLM, allowedTools=[draft_alert_rule_patch,
+  validate_alert_rule], PolicyAlertBuilder redaction.
+
+Tools:
+  internal/ai/tools/alert_tuning.go — draft_alert_rule_patch is a typed
+  read-only tool that proposes an AlertRule patch grounded in recent
+  firing history. validate_alert_rule was already registered by N1.
+
+Handler:
+  internal/api/ai_alert_tuning_handler.go exposes ServeHTTP at
+  POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft, decodes a typed body,
+  resolves the provider via *provider.Registry.For("alert-tuning-suggestions"),
+  opens an SSE writer to the response, and runs
+  dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter).
+
+Router wiring:
+  internal/api/router.go imports the strategy, calls
+  tools.RegisterAlertTuningSuggestionsTools(...) on the process tool
+  registry, constructs the handler, and threads it as a parameter into
+  mountAIRoutes(...). internal/api/ai_routes.go declares a stub-fallback
+  inside the /ai/* sub-router so off-mode 404 holds even with a nil
+  handler at boot.
+
+Job stub:
+  internal/jobs/ai_idle_drain_indexer.go is the canonical pattern for
+  features that declare a JobNames entry: a fail-closed cron stub that
+  re-checks ai_mode + per-feature toggle on every tick and returns
+  {Skipped: 1} if either is off. The actual fan-out implementation
+  lands in a future slice; the gate ships today.
+
+SPA component:
+  web/src/components/ai/AIAlertTuningSuggestions.tsx — wrapped with
+  withAiFeature('alert-tuning-suggestions', InnerSection). Uses
+  useAiStream targeting /ai/alerts/rules/{ruleID}/tune/draft. Captures
+  tool_result for draft_alert_rule_patch into proposal state. "Apply
+  to form" button copies the proposal into the parent's form state via
+  onApplyDraft callback. Computed disabled, dedicated cleanup effect.
+
+i18n:
+  en.json carries settings.ai.features.alert-tuning-suggestions
+  (label + description) plus notifications.alertStudio.aiTuning.* for
+  the visible component copy. ar.json + he.json are placeholders that
+  fall back to en via i18next's fallbackLng.
+
+Eval goldens + canned:
+  internal/ai/strategies/alert-tuning-suggestions/goldens.yaml has 3
+  goldens (typical_noisy_rule, insufficient_history, refusal_other_rule)
+  with paired canned/*.yaml provider replies for the F6 mock provider.
+
+# 3) Inbox-categorization-specific shape
+
+Source port shape:
+  LoadCategoryCounts(ctx, filters database.NotificationLogFilters)
+    -> ([]CategoryCount, totalInWindow int, minRequiredEvents int, error)
+  The production adapter in internal/api/ai_inbox_categorization_handler.go
+  composes NotificationRepo.GetLogsFiltered + per-unique-AlertID lookup
+  via AlertRuleRepo.GetByID + tools.BucketByCategory.
+
+Closed taxonomy (alphabetical, "other" last):
+  ["battery", "charging", "climate", "connectivity", "maintenance",
+   "noise", "security", "tire", "other"]
+
+Substring-mapper ordering:
+  CategoryForSignal in internal/ai/tools/inbox_auto_categorization.go
+  maps signal_name to category by deterministic substring matching.
+  Edge case: "tpms_warn" matches "tpms" (tire family) BEFORE "warn"
+  (maintenance family) — verified by test
+  TestCategoryForSignal/tpms_warn.
+
+Tool registration:
+  This slice registers BOTH new tools (draft_alert_categories +
+  validate_alert_category) via tools.RegisterInboxAutoCategorizationTools.
+  Unlike slice 0034 which reused validate_alert_rule from N1, slice
+  0035's validate_alert_category is brand-new — categories live in
+  this slice's closed taxonomy.
+
+JobNames + PushKinds:
+  - JobNames=["ai_alert_inbox_categorizer"]: declared in registry,
+    implemented as a fail-closed gate stub at
+    internal/jobs/ai_alert_inbox_categorizer.go. Tests assert the
+    off-mode + toggle-off + settings-error fail-closed contract.
+  - PushKinds=["ai_alert_category_suggested"]: declared only. The
+    actual push fan-out worker is documented as future per-precedent
+    slices (digest, yir).
+
+=== REASONING ===
+
+# Why preserve baseline by HOC composition, not handler branch
+
+The propose-only contract (ADR-015 §I3 + §I8) requires that the
+deterministic NotificationFilterBar + GET /api/v1/notifications/logs
+path remains the SOLE write path for inbox state. We compose by:
+
+  1. Wrapping the AI section with withAiFeature('inbox-auto-categorization',
+     InnerSection) so the entire tree is ABSENT (returns null) when
+     ai_mode='off' or the per-feature toggle is off. This is structural
+     hiding, not CSS hiding — the DOM never carries a disabled AI
+     button (ADR-015 §I5).
+  2. Mounting /api/v1/ai/alerts/inbox/categorize ONLY through
+     guard.Wrap("inbox-auto-categorization", ...). The guard returns
+     404 BEFORE the handler runs in off mode, so even a misbehaving
+     client cannot tickle the LLM (ADR-015 §I6 + §I7).
+  3. Routing the "Apply" affordance back through the existing URL-backed
+     rule_id filter, NOT a new write path. The AI panel's
+     onApplyCategories callback only calls setFiltersBatch — the
+     deterministic baseline is what writes to the URL and re-fetches
+     /api/v1/notifications/logs. No new persistence path exists.
+
+# Why register both tools in this slice instead of reusing existing ones
+
+draft_alert_rule_patch (slice 0034) is shaped around tuning a SINGLE
+AlertRule's thresholds; it is not reusable for multi-rule histogram
+bucketing. validate_alert_rule (slice N1) validates a RULE PATCH, not
+a CATEGORY LABEL. The closed category taxonomy and the histogram-shape
+output are unique to this slice, so two new tools is the correct
+factoring. They live in a single file
+(internal/ai/tools/inbox_auto_categorization.go) so the closed-taxonomy
+constants + substring mapper + bucketer are colocated and reusable for
+the future ai_alert_inbox_categorizer fan-out worker.
+
+# Why the closed-taxonomy substring mapper is deterministic
+
+CategoryForSignal is pure: same input → same output, no external state,
+no time dependence, no DB. The bucket counts the LLM sees come from
+the same deterministic mapping the future fan-out worker will use, so
+the LLM's narration stays consistent with the user's eventual filter
+state. This is the classical LLM-grounding pattern: numbers are
+computed by deterministic Go code; the LLM's job is purely descriptive
+narration over those numbers.
+
+# Why ai_alert_inbox_categorizer is a no-op gate today
+
+The per-user category-recompute + push fan-out is naturally a
+fan-out-and-batch worker (see methodology 0030 "Why a job and not an
+inline …" reasoning). Shipping the fail-closed gate today proves the
+ADR-015 §I12 #3 invariant ("background dispatcher gate trips before
+execution") for the JobNames entry registered by this slice. The
+actual fan-out implementation lands in a future slice when the push
+worker arrives; today's gate ensures off-mode users never receive an
+ai_alert_category_suggested push.
+
+# Why the eval golden's substring pins are narrow
+
+The first eval pass blocked on two false positives:
+  - "forecast" appearing inside the canned reply's "NOT a forecast"
+    disclaimer (substring match doesn't honor negation).
+  - "batt" matching the legitimate "battery" canonical category label
+    (the closed-taxonomy enforcement happens via validate_alert_category,
+    not via answer-substring blocking).
+Both pins were rephrased to target only the wrong-frame patterns
+("predicts that", "will likely", "regression model") and only the
+clearly out-of-taxonomy combined names ("battery_charging",
+"batt/charge"), without false-positiving on the canonical labels or
+the honest-method disclaimer.
+
+=== CHANGES ===
+
+Production:
+  + internal/ai/strategies/inbox-auto-categorization/strategy.go
+      Strategy with FeatureID="inbox-auto-categorization", system prompt
+      enforcing the closed taxonomy + propose-only contract,
+      allowedTools=[draft_alert_categories, validate_alert_category],
+      PolicyAlertBuilder redaction.
+  + internal/ai/tools/inbox_auto_categorization.go
+      Closed taxonomy constants, CategoryForSignal substring mapper,
+      BucketByCategory helper, draft_alert_categories tool,
+      validate_alert_category tool, RegisterInboxAutoCategorizationTools.
+  + internal/api/ai_inbox_categorization_handler.go
+      Handler at POST /api/v1/ai/alerts/inbox/categorize with body parser,
+      NewAIInboxCategorizationHandler/NewAIInboxCategorizationSource
+      constructors, ServeHTTP that opens SSE + dispatches.
+  + internal/jobs/ai_alert_inbox_categorizer.go
+      Fail-closed cron-stub job registered as JobNames entry. Re-checks
+      ai_mode + per-feature toggle on every tick.
+  + web/src/components/ai/AIInboxAutoCategorization.tsx
+      SPA component wrapped with withAiFeature. useAiStream targets
+      /ai/alerts/inbox/categorize. Captures tool_result for
+      draft_alert_categories. "Apply" copies deduped rule_ids back via
+      parent's onApplyCategories callback.
+  M internal/ai/features/registry.go
+      Added inbox-auto-categorization registry entry with full RouteSet:
+      Backend=POST /api/v1/ai/alerts/inbox/categorize,
+      Frontend=/alerts/inbox,
+      UITestIDs=[ai-feature-inbox-auto-categorization-root],
+      JobNames=[ai_alert_inbox_categorizer],
+      PushKinds=[ai_alert_category_suggested].
+  M internal/api/ai_routes.go
+      Added aiInboxCategorize *AIInboxCategorizationHandler param to
+      mountAIRoutes; mounted POST /alerts/inbox/categorize via
+      g.Wrap("inbox-auto-categorization", ...) with stub fallback for
+      nil handler. Added aiInboxCategorizationStubHandler.
+  M internal/api/router.go
+      Imported inboxautocategorization strategy. Registered both new
+      tools via tools.RegisterInboxAutoCategorizationTools(...). Built
+      aiInboxCategorizationHandler. Threaded into mountAIRoutes(...) call.
+  M web/src/features/notifications/components/InboxBody.tsx
+      Imported AIInboxAutoCategorization. Added handleApplyAICategories
+      callback wired to setFiltersBatch. Mounted the component below
+      the FilterBar.
+  M web/src/i18n/en.json
+      Added settings.ai.features.inbox-auto-categorization (label +
+      description). Added notifications.inbox.aiCategorize block (title,
+      badge, description, suggestButton, applyButton, previewLabel).
+  M web/src/ai/features.ts
+      Regenerated by tools/aigen — adds the slice's metadata to the SPA
+      mirror so withAiFeature can resolve uiTestIds.
+
+Tests:
+  + internal/ai/strategies/inbox-auto-categorization/strategy_test.go
+      Pins FeatureID, system prompt substrings (closed taxonomy +
+      honest-method disclaimer), allowedTools whitelist, defensive copy
+      of allowedTools, propose-only invariant (no mutating tools),
+      PolicyAlertBuilder redaction policy.
+  + internal/ai/tools/inbox_auto_categorization_test.go
+      18 tests across CategoryForSignal (every taxonomy bucket plus
+      the tpms_warn ordering edge case), BucketByCategory, both tools'
+      Validate paths (vehicle_id range, window_days range, severities
+      whitelist, label whitelist, etc.) and Execute paths.
+  + internal/api/ai_inbox_categorization_handler_test.go
+      TestInboxCategorizationAIOffNoAutoLabels — load-bearing AI-OFF
+      contract: AI route 404s in off mode (with toggle on); baseline
+      /api/v1/notifications/logs route returns 200 with a
+      NotificationLog list that has NO ai_category / auto_category /
+      ai_assigned fields. Plus body parser tests (empty, all fields,
+      bad vehicle_id, bad window, bad severity, bad rule_id, bad JSON,
+      unknown field) and nil-wiring panic tests.
+  + internal/jobs/ai_alert_inbox_categorizer_test.go
+      Off-mode + toggle-off + on-mode positive control + settings-error
+      fail-closed + nil-deps panic tests.
+
+Eval:
+  + internal/ai/strategies/inbox-auto-categorization/goldens.yaml
+      3 goldens: typical_noisy_inbox (happy path: must call both tools,
+      narrate with descriptive counts and honest-method qualifier),
+      insufficient_history (must surface has_enough_history=false
+      honestly, no fabricated baseline), refusal_other_inbox (must NOT
+      call any tool when scope is wrong).
+  + internal/ai/strategies/inbox-auto-categorization/canned/typical_noisy_inbox.yaml
+  + internal/ai/strategies/inbox-auto-categorization/canned/insufficient_history.yaml
+  + internal/ai/strategies/inbox-auto-categorization/canned/refusal_other_inbox.yaml
+
+SPA tests:
+  + web/src/components/ai/__tests__/TestInboxCategorizationAIOffNoAutoLabels.test.tsx
+      6 tests:
+        Off-mode contract (3): mode=off+toggle on hides; mode=cloud+toggle
+        off hides; mode=cloud+toggle on renders (positive control).
+        On-mode wiring (3): single POST against
+        /api/v1/ai/alerts/inbox/categorize + first delta render; double
+        click while streaming is no-op; tool_result renders preview chips
+        + Apply copies deduped rule_ids to onApplyCategories.
+
+=== GATE ===
+
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/ai/features.ts
+ M web/src/features/notifications/components/InboxBody.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/inbox-auto-categorization/
+?? internal/ai/tools/inbox_auto_categorization.go
+?? internal/ai/tools/inbox_auto_categorization_test.go
+?? internal/api/ai_inbox_categorization_handler.go
+?? internal/api/ai_inbox_categorization_handler_test.go
+?? internal/jobs/ai_alert_inbox_categorizer.go
+?? internal/jobs/ai_alert_inbox_categorizer_test.go
+?? web/src/components/ai/AIInboxAutoCategorization.tsx
+?? web/src/components/ai/__tests__/TestInboxCategorizationAIOffNoAutoLabels.test.tsx
+EXIT=0
+(All entries are within this slice's allowed-files list — see the
+prompt's "Allowed files" section. No silent drift.)
+
+$ go test -race -count=1 ./internal/ai/... ./internal/api/... ./internal/jobs/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations               3.077s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming                   3.115s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative  3.589s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative 3.668s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering 3.118s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis                 3.098s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm                        3.337s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration            3.435s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration                   3.033s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching                     3.360s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization          2.844s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder                   3.123s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder              3.110s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay             2.947s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search                          3.113s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender        3.158s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help                           2.903s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions       3.017s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion   2.817s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights             4.594s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning      4.529s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent             3.321s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation          3.031s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration                      4.713s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy                                      3.598s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter                        3.562s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream                                        1.270s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools                                         1.207s
+ok  github.com/ev-dev-labs/teslasync/internal/api                                              8.991s
+ok  github.com/ev-dev-labs/teslasync/internal/jobs                                             1.120s
+EXIT=0
+
+$ go run ./tools/aivet
+aivet: OK — 30 AI route(s), 28 feature(s) in registry, TS mirror in sync
+EXIT=0
+(One new route + one new feature compared to slice 0034's baseline of
+29/27 — exactly what this slice ships.)
+
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+$ go run ./cmd/ai-eval --feature inbox-auto-categorization
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 510.8µs elapsed)
+By feature:
+  inbox-auto-categorization      3/3 pass
+Details:
+  [PASS] inbox-auto-categorization/typical_noisy_inbox (510.8µs)
+  [PASS] inbox-auto-categorization/insufficient_history (0s)
+  [PASS] inbox-auto-categorization/refusal_other_inbox (0s)
+EXIT=0
+(NB: the prompt's `make ai-eval-fast --feature ...` is a make-style flag
+the existing Makefile does not surface; precedent slices 0030+ run
+`go run ./cmd/ai-eval --feature ...` directly. Same evaluator + same
+F6 mock-provider harness; same 3-golden requirement.)
+
+$ cd web; npx tsc --noEmit
+EXIT=0
+
+$ cd web; npm test -- --run TestInboxCategorizationAIOffNoAutoLabels
+RUN  v4.1.2 D:/repos/teslasync/web
+ ✓ src/components/ai/__tests__/TestInboxCategorizationAIOffNoAutoLabels.test.tsx (6 tests) 392ms
+ Test Files  1 passed (1)
+      Tests  6 passed (6)
+EXIT=0
+
+$ cd web; npx eslint src/components/ai/AIInboxAutoCategorization.tsx \
+                    src/components/ai/__tests__/TestInboxCategorizationAIOffNoAutoLabels.test.tsx \
+                    src/features/notifications/components/InboxBody.tsx
+EXIT=0
+(slice-scoped lint clean; the repo-wide `npm run lint` was already
+failing on unrelated pre-existing files outside this slice's allowed
+list — same baseline noted by slice 0034. The 23 errors / 2 warnings
+the global run reports come from InlineCallout, DensityToggle, TreeSelect,
+UptimeHeatmap, CommandPalette, AlertMessageEditor, AISettings,
+IncidentForm, ScheduledMaintenanceCard, ChatbotPage, SignalsWorkspacePage,
+useAiStream, useRangeState, rum.test, rum.ts — none in this slice's
+allowed list.)
+
+# W1 inline self-check — placeholder strings on this slice's component.
+$ Select-String -Path 'web/src/components/ai/AIInboxAutoCategorization.tsx' \
+                -Pattern 'future slice|coming soon|wiring lands|would call POST' |
+    Measure-Object | Select-Object -ExpandProperty Count
+0
+EXIT=0
+(Project-wide count is 1 in AIChatbotIndicator.tsx — a pre-existing
+documentation comment from before the W1 enforcement rule, identical
+state as recorded by slice 0034. Slice 0035's component count is 0.)
+
+# Off-mode focused proof — 404 contract + UI absence + baseline still works.
+$ go test -count=1 -run TestInboxCategorizationAIOffNoAutoLabels ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/api  0.190s
+EXIT=0
+(Asserts: AI route /api/v1/ai/alerts/inbox/categorize returns 404 with
+ai_mode='off' even when the per-feature toggle is on; 404 body does not
+leak feature/strategy/provider/category/categorize tokens; baseline
+/api/v1/notifications/logs returns 200 with NotificationLog shape
+carrying NO ai_category / auto_category / ai_assigned / ai_label fields.)
+
+=== COMMIT ===
+
+$ git add internal/ai/features/registry.go \
+          internal/ai/strategies/inbox-auto-categorization \
+          internal/ai/tools/inbox_auto_categorization.go \
+          internal/ai/tools/inbox_auto_categorization_test.go \
+          internal/api/ai_inbox_categorization_handler.go \
+          internal/api/ai_inbox_categorization_handler_test.go \
+          internal/api/ai_routes.go \
+          internal/api/router.go \
+          internal/jobs/ai_alert_inbox_categorizer.go \
+          internal/jobs/ai_alert_inbox_categorizer_test.go \
+          web/src/ai/features.ts \
+          web/src/components/ai/AIInboxAutoCategorization.tsx \
+          web/src/components/ai/__tests__/TestInboxCategorizationAIOffNoAutoLabels.test.tsx \
+          web/src/features/notifications/components/InboxBody.tsx \
+          web/src/i18n/en.json \
+          .github/prompts/db-refactor/logs/phase-50-0035-inbox-auto-categorization.log
+
+$ git commit -m "feat(ai): add Inbox auto-categorization
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+(see commit hash in git log immediately following this slice)
+
+=== AI-OFF CONTRACT ===
+I1 default-off:     PASS  (registry entry has DefaultOn: false; the
+                           inbox-auto-categorization toggle is opt-in
+                           per-user even when ai_mode='cloud'; verified
+                           by `go test ./internal/ai/features/...` plus
+                           the SPA off-mode test's "toggle off but
+                           mode=cloud" assertion.)
+I3 baseline intact: PASS  (the deterministic NotificationFilterBar +
+                           GET /api/v1/notifications/logs path is
+                           unchanged. The SPA integration adds the AI
+                           component as a sibling to the FilterBar; the
+                           only callback flowing back into baseline state
+                           is handleApplyAICategories which writes
+                           through the existing setFiltersBatch URL
+                           writer — same path the user uses by hand.
+                           Verified by TestInboxCategorizationAIOffNoAutoLabels
+                           on both Go + React sides; the Go test fetches
+                           a stub baseline route and asserts NO new
+                           AI-related JSON fields leak in.)
+I4 zero egress:     PASS  (off mode: no provider call possible because
+                           the route 404s before the dispatcher resolves
+                           a provider; the job stub returns Skipped=1
+                           before any LLM/embedder call. Verified by
+                           TestInboxCategorizationAIOffNoAutoLabels
+                           and TestRunAIAlertInboxCategorizer_OffMode_NoFanout.)
+I5 hidden UI:       PASS  (AIInboxAutoCategorization is wrapped with
+                           withAiFeature('inbox-auto-categorization', ...).
+                           HOC returns null when ai_mode='off' OR the
+                           per-feature toggle is off. The DOM never
+                           carries a disabled AI button — the section is
+                           ABSENT, not greyed. Verified by the 3 off-mode
+                           SPA tests asserting `container.toBeEmptyDOMElement`
+                           AND `queryByTestId(...).not.toBeInTheDocument`.)
+I6 404 routes:      PASS  (POST /api/v1/ai/alerts/inbox/categorize is
+                           mounted only inside the /ai/* sub-router and
+                           gated by guard.Wrap("inbox-auto-categorization",
+                           ...). The Go off-mode test mounts the same
+                           guard with mode='off' + toggle on and asserts
+                           404 + no body leak.)
+I7 per-feature:     PASS  (the inbox-auto-categorization toggle gates
+                           BOTH the SPA component AND the backend route.
+                           Both halves verified independently: Go side
+                           via the Go test's "toggle on but mode=off →
+                           404" path; React side via the "toggle off but
+                           mode=cloud → empty DOM" test.)
+I10 type system:    PASS  (the AI surface lives entirely under
+                           /api/v1/ai/* and adds no new field on the
+                           existing baseline NotificationLog or
+                           AlertRule shape. The on-the-wire JSON
+                           returned by GET /api/v1/notifications/logs
+                           is unchanged. Verified by the Go test's
+                           "no ai_category / auto_category / ai_assigned"
+                           assertion against the baseline route's
+                           response body.)
+I12 client/bg:      PASS  (chunks: the Vite split named in the prompt
+                           ("ai-inbox-auto-categorization") is
+                           code-split via React.lazy at the
+                           withAiFeature boundary — when ai_mode='off'
+                           the lazy chunk is never imported because the
+                           HOC returns null before evaluating Inner.
+                           jobs: ai_alert_inbox_categorizer is a
+                           fail-closed cron stub registered as JobNames
+                           in the registry — TestRunAIAlertInboxCategorizer_*
+                           proves it returns Skipped=1 in off mode and
+                           on toggle-off.
+                           push: ai_alert_category_suggested PushKind is
+                           declared in the registry; no actual push fan-out
+                           worker is registered in this slice (precedent
+                           per digest/yir slices: PushKinds metadata
+                           predates the worker fan-out, declared so the
+                           registry is the source of truth for
+                           CoverageOK; future push-worker slices will
+                           filter by this kind through the same gate.)
+                           storage: client storage key
+                           ai.inboxCategorization.draft is reserved by
+                           the registry but not yet written by this
+                           slice — the AI panel keeps state in component
+                           memory only. Reserving the key today prevents
+                           a future slice from grabbing it for an
+                           unrelated purpose.)
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

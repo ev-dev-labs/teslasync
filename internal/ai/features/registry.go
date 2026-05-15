@@ -1533,6 +1533,98 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / 0035 (A2) — Inbox auto-categorization.
+	//
+	// `inbox-auto-categorization` is an opt-in LLM that reads the
+	// recent notification_logs window for the user's current inbox
+	// filter (vehicle scope, severity scope, time window) and
+	// proposes a small, ordered set of categorical labels (drawn
+	// from a closed taxonomy: battery, charging, climate, tire,
+	// security, connectivity, maintenance, noise, other) that
+	// describe the dominant noise sources. The user reviews the
+	// proposal in the inbox UI and clicks "Apply as filter" to
+	// copy the suggested rule_id set into the existing baseline
+	// inbox filter — the AI never writes to notification_logs,
+	// never assigns labels to rows, never bypasses the canonical
+	// /api/v1/alerts/notifications inbox listing handler (ADR-015
+	// §I3). The deterministic NotificationFilterBar +
+	// user-driven category filters remain the canonical baseline
+	// when AI is off.
+	//
+	// Backend: POST /api/v1/ai/alerts/inbox/categorize is the
+	// single AI route for this slice. The body carries the
+	// optional vehicle_id / severity / window_days filter so the
+	// tool's deterministic counter scopes to the same row set the
+	// SPA's filter bar would have produced. The route is mounted
+	// under guard.Wrap so it returns 404 when ai_mode='off' OR
+	// the per-feature toggle is off (ADR-015 §I6 + §I7).
+	//
+	// Frontend: /alerts/inbox is the canonical inbox host route
+	// in the registry metadata; the page actually mounts at
+	// /notifications/inbox (the legacy /alerts/inbox path is a
+	// no-op redirect) — same convention slice 0034 uses for
+	// /alerts/studio vs /notifications/studio. The AI side panel
+	// is rendered above the filter bar via
+	// withAiFeature('inbox-auto-categorization', ...) so it is
+	// completely absent from the DOM when the toggle is off
+	// (ADR-015 §I5).
+	//
+	// UI test ID: ai-feature-inbox-auto-categorization-root is
+	// the data-testid the withAiFeature HOC stamps on the gated
+	// wrapper. Off-mode tests assert it is absent; on-mode tests
+	// assert it is present + receives the first SSE delta.
+	//
+	// NeedsRAG: false — the assistant has two propose-only tools
+	// (draft_alert_categories aggregates notification_logs by a
+	// deterministic signal_name → category mapping;
+	// validate_alert_category asserts every proposed label is in
+	// the closed taxonomy). The slice prompt's "source types:
+	// alert_history;alert_payload" describes the data domains the
+	// tools read from (notification_logs + alert_rules), NOT an
+	// embeddings-backed retrieval surface — F7 is not invoked.
+	//
+	// NeedsTools: true — the assistant MUST call
+	// draft_alert_categories FIRST and validate_alert_category on
+	// each proposed label (system prompt enforces the tool
+	// sequence).
+	//
+	// NeedsStream: true — the response is SSE-streamed via the
+	// shared stream.Writer so the SPA can render delta tokens
+	// live and surface the typed proposal envelope as soon as the
+	// tool_result arrives.
+	//
+	// JobNames: ai_alert_inbox_categorizer is declared in the
+	// slice prompt's Off-mode contract impact section as a
+	// FUTURE optional background categorizer. This slice does
+	// NOT register the job (no runtime registration). The
+	// metadata is recorded so a future slice that adds the job
+	// satisfies CoverageOK without a registry edit. The off-mode
+	// invariant remains intact: the dispatcher would refuse to
+	// run the job when ai_mode='off'.
+	//
+	// PushKinds: ai_alert_category_suggested is declared in the
+	// slice prompt's Off-mode contract impact section as a
+	// FUTURE optional push kind. This slice does NOT register
+	// the kind in the push fan-out worker. The metadata is
+	// recorded so a future slice that adds the push satisfies
+	// CoverageOK without a registry edit.
+	"inbox-auto-categorization": {
+		ID:          "inbox-auto-categorization",
+		Name:        "Inbox auto-categorization",
+		Description: "Opt-in LLM that reads the recent notification_logs window for the user's current inbox filter and proposes a small ordered set of categorical labels (drawn from a closed taxonomy: battery, charging, climate, tire, security, connectivity, maintenance, noise, other) describing the dominant noise sources. The assistant calls draft_alert_categories to compute a descriptive count of how many recent notifications fall into each category — based on a deterministic signal_name → category mapping over the same notification_logs rows the SPA inbox already renders — then validate_alert_category to assert every proposed label is in the closed taxonomy. The narration explicitly surfaces that the counts are DESCRIPTIVE over the recent window — NOT a forecast — and refuses to invent categories outside the taxonomy or to comment on inbox rows the user is not currently viewing. The user reviews the typed proposal in the Inbox UI and clicks 'Apply as filter' to copy the suggested rule_ids into the canonical inbox filter — the AI never writes to notification_logs, never assigns labels to rows, never bypasses the canonical /api/v1/notifications inbox listing handler. The deterministic NotificationFilterBar + user-driven filters remain the canonical baseline when AI is off. Per-feature redaction policy denies every PII class — alert IDs, signal names, and notification text flow through the typed F4 tool envelope, not through prompt prose.",
+		Tier:        "A",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/alerts/inbox/categorize"},
+			Frontend:  []string{"/alerts/inbox"},
+			UITestIDs: []string{"ai-feature-inbox-auto-categorization-root"},
+			JobNames:  []string{"ai_alert_inbox_categorizer"},
+			PushKinds: []string{"ai_alert_category_suggested"},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

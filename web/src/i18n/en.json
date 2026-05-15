@@ -2492,6 +2492,10 @@
         "alert-tuning-suggestions": {
           "label": "Alert-rule tuning suggestions",
           "description": "Opt-in LLM that reads an existing AlertRule plus the rule's recent 30-day firing history and proposes a typed lower-noise patch (threshold, cooldown, severity, trigger-mode) — for example, raising the battery-low threshold or lengthening the cooldown when the rule has been firing 23 times a week. Surfaces a descriptive replay of the recent firing window (how often the rule would have fired under the proposed thresholds), explicitly NOT a prediction, and never persists the patch — the user reviews the typed draft inside the AlertStudio editor and clicks the canonical Save button to apply. The deterministic AlertStudio editor (manual threshold + cooldown tuning, severity selector, trigger-mode toggle, fired-history table) remains the canonical baseline when AI is off."
+        },
+        "inbox-auto-categorization": {
+          "label": "Inbox auto-categorization",
+          "description": "Opt-in LLM that reads recent notification-log rows for the requested vehicle plus severity filter, buckets them into a closed taxonomy of nine categories (battery, charging, climate, tire, security, connectivity, maintenance, noise, other) using a deterministic substring mapper over the alert rule's signal name, and proposes which category buckets dominate the inbox over the recent window. Surfaces a descriptive count over the chosen window — explicitly NOT a forecast — and never assigns labels to rows; the user reviews the typed proposal inside the inbox panel and clicks Apply categories as filter to copy the proposed rule_id list into the existing URL-backed inbox filter. The deterministic inbox (manual severity / vehicle / rule_id filters, free-text search, day-grouped + threaded views, bulk actions) remains the canonical baseline when AI is off."
         }
       },
       "archive": {
@@ -6617,6 +6621,14 @@
       },
       "error": {
         "title": "Could not load notifications"
+      },
+      "aiCategorize": {
+        "title": "Suggest inbox categories",
+        "badge": "AI",
+        "description": "Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.",
+        "suggestButton": "Suggest categories",
+        "applyButton": "Apply categories as filter",
+        "previewLabel": "Proposed categories (review before applying):"
       }
     },
     "bulkRead": {

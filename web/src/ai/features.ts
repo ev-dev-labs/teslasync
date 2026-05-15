@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "digest-narration" | "drive-coaching" | "inbox-auto-categorization" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "preheat-precool-recommender" | "rag-help" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -179,6 +179,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-drive-coaching-root"] as const),
   }),
+  "inbox-auto-categorization": Object.freeze({
+    id: "inbox-auto-categorization",
+    name: "Inbox auto-categorization",
+    description: "Opt-in LLM that reads the recent notification_logs window for the user's current inbox filter and proposes a small ordered set of categorical labels (drawn from a closed taxonomy: battery, charging, climate, tire, security, connectivity, maintenance, noise, other) describing the dominant noise sources. The assistant calls draft_alert_categories to compute a descriptive count of how many recent notifications fall into each category — based on a deterministic signal_name → category mapping over the same notification_logs rows the SPA inbox already renders — then validate_alert_category to assert every proposed label is in the closed taxonomy. The narration explicitly surfaces that the counts are DESCRIPTIVE over the recent window — NOT a forecast — and refuses to invent categories outside the taxonomy or to comment on inbox rows the user is not currently viewing. The user reviews the typed proposal in the Inbox UI and clicks 'Apply as filter' to copy the suggested rule_ids into the canonical inbox filter — the AI never writes to notification_logs, never assigns labels to rows, never bypasses the canonical /api/v1/notifications inbox listing handler. The deterministic NotificationFilterBar + user-driven filters remain the canonical baseline when AI is off. Per-feature redaction policy denies every PII class — alert IDs, signal names, and notification text flow through the typed F4 tool envelope, not through prompt prose.",
+    tier: "A",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-inbox-auto-categorization-root"] as const),
+  }),
   "nl-alert-builder": Object.freeze({
     id: "nl-alert-builder",
     name: "Natural-language alert builder",
@@ -339,6 +350,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "cost-forecast-narration",
   "digest-narration",
   "drive-coaching",
+  "inbox-auto-categorization",
   "nl-alert-builder",
   "nl-automation-builder",
   "nl-drive-search-replay",

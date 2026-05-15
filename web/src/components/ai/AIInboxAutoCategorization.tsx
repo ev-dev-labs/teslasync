@@ -1,0 +1,333 @@
+// Phase-50 / 0035 — A2 Inbox auto-categorization.
+//
+// W1 inline wiring (P11/P12):
+//   - useAiStream targets POST /ai/alerts/inbox/categorize (the
+//     backend path after stripping the /api/v1 prefix).
+//   - The primary action button is disabled via a COMPUTED
+//     expression
+//     (`stream.state === 'streaming' || stream.state === 'paused-confirm'`),
+//     never a literal `disabled` or `disabled={true}` (Rule W1-A).
+//   - tool_result frames carrying a typed CategoryProposal are
+//     captured in component state; clicking "Apply categories as
+//     filter" invokes the parent's onApplyCategories callback with
+//     the proposed rule_id list. The AI panel NEVER persists state
+//     directly — the baseline NotificationFilterBar URL state is
+//     the sole filter-write path (ADR-015 §I3 + §I8 propose-only
+//     contract).
+//   - cancel() runs on unmount AND when vehicleId / windowDays /
+//     severities change (dedicated useEffect with explicit deps).
+//   - Component is wrapped with withAiFeature so it is ABSENT
+//     (returns null) when ai_mode='off' or the per-feature toggle
+//     is off (ADR-015 §I5 hidden UI).
+
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { AiOutputPanel } from '@/components/ai/AiOutputPanel'
+import { withAiFeature } from '@/components/ai/withAiFeature'
+import { Button, GlassPanel } from '@/components/ui'
+import type { AiStreamEvent } from '@/hooks/useAiStream'
+import { useAiStream } from '@/hooks/useAiStream'
+
+// CategoryBucket is the typed shape of one element in the
+// `draft_alert_categories` tool's `categories` array. Mirrors
+// internal/ai/tools/inbox_auto_categorization.go CategoryBucket
+// — keeping the shape narrow here protects the SPA from blindly
+// trusting any field the LLM might emit.
+export interface CategoryBucket {
+  category: string
+  count: number
+  rule_ids?: number[]
+  sample_titles?: string[]
+}
+
+export interface AIInboxAutoCategorizationProps {
+  /**
+   * Optional vehicle scope. Forwarded as `vehicle_id` in the
+   * request body when non-null. Omitted when null/undefined so
+   * the LLM categorizes the entire inbox.
+   */
+  vehicleId?: number | null
+  /**
+   * Optional severity filter. When non-empty the values are
+   * forwarded as `severities` in the request body. Empty array
+   * is omitted entirely so the backend's default (all severities)
+   * applies.
+   */
+  severities?: string[]
+  /**
+   * Optional rule filter. When non-empty the values are forwarded
+   * as `rule_ids`. Empty array is omitted.
+   */
+  ruleIds?: number[]
+  /**
+   * Optional inbox window in days. Forwarded as `window_days`.
+   * Omitted when null/undefined so the backend's default (7 days)
+   * applies.
+   */
+  windowDays?: number | null
+  /**
+   * Called when the user clicks "Apply categories as filter" on a
+   * captured proposal. The parent (InboxBody) merges the rule_id
+   * list into the URL-backed NotificationFilterBar state. The AI
+   * panel never writes to the API directly — the user simply
+   * narrows the deterministic baseline list.
+   */
+  onApplyCategories: (ruleIds: number[]) => void
+}
+
+function InnerSection({
+  vehicleId,
+  severities,
+  ruleIds,
+  windowDays,
+  onApplyCategories,
+}: AIInboxAutoCategorizationProps) {
+  const { t } = useTranslation()
+  const [proposal, setProposal] = useState<CategoryBucket[] | null>(null)
+
+  // Body is memoised so useAiStream's deps are stable until the
+  // scope inputs actually change. We only emit fields that have a
+  // value — empty severities / empty ruleIds / null vehicleId are
+  // dropped to match the backend handler's optional-field contract.
+  const body = useMemo(() => {
+    const out: Record<string, unknown> = {}
+    if (vehicleId != null) {
+      out.vehicle_id = vehicleId
+    }
+    if (windowDays != null) {
+      out.window_days = windowDays
+    }
+    if (severities && severities.length > 0) {
+      out.severities = severities
+    }
+    if (ruleIds && ruleIds.length > 0) {
+      out.rule_ids = ruleIds
+    }
+    return out
+  }, [vehicleId, windowDays, severities, ruleIds])
+
+  const handleEvent = useCallback((ev: AiStreamEvent) => {
+    if (ev.type === 'tool_result' && ev.name === 'draft_alert_categories' && ev.ok) {
+      const data = ev.data as
+        | { status?: string; categories?: unknown }
+        | undefined
+      if (!data || data.status !== 'ok' || !Array.isArray(data.categories)) {
+        return
+      }
+      const buckets: CategoryBucket[] = []
+      for (const raw of data.categories) {
+        if (raw == null || typeof raw !== 'object') {
+          continue
+        }
+        const r = raw as Record<string, unknown>
+        if (typeof r.category !== 'string' || r.category === '') {
+          continue
+        }
+        if (typeof r.count !== 'number' || r.count < 0) {
+          continue
+        }
+        const bucket: CategoryBucket = {
+          category: r.category,
+          count: r.count,
+        }
+        if (Array.isArray(r.rule_ids)) {
+          const ids: number[] = []
+          for (const v of r.rule_ids) {
+            if (typeof v === 'number' && v > 0) {
+              ids.push(v)
+            }
+          }
+          if (ids.length > 0) {
+            bucket.rule_ids = ids
+          }
+        }
+        if (Array.isArray(r.sample_titles)) {
+          const titles: string[] = []
+          for (const v of r.sample_titles) {
+            if (typeof v === 'string' && v !== '') {
+              titles.push(v)
+            }
+          }
+          if (titles.length > 0) {
+            bucket.sample_titles = titles
+          }
+        }
+        buckets.push(bucket)
+      }
+      if (buckets.length > 0) {
+        setProposal(buckets)
+      }
+    }
+  }, [])
+
+  const stream = useAiStream({
+    url: '/ai/alerts/inbox/categorize',
+    body,
+    onEvent: handleEvent,
+  })
+
+  // Pull cancel out so the cleanup effect's deps stay narrow.
+  // The hook returns a stable cancel reference (useCallback with
+  // [] deps), so destructuring here keeps the effect dep list
+  // tight. Including the whole stream object would re-run the
+  // cleanup on every internal state tick of useAiStream and wipe
+  // the captured proposal mid-stream.
+  const { cancel: cancelStream } = stream
+
+  // Cancel + reset whenever the inbox scope changes so a stale
+  // stream from a previous filter cannot bleed proposals into the
+  // current view. Dedicated effect so the cleanup deps stay
+  // explicit (Rule of Hooks / W1 §6).
+  useEffect(() => {
+    return () => {
+      cancelStream()
+      setProposal(null)
+    }
+  }, [vehicleId, windowDays, severities, ruleIds, cancelStream])
+
+  const isBusy = stream.state === 'streaming' || stream.state === 'paused-confirm'
+  // Computed disabled — never a literal. Disabled while a stream
+  // is in flight (double-submit guard).
+  const categorizeDisabled = isBusy
+
+  const handleCategorize = useCallback(() => {
+    if (isBusy) {
+      return // double-submit no-op
+    }
+    setProposal(null)
+    stream.start()
+  }, [isBusy, stream])
+
+  // The "Apply" button gathers every rule_id across every
+  // category bucket. Filtering by rule_id list is the canonical
+  // baseline narrowing mechanism in NotificationFilterBar.
+  const allRuleIds = useMemo(() => {
+    if (!proposal || proposal.length === 0) {
+      return [] as number[]
+    }
+    const seen = new Set<number>()
+    for (const bucket of proposal) {
+      if (!bucket.rule_ids) {
+        continue
+      }
+      for (const id of bucket.rule_ids) {
+        seen.add(id)
+      }
+    }
+    return Array.from(seen).sort((a, b) => a - b)
+  }, [proposal])
+
+  const handleApply = useCallback(() => {
+    if (allRuleIds.length === 0) {
+      return
+    }
+    onApplyCategories(allRuleIds)
+  }, [allRuleIds, onApplyCategories])
+
+  const applyDisabled = allRuleIds.length === 0 || isBusy
+
+  return (
+    <GlassPanel>
+      <div className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-white/90">
+                {t(
+                  'notifications.inbox.aiCategorize.title',
+                  'Suggest inbox categories',
+                )}
+              </h3>
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
+                title={t(
+                  'chatbot.llm.indicatorTooltip',
+                  'Responses are generated by an LLM with redacted vehicle context.',
+                )}
+                aria-label={t('chatbot.llm.indicator', 'AI mode')}
+              >
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-300"
+                  aria-hidden="true"
+                />
+                {t('notifications.inbox.aiCategorize.badge', 'AI')}
+              </span>
+            </div>
+            <p className="text-sm text-white/60">
+              {t(
+                'notifications.inbox.aiCategorize.description',
+                'Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.',
+              )}
+            </p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={categorizeDisabled}
+            aria-disabled={categorizeDisabled ? 'true' : 'false'}
+            onClick={handleCategorize}
+            data-testid="ai-feature-inbox-auto-categorization-categorize"
+          >
+            {isBusy
+              ? t('ai.common.generating', 'Generating…')
+              : t(
+                  'notifications.inbox.aiCategorize.suggestButton',
+                  'Suggest categories',
+                )}
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            disabled={applyDisabled}
+            aria-disabled={applyDisabled ? 'true' : 'false'}
+            onClick={handleApply}
+            data-testid="ai-feature-inbox-auto-categorization-apply"
+          >
+            {t(
+              'notifications.inbox.aiCategorize.applyButton',
+              'Apply categories as filter',
+            )}
+          </Button>
+        </div>
+        {proposal && proposal.length > 0 && (
+          <div className="rounded-md border border-emerald-300/30 bg-emerald-300/5 p-3 text-sm text-emerald-300">
+            <div className="font-medium">
+              {t(
+                'notifications.inbox.aiCategorize.previewLabel',
+                'Proposed categories (review before applying):',
+              )}
+            </div>
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {proposal.map((bucket) => (
+                <li
+                  key={bucket.category}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300/30 bg-emerald-300/10 px-2.5 py-1 text-xs font-medium text-emerald-300"
+                  data-testid={`ai-feature-inbox-auto-categorization-bucket-${bucket.category}`}
+                >
+                  <span>{bucket.category}</span>
+                  <span className="text-emerald-300/70">·</span>
+                  <span>{bucket.count}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        <AiOutputPanel
+          text={stream.text}
+          state={stream.state}
+          error={stream.error}
+        />
+      </div>
+    </GlassPanel>
+  )
+}
+InnerSection.displayName = 'AIInboxAutoCategorizationInner'
+
+export const AIInboxAutoCategorization = withAiFeature(
+  'inbox-auto-categorization',
+  InnerSection,
+)
+AIInboxAutoCategorization.displayName = 'AIInboxAutoCategorization'

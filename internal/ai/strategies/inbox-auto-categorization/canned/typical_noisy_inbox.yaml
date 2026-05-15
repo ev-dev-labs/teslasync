@@ -1,0 +1,34 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_alert_categories_typical_noisy_inbox_1
+        name: draft_alert_categories
+        arguments: '{"vehicle_id": 1, "window_days": 7}'
+    input_tokens: 96
+    output_tokens: 64
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_alert_category_typical_noisy_inbox_1
+        name: validate_alert_category
+        arguments: '{"label": "battery"}'
+    input_tokens: 320
+    output_tokens: 80
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_alert_category_typical_noisy_inbox_2
+        name: validate_alert_category
+        arguments: '{"label": "charging"}'
+    input_tokens: 360
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      In the last 7 days, 23 of 47 notifications for
+      <vehicle id='1'/> are battery and 12 are charging — these
+      two categories dominate the recent inbox window. This is a
+      descriptive tally of the recent notifications grouped by
+      the deterministic signal_name -> category mapping, NOT a
+      forecast or a predictive model. Click Apply on the
+      battery + charging category chips to narrow the existing
+      filter to the matching rule_ids.
+    input_tokens: 480
+    output_tokens: 160
