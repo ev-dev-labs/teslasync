@@ -2153,6 +2153,89 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / S2 (slice 0043) — Data repair suggestions.
+	//
+	// LLM-assisted assistant for the /system/data-repair page that
+	// proposes a typed RepairPlan for ONE stale charging session
+	// OR ONE stale drive from the in-scope inventory loaded
+	// server-side. PROPOSE-ONLY: the LLM never writes; the user
+	// reviews the typed proposal in the AI side panel and clicks
+	// the canonical Save / Close / Discard button on the baseline
+	// edit form to apply it (the baseline path through
+	// PUT/POST/DELETE /api/v1/data-repair/{kind}/{id}{...} is the
+	// sole write surface).
+	//
+	// The strategy invokes two propose-only tools:
+	//   - draft_data_repair_plan    — builds a normalized + scope-
+	//     checked RepairPlan DTO with the per-kind allowlist of
+	//     update_fields enforced (mirrors database.chargingPartialAllowed
+	//     / drivePartialAllowed exactly).
+	//   - validate_data_repair_plan — re-runs the same shape /
+	//     scope / allowlist checks so the LLM can confirm the
+	//     proposed draft would be accepted by the canonical
+	//     handler before narrating it.
+	//
+	// Per-request scope binding (defence against prompt-injection
+	// exfiltration): the AI handler installs a snapshot of the
+	// CURRENT in-scope (chargingIDs, driveIDs) into ctx via
+	// tools.WithScopedDataRepairIDs BEFORE invoking the dispatcher.
+	// Both tools refuse any LLM-supplied (target_kind, target_id)
+	// pair that is NOT in the snapshot — even if the LLM tries to
+	// propose discarding a different row, the scope check refuses
+	// the call before the proposal reaches the frontend AI panel.
+	//
+	// Routes:
+	//   - Backend: POST /api/v1/ai/system/data-repair/draft
+	//     (gated by guard.Wrap("data-repair-suggestions"); 404 in
+	//     off mode).
+	//   - Frontend: /system/data-repair (registry metadata only;
+	//     the AI side panel is rendered inside the canonical
+	//     DataRepairPage at /system/data-repair when the feature
+	//     is enabled — the registry route is the coverage anchor
+	//     for off-mode walker tests).
+	//   - UITestIDs: ai-feature-data-repair-suggestions-root
+	//     (auto-applied by withAiFeature HOC reading
+	//     meta.uiTestIds[0]).
+	//
+	// NeedsRAG: false — the slice prompt enumerates the source
+	// types audit_log;signal_gap;job_status as future-eligible RAG
+	// corpora, but Phase-50 / 0043 ships propose-only without RAG;
+	// the inventory the handler synthesises is sufficient ground
+	// truth.
+	// NeedsTools: true — draft_data_repair_plan +
+	// validate_data_repair_plan.
+	// NeedsStream: true — the dispatcher streams delta+done frames
+	// to the SPA via internal/ai/stream so the typed RepairPlan
+	// renders progressively in the AI panel.
+	//
+	// Per-feature redaction policy is PolicyAlertBuilder (deny-by-
+	// default; every PII class redacted to a round-trip tag — VINs,
+	// coordinates, place names, vehicle names) so a leaked
+	// transcript reveals nothing about the operator's fleet beyond
+	// the bare row IDs and timestamps the user already sees in the
+	// stale-session list.
+	//
+	// JobNames / PushKinds: explicitly empty (no background job, no
+	// notification/push channel surface). features.CoverageOK
+	// rejects nil; the empty slice is the affirmative "no surface"
+	// signal.
+	"data-repair-suggestions": {
+		ID:          "data-repair-suggestions",
+		Name:        "Data repair suggestions",
+		Description: "Opt-in LLM that proposes a typed RepairPlan (close, discard, or partial-update) for ONE stale charging session OR ONE stale drive from the server-side inventory shown on /system/data-repair. PROPOSE-ONLY: routes through two propose-only tools (draft_data_repair_plan + validate_data_repair_plan) that share the SAME per-kind update_fields allowlist used by database.chargingPartialAllowed / drivePartialAllowed. The user reviews the typed proposal in the AI side panel and clicks the canonical Save / Close / Discard button on the baseline edit form to apply it; the LLM never writes. The deterministic stale-session list and per-row edit forms at /system/data-repair remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyAlertBuilder (deny-by-default; every PII class redacted to a round-trip tag) so a leaked transcript reveals nothing about VINs, coordinates, place names, or vehicle names. Per-request scope binding installs the current (chargingIDs, driveIDs) snapshot in ctx and refuses any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields.",
+		Tier:        "S",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/system/data-repair/draft"},
+			Frontend:  []string{"/system/data-repair"},
+			UITestIDs: []string{"ai-feature-data-repair-suggestions-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / F8 (slice 0009) — Redaction Bypass Report meta-feature.
 	//
 	// `__redaction_bypass__` follows the same SPECIAL-CASE pattern as

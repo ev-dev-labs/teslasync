@@ -1,0 +1,148 @@
+feature:
+  id: data-repair-suggestions
+  system: |
+    You are the TeslaSync data-repair-suggestions agent. Your job
+    is to PROPOSE a typed RepairPlan that fixes ONE stale charging
+    session OR ONE stale drive from the inventory the
+    caller-supplied user message contains; you NEVER execute the
+    repair yourself. ALWAYS call draft_data_repair_plan FIRST with
+    the typed fields you can infer from the user's request and the
+    in-scope stale-session inventory, then call
+    validate_data_repair_plan on the proposed draft to confirm it
+    satisfies the RepairPlan contract. Do NOT propose closing,
+    deleting, or updating any row that is NOT included in the
+    in-scope stale-session inventory the user message lists; the
+    per-request scope binding will refuse it, but you should refuse
+    it first with a polite explanation. The actions you may
+    propose are exactly: "close" (set ended_at=now, fill in
+    computed duration), "discard" (delete the stale row entirely),
+    or "update" (apply a partial patch — supply update_fields with
+    only the keys the user explicitly mentioned or the inventory
+    makes obviously wrong). Never invent values for
+    end_battery_pct, total_energy_added_wh, distance_m, duration_s,
+    or any other numeric field — only quote the values the user
+    provided in the request, and refuse to fabricate one when the
+    user is silent on it. Refuse politely if asked to repair,
+    modify, or delete any row outside the in-scope inventory,
+    including rows for other vehicles. Be concise: one rationale
+    sentence per proposed plan plus the typed draft is enough — the
+    user reviews the structured proposal in the AI panel and clicks
+    the canonical Save / Close / Discard button in the baseline
+    edit form to apply it. Never claim the plan was applied, saved,
+    closed, or discarded; it is propose-only.
+  # Tools MUST mirror
+  # internal/ai/strategies/data-repair-suggestions/strategy.go's
+  # allowedTools whitelist. Both tools are PROPOSE-ONLY: they
+  # construct or validate a RepairPlan DTO but do NOT touch the
+  # database. The actual save / close / delete call goes through
+  # the existing typed PUT / POST / DELETE
+  # /api/v1/data-repair/{kind}/{id} handlers AFTER the user
+  # explicitly clicks the canonical button in the DataRepairPage UI;
+  # the LLM has no tool that writes.
+  tools:
+    - draft_data_repair_plan
+    - validate_data_repair_plan
+  mutating_tools: []
+
+goldens:
+  # typical_stale_charging_close — happy path; user asks to close a
+  # stale charging session that has been open for 3 days. The LLM
+  # MUST call draft_data_repair_plan with target_kind=charging,
+  # target_id=42, action=close, then validate_data_repair_plan on
+  # the draft. The narrative reply MUST mention the action ("close")
+  # and the target ID so the user can confirm before clicking the
+  # canonical Close button in the baseline edit form. Pin: must NOT
+  # claim the session was closed.
+  - name: typical_stale_charging_close
+    input:
+      user_message: "Close stale charging session #42 — it's been open for 3 days."
+      context_overrides:
+        scoped_charging_ids: [42]
+        scoped_drive_ids: []
+    expect:
+      must_call_tools:
+        - draft_data_repair_plan
+        - validate_data_repair_plan
+      answer_must_contain: ["42", "close"]
+      answer_must_not_contain:
+        - "saved"
+        - "closed the"
+        - "discarded"
+        - "applied"
+        - "deleted"
+        # Honest-no-invention pin: the LLM must NOT add a
+        # speculative end_battery_pct / total_energy_added_wh
+        # value the user did not provide.
+        - "end_battery_pct"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_data_repair_plan with
+        target_kind=charging, target_id=42, action=close,
+        (2) called validate_data_repair_plan on the proposed
+        draft, (3) the narration mentions the close action and
+        the in-scope target ID, (4) does NOT claim the session
+        was closed / saved / discarded, (5) does NOT invent
+        end_battery_pct / total_energy_added_wh values the user
+        did not supply.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # typical_stale_drive_update — user asks to update a stale drive's
+  # ended_at + distance to specific values they supply. The LLM
+  # MUST call draft_data_repair_plan with target_kind=drive,
+  # target_id=99, action=update, update_fields containing only the
+  # keys the user mentioned. Pin: must NOT include keys the user
+  # was silent on, must NOT claim the drive was updated.
+  - name: typical_stale_drive_update
+    input:
+      user_message: "Update stale drive #99: end_ts=2026-03-30T04:00:00Z, distance_m=12345."
+      context_overrides:
+        scoped_charging_ids: []
+        scoped_drive_ids: [99]
+    expect:
+      must_call_tools:
+        - draft_data_repair_plan
+        - validate_data_repair_plan
+      answer_must_contain: ["99", "update"]
+      answer_must_not_contain:
+        - "updated the"
+        - "saved"
+        - "applied"
+        # Honest-no-invention pin: the user did NOT supply
+        # duration_s or end_battery_pct; the LLM must not pad
+        # the proposed update_fields with fabricated values.
+        - "end_battery_pct"
+        - "duration_s"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_data_repair_plan with
+        target_kind=drive, target_id=99, action=update, and
+        update_fields containing ONLY the keys the user
+        explicitly supplied (end_ts + distance_m), (2) called
+        validate_data_repair_plan on the draft, (3) the
+        narration mentions the update action and the in-scope
+        target ID, (4) does NOT claim the drive was updated /
+        saved / applied, (5) does NOT invent additional update
+        keys (end_battery_pct, duration_s, max_speed_mps).
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_out_of_scope_target — caller asks the agent to repair a
+  # row whose ID is NOT in the in-scope inventory the handler
+  # synthesised. The agent MUST refuse politely without proposing
+  # any tool call. Mirrors nl-alert-builder's refusal_other_vehicle.
+  # Pin: must NOT call any tool when the scope is wrong.
+  - name: refusal_out_of_scope_target
+    input:
+      user_message: "Discard charging session #777 — it's been open for ages."
+      context_overrides:
+        scoped_charging_ids: [42]
+        scoped_drive_ids: []
+    expect:
+      must_not_call_tools:
+        - draft_data_repair_plan
+        - validate_data_repair_plan
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain:
+        - "discarded"
+        - "deleted"
+        - "saved"
+        - "draft_data_repair_plan"

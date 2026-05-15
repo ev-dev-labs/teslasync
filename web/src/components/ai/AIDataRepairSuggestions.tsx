@@ -1,0 +1,179 @@
+// Phase-50 / 0043 — S2 Data repair suggestions.
+// Phase-50 / W1 inline wiring (per slice prompt 0043) — wired the
+// "Draft repair plan" button to POST
+// /api/v1/ai/system/data-repair/draft via the canonical
+// useAiStream hook. The slice methodology forbids shipping the
+// visual affordance without end-to-end SSE wiring; this component
+// lands both in one commit so the on-mode wiring test
+// (TestDataRepairSuggestionsAIOnWiredCallsRoute) can prove the
+// button actually opens an SSE stream against the registered
+// backend route.
+//
+// AIDataRepairSuggestions is the visible AI surface for the
+// /system/data-repair page. It is rendered conditionally via
+// withAiFeature('data-repair-suggestions', …) so:
+//
+//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
+//   - When ai_mode is 'local'/'cloud' AND the data-repair-suggestions
+//     toggle is on, it renders an opt-in section with a "Draft
+//     repair plan" button that POSTs to
+//     /api/v1/ai/system/data-repair/draft. The SSE response stream
+//     accumulates into the shared AiOutputPanel.
+//
+// The component does NOT replace the deterministic stale-session
+// list, per-row repair forms, or close/discard/update buttons on
+// DataRepairPage. That baseline content remains the canonical
+// view visible to every user; this AI section is opt-in propose-
+// only suggestion layered alongside.
+//
+// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+//   - useAiStream is called unconditionally at the top of the body
+//     (Hooks-rules safe).
+//   - The Draft button's disabled prop is a COMPUTED expression
+//     (`!canDraft`), never a literal `disabled` or
+//     `disabled={true}`.
+//   - Double-submit protection: stream.start() is a no-op while
+//     state === 'streaming' (the hook coalesces; the button is
+//     also visually disabled to mirror the state machine).
+//   - The streamed text accumulates into AiOutputPanel which
+//     renders the SSE delta stream as-it-arrives.
+//
+// ADR-015 alignment:
+//   - I3 baseline intact: this component never replaces the
+//     deterministic stale-session list or repair buttons; it adds
+//     an opt-in proposal section alongside.
+//   - I5 hidden UI:       the withAiFeature HOC returns null when
+//     the feature is not enabled, so the section is entirely
+//     absent from the DOM in off mode.
+//   - I6 404 routes:      the backend route is guard-wrapped and
+//     returns 404 in off mode; useAiStream surfaces that as
+//     state='error' for the user, but the component is never
+//     rendered in off mode at all because of I5.
+//   - I8 propose-only:    the LLM never writes; the typed
+//     RepairPlan it proposes is rendered here, and the user must
+//     click the canonical Save / Close / Discard button on the
+//     baseline form below to apply it.
+
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { AiOutputPanel } from '@/components/ai/AiOutputPanel'
+import { withAiFeature } from '@/components/ai/withAiFeature'
+import { Button, GlassPanel } from '@/components/ui'
+import { useAiStream } from '@/hooks/useAiStream'
+
+/**
+ * InnerSection is the always-rendered body of the AI data repair
+ * suggestions card. The surrounding {@link withAiFeature} HOC
+ * handles the visibility gate; this component only describes the
+ * surface's appearance.
+ *
+ * Visual contract:
+ *   - One GlassPanel sized to sit above the deterministic stale-
+ *     session tabs on DataRepairPage.
+ *   - Cyan AI badge in the header (matches the chatbot brand
+ *     colour).
+ *   - A single "Draft repair plan" button that submits a POST to
+ *     the registered backend route. There is no user-supplied
+ *     question — the suggestion is a one-shot read of the in-
+ *     scope stale-session inventory the backend loads itself.
+ *   - Draft button is disabled while a stream is open.
+ *   - Title attribute carries the long-form explanation so a user
+ *     hovering for a tooltip understands the privacy + propose-
+ *     only contract — every PII class is redacted to a round-trip
+ *     tag, the proposal is grounded in the same deterministic
+ *     stale-session inventory the tabs below render, and the LLM
+ *     never writes.
+ */
+function InnerSection() {
+  const { t } = useTranslation()
+
+  // The backend reads the in-scope stale-session inventory itself
+  // (it loads stale charging + stale drives via the canonical
+  // ChargingRepo.GetStale / DriveRepo.GetStale paths). The body is
+  // intentionally empty. useMemo keeps the body reference stable
+  // so useAiStream's dependency-tracked re-render path doesn't
+  // churn.
+  const body = useMemo(() => ({}), [])
+
+  const stream = useAiStream({
+    url: '/ai/system/data-repair/draft',
+    body,
+    onEvent: () => {},
+  })
+
+  const canDraft = stream.state !== 'streaming'
+
+  return (
+    <GlassPanel>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="text-base font-semibold text-white/90">
+                {t(
+                  'dataRepair.aiSuggestions.title',
+                  'AI repair suggestions',
+                )}
+              </h3>
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-2.5 py-1 text-xs font-medium text-cyan-300"
+                title={t(
+                  'chatbot.llm.indicatorTooltip',
+                  'Responses are generated by an LLM with redacted vehicle context.',
+                )}
+                aria-label={t('chatbot.llm.indicator', 'AI mode')}
+              >
+                <span
+                  className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-300"
+                  aria-hidden="true"
+                />
+                {t('dataRepair.aiSuggestions.badge', 'AI')}
+              </span>
+            </div>
+            <p className="text-sm text-white/60">
+              {t(
+                'dataRepair.aiSuggestions.description',
+                'Propose a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory below. The LLM never writes — review the proposal here and click the canonical Save / Close / Discard button on the matching baseline form to apply it.',
+              )}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!canDraft}
+            aria-disabled={!canDraft ? 'true' : 'false'}
+            onClick={() => stream.start()}
+            title={t(
+              'dataRepair.aiSuggestions.description',
+              'Propose a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory below. The LLM never writes — review the proposal here and click the canonical Save / Close / Discard button on the matching baseline form to apply it.',
+            )}
+          >
+            {stream.state === 'streaming'
+              ? t('ai.common.generating', 'Generating\u2026')
+              : t('dataRepair.aiSuggestions.button', 'Draft repair plan')}
+          </Button>
+        </div>
+        <AiOutputPanel
+          text={stream.text}
+          state={stream.state}
+          error={stream.error}
+        />
+      </div>
+    </GlassPanel>
+  )
+}
+InnerSection.displayName = 'AIDataRepairSuggestionsInner'
+
+/**
+ * AIDataRepairSuggestions renders the LLM data repair suggestion
+ * section only when the data-repair-suggestions feature is
+ * enabled. The wrapping div from {@link withAiFeature} carries
+ * `data-testid="ai-feature-data-repair-suggestions-root"`, which
+ * the off-mode invariant test asserts against.
+ */
+export const AIDataRepairSuggestions = withAiFeature(
+  'data-repair-suggestions',
+  InnerSection,
+)
+AIDataRepairSuggestions.displayName = 'AIDataRepairSuggestions'

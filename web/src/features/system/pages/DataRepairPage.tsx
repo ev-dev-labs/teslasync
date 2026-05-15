@@ -21,6 +21,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
 import { request } from '@/api/client';
+import { AIDataRepairSuggestions } from '@/components/ai/AIDataRepairSuggestions';
 import {
   Wrench, BatteryCharging, Route, AlertTriangle, CheckCircle,
   X, Save, Clock, Trash2,
@@ -222,6 +223,11 @@ export default function DataRepairPage() {
           <MetricCard label={t('Stale Drives')} value={staleDrives.length} icon={<Route className="h-4 w-4" />} color="purple" />
           <MetricCard label={t('Status')} value={totalStale === 0 ? t('Clean') : t('Needs Repair')} icon={<Wrench className="h-4 w-4" />} color={totalStale === 0 ? 'green' : 'red'} />
         </div>
+      </FadeIn>
+
+      {/* ── AI repair suggestions (opt-in, hidden when ai_mode='off') ── */}
+      <FadeIn>
+        <AIDataRepairSuggestions />
       </FadeIn>
 
       {/* ── Tab buttons ──────────────────────────────────────────── */}

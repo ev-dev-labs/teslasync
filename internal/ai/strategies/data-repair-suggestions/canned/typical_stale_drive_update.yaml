@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_data_repair_draft_drive_update_99
+        name: draft_data_repair_plan
+        arguments: '{"target_kind": "drive", "target_id": 99, "action": "update", "update_fields": {"end_ts": "2026-03-30T04:00:00Z", "distance_m": 12345}}'
+    input_tokens: 64
+    output_tokens: 48
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_data_repair_validate_drive_update_99
+        name: validate_data_repair_plan
+        arguments: '{"target_kind": "drive", "target_id": 99, "action": "update", "update_fields": {"end_ts": "2026-03-30T04:00:00Z", "distance_m": 12345}}'
+    input_tokens: 124
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I drafted an update plan for stale drive 99 that sets
+      end_ts to 2026-03-30T04:00:00Z and distance_m to 12345
+      meters. Review the typed proposal in the AI panel and
+      click the Save button on the baseline edit form to apply
+      the patch; I never update drives myself.
+    input_tokens: 178
+    output_tokens: 70

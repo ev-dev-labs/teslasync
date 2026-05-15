@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -178,6 +178,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsTools: true,
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-cross-rule-conflict-detection-root"] as const),
+  }),
+  "data-repair-suggestions": Object.freeze({
+    id: "data-repair-suggestions",
+    name: "Data repair suggestions",
+    description: "Opt-in LLM that proposes a typed RepairPlan (close, discard, or partial-update) for ONE stale charging session OR ONE stale drive from the server-side inventory shown on /system/data-repair. PROPOSE-ONLY: routes through two propose-only tools (draft_data_repair_plan + validate_data_repair_plan) that share the SAME per-kind update_fields allowlist used by database.chargingPartialAllowed / drivePartialAllowed. The user reviews the typed proposal in the AI side panel and clicks the canonical Save / Close / Discard button on the baseline edit form to apply it; the LLM never writes. The deterministic stale-session list and per-row edit forms at /system/data-repair remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyAlertBuilder (deny-by-default; every PII class redacted to a round-trip tag) so a leaked transcript reveals nothing about VINs, coordinates, place names, or vehicle names. Per-request scope binding installs the current (chargingIDs, driveIDs) snapshot in ctx and refuses any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields.",
+    tier: "S",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-data-repair-suggestions-root"] as const),
   }),
   "digest-narration": Object.freeze({
     id: "digest-narration",
@@ -460,6 +471,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "chatbot-llm",
   "cost-forecast-narration",
   "cross-rule-conflict-detection",
+  "data-repair-suggestions",
   "digest-narration",
   "drive-coaching",
   "geofence-aware-automation-suggestions",

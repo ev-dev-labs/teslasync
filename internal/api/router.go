@@ -89,6 +89,7 @@ import (
 	periodcomparenarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/period-compare-narration"
 	lifetimestatsqa "github.com/ev-dev-labs/teslasync/internal/ai/strategies/lifetime-stats-qa"
 	incidenttimelinesummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/incident-timeline-summarizer"
+	datarepairsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/data-repair-suggestions"
 	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
 	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
 	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
@@ -1245,6 +1246,35 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		incidenttimelinesummarizer.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// data-repair-suggestions (Phase-50 / S2, slice 0043).
+	// Adds `draft_data_repair_plan` + `validate_data_repair_plan`
+	// to the shared tool registry so the dispatcher can resolve
+	// them for the data-repair-suggestions strategy. Same
+	// ordering rule as the other slice tools above: must be
+	// registered before the handler constructor below so the
+	// strategy's allowedTools resolve at boot. Both tools are
+	// PROPOSE-only; the actual save/close/discard mutation
+	// flows through the existing typed
+	// PUT/POST/DELETE /api/v1/data-repair/{kind}/{id}{...}
+	// handlers AFTER the user explicitly clicks the canonical
+	// button on the baseline /system/data-repair edit form. No
+	// new SQL is written by this slice — the source port
+	// composes the SAME ChargingRepo.GetStale + DriveRepo.GetStale
+	// paths that back the baseline DataRepairHandler.GetStaleSessions.
+	tools.RegisterDataRepairSuggestionsTools(aiToolRegistry, tools.DataRepairSuggestionsSources{
+		Validator: NewAIDataRepairPlanValidator(),
+	})
+	// data-repair-suggestions handler. Constructed after the tool
+	// registration above so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	aiDataRepairSuggestionsHandler := NewAIDataRepairSuggestionsHandler(
+		aiRegistry,
+		aiToolRegistry,
+		datarepairsuggestions.New(),
+		NewAIDataRepairSource(db),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
@@ -3265,7 +3295,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

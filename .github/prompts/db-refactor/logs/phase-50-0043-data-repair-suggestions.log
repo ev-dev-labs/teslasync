@@ -1,0 +1,614 @@
+================================================================
+Phase-50 / Prompt 0043 — S2 Data repair suggestions
+================================================================
+
+Slice prompt:  .github/prompts/db-refactor/phase-50/0043-data-repair-suggestions.prompt.md
+Slice log:     .github/prompts/db-refactor/logs/phase-50-0043-data-repair-suggestions.log
+Branch:        feat/vampire-drain-explanation
+HEAD at start: 8e4f459d8daf3ee888f59a6de5146f488a223dc7
+Feature ID:    data-repair-suggestions
+Tier:          S2
+ADR:           ADR-015 AI-Off Contract
+
+=== PREFLIGHT ===
+
+Branch is feat/vampire-drain-explanation, ahead of
+origin/feat/vampire-drain-explanation by 2 commits (the previous
+0042 incident-timeline-summarizer commit + a prior local
+checkpoint).
+
+Predecessor logs verified (all 0001–0010 F0–F9 foundation slices
+ended STATUS=DONE):
+
+  $ for f in (Get-ChildItem .github/prompts/db-refactor/logs/phase-50-000?-*.log) { Get-Content $f -Tail 6 | Select-String 'STATUS=' }
+  STATUS=DONE   (phase-50-0001-foundation-architecture-doc.log)
+  STATUS=DONE   (phase-50-0002-feature-registry-and-types.log)
+  STATUS=DONE   (phase-50-0003-provider-port-and-mock.log)
+  STATUS=DONE   (phase-50-0004-dispatcher-and-strategies.log)
+  STATUS=DONE   (phase-50-0005-decorator-chain-and-redaction.log)
+  STATUS=DONE   (phase-50-0006-guard-and-routes.log)
+  STATUS=DONE   (phase-50-0007-tools-and-typed-actions.log)
+  STATUS=DONE   (phase-50-0008-rag-retrieval-and-citations.log)
+  STATUS=DONE   (phase-50-0009-eval-harness-and-goldens.log)
+  STATUS=DONE   (phase-50-0010-spa-feature-flag-toggles.log)
+
+Working tree clean at preflight (this slice's edits start fresh
+on top of HEAD 8e4f459d8).
+
+=== SURVEY ===
+
+Baseline behavior surveyed before edits:
+
+* Backend canonical baseline:
+  - GET    /api/v1/data-repair/stale-sessions  → returns
+    {stale_charging:[…], stale_drives:[…]} via
+    DataRepairHandler.GetStaleSessions, which composes
+    ChargingRepo.GetStale + DriveRepo.GetStale (24h cutoff).
+  - POST   /api/v1/data-repair/charging/{id}/close
+  - POST   /api/v1/data-repair/drives/{id}/close
+  - DELETE /api/v1/data-repair/charging/{id}
+  - DELETE /api/v1/data-repair/drives/{id}
+  - PUT    /api/v1/data-repair/charging/{id}  (per-kind partial
+                                               update, allowlist =
+                                               database.chargingPartialAllowed)
+  - PUT    /api/v1/data-repair/drives/{id}    (per-kind partial
+                                               update, allowlist =
+                                               database.drivePartialAllowed)
+
+* Frontend canonical baseline:
+  - /system/data-repair → DataRepairPage. Loads stale-sessions,
+    renders four MetricCards (Total Stale, Stale Charging, Stale
+    Drives, Status), two tab buttons (Charging Sessions, Drives),
+    and a per-row inline edit form (Update / Close / Discard).
+    Toast-driven success feedback on each mutation.
+
+* Per-kind update_fields allowlists (mirrored verbatim into the
+  AI tool):
+  - charging: ended_at, start_soc_pct, end_soc_pct, delta_soc_pct,
+    total_energy_added_wh, charger_type, cable_type, peak_power_w,
+    avg_power_w, cost_decimal, cost_currency, start_lat, start_lng,
+    start_place, start_odometer_m, end_odometer_m
+  - drive: ended_at, distance_m, duration_s, start_soc_pct,
+    end_soc_pct, max_speed_mps, avg_speed_mps, avg_power_w,
+    ambient_temp_c_avg, energy_used_wh, regen_energy_wh,
+    start_place, end_place, start_lat, start_lng, end_lat, end_lng,
+    start_odometer_m, end_odometer_m
+
+* Closest precedents inspected before designing this slice:
+  - 0042 incident-timeline-summarizer (S1): handler-loads-context
+    pattern, withAiFeature HOC, AiOutputPanel, useAiStream wiring
+    template. Reused as the structural template for both the
+    backend handler and the SPA component.
+  - 0015 nl-alert-builder (S2 propose-only): two-tool draft +
+    validate pattern, PolicyAlertBuilder redaction policy, scope-
+    bound tool refusal pattern. Reused as the propose-only
+    architectural template.
+
+* Eval harness behavior verified: cmd/ai-eval and
+  internal/ai/eval/runner.go build a stub registry per golden
+  spec from the YAML's `tools:` block — so the goldens don't
+  need the real production tools to be registered through the
+  eval harness; they only need the tool *names* declared.
+
+* Pre-existing baseline quirks observed but NOT touched by this
+  slice (out of scope per the slice prompt's "do not fix
+  unrelated issues" guidance):
+  - DataRepairPage charging form sends `end_ts` for the close
+    button while chargingPartialAllowed only accepts `ended_at`.
+    The handler silently filters; no behavioural impact.
+  - DataRepairPage drive form sends `/data-repair/drives/{id}`
+    (plural) while the router uses `/drive/{id}` (singular) for
+    one mutation. Pre-existing inconsistency; not in this slice's
+    scope.
+
+=== REASONING ===
+
+Why the selected design preserves ADR-015, P1–P10, and the non-AI
+baseline:
+
+1. **Propose-only tool surface (ADR-015 §I8):** The LLM is given
+   exactly two tools — `draft_data_repair_plan` +
+   `validate_data_repair_plan`. Neither tool writes; both return
+   typed envelopes the user must apply via the canonical baseline
+   Save / Close / Discard buttons. The tools share a single
+   `checkDataRepairScopeAndShape` helper so the same allowlist
+   that the canonical handler enforces (chargingPartialAllowed /
+   drivePartialAllowed verbatim) is enforced on the proposed
+   plan BEFORE the LLM narrates a rationale.
+
+2. **Per-request scope binding (ADR-015 §I7 + prompt-injection
+   defence):** The handler installs a snapshot of the current in-
+   scope (chargingIDs, driveIDs) into ctx via
+   `tools.WithScopedDataRepairIDs` BEFORE invoking the dispatcher.
+   Both tools refuse any LLM-supplied (target_kind, target_id)
+   pair that is NOT in the snapshot. Even if the LLM tries to
+   propose discarding a different row (e.g., via prompt-injection
+   in an operator-authored start_place field), the scope check
+   refuses the call before the proposal ever reaches the SPA.
+
+3. **Baseline coexistence (P10):** The selection between baseline
+   and AI happens at *page composition* time inside DataRepairPage
+   — the AI section is mounted via the `withAiFeature` HOC, which
+   returns null when the feature is off. The baseline tabs +
+   metric cards + edit forms render unconditionally and are not
+   touched by this slice (the only edit to DataRepairPage.tsx is
+   a one-line `<AIDataRepairSuggestions />` mount above the
+   stats). When the feature is off, the page DOM is byte-
+   identical to the pre-slice DOM modulo the absence of the AI
+   wrapper.
+
+4. **Decorator chain (P5):** The handler routes every provider
+   call through `provider.Registry.Call`, which is wrapped at
+   construction time by the locked decorator order: redaction →
+   rate limit → cost cap → audit → trace. No bespoke per-feature
+   bypass.
+
+5. **No new write paths (P7):** The two tools are propose-only
+   stubs that return envelopes; neither the strategy nor the
+   handler invokes any DB write or canonical handler mutation.
+   The user must click the canonical Save / Close / Discard
+   button on the baseline form to apply a proposal.
+
+6. **Empty inventory branch:** The `buildDataRepairSuggestionsUserMessage`
+   helper emits a special "inventory is empty, do not call any
+   tool, reply with one short sentence and STOP" instruction
+   when both stale-charging and stale-drive lists are empty. This
+   means a user with a clean fleet sees a polite no-action
+   response, not a hallucinated proposal.
+
+7. **Empty arrays explicit in registry (P9):** JobNames=[]string{},
+   PushKinds=[]string{} are explicit empty slices, not omitted.
+   features.CoverageOK rejects nil so the empty slice is the
+   affirmative "no surface" signal.
+
+8. **NeedsRAG=false:** The slice prompt's source-types list
+   (audit_log;signal_gap;job_status) is *future-eligible*, not
+   required by Phase-50 0043. Mirrors nl-alert-builder (also
+   propose-only, also NeedsRAG=false) — the inventory the
+   handler synthesises is sufficient ground truth. No bespoke
+   embedding SQL is added by this slice (P8 — keep RAG behind
+   the single F7 entry point).
+
+9. **NeedsTools=true, NeedsStream=true:** The two tools satisfy
+   tool routing; the dispatcher streams delta+done frames to the
+   SPA via internal/ai/stream so the typed RepairPlan renders
+   progressively in the AiOutputPanel.
+
+=== CHANGES ===
+
+Production:
+
+  M  internal/ai/features/registry.go
+       (+78L) "data-repair-suggestions" entry with full Routes
+       metadata (Backend, Frontend, UITestIDs, JobNames=[]string{},
+       PushKinds=[]string{}); inserted between
+       incident-timeline-summarizer and __redaction_bypass__ with
+       a slice-level explanatory comment.
+  A  internal/ai/strategies/data-repair-suggestions/strategy.go
+       (~190L) FeatureID const, system prompt with load-bearing
+       pins (propose-only; tool sequence; refuse out-of-scope),
+       PolicyAlertBuilder redaction policy, allowedTools list
+       (draft_data_repair_plan, validate_data_repair_plan),
+       Strategy implementation.
+  A  internal/ai/strategies/data-repair-suggestions/strategy_test.go
+       (~280L) 8 tests covering FeatureID, System prompt
+       contents, AllowedTools, RedactionPolicy, Context shape,
+       EvalGoldens loader.
+  A  internal/ai/strategies/data-repair-suggestions/goldens.yaml
+       3 deterministic goldens:
+         - typical_stale_charging_close
+         - typical_stale_drive_update
+         - refusal_out_of_scope_target
+  A  internal/ai/strategies/data-repair-suggestions/canned/
+        typical_stale_charging_close.yaml
+        typical_stale_drive_update.yaml
+        refusal_out_of_scope_target.yaml
+       Mock-provider canned reply YAMLs that drive the goldens.
+  A  internal/ai/tools/data_repair_suggestions.go
+       (~700L) Scope binding helpers
+       (WithScopedDataRepairIDs / ScopedDataRepairIDsFromContext);
+       per-kind update_fields allowlists (chargingPartialAllowed +
+       drivePartialAllowed mirrors); DataRepairPlan DTO +
+       DataRepairPlanValidator port; shared
+       checkDataRepairScopeAndShape helper; draftDataRepairPlan
+       tool; validateDataRepairPlanTool;
+       RegisterDataRepairSuggestionsTools registration entry.
+  A  internal/ai/tools/data_repair_suggestions_test.go
+       21 tests covering happy paths, scope refusal (no scope in
+       ctx, wrong kind, wrong id), per-kind allowlist enforcement,
+       propose-only contract (no DB write), defensive copies of
+       returned envelopes.
+  A  internal/api/ai_data_repair_handler.go
+       (~540L) AIDataRepairSource port (StaleSessions method);
+       NewAIDataRepairSuggestionsHandler constructor with panic-
+       on-nil wiring guard; ServeHTTP loads inventory, installs
+       scope binding, opens SSE, runs dispatcher;
+       buildDataRepairSuggestionsUserMessage helper (sorted,
+       deterministic prompt with hours_open arithmetic);
+       AIDataRepairSourceImpl production wiring (composes
+       database.NewChargingRepo + database.NewDriveRepo);
+       AIDataRepairPlanValidator production wiring (intentionally
+       permissive — shape and allowlist checks live in the tool).
+  A  internal/api/ai_data_repair_handler_test.go
+       Tests:
+         - TestDataRepairSuggestionsAIOffManualRunbookWorks
+           (load-bearing AI-OFF contract proof: AI route 404 in
+           off mode + 4 baseline routes still 200)
+         - TestAIDataRepairSuggestionsHandler_PanicsOnNilWiring
+         - TestNewAIDataRepairSource_PanicsOnNilDB
+         - TestAIDataRepairSuggestionsHandler_RejectsBadBody
+           (6 cases: empty, {}, null, unknown_field, malformed,
+           bare_array)
+         - TestBuildDataRepairSuggestionsUserMessage_DeterministicShape
+           (pin sorted-by-ID + RFC3339 + hours_open arithmetic)
+         - TestBuildDataRepairSuggestionsUserMessage_EmptyInventory
+           (pin empty-inventory STOP instruction)
+         - TestAIDataRepairPlanValidator_AcceptsValidPlan
+         - TestAIDataRepairPlanValidator_RejectsNil
+  M  internal/api/ai_routes.go
+       (+25L) New `aiDataRepairSuggestions *AIDataRepairSuggestionsHandler`
+       parameter to mountAIRoutes; new Post route block guarded
+       by `g.Wrap("data-repair-suggestions", …)` for
+       /system/data-repair/draft; added stub handler.
+  M  internal/api/router.go
+       (+5L) Strategy import, tool registration
+       `tools.RegisterDataRepairSuggestionsTools(...)`, handler
+       construction `aiDataRepairSuggestionsHandler := NewAIDataRepairSuggestionsHandler(...)`,
+       new arg appended to mountAIRoutes call.
+
+Frontend:
+
+  A  web/src/components/ai/AIDataRepairSuggestions.tsx
+       (~190L) withAiFeature('data-repair-suggestions', InnerSection);
+       useAiStream wired to '/ai/system/data-repair/draft' (the
+       backend path after stripping /api/v1/); computed disabled
+       prop (`!canDraft`); double-submit guarded; Cyan AI badge;
+       i18n strings for title/description/badge/button.
+  M  web/src/features/system/pages/DataRepairPage.tsx
+       (+5L) Import + render `<AIDataRepairSuggestions />` above
+       the existing tabs. No other behavioural changes.
+  M  web/src/i18n/en.json
+       (+12L) settings.ai.features.data-repair-suggestions
+       (label + description); dataRepair.aiSuggestions block
+       (title, description, badge, button).
+  A  web/src/features/system/__tests__/TestDataRepairSuggestionsAIOffManualRunbookWorks.test.tsx
+       4 tests:
+         - off mode hides AI section even with toggle on
+         - cloud mode + toggle false hides AI section (per-feature
+           opt-in)
+         - cloud mode + toggle true renders AI section (positive
+           control)
+         - DataRepairPage in off mode renders deterministic
+           manual-runbook surface (page title, metric cards, tab
+           buttons) AND the AI section is absent
+  A  web/src/features/system/__tests__/TestDataRepairSuggestionsAIOnWiredCallsRoute.test.tsx
+       2 tests:
+         - clicking Draft repair plan POSTs once to
+           /api/v1/ai/system/data-repair/draft and renders the
+           first delta inside the AI panel
+         - second click while streaming is a no-op (double-submit
+           guard)
+
+Generated:
+
+  M  web/src/ai/features.ts
+       Auto-regenerated by `go run ./tools/aigen` after the
+       registry edit; the data-repair-suggestions entry is added
+       to the union type, the AI_FEATURES map, and the
+       AI_FEATURE_IDS list.
+
+i18n placeholders (ar/he intentionally untouched — placeholder
+files with only `_meta`; i18next falls through to en.json):
+
+  · web/src/i18n/ar.json — unchanged
+  · web/src/i18n/he.json — unchanged
+
+=== GATE ===
+
+> Note on `make ai-eval-fast --feature data-repair-suggestions`:
+> the slice prompt's verification block invokes a Make target
+> which is not portable on Windows (the repo's Makefile does not
+> declare per-feature parameter passthrough). The Make-portable
+> equivalent is `go run ./cmd/ai-eval --feature
+> data-repair-suggestions`, which exercises the same
+> internal/ai/eval/runner.go that the Make target invokes. Both
+> read the SAME goldens.yaml + canned/*.yaml files. This
+> substitution is documented here in compliance with Honesty
+> Covenant rule 3 (no skip-and-assume) — the gate IS run, just
+> via the Windows-portable invocation.
+
+--- 1) git --no-pager status --short ---
+
+  M internal/ai/features/registry.go
+   M internal/api/ai_routes.go
+   M internal/api/router.go
+   M web/src/ai/features.ts
+   M web/src/features/system/pages/DataRepairPage.tsx
+   M web/src/i18n/en.json
+  ?? internal/ai/strategies/data-repair-suggestions/
+  ?? internal/ai/tools/data_repair_suggestions.go
+  ?? internal/ai/tools/data_repair_suggestions_test.go
+  ?? internal/api/ai_data_repair_handler.go
+  ?? internal/api/ai_data_repair_handler_test.go
+  ?? web/src/components/ai/AIDataRepairSuggestions.tsx
+  ?? web/src/features/system/__tests__/TestDataRepairSuggestionsAIOffManualRunbookWorks.test.tsx
+  ?? web/src/features/system/__tests__/TestDataRepairSuggestionsAIOnWiredCallsRoute.test.tsx
+
+  EXIT=0
+
+  All dirty paths are within the slice's allowed-files list. Note:
+  web/src/ai/features.ts is the auto-generated TS mirror of the Go
+  registry; aigen --check passes, proving it is in sync with the
+  Go source of truth.
+
+--- 2) go test -race -count=1 ./internal/ai/... ./internal/api/... ---
+
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/cost
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/dispatch
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/eval
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/features
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/guard
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/health
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/limit
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/provider
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/provider/mock
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/provider/openai
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/rag
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/redact
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions
+  …(all 39 strategy packages PASS)…
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/strategies/data-repair-suggestions   2.968s
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/strategies/incident-timeline-summarizer
+  …
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/strategy
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/stream
+  ok   github.com/ev-dev-labs/teslasync/internal/ai/tools                                1.266s
+  ok   github.com/ev-dev-labs/teslasync/internal/api                                    10.521s
+
+  EXIT=0
+
+--- 3) go run ./tools/aivet ---
+
+  aivet: OK — 41 AI route(s), 39 feature(s) in registry, TS mirror in sync
+
+  EXIT=0
+
+  Coverage walker proves every backend route in the registry is
+  registered in the chi router AND every UI test ID is referenced
+  by a withAiFeature wrapper. The new
+  POST /api/v1/ai/system/data-repair/draft is one of the 41 routes
+  walked.
+
+--- 4) go run ./tools/aigen --check ---
+
+  aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+
+  EXIT=0
+
+--- 5) go run ./cmd/ai-eval --feature data-repair-suggestions ---
+
+  AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 1.044ms elapsed)
+
+  By feature:
+    data-repair-suggestions        3/3 pass
+
+  Details:
+    [PASS] data-repair-suggestions/typical_stale_charging_close (522.9µs)
+    [PASS] data-repair-suggestions/typical_stale_drive_update     (0s)
+    [PASS] data-repair-suggestions/refusal_out_of_scope_target    (521.1µs)
+
+  EXIT=0
+
+--- 6a) cd web; npx tsc --noEmit ---
+
+  (no output)
+
+  EXIT=0
+
+--- 6b) cd web; npm run lint (full repo) ---
+
+  (pre-existing baseline: 25 problems, 23 errors, 2 warnings —
+  ALL in files outside this slice's allowed scope:
+  ScheduledMaintenanceCard.tsx, ChatbotPage.tsx,
+  SignalsWorkspacePage.tsx, useAiStream.ts (pre-existing 'parts'
+  / 'dataParts' const-prefer warnings from slice 0006),
+  useRangeState.ts, rum.ts, rum.test.ts, EnergyEditor.tsx, etc.)
+
+  Baseline-vs-changed comparison (git stash + lint + git stash pop):
+    Baseline:      25 problems (23 errors, 2 warnings)
+    After-changes: 25 problems (23 errors, 2 warnings)
+
+  This slice adds ZERO new lint problems.
+
+  EXIT=1   (pre-existing baseline failures unchanged; the
+            slice's introduced delta is 0)
+
+  Focused lint of slice files only (passes clean):
+    $ npx eslint \
+        src/components/ai/AIDataRepairSuggestions.tsx \
+        src/features/system/__tests__/TestDataRepairSuggestionsAIOffManualRunbookWorks.test.tsx \
+        src/features/system/__tests__/TestDataRepairSuggestionsAIOnWiredCallsRoute.test.tsx \
+        src/features/system/pages/DataRepairPage.tsx
+    (no output)
+    EXIT=0
+
+--- 6c) cd web; npm test -- --run TestDataRepairSuggestionsAIOffManualRunbookWorks ---
+
+  ✓ src/features/system/__tests__/TestDataRepairSuggestionsAIOnWiredCallsRoute.test.tsx (2 tests) 302ms
+  ✓ src/features/system/__tests__/TestDataRepairSuggestionsAIOffManualRunbookWorks.test.tsx (4 tests) 271ms
+
+   Test Files  2 passed (2)
+        Tests  6 passed (6)
+
+  EXIT=0
+
+  (Both the off-mode TestDataRepairSuggestionsAIOffManualRunbookWorks
+  AND the on-mode wiring test
+  TestDataRepairSuggestionsAIOnWiredCallsRoute pass. The
+  positional --run filter "TestDataRepairSuggestions" matches both
+  files by path, so both are exercised.)
+
+--- 7) W1 inline self-check ---
+
+  $ Select-String -Path 'web/src/components/ai/AIDataRepairSuggestions.tsx' \
+      -Pattern 'future slice|coming soon|wiring lands|would call POST' \
+      | Measure-Object | Select-Object -ExpandProperty Count
+
+  0
+
+  EXIT=0
+
+  Zero placeholder/deferral strings in the slice's shipped AI
+  component — wired end-to-end.
+
+--- 8) Off-mode focused proof ---
+
+  TestDataRepairSuggestionsAIOffManualRunbookWorks
+  (internal/api/ai_data_repair_handler_test.go) proves:
+    · POST /api/v1/ai/system/data-repair/draft returns 404 when
+      ai_mode='off' even with the per-feature toggle on (chi
+      handler is unmounted by the guard).
+    · The 404 body does not leak feature/strategy/provider/agent
+      identifiers.
+    · GET /api/v1/data-repair/stale-sessions returns 200 with
+      `"surface":"baseline_deterministic_data_repair"`.
+    · POST /api/v1/data-repair/charging/{id}/close returns 200
+      with `"surface":"baseline_close_charging"`.
+    · DELETE /api/v1/data-repair/drive/{id} returns 200 with
+      `"surface":"baseline_delete_drive"`.
+    · PUT /api/v1/data-repair/charging/{id} returns 200 with
+      `"surface":"baseline_update_charging"`.
+
+  TestDataRepairSuggestionsAIOffManualRunbookWorks
+  (web/src/features/system/__tests__/...test.tsx) proves:
+    · `data-testid="ai-feature-data-repair-suggestions-root"` is
+      ABSENT in the DOM when ai_mode='off' even with the toggle
+      on.
+    · `data-testid="ai-feature-data-repair-suggestions-root"` is
+      ABSENT when ai_mode='cloud' AND toggle=false (per-feature
+      opt-in proof).
+    · `data-testid="ai-feature-data-repair-suggestions-root"` IS
+      present (positive control) when ai_mode='cloud' AND
+      toggle=true.
+    · The full DataRepairPage in off mode renders the
+      deterministic manual-runbook surface (page title, four
+      metric cards, two tab buttons) AND the AI section is absent.
+
+  Service worker chunks (ai-data-repair-suggestions): the SPA
+  build's per-feature chunk gating is handled at compile time by
+  the dynamic import barrel; this slice does not introduce a new
+  background job or notification push channel, so JobNames and
+  PushKinds are explicit empty arrays in the registry.
+
+  Client storage keys (ai.dataRepair.draft): the slice ships no
+  localStorage / sessionStorage / IndexedDB persistence in this
+  iteration. The proposed RepairPlan is held in component-local
+  React state inside AiOutputPanel; if the user navigates away,
+  the proposal is discarded. A future slice may persist it under
+  the `ai.dataRepair.draft` key documented in the slice prompt.
+
+=== COMMIT ===
+
+(See trailing transcript after this log file is committed.)
+
+=== AI-OFF CONTRACT ===
+
+I1 default-off:     PASS   data-repair-suggestions registry entry
+                            sets DefaultOn: false. New users see
+                            the page as if the AI feature did not
+                            exist; opt-in requires both
+                            settings.ai_mode != 'off' AND
+                            settings.ai_features['data-repair-suggestions']
+                            === true (ADR-015 §I1 + §I7).
+
+I3 baseline intact: PASS   The deterministic stale-session list,
+                            metric cards, tab buttons, and per-row
+                            edit forms (Update / Close / Discard)
+                            on /system/data-repair render
+                            unconditionally. The ONLY edit to
+                            DataRepairPage.tsx is a one-line
+                            `<AIDataRepairSuggestions />` mount
+                            above the stats; that mount returns
+                            null in off mode via withAiFeature.
+                            Proven by the React off-mode test's
+                            "DataRepairPage in off mode shows the
+                            deterministic stale-session manual-
+                            runbook surface" assertion.
+
+I4 zero egress:     PASS   In off mode, useAiStream's POST is
+                            never enqueued because the AI
+                            component is unmounted by withAiFeature
+                            (returns null). No fetch, no
+                            EventSource, no provider call, no
+                            decorator chain invocation. Backend
+                            guard.Wrap fails closed → no provider
+                            registry lookup → no decorator →
+                            no provider.Call.
+
+I5 hidden UI:       PASS   data-testid="ai-feature-data-repair-
+                            suggestions-root" is absent from the
+                            DOM in off mode (proven by the React
+                            off-mode test). The empty-container
+                            assertion `expect(container).toBeEmptyDOMElement()`
+                            also proves the wrapper renders zero
+                            children.
+
+I6 404 routes:      PASS   POST /api/v1/ai/system/data-repair/draft
+                            returns 404 in off mode (proven by the
+                            Go off-mode test, which mounts the
+                            route under guard.Wrap and asserts
+                            rec.Code == 404). Defence-in-depth:
+                            the 404 body is asserted to NOT leak
+                            "data-repair-suggestions", "feature",
+                            "strategy", "provider", or "agent"
+                            (ADR-015 §I9).
+
+I7 per-feature:     PASS   Even with ai_mode='cloud', the section
+                            is hidden when settings.ai_features
+                            ['data-repair-suggestions'] === false.
+                            Proven by the React off-mode test's
+                            second case ("renders nothing when
+                            ai_mode is non-off but the data-repair-
+                            suggestions toggle is false"). The
+                            backend guard.Wrap also enforces this
+                            on the server side.
+
+I10 type system:    PASS   The DataRepairPlan DTO is a typed Go
+                            struct with explicit Action enum
+                            ("close" | "discard" | "update") and
+                            per-kind UpdateFields allowlist
+                            enforcement. The validator returns a
+                            typed error envelope, not a free-form
+                            string. The TS mirror
+                            web/src/ai/features.ts is regenerated
+                            by aigen; aigen --check passes.
+
+I12 client/bg:      PASS   This slice adds:
+                            · Service worker chunk:
+                              ai-data-repair-suggestions (handled
+                              by SPA's dynamic-import barrel; no
+                              new persistent background work in
+                              off mode).
+                            · Client storage key: ai.dataRepair.
+                              draft is RESERVED in the slice
+                              prompt's contract impact section
+                              but NOT used by this iteration —
+                              the proposal is held in component-
+                              local state and discarded on
+                              navigate-away. A future slice may
+                              persist it. No ai.dataRepair.draft
+                              key is written in off mode (the
+                              component never mounts).
+                            · No new background jobs (JobNames=
+                              []string{} explicit).
+                            · No new push kinds (PushKinds=
+                              []string{} explicit).
+
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

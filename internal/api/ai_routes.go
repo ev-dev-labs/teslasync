@@ -147,6 +147,7 @@ func mountAIRoutes(
 	aiPeriodCompareNarration *AIPeriodCompareNarrationHandler,
 	aiLifetimeStatsQA *AILifetimeStatsQAHandler,
 	aiIncidentTimelineSummarizer *AIIncidentTimelineSummarizerHandler,
+	aiDataRepairSuggestions *AIDataRepairSuggestionsHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -405,6 +406,27 @@ func mountAIRoutes(
 			incidentTimelineSummarizerHandler = aiIncidentTimelineSummarizer.ServeHTTP
 		}
 		r.Post("/system/incidents/{incidentID}/summarize", g.Wrap("incident-timeline-summarizer", incidentTimelineSummarizerHandler))
+
+		// data-repair-suggestions (Phase-50 / S2, slice 0043).
+		// Opt-in LLM that proposes a typed RepairPlan for ONE
+		// stale charging session OR ONE stale drive from the
+		// in-scope inventory loaded server-side. PROPOSE-ONLY:
+		// the user reviews the typed proposal in the AI side
+		// panel and clicks the canonical Save / Close / Discard
+		// button on the baseline /system/data-repair edit form;
+		// the LLM never writes. Same stub-fallback pattern as the
+		// other AI handlers — a nil handler is possible during
+		// partial wiring but the off-mode 404 invariant still
+		// holds because guard.Wrap returns 404 BEFORE the handler
+		// runs in off mode. The canonical baseline routes at
+		// GET /api/v1/data-repair/stale-sessions and
+		// PUT/POST/DELETE /api/v1/data-repair/{kind}/{id}{...}
+		// are unchanged.
+		var dataRepairSuggestionsHandler http.HandlerFunc = aiDataRepairSuggestionsStubHandler
+		if aiDataRepairSuggestions != nil {
+			dataRepairSuggestionsHandler = aiDataRepairSuggestions.ServeHTTP
+		}
+		r.Post("/system/data-repair/draft", g.Wrap("data-repair-suggestions", dataRepairSuggestionsHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1170,6 +1192,15 @@ func aiLifetimeStatsQAStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiIncidentTimelineSummarizerStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai incident timeline summarizer is not yet implemented")
+}
+
+// aiDataRepairSuggestionsStubHandler mirrors
+// aiIncidentTimelineSummarizerStubHandler for the S2 slice
+// (Phase-50 / 0043 data-repair-suggestions). Reachable only when
+// AIDataRepairSuggestionsHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiDataRepairSuggestionsStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai data-repair suggestions is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

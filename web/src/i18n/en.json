@@ -2491,6 +2491,10 @@
           "label": "Incident timeline summarizer",
           "description": "Opt-in LLM summarizer that condenses one incident's chronological timeline into a 3-6 sentence factual summary — what happened, what investigation steps the operator took, and how it resolved — by routing through two read-only tools that quote the same deterministic envelope the canonical incident page renders. The narrator never invents updates and never speculates about root cause. Per-request scope binding rejects any cross-incident tool call to defend against prompt-injection exfiltration via operator-authored text. The deterministic incident timeline list, append-update form, and lifecycle controls on the per-incident page remain the canonical baseline when AI is off."
         },
+        "data-repair-suggestions": {
+          "label": "Data repair suggestions",
+          "description": "Opt-in LLM that proposes a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory shown on the Data Repair page. PROPOSE-ONLY: the LLM routes through two propose-only tools that share the same per-kind update_fields allowlist used by the canonical handler, and the user reviews the typed proposal in the AI side panel and clicks the canonical Save / Close / Discard button on the baseline form to apply it. The LLM never writes. Per-request scope binding rejects any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields. The deterministic stale-session list and per-row repair forms on the Data Repair page remain the canonical baseline when AI is off."
+        },
         "vampire-drain-explanation": {
           "label": "Vampire-drain explanation",
           "description": "Opt-in LLM narrator that explains the deterministic vampire-drain (idle energy loss) signal — recent average / median / p95 idle drain rate per day, the worst recent idle window (start, duration, drain %, ambient temperature), and the per-event driver (Sentry on, climate on, very long parked window) most strongly correlated with elevated drain — grounded in the same numeric envelope the cards render, and honest that the per-event driver attribution is correlational rather than causal. The deterministic vampire-drain stats, per-event timeline, and typical-vs-worst cards on the Vampire Drain page remain the canonical baseline when AI is off."
@@ -3156,6 +3160,14 @@
       "description": "Get a 3-6 sentence factual summary of this incident\u2019s timeline. The summary is grounded in the same deterministic envelope the timeline below shows; the narrator never invents updates and never speculates about root cause.",
       "badge": "AI",
       "button": "Summarize"
+    }
+  },
+  "dataRepair": {
+    "aiSuggestions": {
+      "title": "AI repair suggestions",
+      "description": "Propose a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory below. The LLM never writes \u2014 review the proposal here and click the canonical Save / Close / Discard button on the matching baseline form to apply it.",
+      "badge": "AI",
+      "button": "Draft repair plan"
     }
   },
   "analytics": {

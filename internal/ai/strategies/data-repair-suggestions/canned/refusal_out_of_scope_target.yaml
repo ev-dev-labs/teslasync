@@ -1,0 +1,11 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot propose a repair for charging session 777 — that
+      ID is not in the in-scope stale-session inventory for this
+      request. The current scope contains only charging session
+      42. If you want to repair a different stale row, refresh
+      the page so it appears in the inventory and I will draft a
+      plan for it.
+    input_tokens: 48
+    output_tokens: 64
