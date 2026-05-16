@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-dashboard-composer" | "nl-drive-search-replay" | "nl-grafana-panel" | "nl-search" | "nl-sql-playground" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "trip-postcard-share-card-image-generation" | "vampire-drain-explanation" | "voice-mode" | "watch-face-nl-response" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-dashboard-composer" | "nl-drive-search-replay" | "nl-grafana-panel" | "nl-search" | "nl-sql-playground" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "trip-postcard-share-card-image-generation" | "vampire-drain-explanation" | "vehicle-paint-preview" | "voice-mode" | "watch-face-nl-response" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -608,6 +608,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-vampire-drain-explanation-root"] as const),
   }),
+  "vehicle-paint-preview": Object.freeze({
+    id: "vehicle-paint-preview",
+    name: "Vehicle paint preview",
+    description: "Opt-in LLM-backed propose-only assistant that drafts a typed paint-preview image-prompt envelope (proposed color, image prompt, optional style hint) for ONE existing vehicle grounded in the vehicle's read-only model / trim / current exterior color. The strategy NEVER generates image bytes, NEVER calls an external image-generation provider, NEVER persists or applies a new color; the user reviews the structured proposal in the AI panel and applies the new paint color through the existing manual per-vehicle Color setting on /vehicles/:vehicleId. The existing vehicle photo gallery + manual exterior_color row + manual theme/appearance settings remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript reveals neither the vehicle's display name nor VIN nor any location.",
+    tier: "GEN2",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-vehicle-paint-preview-root"] as const),
+  }),
   "voice-mode": Object.freeze({
     id: "voice-mode",
     name: "Helix voice mode",
@@ -697,6 +708,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "trip-planner-llm-agent",
   "trip-postcard-share-card-image-generation",
   "vampire-drain-explanation",
+  "vehicle-paint-preview",
   "voice-mode",
   "watch-face-nl-response",
   "yir-narration",

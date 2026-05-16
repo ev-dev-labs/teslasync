@@ -1305,6 +1305,61 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_share_card_ready"},
 		},
 	},
+	// vehicle-paint-preview — Phase-50 / 0061 (GEN2).
+	//
+	// Opt-in LLM-backed propose-only assistant that drafts a typed
+	// paint-preview image-prompt envelope (proposed_color,
+	// image_prompt, optional one-word style_hint) for ONE existing
+	// vehicle grounded in the vehicle's read-only model / trim /
+	// current exterior color. The strategy NEVER generates image
+	// bytes, NEVER calls an external image-generation provider,
+	// NEVER persists or applies a new color, and NEVER mutates any
+	// vehicle setting. The user reviews the structured proposal in
+	// the AI panel on /vehicles/:vehicleId and applies the new
+	// paint color through the existing manual per-vehicle Color
+	// setting (rendered by VehicleConfigSection) plus the manual
+	// theme/appearance settings on the same page. The existing
+	// vehicle photo gallery + manual exterior_color row remain the
+	// canonical baseline when AI is off (ADR-015 §I3, §I5, §I6).
+	//
+	// JobNames + PushKinds: intentionally empty — this slice has no
+	// background pregen, no push-event kind. A future ML/job-tier
+	// slice that pregenerates paint-preview suggestions would land
+	// its own job + push-kind entries; today the AI handler is
+	// strictly request-scoped.
+	//
+	// Routes: backend
+	// /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft is the
+	// propose-only endpoint, gated by guard.Wrap(
+	// "vehicle-paint-preview"); frontend /vehicles/:vehicleId is
+	// the authenticated vehicle detail page that renders both the
+	// baseline VehicleConfigSection / manual settings AND the
+	// opt-in AI surface via withAiFeature.
+	//
+	// Redaction: PolicyChatbot (allow nothing in cleartext). The
+	// LLM's view of the vehicle is the redaction-tagged display
+	// name and VIN; the propose-only tool's evidence envelope
+	// further omits the display name and VIN entirely as
+	// defence-in-depth. The validator additionally refuses any
+	// cleartext lat/long pair or "<number> <Word> <Street-type>"
+	// pattern in the proposed color or style hint.
+	"vehicle-paint-preview": {
+		ID:          "vehicle-paint-preview",
+		Name:        "Vehicle paint preview",
+		Description: "Opt-in LLM-backed propose-only assistant that drafts a typed paint-preview image-prompt envelope (proposed color, image prompt, optional style hint) for ONE existing vehicle grounded in the vehicle's read-only model / trim / current exterior color. The strategy NEVER generates image bytes, NEVER calls an external image-generation provider, NEVER persists or applies a new color; the user reviews the structured proposal in the AI panel and applies the new paint color through the existing manual per-vehicle Color setting on /vehicles/:vehicleId. The existing vehicle photo gallery + manual exterior_color row + manual theme/appearance settings remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class tagged so a leaked transcript reveals neither the vehicle's display name nor VIN nor any location.",
+		Tier:        "GEN2",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft"},
+			Frontend:  []string{"/vehicles/:vehicleId"},
+			UITestIDs: []string{"ai-feature-vehicle-paint-preview-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 	// Phase-50 / T1 (slice 0031) — Preheat and precool recommender.
 	//
 	// preheat-precool-recommender is the first T-tier (Tools-rich) AI

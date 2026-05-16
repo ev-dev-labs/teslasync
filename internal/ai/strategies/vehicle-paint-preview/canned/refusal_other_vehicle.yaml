@@ -1,0 +1,11 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot generate a paint preview for a different vehicle —
+      my role is to propose a paint-color image prompt only for
+      the vehicle in scope for this session (vehicle 7). If
+      you'd like, I can draft a paint-preview image prompt for
+      vehicle 7 instead — just tell me which color and I'll
+      propose one.
+    input_tokens: 46
+    output_tokens: 42

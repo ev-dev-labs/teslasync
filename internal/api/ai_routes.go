@@ -165,6 +165,7 @@ func mountAIRoutes(
 	aiNLGrafanaPanel *AINLGrafanaPanelHandler,
 	aiNLDashboardComposer *AINLDashboardComposerHandler,
 	aiTripPostcardShareCardImageGeneration *AITripPostcardShareCardImageGenerationHandler,
+	aiVehiclePaintPreview *AIVehiclePaintPreviewHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -826,6 +827,31 @@ func mountAIRoutes(
 			tripPostcardShareCardImageGenerationHandler = aiTripPostcardShareCardImageGeneration.ServeHTTP
 		}
 		r.Post("/share-cards/trip-image/draft", g.Wrap("trip-postcard-share-card-image-generation", tripPostcardShareCardImageGenerationHandler))
+
+		// vehicle-paint-preview (Phase-50 / 0061, GEN2 slice) drafts a
+		// typed paint-preview image-prompt envelope (proposed color,
+		// image prompt, optional one-word style hint) for ONE existing
+		// vehicle grounded in the vehicle's read-only model / trim /
+		// current exterior color. The LLM does NOT generate image
+		// bytes, NEVER calls an external image-generation provider,
+		// and NEVER persists or applies a new color — the surface is
+		// propose-only, mirroring the auto-trip-naming +
+		// trip-postcard patterns. The user reviews the structured
+		// proposal in the AI panel on /vehicles/:vehicleId and
+		// applies the new paint color through the existing manual
+		// per-vehicle Color setting (VehicleConfigSection); the
+		// existing vehicle photo gallery + manual exterior_color row
+		// + manual theme/appearance settings are unchanged. Same
+		// stub-fallback pattern as the other AI handlers — a nil
+		// handler is possible during partial wiring but the off-mode
+		// 404 invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode. (ADR-015 §I3 + §I5
+		// + §I6.)
+		var vehiclePaintPreviewHandler http.HandlerFunc = aiVehiclePaintPreviewStubHandler
+		if aiVehiclePaintPreview != nil {
+			vehiclePaintPreviewHandler = aiVehiclePaintPreview.ServeHTTP
+		}
+		r.Post("/vehicles/{vehicleID}/paint-preview/draft", g.Wrap("vehicle-paint-preview", vehiclePaintPreviewHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1758,6 +1784,15 @@ func aiNLDashboardComposerStubHandler(w http.ResponseWriter, _ *http.Request) {
 // not the stub.
 func aiTripPostcardShareCardImageGenerationStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai trip postcard / share-card image-prompt generation is not yet implemented")
+}
+
+// aiVehiclePaintPreviewStubHandler mirrors the other AI stub
+// handlers for the GEN2 slice (Phase-50 / 0061 vehicle-paint-preview).
+// Reachable only when AIVehiclePaintPreviewHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiVehiclePaintPreviewStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai vehicle paint-preview image-prompt generation is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

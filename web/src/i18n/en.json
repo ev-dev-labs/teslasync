@@ -8285,6 +8285,14 @@
   },
   "vehicles": {
     "compareButton": "Compare vehicles",
+    "aiPaintPreview": {
+      "title": "Draft a Helix paint preview",
+      "description": "Ask Helix to draft a propose-only paint-color image prompt for this vehicle. Helix only sees the redacted vehicle context (model, trim, current exterior color) — never the display name, VIN, license plate, or location. The draft is never applied automatically; review the proposed image prompt here, then use the existing Color setting below to apply the new paint if you'd like to keep it.",
+      "button": "Preview paint color",
+      "badge": "Helix",
+      "noVehicleHint": "Open a vehicle detail page to enable Helix.",
+      "streamingLabel": "Helix is drafting a paint preview…"
+    },
     "photos": {
       "gallery": "Photo gallery",
       "galleryNamed": "{{name}} photo gallery",
@@ -8387,6 +8395,7 @@
         "recentDrivesFailed": "Recent drives failed to load",
         "recentChargesFailed": "Recent charges failed to load",
         "vehicleConfigFailed": "Vehicle config section failed to load",
+        "aiPaintPreviewFailed": "Helix paint preview failed to load",
         "quickLinksFailed": "Quick links failed to load",
         "settingsFailed": "Per-vehicle settings failed to load"
       }

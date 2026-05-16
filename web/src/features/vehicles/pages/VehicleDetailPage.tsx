@@ -43,6 +43,7 @@ import {
 } from '../components/vehicle-detail'
 import VehicleSettingsTab from '../components/VehicleSettingsTab'
 import { useVehicleSettings, findEffectiveSetting } from '@/api/hooks/useVehicleSettings'
+import { AIVehiclePaintPreview } from '@/components/ai/AIVehiclePaintPreview'
 
 /* ─── Loading skeleton (Phase-45 / Prompt 18) ─────────────────────── */
 
@@ -248,6 +249,9 @@ export default function VehicleDetailPage() {
           </SectionErrorBoundary>
           <SectionErrorBoundary name="vehicle-detail:vehicle-config" fallbackTitle={t('vehicles.detail.section.vehicleConfigFailed', 'Vehicle config section failed to load')}>
             <FadeIn delay={0.26}><VehicleConfigSection vehicleConfig={vehicleConfig} softwareVersion={state.software_version} /></FadeIn>
+          </SectionErrorBoundary>
+          <SectionErrorBoundary name="vehicle-detail:ai-paint-preview" fallbackTitle={t('vehicles.detail.section.aiPaintPreviewFailed', 'Helix paint preview failed to load')}>
+            <FadeIn delay={0.27}><AIVehiclePaintPreview vehicleId={vehicleId} /></FadeIn>
           </SectionErrorBoundary>
           <SectionErrorBoundary name="vehicle-detail:quick-links" fallbackTitle={t('vehicles.detail.section.quickLinksFailed', 'Quick links failed to load')}>
             <FadeIn delay={0.28}><QuickLinksSection /></FadeIn>
