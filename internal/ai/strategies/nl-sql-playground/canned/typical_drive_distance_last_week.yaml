@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_nl_sql_draft_drives_last_week
+        name: draft_readonly_sql
+        arguments: '{"prompt": "How far did I drive last week?", "sql": "SELECT SUM(distance_m) AS total_distance_m FROM drives WHERE started_at >= NOW() - INTERVAL ''7 days''", "rationale": "Aggregates the drives table over the trailing 7 days using SUM(distance_m)."}'
+    input_tokens: 88
+    output_tokens: 64
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_nl_sql_validate_drives_last_week
+        name: validate_readonly_sql
+        arguments: '{"prompt": "How far did I drive last week?", "sql": "SELECT SUM(distance_m) AS total_distance_m FROM drives WHERE started_at >= NOW() - INTERVAL ''7 days''", "rationale": "Aggregates the drives table over the trailing 7 days using SUM(distance_m)."}'
+    input_tokens: 132
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      I drafted a read-only SELECT against the `drives` table that
+      returns SUM(distance_m) for the trailing 7 days. Review the
+      typed proposal in the AI panel and click the Apply to editor
+      button to copy it into the manual SQL editor on /power/sql,
+      then click Run to execute; I never run the query myself.
+    input_tokens: 188
+    output_tokens: 84

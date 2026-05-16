@@ -2574,6 +2574,10 @@
         "pii-redaction-shared-exports": {
           "label": "PII redaction in shared exports",
           "description": "Opt-in Helix advisor that recommends which PII classes to redact from a shared export on the Exports page — the highly-recommended classes for the chosen export type (drives, charging, trips, analytics, backup, account) plus the optional classes that depend on your consent — by routing through two read-only tools that consult a STATIC catalog of PII classes keyed by export type. The advisor is catalog-based, not a per-row PII scan: Helix never reads the rows of your export and never reports PII it actually saw; it surfaces the catalog's recommendations plus the assumptions inherited from the catalog. Per-request scope binding rejects any cross-export-type tool call to defend against prompt-injection exfiltration. The deterministic export-jobs list, bulk-delete toolbar, and download links remain the canonical baseline when Helix is off."
+        },
+        "nl-sql-playground": {
+          "label": "Natural-language SQL playground",
+          "description": "Opt-in Helix translator on the SQL Playground page (/power/sql) that converts a natural-language question into a typed read-only SQL DRAFT (a single SELECT or WITH statement against the curated install-wide schema catalog of drives, charging_sessions, vehicles, alerts, and signal_log_view) by routing through two propose-only tools (draft_readonly_sql + validate_readonly_sql). The translator NEVER executes SQL — there is no apply or execute tool; the deny-by-default keyword scan refuses INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE, VACUUM, COPY, CALL, DO, MERGE, and EXECUTE; the per-request scope binding refuses any table reference outside the curated catalog. The user reviews the typed proposal in the AI side panel, clicks Apply to editor to copy the draft into the manual SQL editor, and clicks the canonical Run button to execute. The deterministic manual SQL editor and curated catalog viewer remain the canonical baseline when Helix is off."
         }
       },
       "archive": {

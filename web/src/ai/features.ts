@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "voice-mode" | "watch-face-nl-response" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "nl-sql-playground" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "voice-mode" | "watch-face-nl-response" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -355,6 +355,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-nl-search-root"] as const),
   }),
+  "nl-sql-playground": Object.freeze({
+    id: "nl-sql-playground",
+    name: "Helix natural-language SQL playground",
+    description: "Opt-in Helix translator on the /power/sql route that turns plain-English data questions (e.g. \"how far did I drive last week\") into a typed read-only SELECT draft you can review before clicking the canonical Run button on the manual SQL playground form. The translator uses TWO propose-only typed tools (draft_readonly_sql, validate_readonly_sql) that share the SAME allowlist enforcement: every proposed statement MUST start with SELECT or WITH, MUST be a single statement (no semicolons), every referenced table MUST appear in the per-request scope-bound schema catalog the handler installs, and any DML/DDL keyword (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE, VACUUM, COPY, CALL, DO, MERGE, EXECUTE) is rejected at parse time. The LLM NEVER executes the SQL itself — the user reviews the typed draft in the Helix panel and clicks the canonical Run button on the baseline manual SQL editor to actually execute the query. The Helix panel is propose-only and never bypasses the existing read-only execution handler. Per-request scope binding rejects any table name not in the in-scope curated catalog (drives, charging_sessions, vehicles, signal_log_view, alerts) so a prompt-injection attempt that pastes \"select * from secrets\" cannot exfiltrate out-of-scope tables — the LLM physically cannot reference a table name the catalog does not list. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); only schema metadata (table + column names + descriptions) crosses the tool boundary, no row data, no operator-authored text from any non-prompt source. Retrieval is constrained to two source types: schema_catalog (a feature-local string referring to the in-scope curated table descriptions) and docs (the existing rag.SourceDocs for SPA help-page chunks that describe each table's columns). The deterministic /power/sql baseline (manual SQL textarea + curated schema catalog viewer + Run button + read-only result table) remains the canonical surface when Helix is off (ADR-015 §I3 + §I5 + §I6).",
+    tier: "PU1",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-nl-sql-playground-root"] as const),
+  }),
   "period-compare-narration": Object.freeze({
     id: "period-compare-narration",
     name: "Period compare narration",
@@ -630,6 +641,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "nl-automation-builder",
   "nl-drive-search-replay",
   "nl-search",
+  "nl-sql-playground",
   "period-compare-narration",
   "pii-redaction-shared-exports",
   "predictive-maintenance",

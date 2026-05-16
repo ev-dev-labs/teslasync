@@ -1,0 +1,10 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot draft a destructive query — the SQL playground at
+      /power/sql is read-only by contract, and I never propose
+      write or destructive statements. If you would like to count,
+      list, or aggregate old drives older than 5 years, I can
+      draft a SELECT for you instead.
+    input_tokens: 60
+    output_tokens: 80

@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_nl_sql_draft_charging_count
+        name: draft_readonly_sql
+        arguments: '{"prompt": "How many charging sessions did I have this month?", "sql": "SELECT COUNT(*) AS session_count FROM charging_sessions WHERE started_at >= date_trunc(''month'', NOW())", "rationale": "Counts the charging_sessions table over the current month using COUNT(*)."}'
+    input_tokens: 92
+    output_tokens: 64
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_nl_sql_validate_charging_count
+        name: validate_readonly_sql
+        arguments: '{"prompt": "How many charging sessions did I have this month?", "sql": "SELECT COUNT(*) AS session_count FROM charging_sessions WHERE started_at >= date_trunc(''month'', NOW())", "rationale": "Counts the charging_sessions table over the current month using COUNT(*)."}'
+    input_tokens: 138
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      I drafted a read-only SELECT against the `charging_sessions`
+      table that returns COUNT(*) for the current month. Review the
+      typed proposal in the AI panel and click the Apply to editor
+      button to copy it into the manual SQL editor on /power/sql,
+      then click Run to execute; I never run the query myself.
+    input_tokens: 192
+    output_tokens: 80

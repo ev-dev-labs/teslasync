@@ -3540,6 +3540,61 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_watch_response"},
 		},
 	},
+
+	// nl-sql-playground is the Phase-50 / 0057 PU1 surface that
+	// adds an OPT-IN Helix translator on the /power/sql route that
+	// turns plain-English data questions into a typed read-only
+	// SELECT draft the user can review before manually executing
+	// inside the deterministic SQL playground form. The
+	// deterministic /power/sql baseline (manual SQL editor +
+	// curated schema catalog viewer) remains the canonical surface
+	// when ai_mode='off' or the per-feature toggle is off
+	// (ADR-015 §I3 + §I5 + §I6). The backend route
+	// POST /api/v1/ai/power/sql/draft is gated by
+	// ai.GuardedHandler('nl-sql-playground') so off-mode users see
+	// a 404. The strategy uses TWO propose-only typed tools
+	// (draft_readonly_sql, validate_readonly_sql) that route every
+	// proposal through a strict allowlist: the SQL MUST start with
+	// SELECT or WITH; semicolons are forbidden (single-statement
+	// only); every referenced table MUST appear in the per-request
+	// scope-bound schema catalog the handler installs via
+	// tools.WithScopedSchemaCatalog; every DML/DDL keyword (INSERT,
+	// UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE,
+	// VACUUM, COPY, CALL, DO, MERGE, EXECUTE) is rejected at parse
+	// time. The LLM NEVER executes the SQL itself — the user
+	// reviews the typed draft in the AI panel and clicks the
+	// canonical Run button on the baseline form which fires the
+	// existing manual-SQL execution path. Per-request scope
+	// binding rejects any table name not in the in-scope catalog
+	// to defend against prompt-injection exfiltration through the
+	// operator's natural-language prompt. Per-feature redaction
+	// policy is PolicyAlertBuilder (Allow=nil; deny-by-default —
+	// every PII class is tagged round-trip before the provider
+	// sees the prompt). The retrieval surface is restricted to two
+	// source types: schema_catalog (a feature-local string for
+	// curated table/column metadata) and docs (rag.SourceDocs for
+	// the SPA help docs that describe each table). Service-worker
+	// chunk 'ai-nl-sql-playground' is registered for off-mode SW
+	// filtering; the client storage key 'ai.sqlPlayground.draft' is
+	// only written when the gated component mounts, so off mode
+	// leaves it absent by construction (ADR-015 §I12).
+	"nl-sql-playground": {
+		ID:          "nl-sql-playground",
+		Name:        "Helix natural-language SQL playground",
+		Description: "Opt-in Helix translator on the /power/sql route that turns plain-English data questions (e.g. \"how far did I drive last week\") into a typed read-only SELECT draft you can review before clicking the canonical Run button on the manual SQL playground form. The translator uses TWO propose-only typed tools (draft_readonly_sql, validate_readonly_sql) that share the SAME allowlist enforcement: every proposed statement MUST start with SELECT or WITH, MUST be a single statement (no semicolons), every referenced table MUST appear in the per-request scope-bound schema catalog the handler installs, and any DML/DDL keyword (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE, VACUUM, COPY, CALL, DO, MERGE, EXECUTE) is rejected at parse time. The LLM NEVER executes the SQL itself — the user reviews the typed draft in the Helix panel and clicks the canonical Run button on the baseline manual SQL editor to actually execute the query. The Helix panel is propose-only and never bypasses the existing read-only execution handler. Per-request scope binding rejects any table name not in the in-scope curated catalog (drives, charging_sessions, vehicles, signal_log_view, alerts) so a prompt-injection attempt that pastes \"select * from secrets\" cannot exfiltrate out-of-scope tables — the LLM physically cannot reference a table name the catalog does not list. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); only schema metadata (table + column names + descriptions) crosses the tool boundary, no row data, no operator-authored text from any non-prompt source. Retrieval is constrained to two source types: schema_catalog (a feature-local string referring to the in-scope curated table descriptions) and docs (the existing rag.SourceDocs for SPA help-page chunks that describe each table's columns). The deterministic /power/sql baseline (manual SQL textarea + curated schema catalog viewer + Run button + read-only result table) remains the canonical surface when Helix is off (ADR-015 §I3 + §I5 + §I6).",
+		Tier:        "PU1",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/power/sql/draft"},
+			Frontend:  []string{"/power/sql"},
+			UITestIDs: []string{"ai-feature-nl-sql-playground-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

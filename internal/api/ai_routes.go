@@ -161,6 +161,7 @@ func mountAIRoutes(
 	aiSafetySettingExplainer *AISafetySettingExplainerHandler,
 	aiVoiceMode *AIVoiceModeHandler,
 	aiWatchFaceNLResponse *AIWatchFaceNLResponseHandler,
+	aiNLSqlPlayground *AINLSQLPlaygroundHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -725,6 +726,28 @@ func mountAIRoutes(
 			watchFaceNLResponseHandler = aiWatchFaceNLResponse.ServeHTTP
 		}
 		r.Post("/watch/respond", g.Wrap("watch-face-nl-response", watchFaceNLResponseHandler))
+
+		// nl-sql-playground (Phase-50 / 0057, PU1 slice).
+		// Opt-in Helix translator that converts a natural-language
+		// request into a typed read-only SQL DRAFT (a single
+		// SELECT or WITH statement against the curated install-
+		// wide schema catalog) the user reviews in the AI side
+		// panel of the manual SQL playground page at /power/sql,
+		// then explicitly clicks the canonical Apply to editor
+		// button to copy the draft into the manual SQL editor and
+		// the canonical Run button to execute. The narrator NEVER
+		// executes the SQL — there is no apply / execute tool;
+		// the deny-by-default keyword scan + per-request scope
+		// binding refuses anything other than a SELECT/WITH
+		// against the curated table whitelist. The canonical
+		// baseline editor on /power/sql is unchanged; the AI
+		// surface NEVER replaces the deterministic editor — it
+		// COEXISTS with it. (ADR-015 §I3 + §I5 + §I6.)
+		var nlSqlPlaygroundHandler http.HandlerFunc = aiNLSqlPlaygroundStubHandler
+		if aiNLSqlPlayground != nil {
+			nlSqlPlaygroundHandler = aiNLSqlPlayground.ServeHTTP
+		}
+		r.Post("/power/sql/draft", g.Wrap("nl-sql-playground", nlSqlPlaygroundHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1620,6 +1643,15 @@ func aiVoiceModeStubHandler(w http.ResponseWriter, _ *http.Request) {
 // the guard, not the stub.
 func aiWatchFaceNLResponseStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai watch face natural-language response is not yet implemented")
+}
+
+// aiNLSqlPlaygroundStubHandler mirrors the other AI stub
+// handlers for the PU1 slice (Phase-50 / 0057 nl-sql-
+// playground). Reachable only when AINLSQLPlaygroundHandler is
+// nil at construction; the off-mode 404 invariant is held by
+// the guard, not the stub.
+func aiNLSqlPlaygroundStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai natural-language sql playground is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every
