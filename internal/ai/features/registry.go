@@ -3092,6 +3092,75 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+
+	// software-update-changelog-summarizer (Phase-50 / M3, slice 0051)
+	// summarizes the deterministic firmware update history the SPA's
+	// SoftwareUpdatesPage already renders from
+	// GET /api/v1/software-updates. Routes through TWO read-only tools:
+	//
+	//   - query_vehicle_software loads the in-scope vehicle's
+	//     deterministic update envelope (current installed version,
+	//     recent install/scheduled history, install cadence) from the
+	//     SAME software_updates table the canonical baseline timeline
+	//     reads — no new SQL, no separate write path. The envelope
+	//     includes a vehicle_id scope binding so an LLM-supplied
+	//     vehicle_id outside scope is refused at the tool boundary.
+	//
+	//   - retrieve_update_notes is the OPTIONAL F7 retrieval tool
+	//     scoped to the per-feature source-type allowlist
+	//     {software_update, docs}. Returns at most k cached release-
+	//     note chunks the operator can quote when summarizing the
+	//     changelog. Vehicle scoping for retrieve_update_notes is
+	//     INTENTIONALLY implicit: the input schema does NOT accept
+	//     vehicle_id so the LLM cannot request another vehicle's
+	//     chunks; per-vehicle separation is handled by the F7
+	//     retriever's per-subject filter and the source-type
+	//     allowlist.
+	//
+	// The narrator quotes ONLY what the deterministic envelope and
+	// the cached release-note chunks contain — it never invents a
+	// version number, never invents a feature/fix, never speculates
+	// about Tesla's roadmap, and is honest when a recently-listed
+	// version has no cached release-note chunks (in which case the
+	// narration sticks to the install/schedule cadence and explicitly
+	// says the release-note text is not available). The deterministic
+	// firmware history table, current-version stat card, and external
+	// "View release notes" links on the SoftwareUpdatesPage remain
+	// the canonical baseline when AI is off (ADR-015 §I3).
+	//
+	// Per-feature redaction policy is PolicyChatbot (Allow=nil) —
+	// release-note text is public reference material; vehicle
+	// identifiers (VIN, lat/long, addresses, place names, charger
+	// network labels) are tagged round-trip BEFORE the message
+	// reaches the provider so a leaked transcript reveals nothing
+	// beyond the firmware version strings themselves.
+	//
+	// JobNames: [ai_update_notes_indexer] is reserved for the
+	// future cron that re-embeds the cached release-note corpus
+	// into the F7 vector store. The job stub at
+	// internal/jobs/ai_update_notes_indexer.go is fail-closed: when
+	// ai_mode='off' OR the per-feature toggle is off the cron
+	// returns Skipped=1 without touching the embedder or the vector
+	// DB (ADR-015 §I12 #3). The actual fan-out implementation lands
+	// in a future indexer-fan-out slice; today's contract pins the
+	// gate so the off-mode 9999 final-gate has provable evidence.
+	"software-update-changelog-summarizer": {
+		ID:          "software-update-changelog-summarizer",
+		Name:        "Software update changelog summarizer",
+		Description: "Opt-in Helix narrator that summarizes the deterministic firmware update history the SPA's SoftwareUpdatesPage already renders from GET /api/v1/software-updates. Routes through one read-only typed tool (query_vehicle_software) that loads the in-scope vehicle's deterministic update envelope (current installed version, recent install/scheduled history, install cadence) from the SAME software_updates table the canonical baseline timeline reads — no new SQL, no separate write path. An OPTIONAL second tool (retrieve_update_notes) is the F7 retrieval surface scoped to {software_update, docs} source types so the narrator can quote cached release-note chunks when available. The narrator quotes ONLY what the deterministic envelope + cached chunks contain — it never invents a version number, never invents a feature/fix, never speculates about Tesla's roadmap, and is honest when a recently-listed version has no cached release-note chunks. Per-feature redaction policy is PolicyChatbot (Allow=nil) so VIN, coordinates, addresses, place names, and charger network labels stay tagged round-trip; release-note text is public so no class is allowed in cleartext. The deterministic firmware history timeline, current-version stat card, and external 'View release notes' links on the SoftwareUpdatesPage remain the canonical baseline when AI is off (ADR-015 §I3).",
+		Tier:        "M3",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/software-updates/summarize"},
+			Frontend:  []string{"/vehicle-systems/software"},
+			UITestIDs: []string{"ai-feature-software-update-changelog-summarizer-root"},
+			JobNames:  []string{"ai_update_notes_indexer"},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

@@ -2566,6 +2566,10 @@
         "tco-narration": {
           "label": "TCO narration",
           "description": "Opt-in Helix narrator that explains the deterministic Total-Cost-of-Ownership envelope on the True Cost of Ownership page — the EV charging cost, the equivalent gas cost, the cumulative savings, and the cost-per-kilometre comparison — by routing through one read-only tool that quotes the same numbers the chart shows. The narrator is honest about the four limiting assumptions: operating cost only (no depreciation, resale, insurance, registration, or financing); a flat $50/month maintenance heuristic; equivalent gas cost estimated from charged energy not real-world distance; and gas-price / efficiency / electricity-rate defaults from your editable Settings. When the deterministic envelope reports negative savings the narrator states that fact honestly rather than cheerlead. The deterministic hero stat cards, cumulative-savings area chart, cost-per-km bar chart, monthly EV-vs-gas bar chart, and savings-breakdown summary remain the canonical baseline when Helix is off."
+        },
+        "software-update-changelog-summarizer": {
+          "label": "Software update changelog summarizer",
+          "description": "Opt-in Helix narrator that summarizes one in-scope vehicle's firmware update history on the Software Updates page — the current installed version, the install cadence (days between recent versions), and the headline release-note themes for the versions you have actually installed — by routing through two read-only tools that quote the same deterministic update events the timeline shows plus the public Tesla release-note chunks the retrieval layer surfaces. The narrator never invents firmware versions and never claims features your installed build does not have; when no release notes are available for a version it states that fact honestly. Per-request scope binding rejects any cross-vehicle tool call to defend against prompt-injection exfiltration via release-note text. The deterministic current-version metric card, install-count metric card, total-update count, the per-version timeline with status chips, and the public release-notes external links remain the canonical baseline when Helix is off."
         }
       },
       "archive": {
@@ -8212,7 +8216,14 @@
     "distanceAutopilot": "{{unit}} (autopilot)"
   },
   "softwareUpdates": {
-    "title": "Software Updates"
+    "title": "Software Updates",
+    "aiNarration": {
+      "title": "Summarize my software update history",
+      "description": "Ask Helix to walk through your firmware update history — the current version, the install cadence, and the headline release-note themes. The narrator quotes only the deterministic update events your vehicle reported plus public Tesla release notes for the versions you have installed; it never invents firmware versions or claims features your installed build does not have.",
+      "button": "Summarize updates",
+      "badge": "Helix",
+      "noVehicleHint": "Pick a vehicle above to enable Helix."
+    }
   },
   "tirePressure": {
     "title": "Tire Pressure",

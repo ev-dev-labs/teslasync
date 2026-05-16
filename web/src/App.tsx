@@ -345,6 +345,13 @@ export default function App() {
         <Route path="chatbot" element={<SafeRoute name="Chatbot"><Chatbot /></SafeRoute>} />
         <Route path="tire-pressure" element={<SafeRoute name="TirePressure"><TirePressure /></SafeRoute>} />
         <Route path="software-updates" element={<SafeRoute name="SoftwareUpdates"><SoftwareUpdates /></SafeRoute>} />
+        {/* Phase-50 / 0051 alias: the slice prompt registered the AI feature
+            against frontend route `/vehicle-systems/software`; the canonical
+            app path stays `/software-updates` for back-compat, but mounting
+            the same page at `/vehicle-systems/software` lets the registry's
+            RouteSet.Frontend entry land users on the deterministic
+            baseline. */}
+        <Route path="vehicle-systems/software" element={<SafeRoute name="SoftwareUpdates"><SoftwareUpdates /></SafeRoute>} />
         <Route path="vampire-drain" element={<SafeRoute name="VampireDrain"><VampireDrain /></SafeRoute>} />
         {/* Phase-50 / 0030 alias: the slice prompt registered the AI feature
             against frontend route `/charging/vampire-drain`; the canonical

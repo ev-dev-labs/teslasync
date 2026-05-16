@@ -1,0 +1,30 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_vehicle_software_typical_recent_install_1
+        name: query_vehicle_software
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_retrieve_update_notes_typical_recent_install_1
+        name: retrieve_update_notes
+        arguments: '{"vehicle_id": 42, "query": "2024.32.10", "source_types": ["software_update", "docs"], "top_k": 4}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      Vehicle <vehicle id='42'/> is currently installed on
+      firmware 2024.32.10, installed about a week ago per the
+      deterministic envelope. The previous installed version
+      was 2024.26.5 a few weeks earlier, with 2024.20.1 before
+      that — the install cadence has been roughly 30 days
+      between installs across the recent history reported by
+      query_vehicle_software. retrieve_update_notes returned
+      one cached chunk for 2024.32.10 from the docs corpus
+      noting Autopilot stack-trace improvements; I will not
+      add features, fixes, or behaviour changes beyond what
+      that chunk reports.
+    input_tokens: 320
+    output_tokens: 160

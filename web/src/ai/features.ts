@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "predictive-maintenance" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "predictive-maintenance" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -443,6 +443,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-smart-charge-schedule-suggestion-root"] as const),
   }),
+  "software-update-changelog-summarizer": Object.freeze({
+    id: "software-update-changelog-summarizer",
+    name: "Software update changelog summarizer",
+    description: "Opt-in Helix narrator that summarizes the deterministic firmware update history the SPA's SoftwareUpdatesPage already renders from GET /api/v1/software-updates. Routes through one read-only typed tool (query_vehicle_software) that loads the in-scope vehicle's deterministic update envelope (current installed version, recent install/scheduled history, install cadence) from the SAME software_updates table the canonical baseline timeline reads — no new SQL, no separate write path. An OPTIONAL second tool (retrieve_update_notes) is the F7 retrieval surface scoped to {software_update, docs} source types so the narrator can quote cached release-note chunks when available. The narrator quotes ONLY what the deterministic envelope + cached chunks contain — it never invents a version number, never invents a feature/fix, never speculates about Tesla's roadmap, and is honest when a recently-listed version has no cached release-note chunks. Per-feature redaction policy is PolicyChatbot (Allow=nil) so VIN, coordinates, addresses, place names, and charger network labels stay tagged round-trip; release-note text is public so no class is allowed in cleartext. The deterministic firmware history timeline, current-version stat card, and external 'View release notes' links on the SoftwareUpdatesPage remain the canonical baseline when AI is off (ADR-015 §I3).",
+    tier: "M3",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-software-update-changelog-summarizer-root"] as const),
+  }),
   "speed-profile-insights": Object.freeze({
     id: "speed-profile-insights",
     name: "Speed-profile insights",
@@ -572,6 +583,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "route-efficiency-suggestions",
   "signal-explorer-nl-filter",
   "smart-charge-schedule-suggestion",
+  "software-update-changelog-summarizer",
   "speed-profile-insights",
   "state-machine-debugger-narrator",
   "suggest-new-geofences",

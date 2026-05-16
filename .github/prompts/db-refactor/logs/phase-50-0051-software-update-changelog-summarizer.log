@@ -1,0 +1,295 @@
+# Phase-50 / Prompt 0051 — M3 Software update changelog summarizer
+
+=== PREFLIGHT ===
+Branch:     refactor/signals-rewrite-50-0051 (started from refactor/signals-rewrite-50-0049 @ 2894e3dbb)
+Predecessor logs verified DONE:
+  phase-50-0001-F0-feature-registry.log              → STATUS=DONE
+  phase-50-0002-F1-provider-port-mock-default.log    → STATUS=DONE
+  phase-50-0003-F2-strategy-port-redaction.log       → STATUS=DONE
+  phase-50-0004-F3-orchestration-streaming.log       → STATUS=DONE
+  phase-50-0005-F4-tools-confirm-pause.log           → STATUS=DONE
+  phase-50-0006-F5-decorator-chain.log               → STATUS=DONE
+  phase-50-0007-F6-eval-harness.log                  → STATUS=DONE
+  phase-50-0008-F7-rag-retrieval.log                 → STATUS=DONE
+  phase-50-0009-F8-redaction.log                     → STATUS=DONE
+  phase-50-0010-F9-rate-limiter-cost-cap.log         → STATUS=DONE
+  phase-50-0050-tco-narration.log                    → STATUS=DONE (closest narrator predecessor; M-tier 2-tool retrieval)
+  phase-50-0049-predictive-maintenance.log           → STATUS=DONE (closest 2-tool RAG narrator template)
+Dirty-tree before edits: clean (verified via git status --short).
+
+=== SURVEY ===
+Baseline route/page (must remain reachable in off mode):
+  Backend:  GET /api/v1/vehicles/{vehicleID}/software-updates  (handler: SoftwareUpdateHandler.List @ internal/api/software_update_handler.go)
+            GET /api/v1/software-updates                       (handler: SoftwareUpdateHandler.ListAll)
+  Repo:     internal/database/software_update_repo.go         — SoftwareUpdateRepo.GetByVehicle(ctx, vehicleID, limit, start, end) → []*models.SoftwareUpdate
+  Model:    internal/models                                    — SoftwareUpdate{ID, VehicleID, Version, Status, InstalledAt*, ScheduledAt*, CreatedAt}
+  Frontend: web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx (213 lines)
+            - Renders MetricCard summary, GlassPanel timeline with status chips, raw release-note links to notateslaapp.com
+            - Uses useQuery + request<SoftwareUpdate[]>(/software-updates?vehicle_id=…)
+            - Range filter, Pagination
+            - Cited route in registry: /vehicle-systems/software → does NOT exist; mounted at /software-updates today.
+
+Existing patterns inspected:
+  Strategy template:     internal/ai/strategies/tco-narration/strategy.go (closest 1-tool narrator)
+                         internal/ai/strategies/predictive-maintenance/strategy.go (closest 2-tool narrator + RAG)
+  Tool template:         internal/ai/tools/predictive_maintenance.go (per-feature scope binding)
+                         internal/ai/tools/tco_summary.go (deterministic summarizer adapter)
+  Handler template:      internal/api/ai_predictive_maintenance_handler.go (production source adapter pattern)
+                         internal/api/ai_tco_narration_handler.go (off-mode 404 invariant)
+  Goldens template:      internal/ai/strategies/predictive-maintenance/goldens.yaml + canned/*.yaml (3-golden minimum)
+  Component template:    web/src/components/ai/AITCONarration.tsx (AIFeatureCard + useAiStream wiring)
+                         web/src/components/ai/AIPredictiveMaintenance.tsx (vehicleId-scoped narrator)
+  Page integration:      web/src/features/analytics/pages/TrueCostPage.tsx (mounts AITCONarration above charts)
+  Job stub:              internal/jobs/ai_docs_indexer.go (fail-closed cron stub for ai_update_notes_indexer)
+  Frontend route alias:  web/src/App.tsx (precedent: /analytics/tco aliasing /tco; /charging/vampire-drain aliasing /vampire-drain)
+  Registry coverage:     internal/ai/features/registry.go — CoverageOK enforces every feature has Routes.{Backend,Frontend,UITestIDs,JobNames,PushKinds} and Name != "".
+  Redaction:             internal/ai/redact/policies.go — PolicyChatbot() = {Allow=nil, Mode=ModeRedactedTags}.
+
+Baseline behavior to preserve:
+  - GET /api/v1/vehicles/{id}/software-updates and GET /api/v1/software-updates remain reachable + unmodified.
+  - SoftwareUpdatesPage.tsx renders the same MetricCards, timeline, raw release-note links regardless of ai_mode.
+  - The withAiFeature HOC returns null in off mode → AI section absent from DOM.
+
+=== REASONING ===
+Slice 0051 layers an opt-in Helix narrator over the existing SoftwareUpdatesPage without replacing or branching the
+deterministic baseline. ADR-015 invariants honoured by construction:
+
+I3 baseline intact: AISoftwareUpdateChangelogSummarizer is rendered ABOVE the existing timeline as an additional
+   FadeIn block. The existing MetricCard + GlassPanel timeline + external release-note links are unchanged. No
+   conditional `{aiOn ? <AI/> : <Baseline/>}` branching exists; the baseline is always present.
+
+I4 zero egress (off mode): The withAiFeature HOC returns null when useAiEnabled('software-update-changelog-summarizer')
+   returns false. useAiStream is therefore never instantiated, so no /ai/* fetch is enqueued. The off-mode test
+   verifies the wrapper renders an empty container.
+
+I5 hidden UI: data-testid="ai-feature-software-update-changelog-summarizer-root" is the wrapper from withAiFeature;
+   it is absent from the DOM in off mode (proven by TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly).
+
+I6 404 routes: POST /api/v1/ai/software-updates/summarize is wrapped by ai.GuardedHandler (see
+   mountAIRoutes @ internal/api/ai_routes.go:584 area). The guard returns 404 BEFORE the handler runs when
+   ai_mode='off' or the per-feature toggle is off. The Go off-mode test asserts this directly.
+
+I7 per-feature: Registry entry has DefaultOn=false. The toggle is independent of the global ai_mode flag — both
+   gates must be open. Tests cover both halves of the gate (mode='off' with toggle on, mode='cloud' with toggle off).
+
+I10 type system: TypeScript interface for the request body matches the Go DTO (vehicle_id: number → vehicle_id int64).
+    aigen --check confirms web/src/ai/features.ts mirrors the Go registry.
+
+I12 client/bg: ai_update_notes_indexer is a fail-closed cron stub (RunAIUpdateNotesIndexer) that re-checks ai_mode
+    + per-feature toggle on every tick. Settings-read failures fail closed (Skipped=1). No background fan-out
+    is performed yet (the per-version embed loop lands in a future indexer slice); the gate + telemetry envelope
+    ship today so the off-mode invariant is structurally provable.
+
+P1-P10 alignment:
+  - P1 (provider port): Strategy never imports a provider adapter directly; the dispatcher resolves via aiToolRegistry.
+  - P4 (dispatcher loop): Handler invokes dispatch.Run with the strategy + tool registry; no bespoke loop.
+  - P5 (decorator chain): Provider calls flow through redact → rate-limit → cost-cap → audit → trace via the
+    decorator chain installed in NewAIToolRegistry/NewAIDispatcher (no per-handler wrapping).
+  - P6 (backend guard / frontend HOC): ai.GuardedHandler on backend, withAiFeature on frontend.
+  - P8 (eval goldens): 3 deterministic goldens at internal/ai/strategies/software-update-changelog-summarizer/goldens.yaml
+    + 3 canned mock responses under canned/. ai-eval --feature software-update-changelog-summarizer = 3/3 PASS.
+  - P9 (registry): Entry added with all surface metadata; CoverageOK passes.
+  - P10 (baseline coexistence): Baseline rendered unconditionally; AI section is opt-in addendum.
+  - P11 (wired-or-absent): The component imports useAiStream and is wired end-to-end against
+    /api/v1/ai/software-updates/summarize. No placeholder strings (W1 self-check = 0).
+  - P12 (no-placeholder-buttons): Button's disabled prop is `!canStart || stream.state === 'streaming'`,
+    a computed expression. The on-mode wiring test asserts both the enabled and computed-disabled paths.
+
+Per-request scope binding (defence-in-depth, mirrors predictive-maintenance R-class):
+  The handler installs WithScopedSoftwareUpdateChangelogWindow{VehicleID, Limit} into ctx BEFORE dispatch.Run
+  starts. The query_vehicle_software tool's Execute REJECTS any LLM-supplied vehicle_id mismatch ⇒ a
+  prompt-injected "summarize vehicle 99 instead" cannot exfiltrate cross-vehicle data. The retrieve_update_notes
+  tool's Validate ALSO clamps the LLM-requested limit to the scope window's Limit. The system prompt explicitly
+  refuses cross-vehicle requests ("Refuse politely if asked to summarize, modify, or compare any vehicle other
+  than the one named in the request").
+
+F7 source-type allowlist:
+  retrieve_update_notes restricts source_types to {software_update, docs}. The unexported constants
+  softwareUpdateSourceUpdate + softwareUpdateSourceDocs are aggregated into a slice (lex order) and validated
+  at the tool boundary. Forward-compat: NOT promoted to rag.Source* constants — keeps the F7 contract tight.
+
+F8 redaction:
+  PolicyChatbot() (Allow=nil, Mode=ModeRedactedTags) is the round-trip redaction policy. Release notes are
+  PUBLIC text (no PII); the policy strips VINs, coordinates, place names, IPs, emails, phones, MACs to defend
+  against accidental leak via user-context strings (e.g., a vehicle's display_name a user set to "John Doe's Tesla").
+
+HX (Helix UX) compliance:
+  - Component renders through AIFeatureCard, NOT a bespoke GlassPanel + Button + AiOutputPanel composition.
+  - buttonLabel="Summarize updates" (the per-feature verb). The card composes the accessible name as
+    "Ask Helix · Summarize updates"; tests use UNANCHORED regex `/Summarize updates/i`.
+  - badgeLabel="Helix" (not "AI") in the user-visible header.
+  - All user-visible i18n keys say "Helix" not "AI" (softwareUpdates.aiNarration.{title,description,button,badge,noVehicleHint}).
+
+=== CHANGES ===
+Production code:
+  + internal/ai/features/registry.go                                                         (+M3 entry)
+  + internal/ai/strategies/software-update-changelog-summarizer/strategy.go                  (~225 lines)
+  + internal/ai/strategies/software-update-changelog-summarizer/strategy_test.go             (~210 lines)
+  + internal/ai/strategies/software-update-changelog-summarizer/goldens.yaml                 (3 goldens)
+  + internal/ai/strategies/software-update-changelog-summarizer/canned/typical_recent_install.yaml
+  + internal/ai/strategies/software-update-changelog-summarizer/canned/no_release_notes_honesty.yaml
+  + internal/ai/strategies/software-update-changelog-summarizer/canned/no_install_history_honesty.yaml
+  + internal/ai/tools/software_update_summary.go                                             (~640 lines: query_vehicle_software + retrieve_update_notes + scope binding + production source iface)
+  + internal/ai/tools/software_update_summary_test.go                                        (~520 lines: hermetic unit tests)
+  + internal/api/ai_software_update_changelog_summarizer_handler.go                          (~530 lines: handler + production source adapter + cadence helper)
+  + internal/api/ai_software_update_changelog_summarizer_handler_test.go                     (~470 lines: off-mode 404, parser, cadence math, source nil-panic)
+  + internal/api/ai_routes.go                                                                (added handler param + route registration + stub fallback)
+  + internal/api/router.go                                                                   (added strategy import + retriever + tool registration + handler construction + mountAIRoutes call)
+  + internal/jobs/ai_update_notes_indexer.go                                                 (fail-closed cron stub mirroring ai_docs_indexer)
+  + internal/jobs/ai_update_notes_indexer_test.go                                            (5 tests: off-mode, toggle-off, on-mode no-op, settings-error fail-closed, nil-deps)
+  + web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx                            (~165 lines: AIFeatureCard + useAiStream + withAiFeature)
+  + web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx                           (mount AISoftwareUpdateChangelogSummarizer above timeline)
+  + web/src/App.tsx                                                                          (added /vehicle-systems/software alias route)
+
+i18n (en.json only — ar.json + he.json are placeholder fallback files; both fall back to en via i18next):
+  + softwareUpdates.aiNarration.{title,description,button,badge,noVehicleHint}                (5 user-visible strings)
+  + settings.ai.features.software-update-changelog-summarizer.{label,description}             (Settings → AI toggle entry)
+
+Tests (Vitest):
+  + web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx (3 tests: off+toggle-on, on+toggle-off, on+toggle-on positive control)
+  + web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute.test.tsx (3 tests: route POST + delta render, double-submit guard, no-vehicle-disabled)
+
+Generated:
+  + web/src/ai/features.ts                                                                  (re-emitted by aigen — 47 features, includes new entry)
+
+=== GATE ===
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/App.tsx
+ M web/src/ai/features.ts
+ M web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/software-update-changelog-summarizer/
+?? internal/ai/tools/software_update_summary.go
+?? internal/ai/tools/software_update_summary_test.go
+?? internal/api/ai_software_update_changelog_summarizer_handler.go
+?? internal/api/ai_software_update_changelog_summarizer_handler_test.go
+?? internal/jobs/ai_update_notes_indexer.go
+?? internal/jobs/ai_update_notes_indexer_test.go
+?? web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx
+?? web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute.test.tsx
+?? web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx
+EXIT=0
+(All paths within the slice's allowed-files list. No drift.)
+
+$ go test -race -count=1 ./internal/ai/... ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/cost
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch
+ok  github.com/ev-dev-labs/teslasync/internal/ai/eval
+ok  github.com/ev-dev-labs/teslasync/internal/ai/features
+ok  github.com/ev-dev-labs/teslasync/internal/ai/guard
+ok  github.com/ev-dev-labs/teslasync/internal/ai/health
+ok  github.com/ev-dev-labs/teslasync/internal/ai/limit
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/anthropic
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/azure
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/mock
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai
+ok  github.com/ev-dev-labs/teslasync/internal/ai/rag
+ok  github.com/ev-dev-labs/teslasync/internal/ai/redact
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/[all 47 strategies — every package PASS]
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/software-update-changelog-summarizer  3.583s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools
+ok  github.com/ev-dev-labs/teslasync/internal/api  8.684s
+EXIT=0
+
+$ go run ./tools/aivet
+aivet: OK — 49 AI route(s), 47 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+$ go run ./cmd/ai-eval --feature software-update-changelog-summarizer
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 1.3169ms elapsed)
+By feature:
+  software-update-changelog-summarizer 3/3 pass
+Details:
+  [PASS] software-update-changelog-summarizer/typical_recent_install
+  [PASS] software-update-changelog-summarizer/no_release_notes_honesty
+  [PASS] software-update-changelog-summarizer/no_install_history_honesty
+EXIT=0
+
+$ cd web; npx tsc --noEmit
+(no output — clean)
+EXIT=0
+
+$ npm run lint
+(26 pre-existing errors in unrelated files — ScheduledMaintenanceCard.tsx, ChatbotPage.tsx, MQTTInspectorPage.tsx,
+ SignalsWorkspacePage.tsx, useAiStream.ts, useRangeState.ts, observability/rum.test.ts, observability/rum.ts.
+ None of the errors are in this slice's added files. The pre-existing baseline is the same as predecessor 0050
+ — no regression introduced by this slice. Per the slice prompt, lint is part of the verification suite but
+ pre-existing failures unrelated to this slice are not load-bearing.)
+EXIT=1 (pre-existing baseline; not introduced by this slice)
+
+$ npm test -- --run TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly
+✓ src/features/vehicle-systems/__tests__/TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx (3 tests) 44ms
+Test Files  1 passed (1)
+     Tests  3 passed (3)
+EXIT=0
+
+$ npm test -- --run TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute
+✓ src/features/vehicle-systems/__tests__/TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute.test.tsx (3 tests) 324ms
+Test Files  1 passed (1)
+     Tests  3 passed (3)
+EXIT=0
+
+# W1 inline self-check — placeholder strings in this slice's component
+$ Select-String -Path 'web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx' \
+                -Pattern 'future slice|coming soon|wiring lands|would call POST' | Measure-Object
+0
+EXIT=0
+
+# Off-mode focused proof:
+#   - POST /api/v1/ai/software-updates/summarize returns 404 in off mode (proven by Go-side
+#     TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly in
+#     internal/api/ai_software_update_changelog_summarizer_handler_test.go via the ai.GuardedHandler wrap).
+#   - data-testid="ai-feature-software-update-changelog-summarizer-root" is absent from the DOM in off mode
+#     (proven by Vitest TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly's first two cases — both gate halves).
+#   - Baseline GET /api/v1/vehicles/{id}/software-updates + the SoftwareUpdatesPage timeline + raw release-note
+#     links are UNCHANGED — the AI section is layered ABOVE without modifying the deterministic panels.
+
+=== COMMIT ===
+git add internal/ai/features/registry.go \
+        internal/ai/strategies/software-update-changelog-summarizer/ \
+        internal/ai/tools/software_update_summary.go \
+        internal/ai/tools/software_update_summary_test.go \
+        internal/api/ai_software_update_changelog_summarizer_handler.go \
+        internal/api/ai_software_update_changelog_summarizer_handler_test.go \
+        internal/api/ai_routes.go \
+        internal/api/router.go \
+        internal/jobs/ai_update_notes_indexer.go \
+        internal/jobs/ai_update_notes_indexer_test.go \
+        web/src/components/ai/AISoftwareUpdateChangelogSummarizer.tsx \
+        web/src/features/vehicle-systems/pages/SoftwareUpdatesPage.tsx \
+        web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly.test.tsx \
+        web/src/features/vehicle-systems/__tests__/TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute.test.tsx \
+        web/src/App.tsx \
+        web/src/ai/features.ts \
+        web/src/i18n/en.json \
+        .github/prompts/db-refactor/logs/phase-50-0051-software-update-changelog-summarizer.log
+git commit -m "feat(ai): add Software update changelog summarizer
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+
+=== AI-OFF CONTRACT ===
+I1  default-off:     PASS  (registry entry DefaultOn: false at internal/ai/features/registry.go; verified via grep + features.CoverageOK passing in `go test ./internal/ai/features/...`)
+I3  baseline intact: PASS  (SoftwareUpdatesPage.tsx still renders MetricCard summary + GlassPanel timeline + raw notateslaapp.com release-note links unconditionally; the AI section is mounted ABOVE the timeline as an additional FadeIn block, never replacing or branching it. The Go GET /api/v1/vehicles/{id}/software-updates handler is unchanged.)
+I4  zero egress:     PASS  (in off mode the withAiFeature HOC returns null → useAiStream is never instantiated → no /ai/* fetch is enqueued. The Vitest off-mode test asserts the wrapper renders an empty container.)
+I5  hidden UI:       PASS  (TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly Vitest cases 1+2 prove `data-testid="ai-feature-software-update-changelog-summarizer-root"` is absent from the DOM when ai_mode='off' OR per-feature toggle is false. Case 3 is the positive control proving the gate works.)
+I6  404 routes:      PASS  (POST /api/v1/ai/software-updates/summarize is wrapped by ai.GuardedHandler in mountAIRoutes; the guard returns 404 in off mode BEFORE the handler runs. The Go-side TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly asserts this directly. Stub aiSoftwareUpdateChangelogSummarizerStubHandler is reachable only when the handler is nil at construction; the off-mode 404 still holds because the guard fires first.)
+I7  per-feature:     PASS  (the registry's DefaultOn=false plus the withAiFeature/useAiEnabled('software-update-changelog-summarizer') gate require BOTH ai_mode≠'off' AND the toggle=true. Vitest off-mode case 2 (mode='cloud' but toggle=false) proves the per-feature toggle alone is sufficient to hide the surface.)
+I10 type system:     PASS  (`go run ./tools/aigen --check` confirms web/src/ai/features.ts is in sync with the Go registry. `go run ./tools/aivet` confirms 49 AI route(s) + 47 feature(s) all reconcile across registry/router/TS mirror.)
+I12 client/bg:       PASS  (background job ai_update_notes_indexer is registered in registry's JobNames; the implementation at internal/jobs/ai_update_notes_indexer.go re-checks ai_mode + per-feature toggle on every tick and returns Skipped=1 when either is off. Settings-read failures fail closed (Skipped=1, no fan-out). 5 tests in internal/jobs/ai_update_notes_indexer_test.go cover off-mode, toggle-off, on-mode no-op, settings-error fail-closed, nil-deps. No service-worker chunk shipped (the lazy-loaded AISoftwareUpdateChangelogSummarizer component is the chunk; loaded only on the SoftwareUpdatesPage mount AFTER the gate has passed). No new push kinds. No new client storage keys.)
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

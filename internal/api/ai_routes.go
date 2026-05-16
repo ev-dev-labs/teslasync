@@ -155,6 +155,7 @@ func mountAIRoutes(
 	aiStateMachineDebuggerNarrator *AIStateMachineDebuggerNarratorHandler,
 	aiPredictiveMaintenance *AIPredictiveMaintenanceHandler,
 	aiTCONarration *AITCONarrationHandler,
+	aiSoftwareUpdateChangelogSummarizer *AISoftwareUpdateChangelogSummarizerHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -582,6 +583,25 @@ func mountAIRoutes(
 			tcoNarrationHandler = aiTCONarration.ServeHTTP
 		}
 		r.Post("/analytics/tco/narrate", g.Wrap("tco-narration", tcoNarrationHandler))
+
+		// software-update-changelog-summarizer (Phase-50 / M3,
+		// slice 0051) summarizes the deterministic firmware
+		// update history the SPA's SoftwareUpdatesPage already
+		// renders from GET /api/v1/vehicles/{id}/software-updates.
+		// The route lives under /ai/software-updates/summarize
+		// so it is namespaced alongside the existing
+		// /vehicles/{id}/software-updates baseline reader. Same
+		// stub-fallback pattern as the other AI handlers — a
+		// nil handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// canonical baseline route at
+		// GET /api/v1/vehicles/{id}/software-updates is unchanged.
+		var softwareUpdateChangelogSummarizerHandler http.HandlerFunc = aiSoftwareUpdateChangelogSummarizerStubHandler
+		if aiSoftwareUpdateChangelogSummarizer != nil {
+			softwareUpdateChangelogSummarizerHandler = aiSoftwareUpdateChangelogSummarizer.ServeHTTP
+		}
+		r.Post("/software-updates/summarize", g.Wrap("software-update-changelog-summarizer", softwareUpdateChangelogSummarizerHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1420,6 +1440,16 @@ func aiPredictiveMaintenanceStubHandler(w http.ResponseWriter, _ *http.Request) 
 // 404 invariant is held by the guard, not the stub.
 func aiTCONarrationStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai tco narration is not yet implemented")
+}
+
+// aiSoftwareUpdateChangelogSummarizerStubHandler mirrors
+// aiTCONarrationStubHandler for the M3 slice (Phase-50 / 0051
+// software-update-changelog-summarizer). Reachable only when
+// AISoftwareUpdateChangelogSummarizerHandler is nil at
+// construction; the off-mode 404 invariant is held by the
+// guard, not the stub.
+func aiSoftwareUpdateChangelogSummarizerStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai software update changelog summarizer is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every
