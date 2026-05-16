@@ -1,0 +1,13 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_watch_context_ambiguous_request_clarifies_1
+        name: query_watch_context
+        arguments: '{}'
+    input_tokens: 54
+    output_tokens: 24
+  - finish_reason: stop
+    content: |
+      Did you want battery, climate, or lock status?
+    input_tokens: 224
+    output_tokens: 16

@@ -160,6 +160,7 @@ func mountAIRoutes(
 	aiQuietHoursSuggestion *AIQuietHoursSuggestionHandler,
 	aiSafetySettingExplainer *AISafetySettingExplainerHandler,
 	aiVoiceMode *AIVoiceModeHandler,
+	aiWatchFaceNLResponse *AIWatchFaceNLResponseHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -691,6 +692,39 @@ func mountAIRoutes(
 			voiceModeHandler = aiVoiceMode.ServeHTTP
 		}
 		r.Post("/voice/chat", g.Wrap("voice-mode", voiceModeHandler))
+
+		// watch-face-nl-response (Phase-50 / 0056, V2 slice).
+		// Opt-in Helix narrator on the /watch route that answers
+		// glance-style natural-language questions (battery, range,
+		// charging, locks, climate, recent alerts) about the
+		// install's primary vehicle. The narrator uses ONE
+		// read-only typed tool (query_watch_context) that returns
+		// a deterministic envelope mirroring the deterministic
+		// /watch card state — same class of grounding the fixed
+		// watch cards have, with watch-specific instructions to
+		// keep replies SHORT and free of markdown / lists / code
+		// blocks / URLs because watch panels render plain text
+		// only.
+		//
+		// Same stub-fallback pattern as the other AI handlers — a
+		// nil handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// canonical baseline route at GET /api/v1/watch/summary
+		// is unchanged; the AI surface NEVER replaces the
+		// deterministic watch cards or tap-commands — it
+		// COEXISTS with them.
+		//
+		// The narrator is READ-only: it NEVER claims to have
+		// changed a setting, NEVER promises to send a vehicle
+		// command. The deterministic tap-icons on the watch face
+		// remain the only command path. (ADR-015 §I3 + §I5 +
+		// §I6.)
+		var watchFaceNLResponseHandler http.HandlerFunc = aiWatchFaceNLResponseStubHandler
+		if aiWatchFaceNLResponse != nil {
+			watchFaceNLResponseHandler = aiWatchFaceNLResponse.ServeHTTP
+		}
+		r.Post("/watch/respond", g.Wrap("watch-face-nl-response", watchFaceNLResponseHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1577,6 +1611,15 @@ func aiSafetySettingExplainerStubHandler(w http.ResponseWriter, _ *http.Request)
 // invariant is held by the guard, not the stub.
 func aiVoiceModeStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai voice mode is not yet implemented")
+}
+
+// aiWatchFaceNLResponseStubHandler mirrors the other AI stub
+// handlers for the V2 slice (Phase-50 / 0056 watch-face-nl-
+// response). Reachable only when AIWatchFaceNLResponseHandler
+// is nil at construction; the off-mode 404 invariant is held by
+// the guard, not the stub.
+func aiWatchFaceNLResponseStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai watch face natural-language response is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

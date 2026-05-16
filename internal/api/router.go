@@ -103,6 +103,7 @@ import (
 	quiethourssuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/quiet-hours-suggestion"
 	safetysettingexplainer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/safety-setting-explainer"
 	voicemode "github.com/ev-dev-labs/teslasync/internal/ai/strategies/voice-mode"
+	watchfacenlresponse "github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response"
 	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
 	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
 	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
@@ -1720,9 +1721,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// purposes (wake state, command pre-checks, watch streams, range
 	// projection short-cuts, signal-key listing) and keep the legacy
 	// fluent setter until they migrate to LiveStateReader.
+	//
+	// redisSignalCache is also consumed by the Phase-50 / 0056 V2
+	// AIWatchFaceNLContextSource adapter below; declaring it at this
+	// outer scope lets the adapter reuse the same instance the
+	// watchHandler already does (one cache per router). The variable
+	// stays nil when CacheStore is unconfigured; the AI source
+	// constructor tolerates nil and degrades to a vehicle-name-only
+	// envelope (the canonical /watch/summary handler's degraded-mode
+	// behaviour, mirrored honestly).
+	var redisSignalCache *signal.RedisSignalCache
 	if opt.CacheStore != nil {
 		if rdb := opt.CacheStore.Underlying(); rdb != nil {
-			redisSignalCache := signal.NewRedisSignalCache(rdb)
+			redisSignalCache = signal.NewRedisSignalCache(rdb)
 			maintenanceHandler.WithRedisCache(redisSignalCache)
 			commandHandler.WithRedisCache(redisSignalCache)
 			watchHandler.WithRedisCache(redisSignalCache)
@@ -2318,6 +2329,46 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		voicemode.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
+	// watch-face-nl-response (Phase-50 / 0056 V2) sources.
+	// The watch-face-nl-response AI surface layers an opt-in
+	// Helix narrator on top of the existing /watch deterministic
+	// surface. Its single read-only tool query_watch_context
+	// bundles:
+	//
+	//   - the primary-vehicle snapshot (vehicle_name from
+	//     VehicleRepo + scalar live-state from the canonical
+	//     RedisSignalCache — the SAME two readers the
+	//     deterministic /watch/summary handler uses)
+	//   - the trailing-24h non-critical recent-alert list,
+	//     projected to {severity, age_seconds} pairs only (no
+	//     title, no message body, no PII) — read via the
+	//     canonical NotificationRepo.
+	//
+	// NO new SQL is written; both adapters wrap existing
+	// readers. Registered AFTER the slice 0055 tools above so
+	// the registry's Names list grows deterministically.
+	aiWatchFaceNLContextSource := NewAIWatchFaceNLContextSource(
+		database.NewVehicleRepo(db),
+		redisSignalCache,
+	)
+	aiWatchFaceNLAlertHistorySource := NewAIWatchFaceNLAlertHistorySource(
+		database.NewNotificationRepo(db),
+	)
+	tools.RegisterWatchFaceNLResponseTools(aiToolRegistry, tools.WatchFaceNLResponseSources{
+		Source: aiWatchFaceNLContextSource,
+		Alerts: aiWatchFaceNLAlertHistorySource,
+	})
+	// watch-face-nl-response handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiWatchFaceNLResponseHandler := NewAIWatchFaceNLResponseHandler(
+		aiRegistry,
+		aiToolRegistry,
+		watchfacenlresponse.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 
@@ -3806,7 +3857,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler, aiFeedbackQueueTriageHandler, aiMqttSseInspectorExplanationsHandler, aiStateMachineDebuggerNarratorHandler, aiPredictiveMaintenanceHandler, aiTCONarrationHandler, aiSoftwareUpdateChangelogSummarizerHandler, aiPiiRedactionSharedExportsHandler, aiQuietHoursSuggestionHandler, aiSafetySettingExplainerHandler, aiVoiceModeHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler, aiFeedbackQueueTriageHandler, aiMqttSseInspectorExplanationsHandler, aiStateMachineDebuggerNarratorHandler, aiPredictiveMaintenanceHandler, aiTCONarrationHandler, aiSoftwareUpdateChangelogSummarizerHandler, aiPiiRedactionSharedExportsHandler, aiQuietHoursSuggestionHandler, aiSafetySettingExplainerHandler, aiVoiceModeHandler, aiWatchFaceNLResponseHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

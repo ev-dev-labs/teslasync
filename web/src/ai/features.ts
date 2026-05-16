@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "voice-mode" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "voice-mode" | "watch-face-nl-response" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -575,6 +575,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-voice-mode-root"] as const),
   }),
+  "watch-face-nl-response": Object.freeze({
+    id: "watch-face-nl-response",
+    name: "Helix watch face natural-language response",
+    description: "Opt-in Helix narrator on the /watch route that answers glance-style natural-language questions (battery, range, charging, locks, climate, recent alerts) about the install's primary vehicle. The narrator uses ONE read-only typed tool (query_watch_context) that returns a deterministic envelope mirroring the deterministic /watch card state (vehicle_name, soc_percent, range_km AND range_mi, is_charging, time_to_full_min, is_locked, sentry_mode, inside_temp_c AND inside_temp_f, outside_temp_c AND outside_temp_f, is_climate_on, recent_alerts (max 5, non-critical, {severity, age_seconds} pair only — NO alert title, message body, or kind tag because the canonical notification_log table has no stable kind enum and the title is a templated string that may contain custom rule names / vehicle names / place names), last_updated). Both °C AND pre-computed °F fields are emitted side by side for every temperature reading, and both km AND mi fields are emitted side by side for range — the LLM picks whichever matches the user's preferred display unit rather than doing arithmetic on small local models (cToFPtr precedent in drive_coaching.go). Replies are 1-2 sentences, plain prose only (no markdown, no lists, no code blocks, no URLs) because watch panels render plain text and are 40-45 mm wide. The narrator is READ-only: it NEVER claims to have changed a setting, NEVER promises to send a vehicle command, NEVER says 'I have locked it' — the deterministic tap-icons on the watch face remain the only command path and continue to work regardless of whether this narrator is enabled. Per-feature redaction policy is PolicyChatbot (Allow=nil); the typed envelope omits PII (no GPS, no street names, no charger labels, no alert titles or message bodies) by construction, and the redaction policy is defence in depth in case a future edit widens the schema or the user's free-text question contains PII the policy will tag round-trip. The deterministic /watch route (battery gauge, status icons, tap-commands, /api/v1/watch/summary read path) remains the canonical surface when AI is off (ADR-015 §I3 + §I5 + §I6).",
+    tier: "V",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-watch-face-nl-response-root"] as const),
+  }),
   "yir-narration": Object.freeze({
     id: "yir-narration",
     name: "Year-in-review narration",
@@ -639,6 +650,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "trip-planner-llm-agent",
   "vampire-drain-explanation",
   "voice-mode",
+  "watch-face-nl-response",
   "yir-narration",
 ] as const);
 

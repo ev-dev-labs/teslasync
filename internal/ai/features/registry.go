@@ -3496,6 +3496,50 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+
+	// watch-face-nl-response is the Phase-50 / 0056 V2 surface
+	// that adds an OPT-IN Helix narrator answering glance-style
+	// natural-language questions on the /watch route. The
+	// deterministic /watch baseline (battery gauge, status icons,
+	// tap-commands) remains the canonical surface; the AI panel
+	// is ABSENT when ai_mode='off' or the per-feature toggle is
+	// off (ADR-015 §I3 + §I5 + §I6). The backend route
+	// POST /api/v1/ai/watch/respond is gated by
+	// ai.GuardedHandler('watch-face-nl-response') so off-mode
+	// users see a 404. The strategy uses ONE read-only typed
+	// tool (query_watch_context) that returns a deterministic
+	// envelope of {vehicle_name, soc_percent, range_km, range_mi,
+	// is_charging, time_to_full_min, is_locked, sentry_mode,
+	// inside_temp_c/_f, outside_temp_c/_f, is_climate_on,
+	// recent_alerts (max 5, non-critical, {severity, age_seconds}
+	// pair only — NO alert title or message body or kind tag),
+	// last_updated} so the LLM has the same class of grounding
+	// the fixed watch cards have. The watch narrator NEVER
+	// claims to have changed a setting or sent a command — the
+	// deterministic tap-icons on the watch face are the only
+	// command path. Per-feature redaction policy is
+	// PolicyChatbot (Allow=nil; every PII class is tagged round-
+	// trip before the provider sees the message). The PushKind
+	// 'ai_watch_response' is registered for off-mode push-kind
+	// filter coverage; no background jobs, service-worker chunks,
+	// or client-storage keys are added in this slice.
+	"watch-face-nl-response": {
+		ID:          "watch-face-nl-response",
+		Name:        "Helix watch face natural-language response",
+		Description: "Opt-in Helix narrator on the /watch route that answers glance-style natural-language questions (battery, range, charging, locks, climate, recent alerts) about the install's primary vehicle. The narrator uses ONE read-only typed tool (query_watch_context) that returns a deterministic envelope mirroring the deterministic /watch card state (vehicle_name, soc_percent, range_km AND range_mi, is_charging, time_to_full_min, is_locked, sentry_mode, inside_temp_c AND inside_temp_f, outside_temp_c AND outside_temp_f, is_climate_on, recent_alerts (max 5, non-critical, {severity, age_seconds} pair only — NO alert title, message body, or kind tag because the canonical notification_log table has no stable kind enum and the title is a templated string that may contain custom rule names / vehicle names / place names), last_updated). Both °C AND pre-computed °F fields are emitted side by side for every temperature reading, and both km AND mi fields are emitted side by side for range — the LLM picks whichever matches the user's preferred display unit rather than doing arithmetic on small local models (cToFPtr precedent in drive_coaching.go). Replies are 1-2 sentences, plain prose only (no markdown, no lists, no code blocks, no URLs) because watch panels render plain text and are 40-45 mm wide. The narrator is READ-only: it NEVER claims to have changed a setting, NEVER promises to send a vehicle command, NEVER says 'I have locked it' — the deterministic tap-icons on the watch face remain the only command path and continue to work regardless of whether this narrator is enabled. Per-feature redaction policy is PolicyChatbot (Allow=nil); the typed envelope omits PII (no GPS, no street names, no charger labels, no alert titles or message bodies) by construction, and the redaction policy is defence in depth in case a future edit widens the schema or the user's free-text question contains PII the policy will tag round-trip. The deterministic /watch route (battery gauge, status icons, tap-commands, /api/v1/watch/summary read path) remains the canonical surface when AI is off (ADR-015 §I3 + §I5 + §I6).",
+		Tier:        "V",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/watch/respond"},
+			Frontend:  []string{"/watch"},
+			UITestIDs: []string{"ai-feature-watch-face-nl-response-root"},
+			JobNames:  []string{},
+			PushKinds: []string{"ai_watch_response"},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used
