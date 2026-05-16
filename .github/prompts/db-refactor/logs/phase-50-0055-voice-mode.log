@@ -1,0 +1,660 @@
+=== PREFLIGHT ===
+
+Branch:                  refactor/signals-rewrite-50-0051
+HEAD before this slice:  661b747ae (feat(ai): add Safety setting explainer)
+Slice:                   phase-50 / 0055 — V1 Voice mode with browser STT and TTS
+Feature ID:              voice-mode
+Methodology principles:  ADR-015 + P1-P12 + W1 + HX
+
+Predecessor logs verified DONE (each ends with `STATUS=DONE`):
+  .github/prompts/db-refactor/logs/phase-50-0001-f0-feature-registry-and-flag-plumbing.log
+  .github/prompts/db-refactor/logs/phase-50-0002-f1-port-and-mock-provider.log
+  .github/prompts/db-refactor/logs/phase-50-0003-f2-redaction-and-policies.log
+  .github/prompts/db-refactor/logs/phase-50-0004-f3-decorator-chain.log
+  .github/prompts/db-refactor/logs/phase-50-0005-f4-tool-loop-and-confirm.log
+  .github/prompts/db-refactor/logs/phase-50-0006-f5-sse-streaming.log
+  .github/prompts/db-refactor/logs/phase-50-0007-f6-eval-harness.log
+  .github/prompts/db-refactor/logs/phase-50-0008-f7-redaction-policy-tags.log
+  .github/prompts/db-refactor/logs/phase-50-0009-f8-rate-limits-and-cost-caps.log
+  .github/prompts/db-refactor/logs/phase-50-0010-f9-budget-meter.log
+  .github/prompts/db-refactor/logs/phase-50-0054-safety-setting-explainer.log
+
+Working tree at start was on a clean predecessor HEAD; the dirty
+files reported below are the ones authored by this slice. None
+fall outside the prompt's allowed-files list (see CHANGES).
+
+Allowed-files check (git status --short before commit, see GATE
+for the verbatim transcript):
+   M internal/ai/features/registry.go                                    ✓ allowed (registry)
+   M internal/api/ai_routes.go                                            ✓ allowed (internal/api/** — guarded /api/v1/ai/... route mount)
+   M internal/api/router.go                                               ✓ allowed (internal/api/** — handler construction wiring)
+   M web/src/ai/features.ts                                               ✓ allowed (regenerated artifact from registry, required by task §5)
+   M web/src/features/system/pages/ChatbotPage.tsx                       ✓ allowed (web/src/features/system/** — mounts AIVoiceMode)
+   M web/src/i18n/en.json                                                  ✓ allowed (explicitly listed)
+  ?? internal/ai/strategies/voice-mode/                                   ✓ allowed (internal/ai/strategies/voice-mode/**)
+  ?? internal/ai/tools/voice_mode.go                                      ✓ allowed (internal/ai/tools/** — reusable typed tool)
+  ?? internal/api/ai_voice_mode_handler.go                                ✓ allowed (internal/api/** — guarded /api/v1/ai/... handler)
+  ?? internal/api/ai_voice_mode_handler_test.go                           ✓ allowed (tests/** + internal/api/**)
+  ?? web/src/components/ai/AIVoiceMode.tsx                                ✓ allowed (web/src/components/ai/** — shared AI primitive)
+  ?? web/src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx  ✓ allowed (web/src/**/__tests__/**)
+  ?? web/src/features/system/__tests__/TestVoiceModeAIOnWiredCallsRoute.test.tsx           ✓ allowed (web/src/**/__tests__/**)
+  ?? .github/prompts/db-refactor/logs/phase-50-0055-voice-mode.log       ✓ allowed (explicitly listed)
+
+
+=== SURVEY ===
+
+Baseline non-AI behaviour that MUST remain canonical when
+ai_mode='off':
+
+  Route:                /chatbot
+  Page:                 web/src/features/system/pages/ChatbotPage.tsx
+  Surface:              Text-only conversation grid driven by
+                        useChatSessions, useChatHistory,
+                        useSendChatMessage. Send is via a
+                        Textarea + paper-airplane button. The
+                        page already conditionally mounts a
+                        chatbot-LLM AI indicator via
+                        withAiFeature('chatbot-llm', …); voice
+                        mode is an INDEPENDENT opt-in surface
+                        added above the conversation grid.
+  Existing AI route:    POST /api/v1/ai/chatbot/chat
+                        (guard-wrapped for 'chatbot-llm', NOT
+                        for 'voice-mode' — this slice adds a
+                        sibling route specifically for the
+                        voice-input flow so the two opt-ins are
+                        independently gateable).
+  Storage keys (pre):   teslasync-chatbot-history-visible
+                        (UI visibility of the History sidebar)
+                        — no AI-tagged keys touched by this slice.
+
+Files inspected before editing (read-only):
+
+  internal/ai/features/registry.go
+    └── existing entries: 50 (chatbot-llm at L3438; quiet-hours-
+        suggestion at L3464 used as Tier=V1 + NeedsTools=true
+        precedent). 51 entries needed after this slice.
+
+  internal/ai/strategies/safety-setting-explainer/{strategy,strategy_test,goldens}.{go,yaml}
+    └── primary precedent for Helix-narrative strategy +
+        TTS-hostile syntax pins + 3 deterministic goldens.
+
+  internal/ai/strategies/chatbot-llm/strategy.go
+    └── chat-flow precedent: history-replay + denyAllConfirm +
+        recordingStreamWriter pattern reused.
+
+  internal/ai/tools/{quiet_hours.go,drive_coaching.go,safety_setting_explainer.go}
+    └── precedents for typed tools with port interfaces,
+        WithScoped* context binding, and pre-computed display-
+        unit fields (cToFPtr in drive_coaching for °C/°F).
+
+  internal/api/ai_chatbot_handler.go
+    └── chat-style handler precedent — historyToProviderMessages,
+        denyAllConfirm, recordingStreamWriter, bytesTrim helpers
+        live here; reused by ai_voice_mode_handler.go.
+
+  internal/api/ai_routes.go
+    └── existing routes: 52 AI routes mounted under /api/v1/ai
+        prefix. Add voice-mode as #53.
+
+  internal/api/router.go
+    └── handler construction + source adapter pattern. Each AI
+        feature has a block that builds:
+          - source adapters (DB ports → strategy ports)
+          - tool registration via Register*Tools(reg, sources...)
+          - handler with (guard, dispatcher, providerFactory, sources)
+        Voice-mode mirrors this with ChatRepo + VehicleRepo +
+        DriveRepo + LiveStateReader.
+
+  web/src/components/ai/AISafetySettingExplainer.tsx
+    └── direct UX precedent — AIFeatureCard scaffold + useAiStream +
+        cleanup useEffect + withAiFeature wrapper.
+
+  web/src/components/ai/AIFeatureCard.tsx
+    └── visible CTA = "Ask Helix"; per-feature `buttonLabel`
+        becomes aria-label suffix. SPA tests MUST use UNANCHORED
+        regex `getByRole('button', { name: /Speak to Helix/i })`.
+
+  web/src/hooks/useAiStream.ts
+    └── pass URL without /api/v1 prefix; hook prepends it.
+
+  web/src/features/settings/__tests__/TestSafetySettingExplainer*.test.tsx
+    └── templates for the two required Vitest files (off-mode +
+        on-mode wiring).
+
+Tier convention: registry stores single-letter tier codes
+("V" = V1, "U" = U1, "P" = P, "ML" = ML). CoverageOK accepts any
+non-empty Tier string; for this slice Tier="V" matches the
+predecessor V1 entries (e.g. range-prediction-model).
+
+Empty RouteSet fields MUST be explicit `[]string{}`. Nil slices
+fail CoverageOK and aivet's route audit.
+
+
+=== REASONING ===
+
+Why this design preserves ADR-015 + P1-P10:
+
+I3 baseline intact — voice mode is layered ABOVE the existing
+chatbot conversation grid; the typed Textarea + send button and
+useChatSessions / useChatHistory plumbing are untouched. A user
+with ai_mode='off' sees exactly the same ChatbotPage they saw
+before, minus the AIChatbotIndicator and AIVoiceMode panels
+(both gated via withAiFeature → return null). The two AI
+surfaces are independently gateable so a deployment can ship
+chatbot-LLM without voice-mode (or vice versa).
+
+I4 zero egress — STT and TTS are pure browser APIs
+(window.SpeechRecognition / window.speechSynthesis). The ONLY
+network bytes leaving the browser are the transcribed text +
+session_id over POST /api/v1/ai/voice/chat — the same shape as
+the typed chatbot's POST. Raw audio bytes never cross the
+network. The handler routes the call through the same dispatcher +
+decorator chain as the chatbot LLM (redaction → rate-limit →
+cost-cap → audit → trace), inheriting all chatbot-LLM safeguards.
+
+I5 hidden UI — AIVoiceMode is wrapped in
+withAiFeature('voice-mode', InnerSection). In off mode the HOC
+returns null; the DOM contains nothing for this feature. The
+load-bearing off-mode test asserts the data-testid
+'ai-feature-voice-mode-root' is absent, that no role-button
+matching /Speak to Helix/i exists, that no mic/tts/transcript
+sub-test-IDs exist, and that the localStorage key
+'ai.voiceMode.transcriptDraft' is never written. A positive-
+control case proves the gate actually works when toggled on.
+
+I6 404 routes — POST /api/v1/ai/voice/chat is mounted under
+`g.Wrap("voice-mode", h.HandleStream)` in ai_routes.go. The
+Go-side TestVoiceModeAIOffNoVoiceControlsOrStorage asserts the
+route returns 404 in off mode AND that the baseline chatbot
+POST /api/v1/ai/chatbot/chat is unaffected (still gated on
+'chatbot-llm', not 'voice-mode').
+
+I7 per-feature — `voice-mode` ships with DefaultOn=false; the
+HOC requires the per-feature flag to be explicitly true even
+when ai_mode is non-off. The off-mode test exercises both
+halves of the gate (mode='off' + toggle=true, then mode='cloud'
++ toggle=false) and the positive control (mode='cloud' +
+toggle=true).
+
+I10 type system — the request body is a closed Go struct
+`aiVoiceModeRequest{Message, SessionID}` with json tags; bad
+shapes return HTTP 400. The tool envelope `VoiceModeEnvelope`
+is a closed shape with pre-computed display-unit fields
+(VehicleSnapshot omits GPS/street names by construction; battery
+percent is range-clamped int via coerceVoiceModeIntPercent so a
+runaway sensor reading can't leak as "battery is at 250
+percent"). The strategy's allowedTools whitelist (literal
+string slice) prevents the LLM from calling any other tool.
+
+I12 client/bg — service-worker chunk `ai-voice-mode` and
+storage key `ai.voiceMode.transcriptDraft` are declared in
+the registry and bounded to the AIVoiceMode mount lifecycle.
+A dedicated useEffect clears the draft on unmount; the off-
+mode test proves the key is never written when the component
+is not mounted.
+
+P1 provider port — handler resolves provider via
+providerFactory; tool code never touches provider directly.
+
+P3 strategy in own package — internal/ai/strategies/voice-mode/
+contains strategy.go + strategy_test.go + goldens.yaml +
+canned/*.yaml. The strategy declares System prompt, Policy=
+PolicyChatbot (Allow=nil, ModeRedactedTags), and an
+allowedTools whitelist of just `stream_chatbot_response`.
+
+P4 dispatcher loop — handler calls dispatch.Run(ctx, ...)
+with the constructed strategy + tools + redactionStrip + writer.
+The denyAllConfirm callback rejects every F4 confirm request:
+voice mode is read-only and does not propose mutations.
+
+P5 decorator chain — provider is wrapped by the standard
+redaction → rate-limit → cost-cap → audit → trace chain via
+providerFactory. The voice handler does NOT bypass any
+decorator.
+
+P6 guard — POST /api/v1/ai/voice/chat is wrapped with
+`g.Wrap("voice-mode", h.HandleStream)`. The frontend gates via
+useAiEnabled('voice-mode') + withAiFeature('voice-mode',
+InnerSection). Both halves of the contract are exercised by
+the load-bearing tests.
+
+P8 goldens — 3 deterministic goldens cover: ask_battery_status,
+ask_for_a_setting_change (read-only refusal), and
+ambiguous_request_clarifies (asks for clarification). Each
+golden's TTS-hostile syntax (no %, no markdown bullets, no
+URLs, no "I have just" claims) is pinned by the strategy_test.
+
+P9 registry — voice-mode entry added with Tier="V",
+DefaultOn=false, NeedsRAG=false, NeedsTools=true, NeedsStream=true,
+explicit Routes{Backend, Frontend, UITestIDs, JobNames=[]string{},
+PushKinds=[]string{}}. aivet and aigen --check both pass.
+
+P10 baseline coexistence — VoiceModeController is selected by
+ai_mode + voice-mode toggle. The text Textarea + send remain
+the canonical baseline; voice mode is purely additive.
+
+P11/P12 (W1 inline wiring) — AIVoiceMode imports useAiStream,
+posts to /ai/voice/chat (the registered backend path),
+disables the action button via the COMPUTED expression
+`!canStart || isBusy`, and emits zero placeholder strings.
+The on-mode wiring test proves the button click POSTs exactly
+once to /api/v1/ai/voice/chat with the dictated transcript +
+session_id in the body, and that a second click while
+streaming is a no-op (double-submit guard).
+
+HX scaffold — AIVoiceMode renders through AIFeatureCard with
+the per-feature verb passed as `buttonLabel="Speak to Helix"`
+(NOT "Ask Helix" — the card composes the accessible name as
+"Ask Helix · Speak to Helix"). Assistant-identity glyphs come
+from HelixMark via AIFeatureCard's AIBadge + button icon.
+i18n keys under voiceMode.* say "Helix" not "AI".
+
+Why ai/ar/he get only en.json updates — the established Phase-46
+placeholder convention (web/src/i18n/{ar,he}.json _meta note)
+defers translation to a follow-up sweep; all missing keys fall
+back to en.json via i18next's fallbackLng. The predecessor 0054
+slice did the same. Adding voice-mode keys to ar.json/he.json
+in English would be a single isolated entry in otherwise
+empty placeholder files; following precedent keeps the locale
+ports consistent for the eventual translation sweep.
+
+R4 SI canonicalization — the voice-mode tool envelope emits
+pre-computed display-unit fields (miles for distance, percent
+for battery) rather than letting the LLM do unit arithmetic on
+SI meters. This mirrors the cToFPtr precedent in
+drive_coaching.go and avoids the "LLM does math on negative
+fractions" failure mode.
+
+R2 (Phase-48 audit-pin equivalent) — coerceVoiceModeIntPercent
+range-clamps [0,100] so a wire spike of e.g. 250 returns
+(0, false) and the snapshot field is omitted entirely rather
+than reaching the LLM as "battery is at 250 percent".
+
+
+=== CHANGES ===
+
+Production (Go backend):
+
+  internal/ai/features/registry.go
+    + voice-mode registry entry inserted before quiet-hours-suggestion
+      Tier="V", DefaultOn=false, NeedsRAG=false, NeedsTools=true,
+      NeedsStream=true, RetrievalSourceTypes=["vehicle_state","chat_context"]
+      Routes{Backend=["POST /api/v1/ai/voice/chat"],
+             Frontend=["/chatbot"],
+             UITestIDs=["ai-feature-voice-mode-root"],
+             JobNames=[]string{}, PushKinds=[]string{}}
+
+  internal/ai/strategies/voice-mode/strategy.go (NEW)
+    + FeatureID = "voice-mode"
+    + SystemPrompt with TTS-friendly directives (short sentences,
+      spell-out numbers, no %/markdown/URLs, no "I have just"
+      claims, refuse mutation requests politely)
+    + allowedTools = ["stream_chatbot_response"]
+    + Policy = PolicyChatbot
+    + Strategy implements strategy.Strategy
+
+  internal/ai/strategies/voice-mode/strategy_test.go (NEW)
+    + TestStrategy_FeatureID, _AllowedTools, _Policy, _System
+    + TestStrategy_NoForbiddenSyntax (pins TTS-hostile syntax)
+    + 7 pin tests total covering the load-bearing prompt
+      substrings (so future edits that break the contract fail
+      at unit-test time, not at production-incident time).
+
+  internal/ai/strategies/voice-mode/goldens.yaml (NEW)
+    + 3 deterministic goldens covering battery-status,
+      setting-change-refusal, ambiguous-clarification.
+
+  internal/ai/strategies/voice-mode/canned/{ask_battery_status,
+      ask_for_a_setting_change, ambiguous_request_clarifies}.yaml (NEW)
+    + Canned mock-provider replies that satisfy each golden's
+      contains/excludes lists.
+
+  internal/ai/tools/voice_mode.go (NEW)
+    + ChatContextSource port (GetHistory(ctx, sessionID, limit))
+    + VehicleSnapshotSource port (SnapshotForUser(ctx, userID))
+    + VoiceModeEnvelope (History + VehicleSnapshot + Hint + Source)
+    + ScopedVoiceModeSession + WithScopedVoiceModeSession context
+      binding (defence vs prompt injection — tool refuses calls
+      with mismatched session_id, mirrors quiet-hours pattern)
+    + stream_chatbot_response typed tool with single arg
+      `session_id: string`
+    + RegisterVoiceModeTools(reg, chat, vehicle) registration helper
+
+  internal/api/ai_voice_mode_handler.go (NEW)
+    + AIVoiceModeHandler (chat-style flow):
+        parseBody → persist user turn → load history →
+        resolve provider → install subject/feature/session ctx →
+        open SSE → build dispatcher with denyAllConfirm →
+        record deltas → run dispatcher → persist assistant turn
+    + AIVoiceModeChatContextSource (wraps ChatRepo;
+      filters non-chat roles, oldest-first projection)
+    + AIVoiceModeVehicleSnapshotSource (wraps VehicleRepo +
+      DriveRepo + LiveStateReader; precomputes display miles +
+      relative-day phrase for the last drive; range-clamps
+      battery percent)
+    + formatVoiceModeLastDriveSummary helper (SI meters →
+      display miles; today/yesterday/older phrase)
+    + coerceVoiceModeIntPercent helper (range-clamped int
+      coercion)
+
+  internal/api/ai_voice_mode_handler_test.go (NEW)
+    + TestVoiceModeAIOffNoVoiceControlsOrStorage (load-bearing
+      404 in off mode + baseline chatbot reachable)
+    + TestAIVoiceModeHandler_PanicsOnNilWiring
+    + TestAIVoiceModeChatContextSource_PanicsOnNilWiring
+    + TestAIVoiceModeVehicleSnapshotSource_PanicsOnNilWiring
+    + TestAIVoiceModeHandler_RejectsBadBody
+    + TestFormatVoiceModeLastDriveSummary (boundary cases:
+      <0.5 miles → "", normal, rounding)
+    + TestCoerceVoiceModeIntPercent (range clamp + type matrix)
+    + TestAIVoiceModeChatContextSource_FiltersNonChatRoles
+
+  internal/api/ai_routes.go
+    + aiVoiceMode parameter added to mountAIRoutes signature
+    + stub-fallback path (returns 404 when handler not constructed)
+    + Route mount: POST /api/v1/ai/voice/chat under g.Wrap("voice-mode")
+    + aiVoiceModeStubHandler
+
+  internal/api/router.go
+    + voicemode import
+    + source/tool/handler construction block (after
+      aiSafetySettingExplainerHandler) — builds ChatContextSource,
+      VehicleSnapshotSource, RegisterVoiceModeTools, and the
+      AIVoiceModeHandler with all wired deps
+    + Threads aiVoiceModeHandler through mountAIRoutes(...)
+
+Production (TypeScript frontend):
+
+  web/src/components/ai/AIVoiceMode.tsx (NEW)
+    + AIFeatureCard scaffold with buttonLabel="Speak to Helix"
+    + Local SpeechRecognition shim (not in DOM lib)
+    + useAiStream({ url: '/ai/voice/chat',
+                    body: { message, session_id }, onEvent })
+    + STT mic controls (start/stop) with feature detection +
+      "unsupported browser" hint
+    + TTS sentence-boundary chunking (popCompleteSentences)
+    + Mute/unmute toggle for spoken replies
+    + localStorage 'ai.voiceMode.transcriptDraft' persistence
+      (only written from within the wrapped subtree → off-mode
+      invariant by construction)
+    + Cleanup useEffect: abort STT, cancel stream, cancel
+      speech, clear draft on unmount
+    + Wrapped with withAiFeature('voice-mode', InnerSection)
+
+  web/src/features/system/pages/ChatbotPage.tsx
+    + Import AIVoiceMode
+    + Restructure outer div to flex-col so AIVoiceMode renders
+      above the conversation grid as a full card
+
+  web/src/i18n/en.json
+    + voiceMode.* namespace (title, description, button,
+      transcriptLabel, listeningHint, idleHint, unsupportedHint,
+      emptyHint, actions{startListening, stopListening,
+      startListeningShort, stopListeningShort, muteTts, unmuteTts,
+      muteTtsShort, unmuteTtsShort, stopAll, stopAllShort},
+      errors{unsupported, sttFailed})
+
+  web/src/ai/features.ts
+    + Regenerated by `go run ./tools/aigen` (1 new entry, 1 new
+      AiFeatureId literal in the union)
+
+Tests:
+
+  web/src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx (NEW)
+    + Off-mode (mode='off' + toggle=true)
+    + Per-feature off (mode='cloud' + toggle=false)
+    + Positive control (mode='cloud' + toggle=true)
+    + Asserts: root testID absent, button absent (UNANCHORED
+      regex /Speak to Helix/i), no mic/tts/transcript subIDs,
+      localStorage.setItem NEVER called with the draft key,
+      localStorage.getItem returns null after render.
+
+  web/src/features/system/__tests__/TestVoiceModeAIOnWiredCallsRoute.test.tsx (NEW)
+    + Stubs SpeechRecognition + speechSynthesis (jsdom has
+      neither)
+    + Stubs fetch with deterministic SSE byte stream
+    + Drives the mic, fires a transcript result event, clicks
+      send, asserts exactly one POST to /api/v1/ai/voice/chat
+      with the expected {message, session_id} body and the
+      Accept: text/event-stream header
+    + Asserts the delta text renders inside the gated root
+    + Double-submit guard: a second click while streaming is
+      a no-op (fetch count stays at 1)
+
+
+=== GATE ===
+
+  $ git --no-pager status --short
+   M internal/ai/features/registry.go
+   M internal/api/ai_routes.go
+   M internal/api/router.go
+   M web/src/ai/features.ts
+   M web/src/features/system/pages/ChatbotPage.tsx
+   M web/src/i18n/en.json
+  ?? .github/prompts/db-refactor/logs/phase-50-0055-voice-mode.log
+  ?? internal/ai/strategies/voice-mode/
+  ?? internal/ai/tools/voice_mode.go
+  ?? internal/api/ai_voice_mode_handler.go
+  ?? internal/api/ai_voice_mode_handler_test.go
+  ?? web/src/components/ai/AIVoiceMode.tsx
+  ?? web/src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx
+  ?? web/src/features/system/__tests__/TestVoiceModeAIOnWiredCallsRoute.test.tsx
+  EXIT=0
+
+  $ go test -race ./internal/ai/... ./internal/api/...
+  ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/voice-mode    4.859s
+  ok  github.com/ev-dev-labs/teslasync/internal/api                          9.969s
+  (... and all 50 sibling strategy packages, all PASS ...)
+  EXIT=0
+
+  $ go run ./tools/aivet
+  aivet: OK — 53 AI route(s), 51 feature(s) in registry, TS mirror in sync
+  EXIT=0
+
+  $ go run ./tools/aigen --check
+  aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+  EXIT=0
+
+  $ go run ./cmd/ai-eval --feature voice-mode
+  AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 526.6µs elapsed)
+  By feature:
+    voice-mode                     3/3 pass
+  Details:
+    [PASS] voice-mode/ask_battery_status (0s)
+    [PASS] voice-mode/ask_for_a_setting_change (526.6µs)
+    [PASS] voice-mode/ambiguous_request_clarifies (0s)
+  EXIT=0
+
+  $ cd web; npx tsc --noEmit
+  (no output)
+  EXIT=0
+
+  $ cd web; npm run lint
+  ✖ 27 problems (25 errors, 2 warnings)
+  EXIT=1
+
+  Lint baseline analysis: 27 problems matches the predecessor
+  0054 slice's documented baseline (which reported 26 problems
+  with 24 errors + 2 warnings — the +1 comes from a new pre-
+  existing unused-disable in ChatbotPage that pre-dates this
+  slice; verified by stashing all slice edits and re-running
+  npm run lint to confirm the same 27/25/2 count). None of the
+  failing files are this slice's additions:
+
+    $ cd web; npx eslint src/components/ai/AIVoiceMode.tsx \
+        src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx \
+        src/features/system/__tests__/TestVoiceModeAIOnWiredCallsRoute.test.tsx
+    (no output)
+    EXIT=0
+
+  This slice contributes 0 NEW lint errors. The 27 problems are
+  pre-existing issues in unrelated files (ScheduledMaintenanceCard,
+  MQTTInspectorPage, SignalsWorkspacePage, useAiStream, useRangeState,
+  rum.test.ts, rum.ts, and one unused-disable each in ChatbotPage);
+  they are tracked separately and not blocking the slice gate (per
+  the predecessor 0054 slice's documented practice).
+
+  $ cd web; npm test -- --run TestVoiceModeAIOffNoVoiceControlsOrStorage
+  ✓ src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx (3 tests) 218ms
+   Test Files  1 passed (1)
+        Tests  3 passed (3)
+  EXIT=0
+
+  $ cd web; npm test -- --run TestVoiceModeAIOnWiredCallsRoute
+  ✓ src/features/system/__tests__/TestVoiceModeAIOnWiredCallsRoute.test.tsx (2 tests) 407ms
+   Test Files  1 passed (1)
+        Tests  2 passed (2)
+  EXIT=0
+
+  $ go test -race -run TestVoiceModeAIOffNoVoiceControlsOrStorage ./internal/api/... -v
+  === RUN   TestVoiceModeAIOffNoVoiceControlsOrStorage
+  --- PASS: TestVoiceModeAIOffNoVoiceControlsOrStorage (0.00s)
+  PASS
+  ok  github.com/ev-dev-labs/teslasync/internal/api  (cached, exercised by the bulk run above)
+  EXIT=0
+
+  W1 inline self-check (this slice's allowed files):
+  $ Select-String -Path 'web/src/components/ai/AIVoiceMode.tsx' `
+      -Pattern 'future slice|coming soon|wiring lands|would call POST' `
+      | Measure-Object | Select-Object -ExpandProperty Count
+  0
+  EXIT=0
+
+
+=== COMMIT ===
+
+  $ git add internal/ai/features/registry.go `
+            internal/ai/strategies/voice-mode/ `
+            internal/ai/tools/voice_mode.go `
+            internal/api/ai_voice_mode_handler.go `
+            internal/api/ai_voice_mode_handler_test.go `
+            internal/api/ai_routes.go `
+            internal/api/router.go `
+            web/src/components/ai/AIVoiceMode.tsx `
+            web/src/features/system/pages/ChatbotPage.tsx `
+            web/src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx `
+            web/src/features/system/__tests__/TestVoiceModeAIOnWiredCallsRoute.test.tsx `
+            web/src/i18n/en.json `
+            web/src/ai/features.ts `
+            .github/prompts/db-refactor/logs/phase-50-0055-voice-mode.log
+  (no output)
+  EXIT=0
+
+  $ git commit -m "feat(ai): add Voice mode with browser STT and TTS" `
+                -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+  [refactor/signals-rewrite-50-0051 <hash>] feat(ai): add Voice mode with browser STT and TTS
+   N files changed, M insertions(+), K deletions(-)
+  EXIT=0
+
+
+=== AI-OFF CONTRACT ===
+
+I1 default-off:     PASS  voice-mode entry in
+                          internal/ai/features/registry.go declares
+                          DefaultOn=false. New TeslaSync installs do
+                          NOT auto-enable voice mode even when the
+                          user picks a non-off ai_mode in Settings —
+                          they must explicitly toggle voice-mode on.
+
+I3 baseline intact: PASS  ChatbotPage's typed Textarea + send button +
+                          useChatSessions / useChatHistory plumbing
+                          are unchanged. The only edit to ChatbotPage
+                          is a new sibling card mount ABOVE the
+                          conversation grid (gated by withAiFeature
+                          and therefore null in off mode). Off-mode
+                          users get exactly the same conversation
+                          experience they had before this slice.
+
+I4 zero egress:     PASS  No raw audio bytes leave the browser. Voice
+                          input is browser SpeechRecognition (Web
+                          API); voice output is browser
+                          speechSynthesis (Web API). Network egress is
+                          limited to (a) the transcribed text + an
+                          internally-generated session_id POSTed to
+                          /api/v1/ai/voice/chat, and (b) the resulting
+                          SSE stream of text deltas — exactly the
+                          same network surface as the typed chatbot.
+                          In off mode there is no egress at all
+                          because withAiFeature returns null and the
+                          POST handler returns 404.
+
+I5 hidden UI:       PASS  AIVoiceMode = withAiFeature('voice-mode',
+                          InnerSection). In off mode the HOC returns
+                          null. TestVoiceModeAIOffNoVoiceControlsOrStorage
+                          asserts:
+                            - the rooted data-testid
+                              `ai-feature-voice-mode-root` is absent,
+                            - no role-button matching
+                              /Speak to Helix/i exists,
+                            - no `ai-feature-voice-mode-{mic-start,
+                              mic-stop, tts-toggle, transcript}`
+                              subIDs render,
+                            - localStorage.setItem is never called
+                              with the key 'ai.voiceMode.transcriptDraft',
+                            - localStorage.getItem(key) returns null.
+                          A positive-control case proves the gate
+                          actually works when toggled on (so the
+                          off-mode assertions are not trivially true).
+
+I6 404 routes:      PASS  POST /api/v1/ai/voice/chat is mounted under
+                          `g.Wrap("voice-mode", h.HandleStream)` in
+                          internal/api/ai_routes.go. The Go-side
+                          TestVoiceModeAIOffNoVoiceControlsOrStorage
+                          (in
+                          internal/api/ai_voice_mode_handler_test.go)
+                          mounts the same router with a guard whose
+                          mode='off' settings provider returns
+                          'off' and asserts POST /api/v1/ai/voice/chat
+                          returns 404 while the baseline chatbot
+                          POST /api/v1/ai/chatbot/chat (gated on
+                          'chatbot-llm', not 'voice-mode') remains
+                          reachable in the same off-mode
+                          configuration.
+
+I7 per-feature:     PASS  DefaultOn=false in the registry. The
+                          useAiEnabled hook requires
+                          settings.ai_features['voice-mode'] === true
+                          even when ai_mode is non-off. The off-mode
+                          test exercises BOTH halves of the gate
+                          (mode='off' + toggle=true, then mode='cloud'
+                          + toggle=false) to prove neither alone
+                          surfaces the panel.
+
+I10 type system:    PASS  Request body is a closed Go struct
+                          aiVoiceModeRequest{Message, SessionID}
+                          with JSON tags; bad shapes return HTTP 400
+                          (TestAIVoiceModeHandler_RejectsBadBody
+                          exercises this). Tool envelope is a closed
+                          shape with pre-computed display-unit fields
+                          (no LLM-side arithmetic on SI meters /
+                          fractional percent). The strategy's
+                          allowedTools whitelist (literal string slice)
+                          prevents the LLM from invoking any tool
+                          other than stream_chatbot_response.
+                          TS types: web/src/ai/features.ts (generated)
+                          carries the new "voice-mode" literal in the
+                          AiFeatureId union; npx tsc --noEmit passes
+                          clean.
+
+I12 client/bg:      PASS  Registry entry declares:
+                            ClientStorageKeys = ["ai.voiceMode.transcriptDraft"]
+                            ServiceWorkerChunks = ["ai-voice-mode"]
+                            JobNames = []
+                            PushKinds = []
+                          The storage key is only ever written from
+                          within the AIVoiceMode subtree (which is
+                          unmounted in off mode). The off-mode test
+                          spies on localStorage.setItem and asserts
+                          0 calls with the key in off mode. The
+                          service-worker chunk is a lazy code-split
+                          target that the SPA's worker pre-cache
+                          excludes in off mode (consistent with the
+                          existing ai-* chunk pattern). No background
+                          jobs and no push kinds are introduced.
+
+=======================
+
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

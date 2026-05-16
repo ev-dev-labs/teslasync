@@ -1,0 +1,15 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_stream_chatbot_response_ask_battery_status_1
+        name: stream_chatbot_response
+        arguments: '{"session_id":"voice-session-1","history_limit":8}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Your Model 3 is at 82 percent right now and it is not
+      currently plugged in. Let me know if you want a drive
+      or charging summary next.
+    input_tokens: 320
+    output_tokens: 64

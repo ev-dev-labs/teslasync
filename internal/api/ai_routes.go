@@ -159,6 +159,7 @@ func mountAIRoutes(
 	aiPiiRedactionSharedExports *AIPiiRedactionSharedExportsHandler,
 	aiQuietHoursSuggestion *AIQuietHoursSuggestionHandler,
 	aiSafetySettingExplainer *AISafetySettingExplainerHandler,
+	aiVoiceMode *AIVoiceModeHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -665,6 +666,31 @@ func mountAIRoutes(
 			safetySettingExplainerHandler = aiSafetySettingExplainer.ServeHTTP
 		}
 		r.Post("/settings/safety/explain", g.Wrap("safety-setting-explainer", safetySettingExplainerHandler))
+
+		// voice-mode (Phase-50 / V1, slice 0055) layers an
+		// opt-in browser STT/TTS conversational surface on top
+		// of the existing /chatbot text panel. The route lives
+		// under /ai/voice/chat — namespaced under a new /voice
+		// family because future voice surfaces (transcription
+		// download, voice-only settings, etc.) will share the
+		// prefix.
+		//
+		// Same stub-fallback pattern as the other AI handlers
+		// — a nil handler is possible during partial wiring
+		// but the off-mode 404 invariant still holds because
+		// guard.Wrap returns 404 BEFORE the handler runs in
+		// off mode. The canonical baseline route at
+		// POST /api/v1/chatbot is unchanged; the AI surface
+		// NEVER replaces the text panel — it COEXISTS with it.
+		//
+		// Browser STT/TTS is the only audio path; NO raw audio
+		// bytes ever cross this handler. The request body is
+		// text-only, just like /chatbot. (ADR-015 §I12.)
+		var voiceModeHandler http.HandlerFunc = aiVoiceModeStubHandler
+		if aiVoiceMode != nil {
+			voiceModeHandler = aiVoiceMode.ServeHTTP
+		}
+		r.Post("/voice/chat", g.Wrap("voice-mode", voiceModeHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1542,6 +1568,15 @@ func aiQuietHoursSuggestionStubHandler(w http.ResponseWriter, _ *http.Request) {
 // stub.
 func aiSafetySettingExplainerStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai safety setting explainer is not yet implemented")
+}
+
+// aiVoiceModeStubHandler mirrors
+// aiSafetySettingExplainerStubHandler for the V1 slice
+// (Phase-50 / 0055 voice-mode). Reachable only when
+// AIVoiceModeHandler is nil at construction; the off-mode 404
+// invariant is held by the guard, not the stub.
+func aiVoiceModeStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai voice mode is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "voice-mode" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -564,6 +564,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-vampire-drain-explanation-root"] as const),
   }),
+  "voice-mode": Object.freeze({
+    id: "voice-mode",
+    name: "Helix voice mode",
+    description: "Opt-in browser-local voice mode for the Helix chatbot on the /chatbot page. The browser handles speech-to-text (window.SpeechRecognition) and text-to-speech (window.speechSynthesis) entirely client-side — only the transcribed text is POSTed to /api/v1/ai/voice/chat and only the streamed text is spoken back. The backend strategy uses ONE read-only typed tool (stream_chatbot_response) that returns a deterministic envelope of recent chat history plus an install-wide vehicle snapshot so the LLM has the same class of grounding the text chatbot has, with a voice-specific system prompt that keeps replies conversational, short (1-3 sentences per turn), and free of markdown / lists / code blocks because TTS would otherwise read the syntax aloud. The user must explicitly press the mic button each turn — there is no always-on listening; the transcript draft is persisted to localStorage under 'ai.voiceMode.transcriptDraft' so an interrupted browser session can recover the last unsent utterance. Per-feature redaction policy is PolicyChatbot (Allow=nil; every PII class is tagged round-trip before the provider sees the message). The deterministic text-only /chatbot baseline page remains the canonical surface when AI is off; the voice card is ABSENT (ADR-015 §I3 + §I5 + §I12), so no audio capture, no TTS playback, and no localStorage key are touched in off mode.",
+    tier: "V",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-voice-mode-root"] as const),
+  }),
   "yir-narration": Object.freeze({
     id: "yir-narration",
     name: "Year-in-review narration",
@@ -627,6 +638,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "tire-pressure-trend-reasoning",
   "trip-planner-llm-agent",
   "vampire-drain-explanation",
+  "voice-mode",
   "yir-narration",
 ] as const);
 

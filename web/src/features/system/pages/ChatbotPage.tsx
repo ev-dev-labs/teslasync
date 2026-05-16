@@ -40,6 +40,9 @@ import { SuggestedPrompts } from '../components/chatbot/SuggestedPrompts';
 // rendered conditionally via withAiFeature('chatbot-llm', …); absent
 // in off mode (ADR-015 §I5 + §I6).
 import { AIChatbotIndicator } from '@/components/ai/AIChatbotIndicator';
+// Phase-50 / 0055 — V1 voice mode. Optional browser STT/TTS panel
+// mounted above the conversation; absent in off mode via withAiFeature.
+import { AIVoiceMode } from '@/components/ai/AIVoiceMode';
 
 // History sidebar visibility persists across reloads via localStorage so
 // that a desktop user who opens the History panel finds it still open
@@ -699,11 +702,13 @@ export default function ChatbotPage() {
         </div>
       }
     >
-      <div
-        className="flex flex-1 gap-4 min-h-0 relative"
-        style={{ height: 'calc(100dvh - 12rem)' }}
-      >
-        {showSessions && (
+      <div className="flex flex-col flex-1 gap-4 min-h-0">
+        <AIVoiceMode />
+        <div
+          className="flex flex-1 gap-4 min-h-0 relative"
+          style={{ height: 'calc(100dvh - 12rem)' }}
+        >
+          {showSessions && (
           isMobile ? (
             <div
               className="fixed inset-0 z-40 flex"
@@ -871,6 +876,7 @@ export default function ChatbotPage() {
             </div>
           </div>
         </GlassPanel>
+        </div>
       </div>
     </PageContainer>
   );

@@ -3414,6 +3414,71 @@ var Registry = map[string]Feature{
 		},
 	},
 
+	// Phase-50 / V1 (slice 0055) — Voice mode.
+	//
+	// Opt-in browser STT/TTS voice mode that wraps the existing
+	// /chatbot conversational surface. Two halves:
+	//
+	//   • Browser-local STT (window.SpeechRecognition /
+	//     webkitSpeechRecognition) captures the user's spoken
+	//     prompt and writes the transcript draft to localStorage
+	//     under `ai.voiceMode.transcriptDraft`. The transcript
+	//     never leaves the browser as audio — only the
+	//     transcribed text is POSTed.
+	//   • Browser-local TTS (window.speechSynthesis) speaks the
+	//     accumulated SSE `delta` text as it streams in, buffered
+	//     at sentence boundaries to avoid utterance-queue
+	//     thrashing. Audio output is generated entirely in the
+	//     browser by the platform speech engine.
+	//
+	// The backend route POST /api/v1/ai/voice/chat is an LLM
+	// surface that runs the voice-mode strategy. The strategy's
+	// single typed tool `stream_chatbot_response` returns a
+	// deterministic envelope of chat history + a per-install
+	// vehicle snapshot so the LLM has the same class of grounding
+	// the text chatbot has, with the voice-specific instruction
+	// to keep replies conversational, short, and free of
+	// markdown (because TTS will read them aloud). Render
+	// contract is NARRATIVE.
+	//
+	// ADR-015 alignment:
+	//   - I1 default-off:   DefaultOn=false; toggle defaults
+	//     false in features.Registry.
+	//   - I3 baseline:      the /chatbot text path remains the
+	//     canonical baseline when AI is off; the voice card is
+	//     absent (withAiFeature returns null) so neither the
+	//     mic UI nor the localStorage transcript key surface.
+	//   - I5 hidden UI:     ai-feature-voice-mode-root is the
+	//     only DOM marker the surface emits; absent in off mode.
+	//   - I6 404 routes:    POST /api/v1/ai/voice/chat is gated
+	//     by guard.Wrap and returns 404 in off mode.
+	//   - I7 per-feature:   per-feature toggle 'voice-mode' is
+	//     the only on-switch; mode='off' trumps the toggle.
+	//   - I9 redaction:     PolicyChatbot (Allow=nil, round-trip
+	//     redacted tags) so no PII reaches the provider.
+	//   - I12 client/bg:    service-worker chunk 'ai-voice-mode'
+	//     is registered for off-mode SW filtering; client
+	//     storage key 'ai.voiceMode.transcriptDraft' is only
+	//     written when the gated component mounts, so off mode
+	//     leaves it absent by construction.
+	"voice-mode": {
+		ID:          "voice-mode",
+		Name:        "Helix voice mode",
+		Description: "Opt-in browser-local voice mode for the Helix chatbot on the /chatbot page. The browser handles speech-to-text (window.SpeechRecognition) and text-to-speech (window.speechSynthesis) entirely client-side — only the transcribed text is POSTed to /api/v1/ai/voice/chat and only the streamed text is spoken back. The backend strategy uses ONE read-only typed tool (stream_chatbot_response) that returns a deterministic envelope of recent chat history plus an install-wide vehicle snapshot so the LLM has the same class of grounding the text chatbot has, with a voice-specific system prompt that keeps replies conversational, short (1-3 sentences per turn), and free of markdown / lists / code blocks because TTS would otherwise read the syntax aloud. The user must explicitly press the mic button each turn — there is no always-on listening; the transcript draft is persisted to localStorage under 'ai.voiceMode.transcriptDraft' so an interrupted browser session can recover the last unsent utterance. Per-feature redaction policy is PolicyChatbot (Allow=nil; every PII class is tagged round-trip before the provider sees the message). The deterministic text-only /chatbot baseline page remains the canonical surface when AI is off; the voice card is ABSENT (ADR-015 §I3 + §I5 + §I12), so no audio capture, no TTS playback, and no localStorage key are touched in off mode.",
+		Tier:        "V",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/voice/chat"},
+			Frontend:  []string{"/chatbot"},
+			UITestIDs: []string{"ai-feature-voice-mode-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
+
 	"quiet-hours-suggestion": {
 		ID:          "quiet-hours-suggestion",
 		Name:        "Helix quiet-hours suggestion",

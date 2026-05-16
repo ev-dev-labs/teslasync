@@ -1,0 +1,213 @@
+feature:
+  id: voice-mode
+  system: |
+    You are Helix in voice mode, the TeslaSync fleet assistant
+    speaking to the user through their browser's text-to-speech
+    engine. Your replies will be SPOKEN ALOUD by the browser;
+    the user is hands-free and cannot read formatting on a
+    screen. ALWAYS call stream_chatbot_response FIRST and ground
+    every claim in the typed envelope it returns (recent chat
+    history + an install-wide vehicle snapshot with VIN,
+    display_name, soc_percent, charging_state, and
+    last_drive_summary). Quote ONLY values the typed envelope
+    surfaces; never invent vehicle data, never invent a setting,
+    never claim a value the envelope did not return. Keep
+    replies SHORT — aim for 1 to 3 sentences per turn, never
+    more than 4. The browser TTS engine queues every utterance
+    and a long reply blocks the user from interrupting. NEVER
+    use markdown (no asterisks for bold, no underscores for
+    emphasis, no hash signs for headings); NEVER use lists (no
+    bullet points, no numbered items); NEVER use code blocks or
+    backticks; NEVER include URLs — TTS would read every
+    punctuation mark aloud verbatim and the result would be
+    unlistenable. Use plain sentences with normal punctuation
+    only. Numbers MUST be written in a TTS-friendly form: say
+    "82 percent" not "82%"; say "23 miles" not "23 mi"; say
+    "10 a.m." not "10:00"; the speech engine reads symbols
+    literally. If the user asks a question the envelope cannot
+    answer, say so plainly in one sentence and suggest they
+    open the text chat or the relevant Settings page — DO NOT
+    fabricate an answer and DO NOT promise to act. NEVER claim
+    to have changed a setting, NEVER promise to perform an
+    action, NEVER say "I have done X" — voice mode is a
+    READ-only assistant; every state change happens in the
+    existing UI. Never quote precise street addresses, GPS
+    coordinates, place names, charger network labels, VINs,
+    IPs, emails, phone numbers, or MAC addresses — the
+    redaction policy strips them round-trip, but a leaked
+    transcript should not contain them at all. If the user's
+    request is ambiguous, ask one short clarifying question
+    (single sentence) rather than guessing. Be friendly and
+    natural — the user is talking, not typing — but stay
+    concise and stay grounded in the envelope.
+  # Tools MUST mirror
+  # internal/ai/strategies/voice-mode/strategy.go's
+  # allowedTools whitelist. The single tool is a READ-only
+  # aggregator: stream_chatbot_response reads the canonical
+  # ChatRepo via the ChatContextSource port and projects the
+  # vehicle snapshot via the VehicleSnapshotSource port. NO
+  # database write is performed.
+  tools:
+    - stream_chatbot_response
+  mutating_tools: []
+
+goldens:
+  # ask_battery_status — the most common case: a user asks
+  # for the current state of charge while driving hands-free.
+  # The LLM MUST call stream_chatbot_response FIRST to fetch
+  # the typed envelope (recent history + vehicle snapshot),
+  # then produce a SHORT spoken-style answer that quotes the
+  # snapshot's soc_percent verbatim. Pin: must NOT use markdown
+  # / lists / code blocks; must NOT include a URL; must NOT
+  # claim to have changed any setting; must keep the reply
+  # short enough for TTS to render naturally.
+  - name: ask_battery_status
+    input:
+      user_message: "Hey Helix, what's my battery at right now?"
+      context_overrides:
+        user_id: "user-1"
+        session_id: "voice-session-1"
+    expect:
+      must_call_tools:
+        - stream_chatbot_response
+      answer_must_contain:
+        - "percent"
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # TTS-hostile syntax pins. The narrator must NOT emit
+        # markdown / lists / code blocks / URLs — TTS reads
+        # the punctuation aloud verbatim.
+        - "**"
+        - "##"
+        - "```"
+        - "http://"
+        - "https://"
+        # The "82%" form is hostile to TTS — the spoken word
+        # "percent" is the canonical form (the narrator must
+        # spell out the percent symbol).
+        - "%"
+        # Honest "read-only" pin: the narrator must NOT claim
+        # the narration changed any setting.
+        - "I have changed"
+        - "I have updated"
+        - "I have set"
+      judge_rubric: |
+        Score 1-5 on: (1) called stream_chatbot_response FIRST
+        and grounded the answer in the typed envelope, (2)
+        named the vehicle's current state of charge in a
+        TTS-friendly form (e.g. "82 percent" not "82%"), (3)
+        kept the reply to 1-3 sentences, (4) used plain prose
+        with no markdown / no lists / no code blocks / no
+        URLs, (5) did NOT claim to have changed a setting,
+        did NOT invent a value the envelope did not surface.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # ask_for_a_setting_change — load-bearing read-only pin.
+  # The user (hands-free) asks the narrator to perform a
+  # mutation ("turn on quiet hours for me"). The narrator
+  # MUST refuse politely, explain that voice mode is read-
+  # only, and direct the user to the Settings UI rather than
+  # fabricating a "done" reply. The narrator MUST still call
+  # stream_chatbot_response FIRST (the strategy's grounding
+  # directive applies even on refusal turns) — calling the
+  # tool first lets the narrator confirm what the current
+  # value is and surface it in the refusal, which is honest
+  # behaviour.
+  - name: ask_for_a_setting_change
+    input:
+      user_message: "Helix, can you turn on quiet hours for me?"
+      context_overrides:
+        user_id: "user-1"
+        session_id: "voice-session-1"
+    expect:
+      must_call_tools:
+        - stream_chatbot_response
+      answer_must_contain:
+        - "Settings"
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # TTS-hostile syntax pins.
+        - "**"
+        - "##"
+        - "```"
+        - "http://"
+        - "https://"
+        # The load-bearing "read-only" pin: the narrator must
+        # NEVER claim to have made the change.
+        - "I have turned on"
+        - "I have enabled"
+        - "I have changed"
+        - "I have updated"
+        - "Done"
+        - "Quiet hours are now"
+        - "I just enabled"
+      judge_rubric: |
+        Score 1-5 on: (1) called stream_chatbot_response FIRST
+        even on a refusal turn (grounding directive applies
+        unconditionally), (2) refused politely to perform the
+        mutation, (3) explained the voice surface is read-only
+        and directed the user to the Settings UI, (4) did
+        NOT claim to have enabled / changed / updated the
+        setting, (5) the refusal is a 1-2 sentence spoken-
+        style sentence (no markdown / no lists / no URLs),
+        not a generic "I cannot help" wall. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # ambiguous_request_clarifies — the strategy's "ask one
+  # short clarifying question" directive. The user is vague
+  # ("show me the energy stuff"); the narrator should call
+  # the tool, see the envelope, and ask ONE short
+  # clarifying question rather than guessing which slice of
+  # the energy surface the user meant. Pin: the response
+  # must be a single short question, must NOT enumerate a
+  # list of options as bullets, must NOT propose an action.
+  - name: ambiguous_request_clarifies
+    input:
+      user_message: "Helix, show me the energy stuff."
+      context_overrides:
+        user_id: "user-1"
+        session_id: "voice-session-1"
+    expect:
+      must_call_tools:
+        - stream_chatbot_response
+      answer_must_contain:
+        - "?"
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # TTS-hostile syntax pins.
+        - "**"
+        - "##"
+        - "```"
+        - "http://"
+        - "https://"
+        # Bullet-list pin: the narrator must NEVER respond to
+        # an ambiguous request with a bulleted list of
+        # options — TTS would read "dash" on every bullet.
+        - "* "
+        - "1. "
+        - "2. "
+        - "- "
+        # Honest "read-only" pin.
+        - "I have changed"
+        - "I have updated"
+      judge_rubric: |
+        Score 1-5 on: (1) called stream_chatbot_response FIRST,
+        (2) responded with ONE short clarifying question
+        (single sentence ending with "?"), (3) the question
+        is grounded in the envelope (refers to something the
+        envelope actually surfaces — charging, recent drive,
+        battery, etc.), (4) did NOT enumerate a bulleted list
+        of options (TTS-hostile), (5) did NOT claim to have
+        changed any setting, did NOT invent a value the
+        envelope did not surface. Pass = score >= 4.
+      judge_pass_threshold: 4
