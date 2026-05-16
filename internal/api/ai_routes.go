@@ -164,6 +164,7 @@ func mountAIRoutes(
 	aiNLSqlPlayground *AINLSQLPlaygroundHandler,
 	aiNLGrafanaPanel *AINLGrafanaPanelHandler,
 	aiNLDashboardComposer *AINLDashboardComposerHandler,
+	aiTripPostcardShareCardImageGeneration *AITripPostcardShareCardImageGenerationHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -803,6 +804,28 @@ func mountAIRoutes(
 			nlDashboardComposerHandler = aiNLDashboardComposer.ServeHTTP
 		}
 		r.Post("/power/dashboard/draft", g.Wrap("nl-dashboard-composer", nlDashboardComposerHandler))
+
+		// trip-postcard-share-card-image-generation (Phase-50 / 0060,
+		// GEN1 slice) drafts a typed share-card image-prompt + a
+		// render-ready preview envelope for ONE existing trip. The
+		// LLM does NOT generate image bytes, NEVER calls an external
+		// image-generation provider, and NEVER publishes / saves /
+		// uploads anything — the surface is propose-only, mirroring
+		// the auto-trip-naming pattern. The user reviews the
+		// structured proposal in the AI panel and applies it through
+		// the existing manual share-link controls in the SPA's
+		// authenticated /sharing/trips page; the static /s/:token
+		// share-card baseline (SharedDrivePage) is unchanged. Same
+		// stub-fallback pattern as the other AI handlers — a nil
+		// handler is possible during partial wiring but the off-mode
+		// 404 invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode. (ADR-015 §I3 + §I5
+		// + §I6.)
+		var tripPostcardShareCardImageGenerationHandler http.HandlerFunc = aiTripPostcardShareCardImageGenerationStubHandler
+		if aiTripPostcardShareCardImageGeneration != nil {
+			tripPostcardShareCardImageGenerationHandler = aiTripPostcardShareCardImageGeneration.ServeHTTP
+		}
+		r.Post("/share-cards/trip-image/draft", g.Wrap("trip-postcard-share-card-image-generation", tripPostcardShareCardImageGenerationHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1725,6 +1748,16 @@ func aiNLGrafanaPanelStubHandler(w http.ResponseWriter, _ *http.Request) {
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiNLDashboardComposerStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai natural-language dashboard composer is not yet implemented")
+}
+
+// aiTripPostcardShareCardImageGenerationStubHandler mirrors the
+// other AI stub handlers for the GEN1 slice (Phase-50 / 0060
+// trip-postcard-share-card-image-generation). Reachable only when
+// AITripPostcardShareCardImageGenerationHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiTripPostcardShareCardImageGenerationStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai trip postcard / share-card image-prompt generation is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

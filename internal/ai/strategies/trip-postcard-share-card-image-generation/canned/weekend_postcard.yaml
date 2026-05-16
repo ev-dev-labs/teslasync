@@ -1,0 +1,25 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_share_card_draft_weekend_1
+        name: draft_image_prompt
+        arguments: '{"trip_id": 101, "style_hint": "vintage"}'
+    input_tokens: 52
+    output_tokens: 40
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_share_card_render_weekend_1
+        name: render_share_card_preview
+        arguments: '{"trip_id": 101, "proposed_title": "Weekend Road Trip — October 2024", "image_prompt": "A vintage postcard illustration of an electric vehicle on a coastal highway at sunset, with rolling hills and a glowing horizon, painted in warm October palette."}'
+    input_tokens: 104
+    output_tokens: 60
+  - finish_reason: stop
+    content: |
+      I drafted a Weekend Road Trip share-card preview for trip 101
+      using a vintage-postcard style. The proposed title is
+      "Weekend Road Trip — October 2024" and the image prompt
+      describes a coastal-highway sunset scene in a warm October
+      palette. Review the structured proposal in the side panel,
+      then use the existing share-link generator to apply it.
+    input_tokens: 168
+    output_tokens: 72

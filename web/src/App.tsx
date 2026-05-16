@@ -194,6 +194,8 @@ const Search = lazy(() => import('./features/system/pages/SearchPage'))
 
 // Sharing (public)
 const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
+// Sharing (authenticated, in Layout) — Phase-50 / 0060 GEN1 trip postcard.
+const SharingTrips = lazy(() => import('./features/sharing/pages/SharingTripsPage'))
 
 // Watch (standalone — no Layout, API key auth)
 const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
@@ -388,6 +390,12 @@ export default function App() {
         <Route path="efficiency" element={<SafeRoute name="Efficiency"><Efficiency /></SafeRoute>} />
         <Route path="trips" element={<SafeRoute name="Trips"><Trips /></SafeRoute>} />
         <Route path="trips/:id" element={<SafeRoute name="TripDetail"><TripDetail /></SafeRoute>} />
+        {/* Phase-50 / 0060 — GEN1 trip-postcard-share-card-image-generation
+            registers frontend route `/sharing/trips`. The page renders the
+            deterministic recent-trips list + static-share-card hints
+            regardless of AI mode; the opt-in AI card is gated by
+            withAiFeature and absent in off mode. */}
+        <Route path="sharing/trips" element={<SafeRoute name="SharingTrips"><SharingTrips /></SafeRoute>} />
         <Route path="trip-planner" element={<SafeRoute name="TripPlanner"><TripPlanner /></SafeRoute>} />
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />

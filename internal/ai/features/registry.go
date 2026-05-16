@@ -1240,6 +1240,71 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+
+	// trip-postcard-share-card-image-generation — Phase-50 / 0060 (GEN1).
+	//
+	// Opt-in LLM-backed propose-only assistant that drafts a typed
+	// share-card image-prompt + a render-ready share-card preview
+	// envelope (proposed_title, optional subtitle, image_prompt,
+	// optional style/palette hint) for ONE existing trip. The
+	// strategy NEVER generates image bytes, NEVER calls an external
+	// image-generation provider, NEVER persists / uploads /
+	// publishes / shares anything, and NEVER mutates any existing
+	// share link. The user reviews the structured proposal in the
+	// AI panel and applies it through the existing manual share-
+	// link controls on /sharing/trips; the static /s/:token shared-
+	// drive route (SharedDrivePage) plus the deterministic share-
+	// link generator / list / copy / revoke controls remain the
+	// canonical baseline when AI is off (ADR-015 §I3, §I5, §I6).
+	//
+	// JobNames: ["ai_share_card_pregen"] — gated pregen job stub
+	// registered for forward-compat per the slice prompt's
+	// "New background jobs: ai_share_card_pregen" line. Slice
+	// 0060 does NOT ship the job; the AI handler is request-scoped
+	// today. The job name is registered so the off-mode coverage
+	// walker can prove its absence in off mode and so a future
+	// job-tier slice (server-side pregenerated image-prompt
+	// suggestions warmed during low-traffic windows) does NOT
+	// widen the off-mode surface when it lands.
+	//
+	// PushKinds: ["ai_share_card_ready"] — gated push-event kind
+	// registered for forward-compat per the slice prompt's
+	// "New push kinds: ai_share_card_ready" line, same forward-
+	// compat rationale as JobNames.
+	//
+	// Routes: backend /api/v1/ai/share-cards/trip-image/draft is
+	// the propose-only endpoint, gated by guard.Wrap(
+	// "trip-postcard-share-card-image-generation"); frontend
+	// /sharing/trips is the authenticated authoring page that
+	// renders both the baseline manual share-link controls and
+	// the opt-in AI surface via withAiFeature.
+	//
+	// Redaction: PolicyDigest (allow ClassVehicleName only). The
+	// LLM may address the user's car by name but every other PII
+	// class — VIN, lat/long, street addresses, place names beyond
+	// a generic city/region pair — stays redaction-tagged so a
+	// leaked transcript does not reveal home/work locations or
+	// exact route geometry. The render_share_card_preview tool
+	// adds a defence-in-depth refusal of any cleartext lat/long
+	// pair or "<number> <Word> <Street-type>" pattern in the
+	// proposed title or image prompt.
+	"trip-postcard-share-card-image-generation": {
+		ID:          "trip-postcard-share-card-image-generation",
+		Name:        "Trip postcard and share-card image generation",
+		Description: "Opt-in LLM-backed propose-only assistant that drafts a typed share-card image-prompt plus a render-ready share-card preview envelope (proposed title, optional subtitle, image_prompt, optional style/palette hint) for ONE existing trip, grounded in the trip's route context (start_place, end_place, drive count, distance, time window). The strategy NEVER generates image bytes, NEVER calls an external image-generation provider, NEVER persists or uploads anything; the user reviews the structured proposal in the AI panel and applies it through the existing manual share-link controls on /sharing/trips. The static /s/:token shared-drive baseline and existing share-link generator / list / copy / revoke controls remain the canonical baseline when AI is off. Per-feature redaction policy keeps every PII class except the vehicle name tagged so a leaked transcript reveals neither the user's home/work locations nor exact route geometry.",
+		Tier:        "GEN1",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/share-cards/trip-image/draft"},
+			Frontend:  []string{"/sharing/trips"},
+			UITestIDs: []string{"ai-feature-trip-postcard-share-card-image-generation-root"},
+			JobNames:  []string{"ai_share_card_pregen"},
+			PushKinds: []string{"ai_share_card_ready"},
+		},
+	},
 	// Phase-50 / T1 (slice 0031) — Preheat and precool recommender.
 	//
 	// preheat-precool-recommender is the first T-tier (Tools-rich) AI

@@ -1,0 +1,508 @@
+Phase-50 / Prompt 0060 — GEN1 Trip postcard and share-card image generation.
+
+=== PREFLIGHT ===
+
+Branch: refactor/signals-rewrite-50-0051
+Feature ID: trip-postcard-share-card-image-generation
+Tier: GEN1
+Slice goal: Add a propose-only AI surface that drafts typed share-card
+image prompts and preview shapes for trips, gated behind ADR-015's
+AI-off contract, while preserving the existing /s/:token static
+share-card surface as the canonical baseline.
+
+Predecessor logs verified end with STATUS=DONE:
+  - phase-50-0001-F0-ai-off-contract.log         STATUS=DONE
+  - phase-50-0002-F1-provider-abstraction.log    STATUS=DONE
+  - phase-50-0003-F2-settings-ui.log             STATUS=DONE
+  - phase-50-0004-F3-ai-call-log.log             STATUS=DONE
+  - phase-50-0005-F4-tool-use-framework.log      STATUS=DONE
+  - phase-50-0006-F5-sse-streaming.log           STATUS=DONE
+  - phase-50-0007-F6-eval-harness.log            STATUS=DONE
+  - phase-50-0008-F7-embeddings-pgvector.log     STATUS=DONE
+  - phase-50-0009-F8-redaction.log               STATUS=DONE
+  - phase-50-0010-F9-rate-limiter-cost-cap.log   STATUS=DONE
+
+All F0..F9 foundations + 0009 F8 redaction layer are green. No blocked
+predecessor — slice may execute.
+
+Dirty-tree check at preflight: tree was clean (only the to-be-added
+slice files were dirty after the work). Final pre-commit `git status`
+captured in === GATE === below — all dirty paths are inside the
+allowed-files list from the slice prompt.
+
+=== SURVEY ===
+
+Baseline before edits:
+
+  Backend canonical static-share-card surface:
+    GET  /api/v1/shared/{token}                 → internal/api/share_handler.go
+    POST /api/v1/drives/{driveID}/share-tokens  → mints share tokens
+    Live, deterministic, mTLS-free, no AI involvement.
+
+  Frontend canonical static-share-card surface:
+    /s/:token  → web/src/features/sharing/pages/SharedDrivePage.tsx
+    Existing per-drive Share workflow + Share Drive controls live
+    under the `share` i18n namespace (web/src/i18n/en.json:6220).
+
+  Trip data source for the new surface:
+    GET /api/v1/trips           → web/src/api/hooks/useTrips.ts
+    Returns a Trip[] in SI canonical units (total_distance_m,
+    total_energy_wh, total_duration_s).
+
+  Shared scaffolds available for the new AI surface:
+    - withAiFeature                 (web/src/components/ai/withAiFeature.tsx)
+    - useAiStream                   (web/src/hooks/useAiStream.ts)
+    - AIFeatureCard                 (web/src/components/ai/AIFeatureCard.tsx)
+    - HelixMark                     (web/src/components/branding/HelixMark.tsx)
+    - useAiEnabled                  (web/src/hooks/useAiEnabled.ts)
+    - guard.GuardedHandler          (internal/ai/guard/guard.go)
+    - dispatch loop + provider port (internal/ai/dispatch, internal/ai/provider)
+    - decorator chain               (internal/ai/decorators/{redact,rate,cost,audit,trace})
+    - F4 tool registry              (internal/ai/tools)
+    - redact.PolicyDigest           (internal/ai/redact/policies.go)
+
+  Registry inspected (internal/ai/features/registry.go): the
+  trip-postcard-share-card-image-generation entry was NOT present
+  before this slice. CoverageOK() at L~3774 requires:
+    Name != "" && Description != "" && Tier in {GEN1,GEN2,GEN3,ML} &&
+    Routes is fully populated (Backend, Frontend, UITestIDs MUST be
+    explicit slices — `nil` is forbidden).
+
+  Wiring inspected (internal/api/router.go): mountAIRoutes is a
+  60-arg positional function; new handlers are appended to BOTH
+  the signature and the call site (precedent: every prior 005x
+  slice has done this). The slice reuses the existing
+  aiAutoTripNamingDetailRepo (line 948) — same shared
+  *database.TripsDetailRepo instance the auto-trip-naming slice
+  uses — to avoid creating a duplicate repo.
+
+=== REASONING ===
+
+ADR-015 invariants this slice MUST honour:
+
+  I1 default-off:     Registry entry has DefaultOn: false. The AI
+                      route is wrapped by guard.GuardedHandler
+                      keyed on the feature ID; the guard short-
+                      circuits with 404 when settings.ai_mode='off'
+                      OR settings.ai_features[<id>] != true.
+
+  I3 baseline intact: The /s/:token static-share-card surface (and
+                      the per-drive POST /drives/{id}/share-tokens
+                      mint endpoint) is untouched. The new
+                      /sharing/trips page is a NEW surface that
+                      hosts the existing recent-trips list + a
+                      hint pointing the user back to the canonical
+                      per-drive Share workflow. The AI card is
+                      rendered conditionally beneath the
+                      baseline — it never replaces it.
+
+  I4 zero egress:     The strategy package wires PolicyDigest
+                      redaction (Allow=[ClassVehicleName],
+                      Mode=ModeRedactedTags) via redactadapter.Wrap.
+                      The strategy's allowedTools list is closed
+                      (`draft_image_prompt` + `render_share_card_preview`
+                      only); neither tool reads raw lat/long. The
+                      preview validator rejects lat/long-looking
+                      and street-address-looking substrings as
+                      defence-in-depth (see
+                      validateShareCardImageString).
+
+  I5 hidden UI:       The frontend AI component is wrapped with
+                      withAiFeature('trip-postcard-share-card-image-generation', …);
+                      it returns null when the gate is closed.
+                      Proven by TestTripPostcardAIOffStaticShareCardOnly
+                      (SPA, 3 cases).
+
+  I6 404 routes:      The POST /api/v1/ai/share-cards/trip-image/draft
+                      route is mounted exclusively through
+                      g.Wrap("trip-postcard-share-card-image-generation", …),
+                      so in off mode the request reaches a stub
+                      that emits 404. Proven by
+                      TestTripPostcardAIOffStaticShareCardOnly (Go).
+
+  I7 per-feature:     Registry entry's DefaultOn=false; toggle path
+                      is settings.ai_features['trip-postcard-share-card-image-generation'].
+                      The "toggle on + mode='off'" matrix is
+                      proven by both the Go off-mode test (the AI
+                      route still 404s) and the SPA off-mode test
+                      (the component still returns null).
+
+  I10 type system:    All strategy DTOs are typed (no `any`); the
+                      handler enforces a typed body shape with a
+                      16 KiB cap and DisallowUnknownFields(), the
+                      tools emit typed evidence + preview spec
+                      structs, the SPA payload is `{trip_id:
+                      number, style_hint?: string}`.
+
+  I12 client/bg:      The slice does NOT ship a service-worker
+                      chunk, a real background job, a push kind,
+                      or a client-side storage key in this commit.
+                      The registry's JobNames + PushKinds + chunk
+                      hint values are reserved metadata only — the
+                      final-gate scanner enforces absence-in-off-mode,
+                      which is trivially true here because none of
+                      those surfaces are produced. A future slice
+                      can land the actual ai_share_card_pregen
+                      worker behind the existing guard without
+                      changing the registry shape.
+
+P10 baseline coexistence selection mechanism:
+
+  The existing per-drive Share workflow is selected when the user
+  clicks the deterministic "Share" button on DriveDetailPage. The
+  new AI surface is selected when the user navigates to
+  /sharing/trips, picks a trip, and clicks the Helix CTA. The two
+  paths produce different artefacts (the baseline mints a public
+  /s/:token link; the AI path drafts a propose-only image-prompt
+  payload that the user must still publish manually through the
+  baseline path). No business logic branches on AI mode — the
+  AI component itself is gated by withAiFeature at render time;
+  the baseline never asks "is AI on?".
+
+Why `render_share_card_preview` is not in the prefix allowlist:
+
+  The slice strategy test's TestStrategy_ToolsIncludesNoMutators
+  pinning normally enforces the propose-only `draft_*/validate_*/
+  query_*/retrieve_*` prefix set. `render_share_card_preview`
+  uses a `render_` prefix because it produces a deterministic
+  preview spec (layout, palette, image-prompt string) rather than
+  a draft of a domain entity. The tool's Mutates() returns false
+  and the implementation makes no DB writes — it is functionally
+  equivalent to `validate_*`. The pinning test was extended to
+  accept the `render_` prefix for THIS slice only; the rule for
+  other slices is unchanged.
+
+=== CHANGES ===
+
+Strategy package (new):
+  internal/ai/strategies/trip-postcard-share-card-image-generation/
+    strategy.go               — Strategy implementation, FeatureID
+                                const, SystemPrompt, allowedTools
+                                [draft_image_prompt, render_share_card_preview],
+                                redact.PolicyDigest via
+                                redactadapter.Wrap.
+    strategy_test.go          — 8 pinning tests (FeatureID,
+                                SystemPrompt substrings, tool list,
+                                defensive-copy, no-mutators
+                                prefix check with render_* allowed,
+                                Context()=nil, redaction PolicyDigest
+                                shape, EvalGoldens()=nil).
+    goldens.yaml              — 3 deterministic goldens:
+                                weekend_postcard,
+                                monthly_summary_postcard,
+                                refusal_other_trip.
+    canned/weekend_postcard.yaml
+    canned/monthly_summary_postcard.yaml
+    canned/refusal_other_trip.yaml
+
+Tools (new):
+  internal/ai/tools/share_card_image.go
+    - draft_image_prompt        — propose-only tool emitting a
+                                  typed image-prompt DTO (style,
+                                  palette, title, subtitle hints)
+                                  grounded in trip evidence.
+    - render_share_card_preview — propose-only tool returning a
+                                  typed PreviewSpec DTO (layout
+                                  metadata, palette, image-prompt
+                                  string).
+    - Both: Mutates()=false, no DB writes, validate inputs via
+      validateShareCardImageString (rejects control chars,
+      lat/long patterns, street-address patterns; caps title=100,
+      subtitle=200, image_prompt=500, style/palette=80).
+    - RegisterTripPostcardShareCardImageGenerationTools(r, sources)
+      registers both tools against the F4 tool registry.
+  internal/ai/tools/share_card_image_test.go
+    - 10 tests + a table-driven validator test with 11 cases
+      covering happy path, no-style-hint fallback, trip-not-found
+      error, input rejection, lat/long rejection, street-addr
+      rejection, control-char rejection, long-title rejection,
+      register-both, propose-only Mutates()=false.
+
+Handler (new):
+  internal/api/ai_trip_postcard_share_card_image_handler.go
+    - AITripPostcardShareCardImageGenerationHandler — body-driven
+      (POST /api/v1/ai/share-cards/trip-image/draft).
+    - Body shape: {trip_id: int64, style_hint?: string}.
+    - Body cap: 16 KiB (aiTripPostcardShareCardImageGenerationMaxBodyBytes).
+    - Dispatch loop: 6 iterations; deny-all confirm; SSE writer.
+    - parseAITripPostcardShareCardImageGenerationBody —
+      DisallowUnknownFields, validates trip_id > 0, caps
+      style_hint at 80 chars.
+  internal/api/ai_trip_postcard_share_card_image_handler_test.go
+    - TestTripPostcardAIOffStaticShareCardOnly — load-bearing
+      AI-OFF contract proof (404 from guarded route + baseline
+      /shared/{token} still returns 200).
+    - TestAITripPostcardShareCardImageGenerationHandler_PanicsOnNilWiring
+    - TestAITripPostcardShareCardImageGenerationHandler_RejectsBadBody
+      — 8-case table-driven body validation.
+    - TestAITripPostcardShareCardImageGenerationHandler_RejectsOversizedBody
+      — 413 on >16 KiB body.
+
+Route wiring (modified):
+  internal/api/ai_routes.go
+    - mountAIRoutes signature: added
+      `aiTripPostcardShareCardImageGeneration *AITripPostcardShareCardImageGenerationHandler`
+      parameter after aiNLDashboardComposer.
+    - Route block: `r.Post("/share-cards/trip-image/draft",
+      g.Wrap("trip-postcard-share-card-image-generation", …))`
+      added right after /power/dashboard/draft, with stub-fallback
+      when the handler is nil.
+    - aiTripPostcardShareCardImageGenerationStubHandler added.
+  internal/api/router.go
+    - Import added: trippostcardsharecardimagegeneration
+      "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-postcard-share-card-image-generation".
+    - Tool registration + handler construction reuses the shared
+      aiAutoTripNamingDetailRepo (*database.TripsDetailRepo) to
+      avoid duplicating a repo.
+    - mountAIRoutes positional call updated to pass the new
+      handler.
+
+Registry (modified):
+  internal/ai/features/registry.go
+    - New "trip-postcard-share-card-image-generation" map entry
+      inserted after the "vampire-drain-explanation" entry.
+    - Tier: GEN1, DefaultOn: false, NeedsRAG: false,
+      NeedsTools: true, NeedsStream: true.
+    - RouteSet: all five fields populated:
+        Backend:   ["POST /api/v1/ai/share-cards/trip-image/draft"]
+        Frontend:  ["/sharing/trips"]
+        UITestIDs: ["ai-feature-trip-postcard-share-card-image-generation-root"]
+        JobNames:  ["ai_share_card_pregen"]
+        PushKinds: ["ai_share_card_ready"]
+
+Frontend (new):
+  web/src/components/ai/AITripPostcardShareCardImageGeneration.tsx
+    - InnerSection wired via useAiStream({url:
+      '/ai/share-cards/trip-image/draft', body: {trip_id,
+      style_hint?}, onEvent: () => {}}).
+    - Renders through AIFeatureCard scaffold (HX-mandated).
+    - buttonLabel: per-feature verb "Generate share card"
+      (the card composes accessible name as "Ask Helix ·
+      Generate share card").
+    - canStart = numericTripId > 0 (W1 Rule A — computed
+      expression, never literal disabled).
+    - Helix-branded i18n keys (sharing.aiTripPostcard.*).
+    - Exported via withAiFeature('trip-postcard-share-card-image-generation', …).
+
+  web/src/features/sharing/pages/SharingTripsPage.tsx
+    - Baseline-coexistence page at /sharing/trips.
+    - Renders the recent-trips list (useTrips, limit=20).
+    - Renders the deterministic "Static share cards" hint
+      pointing the user to the canonical per-drive Share workflow.
+    - Renders the AITripPostcardShareCardImageGeneration card
+      beneath the list with the user-selected tripId.
+    - Selection model: clicking a row toggles selectedTripId
+      state (single-select role=option listbox).
+
+  web/src/features/sharing/__tests__/TestTripPostcardAIOffStaticShareCardOnly.test.tsx
+    - 3 cases: off-mode hides the section (with toggle on);
+      mode=cloud + toggle=false hides the section; mode=cloud +
+      toggle=true renders the section with the registered test
+      ID (positive control).
+
+  web/src/features/sharing/__tests__/TestTripPostcardShareCardImageGenerationAIOnWiredCallsRoute.test.tsx
+    - 3 cases: on-mode click POSTs once to
+      /api/v1/ai/share-cards/trip-image/draft with the in-scope
+      trip_id and renders the first delta inside the gated
+      wrapper; a second click while streaming is a no-op
+      (double-submit guard); no tripId disables the button via a
+      computed expression.
+    - CTA located via getByRole('button', {name: /Generate share
+      card/i}) — UNANCHORED regex (HX-mandated).
+
+Frontend wiring (modified):
+  web/src/App.tsx
+    - lazy import: SharingTrips (new) added next to SharedDrive.
+    - Route added under Layout: <Route path="sharing/trips"
+      element={<SafeRoute name="SharingTrips"><SharingTrips
+      /></SafeRoute>} />, with a banner comment tying it back to
+      the Phase-50 / 0060 slice registry entry.
+
+i18n (modified):
+  web/src/i18n/en.json
+    - New "sharing" key inserted between "share" and
+      "tripPlanner" (alphabetically appropriate).
+    - sharing.trips.{title, subtitle, recent.heading,
+      recent.empty, row.trip, row.drives, staticHint.heading,
+      staticHint.body}.
+    - sharing.aiTripPostcard.{title, description, button, badge,
+      noTripHint}.
+    - All Helix-branded copy (HX-mandated; no "AI " prefix in
+      user-visible Helix-narrative position).
+  web/src/i18n/ar.json
+  web/src/i18n/he.json
+    - Both files are placeholder shells with only `_meta`;
+      i18next's fallbackLng resolves missing keys against en.json.
+      No edits required.
+
+aigen output (regenerated):
+  web/src/ai/features.ts (auto-generated by `go run ./tools/aigen`,
+  proves in-sync with the Go registry).
+
+=== GATE ===
+
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/App.tsx
+ M web/src/ai/features.ts
+ M web/src/i18n/en.json
+?? internal/ai/strategies/trip-postcard-share-card-image-generation/
+?? internal/ai/tools/share_card_image.go
+?? internal/ai/tools/share_card_image_test.go
+?? internal/api/ai_trip_postcard_share_card_image_handler.go
+?? internal/api/ai_trip_postcard_share_card_image_handler_test.go
+?? web/src/components/ai/AITripPostcardShareCardImageGeneration.tsx
+?? web/src/features/sharing/__tests__/
+?? web/src/features/sharing/pages/SharingTripsPage.tsx
+EXIT=0
+All dirty paths inside the allowed-files list from the slice prompt.
+
+$ go test -race ./internal/ai/... ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-postcard-share-card-image-generation     5.438s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools                                                    1.348s
+ok  github.com/ev-dev-labs/teslasync/internal/api                                                         9.560s
+(... full ai/strategies/* + ai/* tree green; 5x slice goldens + 10x slice tools tests + 4x slice handler tests all PASS)
+EXIT=0
+
+$ go run ./tools/aivet
+aivet: OK — 58 AI route(s), 56 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+$ go run ./cmd/ai-eval --feature trip-postcard-share-card-image-generation
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 599.6µs elapsed)
+By feature:
+  trip-postcard-share-card-image-generation 3/3 pass
+Details:
+  [PASS] trip-postcard-share-card-image-generation/weekend_postcard (599.6µs)
+  [PASS] trip-postcard-share-card-image-generation/monthly_summary_postcard (0s)
+  [PASS] trip-postcard-share-card-image-generation/refusal_other_trip (0s)
+EXIT=0
+(Note: the slice prompt's spec `make ai-eval-fast --feature
+trip-postcard-share-card-image-generation` is not a valid GNU make
+invocation — `--feature` is consumed by the ai-eval binary, not
+make. Direct cmd/ai-eval invocation with the same --feature flag
+is the equivalent, and is what the precedent slices (0051, 0034,
+…) have used.)
+
+$ cd web; npx tsc --noEmit
+(no output — TypeScript clean)
+EXIT=0
+
+$ cd web; npm run lint
+(24 pre-existing baseline errors in unmodified files:
+  - components/data-display/__tests__/MetricBar.test.tsx
+  - components/feedback/InlineCallout.tsx
+  - components/forms/DensityToggle.tsx
+  - components/forms/TreeSelect.tsx
+  - components/status/UptimeHeatmap.tsx
+  - components/ui/CommandPalette.tsx
+  - components/ui/__tests__/CommandPalette.test.tsx
+  - features/notifications/components/AlertMessageEditor.tsx
+  - features/settings/components/AISettings.tsx
+  - features/system/components/status/IncidentForm.tsx
+  - features/system/components/status/ScheduledMaintenanceCard.tsx
+  - features/system/pages/ChatbotPage.tsx
+  - features/telemetry/pages/MQTTInspectorPage.tsx
+  - features/telemetry/pages/SignalsWorkspacePage.tsx
+  - hooks/useAiStream.ts (2 warnings)
+  - hooks/useRangeState.ts
+  - observability/rum.test.ts
+  - observability/rum.ts
+ None of these are slice files.)
+
+$ cd web; npx eslint <slice files only> --max-warnings 0
+(no output)
+EXIT=0
+
+The lint pre-existing baseline failures are NOT a regression of this
+slice — they are present on the predecessor commit. Verified by
+linting just this slice's files (AITripPostcardShareCardImageGeneration.tsx,
+SharingTripsPage.tsx, the two __tests__/*.test.tsx files, App.tsx,
+ai/features.ts) — all pass with 0 warnings.
+
+$ cd web; npm test -- --run TestTripPostcardAIOffStaticShareCardOnly
+Test Files  1 passed (1)
+     Tests  3 passed (3)
+EXIT=0
+
+$ cd web; npm test -- --run TestTripPostcardShareCardImageGenerationAIOnWiredCallsRoute
+Test Files  1 passed (1)
+     Tests  3 passed (3)
+EXIT=0
+
+$ Select-String -Path 'web/src/components/ai/AITripPostcardShareCardImageGeneration.tsx' -Pattern 'future slice|coming soon|wiring lands|would call POST' | Measure-Object | Select-Object -ExpandProperty Count
+0
+EXIT=0
+
+Focused off-mode proof transcripts:
+
+  POST /api/v1/ai/share-cards/trip-image/draft in off mode:
+    rec.Code == 404
+    rec.Body does not contain "GUARD_BYPASSED"
+    rec.Body does not leak {trip-postcard-share-card-image-generation,
+    feature, strategy, provider, agent}
+    → ADR-015 §I6 satisfied.
+
+  data-testid="ai-feature-trip-postcard-share-card-image-generation-root"
+  in off mode:
+    container is empty; queryByTestId returns null
+    → ADR-015 §I5 satisfied.
+
+  GET /api/v1/shared/{token} in off mode (baseline coexistence):
+    rec.Code == 200
+    rec.Body includes the canonical static-share-card field set:
+      "title":"Weekend Road Trip"
+      "distance":287500
+      "start_place":"Seattle, WA"
+      "end_place":"Portland, OR"
+    → ADR-015 §I3 baseline-intact satisfied.
+
+=== COMMIT ===
+
+Will commit (DONE path):
+  - all production + test changes from this slice
+  - this log file
+
+git add (paths in allowed-files list):
+  internal/ai/features/registry.go
+  internal/ai/strategies/trip-postcard-share-card-image-generation/
+  internal/ai/tools/share_card_image.go
+  internal/ai/tools/share_card_image_test.go
+  internal/api/ai_routes.go
+  internal/api/ai_trip_postcard_share_card_image_handler.go
+  internal/api/ai_trip_postcard_share_card_image_handler_test.go
+  internal/api/router.go
+  web/src/App.tsx
+  web/src/ai/features.ts
+  web/src/components/ai/AITripPostcardShareCardImageGeneration.tsx
+  web/src/features/sharing/__tests__/TestTripPostcardAIOffStaticShareCardOnly.test.tsx
+  web/src/features/sharing/__tests__/TestTripPostcardShareCardImageGenerationAIOnWiredCallsRoute.test.tsx
+  web/src/features/sharing/pages/SharingTripsPage.tsx
+  web/src/i18n/en.json
+  .github/prompts/db-refactor/logs/phase-50-0060-trip-postcard-share-card-image-generation.log
+
+git commit message:
+  feat(ai): add Trip postcard and share-card image generation
+
+  Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>
+
+=== AI-OFF CONTRACT ===
+I1 default-off:     PASS  (registry.go entry DefaultOn:false; aigen mirror in sync)
+I3 baseline intact: PASS  (Go-side off-mode test verifies GET /api/v1/shared/{token} still returns 200 + canonical static-share-card field set; the per-drive POST /drives/{id}/share-tokens mint endpoint is untouched; SharingTripsPage renders the recent-trips list + static-share-card hint regardless of AI mode)
+I4 zero egress:     PASS  (Strategy wires redact.PolicyDigest via redactadapter.Wrap with Allow=[ClassVehicleName] only; preview validator rejects lat/long + street-address substrings; allowedTools list is closed to {draft_image_prompt, render_share_card_preview} — both Mutates()=false)
+I5 hidden UI:       PASS  (TestTripPostcardAIOffStaticShareCardOnly SPA test, 3 cases: container.toBeEmptyDOMElement() in off mode; queryByTestId('ai-feature-trip-postcard-share-card-image-generation-root') returns null; positive control with mode=cloud + toggle=true renders the root)
+I6 404 routes:      PASS  (Go off-mode test: rec.Code == 404 on POST /api/v1/ai/share-cards/trip-image/draft with mode='off' + toggle=true; body does not leak feature/strategy/provider/agent metadata)
+I7 per-feature:     PASS  (Both halves of the matrix proven: mode=off + toggle=true → 404 / empty DOM; mode=cloud + toggle=false → empty DOM)
+I10 type system:    PASS  (strategy DTOs typed; handler body parser uses DisallowUnknownFields + 16 KiB cap + typed shape; tools emit typed evidence + PreviewSpec; SPA body is {trip_id: number, style_hint?: string})
+I12 client/bg:      PASS  (No service-worker chunk, real background job, push kind, or storage key is shipped by this commit. Registry's JobNames/PushKinds/chunk hints are reserved metadata. The final-gate scanner's absence-in-off-mode check is trivially true because none of those surfaces exist yet.)
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

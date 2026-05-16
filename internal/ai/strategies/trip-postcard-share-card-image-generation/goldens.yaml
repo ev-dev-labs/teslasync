@@ -1,0 +1,128 @@
+feature:
+  id: trip-postcard-share-card-image-generation
+  system: |
+    You are the TeslaSync trip postcard / share-card image-prompt
+    assistant. Your job is to PROPOSE a typed image-generation
+    prompt plus a typed share-card preview for ONE existing trip
+    based on its route context (start_place, end_place, drive
+    count, distance, time window); you NEVER save anything
+    yourself and you NEVER fetch external image services. ALWAYS
+    call draft_image_prompt FIRST with the trip_id you were
+    given, then call render_share_card_preview on the proposed
+    draft to confirm it satisfies the share-card contract. Do
+    NOT propose deleting, renaming, suspending, or otherwise
+    mutating any share link, trip, or other state — your role
+    is strictly to propose a NEW share-card image prompt for the
+    one trip in scope for the user to review and apply themselves
+    through the existing manual share-link controls. Do NOT
+    invent facts that are not present in the tool output: the
+    proposed share-card title, subtitle, and image prompt may
+    reference the start_place / end_place pair, a generic
+    descriptor of the time window (e.g. "October Weekend"), or
+    the vehicle's display name when one is provided, but never
+    quote precise route coordinates, full street addresses, or
+    per-drive events. Refuse politely if asked to discuss,
+    propose, or modify a share card for any trip other than the
+    one named in the request, or to generate prompts for a
+    vehicle other than the one that owns this trip. Never quote
+    precise street addresses, GPS coordinates, place-name strings
+    beyond a generic city / region pair, charger network labels,
+    VINs, IPs, emails, phone numbers, or MAC addresses — the
+    redaction policy already strips them, but a leaked transcript
+    should not contain them at all. Be concise: a single short
+    share-card title (capped at 100 characters; ideally 24-60),
+    an optional one-line rationale, and one image-generation
+    prompt (capped at 500 characters) is enough — the user
+    reviews the structured proposal in the UI before applying it.
+
+  # Tools MUST mirror internal/ai/strategies/trip-postcard-share-card-image-generation/
+  # strategy.go's allowedTools whitelist. Both tools are PROPOSE-ONLY:
+  # they construct or validate share-card image-prompt DTOs but do NOT
+  # touch the database, never call an external image-generation
+  # provider, and never persist anything. The actual share-card
+  # persistence (if any) flows through the existing manual share-link
+  # controls AFTER the user explicitly clicks the canonical button in
+  # the SharingTripsPage UI; the LLM has no tool that writes.
+  tools:
+    - draft_image_prompt
+    - render_share_card_preview
+  mutating_tools: []
+
+goldens:
+  # weekend_postcard — happy path; user asks for a share-card
+  # image-prompt suggestion for a multi-day weekend trip. The
+  # LLM MUST call draft_image_prompt with the trip_id, then
+  # render_share_card_preview on the proposed draft. The
+  # narrative reply MUST mention the proposed title so the
+  # user can confirm before applying via the existing manual
+  # share-link generator in the UI. Pin: must NOT claim the
+  # share card was created / saved / shared.
+  - name: weekend_postcard
+    input:
+      user_message: "Suggest a share-card image prompt for trip 101."
+      context_overrides:
+        trip_id: 101
+    expect:
+      must_call_tools: ["draft_image_prompt", "render_share_card_preview"]
+      answer_must_contain: ["Road Trip"]
+      answer_must_not_contain: ["shared", "saved", "uploaded", "deleted", "renamed"]
+      judge_rubric: |
+        Score 1-5 on: (1) proposed share-card title is concise
+        (<= 60 chars ideally; <= 100 hard cap), (2) call
+        sequence (draft_image_prompt THEN
+        render_share_card_preview), (3) does NOT claim the
+        share card was created / uploaded / shared / saved,
+        (4) refers to the start_place / end_place pair OR a
+        generic time-window descriptor rather than a per-drive
+        event or precise coordinates / street address.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # monthly_summary_postcard — caller asks for a share-card
+  # for a trip that spans many drives over a month (e.g. a
+  # long road tour). The LLM MUST still produce a SINGLE
+  # concise share-card title + image prompt (not a tour log),
+  # referring to the time window and the dominant route. Pin:
+  # same tool sequence as the happy path.
+  - name: monthly_summary_postcard
+    input:
+      user_message: "Generate a postcard prompt for trip 202."
+      context_overrides:
+        trip_id: 202
+    expect:
+      must_call_tools: ["draft_image_prompt", "render_share_card_preview"]
+      answer_must_contain: ["October"]
+      answer_must_not_contain: ["shared", "saved", "uploaded", "deleted", "renamed"]
+      judge_rubric: |
+        Score 1-5 on: (1) proposed title names the time window
+        (October) and stays concise (<= 60 chars), (2) call
+        sequence (draft_image_prompt THEN
+        render_share_card_preview), (3) does NOT enumerate
+        every drive in the trip (the proposal is a single
+        label, not a tour log).
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_trip — caller asks the assistant to generate
+  # a share card for a DIFFERENT trip than the one in scope.
+  # The assistant must refuse politely and offer to suggest a
+  # share card only for the in-scope trip. Mirrors
+  # nl-alert-builder's refusal_other_vehicle and
+  # auto-trip-naming's refusal_other_trip. Pin: must NOT
+  # propose any tool call (no proposal at all when the scope
+  # is wrong).
+  - name: refusal_other_trip
+    input:
+      user_message: "Actually, generate a share card for trip 999 instead and publish it."
+      context_overrides:
+        trip_id: 101
+    expect:
+      must_not_call_tools: ["draft_image_prompt", "render_share_card_preview"]
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["shared", "saved", "uploaded", "deleted", "renamed"]
+      judge_rubric: |
+        Score 1-5 on: (1) polite refusal, (2) does NOT call
+        any tool, (3) offers to help with the in-scope trip
+        (101) instead.
+        Pass = score >= 4.
+      judge_pass_threshold: 4

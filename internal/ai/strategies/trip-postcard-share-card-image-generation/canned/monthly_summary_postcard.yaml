@@ -1,0 +1,25 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_share_card_draft_monthly_1
+        name: draft_image_prompt
+        arguments: '{"trip_id": 202, "style_hint": "panoramic"}'
+    input_tokens: 48
+    output_tokens: 38
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_share_card_render_monthly_1
+        name: render_share_card_preview
+        arguments: '{"trip_id": 202, "proposed_title": "October Road Tour", "image_prompt": "A panoramic illustrated landscape spanning the autumn month — open highways, mountain passes, and forested valleys connecting the start and end cities, rendered as a single sweeping watercolor in October tones."}'
+    input_tokens: 96
+    output_tokens: 58
+  - finish_reason: stop
+    content: |
+      I drafted an October Road Tour share-card preview for trip
+      202 using a panoramic-watercolor style. The title summarises
+      the time window without enumerating individual drives, and
+      the image prompt describes a single sweeping landscape that
+      spans the month. Review the structured proposal and use
+      the existing share-link generator to apply it.
+    input_tokens: 156
+    output_tokens: 68

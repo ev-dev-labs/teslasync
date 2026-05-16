@@ -6257,6 +6257,31 @@
     "footer": "Shared via TeslaSync — Self-hosted Tesla Fleet Intelligence",
     "learnMore": "Learn more →"
   },
+  "sharing": {
+    "trips": {
+      "title": "Share a trip",
+      "subtitle": "Pick a recent trip to share as a static link, postcard, or image.",
+      "recent": {
+        "heading": "Recent trips",
+        "empty": "No recent trips. Drive your vehicle to populate this list."
+      },
+      "row": {
+        "trip": "Trip",
+        "drives": "{{count}} drives"
+      },
+      "staticHint": {
+        "heading": "Static share cards",
+        "body": "Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click \"Share\", and copy the public link — anyone with the link can view the static card, no AI required."
+      }
+    },
+    "aiTripPostcard": {
+      "title": "Draft a Helix share-card image",
+      "description": "Ask Helix to draft a propose-only image prompt and preview spec for the selected trip's share card. Helix only sees the redacted trip context (distance, duration, drive count, vehicle name) — never raw coordinates or street addresses. The draft is never published automatically; review it here, then use the existing Share button on the trip to publish a static share card.",
+      "button": "Generate share card",
+      "badge": "Helix",
+      "noTripHint": "Pick a trip from the list above to enable Helix."
+    }
+  },
   "tripPlanner": {
     "aiAgent": {
       "title": "Draft a plan with Helix",
