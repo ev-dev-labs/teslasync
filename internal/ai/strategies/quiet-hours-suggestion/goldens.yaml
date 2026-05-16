@@ -1,0 +1,217 @@
+feature:
+  id: quiet-hours-suggestion
+  system: |
+    You are the TeslaSync quiet-hours / Do-Not-Disturb suggestion
+    advisor. Your job is to PROPOSE ONE candidate quiet-hours
+    window for the ONE user in scope, derived strictly from their
+    recent notification history; you NEVER invent a timezone, you
+    NEVER invent a weekday set, and you NEVER propose disabling
+    notifications entirely. ALWAYS call draft_quiet_hours_window
+    FIRST with the caller-supplied user scope and ground every
+    claim in the deterministic aggregated history envelope it
+    returns. AFTER drafting you MUST call
+    validate_quiet_hours_window with the candidate window; if
+    validate_quiet_hours_window returns ok=false you MUST REFUSE
+    to produce a final recommendation, surface the validator's
+    errors[] verbatim, and ask the user to retry. Quote ONLY
+    values returned by the tools: the candidate's start_local,
+    end_local, weekdays bitmask (with a human-friendly weekday
+    list), timezone, bypass_severities, and the aggregated
+    history summary. Do NOT invent a timezone the tool did not
+    return, do NOT invent a different weekday set, do NOT propose
+    a bypass severity outside {info, warn, critical}, do NOT
+    quote individual notification titles or messages because the
+    tool aggregates the history before surfacing it, and do NOT
+    predict how many notifications the candidate would defer in
+    the FUTURE because the candidate is a descriptive replay of
+    past cadence — not a forecast. EVERY narration MUST surface
+    the descriptive-replay limit PLAINLY: the candidate is based
+    on your recent notification history, not a forecast of future
+    traffic. The phrase "based on your recent notification
+    history" MUST appear in the narration so the user is not
+    misled into believing the candidate is a forward-looking
+    prediction. NEVER propose disabling notifications entirely,
+    NEVER propose removing critical from bypass_severities
+    (critical alerts must always deliver), and NEVER propose a
+    window that covers every hour of every weekday — a candidate
+    that silences all notifications is by definition wrong.
+    Refuse politely if asked to suggest a window for, modify, or
+    compare any user other than the one named in the request —
+    the in-scope user is the SOLE binding and cross-user
+    requests are out of scope. Never quote precise street
+    addresses, GPS coordinates, place names, charger network
+    labels, VINs, IPs, emails, phone numbers, or MAC addresses —
+    the redaction policy strips them, but a leaked transcript
+    should not contain them at all. Be concise: 2-4 sentences
+    naming the proposed window (start–end in the user's local
+    timezone), the weekdays it covers, the bypass_severities
+    (always include critical), and the "based on your recent
+    notification history" disclosure. Ground every claim
+    strictly in the tool replies.
+  # Tools MUST mirror
+  # internal/ai/strategies/quiet-hours-suggestion/strategy.go's
+  # allowedTools whitelist. Both tools are READ-only / pure-
+  # functional aggregators: draft_quiet_hours_window aggregates
+  # the trailing notification_logs window into per-hour event
+  # counts, and validate_quiet_hours_window is a pure-Go
+  # validator. NO database write is performed by either tool.
+  tools:
+    - draft_quiet_hours_window
+    - validate_quiet_hours_window
+  mutating_tools: []
+
+goldens:
+  # sleep_window_suggestion — the most common case the operator
+  # will use the advisor on: sleeping hours. The LLM MUST call
+  # draft_quiet_hours_window FIRST, then call
+  # validate_quiet_hours_window with the candidate window, then
+  # produce a 2-4 sentence recommendation that names the
+  # proposed window (start–end in the user's local timezone),
+  # the weekdays it covers, the bypass_severities (always
+  # include critical), and the descriptive-replay disclosure.
+  # Pin: must NOT propose disabling notifications entirely;
+  # must NOT remove critical from bypass_severities; must NOT
+  # claim the candidate is a forecast.
+  - name: sleep_window_suggestion
+    input:
+      user_message: "Suggest a quiet-hours window for me based on my recent notifications."
+      context_overrides:
+        user_id: "user-1"
+    expect:
+      must_call_tools:
+        - draft_quiet_hours_window
+        - validate_quiet_hours_window
+      answer_must_contain:
+        - "based on your recent notification history"
+        - "critical"
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # Honest "descriptive-replay, not a forecast" pin: the
+        # narrator must NOT claim the candidate predicts
+        # future notification volume.
+        - "will defer"
+        - "we predict"
+        - "forecast"
+        # Honest "no disabling" pin: the narrator must NOT
+        # propose silencing all notifications.
+        - "disable notifications"
+        - "turn off notifications"
+        - "silence all notifications"
+        # Fabrication pin: an invented timezone or weekday
+        # would signal the narrator hallucinated outside the
+        # tool reply.
+        - "Mars/Jezero"
+        - "Atlantis/Tartessos"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_quiet_hours_window FIRST
+        with user_id=user-1, (2) called validate_quiet_hours_
+        window AFTER drafting with the candidate window, (3)
+        recommendation names the proposed window (start–end in
+        the user's local timezone), the weekdays it covers, and
+        the bypass_severities including critical, (4) explicitly
+        surfaces the "based on your recent notification history"
+        descriptive-replay disclosure, (5) does NOT propose
+        disabling notifications, does NOT remove critical from
+        bypass_severities, and does NOT claim the candidate is
+        a forecast of future traffic. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # work_meeting_window — the second-most-common case: a quiet
+  # window during the workday so notifications don't interrupt
+  # meetings. The LLM MUST surface that the candidate is based
+  # on past notification cadence and includes critical in
+  # bypass_severities. Pin: must NOT propose a window that
+  # spans every hour of every weekday; must NOT invent a
+  # timezone outside the tool reply.
+  - name: work_meeting_window
+    input:
+      user_message: "I get too many notifications during work meetings — suggest a quiet-hours window."
+      context_overrides:
+        user_id: "user-1"
+    expect:
+      must_call_tools:
+        - draft_quiet_hours_window
+        - validate_quiet_hours_window
+      answer_must_contain:
+        - "based on your recent notification history"
+        - "critical"
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # Per-row claim pin: the narrator must NOT claim it
+        # quoted any notification title — the tool aggregates
+        # the history before surfacing it.
+        - "your notifications said"
+        - "the notification titled"
+        # Honest "no all-day silence" pin: the narrator must
+        # NOT propose a window that silences every hour of
+        # every weekday.
+        - "every hour of every day"
+        - "all day every day"
+        # Honest "no disabling" pin.
+        - "disable notifications"
+        - "turn off notifications"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_quiet_hours_window FIRST
+        with user_id=user-1, (2) called validate_quiet_hours_
+        window AFTER drafting with the candidate window, (3)
+        recommendation names a workday-aligned window with the
+        weekdays it covers and bypass_severities including
+        critical, (4) explicitly surfaces the "based on your
+        recent notification history" descriptive-replay
+        disclosure, (5) does NOT quote individual notification
+        titles, does NOT propose silencing all notifications,
+        and does NOT invent a timezone outside the tool reply.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # validation_failure_honesty — the LLM drafts a candidate
+  # window that is invalid (e.g. start_local == end_local), and
+  # validate_quiet_hours_window returns ok=false with a specific
+  # error. The strategy's system prompt REQUIRES the narrator
+  # to refuse to produce a final recommendation, surface the
+  # validator's errors[] verbatim, and ask the user to retry
+  # rather than narrating the broken window. Pin: must NOT
+  # silently fix the candidate; must surface the validator's
+  # error verbatim.
+  - name: validation_failure_honesty
+    input:
+      user_message: "Suggest a quiet-hours window for me — but try one with the same start and end."
+      context_overrides:
+        user_id: "user-1"
+    expect:
+      must_call_tools:
+        - draft_quiet_hours_window
+        - validate_quiet_hours_window
+      answer_must_contain:
+        - "start_local must differ from end_local"
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # Honest-validation-required pin: when the validator
+        # returns ok=false the narrator MUST NOT silently fix
+        # the candidate and present a clean recommendation. The
+        # error MUST be surfaced verbatim.
+        - "Here is the recommended window:"
+        - "I have prepared the following window:"
+        # Honest "no disabling" pin even on the failure path.
+        - "disable notifications"
+        - "turn off notifications"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_quiet_hours_window FIRST
+        with user_id=user-1, (2) called validate_quiet_hours_
+        window AFTER drafting with the candidate window that has
+        start_local == end_local, (3) when the validator returns
+        ok=false the narration plainly surfaces the
+        "start_local must differ from end_local" error verbatim
+        and asks the user to retry, (4) does NOT silently fix
+        the window and present a clean recommendation, (5) does
+        NOT propose disabling notifications. Pass = score >= 4.
+      judge_pass_threshold: 4

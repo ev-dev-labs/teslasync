@@ -3238,6 +3238,101 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+
+	// quiet-hours-suggestion (Phase-50 / P2, slice 0053)
+	// helps the user discover a sensible quiet-hours / Do-Not-
+	// Disturb window from their actual notification history. The
+	// canonical baseline at the QuietHoursPanel (the manual
+	// CRUD form against /api/v1/notifications/quiet-hours) is
+	// unchanged; this feature only adds an opt-in advisor on
+	// the QuietHoursPage that proposes ONE candidate window
+	// the user can copy into the existing form via "Apply to
+	// form" (the baseline Save button stays the sole write
+	// path).
+	//
+	// The advisor routes through TWO read-only typed tools:
+	//
+	//   - draft_quiet_hours_window reads the recent
+	//     notification_logs window (non-critical severities
+	//     only) plus the user's existing quiet-hours windows,
+	//     finds the longest contiguous "quiet" interval where
+	//     non-critical activity is rare, and returns a typed
+	//     candidate {start_local, end_local, weekdays,
+	//     timezone, bypass_severities, history_summary,
+	//     assumptions, status}. NO database write. NO new SQL
+	//     beyond what the canonical NotificationRepo and
+	//     QuietHoursRepo readers already issue.
+	//
+	//   - validate_quiet_hours_window accepts a candidate
+	//     window and asserts it satisfies the SAME validation
+	//     rules the canonical /api/v1/notifications/quiet-hours
+	//     POST handler enforces (HH:MM format, distinct
+	//     start/end, valid IANA timezone, weekdays bitmask
+	//     0..127, bypass severities subset of {info, warn,
+	//     critical}). Returns {ok, errors[], warnings[]}.
+	//     Re-uses the same validateQuietHours predicate the
+	//     canonical handler uses so an AI-accepted window is
+	//     byte-equivalent to a hand-typed one. NO database IO.
+	//
+	// Both tools are propose-only / read-only: they NEVER
+	// mutate state and NEVER trigger a save. The narrator
+	// describes the candidate window in plain English and the
+	// user clicks "Apply to form" — which copies the typed
+	// candidate into the QuietHoursPanel's existing form
+	// state. The user reviews and clicks the canonical Save
+	// button, which fires the existing useSaveQuietHours
+	// mutation against /api/v1/notifications/quiet-hours.
+	//
+	// Per-feature redaction policy is PolicyAlertBuilder
+	// (Allow=nil, Mode=ModeRedactedTags). The notification
+	// titles + messages the candidate-finder reads MAY contain
+	// vehicle names, place names, or charger network labels;
+	// the policy tags every PII class round-trip BEFORE the
+	// message reaches the provider so a leaked transcript
+	// reveals nothing. The candidate-finder additionally
+	// AGGREGATES the history (per-hour event counts) before
+	// surfacing it to the LLM so individual notification
+	// titles/messages never leave the tool boundary — defence
+	// in depth on top of the redaction policy.
+	//
+	// The deterministic QuietHoursPanel CRUD form, the
+	// /api/v1/notifications/quiet-hours endpoints, and the
+	// notification dispatcher's defer logic remain the
+	// canonical baseline when AI is off (ADR-015 §I3).
+	//
+	// This slice does NOT use F7 retrieval — the candidate
+	// window is computed deterministically from the SAME
+	// notification_logs rows the canonical InboxPage reads, no
+	// vector store consultation needed. NeedsRAG is false.
+	//
+	// Frontend route metadata in the registry is "/settings/
+	// notifications" per the slice prompt (the conceptual
+	// "notifications settings" surface). The actual SPA route
+	// the AI panel mounts on is /notifications/quiet-hours
+	// (where the QuietHoursPanel lives in this codebase); both
+	// names refer to the same QuietHoursPage. The
+	// /settings/notifications path is reserved for a future
+	// settings-area redirect — keeping it in the registry
+	// satisfies the slice prompt's explicit metadata
+	// requirement and the off-mode walker treats both routes
+	// as gated by the same toggle.
+	"quiet-hours-suggestion": {
+		ID:          "quiet-hours-suggestion",
+		Name:        "Helix quiet-hours suggestion",
+		Description: "Opt-in Helix advisor on the Quiet hours / Do-Not-Disturb settings page that proposes ONE candidate quiet-hours window from your recent notification history. Routes through two read-only typed tools: draft_quiet_hours_window aggregates the trailing 30-day notification_logs (non-critical severities only) into per-hour event counts, finds the longest contiguous interval where non-critical traffic is sparsest, and returns a typed candidate {start_local, end_local, weekdays, timezone, bypass_severities, history_summary, assumptions, status} (the candidate-finder NEVER quotes individual notification titles/messages — only aggregated counts cross the tool boundary); validate_quiet_hours_window asserts the candidate satisfies the SAME validation rules the canonical POST /api/v1/notifications/quiet-hours handler enforces (HH:MM, distinct start/end, valid IANA timezone, weekday bitmask 0..127, bypass severities subset of {info, warn, critical}) so an AI-accepted window is byte-equivalent to a hand-typed one. The advisor NEVER triggers a save; the user clicks 'Apply to form' which copies the typed candidate into the existing QuietHoursPanel form state, then reviews and clicks the canonical Save button (which still fires the canonical useSaveQuietHours mutation against /api/v1/notifications/quiet-hours). The narrator surfaces a 2-3 sentence rationale grounded strictly in the aggregated history and explicitly discloses the descriptive-replay caveat: the candidate is derived from past notification cadence, not a forecast of future traffic. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); tool aggregation is the primary privacy guard, the redaction policy is defence-in-depth. The deterministic QuietHoursPanel CRUD form, the /api/v1/notifications/quiet-hours endpoints, and the notification dispatcher's defer logic remain the canonical baseline when AI is off (ADR-015 §I3).",
+		Tier:        "P2",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/settings/quiet-hours/draft"},
+			Frontend:  []string{"/settings/notifications"},
+			UITestIDs: []string{"ai-feature-quiet-hours-suggestion-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

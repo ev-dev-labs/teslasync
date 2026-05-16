@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -399,6 +399,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-preheat-precool-recommender-root"] as const),
   }),
+  "quiet-hours-suggestion": Object.freeze({
+    id: "quiet-hours-suggestion",
+    name: "Helix quiet-hours suggestion",
+    description: "Opt-in Helix advisor on the Quiet hours / Do-Not-Disturb settings page that proposes ONE candidate quiet-hours window from your recent notification history. Routes through two read-only typed tools: draft_quiet_hours_window aggregates the trailing 30-day notification_logs (non-critical severities only) into per-hour event counts, finds the longest contiguous interval where non-critical traffic is sparsest, and returns a typed candidate {start_local, end_local, weekdays, timezone, bypass_severities, history_summary, assumptions, status} (the candidate-finder NEVER quotes individual notification titles/messages — only aggregated counts cross the tool boundary); validate_quiet_hours_window asserts the candidate satisfies the SAME validation rules the canonical POST /api/v1/notifications/quiet-hours handler enforces (HH:MM, distinct start/end, valid IANA timezone, weekday bitmask 0..127, bypass severities subset of {info, warn, critical}) so an AI-accepted window is byte-equivalent to a hand-typed one. The advisor NEVER triggers a save; the user clicks 'Apply to form' which copies the typed candidate into the existing QuietHoursPanel form state, then reviews and clicks the canonical Save button (which still fires the canonical useSaveQuietHours mutation against /api/v1/notifications/quiet-hours). The narrator surfaces a 2-3 sentence rationale grounded strictly in the aggregated history and explicitly discloses the descriptive-replay caveat: the candidate is derived from past notification cadence, not a forecast of future traffic. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); tool aggregation is the primary privacy guard, the redaction policy is defence-in-depth. The deterministic QuietHoursPanel CRUD form, the /api/v1/notifications/quiet-hours endpoints, and the notification dispatcher's defer logic remain the canonical baseline when AI is off (ADR-015 §I3).",
+    tier: "P2",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-quiet-hours-suggestion-root"] as const),
+  }),
   "rag-help": Object.freeze({
     id: "rag-help",
     name: "RAG-backed app help",
@@ -590,6 +601,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "pii-redaction-shared-exports",
   "predictive-maintenance",
   "preheat-precool-recommender",
+  "quiet-hours-suggestion",
   "rag-help",
   "range-prediction-model",
   "route-efficiency-suggestions",

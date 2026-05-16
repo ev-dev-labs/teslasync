@@ -157,6 +157,7 @@ func mountAIRoutes(
 	aiTCONarration *AITCONarrationHandler,
 	aiSoftwareUpdateChangelogSummarizer *AISoftwareUpdateChangelogSummarizerHandler,
 	aiPiiRedactionSharedExports *AIPiiRedactionSharedExportsHandler,
+	aiQuietHoursSuggestion *AIQuietHoursSuggestionHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -621,6 +622,27 @@ func mountAIRoutes(
 			piiRedactionSharedExportsHandler = aiPiiRedactionSharedExports.ServeHTTP
 		}
 		r.Post("/exports/redaction/draft", g.Wrap("pii-redaction-shared-exports", piiRedactionSharedExportsHandler))
+
+		// quiet-hours-suggestion (Phase-50 / P2, slice 0053)
+		// proposes ONE quiet-hours / Do-Not-Disturb window for
+		// the in-scope user, derived strictly from their recent
+		// notification history. The route lives under
+		// /ai/settings/quiet-hours/draft so it is namespaced
+		// under the existing /settings family. Same stub-
+		// fallback pattern as the other AI handlers — a nil
+		// handler is possible during partial wiring but the
+		// off-mode 404 invariant still holds because guard.Wrap
+		// returns 404 BEFORE the handler runs in off mode. The
+		// canonical baseline routes at /api/v1/notifications/
+		// quiet-hours (List, Create, Patch, Delete) are
+		// unchanged; the AI surface NEVER persists state and
+		// hands its typed candidate to the user via "Apply to
+		// form" in the SPA.
+		var quietHoursSuggestionHandler http.HandlerFunc = aiQuietHoursSuggestionStubHandler
+		if aiQuietHoursSuggestion != nil {
+			quietHoursSuggestionHandler = aiQuietHoursSuggestion.ServeHTTP
+		}
+		r.Post("/settings/quiet-hours/draft", g.Wrap("quiet-hours-suggestion", quietHoursSuggestionHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1479,6 +1501,15 @@ func aiSoftwareUpdateChangelogSummarizerStubHandler(w http.ResponseWriter, _ *ht
 // guard, not the stub.
 func aiPiiRedactionSharedExportsStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai pii redaction shared exports is not yet implemented")
+}
+
+// aiQuietHoursSuggestionStubHandler mirrors
+// aiPiiRedactionSharedExportsStubHandler for the P2 slice
+// (Phase-50 / 0053 quiet-hours-suggestion). Reachable only when
+// AIQuietHoursSuggestionHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiQuietHoursSuggestionStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai quiet hours suggestion is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

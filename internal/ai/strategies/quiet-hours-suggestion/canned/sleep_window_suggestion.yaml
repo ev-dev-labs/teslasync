@@ -1,0 +1,28 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_quiet_hours_window_sleep_window_suggestion_1
+        name: draft_quiet_hours_window
+        arguments: '{"user_id": "user-1"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_quiet_hours_window_sleep_window_suggestion_1
+        name: validate_quiet_hours_window
+        arguments: '{"user_id": "user-1", "start_local": "22:00", "end_local": "07:00", "timezone": "America/Los_Angeles", "weekdays": 127, "bypass_severities": ["critical"]}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I suggest a quiet-hours window from 22:00 to 07:00 in
+      your local timezone (America/Los_Angeles), covering
+      every weekday (Sun through Sat). The window keeps
+      critical alerts in bypass_severities so emergency
+      notifications still reach you immediately. This
+      recommendation is based on your recent notification history,
+      not a snapshot of future traffic — actual quiet windows
+      in the coming weeks may shift if your notification
+      cadence changes.
+    input_tokens: 320
+    output_tokens: 160

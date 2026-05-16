@@ -49,7 +49,7 @@
     "aiHelp": {
       "title": "Ask the help assistant",
       "badge": "Helix",
-      "description": "Ask a natural-language question about the application and the assistant will answer using the project\u2019s own documentation, runbooks, and i18n strings — with explicit citations to each source.",
+      "description": "Ask a natural-language question about the application and the assistant will answer using the project’s own documentation, runbooks, and i18n strings — with explicit citations to each source.",
       "askButton": "Ask the assistant"
     },
     "tooltip": {
@@ -3193,17 +3193,15 @@
   "incidentTimeline": {
     "aiSummary": {
       "title": "Helix timeline summary",
-      "description": "Get a 3-6 sentence factual summary of this incident\u2019s timeline. The summary is grounded in the same deterministic envelope the timeline below shows; the narrator never invents updates and never speculates about root cause.",
+      "description": "Get a 3-6 sentence factual summary of this incident’s timeline. The summary is grounded in the same deterministic envelope the timeline below shows; the narrator never invents updates and never speculates about root cause.",
       "badge": "Helix",
       "button": "Summarize"
     }
   },
   "dataRepair": {
-    "aiSuggestions": {
-      "title": "Helix repair suggestions",
-      "description": "Propose a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory below. The LLM never writes \u2014 review the proposal here and click the canonical Save / Close / Discard button on the matching baseline form to apply it.",
-      "badge": "Helix",
-      "button": "Draft repair plan"
+    "drive": {
+      "distanceMi": "Distance (mi)",
+      "maxSpeedMph": "Max Speed (mph)"
     }
   },
   "analytics": {
@@ -4330,7 +4328,7 @@
   "chargePlanner": {
     "aiAgent": {
       "title": "Draft a schedule with Helix",
-      "description": "Ask Helix to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically \u2014 review the proposed window and click Schedule below to apply it.",
+      "description": "Ask Helix to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically — review the proposed window and click Schedule below to apply it.",
       "badge": "Helix",
       "generateButton": "Draft a schedule"
     },
@@ -6250,7 +6248,7 @@
   "tripPlanner": {
     "aiAgent": {
       "title": "Draft a plan with Helix",
-      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically \u2014 review the proposed plan and click Plan in the form below to save it.",
+      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "badge": "Helix",
       "generateButton": "Draft a plan"
     },
@@ -7061,6 +7059,21 @@
     "bulk": {
       "announceArchived": "{{count}} items archived",
       "announceRestored": "{{count}} items restored"
+    },
+    "quietHours": {
+      "aiSuggestion": {
+        "title": "Suggest a quiet-hours window from your notification history",
+        "description": "Ask Helix to recommend ONE quiet-hours window based on the trailing 30 days of your notification cadence. Helix never reads individual notification titles or messages — it consults a per-hour aggregate of non-critical events to find the sparsest interval. Apply the recommendation to seed the form below; you remain in control of the Save button.",
+        "button": "Suggest quiet hours",
+        "badge": "Helix",
+        "applyButton": "Apply to form",
+        "previewLabel": "Proposed window (review before saving):",
+        "previewWindow": "Window: {{start}} → {{end}} ({{tz}})",
+        "previewWeekdays": "Weekday bitmask: {{weekdays}}",
+        "previewBypass": "Bypass severities: {{severities}}",
+        "previewInsufficientHistory": "Helix had insufficient notification history; this is a conservative default.",
+        "previewExistingCount": "You already have {{count}} quiet-hours window(s) configured."
+      }
     }
   },
   "orders": {
@@ -7671,12 +7684,6 @@
     "noFilterResults": "No commands match the current filters",
     "noCommands": "No commands have been sent yet"
   },
-  "dataRepair": {
-    "drive": {
-      "distanceMi": "Distance (mi)",
-      "maxSpeedMph": "Max Speed (mph)"
-    }
-  },
   "dataExport": {
     "csvPreview": "CSV Preview",
     "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
@@ -8118,7 +8125,7 @@
       "notFound": "Trip not found",
       "aiSuggestName": {
         "title": "Suggest a trip name",
-        "description": "Get a short, propose-only name suggestion grounded in this trip\u2019s route context (start and end places, drive count, distance, time window). The suggestion is never saved automatically \u2014 review the proposed name in the panel and click Save to apply it.",
+        "description": "Get a short, propose-only name suggestion grounded in this trip’s route context (start and end places, drive count, distance, time window). The suggestion is never saved automatically — review the proposed name in the panel and click Save to apply it.",
         "badge": "Helix",
         "generateButton": "Suggest a name"
       }

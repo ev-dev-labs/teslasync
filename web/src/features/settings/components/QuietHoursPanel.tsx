@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Moon, Plus, Trash2, Pencil, X, Check } from 'lucide-react'
 import {
@@ -174,7 +174,24 @@ function parseHHMM(s: string): number | null {
   return h * 60 + m
 }
 
-export function QuietHoursPanel() {
+// QuietHoursPanelProps lets a sibling AI surface (the
+// quiet-hours-suggestion advisor on QuietHoursPage) seed the
+// "Add window" form with a typed draft via "Apply to form". The
+// seed is applied imperatively when its identity changes — the
+// panel always retains the user's manual control over the Save
+// button and the canonical write path.
+//
+// `onSeedConsumed` is fired AFTER the seed has been copied into
+// local form state so the parent can clear its own pending-seed
+// pointer and keep the React data flow one-way (no infinite
+// re-seeding loop).
+export interface QuietHoursPanelProps {
+  seedDraft?: QuietHoursWindowInput | null
+  onSeedConsumed?: () => void
+}
+
+export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
+  const { seedDraft, onSeedConsumed } = props
   const { t } = useTranslation('settings')
   const toast = useToast()
   const { data: rawWindows, isLoading } = useQuietHours()
@@ -185,6 +202,34 @@ export function QuietHoursPanel() {
   const [draft, setDraft] = useState<DraftWindow | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
+
+  // Apply a seedDraft from the AI advisor exactly once per
+  // identity. The "Apply to form" handler in
+  // <AIQuietHoursSuggestion> forwards a typed
+  // QuietHoursWindowInput through `seedDraft`; the panel copies
+  // the typed scalars into local form state so the user can
+  // tweak the proposed values and then press the canonical Save
+  // button. The Save button is the SOLE write path — the AI
+  // surface never persists state directly (ADR-015 §I3 + §I8
+  // propose-only contract).
+  const lastConsumedSeed = useRef<QuietHoursWindowInput | null>(null)
+  useEffect(() => {
+    if (!seedDraft) return
+    if (lastConsumedSeed.current === seedDraft) return
+    lastConsumedSeed.current = seedDraft
+    setEditingId(null)
+    const base = makeDraft()
+    setDraft({
+      enabled: seedDraft.enabled ?? true,
+      start_local: seedDraft.start_local ?? base.start_local,
+      end_local: seedDraft.end_local ?? base.end_local,
+      timezone: seedDraft.timezone ?? base.timezone,
+      weekdays: seedDraft.weekdays ?? ALL_WEEKDAYS,
+      bypass_severities: [...(seedDraft.bypass_severities ?? DEFAULT_BYPASS)],
+    })
+    setValidationError(null)
+    onSeedConsumed?.()
+  }, [seedDraft, onSeedConsumed])
 
   const tzOptions = useMemo(
     () => listTimezones(draft?.timezone ?? 'UTC'),

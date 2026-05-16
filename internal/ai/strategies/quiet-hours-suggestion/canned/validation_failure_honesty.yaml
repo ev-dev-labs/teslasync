@@ -1,0 +1,29 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_quiet_hours_window_validation_failure_honesty_1
+        name: draft_quiet_hours_window
+        arguments: '{"user_id": "user-1"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_quiet_hours_window_validation_failure_honesty_1
+        name: validate_quiet_hours_window
+        arguments: '{"user_id": "user-1", "start_local": "22:00", "end_local": "22:00", "timezone": "America/Los_Angeles", "weekdays": 127, "bypass_severities": ["critical"]}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I cannot complete this recommendation: the
+      validate_quiet_hours_window tool reported the candidate
+      window is invalid because start_local must differ from
+      end_local; a zero-duration window covers no time.
+      Specifically the validator returned the error:
+      `start_local must differ from end_local`. Please retry
+      by choosing a different end time so the window covers a
+      non-zero duration. This recommendation would have been
+      based on your recent notification history, not a
+      snapshot of future traffic.
+    input_tokens: 320
+    output_tokens: 160
