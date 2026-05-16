@@ -2818,6 +2818,104 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+
+	// Phase-50 / 0048 — S7 state-machine-debugger-narrator.
+	//
+	// Opt-in LLM-backed narrator that turns the deterministic
+	// per-vehicle FSM transition trace into a 3-6 sentence
+	// operator-readable factual narration by routing through two
+	// read-only tools:
+	//
+	//   - query_fsm_trace — typed deterministic envelope
+	//     describing the in-scope (vehicle_id, from_unix, to_unix)
+	//     tuple: window bounds, vehicle id, total_transitions,
+	//     per_fsm ([{fsm_name, count}]), per_edge ([{from_state,
+	//     to_state, count}]), flap_count (mirroring the SPA's
+	//     FSMHealthPanel.computeFlapIds heuristic), and the
+	//     chronologically-ordered transitions stream
+	//     ([{id, fsm_name, from_state, to_state, trigger, ts}]).
+	//     Per-request scope binding installs the body-supplied
+	//     (vehicle_id, from_unix, to_unix) tuple in ctx via
+	//     tools.WithScopedFSMTraceWindow and refuses any
+	//     LLM-supplied tuple outside that triple to defend
+	//     against prompt-injection exfiltration via operator-
+	//     readable trigger strings or FSM names.
+	//
+	//   - retrieve_fsm_chunks — F7 retrieval restricted to the
+	//     per-feature source-type allowlist {fsm_transition,
+	//     signal_history_summary}. Both source types are
+	//     reserved for forward-compatibility — a future indexer
+	//     slice will index per-transition and per-window signal-
+	//     history chunks. Until then, retrieve_fsm_chunks called
+	//     with either source type simply returns zero chunks for
+	//     that corpus; the strategy's goldens already cover the
+	//     zero-matches narration and the system prompt instructs
+	//     the LLM to answer gracefully when zero chunks are
+	//     returned.
+	//
+	// The deterministic StateMachineDebuggerPage at /state-debugger
+	// (the canonical transition table + state diagram + FSM health
+	// panel + timeline chart) is the baseline rendered when AI is
+	// off. The registry's Frontend route metadata is
+	// `/system/fsm-debugger` (the slice prompt's documented
+	// coverage anchor); the AI section is rendered inside the
+	// canonical StateMachineDebuggerPage when the feature is
+	// enabled — same coverage-anchor pattern used by
+	// log-trace-summarization, incident-timeline-summarizer,
+	// feedback-queue-triage, and mqtt-sse-inspector-explanations.
+	//
+	// Routes:
+	//   - Backend: POST /api/v1/ai/system/fsm/narrate
+	//     (gated by guard.Wrap("state-machine-debugger-narrator");
+	//     404 in off mode).
+	//   - Frontend: /system/fsm-debugger (registry metadata only;
+	//     narration surface is rendered inside the canonical
+	//     StateMachineDebuggerPage at /state-debugger when the
+	//     feature is enabled — the registry route is the
+	//     coverage anchor for off-mode walker tests).
+	//   - UITestIDs: ai-feature-state-machine-debugger-narrator-root
+	//     (auto-applied by withAiFeature HOC reading
+	//     meta.uiTestIds[0]).
+	//
+	// NeedsRAG: true — the OPTIONAL secondary retrieve_fsm_chunks
+	// tool routes through the F7 rag.Retriever entry point.
+	// NeedsTools: true — query_fsm_trace + retrieve_fsm_chunks.
+	// NeedsStream: true — the dispatcher streams delta+done
+	// frames to the SPA via internal/ai/stream.
+	//
+	// Per-feature redaction policy is PolicyDigest
+	// (Allow=[ClassVehicleName]) per the slice prompt — every
+	// other PII class (VIN, lat/long, place names, IP addresses,
+	// emails, phone numbers, MAC addresses, IDs) is tagged
+	// round-trip BEFORE the message is sent to the provider so a
+	// leaked transcript reveals nothing beyond the operator-
+	// chosen car name. Transition details are user-visible to
+	// the operator already, so the narration is unaffected.
+	//
+	// JobNames: [] — this slice does NOT add a background job;
+	// the canonical fsm-transition write path is unchanged and
+	// the AI surface is request-scoped to the user's HTTP call.
+	//
+	// PushKinds: [] — this slice does NOT add a push kind; the
+	// SSE stream the AI handler writes to is the per-request
+	// dispatcher stream, not a fan-out to subscribers.
+	"state-machine-debugger-narrator": {
+		ID:          "state-machine-debugger-narrator",
+		Name:        "State-machine debugger narrator",
+		Description: "Opt-in LLM-backed narrator that turns the deterministic per-vehicle FSM transition trace into a 3-6 sentence operator-readable factual narration by routing through two read-only tools: query_fsm_trace (loads the in-scope (vehicle_id, from_unix, to_unix) window via the FSMTraceSource port — a thin deterministic adapter around the same database.FSMTransitionRepo the canonical baseline /api/v1/fsm/transitions endpoint already serves; emits a typed FSMTraceEnvelope of window bounds + vehicle id + total_transitions + per_fsm + per_edge + flap_count + transitions) and the OPTIONAL retrieve_fsm_chunks (F7 retrieval restricted to {fsm_transition, signal_history_summary} source types) for per-event context. The deterministic StateMachineDebuggerPage transition table + state diagram + FSM health panel + timeline chart remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyDigest (Allow=[ClassVehicleName]) so a leaked transcript reveals nothing beyond the operator-chosen car name. Per-request scope binding installs the body-supplied (vehicle_id, from_unix, to_unix) tuple in ctx and refuses any LLM-supplied tuple outside that triple to defend against prompt-injection exfiltration via operator-readable trigger strings or FSM names. Both tools are READ-only — no record is created, mutated, or deleted by the AI surface; the existing fsm-transition write path is the only mutation surface and the AI never touches it.",
+		Tier:        "S7",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/system/fsm/narrate"},
+			Frontend:  []string{"/system/fsm-debugger"},
+			UITestIDs: []string{"ai-feature-state-machine-debugger-narrator-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

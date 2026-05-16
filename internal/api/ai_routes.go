@@ -152,6 +152,7 @@ func mountAIRoutes(
 	aiLogTraceSummarization *AILogTraceSummarizationHandler,
 	aiFeedbackQueueTriage *AIFeedbackQueueTriageHandler,
 	aiMqttSseInspectorExplanations *AIMqttSseInspectorExplanationsHandler,
+	aiStateMachineDebuggerNarrator *AIStateMachineDebuggerNarratorHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -514,6 +515,28 @@ func mountAIRoutes(
 			mqttSseInspectorExplanationsHandler = aiMqttSseInspectorExplanations.ServeHTTP
 		}
 		r.Post("/system/streams/explain", g.Wrap("mqtt-sse-inspector-explanations", mqttSseInspectorExplanationsHandler))
+
+		// state-machine-debugger-narrator (Phase-50 / S7, slice
+		// 0048). Opt-in LLM-backed narrator that turns the
+		// deterministic per-vehicle FSM transition trace into a
+		// 3-6 sentence operator-readable factual narration by
+		// routing through two read-only tools (query_fsm_trace
+		// and the OPTIONAL retrieve_fsm_chunks). NARRATE-ONLY:
+		// the user reviews the narration in the AI side panel
+		// and continues to use the deterministic
+		// StateMachineDebuggerPage transition table + state
+		// diagram + FSM health panel + timeline chart for raw
+		// inspection. Same stub-fallback pattern as the other AI
+		// handlers — a nil handler is possible during partial
+		// wiring but the off-mode 404 invariant still holds
+		// because guard.Wrap returns 404 BEFORE the handler runs
+		// in off mode. The canonical baseline route at GET
+		// /api/v1/fsm/transitions is unchanged.
+		var stateMachineDebuggerNarratorHandler http.HandlerFunc = aiStateMachineDebuggerNarratorStubHandler
+		if aiStateMachineDebuggerNarrator != nil {
+			stateMachineDebuggerNarratorHandler = aiStateMachineDebuggerNarrator.ServeHTTP
+		}
+		r.Post("/system/fsm/narrate", g.Wrap("state-machine-debugger-narrator", stateMachineDebuggerNarratorHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1325,6 +1348,16 @@ func aiFeedbackQueueTriageStubHandler(w http.ResponseWriter, _ *http.Request) {
 // stub.
 func aiMqttSseInspectorExplanationsStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai mqtt-sse inspector explanations is not yet implemented")
+}
+
+// aiStateMachineDebuggerNarratorStubHandler mirrors
+// aiMqttSseInspectorExplanationsStubHandler for the S7 slice
+// (Phase-50 / 0048 state-machine-debugger-narrator). Reachable
+// only when AIStateMachineDebuggerNarratorHandler is nil at
+// construction; the off-mode 404 invariant is held by the
+// guard, not the stub.
+func aiStateMachineDebuggerNarratorStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai state-machine debugger narrator is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

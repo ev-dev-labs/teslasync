@@ -95,6 +95,7 @@ import (
 	logtracesummarization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/log-trace-summarization"
 	feedbackqueuetriage "github.com/ev-dev-labs/teslasync/internal/ai/strategies/feedback-queue-triage"
 	mqttsseinspectorexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/mqtt-sse-inspector-explanations"
+	statemachinedebuggernarrator "github.com/ev-dev-labs/teslasync/internal/ai/strategies/state-machine-debugger-narrator"
 	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
 	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
 	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
@@ -1994,6 +1995,57 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
+	// state-machine-debugger-narrator (Phase-50 / S7, slice 0048).
+	// The shared rag.Retriever is constructed per-feature so the
+	// rate-limit + cost-cap decorators on the embedding provider
+	// apply per-strategy. The retriever uses the same
+	// nomic-embed-text 768-dim physical table as the other RAG
+	// slices; the per-feature source-type allowlist
+	// {fsm_transition, signal_history_summary} is enforced in
+	// retrieve_fsm_chunks's Validate. Both source types are
+	// reserved as strings (not promoted to rag.Source* constants)
+	// for forward-compat without widening the F7 contract — a
+	// future indexer slice will land the actual fsm-transition /
+	// signal-history chunk indexing.
+	aiStateMachineDebuggerNarratorRetriever, err := rag.New(
+		context.Background(),
+		aiSettingsRepo,
+		db,
+		aiRegistry,
+		statemachinedebuggernarrator.FeatureID,
+		rag.ModelNomicEmbedText,
+	)
+	if err != nil {
+		log.Fatal().Err(err).Msg("ai state-machine-debugger-narrator: rag.New failed during boot wiring")
+	}
+	// state-machine-debugger-narrator tools (Phase-50 / S7, slice
+	// 0048). Adds `query_fsm_trace` + `retrieve_fsm_chunks` to
+	// the shared tool registry so the dispatcher can resolve them
+	// for the state-machine-debugger-narrator strategy. Same
+	// ordering rule as the other slice tools above: must be
+	// registered before the handler constructor below so the
+	// strategy's allowedTools resolve at boot. The Source is the
+	// production AIFSMTraceSource adapter that returns a
+	// deterministic empty envelope describing the bound tuple;
+	// the canonical baseline /api/v1/fsm/transitions surface
+	// remains reachable to the operator at all times.
+	aiFSMTraceSource := NewAIFSMTraceSource()
+	tools.RegisterStateMachineDebuggerNarratorTools(aiToolRegistry, tools.StateMachineDebuggerNarratorSources{
+		Retriever: aiStateMachineDebuggerNarratorRetriever,
+		FSMTrace:  aiFSMTraceSource,
+	})
+	// state-machine-debugger-narrator handler. One per process;
+	// stateless beyond constructor inputs. Must be constructed
+	// AFTER the tool registration above so the dispatcher can
+	// resolve the strategy's allowedTools at boot.
+	aiStateMachineDebuggerNarratorHandler := NewAIStateMachineDebuggerNarratorHandler(
+		aiRegistry,
+		aiToolRegistry,
+		statemachinedebuggernarrator.New(),
+		aiFSMTraceSource,
+		cfg.Auth.ForwardAuthHeader,
+	)
+
 	// Phase-46 / Prompt 40 — rate-limit status counters. Construct two
 	// sliding-window observers (one for every /api/v1 request, one
 	// scoped to writes only) and a handler that joins them with the
@@ -3479,7 +3531,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler, aiFeedbackQueueTriageHandler, aiMqttSseInspectorExplanationsHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler, aiFeedbackQueueTriageHandler, aiMqttSseInspectorExplanationsHandler, aiStateMachineDebuggerNarratorHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

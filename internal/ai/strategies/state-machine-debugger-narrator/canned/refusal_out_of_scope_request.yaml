@@ -1,0 +1,12 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot narrate a different vehicle or window than the
+      one currently in scope (vehicle_id=42, from_unix=1700000000,
+      to_unix=1700003600). The per-request scope binding refuses
+      any tool call outside that tuple. If you want a different
+      vehicle or window, please reopen the AI panel from the
+      State Machine Debugger page after switching the vehicle
+      selector or adjusting the time range.
+    input_tokens: 96
+    output_tokens: 64

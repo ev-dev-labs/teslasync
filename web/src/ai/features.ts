@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -443,6 +443,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-speed-profile-insights-root"] as const),
   }),
+  "state-machine-debugger-narrator": Object.freeze({
+    id: "state-machine-debugger-narrator",
+    name: "State-machine debugger narrator",
+    description: "Opt-in LLM-backed narrator that turns the deterministic per-vehicle FSM transition trace into a 3-6 sentence operator-readable factual narration by routing through two read-only tools: query_fsm_trace (loads the in-scope (vehicle_id, from_unix, to_unix) window via the FSMTraceSource port — a thin deterministic adapter around the same database.FSMTransitionRepo the canonical baseline /api/v1/fsm/transitions endpoint already serves; emits a typed FSMTraceEnvelope of window bounds + vehicle id + total_transitions + per_fsm + per_edge + flap_count + transitions) and the OPTIONAL retrieve_fsm_chunks (F7 retrieval restricted to {fsm_transition, signal_history_summary} source types) for per-event context. The deterministic StateMachineDebuggerPage transition table + state diagram + FSM health panel + timeline chart remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyDigest (Allow=[ClassVehicleName]) so a leaked transcript reveals nothing beyond the operator-chosen car name. Per-request scope binding installs the body-supplied (vehicle_id, from_unix, to_unix) tuple in ctx and refuses any LLM-supplied tuple outside that triple to defend against prompt-injection exfiltration via operator-readable trigger strings or FSM names. Both tools are READ-only — no record is created, mutated, or deleted by the AI surface; the existing fsm-transition write path is the only mutation surface and the AI never touches it.",
+    tier: "S7",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-state-machine-debugger-narrator-root"] as const),
+  }),
   "suggest-new-geofences": Object.freeze({
     id: "suggest-new-geofences",
     name: "Suggest new geofences",
@@ -539,6 +550,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "signal-explorer-nl-filter",
   "smart-charge-schedule-suggestion",
   "speed-profile-insights",
+  "state-machine-debugger-narrator",
   "suggest-new-geofences",
   "tire-pressure-trend-reasoning",
   "trip-planner-llm-agent",

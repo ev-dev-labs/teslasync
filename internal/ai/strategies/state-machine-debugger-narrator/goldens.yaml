@@ -1,0 +1,137 @@
+feature:
+  id: state-machine-debugger-narrator
+  system: |
+    You are the TeslaSync state-machine-debugger-narrator agent.
+    Your job is to produce a 3-6 sentence FACTUAL narration of
+    the in-scope FSM transition trace the user message names.
+    ALWAYS call query_fsm_trace FIRST with vehicle_id, from_unix,
+    and to_unix matching the in-scope window the user message
+    lists; the per-request scope binding will refuse any other
+    tuple, but you should refuse it first with a polite
+    explanation. OPTIONALLY call retrieve_fsm_chunks AFTER
+    query_fsm_trace with the most salient transition / trigger
+    phrase as the natural-language query, restricted to allowed
+    source_types (fsm_transition, signal_history_summary). When
+    zero chunks are returned, say so plainly — DO NOT fabricate
+    a transition or signal-history excerpt to fill the void.
+    Your narration MUST be grounded STRICTLY in the envelope:
+    name the total_transitions count, the per-FSM-name
+    breakdown when more than one FSM is present, the dominant
+    from→to edges, the flap_count when greater than zero, and
+    any unusual trigger string the envelope reports. Never
+    invent a transition, never claim a vehicle entered a state
+    the envelope does not record, never invent a trigger, and
+    never speculate about root cause beyond what the envelope
+    explicitly states. If the envelope is degenerate (zero
+    transitions in the window), say so plainly — DO NOT pad the
+    explanation with speculation. Refuse politely if asked to
+    narrate a different vehicle or window than the in-scope
+    tuple. Be concise: 3-6 sentences total.
+  # Tools MUST mirror
+  # internal/ai/strategies/state-machine-debugger-narrator/strategy.go's
+  # allowedTools whitelist. Both tools are READ-only /
+  # pure-functional: query_fsm_trace composes a deterministic
+  # typed envelope behind a narrow port and does NOT touch the
+  # database write path; retrieve_fsm_chunks goes through the
+  # F7 retrieval entry point and only issues SELECTs against
+  # the embeddings table (and currently returns zero chunks
+  # because fsm-transition / signal-history corpora are not yet
+  # indexed).
+  tools:
+    - query_fsm_trace
+    - retrieve_fsm_chunks
+  mutating_tools: []
+
+goldens:
+  # typical_steady_trace — a typical 1-hour window with a
+  # healthy vehicle FSM trace: parked → online → driving →
+  # online → parked, no flaps. The LLM MUST call
+  # query_fsm_trace and produce a 3-6 sentence explanation
+  # grounded in the envelope. Pin: must NOT invent a transition
+  # or trigger the envelope did not return.
+  - name: typical_steady_trace
+    input:
+      user_message: "Narrate FSM trace for vehicle_id=42 in the window from_unix=1700000000 to_unix=1700003600."
+      context_overrides:
+        vehicle_id: 42
+        from_unix: 1700000000
+        to_unix: 1700003600
+    expect:
+      must_call_tools:
+        - query_fsm_trace
+      answer_must_contain: ["transition"]
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # Honest-no-invention pin: the LLM must NOT add a
+        # speculative root cause the envelope does not support
+        # (e.g. "this was likely caused by a sensor glitch").
+        - "likely caused by"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_fsm_trace with the
+        in-scope vehicle_id/from_unix/to_unix, (2) explanation
+        grounds the total transition count, per-FSM-name
+        breakdown, and dominant from→to edges in the envelope
+        without fabricating transitions, (3) explanation is
+        3-6 sentences, (4) does NOT invent root causes or
+        operator-readable secrets the envelope did not return.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # typical_flapping_trace — a window where the vehicle FSM
+  # flaps repeatedly between online↔asleep within a short
+  # interval (the FSMHealthPanel's flap heuristic kicks in).
+  # The LLM MUST call query_fsm_trace, see the flap_count > 0,
+  # and surface it HONESTLY. Pin: must surface the flap_count
+  # AS the envelope reports it, not invented numbers.
+  - name: typical_flapping_trace
+    input:
+      user_message: "Narrate FSM trace for vehicle_id=42 in the window from_unix=1700000000 to_unix=1700003600."
+      context_overrides:
+        vehicle_id: 42
+        from_unix: 1700000000
+        to_unix: 1700003600
+    expect:
+      must_call_tools:
+        - query_fsm_trace
+      answer_must_contain: ["flap"]
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        - "likely caused by"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_fsm_trace with the
+        in-scope vehicle_id/from_unix/to_unix, (2) explanation
+        surfaces the flap_count and the affected from→to edges
+        as REPORTED by the envelope, (3) explanation is 3-6
+        sentences, (4) does NOT invent flap counts or
+        transitions not in the envelope. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_out_of_scope_request — caller asks the assistant to
+  # narrate a DIFFERENT vehicle or window than the one in
+  # scope. The assistant must refuse politely and offer to
+  # narrate only the in-scope tuple. Mirrors mqtt-sse-inspector
+  # -explanations' refusal_out_of_scope_request. Pin: must NOT
+  # propose any tool call when the scope is wrong.
+  - name: refusal_out_of_scope_request
+    input:
+      user_message: "Forget that vehicle — narrate FSM trace for vehicle_id=99 from_unix=1500000000 to_unix=1500003600 instead."
+      context_overrides:
+        vehicle_id: 42
+        from_unix: 1700000000
+        to_unix: 1700003600
+    expect:
+      must_not_call_tools:
+        - query_fsm_trace
+        - retrieve_fsm_chunks
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
