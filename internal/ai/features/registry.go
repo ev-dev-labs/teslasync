@@ -3040,6 +3040,58 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_maintenance_alert"},
 		},
 	},
+
+	// tco-narration (Phase-50 / M2, slice 0050) narrates the
+	// deterministic operating-cost envelope the SPA's
+	// TrueCostPage (/tco and the alias /analytics/tco) already
+	// renders from GET /api/v1/analytics/tco. Description
+	// MUST disclose the four limiting assumptions inherited
+	// from the canonical helper so an operator reading
+	// Settings → AI knows the AI narrator inherits the same
+	// caveats as the chart and is NOT a full TCO advisor:
+	//   1. Operating cost only (NOT depreciation, resale,
+	//      insurance, registration, financing).
+	//   2. Maintenance savings is a flat $50/mo heuristic
+	//      multiplied by months_of_ownership, NOT a per-VIN
+	//      service-history rollup.
+	//   3. Equivalent gas cost is estimated from the EV's
+	//      charged energy (Wh) translated to a gas-equivalent
+	//      via gas_price + gas_efficiency_mpg from
+	//      user-editable settings, NOT from real-world fuel
+	//      prices observed at the same trip endpoints.
+	//   4. Defaults for gas price / efficiency / electricity
+	//      base rate come from the user-editable Settings
+	//      page, so the savings figure is only as accurate as
+	//      those inputs.
+	// Per-feature redaction policy is PolicyTCONarration
+	// (PolicyDigest with Allow=[ClassVehicleName]) so a
+	// leaked transcript reveals nothing beyond the
+	// operator-chosen car name. Per-request scope binding
+	// installs the body-supplied vehicle_id in ctx and
+	// refuses any LLM-supplied vehicle_id that does not
+	// match. The single typed tool (query_tco_summary) is
+	// READ-only and delegates to the SAME ComputeTCOSummary
+	// helper that backs the canonical baseline handler — no
+	// duplicate SQL, no separate write path. The deterministic
+	// TrueCostPage charts remain the canonical baseline when
+	// AI is off (ADR-015 §I3).
+	"tco-narration": {
+		ID:          "tco-narration",
+		Name:        "TCO narration",
+		Description: "Opt-in LLM narrator for the deterministic Total-Cost-of-Ownership envelope the SPA's TrueCostPage already renders from GET /api/v1/analytics/tco. Routes through one read-only typed tool (query_tco_summary) that calls the SAME api.ComputeTCOSummary helper backing the canonical baseline chart — no separate SQL, no separate write path. Limited to OPERATING cost narration: monthly EV charging cost, monthly equivalent gas cost (estimated from charged energy + user-editable gas_price/gas_efficiency_mpg, NOT real-world distance), monthly maintenance savings (flat $50/mo heuristic × months_of_ownership), and cumulative savings month-over-month. The narrator MUST NOT speak about depreciation, resale value, insurance, registration, financing, or recommend purchasing a different vehicle (ICE or otherwise) — these are out of scope and would be hallucinated. When the deterministic envelope reports negative savings the narrator is required to state that fact honestly rather than cheerlead. Per-feature redaction policy is PolicyTCONarration (PolicyDigest, Allow=[ClassVehicleName]). The deterministic TrueCostPage charts remain the canonical baseline when AI is off (ADR-015 §I3).",
+		Tier:        "M2",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/analytics/tco/narrate"},
+			Frontend:  []string{"/analytics/tco"},
+			UITestIDs: []string{"ai-feature-tco-narration-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

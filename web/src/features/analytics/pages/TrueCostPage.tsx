@@ -11,6 +11,7 @@ import {
   Tooltip, ResponsiveContainer, Legend,
   ChartContainer, ChartTooltip, ChartGradient, chartGrid, axisTick,
 } from '@/components/charts';
+import { AITCONarration } from '@/components/ai/AITCONarration';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useCostBreakdown } from '@/api/hooks/useAnalytics';
@@ -58,6 +59,17 @@ export default function TrueCostPage() {
         </div>
       }
     >
+      {/* Phase-50 / 0050 (M2 tco-narration): opt-in LLM narrator that
+          explains the deterministic operating-cost envelope rendered
+          below. Rendered OUTSIDE the `tco ?` gate so it stays visible
+          even when the deterministic envelope is still null (settings
+          loaded but query in flight, or no charging data yet). The
+          withAiFeature HOC inside AITCONarration handles all
+          mode/toggle gating (ADR-015 §I5 + §I6) — when ai_mode='off'
+          this entire surface is absent from the DOM. The component
+          never replaces the deterministic charts below; it adds an
+          opt-in narrative section alongside them. */}
+      <AITCONarration vehicleId={vehicleId ?? undefined} />
       {tco ? (
         <>
           {/* Hero stat cards */}

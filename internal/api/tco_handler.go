@@ -1,11 +1,26 @@
 package api
 
+// Phase-50 / 0050 — M2 TCO narration.
+//
+// The deterministic Total-Cost-of-Ownership math previously inlined
+// inside (*TCOHandler).GetTCO has been extracted to the package-level
+// pure helper [ComputeTCOSummary] in tco_summary.go so the new AI
+// surface (POST /api/v1/ai/analytics/tco/narrate via the
+// [tools.TCOSummarizer] adapter) shares the SAME numbers the chart
+// renders. This file therefore parses + validates the request and
+// writes the response; all SQL and arithmetic live in the helper.
+//
+// Wire-shape stability: the response body MUST stay byte-identical
+// with the pre-refactor inline `map[string]interface{}` literal.
+// The mapping below uses the SAME snake_case keys, the SAME field
+// order, the SAME safeF/math.Round guards (now inside the helper),
+// and the SAME empty-not-null guard for monthly_breakdown. A
+// contract test (tco_handler_shape_test.go) pins the JSON field
+// list so a future drift breaks loudly.
+
 import (
-	"math"
 	"net/http"
-	"sort"
 	"strconv"
-	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
@@ -27,202 +42,35 @@ func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-
-	// Total electricity cost from charging sessions. Phase-42 SI canonical
-	// charging_sessions (000184): cost_decimal NUMERIC, total_energy_added_wh
-	// BIGINT. Cast cost_decimal to float8 for pgx scan; convert Wh→kWh.
-	var totalChargingCost, totalWh float64
-	var totalSessions int
-	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(cost_decimal::float8), 0),
-		        COALESCE(SUM(total_energy_added_wh), 0),
-		        COUNT(*)
-		 FROM charging_sessions
-		 WHERE vehicle_id = $1 AND cost_decimal > 0`, vehicleID,
-	).Scan(&totalChargingCost, &totalWh, &totalSessions)
+	summary, err := ComputeTCOSummary(r.Context(), h.db, vehicleID)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("tco: failed to get charging costs")
+		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("tco: ComputeTCOSummary failed")
 		writeError(w, http.StatusInternalServerError, "failed to get TCO data")
 		return
 	}
 
-	// Total distance and date range derived from drives. Phase-42 dropped
-	// daily_mileage; SUM(distance_m) / 1000 gives km, MIN/MAX(started_at)
-	// give the ownership date range over the same data set.
-	var totalKm float64
-	var firstDate, lastDate *time.Time
-	err = h.db.Pool.QueryRow(ctx,
-		`SELECT COALESCE(SUM(distance_m) / 1000.0, 0),
-		        MIN(started_at),
-		        MAX(started_at)
-		 FROM drives WHERE vehicle_id = $1 AND distance_m > 0`, vehicleID,
-	).Scan(&totalKm, &firstDate, &lastDate)
-	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("tco: failed to get mileage data")
-		writeError(w, http.StatusInternalServerError, "failed to get TCO data")
-		return
-	}
-
-	// Get gas price and efficiency from settings
-	var baseCostPerKWh, gasPrice, gasEfficiencyMPG float64
-	err = h.db.Pool.QueryRow(ctx,
-		`SELECT
-		   COALESCE((SELECT value_num FROM settings WHERE key = 'base_cost_per_kwh'), 0.12),
-		   COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
-		   COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
-	).Scan(&baseCostPerKWh, &gasPrice, &gasEfficiencyMPG)
-	if err != nil {
-		log.Error().Err(err).Msg("tco: failed to get settings")
-		writeError(w, http.StatusInternalServerError, "failed to get TCO data")
-		return
-	}
-	// Guard against zero/negative values that would cause division-by-zero (producing +Inf/NaN in JSON)
-	if gasEfficiencyMPG <= 0 {
-		gasEfficiencyMPG = 25
-	}
-	if baseCostPerKWh <= 0 {
-		baseCostPerKWh = 0.12
-	}
-	if gasPrice <= 0 {
-		gasPrice = 3.50
-	}
-
-	// Calculate ownership duration
-	var monthsOfOwnership float64 = 1
-	if firstDate != nil && lastDate != nil && !firstDate.IsZero() && !lastDate.IsZero() {
-		days := lastDate.Sub(*firstDate).Hours() / 24
-		if days > 0 {
-			monthsOfOwnership = days / 30.44
-			if monthsOfOwnership < 1 {
-				monthsOfOwnership = 1
-			}
-		}
-	}
-
-	// Calculate cost comparisons
-	var costPerKmEV, costPerKmICE, totalSavings, monthlySavings float64
-	if totalKm > 0 {
-		costPerKmEV = totalChargingCost / totalKm
-		totalMiles := totalKm / 1.60934
-		gallonsUsed := totalMiles / gasEfficiencyMPG
-		equivalentGasCost := gallonsUsed * gasPrice
-		costPerKmICE = equivalentGasCost / totalKm
-		totalSavings = (costPerKmICE - costPerKmEV) * totalKm
-		monthlySavings = totalSavings / monthsOfOwnership
-	}
-
-	maintenanceSavingsEstimate := monthsOfOwnership * 50
-
-	// Build monthly breakdown from charging sessions
-	type monthlyEntry struct {
-		Month        string  `json:"month"`
-		EVCost       float64 `json:"ev_cost"`
-		EquivGasCost float64 `json:"equiv_gas_cost"`
-		Savings      float64 `json:"savings"`
-		CumSavings   float64 `json:"cumulative_savings"`
-		EnergyWh     float64 `json:"energy_wh"`
-	}
-
-	rows, err := h.db.Pool.Query(ctx,
-		`SELECT TO_CHAR(started_at, 'YYYY-MM') as month,
-		        COALESCE(SUM(cost_decimal::float8), 0) as monthly_cost,
-		        COALESCE(SUM(total_energy_added_wh), 0) as monthly_wh
-		 FROM charging_sessions
-		 WHERE vehicle_id = $1 AND cost_decimal > 0
-		 GROUP BY TO_CHAR(started_at, 'YYYY-MM')
-		 ORDER BY month`, vehicleID)
-	if err != nil {
-		log.Error().Err(err).Msg("tco: failed to get monthly breakdown")
-		writeError(w, http.StatusInternalServerError, "failed to get TCO data")
-		return
-	}
-	defer rows.Close()
-
-	var monthlyBreakdown []monthlyEntry
-	var cumulativeSavings float64
-	for rows.Next() {
-		var month string
-		var monthlyCost, monthlyWh float64
-		if err := rows.Scan(&month, &monthlyCost, &monthlyWh); err != nil {
-			continue
-		}
-		// Estimate equivalent gas cost for this month's driving using energy consumed
-		equivGas := 0.0
-		if baseCostPerKWh > 0 && gasEfficiencyMPG > 0 {
-			// kWh → estimated km (using overall efficiency) → miles → gallons → cost
-			kmPerKWh := 0.0
-			if totalWh > 0 && totalKm > 0 {
-				kmPerKWh = totalKm / (totalWh / 1000.0)
-			} else {
-				kmPerKWh = 5.0 // reasonable EV default
-			}
-			estimatedKm := (monthlyWh / 1000.0) * kmPerKWh
-			estimatedMiles := estimatedKm / 1.60934
-			gallons := estimatedMiles / gasEfficiencyMPG
-			equivGas = gallons * gasPrice
-		}
-		monthSavings := equivGas - monthlyCost
-		cumulativeSavings += monthSavings
-		monthlyBreakdown = append(monthlyBreakdown, monthlyEntry{
-			Month:        month,
-			EVCost:       math.Round(monthlyCost*100) / 100,
-			EquivGasCost: math.Round(equivGas*100) / 100,
-			Savings:      math.Round(monthSavings*100) / 100,
-			CumSavings:   math.Round(cumulativeSavings*100) / 100,
-			EnergyWh:     math.Round(monthlyWh*100) / 100,
-		})
-	}
-
-	if monthlyBreakdown == nil {
-		monthlyBreakdown = make([]monthlyEntry, 0)
-	}
-	sort.Slice(monthlyBreakdown, func(i, j int) bool {
-		return monthlyBreakdown[i].Month < monthlyBreakdown[j].Month
-	})
-
-	// safeF guards against NaN/Inf which silently break json.Encode
-	safeF := func(v float64) float64 {
-		if math.IsNaN(v) || math.IsInf(v, 0) {
-			return 0
-		}
-		return v
-	}
-
-	equivalentGasCostTotal := 0.0
-	if totalKm > 0 {
-		totalMiles := totalKm / 1.60934
-		gallonsUsed := totalMiles / gasEfficiencyMPG
-		equivalentGasCostTotal = gallonsUsed * gasPrice
-	}
-
-	firstDateStr := ""
-	lastDateStr := ""
-	if firstDate != nil {
-		firstDateStr = firstDate.Format("2006-01-02")
-	}
-	if lastDate != nil {
-		lastDateStr = lastDate.Format("2006-01-02")
-	}
-
+	// Wire shape MUST stay byte-identical with the pre-refactor
+	// inline literal — the deterministic TrueCostPage chart
+	// consumes every field by snake_case key. The contract test
+	// in tco_handler_shape_test.go pins this field list.
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"vehicle_id":                   vehicleID,
-		"total_charging_cost":          safeF(math.Round(totalChargingCost*100) / 100),
-		"total_wh":                     safeF(math.Round(totalWh*100) / 100),
-		"total_sessions":               totalSessions,
-		"total_km":                     safeF(math.Round(totalKm*100) / 100),
-		"first_date":                   firstDateStr,
-		"last_date":                    lastDateStr,
-		"months_of_ownership":          safeF(math.Round(monthsOfOwnership*10) / 10),
-		"cost_per_km_ev":               safeF(math.Round(costPerKmEV*10000) / 10000),
-		"cost_per_km_ice":              safeF(math.Round(costPerKmICE*10000) / 10000),
-		"equivalent_gas_cost":          safeF(math.Round(equivalentGasCostTotal*100) / 100),
-		"total_savings":                safeF(math.Round(totalSavings*100) / 100),
-		"monthly_savings":              safeF(math.Round(monthlySavings*100) / 100),
-		"maintenance_savings_estimate": safeF(math.Round(maintenanceSavingsEstimate*100) / 100),
-		"gas_price":                    safeF(gasPrice),
-		"gas_efficiency_mpg":           safeF(gasEfficiencyMPG),
-		"base_cost_per_kwh":            safeF(baseCostPerKWh),
-		"monthly_breakdown":            monthlyBreakdown,
+		"vehicle_id":                   summary.VehicleID,
+		"total_charging_cost":          summary.TotalChargingCost,
+		"total_wh":                     summary.TotalWh,
+		"total_sessions":               summary.TotalSessions,
+		"total_km":                     summary.TotalKm,
+		"first_date":                   summary.FirstDate,
+		"last_date":                    summary.LastDate,
+		"months_of_ownership":          summary.MonthsOfOwnership,
+		"cost_per_km_ev":               summary.CostPerKmEV,
+		"cost_per_km_ice":              summary.CostPerKmICE,
+		"equivalent_gas_cost":          summary.EquivalentGasCost,
+		"total_savings":                summary.TotalSavings,
+		"monthly_savings":              summary.MonthlySavings,
+		"maintenance_savings_estimate": summary.MaintenanceSavingsEstimate,
+		"gas_price":                    summary.GasPrice,
+		"gas_efficiency_mpg":           summary.GasEfficiencyMPG,
+		"base_cost_per_kwh":            summary.BaseCostPerKWh,
+		"monthly_breakdown":            summary.MonthlyBreakdown,
 	})
 }

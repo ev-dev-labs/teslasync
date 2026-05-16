@@ -1,0 +1,27 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_tco_summary_typical_growth_savings_1
+        name: query_tco_summary
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Vehicle <vehicle id='42'/> shows a positive operating-cost
+      gap: cost_per_km_ev is well below cost_per_km_ice across the
+      ownership window, which compounds into a meaningful total
+      savings figure over the months_of_ownership reported by the
+      tool. The deterministic monthly_breakdown supports that
+      trend and the sessions count is large enough to be
+      representative. Honest scope: this is OPERATING-cost only —
+      purchase price, financing, registration, insurance, and
+      other ownership costs are NOT included, so this is not full
+      Total Cost of Ownership in the accounting sense. The
+      maintenance_savings_estimate is a flat $50-per-month
+      heuristic, and the per-month equivalent_gas_cost is
+      estimated from each month's charging energy rather than
+      from actual per-month distance, so a low-charging /
+      high-driving month will look cheaper than reality.
+    input_tokens: 240
+    output_tokens: 160

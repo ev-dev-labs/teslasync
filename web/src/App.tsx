@@ -461,6 +461,13 @@ export default function App() {
         <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
+        {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
+            against frontend route `/analytics/tco`; the canonical app path
+            stays `/tco` for back-compat (it predates the /analytics/* family),
+            but mounting the same page at `/analytics/tco` lets the registry's
+            RouteSet.Frontend entry land users on the deterministic baseline
+            without surprising 404s. */}
+        <Route path="analytics/tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         <Route path="vehicle-comparison" element={<SafeRoute name="FleetCompare"><FleetCompare /></SafeRoute>} />
         <Route path="sleep-efficiency" element={<SafeRoute name="SleepEfficiency"><SleepEfficiency /></SafeRoute>} />
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />

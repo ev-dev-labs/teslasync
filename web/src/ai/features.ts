@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "predictive-maintenance" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "predictive-maintenance" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -476,6 +476,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-suggest-new-geofences-root"] as const),
   }),
+  "tco-narration": Object.freeze({
+    id: "tco-narration",
+    name: "TCO narration",
+    description: "Opt-in LLM narrator for the deterministic Total-Cost-of-Ownership envelope the SPA's TrueCostPage already renders from GET /api/v1/analytics/tco. Routes through one read-only typed tool (query_tco_summary) that calls the SAME api.ComputeTCOSummary helper backing the canonical baseline chart — no separate SQL, no separate write path. Limited to OPERATING cost narration: monthly EV charging cost, monthly equivalent gas cost (estimated from charged energy + user-editable gas_price/gas_efficiency_mpg, NOT real-world distance), monthly maintenance savings (flat $50/mo heuristic × months_of_ownership), and cumulative savings month-over-month. The narrator MUST NOT speak about depreciation, resale value, insurance, registration, financing, or recommend purchasing a different vehicle (ICE or otherwise) — these are out of scope and would be hallucinated. When the deterministic envelope reports negative savings the narrator is required to state that fact honestly rather than cheerlead. Per-feature redaction policy is PolicyTCONarration (PolicyDigest, Allow=[ClassVehicleName]). The deterministic TrueCostPage charts remain the canonical baseline when AI is off (ADR-015 §I3).",
+    tier: "M2",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-tco-narration-root"] as const),
+  }),
   "tire-pressure-trend-reasoning": Object.freeze({
     id: "tire-pressure-trend-reasoning",
     name: "Tire pressure trend reasoning",
@@ -564,6 +575,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "speed-profile-insights",
   "state-machine-debugger-narrator",
   "suggest-new-geofences",
+  "tco-narration",
   "tire-pressure-trend-reasoning",
   "trip-planner-llm-agent",
   "vampire-drain-explanation",

@@ -154,6 +154,7 @@ func mountAIRoutes(
 	aiMqttSseInspectorExplanations *AIMqttSseInspectorExplanationsHandler,
 	aiStateMachineDebuggerNarrator *AIStateMachineDebuggerNarratorHandler,
 	aiPredictiveMaintenance *AIPredictiveMaintenanceHandler,
+	aiTCONarration *AITCONarrationHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -562,6 +563,25 @@ func mountAIRoutes(
 			predictiveMaintenanceHandler = aiPredictiveMaintenance.ServeHTTP
 		}
 		r.Post("/maintenance/predict", g.Wrap("predictive-maintenance", predictiveMaintenanceHandler))
+
+		// tco-narration (Phase-50 / M2, slice 0050) narrates
+		// the deterministic operating-cost envelope the SPA's
+		// TrueCostPage already renders from
+		// GET /api/v1/analytics/tco. The route lives under
+		// /ai/analytics/tco/narrate so it is namespaced under
+		// the existing /analytics family alongside
+		// /analytics/period-compare/narrate. Same
+		// stub-fallback pattern as the other AI handlers — a
+		// nil handler is possible during partial wiring but
+		// the off-mode 404 invariant still holds because
+		// guard.Wrap returns 404 BEFORE the handler runs in
+		// off mode. The canonical baseline route at
+		// GET /api/v1/analytics/tco is unchanged.
+		var tcoNarrationHandler http.HandlerFunc = aiTCONarrationStubHandler
+		if aiTCONarration != nil {
+			tcoNarrationHandler = aiTCONarration.ServeHTTP
+		}
+		r.Post("/analytics/tco/narrate", g.Wrap("tco-narration", tcoNarrationHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1392,6 +1412,14 @@ func aiStateMachineDebuggerNarratorStubHandler(w http.ResponseWriter, _ *http.Re
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiPredictiveMaintenanceStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai predictive maintenance is not yet implemented")
+}
+
+// aiTCONarrationStubHandler mirrors aiPredictiveMaintenanceStubHandler
+// for the M2 slice (Phase-50 / 0050 tco-narration). Reachable only
+// when AITCONarrationHandler is nil at construction; the off-mode
+// 404 invariant is held by the guard, not the stub.
+func aiTCONarrationStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai tco narration is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

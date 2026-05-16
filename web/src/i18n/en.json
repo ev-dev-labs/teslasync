@@ -2562,6 +2562,10 @@
         "predictive-maintenance": {
           "label": "Predictive maintenance",
           "description": "Opt-in LLM advisor that narrates one in-scope vehicle's upcoming maintenance risks in a 3-6 sentence factual paragraph — which scheduled items are overdue, which are due soon, the recent service-record context, and whether the current mileage informs the recommendation or if time-based reasoning was used (when no recent odometer reading is available) — by routing through two read-only tools that quote the same deterministic maintenance envelope the operator can already inspect on the Maintenance page. The advisor never invents an item, never proposes a write, and never speculates about root cause beyond the deterministic envelope. Per-request scope binding rejects any cross-vehicle tool call to defend against prompt-injection exfiltration via user-authored service-record notes. VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The deterministic threshold reminders, status badges, summary metric cards, upcoming items list, and Schedule Maintenance write controls on the Maintenance page remain the canonical baseline when Helix is off."
+        },
+        "tco-narration": {
+          "label": "TCO narration",
+          "description": "Opt-in Helix narrator that explains the deterministic Total-Cost-of-Ownership envelope on the True Cost of Ownership page — the EV charging cost, the equivalent gas cost, the cumulative savings, and the cost-per-kilometre comparison — by routing through one read-only tool that quotes the same numbers the chart shows. The narrator is honest about the four limiting assumptions: operating cost only (no depreciation, resale, insurance, registration, or financing); a flat $50/month maintenance heuristic; equivalent gas cost estimated from charged energy not real-world distance; and gas-price / efficiency / electricity-rate defaults from your editable Settings. When the deterministic envelope reports negative savings the narrator states that fact honestly rather than cheerlead. The deterministic hero stat cards, cumulative-savings area chart, cost-per-km bar chart, monthly EV-vs-gas bar chart, and savings-breakdown summary remain the canonical baseline when Helix is off."
         }
       },
       "archive": {
@@ -3571,7 +3575,14 @@
     "maintenanceSavings": "Maintenance Savings (Est.)",
     "noOilChanges": "No oil changes, less brake wear",
     "totalEstSavings": "Total Estimated Savings",
-    "noData": "No data available. Start charging to see your cost analysis."
+    "noData": "No data available. Start charging to see your cost analysis.",
+    "aiNarration": {
+      "title": "Explain my total cost of ownership",
+      "description": "Ask Helix to walk through the deterministic operating-cost figures shown below — the EV charging spend, the equivalent gas cost, the cumulative savings, and the cost-per-kilometre comparison. The narrator quotes the same numbers the chart shows and is honest about the four limiting assumptions: operating cost only (no depreciation, resale, insurance, registration, or financing); a flat $50/month maintenance heuristic; equivalent gas cost estimated from charged energy not real-world distance; and gas-price / efficiency / electricity-rate defaults from your editable Settings.",
+      "button": "Explain ownership cost",
+      "badge": "Helix",
+      "noVehicleHint": "Pick a vehicle above to enable Helix."
+    }
   },
   "automations": {
     "builder": {

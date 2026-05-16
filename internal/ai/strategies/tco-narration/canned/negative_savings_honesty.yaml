@@ -1,0 +1,26 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_tco_summary_negative_savings_honesty_1
+        name: query_tco_summary
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Vehicle <vehicle id='42'/> is currently more expensive to
+      operate than the gas equivalent: the deterministic envelope
+      returned a negative total_savings figure because
+      cost_per_km_ev exceeds cost_per_km_ice over the ownership
+      window. The most plausible driver in the tool reply is the
+      mix of charging sessions — supercharger-heavy usage at the
+      configured base_cost_per_kwh produces a higher per-km cost
+      than the configured gas_efficiency_mpg / gas_price baseline
+      assumes for an ICE alternative. Honest scope: this is
+      OPERATING-cost only; purchase price, financing, registration,
+      insurance, and other ownership costs do not enter the
+      calculation, and the maintenance_savings_estimate is a flat
+      $50-per-month heuristic. I am not recommending switching
+      vehicle types — that is outside the scope of this narrator.
+    input_tokens: 240
+    output_tokens: 160
