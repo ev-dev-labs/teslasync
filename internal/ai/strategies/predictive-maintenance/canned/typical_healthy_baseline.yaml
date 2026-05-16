@@ -1,0 +1,20 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_maintenance_context_typical_healthy_baseline_1
+        name: query_maintenance_context
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Your vehicle is in good shape from a maintenance
+      perspective. The envelope reports zero items past their
+      service interval and zero items inside the due-soon
+      window. The summary counts 8 items in total, all in good
+      status. No action is required right now; continue to
+      monitor odometer and time-based reminders surfaced by
+      the canonical Maintenance page above as new intervals
+      approach.
+    input_tokens: 240
+    output_tokens: 80

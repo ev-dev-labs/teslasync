@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "predictive-maintenance" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -366,6 +366,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-period-compare-narration-root"] as const),
   }),
+  "predictive-maintenance": Object.freeze({
+    id: "predictive-maintenance",
+    name: "Predictive maintenance",
+    description: "Opt-in LLM-backed advisor that turns the deterministic per-vehicle maintenance reminders + service history + (when indexed) ML-anomaly signals into a 3-6 sentence operator-readable risk narration by routing through two read-only tools: query_maintenance_context (loads the in-scope vehicle's items, recent_records, and summary counts via the MaintenancePredictionContextSource port — a thin deterministic adapter around the same default-items + Redis-odometer reader the canonical baseline GET /api/v1/maintenance handler already serves) and the OPTIONAL retrieve_maintenance_chunks (F7 retrieval restricted to {maintenance_event, vehicle_state, ml_anomaly} source types) for per-event context. The deterministic MaintenancePage items grid + summary cards + service records table + due-soon / overdue badges remain the canonical baseline when AI is off; the existing manual service-record write path is the SOLE mutation surface. Per-feature redaction policy is PolicyDigest (Allow=[ClassVehicleName]) so a leaked transcript reveals nothing beyond the operator-chosen car name. Per-request scope binding installs the body-supplied vehicle_id in ctx and refuses any LLM-supplied vehicle_id that does not match to defend against prompt-injection exfiltration via operator-authored service-record description / provider strings. Both tools are READ-only — no record is created, mutated, or deleted by the AI surface.",
+    tier: "M1",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-predictive-maintenance-root"] as const),
+  }),
   "preheat-precool-recommender": Object.freeze({
     id: "preheat-precool-recommender",
     name: "Preheat and precool recommender",
@@ -543,6 +554,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "nl-drive-search-replay",
   "nl-search",
   "period-compare-narration",
+  "predictive-maintenance",
   "preheat-precool-recommender",
   "rag-help",
   "range-prediction-model",

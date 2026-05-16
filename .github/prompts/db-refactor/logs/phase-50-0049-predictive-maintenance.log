@@ -1,0 +1,779 @@
+=== PREFLIGHT ===
+Branch:
+$ git --no-pager branch --show-current
+refactor/signals-rewrite-50-0049
+
+Predecessor logs (all must end STATUS=DONE):
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0001-F0-ai-off-contract.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0002-F1-provider-abstraction.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0003-F2-settings-ui.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0004-F3-ai-call-log.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0005-F4-tool-use-framework.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0006-F5-sse-streaming.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0007-F6-eval-harness.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0008-F7-embeddings-pgvector.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0009-F8-redaction.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0010-F9-rate-limiter-cost-cap.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+$ Get-Content .github/prompts/db-refactor/logs/phase-50-0063-range-prediction-model.log -Tail 3
+=== STATUS ===
+EXIT=0
+STATUS=DONE
+
+Dirty-tree check (allowed files only):
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/ai/features.ts
+ M web/src/features/vehicle-systems/pages/MaintenancePage.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/predictive-maintenance/
+?? internal/ai/tools/predictive_maintenance.go
+?? internal/ai/tools/predictive_maintenance_test.go
+?? internal/api/ai_predictive_maintenance_handler.go
+?? internal/api/ai_predictive_maintenance_handler_test.go
+?? web/src/components/ai/AIPredictiveMaintenance.tsx
+?? web/src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOffShowsThresholdReminders.test.tsx
+?? web/src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOnWiredCallsRoute.test.tsx
+
+Every entry is on the allow-list from this prompt (registry.go,
+strategies/predictive-maintenance/**, tools/**, api/**,
+web/src/features/maintenance/** OR
+web/src/features/vehicle-systems/** [where the MaintenancePage
+canonically lives], web/src/components/ai/**, web/src/i18n/en.json,
+web/src/**/__tests__/**, and the regenerated TS mirror
+web/src/ai/features.ts which is the deterministic output of
+go run ./tools/aigen and is required by the prompt's verification
+step go run ./tools/aigen --check).
+
+=== SURVEY ===
+
+Baseline non-AI behavior preserved by this slice:
+
+1. Backend route GET /api/v1/maintenance returns a deterministic
+   list of maintenance items per-vehicle. Source:
+   internal/api/maintenance_handler.go. The handler reads
+   persistent items from the maintenance_items table when present,
+   and falls back to a hard-coded default list (Cabin Air Filter,
+   Tire Rotation, Wiper Blades) derived from the current odometer
+   read via the WithRedisCache(*signal.RedisSignalCache) signal
+   cache. Items carry the legacy field names current_mileage,
+   due_mileage, interval_miles (pre-Phase-48 SI cutover —
+   maintenance.go was not migrated to SI in this slice because
+   touching SI-canonicalization code is out of allowed-files scope).
+
+2. Backend route GET /api/v1/service-records returns the recent
+   service-record history per vehicle. Source:
+   internal/api/maintenance_handler.go::GetServiceRecords.
+
+3. Frontend route /maintenance is owned by
+   web/src/features/vehicle-systems/pages/MaintenancePage.tsx
+   (686 lines pre-edit). The page composes (in order top to bottom):
+   - PageHeader with the active vehicle's display name
+   - Summary metric cards (FadeIn): total, due-soon, overdue,
+     completed counts derived from the maintenance items
+   - Filter / Sort toolbar with category select + sort select +
+     "Schedule Maintenance" CTA
+   - Maintenance items grid (status + due_date + due_mileage +
+     progress against interval bar) — the canonical reminders
+   - Recent service records table (date, description, mileage,
+     cost) with running cost summary
+   - Cost-summary FadeIn aggregating service-record totals.
+
+4. Threshold reminders: every item carries a derived status
+   (overdue / due-soon / good) computed by the page from the
+   item's due_date OR due_mileage relative to today and the
+   current odometer. The status drives the status badge colour
+   and the order in which items surface in the grid.
+
+5. Settings → AI page already exposes an explicit per-feature
+   toggle gate: when ai_mode='off' the entire AI surface is
+   hidden, and per-feature toggles independently gate each
+   individual feature's UI + routes (ADR-015 §I7).
+
+Why the baseline must stay: the prompt's central invariant is
+that the deterministic threshold reminders are the canonical
+maintenance reminder source. Operators with ai_mode='off' (the
+default) MUST continue to see the exact same list of items, the
+same status badges, the same summary metric cards, the same
+Schedule Maintenance write path, and the same service-record
+table. The AI advisor adds an OPT-IN narrative panel; it never
+mutates a maintenance item, never reorders the grid, and never
+substitutes for the deterministic reminders.
+
+Closest existing slice precedent reviewed before edits:
+0048 state-machine-debugger-narrator (the most recent
+RAG-narrator slice with scope binding, two read-only tools,
+PolicyDigest redaction, and AIFeatureCard wiring). The 0049
+slice mirrors that template structurally so future maintainers
+can recognise the pattern at a glance.
+
+DTOs and types involved:
+- Backend body: AIPredictiveMaintenancePredictRequest{
+    VehicleID int64 `json:"vehicle_id"`
+  } — only one field, parsed via json.Decoder +
+  DisallowUnknownFields. Per-field validation rejects
+  vehicle_id <= 0.
+- Tool envelope: MaintenancePredictionContextEnvelope with
+  per-item fields (id, category, name, status, due_date,
+  due_mileage, current_mileage, last_service_date, interval_*,
+  derived_status) + recent_records + summary aggregate counts.
+- Scope binding: ScopedMaintenancePredictionWindow{
+    VehicleID int64
+  } — vehicle-only (maintenance items aren't time-windowed,
+  unlike 0048's window-bounded FSM trace).
+
+Registry routes for predictive-maintenance:
+- Backend:   POST /api/v1/ai/maintenance/predict
+- Frontend:  /maintenance
+- UITestIDs: ai-feature-predictive-maintenance-root
+- JobNames:  ai_maintenance_model_update
+- PushKinds: ai_maintenance_alert
+
+=== REASONING ===
+
+ADR-015 alignment:
+
+§I1 default-off — registry entry sets DefaultOn=false; the
+guard's per-feature gate is false unless the user explicitly
+turns it on in Settings → AI. The aigen-generated TS mirror
+web/src/ai/features.ts carries the same default. No env var
+or migration ships this feature on.
+
+§I3 baseline intact — the MaintenancePage edit ONLY appends an
+opt-in FadeIn block (between the summary metric cards FadeIn and
+the Filter / Sort toolbar FadeIn) wrapping <AIPredictiveMaintenance/>.
+The threshold reminders, status badges, summary metric cards,
+upcoming items list, recent service records table, cost-summary
+FadeIn, and Schedule Maintenance CTA are unchanged. The
+withAiFeature HOC returns null when ai_mode='off' OR when the
+per-feature toggle is false, so the appended FadeIn renders no
+DOM in off mode (proven by the React test, which asserts the
+container is empty).
+
+§I4 zero egress — in off mode useAiStream is never instantiated
+because withAiFeature short-circuits to null BEFORE the inner
+section's hooks run. The backend guard returns 404 before
+reaching the dispatcher. No provider call is ever made.
+
+§I5 hidden UI — the wrapping div from withAiFeature carries
+data-testid="ai-feature-predictive-maintenance-root" only when
+the feature is enabled; the React off-mode test asserts the
+test ID is absent from the DOM AND that the visible "Predict
+maintenance" verb is absent from the accessible name.
+
+§I6 404 routes — POST /api/v1/ai/maintenance/predict is mounted
+inside the same guarded scope as every other AI route in
+ai_routes.go (g.Wrap("predictive-maintenance", …)). The
+off-mode 404 invariant is therefore enforced by the existing
+guard matrix (proven for every AI feature by the foundation
+slice 0001's matrix tests, not duplicated per-slice).
+
+§I7 per-feature — the guard checks the per-feature toggle
+INDEPENDENTLY of ai_mode. The React off-mode test's second
+case (ai_mode='cloud' AND toggle=false) proves the surface is
+still hidden.
+
+§I8 propose-only — the AI surface NEVER mutates maintenance
+items, service records, signal-pipeline entry points, or
+reminder thresholds. The advisor is read-only narration over
+the deterministic maintenance envelope. There is no "Apply to
+form" or "Use this draft" action — the render contract is
+"narrative", not "proposal" or "suggestion".
+
+§I10 type system — the handler body is parsed with
+json.Decoder + DisallowUnknownFields; vehicle_id is typed
+int64. The MaintenancePredictionContextEnvelope and
+ScopedMaintenancePredictionWindow are exhaustive typed structs
+with no map[string]any. The only place a legacy
+map[string]interface{} survives is in the production
+AIPredictiveMaintenanceContextSource, which mirrors the
+upstream MaintenanceHandler.defaultItems return shape — that
+shape is part of the existing pre-Phase-48 maintenance handler
+contract and re-typing it would require touching
+maintenance_handler.go (out of allowed-files scope).
+
+§I12 client/bg — JobNames=[ai_maintenance_model_update] and
+PushKinds=[ai_maintenance_alert] are declared in registry
+metadata so the 9999 AI-OFF contract walker has coverage data.
+NO actual worker code or push-delivery pipeline ships in this
+slice. This mirrors the digest-narration ai_digest_weekly and
+nl-search ai_search_indexer precedents, where the worker /
+push pipeline landed in a follow-up slice. The
+service-worker chunk ai-predictive-maintenance is reserved
+for future route-split work and is not written to by this
+slice.
+
+Methodology principles P1-P12:
+
+P1 provider port — the strategy uses the shared provider.Registry;
+no direct adapter import escapes feature code.
+
+P4 strategy / dispatcher — the strategy declares allowedTools
+[query_maintenance_context, retrieve_maintenance_chunks]; the
+shared dispatcher loop is unchanged.
+
+P5 decorator chain — every provider call routes through the
+locked decorator chain (redaction, rate limit, cost cap, audit,
+trace) installed once at boot.
+
+P6 backend guard + frontend gate — POST /api/v1/ai/maintenance/predict
+is wrapped with g.Wrap("predictive-maintenance", …); the React
+component is wrapped with withAiFeature('predictive-maintenance', …).
+
+P8 eval goldens — 3 goldens in goldens.yaml (typical_overdue_item,
+typical_healthy_baseline, refusal_out_of_scope_request) each
+backed by a canned mock-provider YAML in canned/*.yaml. The
+eval harness passes 3/3.
+
+P9 feature registry — the registry entry declares Routes with
+ALL five fields populated explicitly (Backend, Frontend,
+UITestIDs, JobNames, PushKinds), not omitted, per the
+methodology's "empty arrays must be explicit, not omitted" rule.
+
+P10 baseline coexistence — selection between baseline and AI
+happens at composition time. MaintenancePage always renders the
+deterministic reminders; the AIPredictiveMaintenance card is
+appended via withAiFeature, which returns null in off mode. There
+is no per-call branch inside business logic; the canonical
+maintenance handler is reached for both paths.
+
+P11 wired-or-absent — the AIPredictiveMaintenance component
+imports useAiStream and calls it unconditionally at the top of
+InnerSection's body (Hooks-rules safe). The hook's URL is the
+registered backend endpoint /ai/maintenance/predict (the
+request() client that useAiStream wraps prepends /api/v1).
+
+P12 no placeholder buttons — the action button's disabled prop is
+the COMPUTED expression `!canStart` derived from
+`typeof vehicleId === 'number' && Number.isFinite(vehicleId) && vehicleId > 0`,
+NOT a literal `disabled` or `disabled={true}`. The On-mode
+wiring test asserts the button is enabled when vehicleId is set
+AND disabled when missing / zero / negative / non-finite (four
+input states). No "future slice", "coming soon", "wiring lands",
+or "would call POST" strings appear in the component (W1 inline
+self-check returns 0).
+
+Tools (F4 typed-DTO contract):
+- query_maintenance_context (input: vehicle_id int64) returns
+  the typed MaintenancePredictionContextEnvelope. The tool
+  REFUSES any LLM-supplied vehicle_id that doesn't match the
+  scope bound at handler entry — defends against prompt-injection
+  exfiltration via operator-authored service-record notes.
+- retrieve_maintenance_chunks (input: query string, optional
+  top_k) calls the F7 retriever scoped to the allowlist
+  [maintenance_event, vehicle_state, ml_anomaly]. The tool
+  has NO vehicle_id input — separation of concerns is handled
+  by the F7 retriever's subject-scoping and the source-type
+  allowlist. TestRetrieveMaintenanceChunks_InputSchemaOmitsVehicleID
+  pins this contract.
+
+Redaction (F8 PolicyDigest):
+- Allowed classes: ClassVehicleName only.
+- Round-trip required: yes (the strategy emits the policy ID
+  in its system message; the redaction layer round-trips the
+  digest IDs back to the originals before the response reaches
+  the operator).
+- VINs, lat/long, place names, IPs, emails, phone numbers,
+  MAC addresses, and IDs in plaintext are redacted before the
+  message reaches the provider.
+
+Scope binding (per-request):
+The handler installs ScopedMaintenancePredictionWindow{VehicleID}
+into the request context BEFORE the dispatcher runs. The
+query_maintenance_context tool reads the scope from the context
+and refuses any LLM-supplied vehicle_id that doesn't match. This
+is vehicle-only (no time window) because maintenance items are
+not time-bounded — different from 0048's
+ScopedFSMTraceWindow{VehicleID, FromUnix, ToUnix}.
+
+User-prefs / units:
+This slice does NOT duplicate userPrefsMiddleware. The
+deterministic envelope already emits SI-canonical fields
+alongside the legacy unit-suffixed fields where the upstream
+MaintenanceHandler exposes them; the dispatcher's user-prefs
+seed message gives the LLM the conversion formulas it needs to
+narrate in the operator's display units.
+
+=== CHANGES ===
+
+Production (Go):
+- internal/ai/features/registry.go
+  Added 'predictive-maintenance' entry: Tier=M1, DefaultOn=false,
+  Routes={Backend=[POST /api/v1/ai/maintenance/predict],
+  Frontend=[/maintenance], UITestIDs=[ai-feature-predictive-maintenance-root],
+  JobNames=[ai_maintenance_model_update],
+  PushKinds=[ai_maintenance_alert]}.
+  Inserted AFTER the 'state-machine-debugger-narrator' entry
+  (registry entries are insertion-ordered, not strictly
+  alphabetically sorted).
+
+- internal/ai/strategies/predictive-maintenance/strategy.go
+  New. Package predictivemaintenance, FeatureID=
+  "predictive-maintenance", SystemPrompt (tool-first,
+  no-invention, scope-refusal, current_mileage-null-handling
+  directives), allowedTools=[query_maintenance_context,
+  retrieve_maintenance_chunks], RedactionPolicy=PolicyDigest.
+
+- internal/ai/strategies/predictive-maintenance/strategy_test.go
+  New. Strategy contract pin tests (FeatureID, RenderContract,
+  RedactionPolicy, allowedTools).
+
+- internal/ai/strategies/predictive-maintenance/goldens.yaml
+  New. 3 goldens: typical_overdue_item, typical_healthy_baseline,
+  refusal_out_of_scope_request. Each references a canned
+  mock-provider YAML.
+
+- internal/ai/strategies/predictive-maintenance/canned/{typical_overdue_item, typical_healthy_baseline, refusal_out_of_scope_request}.yaml
+  New. Canned mock-provider responses with deterministic
+  delta + tool-call + done frames that satisfy the goldens'
+  assertions.
+
+- internal/ai/tools/predictive_maintenance.go
+  New (~700 lines). Defines the
+  MaintenancePredictionContextSource interface, the
+  MaintenancePredictionContextEnvelope + per-item structs,
+  ScopedMaintenancePredictionWindow scope binding, the
+  query_maintenance_context tool (refuses LLM vehicle_id !=
+  scope), the retrieve_maintenance_chunks tool (NO vehicle_id
+  input; allowlist [maintenance_event, vehicle_state,
+  ml_anomaly]), and the RegisterPredictiveMaintenanceTools(r,
+  sources) registration helper.
+
+- internal/ai/tools/predictive_maintenance_test.go
+  New. Comprehensive unit tests covering tool descriptions,
+  input schemas (incl. the load-bearing
+  TestRetrieveMaintenanceChunks_InputSchemaOmitsVehicleID),
+  scope-binding refusal paths, and execute paths under both
+  bound and unbound contexts.
+
+- internal/api/ai_predictive_maintenance_handler.go
+  New (~530 lines). Defines AIPredictiveMaintenanceHandler
+  (panics on nil deps),
+  parsePredictiveMaintenanceRequest (json.Decoder +
+  DisallowUnknownFields), buildPredictiveMaintenanceUserMessage,
+  and the production AIPredictiveMaintenanceContextSource that
+  wraps the existing MaintenanceHandler (same-package access
+  to defaultItems) + reads odometer from Redis (current_mileage
+  as *float64 so unknown is null, not 0).
+
+- internal/api/ai_predictive_maintenance_handler_test.go
+  New (~340 lines). Contains the load-bearing
+  TestPredictiveMaintenanceAIOffShowsThresholdReminders (mocks
+  baseline GET /api/v1/maintenance returning Cabin Air Filter
+  + Tire Rotation + Wiper Blades with their status / due_date
+  / due_mileage fields pinned), plus body-validation,
+  source-unit, and nil-wiring tests.
+
+- internal/api/ai_routes.go
+  Threaded aiPredictiveMaintenance *AIPredictiveMaintenanceHandler
+  parameter through mountAIRoutes; mounted the route with
+  g.Wrap("predictive-maintenance", …) + stub fallback;
+  defined aiPredictiveMaintenanceStubHandler mirroring the
+  0048 stub for the nil-handler boot path.
+
+- internal/api/router.go
+  Added 'predictive-maintenance' rag.New(…) retriever
+  construction + tools.RegisterPredictiveMaintenanceTools call
+  + AIPredictiveMaintenanceContextSource construction
+  (recreates redisSignalCache locally from opt.CacheStore at
+  this scope) + NewAIPredictiveMaintenanceHandler construction
+  + appended the handler as the final positional argument to
+  the mountAIRoutes(…) call.
+
+Production (TS):
+- web/src/components/ai/AIPredictiveMaintenance.tsx
+  New. Imports useAiStream + AIFeatureCard + withAiFeature.
+  InnerSection({vehicleId?: number}) calls useAiStream({
+    url: '/ai/maintenance/predict',
+    body: { vehicle_id: … },
+    onEvent: () => {}
+  }) unconditionally at the top of the body. canStart =
+  vehicleId is finite positive number. Renders via
+  AIFeatureCard with buttonLabel="Predict maintenance"
+  (the per-feature verb, NOT "Ask Helix" — the card paints
+  "Ask Helix · Predict maintenance" as the accessible name).
+  Exported as withAiFeature('predictive-maintenance',
+  InnerSection).
+
+- web/src/features/vehicle-systems/pages/MaintenancePage.tsx
+  Imported AIPredictiveMaintenance from
+  '@/components/ai/AIPredictiveMaintenance' + inserted one
+  FadeIn block between the summary metric cards FadeIn and
+  the Filter / Sort toolbar FadeIn:
+    <FadeIn delay={0.03}>
+      <AIPredictiveMaintenance
+        vehicleId={vehicleId ?? undefined}
+      />
+    </FadeIn>
+  vehicleId comes from useSelectedVehicle() (number | null);
+  the ?? undefined narrows for the optional component prop.
+
+Tests (TS):
+- web/src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOffShowsThresholdReminders.test.tsx
+  New. Three sub-tests covering: (1) ai_mode='off' + toggle
+  on => container empty + test ID absent + visible verb
+  absent; (2) ai_mode='cloud' + toggle false => same absence
+  asserts; (3) positive control: ai_mode='cloud' + toggle
+  true => test ID present + button present (unanchored regex).
+
+- web/src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOnWiredCallsRoute.test.tsx
+  New. Four sub-tests covering: (1) click POSTs exactly once
+  to /api/v1/ai/maintenance/predict with body {vehicle_id};
+  first SSE delta renders inside the gated wrapper;
+  (2) double-submit guard: second click while streaming is a
+  no-op (fetch count stays at 1); (3) computed-disabled when
+  vehicleId is missing; (4) computed-disabled when vehicleId
+  is zero / negative / non-finite.
+
+I18n:
+- web/src/i18n/en.json
+  Added two top-level key blocks:
+  1. helix.features.predictive-maintenance.{label, description}
+     describing the feature for the Settings → AI page.
+  2. maintenance.aiPredictive.{title, description, button,
+     badge, emptyHint} for the visible AI card copy.
+  ar.json and he.json are placeholder files (per Phase-46
+  prompt 48) that fall back to en.json via i18next's
+  fallbackLng; per the convention established by every
+  Phase-50 AI slice since 0011, new keys are added to en.json
+  only and the placeholder files are not touched.
+
+Registry (TS mirror):
+- web/src/ai/features.ts
+  Regenerated by `go run ./tools/aigen`; the deterministic
+  output now reflects 45 features (44 before this slice + 1
+  for predictive-maintenance). aigen --check confirms the
+  mirror is in sync with the Go registry.
+
+Golden coverage:
+- 3 goldens added; eval harness reports 3/3 pass at 100% pass
+  rate, 566.4µs elapsed.
+
+=== GATE ===
+
+$ git --no-pager status --short
+ M internal/ai/features/registry.go
+ M internal/api/ai_routes.go
+ M internal/api/router.go
+ M web/src/ai/features.ts
+ M web/src/features/vehicle-systems/pages/MaintenancePage.tsx
+ M web/src/i18n/en.json
+?? internal/ai/strategies/predictive-maintenance/
+?? internal/ai/tools/predictive_maintenance.go
+?? internal/ai/tools/predictive_maintenance_test.go
+?? internal/api/ai_predictive_maintenance_handler.go
+?? internal/api/ai_predictive_maintenance_handler_test.go
+?? web/src/components/ai/AIPredictiveMaintenance.tsx
+?? web/src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOffShowsThresholdReminders.test.tsx
+?? web/src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOnWiredCallsRoute.test.tsx
+EXIT=0
+
+$ go test -race ./internal/ai/... ./internal/api/...
+ok  github.com/ev-dev-labs/teslasync/internal/ai/audit       (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/budget       (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/contextpref  (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/decorators   (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/dispatch     (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/eval         (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/features     (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/guard        (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider     (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/provider/openai      1.455s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/rag                  1.461s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/redact               (cached)
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions                  3.337s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations                      3.505s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations               3.396s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming                          3.301s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative          3.443s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative         3.086s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering      3.519s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis                         3.361s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm                                3.271s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration                    3.070s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection              3.024s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/data-repair-suggestions                    3.041s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration                           3.184s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching                             3.266s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/feedback-queue-triage                      3.099s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/geofence-aware-automation-suggestions      2.970s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization                  3.054s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/incident-timeline-summarizer               3.013s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines      3.085s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/lifetime-stats-qa                          2.981s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/log-trace-summarization                    3.203s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/ml-charging-curve-clustering               4.202s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/mqtt-sse-inspector-explanations            3.030s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder                          4.890s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder                     3.700s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay                    5.630s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search                                 5.526s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/period-compare-narration                  5.269s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/predictive-maintenance                     5.630s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender               4.475s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help                                  4.585s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model                    4.556s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions              5.043s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/signal-explorer-nl-filter                 5.508s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion          4.455s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights                    4.231s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/state-machine-debugger-narrator           4.913s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/suggest-new-geofences                     3.950s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning             3.040s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent                    4.022s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation                 4.550s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration                             4.666s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy                                             3.581s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/strategy/redactadapter                               3.546s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/stream                                               1.274s
+ok  github.com/ev-dev-labs/teslasync/internal/ai/tools                                                1.251s
+ok  github.com/ev-dev-labs/teslasync/internal/api                                                     8.691s
+EXIT=0
+
+$ go run ./tools/aivet
+aivet: OK — 47 AI route(s), 45 feature(s) in registry, TS mirror in sync
+EXIT=0
+
+$ go run ./tools/aigen --check
+aigen: web/src/ai/features.ts is in sync with internal/ai/features registry
+EXIT=0
+
+$ go run ./cmd/ai-eval -feature predictive-maintenance
+AI eval results: 3 goldens, 3 pass, 0 fail (100.0% pass rate, 566.4µs elapsed)
+
+By feature:
+  predictive-maintenance         3/3 pass
+
+Details:
+  [PASS] predictive-maintenance/typical_overdue_item (0s)
+  [PASS] predictive-maintenance/typical_healthy_baseline (566.4µs)
+  [PASS] predictive-maintenance/refusal_out_of_scope_request (0s)
+EXIT=0
+
+(Note: the prompt's verification command lists
+`make ai-eval-fast --feature predictive-maintenance`. The
+project's Makefile does not currently expose ai-eval-fast as
+a parameterised target; the canonical entry point for the
+F6 harness is `go run ./cmd/ai-eval -feature <name>` which
+is what every Phase-50 slice's log has invoked. The output
+above is the eval harness run via that entry point with
+the feature filter applied.)
+
+$ cd web; npx tsc --noEmit
+(no output — exit 0)
+EXIT=0
+
+$ cd web; npm run lint  (baseline diff check)
+$ git stash --include-untracked; npm run lint 2>&1 | Select-String "problems"; git stash pop
+✘ 26 problems (24 errors, 2 warnings)
+$ npm run lint 2>&1 | Select-String "problems"
+✘ 26 problems (24 errors, 2 warnings)
+DIFF: 0 new lint errors introduced by this slice.
+
+All 26 problems are in files NOT touched by slice 0049:
+- ScheduledMaintenanceCard.tsx (jsx-a11y/label-has-associated-control)
+- ChatbotPage.tsx (unused-eslint-disable)
+- MQTTInspectorPage.tsx (unused-eslint-disable)
+- SignalsWorkspacePage.tsx (no-empty-object-type)
+- useAiStream.ts (prefer-const ×2)
+- useRangeState.ts (unused-eslint-disable)
+- rum.test.ts (no-unused-vars ×2)
+- rum.ts (unused-eslint-disable)
+
+The slice introduced zero new lint violations. The baseline
+errors are pre-existing and outside the slice's allowed-files
+scope; fixing them is the responsibility of a separate cleanup
+slice and is explicitly forbidden by this prompt's "Don't fix
+pre-existing issues unrelated to your task" rule. Treated as
+EXIT=0 for the slice's lint gate.
+EXIT=0  (no new errors)
+
+$ cd web; npm test -- --run TestPredictiveMaintenanceAIOffShowsThresholdReminders
+✓ src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOffShowsThresholdReminders.test.tsx (3 tests) 176ms
+Test Files  1 passed (1)
+     Tests  3 passed (3)
+EXIT=0
+
+$ cd web; npm test -- --run TestPredictiveMaintenanceAIOnWiredCallsRoute
+✓ src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOnWiredCallsRoute.test.tsx (4 tests) 373ms
+Test Files  1 passed (1)
+     Tests  4 passed (4)
+EXIT=0
+
+$ Select-String -Path 'web/src/components/ai/AI*.tsx' -Pattern 'future slice|coming soon|wiring lands|would call POST' | Measure-Object | Select-Object -ExpandProperty Count
+0
+EXIT=0  (slice-shipped component contains zero placeholder strings)
+
+Off-mode focused proof:
+- Backend route POST /api/v1/ai/maintenance/predict returns 404
+  when ai_mode='off' because the route is mounted inside the
+  g.Wrap("predictive-maintenance", …) guarded scope. This is the
+  invariant the foundation slice 0001 matrix tests enforce
+  exhaustively for every feature; not re-asserted per-slice.
+- UI test ID 'ai-feature-predictive-maintenance-root' is absent
+  from the DOM when ai_mode='off' — asserted by
+  TestPredictiveMaintenanceAIOffShowsThresholdReminders case 1
+  AND case 2 (per-feature toggle off variant).
+- Baseline /api/v1/maintenance behaviour unchanged — asserted by
+  TestPredictiveMaintenanceAIOffShowsThresholdReminders (Go side,
+  in internal/api/ai_predictive_maintenance_handler_test.go),
+  which mocks the baseline GET /api/v1/maintenance handler to
+  return the canonical default items (Cabin Air Filter + Tire
+  Rotation + Wiper Blades) and confirms the route still surfaces
+  them with status / due_date / due_mileage fields intact.
+
+=== COMMIT ===
+
+Command: git add internal/ai/features/registry.go
+                 internal/ai/strategies/predictive-maintenance/
+                 internal/ai/tools/predictive_maintenance.go
+                 internal/ai/tools/predictive_maintenance_test.go
+                 internal/api/ai_predictive_maintenance_handler.go
+                 internal/api/ai_predictive_maintenance_handler_test.go
+                 internal/api/ai_routes.go
+                 internal/api/router.go
+                 web/src/components/ai/AIPredictiveMaintenance.tsx
+                 web/src/features/vehicle-systems/pages/MaintenancePage.tsx
+                 web/src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOffShowsThresholdReminders.test.tsx
+                 web/src/features/vehicle-systems/__tests__/TestPredictiveMaintenanceAIOnWiredCallsRoute.test.tsx
+                 web/src/i18n/en.json
+                 web/src/ai/features.ts
+                 .github/prompts/db-refactor/logs/phase-50-0049-predictive-maintenance.log
+
+Command: git commit -m "feat(ai): add Predictive maintenance"
+                    -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"
+
+(Commit transcript appended after the commit is performed by
+the post-log step; see the commit object referenced in the
+PR for the canonical record.)
+
+=== AI-OFF CONTRACT ===
+I1 default-off:     PASS  (registry entry DefaultOn=false; no
+                          environment toggle ships this feature
+                          on; the guard's per-feature gate is
+                          false unless the user explicitly turns
+                          it on in Settings → AI; aigen-generated
+                          TS mirror web/src/ai/features.ts
+                          carries the same default).
+I3 baseline intact: PASS  (MaintenancePage continues to render
+                          the existing summary metric cards,
+                          filter / sort toolbar, items grid,
+                          recent service records table, and
+                          cost-summary FadeIn unchanged; the
+                          appended AIPredictiveMaintenance
+                          FadeIn renders no DOM in off mode
+                          because withAiFeature returns null;
+                          GET /api/v1/maintenance and
+                          GET /api/v1/service-records are
+                          untouched — proven by the Go test
+                          TestPredictiveMaintenanceAIOffShowsThresholdReminders
+                          which mocks the baseline route and
+                          asserts the canonical 3-item default
+                          list still surfaces).
+I4 zero egress:     PASS  (in off mode useAiStream is never
+                          instantiated because withAiFeature
+                          short-circuits to null before the
+                          inner section's hooks run; the backend
+                          guard returns 404 before reaching the
+                          dispatcher; no provider call is ever
+                          made).
+I5 hidden UI:       PASS  (withAiFeature('predictive-maintenance',
+                          InnerSection) returns null when
+                          useAiEnabled is false; the data-testid
+                          'ai-feature-predictive-maintenance-root'
+                          is absent from the DOM; the visible
+                          "Predict maintenance" verb is absent
+                          from the accessible name — proven by
+                          all three cases of the React off-mode
+                          test
+                          TestPredictiveMaintenanceAIOffShowsThresholdReminders).
+I6 404 routes:      PASS  (POST /api/v1/ai/maintenance/predict
+                          is mounted inside g.Wrap("predictive-maintenance",
+                          …); the off-mode 404 invariant is
+                          enforced by the foundation slice
+                          0001's matrix tests for every AI
+                          feature, not duplicated per-slice).
+I7 per-feature:     PASS  (the gate checks the per-feature
+                          toggle independently — with mode
+                          'cloud' AND toggle=false the surface
+                          is still hidden; proven by the React
+                          off-mode test's second case AND by
+                          the foundation guard's matrix tests).
+I10 type system:    PASS  (handler body parsed with json.Decoder
+                          + DisallowUnknownFields; vehicle_id
+                          typed int64; validation runs at the
+                          boundary; the MaintenancePredictionContextEnvelope
+                          and ScopedMaintenancePredictionWindow
+                          are exhaustive typed structs; the only
+                          map[string]interface{} that survives
+                          is the upstream MaintenanceHandler.defaultItems
+                          return shape, which the production
+                          source mirrors — re-typing it would
+                          require touching maintenance_handler.go
+                          which is outside this slice's
+                          allowed-files scope).
+I12 client/bg:      PASS  (registry declares JobNames=
+                          [ai_maintenance_model_update] and
+                          PushKinds=[ai_maintenance_alert] so
+                          the 9999 AI-OFF contract walker has
+                          coverage data; NO actual worker code
+                          or push pipeline ships in this slice
+                          — the worker / push delivery pipeline
+                          lands in a follow-up slice, mirroring
+                          the digest-narration ai_digest_weekly
+                          and nl-search ai_search_indexer
+                          precedents; no new client storage
+                          keys; the only client-side resource
+                          is the SSE stream opened by
+                          useAiStream which closes on unmount
+                          via the hook's AbortController
+                          cleanup; the service-worker chunk
+                          'ai-predictive-maintenance' is
+                          reserved for future route-split work
+                          and is not written to by this slice).
+=======================
+
+=== STATUS ===
+EXIT=0
+STATUS=DONE

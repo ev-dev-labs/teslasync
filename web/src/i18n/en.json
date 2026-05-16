@@ -2558,6 +2558,10 @@
         "state-machine-debugger-narrator": {
           "label": "State-machine debugger narrator",
           "description": "Opt-in LLM narrator that summarizes one in-scope vehicle FSM transition trace into a 3-6 sentence factual paragraph — the total transition count, the per-FSM-name breakdown when more than one FSM is present, the dominant from→to edges, the flap count when greater than zero, and any unusual trigger string — by routing through two read-only tools that quote the same deterministic transition envelope the operator can already inspect manually in the transition table. The narrator never invents a transition and never speculates about root cause. Per-request scope binding rejects any cross-vehicle or cross-window tool call to defend against prompt-injection exfiltration via operator-readable trigger strings or FSM names. VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The deterministic transition table, state diagram, FSM health panel, and timeline chart on the State Machine Debugger page remain the canonical baseline when Helix is off."
+        },
+        "predictive-maintenance": {
+          "label": "Predictive maintenance",
+          "description": "Opt-in LLM advisor that narrates one in-scope vehicle's upcoming maintenance risks in a 3-6 sentence factual paragraph — which scheduled items are overdue, which are due soon, the recent service-record context, and whether the current mileage informs the recommendation or if time-based reasoning was used (when no recent odometer reading is available) — by routing through two read-only tools that quote the same deterministic maintenance envelope the operator can already inspect on the Maintenance page. The advisor never invents an item, never proposes a write, and never speculates about root cause beyond the deterministic envelope. Per-request scope binding rejects any cross-vehicle tool call to defend against prompt-injection exfiltration via user-authored service-record notes. VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The deterministic threshold reminders, status badges, summary metric cards, upcoming items list, and Schedule Maintenance write controls on the Maintenance page remain the canonical baseline when Helix is off."
         }
       },
       "archive": {
@@ -7884,6 +7888,15 @@
       "button": "Narrate transitions",
       "badge": "Helix",
       "emptyHint": "Select a vehicle and a valid time window first."
+    }
+  },
+  "maintenance": {
+    "aiPredictive": {
+      "title": "Helix maintenance advisor",
+      "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
+      "button": "Predict maintenance",
+      "badge": "Helix",
+      "emptyHint": "Select a vehicle first."
     }
   },
   "signalDiff": {

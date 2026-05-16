@@ -153,6 +153,7 @@ func mountAIRoutes(
 	aiFeedbackQueueTriage *AIFeedbackQueueTriageHandler,
 	aiMqttSseInspectorExplanations *AIMqttSseInspectorExplanationsHandler,
 	aiStateMachineDebuggerNarrator *AIStateMachineDebuggerNarratorHandler,
+	aiPredictiveMaintenance *AIPredictiveMaintenanceHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -537,6 +538,30 @@ func mountAIRoutes(
 			stateMachineDebuggerNarratorHandler = aiStateMachineDebuggerNarrator.ServeHTTP
 		}
 		r.Post("/system/fsm/narrate", g.Wrap("state-machine-debugger-narrator", stateMachineDebuggerNarratorHandler))
+
+		// predictive-maintenance (Phase-50 / M1, slice 0049).
+		// Opt-in LLM-backed advisor that turns the deterministic
+		// per-vehicle maintenance reminders + service history
+		// into a 3-6 sentence operator-readable risk narration
+		// by routing through two read-only tools
+		// (query_maintenance_context and the OPTIONAL
+		// retrieve_maintenance_chunks). NARRATE-ONLY: the user
+		// reviews the advisory in the AI side panel and
+		// continues to use the deterministic MaintenancePage
+		// items grid + summary cards + service records table +
+		// due-soon / overdue badges for the canonical
+		// maintenance overview. Same stub-fallback pattern as
+		// the other AI handlers — a nil handler is possible
+		// during partial wiring but the off-mode 404 invariant
+		// still holds because guard.Wrap returns 404 BEFORE the
+		// handler runs in off mode. The canonical baseline
+		// routes at GET /api/v1/maintenance and
+		// /api/v1/maintenance/records are unchanged.
+		var predictiveMaintenanceHandler http.HandlerFunc = aiPredictiveMaintenanceStubHandler
+		if aiPredictiveMaintenance != nil {
+			predictiveMaintenanceHandler = aiPredictiveMaintenance.ServeHTTP
+		}
+		r.Post("/maintenance/predict", g.Wrap("predictive-maintenance", predictiveMaintenanceHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1358,6 +1383,15 @@ func aiMqttSseInspectorExplanationsStubHandler(w http.ResponseWriter, _ *http.Re
 // guard, not the stub.
 func aiStateMachineDebuggerNarratorStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai state-machine debugger narrator is not yet implemented")
+}
+
+// aiPredictiveMaintenanceStubHandler mirrors
+// aiStateMachineDebuggerNarratorStubHandler for the M1 slice
+// (Phase-50 / 0049 predictive-maintenance). Reachable only when
+// AIPredictiveMaintenanceHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiPredictiveMaintenanceStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai predictive maintenance is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

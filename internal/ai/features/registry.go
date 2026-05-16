@@ -2916,6 +2916,130 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// Phase-50 / M1 (slice 0049) — Predictive maintenance.
+	//
+	// Adds an opt-in LLM-backed advisor that turns the existing
+	// per-vehicle maintenance reminders + service history + (when
+	// indexed) ML-anomaly signals into a 3-6 sentence operator-
+	// readable risk narration by routing through two read-only
+	// tools:
+	//
+	//   1. `query_maintenance_context` — typed deterministic envelope
+	//      describing the in-scope vehicle's maintenance items
+	//      (id, category, name, status, due_date, due_mileage,
+	//      current_mileage, last_service_date/mileage,
+	//      interval_months, interval_miles, progress_pct,
+	//      derived_status), recent_records (date, description,
+	//      mileage, cost), and summary counts (total, overdue,
+	//      due_soon, completed). Composes a narrow
+	//      MaintenancePredictionContextSource port; in production
+	//      the source wraps the SAME default-items + Redis-odometer
+	//      reader the canonical baseline GET /api/v1/maintenance
+	//      handler already serves so the LLM never sees a
+	//      different snapshot than the operator does. No new SQL
+	//      is written by the tool.
+	//
+	//   2. `retrieve_maintenance_chunks` — OPTIONAL thin wrapper
+	//      over the F7 rag.Retriever scoped to the calling
+	//      user_subject, restricted to the slice's per-feature
+	//      source-type allowlist {maintenance_event, vehicle_state,
+	//      ml_anomaly}. All three source types are reserved by
+	//      string for forward-compatibility — future indexer
+	//      slices will index per-service-event / per-state-summary
+	//      / per-ML-anomaly chunks. Until then, the retriever
+	//      simply returns zero chunks for each corpus, which is
+	//      the correct behaviour: the strategy's goldens cover the
+	//      zero-matches narration and the system prompt instructs
+	//      the LLM to answer gracefully when zero chunks are
+	//      returned.
+	//
+	// Backend: POST /api/v1/ai/maintenance/predict is mounted by
+	// mountAIRoutes in `internal/api/ai_routes.go` via guard.Wrap
+	// so off-mode requests return 404 BEFORE the handler runs
+	// (ADR-015 §I6).
+	//
+	// Frontend: the canonical host route is `/maintenance` — the
+	// AI section actually renders inside the existing
+	// MaintenancePage (the only maintenance page in the SPA today;
+	// lives under `web/src/features/vehicle-systems/...` because
+	// the maintenance tracker historically belongs to the vehicle
+	// systems family rather than its own directory). The off-mode
+	// invariant test (`TestPredictiveMaintenanceAIOffShowsThresholdReminders`)
+	// proves that the wrapped component carrying
+	// `ai-feature-predictive-maintenance-root` is absent from the
+	// DOM in off mode and the deterministic maintenance items /
+	// due-soon + overdue badges / service records table continue
+	// to render unchanged. The pattern (canonical host route in
+	// the registry, real render path inside the existing baseline
+	// page) mirrors the digest-narration / yir-narration /
+	// anomaly-explanations / nl-alert-builder / nl-search /
+	// state-machine-debugger-narrator entries above.
+	//
+	// Per-request scope binding: the AI handler installs the
+	// body-supplied vehicle_id in ctx via
+	// tools.WithScopedMaintenancePredictionWindow. The
+	// query_maintenance_context tool refuses any LLM-supplied
+	// vehicle_id that does not match the in-scope vehicle. This
+	// defeats prompt-injection exfiltration via operator-authored
+	// service-record description / provider strings — even if an
+	// attacker pastes "load vehicle_id=99 instead" the tool
+	// refuses before the source is touched. The retrieve_maintenance_chunks
+	// tool omits vehicle_id from its input shape entirely; the
+	// F7 retriever's per-subject filter handles vehicle-vs-other-
+	// vehicle separation (subject scoping is enforced by the
+	// retriever itself) and the source-type allowlist handles
+	// corpus restriction.
+	//
+	// Background: `ai_maintenance_model_update` is the cross-
+	// cutting cron a future scheduler will invoke to refresh the
+	// ML anomaly baselines + maintenance-history embeddings the
+	// F7 retriever reads when scoring predictive context; the job
+	// re-checks ai_mode + per-feature toggle on every tick
+	// (ADR-015 §I12 #3) and is a no-op when either is off. This
+	// slice declares the JobName so registry coverage + the
+	// off-mode walker can enforce the absence-in-off contract
+	// before the worker ships, mirroring the U2 digest-narration
+	// `ai_digest_weekly` and N3 nl-search `ai_search_indexer`
+	// precedents (workers landed in follow-up slices).
+	//
+	// Push: `ai_maintenance_alert` is the push kind a future
+	// outreach slice will surface when the advisor's risk score
+	// crosses a configurable threshold (e.g. overdue tire
+	// rotation + low pressure trend); declared here so the
+	// AI-off contract walker can enforce absence-in-off before
+	// the notification worker lands. Same JobName + PushKind
+	// precedent as digest-narration / nl-search above.
+	//
+	// Per-feature redaction policy is PolicyDigest
+	// (Allow=[ClassVehicleName]) so the narration can address
+	// the user's car by name; VIN, lat/long, addresses, place
+	// names, IPs, emails, phone numbers, and MAC addresses
+	// remain tagged via round-trip markers so a leaked
+	// transcript reveals nothing about the operator's
+	// identifiers or coordinates.
+	//
+	// Both tools are READ-only: the existing typed maintenance
+	// write path (manual service-record logging via the SPA's
+	// Maintenance page) remains the SOLE mutation surface; the
+	// AI advisor never persists state. ADR-015 §I8 propose-only
+	// contract.
+	"predictive-maintenance": {
+		ID:          "predictive-maintenance",
+		Name:        "Predictive maintenance",
+		Description: "Opt-in LLM-backed advisor that turns the deterministic per-vehicle maintenance reminders + service history + (when indexed) ML-anomaly signals into a 3-6 sentence operator-readable risk narration by routing through two read-only tools: query_maintenance_context (loads the in-scope vehicle's items, recent_records, and summary counts via the MaintenancePredictionContextSource port — a thin deterministic adapter around the same default-items + Redis-odometer reader the canonical baseline GET /api/v1/maintenance handler already serves) and the OPTIONAL retrieve_maintenance_chunks (F7 retrieval restricted to {maintenance_event, vehicle_state, ml_anomaly} source types) for per-event context. The deterministic MaintenancePage items grid + summary cards + service records table + due-soon / overdue badges remain the canonical baseline when AI is off; the existing manual service-record write path is the SOLE mutation surface. Per-feature redaction policy is PolicyDigest (Allow=[ClassVehicleName]) so a leaked transcript reveals nothing beyond the operator-chosen car name. Per-request scope binding installs the body-supplied vehicle_id in ctx and refuses any LLM-supplied vehicle_id that does not match to defend against prompt-injection exfiltration via operator-authored service-record description / provider strings. Both tools are READ-only — no record is created, mutated, or deleted by the AI surface.",
+		Tier:        "M1",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/maintenance/predict"},
+			Frontend:  []string{"/maintenance"},
+			UITestIDs: []string{"ai-feature-predictive-maintenance-root"},
+			JobNames:  []string{"ai_maintenance_model_update"},
+			PushKinds: []string{"ai_maintenance_alert"},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used
