@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_safety_settings_explain_alert_digest_mode_1
+        name: query_safety_settings
+        arguments: '{}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      The alert_digest_mode setting is currently "instant",
+      which is the same as the default_value, and the typed
+      envelope's allowed_values list is exactly {instant,
+      hourly, daily} — those are the only modes the envelope
+      surfaces. "instant" delivers each alert as it fires;
+      "hourly" batches them into one digest per hour; "daily"
+      batches them into one digest per day. To change the
+      mode you can use the Settings UI you are on right now —
+      I never write a setting from this panel.
+    input_tokens: 320
+    output_tokens: 160

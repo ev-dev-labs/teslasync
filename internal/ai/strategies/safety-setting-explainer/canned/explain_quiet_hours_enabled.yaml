@@ -1,0 +1,28 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_safety_settings_explain_quiet_hours_enabled_1
+        name: query_safety_settings
+        arguments: '{}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_retrieve_docs_explain_quiet_hours_enabled_1
+        name: retrieve_docs
+        arguments: '{"query": "quiet hours notifications", "source_types": ["docs"], "k": 3}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      The quiet_hours_enabled setting is currently false on
+      your account, which is the same as the default_value.
+      When this toggle is true, TeslaSync defers non-critical
+      notifications during the quiet-hours window you have
+      configured (start_local through end_local in your
+      timezone) and only delivers critical alerts immediately.
+      You can read more in notifications/quiet-hours.md and
+      change the value from the Settings UI you are on right
+      now — I never write a setting from this panel.
+    input_tokens: 320
+    output_tokens: 160

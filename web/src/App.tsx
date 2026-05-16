@@ -163,6 +163,13 @@ const MyActivity = lazy(() => import('./features/system/pages/MyActivityPage'))
 
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
+// Phase-50 / 0054 — P3 safety setting explainer host page. Distinct
+// from /safety-settings (vehicle telemetry) — this page hosts the
+// safety-RELATED APPLICATION settings (notification quiet hours,
+// alert digest mode, critical-flash, tab-badge, api_suspended) plus
+// the opt-in Helix narrator. Routed at /settings/safety to live
+// under the /settings family.
+const SafetySettingsPage = lazy(() => import('./features/settings/pages/SafetyPage'))
 // Account-level security pages promoted out of Settings (Phase-50 split):
 //   /account/2fa       — Two-factor authentication enrollment / disable
 //   /account/sessions  — Active browser/device sessions + revoke
@@ -336,6 +343,7 @@ export default function App() {
         <Route path="notifications/audit" element={<SafeRoute name="NotificationsAudit"><NotificationsAudit /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
+        <Route path="settings/safety" element={<SafeRoute name="SafetySettingsPage"><SafetySettingsPage /></SafeRoute>} />
         <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />
         <Route path="account/sessions" element={<SafeRoute name="ActiveSessions"><ActiveSessions /></SafeRoute>} />
         <Route path="account/privacy" element={<SafeRoute name="Privacy"><Privacy /></SafeRoute>} />

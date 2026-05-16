@@ -3316,6 +3316,104 @@ var Registry = map[string]Feature{
 	// satisfies the slice prompt's explicit metadata
 	// requirement and the off-mode walker treats both routes
 	// as gated by the same toggle.
+	// safety-setting-explainer (Phase-50 / P3, slice 0054)
+	// adds an opt-in Helix advisor on the NEW /settings/safety
+	// SPA page that explains the user's existing safety-related
+	// TeslaSync settings in plain English. Targeted at users
+	// who know a setting exists ("alert digest mode",
+	// "critical alert flash", "quiet hours") but don't know
+	// what it does, what its current value means, or where to
+	// learn more.
+	//
+	// The deterministic baseline rendered by the same SPA
+	// route — the listing of every safety-related setting with
+	// its current value PLUS a static link to the canonical
+	// docs — is unchanged in off mode. The AI surface is an
+	// opt-in narrator above that list; off-mode users see ONLY
+	// the list (no AI panel, no AI test ID) per ADR-015 §I3 +
+	// §I5.
+	//
+	// The advisor routes through TWO read-only typed tools:
+	//
+	//   - query_safety_settings reads the deterministic
+	//     SettingsRepo and returns a typed envelope of the
+	//     safety-related toggles only: notification quiet
+	//     hours state, alert digest mode, critical-flash
+	//     signalling, tab-badge signalling, and the
+	//     api_suspended operational gate. Each entry carries
+	//     {key, current_value, default_value, allowed_values,
+	//     short_description, docs_anchor} so the LLM has a
+	//     deterministic schema-plus-state envelope and never
+	//     needs to invent a setting that does not exist. NO
+	//     database write. NO new SQL beyond what the canonical
+	//     SettingsRepo readers already issue.
+	//
+	//   - retrieve_docs is the SHARED F7-backed RAG tool
+	//     registered globally by the rag-help slice (0020). The
+	//     safety-setting-explainer strategy reuses it scoped to
+	//     the global `docs` corpus only — the system prompt
+	//     forbids querying the runbooks or i18n corpora because
+	//     the explainer is user-facing help, not operator
+	//     guidance. Reusing the existing tool avoids minting a
+	//     parallel retriever for the same docs index.
+	//
+	// Both tools are READ-only / pure aggregators: the
+	// dispatcher's deny-all confirm gate is therefore never
+	// reached in practice — defence in depth in case a future
+	// edit accidentally adds a write tool.
+	//
+	// Per-feature redaction policy is PolicyChatbot
+	// (Allow=nil, Mode=ModeRedactedTags). The query tool returns
+	// scalar setting values only — no PII, no notification
+	// titles, no addresses — so the policy is defence in depth
+	// in case a future edit widens the schema. The slice prompt
+	// explicitly states "Allowed classes: none; current
+	// settings are redacted and no provider sees secrets".
+	//
+	// This slice does NOT use F7 retrieval against
+	// `settings_schema` — the schema is delivered
+	// deterministically by query_safety_settings (which is
+	// itself the canonical schema-plus-state source), so the
+	// RAG block in the slice prompt's evidence section
+	// ("settings_schema;docs") is satisfied by:
+	//   - settings_schema → query_safety_settings (typed tool,
+	//     deterministic Go-defined schema; never an embedding
+	//     query against arbitrary text).
+	//   - docs              → retrieve_docs (F7 RAG, scoped to
+	//     the docs corpus only).
+	// NeedsRAG is true because retrieve_docs is in the
+	// allowedTools set — even though no F7 corpus is mutated
+	// here, the strategy's runtime path consults the F7
+	// retriever.
+	//
+	// Frontend route metadata is "/settings/safety" — a NEW
+	// SPA route mounted in web/src/App.tsx that renders
+	// SafetyPage. Distinct from the pre-existing
+	// /safety-settings route (which renders Tesla vehicle
+	// SAFETY signal telemetry — seatbelt status, lock state,
+	// etc. from features/vehicle-systems/pages/
+	// SafetySettingsPage.tsx). The new route is for
+	// APPLICATION safety SETTINGS (notification behaviour,
+	// alert signalling, operational gates) and never overlaps
+	// with the vehicle telemetry page.
+	"safety-setting-explainer": {
+		ID:          "safety-setting-explainer",
+		Name:        "Helix safety setting explainer",
+		Description: "Opt-in Helix advisor on the Safety settings page that explains your TeslaSync safety-related settings in plain English without changing any defaults. Routes through two read-only typed tools: query_safety_settings reads the deterministic SettingsRepo and returns a typed envelope of every safety-related toggle (notification quiet hours state, alert digest mode, critical-flash signalling, tab-badge signalling, and the api_suspended operational gate) — each entry carries {key, current_value, default_value, allowed_values, short_description, docs_anchor} so the narrator has a schema-plus-state envelope and never needs to invent a setting that does not exist; retrieve_docs (the shared F7-backed RAG tool registered by the rag-help slice) pulls matching documentation chunks scoped to the global docs corpus only — runbooks and i18n corpora are forbidden by the system prompt because the explainer is user-facing help, not operator guidance. The advisor NEVER persists state and NEVER changes a setting; the user must use the existing Settings UI to change values. The narrator surfaces a 2-4 sentence explanation grounded strictly in the typed envelope plus the retrieved chunks, names the current value (from query_safety_settings), and cites the matching docs chunk by its source label so the user can read more. Per-feature redaction policy is PolicyChatbot (Allow=nil); the typed tool returns scalar setting values only — no PII, no notification titles, no addresses — so the policy is defence in depth. The deterministic baseline rendering of the Safety settings page (the listing of every safety-related setting with its current value plus a static link to the canonical docs) is unchanged when AI is off; the AI panel is absent (ADR-015 §I3 + §I5).",
+		Tier:        "P3",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/settings/safety/explain"},
+			Frontend:  []string{"/settings/safety"},
+			UITestIDs: []string{"ai-feature-safety-setting-explainer-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
+
 	"quiet-hours-suggestion": {
 		ID:          "quiet-hours-suggestion",
 		Name:        "Helix quiet-hours suggestion",

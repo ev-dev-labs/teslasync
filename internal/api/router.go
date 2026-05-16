@@ -101,6 +101,7 @@ import (
 	softwareupdatechangelogsummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/software-update-changelog-summarizer"
 	piiredactionsharedexports "github.com/ev-dev-labs/teslasync/internal/ai/strategies/pii-redaction-shared-exports"
 	quiethourssuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/quiet-hours-suggestion"
+	safetysettingexplainer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/safety-setting-explainer"
 	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
 	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
 	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
@@ -2249,6 +2250,35 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
+	// safety-setting-explainer (Phase-50 / 0054 P3) source.
+	// Wraps the canonical SettingsRepo so the AI tool reads
+	// the SAME settings row the deterministic Settings UI
+	// already does — no new SQL, no duplicate read paths.
+	// The tool surfaces a typed envelope of every safety-
+	// related toggle (quiet hours, alert digest mode,
+	// critical-flash, tab-badge, api_suspended) so the LLM
+	// can quote current_value + default_value verbatim and
+	// never invents a setting that does not exist. Tool
+	// produces NO mutations and never triggers a save and
+	// never touches the existing handlers. Registered AFTER
+	// the slice 0053 tools above so the registry's Names
+	// list grows deterministically.
+	aiSafetySettingExplainerSource := NewAISafetySettingExplainerSource(aiSettingsRepo)
+	tools.RegisterSafetySettingExplainerTools(aiToolRegistry, tools.SafetySettingExplainerSources{
+		Source: aiSafetySettingExplainerSource,
+	})
+	// safety-setting-explainer handler. One per process;
+	// stateless beyond constructor inputs. Must be
+	// constructed AFTER the tool registration above so the
+	// dispatcher can resolve the strategy's allowedTools at
+	// boot.
+	aiSafetySettingExplainerHandler := NewAISafetySettingExplainerHandler(
+		aiRegistry,
+		aiToolRegistry,
+		safetysettingexplainer.New(),
+		cfg.Auth.ForwardAuthHeader,
+	)
+
 	// Phase-46 / Prompt 40 — rate-limit status counters. Construct two
 	// sliding-window observers (one for every /api/v1 request, one
 	// scoped to writes only) and a handler that joins them with the
@@ -3734,7 +3764,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler, aiFeedbackQueueTriageHandler, aiMqttSseInspectorExplanationsHandler, aiStateMachineDebuggerNarratorHandler, aiPredictiveMaintenanceHandler, aiTCONarrationHandler, aiSoftwareUpdateChangelogSummarizerHandler, aiPiiRedactionSharedExportsHandler, aiQuietHoursSuggestionHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler, aiFeedbackQueueTriageHandler, aiMqttSseInspectorExplanationsHandler, aiStateMachineDebuggerNarratorHandler, aiPredictiveMaintenanceHandler, aiTCONarrationHandler, aiSoftwareUpdateChangelogSummarizerHandler, aiPiiRedactionSharedExportsHandler, aiQuietHoursSuggestionHandler, aiSafetySettingExplainerHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

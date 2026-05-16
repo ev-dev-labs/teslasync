@@ -9722,5 +9722,51 @@
       "done": "I saved them"
     }
   },
-  "Read-Write": "Read-Write"
+  "Read-Write": "Read-Write",
+  "safetySettings": {
+    "pageTitle": "Safety settings",
+    "pageSubtitle": "Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links below each row to change a value.",
+    "listing": {
+      "title": "Your safety-related settings",
+      "subtitle": "Each row shows the current value on this install and links to the canonical Settings page where you can change it.",
+      "docsLink": "Docs",
+      "changeHint": "To change a value, open the main Settings page. This page is read-only and never changes a setting on its own."
+    },
+    "rows": {
+      "quietHoursEnabled": {
+        "title": "Quiet hours",
+        "description": "When ON, TeslaSync defers non-critical notifications during the configured quiet-hours window. Critical alerts are always delivered."
+      },
+      "quietHoursStart": {
+        "title": "Quiet-hours window start",
+        "description": "Window start in HH:MM (24-hour) local time. Effective only when quiet hours are ON."
+      },
+      "quietHoursEnd": {
+        "title": "Quiet-hours window end",
+        "description": "Window end in HH:MM (24-hour) local time. Effective only when quiet hours are ON."
+      },
+      "alertDigestMode": {
+        "title": "Alert digest mode",
+        "description": "How alerts are batched. Instant delivers each alert as it fires; Hourly batches into one digest per hour; Daily batches into one digest per day."
+      },
+      "criticalFlashEnabled": {
+        "title": "Critical-alert tab flash",
+        "description": "When ON, TeslaSync briefly flashes the browser tab title when a critical alert arrives while the tab is in the background. Honours the OS-level reduce-motion preference."
+      },
+      "tabBadgeEnabled": {
+        "title": "Unread tab badge",
+        "description": "When ON, TeslaSync prefixes the browser tab title with (N) and paints a coloured dot on the favicon for unread notifications."
+      },
+      "apiSuspended": {
+        "title": "API kill-switch",
+        "description": "Operational kill-switch. When ON, TeslaSync stops issuing requests to the Tesla Fleet API; existing telemetry streams continue. Used during outage triage so the install does not pile up rate-limited retries."
+      }
+    },
+    "aiExplainer": {
+      "title": "Explain my safety settings",
+      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "button": "Explain my settings",
+      "badge": "Helix"
+    }
+  }
 }

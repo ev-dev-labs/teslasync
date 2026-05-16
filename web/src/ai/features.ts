@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -443,6 +443,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-route-efficiency-suggestions-root"] as const),
   }),
+  "safety-setting-explainer": Object.freeze({
+    id: "safety-setting-explainer",
+    name: "Helix safety setting explainer",
+    description: "Opt-in Helix advisor on the Safety settings page that explains your TeslaSync safety-related settings in plain English without changing any defaults. Routes through two read-only typed tools: query_safety_settings reads the deterministic SettingsRepo and returns a typed envelope of every safety-related toggle (notification quiet hours state, alert digest mode, critical-flash signalling, tab-badge signalling, and the api_suspended operational gate) — each entry carries {key, current_value, default_value, allowed_values, short_description, docs_anchor} so the narrator has a schema-plus-state envelope and never needs to invent a setting that does not exist; retrieve_docs (the shared F7-backed RAG tool registered by the rag-help slice) pulls matching documentation chunks scoped to the global docs corpus only — runbooks and i18n corpora are forbidden by the system prompt because the explainer is user-facing help, not operator guidance. The advisor NEVER persists state and NEVER changes a setting; the user must use the existing Settings UI to change values. The narrator surfaces a 2-4 sentence explanation grounded strictly in the typed envelope plus the retrieved chunks, names the current value (from query_safety_settings), and cites the matching docs chunk by its source label so the user can read more. Per-feature redaction policy is PolicyChatbot (Allow=nil); the typed tool returns scalar setting values only — no PII, no notification titles, no addresses — so the policy is defence in depth. The deterministic baseline rendering of the Safety settings page (the listing of every safety-related setting with its current value plus a static link to the canonical docs) is unchanged when AI is off; the AI panel is absent (ADR-015 §I3 + §I5).",
+    tier: "P3",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-safety-setting-explainer-root"] as const),
+  }),
   "signal-explorer-nl-filter": Object.freeze({
     id: "signal-explorer-nl-filter",
     name: "Signal explorer natural-language filter",
@@ -605,6 +616,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "rag-help",
   "range-prediction-model",
   "route-efficiency-suggestions",
+  "safety-setting-explainer",
   "signal-explorer-nl-filter",
   "smart-charge-schedule-suggestion",
   "software-update-changelog-summarizer",
