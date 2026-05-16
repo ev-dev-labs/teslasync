@@ -2570,6 +2570,10 @@
         "software-update-changelog-summarizer": {
           "label": "Software update changelog summarizer",
           "description": "Opt-in Helix narrator that summarizes one in-scope vehicle's firmware update history on the Software Updates page — the current installed version, the install cadence (days between recent versions), and the headline release-note themes for the versions you have actually installed — by routing through two read-only tools that quote the same deterministic update events the timeline shows plus the public Tesla release-note chunks the retrieval layer surfaces. The narrator never invents firmware versions and never claims features your installed build does not have; when no release notes are available for a version it states that fact honestly. Per-request scope binding rejects any cross-vehicle tool call to defend against prompt-injection exfiltration via release-note text. The deterministic current-version metric card, install-count metric card, total-update count, the per-version timeline with status chips, and the public release-notes external links remain the canonical baseline when Helix is off."
+        },
+        "pii-redaction-shared-exports": {
+          "label": "PII redaction in shared exports",
+          "description": "Opt-in Helix advisor that recommends which PII classes to redact from a shared export on the Exports page — the highly-recommended classes for the chosen export type (drives, charging, trips, analytics, backup, account) plus the optional classes that depend on your consent — by routing through two read-only tools that consult a STATIC catalog of PII classes keyed by export type. The advisor is catalog-based, not a per-row PII scan: Helix never reads the rows of your export and never reports PII it actually saw; it surfaces the catalog's recommendations plus the assumptions inherited from the catalog. Per-request scope binding rejects any cross-export-type tool call to defend against prompt-injection exfiltration. The deterministic export-jobs list, bulk-delete toolbar, and download links remain the canonical baseline when Helix is off."
         }
       },
       "archive": {
@@ -9591,6 +9595,25 @@
     },
     "selectExport": "Select export {{id}}",
     "download": "Download"
+  },
+  "exports": {
+    "aiRedaction": {
+      "title": "Plan PII redactions before sharing",
+      "description": "Ask Helix to recommend which PII classes to redact from a shared export. The recommendation is catalog-based — Helix never reads the rows of your export; it consults a deterministic per-export-type PII catalog and surfaces the highly-recommended redactions plus the optional ones that depend on your consent. Apply the recommendation by toggling the matching options in your export request.",
+      "button": "Suggest redactions",
+      "badge": "Helix",
+      "exportTypeLabel": "Export type",
+      "exportTypePlaceholder": "Select an export type…",
+      "noTypeHint": "Pick an export type to enable Helix.",
+      "exportType": {
+        "drives": "Drives",
+        "charging": "Charging",
+        "trips": "Trips",
+        "analytics": "Analytics",
+        "backup": "Backup",
+        "account": "Account"
+      }
+    }
   },
   "locations": {
     "filterLabel": {

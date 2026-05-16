@@ -1,0 +1,34 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_export_redaction_plan_catalog_based_disclosure_1
+        name: draft_export_redaction_plan
+        arguments: '{"export_type": "backup"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_export_redaction_plan_catalog_based_disclosure_1
+        name: validate_export_redaction_plan
+        arguments: '{"export_type": "backup", "classes": [{"class": "vin", "mode": "redact"}, {"class": "lat_long", "mode": "redact"}, {"class": "address", "mode": "redact"}, {"class": "place_name", "mode": "redact"}, {"class": "ip", "mode": "redact"}, {"class": "email", "mode": "redact"}, {"class": "phone", "mode": "redact"}, {"class": "mac", "mode": "redact"}, {"class": "user_subject_id", "mode": "redact"}]}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      For the backup export the catalog-based recommendation
+      redacts the full identifier set: vin, lat_long, address,
+      place_name, ip, email, phone, mac, and user_subject_id.
+      Backups carry the full per-vehicle row inventory across
+      drives, charging, trips, and account fields, so the
+      catalog recommends the most conservative defaults of any
+      export type. vehicle_name and precise_timestamp are
+      optional — keep_if_consent is the catalog's suggestion;
+      round timestamps to the nearest minute for a shared
+      backup unless your mechanic needs the precision. This is
+      a catalog-based recommendation describing the PII classes
+      typically present in backup exports; it is not a per-row PII scan of your specific backup, and the advisor
+      never reads the export rows. Final responsibility for
+      verifying the redaction settings before sharing rests
+      with you.
+    input_tokens: 320
+    output_tokens: 160

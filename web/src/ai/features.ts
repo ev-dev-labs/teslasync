@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "predictive-maintenance" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -366,6 +366,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-period-compare-narration-root"] as const),
   }),
+  "pii-redaction-shared-exports": Object.freeze({
+    id: "pii-redaction-shared-exports",
+    name: "Helix export redaction advisor",
+    description: "Opt-in Helix advisor on the Exports page that recommends which PII classes (VINs, GPS coordinates, addresses, vehicle names, charger network labels, IPs, emails, phone numbers, MAC addresses, user-subject ids, precise timestamps) you should redact before sharing or downloading an export. Routes through two read-only typed tools: draft_export_redaction_plan returns a STATIC Go catalog of PII classes typically present in the chosen export_type ({drives, charging, trips, analytics, backup, account}) plus per-class recommendations and limiting-assumption disclosures (catalog-based, NOT a per-row PII scan); validate_export_redaction_plan asserts every cited class is recognized and every highly-recommended class is covered before the narrator is allowed to narrate. The advisor NEVER triggers an export, NEVER mutates state, and NEVER claims it scanned your data — it only narrates the catalog-based recommendation. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); the static catalog never carries PII so the policy is defence-in-depth. The deterministic /exports list, /export/jobs endpoints, and the existing manual export flow remain the canonical baseline when AI is off (ADR-015 §I3).",
+    tier: "P1",
+    defaultOn: false,
+    needsRag: false,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-pii-redaction-shared-exports-root"] as const),
+  }),
   "predictive-maintenance": Object.freeze({
     id: "predictive-maintenance",
     name: "Predictive maintenance",
@@ -576,6 +587,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "nl-drive-search-replay",
   "nl-search",
   "period-compare-narration",
+  "pii-redaction-shared-exports",
   "predictive-maintenance",
   "preheat-precool-recommender",
   "rag-help",

@@ -3144,6 +3144,83 @@ var Registry = map[string]Feature{
 	// DB (ADR-015 §I12 #3). The actual fan-out implementation lands
 	// in a future indexer-fan-out slice; today's contract pins the
 	// gate so the off-mode 9999 final-gate has provable evidence.
+	// pii-redaction-shared-exports (Phase-50 / P1, slice 0052)
+	// helps users choose redaction settings before they create a
+	// shared / downloadable export. The deterministic export
+	// pipeline at POST /api/v1/export/jobs is unchanged; this
+	// feature only adds an opt-in advisor on the /exports page
+	// that surfaces a Helix-narrated recommendation of which PII
+	// classes are typically present in each export type and
+	// which should be redacted before sharing.
+	//
+	// The advisor routes through TWO read-only typed tools:
+	//
+	//   - draft_export_redaction_plan reads a STATIC Go catalog
+	//     keyed by export_type ({drives, charging, trips,
+	//     analytics, backup, account}) and returns a typed
+	//     envelope listing the PII classes typically present in
+	//     that export type plus per-class recommendations and
+	//     limiting-assumption disclosures. NO database IO is
+	//     performed; the catalog is hard-coded so the
+	//     recommendation is reproducible across boots.
+	//
+	//   - validate_export_redaction_plan accepts a candidate
+	//     plan and asserts every cited class is recognized,
+	//     every "highly recommended" class for the export_type
+	//     is covered by the plan, and the plan is internally
+	//     consistent. Returns {ok, errors[], warnings[]}. NO
+	//     database IO. The strategy's system prompt REQUIRES
+	//     the LLM to call this AFTER drafting and to refuse
+	//     to narrate a plan whose validation is not ok.
+	//
+	// Both tools are pure-functional / propose-only: they NEVER
+	// mutate state and NEVER trigger an export. The narrator
+	// describes the recommended plan in natural language and
+	// the user manually applies the suggestions next time they
+	// create an export through the existing baseline export UI.
+	// There is no "Apply to form" affordance because the
+	// /exports page is a list view (past export jobs); a future
+	// slice MAY wire a recommendation-into-form copy when the
+	// export creation form gains an explicit redaction picker.
+	//
+	// Per-feature redaction policy is PolicyAlertBuilder
+	// (Allow=nil, Mode=ModeRedactedTags). Round-trip is NOT
+	// required for this slice (the static catalog never carries
+	// PII; the policy is defence-in-depth in case a future edit
+	// accidentally surfaces user-supplied text through one of
+	// the tools). The deterministic GET /api/v1/export/jobs +
+	// POST /api/v1/export/jobs endpoints and the existing
+	// ExportsPage list rendering remain the canonical baseline
+	// when AI is off (ADR-015 §I3).
+	//
+	// The future F7 retrieval surface for export-related
+	// guidance is reserved under source types
+	// {export_manifest, redaction_report}. This slice does NOT
+	// wire a retrieve tool — the catalog is static and
+	// sufficient for the v1 advisor — so NeedsRAG is false.
+	// The source-type strings are reserved as slice-local
+	// constants in internal/ai/tools/export_redaction_plan.go
+	// for forward-compat without widening the global F7
+	// contract; a future slice that adds a retrieve tool will
+	// promote them to the per-feature allowlist there.
+	"pii-redaction-shared-exports": {
+		ID:          "pii-redaction-shared-exports",
+		Name:        "Helix export redaction advisor",
+		Description: "Opt-in Helix advisor on the Exports page that recommends which PII classes (VINs, GPS coordinates, addresses, vehicle names, charger network labels, IPs, emails, phone numbers, MAC addresses, user-subject ids, precise timestamps) you should redact before sharing or downloading an export. Routes through two read-only typed tools: draft_export_redaction_plan returns a STATIC Go catalog of PII classes typically present in the chosen export_type ({drives, charging, trips, analytics, backup, account}) plus per-class recommendations and limiting-assumption disclosures (catalog-based, NOT a per-row PII scan); validate_export_redaction_plan asserts every cited class is recognized and every highly-recommended class is covered before the narrator is allowed to narrate. The advisor NEVER triggers an export, NEVER mutates state, and NEVER claims it scanned your data — it only narrates the catalog-based recommendation. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); the static catalog never carries PII so the policy is defence-in-depth. The deterministic /exports list, /export/jobs endpoints, and the existing manual export flow remain the canonical baseline when AI is off (ADR-015 §I3).",
+		Tier:        "P1",
+		DefaultOn:   false,
+		NeedsRAG:    false,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/exports/redaction/draft"},
+			Frontend:  []string{"/exports"},
+			UITestIDs: []string{"ai-feature-pii-redaction-shared-exports-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
+
 	"software-update-changelog-summarizer": {
 		ID:          "software-update-changelog-summarizer",
 		Name:        "Software update changelog summarizer",

@@ -7,6 +7,7 @@ import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Skeleton, ErrorDisplay } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
+import { AIPiiRedactionSharedExports } from '@/components/ai/AIPiiRedactionSharedExports';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
@@ -62,6 +63,7 @@ export default function ExportsPage() {
       )}
     >
       <FadeIn>
+        <AIPiiRedactionSharedExports />
         <BulkActionToolbar
           selectedIds={Array.from(sel.selectedIds)}
           total={visibleIds.length}

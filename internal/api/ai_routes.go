@@ -156,6 +156,7 @@ func mountAIRoutes(
 	aiPredictiveMaintenance *AIPredictiveMaintenanceHandler,
 	aiTCONarration *AITCONarrationHandler,
 	aiSoftwareUpdateChangelogSummarizer *AISoftwareUpdateChangelogSummarizerHandler,
+	aiPiiRedactionSharedExports *AIPiiRedactionSharedExportsHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -602,6 +603,24 @@ func mountAIRoutes(
 			softwareUpdateChangelogSummarizerHandler = aiSoftwareUpdateChangelogSummarizer.ServeHTTP
 		}
 		r.Post("/software-updates/summarize", g.Wrap("software-update-changelog-summarizer", softwareUpdateChangelogSummarizerHandler))
+
+		// pii-redaction-shared-exports (Phase-50 / P1, slice 0052)
+		// recommends which PII classes the user should redact
+		// before sharing or downloading an export of the chosen
+		// export_type. The route lives under
+		// /ai/exports/redaction/draft so it is namespaced under
+		// the existing /export family. Same stub-fallback pattern
+		// as the other AI handlers — a nil handler is possible
+		// during partial wiring but the off-mode 404 invariant
+		// still holds because guard.Wrap returns 404 BEFORE the
+		// handler runs in off mode. The canonical baseline routes
+		// at GET/POST /api/v1/export/jobs (the deterministic
+		// export pipeline) are unchanged.
+		var piiRedactionSharedExportsHandler http.HandlerFunc = aiPiiRedactionSharedExportsStubHandler
+		if aiPiiRedactionSharedExports != nil {
+			piiRedactionSharedExportsHandler = aiPiiRedactionSharedExports.ServeHTTP
+		}
+		r.Post("/exports/redaction/draft", g.Wrap("pii-redaction-shared-exports", piiRedactionSharedExportsHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1450,6 +1469,16 @@ func aiTCONarrationStubHandler(w http.ResponseWriter, _ *http.Request) {
 // guard, not the stub.
 func aiSoftwareUpdateChangelogSummarizerStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai software update changelog summarizer is not yet implemented")
+}
+
+// aiPiiRedactionSharedExportsStubHandler mirrors
+// aiSoftwareUpdateChangelogSummarizerStubHandler for the P1
+// slice (Phase-50 / 0052 pii-redaction-shared-exports).
+// Reachable only when AIPiiRedactionSharedExportsHandler is nil
+// at construction; the off-mode 404 invariant is held by the
+// guard, not the stub.
+func aiPiiRedactionSharedExportsStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai pii redaction shared exports is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every
