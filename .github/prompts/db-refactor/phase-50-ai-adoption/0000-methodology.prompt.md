@@ -406,6 +406,28 @@ implementations: heuristic (existing) and LLM (new). The wiring picks
 the implementation based on `useAiEnabled(feature)`. Feature
 handlers never branch on the mode internally.
 
+### P11 — Wired-or-absent (slice 0065 W1)
+
+Every guarded AI surface that ships a backend route MUST have its
+frontend counterpart call that route end-to-end when the feature is
+enabled. Rendering an indicator without a working call path is a
+deferred scope violation, not a slice deliverable. The build-time
+contract for this principle is
+`internal/ai/features/spa_wiring.go` (the `SPAWiringTable`); the
+static check that enforces it is `tools/aivet` rule W1-B.
+
+### P12 — No placeholder buttons (slice 0065 W1)
+
+Shipped AI components MUST NOT render an unconditionally `disabled`
+primary action with placeholder copy. A button may be transiently
+disabled while a request is in flight or while a required parent
+context is missing (e.g. `driveId === undefined`), but never as a
+permanent "coming soon" affordance. The static check that enforces
+this principle is `tools/aivet` rule W1-A, which rejects both the
+forbidden placeholder substrings ("future slice", "coming soon",
+"wiring lands", "would call POST") and literal `disabled` /
+`disabled={true}` attributes on `<Button>` elements.
+
 ---
 
 ## Locked decisions (do not re-litigate)

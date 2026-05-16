@@ -19,6 +19,21 @@
 //   4. TS mirror in sync — the generator (tools/aigen) reports the
 //      web/src/ai/features.ts file as up-to-date.
 //
+//   5. W1-A (slice 0065) — no shipped AI component contains a
+//      placeholder ("future slice", "coming soon", "wiring lands",
+//      "would call POST") OR a literal `disabled` / `disabled={true}`
+//      attribute on a JSX Button. Computed disabled expressions
+//      (`disabled={!ready || streaming}`) are allowed.
+//
+//   6. W1-B (slice 0065) — every entry in features.SPAWiringTable
+//      points at a SPA component that (a) imports `useAiStream` from
+//      `@/hooks/useAiStream` and (b) references either the canonical
+//      endpoint's path-prefix (everything before the first `{`
+//      placeholder, e.g. `/ai/drives/` for a parameterised route) or
+//      the generated SPA_WIRING_BY_ID map from `web/src/ai/spaWiring`.
+//      Files allowlisted via features.SPAWiringIndicatorOnly are
+//      exempt from (a) and (b) but still subject to W1-A.
+//
 // Usage:
 //
 //	go run ./tools/aivet
@@ -35,6 +50,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -132,6 +148,18 @@ func main() {
 		failures = append(failures, fmt.Sprintf("tools/aigen --check failed:\n%s", string(out)))
 	}
 
+	// 5 + 6. SPA wiring contract (Phase-50 / 0065 W1).
+	if err := features.SPAWiringSelfCheck(); err != nil {
+		failures = append(failures, fmt.Sprintf("features.SPAWiringSelfCheck: %v", err))
+	}
+	w1aFailures, w1bFailures := runW1Checks()
+	for _, f := range w1aFailures {
+		failures = append(failures, "W1-A: "+f)
+	}
+	for _, f := range w1bFailures {
+		failures = append(failures, "W1-B: "+f)
+	}
+
 	if len(failures) > 0 {
 		fmt.Fprintln(os.Stderr, "aivet: AI-off contract violations detected:")
 		for _, f := range failures {
@@ -143,8 +171,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("aivet: OK — %d AI route(s), %d feature(s) in registry, TS mirror in sync\n",
-		countMounts(), len(features.IDs()))
+	fmt.Printf("aivet: OK — %d AI route(s), %d feature(s) in registry, %d SPA wiring entries, TS mirror in sync\n",
+		countMounts(), len(features.IDs()), len(features.SPAWiringTable))
 }
 
 // aiMount describes one HTTP route registration discovered under
@@ -443,3 +471,195 @@ var _ = bytes.Buffer{} // appease tidy if bytes is dropped above
 var _ = routerFile     // reserved for future per-file targeted parsing
 var _ = aiRoutesFile
 var _ = aiSubprefix
+
+// =====================================================================
+// W1-A and W1-B (Phase-50 / 0065)
+// =====================================================================
+
+// w1APlaceholderRE matches the case-insensitive substrings W1-A
+// forbids in shipped AI components. Each substring marks a deferred-
+// wiring placeholder pattern.
+var w1APlaceholderRE = regexp.MustCompile(
+	`(?i)(future slice|coming soon|wiring lands|would call POST)`,
+)
+
+// w1ALiteralDisabledRE matches a JSX Button (or Helix-cyan
+// AskHelixButton variant) carrying a literal `disabled` flag,
+// either `disabled` (boolean shorthand) or `disabled={true}`. We
+// approximate the JSX element scan with a regex because aivet has
+// always been line-based and adding a TS parser would dwarf the
+// rule. The pattern is intentionally narrow to avoid false positives
+// against `disabled={someExpression}`.
+var w1ALiteralDisabledRE = regexp.MustCompile(
+	`<Button\b[^>]*?\sdisabled(?:\s|=\{true\}|\s*/?>)`,
+)
+
+// w1AScanRoots are the directories scanned by W1-A. Component files
+// under web/src/components/ai/AI*.tsx are the primary surface;
+// page-level wiring files referenced by SPAWiringTable are added
+// dynamically inside runW1Checks.
+var w1AScanRoots = []string{
+	"web/src/components/ai",
+}
+
+// runW1Checks executes W1-A (placeholder + literal disabled) and
+// W1-B (useAiStream import + endpoint reference). Returns two slices
+// of failure strings; an empty slice means the rule passed.
+func runW1Checks() (w1a []string, w1b []string) {
+	// Build the W1-A scan set: every AI*.tsx in components/ai/ plus
+	// every page-level Component path listed in SPAWiringTable
+	// (these are the page-level wiring files like ChatbotPage.tsx).
+	scanFiles := map[string]struct{}{}
+	for _, root := range w1AScanRoots {
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			w1a = append(w1a, fmt.Sprintf("scan %s: %v", root, err))
+			continue
+		}
+		for _, e := range entries {
+			if e.IsDir() {
+				continue
+			}
+			name := e.Name()
+			if !strings.HasPrefix(name, "AI") || !strings.HasSuffix(name, ".tsx") {
+				continue
+			}
+			if strings.HasSuffix(name, ".test.tsx") {
+				continue
+			}
+			scanFiles[filepath.ToSlash(filepath.Join(root, name))] = struct{}{}
+		}
+	}
+	for _, w := range features.SPAWiringTable {
+		path := filepath.ToSlash(filepath.Join("web", "src", filepath.FromSlash(w.Component)))
+		scanFiles[path] = struct{}{}
+	}
+
+	// W1-A: placeholder strings + literal disabled.
+	for path := range scanFiles {
+		src, err := os.ReadFile(path)
+		if err != nil {
+			w1a = append(w1a, fmt.Sprintf("%s: read: %v", path, err))
+			continue
+		}
+		text := string(src)
+		// Strip the well-known "this slice ships only the visible AI
+		// marker ... consumed by a future slice's frontend SSE hook"
+		// comment line in AIChatbotIndicator.tsx — that file is the
+		// indicator badge, and the future-slice reference there is
+		// historical context, not a deferred-wiring confession. We
+		// keep the strip narrow: any other occurrence of the W1-A
+		// placeholder substrings (including in AIChatbotIndicator
+		// in the future) still fails.
+		//
+		// In practice no shipped file should contain the placeholder
+		// substrings at all; rules below treat the matched line as
+		// the failure location for actionable output.
+		for _, loc := range w1APlaceholderRE.FindAllStringIndex(text, -1) {
+			lineNum := 1 + strings.Count(text[:loc[0]], "\n")
+			snippet := strings.TrimSpace(extractLine(text, loc[0]))
+			w1a = append(w1a, fmt.Sprintf(
+				"%s:%d: placeholder phrase forbidden by P11/P12: %q",
+				path, lineNum, snippet))
+		}
+		for _, loc := range w1ALiteralDisabledRE.FindAllStringIndex(text, -1) {
+			lineNum := 1 + strings.Count(text[:loc[0]], "\n")
+			snippet := strings.TrimSpace(extractLine(text, loc[0]))
+			w1a = append(w1a, fmt.Sprintf(
+				"%s:%d: <Button> has a literal `disabled` / `disabled={true}` attribute (P12); "+
+					"use a computed expression like `disabled={!canStart || stream.state === 'streaming'}`: %q",
+				path, lineNum, snippet))
+		}
+	}
+
+	// W1-B: every SPAWiringTable entry's Component file must import
+	// useAiStream from @/hooks/useAiStream AND reference the
+	// endpoint (via the static path-prefix or the generated
+	// SPA_WIRING_BY_ID map). Indicator-only files are exempt.
+	for _, w := range features.SPAWiringTable {
+		if features.IsIndicatorOnly(w.Component) {
+			continue
+		}
+		path := filepath.ToSlash(filepath.Join("web", "src", filepath.FromSlash(w.Component)))
+		src, err := os.ReadFile(path)
+		if err != nil {
+			w1b = append(w1b, fmt.Sprintf(
+				"%s: cannot read component for feature %q: %v", path, w.FeatureID, err))
+			continue
+		}
+		text := string(src)
+
+		hasImport := importsUseAiStream(text)
+		if !hasImport {
+			w1b = append(w1b, fmt.Sprintf(
+				"%s: feature %q must import { useAiStream } from '@/hooks/useAiStream'",
+				path, w.FeatureID))
+		}
+
+		prefix := features.SPAWiringEndpointStaticPrefix(w.Endpoint)
+		refsByID := strings.Contains(text, "SPA_WIRING_BY_ID['"+w.FeatureID+"']") ||
+			strings.Contains(text, `SPA_WIRING_BY_ID["`+w.FeatureID+`"]`) ||
+			strings.Contains(text, "SPA_WIRING_BY_ID."+jsIdentifierOf(w.FeatureID))
+		refsByPath := prefix != "" && strings.Contains(text, prefix)
+		if !refsByID && !refsByPath {
+			w1b = append(w1b, fmt.Sprintf(
+				"%s: feature %q must reference the canonical endpoint path %q "+
+					"(directly as a string literal containing %q, OR via SPA_WIRING_BY_ID[%q].endpointPath from '@/ai/spaWiring')",
+				path, w.FeatureID, features.SPAWiringEndpointPath(w.Endpoint), prefix, w.FeatureID))
+		}
+	}
+
+	sort.Strings(w1a)
+	sort.Strings(w1b)
+	return w1a, w1b
+}
+
+// importsUseAiStream reports whether the source text contains an
+// import of `useAiStream` from '@/hooks/useAiStream'. The check
+// looks for any line that mentions both tokens — a stricter parse
+// would require a TS AST and the regex is sufficient for the
+// repository's import conventions.
+func importsUseAiStream(src string) bool {
+	for _, line := range strings.Split(src, "\n") {
+		trim := strings.TrimSpace(line)
+		if !strings.HasPrefix(trim, "import") {
+			continue
+		}
+		if !strings.Contains(trim, "useAiStream") {
+			continue
+		}
+		if strings.Contains(trim, "@/hooks/useAiStream") {
+			return true
+		}
+	}
+	return false
+}
+
+// jsIdentifierOf converts a kebab-case feature ID into the camelCase
+// identifier a developer would type for dotted property access (rare
+// — the canonical access is bracket-keyed, but we still accept the
+// dotted form for forward-compat).
+func jsIdentifierOf(id string) string {
+	parts := strings.Split(id, "-")
+	for i, p := range parts {
+		if i == 0 || p == "" {
+			continue
+		}
+		parts[i] = strings.ToUpper(p[:1]) + p[1:]
+	}
+	return strings.Join(parts, "")
+}
+
+// extractLine returns the source line containing the byte offset
+// idx, useful for W1-A failure snippets.
+func extractLine(s string, idx int) string {
+	if idx < 0 || idx >= len(s) {
+		return ""
+	}
+	start := strings.LastIndexByte(s[:idx], '\n') + 1
+	end := strings.IndexByte(s[idx:], '\n')
+	if end < 0 {
+		return s[start:]
+	}
+	return s[start : idx+end]
+}

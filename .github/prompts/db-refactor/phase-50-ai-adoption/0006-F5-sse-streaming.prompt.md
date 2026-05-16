@@ -194,6 +194,15 @@ Replace the typewriter in `ChatbotPage.tsx` with `useAiStream`. In
 synchronously — covered by U1 slice (0011), this slice only ships
 the primitive.
 
+> **Phase-50 / W1 (slice 0065) cross-reference:** the SPA-side wiring
+> for `ChatbotPage` (and for every other AI feature with a registered
+> `/api/v1/ai/*` route) is completed by 0065 — see
+> `internal/ai/features/spa_wiring.go` for the per-feature
+> Component → Endpoint table, methodology principles P11 + P12 for
+> the "wired-or-absent" / "no placeholder buttons" rules, and
+> `tools/aivet` rules W1-A + W1-B for the static checks that enforce
+> them.
+
 ## Tasks
 
 1. Backend `Writer` + tests with `httptest.ResponseRecorder` plus a

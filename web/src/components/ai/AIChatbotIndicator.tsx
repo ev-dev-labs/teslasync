@@ -1,4 +1,5 @@
 // Phase-50 / 0011 — U1 Chatbot LLM upgrade.
+// Phase-50 / W1 (slice 0065) — wiring contract finalized.
 //
 // AIChatbotIndicator is the visible AI surface for the chatbot page.
 // It is rendered conditionally via withAiFeature('chatbot-llm', …) so:
@@ -11,10 +12,12 @@
 //
 // The indicator does NOT replace the chatbot's send/receive plumbing.
 // In off mode the page uses POST /chatbot (heuristic baseline). The
-// AI route at POST /api/v1/ai/chatbot is wired separately by U1's
-// backend and consumed by a future slice's frontend SSE hook. This
-// slice ships only the visible AI marker so the off-mode contract
-// has a concrete UI test ID to assert against.
+// AI route at POST /api/v1/ai/chatbot is wired by ChatbotPage.tsx,
+// which calls useAiStream when the chatbot-llm feature is enabled.
+// This indicator file is allowlisted in
+// internal/ai/features.SPAWiringIndicatorOnly because the wiring
+// lives on the page, not here — but it remains subject to the W1-A
+// no-placeholder rule.
 
 import { useTranslation } from 'react-i18next'
 
