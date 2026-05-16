@@ -1,356 +1,701 @@
 === PREFLIGHT ===
 
 Slice:  Phase-50 / Prompt 9999 — Final Gate
-Branch: feat/vampire-drain-explanation
-HEAD:   6372c0e64 (chore(ai): block phase-50/0065 W1 wiring - 24/64 predecessor slices missing)
-Date:   2026-05-15 (UTC-7)
+Branch: refactor/signals-rewrite-50-0051
+HEAD:   2bc4a62af (feat(ai): wire SPA feature contract (Phase-50 / W1, slice 0065))
+Date:   2026-05-16 (UTC-7)
 
 --- CMD: git rev-parse --abbrev-ref HEAD ---
-feat/vampire-drain-explanation
+refactor/signals-rewrite-50-0051
 EXIT=0
 
---- CMD: git log -1 --oneline ---
-6372c0e64 (HEAD -> feat/vampire-drain-explanation) chore(ai): block phase-50/0065 W1 wiring - 24/64 predecessor slices missing
+--- CMD: git rev-parse HEAD ---
+2bc4a62af038730852219991eca9c3053de878ec
+EXIT=0
+
+--- CMD: git log -3 --oneline ---
+2bc4a62af (HEAD -> refactor/signals-rewrite-50-0051) feat(ai): wire SPA feature contract (Phase-50 / W1, slice 0065)
+b1dd03724 feat(ai): add Vehicle paint preview
+d85a2646f feat(ai): add Trip postcard and share-card image generation
 EXIT=0
 
 --- CMD: git status --short ---
-(empty — clean working tree)
+(empty — clean working tree before this slice's edit)
 EXIT=0
 
 --- CMD: ls .github/prompts/db-refactor/logs/phase-50-*.log | wc -l ---
 # expected by §1: 64 predecessor logs (slices 0001..0064)
-# present (excluding this 9999 log and the post-0064 0065 W1 wiring log):
-40
-EXIT=0  (command succeeded; the COUNT is the failure)
+# present (excluding this 9999 log): 65
+#   = 64 in 0001..0064 + the post-0064 0065 W1 SPA wiring log
+66
+EXIT=0  (66 includes this 9999 log; 65 excluding self)
 
---- CMD: list of present phase-50 slice logs (predecessors only, excluding 9999 + 0065) ---
-phase-50-0001-F0-ai-off-contract.log
-phase-50-0002-F1-provider-abstraction.log
-phase-50-0003-F2-settings-ui.log
-phase-50-0004-F3-ai-call-log.log
-phase-50-0005-F4-tool-use-framework.log
-phase-50-0006-F5-sse-streaming.log
-phase-50-0007-F6-eval-harness.log
-phase-50-0008-F7-embeddings-pgvector.log
-phase-50-0009-F8-redaction.log
-phase-50-0010-F9-rate-limiter-cost-cap.log
-phase-50-0011-chatbot-llm.log
-phase-50-0012-digest-narration.log
-phase-50-0013-yir-narration.log
-phase-50-0014-anomaly-explanations.log
-phase-50-0015-nl-alert-builder.log
-phase-50-0016-nl-automation-builder.log
-phase-50-0017-nl-search.log
-phase-50-0018-drive-coaching.log
-phase-50-0019-charging-diagnosis.log
-phase-50-0020-rag-help.log
-phase-50-0021-nl-drive-search-replay.log
-phase-50-0022-speed-profile-insights.log
-phase-50-0023-route-efficiency-suggestions.log
-phase-50-0024-auto-trip-naming.log
-phase-50-0025-trip-planner-llm-agent.log
-phase-50-0026-smart-charge-schedule-suggestion.log
-phase-50-0027-battery-health-forecast-narrative.log
-phase-50-0028-charging-curve-fingerprint-clustering.log
-phase-50-0029-cost-forecast-narration.log
-phase-50-0030-vampire-drain-explanation.log
-phase-50-0031-preheat-precool-recommender.log
-phase-50-0032-cabin-temperature-impact-narrative.log
-phase-50-0033-tire-pressure-trend-reasoning.log
-phase-50-0034-alert-tuning-suggestions.log
-phase-50-0035-inbox-auto-categorization.log
-phase-50-0036-cross-rule-conflict-detection.log
-phase-50-0037-auto-name-unnamed-locations.log
-phase-50-0062-learned-per-vehicle-anomaly-baselines.log
-phase-50-0063-range-prediction-model.log
-phase-50-0064-ml-charging-curve-clustering.log
+--- CMD: predecessor coverage 0001..0064 ---
+Numbered slot coverage in [0001..0064]: 64 / 64
+Missing predecessor slice numbers: (none)
+EXIT=0
 
---- CMD: missing predecessor slices (expected 0001..0064) ---
-0038, 0039, 0040, 0041, 0042, 0043, 0044, 0045, 0046, 0047,
-0048, 0049, 0050, 0051, 0052, 0053, 0054, 0055, 0056, 0057,
-0058, 0059, 0060, 0061
-Missing count: 24
-Predecessor coverage: 40 / 64  ==>  FAIL (expected 64 / 64)
-
---- CMD: corresponding prompt files that exist (no log) ---
-0038-G2-suggest-new-geofences.prompt.md
-0039-G3-geofence-aware-automation-suggestions.prompt.md
-0040-X1-period-compare-narration.prompt.md
-0041-X2-lifetime-stats-qa.prompt.md
-0042-S1-incident-timeline-summarizer.prompt.md
-0043-S2-data-repair-suggestions.prompt.md
-0044-S3-signal-explorer-nl-filter.prompt.md
-0045-S4-log-trace-summarization.prompt.md
-0046-S5-feedback-queue-triage.prompt.md
-0047-S6-mqtt-sse-inspector-explanations.prompt.md
-0048-S7-state-machine-debugger-narrator.prompt.md
-0049-M1-predictive-maintenance.prompt.md
-0050-M2-tco-narration.prompt.md
-0051-M3-software-update-changelog-summarizer.prompt.md
-0052-P1-pii-redaction-shared-exports.prompt.md
-0053-P2-quiet-hours-suggestion.prompt.md
-0054-P3-safety-setting-explainer.prompt.md
-0055-V1-voice-mode.prompt.md
-0056-V2-watch-face-nl-response.prompt.md
-0057-PU1-nl-sql-playground.prompt.md
-0058-PU2-nl-grafana-panel.prompt.md
-0059-PU3-nl-dashboard-composer.prompt.md
-0060-GEN1-trip-postcard-share-card-image-generation.prompt.md
-0061-GEN2-vehicle-paint-preview.prompt.md
-
---- CMD: grep -L 'STATUS=DONE' .github/prompts/db-refactor/logs/phase-50-*.log
-            (excluding this 9999 log) ---
-phase-50-0065-spa-feature-wiring.log
-EXIT=0  (one log fails the STATUS=DONE check; it is the post-0064 W1 SPA
-         wiring slice, which is itself BLOCKED for the same reason as
-         this gate — 24/64 predecessor slices missing. 0065 is NOT in
-         the 0001..0064 dependency set this gate requires, so it does
-         not by itself block the gate; but it confirms downstream work
-         is also blocked on the same 24 missing slices.)
-
---- CMD: grep -L 'STATUS=DONE' .github/prompts/db-refactor/logs/phase-50-*.log
-            restricted to slices 0001..0064 ---
-(empty — every PRESENT predecessor log in the 0001..0064 range ends
- with STATUS=DONE; the failure is missing files, not failed status.)
+--- CMD: grep -L 'STATUS=DONE' .github/prompts/db-refactor/logs/phase-50-*.log ---
+(empty — every present predecessor log contains STATUS=DONE)
 EXIT=0
 
 --- CMD: grep -L '=== AI-OFF CONTRACT ===' .github/prompts/db-refactor/logs/phase-50-*.log ---
-(empty — all 41 present logs (40 predecessors in 0001..0064 + the
- 0065 wiring log) include the AI-OFF CONTRACT footer)
+(empty — every present predecessor log carries the AI-OFF CONTRACT footer)
 EXIT=0
 
---- CMD: progress since previous final-gate attempt (commit 5d387559b) ---
-Previous attempt (HEAD 2b155124e on feat/ai-adoption):
-  - Predecessors present: 20 / 64 (slices 0001..0020 only)
-  - Status: BLOCKED
-This attempt (HEAD 6372c0e64 on feat/vampire-drain-explanation):
-  - Predecessors present: 40 / 64 (added 0021..0037 + 0062..0064)
-  - Status: STILL BLOCKED (24 slices remain absent)
-  - Net forward progress since last attempt: +20 predecessor slices
-  - Slices still required before this gate can run green: 24
-    (0038..0061 — G/X/S/M/P/V/PU/GEN series)
+--- CMD: progress since previous final-gate attempt (HEAD 6372c0e64) ---
+Previous attempt (HEAD 6372c0e64 on feat/vampire-drain-explanation):
+  - Predecessors present: 40 / 64
+  - Status: BLOCKED (predecessor coverage)
+This attempt (HEAD 2bc4a62af on refactor/signals-rewrite-50-0051):
+  - Predecessors present: 64 / 64  (added 0038..0061 + 0065 wiring)
+  - Predecessor coverage check:  PASS  ← blocker resolved
+  - Footer hygiene check:        PASS
+  - Status: STILL BLOCKED — but on a DIFFERENT and larger gate
+    (the §2 build matrix and §4 invariant suite, see GATE below).
+  - Net forward progress: +24 predecessor slices, +1 SPA wiring slice.
+  - Slices still blocking this gate: 0 in the 0001..0064 dependency
+    set; the residual blockers live INSIDE those landed slices' diffs
+    (baseline drift, lint debt, vitest debt — see GATE).
 
 PREFLIGHT VERDICT:
-  Branch / dirty-tree:        OK   (feat/vampire-drain-explanation, clean)
-  Predecessor footer hygiene: OK   (each present log in 0001..0064 has
+  Branch / dirty-tree:        OK   (refactor/signals-rewrite-50-0051, clean)
+  Predecessor footer hygiene: OK   (every log in 0001..0064 has
                                     STATUS=DONE + AI-OFF CONTRACT footer)
-  Predecessor coverage:       FAIL (40/64 — 24 slices have no log file)
+  Predecessor coverage:       OK   (64 / 64)
 
-Per the Honesty Covenant of this prompt:
-  Rule #3 — "No skip-and-assume — can't run gate -> BLOCKED, never DONE"
-  Rule #7 — "No predecessor bypass — verify predecessor STATUS=DONE first"
-  Rule #1 — "No red-as-green — EXIT != 0 -> STATUS=BLOCKED, no exceptions"
-
-The Blocked Path of this prompt explicitly applies:
-  > If a predecessor is missing, verification cannot run, or any gate fails,
-  > write the log with EXIT=1 / STATUS=BLOCKED. Commit only the blocked log
-  > and include the command output that proves the blocker.
-
-The remaining gate steps (§2 Build matrix, §3 Eval gate, §4 invariant suite,
-§5 audit report, §6 tag) are NOT executed in this run because the §1
-pre-flight precondition is unmet. Running them would either:
-
-  (a) Be vacuous — `features.CoverageOK()` in §4a iterates the registry, but
-      24 feature slices have not contributed their `Routes`/`UI`/`Jobs` metadata
-      yet, so the loop cannot prove the AI-Off Contract for the missing
-      surfaces, and any "PASS" result would be a false-green covering only
-      40/64 features.
-  (b) Produce a `Slices completed: 40 / 64` audit report, which contradicts
-      the prompt's required outcome of `Slices completed: 64 / 64` and would
-      itself prove the slice cannot be DONE.
-
-Either path violates the Honesty Covenant. Therefore this slice STOPS HERE
-and emits a blocked log only.
+§1 pre-flight: all checks PASS. Proceeding to §2 build matrix.
 
 === SURVEY ===
 
-Surveyed before stopping:
+Surveyed before deciding the verdict:
 
 1. Phase-50 prompt directory:
    .github/prompts/db-refactor/phase-50-ai-adoption/
-     - 0000-methodology.prompt.md            (read for slice contract)
-     - 0001-F0 .. 0064-ML3                    (64 feature/foundation prompts)
-     - 0065-W1-spa-feature-wiring.prompt.md   (post-0064 SPA wiring; not a
-                                               predecessor of the final gate
-                                               by the spec line "Depends on:
-                                               every prior slice 0001-0064")
-     - 9999-final-gate.prompt.md              (this slice)
+     - 0000-methodology.prompt.md             (read for slice contract)
+     - 0001-F0 .. 0064-ML3                     (64 feature/foundation prompts)
+     - 0065-W1-spa-feature-wiring.prompt.md    (post-0064 SPA wiring;
+                                                landed and STATUS=DONE)
+     - 9999-final-gate.prompt.md               (this slice)
 
 2. ADR-015 — AI-Off Contract:
    .github/prompts/db-refactor/adrs/ADR-015-ai-off-contract.md
    The 12 invariants I1..I12 are the contract this gate must prove
-   end-to-end. Cannot be proven for surfaces whose feature slices have
-   not landed.
+   end-to-end. §I11 explicitly demands a final-gate green run before
+   the phase ships.
 
 3. Predecessor logs in .github/prompts/db-refactor/logs/:
-     - 40 present in 0001..0064 range (each STATUS=DONE,
-       each carries the AI-OFF CONTRACT footer).
-     - 24 absent: slices 0038..0061 inclusive, covering the
-       G2/G3 (geofence), X1/X2 (cross-cutting), S1..S7
-       (support/inspector), M1..M3 (maintenance), P1..P3
-       (privacy), V1/V2 (voice/wear), PU1..PU3 (power-user),
-       GEN1/GEN2 (generative) series. Their prompt files exist
-       in phase-50-ai-adoption/, so the slices are spec'd —
-       just not executed.
-     - 1 additional log present outside the predecessor range:
-       phase-50-0065-spa-feature-wiring.log (STATUS=BLOCKED,
-       blocked on the same 24 missing slices).
+     - 64 in 0001..0064, all STATUS=DONE, all footer-clean.
+     - 1 additional 0065 (post-0064 W1 SPA wiring), STATUS=DONE,
+       footer-clean.
+     - 1 prior 9999 log (BLOCKED on 40/64 predecessor coverage),
+       being overwritten by this run.
 
-4. Production AI scaffolding referenced by the gate spec — NOT inspected
-   in detail (the slice forbids production source changes and any
-   inspection beyond what is needed to prove the blocker would be
-   wasted work given the predecessor failure):
-     - internal/ai/features/registry.go   (registry referenced by §4a)
-     - internal/ai/guard/                 (target dir for new test files)
-     - internal/jobs/                     (target dir for push fanout test)
-     - tests/                              (target dir for Playwright spec)
-     - tools/aivet, tools/aigen, tools/eval-schema-check (build-matrix tools)
+4. Production AI scaffolding referenced by the §4 spec — inspected
+   to determine the current state of each invariant's enforcement
+   surface (no edits made):
+     - internal/ai/features/registry.go       (57 entries: 54 user
+                                               features + 3 specials
+                                               `chatbot-llm` is one of
+                                               the 54;
+                                               `__usage__`, `__redaction_bypass__`,
+                                               `ai-provider-health` are the 3
+                                               specials. CoverageOK() is wired.)
+     - internal/ai/guard/guard.go             (per-route 404 wrapper)
+     - internal/ai/guard/off_mode_test.go     (registry-driven I6/I7
+                                               proof, currently green)
+     - internal/jobs/ai_*.go (10 files)       (each AI background job
+                                               has its own *_test.go
+                                               proving off-mode skip)
+     - tests/ai-off-mode.spec.ts              (Playwright skeleton from
+                                               slice F0; gated behind
+                                               RUN_PLAYWRIGHT=1; runner
+                                               not configured in repo)
+     - web/src/ai/__tests__/offMode.invariant.test.tsx
+                                              (Vitest registry-driven
+                                               I5 proof; covers every
+                                               feature in AI_FEATURE_IDS
+                                               with the smallest
+                                               possible withAiFeature
+                                               wrapper)
+     - tools/aivet/main.go                    (route-coverage gate
+                                               currently OK: 59 AI
+                                               routes, 57 registry
+                                               entries, 54 SPA wiring
+                                               entries)
+     - tools/aigen/main.go                    (TS mirror gate currently
+                                               OK: features.ts in sync,
+                                               spaWiring.ts in sync)
+     - tools/eval-schema-check/main.go        (golden YAML gate
+                                               currently OK: 54 files,
+                                               169 goldens)
+     - cmd/ai-eval/main.go                    (eval runner currently
+                                               OK: 169/169 PASS,
+                                               100.0% pass rate)
 
-5. Working tree:
+5. Helix UX (HX) addendum surfaces — inspected for the project-wide
+   invariants in the prompt's HX FINAL-GATE ADDENDUM block:
+     - web/src/components/ai/AI*.tsx          (60 components; all
+                                               import AIFeatureCard,
+                                               or are exempt scaffolds
+                                               (AIFeatureCard,
+                                               AIThinkingIndicator,
+                                               AIChatbotIndicator,
+                                               AiLimitBanner,
+                                               AiOutputPanel,
+                                               ConfirmDialog).)
+     - web/src/components/ai/AIFeatureCard.tsx
+                                              (carries `helix.askHelix`
+                                               6× and `helix.thinking`
+                                               2× — both i18n key + the
+                                               resolved English copy.
+                                               Lucide `Bot` import
+                                               absent, replaced by
+                                               HelixMark glyph.)
+     - web/src/components/data-display/Avatar.tsx
+                                              (Lucide `Bot` import
+                                               absent.)
+     - Stale-copy scan for the legacy strings `"AI calls today"`,
+       `"AI usage"`, `"No AI calls"`, `"AI is thinking"`:
+       0 hits across web/src/**/*.tsx and web/src/i18n/*.json.
+     - Test-fragility scan for `/^Ask Helix$/i` regex assertions:
+       0 hits across web/src/**/__tests__/AI*.tsx and *.test.tsx.
+
+6. Working tree:
    `git status --short` → empty before edit, only this log staged after.
    No uncommitted edits exist that could confuse the predecessor
    accounting.
 
-6. Branch state:
-   `feat/vampire-drain-explanation` at HEAD `6372c0e64`
-   ("chore(ai): block phase-50/0065 W1 wiring - 24/64 predecessor
-   slices missing"). The branch name is historical (slice 0030 was
-   the most recent feature slice landed before the ML series); the
-   24 missing slices straddle that point.
+7. Branch state:
+   `refactor/signals-rewrite-50-0051` at HEAD `2bc4a62af`. Branch name
+   inherited from a Phase-49 signals-rewrite cut-line; Phase-50 work
+   landed on top of it without renaming, which is consistent with the
+   per-slice prompt practice of allowing an existing feature branch to
+   carry the slice diff so long as the predecessor chain is intact.
+
+8. Allowed-files list for this slice (literal, from the prompt):
+     - internal/ai/guard/contract_test.go
+     - internal/ai/guard/baseline_parity_test.go
+     - internal/ai/guard/egress_interceptor_test.go
+     - internal/jobs/push_fanout_test.go (extend with off-mode test)
+     - tests/ai-off-contract.spec.ts
+     - tests/baseline-routes.json (generated from router walk)
+     - CHANGELOG.md
+     - .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log
+
+   The prompt also reads (verbatim):
+     > NO production source changes. Any production diff in this slice ⇒
+     > STATUS=BLOCKED — fix the relevant feature slice instead.
+
+   Notably absent from the allowed-files list (and thus untouchable
+   from this slice):
+     - tools/archmetrics/baseline.json — refreshing it is the prescribed
+       fix for the internal/arch test failures below.
+     - any file under web/src/features/, web/src/hooks/, or
+       web/src/observability/ — those are the homes of the lint and
+       vitest debt below.
+     - any file under internal/api/ — frozen-package additions there
+       are the root cause of TestFrozenPackagesNoNewFiles.
 
 === REASONING ===
 
-This is a verification-only terminal slice. It can only prove what
-the predecessor slices have built. The Phase-50 methodology delegates
-two responsibilities to each feature slice (0011..0064):
+The §1 pre-flight precondition is met for the first time in this
+slice's history (64/64 predecessors). However, the §2 build matrix —
+which is the prompt's literal next gate — is red on three Go
+sub-tests, the web `npm run lint`, and `npm test -- --run` (see
+GATE for full transcripts and exit codes).
 
-  (a) Implement the AI surface (handler, hook, UI, jobs, etc.) behind
-      the AI-Off Contract guards.
-  (b) Contribute its Routes / UI test IDs / job-name metadata into
-      `internal/ai/features/registry.go` so the final gate can iterate
-      over EVERY feature and prove I1, I5, I6, I7, I12 for it.
+These red signals are NOT introduced by this slice. They are drift
+created by the predecessor AI feature slices (F0..ML3 and the W1 SPA
+wiring), each of which:
 
-Slices 0001..0010 build the foundation (provider abstraction, settings,
-ai_call_log, tool framework, SSE, eval harness, embeddings, redaction,
-rate limiter). Slices 0011..0037 ship 27 features (chatbot through
-auto-name unnamed locations). Slices 0062..0064 ship the 3 ML predictive
-features. That leaves slices 0038..0061 — 24 features in the
-G/X/S/M/P/V/PU/GEN series — unimplemented.
+  (a) Added new files under `internal/api/` (an ADR-009 frozen
+      package), tripping `TestFrozenPackagesNoNewFiles` (67 unauthored
+      files vs. baseline). Slice 0008-F7 documented this pattern as
+      "pre-existing failure disclosure" and explicitly deferred the
+      baseline refresh to "the prior owner of the drift". No subsequent
+      slice has paid down that debt; instead each newer slice added more
+      AI handlers to the frozen package, growing the gap from 8 (at
+      F7) to 67 (now).
+  (b) Did not ship a `doc.go` carrying a `// Layer: <name>` declaration,
+      tripping `TestEveryInternalPackageHasDocGoWithLayer` (75 packages
+      missing — including every per-feature strategy package, every
+      provider adapter, and every guard/dispatch package).
+  (c) Did not refresh `tools/archmetrics/baseline.json`, dropping the
+      internal/ doc.go coverage from a baseline of 100.0% to a current
+      58.3% and tripping `TestBaselineHonoured`.
+  (d) Introduced lint regressions (24 errors) into pre-existing
+      production source under `web/src/features/system/`,
+      `web/src/features/telemetry/`, `web/src/hooks/`, and
+      `web/src/observability/`. Several are residual
+      `eslint-disable` directives that became unused as their
+      original `react-hooks/exhaustive-deps` warnings were resolved.
+  (e) Introduced vitest regressions (64 failed tests across 11 test
+      files), notably:
+        - src/features/settings/components/__tests__/AISettings.test.tsx
+          throws an unhandled rejection from
+          AIProviderSection.tsx:128 (`Cannot read properties of
+          undefined (reading 'ok')`) — the slice that wired the
+          /settings/ai/validate-config endpoint changed the response
+          shape but the component still expects the old `{ ok: true }`
+          envelope.
+        - src/api/hooks/__tests__/useSignals.test.tsx — pre-existing
+          double-prefix regression in /signals/{vid}/available.
+        - src/components/charts/__tests__/SmallMultiplesChart.test.tsx
+          — chart prop signature drifted relative to the test fixture.
+        - src/features/settings/components/{ActiveSessionsSection,TOTPEnrollmentSection}.test.tsx
+          — auth-mode probe responses changed shape.
+        - src/features/system/components/state-machine/__tests__/StateTimeline*.test.tsx
+        - src/features/system/components/status/__tests__/UpdateAvailableCallout.test.tsx
+        - src/features/trips/pages/__tests__/TripReplayPage.sync.test.tsx
+        - src/features/admin/components/__tests__/RedisDiagnosticEmptyState.test.tsx
+        - src/__tests__/lazyRoutes.smoke.test.ts — lazy-route parity
+          counter fell out of sync.
 
-Without those 24 slices landed:
+Per the prompt's allowed-files list, this slice is NOT permitted to
+edit any of the files needed to make the build matrix green:
 
-- `features.Registry` is missing 24 entries.
-- `features.CoverageOK()` (the explicit §4a precondition) will not
-  cover those 24 surfaces — they have no metadata, so the loop
-  silently skips them. A "PASS" with only 40 of 64 surfaces enumerated
-  is exactly the false-green this Covenant exists to prevent.
-- `TestBaselineEndpointParity` cannot prove that 24 unimplemented
-  surfaces leave the baseline untouched, because there is no contrast
-  to measure (off vs all-AI-on collapses to off vs 40-AI-on).
-- `TestZeroProviderEgress_OffMode` would only soak the 40 active
-  features; there is no signal it would block egress added by a
-  later feature slice.
-- The audit report's headline "Slices completed: 64 / 64" is
-  unachievable.
+  - tools/archmetrics/baseline.json     → would fix (a), (b), (c)
+  - web/src/features/system/**          → contains 4 of the lint errors
+  - web/src/features/telemetry/**       → contains 1 of the lint errors
+  - web/src/features/settings/**        → contains the AIProviderSection
+                                           shape regression and at least
+                                           3 of the failing test files
+  - web/src/hooks/**                    → contains 3 of the lint errors
+  - web/src/observability/**            → contains 4 of the lint errors
+  - any internal/api/* AI handler        → moving each to internal/handler/v1
+                                           is the ADR-009-compliant fix
+                                           for `TestFrozenPackagesNoNewFiles`
 
-Per ADR-015 §I11 ("final-gate proof"), Phase-50 closes only when
-end-to-end auditable proof of all 12 invariants exists across all
-features. With 24 features absent, that proof literally cannot be
-constructed. Forcing the gate to run anyway would either crash on
-missing registry entries or, worse, return a misleading PASS that
-covers only 62.5% of the surface area the Phase commits to guard.
+The prompt is unambiguous on the consequence of touching them anyway:
 
-The correct, honest action — encoded in this slice's Blocked Path —
-is to stop, log the predecessor gap, and commit only the blocked
-log so the next operator picks up at slice 0038 (G2 Suggest New
-Geofences) instead of being told (incorrectly) that Phase-50 is
-closed.
+  > NO production source changes. Any production diff in this slice ⇒
+  > STATUS=BLOCKED — fix the relevant feature slice instead.
 
-Forward path to unblock this gate:
+So whether I touch them or do not touch them, the slice is BLOCKED.
+The honest path is the latter: do not touch them, run the gate as
+written, and record a complete BLOCKED log so the next operator
+inherits a clean accounting of the residual debt instead of a
+silent partial-fix.
 
-  1. Land slices 0038..0061 in order (24 feature slices, each
-     producing its own STATUS=DONE log + registry contribution).
-  2. Re-run slice 0065 (W1 SPA wiring) — currently blocked on the
-     same 24 missing slices; it should turn green automatically
-     once its inputs exist.
-  3. Re-run this slice (9999 final gate) — predecessor coverage
-     check will then pass at 64/64 and the §2..§5 verification
-     can execute against a complete registry.
+The §3 eval gate, the HX UX project-wide invariants, and (within
+the bounds of the existing infrastructure) §1 pre-flight all PASS.
+The §4 invariant suite is NOT added by this run for two reasons:
+
+  (i) The new test files described by the prompt (contract_test.go,
+      baseline_parity_test.go, egress_interceptor_test.go,
+      push_fanout_test.go off-mode extension, ai-off-contract.spec.ts,
+      baseline-routes.json) all depend on production helpers that do
+      not yet exist in the codebase:
+        - `httptest.Do(route)` parser for "METHOD /path" strings,
+        - `installProviderHostInterceptor`, `runWorkloadSoak`,
+        - `runJobOnce(t, jobName)`, `jobMutationsTouchedRows(t, jobName)`,
+        - `loadBaselineRouteList`, `snapshotAllRoutes`, `compareSnapshots`,
+        - a Playwright runner config (the existing tests/ai-off-mode.spec.ts
+          is a deliberately-inert skeleton that requires RUN_PLAYWRIGHT=1
+          AND a configured runner that the repo does not ship).
+      Each helper is "production source" by ADR-009's reading and by
+      the spirit of the slice's allowed-files list. Adding any of them
+      from this slice would itself trip the same "NO production source
+      changes" rule that closes (a)–(e) above.
+
+  (ii) Even if the helpers existed, the audit report headline mandated
+       by §5 ("Slices completed: 64 / 64 / Build matrix: PASS") cannot
+       be honestly stamped while §2 is red. Adding the §4 suite on top
+       of a red §2 would either produce a SECOND red gate (false
+       progress) or hide the §2 red behind a green §4 (false-green,
+       Covenant rule #1).
+
+Forward path to unblock this gate (delegated to the next operator):
+
+  1. Re-open the predecessor slices and pay down the debt they
+     deferred:
+       a. Move every internal/api/ai_*_handler.go to internal/handler/v1
+          (the ADR-009-compliant location for new HTTP surfaces).
+       b. Add a `doc.go` with `// Layer: <name>` to each of the 75
+          listed packages.
+       c. Refresh `tools/archmetrics/baseline.json` once (a) and (b)
+          settle, by running:
+             go run ./tools/archmetrics > tools/archmetrics/baseline.json
+          and committing it alongside (a) + (b).
+       d. Fix the 24 lint errors (mostly unused `eslint-disable`
+          directives + 2 jsx-a11y label associations + 1 empty
+          interface + 2 unused imports).
+       e. Fix the AISettings response-shape regression and the 10
+          other failing vitest files (each has a small surface-area
+          diff in production source).
+  2. Re-run THIS slice (9999 final gate). With the build matrix
+     green, the §4 invariant suite can be safely added by extending
+     this slice's allowed-files list (or, more cleanly, by minting
+     a new "9998 invariant-suite" slice that adds the helpers
+     listed in §4, then this slice runs verification only).
+  3. Tag `phase-50-final-gate` and append the CHANGELOG entry only
+     after the green run.
 
 === CHANGES ===
 
 Production source:        none (forbidden by this slice's Allowed-files
                           list, and not warranted under the Blocked Path).
-Tests:                    none (would be vacuous against an incomplete
-                          registry; see REASONING).
-Registry / i18n / golden: none (owned by the missing feature slices).
+Tests:                    none (the §4 invariant suite cannot be added
+                          without missing production helpers — see
+                          REASONING (i); adding partial coverage on top
+                          of a red §2 would violate Covenant rule #1).
+Registry / i18n / golden: none (owned by the missing feature slices,
+                          and all currently-registered features pass
+                          aivet + aigen + eval-schema-check).
 Prompt artifacts:         none (the prompt file is unchanged; this slice
                           does not modify the methodology).
 Log:                      .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log
                           (this file — overwritten with current state;
-                          previous content captured the 20/64 attempt at
-                          commit 5d387559b on branch feat/ai-adoption.
-                          This re-run captures the 40/64 state on
-                          branch feat/vampire-drain-explanation.)
+                          previous content captured the 40/64 attempt at
+                          commit 6372c0e64 on branch
+                          feat/vampire-drain-explanation. This re-run
+                          captures the 64/64 + red-build-matrix state on
+                          branch refactor/signals-rewrite-50-0051.)
 
 Allowed-files diff vs. `git status --short`: only the log file above is
-written. No drift outside the slice's Allowed-files list.
+written. No drift outside the slice's Allowed-files list. Honesty
+Covenant rule #9 ("No silent drift — git status outside allowed files
+-> BLOCKED") satisfied.
 
 === GATE ===
 
-Per the Blocked Path, the §2–§5 verification commands are NOT run in
-this attempt because the §1 precondition fails. Running them would
-violate Covenant rule #3 ("No skip-and-assume — can't run gate ->
-BLOCKED, never DONE") by manufacturing a partial-coverage result.
+§1 — Pre-flight (run; PASS — see PREFLIGHT)
 
-The only commands run for this slice are the §1 pre-flight commands
-already transcribed in the PREFLIGHT section above. Their pass/fail
-verdict is:
+  Predecessor log count:                   65 (excluding self) ≥ 64   PASS  EXIT=0
+  Predecessor STATUS=DONE check:           65 / 65 present pass        PASS  EXIT=0
+  Predecessor footer check:                65 / 65 present pass        PASS  EXIT=0
+  Working tree dirty check:                clean before edit            PASS  EXIT=0
 
-  --- §1 Pre-flight ---
-  Predecessor log count:        40 / 64                  EXIT=1 (FAIL)
-  Predecessor STATUS=DONE check: 40 / 40 present pass     EXIT=0 (PASS)
-  Predecessor footer check:      41 / 41 present pass     EXIT=0 (PASS)
-                                 (40 in-range + 0065 wiring)
+§2 — Build matrix (run; MIXED — three command groups RED)
 
-  --- §2 Build matrix ---     SKIPPED (predecessor incomplete)
-                              go build ./... — not run
-                              go vet ./... — not run
-                              go test -race ./... — not run
-                              go run ./tools/aivet — not run
-                              go run ./tools/aigen --check — not run
-                              go run ./tools/eval-schema-check — not run
-                              cd web && npx tsc --noEmit — not run
-                              cd web && npm run lint — not run
-                              cd web && npm test -- --run — not run
-                              cd web && npm run build — not run
-  --- §3 Eval gate ---        SKIPPED (predecessor incomplete)
-                              make ai-eval-fast — not run
-  --- §4 Invariant suite ---  SKIPPED (predecessor incomplete; would be
-                                       vacuous against partial registry)
-                              TestAIOffContract_AllFeatures — not added
-                              TestBaselineEndpointParity — not added
-                              TestZeroProviderEgress_OffMode — not added
-                              tests/ai-off-contract.spec.ts — not added
-                              TestPushFanout_AiKindsSuppressed_OffMode — not added
-  --- §5 Audit report ---     SKIPPED (would print "40 / 64" — by spec
-                                       must be "64 / 64" for DONE)
-  --- §6 Tag + CHANGELOG ---  SKIPPED (no green result to tag;
-                                       phase-50-final-gate tag NOT created;
-                                       CHANGELOG.md NOT modified)
+  --- CMD: go build ./... ---
+  (no output; clean compile across every package)
+  EXIT=0
 
-Aggregate gate verdict: FAIL on §1; remaining steps not run.
+  --- CMD: go vet ./... ---
+  (no output; clean vet across every package)
+  EXIT=0
+
+  --- CMD: go test -race -count=1 -timeout 600s ./... ---
+  (full transcript saved alongside this log; only the failing
+  packages and the FAIL-marker tails are reproduced here)
+
+  --- FAIL: TestBaselineHonoured (0.09s)
+      arch_test.go:192: internal/ doc.go coverage dropped:
+        baseline=100.0%, current=58.3% (did a doc.go get deleted
+        without refreshing the baseline?)
+  --- FAIL: TestEveryInternalPackageHasDocGoWithLayer (1.20s)
+      arch_test.go:290: packages missing doc.go (75):
+        cmd/ai-eval, internal/ai/cost, internal/ai/dispatch,
+        internal/ai/features, internal/ai/guard, internal/ai/health,
+        internal/ai/provider/anthropic, .../azure, .../mock,
+        .../ollama, .../openai,
+        internal/ai/strategies/{alert-tuning-suggestions,
+          anomaly-explanations, auto-name-unnamed-locations,
+          auto-trip-naming, battery-health-forecast-narrative,
+          cabin-temperature-impact-narrative,
+          charging-curve-fingerprint-clustering,
+          charging-diagnosis, chatbot-llm, cost-forecast-narration,
+          cross-rule-conflict-detection, data-repair-suggestions,
+          digest-narration, drive-coaching, feedback-queue-triage,
+          geofence-aware-automation-suggestions,
+          inbox-auto-categorization, incident-timeline-summarizer,
+          learned-per-vehicle-anomaly-baselines, lifetime-stats-qa,
+          log-trace-summarization, ml-charging-curve-clustering,
+          mqtt-sse-inspector-explanations, nl-alert-builder,
+          nl-automation-builder, nl-dashboard-composer,
+          nl-drive-search-replay, nl-grafana-panel, nl-search,
+          nl-sql-playground, period-compare-narration,
+          pii-redaction-shared-exports, predictive-maintenance,
+          preheat-precool-recommender, quiet-hours-suggestion,
+          rag-help, range-prediction-model,
+          route-efficiency-suggestions, safety-setting-explainer,
+          signal-explorer-nl-filter, smart-charge-schedule-suggestion,
+          software-update-changelog-summarizer, speed-profile-insights,
+          state-machine-debugger-narrator, suggest-new-geofences,
+          tco-narration, tire-pressure-trend-reasoning,
+          trip-planner-llm-agent,
+          trip-postcard-share-card-image-generation,
+          vampire-drain-explanation, vehicle-paint-preview,
+          voice-mode, watch-face-nl-response, yir-narration},
+        plus the foundational F0..F9 leaves not enumerated above.
+  --- FAIL: TestFrozenPackagesNoNewFiles (0.01s)
+      arch_test.go:335: FROZEN PACKAGE internal/api has 67 new
+        file(s) not in baseline:
+        ai_admin_handler.go, ai_alert_handler.go,
+        ai_alert_tuning_handler.go, ai_anomaly_handler.go,
+        ai_auto_name_unnamed_locations_handler.go,
+        ai_auto_trip_name_handler.go, ai_automation_handler.go,
+        ai_battery_health_handler.go,
+        ai_charging_curve_clustering_handler.go,
+        ai_charging_diagnosis_handler.go, ai_chatbot_handler.go,
+        ai_climate_schedule_handler.go,
+        ai_cost_forecast_narration_handler.go,
+        ai_cross_rule_conflict_handler.go,
+        ai_data_repair_handler.go, ai_digest_handler.go,
+        ai_drive_coach_handler.go, ai_drive_search_handler.go,
+        ai_drive_search_hydrator.go,
+        ai_feedback_triage_handler.go,
+        ai_geofence_aware_automation_handler.go,
+        ai_inbox_categorization_handler.go,
+        ai_incident_timeline_summarizer_handler.go,
+        ai_internal_handler.go, ai_lifetime_stats_qa_handler.go,
+        ai_log_trace_summarization_handler.go,
+        ai_ml_anomaly_baseline_handler.go,
+        ai_ml_charging_curve_handler.go, ai_ml_range_handler.go,
+        ai_mqtt_sse_inspector_handler.go,
+        ai_nl_dashboard_composer_handler.go,
+        ai_nl_grafana_panel_handler.go,
+        ai_nl_sql_playground_handler.go, ai_nl_search_handler.go,
+        ai_period_compare_handler.go,
+        ai_pii_redaction_handler.go, ai_quiet_hours_handler.go,
+        ai_rag_help_handler.go, ai_redaction_bypass_handler.go,
+        ai_route_efficiency_handler.go, ai_routes.go,
+        ai_safety_setting_explainer_handler.go,
+        ai_settings_validate_handler.go,
+        ai_signal_explorer_nl_filter_handler.go,
+        ai_software_update_summarizer_handler.go,
+        ai_speed_profile_handler.go,
+        ai_state_machine_debugger_handler.go,
+        ai_tco_narration_handler.go,
+        ai_tire_pressure_handler.go,
+        ai_trip_planner_handler.go,
+        ai_trip_postcard_share_card_handler.go,
+        ai_usage_handler.go,
+        ai_vampire_drain_handler.go,
+        ai_vehicle_paint_preview_handler.go,
+        ai_voice_mode_handler.go,
+        ai_watch_face_nl_response_handler.go,
+        ai_yir_handler.go,
+        + 11 supporting non-handler files
+        (alert_message_handler.go, drive_dynamics_handler.go,
+        status_incidents_handler.go, status_v1_handler.go, etc.)
+        → ADR-009 forbids new files here. Add the new endpoint to
+        internal/handler/v1 OR refresh tools/archmetrics/baseline.json
+        if this is an intentional exception.
+
+  FAIL    github.com/ev-dev-labs/teslasync/internal/arch  13.175s
+  (every other package — 100+ — passed; only internal/arch failed)
+  EXIT=1                                                              FAIL
+
+  --- CMD: go run ./tools/aivet ---
+  aivet: OK — 59 AI route(s), 57 feature(s) in registry,
+         54 SPA wiring entries, TS mirror in sync
+  EXIT=0                                                              PASS
+
+  --- CMD: go run ./tools/aigen --check ---
+  aigen: web/src/ai/features.ts is in sync (features mirror,
+         57 entries)
+  aigen: web/src/ai/spaWiring.ts is in sync (SPA wiring mirror,
+         54 entries)
+  EXIT=0                                                              PASS
+
+  --- CMD: go run ./tools/eval-schema-check ---
+  ok internal\ai\strategies\alert-tuning-suggestions\goldens.yaml ...
+  ... (54 strategy directories listed; 169 goldens total)
+  All 54 file(s) passed schema check
+  EXIT=0                                                              PASS
+
+  --- CMD: cd web && npx tsc --noEmit ---
+  (no output; 0 errors)
+  EXIT=0                                                              PASS
+
+  --- CMD: cd web && npm run lint ---
+  D:\repos\teslasync\web\src\features\system\components\status\ScheduledMaintenanceCard.tsx
+    146:17  error  A form label must be associated with a control  jsx-a11y/label-has-associated-control
+    150:17  error  A form label must be associated with a control  jsx-a11y/label-has-associated-control
+  D:\repos\teslasync\web\src\features\system\pages\ChatbotPage.tsx
+    325:5  error  Unused eslint-disable directive (no problems
+                  were reported from 'react-hooks/exhaustive-deps')
+  D:\repos\teslasync\web\src\features\telemetry\pages\MQTTInspectorPage.tsx
+    145:5  error  Unused eslint-disable directive (no problems
+                  were reported from 'react-hooks/exhaustive-deps')
+  D:\repos\teslasync\web\src\features\telemetry\pages\SignalsWorkspacePage.tsx
+    95:11  error  An interface declaring no members is equivalent
+                  to its supertype  @typescript-eslint/no-empty-object-type
+  D:\repos\teslasync\web\src\hooks\useAiStream.ts
+    274:15  warning  'parts' is never reassigned. Use 'const' instead      prefer-const
+    366:7   warning  'dataParts' is never reassigned. Use 'const' instead  prefer-const
+  D:\repos\teslasync\web\src\hooks\useRangeState.ts
+    233:5  error  Unused eslint-disable directive (no problems were
+                  reported from 'react-hooks/exhaustive-deps')
+  D:\repos\teslasync\web\src\observability\rum.test.ts
+    18:10  error  'installRouteSpanEmitter' is defined but never used.
+                  Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+    18:35  error  'installGlobalErrorRecorder' is defined but never used.
+                  Allowed unused vars must match /^_/u  @typescript-eslint/no-unused-vars
+  D:\repos\teslasync\web\src\observability\rum.ts
+    48:7  error  Unused eslint-disable directive (no problems were
+                  reported from 'no-console')
+  ✖ 26 problems (24 errors, 2 warnings)
+  8 errors and 2 warnings potentially fixable with the `--fix` option.
+  EXIT=1                                                              FAIL
+
+  --- CMD: cd web && npm test -- --run ---
+  Test Files  11 failed | 386 passed (397)
+        Tests  64 failed | 4054 passed (4118)
+       Errors  2 errors
+     Start at  05:55:12
+     Duration  245.06s
+  Failing test files:
+    - src/__tests__/lazyRoutes.smoke.test.ts
+    - src/api/hooks/__tests__/useSignals.test.tsx
+    - src/components/charts/__tests__/SmallMultiplesChart.test.tsx
+    - src/features/admin/components/__tests__/RedisDiagnosticEmptyState.test.tsx
+    - src/features/settings/components/__tests__/AISettings.test.tsx
+    - src/features/settings/components/ActiveSessionsSection.test.tsx
+    - src/features/settings/components/TOTPEnrollmentSection.test.tsx
+    - src/features/system/components/state-machine/__tests__/StateTimeline.empty.test.tsx
+    - src/features/system/components/state-machine/__tests__/StateTimeline.test.tsx
+    - src/features/system/components/status/__tests__/UpdateAvailableCallout.test.tsx
+    - src/features/trips/pages/__tests__/TripReplayPage.sync.test.tsx
+  Sample unhandled rejection (AISettings.test.tsx):
+    TypeError: Cannot read properties of undefined (reading 'ok')
+      at runValidate (src/features/settings/components/AIProviderSection.tsx:128:16)
+  EXIT=1                                                              FAIL
+
+  --- CMD: cd web && npm run build ---
+  (vite build successful; bundle-size gate: entry 379.4 KB,
+   vendor 303.8 KB, route 1145.7 KB, 391 chunks; OK)
+  EXIT=0                                                              PASS
+
+§2 verdict: MIXED — go test, web lint, and web npm test FAIL. Build
+matrix is RED on three command groups; remaining six groups PASS.
+
+§3 — Eval gate (run; PASS)
+
+  --- CMD: go run ./cmd/ai-eval --all ---
+  (substituted for `make ai-eval-fast` because Windows PowerShell does
+   not have GNU make in PATH. The Makefile target is literally
+   `go run ./cmd/ai-eval --all`, so the substitution is exact.)
+  AI eval results: 169 goldens, 169 pass, 0 fail (100.0% pass rate,
+                  1.1106962s elapsed)
+  EXIT=0                                                              PASS
+
+  Per-feature pass rate: 100% on every feature (well above the 80%
+  threshold the prompt mandates).
+
+§4 — Invariant suite (NOT RUN — would be vacuous against red §2,
+                     and the prescribed test files require production
+                     helpers that do not exist; see REASONING (i))
+
+  TestAIOffContract_AllFeatures              — not added
+  TestBaselineEndpointParity                  — not added
+  TestZeroProviderEgress_OffMode              — not added
+  tests/ai-off-contract.spec.ts (Playwright)  — not added
+                                                (no runner configured)
+  TestPushFanout_AiKindsSuppressed_OffMode    — not added
+  tests/baseline-routes.json                  — not added
+
+  Existing infrastructure that DOES enforce the relevant invariants
+  (and is currently green) and would be subsumed by the new tests
+  once the prerequisites land:
+    - internal/ai/guard/off_mode_test.go      (I6, I7 across all 57
+                                               registry entries)
+    - web/src/ai/__tests__/offMode.invariant.test.tsx
+                                              (I5 across all 54
+                                               user features in
+                                               AI_FEATURE_IDS)
+    - internal/jobs/ai_*_test.go (10 files)   (I4 + I12 #3 per job)
+
+§5 — Audit report (NOT GENERATED — required headline
+                  "Slices completed: 64 / 64 / Build matrix: PASS"
+                  cannot be honestly stamped while §2 is red)
+
+§6 — Tag and CHANGELOG (NOT EXECUTED — Covenant rule #8
+                       "No commit on red — commit only the log
+                       when BLOCKED")
+  phase-50-final-gate tag       NOT created
+  CHANGELOG.md                  NOT modified
+
+--- HX (Helix UX) FINAL-GATE ADDENDUM ---
+
+Run all 5 HX project-wide invariant scans (verbatim from the prompt):
+
+  --- HX#1: every non-internal AI component imports AIFeatureCard ---
+  $missing = (Get-ChildItem 'web/src/components/ai/AI*.tsx' |
+    Where-Object { $_.Name -notmatch
+      '^(AIFeatureCard|AIThinkingIndicator|AIChatbotIndicator|AiLimitBanner|AiOutputPanel|ConfirmDialog)\.tsx$' } |
+    ForEach-Object {
+      if (-not (Select-String -Path $_.FullName -Pattern
+        "from '@/components/ai/AIFeatureCard'" -Quiet)) { $_.Name }
+    })
+  $missing.Count = 0
+  EXIT=0                                                              PASS
+
+  --- HX#2: HelixMark replaces lucide Bot in components/ai + Avatar ---
+  Select-String 'web/src/components/ai/*.tsx',
+                'web/src/components/data-display/Avatar.tsx'
+                -Pattern "from 'lucide-react'.*\bBot\b|\bimport \{.*\bBot\b.*\} from 'lucide-react'"
+  Result: 0 matches
+  EXIT=0                                                              PASS
+
+  --- HX#3: AIFeatureCard owns the universal CTA + thinking copy ---
+  helix.askHelix / Ask Helix matches in AIFeatureCard.tsx: 6  (>0)
+  helix.thinking / Helix is thinking matches in AIFeatureCard.tsx: 2  (>0)
+  EXIT=0                                                              PASS
+
+  --- HX#4: stale legacy copy (`AI calls today`, `AI usage`,
+            `No AI calls`, `AI is thinking`) is gone ---
+  Select-String 'web/src/**/*.tsx','web/src/i18n/*.json'
+                -Pattern '"AI calls today"|"AI usage"|"No AI calls"|"AI is thinking"'
+  Result: 0 matches
+  EXIT=0                                                              PASS
+
+  --- HX#5: no fragile `/^Ask Helix$/i` regex assertions in tests ---
+  Select-String 'web/src/**/__tests__/AI*.tsx','web/src/**/*.test.tsx'
+                -Pattern "/\^Ask Helix\$/"
+  Result: 0 matches
+  EXIT=0                                                              PASS
+
+  HX scaffold exemption file (web/src/components/ai/__hx_scaffold_exemptions.ts):
+    not present in repo. The hard-coded regex in HX#1 already excludes
+    the 6 known exempt scaffolds (AIFeatureCard, AIThinkingIndicator,
+    AIChatbotIndicator, AiLimitBanner, AiOutputPanel, ConfirmDialog),
+    and HX#1 returned $missing.Count=0, so no additional exemption
+    list is required at this point. If a future slice adds a non-card
+    AI affordance (chat surface, voice/watch, image-gen), it will need
+    to introduce the exemption file before the HX#1 scan stays green.
+
+  HX verdict: all 5 invariants PASS.
+
+Aggregate gate verdict: §1 PASS, §2 FAIL (3 of 9 commands red),
+                        §3 PASS, §4 NOT-RUN (blocked on §2),
+                        §5 NOT-GENERATED, §6 NOT-EXECUTED,
+                        HX addendum PASS.
+
+Per the Honesty Covenant of this prompt:
+  Rule #1 — "No red-as-green — EXIT != 0 -> STATUS=BLOCKED, no exceptions"
+  Rule #2 — "No scope narrowing — run the exact gate command, no subsets"
+  Rule #3 — "No skip-and-assume — can't run gate -> BLOCKED, never DONE"
+  Rule #8 — "No commit on red — commit only the log when BLOCKED"
+
+The Blocked Path of this prompt explicitly applies:
+  > If a predecessor is missing, verification cannot run, or any gate
+  > fails, write the log with EXIT=1 / STATUS=BLOCKED. Commit only
+  > the blocked log and include the command output that proves the
+  > blocker.
+
+The §6 tag and CHANGELOG steps are NOT executed in this run because
+the §2 build matrix is red. Tagging `phase-50-final-gate` on a red
+build matrix would mark Phase-50 as complete in the repo's release
+metadata when in fact the AI-Off Contract has known unaudited
+surfaces (the 67 frozen-package handlers, the 75 layer-less
+packages, the lint debt, and the vitest debt).
 
 === COMMIT ===
 
 Note: the logs directory is in .gitignore (lines 89-90 of /.gitignore:
-`/.github/prompts` and `/.github/prompts/db-refactor/logs`). The 41
-predecessor logs are tracked because they were force-added with
-`git add -f` by their respective slices, matching the established
-convention. This slice follows the same convention.
+`/.github/prompts` and `/.github/prompts/db-refactor/logs`). The 65
+predecessor logs (64 in 0001..0064 + the 0065 W1 wiring log) are
+tracked because they were force-added with `git add -f` by their
+respective slices, matching the established convention. This slice
+follows the same convention.
 
 --- CMD: rm .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log ---
-(removed previous BLOCKED log that captured the 20/64 state)
+(removed previous BLOCKED log that captured the 40/64 state at
+HEAD 6372c0e64; superseded by this 64/64 + red-build-matrix log)
 EXIT=0
 
 --- CMD: write .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log ---
@@ -358,8 +703,9 @@ EXIT=0
 EXIT=0
 
 --- CMD: git add -f .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log ---
-EXIT=0
-(transcript captured at commit time — see post-commit diagnostics below)
+(transcript captured at commit time — see post-commit diagnostics
+ appended to this log by the wrapping slice driver)
+EXIT=0  (expected)
 
 --- CMD: git status --short (after add) ---
 M  .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log
@@ -370,7 +716,8 @@ M  .github/prompts/db-refactor/logs/phase-50-9999-final-gate.log
       satisfied.
 
 --- CMD: git commit (blocked-log-only) ---
-chore(ai): block phase-50 final gate - 24/64 predecessor slices missing
+chore(ai): block phase-50 final gate — build matrix red on go-test,
+           web-lint, and web-test (drift from predecessor AI slices)
 
 (transcript captured at commit time — single-file commit recorded
  below in the post-commit verification section.)
@@ -381,48 +728,107 @@ source, no test source, no migrations, no prompt edits, no tag.
 
 === AI-OFF CONTRACT ===
 
-This slice is verification-only and was BLOCKED at pre-flight; no
-production code, configuration, or DB schema was touched. The 12
-invariants are therefore preserved trivially (no diff = no risk),
-but for each invariant we record the affirmative evidence we did
-gather while preparing this slice:
+This slice is verification-only and was BLOCKED at the §2 build
+matrix; no production code, configuration, or DB schema was touched.
+The 12 invariants are therefore preserved trivially (no diff = no
+risk), but for each invariant we record the affirmative evidence
+gathered during this run:
 
-I1  Default-off ............. UNTOUCHED (settings.ai_mode default is set
-                              by slice 0003-F2-settings-ui, log present
-                              and STATUS=DONE).
-I2  Three modes, one flag ... UNTOUCHED (DB constraint introduced by
-                              slice 0003-F2; not modified here).
-I3  Non-AI baseline intact .. UNTOUCHED (no production source changed
-                              by this slice; baseline routes unchanged).
-I4  Zero egress in off ...... NOT PROVEN this run (egress soak test
-                              would be vacuous against the partial
-                              registry; deferred to a re-run after
-                              slices 0038..0061 land).
-I5  Hidden UI in off ........ NOT PROVEN this run (Playwright spec
-                              walks features.Registry; 24 features
-                              missing from registry means 24 surfaces
-                              would silently skip — false-green risk).
-I6  404 routes in off ....... NOT PROVEN this run (same reason as I5
-                              — backend-route loop iterates registry).
-I7  Per-feature opt-in ...... NOT PROVEN this run (registry-driven).
-I8  Data survives toggle .... UNTOUCHED (no DB / cache schema diff).
-I9  Keys never leak ......... UNTOUCHED (settings DTO redaction was
-                              landed by slice 0003-F2; not modified
-                              here; no new field added by this slice).
-I10 Type system .............. UNTOUCHED (aivet / aigen / ESLint
-                              rules unchanged; no AI components added).
+I1  Default-off ............. UNTOUCHED + PARTIAL EVIDENCE.
+                              Settings.ai_mode default 'off' is enforced
+                              by migration introduced by slice 0003-F2
+                              (log present, STATUS=DONE). Not directly
+                              re-verified by this slice.
+
+I2  Three modes, one flag ... UNTOUCHED.
+                              DB constraint introduced by slice 0003-F2;
+                              not modified here.
+
+I3  Non-AI baseline intact .. UNTOUCHED + PARTIAL EVIDENCE.
+                              No production source changed by this slice.
+                              go build ./... and go vet ./... both PASS,
+                              so the baseline still compiles. The web
+                              build PASSES. The vitest red is in
+                              SETTINGS-screen and SUPPORT-screen tests;
+                              none of the failing tests assert on a
+                              non-AI baseline endpoint's contract.
+
+I4  Zero egress in off ...... NOT FULLY PROVEN this run.
+                              The egress soak test would require the
+                              `installProviderHostInterceptor` helper
+                              that does not exist; deferring it to a
+                              future slice that adds the helper.
+                              However: each per-feature internal/jobs
+                              test (10 files) asserts the job is a
+                              no-op when ai_mode='off' (tests passed
+                              under §2's go test run — the FAIL was
+                              localised to internal/arch only).
+
+I5  Hidden UI in off ........ PROVEN by existing infrastructure.
+                              web/src/ai/__tests__/offMode.invariant.test.tsx
+                              walks every AI_FEATURE_ID (54 user
+                              features) and asserts no [data-ai-feature]
+                              renders, no uiTestId is in the tree, and
+                              no inner placeholder is shown. This test
+                              file was NOT in the failing-test list under
+                              §2's npm test run.
+
+I6  404 routes in off ....... PROVEN by existing infrastructure.
+                              internal/ai/guard/off_mode_test.go's
+                              TestGuard_OffModeReturns404 walks every
+                              feature in features.IDs() (57 entries)
+                              and asserts http.NotFound. This test
+                              passed under §2's go test run.
+
+I7  Per-feature opt-in ...... PROVEN by existing infrastructure.
+                              internal/ai/guard/off_mode_test.go's
+                              TestGuard_PerFeatureOptInRequired covers
+                              the local-mode + feature-off case for
+                              every registered feature.
+
+I8  Data survives toggle .... UNTOUCHED.
+                              No DB / cache schema diff in this slice.
+
+I9  Keys never leak ......... UNTOUCHED + KNOWN GAP.
+                              Settings DTO redaction shipped in slice
+                              0003-F2; not modified here. The vitest
+                              regression in AISettings.test.tsx
+                              (AIProviderSection.tsx:128) is
+                              orthogonal — it concerns the validate-config
+                              response shape, not key disclosure.
+
+I10 Type system .............. UNTOUCHED + PARTIAL EVIDENCE.
+                              aivet, aigen, ESLint custom AI rule, and
+                              CoverageOK() all currently green. The 24
+                              ESLint errors above are NOT in the AI
+                              custom rule; they are jsx-a11y, unused
+                              vars, and unused-eslint-disable in
+                              non-AI surfaces.
+
 I11 Final-gate proof ........ NOT ACHIEVED this run — that is exactly
                               the blocker this log records. Phase-50
-                              cannot be marked closed until slices
-                              0038..0061 land and this slice re-runs
-                              green.
-I12 Client / background ..... UNTOUCHED (no service worker manifest,
-                              client storage key, background job, or
-                              push fanout code modified by this slice).
+                              cannot be marked closed until the §2
+                              red commands turn green and the §4
+                              invariant suite is added.
+
+I12 Client / background ..... UNTOUCHED + PARTIAL EVIDENCE.
+                              No service worker manifest, client
+                              storage key, or push fanout code modified.
+                              Each per-feature internal/jobs test (10
+                              files) covers the background-job side of
+                              I12 (the dispatcher gate). The SW manifest
+                              and client-storage assertions await the
+                              §4 Playwright suite.
 
 Net effect on the AI-Off Contract: zero diff, zero new risk, zero
 new proof. The contract remains exactly as the predecessor slices
-0001..0037 + 0062..0064 left it.
+0001..0065 left it, but the global build matrix is now visibly red
+in a way that the per-slice "pre-existing failure disclosure"
+pattern obscured.
+
+HX (Helix UX) project-wide invariants: all 5 PASS (see the
+HX FINAL-GATE ADDENDUM block above). The Helix rebrand is
+complete and consistent across the AI surface.
 
 === STATUS ===
 EXIT=1
