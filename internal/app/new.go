@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
@@ -508,6 +510,27 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 	a.TelemetryHandler.SetPipeline(normPipeline)
 
 	dlqTopic := strings.TrimSuffix(a.Cfg.FleetTelemetry.TopicBase, "/") + "/dlq"
+
+	// subRef bridges the chicken-and-egg between the paho client (which
+	// must register an OnConnect handler BEFORE Connect) and the
+	// PipelineSubscriber (which owns the topic + Subscribe call but cannot
+	// be constructed until we have a connected client). On every
+	// post-Start reconnect, paho fires OnConnect → callback derefs subRef
+	// → PipelineSubscriber.OnBrokerReconnect re-issues SUBSCRIBE.
+	//
+	// Without this, paho v1.5.0's default ResumeSubs=false leaves a
+	// reconnected client with no subscriptions whenever the broker drops
+	// the persistent session (EMQX session_expiry_interval elapsed,
+	// node restart on a non-replicated cluster, etc), silently halting
+	// the entire fleet-telemetry stream — observed in production as
+	// `subscriptions=0, delivered_msgs=0` with `connected=true` for days.
+	var subRef atomic.Pointer[mqtt.PipelineSubscriber]
+	pipelineOnConnect := func(c pahomqtt.Client) {
+		if sub := subRef.Load(); sub != nil {
+			sub.OnBrokerReconnect(c)
+		}
+	}
+
 	pahoClient, dlq, err := mqtt.NewProductionPipelineMQTT(
 		ctx,
 		a.Cfg.MQTT.BrokerURL(),
@@ -516,6 +539,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		a.Cfg.MQTT.Password,
 		dlqTopic,
 		pipelineLogger,
+		pipelineOnConnect,
 	)
 	if err != nil {
 		return fmt.Errorf("phase-42a: NewProductionPipelineMQTT failed; broker=%s dlq_topic=%s: %w",
@@ -578,6 +602,12 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		},
 		pipelineLogger,
 	)
+	// Publish subRef BEFORE Start so any post-Start reconnect (or even a
+	// pathological mid-Start reconnect that fires the goroutine-scheduled
+	// OnConnect after subRef is published) routes through
+	// PipelineSubscriber.OnBrokerReconnect, which guards itself against
+	// pre-start invocations via the started/stopped flags.
+	subRef.Store(pipelineSubscriber)
 	if err := pipelineSubscriber.Start(); err != nil {
 		log.Warn().Err(err).
 			Str("topic_base", a.Cfg.FleetTelemetry.TopicBase).
