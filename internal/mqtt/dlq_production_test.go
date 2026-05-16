@@ -117,7 +117,7 @@ func TestNewProductionPipelineMQTT_RejectsEmptyArgs(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c, dlq, err := NewProductionPipelineMQTT(ctx, tc.brokerURL, tc.clientID, "u", "p", tc.dlqTopic, log)
+			c, dlq, err := NewProductionPipelineMQTT(ctx, tc.brokerURL, tc.clientID, "u", "p", tc.dlqTopic, log, nil)
 			if err == nil {
 				t.Fatalf("err = nil, want non-nil")
 			}
@@ -159,7 +159,7 @@ func TestNewProductionPipelineMQTT_ConnectionFailureWrapped(t *testing.T) {
 	defer cancel()
 
 	log := zerolog.New(zerolog.NewTestWriter(t))
-	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log)
+	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log, nil)
 
 	if err == nil {
 		// Defensive cleanup if paho somehow succeeded against the closed port.
@@ -197,7 +197,7 @@ func TestNewProductionPipelineMQTT_ContextCancelledDuringConnect(t *testing.T) {
 	cancel() // cancel BEFORE the call so ctx.Done() is already closed
 
 	log := zerolog.New(zerolog.NewTestWriter(t))
-	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log)
+	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log, nil)
 
 	if err == nil {
 		if c != nil {
