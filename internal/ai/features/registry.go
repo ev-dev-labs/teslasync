@@ -3665,6 +3665,71 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+	// PU3 — natural-language dashboard composer.
+	//
+	// Composes a typed DashboardLayoutDraft (title + ordered list
+	// of panel slots picking panels by NAME from a curated
+	// install-wide catalog and placing each on the Grafana
+	// 24-column grid) on the /power/dashboards page. The user
+	// reviews the typed proposal in the AI side panel and clicks
+	// the canonical "Apply to editor" button to copy the draft
+	// into the manual dashboard composer form, then clicks the
+	// existing Copy to clipboard button to paste the JSON into
+	// their own Grafana dashboard editor. The translator NEVER
+	// pushes the dashboard to Grafana itself — propose-only,
+	// review-and-copy.
+	//
+	// The slice ships TWO propose-only typed tools
+	// (draft_dashboard_layout, validate_dashboard_layout) that
+	// share the SAME single-dimension allowlist enforcement: every
+	// slot.panel_name MUST be in the in-scope curated panel
+	// catalog (six install-wide panel templates:
+	// drives_per_day_timeseries, battery_soc_stat,
+	// charging_sessions_table, alerts_count_stat, vehicles_table,
+	// energy_used_per_day_barchart). Each slot's grid_pos MUST be
+	// inside the dashboard grid (x in [0..23], y in [0..49], w in
+	// [1..24], h in [1..50]; x+w ≤ 24). The dashboard MUST contain
+	// at least 1 and at most 12 slots. Slots MUST NOT use the same
+	// panel_name twice. Slot bounding boxes MUST NOT overlap.
+	// Per-request scope binding rejects any out-of-catalog
+	// panel_name so a prompt-injection attempt cannot exfiltrate
+	// or invent panels.
+	//
+	// Per-feature redaction policy is PolicyAlertBuilder (Allow =
+	// nil; every PII class is tagged round-trip before the
+	// provider sees the prompt). Only catalog metadata (panel
+	// names + descriptions) crosses the tool boundary, no row
+	// data, no operator-authored text from any non-prompt source.
+	// Retrieval is constrained to two source types:
+	// dashboard_schema (a feature-local string referring to the
+	// in-scope curated panel catalog) and widget_catalog (a
+	// feature-local string referring to the per-panel rendering
+	// hints). Service-worker chunk 'ai-nl-dashboard-composer' is
+	// registered for off-mode SW filtering; the client storage
+	// key 'ai.dashboardComposer.draft' is only written when the
+	// gated component mounts, so off mode leaves it absent by
+	// construction (ADR-015 §I12). The deterministic
+	// /power/dashboards baseline (manual JSON dashboard composer
+	// + curated panel catalog viewer + Copy to clipboard button)
+	// remains the canonical surface when Helix is off (ADR-015
+	// §I3 + §I5 + §I6).
+	"nl-dashboard-composer": {
+		ID:          "nl-dashboard-composer",
+		Name:        "Helix natural-language dashboard composer",
+		Description: "Opt-in Helix translator on the /power/dashboards route that turns plain-English dashboard requests (e.g. \"give me an overview dashboard with daily drives, current battery, and recent alerts\") into a typed DashboardLayoutDraft JSON envelope (title + ordered list of panel slots picking panels by name from a curated install-wide panel catalog and placing each on the Grafana 24-column grid) you can review before clicking the canonical Apply to editor button on the manual dashboard composer form. The translator uses TWO propose-only typed tools (draft_dashboard_layout, validate_dashboard_layout) that share the SAME single-dimension allowlist enforcement: every slot.panel_name MUST be in the in-scope curated panel catalog (six install-wide panel templates: drives_per_day_timeseries, battery_soc_stat, charging_sessions_table, alerts_count_stat, vehicles_table, energy_used_per_day_barchart); each slot's grid_pos MUST be inside the dashboard grid (x in [0..23], y in [0..49], w in [1..24], h in [1..50]; x+w ≤ 24); the dashboard MUST contain at least 1 and at most 12 slots; slots MUST NOT use the same panel_name twice; slot bounding boxes MUST NOT overlap. The LLM NEVER pushes the dashboard to Grafana itself — the user reviews the typed draft in the Helix panel, clicks Apply to editor to copy the draft into the manual dashboard composer form, then clicks Copy to clipboard on the baseline editor to copy the JSON for pasting into their own Grafana dashboard. The Helix panel is propose-only and never bypasses the existing manual composer. Per-request scope binding rejects any panel_name not in the in-scope curated catalog so a prompt-injection attempt cannot exfiltrate or invent panels. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); only catalog metadata (panel names + descriptions) crosses the tool boundary, no row data, no operator-authored text from any non-prompt source. Retrieval is constrained to two source types: dashboard_schema (a feature-local string referring to the in-scope curated panel catalog) and widget_catalog (a feature-local string referring to per-panel rendering hints). The deterministic /power/dashboards baseline (manual JSON dashboard composer + curated panel catalog viewer + Copy to clipboard button) remains the canonical surface when Helix is off (ADR-015 §I3 + §I5 + §I6).",
+		Tier:        "PU3",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/power/dashboard/draft"},
+			Frontend:  []string{"/power/dashboards"},
+			UITestIDs: []string{"ai-feature-nl-dashboard-composer-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

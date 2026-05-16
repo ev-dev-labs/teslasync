@@ -163,6 +163,7 @@ func mountAIRoutes(
 	aiWatchFaceNLResponse *AIWatchFaceNLResponseHandler,
 	aiNLSqlPlayground *AINLSQLPlaygroundHandler,
 	aiNLGrafanaPanel *AINLGrafanaPanelHandler,
+	aiNLDashboardComposer *AINLDashboardComposerHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -775,6 +776,33 @@ func mountAIRoutes(
 			nlGrafanaPanelHandler = aiNLGrafanaPanel.ServeHTTP
 		}
 		r.Post("/power/grafana-panel/draft", g.Wrap("nl-grafana-panel", nlGrafanaPanelHandler))
+
+		// nl-dashboard-composer (Phase-50 / 0059, PU3 slice).
+		// Opt-in Helix translator that converts a natural-language
+		// dashboard request into a typed DashboardLayoutDraft (a
+		// single dashboard envelope — title + ordered list of
+		// panel slots picking panels by name from a curated
+		// install-wide panel catalog and placing each on the
+		// Grafana 24-column grid) the user reviews in the AI side
+		// panel of the manual dashboard composer page at
+		// /power/dashboards, then explicitly clicks the canonical
+		// Apply to editor button to copy the draft into the
+		// manual JSON dashboard composer form and the canonical
+		// Copy to clipboard button to paste it into their existing
+		// Grafana dashboard editor. The narrator NEVER pushes the
+		// dashboard — there is no apply / push tool; the
+		// per-request scope binding refuses any panel_name outside
+		// the curated install-wide whitelist, and the layout
+		// contract refuses overlapping bounding boxes or more than
+		// 12 slots. The canonical baseline composer on
+		// /power/dashboards is unchanged; the AI surface NEVER
+		// replaces the deterministic composer — it COEXISTS with
+		// it. (ADR-015 §I3 + §I5 + §I6.)
+		var nlDashboardComposerHandler http.HandlerFunc = aiNLDashboardComposerStubHandler
+		if aiNLDashboardComposer != nil {
+			nlDashboardComposerHandler = aiNLDashboardComposer.ServeHTTP
+		}
+		r.Post("/power/dashboard/draft", g.Wrap("nl-dashboard-composer", nlDashboardComposerHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1688,6 +1716,15 @@ func aiNLSqlPlaygroundStubHandler(w http.ResponseWriter, _ *http.Request) {
 // not the stub.
 func aiNLGrafanaPanelStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai natural-language grafana panel is not yet implemented")
+}
+
+// aiNLDashboardComposerStubHandler mirrors the other AI stub
+// handlers for the PU3 slice (Phase-50 / 0059
+// nl-dashboard-composer). Reachable only when
+// AINLDashboardComposerHandler is nil at construction; the
+// off-mode 404 invariant is held by the guard, not the stub.
+func aiNLDashboardComposerStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai natural-language dashboard composer is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

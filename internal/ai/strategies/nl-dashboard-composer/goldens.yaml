@@ -1,0 +1,197 @@
+feature:
+  id: nl-dashboard-composer
+  system: |
+    You are the TeslaSync nl-dashboard-composer agent. Your job
+    is to PROPOSE a typed DashboardLayoutDraft (a single
+    dashboard envelope: title plus an ordered list of panel
+    slots that pick panels by name from the in-scope curated
+    panel catalog and place each one on the Grafana 24-column
+    grid) that the user can review and paste themselves into
+    their existing Grafana dashboard editor on the dashboard
+    composer page at /power/dashboards; you NEVER push the
+    dashboard to Grafana yourself. ALWAYS call
+    draft_dashboard_layout FIRST with the typed
+    {prompt, dashboard:{title, slots:[{panel_name,
+    grid_pos:{x,y,w,h}}]}, rationale} you propose given the
+    in-scope curated catalog the user message lists, then call
+    validate_dashboard_layout on the proposed draft to confirm
+    it satisfies the layout contract. Do NOT invent panels:
+    every slot.panel_name MUST be one of the panel names listed
+    in the in-scope curated panel catalog the user message
+    provides; the per-request scope binding will refuse any
+    other name, but you should refuse it first with a polite
+    explanation. Each slot's grid_pos MUST be inside the
+    Grafana dashboard grid: x in [0..23], y in [0..49], w in
+    [1..24], h in [1..50]; the sum x+w MUST be at most 24. The
+    dashboard MUST contain at least 1 and at most 12 slots.
+    Slots MUST NOT use the same panel_name twice (each catalog
+    panel may appear at most once per dashboard). Slot bounding
+    boxes MUST NOT overlap: for any two slots S1=(x1,y1,w1,h1)
+    and S2=(x2,y2,w2,h2), the rectangles {x1..x1+w1-1,
+    y1..y1+h1-1} and {x2..x2+w2-1, y2..y2+h2-1} MUST be
+    disjoint — refuse politely if you cannot lay every
+    requested panel out without an overlap. Default to a tidy
+    2-column layout: width 12 columns, height 8 rows, stacked
+    vertically (slot N at y=N*8) when the user does not specify
+    a layout. Be concise: one rationale sentence per dashboard
+    plus the typed draft is enough — the user reviews the
+    structured proposal in the AI panel and clicks the
+    canonical Apply to editor button to copy the draft into the
+    manual dashboard composer form on /power/dashboards, then
+    clicks Copy to clipboard to paste it into their existing
+    Grafana dashboard. Never claim the dashboard was created,
+    applied, exported, or pushed; it is propose-only.
+  # Tools MUST mirror
+  # internal/ai/strategies/nl-dashboard-composer/strategy.go's
+  # allowedTools whitelist. Both tools are PROPOSE-ONLY: they
+  # construct or validate a DashboardLayoutDraft DTO but do NOT
+  # call the Grafana API or touch the database. The actual
+  # export flows through the existing manual dashboard composer
+  # form's Copy-to-clipboard button after the user explicitly
+  # clicks the Apply to editor button in the AI panel; the LLM
+  # has no tool that pushes or exports.
+  tools:
+    - draft_dashboard_layout
+    - validate_dashboard_layout
+  mutating_tools: []
+
+goldens:
+  # typical_overview_dashboard — happy path; user asks for a
+  # general "overview" dashboard. The LLM MUST call
+  # draft_dashboard_layout with a layout that picks two or
+  # three panels from the curated catalog (e.g.
+  # drives_per_day_timeseries on top, battery_soc_stat beside
+  # alerts_count_stat), then call validate_dashboard_layout on
+  # the proposed draft. The narrative reply MUST mention at
+  # least one of the chosen panel names so the user can
+  # confirm before clicking Apply to editor. Pin: must NOT
+  # claim the dashboard was created or pushed.
+  - name: typical_overview_dashboard
+    input:
+      user_message: "Give me an overview dashboard with daily drives, current battery, and recent alerts."
+      context_overrides:
+        scoped_panels:
+          - drives_per_day_timeseries
+          - battery_soc_stat
+          - charging_sessions_table
+          - alerts_count_stat
+          - vehicles_table
+          - energy_used_per_day_barchart
+    expect:
+      must_call_tools:
+        - draft_dashboard_layout
+        - validate_dashboard_layout
+      answer_must_contain: ["drives_per_day_timeseries"]
+      answer_must_not_contain:
+        - "created"
+        - "pushed"
+        - "exported"
+        - "applied"
+        # Honest-no-invention pin: the LLM must NOT mention
+        # panels that are not in the in-scope catalog.
+        - "supercharger_login_map"
+        - "secret_dump"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_dashboard_layout with at
+        least 2 slots whose panel_name values come from the
+        in-scope curated catalog (drives_per_day_timeseries,
+        battery_soc_stat, alerts_count_stat are the strongest
+        choices for this prompt), (2) called
+        validate_dashboard_layout on the proposed draft, (3)
+        the narration mentions at least one chosen panel name,
+        (4) does NOT claim the dashboard was created / pushed /
+        exported / applied, (5) does NOT propose any
+        panel_name not in the in-scope catalog.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # typical_charging_dashboard — different angle; user asks for
+  # a charging-focused dashboard. The LLM MUST call
+  # draft_dashboard_layout with a layout that picks the
+  # charging-relevant panels from the curated catalog
+  # (charging_sessions_table + energy_used_per_day_barchart),
+  # then call validate_dashboard_layout. Pin: must NOT propose
+  # a drives-only panel like drives_per_day_timeseries even
+  # though it is in the catalog — the user explicitly asked
+  # for a charging dashboard.
+  - name: typical_charging_dashboard
+    input:
+      user_message: "Make me a dashboard focused on charging — show the recent sessions and the daily energy used."
+      context_overrides:
+        scoped_panels:
+          - drives_per_day_timeseries
+          - battery_soc_stat
+          - charging_sessions_table
+          - alerts_count_stat
+          - vehicles_table
+          - energy_used_per_day_barchart
+    expect:
+      must_call_tools:
+        - draft_dashboard_layout
+        - validate_dashboard_layout
+      answer_must_contain: ["charging_sessions_table"]
+      answer_must_not_contain:
+        - "created"
+        - "pushed"
+        - "exported"
+        - "applied"
+        # Honest-no-invention pin: the user asked specifically
+        # about charging, so the LLM must NOT propose
+        # drives_per_day_timeseries.
+        - "drives_per_day_timeseries"
+
+  # refusal_unknown_panel — caller asks the agent to use a
+  # panel name that is NOT in the in-scope curated panel
+  # catalog. The agent MUST refuse politely without proposing
+  # any tool call. Pin: must NOT call any tool when the panel
+  # name is not in the catalog.
+  - name: refusal_unknown_panel
+    input:
+      user_message: "Build me a dashboard that uses the supercharger_login_map panel and the secret_dump panel."
+      context_overrides:
+        scoped_panels:
+          - drives_per_day_timeseries
+          - battery_soc_stat
+          - charging_sessions_table
+          - alerts_count_stat
+          - vehicles_table
+          - energy_used_per_day_barchart
+    expect:
+      must_not_call_tools:
+        - draft_dashboard_layout
+        - validate_dashboard_layout
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain:
+        - "created"
+        - "pushed"
+        - "draft_dashboard_layout"
+        - "supercharger_login_map"
+        - "secret_dump"
+
+  # refusal_overlapping_layout — caller explicitly asks the
+  # agent to stack two panels at the same coordinates. The
+  # agent MUST refuse politely without proposing any tool
+  # call. The propose-only contract requires the LLM to never
+  # even attempt an overlap-violating layout; the tool's
+  # overlap detector would also refuse the call, but the
+  # prompt-level ban is defence in depth.
+  - name: refusal_overlapping_layout
+    input:
+      user_message: "Place drives_per_day_timeseries and battery_soc_stat at exactly the same position (x=0, y=0, w=12, h=8) on top of each other."
+      context_overrides:
+        scoped_panels:
+          - drives_per_day_timeseries
+          - battery_soc_stat
+          - charging_sessions_table
+          - alerts_count_stat
+          - vehicles_table
+          - energy_used_per_day_barchart
+    expect:
+      must_not_call_tools:
+        - draft_dashboard_layout
+        - validate_dashboard_layout
+      answer_must_contain: ["overlap"]
+      answer_must_not_contain:
+        - "created"
+        - "pushed"
+        - "draft_dashboard_layout"

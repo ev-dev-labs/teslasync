@@ -1,0 +1,27 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_dashboard_draft_charging
+        name: draft_dashboard_layout
+        arguments: '{"prompt": "Make me a dashboard focused on charging — show the recent sessions and the daily energy used.", "dashboard": {"title": "Charging overview", "slots": [{"panel_name": "charging_sessions_table", "grid_pos": {"x": 0, "y": 0, "w": 24, "h": 8}}, {"panel_name": "energy_used_per_day_barchart", "grid_pos": {"x": 0, "y": 8, "w": 24, "h": 8}}]}, "rationale": "Pairs the charging sessions table on top with the daily energy bar chart below for a focused charging view."}'
+    input_tokens: 122
+    output_tokens: 88
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_dashboard_validate_charging
+        name: validate_dashboard_layout
+        arguments: '{"prompt": "Make me a dashboard focused on charging — show the recent sessions and the daily energy used.", "dashboard": {"title": "Charging overview", "slots": [{"panel_name": "charging_sessions_table", "grid_pos": {"x": 0, "y": 0, "w": 24, "h": 8}}, {"panel_name": "energy_used_per_day_barchart", "grid_pos": {"x": 0, "y": 8, "w": 24, "h": 8}}]}, "rationale": "Pairs the charging sessions table on top with the daily energy bar chart below for a focused charging view."}'
+    input_tokens: 180
+    output_tokens: 28
+  - finish_reason: stop
+    content: |
+      I drafted a charging-focused dashboard with two panels
+      from the in-scope catalog: `charging_sessions_table`
+      across the top showing the recent sessions, then
+      `energy_used_per_day_barchart` below showing the daily
+      energy used. Review the typed proposal in the AI panel
+      and click the Apply to editor button to copy the JSON
+      into the manual dashboard composer; I never push it to
+      Grafana myself.
+    input_tokens: 220
+    output_tokens: 86

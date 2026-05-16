@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-grafana-panel" | "nl-search" | "nl-sql-playground" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "voice-mode" | "watch-face-nl-response" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-dashboard-composer" | "nl-drive-search-replay" | "nl-grafana-panel" | "nl-search" | "nl-sql-playground" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "voice-mode" | "watch-face-nl-response" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -333,6 +333,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-nl-automation-builder-root"] as const),
   }),
+  "nl-dashboard-composer": Object.freeze({
+    id: "nl-dashboard-composer",
+    name: "Helix natural-language dashboard composer",
+    description: "Opt-in Helix translator on the /power/dashboards route that turns plain-English dashboard requests (e.g. \"give me an overview dashboard with daily drives, current battery, and recent alerts\") into a typed DashboardLayoutDraft JSON envelope (title + ordered list of panel slots picking panels by name from a curated install-wide panel catalog and placing each on the Grafana 24-column grid) you can review before clicking the canonical Apply to editor button on the manual dashboard composer form. The translator uses TWO propose-only typed tools (draft_dashboard_layout, validate_dashboard_layout) that share the SAME single-dimension allowlist enforcement: every slot.panel_name MUST be in the in-scope curated panel catalog (six install-wide panel templates: drives_per_day_timeseries, battery_soc_stat, charging_sessions_table, alerts_count_stat, vehicles_table, energy_used_per_day_barchart); each slot's grid_pos MUST be inside the dashboard grid (x in [0..23], y in [0..49], w in [1..24], h in [1..50]; x+w ≤ 24); the dashboard MUST contain at least 1 and at most 12 slots; slots MUST NOT use the same panel_name twice; slot bounding boxes MUST NOT overlap. The LLM NEVER pushes the dashboard to Grafana itself — the user reviews the typed draft in the Helix panel, clicks Apply to editor to copy the draft into the manual dashboard composer form, then clicks Copy to clipboard on the baseline editor to copy the JSON for pasting into their own Grafana dashboard. The Helix panel is propose-only and never bypasses the existing manual composer. Per-request scope binding rejects any panel_name not in the in-scope curated catalog so a prompt-injection attempt cannot exfiltrate or invent panels. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); only catalog metadata (panel names + descriptions) crosses the tool boundary, no row data, no operator-authored text from any non-prompt source. Retrieval is constrained to two source types: dashboard_schema (a feature-local string referring to the in-scope curated panel catalog) and widget_catalog (a feature-local string referring to per-panel rendering hints). The deterministic /power/dashboards baseline (manual JSON dashboard composer + curated panel catalog viewer + Copy to clipboard button) remains the canonical surface when Helix is off (ADR-015 §I3 + §I5 + §I6).",
+    tier: "PU3",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-nl-dashboard-composer-root"] as const),
+  }),
   "nl-drive-search-replay": Object.freeze({
     id: "nl-drive-search-replay",
     name: "NL drive search and replay",
@@ -650,6 +661,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "mqtt-sse-inspector-explanations",
   "nl-alert-builder",
   "nl-automation-builder",
+  "nl-dashboard-composer",
   "nl-drive-search-replay",
   "nl-grafana-panel",
   "nl-search",
