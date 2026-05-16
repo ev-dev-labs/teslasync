@@ -11,6 +11,7 @@ import {
 } from '@/components/charts';
 import { Skeleton, EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { AIMqttSseInspectorExplanations } from '@/components/ai/AIMqttSseInspectorExplanations';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -130,6 +131,20 @@ export default function MQTTInspectorPage() {
 
   const vehicleColumns = useMemo(() => buildVehicleColumns(t, formatRelative), [t, formatRelative]);
 
+  // AI explainer window: derive (from_unix, to_unix) from the
+  // current time so the in-scope window covers the most recent
+  // 30 minutes of broker activity. Recomputed once per mount —
+  // a deliberate choice so the body reference stays stable
+  // between renders (the AI advisor's useAiStream hook depends
+  // on body identity). Operators who want a different window
+  // refresh the page; this matches the precedent set by
+  // log-trace-summarization and incident-timeline-summarizer.
+  const aiWindow = useMemo(() => {
+    const now = Math.floor(Date.now() / 1000);
+    return { fromUnix: now - 30 * 60, toUnix: now };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <PageContainer
       title={t('mqtt.title', 'MQTT Inspector')}
@@ -225,6 +240,14 @@ export default function MQTTInspectorPage() {
             <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('mqtt.noStatus', 'MQTT broker status not available')} />
           )}
         </GlassPanel>
+      </FadeIn>
+
+      {/* AI explainer (opt-in, Phase-50 / S6 slice 0047). */}
+      <FadeIn delay={0.18}>
+        <AIMqttSseInspectorExplanations
+          fromUnix={aiWindow.fromUnix}
+          toUnix={aiWindow.toUnix}
+        />
       </FadeIn>
 
       {/* Throughput Chart */}

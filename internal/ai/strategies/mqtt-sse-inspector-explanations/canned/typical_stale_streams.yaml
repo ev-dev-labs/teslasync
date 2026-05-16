@@ -1,0 +1,25 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_stream_inspector_typical_stale_streams_1
+        name: query_stream_inspector
+        arguments: '{"from_unix": 1700000000, "to_unix": 1700001800}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      The MQTT broker is connected, but the deterministic
+      envelope reports a non-trivial number of stale vehicle
+      streams whose last_received timestamp is older than the
+      staleness threshold. Aggregate signals-per-second is
+      noticeably lower than a healthy steady state because
+      those vehicles have stopped reporting. The SSE hub has
+      connected operator clients with zero dropped frames, so
+      the live event channel is not the bottleneck. One
+      background job in the watch list reports a non-ok
+      last_status, which is consistent with the staleness and
+      worth investigating in the operator console — the
+      envelope alone does not support deeper root-cause
+      attribution.
+    input_tokens: 240
+    output_tokens: 96

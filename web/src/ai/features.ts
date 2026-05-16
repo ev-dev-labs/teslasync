@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "period-compare-narration" | "preheat-precool-recommender" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "speed-profile-insights" | "suggest-new-geofences" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -300,6 +300,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-ml-charging-curve-clustering-root"] as const),
   }),
+  "mqtt-sse-inspector-explanations": Object.freeze({
+    id: "mqtt-sse-inspector-explanations",
+    name: "MQTT and SSE inspector explanations",
+    description: "Opt-in LLM-backed explainer that turns the deterministic MQTT-broker / SSE-hub / background-job snapshot into a 3-6 sentence operator-readable factual explanation by routing through two read-only tools: query_stream_inspector (loads the in-scope window via the StreamInspectorSource port — a thin deterministic adapter around the same MQTT status snapshot the canonical baseline /api/v1/admin/mqtt/status endpoint already serves; emits a typed StreamInspectorEnvelope of broker connectivity + per-vehicle stream stats + SSE hub state + background-job freshness) and the OPTIONAL retrieve_stream_chunks (F7 retrieval restricted to {mqtt_status, sse_status, job_status} source types) for per-event context. The deterministic MQTTInspectorPage broker-status snapshot table remains the canonical baseline when AI is off. Per-feature redaction policy is PolicyChatbot (deny-by-default; every tag class redacted to a round-trip tag) so a leaked transcript reveals nothing about broker hostnames, ports, SSE client identifiers, or VINs. Per-request scope binding installs the body-supplied (from_unix, to_unix) tuple in ctx and refuses any LLM-supplied window outside that tuple to defend against prompt-injection exfiltration via operator-readable VINs, topic names, or broker hostnames. Both tools are READ-only — no record is created, mutated, or deleted by the AI surface; the existing telemetry-ingest path is the only mutation surface and the AI never touches it.",
+    tier: "S6",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-mqtt-sse-inspector-explanations-root"] as const),
+  }),
   "nl-alert-builder": Object.freeze({
     id: "nl-alert-builder",
     name: "Natural-language alert builder",
@@ -515,6 +526,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "lifetime-stats-qa",
   "log-trace-summarization",
   "ml-charging-curve-clustering",
+  "mqtt-sse-inspector-explanations",
   "nl-alert-builder",
   "nl-automation-builder",
   "nl-drive-search-replay",

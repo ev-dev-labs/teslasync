@@ -2550,6 +2550,10 @@
         "feedback-queue-triage": {
           "label": "Feedback queue triage",
           "description": "Opt-in LLM advisor that proposes a status, category, and priority label for one in-scope user feedback row — by quoting the same redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) that an operator can already inspect manually in the queue — and routes the proposal through a closed-enum validator before the UI surfaces it as a recommendation chip. The advisor NEVER writes to user_feedback; the existing manual triage controls (status dropdown, category badge, priority chip, save button) remain the sole write path. Per-request scope binding rejects any cross-row tool call to defend against prompt-injection exfiltration via user-authored feedback text. The deterministic feedback queue table, filter / sort / search controls, per-row expansion, and manual triage controls on the Admin Feedback Queue page remain the canonical baseline when Helix is off."
+        },
+        "mqtt-sse-inspector-explanations": {
+          "label": "MQTT and SSE inspector explanations",
+          "description": "Opt-in LLM narrator that summarizes one in-scope window of the MQTT broker, SSE hub, and background-job state into a 3-6 sentence factual paragraph — whether the broker is connected, how many vehicles are actively streaming, how many are stale, what aggregate signals-per-second the pipeline holds, how many SSE clients are subscribed, and whether the background jobs (signal_log writer, snapshot rollover, alert engine) ran recently — by routing through two read-only tools that quote the same deterministic broker-status envelope the operator can already inspect manually. The narrator never invents a stream state and never speculates about root cause. Per-request scope binding rejects any cross-window tool call to defend against prompt-injection exfiltration via broker topic strings. Broker hostnames, ports, SSE client identifiers, and VINs are redacted before the message reaches the provider. The deterministic broker-status snapshot panel, per-vehicle stream stats table, throughput chart, and topic-pattern badges on the MQTT Inspector page remain the canonical baseline when Helix is off."
         }
       },
       "archive": {
@@ -7859,6 +7863,15 @@
     "vehicleBreakdown": "Vehicle Breakdown",
     "vehicles": "vehicles",
     "noVehicles": "No vehicles currently streaming"
+  },
+  "mqttSseInspector": {
+    "aiExplainer": {
+      "title": "Helix stream explainer",
+      "description": "Get a 3-6 sentence factual explanation of the current MQTT broker, SSE hub, and background-job state. The explainer reads only the deterministic broker-status envelope (broker connectivity, per-vehicle stream stats, SSE client counts, job freshness) — broker hostnames, ports, SSE client identifiers, and VINs are redacted before the message reaches the provider. The explanation is informational; the broker-status snapshot above remains the canonical raw view.",
+      "button": "Explain streams",
+      "badge": "Helix",
+      "emptyHint": "A valid time window is required."
+    }
   },
   "signalDiff": {
     "metric": "Metric",

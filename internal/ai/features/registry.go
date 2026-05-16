@@ -2721,6 +2721,103 @@ var Registry = map[string]Feature{
 			PushKinds: []string{"ai_feedback_triaged"},
 		},
 	},
+
+	// Phase-50 / 0047 — S6 mqtt-sse-inspector-explanations.
+	//
+	// Opt-in LLM-backed explainer that turns the deterministic
+	// MQTT-broker / SSE-hub / background-job snapshot into a 3-6
+	// sentence operator-readable factual explanation by routing
+	// through two read-only tools:
+	//
+	//   - query_stream_inspector — typed deterministic envelope
+	//     describing the in-scope (from_unix, to_unix) window:
+	//     broker connectivity (mqtt_connected, mqtt_uptime_seconds,
+	//     mqtt_broker_address, mqtt_topic_patterns), per-vehicle
+	//     stream stats (vin, state, signal_count, batch_count,
+	//     signals_per_second, last_received, stale), aggregate
+	//     totals (vehicle_count, stale_vehicle_count, total_signals,
+	//     total_batches, aggregate_signals_per_second), SSE hub
+	//     state (sse_connected_clients, sse_dropped_frames), and
+	//     per-job freshness (background_jobs[*]: name,
+	//     last_run_unix, last_run_time, last_status,
+	//     last_duration_ms). Per-request scope binding installs the
+	//     body-supplied (from_unix, to_unix) tuple in ctx via
+	//     tools.WithScopedStreamInspectorWindow and refuses any
+	//     LLM-supplied window outside that tuple to defend against
+	//     prompt-injection exfiltration via operator-readable VINs,
+	//     topic names, or broker hostnames.
+	//
+	//   - retrieve_stream_chunks — F7 retrieval restricted to the
+	//     per-feature source-type allowlist {mqtt_status,
+	//     sse_status, job_status}. All three source types are
+	//     reserved for forward-compatibility — a future indexer
+	//     slice will index per-window broker / SSE-hub / job
+	//     chunks. Until then, retrieve_stream_chunks called with
+	//     any of these source types simply returns zero chunks for
+	//     that corpus; the strategy's goldens already cover the
+	//     zero-matches narration and the system prompt instructs
+	//     the LLM to answer gracefully when zero chunks are
+	//     returned.
+	//
+	// The deterministic MQTTInspectorPage at /mqtt-inspector (the
+	// canonical broker-status snapshot table) is the baseline
+	// rendered when AI is off. The registry's Frontend route
+	// metadata is `/system/streams` (the slice prompt's documented
+	// coverage anchor); the AI section is rendered inside the
+	// canonical MQTTInspectorPage when the feature is enabled —
+	// same coverage-anchor pattern used by log-trace-summarization,
+	// incident-timeline-summarizer, and feedback-queue-triage.
+	//
+	// Routes:
+	//   - Backend: POST /api/v1/ai/system/streams/explain
+	//     (gated by guard.Wrap("mqtt-sse-inspector-explanations");
+	//     404 in off mode).
+	//   - Frontend: /system/streams (registry metadata only;
+	//     explanation surface is rendered inside the canonical
+	//     MQTTInspectorPage at /mqtt-inspector when the feature
+	//     is enabled — the registry route is the coverage anchor
+	//     for off-mode walker tests).
+	//   - UITestIDs: ai-feature-mqtt-sse-inspector-explanations-root
+	//     (auto-applied by withAiFeature HOC reading
+	//     meta.uiTestIds[0]).
+	//
+	// NeedsRAG: true — the OPTIONAL secondary
+	// retrieve_stream_chunks tool routes through the F7
+	// rag.Retriever entry point.
+	// NeedsTools: true — query_stream_inspector +
+	// retrieve_stream_chunks.
+	// NeedsStream: true — the dispatcher streams delta+done frames
+	// to the SPA via internal/ai/stream.
+	//
+	// Per-feature redaction policy is PolicyChatbot
+	// (deny-by-default; every tag class redacted to a round-trip
+	// tag) so a leaked transcript reveals nothing about broker
+	// hostnames, ports, SSE client identifiers, or VINs.
+	//
+	// JobNames: [] — this slice does NOT add a background job;
+	// the canonical telemetry-ingest path is unchanged and the
+	// AI surface is request-scoped to the user's HTTP call.
+	//
+	// PushKinds: [] — this slice does NOT add a push kind; the
+	// SSE stream the AI handler writes to is the per-request
+	// dispatcher stream, not a fan-out to subscribers.
+	"mqtt-sse-inspector-explanations": {
+		ID:          "mqtt-sse-inspector-explanations",
+		Name:        "MQTT and SSE inspector explanations",
+		Description: "Opt-in LLM-backed explainer that turns the deterministic MQTT-broker / SSE-hub / background-job snapshot into a 3-6 sentence operator-readable factual explanation by routing through two read-only tools: query_stream_inspector (loads the in-scope window via the StreamInspectorSource port — a thin deterministic adapter around the same MQTT status snapshot the canonical baseline /api/v1/admin/mqtt/status endpoint already serves; emits a typed StreamInspectorEnvelope of broker connectivity + per-vehicle stream stats + SSE hub state + background-job freshness) and the OPTIONAL retrieve_stream_chunks (F7 retrieval restricted to {mqtt_status, sse_status, job_status} source types) for per-event context. The deterministic MQTTInspectorPage broker-status snapshot table remains the canonical baseline when AI is off. Per-feature redaction policy is PolicyChatbot (deny-by-default; every tag class redacted to a round-trip tag) so a leaked transcript reveals nothing about broker hostnames, ports, SSE client identifiers, or VINs. Per-request scope binding installs the body-supplied (from_unix, to_unix) tuple in ctx and refuses any LLM-supplied window outside that tuple to defend against prompt-injection exfiltration via operator-readable VINs, topic names, or broker hostnames. Both tools are READ-only — no record is created, mutated, or deleted by the AI surface; the existing telemetry-ingest path is the only mutation surface and the AI never touches it.",
+		Tier:        "S6",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/system/streams/explain"},
+			Frontend:  []string{"/system/streams"},
+			UITestIDs: []string{"ai-feature-mqtt-sse-inspector-explanations-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

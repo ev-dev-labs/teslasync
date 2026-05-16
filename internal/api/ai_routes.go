@@ -151,6 +151,7 @@ func mountAIRoutes(
 	aiSignalExplorerNlFilter *AISignalExplorerNlFilterHandler,
 	aiLogTraceSummarization *AILogTraceSummarizationHandler,
 	aiFeedbackQueueTriage *AIFeedbackQueueTriageHandler,
+	aiMqttSseInspectorExplanations *AIMqttSseInspectorExplanationsHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -491,6 +492,28 @@ func mountAIRoutes(
 			feedbackQueueTriageHandler = aiFeedbackQueueTriage.ServeHTTP
 		}
 		r.Post("/feedback/triage/draft", g.Wrap("feedback-queue-triage", feedbackQueueTriageHandler))
+
+		// mqtt-sse-inspector-explanations (Phase-50 / S6, slice
+		// 0047). Opt-in LLM-backed explainer that turns the
+		// deterministic MQTT-broker / SSE-hub / background-job
+		// snapshot into a 3-6 sentence operator-readable factual
+		// explanation by routing through two read-only tools
+		// (query_stream_inspector and the OPTIONAL
+		// retrieve_stream_chunks). EXPLAIN-ONLY: the user reviews
+		// the explanation in the AI side panel and continues to
+		// use the deterministic MQTTInspectorPage broker-status
+		// snapshot table for raw inspection. Same stub-fallback
+		// pattern as the other AI handlers — a nil handler is
+		// possible during partial wiring but the off-mode 404
+		// invariant still holds because guard.Wrap returns 404
+		// BEFORE the handler runs in off mode. The canonical
+		// baseline route at GET /api/v1/admin/mqtt/status is
+		// unchanged.
+		var mqttSseInspectorExplanationsHandler http.HandlerFunc = aiMqttSseInspectorExplanationsStubHandler
+		if aiMqttSseInspectorExplanations != nil {
+			mqttSseInspectorExplanationsHandler = aiMqttSseInspectorExplanations.ServeHTTP
+		}
+		r.Post("/system/streams/explain", g.Wrap("mqtt-sse-inspector-explanations", mqttSseInspectorExplanationsHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1292,6 +1315,16 @@ func aiLogTraceSummarizationStubHandler(w http.ResponseWriter, _ *http.Request) 
 // off-mode 404 invariant is held by the guard, not the stub.
 func aiFeedbackQueueTriageStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai feedback queue triage is not yet implemented")
+}
+
+// aiMqttSseInspectorExplanationsStubHandler mirrors
+// aiFeedbackQueueTriageStubHandler for the S6 slice (Phase-50
+// / 0047 mqtt-sse-inspector-explanations). Reachable only when
+// AIMqttSseInspectorExplanationsHandler is nil at construction;
+// the off-mode 404 invariant is held by the guard, not the
+// stub.
+func aiMqttSseInspectorExplanationsStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai mqtt-sse inspector explanations is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every
