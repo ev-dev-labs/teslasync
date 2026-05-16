@@ -1,0 +1,12 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot draft a Grafana panel of that type — it is not in
+      the in-scope curated panel-type catalog for this request.
+      The current scope contains only `timeseries`, `stat`,
+      `gauge`, `table`, `barchart`, `heatmap`, `piechart`, and
+      `logs`. If you want a different visualization, ask me about
+      one of the in-scope panel types or reach out to the
+      operator who maintains the curated catalog.
+    input_tokens: 64
+    output_tokens: 80

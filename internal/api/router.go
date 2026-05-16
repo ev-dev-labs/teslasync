@@ -105,6 +105,7 @@ import (
 	voicemode "github.com/ev-dev-labs/teslasync/internal/ai/strategies/voice-mode"
 	watchfacenlresponse "github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response"
 	nlsqlplayground "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-sql-playground"
+	nlgrafanapanel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-grafana-panel"
 	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
 	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
 	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
@@ -2405,6 +2406,38 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
+	// nl-grafana-panel (Phase-50 / 0058 PU2) sources.
+	// The nl-grafana-panel AI surface layers an opt-in Helix
+	// translator on top of the manual Grafana panel JSON editor
+	// at /power/grafana. Its two propose-only tools
+	// (draft_grafana_panel + validate_grafana_panel) build a
+	// typed GrafanaPanelDraft for the user to review and copy
+	// into the existing manual JSON editor; the AI never pushes
+	// to Grafana itself. The three curated install-wide
+	// catalogs (panel-types, datasource-types, tables) are
+	// hardcoded in AINLGrafanaPanelCatalogSourceImpl — adding
+	// any of these is a deliberate per-prompt decision, not a
+	// default. The table catalog is shared with nl-sql-playground
+	// so the two slices stay in lock-step. Registered AFTER the
+	// slice 0057 tools above so the registry's Names list grows
+	// deterministically.
+	aiNLGrafanaPanelCatalogSource := NewAINLGrafanaPanelCatalogSource()
+	aiNLGrafanaPanelValidator := NewAINLGrafanaValidator()
+	tools.RegisterNLGrafanaPanelTools(aiToolRegistry, tools.NLGrafanaPanelSources{
+		Validator: aiNLGrafanaPanelValidator,
+	})
+	// nl-grafana-panel handler. One per process; stateless
+	// beyond constructor inputs. Must be constructed AFTER the
+	// tool registration above so the dispatcher can resolve the
+	// strategy's allowedTools at boot.
+	aiNLGrafanaPanelHandler := NewAINLGrafanaPanelHandler(
+		aiRegistry,
+		aiToolRegistry,
+		nlgrafanapanel.New(),
+		aiNLGrafanaPanelCatalogSource,
+		cfg.Auth.ForwardAuthHeader,
+	)
+
 	// Phase-46 / Prompt 40 — rate-limit status counters. Construct two
 	// sliding-window observers (one for every /api/v1 request, one
 	// scoped to writes only) and a handler that joins them with the
@@ -3890,7 +3923,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// per-feature toggle is on (ADR-015 §I6, §I7). Fresh
 		// installs ship with ai_mode='off' so this entire subtree
 		// is invisible until the user opts in via Settings.
-		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler, aiFeedbackQueueTriageHandler, aiMqttSseInspectorExplanationsHandler, aiStateMachineDebuggerNarratorHandler, aiPredictiveMaintenanceHandler, aiTCONarrationHandler, aiSoftwareUpdateChangelogSummarizerHandler, aiPiiRedactionSharedExportsHandler, aiQuietHoursSuggestionHandler, aiSafetySettingExplainerHandler, aiVoiceModeHandler, aiWatchFaceNLResponseHandler, aiNLSqlPlaygroundHandler)
+		mountAIRoutes(r, aiGuard, aiRegistry, aiSettingsRepo, RequireSudo(sudoStore, sudoCfg), aiChatbotHandler, aiDigestHandler, aiYIRHandler, aiAnomalyHandler, aiAlertHandler, aiAutomationHandler, aiSearchHandler, aiDriveCoachHandler, aiChargingDiagnosisHandler, aiRagHelpHandler, aiDriveSearchHandler, aiSpeedProfileInsightsHandler, aiRouteEfficiencySuggestionsHandler, aiAutoTripNameHandler, aiTripPlannerLLMHandler, aiSmartChargeScheduleHandler, aiBatteryHealthHandler, aiChargingCurveClusteringHandler, aiCostForecastNarrationHandler, aiVampireDrainExplanationHandler, aiPreheatPrecoolRecommenderHandler, aiCabinTemperatureImpactNarrativeHandler, aiTirePressureTrendReasoningHandler, aiAlertTuningHandler, aiInboxCategorizationHandler, aiCrossRuleConflictHandler, aiAutoNameUnnamedLocationsHandler, aiSuggestNewGeofencesHandler, aiGeofenceAwareAutomationHandler, aiLearnedAnomalyBaselinesHandler, aiRangePredictionHandler, aiMLChargingCurveClusteringHandler, aiPeriodCompareNarrationHandler, aiLifetimeStatsQAHandler, aiIncidentTimelineSummarizerHandler, aiDataRepairSuggestionsHandler, aiSignalExplorerNlFilterHandler, aiLogTraceSummarizationHandler, aiFeedbackQueueTriageHandler, aiMqttSseInspectorExplanationsHandler, aiStateMachineDebuggerNarratorHandler, aiPredictiveMaintenanceHandler, aiTCONarrationHandler, aiSoftwareUpdateChangelogSummarizerHandler, aiPiiRedactionSharedExportsHandler, aiQuietHoursSuggestionHandler, aiSafetySettingExplainerHandler, aiVoiceModeHandler, aiWatchFaceNLResponseHandler, aiNLSqlPlaygroundHandler, aiNLGrafanaPanelHandler)
 
 		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
 		//

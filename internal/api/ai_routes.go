@@ -162,6 +162,7 @@ func mountAIRoutes(
 	aiVoiceMode *AIVoiceModeHandler,
 	aiWatchFaceNLResponse *AIWatchFaceNLResponseHandler,
 	aiNLSqlPlayground *AINLSQLPlaygroundHandler,
+	aiNLGrafanaPanel *AINLGrafanaPanelHandler,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -748,6 +749,32 @@ func mountAIRoutes(
 			nlSqlPlaygroundHandler = aiNLSqlPlayground.ServeHTTP
 		}
 		r.Post("/power/sql/draft", g.Wrap("nl-sql-playground", nlSqlPlaygroundHandler))
+
+		// nl-grafana-panel (Phase-50 / 0058, PU2 slice).
+		// Opt-in Helix translator that converts a natural-language
+		// data question into a typed GrafanaPanelDraft (a single
+		// Grafana panel JSON envelope — title, type, datasource,
+		// targets, grid_pos) the user reviews in the AI side
+		// panel of the manual Grafana panel-builder page at
+		// /power/grafana, then explicitly clicks the canonical
+		// Apply to editor button to copy the draft into the
+		// manual JSON editor and the canonical Copy to clipboard
+		// button to paste it into their existing Grafana
+		// dashboard editor. The narrator NEVER pushes the panel
+		// — there is no apply / push tool; the per-request scope
+		// binding refuses any panel type, datasource type, or
+		// table outside the curated install-wide whitelists, and
+		// the postgres rawSql contract refuses anything other
+		// than a SELECT/WITH against the curated table whitelist.
+		// The canonical baseline editor on /power/grafana is
+		// unchanged; the AI surface NEVER replaces the
+		// deterministic editor — it COEXISTS with it.
+		// (ADR-015 §I3 + §I5 + §I6.)
+		var nlGrafanaPanelHandler http.HandlerFunc = aiNLGrafanaPanelStubHandler
+		if aiNLGrafanaPanel != nil {
+			nlGrafanaPanelHandler = aiNLGrafanaPanel.ServeHTTP
+		}
+		r.Post("/power/grafana-panel/draft", g.Wrap("nl-grafana-panel", nlGrafanaPanelHandler))
 
 		// vampire-drain-explanation (Phase-50 / C5, slice 0030).
 		// Opt-in LLM narrator that explains the deterministic
@@ -1652,6 +1679,15 @@ func aiWatchFaceNLResponseStubHandler(w http.ResponseWriter, _ *http.Request) {
 // the guard, not the stub.
 func aiNLSqlPlaygroundStubHandler(w http.ResponseWriter, _ *http.Request) {
 	writeError(w, http.StatusNotImplemented, "ai natural-language sql playground is not yet implemented")
+}
+
+// aiNLGrafanaPanelStubHandler mirrors the other AI stub handlers
+// for the PU2 slice (Phase-50 / 0058 nl-grafana-panel).
+// Reachable only when AINLGrafanaPanelHandler is nil at
+// construction; the off-mode 404 invariant is held by the guard,
+// not the stub.
+func aiNLGrafanaPanelStubHandler(w http.ResponseWriter, _ *http.Request) {
+	writeError(w, http.StatusNotImplemented, "ai natural-language grafana panel is not yet implemented")
 }
 
 // userPrefsMiddleware reads the global Application settings on every

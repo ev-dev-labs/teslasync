@@ -10,7 +10,7 @@
 //
 // Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 
-export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-search" | "nl-sql-playground" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "voice-mode" | "watch-face-nl-response" | "yir-narration";
+export type AiFeatureId = "__redaction_bypass__" | "__usage__" | "ai-provider-health" | "alert-tuning-suggestions" | "anomaly-explanations" | "auto-name-unnamed-locations" | "auto-trip-naming" | "battery-health-forecast-narrative" | "cabin-temperature-impact-narrative" | "charging-curve-fingerprint-clustering" | "charging-diagnosis" | "chatbot-llm" | "cost-forecast-narration" | "cross-rule-conflict-detection" | "data-repair-suggestions" | "digest-narration" | "drive-coaching" | "feedback-queue-triage" | "geofence-aware-automation-suggestions" | "inbox-auto-categorization" | "incident-timeline-summarizer" | "learned-per-vehicle-anomaly-baselines" | "lifetime-stats-qa" | "log-trace-summarization" | "ml-charging-curve-clustering" | "mqtt-sse-inspector-explanations" | "nl-alert-builder" | "nl-automation-builder" | "nl-drive-search-replay" | "nl-grafana-panel" | "nl-search" | "nl-sql-playground" | "period-compare-narration" | "pii-redaction-shared-exports" | "predictive-maintenance" | "preheat-precool-recommender" | "quiet-hours-suggestion" | "rag-help" | "range-prediction-model" | "route-efficiency-suggestions" | "safety-setting-explainer" | "signal-explorer-nl-filter" | "smart-charge-schedule-suggestion" | "software-update-changelog-summarizer" | "speed-profile-insights" | "state-machine-debugger-narrator" | "suggest-new-geofences" | "tco-narration" | "tire-pressure-trend-reasoning" | "trip-planner-llm-agent" | "vampire-drain-explanation" | "voice-mode" | "watch-face-nl-response" | "yir-narration";
 
 export interface AiFeatureMeta {
   readonly id: AiFeatureId;
@@ -344,6 +344,17 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
     needsStream: true,
     uiTestIds: Object.freeze(["ai-feature-nl-drive-search-replay-root"] as const),
   }),
+  "nl-grafana-panel": Object.freeze({
+    id: "nl-grafana-panel",
+    name: "Helix natural-language Grafana panel",
+    description: "Opt-in Helix translator on the /power/grafana route that turns plain-English data questions (e.g. \"show me a daily time series of how far I drove this month\") into a typed Grafana panel JSON draft (title, type, datasource, targets, grid_pos) you can review before clicking the canonical Copy to clipboard button on the manual Grafana panel-builder form. The translator uses TWO propose-only typed tools (draft_grafana_panel, validate_grafana_panel) that share the SAME three-dimensional allowlist enforcement: panel.type MUST be in the in-scope curated panel-type whitelist (timeseries, stat, gauge, table, barchart, heatmap, piechart, logs); panel.datasource.type MUST be in the in-scope curated datasource-type whitelist (postgres, prometheus); for postgres targets the rawSql MUST start with SELECT or WITH, MUST be a single statement (no semicolons), MUST NOT contain any DML/DDL keyword (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE, VACUUM, COPY, CALL, DO, MERGE, EXECUTE), and every referenced table MUST appear in the same in-scope curated table catalog the nl-sql-playground tools enforce; for prometheus targets the expr MUST be a single non-empty PromQL expression (no semicolons); grid_pos MUST be inside the dashboard grid (x in [0..23], y in [0..49], w in [1..24], h in [1..50]). The LLM NEVER pushes the panel itself — the user reviews the typed draft in the Helix panel and clicks the canonical Copy to clipboard button on the baseline manual Grafana panel-builder editor to copy the JSON for pasting into their own Grafana dashboard. The Helix panel is propose-only and never bypasses the existing manual editor. Per-request scope binding rejects any panel type, datasource type, or table name not in the in-scope curated catalog so a prompt-injection attempt cannot exfiltrate out-of-scope tables or smuggle a panel against an out-of-catalog datasource. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); only schema metadata (panel-type slugs, datasource-type slugs + their canonical UIDs, table + column names + descriptions) crosses the tool boundary, no row data, no operator-authored text from any non-prompt source. Retrieval is constrained to two source types: schema_catalog (the feature-local string referring to the in-scope curated table descriptions, shared with nl-sql-playground) and grafana_panel_schema (a feature-local string referring to the in-scope curated panel-type and datasource-type whitelists). The deterministic /power/grafana baseline (manual JSON editor + curated panel-builder catalog viewer + Copy to clipboard button) remains the canonical surface when Helix is off (ADR-015 §I3 + §I5 + §I6).",
+    tier: "PU2",
+    defaultOn: false,
+    needsRag: true,
+    needsTools: true,
+    needsStream: true,
+    uiTestIds: Object.freeze(["ai-feature-nl-grafana-panel-root"] as const),
+  }),
   "nl-search": Object.freeze({
     id: "nl-search",
     name: "Natural-language search",
@@ -640,6 +651,7 @@ export const AI_FEATURE_IDS: readonly AiFeatureId[] = Object.freeze([
   "nl-alert-builder",
   "nl-automation-builder",
   "nl-drive-search-replay",
+  "nl-grafana-panel",
   "nl-search",
   "nl-sql-playground",
   "period-compare-narration",

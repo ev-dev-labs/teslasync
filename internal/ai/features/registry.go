@@ -3595,6 +3595,76 @@ var Registry = map[string]Feature{
 			PushKinds: []string{},
 		},
 	},
+
+	// nl-grafana-panel is the Phase-50 / 0058 PU2 surface that
+	// adds an OPT-IN Helix translator on the /power/grafana route
+	// that turns plain-English data questions into a typed
+	// GrafanaPanelDraft (a single Grafana panel JSON envelope —
+	// title, type, datasource, targets, grid_pos) the user can
+	// review and copy into the deterministic Grafana panel JSON
+	// editor before pasting into their existing Grafana dashboard.
+	// The deterministic /power/grafana baseline (manual JSON
+	// editor + curated panel-builder catalog viewer + Copy to
+	// clipboard button) remains the canonical surface when
+	// ai_mode='off' or the per-feature toggle is off
+	// (ADR-015 §I3 + §I5 + §I6). The backend route
+	// POST /api/v1/ai/power/grafana-panel/draft is gated by
+	// ai.GuardedHandler('nl-grafana-panel') so off-mode users see
+	// a 404. The strategy uses TWO propose-only typed tools
+	// (draft_grafana_panel, validate_grafana_panel) that share the
+	// SAME three-dimensional allowlist enforcement: panel.type
+	// MUST be in the in-scope curated panel-type whitelist
+	// (timeseries, stat, gauge, table, barchart, heatmap,
+	// piechart, logs); panel.datasource.type MUST be in the
+	// in-scope curated datasource-type whitelist (postgres,
+	// prometheus); for postgres targets the rawSql MUST start
+	// with SELECT or WITH, MUST be a single statement (no
+	// semicolons), MUST NOT contain any of the same DML/DDL
+	// keywords nl-sql-playground rejects, and every referenced
+	// table MUST appear in the same in-scope curated table
+	// catalog (drives, charging_sessions, vehicles,
+	// signal_log_view, alerts) the nl-sql-playground tools enforce
+	// — re-using one whitelist guarantees the two slices stay
+	// in lock-step. For prometheus targets the expr MUST be a
+	// single non-empty PromQL expression (no semicolons). gridPos
+	// MUST be inside the dashboard grid (x in [0..23], y in
+	// [0..49], w in [1..24], h in [1..50]). The LLM NEVER pushes
+	// the panel itself — the user reviews the typed draft in the
+	// AI panel and clicks the canonical Copy to clipboard button
+	// on the baseline form to paste it into their own Grafana
+	// dashboard editor. Per-request scope binding rejects any
+	// out-of-catalog panel/datasource type or table name to
+	// defend against prompt-injection exfiltration through the
+	// operator's natural-language prompt. Per-feature redaction
+	// policy is PolicyAlertBuilder (Allow=nil; deny-by-default —
+	// every PII class is tagged round-trip before the provider
+	// sees the prompt). The retrieval surface is restricted to
+	// two source types: schema_catalog (the feature-local string
+	// for curated table/column metadata, shared with
+	// nl-sql-playground) and grafana_panel_schema (a feature-
+	// local string for the in-scope panel-type/datasource-type
+	// catalog metadata). Service-worker chunk
+	// 'ai-nl-grafana-panel' is registered for off-mode SW
+	// filtering; the client storage key 'ai.grafanaPanel.draft'
+	// is only written when the gated component mounts, so off
+	// mode leaves it absent by construction (ADR-015 §I12).
+	"nl-grafana-panel": {
+		ID:          "nl-grafana-panel",
+		Name:        "Helix natural-language Grafana panel",
+		Description: "Opt-in Helix translator on the /power/grafana route that turns plain-English data questions (e.g. \"show me a daily time series of how far I drove this month\") into a typed Grafana panel JSON draft (title, type, datasource, targets, grid_pos) you can review before clicking the canonical Copy to clipboard button on the manual Grafana panel-builder form. The translator uses TWO propose-only typed tools (draft_grafana_panel, validate_grafana_panel) that share the SAME three-dimensional allowlist enforcement: panel.type MUST be in the in-scope curated panel-type whitelist (timeseries, stat, gauge, table, barchart, heatmap, piechart, logs); panel.datasource.type MUST be in the in-scope curated datasource-type whitelist (postgres, prometheus); for postgres targets the rawSql MUST start with SELECT or WITH, MUST be a single statement (no semicolons), MUST NOT contain any DML/DDL keyword (INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE, VACUUM, COPY, CALL, DO, MERGE, EXECUTE), and every referenced table MUST appear in the same in-scope curated table catalog the nl-sql-playground tools enforce; for prometheus targets the expr MUST be a single non-empty PromQL expression (no semicolons); grid_pos MUST be inside the dashboard grid (x in [0..23], y in [0..49], w in [1..24], h in [1..50]). The LLM NEVER pushes the panel itself — the user reviews the typed draft in the Helix panel and clicks the canonical Copy to clipboard button on the baseline manual Grafana panel-builder editor to copy the JSON for pasting into their own Grafana dashboard. The Helix panel is propose-only and never bypasses the existing manual editor. Per-request scope binding rejects any panel type, datasource type, or table name not in the in-scope curated catalog so a prompt-injection attempt cannot exfiltrate out-of-scope tables or smuggle a panel against an out-of-catalog datasource. Per-feature redaction policy is PolicyAlertBuilder (Allow=nil); only schema metadata (panel-type slugs, datasource-type slugs + their canonical UIDs, table + column names + descriptions) crosses the tool boundary, no row data, no operator-authored text from any non-prompt source. Retrieval is constrained to two source types: schema_catalog (the feature-local string referring to the in-scope curated table descriptions, shared with nl-sql-playground) and grafana_panel_schema (a feature-local string referring to the in-scope curated panel-type and datasource-type whitelists). The deterministic /power/grafana baseline (manual JSON editor + curated panel-builder catalog viewer + Copy to clipboard button) remains the canonical surface when Helix is off (ADR-015 §I3 + §I5 + §I6).",
+		Tier:        "PU2",
+		DefaultOn:   false,
+		NeedsRAG:    true,
+		NeedsTools:  true,
+		NeedsStream: true,
+		Routes: RouteSet{
+			Backend:   []string{"POST /api/v1/ai/power/grafana-panel/draft"},
+			Frontend:  []string{"/power/grafana"},
+			UITestIDs: []string{"ai-feature-nl-grafana-panel-root"},
+			JobNames:  []string{},
+			PushKinds: []string{},
+		},
+	},
 }
 
 // IsKnown reports whether id corresponds to a registered feature. Used

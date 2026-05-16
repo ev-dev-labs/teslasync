@@ -145,6 +145,7 @@ const FleetTelemetryCoverage = lazy(() => import('./features/admin/pages/FleetTe
 
 // Power user
 const PowerSqlPlayground = lazy(() => import('./features/power-user/pages/SqlPlaygroundPage'))
+const PowerGrafanaPanel = lazy(() => import('./features/power-user/pages/GrafanaPanelPage'))
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
@@ -410,6 +411,7 @@ export default function App() {
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
         <Route path="api-playground" element={<SafeRoute name="ApiPlayground"><ApiPlayground /></SafeRoute>} />
         <Route path="power/sql" element={<SafeRoute name="PowerSqlPlayground"><PowerSqlPlayground /></SafeRoute>} />
+        <Route path="power/grafana" element={<SafeRoute name="PowerGrafanaPanel"><PowerGrafanaPanel /></SafeRoute>} />
         <Route path="redis-signals" element={<SafeRoute name="RedisSignalViewer"><RedisSignalViewer /></SafeRoute>} />
         <Route path="signals" element={<SafeRoute name="SignalsWorkspace"><SignalsWorkspace /></SafeRoute>} />
         <Route path="signal-explorer" element={<SafeRoute name="SignalExplorer"><SignalExplorer /></SafeRoute>} />

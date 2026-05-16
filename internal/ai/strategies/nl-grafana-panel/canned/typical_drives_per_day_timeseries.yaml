@@ -1,0 +1,27 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_grafana_draft_drives_per_day
+        name: draft_grafana_panel
+        arguments: '{"prompt": "Show me a daily time series of how far I drove each day this month.", "panel": {"title": "Drives per day this month", "type": "timeseries", "datasource": {"type": "postgres", "uid": "tesla-postgres"}, "targets": [{"ref_id": "A", "raw_sql": "SELECT date_trunc(''day'', started_at) AS time, SUM(distance_m) AS value FROM drives WHERE started_at >= date_trunc(''month'', NOW()) GROUP BY 1 ORDER BY 1 LIMIT 100", "format": "time_series"}], "grid_pos": {"x": 0, "y": 0, "w": 12, "h": 8}}, "rationale": "Aggregates the drives table by day over the current month using SUM(distance_m) for a Grafana timeseries panel."}'
+    input_tokens: 110
+    output_tokens: 96
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_grafana_validate_drives_per_day
+        name: validate_grafana_panel
+        arguments: '{"prompt": "Show me a daily time series of how far I drove each day this month.", "panel": {"title": "Drives per day this month", "type": "timeseries", "datasource": {"type": "postgres", "uid": "tesla-postgres"}, "targets": [{"ref_id": "A", "raw_sql": "SELECT date_trunc(''day'', started_at) AS time, SUM(distance_m) AS value FROM drives WHERE started_at >= date_trunc(''month'', NOW()) GROUP BY 1 ORDER BY 1 LIMIT 100", "format": "time_series"}], "grid_pos": {"x": 0, "y": 0, "w": 12, "h": 8}}, "rationale": "Aggregates the drives table by day over the current month using SUM(distance_m) for a Grafana timeseries panel."}'
+    input_tokens: 168
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      I drafted a `timeseries` Grafana panel against the postgres
+      datasource that aggregates the `drives` table by day over
+      the current month. Review the typed proposal in the AI
+      panel and click the Apply to editor button to copy the
+      JSON into the manual Grafana panel editor on
+      /power/grafana, then click Copy to clipboard to paste it
+      into your Grafana dashboard editor; I never push it to
+      Grafana myself.
+    input_tokens: 220
+    output_tokens: 92
