@@ -22,10 +22,16 @@ vi.mock('workbox-precaching', () => ({
 
 vi.mock('workbox-routing', () => ({
   registerRoute: vi.fn(),
+  NavigationRoute: vi.fn().mockImplementation(function () {
+    return {};
+  }),
 }));
 
 vi.mock('workbox-strategies', () => ({
   CacheFirst: vi.fn().mockImplementation(function () {
+    return {};
+  }),
+  NetworkFirst: vi.fn().mockImplementation(function () {
     return {};
   }),
 }));

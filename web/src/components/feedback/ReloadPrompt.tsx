@@ -10,6 +10,18 @@ const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000
 
 /**
  * Shows a non-intrusive banner when a new version is deployed.
+ *
+ * NOTE: After the switch to `registerType: 'autoUpdate'` (vite.config.ts),
+ * `needRefresh` is never set to `true` by `useRegisterSW` — vite-plugin-pwa
+ * wires `onNeedRefresh` only in `prompt` mode. The banner UI is therefore
+ * effectively dead code in production, but the hook is still mounted for
+ * its useful side effect: the periodic `registration.update()` interval
+ * below makes the browser fetch the manifest every 5 minutes so newly
+ * deployed builds are picked up promptly even on tabs the user keeps
+ * open. The `activated` listener inside vite-plugin-pwa's autoUpdate
+ * branch then drives the auto-reload — see node_modules/vite-plugin-pwa
+ * /dist/client/build/react.js.
+ *
  * Counts down then auto-reloads so users always run the latest version,
  * but exposes a Dismiss button to opt out (cancels the countdown and
  * hides the banner — the next page navigation or update check picks up

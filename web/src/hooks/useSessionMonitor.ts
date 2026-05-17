@@ -33,6 +33,17 @@ import type { SessionInfo } from '@/api/types'
 
 const SESSION_POLL_MS = 5 * 60 * 1000
 const SESSION_STALE_MS = 4 * 60 * 1000
+/** Polling cadence while expiry is < NEAR_EXPIRY_THRESHOLD_S away. */
+const SESSION_POLL_NEAR_EXPIRY_MS = 30 * 1000
+/**
+ * When the server-reported `expires_in` is under this many seconds the
+ * hook tightens polling so the SessionExpiringModal countdown stays in
+ * sync with the upstream cookie's actual lifetime. The default 5-min
+ * poll would otherwise leave a stale `expires_in` snapshot driving the
+ * UI for up to 4m59s after the proxy renewed (or invalidated) the
+ * cookie.
+ */
+const NEAR_EXPIRY_THRESHOLD_S = 5 * 60
 /** Window (in seconds) before expiry that the SessionExpiringModal opens. */
 export const SESSION_EXPIRING_THRESHOLD_S = 60
 
@@ -145,7 +156,19 @@ export function useSessionMonitor(): SessionMonitorState {
   const query = useQuery<SessionInfo>({
     queryKey: sessionMonitorKey,
     queryFn: ({ signal }) => request<SessionInfo>('/auth/session', { signal }),
-    refetchInterval: SESSION_POLL_MS,
+    // Tighten the poll when expiry is near so the modal countdown
+    // tracks the upstream cookie within ~30s instead of up to 5min.
+    // TanStack Query v5 accepts a functional form here; the query
+    // shape is the same as the queryFn's return.
+    refetchInterval: (q) => {
+      const data = q.state.data
+      if (!data || data.mode !== 'session' || !data.authenticated) {
+        return SESSION_POLL_MS
+      }
+      const remaining =
+        typeof data.expires_in === 'number' ? data.expires_in : Number.POSITIVE_INFINITY
+      return remaining < NEAR_EXPIRY_THRESHOLD_S ? SESSION_POLL_NEAR_EXPIRY_MS : SESSION_POLL_MS
+    },
     refetchOnWindowFocus: true,
     staleTime: SESSION_STALE_MS,
     // The endpoint never 401s, so a failed retry indicates a deeper

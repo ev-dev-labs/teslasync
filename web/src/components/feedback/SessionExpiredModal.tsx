@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Modal, Button } from '@/components/ui'
 import { Lock } from 'lucide-react'
 import { useSessionMonitor } from '@/hooks/useSessionMonitor'
+import { navigateToReauth } from '@/lib/resilience'
 
 /**
  * Phase-46 / Prompt 05 — SessionExpiredModal.
@@ -16,12 +17,13 @@ import { useSessionMonitor } from '@/hooks/useSessionMonitor'
  *      `teslasync:session-expired` for that branch (the "sat idle long
  *      enough that the proxy invalidated us between polls" path).
  *
- * Distinct from {@link AuthExpiredOverlay}:
- *   • AuthExpiredOverlay → fired on PWA-mode session-middleware 401
- *     where window.location.reload() can't trigger the proxy redirect.
- *   • SessionExpiredModal → fired in normal browser sessions when the
- *     proxy cookie expires; preserves the current URL so post-login
- *     the user resumes where they were instead of being dumped on /.
+ * Recovery action: clicking "Sign in again" hands off to
+ * {@link navigateToReauth} which navigates the top-level window to the
+ * IdP's documented entry point (Authentik's /outpost.goauthentik.io
+ * /start?rd=… by default). The previous reload-current-path approach
+ * relied on the browser's nav request reaching Authentik through the
+ * SW — fragile behind a Service Worker that may match navigations
+ * from cache.
  *
  * **Open mode**: when there is no auth provider this modal renders
  * nothing — `useSessionMonitor` reports `mode === 'open'` and we also
@@ -33,7 +35,6 @@ import { useSessionMonitor } from '@/hooks/useSessionMonitor'
  * onClose no-op. The only way out is the "Sign in again" button.
  */
 
-const RETURN_URL_KEY = 'teslasync-return-url'
 const SESSION_EXPIRED_EVENT = 'teslasync:session-expired'
 
 export function SessionExpiredModal() {
@@ -54,18 +55,13 @@ export function SessionExpiredModal() {
   const open = hasExpired || eventTriggered
 
   const handleSignIn = () => {
-    try {
-      window.sessionStorage.setItem(RETURN_URL_KEY, window.location.href)
-    } catch {
-      /* private mode — best-effort */
-    }
-    // window.location.assign with the current path triggers the
-    // ForwardAuth proxy redirect to its login flow. After auth, the
-    // proxy returns the user to the same URL; the saved return-url
-    // is a defence-in-depth fallback for proxies that don't preserve
-    // the original deep-link.
-    const target = window.location.pathname + window.location.search + window.location.hash
-    window.location.assign(target || '/')
+    // Explicit IdP handoff. navigateToReauth() writes the current URL
+    // to sessionStorage AND embeds it in the `rd=` param so Authentik
+    // can deep-link the user back to where they were after sign-in.
+    // Previous behaviour (reload current path) was fragile behind a
+    // Service Worker that may match navigations from cache, and lost
+    // the deep-link in PWA standalone where the address bar is hidden.
+    navigateToReauth()
   }
 
   return (

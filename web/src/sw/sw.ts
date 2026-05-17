@@ -9,8 +9,8 @@
 // notifications fire even when the TeslaSync tab is closed.
 
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
-import { registerRoute } from 'workbox-routing'
-import { CacheFirst } from 'workbox-strategies'
+import { NavigationRoute, registerRoute } from 'workbox-routing'
+import { CacheFirst, NetworkFirst } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { CacheableResponsePlugin } from 'workbox-cacheable-response'
 
@@ -18,10 +18,59 @@ declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null }>
 }
 
+// ── SW lifecycle: skipWaiting + clientsClaim ───────────────────────────────
+//
+// vite-plugin-pwa `registerType: 'autoUpdate'` reloads controlled pages
+// when the new SW reaches the `activated` state. For that handoff to
+// happen, the new SW must skip `waiting` and take control of existing
+// clients. In `generateSW` mode the plugin auto-injects these via the
+// workbox config; in `injectManifest` mode the plugin can NOT modify
+// this hand-written file, so the install/activate handlers must be
+// declared explicitly. Without them, the new SW sits in `waiting`
+// indefinitely on tabs the user keeps open — autoUpdate becomes a
+// silent no-op for installed PWAs. The existing message-based
+// SKIP_WAITING handler at the bottom is kept for legacy compat.
+self.addEventListener('install', () => {
+  self.skipWaiting()
+})
+self.addEventListener('activate', (event) => {
+  event.waitUntil(self.clients.claim())
+})
+
 // Precache the build manifest. injectManifest substitutes
 // `self.__WB_MANIFEST` with the list of build artefacts at build time.
+//
+// IMPORTANT: index.html is intentionally excluded from the build glob
+// (see vite.config.ts injectManifest.globPatterns). Precaching the SPA
+// shell behind a ForwardAuth proxy traps the user in a refresh loop on
+// session expiry because workbox's directoryIndex default rewrites
+// GET / to /index.html and serves it from cache, swallowing the
+// proxy's 302 to the login page. Navigation requests are handled
+// instead by the NavigationRoute below.
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
+
+// ── Navigation handling ────────────────────────────────────────────────────
+//
+// NetworkFirst with a short timeout keeps offline launch working
+// (returns the last cached navigation response when the network is
+// unreachable) without the loop bug that precaching `index.html`
+// caused. NetworkFirst follows redirects at the network layer, so an
+// Authentik 302 → login HTML is observed as a real HTTP response and
+// the SPA's `resilience.ts` auth-expired handling can fire on the
+// next API call. Cached entries are capped to keep storage modest.
+registerRoute(
+  new NavigationRoute(
+    new NetworkFirst({
+      cacheName: 'navigations',
+      networkTimeoutSeconds: 3,
+      plugins: [
+        new CacheableResponsePlugin({ statuses: [200] }),
+        new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 7 }),
+      ],
+    }),
+  ),
+)
 
 // Workbox runtime caching — same three buckets the previous generateSW
 // config used. Re-implementing them here keeps SPA performance unchanged

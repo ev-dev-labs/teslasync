@@ -1,4 +1,21 @@
 import '@testing-library/jest-dom'
+import { beforeEach } from 'vitest'
+import * as resilience from '@/lib/resilience'
+
+// Reset the module-scoped auth-expired latch in resilience.ts between
+// every test. vitest's per-file isolation is not enough on its own —
+// within a single file, a test that exercises a 401 path will leave
+// the latch set, and subsequent tests in that file would silently
+// observe a no-op handleAuthExpired() call. Wrapped in a try/catch so
+// tests that vi.mock('@/lib/resilience') without exposing the test
+// hook don't blow up here.
+beforeEach(() => {
+  try {
+    resilience._resetAuthExpiredLatch?.()
+  } catch {
+    /* test mocked the module and stripped the hook — fine */
+  }
+})
 
 // Polyfill IntersectionObserver for jsdom (used by framer-motion's useInView)
 class MockIntersectionObserver {

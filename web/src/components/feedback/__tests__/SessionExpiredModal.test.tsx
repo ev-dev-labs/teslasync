@@ -71,7 +71,7 @@ describe('SessionExpiredModal', () => {
     expect(screen.getByTestId('session-expired-modal')).toBeTruthy()
   })
 
-  it('clicking "Sign in again" preserves return URL and reloads to current path', () => {
+  it('clicking "Sign in again" hands off to the IdP outpost with rd= deep-link', () => {
     mockMonitor = { mode: 'session', hasExpired: true }
 
     const assignSpy = vi.fn()
@@ -91,10 +91,19 @@ describe('SessionExpiredModal', () => {
     try {
       render(<SessionExpiredModal />)
       fireEvent.click(screen.getByTestId('session-expired-signin'))
+      // navigateToReauth() writes sessionStorage as a belt-and-
+      // suspenders fallback for proxies that drop the `rd=` param.
       expect(window.sessionStorage.getItem('teslasync-return-url')).toBe(
         'http://localhost/dashboard?tab=overview',
       )
-      expect(assignSpy).toHaveBeenCalledWith('/dashboard?tab=overview')
+      // Default Authentik outpost path with the current href URL-
+      // encoded as the rd= return-destination parameter. Authentik
+      // upstream validates rd= host matches the configured external
+      // host, so we always pass the full href, not just the pathname.
+      expect(assignSpy).toHaveBeenCalledTimes(1)
+      const target = assignSpy.mock.calls[0][0] as string
+      expect(target).toMatch(/^\/outpost\.goauthentik\.io\/start\?rd=/)
+      expect(target).toContain(encodeURIComponent('http://localhost/dashboard?tab=overview'))
     } finally {
       Object.defineProperty(window, 'location', {
         configurable: true,

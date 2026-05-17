@@ -5,7 +5,6 @@ import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgressBoundary'
-import { AuthExpiredOverlay } from '@/components/feedback'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
 import { DensityApplier } from '@/components/ui/DensityApplier'
 import { ContextMenuRoot } from '@/components/ui/ContextMenu'
@@ -293,7 +292,6 @@ export default function App() {
 
   return (
     <>
-      <AuthExpiredOverlay />
       <OnboardingGate />
       <ScrollRestoration />
       <DensityApplier />
