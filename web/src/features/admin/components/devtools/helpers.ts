@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { request } from '@/api/client'
 import type { Vehicle } from '@/api/types'
+import type { TelemetryError } from './types'
 
 /* ─── API helper ──────────────────────────────────────────────────────── */
 
@@ -109,6 +110,63 @@ export function getNextCronRuns(parts: string[], count: number): Date[] {
     check.setMinutes(check.getMinutes() + 1)
   }
   return results
+}
+
+/* ─── fleet-telemetry error extraction ────────────────────────────────── */
+
+// extractTelemetryErrors normalises Tesla's per-vehicle fleet-telemetry
+// errors response into a UI-friendly shape. Handles all observed wire
+// variants — envelope-wrapped, envelope-less, array-only, snake/camel
+// field names — without throwing on partial data, since the alternative
+// is the silent-empty-table bug (no UI feedback at all when Tesla's
+// shape drifts).
+//
+// Returns ([], true) for a successful response with zero errors so the
+// caller can distinguish "vehicle is healthy" from "no request made yet".
+export function extractTelemetryErrors(
+  data: unknown,
+): { errors: TelemetryError[]; ok: boolean } {
+  if (data == null || typeof data !== 'object') return { errors: [], ok: false }
+
+  const root = data as Record<string, unknown>
+  const candidates: unknown[] = [
+    root.errors,
+    (root.response as Record<string, unknown> | undefined)?.errors,
+    root.response,
+    data,
+  ]
+  let raw: unknown[] | null = null
+  for (const c of candidates) {
+    if (Array.isArray(c)) {
+      raw = c
+      break
+    }
+  }
+  if (raw == null) return { errors: [], ok: false }
+
+  const errors: TelemetryError[] = raw.map((row, i) => {
+    const r = (row ?? {}) as Record<string, unknown>
+    const timestamp = pickString(r, ['reported_at', 'timestamp', 'created_at', 'ts'])
+    const code = pickString(r, ['error_code', 'code', 'name', 'topic'])
+    const message = pickString(r, ['error_message', 'message', 'body', 'description'])
+    const vin = pickString(r, ['vin'])
+    return {
+      rowKey: `${timestamp}|${code}|${vin}|${i}`,
+      timestamp,
+      code,
+      message,
+    }
+  })
+  return { errors, ok: true }
+}
+
+export function pickString(row: Record<string, unknown>, keys: string[]): string {
+  for (const k of keys) {
+    const v = row[k]
+    if (typeof v === 'string' && v !== '') return v
+    if (typeof v === 'number') return String(v)
+  }
+  return ''
 }
 
 /* ─── relative time ───────────────────────────────────────────────────── */

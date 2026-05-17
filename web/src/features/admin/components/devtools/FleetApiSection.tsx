@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { GlassPanel, Badge, Button, Input, Select, DataTable, Textarea, type Column } from '@/components/ui'
+import { GlassPanel, Badge, Button, Input, Select, Textarea, type Column } from '@/components/ui'
 import { Skeleton, AlertBanner } from '@/components/feedback'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'
@@ -12,7 +12,9 @@ import SignalConfigModal from '@/components/ui/SignalConfigModal'
 import { ToolCard } from './ToolCard'
 import { CopyButton } from '@/components/ui'
 import { ResultPanel } from './ResultPanel'
-import { apiFetch, useVehicleOptions } from './helpers'
+import { TelemetryErrorsPanel } from './TelemetryErrorsPanel'
+import { apiFetch, extractTelemetryErrors, useVehicleOptions } from './helpers'
+import type { TelemetryError } from './types'
 import { ICON_COLOR_MAP, ONBOARDING_STEPS, TELEMETRY_FIELDS } from './constants'
 import { Icons } from '@/lib/icons';
 
@@ -480,13 +482,6 @@ function FleetTelemetrySubscribeTool() {
 
 /* ─── Fleet Telemetry Config Tool ─────────────────────────────────────── */
 
-interface TelemetryError {
-  id: string
-  timestamp: string
-  code: string
-  message: string
-}
-
 function FleetTelemetryConfigTool() {
   const { t } = useTranslation()
   const [vin, setVin] = useState('')
@@ -497,13 +492,41 @@ function FleetTelemetryConfigTool() {
   const errorsQuery = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-errors?vin=${vin}`) })
   const deleteMut = useMutation({ mutationFn: () => apiFetch(`fleet-telemetry-config?vin=${vin}`, 'DELETE') })
 
-  const errorData = Array.isArray(errorsQuery.data?.errors) ? (errorsQuery.data.errors as TelemetryError[]) : []
+  // Defensive extraction: see extractTelemetryErrors godoc above.
+  // errorsRaw is the unwrapped Tesla payload (for the "Show raw"
+  // disclosure when the table is empty), errorsApiError is the
+  // upstream error string returned by apiFetch on non-2xx.
+  const errorsApiError =
+    typeof errorsQuery.data?.error === 'string' ? (errorsQuery.data.error as string) : undefined
+  const { errors: errorData, ok: errorsOk } = useMemo(
+    () => (errorsApiError ? { errors: [], ok: false } : extractTelemetryErrors(errorsQuery.data)),
+    [errorsQuery.data, errorsApiError],
+  )
 
   const errorColumns: Column<TelemetryError>[] = useMemo(() => [
-    { key: 'timestamp', header: t('Timestamp'), render: (r) => <span className="text-xs">{formatDateTime(r.timestamp)}</span> },
-    { key: 'code', header: t('Code'), render: (r) => <Badge variant="danger" size="sm">{r.code}</Badge> },
-    { key: 'message', header: t('Message'), render: (r) => <span className="text-xs text-[var(--text-secondary)]">{r.message}</span> },
+    {
+      key: 'timestamp',
+      header: t('Timestamp'),
+      render: (r) => (
+        <span className="text-xs">{r.timestamp ? formatDateTime(r.timestamp) : '—'}</span>
+      ),
+    },
+    {
+      key: 'code',
+      header: t('Code'),
+      render: (r) => (r.code ? <Badge variant="danger" size="sm">{r.code}</Badge> : <span className="text-xs text-[var(--text-muted)]">—</span>),
+    },
+    {
+      key: 'message',
+      header: t('Message'),
+      render: (r) => (
+        <span className="text-xs text-[var(--text-secondary)]">{r.message || '—'}</span>
+      ),
+    },
   ], [t])
+
+  const vinSelected = vin !== ''
+  const errorsRequested = errorsQuery.data != null || errorsQuery.isPending
 
   return (
     <ToolCard icon={Icons.satellite} color="purple" title={t('Telemetry Config')} description={t('Telemetry Config Desc')}>
@@ -516,46 +539,36 @@ function FleetTelemetryConfigTool() {
           onChange={(e) => setVin(e.target.value)}
         />
         <div className="flex flex-wrap gap-2">
-          <Button variant="primary" size="sm" loading={configQuery.isPending} onClick={() => configQuery.mutate()} icon={<Icons.show className="h-3.5 w-3.5" />}>
+          <Button variant="primary" size="sm" disabled={!vinSelected} loading={configQuery.isPending} onClick={() => configQuery.mutate()} icon={<Icons.show className="h-3.5 w-3.5" />}>
             {t('Get Config')}
           </Button>
-          <Button variant="secondary" size="sm" loading={errorsQuery.isPending} onClick={() => errorsQuery.mutate()} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
+          <Button variant="secondary" size="sm" disabled={!vinSelected} loading={errorsQuery.isPending} onClick={() => errorsQuery.mutate()} icon={<Icons.severityWarn className="h-3.5 w-3.5" />}>
             {t('View Errors')}
           </Button>
-          <Button variant="danger" size="sm" loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Icons.delete className="h-3.5 w-3.5" />}>
+          <Button variant="danger" size="sm" disabled={!vinSelected} loading={deleteMut.isPending} onClick={() => deleteMut.mutate()} icon={<Icons.delete className="h-3.5 w-3.5" />}>
             {t('Delete Config')}
           </Button>
         </div>
         <ResultPanel title={t('Telemetry Config')} data={configQuery.data?.error ? undefined : configQuery.data} error={typeof configQuery.data?.error === 'string' ? configQuery.data.error : undefined} idle={!configQuery.data} idleMessage={t('devtools.configIdle', 'Fetch config to see results')} />
         <ResultPanel title={t('Delete Config')} data={deleteMut.data?.error ? undefined : deleteMut.data} error={typeof deleteMut.data?.error === 'string' ? deleteMut.data.error : undefined} idle={!deleteMut.data} />
-        {errorData.length > 0 && (
-          <div className="space-y-2">
-            <DataTable
-              tableId="admin:fleet-api-errors"
-              columns={errorColumns}
-              data={errorData}
-              keyExtractor={(r) => r.id}
-              compact
-              pagination={{ defaultPageSize: 50 }}
-            />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                const blob = new Blob([JSON.stringify(errorData, null, 2)], { type: 'application/json' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = `telemetry-errors-${vin}.json`
-                a.click()
-                URL.revokeObjectURL(url)
-              }}
-              icon={<Icons.download className="h-3.5 w-3.5" />}
-            >
-              {t('Download Errors')}
-            </Button>
-          </div>
-        )}
+        {/* Errors panel — has FOUR distinct render states; before this
+            fix only state (4) rendered, so loading / error / empty all
+            looked identical to "button did nothing". */}
+        <TelemetryErrorsPanel
+          title={t('Telemetry Errors')}
+          loading={errorsQuery.isPending}
+          error={errorsApiError}
+          requested={errorsRequested}
+          ok={errorsOk}
+          errors={errorData}
+          columns={errorColumns}
+          vin={vin}
+          idleMessage={t('devtools.errorsIdle', 'Click View Errors to fetch recent Fleet Telemetry errors for this vehicle.')}
+          emptyMessage={t('devtools.errorsEmpty', 'No Fleet Telemetry errors reported for this vehicle.')}
+          rawData={errorsQuery.data}
+          rawDisclosureLabel={t('devtools.errorsRaw', 'Show raw Tesla response')}
+          downloadLabel={t('Download Errors')}
+        />
       </div>
     </ToolCard>
   )
