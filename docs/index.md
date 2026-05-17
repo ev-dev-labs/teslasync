@@ -3,81 +3,74 @@ layout: home
 
 hero:
   name: TeslaSync
-  text: Tesla Fleet Intelligence Platform
-  tagline: Self-hosted Tesla telemetry, analytics, automation, and operations in one Go + React platform.
+  text: Tesla fleet intelligence — with Helix AI built in
+  tagline: Self-hosted telemetry, analytics, automation, remote control, and an opt-in AI assistant for one car or a fleet. Runs entirely on your own infrastructure.
   actions:
     - theme: brand
       text: Get Started
       link: /guide/getting-started
     - theme: alt
-      text: Deployment
-      link: /deployment/docker
+      text: Helix AI
+      link: /guide/helix-ai
+    - theme: alt
+      text: Remote commands
+      link: /guide/remote-commands
 
 features:
-  - icon: 🚗
-    title: Fleet command center
-    details: Dashboard, vehicle detail, live map, digital twin, trip replay, and command history for one car or a fleet.
+  - icon: 🧠
+    title: Helix AI
+    details: 54 opt-in user features — chatbot with tool-use, NL builders for alerts and dashboards, narratives, predictions, ML clustering, voice mode, and more. Off by default, audited per call, with PII redaction at the network edge.
+  - icon: 🎮
+    title: 65 remote commands
+    details: Every Tesla Fleet API command — wake, lock, climate, sentry, charging, schedules, valet, sunroof, sound system, navigation, software updates — routed through the Vehicle Command Proxy when signing is required.
   - icon: 📡
     title: Real-time telemetry
-    details: Tesla Fleet Telemetry, MQTT ingestion, SSE streaming, Redis live state, and polling fallback when streaming is unavailable.
+    details: Tesla Fleet Telemetry gRPC streaming, MQTT publish/subscribe, SSE to browsers, two-layer signal store (in-process L1 + Redis L2), TimescaleDB hypertable for durable history.
+  - icon: 🚗
+    title: Fleet command center
+    details: Dashboard, live map with 6 tile layers, vehicle detail, command history, state-machine timeline, trip replay, 21 frontend feature areas across 69 pages.
   - icon: 🔋
-    title: Battery and charging intelligence
-    details: Battery health, cell voltage, projected range, charging sessions, charging curve, heatmaps, and Tesla billing history.
+    title: Battery & charging intelligence
+    details: Battery health with degradation projection, cell voltage spread, pack voltage / current, BMS, charging curve, cost analysis, 7×24 charging heatmap, Tesla billing history.
   - icon: 📊
-    title: Analytics and diagnostics
-    details: Cost of ownership, efficiency, speed profile, route efficiency, sleep/vampire drain, signal explorer, anomaly views, and Grafana.
+    title: Analytics & diagnostics
+    details: True cost of ownership, sleep efficiency, temperature impact, weekly digest, year-in-review, projected range, fleet comparison. Plus a full diagnostics suite — live signal monitor, signal explorer, MQTT inspector, DB health.
   - icon: 🔔
-    title: Alerts and automation
-    details: Typed Alert Studio rules, notification channels, automation builder, webhooks, scheduled checks, guard mode, and command workflows.
-  - icon: 🧭
-    title: Location and trips
-    details: Live map, geofences, navigation routes, locations, trips, route replay, and map-tile caching for PWA installs.
+    title: Alerts & automation
+    details: Alert Studio with visual rule builder, CEP rule engine with recursive condition trees and temporal sustain, 50+ templates, quiet hours, per-rule cooldown, multi-channel dispatch, automation builder.
   - icon: 🛠️
     title: Operations built in
-    details: Admin pages, API logs, API playground, Redis signal viewer, database health, data repair, backups, exports, and system status.
+    details: Admin pages, API logs, API playground, Redis signal viewer, DB health dashboard, scheduled backups (Local / S3 / Azure / GCS), data repair, 25+ Tesla developer tools.
   - icon: 🎨
     title: Modern responsive UI
-    details: Vite-powered React SPA with glass panels, dynamic themes, command palette, mobile bottom tabs, PWA install, and offline shell caching.
+    details: Glass panels, 5 dynamic themes × 4 display modes, command palette, PWA installable, mobile bottom tabs, SI canonical with units converted only at the render boundary.
 ---
 
 ## What TeslaSync is
 
-TeslaSync is a self-hosted Tesla Fleet Intelligence Platform. It combines a Go 1.25 backend, a React 18 SPA, TimescaleDB/PostgreSQL storage, Redis, MQTT, Grafana, Prometheus, and optional Tesla Fleet Telemetry streaming.
+A self-hosted **Tesla Fleet Intelligence Platform**. A Go 1.25 backend, a
+React 18 SPA, TimescaleDB / PostgreSQL 17 storage, Redis, MQTT, Grafana,
+Prometheus, optional Tesla Fleet Telemetry streaming, and an optional AI
+layer called **Helix** — all bundled into a Docker Compose stack or a
+production-ready Helm chart.
 
-The app is designed for owners and small fleets that want to keep Tesla data under their own control while still getting a polished dashboard, live state, long-term analytics, notifications, automation, and deployment-friendly operations.
-
-<div style="display: flex; justify-content: center; margin: 2rem 0;">
-  <svg width="280" height="100" viewBox="0 0 280 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="opacity: 0.6;">
-    <path d="M30 65 Q30 42 55 36 L90 28 Q115 18 145 18 Q175 18 200 28 L235 36 Q260 42 260 65 L260 70 Q260 75 254 75 L36 75 Q30 75 30 70 Z" fill="none" stroke="#00f0ff" stroke-width="1.5">
-      <animate attributeName="stroke-dasharray" from="0 800" to="800 0" dur="2s" fill="freeze" />
-    </path>
-    <ellipse cx="80" cy="75" rx="16" ry="16" fill="none" stroke="#10b981" stroke-width="2">
-      <animate attributeName="r" values="0;16" dur="0.5s" begin="0.5s" fill="freeze" />
-    </ellipse>
-    <ellipse cx="210" cy="75" rx="16" ry="16" fill="none" stroke="#10b981" stroke-width="2">
-      <animate attributeName="r" values="0;16" dur="0.5s" begin="0.6s" fill="freeze" />
-    </ellipse>
-    <ellipse cx="258" cy="56" rx="4" ry="7" fill="#00f0ff" opacity="0.7">
-      <animate attributeName="opacity" values="0;0.7;0.3;0.7" dur="2s" begin="1s" repeatCount="indefinite" />
-    </ellipse>
-    <rect x="28" y="52" width="4" height="14" rx="2" fill="#ef4444" opacity="0.6">
-      <animate attributeName="opacity" values="0;0.6;0.2;0.6" dur="2s" begin="1.2s" repeatCount="indefinite" />
-    </rect>
-    <ellipse cx="145" cy="94" rx="100" ry="4" fill="#6b7280" opacity="0.1">
-      <animate attributeName="rx" values="0;100" dur="0.8s" begin="0.3s" fill="freeze" />
-    </ellipse>
-  </svg>
-</div>
+The platform is designed for owners and small fleets that want to keep
+Tesla data under their own control while still getting a polished dashboard,
+live state, long-term analytics, notifications, automation, deployment-friendly
+operations, and an AI assistant they can audit and turn off feature by feature.
 
 ## Current architecture at a glance
 
-| Layer | Current implementation |
+| Layer | Implementation |
 |---|---|
-| Backend | Go 1.25, Chi v5, pgx v5, zerolog, Prometheus, OpenTelemetry, circuit breakers |
-| Frontend | React 18, TypeScript, Vite 5, TanStack Query 5, Tailwind, Framer Motion, i18next |
-| Data | TimescaleDB/PostgreSQL 17, pgvector, Redis 7, optional MongoDB raw signal capture |
-| Streaming | Tesla Fleet Telemetry, MQTT, Redis live state, SSE to browser, polling fallback |
-| Deployment | Docker Compose, Helm, Traefik IngressRoute, Authentik/ForwardAuth, PWA web container |
+| Backend | Go 1.25 · Chi v5 · pgx v5 · zerolog · Prometheus · OpenTelemetry · circuit breakers |
+| Frontend | React 18 · TypeScript · Vite 5 · TanStack Query 5 · Tailwind · Framer Motion · i18next |
+| Data | TimescaleDB / PostgreSQL 17 · pgvector · Redis 7 |
+| Streaming | Tesla Fleet Telemetry (gRPC) · MQTT · SSE · polling fallback |
+| Vehicle control | 65 command endpoints · optional Vehicle Command Proxy |
+| AI | **Helix** — 54 opt-in user features · pluggable provider chain (OpenAI · Azure OpenAI · Anthropic · Ollama) |
+| Deployment | Docker Compose (13 services) · Helm chart · Traefik IngressRoute · Authentik / ForwardAuth · PWA web container |
+| Observability | Prometheus `/metrics` · 28 Grafana dashboards · OpenTelemetry traces (Jaeger profile) |
 
 ## Quick start
 
@@ -89,4 +82,19 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Open the web UI at `http://localhost:3000`. The API listens on `http://localhost:8080`, Grafana on `http://localhost:3001`, and Prometheus on `http://localhost:9099` unless you override ports.
+Open the web UI at `http://localhost:3000`. The API listens on
+`http://localhost:8080`, Grafana on `http://localhost:3001`, Prometheus on
+`http://localhost:9099`. With the `tracing` profile, Jaeger is at
+`http://localhost:16686`.
+
+Continue to [Getting Started](/guide/getting-started) for Tesla Developer
+registration and partner-key flow.
+
+## Where to next
+
+- 🧠 **[Helix AI](/guide/helix-ai)** — features, providers, safety model
+- 🎮 **[Remote commands](/guide/remote-commands)** — the full 65-endpoint reference
+- 🏛 **[Architecture](/guide/architecture)** — services, data flow, schema
+- ⚙ **[Configuration](/guide/configuration)** — every environment variable
+- 📡 **[Fleet Telemetry](/guide/fleet-telemetry)** — gRPC streaming setup
+- 🐳 **[Docker deployment](/deployment/docker)** · ☸ **[Kubernetes](/deployment/kubernetes)**
