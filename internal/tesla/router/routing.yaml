@@ -81,7 +81,7 @@ routes:
     column: cabin_overheat_protection_mode
   - field: CabinOverheatProtectionTemperatureLimit
     dest: climate_snapshot
-    column: cabin_overheat_protection_temperature_limit_c
+    column: cabin_overheat_protection_temperature_limit
   # CarType is the static vehicle-model identity enum (config,
   # CarTypeValue: Model3 / ModelY / Cybertruck / Semi / ...). It is
   # essentially constant for a given VIN, so signal_log carries the
