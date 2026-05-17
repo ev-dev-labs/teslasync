@@ -1,0 +1,596 @@
+package redact
+
+// PolicyChatbot is the policy for the LLM chatbot strategy (Phase-50
+// slice U1). Allows nothing — the chatbot MUST use round-trip tokens
+// for every PII reference. The user sees their own VIN restored via
+// [Restore]; the provider only ever sees `<vin id='1'/>`.
+func PolicyChatbot() Policy {
+	return Policy{
+		Allow: nil,
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyDigest is the policy for the LLM-narrated weekly digest (slice
+// U2). Allows ClassVehicleName because the digest's value proposition
+// includes naming the user's car ("This week, Roadie drove 142 mi").
+// Every other class is still redacted.
+func PolicyDigest() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyYearInReview is the policy for the LLM-narrated year-in-review
+// slides (slice U3, prompt 0013). Allows ClassVehicleName so the
+// narration can address the user's car by name across the slide deck
+// ("This year, Roadie covered 12,500 km"). Every other PII class
+// — VIN, lat/long, addresses, etc. — is redacted to a round-trip
+// tag (`<vin id='1'/>`) and restored by the F8 redact decorator
+// before the response reaches the user.
+//
+// Mirrors PolicyDigest's allow-list intentionally: both narrators
+// share the same value proposition (name the car, never expose
+// trips/locations) and a future change to one frequently warrants
+// the same change to the other. They are kept as DISTINCT policy
+// constructors (rather than aliasing) so per-slice allow-list
+// drift can happen without cross-slice collateral damage.
+func PolicyYearInReview() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyAlertBuilder is the policy for the NL alert builder (slice
+// N1). Allows nothing — alert IDs and selectors flow through the F4
+// tool registry, not through prose. The LLM sees redacted text and
+// proposes a typed AlertRule DTO; restoration happens server-side
+// before persistence.
+func PolicyAlertBuilder() Policy {
+	return Policy{
+		Allow: nil,
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyAutomationBuilder mirrors PolicyAlertBuilder for slice N2.
+// Defined explicitly so each slice's policy lives in one named place
+// rather than aliased to another slice's policy (so a future per-slice
+// change does not require touching the wrong identifier).
+func PolicyAutomationBuilder() Policy {
+	return Policy{
+		Allow: nil,
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyDriveCoaching is the policy for per-drive coaching narratives
+// (slice N4). Allows ClassVehicleName so the coach can address the
+// car by name. Lat/long stays redacted — the coach narrates trends,
+// not exact coordinates.
+func PolicyDriveCoaching() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyChargingDiagnosis is the policy for the per-session charging
+// diagnosis narrative (slice N5, prompt 0019). Allows ClassVehicleName
+// so the diagnosis can address the user's car by name when it
+// explains a specific session ("Roadie's home AC session ran for
+// 7h 12m at 1.6 kW — that's a trickle charge"). Charging location
+// names — including the `start_place` text the user-facing UI
+// renders as a location chip — stay redacted by default per the
+// slice prompt's ADR-015 §I9 commitment ("charging location names
+// remain tagged by default"); the diagnosis narrates flag patterns,
+// not exact addresses or station names.
+//
+// Mirrors PolicyDigest / PolicyYearInReview / PolicyDriveCoaching's
+// allow-list intentionally: every per-feature narrator that names
+// the user's car shares the same allow-list shape. They are kept as
+// DISTINCT policy constructors (rather than aliasing) so per-slice
+// allow-list drift can happen without cross-slice collateral damage.
+func PolicyChargingDiagnosis() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicySpeedProfileInsights is the policy for the per-drive speed
+// profile insights narrative (slice D2, prompt 0022). Allows
+// ClassVehicleName so the insights can address the user's car by
+// name when it discusses the drive's speed regime ("Roadie spent
+// most of this drive at highway speeds"). Precise route coordinates
+// — lat/long pairs, full street addresses — stay redacted by
+// default per the slice prompt's ADR-015 §I9 commitment ("precise
+// route coordinates remain tagged"); the insights narrate the
+// drive's bucket distribution and energy efficiency, not exact
+// route geometry or stop addresses.
+//
+// Mirrors PolicyDigest / PolicyYearInReview / PolicyDriveCoaching /
+// PolicyChargingDiagnosis's allow-list intentionally: every
+// per-feature narrator that names the user's car shares the same
+// allow-list shape. They are kept as DISTINCT policy constructors
+// (rather than aliasing) so per-slice allow-list drift can happen
+// without cross-slice collateral damage — a future change to drive
+// coaching's allow-list does not bleed across to speed-profile
+// insights.
+func PolicySpeedProfileInsights() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyRouteEfficiencySuggestions is the policy for the
+// route-efficiency suggestions narrative (slice D3, prompt 0023).
+// Allows ClassVehicleName so the suggestions can address the user's
+// car by name when it discusses route-level habits ("Roadie's home
+// → work commute averages 165 Wh/km"). Place names and street
+// addresses — which are the natural identifier of a "route" — flow
+// through the F8 redactor as round-trip ClassStreetAddr tags: the
+// provider sees `<addr id='1'/> → <addr id='2'/>`, and the
+// addresses are restored only in the final SSE frame returned to
+// the same authenticated user who issued the request. This keeps
+// the provider transcript free of personally identifying location
+// strings while preserving the user-facing narration ("From your
+// usual Home → Work commute…"). Lat/long pairs are likewise tagged
+// (ClassLatLong) and never exposed in cleartext to the provider.
+//
+// Mirrors PolicyDigest / PolicyYearInReview / PolicyDriveCoaching /
+// PolicyChargingDiagnosis / PolicySpeedProfileInsights's allow-list
+// intentionally: every per-feature narrator that names the user's
+// car shares the same allow-list shape. They are kept as DISTINCT
+// policy constructors (rather than aliasing) so per-slice
+// allow-list drift can happen without cross-slice collateral damage
+// — a future change to charging diagnosis's allow-list does not
+// bleed across to route-efficiency suggestions.
+//
+// Slice prompt mandate (verbatim): "Allowed classes: ClassVehicleName
+// only; locations are tagged and restored only to same user.
+// Round-trip required: yes."
+func PolicyRouteEfficiencySuggestions() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyAutoTripNaming is the policy for the per-trip auto-naming
+// narrative (slice D4, prompt 0024). Allows ClassVehicleName so the
+// suggestion can address the user's car by name when the proposed
+// name reasonably includes a vehicle reference (e.g. "Roadie's
+// October Road Trip" — only the vehicle's display name is allowed
+// through; place names are still tagged). Precise route coordinates
+// — lat/long pairs, street addresses, place names that the trip
+// happens to traverse — stay redacted by default: the proposed
+// trip name is meant to surface a concise human label like "Weekend
+// Road Trip — October 2024", NOT a turn-by-turn dossier ("Trip
+// through 4123 Oak St"). Per the slice prompt's ADR-015 §I9
+// commitment, the redaction policy allow-list mirrors
+// PolicyDigest's so a future change to one does not silently bleed
+// into the other.
+//
+// Mirrors PolicyDigest / PolicyYearInReview / PolicyDriveCoaching /
+// PolicyChargingDiagnosis / PolicySpeedProfileInsights /
+// PolicyRouteEfficiencySuggestions's allow-list intentionally: every
+// per-feature narrator that names the user's car shares the same
+// allow-list shape. They are kept as DISTINCT policy constructors
+// (rather than aliasing) so per-slice allow-list drift can happen
+// without cross-slice collateral damage — a future change to
+// charging diagnosis's allow-list does not bleed across to
+// auto-trip-naming.
+//
+// Slice prompt mandate (verbatim): "Allowed classes: ClassVehicleName
+// only; places stay tagged unless restored to same user.
+// Round-trip required: yes."
+func PolicyAutoTripNaming() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyTripPlannerLLMAgent is the per-feature redaction policy for
+// the Phase-50 D5 trip-planner-llm-agent strategy. Allows
+// ClassVehicleName only; start/end locations, charger place names,
+// addresses, and lat/long pairs are tagged via round-trip markers
+// and restored only when the SSE stream is rendered to the same
+// authenticated user. This matches the slice prompt's verbatim
+// mandate:
+//
+//	Allowed classes: ClassVehicleName only; start/end locations are
+//	tagged and restored only to same user
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyAutoTripNaming /
+// PolicyRouteEfficiencySuggestions so a future per-feature change
+// to one slice's allow-list does not bleed across the others —
+// every feature is independently auditable.
+func PolicyTripPlannerLLMAgent() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicySmartChargeScheduleSuggestion is the per-feature redaction
+// policy for the Phase-50 C1 smart-charge-schedule-suggestion
+// strategy. Allows ClassVehicleName only so the narration can
+// address the user's car by name (e.g. "Charge Roadie from 11pm to
+// 5am to save $4.20"); every other PII class — VIN, lat/long,
+// addresses, place names — remains tagged via round-trip markers
+// and restored only when the SSE stream is rendered to the same
+// authenticated user. The schedule proposal itself is a structured
+// envelope (start_time, end_time, target_soc, est_cost) consisting
+// of timestamps and numbers, not free-form prose, so the redactor
+// has nothing to obscure on the typed side.
+//
+// This matches the slice prompt's verbatim mandate:
+//
+//	Allowed classes: ClassVehicleName only; home/work locations
+//	remain tagged
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicyAutoTripNaming / PolicySpeedProfileInsights /
+// PolicyChargingDiagnosis / PolicyDriveCoaching so a future
+// per-feature change to one slice's allow-list does not bleed
+// across the others — every feature is independently auditable.
+func PolicySmartChargeScheduleSuggestion() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyBatteryHealthForecastNarrative is the per-feature redaction
+// policy for the Phase-50 C2 battery-health-forecast-narrative
+// strategy. Allows ClassVehicleName only so the narration can
+// address the user's car by name (e.g. "Roadie's degradation rate
+// is 1.8%/year"); every other PII class — VIN, lat/long, addresses,
+// place names, charging-location identifiers — remains tagged via
+// round-trip markers and restored only when the SSE stream is
+// rendered to the same authenticated user. The forecast envelope
+// itself is a structured aggregate (state-of-health %, degradation
+// rate, projected dates, fast-charge ratio, deep-discharge counts)
+// consisting of numbers and bucket labels, not free-form prose, so
+// the redactor has nothing to obscure on the typed side.
+//
+// This matches the slice prompt's verbatim mandate:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; battery metrics are
+//	                     aggregate numeric DTOs
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicySmartChargeScheduleSuggestion / PolicyAutoTripNaming /
+// PolicySpeedProfileInsights / PolicyChargingDiagnosis /
+// PolicyDriveCoaching so a future per-feature change to one slice's
+// allow-list does not bleed across the others — every feature is
+// independently auditable.
+func PolicyBatteryHealthForecastNarrative() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyChargingCurveFingerprintClustering is the per-feature
+// redaction policy for the Phase-50 / 0028 C3
+// charging-curve-fingerprint-clustering surface (LLM names and
+// explains the deterministic charging-curve fingerprint clusters
+// for one vehicle).
+//
+// The slice prompt's redaction stanza is the source of truth:
+//
+//	Policy:               PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:      ClassVehicleName only; charging location remains tagged
+//	Round-trip required:  yes
+//
+// The policy therefore mirrors PolicyDigest (Allow=ClassVehicleName,
+// Mode=ModeRedactedTags) so the LLM can name "Roadie" but every
+// charging-location identifier (start_place place names, lat/lng,
+// street addresses, charger network labels) is converted to a
+// round-trip tag before the provider call and only restored in the
+// final SSE frame returned to the same authenticated user. A leaked
+// transcript therefore reveals neither the user's home charger
+// address nor the L3 supercharger they routinely visit.
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicySmartChargeScheduleSuggestion / PolicyAutoTripNaming /
+// PolicySpeedProfileInsights / PolicyChargingDiagnosis /
+// PolicyDriveCoaching / PolicyBatteryHealthForecastNarrative so a
+// future per-feature change to one slice's allow-list does not
+// bleed across the others — every feature is independently
+// auditable.
+func PolicyChargingCurveFingerprintClustering() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyCostForecastNarration is the per-feature redaction policy for
+// the Phase-50 / 0029 C4 cost-forecast-narration surface (LLM narrates
+// the deterministic monthly-cost forecast — historical aggregates,
+// projected next-N-month band, home-vs-supercharger split, gas
+// comparison, deterministic insights — for one vehicle).
+//
+// The slice prompt's redaction stanza is the source of truth:
+//
+//	Policy:               PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:      ClassVehicleName only; cost data is aggregate
+//	                      and user-visible
+//	Round-trip required:  yes
+//
+// The policy therefore mirrors PolicyDigest (Allow=ClassVehicleName,
+// Mode=ModeRedactedTags). Cost numbers and currency are aggregate
+// monetary values the user already sees on the chart, so the LLM can
+// reason about them directly. Every other identifier — VIN, lat/lng,
+// place names, street addresses, charger network labels — is converted
+// to a round-trip tag before the provider call and only restored in
+// the final SSE frame returned to the same authenticated user. A
+// leaked transcript therefore reveals neither the user's home charger
+// address nor the supercharger sites they regularly use.
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicySmartChargeScheduleSuggestion / PolicyAutoTripNaming /
+// PolicySpeedProfileInsights / PolicyChargingDiagnosis /
+// PolicyDriveCoaching / PolicyBatteryHealthForecastNarrative /
+// PolicyChargingCurveFingerprintClustering so a future per-feature
+// change to one slice's allow-list does not bleed across the others —
+// every feature is independently auditable.
+func PolicyCostForecastNarration() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyVampireDrainExplanation is the per-feature redaction policy for the
+// Phase-50 / 0030 — C5 vampire-drain-explanation slice. It mirrors PolicyDigest
+// (allow ClassVehicleName only, ModeRedactedTags so the LLM sees [LOCATION]
+// and [SCHEDULE] tags rather than raw values).
+//
+// Threat model: the prompt may contain idle-drain windows ANCHORED at home or
+// at work. ClassLocation MUST stay tagged so a leaked transcript reveals
+// neither the user's home charger address nor the addresses they regularly
+// park at. ClassSchedule MUST stay tagged so the same transcript reveals
+// neither the user's daily commute pattern nor their weekly Sentry-on
+// schedule. Allowing ClassVehicleName lets the narration say "your Model 3"
+// instead of "[VEHICLE]" — display-name leakage is acceptable.
+//
+// Kept as a distinct identifier from every prior per-feature policy so a
+// future change to one slice's allow-list does not bleed across the others —
+// every feature is independently auditable.
+func PolicyVampireDrainExplanation() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyPreheatPrecoolRecommender is the per-feature redaction policy for
+// the Phase-50 / 0031 — T1 preheat-precool-recommender slice. It mirrors
+// PolicyDigest / PolicySmartChargeScheduleSuggestion (allow ClassVehicleName
+// only, ModeRedactedTags) so the LLM sees [LOCATION] / [SCHEDULE] /
+// [STREET_ADDR] tags rather than raw values.
+//
+// Threat model: the proposed preheat / precool schedule is anchored on the
+// user's typical departure time at home or at work. ClassLocation /
+// ClassStreetAddr MUST stay tagged so a leaked transcript reveals neither
+// the user's home address nor the workplace they typically depart from.
+// ClassSchedule MUST stay tagged so the same transcript does not reveal the
+// user's daily commute pattern. Allowing ClassVehicleName lets the
+// proposal narration say "I drafted a preheat for Roadie before your 7:30am
+// departure" instead of "[VEHICLE]" — display-name leakage is acceptable
+// and is the only PII class the slice prompt's verbatim mandate permits:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; departure places remain
+//	                     tagged
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicySmartChargeScheduleSuggestion / PolicyVampireDrainExplanation /
+// PolicyCostForecastNarration / PolicyAutoTripNaming /
+// PolicyTripPlannerLLMAgent / PolicyDriveCoaching so a future per-feature
+// change to one slice's allow-list does not bleed across the others —
+// every feature is independently auditable.
+func PolicyPreheatPrecoolRecommender() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyTirePressureTrendReasoning is the per-feature redaction policy for
+// the Phase-50 / 0033 — T3 tire-pressure-trend-reasoning slice. It mirrors
+// PolicyDigest (allow ClassVehicleName only, ModeRedactedTags so the LLM
+// sees [LOCATION] / [STREET_ADDR] / [SCHEDULE] tags rather than raw
+// values).
+//
+// Threat model: the deterministic tire-pressure trend envelope is
+// vehicle-scoped and aggregates the four corner pressures (front-left,
+// front-right, rear-left, rear-right) over the last 30 days plus the
+// last-known outside ambient temperature read from the same signal-log
+// change feed. The numeric pressure values are user-visible telemetry
+// (the four-tire gauges on /tire-pressure already render them), so we
+// do NOT classify them as PII; the threat is that a leaked transcript
+// could otherwise expose the user's typical commute corridor or the
+// places where pressure dropped below the soft-low threshold (parking
+// at a winter trailhead, etc.). ClassLocation / ClassStreetAddr /
+// ClassSchedule MUST stay tagged so the narration cannot reveal where
+// or when the pressure event occurred. Allowing ClassVehicleName lets
+// the narration say "Roadie's front-left tire is trending low" instead
+// of "[VEHICLE]" — display-name leakage is acceptable and is the only
+// PII class the slice prompt's verbatim mandate permits:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; pressure values are
+//	                     user-visible telemetry
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from every prior per-feature policy so a
+// future per-feature change to one slice's allow-list does not bleed
+// across the others — every feature is independently auditable.
+func PolicyTirePressureTrendReasoning() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyCabinTemperatureImpactNarrative is the per-feature redaction policy
+// for the Phase-50 / 0032 — T2 cabin-temperature-impact-narrative slice. It
+// mirrors PolicyDigest (allow ClassVehicleName only, ModeRedactedTags so
+// the LLM sees [LOCATION] / [STREET_ADDR] / [SCHEDULE] tags rather than
+// raw values).
+//
+// Threat model: the deterministic temperature-impact aggregates are
+// vehicle-scoped and bucket every recent drive by ambient cabin temperature
+// — the buckets and monthly trend are pure aggregates, but the per-drive
+// scatter context the LLM may quote includes drive_date timestamps which
+// can correlate to commute patterns. ClassLocation / ClassStreetAddr MUST
+// stay tagged so a leaked transcript reveals neither the user's typical
+// route start/end nor any place name the recent-drives sample might
+// surface. ClassSchedule MUST stay tagged so the same transcript does not
+// reveal the user's daily commute schedule. Allowing ClassVehicleName lets
+// the narration say "Roadie loses ~7% efficiency below 0°C" instead of
+// "[VEHICLE]" — display-name leakage is acceptable and is the only PII
+// class the slice prompt's verbatim mandate permits:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; trip and location details
+//	                     remain tagged
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from every prior per-feature policy so a
+// future per-feature change to one slice's allow-list does not bleed
+// across the others — every feature is independently auditable.
+func PolicyCabinTemperatureImpactNarrative() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyAutoNameUnnamedLocations is the per-feature redaction policy
+// for the Phase-50 G1 auto-name-unnamed-locations strategy. Allows
+// ClassVehicleName only — the proposed location name MAY reference
+// the user's vehicle (e.g. "Roadie's home") but every other PII
+// class — VIN, lat/long, addresses, place names — remains tagged
+// via round-trip markers and restored only when the SSE stream is
+// rendered to the same authenticated user. This matches the slice
+// prompt's verbatim mandate:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; coordinates and
+//	                     addresses stay tagged unless restored to
+//	                     same user
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyAutoTripNaming and every
+// prior per-feature policy so a future per-feature change to one
+// slice's allow-list does not bleed across the others — every
+// feature is independently auditable. The auto-name-unnamed-locations
+// surface is structurally close to auto-trip-naming (both propose
+// human-readable labels for an existing aggregate without
+// persisting), but they are independent slices and their allow-lists
+// are independently auditable.
+func PolicyAutoNameUnnamedLocations() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicySuggestNewGeofences is the per-feature redaction policy for the
+// Phase-50 / 0038 — G2 suggest-new-geofences strategy. Allows
+// ClassVehicleName only — the proposed geofence name MAY reference the
+// user's vehicle (e.g. "Roadie's regular work stop") but every other
+// PII class — VIN, lat/long, street addresses, geocoded place names —
+// remains tagged via round-trip markers and restored only when the SSE
+// stream is rendered to the same authenticated user. This matches the
+// slice prompt's verbatim mandate:
+//
+//	Policy:              PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:     ClassVehicleName only; coordinates remain tagged
+//	                     until user confirmation
+//	Round-trip required: yes
+//
+// Kept as a distinct identifier from PolicyAutoNameUnnamedLocations and
+// every prior per-feature policy so a future per-feature change to one
+// slice's allow-list does not bleed across the others — every feature
+// is independently auditable. Although the suggest-new-geofences surface
+// is structurally close to auto-name-unnamed-locations (both propose
+// typed location-shaped artefacts grounded in visited-location
+// aggregates without persisting), they are independent slices and their
+// allow-lists are independently auditable.
+//
+// Threat model rationale: a geofence draft envelope carries a centroid
+// lat/lon pair and a radius_m, derived from the visited-location
+// aggregate's geocoded address_name. The lat/lon stays redaction-tagged
+// in any prompt context the LLM sees, so a leaked transcript reveals
+// neither the user's home/work coordinates nor the surrounding
+// place-name graph. The typed F4 tool envelope (NOT the prompt prose)
+// is what carries the centroid + radius back to the SPA, where the
+// user reviews them inside the existing baseline geofence-create form
+// before clicking Save.
+func PolicySuggestNewGeofences() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}
+
+// PolicyPeriodCompareNarration is the per-feature redaction policy for
+// the Phase-50 / 0040 — X1 period-compare-narration slice (LLM narrates
+// the deterministic period-over-period delta envelope on the
+// PeriodComparePage — total distance, total drives, energy used, average
+// efficiency, total cost, CO2 saved across two trailing-day windows for
+// one vehicle).
+//
+// The slice prompt's redaction stanza is the source of truth:
+//
+//	Policy:               PolicyDigest from internal/ai/redact/policies.go
+//	Allowed classes:      ClassVehicleName only; aggregate analytics data
+//	                      is user-visible
+//	Round-trip required:  yes
+//
+// The policy therefore mirrors PolicyDigest (Allow=ClassVehicleName,
+// Mode=ModeRedactedTags). The aggregate distance / energy / cost / CO2
+// numbers are user-visible analytics the chart on /period-compare
+// already renders, so the LLM can reason about them directly. Every
+// other identifier — VIN, lat/lng, place names, street addresses,
+// charger network labels, schedule patterns — is converted to a
+// round-trip tag before the provider call and only restored in the
+// final SSE frame returned to the same authenticated user. A leaked
+// transcript therefore reveals neither the user's home charger address
+// nor the locations they regularly drive to.
+//
+// Kept as a distinct identifier from PolicyDigest /
+// PolicyTripPlannerLLMAgent / PolicyRouteEfficiencySuggestions /
+// PolicySmartChargeScheduleSuggestion / PolicyAutoTripNaming /
+// PolicySpeedProfileInsights / PolicyChargingDiagnosis /
+// PolicyDriveCoaching / PolicyBatteryHealthForecastNarrative /
+// PolicyChargingCurveFingerprintClustering / PolicyCostForecastNarration
+// / PolicyVampireDrainExplanation so a future per-feature change to one
+// slice's allow-list does not bleed across the others — every feature
+// is independently auditable.
+func PolicyPeriodCompareNarration() Policy {
+	return Policy{
+		Allow: []PIIClass{ClassVehicleName},
+		Mode:  ModeRedactedTags,
+	}
+}

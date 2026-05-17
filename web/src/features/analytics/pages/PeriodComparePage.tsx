@@ -26,6 +26,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
+import { AIPeriodCompareNarration } from '@/components/ai/AIPeriodCompareNarration';
 
 /* ── Types ─────────────────────────────────────────────── */
 
@@ -328,6 +329,17 @@ export default function PeriodComparePage() {
             className="w-44"
           />
         </GlassPanel>
+      </FadeIn>
+
+      {/* AI period-compare narration (Phase-50 / 0040) — opt-in, hidden when ai_mode='off' */}
+      <FadeIn delay={0.025}>
+        <div className="mb-6">
+          <AIPeriodCompareNarration
+            vehicleId={activeVehicle}
+            daysA={daysA}
+            daysB={daysB}
+          />
+        </div>
       </FadeIn>
 
       {!a || !b ? (

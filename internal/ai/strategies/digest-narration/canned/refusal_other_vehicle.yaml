@@ -1,0 +1,7 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot share data for another user's vehicle. I can only narrate the
+      weekly digest for the vehicle currently associated with your session.
+    input_tokens: 28
+    output_tokens: 26

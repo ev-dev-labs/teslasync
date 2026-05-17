@@ -81,19 +81,20 @@ describe('SelectedVehicleProvider', () => {
     expect(result.current.vehicleId).toBeNull();
   });
 
-  it('throws a clear error when used outside the provider', () => {
-    // renderHook will surface the error inside `result.current` is unavailable;
-    // catch it via render to keep the assertion explicit.
+  it('returns a no-op fallback when used outside the provider', () => {
+    // The hook is documented to degrade gracefully when no provider is
+    // mounted (see useSelectedVehicle.ts), so isolated test renders of
+    // page components that read it don't crash.
     const Probe = () => {
-      useSelectedVehicleStore();
-      return null;
+      const { vehicleId, setVehicleId } = useSelectedVehicleStore();
+      return (
+        <div data-testid="probe-vid" data-vid={String(vehicleId)}>
+          {typeof setVehicleId === 'function' ? 'fn' : 'not-fn'}
+        </div>
+      );
     };
-    const consoleError = console.error;
-    console.error = () => {}; // silence React's expected boundary error
-    try {
-      expect(() => render(<Probe />)).toThrow(/SelectedVehicleProvider/);
-    } finally {
-      console.error = consoleError;
-    }
+    const { getByTestId } = render(<Probe />);
+    expect(getByTestId('probe-vid').dataset.vid).toBe('null');
+    expect(getByTestId('probe-vid').textContent).toBe('fn');
   });
 });

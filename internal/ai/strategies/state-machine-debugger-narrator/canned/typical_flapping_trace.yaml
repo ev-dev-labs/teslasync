@@ -1,0 +1,23 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_fsm_trace_typical_flapping_trace_1
+        name: query_fsm_trace
+        arguments: '{"vehicle_id": 42, "from_unix": 1700000000, "to_unix": 1700003600}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      The vehicle FSM trace shows a notable flap pattern in the
+      60-minute window. The deterministic envelope reports a
+      non-zero flap_count concentrated on the online↔asleep
+      edges, with multiple back-and-forth transitions in a
+      short interval. The remaining transitions follow the
+      expected idle-to-active progression. The envelope does
+      not attribute the flapping to any specific signal beyond
+      what its trigger column records, so no root cause is
+      claimed here. Inspect the transition table and the
+      timeline chart above to investigate the per-transition
+      timing.
+    input_tokens: 240
+    output_tokens: 96

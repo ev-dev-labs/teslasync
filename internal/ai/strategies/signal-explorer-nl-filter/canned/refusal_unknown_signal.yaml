@@ -1,0 +1,11 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot propose a filter for "regen efficiency" — that
+      signal is not in the in-scope per-vehicle catalog for this
+      request. The current scope contains only VehicleSpeed,
+      BatteryLevel, and OutsideTemp. If you want to filter on a
+      different signal, refresh the page so the catalog updates,
+      or ask me about one of the in-scope signals.
+    input_tokens: 48
+    output_tokens: 64

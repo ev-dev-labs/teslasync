@@ -1,0 +1,207 @@
+feature:
+  id: safety-setting-explainer
+  system: |
+    You are the TeslaSync safety setting explainer. Your job is
+    to EXPLAIN the user's existing safety-related TeslaSync
+    settings in plain English, grounded strictly in the typed
+    envelope query_safety_settings returns; you NEVER propose a
+    new value, you NEVER claim a setting exists that the
+    envelope did not surface, and you NEVER promise to change a
+    setting on the user's behalf. ALWAYS call
+    query_safety_settings FIRST and ground every claim in the
+    deterministic typed envelope it returns (each entry carries
+    key, current_value, default_value, allowed_values,
+    short_description, docs_anchor). You MAY call retrieve_docs
+    ONCE to pull a matching documentation chunk for the setting
+    the user is asking about, but ONLY with source_types=["docs"];
+    querying the runbooks or i18n corpora is forbidden because
+    this surface is user-facing help, not operator guidance.
+    Quote ONLY values returned by the tools: the setting's
+    canonical key (e.g. quiet_hours_enabled, alert_digest_mode),
+    its current_value (e.g. true / "instant" / "22:00"), its
+    default_value, and the retrieved chunk's source label. Do
+    NOT invent a setting key the typed envelope did not surface,
+    do NOT invent allowed_values outside the envelope's
+    allowed_values list, do NOT claim the setting was changed by
+    your narration, do NOT propose a different value, and do NOT
+    recommend the user "should" change the setting — you EXPLAIN,
+    you do not prescribe. If the user asks how to change a
+    setting, refer them to the same Settings UI they are already
+    on; you NEVER write a setting yourself and the typed
+    envelope is read-only by construction. Refuse politely if
+    asked to explain a setting that is NOT in the safety-related
+    typed envelope (e.g. theme, units, currency) — those
+    settings are out of scope for this surface and the user can
+    ask about them on the relevant Settings page. Never quote
+    precise street addresses, GPS coordinates, place names,
+    charger network labels, VINs, IPs, emails, phone numbers, or
+    MAC addresses — the redaction policy strips them, but a
+    leaked transcript should not contain them at all. The typed
+    envelope contains scalar setting values only (booleans, enum
+    strings, HH:MM time strings); any PII in your narration
+    would be a fabrication. Be concise: 2-4 sentences naming the
+    setting's canonical key, its current_value (and the
+    default_value when they differ), what it controls in plain
+    English, and (when retrieve_docs returned a match) the docs
+    chunk's source label so the user can read more. Ground every
+    claim strictly in the tool replies.
+  # Tools MUST mirror
+  # internal/ai/strategies/safety-setting-explainer/strategy.go's
+  # allowedTools whitelist. Both tools are READ-only / pure
+  # aggregators: query_safety_settings reads the deterministic
+  # SettingsRepo via the SafetySettingsSource port (no DB write),
+  # and retrieve_docs is the SHARED F7-backed RAG tool registered
+  # by the rag-help slice (the safety strategy's system prompt
+  # restricts source_types to ["docs"] only). NO database write
+  # is performed by either tool.
+  tools:
+    - query_safety_settings
+    - retrieve_docs
+  mutating_tools: []
+
+goldens:
+  # explain_quiet_hours_enabled — the most common case the user
+  # will hit: "what does quiet_hours_enabled do?". The LLM MUST
+  # call query_safety_settings FIRST, then OPTIONALLY call
+  # retrieve_docs scoped to ["docs"], then produce a 2-4 sentence
+  # explanation that names the canonical key, the current_value,
+  # and the matching docs chunk's source label. Pin: must NOT
+  # claim the narration changed the setting; must NOT propose a
+  # different value; must NOT invent a setting outside the typed
+  # envelope.
+  - name: explain_quiet_hours_enabled
+    input:
+      user_message: "What does the quiet_hours_enabled setting do, and is it on for me right now?"
+      context_overrides:
+        user_id: "user-1"
+    expect:
+      must_call_tools:
+        - query_safety_settings
+      answer_must_contain:
+        - "quiet_hours_enabled"
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # Honest "explain, not prescribe" pin: the narrator
+        # must NOT recommend a value or claim the setting was
+        # changed.
+        - "you should enable"
+        - "you should disable"
+        - "I have changed"
+        - "I have updated"
+        - "I have enabled"
+        - "I have disabled"
+        # Honest "no fabricated settings" pin: these keys are
+        # not in the safety-related typed envelope.
+        - "geofence_alerts"
+        - "panic_button"
+        - "emergency_contacts"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_safety_settings FIRST
+        and grounded the answer in the typed envelope, (2)
+        named the canonical setting key (quiet_hours_enabled)
+        and its current_value verbatim, (3) gave a 2-4 sentence
+        plain-English explanation of what the setting controls,
+        (4) did NOT propose a different value, did NOT claim
+        the narration changed the setting, did NOT invent a
+        setting key outside the typed envelope, (5) (optional)
+        cited the matching docs chunk's source label when
+        retrieve_docs returned a match. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # explain_alert_digest_mode — the second-most-common case: a
+  # user wondering what the alert_digest_mode enum values mean
+  # (instant / hourly / daily). The LLM MUST surface the
+  # current_value and the allowed_values from the typed envelope
+  # without inventing new modes. Pin: must NOT invent an enum
+  # value outside {instant, hourly, daily}; must NOT claim the
+  # setting was changed by the narration.
+  - name: explain_alert_digest_mode
+    input:
+      user_message: "What does alert_digest_mode control? What are the options?"
+      context_overrides:
+        user_id: "user-1"
+    expect:
+      must_call_tools:
+        - query_safety_settings
+      answer_must_contain:
+        - "alert_digest_mode"
+        - "instant"
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # Honest "no invented enum" pin: the narrator must NOT
+        # claim a digest mode that is not in the allowed_values
+        # list (the canonical set is {instant, hourly, daily};
+        # anything else would be fabrication).
+        - "weekly"
+        - "monthly"
+        - "yearly"
+        - "real-time"
+        # Honest "explain, not prescribe" pin.
+        - "you should switch"
+        - "I have changed"
+        - "I have updated"
+        - "I have set"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_safety_settings FIRST,
+        (2) named the canonical setting key
+        (alert_digest_mode) and its current_value verbatim,
+        (3) listed the allowed_values verbatim from the typed
+        envelope (instant, hourly, daily), (4) did NOT invent
+        an enum value outside the envelope's allowed_values,
+        did NOT claim the narration changed the setting, (5)
+        gave a 2-4 sentence plain-English explanation of what
+        each allowed_value means in practice. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refuse_out_of_scope_setting — the user asks about a setting
+  # that is NOT in the safety-related typed envelope (e.g.
+  # `theme`, which is an Appearance setting). The strategy's
+  # system prompt REQUIRES the narrator to refuse politely and
+  # point the user to the relevant Settings page rather than
+  # inventing the setting or pretending to explain it. Pin: must
+  # NOT fabricate a current_value for `theme`; must NOT claim it
+  # was found in the safety envelope; must surface a refusal.
+  - name: refuse_out_of_scope_setting
+    input:
+      user_message: "What does my theme setting do? Can you explain dark mode?"
+      context_overrides:
+        user_id: "user-1"
+    expect:
+      must_call_tools:
+        - query_safety_settings
+      answer_must_contain:
+        - "safety"
+      answer_must_not_contain:
+        - "5YJ"
+        - "37.7749"
+        - "-122.4194"
+        - "192.168."
+        # Honest "no out-of-scope fabrication" pin: the narrator
+        # must NOT invent a value for `theme` or pretend it was
+        # in the safety envelope.
+        - "your theme is set to"
+        - "your theme is currently"
+        - "theme is dark"
+        - "theme is light"
+        - "dark mode is enabled"
+        # Honest "explain, not prescribe" pin.
+        - "I have changed"
+        - "I have updated"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_safety_settings FIRST
+        (so the narrator can prove the requested setting is
+        absent from the safety envelope), (2) refused politely
+        to invent a current_value for `theme` or pretend it
+        was in the safety envelope, (3) directed the user to
+        the relevant Settings page (Appearance) rather than
+        fabricating an answer, (4) did NOT claim the
+        narration changed any setting, did NOT invent a
+        value, (5) the refusal is short and helpful, not a
+        generic "I cannot help" wall. Pass = score >= 4.
+      judge_pass_threshold: 4

@@ -1,0 +1,31 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_export_redaction_plan_typical_account_export_1
+        name: draft_export_redaction_plan
+        arguments: '{"export_type": "account"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_export_redaction_plan_typical_account_export_1
+        name: validate_export_redaction_plan
+        arguments: '{"export_type": "account", "classes": [{"class": "email", "mode": "redact"}, {"class": "phone", "mode": "redact"}, {"class": "user_subject_id", "mode": "redact"}, {"class": "ip", "mode": "redact"}, {"class": "payment_token", "mode": "drop"}, {"class": "address", "mode": "redact"}]}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      For the account export the catalog-based recommendation
+      redacts email, phone, user_subject_id, ip, and address,
+      and drops payment_token entirely (a placeholder would
+      hint at the field's existence; an empty value is safer).
+      precise_timestamp is optional — keep_if_consent is the
+      catalog's suggestion; round to the nearest minute for a
+      shared export unless the recipient needs the precision.
+      This is a catalog-based recommendation describing the PII
+      classes typically present in account exports; it is NOT a
+      per-row PII scan of your specific export. Final
+      responsibility for verifying the redaction settings before
+      sharing rests with you.
+    input_tokens: 320
+    output_tokens: 160

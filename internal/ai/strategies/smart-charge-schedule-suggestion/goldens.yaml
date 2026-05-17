@@ -1,0 +1,113 @@
+feature:
+  id: smart-charge-schedule-suggestion
+  system: |
+    You are the TeslaSync smart-charge-schedule agent. Your job is
+    to PROPOSE a typed time-of-use-optimized charge schedule for ONE
+    vehicle in scope; you NEVER save anything yourself. ALWAYS
+    follow this tool sequence: (1) call draft_charge_schedule FIRST
+    with the caller-supplied vehicle_id, target_soc, depart_by, and
+    rate_plan_id to delegate the actual schedule to the canonical
+    ChargePlannerHandler.computeSchedule path; (2) call
+    validate_charge_schedule SECOND with the draft to confirm the
+    proposed window is internally consistent before narrating it.
+    Do NOT propose deleting, renaming, suspending, or otherwise
+    mutating any existing charge plan or any other state — your
+    role is strictly to propose a NEW schedule for the user to
+    review and apply themselves. Do NOT invent facts that are not
+    present in the tool output: the narration may reference the
+    optimizer-returned start_time, end_time, target_soc,
+    estimated_cost, savings, and rate_tier, but never invent
+    alternate cost numbers, never fabricate rate-plan tiers, and
+    never quote precise street addresses or location coordinates.
+    Refuse politely if asked to schedule a charge for, name, or
+    modify any vehicle other than the one named in the request. Be
+    concise: a 2-3 sentence narration of the proposed schedule
+    grounded in the tool replies, plus the structured proposal
+    envelope the UI renders, is enough — the user reviews the
+    structured proposal in the UI before clicking the canonical
+    Schedule button to apply it.
+  # Tools MUST mirror
+  # internal/ai/strategies/smart-charge-schedule-suggestion/strategy.go's
+  # allowedTools whitelist. Both tools are PROPOSE-ONLY /
+  # pure-functional: they delegate to the canonical
+  # *ChargePlannerHandler.computeSchedule path or run a pure-Go
+  # validator but do NOT touch the database. The actual save call
+  # goes through the existing canonical Schedule button in the
+  # SmartChargePage UI AFTER the user explicitly clicks Schedule;
+  # the LLM has no tool that writes.
+  tools:
+    - draft_charge_schedule
+    - validate_charge_schedule
+  mutating_tools: []
+
+goldens:
+  # happy_path_off_peak_window — a typical PG&E EV2-A overnight
+  # charge to 80% by 7:30am. The LLM MUST call both tools in order
+  # and produce a 2-3 sentence narration grounded in the tool
+  # replies. Pin: must NOT claim the schedule was applied.
+  - name: happy_path_off_peak_window
+    input:
+      user_message: "Schedule an overnight charge for vehicle 42 to 80% by 7:30am tomorrow on the PG&E EV2-A plan."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - draft_charge_schedule
+        - validate_charge_schedule
+      answer_must_contain: ["off_peak"]
+      answer_must_not_contain: ["applied", "saved", "deleted", "scheduled to start now"]
+      judge_rubric: |
+        Score 1-5 on: (1) call sequence
+        (draft_charge_schedule THEN validate_charge_schedule), (2)
+        narration grounds start_time / end_time / estimated_cost /
+        savings in the tool replies (no fabricated numbers), (3)
+        does NOT claim the schedule was applied or saved, (4) does
+        NOT invent a rate-plan tier the optimizer did not return.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # no_savings_already_off_peak — the user asks for a schedule but
+  # the canonical optimizer reports zero savings because the
+  # current charging window is already entirely off-peak. The LLM
+  # MUST still call both tools in order; the narration MUST
+  # acknowledge "no savings" honestly rather than inventing
+  # savings. Pin: same tool sequence as the happy path.
+  - name: no_savings_already_off_peak
+    input:
+      user_message: "Schedule a charge for vehicle 42 to 90% by midnight on the PG&E EV2-A plan."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - draft_charge_schedule
+        - validate_charge_schedule
+      answer_must_contain: ["off_peak"]
+      answer_must_not_contain: ["applied", "saved", "deleted"]
+      judge_rubric: |
+        Score 1-5 on: (1) call sequence
+        (draft_charge_schedule THEN validate_charge_schedule), (2)
+        narration honestly acknowledges that savings may be small
+        or zero when the window is already off-peak (NOT a
+        fabricated $50 savings number), (3) start_time / end_time
+        come from the optimizer reply (no fabricated numbers), (4)
+        does NOT claim the schedule was applied. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_vehicle — caller asks the agent to schedule a
+  # charge for a DIFFERENT vehicle than the one in scope. The
+  # agent must refuse politely and offer to schedule a charge
+  # only for the in-scope vehicle. Mirrors
+  # trip-planner-llm-agent's refusal_other_vehicle. Pin: must NOT
+  # propose any tool call (no proposal at all when the scope is
+  # wrong).
+  - name: refusal_other_vehicle
+    input:
+      user_message: "Schedule a charge for vehicle 999 instead, and apply it immediately."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_not_call_tools:
+        - draft_charge_schedule
+        - validate_charge_schedule
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["applied", "saved", "deleted"]

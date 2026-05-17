@@ -1,0 +1,23 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_fsm_trace_typical_steady_trace_1
+        name: query_fsm_trace
+        arguments: '{"vehicle_id": 42, "from_unix": 1700000000, "to_unix": 1700003600}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      The vehicle FSM ran cleanly across the 60-minute window
+      with a small number of transitions and no flaps. The
+      deterministic envelope shows a typical idle-to-active
+      progression — the dominant edges describe a short drive
+      cycle followed by a return to parked. Triggers reported
+      by the envelope are the expected telemetry-driven
+      transitions; nothing unusual surfaces. No further
+      root-cause inference is supportable from the envelope
+      alone — use the deterministic transition table, state
+      diagram, and timeline chart above for raw inspection of
+      the per-transition breakdown.
+    input_tokens: 240
+    output_tokens: 96

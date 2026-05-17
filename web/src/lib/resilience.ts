@@ -82,30 +82,128 @@ function dedup<T>(key: string, fn: () => Promise<T>): Promise<T> {
 }
 
 // --- Auth Middleware Session Expiry Detection ---
+//
+// When the upstream ForwardAuth proxy (Authentik / Authelia / oauth2-
+// proxy / Cloudflare Access) reports the session has expired, we
+// navigate the top-level window to the IdP's documented sign-in entry
+// point — explicit handoff, never `window.location.reload()`.
+//
+// Why explicit nav, not reload:
+//   * In an installed PWA there is no address bar; the user can't see a
+//     reload "do" anything.
+//   * Behind a Service Worker that may match the navigation request from
+//     cache (the historical reason this code path looped on `/`), reload
+//     can be swallowed entirely.
+//   * Authentik's outpost expects an `rd=` (return-destination) query
+//     parameter so it can deep-link the user back to the page they were
+//     on after they sign in — reload loses that context.
+//
+// Default targets Authentik's proxy outpost at /outpost.goauthentik.io/start
+// (verified against authentik upstream source — internal/outpost/proxyv2).
+// Override per-deployment via window.__TESLASYNC_REAUTH_URL__ which the
+// helm chart's nginx configmap can inject for non-Authentik IdPs.
 
+const DEFAULT_REAUTH_URL = '/outpost.goauthentik.io/start'
+const RETURN_URL_KEY = 'teslasync-return-url'
+
+declare global {
+  interface Window {
+    __TESLASYNC_REAUTH_URL__?: string
+  }
+}
+
+/**
+ * Resolves the IdP reauth entry-point URL.
+ *
+ * Returns the runtime override when nginx injected one, otherwise the
+ * Authentik outpost default. An explicit empty-string override disables
+ * the IdP handoff entirely and the SPA falls back to `window.location
+ * .reload()` — only safe in dev or in installs where the SW is configured
+ * to NOT swallow navigations to `/`.
+ */
+export function getReauthUrl(): string | null {
+  const override = window.__TESLASYNC_REAUTH_URL__
+  if (typeof override === 'string') {
+    const trimmed = override.trim()
+    return trimmed === '' ? null : trimmed
+  }
+  return DEFAULT_REAUTH_URL
+}
+
+/**
+ * Navigates the top-level window to the configured IdP reauth entry
+ * point, preserving the current URL as the `rd=` query parameter so
+ * the user lands back on the same page after sign-in. Falls back to
+ * `window.location.reload()` when the reauth URL is explicitly
+ * disabled (empty string override).
+ *
+ * Also writes the current href to sessionStorage as a defence-in-
+ * depth fallback for proxies that strip `rd=` in the redirect chain;
+ * App.tsx consumes that key on first mount post-auth.
+ */
+export function navigateToReauth(): void {
+  try {
+    sessionStorage.setItem(RETURN_URL_KEY, window.location.href)
+  } catch {
+    // private-mode / quota — best-effort only
+  }
+
+  const base = getReauthUrl()
+  if (!base) {
+    window.location.reload()
+    return
+  }
+  const returnUrl = encodeURIComponent(window.location.href)
+  const sep = base.includes('?') ? '&' : '?'
+  window.location.assign(`${base}${sep}rd=${returnUrl}`)
+}
+
+// Latch prevents N parallel in-flight queries each independently
+// triggering a fresh navigation in the same JS tick. The latch is
+// cleared by:
+//   * a 30s timeout — escape hatch for the rare case where the
+//     `window.location.assign` call did not actually navigate (browser
+//     extension blocked it, manual intervention in devtools).
+//   * the `focus` event — when the user returns to the tab, give them
+//     an immediate retry path instead of waiting for the timeout.
+//
+// We deliberately do NOT reset on successful API responses, even though
+// it was tempting: /api/v1/auth/session always returns 200 (per
+// auth_session_handler.go contract) even when the response body says
+// the user is unauthenticated. Resetting on that would cause the latch
+// to flap and `navigateToReauth` to fire a second time, churning
+// Authentik's state-JWT cookie and breaking any in-flight OAuth
+// callback (state mismatch → "session ID mismatch" error).
 let _authExpiredHandled = false
+let _authExpiredTimer: ReturnType<typeof setTimeout> | null = null
+
+function resetAuthExpiredLatch(): void {
+  _authExpiredHandled = false
+  if (_authExpiredTimer !== null) {
+    clearTimeout(_authExpiredTimer)
+    _authExpiredTimer = null
+  }
+}
+
+/**
+ * Test / dev hook — exposed for unit tests to reset the auth-expired
+ * latch between runs without exposing the internal mutable state.
+ * Test-setup.ts calls this in `beforeEach` to guarantee isolation
+ * even when multiple tests in the same file exercise the auth path.
+ */
+export function _resetAuthExpiredLatch(): void {
+  resetAuthExpiredLatch()
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', resetAuthExpiredLatch)
+}
 
 function handleAuthExpired(): void {
   if (_authExpiredHandled) return
   _authExpiredHandled = true
-
-  // Store the current URL so we can return after re-authentication
-  sessionStorage.setItem('teslasync-return-url', window.location.href)
-
-  // In PWA standalone mode, we can't rely on a page reload triggering
-  // the ForwardAuth redirect — show a UI overlay instead
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    || (window.navigator as any).standalone === true
-
-  if (isPWA) {
-    document.dispatchEvent(new CustomEvent('teslasync:auth-expired', {
-      detail: { returnUrl: window.location.href, isPWA },
-    }))
-  } else {
-    // Regular browser — reload triggers the ForwardAuth redirect to login
-    window.location.reload()
-  }
+  _authExpiredTimer = setTimeout(resetAuthExpiredLatch, 30_000)
+  navigateToReauth()
 }
 
 // --- Tesla Third-Party OAuth Grant Expiry Detection ---

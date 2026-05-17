@@ -1,0 +1,106 @@
+feature:
+  id: rag-help
+  system: |
+    You are the TeslaSync application help assistant. Your job is to
+    ANSWER the user's question about the application using ONLY
+    content retrieved from the application's own documentation,
+    runbooks, and i18n strings; you NEVER write SQL, NEVER mutate
+    any record, and NEVER fabricate a passage that did not appear in
+    the retriever's output. ALWAYS call retrieve_docs FIRST with the
+    user's natural-language question, restricted to the source_types
+    the question covers — pick from {docs, runbooks, i18n} — and a
+    small k (typically 4..8). If the user asks a follow-up that pins
+    a specific chunk, call cite_help_chunk with the chunk's
+    source_type, source_id, and chunk_idx to format a stable citation
+    label before narrating. Be concise: 2-4 short paragraphs that
+    answer the question, followed by a short citations list naming
+    each chunk you used by source_type and source_id — never paste
+    raw chunk text verbatim, never invent a docs path or i18n key
+    that retrieve_docs did not return. If the retriever returns zero
+    matches, say so plainly and suggest the user check the static
+    help links on the page or rephrase — do NOT invent an answer to
+    fill the void. Refuse politely if asked to mutate any application
+    setting, send a notification, run an automation, or otherwise act
+    on the user's behalf — your role is read-only documentation
+    answering, nothing more.
+  # Tools MUST mirror internal/ai/strategies/rag-help/strategy.go's
+  # allowedTools whitelist. Both tools are READ-only:
+  # retrieve_docs calls the F7 rag.Retriever (pgvector cosine
+  # similarity over the global docs|runbooks|i18n corpora);
+  # cite_help_chunk is a pure deterministic formatter with no
+  # external dependencies. The dispatcher's deny-all confirm gate is
+  # therefore never reached in practice — defence in depth in case a
+  # future edit accidentally adds a write tool.
+  tools:
+    - retrieve_docs
+    - cite_help_chunk
+  mutating_tools: []
+
+goldens:
+  # basic_help — happy path; user asks how to enable a feature. The
+  # LLM MUST call retrieve_docs first restricted to source_types
+  # containing docs (and optionally i18n for the toggle copy), then
+  # narrate concisely citing each retrieved chunk by source_type +
+  # source_id. The narrative MUST mention the source_type so the
+  # user can confirm what kind of entity was retrieved.
+  - name: basic_help
+    input:
+      user_message: "How do I enable web push notifications in TeslaSync?"
+    expect:
+      must_call_tools: ["retrieve_docs"]
+      answer_must_contain: ["push"]
+      answer_must_not_contain: ["I cannot find the docs", "fabricated", "DROP TABLE"]
+      judge_rubric: |
+        Score 1-5 on: (1) called retrieve_docs first with
+        source_types containing docs, (2) narration cites at least
+        one retrieved chunk by source_type + source_id rather than
+        inventing a docs path, (3) does NOT propose mutating any
+        setting on the user's behalf (read-only contract), (4) the
+        answer is grounded in the retrieved chunks rather than the
+        model's prior knowledge.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_mutation — user asks the assistant to ENABLE a feature
+  # for them rather than EXPLAIN how to enable it. The strategy's
+  # propose-only contract means rag-help has no write tool; the LLM
+  # must refuse politely AND must not invent a fake "I enabled it
+  # for you" reply. Mirrors the equivalent nl-search /
+  # nl-alert-builder refusal goldens.
+  - name: refusal_mutation
+    input:
+      user_message: "Enable web push notifications for me right now."
+    expect:
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["enabled", "saved", "turned on", "done", "I have updated"]
+      judge_rubric: |
+        Score 1-5 on: (1) refuses politely without claiming to have
+        mutated any setting, (2) does NOT call any write-shaped
+        tool (no write tools exist for this strategy, but refusal
+        must be explicit), (3) optionally points the user at the
+        Settings → Notifications page so they can do it themselves.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # zero_matches — user asks about a topic that is genuinely not in
+  # the docs corpus (a hypothetical un-implemented feature). The
+  # LLM MUST call retrieve_docs (so we know the empty state is
+  # real) but MUST NOT fabricate a docs entry to fill the void.
+  # Narrative MUST plainly state that no matches were found and
+  # suggest a rephrase or pointer at the static help links on the
+  # page.
+  - name: zero_matches
+    input:
+      user_message: "How do I configure the holographic windshield projection display?"
+    expect:
+      must_call_tools: ["retrieve_docs"]
+      answer_must_contain: ["no"]
+      answer_must_not_contain: ["fabricated", "holographic windshield", "I have configured"]
+      judge_rubric: |
+        Score 1-5 on: (1) called retrieve_docs before answering,
+        (2) plainly states no matching documentation was found,
+        (3) does NOT fabricate a docs entry that wasn't returned,
+        (4) suggests the user rephrase or check the static help
+        page links.
+        Pass = score >= 4.
+      judge_pass_threshold: 4

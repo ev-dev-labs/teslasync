@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -119,6 +120,369 @@ var achievementDefs = []achievementDef{
 	{ID: "supercharger", Name: "Supercharger Fan", Desc: "Complete 50 charging sessions", Icon: "⚡", Target: 50, Field: "charge_sessions"},
 }
 
+// LifetimeStatsResult is the typed envelope returned by ComputeLifetimeStats.
+//
+// Phase-50 / Prompt 0041: extracted so the AI strategy `lifetime-stats-qa`
+// can reuse the deterministic SQL + math without duplicating any queries.
+// The canonical handler `GetLifetimeStats` builds an HTTP JSON response
+// from the same struct and additionally persists/broadcasts achievement
+// unlocks; the AI tool path does NOT persist or broadcast (read-only).
+//
+// Field layout mirrors the pre-existing JSON response keys 1:1 so the
+// frontend contract is unchanged.
+type LifetimeStatsResult struct {
+	// Driving aggregates
+	TotalDrives        int     `json:"total_drives"`
+	TotalDistanceKm    float64 `json:"total_distance_km"`
+	TotalDrivingHours  float64 `json:"total_driving_hours"`
+	LongestDriveKm     float64 `json:"longest_drive_km"`
+	HighestSpeedKmh    float64 `json:"highest_speed_kmh"`
+	AvgEfficiencyWhKm  float64 `json:"avg_efficiency_wh_km"`
+
+	// Charging aggregates
+	TotalChargeSessions int     `json:"total_charge_sessions"`
+	TotalEnergyKwh      float64 `json:"total_energy_kwh"`
+	TotalChargingHours  float64 `json:"total_charging_hours"`
+	TotalChargingCost   float64 `json:"total_charging_cost"`
+
+	// Savings
+	GasEquivalentCost float64 `json:"gas_equivalent_cost"`
+	TotalSavings      float64 `json:"total_savings"`
+	CO2OffsetKg       float64 `json:"co2_offset_kg"`
+	TreesEquivalent   int     `json:"trees_equivalent"`
+
+	// Fun facts
+	EarthCircumferences float64 `json:"earth_circumferences"`
+	MoonTrips           float64 `json:"moon_trips"`
+	DaysOnRoad          float64 `json:"days_on_road"`
+	HomesEquivalentDays float64 `json:"homes_equivalent_days"`
+
+	// Timeline
+	FirstDriveDate      *string `json:"first_drive_date"`
+	OwnershipDays       int     `json:"ownership_days"`
+	MostActiveDayOfWeek string  `json:"most_active_day_of_week"`
+	MostActiveHour      int     `json:"most_active_hour"`
+
+	// Personal records
+	LongestDriveRecord PersonalRecord `json:"longest_drive_record"`
+	HighestSpeedRecord PersonalRecord `json:"highest_speed_record"`
+	MaxChargeRecord    PersonalRecord `json:"max_charge_record"`
+
+	// Achievements (computed; UnlockedAt populated only when caller
+	// persists transitions through the canonical handler)
+	Achievements []Achievement `json:"achievements"`
+}
+
+// PersonalRecord is the typed shape used by ComputeLifetimeStats and
+// returned in the response payload.
+type PersonalRecord struct {
+	Value float64 `json:"value"`
+	Date  *string `json:"date"`
+}
+
+// ComputeLifetimeStats runs every SQL aggregate the canonical lifetime
+// stats endpoint depends on and returns a typed envelope.
+//
+// vehicleID == 0 means "fleet-wide" (no vehicle filter applied). Any
+// negative ID returns an error.
+//
+// This helper is read-only: it does NOT persist achievement unlocks or
+// broadcast SSE events. The canonical handler layers persistence on top.
+// The AI strategy `lifetime-stats-qa` calls this helper directly.
+func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64) (*LifetimeStatsResult, error) {
+	if db == nil {
+		return nil, errLifetimeNilDB
+	}
+	if vehicleID < 0 {
+		return nil, errLifetimeBadVehicle
+	}
+
+	// Driving aggregates (SI canonical: distance_m / duration_s / max_speed_mps).
+	driveQuery := `
+		SELECT COUNT(*),
+		       COALESCE(SUM(distance_m) / 1000.0, 0),
+		       COALESCE(SUM(duration_s) / 60.0, 0),
+		       COALESCE(MAX(distance_m) / 1000.0, 0),
+		       COALESCE(MAX(max_speed_mps) * 3.6, 0),
+		       MIN(started_at)
+		FROM drives
+		WHERE ended_at IS NOT NULL AND distance_m > 0`
+	driveArgs := []interface{}{}
+	if vehicleID > 0 {
+		driveQuery += " AND vehicle_id = $1"
+		driveArgs = append(driveArgs, vehicleID)
+	}
+	var totalDrives int
+	var totalDistKm, totalDrivingMin, longestDriveKm, highestSpeedKmh float64
+	var firstDriveDate *time.Time
+	if err := db.Pool.QueryRow(ctx, driveQuery, driveArgs...).Scan(
+		&totalDrives, &totalDistKm, &totalDrivingMin,
+		&longestDriveKm, &highestSpeedKmh, &firstDriveDate,
+	); err != nil {
+		return nil, fmt.Errorf("lifetime drive stats: %w", err)
+	}
+
+	// Average efficiency (Wh/km).
+	effQuery := `
+		SELECT COALESCE(AVG(
+			CASE WHEN distance_m > 1609.344 AND energy_used_wh IS NOT NULL
+			     AND energy_used_wh > 0
+			THEN energy_used_wh / (distance_m / 1000.0)
+			ELSE NULL END
+		), 0)
+		FROM drives
+		WHERE ended_at IS NOT NULL AND distance_m > 0`
+	effArgs := []interface{}{}
+	if vehicleID > 0 {
+		effQuery += " AND vehicle_id = $1"
+		effArgs = append(effArgs, vehicleID)
+	}
+	var avgEffWhKm float64
+	if err := db.Pool.QueryRow(ctx, effQuery, effArgs...).Scan(&avgEffWhKm); err != nil {
+		log.Warn().Err(err).Msg("lifetime: failed to get efficiency stats")
+	}
+
+	// Charging aggregates.
+	chargeQuery := `
+		SELECT COUNT(*),
+		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
+		       COALESCE(SUM(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0), 0),
+		       COALESCE(SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal::float8 ELSE 0 END), 0)
+		FROM charging_sessions
+		WHERE ended_at IS NOT NULL`
+	chargeArgs := []interface{}{}
+	if vehicleID > 0 {
+		chargeQuery += " AND vehicle_id = $1"
+		chargeArgs = append(chargeArgs, vehicleID)
+	}
+	var totalChargeSessions int
+	var totalEnergyKwh, totalChargingMin, totalChargingCost float64
+	if err := db.Pool.QueryRow(ctx, chargeQuery, chargeArgs...).Scan(
+		&totalChargeSessions, &totalEnergyKwh, &totalChargingMin, &totalChargingCost,
+	); err != nil {
+		return nil, fmt.Errorf("lifetime charging stats: %w", err)
+	}
+
+	// Savings.
+	var gasPrice, gasEfficiencyMPG float64
+	if err := db.Pool.QueryRow(ctx,
+		`SELECT
+			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
+			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
+	).Scan(&gasPrice, &gasEfficiencyMPG); err != nil && err != pgx.ErrNoRows {
+		log.Warn().Err(err).Msg("lifetime: failed to get settings")
+	}
+	if gasPrice <= 0 {
+		gasPrice = 3.50
+	}
+	if gasEfficiencyMPG <= 0 {
+		gasEfficiencyMPG = 25
+	}
+	var gasEquivalentCost, totalSavings float64
+	if totalDistKm > 0 {
+		totalMiles := totalDistKm / 1.60934
+		gallonsUsed := totalMiles / gasEfficiencyMPG
+		gasEquivalentCost = gallonsUsed * gasPrice
+		totalSavings = gasEquivalentCost - totalChargingCost
+		if totalSavings < 0 {
+			totalSavings = 0
+		}
+	}
+
+	// CO₂ offset.
+	co2OffsetKg := totalDistKm * 0.192
+	treesEquivalent := int(co2OffsetKg / 21)
+
+	// Fun facts.
+	earthCircumferences := totalDistKm / 40075.0
+	moonTrips := totalDistKm / 384400.0
+	daysOnRoad := (totalDrivingMin / 60.0) / 24.0
+	homesEquivalentDays := totalEnergyKwh / 30.0
+
+	// Ownership timeline.
+	var ownershipDays int
+	var firstDriveDateStr *string
+	if firstDriveDate != nil && !firstDriveDate.IsZero() {
+		days := int(time.Since(*firstDriveDate).Hours() / 24)
+		if days < 0 {
+			days = 0
+		}
+		ownershipDays = days
+		s := firstDriveDate.Format("2006-01-02")
+		firstDriveDateStr = &s
+	}
+
+	// Most active day-of-week + hour.
+	mostActiveDOW := ""
+	mostActiveHour := 0
+	dowQuery := `
+		SELECT EXTRACT(DOW FROM started_at)::int as dow, COUNT(*) as cnt
+		FROM drives WHERE ended_at IS NOT NULL AND distance_m > 0`
+	dowArgs := []interface{}{}
+	if vehicleID > 0 {
+		dowQuery += " AND vehicle_id = $1"
+		dowArgs = append(dowArgs, vehicleID)
+	}
+	dowQuery += " GROUP BY dow ORDER BY cnt DESC LIMIT 1"
+	var dowIdx, dowCnt int
+	if err := db.Pool.QueryRow(ctx, dowQuery, dowArgs...).Scan(&dowIdx, &dowCnt); err == nil {
+		dayNames := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
+		if dowIdx >= 0 && dowIdx < 7 {
+			mostActiveDOW = dayNames[dowIdx]
+		}
+	}
+	hourQuery := `
+		SELECT EXTRACT(HOUR FROM started_at)::int as hr, COUNT(*) as cnt
+		FROM drives WHERE ended_at IS NOT NULL AND distance_m > 0`
+	hourArgs := []interface{}{}
+	if vehicleID > 0 {
+		hourQuery += " AND vehicle_id = $1"
+		hourArgs = append(hourArgs, vehicleID)
+	}
+	hourQuery += " GROUP BY hr ORDER BY cnt DESC LIMIT 1"
+	var hrIdx, hrCnt int
+	if err := db.Pool.QueryRow(ctx, hourQuery, hourArgs...).Scan(&hrIdx, &hrCnt); err == nil {
+		mostActiveHour = hrIdx
+	}
+
+	// Personal records: longest drive.
+	longestRec := PersonalRecord{Value: longestDriveKm}
+	longestRecQuery := `
+		SELECT started_at FROM drives
+		WHERE ended_at IS NOT NULL AND distance_m > 0`
+	longestRecArgs := []interface{}{}
+	if vehicleID > 0 {
+		longestRecQuery += " AND vehicle_id = $1"
+		longestRecArgs = append(longestRecArgs, vehicleID)
+	}
+	longestRecQuery += " ORDER BY distance_m DESC LIMIT 1"
+	var longestDate time.Time
+	if err := db.Pool.QueryRow(ctx, longestRecQuery, longestRecArgs...).Scan(&longestDate); err == nil {
+		s := longestDate.Format("2006-01-02")
+		longestRec.Date = &s
+	}
+
+	// Highest speed.
+	speedRec := PersonalRecord{Value: highestSpeedKmh}
+	speedRecQuery := `
+		SELECT started_at FROM drives
+		WHERE ended_at IS NOT NULL AND distance_m > 0 AND max_speed_mps IS NOT NULL`
+	speedRecArgs := []interface{}{}
+	if vehicleID > 0 {
+		speedRecQuery += " AND vehicle_id = $1"
+		speedRecArgs = append(speedRecArgs, vehicleID)
+	}
+	speedRecQuery += " ORDER BY max_speed_mps DESC LIMIT 1"
+	var speedDate time.Time
+	if err := db.Pool.QueryRow(ctx, speedRecQuery, speedRecArgs...).Scan(&speedDate); err == nil {
+		s := speedDate.Format("2006-01-02")
+		speedRec.Date = &s
+	}
+
+	// Max charge in a single session.
+	var maxChargeKwh float64
+	var maxChargeDate *string
+	maxChargeQuery := `
+		SELECT total_energy_added_wh / 1000.0, started_at FROM charging_sessions
+		WHERE ended_at IS NOT NULL AND total_energy_added_wh > 0`
+	maxChargeArgs := []interface{}{}
+	if vehicleID > 0 {
+		maxChargeQuery += " AND vehicle_id = $1"
+		maxChargeArgs = append(maxChargeArgs, vehicleID)
+	}
+	maxChargeQuery += " ORDER BY total_energy_added_wh DESC LIMIT 1"
+	var mcDate time.Time
+	if err := db.Pool.QueryRow(ctx, maxChargeQuery, maxChargeArgs...).Scan(&maxChargeKwh, &mcDate); err == nil {
+		s := mcDate.Format("2006-01-02")
+		maxChargeDate = &s
+	}
+	chargeRec := PersonalRecord{Value: maxChargeKwh, Date: maxChargeDate}
+
+	// Achievements (compute only — no persistence; UnlockedAt left nil).
+	fieldValues := map[string]float64{
+		"drives":          float64(totalDrives),
+		"distance_km":     totalDistKm,
+		"charge_sessions": float64(totalChargeSessions),
+		"energy_kwh":      totalEnergyKwh,
+		"savings":         totalSavings,
+		"co2_kg":          co2OffsetKg,
+		"trees":           float64(treesEquivalent),
+	}
+	achievements := computeAchievementsList(fieldValues)
+
+	totalDrivingHours := totalDrivingMin / 60.0
+	totalChargingHours := totalChargingMin / 60.0
+
+	return &LifetimeStatsResult{
+		TotalDrives:        totalDrives,
+		TotalDistanceKm:    safeFloat(math.Round(totalDistKm*100) / 100),
+		TotalDrivingHours:  safeFloat(math.Round(totalDrivingHours*100) / 100),
+		LongestDriveKm:     safeFloat(math.Round(longestDriveKm*100) / 100),
+		HighestSpeedKmh:    safeFloat(math.Round(highestSpeedKmh*10) / 10),
+		AvgEfficiencyWhKm:  safeFloat(math.Round(avgEffWhKm*10) / 10),
+
+		TotalChargeSessions: totalChargeSessions,
+		TotalEnergyKwh:      safeFloat(math.Round(totalEnergyKwh*100) / 100),
+		TotalChargingHours:  safeFloat(math.Round(totalChargingHours*100) / 100),
+		TotalChargingCost:   safeFloat(math.Round(totalChargingCost*100) / 100),
+
+		GasEquivalentCost: safeFloat(math.Round(gasEquivalentCost*100) / 100),
+		TotalSavings:      safeFloat(math.Round(totalSavings*100) / 100),
+		CO2OffsetKg:       safeFloat(math.Round(co2OffsetKg*100) / 100),
+		TreesEquivalent:   treesEquivalent,
+
+		EarthCircumferences: safeFloat(math.Round(earthCircumferences*1000) / 1000),
+		MoonTrips:           safeFloat(math.Round(moonTrips*10000) / 10000),
+		DaysOnRoad:          safeFloat(math.Round(daysOnRoad*100) / 100),
+		HomesEquivalentDays: safeFloat(math.Round(homesEquivalentDays*100) / 100),
+
+		FirstDriveDate:      firstDriveDateStr,
+		OwnershipDays:       ownershipDays,
+		MostActiveDayOfWeek: mostActiveDOW,
+		MostActiveHour:      mostActiveHour,
+
+		LongestDriveRecord: longestRec,
+		HighestSpeedRecord: speedRec,
+		MaxChargeRecord:    chargeRec,
+
+		Achievements: achievements,
+	}, nil
+}
+
+// computeAchievementsList computes the achievement progress list from
+// the supplied field values WITHOUT persisting unlocks. The canonical
+// handler layers persistence + SSE broadcast on top.
+func computeAchievementsList(fieldValues map[string]float64) []Achievement {
+	achievements := make([]Achievement, 0, len(achievementDefs))
+	for _, def := range achievementDefs {
+		current := fieldValues[def.Field]
+		progress := 0.0
+		if def.Target > 0 {
+			progress = current / def.Target
+			if progress > 1.0 {
+				progress = 1.0
+			}
+		}
+		unlocked := current >= def.Target
+		achievements = append(achievements, Achievement{
+			ID:          def.ID,
+			Name:        def.Name,
+			Description: def.Desc,
+			Icon:        def.Icon,
+			Unlocked:    unlocked,
+			Progress:    safeFloat(math.Round(progress*1000) / 1000),
+			Target:      def.Target,
+			Current:     safeFloat(math.Round(current*100) / 100),
+		})
+	}
+	return achievements
+}
+
+var (
+	errLifetimeNilDB      = fmt.Errorf("ComputeLifetimeStats: nil database pool")
+	errLifetimeBadVehicle = fmt.Errorf("ComputeLifetimeStats: vehicle_id must be >= 0")
+)
+
 func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
@@ -135,301 +499,75 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 
 	log.Info().Int64("vehicle_id", vehicleID).Msg("lifetime: computing stats")
 
-	// ── Driving aggregates ──
-	// Phase-42 SI canonical drives (000185): distance_m / duration_s /
-	// max_speed_mps / started_at / ended_at. Aggregate in SI then convert
-	// to km / min / km/h at the response boundary so the JSON contract
-	// (totalDistKm, totalDrivingMin, longestDriveKm, highestSpeedKmh) is
-	// preserved.
-	driveQuery := `
-		SELECT COUNT(*),
-		       COALESCE(SUM(distance_m) / 1000.0, 0),
-		       COALESCE(SUM(duration_s) / 60.0, 0),
-		       COALESCE(MAX(distance_m) / 1000.0, 0),
-		       COALESCE(MAX(max_speed_mps) * 3.6, 0),
-		       MIN(started_at)
-		FROM drives
-		WHERE ended_at IS NOT NULL AND distance_m > 0`
-	driveArgs := []interface{}{}
-	if vehicleID > 0 {
-		driveQuery += " AND vehicle_id = $1"
-		driveArgs = append(driveArgs, vehicleID)
-	}
-
-	var totalDrives int
-	var totalDistKm, totalDrivingMin, longestDriveKm, highestSpeedKmh float64
-	var firstDriveDate *time.Time
-	err := h.db.Pool.QueryRow(ctx, driveQuery, driveArgs...).Scan(
-		&totalDrives, &totalDistKm, &totalDrivingMin,
-		&longestDriveKm, &highestSpeedKmh, &firstDriveDate,
-	)
+	stats, err := ComputeLifetimeStats(ctx, h.db, vehicleID)
 	if err != nil {
-		log.Error().Err(err).Msg("lifetime: failed to get drive stats")
+		log.Error().Err(err).Msg("lifetime: failed to compute stats")
 		writeError(w, http.StatusInternalServerError, "failed to get lifetime stats")
 		return
 	}
 
-	// Average efficiency (Wh/km) — from drives with energy used data.
-	// Phase-42 SI canonical: energy_used_wh and distance_m. Wh/km =
-	// energy_used_wh / (distance_m / 1000). The > 1 mile filter becomes
-	// distance_m > 1609.344.
-	effQuery := `
-		SELECT COALESCE(AVG(
-			CASE WHEN distance_m > 1609.344 AND energy_used_wh IS NOT NULL
-			     AND energy_used_wh > 0
-			THEN energy_used_wh / (distance_m / 1000.0)
-			ELSE NULL END
-		), 0)
-		FROM drives
-		WHERE ended_at IS NOT NULL AND distance_m > 0`
-	effArgs := []interface{}{}
-	if vehicleID > 0 {
-		effQuery += " AND vehicle_id = $1"
-		effArgs = append(effArgs, vehicleID)
-	}
-	var avgEffWhKm float64
-	if err = h.db.Pool.QueryRow(ctx, effQuery, effArgs...).Scan(&avgEffWhKm); err != nil {
-		log.Warn().Err(err).Msg("lifetime: failed to get efficiency stats")
-	}
-
-	// ── Charging aggregates ──
-	// Phase-42 SI canonical charging_sessions (000184):
-	// total_energy_added_wh, cost_decimal NUMERIC, started_at / ended_at.
-	// Duration computed from EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.
-	chargeQuery := `
-		SELECT COUNT(*),
-		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
-		       COALESCE(SUM(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0), 0),
-		       COALESCE(SUM(CASE WHEN cost_decimal > 0 THEN cost_decimal::float8 ELSE 0 END), 0)
-		FROM charging_sessions
-		WHERE ended_at IS NOT NULL`
-	chargeArgs := []interface{}{}
-	if vehicleID > 0 {
-		chargeQuery += " AND vehicle_id = $1"
-		chargeArgs = append(chargeArgs, vehicleID)
-	}
-
-	var totalChargeSessions int
-	var totalEnergyKwh, totalChargingMin, totalChargingCost float64
-	err = h.db.Pool.QueryRow(ctx, chargeQuery, chargeArgs...).Scan(
-		&totalChargeSessions, &totalEnergyKwh, &totalChargingMin, &totalChargingCost,
-	)
-	if err != nil {
-		log.Error().Err(err).Msg("lifetime: failed to get charging stats")
-		writeError(w, http.StatusInternalServerError, "failed to get lifetime stats")
-		return
-	}
-
-	// ── Savings computation (mirrors TCOHandler pattern) ──
-	var gasPrice, gasEfficiencyMPG float64
-	err = h.db.Pool.QueryRow(ctx,
-		`SELECT
-			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_price_per_unit'), 3.50),
-			COALESCE((SELECT value_num FROM settings WHERE key = 'gas_efficiency_mpg'), 25)`,
-	).Scan(&gasPrice, &gasEfficiencyMPG)
-	if err != nil && err != pgx.ErrNoRows {
-		log.Error().Err(err).Msg("lifetime: failed to get settings")
-	}
-	if gasPrice <= 0 {
-		gasPrice = 3.50
-	}
-	if gasEfficiencyMPG <= 0 {
-		gasEfficiencyMPG = 25
-	}
-
-	var gasEquivalentCost, totalSavings float64
-	if totalDistKm > 0 {
-		totalMiles := totalDistKm / 1.60934
-		gallonsUsed := totalMiles / gasEfficiencyMPG
-		gasEquivalentCost = gallonsUsed * gasPrice
-		totalSavings = gasEquivalentCost - totalChargingCost
-		if totalSavings < 0 {
-			totalSavings = 0
-		}
-	}
-
-	// CO₂ offset: avg ICE emits ~192g CO₂/km
-	co2OffsetKg := totalDistKm * 0.192
-	treesEquivalent := int(co2OffsetKg / 21) // avg tree absorbs ~21kg CO₂/year
-
-	// ── Fun facts ──
-	earthCircumferences := totalDistKm / 40075.0
-	moonTrips := totalDistKm / 384400.0
-	daysOnRoad := (totalDrivingMin / 60.0) / 24.0
-	homesEquivalentDays := totalEnergyKwh / 30.0 // avg home uses ~30 kWh/day
-
-	// ── Ownership timeline ──
-	var ownershipDays int
-	var firstDriveDateStr *string
-	if firstDriveDate != nil && !firstDriveDate.IsZero() {
-		days := int(time.Since(*firstDriveDate).Hours() / 24)
-		if days < 0 {
-			days = 0
-		}
-		ownershipDays = days
-		s := firstDriveDate.Format("2006-01-02")
-		firstDriveDateStr = &s
-	}
-
-	// ── Activity patterns: most active DOW and hour ──
-	mostActiveDOW := ""
-	mostActiveHour := 0
-
-	dowQuery := `
-		SELECT EXTRACT(DOW FROM started_at)::int as dow, COUNT(*) as cnt
-		FROM drives WHERE ended_at IS NOT NULL AND distance_m > 0`
-	dowArgs := []interface{}{}
-	if vehicleID > 0 {
-		dowQuery += " AND vehicle_id = $1"
-		dowArgs = append(dowArgs, vehicleID)
-	}
-	dowQuery += " GROUP BY dow ORDER BY cnt DESC LIMIT 1"
-
-	var dowIdx int
-	var dowCnt int
-	if err := h.db.Pool.QueryRow(ctx, dowQuery, dowArgs...).Scan(&dowIdx, &dowCnt); err == nil {
-		dayNames := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-		if dowIdx >= 0 && dowIdx < 7 {
-			mostActiveDOW = dayNames[dowIdx]
-		}
-	}
-
-	hourQuery := `
-		SELECT EXTRACT(HOUR FROM started_at)::int as hr, COUNT(*) as cnt
-		FROM drives WHERE ended_at IS NOT NULL AND distance_m > 0`
-	hourArgs := []interface{}{}
-	if vehicleID > 0 {
-		hourQuery += " AND vehicle_id = $1"
-		hourArgs = append(hourArgs, vehicleID)
-	}
-	hourQuery += " GROUP BY hr ORDER BY cnt DESC LIMIT 1"
-
-	var hrIdx int
-	var hrCnt int
-	if err := h.db.Pool.QueryRow(ctx, hourQuery, hourArgs...).Scan(&hrIdx, &hrCnt); err == nil {
-		mostActiveHour = hrIdx
-	}
-
-	// ── Personal records ──
-	type personalRecord struct {
-		Value float64 `json:"value"`
-		Date  *string `json:"date"`
-	}
-
-	// Longest drive
-	longestRec := personalRecord{Value: longestDriveKm}
-	longestRecQuery := `
-		SELECT started_at FROM drives
-		WHERE ended_at IS NOT NULL AND distance_m > 0`
-	longestRecArgs := []interface{}{}
-	if vehicleID > 0 {
-		longestRecQuery += " AND vehicle_id = $1"
-		longestRecArgs = append(longestRecArgs, vehicleID)
-	}
-	longestRecQuery += " ORDER BY distance_m DESC LIMIT 1"
-	var longestDate time.Time
-	if err := h.db.Pool.QueryRow(ctx, longestRecQuery, longestRecArgs...).Scan(&longestDate); err == nil {
-		s := longestDate.Format("2006-01-02")
-		longestRec.Date = &s
-	}
-
-	// Highest speed
-	speedRec := personalRecord{Value: highestSpeedKmh}
-	speedRecQuery := `
-		SELECT started_at FROM drives
-		WHERE ended_at IS NOT NULL AND distance_m > 0 AND max_speed_mps IS NOT NULL`
-	speedRecArgs := []interface{}{}
-	if vehicleID > 0 {
-		speedRecQuery += " AND vehicle_id = $1"
-		speedRecArgs = append(speedRecArgs, vehicleID)
-	}
-	speedRecQuery += " ORDER BY max_speed_mps DESC LIMIT 1"
-	var speedDate time.Time
-	if err := h.db.Pool.QueryRow(ctx, speedRecQuery, speedRecArgs...).Scan(&speedDate); err == nil {
-		s := speedDate.Format("2006-01-02")
-		speedRec.Date = &s
-	}
-
-	// Most energy in a single charge — Phase-42 SI charging_sessions:
-	// total_energy_added_wh, started_at. Convert Wh → kWh at populate.
-	var maxChargeKwh float64
-	var maxChargeDate *string
-	maxChargeQuery := `
-		SELECT total_energy_added_wh / 1000.0, started_at FROM charging_sessions
-		WHERE ended_at IS NOT NULL AND total_energy_added_wh > 0`
-	maxChargeArgs := []interface{}{}
-	if vehicleID > 0 {
-		maxChargeQuery += " AND vehicle_id = $1"
-		maxChargeArgs = append(maxChargeArgs, vehicleID)
-	}
-	maxChargeQuery += " ORDER BY total_energy_added_wh DESC LIMIT 1"
-	var mcDate time.Time
-	if err := h.db.Pool.QueryRow(ctx, maxChargeQuery, maxChargeArgs...).Scan(&maxChargeKwh, &mcDate); err == nil {
-		s := mcDate.Format("2006-01-02")
-		maxChargeDate = &s
-	}
-	chargeRec := personalRecord{Value: maxChargeKwh, Date: maxChargeDate}
-
-	// ── Achievements ──
+	// Re-evaluate achievements WITH persistence + SSE broadcast (the
+	// computation in ComputeLifetimeStats is read-only; the canonical
+	// HTTP handler is the only path that records unlocks and emits
+	// celebration events).
 	fieldValues := map[string]float64{
-		"drives":          float64(totalDrives),
-		"distance_km":     totalDistKm,
-		"charge_sessions": float64(totalChargeSessions),
-		"energy_kwh":      totalEnergyKwh,
-		"savings":         totalSavings,
-		"co2_kg":          co2OffsetKg,
-		"trees":           float64(treesEquivalent),
+		"drives":          float64(stats.TotalDrives),
+		"distance_km":     stats.TotalDistanceKm,
+		"charge_sessions": float64(stats.TotalChargeSessions),
+		"energy_kwh":      stats.TotalEnergyKwh,
+		"savings":         stats.TotalSavings,
+		"co2_kg":          stats.CO2OffsetKg,
+		"trees":           float64(stats.TreesEquivalent),
 	}
+	stats.Achievements = h.evaluateAchievements(ctx, vehicleID, fieldValues)
 
-	achievements := h.evaluateAchievements(ctx, vehicleID, fieldValues)
-
-	totalDrivingHours := totalDrivingMin / 60.0
-	totalChargingHours := totalChargingMin / 60.0
-
+	// Preserve the legacy JSON shape exactly (key names + ordering are
+	// unchanged from the pre-refactor handler).
 	result := map[string]interface{}{
 		// Driving
-		"total_drives":        totalDrives,
-		"total_distance_km":   safeFloat(math.Round(totalDistKm*100) / 100),
-		"total_driving_hours": safeFloat(math.Round(totalDrivingHours*100) / 100),
-		"longest_drive_km":    safeFloat(math.Round(longestDriveKm*100) / 100),
-		"highest_speed_kmh":   safeFloat(math.Round(highestSpeedKmh*10) / 10),
-		"avg_efficiency_wh_km": safeFloat(math.Round(avgEffWhKm*10) / 10),
+		"total_drives":         stats.TotalDrives,
+		"total_distance_km":    stats.TotalDistanceKm,
+		"total_driving_hours":  stats.TotalDrivingHours,
+		"longest_drive_km":     stats.LongestDriveKm,
+		"highest_speed_kmh":    stats.HighestSpeedKmh,
+		"avg_efficiency_wh_km": stats.AvgEfficiencyWhKm,
 
 		// Charging
-		"total_charge_sessions": totalChargeSessions,
-		"total_energy_kwh":      safeFloat(math.Round(totalEnergyKwh*100) / 100),
-		"total_charging_hours":  safeFloat(math.Round(totalChargingHours*100) / 100),
-		"total_charging_cost":   safeFloat(math.Round(totalChargingCost*100) / 100),
+		"total_charge_sessions": stats.TotalChargeSessions,
+		"total_energy_kwh":      stats.TotalEnergyKwh,
+		"total_charging_hours":  stats.TotalChargingHours,
+		"total_charging_cost":   stats.TotalChargingCost,
 
 		// Savings
-		"gas_equivalent_cost": safeFloat(math.Round(gasEquivalentCost*100) / 100),
-		"total_savings":       safeFloat(math.Round(totalSavings*100) / 100),
-		"co2_offset_kg":       safeFloat(math.Round(co2OffsetKg*100) / 100),
-		"trees_equivalent":    treesEquivalent,
+		"gas_equivalent_cost": stats.GasEquivalentCost,
+		"total_savings":       stats.TotalSavings,
+		"co2_offset_kg":       stats.CO2OffsetKg,
+		"trees_equivalent":    stats.TreesEquivalent,
 
 		// Fun facts
-		"earth_circumferences":  safeFloat(math.Round(earthCircumferences*1000) / 1000),
-		"moon_trips":            safeFloat(math.Round(moonTrips*10000) / 10000),
-		"days_on_road":          safeFloat(math.Round(daysOnRoad*100) / 100),
-		"homes_equivalent_days": safeFloat(math.Round(homesEquivalentDays*100) / 100),
+		"earth_circumferences":  stats.EarthCircumferences,
+		"moon_trips":            stats.MoonTrips,
+		"days_on_road":          stats.DaysOnRoad,
+		"homes_equivalent_days": stats.HomesEquivalentDays,
 
 		// Timeline
-		"first_drive_date":       firstDriveDateStr,
-		"ownership_days":         ownershipDays,
-		"most_active_day_of_week": mostActiveDOW,
-		"most_active_hour":       mostActiveHour,
+		"first_drive_date":        stats.FirstDriveDate,
+		"ownership_days":          stats.OwnershipDays,
+		"most_active_day_of_week": stats.MostActiveDayOfWeek,
+		"most_active_hour":        stats.MostActiveHour,
 
 		// Personal records
-		"longest_drive_record":  longestRec,
-		"highest_speed_record":  speedRec,
-		"max_charge_record":     chargeRec,
+		"longest_drive_record": stats.LongestDriveRecord,
+		"highest_speed_record": stats.HighestSpeedRecord,
+		"max_charge_record":    stats.MaxChargeRecord,
 
 		// Achievements
-		"achievements": achievements,
+		"achievements": stats.Achievements,
 	}
 
 	writeJSON(w, http.StatusOK, result)
 }
+
 
 // evaluateAchievements computes the achievement list for the given field
 // values, persists any newly-crossed unlocks, and broadcasts an

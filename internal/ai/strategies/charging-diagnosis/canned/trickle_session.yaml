@@ -1,0 +1,35 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_charging_diag_trickle_session_1
+        name: query_charge_session
+        arguments: '{"session_id": 501}'
+    input_tokens: 32
+    output_tokens: 22
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_charging_diag_trickle_aggr_1
+        name: query_charging_aggregation
+        arguments: '{"session_id": 501}'
+    input_tokens: 96
+    output_tokens: 28
+  - finish_reason: stop
+    content: |
+      Roadie's charging session 501 ran for 7 hours and 12 minutes
+      at home, adding about 12 kWh from a steady 1.6 kW draw.
+
+      The deterministic aggregator flagged this session as a
+      trickle charge: the average power was well below 5 kW for
+      more than 6 hours. That isn't harmful — overnight AC
+      charging at low amperage is fine — but it does mean the
+      session took longer than it strictly needed to, and the
+      car wasn't ready earlier in the morning.
+
+      One practical suggestion: if the home wall outlet supports
+      a higher amperage (e.g. a 32 A circuit instead of 12 A),
+      switching the mobile connector pin or moving to a wall
+      connector would lift the average power to roughly 7-11 kW
+      for the same overnight window — same kWh added, more
+      flexibility on departure time.
+    input_tokens: 142
+    output_tokens: 102

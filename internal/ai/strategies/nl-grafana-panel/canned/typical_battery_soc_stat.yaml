@@ -1,0 +1,25 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_grafana_draft_battery_soc
+        name: draft_grafana_panel
+        arguments: '{"prompt": "Show me a stat panel with the most recent battery state of charge.", "panel": {"title": "Latest battery state of charge", "type": "stat", "datasource": {"type": "postgres", "uid": "tesla-postgres"}, "targets": [{"ref_id": "A", "raw_sql": "SELECT ts AS time, num_value AS value FROM signal_log_view WHERE signal_name = ''BatteryLevel'' ORDER BY ts DESC LIMIT 1", "format": "time_series"}], "grid_pos": {"x": 0, "y": 0, "w": 6, "h": 4}}, "rationale": "Reads the latest BatteryLevel sample from the signal_log_view for a Grafana stat panel."}'
+    input_tokens: 100
+    output_tokens: 84
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_grafana_validate_battery_soc
+        name: validate_grafana_panel
+        arguments: '{"prompt": "Show me a stat panel with the most recent battery state of charge.", "panel": {"title": "Latest battery state of charge", "type": "stat", "datasource": {"type": "postgres", "uid": "tesla-postgres"}, "targets": [{"ref_id": "A", "raw_sql": "SELECT ts AS time, num_value AS value FROM signal_log_view WHERE signal_name = ''BatteryLevel'' ORDER BY ts DESC LIMIT 1", "format": "time_series"}], "grid_pos": {"x": 0, "y": 0, "w": 6, "h": 4}}, "rationale": "Reads the latest BatteryLevel sample from the signal_log_view for a Grafana stat panel."}'
+    input_tokens: 152
+    output_tokens: 28
+  - finish_reason: stop
+    content: |
+      I drafted a `stat` Grafana panel against the postgres
+      datasource that reads the most recent BatteryLevel sample
+      from the `signal_log_view`. Review the typed proposal in
+      the AI panel and click the Apply to editor button to copy
+      the JSON into the manual Grafana panel editor; I never
+      push it to your dashboard myself.
+    input_tokens: 192
+    output_tokens: 76

@@ -8,11 +8,21 @@ import (
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
+)
+
+// Type aliases keep the fake-client surface area readable in tests below
+// without leaking paho identifiers throughout the file.
+type (
+	pahoMessageHandler = pahomqtt.MessageHandler
+	pahoToken          = pahomqtt.Token
+	pahoOptionsReader  = pahomqtt.ClientOptionsReader
 )
 
 func TestMQTTConfigBrokerURL(t *testing.T) {
@@ -833,4 +843,257 @@ func mustPanic(t *testing.T, name string, fn func()) {
 		}
 	}()
 	fn()
+}
+
+// ---------- OnBrokerReconnect tests ----------------------------------------
+//
+// Pin the contract documented on PipelineSubscriber.OnBrokerReconnect:
+// (a) pre-Start invocations are no-ops (initial Subscribe is owned by Start);
+// (b) post-Start invocations re-issue Subscribe + reset the redelivery
+//     tracker;
+// (c) post-Stop invocations are no-ops (reconnect during shutdown must not
+//     re-establish the subscription);
+// (d) a non-nil client argument overrides the embedded client (paho passes
+//     the connected client to the OnConnect handler — we honour it so the
+//     fix works during the brief reconnect window when s.client may be in
+//     a transitional state).
+
+// fakePahoClient is the smallest possible pahomqtt.Client for testing
+// OnBrokerReconnect's Subscribe path. Only Subscribe is meaningfully
+// implemented; the rest panic if accidentally called by code under test.
+type fakePahoClient struct {
+	mu               sync.Mutex
+	subscribeCalls   int
+	lastSubscribeTop string
+	lastSubscribeQoS byte
+}
+
+func (f *fakePahoClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.subscribeCalls++
+	f.lastSubscribeTop = topic
+	f.lastSubscribeQoS = qos
+	return immediatePahoToken{}
+}
+
+func (f *fakePahoClient) Calls() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.subscribeCalls
+}
+
+func (f *fakePahoClient) LastTopic() string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.lastSubscribeTop
+}
+
+func (f *fakePahoClient) LastQoS() byte {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.lastSubscribeQoS
+}
+
+// Unused pahomqtt.Client methods. They panic so that an accidental
+// dependency on broker-side behaviour in a test surfaces immediately.
+func (f *fakePahoClient) IsConnected() bool                                       { return true }
+func (f *fakePahoClient) IsConnectionOpen() bool                                  { return true }
+func (f *fakePahoClient) Connect() pahoToken                                      { panic("Connect not used") }
+func (f *fakePahoClient) Disconnect(_ uint)                                       { panic("Disconnect not used") }
+func (f *fakePahoClient) Publish(_ string, _ byte, _ bool, _ interface{}) pahoToken { panic("Publish not used") }
+func (f *fakePahoClient) SubscribeMultiple(_ map[string]byte, _ pahoMessageHandler) pahoToken {
+	panic("SubscribeMultiple not used")
+}
+func (f *fakePahoClient) Unsubscribe(_ ...string) pahoToken      { panic("Unsubscribe not used") }
+func (f *fakePahoClient) AddRoute(_ string, _ pahoMessageHandler) {}
+func (f *fakePahoClient) OptionsReader() pahoOptionsReader        { panic("OptionsReader not used") }
+
+// immediatePahoToken returns success immediately without any I/O. This is
+// the contract OnBrokerReconnect expects when it calls token.WaitTimeout
+// followed by token.Error: WaitTimeout must return true (token completed),
+// and Error must return nil.
+type immediatePahoToken struct{}
+
+func (immediatePahoToken) Wait() bool                       { return true }
+func (immediatePahoToken) WaitTimeout(_ time.Duration) bool { return true }
+func (immediatePahoToken) Done() <-chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
+}
+func (immediatePahoToken) Error() error { return nil }
+
+// erroringPahoToken simulates a SUBACK that arrives but with a server-side
+// error (e.g. ACL rejection). OnBrokerReconnect must NOT reset the tracker
+// in this case — the subscription was not actually re-established.
+type erroringPahoToken struct{ err error }
+
+func (e erroringPahoToken) Wait() bool                       { return true }
+func (e erroringPahoToken) WaitTimeout(_ time.Duration) bool { return true }
+func (e erroringPahoToken) Done() <-chan struct{} {
+	ch := make(chan struct{})
+	close(ch)
+	return ch
+}
+func (e erroringPahoToken) Error() error { return e.err }
+
+// timeoutPahoToken simulates a SUBACK that never arrives. OnBrokerReconnect
+// must NOT reset the tracker — same reasoning as erroringPahoToken.
+type timeoutPahoToken struct{}
+
+func (timeoutPahoToken) Wait() bool                       { return false }
+func (timeoutPahoToken) WaitTimeout(_ time.Duration) bool { return false }
+func (timeoutPahoToken) Done() <-chan struct{} {
+	ch := make(chan struct{})
+	return ch // never closes
+}
+func (timeoutPahoToken) Error() error { return nil }
+
+func TestOnBrokerReconnect_PreStart_NoSubscribe(t *testing.T) {
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	fc := &fakePahoClient{}
+
+	// Seed the tracker so we can assert it was NOT reset.
+	sub.tracker.Increment(7)
+
+	sub.OnBrokerReconnect(fc)
+
+	if got := fc.Calls(); got != 0 {
+		t.Errorf("Subscribe calls = %d, want 0 (pre-start invocation must be a no-op)", got)
+	}
+	if got := sub.tracker.Len(); got != 1 {
+		t.Errorf("tracker.Len = %d, want 1 (pre-start invocation must NOT reset the tracker)", got)
+	}
+}
+
+func TestOnBrokerReconnect_PostStop_NoSubscribe(t *testing.T) {
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	// Manually flag started + stopped without going through Start/Stop
+	// (which would touch the embedded nil client).
+	sub.mu.Lock()
+	sub.started = true
+	sub.stopped = true
+	sub.mu.Unlock()
+
+	fc := &fakePahoClient{}
+	sub.tracker.Increment(7)
+
+	sub.OnBrokerReconnect(fc)
+
+	if got := fc.Calls(); got != 0 {
+		t.Errorf("Subscribe calls = %d, want 0 (post-stop invocation must be a no-op)", got)
+	}
+	if got := sub.tracker.Len(); got != 1 {
+		t.Errorf("tracker.Len = %d, want 1 (post-stop invocation must NOT reset the tracker)", got)
+	}
+}
+
+func TestOnBrokerReconnect_PostStart_ReSubscribesAndResetsTracker(t *testing.T) {
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.mu.Lock()
+	sub.started = true
+	sub.mu.Unlock()
+
+	fc := &fakePahoClient{}
+	// Seed the tracker so we can assert it WAS reset.
+	sub.tracker.Increment(7)
+	sub.tracker.Increment(11)
+
+	sub.OnBrokerReconnect(fc)
+
+	if got := fc.Calls(); got != 1 {
+		t.Errorf("Subscribe calls = %d, want 1", got)
+	}
+	if got, want := fc.LastTopic(), sub.pipelineTopicFilter(); got != want {
+		t.Errorf("Subscribe topic = %q, want %q", got, want)
+	}
+	if got, want := fc.LastQoS(), sub.cfg.SubscribeQoS; got != want {
+		t.Errorf("Subscribe QoS = %d, want %d", got, want)
+	}
+	if got := sub.tracker.Len(); got != 0 {
+		t.Errorf("tracker.Len = %d, want 0 (re-subscribe success must reset the tracker — broker-side bookkeeping is gone after a session-expired reconnect)", got)
+	}
+}
+
+func TestOnBrokerReconnect_NilClientArg_FallsBackToEmbeddedClient(t *testing.T) {
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	embeddedFC := &fakePahoClient{}
+	sub.client = embeddedFC // newTestSubscriber leaves this nil
+	sub.mu.Lock()
+	sub.started = true
+	sub.mu.Unlock()
+
+	sub.OnBrokerReconnect(nil)
+
+	if got := embeddedFC.Calls(); got != 1 {
+		t.Errorf("embedded client Subscribe calls = %d, want 1 (nil client arg must fall back to s.client)", got)
+	}
+}
+
+func TestOnBrokerReconnect_SubscribeError_DoesNotResetTracker(t *testing.T) {
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.mu.Lock()
+	sub.started = true
+	sub.mu.Unlock()
+
+	// Inject a fake whose Subscribe returns an error token.
+	fc := &erroringPahoSubscribeClient{err: errors.New("acl: not authorized")}
+	sub.tracker.Increment(7)
+
+	sub.OnBrokerReconnect(fc)
+
+	if got := sub.tracker.Len(); got != 1 {
+		t.Errorf("tracker.Len = %d, want 1 (Subscribe error must NOT reset the tracker — the subscription is not actually live)", got)
+	}
+}
+
+func TestOnBrokerReconnect_SubscribeTimeout_DoesNotResetTracker(t *testing.T) {
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.mu.Lock()
+	sub.started = true
+	sub.mu.Unlock()
+
+	// Tighten the timeout so the test runs quickly.
+	sub.cfg.SubscribeTimeout = 5 * time.Millisecond
+
+	fc := &timeoutPahoSubscribeClient{}
+	sub.tracker.Increment(7)
+
+	sub.OnBrokerReconnect(fc)
+
+	if got := sub.tracker.Len(); got != 1 {
+		t.Errorf("tracker.Len = %d, want 1 (Subscribe timeout must NOT reset the tracker — the subscription is not actually live)", got)
+	}
+}
+
+// erroringPahoSubscribeClient wraps fakePahoClient to return an erroring
+// SUBACK token from Subscribe.
+type erroringPahoSubscribeClient struct {
+	fakePahoClient
+	err error
+}
+
+func (e *erroringPahoSubscribeClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
+	e.fakePahoClient.mu.Lock()
+	e.fakePahoClient.subscribeCalls++
+	e.fakePahoClient.lastSubscribeTop = topic
+	e.fakePahoClient.lastSubscribeQoS = qos
+	e.fakePahoClient.mu.Unlock()
+	return erroringPahoToken{err: e.err}
+}
+
+// timeoutPahoSubscribeClient wraps fakePahoClient to return a timing-out
+// SUBACK token from Subscribe.
+type timeoutPahoSubscribeClient struct {
+	fakePahoClient
+}
+
+func (t *timeoutPahoSubscribeClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
+	t.fakePahoClient.mu.Lock()
+	t.fakePahoClient.subscribeCalls++
+	t.fakePahoClient.lastSubscribeTop = topic
+	t.fakePahoClient.lastSubscribeQoS = qos
+	t.fakePahoClient.mu.Unlock()
+	return timeoutPahoToken{}
 }

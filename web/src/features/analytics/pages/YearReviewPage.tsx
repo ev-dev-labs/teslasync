@@ -9,6 +9,7 @@ import { Button as ControlButton, Select as ControlSelect } from '@/components/u
 import { cn } from '@/lib/cn';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SlideRenderer, SLIDE_DEFS } from '../components/review';
+import { AIYearReviewNarration } from '@/components/ai/AIYearReviewNarration';
 
 // EXCEPTION: full-screen story route intentionally covers app chrome for swipe-style annual review slides.
 export default function YearReviewPage() {
@@ -192,6 +193,20 @@ export default function YearReviewPage() {
       {/* Slide counter */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 text-xs text-[var(--text-muted)]">
         {slideIndex + 1} / {slides.length}
+      </div>
+
+      {/*
+        Phase-50 / 0013 — U3 yir-narration AI surface.
+        Renders nothing when ai_mode='off' or the yir-narration toggle
+        is off (the withAiFeature HOC returns null), so the baseline
+        slide deck is visually unchanged for off-mode users
+        (ADR-015 §I3 + §I5). On-mode users see an opt-in narration
+        affordance overlaid above the slide counter.
+      */}
+      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20 w-full max-w-md px-4 sm:px-0">
+        <AIYearReviewNarration
+          vehicleId={vehicleIdParam ? Number(vehicleIdParam) : undefined}
+        />
       </div>
     </div>
   );

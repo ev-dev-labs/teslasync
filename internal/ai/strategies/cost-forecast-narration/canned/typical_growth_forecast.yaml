@@ -1,0 +1,22 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_cost_forecast_typical_growth_forecast_1
+        name: query_cost_forecast
+        arguments: '{"vehicle_id": 42, "months": 6}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Charging-cost forecast for vehicle <vehicle id='42'/>: the
+      deterministic forecast uses linear regression with calendar-month
+      seasonal adjustment over recent monthly cost totals, projecting
+      the next several months with an APPROXIMATE prediction interval
+      (cost_low / cost_high) — this is an approximate range, NOT a
+      strict statistical confidence band. The home-vs-supercharger
+      split shows home charging dominates by share-of-energy, which
+      keeps the average cost per kWh well below supercharger pricing,
+      and the deterministic insight returned by the tool calls out the
+      modest cost-per-kWh trend over the recent window.
+    input_tokens: 240
+    output_tokens: 128

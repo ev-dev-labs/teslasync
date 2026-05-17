@@ -1,0 +1,37 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_speed_profile_insights_highway_drive_1
+        name: query_speed_profile
+        arguments: '{"drive_id": 702}'
+    input_tokens: 32
+    output_tokens: 22
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_speed_profile_insights_highway_drive_ctx_1
+        name: query_drive_context
+        arguments: '{"drive_id": 702}'
+    input_tokens: 96
+    output_tokens: 28
+  - finish_reason: stop
+    content: |
+      Roadie's drive 702 covered roughly 180 km in about 1 hour 45
+      minutes, with an average speed near 30 m/s (~108 km/h,
+      ~67 mph) and a peak of just under 33 m/s (~120 km/h,
+      ~75 mph).
+
+      The deterministic speed-profile classifier marks this as a
+      highway drive: the average sits squarely in the highway band
+      and the peak stayed within the high-end of typical interstate
+      cruising. Time at speed dominated the energy budget, which is
+      the expected pattern for a long-distance drive of this kind.
+
+      One observation the aggregate supports: the kWh per 100 km
+      figure was higher than for a city or suburban drive of the
+      same vehicle, which is consistent with steady-state highway
+      cruising — aerodynamic drag scales with the square of speed,
+      so a 67-mph average will burn more energy per km than a 35-mph
+      one. Nothing here looks anomalous; the numbers tell a clean
+      highway story.
+    input_tokens: 142
+    output_tokens: 110

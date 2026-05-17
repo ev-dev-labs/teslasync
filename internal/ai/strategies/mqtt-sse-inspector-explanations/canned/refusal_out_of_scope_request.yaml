@@ -1,0 +1,11 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot explain a different window — my role is to
+      explain MQTT/SSE/background-job state only for the
+      window in scope for this session (from_unix=1700000000,
+      to_unix=1700001800). If you'd like, I can explain the
+      in-scope window instead — just confirm and I'll pull the
+      deterministic stream-inspector envelope.
+    input_tokens: 48
+    output_tokens: 64

@@ -1,0 +1,27 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_alert_rules_typical_overlapping_thresholds_1
+        name: query_alert_rules
+        arguments: '{"rule_ids": [1, 2]}'
+    input_tokens: 80
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_detect_rule_conflicts_typical_overlapping_thresholds_1
+        name: detect_rule_conflicts
+        arguments: '{"rule_ids": [1, 2]}'
+    input_tokens: 320
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Rules 1 and 2 have an overlapping_threshold conflict on
+      battery_level: rule 1 (battery_level<20) subsumes rule 2
+      (battery_level<15) for <vehicle id='1'/>, so their
+      definitions overlap whenever the battery is below 15%.
+      This is a structural overlap analysis of the current
+      rule definitions — not a runtime firing prediction.
+      Click "Review rule" on either entry to open the
+      offending rule in the AlertStudio editor.
+    input_tokens: 480
+    output_tokens: 160

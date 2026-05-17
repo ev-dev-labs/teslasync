@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -67,6 +68,15 @@ func settingsDefaults() *models.Settings {
 		UIDensity:            "comfortable",
 		TimeFormatDefault:    "relative",
 		ChartPalette:         "cb_safe",
+		// ADR-015: AI is strictly additive and default-off. A struct
+		// freshly built from defaults must satisfy `AIMode=='off'`
+		// AND `AIFeatures` must be a non-nil empty map so callers can
+		// safely lookup feature IDs without a nil-map panic.
+		AIMode:             "off",
+		AIFeatures:         map[string]bool{},
+		AIProviderConfig:   map[string]any{},
+		AICostCapCents:     0,
+		AIFeaturesArchived: map[string]bool{},
 	}
 }
 
@@ -74,7 +84,7 @@ func settingsDefaults() *models.Settings {
 // Settings struct keyed by JSON tag. Missing keys fall back to defaults.
 func (r *SettingsRepo) Get(ctx context.Context) (*models.Settings, error) {
 	const query = `
-		SELECT key, value_text, value_num, value_bool, data_kind
+		SELECT key, value_text, value_num, value_bool, value_jsonb, data_kind
 		FROM settings`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
@@ -89,12 +99,13 @@ func (r *SettingsRepo) Get(ctx context.Context) (*models.Settings, error) {
 			valueText *string
 			valueNum  *float64
 			valueBool *bool
+			valueJSON []byte
 			dataKind  string
 		)
-		if err := rows.Scan(&key, &valueText, &valueNum, &valueBool, &dataKind); err != nil {
+		if err := rows.Scan(&key, &valueText, &valueNum, &valueBool, &valueJSON, &dataKind); err != nil {
 			return nil, fmt.Errorf("settings get scan: %w", err)
 		}
-		applySettingsRow(out, key, dataKind, valueText, valueNum, valueBool)
+		applySettingsRow(out, key, dataKind, valueText, valueNum, valueBool, valueJSON)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("settings get rows: %w", err)
@@ -105,7 +116,7 @@ func (r *SettingsRepo) Get(ctx context.Context) (*models.Settings, error) {
 // applySettingsRow maps one persisted row onto the typed Settings
 // struct. Unknown keys are tolerated (forward-compat) and silently
 // ignored. NULL value_* columns leave the default in place.
-func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *float64, vBool *bool) {
+func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *float64, vBool *bool, vJSON []byte) {
 	switch key {
 	case "unit_of_length":
 		if vText != nil {
@@ -219,6 +230,35 @@ func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *fl
 		if vText != nil {
 			s.ChartPalette = *vText
 		}
+	case "ai_mode":
+		if vText != nil {
+			s.AIMode = *vText
+		}
+	case "ai_features":
+		if len(vJSON) > 0 {
+			m := map[string]bool{}
+			if err := json.Unmarshal(vJSON, &m); err == nil {
+				s.AIFeatures = m
+			}
+		}
+	case "ai_provider_config":
+		if len(vJSON) > 0 {
+			m := map[string]any{}
+			if err := json.Unmarshal(vJSON, &m); err == nil {
+				s.AIProviderConfig = m
+			}
+		}
+	case "ai_cost_cap_cents":
+		if vNum != nil {
+			s.AICostCapCents = int(*vNum)
+		}
+	case "ai_features_archived":
+		if len(vJSON) > 0 {
+			m := map[string]bool{}
+			if err := json.Unmarshal(vJSON, &m); err == nil {
+				s.AIFeaturesArchived = m
+			}
+		}
 	}
 }
 
@@ -240,26 +280,38 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 		INSERT INTO settings (key, value_text, data_kind)
 		VALUES ($1, $2, 'text')
 		ON CONFLICT (key) DO UPDATE SET
-			value_text = EXCLUDED.value_text,
-			value_num  = NULL,
-			value_bool = NULL,
-			data_kind  = 'text'`
+			value_text  = EXCLUDED.value_text,
+			value_num   = NULL,
+			value_bool  = NULL,
+			value_jsonb = NULL,
+			data_kind   = 'text'`
 	const upsertNum = `
 		INSERT INTO settings (key, value_num, data_kind)
 		VALUES ($1, $2, 'number')
 		ON CONFLICT (key) DO UPDATE SET
-			value_text = NULL,
-			value_num  = EXCLUDED.value_num,
-			value_bool = NULL,
-			data_kind  = 'number'`
+			value_text  = NULL,
+			value_num   = EXCLUDED.value_num,
+			value_bool  = NULL,
+			value_jsonb = NULL,
+			data_kind   = 'number'`
 	const upsertBool = `
 		INSERT INTO settings (key, value_bool, data_kind)
 		VALUES ($1, $2, 'boolean')
 		ON CONFLICT (key) DO UPDATE SET
-			value_text = NULL,
-			value_num  = NULL,
-			value_bool = EXCLUDED.value_bool,
-			data_kind  = 'boolean'`
+			value_text  = NULL,
+			value_num   = NULL,
+			value_bool  = EXCLUDED.value_bool,
+			value_jsonb = NULL,
+			data_kind   = 'boolean'`
+	const upsertJSONB = `
+		INSERT INTO settings (key, value_jsonb, data_kind)
+		VALUES ($1, $2::jsonb, 'jsonb')
+		ON CONFLICT (key) DO UPDATE SET
+			value_text  = NULL,
+			value_num   = NULL,
+			value_bool  = NULL,
+			value_jsonb = EXCLUDED.value_jsonb,
+			data_kind   = 'jsonb'`
 
 	type rowText struct {
 		key, value string
@@ -271,6 +323,10 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 	type rowBool struct {
 		key   string
 		value bool
+	}
+	type rowJSONB struct {
+		key   string
+		value string // raw JSON text; pgx encodes as jsonb via the cast in upsertJSONB
 	}
 
 	textRows := []rowText{
@@ -294,18 +350,47 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 		{"ui_density", s.UIDensity},
 		{"time_format_default", s.TimeFormatDefault},
 		{"chart_palette", s.ChartPalette},
+		// ADR-015: ai_mode is the top-level AI gate. Validation
+		// (one of 'off' / 'local' / 'cloud') happens in the
+		// settings handler before reaching this layer.
+		{"ai_mode", s.AIMode},
 	}
 	numRows := []rowNum{
 		{"base_cost_per_kwh", s.BaseCostPerKWh},
 		{"gas_price_per_unit", s.GasPricePerUnit},
 		{"gas_efficiency_mpg", s.GasEfficiencyMPG},
 		{"decimal_precision", float64(s.DecimalPrecision)},
+		{"ai_cost_cap_cents", float64(s.AICostCapCents)},
 	}
 	boolRows := []rowBool{
 		{"api_suspended", s.APISuspended},
 		{"quiet_hours_enabled", s.QuietHoursEnabled},
 		{"tab_badge_enabled", s.TabBadgeEnabled},
 		{"critical_flash_enabled", s.CriticalFlashEnabled},
+	}
+
+	// JSONB rows. Empty maps marshal to "{}" — match the migration
+	// default so a round-trip of a defaults Settings stays a no-op.
+	aiFeaturesJSON, err := marshalJSONOrEmpty(s.AIFeatures)
+	if err != nil {
+		return fmt.Errorf("settings upsert ai_features marshal: %w", err)
+	}
+	aiProviderJSON, err := marshalJSONOrEmpty(s.AIProviderConfig)
+	if err != nil {
+		return fmt.Errorf("settings upsert ai_provider_config marshal: %w", err)
+	}
+	// Phase-50 / 0003 / F2 — archived per-feature opt-in map. The
+	// settings handler is responsible for writing this on a mode→off
+	// flip; the repo just persists whatever it receives so a typed
+	// round-trip stays a no-op.
+	aiArchivedJSON, err := marshalJSONOrEmpty(s.AIFeaturesArchived)
+	if err != nil {
+		return fmt.Errorf("settings upsert ai_features_archived marshal: %w", err)
+	}
+	jsonbRows := []rowJSONB{
+		{"ai_features", aiFeaturesJSON},
+		{"ai_provider_config", aiProviderJSON},
+		{"ai_features_archived", aiArchivedJSON},
 	}
 
 	for _, rw := range textRows {
@@ -320,6 +405,11 @@ func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
 	}
 	for _, rw := range boolRows {
 		if _, err := tx.Exec(ctx, upsertBool, rw.key, rw.value); err != nil {
+			return fmt.Errorf("settings upsert %s: %w", rw.key, err)
+		}
+	}
+	for _, rw := range jsonbRows {
+		if _, err := tx.Exec(ctx, upsertJSONB, rw.key, rw.value); err != nil {
 			return fmt.Errorf("settings upsert %s: %w", rw.key, err)
 		}
 	}
@@ -369,10 +459,11 @@ func (r *SettingsRepo) UpsertDashboardLayouts(ctx context.Context, jsonStr strin
 		INSERT INTO settings (key, value_text, data_kind)
 		VALUES ('dashboard_layouts', $1, 'text')
 		ON CONFLICT (key) DO UPDATE SET
-			value_text = EXCLUDED.value_text,
-			value_num  = NULL,
-			value_bool = NULL,
-			data_kind  = 'text'`
+			value_text  = EXCLUDED.value_text,
+			value_num   = NULL,
+			value_bool  = NULL,
+			value_jsonb = NULL,
+			data_kind   = 'text'`
 	if _, err := r.db.Pool.Exec(ctx, query, jsonStr); err != nil {
 		return fmt.Errorf("settings upsert_dashboard_layouts: %w", err)
 	}
@@ -400,4 +491,82 @@ func (r *SettingsRepo) GetPollingConfig(ctx context.Context) (*models.PollingCon
 		return nil, fmt.Errorf("settings get_polling_config: %w", err)
 	}
 	return pc, nil
+}
+
+// AIMode returns the current top-level AI feature gate
+// (one of "off" / "local" / "cloud"). When the row is missing — for
+// example on a fresh DB before migration 000201 has run — the
+// default-off contract (ADR-015 §I1) is preserved by returning "off".
+//
+// This single-tenant accessor is the read path used by
+// internal/ai/guard.Wrap; it is intentionally cheap (single-row
+// PK lookup, no allocation in the hot path) so the guard adds
+// negligible per-request overhead.
+func (r *SettingsRepo) AIMode(ctx context.Context) (string, error) {
+	const query = `SELECT value_text FROM settings WHERE key = 'ai_mode'`
+	var v *string
+	err := r.db.Pool.QueryRow(ctx, query).Scan(&v)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "off", nil
+	}
+	if err != nil {
+		return "off", fmt.Errorf("settings ai_mode: %w", err)
+	}
+	if v == nil || *v == "" {
+		return "off", nil
+	}
+	return *v, nil
+}
+
+// AIFeatureEnabled reports whether the named AI feature is opted-in
+// for the current installation. The feature is enabled iff the
+// `ai_features` JSONB row contains `{"<featureID>": true}` AND the
+// top-level `ai_mode` is not "off". When either condition fails the
+// caller MUST treat the feature as disabled (ADR-015 §I7).
+//
+// Missing row, missing key, or any decode failure resolves to false —
+// the contract is fail-closed.
+func (r *SettingsRepo) AIFeatureEnabled(ctx context.Context, featureID string) (bool, error) {
+	if featureID == "" {
+		return false, nil
+	}
+	mode, err := r.AIMode(ctx)
+	if err != nil {
+		return false, err
+	}
+	if mode == "off" {
+		return false, nil
+	}
+	const query = `SELECT value_jsonb FROM settings WHERE key = 'ai_features'`
+	var raw []byte
+	err = r.db.Pool.QueryRow(ctx, query).Scan(&raw)
+	if errors.Is(err, pgx.ErrNoRows) || len(raw) == 0 {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("settings ai_features: %w", err)
+	}
+	m := map[string]bool{}
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return false, nil
+	}
+	return m[featureID], nil
+}
+
+// marshalJSONOrEmpty serialises v to JSON, returning "{}" for nil
+// maps so the JSONB columns always carry a parseable document. The
+// only error path is a value with an unmarshalable type, which is
+// not reachable for the typed maps in models.Settings.
+func marshalJSONOrEmpty(v any) (string, error) {
+	if v == nil {
+		return "{}", nil
+	}
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "", err
+	}
+	if len(b) == 0 || string(b) == "null" {
+		return "{}", nil
+	}
+	return string(b), nil
 }

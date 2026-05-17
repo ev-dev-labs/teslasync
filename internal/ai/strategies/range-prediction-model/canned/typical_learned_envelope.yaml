@@ -1,0 +1,40 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_train_range_model_typical_learned_envelope_1
+        name: train_range_model
+        arguments: '{"vehicle_id": 42, "days": 14}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_range_prediction_typical_learned_envelope_1
+        name: query_range_prediction
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 96
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      City — for vehicle <vehicle id='42'/> the proposed learned
+      envelope on the mild/city and cold/city buckets tightens
+      around the cluster the trainer observed this window (mean and
+      stddev reported by train_range_model grounded the bucket Wh/km;
+      both buckets carry source="learned"). The currently-effective
+      heuristic baseline still uses the wider static curve, so these
+      would refine if applied — they are NOT in use today.
+
+      Suburban — mild/suburban returned source="learned" with a
+      clean mean below the static 170 Wh/km baseline this window,
+      consistent with steady commute drives; cold/suburban also
+      learned but with a wider stddev. The proposed learned
+      envelope would refine the projection here too.
+
+      Highway — mild/highway returned source="learned" with a tight
+      mean band; cold/highway and freezing/highway returned
+      source="linear_fallback" because the trainer found fewer than
+      5 drives per bucket this window, so the heuristic curve
+      remains the proposal for those buckets. None of this is in
+      use by the deterministic projection today — the slice does
+      not persist learned envelopes.
+    input_tokens: 240
+    output_tokens: 168

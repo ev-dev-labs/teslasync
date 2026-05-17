@@ -90,11 +90,16 @@ export function SelectedVehicleProvider({ children }: { children: ReactNode }) {
   );
 }
 
-/** Read & write the persisted selected-vehicle id. Throws if used outside the provider. */
+/** Read & write the persisted selected-vehicle id. Returns a no-op
+ *  fallback when used outside the provider so tests that mount a
+ *  page-level component in isolation degrade gracefully instead of
+ *  crashing on a benign read. {@link useSelectedVehicle}'s doc-string
+ *  promises this behavior.
+ */
 export function useSelectedVehicleStore(): SelectedVehicleStoreValue {
   const ctx = useContext(SelectedVehicleContext);
   if (!ctx) {
-    throw new Error('useSelectedVehicleStore must be used within <SelectedVehicleProvider>');
+    return { vehicleId: null, setVehicleId: () => {} };
   }
   return ctx;
 }

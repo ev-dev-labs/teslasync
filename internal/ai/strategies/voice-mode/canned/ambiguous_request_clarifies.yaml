@@ -1,0 +1,15 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_stream_chatbot_response_ambiguous_request_clarifies_1
+        name: stream_chatbot_response
+        arguments: '{"session_id":"voice-session-1","history_limit":8}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Did you want a quick read on the current charging
+      session, or a summary of your most recent drive's
+      energy use?
+    input_tokens: 320
+    output_tokens: 64

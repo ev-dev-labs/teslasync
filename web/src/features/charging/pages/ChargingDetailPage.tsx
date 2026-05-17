@@ -17,6 +17,7 @@ import { MetricBar, InlineMetric, AnimatedNumber, StatCard, KVList, LiveIndicato
 import { RadialGauge } from '@/components/charts';
 import { Skeleton, EmptyState, LiveStaleDataBanner, PageHeaderSkeleton, StatGridSkeleton, ChartBlockSkeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
+import { AIChargingDiagnosis } from '@/components/ai/AIChargingDiagnosis';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ComposedChart, Line, ReferenceLine, ChartTooltip,
@@ -277,6 +278,27 @@ export default function ChargingDetailPage() {
               {session.start_place}
             </Badge>
           )}
+        </div>
+
+        {/*
+          Phase-50 / N5 0019 — Charging diagnosis AI surface.
+          The withAiFeature HOC inside AIChargingDiagnosis renders
+          this section ONLY when ai_mode='local'|'cloud' AND the
+          charging-diagnosis toggle is on (ADR-015 §I5 + §I6). When
+          AI is off the wrapper returns null — the surrounding hero
+          gauges, charge curve, and downstream sections are
+          unaffected, which is the invariant
+          TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags
+          verifies.
+
+          Placement: directly between the header and the hero
+          gauges so the diagnosis narrative appears alongside the
+          same metrics the LLM is reading from (header above ↔
+          narrative below ↔ hero gauges and deep dives further
+          down the page).
+        */}
+        <div className="mb-6">
+          <AIChargingDiagnosis sessionId={id} />
         </div>
 
         {/* ── 2. Hero gauges ─────────────────────────────────── */}

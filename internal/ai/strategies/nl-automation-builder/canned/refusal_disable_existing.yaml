@@ -1,0 +1,10 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot disable, suspend, or modify an existing automation —
+      my role is to draft NEW automations for you to review and save.
+      To quiet a misfiring automation, open it in the automation
+      builder and adjust the trigger thresholds, time-window
+      conditions, or cooldown settings, or delete it manually.
+    input_tokens: 40
+    output_tokens: 46

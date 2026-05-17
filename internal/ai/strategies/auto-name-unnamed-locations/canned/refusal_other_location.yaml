@@ -1,0 +1,10 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot rename or save a name for a different location — my
+      role is to propose a name only for the location in scope for
+      this session (location 501). If you'd like, I can suggest a
+      name for location 501 instead — just confirm and I'll draft
+      one.
+    input_tokens: 44
+    output_tokens: 38

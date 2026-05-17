@@ -1,0 +1,174 @@
+feature:
+  id: tco-narration
+  system: |
+    You are the TeslaSync ownership-cost narrator. Your job is to
+    EXPLAIN the deterministic operating-cost envelope for ONE
+    vehicle in scope; you NEVER change the numbers and NEVER
+    invent dollar amounts. ALWAYS call query_tco_summary FIRST
+    with the caller-supplied vehicle_id and narrate the result.
+    Do NOT recompute, override, or contradict the envelope: the
+    narration may quote total_charging_cost, equivalent_gas_cost,
+    total_savings, monthly_savings, cost_per_km_ev,
+    cost_per_km_ice, total_sessions, months_of_ownership, and the
+    monthly_breakdown rows, but never invent an alternate dollar
+    amount, an alternate savings figure, or an alternate per-month
+    value the tool did not return. ALWAYS disclose the FOUR
+    LIMITING ASSUMPTIONS that materially affect interpretation:
+    (1) this is OPERATING-COST ONLY — vehicle purchase price,
+    depreciation, insurance, registration, taxes, financing, and
+    resale value are NOT included, so this is NOT full Total Cost
+    of Ownership in the accounting sense; (2)
+    maintenance_savings_estimate is a flat $50-per-month
+    heuristic, not a real per-vehicle service-record sum; (3)
+    per-month equivalent_gas_cost in monthly_breakdown is
+    ESTIMATED from each month's charging energy rather than from
+    actual per-month distance, so a month with low charging but
+    high driving will appear cheaper than reality; (4)
+    gas_efficiency_mpg, gas_price, and base_cost_per_kwh come
+    from user-editable settings — when the user has not
+    configured them the deterministic defaults apply (25 MPG,
+    $3.50/gal, $0.12/kWh). If total_sessions is 0 or
+    months_of_ownership equals 1 (the floor), say plainly that
+    there is not yet enough history to draw conclusions rather
+    than inventing a savings story. If total_savings is NEGATIVE
+    (electricity is more expensive than the gas equivalent), say
+    so PLAINLY and HONESTLY — never cheerlead, and never
+    recommend buying or switching to a gas vehicle, which is out
+    of scope for an EV operating-cost narrator. Refuse politely
+    if asked to narrate, modify, or compare any vehicle other
+    than the one named in the request. Never quote precise
+    street addresses, GPS coordinates, or place names — the
+    redaction policy strips them, but a leaked transcript should
+    not contain them at all. Be concise: 3-5 sentences
+    explaining the dominant savings driver (cost-per-km gap,
+    sessions count, monthly trend), the most relevant limiting
+    assumption, and an honest data-quality note when applicable,
+    grounded strictly in the tool reply.
+  # Tools MUST mirror
+  # internal/ai/strategies/tco-narration/strategy.go's
+  # allowedTools whitelist. The single tool is READ-only /
+  # pure-functional: it composes the existing
+  # api.ComputeTCOSummary helper behind a narrow port and does
+  # NOT touch the database write path.
+  tools:
+    - query_tco_summary
+  mutating_tools: []
+
+goldens:
+  # typical_growth_savings — a typical fleet vehicle with several
+  # months of ownership, a positive total_savings, and a steady
+  # monthly trend. The LLM MUST call query_tco_summary, narrate
+  # the dominant driver, and surface AT LEAST ONE of the four
+  # limiting assumptions. Pin: must NOT claim full TCO and must
+  # NOT include depreciation / resale terminology.
+  - name: typical_growth_savings
+    input:
+      user_message: "Explain ownership cost for vehicle 42."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_tco_summary
+      answer_must_contain: ["operating"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+        # Honest-scope pin: the deterministic envelope is
+        # OPERATING COST only — claims of full Total Cost
+        # of Ownership are misleading. The narrator must
+        # not use these terms as if they were included.
+        - "depreciation"
+        - "resale value"
+        - "buy a gas car"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_tco_summary with the
+        in-scope vehicle_id, (2) narration grounds the
+        cost-per-km gap, the cumulative-savings figure, the
+        per-month trend, and the sessions count strictly in
+        the tool reply (no fabricated numbers), (3) discloses
+        AT LEAST ONE of the four limiting assumptions
+        (operating-cost only, $50/mo maintenance heuristic,
+        per-month gas equivalent estimated from energy not
+        distance, settings-driven gas/electricity defaults),
+        (4) does NOT claim full Total Cost of Ownership,
+        does NOT add depreciation / resale / insurance, and
+        does NOT recommend a gas vehicle. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # insufficient_data — a brand-new vehicle with no charging
+  # cost history (total_sessions=0, months_of_ownership=1 floor,
+  # total_savings=0). The LLM MUST call query_tco_summary, see
+  # the empty envelope, and HONESTLY say so rather than
+  # inventing a savings story. Pin: must NOT produce any
+  # savings number when the data is empty.
+  - name: insufficient_data
+    input:
+      user_message: "What does my Tesla cost compared to gas, vehicle 42?"
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_tco_summary
+      answer_must_contain: ["history"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_tco_summary with the
+        in-scope vehicle_id, (2) narration honestly surfaces
+        that there is not yet enough history to draw a
+        savings conclusion (or equivalent — "no charging
+        sessions yet", "insufficient ownership data"), (3)
+        does NOT invent a savings figure, a cost-per-km gap,
+        or a monthly-trend slope when the envelope is empty,
+        (4) does NOT recommend an aggressive change to
+        charging habits without underlying data to support
+        it. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # negative_savings_honesty — a vehicle whose deterministic
+  # envelope shows total_savings < 0 (cheap gas + expensive
+  # supercharger sessions). The LLM MUST call
+  # query_tco_summary, see the negative figure, and SAY SO
+  # PLAINLY without cheerleading, AND must not recommend
+  # buying or switching to a gas vehicle (out of scope for an
+  # EV operating-cost narrator). Pin: must NOT spin negative
+  # savings as positive, must NOT propose buying gas.
+  - name: negative_savings_honesty
+    input:
+      user_message: "How much am I saving on charging vehicle 42 vs gas?"
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_tco_summary
+      answer_must_contain: ["more expensive"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+        # Cheerleading pin — the narrator must not spin a
+        # negative-savings result.
+        - "great savings"
+        - "huge savings"
+        # Out-of-scope recommendation pin — the EV
+        # operating-cost narrator must not recommend buying
+        # or switching to a gas vehicle.
+        - "buy a gas"
+        - "switch to gas"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_tco_summary with the
+        in-scope vehicle_id, (2) narration honestly states
+        that electricity is more expensive than the gas
+        equivalent for this vehicle (does NOT spin the
+        negative number as positive), (3) names at least one
+        plausible driver from the tool reply (high
+        cost-per-km-ev, dominance of expensive sessions,
+        small total_km that does not amortize the heuristic
+        $50/mo maintenance), (4) does NOT recommend buying
+        or switching to a gas vehicle and does NOT make
+        prescriptive claims outside the deterministic
+        envelope. Pass = score >= 4.
+      judge_pass_threshold: 4

@@ -47,6 +47,13 @@ import { ComputedMetricEditor } from '../components/ComputedMetricEditor'
 import { AlertMessageEditor } from '../components/AlertMessageEditor'
 import { recommendedTriggerMode } from '../lib/recommendedTriggerMode'
 import { Icons } from '@/lib/icons';
+import { AINLAlertBuilder } from '@/components/ai/AINLAlertBuilder'
+import {
+  AIAlertTuningSuggestions,
+  type AlertRuleDraftPatch,
+} from '@/components/ai/AIAlertTuningSuggestions'
+import { AICrossRuleConflictDetection } from '@/components/ai/AICrossRuleConflictDetection'
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 
 // Phase-49 / Slice 0008 — editor-only tri-state. Backend column stays
 // strict ('once' | 'repeat'); 'unset' exists purely so a brand-new
@@ -622,6 +629,7 @@ export default function AlertStudio() {
   const [snoozeTargetId, setSnoozeTargetId] = useState<number | null>(null)
   const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm()
+  const { vehicleId: aiVehicleId } = useSelectedVehicle()
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   // Phase-40 / Prompt 51 — multi-row selection for bulk enable/disable.
@@ -1141,6 +1149,50 @@ export default function AlertStudio() {
     })
   }, [deleteRuleMut, discardDraft, setEditor])
 
+  const handleApplyAITuningPatch = useCallback(
+    (patch: AlertRuleDraftPatch) => {
+      // Phase-50 / 0034 (A1) — copy a typed AI-proposed alert
+      // patch onto the editor's local state. The AI panel never
+      // persists state directly; the user reviews the merged
+      // editor and clicks the canonical Save button next, which
+      // flows through saveRuleMut + the unguarded
+      // PUT /api/v1/alerts/rules/{id} handler (ADR-015 §I3 +
+      // §I8 propose-only contract).
+      //
+      // EditorState stores value_num / value_min / value_max as
+      // strings because <UiInput type="number"> emits strings;
+      // we convert proposed numerics to strings here so the
+      // single canonical buildSavePayload number-parsing code
+      // path runs unchanged.
+      setEditor(s => {
+        const next = { ...s }
+        if (patch.value_num != null) {
+          next.value_num = String(patch.value_num)
+        }
+        if (patch.value_min != null) {
+          next.value_min = String(patch.value_min)
+        }
+        if (patch.value_max != null) {
+          next.value_max = String(patch.value_max)
+        }
+        if (typeof patch.cooldown_min === 'number') {
+          next.cooldown_min = patch.cooldown_min
+        }
+        if (patch.severity) {
+          next.severity = patch.severity as Severity
+        }
+        if (patch.trigger_mode) {
+          next.trigger_mode = patch.trigger_mode as TriggerModeOrUnset
+        }
+        if (patch.op) {
+          next.op = patch.op as RuleOp
+        }
+        return next
+      })
+    },
+    [setEditor],
+  )
+
   const handleToggleTestChannel = useCallback((channelId: number) => {
     setTestChannelIds(current => {
       const selected = current ?? allChannelIds
@@ -1294,6 +1346,19 @@ export default function AlertStudio() {
         </>
       }
     >
+      {/* ── Phase-50 / N1: opt-in AI natural-language alert builder ── */}
+      {/* Renders only when ai_mode != 'off' AND the                    */}
+      {/* nl-alert-builder toggle is on. The withAiFeature HOC inside   */}
+      {/* AINLAlertBuilder enforces the gate; the manual AlertStudio    */}
+      {/* form below remains the canonical baseline in off mode         */}
+      {/* (ADR-015 §I3). The component PROPOSES drafts only — saving    */}
+      {/* still flows through the typed handler below                   */}
+      {/* (ADR-015 §I3 baseline-intact + this slice's PROPOSE-only      */}
+      {/* contract).                                                    */}
+      <FadeIn delay={0.04}>
+        <AINLAlertBuilder vehicleId={aiVehicleId ?? undefined} />
+      </FadeIn>
+
       {showTemplates && (
         <FadeIn>
           <GlassPanel className="p-5">
@@ -1554,6 +1619,46 @@ export default function AlertStudio() {
         </div>
 
         <div className="lg:col-span-8 space-y-4">
+          {(rules?.length ?? 0) >= 2 && (
+            // Phase-50 / 0036 (A3) — opt-in AI cross-rule conflict
+            // detection. Renders only when ai_mode != 'off' AND the
+            // cross-rule-conflict-detection toggle is on AND the
+            // current rule set has at least two rules to compare.
+            // The withAiFeature HOC inside AICrossRuleConflictDetection
+            // enforces the gate; the manual editor below remains the
+            // canonical baseline in off mode (ADR-015 §I3). The
+            // component DETECTS structural conflicts only and surfaces
+            // a "Review rule {id}" hand-off into the existing
+            // selection state — saving still flows through the typed
+            // handler below (ADR-015 §I3 baseline-intact + §I8
+            // propose-only contract).
+            <FadeIn delay={0.02}>
+              <AICrossRuleConflictDetection
+                ruleIds={(rules ?? []).map((r) => r.id)}
+                vehicleId={aiVehicleId ?? undefined}
+                onSelectRule={setSelectedId}
+              />
+            </FadeIn>
+          )}
+          {selectedId != null && (
+            // Phase-50 / 0034 (A1) — opt-in AI alert-rule tuning
+            // suggestions. Renders only when ai_mode != 'off' AND the
+            // alert-tuning-suggestions toggle is on AND a rule is
+            // selected. The withAiFeature HOC inside
+            // AIAlertTuningSuggestions enforces the gate; the manual
+            // editor below remains the canonical baseline in off
+            // mode (ADR-015 §I3). The component PROPOSES typed
+            // patches only — saving still flows through the typed
+            // handler below (ADR-015 §I3 baseline-intact + §I8
+            // propose-only contract).
+            <FadeIn delay={0.04}>
+              <AIAlertTuningSuggestions
+                ruleId={selectedId}
+                vehicleId={aiVehicleId ?? undefined}
+                onApplyDraft={handleApplyAITuningPatch}
+              />
+            </FadeIn>
+          )}
           <GlassPanel className="p-4" data-tour="alert-studio-builder">
             <div className="flex items-center gap-2 mb-4">
               <Icons.pencil className="h-4 w-4 text-neon-cyan" />

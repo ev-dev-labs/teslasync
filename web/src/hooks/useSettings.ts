@@ -51,6 +51,10 @@ const defaults: AppSettings = {
   ui_density: 'comfortable',
   time_format_default: 'relative',
   chart_palette: 'cb_safe',
+  ai_mode: 'off',
+  ai_features: {},
+  ai_provider_config: {},
+  ai_cost_cap_cents: 0,
 }
 
 /**

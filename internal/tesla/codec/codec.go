@@ -118,6 +118,19 @@ func decodePayload(p *ftproto.Payload) []Atomic {
 			decodeErrorsTotal.WithLabelValues(fieldName).Inc()
 			continue
 		}
+		// Per-field tolerant canonicalisation for the same set of
+		// fields the JSON path overrides (canonicalizeFieldsProto).
+		// Maps proto BuckleStatusValue strings to bool for the
+		// BOOLEAN seatbelt columns, etc. Errors here are real
+		// schema violations (e.g. "BuckleStatusFaulted" has no
+		// boolean mapping) — drop the Datum on the same channel
+		// as protomodel.ErrInvalid so the dashboard's
+		// invalid_values_total counter captures both classes.
+		value, err = canonicalizeProtoFieldValue(fieldName, value)
+		if err != nil {
+			invalidValuesTotal.WithLabelValues(fieldName).Inc()
+			continue
+		}
 		atoms, ferr := flattenIfCompound(fieldName, value, emittedAt, vin)
 		if ferr != nil {
 			flattenErrorsTotal.WithLabelValues(fieldName).Inc()

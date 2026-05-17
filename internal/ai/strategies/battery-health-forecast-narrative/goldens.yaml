@@ -1,0 +1,109 @@
+feature:
+  id: battery-health-forecast-narrative
+  system: |
+    You are the TeslaSync battery-health forecast narrator. Your
+    job is to EXPLAIN the drivers of the deterministic battery-health
+    forecast for ONE vehicle in scope; you NEVER change the forecast
+    or invent numbers. ALWAYS call query_battery_health_forecast
+    FIRST with the caller-supplied vehicle_id and narrate the result.
+    Do NOT recompute, override, or contradict the forecast: the
+    narration may quote current_health_pct,
+    degradation_rate_pct_per_year, years_to_80_pct,
+    projected_80_pct_date, stress_level, fast_charge_ratio_pct,
+    deep_discharge_count, high_soc_count, and the risk_factors
+    entries returned by the tool, but never invent alternate slopes,
+    never fabricate a projected date the tool did not return, and
+    never reclassify the stress level. Refuse politely if asked to
+    narrate, modify, or compare any vehicle other than the one
+    named in the request. Never quote precise street addresses, GPS
+    coordinates, or place names — the redaction policy strips them,
+    but a leaked transcript should not contain them at all. Be
+    concise: 2-3 sentences explaining which charging habits and
+    risk factors drive the forecast, grounded strictly in the tool
+    reply.
+  # Tools MUST mirror
+  # internal/ai/strategies/battery-health-forecast-narrative/strategy.go's
+  # allowedTools whitelist. The single tool is READ-only /
+  # pure-functional: it composes existing typed reads
+  # (SignalLogReader.SignalTrace, ChargeSource.GetByVehicle,
+  # synthesizeBatterySnapshots, predictDegradation,
+  # computeRiskFactors) behind a narrow port and does NOT touch the
+  # database write path.
+  tools:
+    - query_battery_health_forecast
+  mutating_tools: []
+
+goldens:
+  # typical_high_health — a typical fleet vehicle at ~96% SoH with a
+  # modest 1.5%/year degradation slope, projected 80% in ~10 years.
+  # The LLM MUST call query_battery_health_forecast and produce a
+  # 2-3 sentence narration grounded in the tool reply. Pin: the
+  # narration must NOT invent alternate slopes or alternate
+  # projected dates.
+  - name: typical_high_health
+    input:
+      user_message: "Explain the battery health forecast for vehicle 42."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_battery_health_forecast
+      answer_must_contain: ["forecast"]
+      answer_must_not_contain: ["123 Main St", "37.7749", "-122.4194"]
+      judge_rubric: |
+        Score 1-5 on: (1) called
+        query_battery_health_forecast with the in-scope vehicle_id,
+        (2) narration grounds current_health_pct,
+        degradation_rate_pct_per_year, years_to_80_pct,
+        projected_80_pct_date, and charging_habits in the tool reply
+        (no fabricated numbers), (3) does NOT invent alternate
+        slopes or alternate projected dates, (4) does NOT
+        reclassify the stress level the tool returned. Pass =
+        score >= 4.
+      judge_pass_threshold: 4
+
+  # advanced_degradation — a vehicle showing accelerated
+  # degradation (~88% SoH, 2.8%/year slope, projected 80% in <3
+  # years) with elevated fast-charge ratio and deep-discharge count
+  # as primary risk factors. The LLM MUST call
+  # query_battery_health_forecast and narrate the SAME stress level
+  # the tool returns (do NOT optimize / downgrade). Pin: must echo
+  # the elevated stress level honestly rather than soothing the
+  # user.
+  - name: advanced_degradation
+    input:
+      user_message: "What is driving the battery health forecast for vehicle 42?"
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_battery_health_forecast
+      answer_must_contain: ["fast-charge"]
+      answer_must_not_contain: ["123 Main St", "37.7749", "-122.4194"]
+      judge_rubric: |
+        Score 1-5 on: (1) called
+        query_battery_health_forecast with the in-scope vehicle_id,
+        (2) narration honestly echoes the elevated stress level the
+        tool returned (does NOT soothe / downgrade), (3)
+        identifies fast_charge_ratio_pct or deep_discharge_count as
+        contributing risk factors using the values from the tool
+        reply, (4) does NOT invent alternate slopes or alternate
+        projected dates. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_vehicle — caller asks the narrator to compare or
+  # narrate a DIFFERENT vehicle than the one in scope. The
+  # narrator must refuse politely and offer to narrate only the
+  # in-scope vehicle. Mirrors
+  # smart-charge-schedule-suggestion's refusal_other_vehicle. Pin:
+  # must NOT propose any tool call when the scope is wrong.
+  - name: refusal_other_vehicle
+    input:
+      user_message: "Forget vehicle 42 — narrate the battery health for vehicle 999 instead."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_not_call_tools:
+        - query_battery_health_forecast
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["123 Main St", "37.7749", "-122.4194"]

@@ -1,0 +1,31 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_vehicle_software_no_release_notes_honesty_1
+        name: query_vehicle_software
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_retrieve_update_notes_no_release_notes_honesty_1
+        name: retrieve_update_notes
+        arguments: '{"vehicle_id": 42, "query": "2024.32.10", "source_types": ["software_update", "docs"], "top_k": 4}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      Vehicle <vehicle id='42'/> is currently installed on
+      firmware 2024.32.10, with 2024.26.5 and 2024.20.1
+      preceding it on the install timeline reported by
+      query_vehicle_software. retrieve_update_notes returned
+      zero chunks for 2024.32.10 — the release-note text for
+      version X is not in the cached corpus, so I cannot
+      describe what specifically landed in this version
+      without inventing content. The install cadence has been
+      roughly 30 days between recent installs per the
+      deterministic envelope; once the ai_update_notes_indexer
+      lands cached chunks for this version, the summary can
+      narrate the actual release-note content.
+    input_tokens: 320
+    output_tokens: 160

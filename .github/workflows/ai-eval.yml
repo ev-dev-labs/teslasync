@@ -1,0 +1,129 @@
+# Phase-50 / 0007 — F6 Eval Harness CI
+#
+# Three jobs:
+#   - fast:   PR-time advisory gate. Runs `make ai-eval-fast` on every
+#             pull-request push. Always passes (continue-on-error)
+#             because authors should be able to land WIP without the
+#             eval suite turning red.
+#   - full:   Blocking gate on push to main. `make ai-eval-full`
+#             produces a JUnit artifact uploaded for review. A
+#             non-zero exit fails the workflow.
+#   - judged: Nightly drift detector. `make ai-eval-judged` re-scores
+#             the canned outputs using an LLM judge with a pinned
+#             seed. Requires repository secrets JUDGE_PROVIDER +
+#             JUDGE_API_KEY; if missing the job is skipped.
+#
+# ADR-015 compliance:
+#   - fast/full modes never reach a real provider — the canned mock is
+#     the only adapter exercised, so the workflow can run in any
+#     environment (no egress, no API keys).
+#   - judged mode is the ONLY path that calls a real provider; it
+#     gates on secrets and runs only on the nightly schedule (never
+#     on PR / push).
+
+name: ai-eval
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'internal/ai/**'
+      - 'cmd/ai-eval/**'
+      - 'tools/eval-schema-check/**'
+      - 'Makefile'
+      - '.github/workflows/ai-eval.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'internal/ai/**'
+      - 'cmd/ai-eval/**'
+      - 'tools/eval-schema-check/**'
+      - 'Makefile'
+      - '.github/workflows/ai-eval.yml'
+  schedule:
+    # Daily at 06:00 UTC (10pm Pacific).
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fast:
+    name: ai-eval (fast / canned only)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Validate goldens schema
+        run: go run ./tools/eval-schema-check
+      - name: Run ai-eval-fast (advisory)
+        id: fast
+        continue-on-error: true
+        run: make ai-eval-fast
+      - name: Annotate fast-mode result
+        if: steps.fast.outcome == 'failure'
+        run: |
+          echo "::warning ::ai-eval-fast reported failures (advisory). See log above."
+
+  full:
+    name: ai-eval (full / blocking on main)
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Validate goldens schema
+        run: go run ./tools/eval-schema-check
+      - name: Run ai-eval-full
+        run: make ai-eval-full
+      - name: Upload JUnit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-eval-junit
+          path: ai-eval.junit.xml
+          if-no-files-found: warn
+
+  judged:
+    name: ai-eval (judged / nightly drift)
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      JUDGE_PROVIDER: ${{ secrets.JUDGE_PROVIDER }}
+      JUDGE_API_KEY: ${{ secrets.JUDGE_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Skip if judge secrets are not configured
+        id: gate
+        run: |
+          if [ -z "${JUDGE_PROVIDER}" ] || [ -z "${JUDGE_API_KEY}" ]; then
+            echo "judge=disabled" >> "$GITHUB_OUTPUT"
+            echo "::notice ::JUDGE_PROVIDER / JUDGE_API_KEY not set; skipping judged run."
+          else
+            echo "judge=enabled" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Run ai-eval-judged
+        if: steps.gate.outputs.judge == 'enabled'
+        run: make ai-eval-judged
+      - name: Upload judged JUnit report
+        if: steps.gate.outputs.judge == 'enabled'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-eval-judged-junit
+          path: ai-eval.judged.junit.xml
+          if-no-files-found: warn

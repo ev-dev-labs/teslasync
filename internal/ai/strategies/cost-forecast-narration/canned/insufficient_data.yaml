@@ -1,0 +1,20 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_cost_forecast_insufficient_data_1
+        name: query_cost_forecast
+        arguments: '{"vehicle_id": 42, "months": 6}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Cost forecast for vehicle <vehicle id='42'/>: there is not enough
+      historical charging-cost data to build a reliable forecast yet —
+      the deterministic helper returned has_enough_data = false, so I
+      will not invent a slope, a projected dollar amount, or an
+      approximate range. Once the vehicle has a few more months of
+      charging-session history (the deterministic minimum is on the
+      tool's min_required_months field), the linear-regression
+      forecaster can return a meaningful projection band.
+    input_tokens: 240
+    output_tokens: 96

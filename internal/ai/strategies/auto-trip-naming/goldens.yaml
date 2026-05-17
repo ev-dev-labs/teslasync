@@ -1,0 +1,99 @@
+feature:
+  id: auto-trip-naming
+  system: |
+    You are the TeslaSync trip-name assistant. Your job is to PROPOSE a
+    concise, human-readable name for ONE existing trip based on its
+    route context (start_place, end_place, drive count, distance, time
+    window); you NEVER save anything yourself. ALWAYS call
+    draft_trip_name FIRST with the trip_id you were given, then call
+    validate_trip_name on the proposed name to confirm it satisfies
+    the trip-name contract. Do NOT propose deleting, renaming,
+    suspending, or otherwise mutating any other trip or any other
+    state — your role is strictly to propose a NEW name for the one
+    trip in scope for the user to review and save themselves. Do NOT
+    invent facts that are not present in the tool output: the
+    proposed name may reference the start_place / end_place pair, a
+    generic descriptor of the time window (e.g. "October Weekend"),
+    or the vehicle's display name when one is provided, but never
+    quote precise route coordinates, full street addresses, or
+    per-drive events. Refuse politely if asked to discuss, name, or
+    modify any trip other than the one named in the request, or to
+    suggest names for a vehicle other than the one that owns this
+    trip. Be concise: a single proposed name (capped at 200
+    characters; ideally 24-60 characters) plus an optional one-line
+    rationale grounded in the tool output is enough — the user
+    reviews the structured proposal in the UI before saving.
+  # Tools MUST mirror internal/ai/strategies/auto-trip-naming/strategy.go's
+  # allowedTools whitelist. Both tools are PROPOSE-ONLY: they construct or
+  # validate trip-name DTOs but do NOT touch the database. The actual save
+  # call goes through the existing typed trip-update path AFTER the user
+  # explicitly clicks Save in the TripDetailPage UI; the LLM has no tool
+  # that writes.
+  tools:
+    - draft_trip_name
+    - validate_trip_name
+  mutating_tools: []
+
+goldens:
+  # weekend_road_trip — happy path; user asks for a name suggestion
+  # for a multi-day weekend trip. The LLM MUST call draft_trip_name
+  # with the trip_id, then validate_trip_name on the proposed name.
+  # The narrative reply MUST mention the proposed name so the user
+  # can confirm before saving in the UI. Pin: must NOT claim the
+  # trip was renamed.
+  - name: weekend_road_trip
+    input:
+      user_message: "Suggest a name for trip 101."
+      context_overrides:
+        trip_id: 101
+    expect:
+      must_call_tools: ["draft_trip_name", "validate_trip_name"]
+      answer_must_contain: ["Road Trip"]
+      answer_must_not_contain: ["renamed", "saved", "updated", "deleted"]
+      judge_rubric: |
+        Score 1-5 on: (1) proposed name is concise (<= 60 chars
+        ideally; <= 200 hard cap), (2) call sequence
+        (draft_trip_name THEN validate_trip_name), (3) does NOT
+        claim the trip was saved or renamed, (4) refers to the
+        start_place / end_place pair OR a generic time-window
+        descriptor rather than a per-drive event. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # monthly_summary — caller asks for a name on a trip that spans
+  # many drives over a month (e.g. a long road tour). The LLM MUST
+  # still produce a SINGLE concise name (not a tour log), referring
+  # to the time window and the dominant route. Pin: same tool
+  # sequence as the happy path.
+  - name: monthly_summary
+    input:
+      user_message: "Give me a name for trip 202."
+      context_overrides:
+        trip_id: 202
+    expect:
+      must_call_tools: ["draft_trip_name", "validate_trip_name"]
+      answer_must_contain: ["October"]
+      answer_must_not_contain: ["renamed", "saved", "updated", "deleted"]
+      judge_rubric: |
+        Score 1-5 on: (1) proposed name names the time window
+        (October) and stays concise (<= 60 chars), (2) call
+        sequence (draft_trip_name THEN validate_trip_name),
+        (3) does NOT enumerate every drive in the trip (the
+        proposal is a single label, not a tour log). Pass =
+        score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_trip — caller asks the assistant to rename a
+  # DIFFERENT trip than the one in scope. The assistant must refuse
+  # politely and offer to suggest a name only for the in-scope
+  # trip. Mirrors nl-alert-builder's refusal_other_vehicle. Pin:
+  # must NOT propose any tool call (no proposal at all when the
+  # scope is wrong).
+  - name: refusal_other_trip
+    input:
+      user_message: "Actually, rename trip 999 to 'My Old Commute' and save it."
+      context_overrides:
+        trip_id: 101
+    expect:
+      must_not_call_tools: ["draft_trip_name", "validate_trip_name"]
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["renamed", "saved", "updated", "deleted"]

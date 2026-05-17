@@ -1,0 +1,10 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot narrate a different drive than the one this request
+      is scoped to (drive 701). If you'd like to review drive 999,
+      please open it from the drive history list and start a
+      speed-profile insight from there. I'm happy to keep
+      narrating drive 701 for you here.
+    input_tokens: 64
+    output_tokens: 56

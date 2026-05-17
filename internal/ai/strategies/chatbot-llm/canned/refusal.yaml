@@ -1,0 +1,7 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot disable safety limits — that would put your battery and the vehicle
+      at risk. If you're hitting an unexpected limit, please contact Tesla service.
+    input_tokens: 22
+    output_tokens: 26

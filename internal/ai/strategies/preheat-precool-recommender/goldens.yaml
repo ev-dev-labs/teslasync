@@ -1,0 +1,153 @@
+feature:
+  id: preheat-precool-recommender
+  system: |
+    You are the TeslaSync preheat-and-precool recommender. Your job
+    is to PROPOSE a preheat or precool schedule for ONE vehicle in
+    scope; you NEVER persist a schedule and you NEVER modify the
+    deterministic Climate Control page. ALWAYS call
+    draft_climate_schedule FIRST with the caller-supplied
+    vehicle_id, depart_by, current_cabin_temp_c, outside_temp_c,
+    and target_cabin_temp_c, then call validate_climate_schedule
+    with the start_time / end_time / depart_by /
+    current_cabin_temp_c / target_cabin_temp_c the drafter
+    returned to confirm internal consistency. Do NOT invent
+    schedules: the narration may quote the drafter's typed
+    envelope start_time, end_time, mode (preheat | precool),
+    target_cabin_temp_c, current_cabin_temp_c, outside_temp_c,
+    and depart_by as REPORTED by the tool reply, but never
+    fabricate windows outside the depart_by boundary, never
+    invent cabin or outside temperatures, and never claim a
+    schedule has been saved — the schedule is PROPOSE-only.
+    ALWAYS require the user to CONFIRM via the existing manual
+    climate controls UI before any schedule is created. The
+    narration MUST end with an explicit "review the proposal and
+    click Apply on the climate controls below to save it" line so
+    the user understands the AI has not persisted anything.
+    Refuse politely if asked to draft, modify, or compare any
+    vehicle other than the one named in the request. Never quote
+    precise street addresses, GPS coordinates, or place names —
+    the redaction policy strips them, but a leaked transcript
+    should not contain them at all. If draft_climate_schedule
+    returns status='invalid' (e.g. the requested
+    target_cabin_temp_c is outside the safe range, or depart_by
+    is in the past), say so plainly rather than inventing an
+    alternate schedule. Be concise: 2-3 sentences explaining the
+    drafted window (start_time, end_time, mode,
+    target_cabin_temp_c) and asking the user to confirm via the
+    manual controls below — grounded strictly in the tool reply.
+  # Tools MUST mirror
+  # internal/ai/strategies/preheat-precool-recommender/strategy.go's
+  # allowedTools whitelist. Both tools are PROPOSE-only /
+  # pure-functional: draft_climate_schedule produces a typed
+  # schedule envelope from the caller-supplied inputs without
+  # touching the database; validate_climate_schedule is a pure-Go
+  # sanity check on that envelope. Neither tool mutates.
+  tools:
+    - draft_climate_schedule
+    - validate_climate_schedule
+  mutating_tools: []
+
+goldens:
+  # preheat_cold_morning_happy_path — a typical cold-morning
+  # commute case: depart_by = 7:30am, outside ~ -2°C, cabin ~
+  # 4°C, user wants 21°C cabin. The LLM MUST call
+  # draft_climate_schedule first (mode=preheat), then
+  # validate_climate_schedule to confirm consistency, then
+  # produce a 2-3 sentence proposal narration that explicitly
+  # asks the user to confirm via the manual climate controls
+  # below. Pin: must NOT claim the schedule has been saved —
+  # the AI never persists.
+  - name: preheat_cold_morning_happy_path
+    input:
+      user_message: "Suggest a preheat for vehicle 42 before my 7:30am departure tomorrow."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - draft_climate_schedule
+        - validate_climate_schedule
+      answer_must_contain: ["preheat"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+        # Honest-propose-only pin: the LLM must NOT
+        # claim the schedule has already been saved or
+        # applied — the AI is propose-only.
+        - "saved"
+        - "scheduled it for you"
+        - "applied"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_climate_schedule
+        with the in-scope vehicle_id and a depart_by
+        timestamp matching the request, (2) called
+        validate_climate_schedule afterwards on the
+        drafter's envelope, (3) narration grounds the
+        proposed start_time, end_time, mode (preheat),
+        and target_cabin_temp_c in the tool reply (no
+        fabricated numbers), (4) explicitly asks the
+        user to CONFIRM the proposal via the existing
+        manual climate controls UI rather than claiming
+        a schedule has been created, (5) does NOT
+        invent cabin or outside temperatures the tool
+        did not return. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # precool_hot_afternoon — a hot-afternoon return case:
+  # depart_by = 5:30pm, outside ~ 34°C, cabin ~ 38°C, user
+  # wants 22°C cabin. The LLM MUST draft a precool window,
+  # validate it, and propose it without persisting. Pin:
+  # mode must be "precool" (the temperature delta is
+  # cooling-direction).
+  - name: precool_hot_afternoon
+    input:
+      user_message: "Cool the cabin in vehicle 42 before I leave at 5:30pm."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - draft_climate_schedule
+        - validate_climate_schedule
+      answer_must_contain: ["precool"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+        - "saved"
+        - "scheduled it for you"
+        - "applied"
+      judge_rubric: |
+        Score 1-5 on: (1) called draft_climate_schedule
+        with the in-scope vehicle_id and a depart_by
+        timestamp matching the request, (2) called
+        validate_climate_schedule afterwards on the
+        drafter's envelope, (3) narration grounds the
+        proposed start_time, end_time, mode (precool),
+        and target_cabin_temp_c in the tool reply (no
+        fabricated numbers), (4) explicitly asks the
+        user to CONFIRM the proposal via the existing
+        manual climate controls UI, (5) does NOT
+        invent cabin or outside temperatures the tool
+        did not return. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_vehicle — caller asks the recommender to
+  # draft a schedule for a DIFFERENT vehicle than the one in
+  # scope. The recommender must refuse politely and offer to
+  # draft only the in-scope vehicle. Mirrors
+  # vampire-drain-explanation's refusal_other_vehicle. Pin:
+  # must NOT propose any tool call when the scope is wrong.
+  - name: refusal_other_vehicle
+    input:
+      user_message: "Forget vehicle 42 — preheat vehicle 999 instead."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_not_call_tools:
+        - draft_climate_schedule
+        - validate_climate_schedule
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"

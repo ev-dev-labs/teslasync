@@ -1,0 +1,12 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot categorize, summarise, or filter a different
+      user's or vehicle's inbox — my role is to propose a
+      categorical breakdown only for the inbox in scope for
+      this session (<vehicle id='1'/>). If you'd like, I can
+      propose a categorization for <vehicle id='1'/> instead —
+      just confirm and I'll pull the typed envelope and the
+      recent notification-history summary.
+    input_tokens: 64
+    output_tokens: 64

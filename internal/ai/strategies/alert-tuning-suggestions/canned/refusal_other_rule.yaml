@@ -1,0 +1,12 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot tune, modify, or compare a different alert rule —
+      my role is to propose a noise-reduction patch only for the
+      alert rule in scope for this session
+      (AlertRule <alert id='42'/>). If you'd like, I can propose
+      a tuning patch for AlertRule <alert id='42'/> instead —
+      just confirm and I'll pull the typed envelope and the
+      recent firing-history summary.
+    input_tokens: 64
+    output_tokens: 64

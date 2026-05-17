@@ -31,6 +31,7 @@ import {
   type IncidentStatus,
 } from '@/api/hooks/useIncidents'
 import { useDateFormat } from '@/hooks/useDateFormat'
+import { AIIncidentTimelineSummarizer } from '@/components/ai/AIIncidentTimelineSummarizer'
 
 const SEVERITY_TONE: Record<IncidentSeverity, { Icon: typeof AlertCircle; cls: string }> = {
   minor:    { Icon: AlertCircle,   cls: 'text-amber-300' },
@@ -198,6 +199,20 @@ export default function IncidentTimelinePage() {
             )}
           </div>
         </GlassPanel>
+
+        {/*
+          Phase-50 / 0042 — AI incident timeline summarizer.
+          Renders only when ai_mode is local|cloud AND the
+          incident-timeline-summarizer toggle is on (gated by
+          withAiFeature). When off, the wrapper returns null and
+          the deterministic timeline below remains the canonical
+          surface (ADR-015 §I3 + §I5). The component is positioned
+          AFTER the incident header so the AI section has a
+          resolved incident in scope, and BEFORE the deterministic
+          timeline so users can compare the AI summary to the raw
+          updates list directly below it.
+        */}
+        <AIIncidentTimelineSummarizer incidentId={incident.id} />
 
         {/* Timeline */}
         <GlassPanel className="p-4">

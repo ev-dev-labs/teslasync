@@ -1,0 +1,37 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_train_charge_curve_clusters_sparse_data_1
+        name: train_charge_curve_clusters
+        arguments: '{"vehicle_id": 7, "lookback_days": 14}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_charge_curve_clusters_sparse_data_1
+        name: query_charge_curve_clusters
+        arguments: '{"vehicle_id": 7}'
+    input_tokens: 96
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      L1 overnight — for vehicle <vehicle id='7'/> L1 returned
+      source="rule_label_fallback" with session_count=1: this
+      14-day window simply doesn't have enough sessions yet for a
+      learned envelope, so the trainer falls back to the rule
+      label without per-cluster stats. Once the vehicle accumulates
+      more L1 sessions this would refine.
+
+      L2 workplace — L2 also returned source="rule_label_fallback"
+      with session_count=2 — below the 3-session floor. The
+      proposed envelope therefore matches the bare rule label for
+      now; nothing has changed for the deterministic
+      classification.
+
+      DC fast — DC returned source="rule_label_fallback" with
+      session_count=2. The currently-effective classification
+      continues to use the static L1/L2/DC labels and the proposed
+      envelope is identical to it for now. No learned refinement
+      is in scope until more sessions land.
+    input_tokens: 240
+    output_tokens: 168

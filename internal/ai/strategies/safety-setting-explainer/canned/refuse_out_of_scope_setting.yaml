@@ -1,0 +1,20 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_safety_settings_refuse_out_of_scope_setting_1
+        name: query_safety_settings
+        arguments: '{}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      The theme setting is not in the safety-related typed
+      envelope I can read from this panel — the safety envelope
+      covers notification quiet hours, alert digest mode,
+      critical-flash signalling, tab-badge signalling, and the
+      api_suspended operational gate only. To learn about the
+      theme or dark mode you can ask on the Appearance section
+      of the Settings page you are on right now; I will not
+      invent a current value here.
+    input_tokens: 320
+    output_tokens: 160

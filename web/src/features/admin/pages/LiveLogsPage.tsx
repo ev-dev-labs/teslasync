@@ -43,6 +43,7 @@ import {
 import { Caption, MetricLabel, Text } from '@/components/ui/Typography';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { AILogTraceSummarization } from '@/components/ai/AILogTraceSummarization';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   LOG_STREAM_MAX_EVENTS,
@@ -293,6 +294,28 @@ export default function LiveLogsPage({
     const needle = vehicleFilter.trim();
     return stream.events.filter((ev) => extractVehicleId(ev.parsed) === needle);
   }, [stream.events, vehicleFilter]);
+
+  // Compute the AI summarization window from the current buffer.
+  // Newest event time backward by 30 minutes, or the current time
+  // minus 30 minutes when the buffer is empty. Both bounds in
+  // Unix seconds (the AI handler validates positive int64 seconds).
+  const { aiFromUnix, aiToUnix } = useMemo(() => {
+    const windowSeconds = 30 * 60;
+    const newestMs = stream.events.length > 0
+      ? stream.events[stream.events.length - 1]?.receivedAt ?? Date.now()
+      : Date.now();
+    const toUnix = Math.floor(newestMs / 1000);
+    const fromUnix = toUnix - windowSeconds;
+    return { aiFromUnix: fromUnix, aiToUnix: toUnix };
+  }, [stream.events]);
+
+  const aiVehicleId = useMemo(() => {
+    const trimmed = vehicleFilter.trim();
+    if (trimmed.length === 0) return undefined;
+    const n = Number(trimmed);
+    if (!Number.isFinite(n) || n <= 0) return undefined;
+    return n;
+  }, [vehicleFilter]);
 
   // Find the scrollable container the DataTable renders inside so we
   // can pin the view to the bottom when autoscroll is on. The
@@ -568,6 +591,11 @@ export default function LiveLogsPage({
     >
       <FadeIn>
         <Stack className="gap-4">
+          <AILogTraceSummarization
+            fromUnix={aiFromUnix}
+            toUnix={aiToUnix}
+            vehicleId={aiVehicleId}
+          />
           {filterPanel}
           {controlsPanel}
           {stream.error ? (

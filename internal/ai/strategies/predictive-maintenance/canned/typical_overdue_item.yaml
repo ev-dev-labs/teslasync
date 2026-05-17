@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_maintenance_context_typical_overdue_item_1
+        name: query_maintenance_context
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Your vehicle has one overdue maintenance item and one due
+      soon. The cabin air filter is marked overdue against its
+      12-month interval; per the envelope, it is the highest-
+      priority item to schedule next. Tire rotation is due soon
+      based on the upcoming mileage threshold the envelope
+      reports. Overall the summary counts 8 items: 1 overdue,
+      1 due_soon, the rest in good status. Use the Maintenance
+      page above to log a service event once the cabin air
+      filter is replaced.
+    input_tokens: 240
+    output_tokens: 96

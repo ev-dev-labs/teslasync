@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_vampire_drain_windows_typical_drain_with_sentry_driver_1
+        name: query_vampire_drain_windows
+        arguments: '{"vehicle_id": 42, "lookback_days": 30}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Recent idle-drain narrative for vehicle <vehicle id='42'/>: over
+      the deterministic 30-day observation window the average drain is
+      around the typical fleet rate per day, and the worst recent idle
+      window appears correlated with Sentry being on for an extended
+      cold-weather park (the deterministic repo derives drain windows
+      from fsm_transitions + signal_log, not from a controlled
+      experiment, so this is a correlation rather than a proven cause).
+      Disabling Sentry for very long parked windows in cold weather
+      would be the most natural next step to test that correlation.
+    input_tokens: 240
+    output_tokens: 128

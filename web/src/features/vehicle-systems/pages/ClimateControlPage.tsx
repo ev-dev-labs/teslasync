@@ -58,6 +58,7 @@ import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { CHART_COLORS } from '@/lib/colors';
 
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
+import { AIPreheatPrecoolRecommender } from '@/components/ai/AIPreheatPrecoolRecommender';
 import { useClimate, useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import type { ClimateState } from '@/types/vehicle-systems';
 
@@ -275,6 +276,17 @@ export default function ClimateControlPage() {
   const activeIdNum = Number(activeId) || 0;
   const { data: chargingLatest } = useChargingTelemetryLatest(activeIdNum);
 
+  /* ─── AI preheat/precool default departure (8 hours from now, RFC3339) ─── */
+  // Stable for the lifetime of the component instance so the AI panel's
+  // useAiStream body identity stays referentially stable. The user can
+  // ignore the proposal if the time doesn't match their actual departure;
+  // the propose-only contract means the AI never persists anything they
+  // don't explicitly Apply.
+  const defaultDepartBy = useMemo(
+    () => new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString(),
+    [],
+  );
+
   /* ─── Comfort indicator ─── */
   const comfort = useMemo(
     () =>
@@ -436,6 +448,20 @@ export default function ClimateControlPage() {
         </div>
       }
     >
+      {/* ─── AI: Preheat / Precool recommender (Phase-50 / 0031, T1) ─── */}
+      {/* Hidden entirely when ai_mode='off' or the per-feature toggle is off */}
+      {/* via the withAiFeature HOC; renders an opt-in propose-only section */}
+      {/* above the deterministic HVAC banner when enabled. */}
+      <FadeIn>
+        <AIPreheatPrecoolRecommender
+          vehicleId={activeIdNum > 0 ? activeIdNum : undefined}
+          currentCabinTempC={latest?.insideTemp ?? null}
+          outsideTempC={latest?.outsideTemp ?? null}
+          targetCabinTempC={latest?.driverTempSetting ?? 21}
+          departBy={defaultDepartBy}
+        />
+      </FadeIn>
+
       {/* ─── HVAC Status Banner ─── */}
       <FadeIn>
         <GlassPanel

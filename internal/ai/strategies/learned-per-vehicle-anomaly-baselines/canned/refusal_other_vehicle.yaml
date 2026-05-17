@@ -1,0 +1,12 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot explain the learned anomaly baseline for a different
+      vehicle — my role is to narrate the per-signal envelope only
+      for the vehicle in scope for this session (vehicle
+      <vehicle id='42'/>). If you'd like, I can call
+      train_anomaly_baseline and query_anomaly_baseline for vehicle
+      <vehicle id='42'/> instead — just confirm and I'll narrate
+      the proposed learned envelope for that vehicle.
+    input_tokens: 48
+    output_tokens: 48

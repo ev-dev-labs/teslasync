@@ -17,6 +17,7 @@ import {
   GeneralSettings,
   AppearanceSettings,
   AdvancedSettings,
+  AISettings,
   SettingsSearch,
 } from '../components'
 // Phase-46 / Prompt 36 — Settings export/import has moved to the
@@ -98,6 +99,12 @@ export default function SettingsPage() {
       </section>
       <section id="appearance">
         <AppearanceSettings />
+      </section>
+      {/* Phase-50 / 0003 — F2 Settings UI for AI. AI is opt-in
+          AFTER onboarding; the panel itself always renders so users
+          can discover and enable it (ADR-015 §I7). */}
+      <section id="ai">
+        <AISettings />
       </section>
       <section id="advanced">
         <AdvancedSettings />

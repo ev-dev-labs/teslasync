@@ -1,0 +1,19 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_battery_health_forecast_typical_high_health_1
+        name: query_battery_health_forecast
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Vehicle <vehicle id='42'/> is at 96% state-of-health and the
+      forecast slope is a modest 1.5%/year, so the projected
+      80%-of-original-capacity date sits about ten years out. The
+      fast-charge ratio and deep-discharge count are both low, which
+      is why the stress_level returned by the deterministic forecast
+      is on the gentle end — keep current habits and the projection
+      should hold.
+    input_tokens: 220
+    output_tokens: 72

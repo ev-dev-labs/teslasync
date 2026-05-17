@@ -1,0 +1,17 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_drivesearch_retrieve_zero_1
+        name: retrieve_drive_chunks
+        arguments: '{"query": "drives exceeding 200 mph last year", "source_types": ["drive_summary"], "k": 5}'
+    input_tokens: 48
+    output_tokens: 36
+  - finish_reason: stop
+    content: |
+      I found no drives matching that query. Tesla vehicles do not
+      typically reach 200 mph in normal operation, so it is unlikely
+      any record exists. Try rephrasing with a more realistic top
+      speed (for example, "drives where I exceeded 80 mph last
+      month") or broaden the time window.
+    input_tokens: 124
+    output_tokens: 64

@@ -65,6 +65,7 @@ import { useToast } from '../feedback/Toast'
 import { NotificationBellPopover } from './NotificationBellPopover'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
+import { HelixMark } from '@/components/branding/HelixMark';
 
 const navI18nKeys: Record<string, string> = {
   // Sidebar nav labels are rendered verbatim from `navSections` below. The
@@ -357,7 +358,7 @@ export const navSections = [
     title: 'Settings',
     items: [
       { to: '/settings', icon: Icons.settings, label: 'General Settings', color: 'text-[var(--text-muted)]' },
-      { to: '/chatbot', icon: Icons.bot, label: 'AI Assistant', color: 'text-purple-400' },
+      { to: '/chatbot', icon: HelixMark, label: 'Helix', color: 'text-purple-400' },
       { to: '/dev-tools', icon: Icons.hammer, label: 'Developer Tools', color: 'text-cyan-400' },
     ],
   },

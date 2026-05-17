@@ -25,6 +25,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { convertTempFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
+import { AICabinTemperatureImpactNarrative } from '@/components/ai/AICabinTemperatureImpactNarrative';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -249,6 +250,14 @@ export default function TemperatureImpactPage() {
             {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
           </AlertBanner>
         )}
+
+        {/* ── Phase-50 / 0032 AI cabin-temperature-impact narrator ── */}
+        {/* Rendered ABOVE the deterministic charts so the narration   */}
+        {/* contextualises the bucketed-efficiency chart and seasonal  */}
+        {/* trend the user is about to read. The withAiFeature HOC     */}
+        {/* gates visibility — in ai_mode='off' this section is        */}
+        {/* entirely absent from the DOM (ADR-015 §I5 + §I6).          */}
+        <AICabinTemperatureImpactNarrative vehicleId={vehicleId !== '' ? vehicleId : undefined} />
 
         {/* ── Summary MetricCards ───────────────────────────────── */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">

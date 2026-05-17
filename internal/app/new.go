@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 
+	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
@@ -17,6 +19,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	"github.com/ev-dev-labs/teslasync/internal/jobs"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -92,6 +95,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initTripGenerator(ctx)
 	a.initGasPriceWorker(ctx)
 	a.initUnitDriftValidator(ctx)
+	a.initAIBackgroundJobs(ctx)
 	a.initHealthWatchdog(ctx)
 	a.loadOpenAPISpec()
 
@@ -506,6 +510,27 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 	a.TelemetryHandler.SetPipeline(normPipeline)
 
 	dlqTopic := strings.TrimSuffix(a.Cfg.FleetTelemetry.TopicBase, "/") + "/dlq"
+
+	// subRef bridges the chicken-and-egg between the paho client (which
+	// must register an OnConnect handler BEFORE Connect) and the
+	// PipelineSubscriber (which owns the topic + Subscribe call but cannot
+	// be constructed until we have a connected client). On every
+	// post-Start reconnect, paho fires OnConnect → callback derefs subRef
+	// → PipelineSubscriber.OnBrokerReconnect re-issues SUBSCRIBE.
+	//
+	// Without this, paho v1.5.0's default ResumeSubs=false leaves a
+	// reconnected client with no subscriptions whenever the broker drops
+	// the persistent session (EMQX session_expiry_interval elapsed,
+	// node restart on a non-replicated cluster, etc), silently halting
+	// the entire fleet-telemetry stream — observed in production as
+	// `subscriptions=0, delivered_msgs=0` with `connected=true` for days.
+	var subRef atomic.Pointer[mqtt.PipelineSubscriber]
+	pipelineOnConnect := func(c pahomqtt.Client) {
+		if sub := subRef.Load(); sub != nil {
+			sub.OnBrokerReconnect(c)
+		}
+	}
+
 	pahoClient, dlq, err := mqtt.NewProductionPipelineMQTT(
 		ctx,
 		a.Cfg.MQTT.BrokerURL(),
@@ -514,6 +539,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		a.Cfg.MQTT.Password,
 		dlqTopic,
 		pipelineLogger,
+		pipelineOnConnect,
 	)
 	if err != nil {
 		return fmt.Errorf("phase-42a: NewProductionPipelineMQTT failed; broker=%s dlq_topic=%s: %w",
@@ -576,6 +602,12 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		},
 		pipelineLogger,
 	)
+	// Publish subRef BEFORE Start so any post-Start reconnect (or even a
+	// pathological mid-Start reconnect that fires the goroutine-scheduled
+	// OnConnect after subRef is published) routes through
+	// PipelineSubscriber.OnBrokerReconnect, which guards itself against
+	// pre-start invocations via the started/stopped flags.
+	subRef.Store(pipelineSubscriber)
 	if err := pipelineSubscriber.Start(); err != nil {
 		log.Warn().Err(err).
 			Str("topic_base", a.Cfg.FleetTelemetry.TopicBase).
@@ -733,6 +765,54 @@ func (a *App) initUnitDriftValidator(ctx context.Context) {
 		driftValidator.Start(loopCtx, worker.Options{})
 	})
 	log.Info().Msg("unit-drift validator started")
+}
+
+// initAIBackgroundJobs schedules cross-cutting AI maintenance jobs.
+// Currently only embeddings TTL — re-runs every hour to delete
+// expired rows from both embeddings tables (see internal/jobs/
+// embeddings_ttl.go).
+//
+// ADR-015 §I12 contract: the cron is started UNCONDITIONALLY. Each
+// tick re-checks ai_mode via [jobs.RunEmbeddingsTTL]; when mode='off'
+// the function returns immediately without touching the DB. The
+// rationale for unconditional start (vs gating here on AIMode):
+//
+//   - When the admin flips ai_mode='local'|'cloud' at runtime we must
+//     pick up the new mode without a process restart. Gating start
+//     here on the boot-time mode would force a restart to enable
+//     background TTL after a runtime opt-in.
+//   - The cron's per-tick cost in off-mode is one settings read +
+//     one log line — measured at < 100µs, well below the noise
+//     floor of the hourly tick.
+//   - The §I12 invariant test (factory + jobs unit tests) proves
+//     zero embeddings rows are written or deleted in off-mode, which
+//     is the user-visible contract.
+func (a *App) initAIBackgroundJobs(ctx context.Context) {
+	settingsRepo := database.NewSettingsRepo(a.DB)
+
+	// Run once at boot so a long-running tick interval doesn't leave
+	// expired rows visible immediately after a restart.
+	go func() {
+		if _, err := jobs.RunEmbeddingsTTL(ctx, a.DB, settingsRepo); err != nil {
+			log.Warn().Err(err).Msg("ai background jobs: initial embeddings TTL run failed")
+		}
+	}()
+
+	resilience.SafeGoLoop(ctx, "embeddings-ttl-cron", func(loopCtx context.Context) {
+		ticker := time.NewTicker(1 * time.Hour)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-loopCtx.Done():
+				return
+			case <-ticker.C:
+				if _, err := jobs.RunEmbeddingsTTL(loopCtx, a.DB, settingsRepo); err != nil {
+					log.Warn().Err(err).Msg("ai background jobs: embeddings TTL run failed")
+				}
+			}
+		}
+	})
+	log.Info().Msg("ai background jobs scheduled (embeddings_ttl re-checks ai_mode per ADR-015 §I12)")
 }
 
 func (a *App) initHealthWatchdog(ctx context.Context) {

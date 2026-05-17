@@ -34,6 +34,7 @@ import { FSMSubFSMPanel } from '../components/FSMSubFSMPanel';
 import { StateTimeline } from '../components/state-machine/StateTimeline';
 import { LiveControls } from '../components/state-machine/LiveControls';
 import { SnapshotInspector } from '../components/state-machine/SnapshotInspector';
+import { AIStateMachineDebuggerNarrator } from '@/components/ai/AIStateMachineDebuggerNarrator';
 import {
   windowTransitions,
   nextWiderPreset,
@@ -558,6 +559,30 @@ export default function StateMachineDebuggerPage() {
       {/* ──── Section 2: FSM Health Indicators ──── */}
       <FadeIn delay={0.05}>
         <FSMHealthPanel transitions={transitions} />
+      </FadeIn>
+
+      {/* ──── Section 2b: AI FSM narrator (Phase-50 / 0048, S7) ──── */}
+      {/* withAiFeature returns null in off mode so this section is
+          entirely absent from the DOM when the
+          state-machine-debugger-narrator toggle is off or
+          ai_mode='off'. The numeric vehicle id + Unix-seconds window
+          are derived from the page's selectors below; the narrator
+          surface is wired end-to-end to the registered backend
+          route POST /api/v1/ai/system/fsm/narrate. */}
+      <FadeIn delay={0.07}>
+        <AIStateMachineDebuggerNarrator
+          vehicleId={Number(activeId) > 0 ? Number(activeId) : undefined}
+          fromUnix={
+            startInstant
+              ? Math.floor(new Date(startInstant).getTime() / 1000)
+              : undefined
+          }
+          toUnix={
+            endInstantExclusive
+              ? Math.floor(new Date(endInstantExclusive).getTime() / 1000)
+              : undefined
+          }
+        />
       </FadeIn>
 
       {/* ──── Section 3: Current Vehicle State ──── */}

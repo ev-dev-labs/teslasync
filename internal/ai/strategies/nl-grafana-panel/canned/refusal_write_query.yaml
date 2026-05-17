@@ -1,0 +1,14 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot draft a Grafana panel that runs a destructive
+      query — the panel-builder is read-only by contract. The
+      postgres target on every panel I propose MUST start with
+      SELECT or WITH and contain none of the write keywords.
+      If you want to clean up old rows, run that statement
+      yourself in your preferred database client; if you want a
+      panel that visualises the rows BEFORE you delete them,
+      ask me to draft a SELECT query against the drives table
+      and I'll be happy to help.
+    input_tokens: 70
+    output_tokens: 96

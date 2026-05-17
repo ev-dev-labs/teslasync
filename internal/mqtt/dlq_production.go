@@ -75,6 +75,16 @@ const (
 //   - SetAutoReconnect(true)          — broker reconnect is mandatory; the
 //     PipelineSubscriber explicitly relies on broker redelivery.
 //
+// We deliberately leave SetResumeSubs at its default (false). Combining it
+// with the explicit re-Subscribe path in PipelineSubscriber.OnBrokerReconnect
+// would accumulate duplicate persisted SUBSCRIBE packets across reconnects,
+// because paho v1.5.0 does not delete completed SUBSCRIBE entries from its
+// internal store after SUBACK (see net.go:205-217). The explicit re-Subscribe
+// is sufficient on its own and is the mechanism that recovers from a
+// broker-dropped persistent session (the failure mode that caused production
+// telemetry to silently stop flowing for 5+ days when the OnConnect handler
+// only logged).
+//
 // Exported as package-private to support direct field inspection in
 // dlq_production_test.go (paho's *Client does not expose its options
 // post-construction; the *ClientOptions return value here is the test seam).
@@ -120,6 +130,21 @@ func productionPipelineOptions(brokerURL, clientID, username, password string) *
 // log is captured by reference for the on-connect / on-connection-lost
 // callbacks attached to the client; subsequent broker events log against
 // this logger asynchronously.
+//
+// onConnect (optional, may be nil) is invoked from inside the paho
+// SetOnConnectHandler AFTER the broker-connected log line, on every
+// successful (re)connect. This is the seam the PipelineSubscriber wires
+// its re-subscribe + tracker-reset into so that a session-expired
+// reconnect (broker dropped persistent session, paho default
+// ResumeSubs=false) re-establishes the SUBSCRIBE; without this the
+// client stays connected indefinitely with subscriptions=0 and the
+// fleet-telemetry stream silently stops flowing. See the Phase-42
+// reconnect-resubscribe contract in
+// PipelineSubscriber.OnBrokerReconnect (mqtt.go).
+//
+// Note: the callback runs on a paho-internal goroutine. The PipelineSubscriber
+// MUST be safe to invoke concurrently with Start/Stop and tolerate being
+// called before its first Start (pre-start invocations are a no-op there).
 func NewProductionPipelineMQTT(
 	ctx context.Context,
 	brokerURL string,
@@ -128,6 +153,7 @@ func NewProductionPipelineMQTT(
 	password string,
 	dlqTopic string,
 	log zerolog.Logger,
+	onConnect func(pahomqtt.Client),
 ) (pahomqtt.Client, *MQTTDLQPublisher, error) {
 	if strings.TrimSpace(brokerURL) == "" {
 		return nil, nil, fmt.Errorf("mqtt: NewProductionPipelineMQTT: brokerURL must be non-empty")
@@ -140,8 +166,11 @@ func NewProductionPipelineMQTT(
 	}
 
 	opts := productionPipelineOptions(brokerURL, clientID, username, password)
-	opts.SetOnConnectHandler(func(_ pahomqtt.Client) {
+	opts.SetOnConnectHandler(func(c pahomqtt.Client) {
 		log.Info().Str("broker", brokerURL).Msg("mqtt: PipelineSubscriber broker connected")
+		if onConnect != nil {
+			onConnect(c)
+		}
 	})
 	opts.SetConnectionLostHandler(func(_ pahomqtt.Client, err error) {
 		log.Warn().Err(err).Str("broker", brokerURL).Msg("mqtt: PipelineSubscriber broker connection lost")

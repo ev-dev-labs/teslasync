@@ -130,7 +130,7 @@ describe('SessionExpiringModal', () => {
     expect(mockMonitor.refresh).toHaveBeenCalledTimes(1)
   })
 
-  it('clicking "Sign out now" persists return URL before navigating', () => {
+  it('clicking "Sign out now" hands off to the IdP outpost with rd= deep-link', () => {
     mockMonitor = freshMonitor({ expiresInSeconds: 20, isExpiringSoon: true })
 
     // Stub assign so the test doesn't actually navigate. Use a spy on
@@ -146,10 +146,17 @@ describe('SessionExpiringModal', () => {
     try {
       render(<SessionExpiringModal />)
       fireEvent.click(screen.getByTestId('session-expiring-signout'))
+      // navigateToReauth() writes sessionStorage as a defence-in-
+      // depth fallback for proxies that drop the `rd=` param.
       expect(window.sessionStorage.getItem('teslasync-return-url')).toBe(
         'http://localhost/foo?bar=1',
       )
-      expect(assignSpy).toHaveBeenCalledWith('/')
+      // Default Authentik outpost path with the current href URL-
+      // encoded as the rd= return-destination parameter.
+      expect(assignSpy).toHaveBeenCalledTimes(1)
+      const target = assignSpy.mock.calls[0][0] as string
+      expect(target).toMatch(/^\/outpost\.goauthentik\.io\/start\?rd=/)
+      expect(target).toContain(encodeURIComponent('http://localhost/foo?bar=1'))
     } finally {
       Object.defineProperty(window, 'location', {
         configurable: true,

@@ -1,0 +1,28 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_alert_rule_patch_typical_noisy_battery_threshold_1
+        name: draft_alert_rule_patch
+        arguments: '{"rule_id": 42, "new_value_num": 15, "new_cooldown_min": 30, "rationale": "raise threshold from 20 to 15 and increase cooldown from 5 to 30 to suppress repeat firings during routine driving"}'
+    input_tokens: 96
+    output_tokens: 64
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_alert_rule_typical_noisy_battery_threshold_1
+        name: validate_alert_rule
+        arguments: '{"vehicle_id": 1, "name": "Battery low", "signal_name": "battery_level", "op": "<", "value_num": 15, "severity": "warn", "cooldown_min": 30, "trigger_mode": "repeat"}'
+    input_tokens: 320
+    output_tokens: 80
+  - finish_reason: stop
+    content: |
+      Proposed tuning for AlertRule <alert id='42'/>: raise the
+      battery_level threshold from 20 to 15 and increase the
+      cooldown from 5 to 30 minutes. Based on the recent firing
+      window, the rule would have fired 3 times instead of 23 in
+      the last 7 days under the proposed thresholds — this is a
+      descriptive replay of the recent firing window, NOT a
+      prediction. Severity stays at warn and trigger-mode stays
+      at repeat; review the diff and click Save in the Alert
+      Studio to apply.
+    input_tokens: 480
+    output_tokens: 160

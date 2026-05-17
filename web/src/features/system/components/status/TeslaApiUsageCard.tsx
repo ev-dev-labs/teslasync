@@ -11,14 +11,25 @@
  *   - What's eating the budget — which service / method?
  *   - Are recent calls healthy (latency, error rate)?
  *
- * Doesn't require any backend changes — all data is already exposed.
+ * Phase-50 / 0004 — F3 refactor: the JSX skeleton (budget bar, bands,
+ * detail grid, top-lists, banner, footer) is delegated to the shared
+ * `<UsageCard>` primitive in components/data-display so this card
+ * (and the new AiUsageCard) share one visual contract. This file's
+ * sole job is now to derive the props from the two API hooks.
  */
 
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
-import { Activity, TrendingUp, AlertTriangle, ExternalLink, Zap, Clock } from 'lucide-react'
+import { Activity, TrendingUp, Zap, Clock } from 'lucide-react'
 import { useApiLogStats } from '@/api/hooks/useAdmin'
 import { useFormatting } from '@/hooks/useFormatting'
+import {
+  UsageCard,
+  type UsageCardBand,
+  type UsageCardDetail,
+  type UsageCardTopList,
+  type UsageCardTopListItem,
+  type UsageCardIntent,
+} from '@/components/data-display'
 import type { APIUsage } from '@/api/types'
 import { fmtInt, fmtPercent } from '@/lib/numberFormat'
 
@@ -111,19 +122,16 @@ export function TeslaApiUsageCard({ apiUsage, now }: TeslaApiUsageCardProps) {
 
   if (!apiUsage || !derived) {
     return (
-      <p className="text-sm text-[var(--text-muted)]">
-        Tesla API usage data is not available yet.
-      </p>
+      <UsageCard emptyMessage="Tesla API usage data is not available yet." />
     )
   }
 
   const overBudget = apiUsage.estimated_cost > apiUsage.monthly_credit
-  const pctClamped = Math.min(100, derived.pctOfBudget)
-  const barColor = overBudget
-    ? 'bg-red-500/70'
+  const budgetIntent: UsageCardIntent = overBudget
+    ? 'danger'
     : derived.pctOfBudget > 80
-      ? 'bg-amber-500/70'
-      : 'bg-cyan-500/70'
+      ? 'warn'
+      : 'normal'
 
   // Top 3 services by call count
   const topServices = dedupeMap(logStats?.by_service)
@@ -136,197 +144,128 @@ export function TeslaApiUsageCard({ apiUsage, now }: TeslaApiUsageCardProps) {
   // Backend returns error_rate as a PERCENTAGE already (errorCount/total*100)
   const errorPct = logStats?.errorRate != null ? logStats.errorRate : null
 
-  return (
-    <div className="space-y-4">
-      {/* Budget progress bar */}
-      <div className="space-y-2">
-        <div className="flex items-baseline justify-between text-sm">
-          <span className="font-medium text-[var(--text-primary)]">
-            {formatCurrency(apiUsage.estimated_cost)} of {formatCurrency(apiUsage.monthly_credit)}
-          </span>
-          <span className={overBudget ? 'text-red-400 font-semibold tabular-nums' : 'text-[var(--text-muted)] tabular-nums'}>
-            {fmtPercent(derived.pctOfBudget, 0)} of monthly credit
-          </span>
-        </div>
-        <div
-          className="h-2 w-full overflow-hidden rounded-full bg-white/[0.06]"
-          role="progressbar"
-          aria-valuenow={Math.round(derived.pctOfBudget)}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Tesla API budget used"
-        >
-          <div
-            className={`h-full transition-all ${barColor}`}
-            style={{ width: `${pctClamped}%` }}
-          />
-        </div>
-        <p className="text-xs text-[var(--text-muted)]">
-          Day {derived.daysElapsed} of {derived.totalDaysInMonth} ·
-          {derived.daysRemaining === 0
-            ? ' resets tomorrow'
-            : ` resets in ${derived.daysRemaining} day${derived.daysRemaining === 1 ? '' : 's'}`}
-        </p>
-      </div>
+  const bands: UsageCardBand[] = [
+    {
+      icon: <Activity className="h-3.5 w-3.5" />,
+      label: 'This month',
+      value: (
+        <>
+          {fmtCount(apiUsage.total_requests)}{' '}
+          <span className="text-xs font-normal text-[var(--text-muted)]">requests</span>
+        </>
+      ),
+      sub: `${formatCurrency(derived.dailyAvgCost)}/day avg`,
+    },
+    {
+      icon: <Clock className="h-3.5 w-3.5" />,
+      label: 'Last 24h',
+      value: (
+        <>
+          {logStats?.last24h != null ? fmtCount(logStats.last24h) : '—'}{' '}
+          <span className="text-xs font-normal text-[var(--text-muted)]">requests</span>
+        </>
+      ),
+      sub: `${formatCurrency(derived.last24hBurn)}/day burn`,
+    },
+    {
+      icon: <TrendingUp className="h-3.5 w-3.5" />,
+      label: 'Forecast EOM',
+      value: formatCurrency(derived.forecastFromMtd),
+      sub: `recent rate: ${formatCurrency(derived.forecastFromRecent)}`,
+      intent: derived.forecastFromMtd > apiUsage.monthly_credit ? 'danger' : 'normal',
+    },
+  ]
 
-      {/* This month / Last 24h / Forecast — three at-a-glance bands */}
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <div className="rounded-lg bg-white/[0.03] p-3">
-          <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-            <Activity className="h-3.5 w-3.5" /> This month
-          </div>
-          <div className="mt-1 font-semibold tabular-nums text-[var(--text-primary)]">
-            {fmtCount(apiUsage.total_requests)}{' '}
-            <span className="text-xs font-normal text-[var(--text-muted)]">requests</span>
-          </div>
-          <div className="text-xs text-[var(--text-muted)] tabular-nums">
-            {formatCurrency(derived.dailyAvgCost)}/day avg
-          </div>
-        </div>
+  const errorIntent: UsageCardIntent =
+    errorPct != null && errorPct >= 5
+      ? 'danger'
+      : errorPct != null && errorPct >= 1
+        ? 'warn'
+        : 'normal'
 
-        <div className="rounded-lg bg-white/[0.03] p-3">
-          <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-            <Clock className="h-3.5 w-3.5" /> Last 24h
-          </div>
-          <div className="mt-1 font-semibold tabular-nums text-[var(--text-primary)]">
-            {logStats?.last24h != null ? fmtCount(logStats.last24h) : '—'}{' '}
-            <span className="text-xs font-normal text-[var(--text-muted)]">requests</span>
-          </div>
-          <div className="text-xs text-[var(--text-muted)] tabular-nums">
-            {formatCurrency(derived.last24hBurn)}/day burn
-          </div>
-        </div>
-
-        <div
-          className={
-            'rounded-lg p-3 ' +
-            (derived.forecastFromMtd > apiUsage.monthly_credit
-              ? 'bg-red-500/10 ring-1 ring-red-500/30'
-              : 'bg-white/[0.03]')
-          }
-        >
-          <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-            <TrendingUp className="h-3.5 w-3.5" /> Forecast EOM
-          </div>
-          <div className="mt-1 font-semibold tabular-nums text-[var(--text-primary)]">
-            {formatCurrency(derived.forecastFromMtd)}
-          </div>
-          <div className="text-xs text-[var(--text-muted)] tabular-nums">
-            recent rate: {formatCurrency(derived.forecastFromRecent)}
-          </div>
-        </div>
-      </div>
-
-      {/* Volume detail */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm md:grid-cols-4">
-        <div>
-          <div className="text-xs text-[var(--text-muted)]">Useful</div>
-          <div className="tabular-nums text-[var(--text-primary)]">{fmtCount(usefulRequests)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-[var(--text-muted)]">Skipped (asleep)</div>
-          <div className="tabular-nums text-[var(--text-primary)]">{fmtCount(apiUsage.skipped_polls)}</div>
-        </div>
-        <div>
-          <div className="text-xs text-[var(--text-muted)]">Avg latency</div>
-          <div className="tabular-nums text-[var(--text-primary)]">
-            {logStats?.avgDurationMs != null ? `${Math.round(logStats.avgDurationMs)} ms` : '—'}
-          </div>
-        </div>
-        <div>
-          <div className="text-xs text-[var(--text-muted)]">Error rate</div>
-          <div
-            className={
-              'tabular-nums ' +
-              (errorPct != null && errorPct >= 5
-                ? 'text-red-400'
-                : errorPct != null && errorPct >= 1
-                  ? 'text-amber-300'
-                  : 'text-[var(--text-primary)]')
-            }
-          >
-            {errorPct != null ? fmtPercent(errorPct, 1) : '—'}
+  const details: UsageCardDetail[] = [
+    { label: 'Useful', value: fmtCount(usefulRequests) },
+    { label: 'Skipped (asleep)', value: fmtCount(apiUsage.skipped_polls) },
+    {
+      label: 'Avg latency',
+      value:
+        logStats?.avgDurationMs != null ? `${Math.round(logStats.avgDurationMs)} ms` : '—',
+    },
+    {
+      label: 'Error rate',
+      value:
+        errorPct != null ? (
+          <>
+            {fmtPercent(errorPct, 1)}
             {logStats?.errorCount != null && (
               <span className="ml-1 text-xs text-[var(--text-muted)]">
                 ({fmtCount(logStats.errorCount)})
               </span>
             )}
-          </div>
-        </div>
-      </div>
+          </>
+        ) : (
+          '—'
+        ),
+      intent: errorIntent,
+    },
+  ]
 
-      {/* Top services + method split */}
-      {(topServices.length > 0 || methodEntries.length > 0) && (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          {topServices.length > 0 && (
-            <div className="rounded-lg bg-white/[0.03] p-3">
-              <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-                <Zap className="h-3.5 w-3.5" /> Top services
-              </div>
-              <ul className="mt-2 space-y-1 text-sm">
-                {topServices.map(([name, count]) => (
-                  <li key={name} className="flex items-center justify-between gap-2">
-                    <span className="truncate font-mono text-xs text-[var(--text-secondary)]">{name}</span>
-                    <span className="tabular-nums text-[var(--text-primary)]">{fmtCount(count)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {methodEntries.length > 0 && (
-            <div className="rounded-lg bg-white/[0.03] p-3">
-              <div className="flex items-center gap-1.5 text-xs uppercase tracking-wider text-[var(--text-muted)]">
-                <Activity className="h-3.5 w-3.5" /> By method
-              </div>
-              <ul className="mt-2 space-y-1 text-sm">
-                {methodEntries.map(([method, count]) => (
-                  <li key={method} className="flex items-center justify-between gap-2">
-                    <span className="font-mono text-xs text-[var(--text-secondary)]">{method}</span>
-                    <span className="tabular-nums text-[var(--text-primary)]">{fmtCount(count)}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      )}
+  const topLists: UsageCardTopList[] = []
+  if (topServices.length > 0) {
+    topLists.push({
+      key: 'services',
+      icon: <Zap className="h-3.5 w-3.5" />,
+      title: 'Top services',
+      items: topServices.map<UsageCardTopListItem>(([name, count]) => ({
+        key: name,
+        label: name,
+        value: fmtCount(count),
+      })),
+    })
+  }
+  if (methodEntries.length > 0) {
+    topLists.push({
+      key: 'methods',
+      icon: <Activity className="h-3.5 w-3.5" />,
+      title: 'By method',
+      items: methodEntries.map<UsageCardTopListItem>(([method, count]) => ({
+        key: method,
+        label: method,
+        value: fmtCount(count),
+      })),
+    })
+  }
 
-      {/* Over-budget call-out */}
-      {overBudget && (
-        <div
-          className="flex items-start gap-2 rounded-lg bg-red-500/10 p-3 text-sm text-red-200 ring-1 ring-red-500/30"
-          role="status"
-          aria-live="polite"
-        >
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
-          <div>
-            <div className="font-semibold">Over monthly credit</div>
-            <div className="text-xs text-red-300/80">
-              Spend has exceeded the {formatCurrency(apiUsage.monthly_credit)} monthly credit by{' '}
-              {formatCurrency(apiUsage.estimated_cost - apiUsage.monthly_credit)}. Review polling cadence
-              or vehicle subscriptions.
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer links */}
-      <div className="flex flex-wrap gap-2 pt-2 border-t border-white/[0.06]">
-        <Link
-          to="/api-logs"
-          className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/15 px-3 py-1.5 text-xs font-medium text-cyan-200 ring-1 ring-cyan-400/30 hover:bg-cyan-500/20 min-h-[36px]"
-        >
-          Open API Logs
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
-        <Link
-          to="/tesla-account"
-          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-white/[0.04] min-h-[36px]"
-        >
-          Tesla account
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
-      </div>
-    </div>
+  return (
+    <UsageCard
+      budget={{
+        headline: `${formatCurrency(apiUsage.estimated_cost)} of ${formatCurrency(apiUsage.monthly_credit)}`,
+        rightLabel: `${fmtPercent(derived.pctOfBudget, 0)} of monthly credit`,
+        caption: `Day ${derived.daysElapsed} of ${derived.totalDaysInMonth} ·${
+          derived.daysRemaining === 0
+            ? ' resets tomorrow'
+            : ` resets in ${derived.daysRemaining} day${derived.daysRemaining === 1 ? '' : 's'}`
+        }`,
+        pct: derived.pctOfBudget,
+        ariaLabel: 'Tesla API budget used',
+        intent: budgetIntent,
+      }}
+      bands={bands}
+      details={details}
+      topLists={topLists}
+      banner={
+        overBudget
+          ? {
+              title: 'Over monthly credit',
+              description: `Spend has exceeded the ${formatCurrency(apiUsage.monthly_credit)} monthly credit by ${formatCurrency(apiUsage.estimated_cost - apiUsage.monthly_credit)}. Review polling cadence or vehicle subscriptions.`,
+              intent: 'danger',
+            }
+          : undefined
+      }
+      footer={[
+        { key: 'logs', to: '/api-logs', label: 'Open API Logs', primary: true },
+        { key: 'tesla', to: '/tesla-account', label: 'Tesla account' },
+      ]}
+    />
   )
 }

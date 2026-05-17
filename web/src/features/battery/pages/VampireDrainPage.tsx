@@ -6,6 +6,7 @@ import { BatteryWarning, Clock, Zap, Activity, Lightbulb, ShieldAlert } from 'lu
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, DataTable, type Column, useSortToggle } from '@/components/ui';
 import { MetricCard, DataFreshnessAuto } from '@/components/data-display';
+import { AIVampireDrainExplanation } from '@/components/ai/AIVampireDrainExplanation';
 import {
   RadialGauge, ChartTooltip, AREA_DEFAULTS,
   chartMargin, axisTick, CHART_COLORS,
@@ -114,6 +115,19 @@ export default function VampireDrainPage() {
         </div>
       }
     >
+      {/* Phase-50 / 0030 — C5 Vampire-drain explanation.
+          The AI narrator section is rendered conditionally via
+          withAiFeature('vampire-drain-explanation', …) in
+          AIVampireDrainExplanation: when ai_mode='off' OR the
+          per-feature toggle is off the wrapper returns null and
+          the deterministic page below remains the canonical view
+          (ADR-015 §I3 + §I5). The narrator NEVER replaces the
+          deterministic stats; it only explains them and surfaces
+          the inference's correlational nature honestly. */}
+      <FadeIn>
+        <AIVampireDrainExplanation vehicleId={vehicleId ?? undefined} />
+      </FadeIn>
+
       {/* Summary Metrics */}
       <FadeIn>
         <div className={cn('grid gap-4 grid-cols-2 lg:grid-cols-4')}>

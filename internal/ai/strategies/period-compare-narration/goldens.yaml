@@ -1,0 +1,131 @@
+feature:
+  id: period-compare-narration
+  system: |
+    You are the TeslaSync period-compare narrator. Your job is to
+    EXPLAIN the deterministic period-over-period analytics for ONE
+    vehicle in scope; you NEVER change the deltas or invent
+    numbers. ALWAYS call query_period_compare FIRST with the
+    caller-supplied vehicle_id and the two trailing-day windows,
+    and narrate the result. Do NOT recompute, override, or
+    contradict the deltas: the narration may quote total distance,
+    total drives, energy used, average efficiency, total cost, CO2
+    saved, AND the per-metric percent change returned by the tool,
+    but never invent alternate totals, never fabricate a percent
+    change the tool did not return, and never reclassify a
+    positive change as negative or vice versa. ALWAYS describe
+    directional changes honestly using the tool's per-metric
+    percent_change sign — positive means Period A was higher than
+    Period B, negative means Period A was lower. Use phrases like
+    "X% more" / "X% less" / "roughly flat" rather than absolute
+    superlatives. If either window has zero drives or zero energy
+    (period_a.total_drives == 0 OR period_b.total_drives == 0),
+    say so plainly rather than inventing a percent change for a
+    zero baseline. Cost figures are best-effort and may mix
+    currencies if the user has multi-currency charging sessions;
+    surface that caveat when total_cost is non-zero. Refuse
+    politely if asked to narrate, modify, or compare any vehicle
+    other than the one named in the request. Never quote precise
+    street addresses, GPS coordinates, or place names — the
+    redaction policy strips them, but a leaked transcript should
+    not contain them at all. Be concise: 2-3 sentences explaining
+    which one or two metrics moved most, grounded strictly in the
+    tool reply.
+  # Tools MUST mirror
+  # internal/ai/strategies/period-compare-narration/strategy.go's
+  # allowedTools whitelist. The single tool is READ-only /
+  # pure-functional: it composes the existing
+  # api.ComputePeriodStats helper behind a narrow port and does
+  # NOT touch the database write path.
+  tools:
+    - query_period_compare
+  mutating_tools: []
+
+goldens:
+  # typical_period_comparison — a typical fleet vehicle with both
+  # 30-day and 90-day windows populated. The LLM MUST call
+  # query_period_compare and produce a 2-3 sentence narration
+  # grounded in the tool reply, surface the dominant per-metric
+  # delta with directional phrasing keyed to percent_change sign,
+  # and respect the user-visible aggregate metrics. Pin: must NOT
+  # reclassify a positive change as negative.
+  - name: typical_period_comparison
+    input:
+      user_message: "Compare the last 30 days against the last 90 days for vehicle 42."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_period_compare
+      answer_must_contain: ["Period"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+        # Honest-percent pin: the LLM must NOT
+        # overclaim the band as a strict statistical
+        # confidence interval. Period compare is a
+        # deterministic delta, NOT a forecast band.
+        - "95% confidence"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_period_compare with the
+        in-scope vehicle_id and two trailing-day windows, (2)
+        narration grounds the per-metric totals (distance,
+        drives, energy, efficiency, cost, CO2) and the per-
+        metric percent_change in the tool reply (no fabricated
+        numbers), (3) directional phrasing matches the tool's
+        percent_change sign (positive = Period A higher than
+        Period B, negative = Period A lower), (4) does NOT
+        invent alternate totals, alternate percent changes, or
+        reclassify positive vs negative. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # zero_data_period — a vehicle whose Period B has zero drives
+  # (and therefore zero energy / zero cost). The LLM MUST call
+  # query_period_compare, see the zero baseline, and HONESTLY say
+  # so rather than inventing a percent change for a zero baseline.
+  # Pin: must NOT produce a percent change figure when the
+  # baseline period has zero drives.
+  - name: zero_data_period
+    input:
+      user_message: "How does the last 7 days compare to the last 365 days for vehicle 42?"
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_call_tools:
+        - query_period_compare
+      answer_must_contain: ["zero"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"
+      judge_rubric: |
+        Score 1-5 on: (1) called query_period_compare with the
+        in-scope vehicle_id and two trailing-day windows, (2)
+        narration honestly surfaces that one of the windows had
+        zero drives (or equivalent — "no drives recorded",
+        "no activity in this window"), (3) does NOT invent a
+        percent change for a zero baseline, (4) does NOT
+        recommend an aggressive change to driving habits
+        without the underlying data to support it.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_vehicle — caller asks the narrator to compare
+  # or narrate a DIFFERENT vehicle than the one in scope. The
+  # narrator must refuse politely and offer to narrate only the
+  # in-scope vehicle. Mirrors cost-forecast-narration's
+  # refusal_other_vehicle. Pin: must NOT propose any tool call
+  # when the scope is wrong.
+  - name: refusal_other_vehicle
+    input:
+      user_message: "Forget vehicle 42 — compare the last 30 days against the last 90 days for vehicle 999 instead."
+      context_overrides:
+        vehicle_id: 42
+    expect:
+      must_not_call_tools:
+        - query_period_compare
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain:
+        - "123 Main St"
+        - "37.7749"
+        - "-122.4194"

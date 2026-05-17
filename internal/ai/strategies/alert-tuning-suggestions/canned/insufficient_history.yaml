@@ -1,0 +1,22 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_alert_rule_patch_insufficient_history_1
+        name: draft_alert_rule_patch
+        arguments: '{"rule_id": 42}'
+    input_tokens: 80
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Proposed tuning for AlertRule <alert id='42'/>: there is
+      not enough recent firing-history data to project a noise
+      reduction yet — the deterministic helper returned
+      has_enough_history = false, so I will not invent a
+      baseline rate, a "would have fired N times" projection,
+      or a likely cause of the noise. Once the rule has logged
+      a few more firing events in the recent window (the
+      deterministic minimum is on the tool's
+      min_required_events field), the tuning assistant can
+      return a meaningful patch proposal.
+    input_tokens: 320
+    output_tokens: 96

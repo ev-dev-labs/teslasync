@@ -41,6 +41,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
+import { AINLDriveSearch } from '@/components/ai/AINLDriveSearch';
 import { formatDateTime, formatRelativeDays, formatTime, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
@@ -662,6 +663,14 @@ export default function DrivesListPage() {
         >
           {stickySummary}
         </PageHeaderSticky>
+
+        {/* AI: opt-in natural-language drive search (Phase-50 / 0021).
+            Hidden when ai_mode='off' or the nl-drive-search-replay toggle
+            is off — the typed SearchInput + FilterBar below remain the
+            canonical baseline. */}
+        <FadeIn>
+          <AINLDriveSearch />
+        </FadeIn>
 
         {/* Search + active filter chips */}
         <FadeIn>

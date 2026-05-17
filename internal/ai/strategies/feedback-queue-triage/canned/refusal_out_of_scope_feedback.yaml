@@ -1,0 +1,10 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot triage a different feedback row — my role is to triage only
+      the row in scope for this session (feedback_id=42). If you'd like, I
+      can triage the in-scope row instead — just confirm and I will load
+      the deterministic envelope via draft_feedback_triage and propose a
+      typed status/category/priority.
+    input_tokens: 56
+    output_tokens: 64

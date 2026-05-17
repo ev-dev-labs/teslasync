@@ -8,7 +8,8 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Bot, Send, Square, History as HistoryIcon } from 'lucide-react';
+import { Send, Square, History as HistoryIcon } from 'lucide-react';
+import { HelixMark } from '@/components/branding/HelixMark';
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Button, Textarea } from '@/components/ui';
@@ -26,6 +27,8 @@ import {
   useDeleteChatSession,
 } from '@/api/hooks/useChat';
 import type { ChatMessage } from '@/api/types';
+import { useAiEnabled } from '@/hooks/useAiEnabled';
+import { useAiStream, type AiStreamEvent } from '@/hooks/useAiStream';
 
 import {
   ChatMessageItem,
@@ -33,39 +36,103 @@ import {
 } from '../components/chatbot/ChatMessageItem';
 import { SessionList } from '../components/chatbot/SessionList';
 import { SuggestedPrompts } from '../components/chatbot/SuggestedPrompts';
+// Phase-50 / 0011 — U1 Chatbot LLM upgrade. Visible AI surface
+// rendered conditionally via withAiFeature('chatbot-llm', …); absent
+// in off mode (ADR-015 §I5 + §I6).
+import { AIChatbotIndicator } from '@/components/ai/AIChatbotIndicator';
+// Phase-50 / 0055 — V1 voice mode. Optional browser STT/TTS panel
+// mounted above the conversation; absent in off mode via withAiFeature.
+import { AIVoiceMode } from '@/components/ai/AIVoiceMode';
+
+// History sidebar visibility persists across reloads via localStorage so
+// that a desktop user who opens the History panel finds it still open
+// after a refresh. Default is hidden (matches the cleaner "focused on
+// the conversation" first-launch experience the design wants).
+const HISTORY_VISIBLE_LS_KEY = 'teslasync-chatbot-history-visible';
+
+function readStoredHistoryVisible(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(HISTORY_VISIBLE_LS_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function persistHistoryVisible(value: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(HISTORY_VISIBLE_LS_KEY, value ? 'true' : 'false');
+  } catch {
+    // localStorage unavailable (private browsing, quota, SSR) — toggle
+    // still works for the current tab, just doesn't survive reload.
+  }
+}
 
 /**
- * Chatbot page (Phase 40 / Prompt 56).
+ * Chatbot page (Phase 40 / Prompt 56; Phase-50 / W1 wired-AI branch).
  *
- * Polished AI assistant surface. The backend `sendChatMessage` endpoint is
- * still request/response — this page does NOT add server-streaming. It
- * uses a deliberate client-side typewriter to reveal the assistant reply
- * character-by-character so the UX matches modern chat surfaces; when
- * real SSE/WebSocket streaming lands the swap is just changing where
- * `streamedText` updates come from. See JSDoc on `useTypewriterStream`.
+ * Two code paths driven by `useAiEnabled('chatbot-llm')`:
+ *
+ *   • AI off (baseline) — `useSendChatMessage` POSTs the legacy
+ *     heuristic `/chatbot` route and runs a client-side typewriter on
+ *     the full reply. This is the canonical baseline for users with
+ *     `ai_mode='off'` (ADR-015 §I3).
+ *   • AI on — `useAiStream` opens an SSE stream against
+ *     `POST /api/v1/ai/chatbot` and accumulates `delta` events directly
+ *     into the streaming assistant message. The typewriter is skipped
+ *     (real streaming replaces the simulated reveal).
+ *
+ * Both hooks are called unconditionally at the top of the component
+ * (React Hooks rule). The branch lives inside the submit handlers.
  *
  * Keyboard contract:
  *   Enter         submit
  *   Shift+Enter   newline
- *   Escape        stop streaming reveal (instant complete)
+ *   Escape        stop streaming reveal (instant complete) / cancel SSE
  *   ↑ (empty input) recall last user message into the input
  */
 export default function ChatbotPage() {
   const { t } = useTranslation();
-  usePageTitle(t('chatbot.title', 'AI Assistant'));
+  usePageTitle(t('chatbot.title', 'Helix'));
   const motion = useMotionPreference();
 
   const [sessionId, setSessionId] = useState('');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<UIChatMessage[]>([]);
   const isMobile = useIsMobile();
-  // History panel: hidden by default on mobile (overlay drawer), open by default on desktop.
-  const [showSessions, setShowSessions] = useState(!isMobile);
-  // When the viewport breakpoint flips (rotation, resize) snap the panel to
-  // the appropriate default so we don't strand a mobile user with a 288px
-  // sidebar consuming the whole screen.
+  // History panel visibility:
+  //   - Default: hidden (cleaner first-launch focus on the conversation).
+  //   - Desktop: persists across reloads via localStorage so a user who
+  //     explicitly opens the panel finds it open again after a refresh.
+  //   - Mobile: always starts hidden (the sidebar would consume the
+  //     small viewport); flipping back to desktop restores the stored
+  //     preference.
+  const [showSessions, setShowSessionsState] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const isMobileView = window.matchMedia('(max-width: 640px)').matches;
+    if (isMobileView) return false;
+    return readStoredHistoryVisible();
+  });
+  const setShowSessions = useCallback(
+    (next: boolean | ((prev: boolean) => boolean)) => {
+      setShowSessionsState((prev) => {
+        const value = typeof next === 'function' ? next(prev) : next;
+        persistHistoryVisible(value);
+        return value;
+      });
+    },
+    [],
+  );
+  // When the viewport breakpoint flips: on mobile force-close so the
+  // sidebar doesn't consume the screen (without touching the persisted
+  // desktop preference); on desktop restore the user's stored choice.
   useEffect(() => {
-    setShowSessions(!isMobile);
+    if (isMobile) {
+      setShowSessionsState(false);
+    } else {
+      setShowSessionsState(readStoredHistoryVisible());
+    }
   }, [isMobile]);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -78,10 +145,42 @@ export default function ChatbotPage() {
   // Hydrate local messages whenever the loaded history changes (switching
   // sessions or first load). Keeps the typewriter-managed local state as
   // the source of truth for the in-flight session.
+  //
+  // Race guards (matter especially when the History sidebar is open and
+  // the user starts a brand-new chat then submits):
+  //
+  //   1. While the SSE is in flight for the *current* session, the local
+  //      optimistic messages (user + streaming assistant placeholder) are
+  //      authoritative. A history GET that races with the stream can
+  //      resolve with `[]` (server hasn't persisted yet) OR with `[user]`
+  //      only (user message persisted, assistant still streaming) — in
+  //      both cases, blindly replacing local state would erase the
+  //      placeholder the SSE deltas are targeting by id and the
+  //      conversation would silently fail to display in the chat panel
+  //      while still appearing as "N msgs" in the sidebar after `done`.
+  //
+  //   2. Even outside an active stream, an empty server response paired
+  //      with non-empty local optimistic messages for the *same* sid is
+  //      almost certainly a stale read of a brand-new session — keep
+  //      local. (We compare `prev[0].session_id` to the current
+  //      sessionId so switching to a *different* session that happens to
+  //      be empty still clears the panel correctly.)
   useEffect(() => {
-    if (historyQuery.data) {
-      setMessages(historyQuery.data.map(toUIMessage));
-    }
+    if (!historyQuery.data) return;
+    const data = historyQuery.data;
+    setMessages((prev) => {
+      const firstSessionId = prev[0]?.session_id;
+      const optimisticForCurrent =
+        typeof firstSessionId === 'string' &&
+        firstSessionId === sessionIdRef.current;
+      if (optimisticForCurrent && streamingMsgIdRef.current !== null) {
+        return prev;
+      }
+      if (data.length === 0 && optimisticForCurrent) {
+        return prev;
+      }
+      return data.map(toUIMessage);
+    });
   }, [historyQuery.data]);
 
   const renameMut = useRenameChatSession();
@@ -125,6 +224,132 @@ export default function ChatbotPage() {
     },
   });
 
+  /* ─── AI-on path (Phase-50 / W1) ───────────────────────────────────── */
+
+  // Gate: when true, submitMessage and friends call the SSE LLM
+  // endpoint at POST /api/v1/ai/chatbot instead of the heuristic
+  // baseline POST /chatbot. Both hooks below are called
+  // unconditionally — React Hooks rule. Branching lives in handlers.
+  const aiEnabled = useAiEnabled('chatbot-llm');
+
+  // The non-null body that triggers the SSE start() via the
+  // pendingAiRequest → useEffect → aiStream.start() pipeline. Reset
+  // to null on done/error so a subsequent click fires a fresh stream.
+  const [pendingAiRequest, setPendingAiRequest] = useState<
+    { message: string; session_id: string } | null
+  >(null);
+
+  // Which assistant message receives streamed delta text. Cleared
+  // on done/error/stop so the next click can target a fresh row.
+  const [streamingMsgId, setStreamingMsgId] = useState<number | null>(null);
+  const streamingMsgIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    streamingMsgIdRef.current = streamingMsgId;
+  }, [streamingMsgId]);
+
+  const sessionIdRef = useRef<string>(sessionId);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
+
+  const handleAiEvent = useCallback(
+    (ev: AiStreamEvent) => {
+      const id = streamingMsgIdRef.current;
+      if (!id) return;
+      if (ev.type === 'delta') {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === id
+              ? { ...m, streamedText: (m.streamedText ?? '') + ev.text }
+              : m,
+          ),
+        );
+      } else if (ev.type === 'done') {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === id
+              ? {
+                  ...m,
+                  isStreaming: false,
+                  content: m.streamedText ?? m.content,
+                  streamedText: undefined,
+                }
+              : m,
+          ),
+        );
+        setStreamingMsgId(null);
+        setPendingAiRequest(null);
+        sessionsQuery.refetch();
+      } else if (ev.type === 'error') {
+        // AI error: keep what was streamed so far (if any) and append
+        // a short failure marker. The user can resubmit; we don't
+        // auto-fall-back to the legacy heuristic because that would
+        // hide the AI failure from the user.
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === id
+              ? {
+                  ...m,
+                  isStreaming: false,
+                  content:
+                    (m.streamedText && m.streamedText.length > 0
+                      ? m.streamedText + '\n\n'
+                      : '') + `(AI error: ${ev.message})`,
+                  streamedText: undefined,
+                }
+              : m,
+          ),
+        );
+        setStreamingMsgId(null);
+        setPendingAiRequest(null);
+      }
+    },
+    [sessionsQuery],
+  );
+
+  const aiStream = useAiStream({
+    url: '/ai/chatbot',
+    body: pendingAiRequest,
+    onEvent: handleAiEvent,
+  });
+
+  // Trigger the stream whenever a fresh pendingAiRequest is set. The
+  // hook's start() is a no-op while runningRef is true and while
+  // pendingAiRequest is null/undefined; we reset pendingAiRequest to
+  // null inside handleAiEvent on done/error so the next click fires
+  // cleanly.
+  useEffect(() => {
+    if (pendingAiRequest) aiStream.start();
+    // intentionally omit aiStream from deps — start is idempotent and
+    // including it would re-fire on every state change inside the hook
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingAiRequest]);
+
+  // When the AI feature is toggled off mid-stream, cancel the SSE and
+  // clear in-flight state. Keeps any user message already persisted
+  // visible; the streaming assistant row gets finalized with whatever
+  // arrived.
+  useEffect(() => {
+    if (!aiEnabled && streamingMsgId) {
+      aiStream.cancel();
+      const id = streamingMsgId;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === id
+            ? {
+                ...m,
+                isStreaming: false,
+                content: m.streamedText ?? m.content,
+                streamedText: undefined,
+              }
+            : m,
+        ),
+      );
+      setStreamingMsgId(null);
+      setPendingAiRequest(null);
+    }
+  }, [aiEnabled, streamingMsgId, aiStream]);
+
   // Auto-scroll on every new message AND while a reveal is in progress
   // (so the user sees the text grow rather than having it appear below
   // the viewport). useDeferredValue keeps the dependency stable while
@@ -138,25 +363,68 @@ export default function ChatbotPage() {
     });
   }, [deferredCount, motion.reduce]);
 
-  // Light-weight tick-driven scroll while the typewriter is active. We
-  // only fire while `stream.isActive` is true so it costs nothing the
-  // rest of the time. `behavior: 'auto'` keeps it cheap (no smooth
+  // Light-weight tick-driven scroll while a stream is active (either
+  // the typewriter on the legacy path or the SSE stream on the AI
+  // path). We only fire while either is active so it costs nothing
+  // the rest of the time. `behavior: 'auto'` keeps it cheap (no smooth
   // animation queue) — the visual effect is "the text grows downward
   // and the viewport tracks it".
   useEffect(() => {
-    if (!stream.isActive) return;
+    if (!stream.isActive && aiStream.state !== 'streaming') return;
     const id = window.setInterval(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
     }, 200);
     return () => window.clearInterval(id);
-  }, [stream.isActive]);
+  }, [stream.isActive, aiStream.state]);
 
   /* ─── handlers ─────────────────────────────────────────────────────── */
+
+  // newAiSessionId mints a client-side session id when none exists,
+  // following the server's `s_<unix-ns>` style closely enough that
+  // server-side logs/joins remain readable. Server accepts any
+  // non-empty string per ai_chatbot_handler.go.
+  const newAiSessionId = () =>
+    `s_${Date.now()}${Math.floor(Math.random() * 1e6)
+      .toString()
+      .padStart(6, '0')}`;
 
   const submitMessage = useCallback(
     (text: string) => {
       const msg = text.trim();
-      if (!msg || sendMut.isPending) return;
+      if (!msg) return;
+      if (aiEnabled) {
+        // AI-on path: SSE stream against /api/v1/ai/chatbot.
+        if (aiStream.state === 'streaming' || pendingAiRequest) return;
+        const sid = sessionId || newAiSessionId();
+        if (!sessionId) setSessionId(sid);
+        const userId = nextLocalId();
+        const assistantId = nextLocalId();
+        const created = new Date().toISOString();
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: userId,
+            session_id: sid,
+            role: 'user',
+            content: msg,
+            created_at: created,
+          },
+          {
+            id: assistantId,
+            session_id: sid,
+            role: 'assistant',
+            content: '',
+            created_at: created,
+            isStreaming: true,
+            streamedText: '',
+          },
+        ]);
+        setStreamingMsgId(assistantId);
+        setPendingAiRequest({ message: msg, session_id: sid });
+        return;
+      }
+      // AI-off path: legacy heuristic POST /chatbot.
+      if (sendMut.isPending) return;
       const userId = nextLocalId();
       setMessages((prev) => [
         ...prev,
@@ -170,7 +438,7 @@ export default function ChatbotPage() {
       ]);
       sendMut.mutate({ message: msg, sessionId: sessionId || undefined });
     },
-    [sendMut, sessionId],
+    [aiEnabled, aiStream.state, pendingAiRequest, sendMut, sessionId],
   );
 
   const handleSend = useCallback(() => {
@@ -198,48 +466,110 @@ export default function ChatbotPage() {
     [handleSend, input, messages],
   );
 
-  // Esc cancels the streaming reveal — listen on the window so it works
-  // regardless of focus position.
+  // Esc cancels the streaming reveal AND aborts an in-flight SSE.
   useEffect(() => {
     const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape' && stream.isActive) {
-        stream.stop();
+      if (e.key === 'Escape') {
+        if (stream.isActive) stream.stop();
+        if (aiStream.state === 'streaming') {
+          aiStream.cancel();
+          // Finalize the streaming assistant row with whatever arrived.
+          const id = streamingMsgIdRef.current;
+          if (id) {
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === id
+                  ? {
+                      ...m,
+                      isStreaming: false,
+                      content: m.streamedText ?? m.content,
+                      streamedText: undefined,
+                    }
+                  : m,
+              ),
+            );
+            setStreamingMsgId(null);
+            setPendingAiRequest(null);
+          }
+        }
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [stream]);
+  }, [stream, aiStream]);
 
   const startNewSession = useCallback(() => {
     stream.stop();
+    aiStream.cancel();
+    setStreamingMsgId(null);
+    setPendingAiRequest(null);
     setSessionId('');
     setMessages([]);
     setInput('');
     inputRef.current?.focus();
-  }, [stream]);
+  }, [stream, aiStream]);
 
   const loadSession = useCallback(
     (sid: string) => {
       stream.stop();
+      aiStream.cancel();
+      setStreamingMsgId(null);
+      setPendingAiRequest(null);
       setSessionId(sid);
     },
-    [stream],
+    [stream, aiStream],
   );
 
   const handleRegenerate = useCallback(
     (assistantMsg: UIChatMessage) => {
       // Find the user message immediately preceding this assistant one;
       // resubmit it so the backend produces a fresh reply, and drop the
-      // old assistant message so the typewriter can re-render cleanly.
+      // old assistant message so the reveal can re-render cleanly.
       const idx = messages.findIndex((m) => m.id === assistantMsg.id);
       if (idx <= 0) return;
-      const userMsg = [...messages.slice(0, idx)].reverse().find((m) => m.role === 'user');
+      const userMsg = [...messages.slice(0, idx)]
+        .reverse()
+        .find((m) => m.role === 'user');
       if (!userMsg) return;
       stream.stop();
-      setMessages((prev) => prev.slice(0, idx));
-      sendMut.mutate({ message: userMsg.content, sessionId: sessionId || undefined });
+      aiStream.cancel();
+      const truncated = messages.slice(0, idx);
+      if (aiEnabled) {
+        if (aiStream.state === 'streaming' || pendingAiRequest) return;
+        const sid = sessionId || newAiSessionId();
+        if (!sessionId) setSessionId(sid);
+        const assistantId = nextLocalId();
+        setMessages([
+          ...truncated,
+          {
+            id: assistantId,
+            session_id: sid,
+            role: 'assistant',
+            content: '',
+            created_at: new Date().toISOString(),
+            isStreaming: true,
+            streamedText: '',
+          },
+        ]);
+        setStreamingMsgId(assistantId);
+        setPendingAiRequest({ message: userMsg.content, session_id: sid });
+        return;
+      }
+      setMessages(truncated);
+      sendMut.mutate({
+        message: userMsg.content,
+        sessionId: sessionId || undefined,
+      });
     },
-    [messages, sendMut, sessionId, stream],
+    [
+      aiEnabled,
+      aiStream,
+      messages,
+      pendingAiRequest,
+      sendMut,
+      sessionId,
+      stream,
+    ],
   );
 
   const handleEditAndResend = useCallback(
@@ -249,20 +579,49 @@ export default function ChatbotPage() {
       const idx = messages.findIndex((m) => m.id === userMsg.id);
       if (idx < 0) return;
       stream.stop();
+      aiStream.cancel();
       const truncated = messages.slice(0, idx);
       const editedId = nextLocalId();
-      setMessages([
-        ...truncated,
-        {
-          ...userMsg,
-          id: editedId,
-          content: newText,
-          created_at: new Date().toISOString(),
-        },
-      ]);
+      const editedMsg: UIChatMessage = {
+        ...userMsg,
+        id: editedId,
+        content: newText,
+        created_at: new Date().toISOString(),
+      };
+      if (aiEnabled) {
+        if (aiStream.state === 'streaming' || pendingAiRequest) return;
+        const sid = sessionId || newAiSessionId();
+        if (!sessionId) setSessionId(sid);
+        const assistantId = nextLocalId();
+        setMessages([
+          ...truncated,
+          editedMsg,
+          {
+            id: assistantId,
+            session_id: sid,
+            role: 'assistant',
+            content: '',
+            created_at: new Date().toISOString(),
+            isStreaming: true,
+            streamedText: '',
+          },
+        ]);
+        setStreamingMsgId(assistantId);
+        setPendingAiRequest({ message: newText, session_id: sid });
+        return;
+      }
+      setMessages([...truncated, editedMsg]);
       sendMut.mutate({ message: newText, sessionId: sessionId || undefined });
     },
-    [messages, sendMut, sessionId, stream],
+    [
+      aiEnabled,
+      aiStream,
+      messages,
+      pendingAiRequest,
+      sendMut,
+      sessionId,
+      stream,
+    ],
   );
 
   const handleRename = useCallback(
@@ -293,17 +652,44 @@ export default function ChatbotPage() {
     [messages],
   );
 
-  const isStreaming = stream.isActive;
-  const isWaiting = sendMut.isPending && !isStreaming;
+  const isAiStreaming = aiStream.state === 'streaming';
+  const isStreaming = stream.isActive || isAiStreaming;
+  const isWaiting =
+    (sendMut.isPending && !stream.isActive) ||
+    (isAiStreaming &&
+      messages.find((m) => m.id === streamingMsgId)?.streamedText === '');
+
+  const stopAll = useCallback(() => {
+    stream.stop();
+    aiStream.cancel();
+    const id = streamingMsgIdRef.current;
+    if (id) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === id
+            ? {
+                ...m,
+                isStreaming: false,
+                content: m.streamedText ?? m.content,
+                streamedText: undefined,
+              }
+            : m,
+        ),
+      );
+      setStreamingMsgId(null);
+      setPendingAiRequest(null);
+    }
+  }, [stream, aiStream]);
 
   /* ─── render ──────────────────────────────────────────────────────── */
 
   return (
     <PageContainer
-      title={t('chatbot.title', 'AI Assistant')}
-      subtitle={t('chatbot.subtitle', 'Ask anything about your Tesla fleet')}
+      title={t('chatbot.title', 'Helix')}
+      subtitle={t('chatbot.subtitle', 'Ask Helix anything about your Tesla fleet')}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
+          <AIChatbotIndicator />
           <Button
             onClick={() => setShowSessions((s) => !s)}
             variant="ghost"
@@ -316,11 +702,13 @@ export default function ChatbotPage() {
         </div>
       }
     >
-      <div
-        className="flex flex-1 gap-4 min-h-0 relative"
-        style={{ height: 'calc(100dvh - 12rem)' }}
-      >
-        {showSessions && (
+      <div className="flex flex-col flex-1 gap-4 min-h-0">
+        <AIVoiceMode />
+        <div
+          className="flex flex-1 gap-4 min-h-0 relative"
+          style={{ height: 'calc(100dvh - 12rem)' }}
+        >
+          {showSessions && (
           isMobile ? (
             <div
               className="fixed inset-0 z-40 flex"
@@ -381,12 +769,12 @@ export default function ChatbotPage() {
                 <div className="relative">
                   <div className="absolute inset-0 rounded-full bg-purple-500/10 blur-xl scale-150" />
                   <div className="relative rounded-full bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-6 border border-[var(--border-subtle)]">
-                    <Bot className="h-12 w-12 text-purple-300" aria-hidden="true" />
+                    <HelixMark className="h-12 w-12 text-purple-300" aria-hidden="true" />
                   </div>
                 </div>
                 <div className="text-center space-y-2">
                   <p className="text-lg font-semibold text-[var(--text-primary)]">
-                    {t('chatbot.howCanIHelp', 'How can I help you?')}
+                    {t('chatbot.howCanIHelp', 'How can Helix help you?')}
                   </p>
                   <p className="text-sm text-[var(--text-secondary)]">
                     {t(
@@ -428,12 +816,12 @@ export default function ChatbotPage() {
               <FadeIn>
                 <div className="flex gap-3 items-start">
                   <div className="rounded-lg bg-gradient-to-br from-purple-500/20 to-blue-500/20 p-1.5 border border-purple-500/20">
-                    <Bot className="h-4 w-4 text-purple-300" aria-hidden="true" />
+                    <HelixMark className="h-4 w-4 text-purple-300" aria-hidden="true" />
                   </div>
                   <GlassPanel className="!p-3 flex items-center gap-2">
                     <TypingDots reduceMotion={motion.reduce} />
                     <span className="text-sm text-[var(--text-secondary)]">
-                      {t('chatbot.thinking', 'Thinking…')}
+                      {t('chatbot.thinking', 'Helix is thinking…')}
                     </span>
                   </GlassPanel>
                 </div>
@@ -448,23 +836,25 @@ export default function ChatbotPage() {
               {t('chatbot.inputLabel', 'Message')}
             </VisuallyHidden>
             <div className="flex items-end gap-2 sm:gap-3">
-              <Textarea
-                ref={inputRef}
-                id="chatbot-input"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={t(
-                  'chatbot.placeholder',
-                  'Ask about your fleet…',
-                )}
-                rows={1}
-                className="flex-1 min-w-0 resize-none min-h-[40px] max-h-40"
-                aria-label={t('chatbot.inputLabel', 'Message')}
-              />
+              <div className="flex-1 min-w-0">
+                <Textarea
+                  ref={inputRef}
+                  id="chatbot-input"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder={t(
+                    'chatbot.placeholder',
+                    'Ask about your fleet…',
+                  )}
+                  rows={1}
+                  className="resize-none min-h-[40px] max-h-40"
+                  aria-label={t('chatbot.inputLabel', 'Message')}
+                />
+              </div>
               {isStreaming ? (
                 <Button
-                  onClick={() => stream.stop()}
+                  onClick={stopAll}
                   variant="secondary"
                   icon={<Square className="h-4 w-4" />}
                   aria-label={t('chatbot.actions.stopStreaming', 'Stop streaming')}
@@ -476,7 +866,7 @@ export default function ChatbotPage() {
               ) : (
                 <Button
                   onClick={handleSend}
-                  disabled={!input.trim() || sendMut.isPending}
+                  disabled={!input.trim() || sendMut.isPending || isAiStreaming}
                   variant="primary"
                   icon={<Send className="h-4 w-4" />}
                   aria-label={t('chatbot.actions.send', 'Send message')}
@@ -486,6 +876,7 @@ export default function ChatbotPage() {
             </div>
           </div>
         </GlassPanel>
+        </div>
       </div>
     </PageContainer>
   );

@@ -1,0 +1,7 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I can show you a few things — which would you like? For example: battery
+      status, recent drives, or upcoming charging sessions.
+    input_tokens: 14
+    output_tokens: 22

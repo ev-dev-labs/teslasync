@@ -5,6 +5,7 @@ import { Grid } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { StatCard, KVList } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
+import { AIAutoTripNameSuggestion } from '@/components/ai/AIAutoTripNameSuggestion';
 import { useTrip } from '@/api/hooks/useTrips';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -47,6 +48,8 @@ export default function TripDetailPage() {
     >
       {trip ? (
         <>
+          <AIAutoTripNameSuggestion tripId={id} />
+
           <Grid cols={{ default: 2, lg: 4 }} gap={4}>
             <StatCard
               label={t('trips.detail.distance', 'Distance')}

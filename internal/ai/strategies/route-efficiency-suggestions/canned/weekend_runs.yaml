@@ -1,0 +1,40 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_route_efficiency_suggestions_weekend_1
+        name: retrieve_route_chunks
+        arguments: '{"query": "weekend route comparison consumption", "source_types": ["drive_summary"], "k": 6}'
+    input_tokens: 44
+    output_tokens: 34
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_route_efficiency_suggestions_weekend_2
+        name: query_route_efficiency
+        arguments: '{"vehicle_id": 1, "lookback_days": 60}'
+    input_tokens: 112
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      For weekend driving on Roadie, the route-efficiency
+      aggregate over the last 60 days shows two recurring routes:
+      a longer out-and-back errand run and a shorter neighborhood
+      loop. The aggregate's kWh/100 mi number on the shorter loop
+      is roughly 15 % lower than on the longer errand run, even
+      though both routes were driven in comparable temperatures.
+
+      A useful pattern the data supports: combining stops on the
+      shorter loop tends to produce a more efficient
+      kWh/100 mi figure than chaining them onto the longer errand
+      route. The best run on the shorter loop was noticeably
+      better than the worst, so this corridor responds well to
+      gentle acceleration and steady cruising.
+
+      Two concrete, non-mutating suggestions you could try
+      yourself the next time both options are on the table:
+      consolidate weekend errands onto the shorter loop when
+      possible, and time the longer route for the warmer part of
+      the day if temperatures dip below freezing — the Route
+      Efficiency page will keep tracking each run so you can
+      verify the improvement on your own car.
+    input_tokens: 240
+    output_tokens: 198

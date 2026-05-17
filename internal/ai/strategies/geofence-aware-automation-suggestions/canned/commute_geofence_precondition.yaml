@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_geo_aware_draft_commute_1
+        name: draft_automation_graph
+        arguments: '{"vehicle_id": 7, "name": "Precondition cabin on arriving Home", "trigger": {"kind": "trigger_geofence", "place_id": 10, "event": "enter"}, "conditions": [], "actions": [{"kind": "action_command", "command_name": "set_climate", "command_params": {"temp_c": 22}}]}'
+    input_tokens: 64
+    output_tokens: 52
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_geo_aware_validate_commute_1
+        name: validate_automation_graph
+        arguments: '{"vehicle_id": 7, "name": "Precondition cabin on arriving Home", "trigger": {"kind": "trigger_geofence", "place_id": 10, "event": "enter"}, "conditions": [], "actions": [{"kind": "action_command", "command_name": "set_climate", "command_params": {"temp_c": 22}}]}'
+    input_tokens: 124
+    output_tokens: 60
+  - finish_reason: stop
+    content: |
+      I drafted "Precondition cabin on arriving Home" — when you
+      enter the Home geofence, the car warms the cabin to 22 °C
+      based on the existing Home place in your geofence catalog.
+      Review the structured draft in the side panel and click Save
+      to add it.
+    input_tokens: 184
+    output_tokens: 64

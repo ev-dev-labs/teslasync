@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_loc_draft_landmark_1
+        name: draft_location_name
+        arguments: '{"location_id": 502, "proposed_name": "Pike Place Market"}'
+    input_tokens: 48
+    output_tokens: 36
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_loc_validate_landmark_1
+        name: validate_location_name
+        arguments: '{"location_id": 502, "proposed_name": "Pike Place Market"}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I drafted the name "Pike Place Market" because the current
+      address_name already maps to that landmark and the visit
+      pattern matches a popular destination. The proposal keeps the
+      name short — review it in the side panel and click Save to
+      apply it to location 502.
+    input_tokens: 142
+    output_tokens: 56

@@ -1,0 +1,25 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_tire_pressure_trend_typical_pressure_loss_winter_1
+        name: query_tire_pressure_trend
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Tire-pressure trend for vehicle <vehicle id='42'/>: based on
+      recent readings, all four tires are trending downward at a
+      similar rate-of-change-per-day, and the deterministic
+      envelope flags a cold-weather correlation across the same
+      window — the most likely deterministic driver here is
+      seasonal contraction rather than a puncture, which would
+      typically affect a single corner. The numbers are still
+      inside the normal pressure band; at the current rate the
+      front-left would be the first to cross the soft-low
+      threshold, so a top-up before the next cold snap is the
+      pragmatic next step. This is a descriptive linear slope
+      across the recent change-feed window, not a predictive
+      model.
+    input_tokens: 240
+    output_tokens: 144

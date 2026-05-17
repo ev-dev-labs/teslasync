@@ -1,0 +1,16 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_lifetime_stats_typical_lifetime_question_1
+        name: query_lifetime_stats
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Vehicle <vehicle id='42'/> has driven 12,345 km across 487
+      drives over 312 days of ownership. Average efficiency is
+      roughly 142 Wh/km and the longest single drive on record
+      reached 412 km.
+    input_tokens: 240
+    output_tokens: 96

@@ -1,0 +1,21 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_vampire_drain_windows_insufficient_data_1
+        name: query_vampire_drain_windows
+        arguments: '{"vehicle_id": 42, "lookback_days": 30}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Vampire-drain narrative for vehicle <vehicle id='42'/>: there is
+      not enough data to characterise the recent idle-drain rate yet —
+      the deterministic helper returned has_enough_data = false, so I
+      will not invent a drain rate, a worst-event window, or a
+      per-event driver attribution. Once a few more idle-drain windows
+      have been observed (the deterministic minimum is on the tool's
+      sample_window_days field), the narrative can describe the
+      typical-vs-worst behaviour and the most strongly-correlated
+      per-event driver honestly.
+    input_tokens: 240
+    output_tokens: 96

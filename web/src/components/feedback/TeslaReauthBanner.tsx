@@ -15,11 +15,11 @@ import { drainQueuedTeslaMutations } from '@/lib/teslaAuthRecovery'
  * top-of-page row with a single-click CTA that deep-links the user to
  * `/tesla-account` to complete the OAuth flow again.
  *
- * Distinct from {@link AuthExpiredOverlay} — that's a full-screen
- * blocker for Authentik session expiry. Tesla token expiry is a
- * *partial* failure: non-Tesla data (settings, dashboards, drives
- * history) keeps loading normally, so a non-modal banner is the right
- * fit. We sit at the top with `sticky` rather than `fixed` so we don't
+ * Distinct from {@link SessionExpiredModal} — that's a hard blocker
+ * for Authentik session expiry. Tesla token expiry is a *partial*
+ * failure: non-Tesla data (settings, dashboards, drives history)
+ * keeps loading normally, so a non-modal banner is the right fit.
+ * We sit at the top with `sticky` rather than `fixed` so we don't
  * obscure the Authentik blocker if both happen at once.
  *
  * Mounting note — the banner is mounted in <Layout> alongside the other

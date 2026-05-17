@@ -6,6 +6,8 @@ import { PrintButton } from '@/components/ui';
 import { SectionErrorBoundary, AlertBanner } from '@/components/feedback';
 import { ChartTimeRangeProvider } from '@/components/charts';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
+import { AIDriveCoaching } from '@/components/ai/AIDriveCoaching';
+import { AISpeedProfileInsights } from '@/components/ai/AISpeedProfileInsights';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import {
   useDriveDetailData,
@@ -110,6 +112,26 @@ export default function DriveDetailPage() {
               <DriveStatCards drive={drive} stats={stats} />
             </SectionErrorBoundary>
           )}
+          {/*
+            Phase-50 / 0018 — Per-drive coaching narrative (AI, opt-in).
+
+            This is the AI surface for the drive detail page. It is
+            wrapped in withAiFeature('drive-coaching', …) so it
+            renders ONLY when ai_mode != 'off' AND the drive-coaching
+            toggle is on (ADR-015 §I5 + §I6). When AI is off the
+            wrapper returns null — the surrounding stat-card stack
+            and downstream sections are unaffected, which is the
+            invariant TestDriveCoachingAIOffShowsOnlyBaselineStats
+            verifies.
+
+            Placement: directly after the DriveStatCards block so
+            the coaching narrative appears alongside the same
+            metrics the LLM is reading from (stat cards above ↔
+            narrative below ↔ deep dives further down the page).
+          */}
+          <SectionErrorBoundary name="drive-detail:ai-coaching" fallbackTitle={t('driveDetail.section.aiCoachingFailed', 'Helix drive coaching failed to load')}>
+            <AIDriveCoaching driveId={id} />
+          </SectionErrorBoundary>
           {hasMeaningfulDriveStats && (
             <SectionErrorBoundary name="drive-detail:more-details" fallbackTitle={t('driveDetail.section.moreDetailsFailed', 'More details failed to load')}>
               <MoreDetailsPanel drive={drive} stats={stats} />
@@ -166,6 +188,9 @@ export default function DriveDetailPage() {
                 <SpeedHistogramChart speedHistData={speedHistData} />
               </SectionErrorBoundary>
             </div>
+            <SectionErrorBoundary name="drive-detail:ai-speed-profile-insights" fallbackTitle={t('driveDetail.section.aiSpeedProfileInsightsFailed', 'Helix speed-profile insights failed to load')}>
+              <AISpeedProfileInsights driveId={id} />
+            </SectionErrorBoundary>
             <SectionErrorBoundary name="drive-detail:power-profile" fallbackTitle={t('driveDetail.section.powerProfileFailed', 'Power profile chart failed to load')}>
               <PowerProfileChart chartData={chartData} stats={stats} />
             </SectionErrorBoundary>

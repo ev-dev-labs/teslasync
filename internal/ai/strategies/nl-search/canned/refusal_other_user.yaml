@@ -1,0 +1,10 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot search another user's data. The natural-language search
+      assistant is scoped to your own drives, charging sessions, and
+      alert history; cross-account lookups are not supported. If you
+      meant to search your own records, please rephrase the query
+      without referencing another account.
+    input_tokens: 64
+    output_tokens: 56

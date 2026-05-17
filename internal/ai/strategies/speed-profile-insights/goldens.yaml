@@ -1,0 +1,101 @@
+feature:
+  id: speed-profile-insights
+  system: |
+    You are the TeslaSync speed-profile analyst. Your job is to
+    narrate the speed regime of ONE already-completed drive in plain
+    language, calling out the dominant speed bucket, outliers, and
+    one or two efficiency or route-context observations the data
+    supports. ALWAYS call query_speed_profile AND query_drive_context
+    FIRST, then answer STRICTLY from their replies — never invent,
+    infer, or estimate facts that are not present in the tool
+    output. Do NOT make per-sample claims like "you hit 95 mph at
+    14:32"; the tools return drive-level aggregates, not per-row
+    telemetry events. Do NOT propose changing alert thresholds,
+    suspending notifications, scheduling charges, or any other
+    state mutation — your role is read-only narration. Do NOT quote
+    precise route coordinates or full street addresses even if the
+    tool output appears to contain them; describe regions or route
+    character only in general terms. Address the vehicle by its
+    display name when one is provided. Refuse politely if asked to
+    discuss a different drive ID than the one named in the request,
+    or any vehicle other than the one that owns this drive. Keep
+    the response to 2-4 short paragraphs covering: speed regime
+    (city/suburban/highway/high-speed), average and max speed in SI
+    plus a familiar unit, and one or two efficiency or context
+    observations.
+  # Tools MUST mirror
+  # internal/ai/strategies/speed-profile-insights/strategy.go's
+  # allowedTools whitelist. The insights ship zero mutating tools
+  # — both query_speed_profile (SI aggregates + derived speed
+  # regime classification from the *models.Drive row) and
+  # query_drive_context (the drive's temporal + battery +
+  # temperature envelope from the SAME *models.Drive row) are
+  # read-only. No new SQL is written by either tool.
+  tools:
+    - query_speed_profile
+    - query_drive_context
+  mutating_tools: []
+
+goldens:
+  # city_drive — happy-path low-speed regime: a 9 km commute that
+  # averaged about 10 m/s (36 km/h, ~22 mph). The deterministic
+  # query_speed_profile classifies this as `city`. The narrative MUST
+  # name the city regime, quote SI plus a familiar unit, and offer at
+  # most one or two grounded observations. Pin: must NOT propose
+  # mutations or quote a per-second timestamp.
+  - name: city_drive
+    input:
+      user_message: "Narrate the speed profile for drive 701 on vehicle 1."
+      context_overrides:
+        drive_id: 701
+        vehicle_id: 1
+    expect:
+      must_call_tools: ["query_speed_profile", "query_drive_context"]
+      answer_must_contain: ["city", "Roadie"]
+      answer_must_not_contain: ["14:32", "suspend", "disable", "lower the threshold", "delete"]
+      judge_rubric: |
+        Score 1-5 on: (1) factual accuracy (uses values from the
+        two tool replies, names the city regime), (2) tone (calm,
+        factual, not alarmist), (3) avoids inventing per-sample
+        events or proposing state mutations. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # highway_drive — happy-path high-speed regime: a long interstate
+  # drive that averaged ~30 m/s (~108 km/h, ~67 mph). The
+  # deterministic query_speed_profile classifies this as `highway`.
+  # The narrative MUST name the highway regime, quote SI plus a
+  # familiar unit, and at most one efficiency observation. Pin:
+  # must NOT invent specific exits, addresses, or per-sample events.
+  - name: highway_drive
+    input:
+      user_message: "Narrate the speed profile for drive 702 on vehicle 1."
+      context_overrides:
+        drive_id: 702
+        vehicle_id: 1
+    expect:
+      must_call_tools: ["query_speed_profile", "query_drive_context"]
+      answer_must_contain: ["highway", "Roadie"]
+      answer_must_not_contain: ["14:32", "suspend", "disable", "delete", "create alert"]
+      judge_rubric: |
+        Score 1-5 on: (1) factual accuracy (highway regime matches
+        the tool replies, average and max speed quoted in SI plus a
+        familiar unit from the tool envelope), (2) value (one
+        concrete efficiency or context observation the data
+        supports), (3) avoids inventing per-sample events,
+        addresses, or proposing state mutations. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_drive — caller asks the narrator to discuss a
+  # different drive ID than the one scoped in the request. The
+  # narrator must refuse politely and offer to narrate only the
+  # in-scope drive. Mirrors the equivalent drive-coaching,
+  # charging-diagnosis, and nl-search refusal goldens.
+  - name: refusal_other_drive
+    input:
+      user_message: "Actually narrate drive 999 instead — it belongs to my friend."
+      context_overrides:
+        drive_id: 701
+        vehicle_id: 1
+    expect:
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["here is", "okay"]

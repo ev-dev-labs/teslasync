@@ -1,0 +1,41 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_route_efficiency_suggestions_home_to_work_1
+        name: retrieve_route_chunks
+        arguments: '{"query": "home to work commute consumption", "source_types": ["drive_summary"], "k": 5}'
+    input_tokens: 40
+    output_tokens: 30
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_route_efficiency_suggestions_home_to_work_2
+        name: query_route_efficiency
+        arguments: '{"vehicle_id": 1, "lookback_days": 30}'
+    input_tokens: 108
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Roadie's most-frequent route over the last 30 days is your
+      Home → Work commute, with three completed trips averaging
+      about 10 km each. The route-efficiency aggregate reports a
+      working figure around the high-teens kWh/100 mi (roughly
+      11 kWh/100 km) for this corridor, which is higher than the
+      figure on your Work → Home return leg over the same window.
+
+      That gap is consistent with cold-start losses and stop-and-go
+      traffic dominating the outbound run. The best Home → Work
+      run on file was meaningfully better than the worst, so the
+      data itself is telling you the corridor is sensitive to
+      conditions and driving style — not to anything inherently
+      wasteful about the route.
+
+      One thing you might consider: when both routes are available,
+      preferring the corridor with the lower kWh/100 mi number you
+      see on the Route Efficiency page is a low-effort win. For the
+      Home → Work direction, the data supports matching the
+      conditions of your best run (warmer departure, lighter
+      traffic) when you can — no settings change is needed on
+      Roadie's side; the suggestion is purely about which corridor
+      and which time-of-day you pick.
+    input_tokens: 220
+    output_tokens: 192

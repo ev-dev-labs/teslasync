@@ -32,7 +32,14 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'prompt',
+      // Auto-apply SW updates instead of waiting for a user "Reload now"
+      // prompt. The previous 'prompt' mode stranded mobile/PWA users on
+      // older buggy SWs whenever they dismissed the update toast — which
+      // mattered for any bug shipped in the SW or the auth-recovery path
+      // (see resilience.ts handleAuthExpired). 'autoUpdate' requires
+      // skipWaiting/clientsClaim listeners in sw.ts (injectManifest mode
+      // does not auto-inject them — see src/sw/sw.ts install/activate).
+      registerType: 'autoUpdate',
       // Phase 40 / Prompt 52 — switched from the default `generateSW`
       // strategy to `injectManifest` so we can register a custom `push`
       // event handler in the service worker. Workbox runtime caching
@@ -42,10 +49,19 @@ export default defineConfig({
       srcDir: 'src/sw',
       filename: 'sw.ts',
       injectManifest: {
-        // Same precache scope as the previous generateSW config.
-        globPatterns: ['**/*.{js,css,html,svg,png,ico,woff,woff2,json}'],
+        // HTML intentionally excluded — index.html MUST NOT be precached
+        // behind a ForwardAuth proxy (Authentik/Authelia/oauth2-proxy).
+        // workbox-precaching's `directoryIndex` default rewrites a GET /
+        // to /index.html and serves it from cache, swallowing top-level
+        // navigations that the proxy needs to intercept on session
+        // expiry. The result was a refresh loop on / that only cleared
+        // when the user manually deleted site cookies (which Chrome
+        // bundles with SW unregistration). Navigation requests are now
+        // handled by the NavigationRoute(NetworkFirst) registered in
+        // sw.ts so offline launch still works without the loop.
+        globPatterns: ['**/*.{js,css,svg,png,ico,woff,woff2,json}'],
       },
-      includeAssets: ['favicon.svg', 'offline.html', 'icons/*.svg', 'icons/*.png'],
+      includeAssets: ['favicon.svg', 'icons/*.svg', 'icons/*.png'],
       manifest: {
         name: 'TeslaSync',
         short_name: 'TeslaSync',

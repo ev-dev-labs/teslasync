@@ -38,6 +38,7 @@ import js from '@eslint/js';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import aiComponentMustBeWrapped from './eslint-rules/ai-component-must-be-wrapped.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -49,12 +50,33 @@ const compat = new FlatCompat({
   allConfig: js.configs.all,
 });
 
+// Phase-50 / 0001 — F0 AI-Off Contract.
+//
+// Local plugin namespace `teslasync` for in-tree custom rules. The
+// `ai-component-must-be-wrapped` rule statically enforces ADR-015's
+// invariant that every AI surface in the SPA goes through
+// `withAiFeature(...)`. See web/eslint-rules/ai-component-must-be-wrapped.js
+// for the heuristic and rationale.
+const teslasyncPlugin = {
+  rules: {
+    'ai-component-must-be-wrapped': aiComponentMustBeWrapped,
+  },
+};
+
 export default [
   // Mirror the legacy `ignorePatterns`: skip the build output and the
   // ESLint config files themselves (the latter avoids parser noise on
   // CommonJS / flat-config syntax).
   {
-    ignores: ['dist/**', '.eslintrc.cjs', 'eslint.config.js'],
+    ignores: [
+      'dist/**',
+      '.eslintrc.cjs',
+      'eslint.config.js',
+      // The custom rule itself + its tests are CommonJS files that
+      // intentionally use Node globals (require/module.exports) and
+      // should not be linted as TypeScript browser modules.
+      'eslint-rules/**',
+    ],
   },
   // Pull in every plugin / rule defined in `.eslintrc.cjs` via the
   // back-compat shim. Apply each block to all `.ts` / `.tsx` files in
@@ -109,6 +131,16 @@ export default [
       // control when the surface mounts. WCAG 2.4.3 (Focus Order) is
       // satisfied.
       'jsx-a11y/no-autofocus': 'off',
+    },
+  },
+  // Phase-50 / 0001 — register `teslasync/ai-component-must-be-wrapped`
+  // for every AI surface in the SPA. The rule is path-and-name aware
+  // (see eslint-rules/ai-component-must-be-wrapped.js for heuristic).
+  {
+    files: ['src/**/*.tsx'],
+    plugins: { teslasync: teslasyncPlugin },
+    rules: {
+      'teslasync/ai-component-must-be-wrapped': 'error',
     },
   },
 ];

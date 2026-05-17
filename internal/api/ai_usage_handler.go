@@ -1,0 +1,242 @@
+package api
+
+// Phase-50 / 0004 — F3 AI Usage Handler.
+//
+// Three GET endpoints under /api/v1/ai/usage/* that surface the
+// per-call audit log written by the audit decorator:
+//
+//   GET /api/v1/ai/usage/today        — aggregate of "today" calls
+//   GET /api/v1/ai/usage/by-feature   — per-feature breakdown
+//   GET /api/v1/ai/usage/recent       — last N calls for the user
+//
+// Routing is mounted by mountAIUsageRoutes immediately after
+// mountAIRoutes in router.go so the same /api/v1 middleware stack
+// (auth, logging, rate limiting, tracing) wraps both.
+//
+// Gating semantics (the special-case __usage__ feature):
+//   - Off mode (ai_mode='off'): the wrapper below makes the per-feature
+//     toggle look "off" so guard.Wrap returns 404. Symmetrical to the
+//     ADR-015 §I6 contract every other AI route follows.
+//   - Non-off mode: the wrapper short-circuits the per-feature toggle
+//     check to true so the user sees their usage card without having
+//     to flip a separate "show usage" toggle. The prompt is explicit:
+//     "no per-feature toggle".
+//
+// The wrapper is a tiny adapter — guard.Wrap itself is unchanged so
+// the off-mode invariant test (offMode.invariant.test.tsx) still holds
+// for every other AI route.
+
+import (
+	"context"
+	"net/http"
+	"strconv"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+)
+
+// AIUsageFeatureID is the special-case meta-feature ID registered in
+// internal/ai/features/registry.go. Centralising the literal here
+// keeps the handler + the guard wrapper in sync; tools/aivet checks
+// the registry vs the route mount but not the handler-side string.
+const AIUsageFeatureID = "__usage__"
+
+// usageDefaultByFeatureWindow is the default lookback window for the
+// /by-feature endpoint when the caller does not supply ?since. Seven
+// days matches the chunk-time-interval on the hypertable so the query
+// hits at most one chunk in the steady state.
+const usageDefaultByFeatureWindow = 7 * 24 * time.Hour
+
+// usageDefaultRecentLimit is the default limit for /recent when the
+// caller does not supply ?limit. 50 fits the AiUsageCard's "recent
+// activity" tab without paginating.
+const usageDefaultRecentLimit = 50
+
+// usageGuardSettings adapts a guard.Settings to special-case the
+// __usage__ meta-feature: AIFeatureEnabled("__usage__") returns true
+// whenever the underlying mode is non-off, regardless of the
+// per-feature toggle (which doesn't exist for __usage__). Every other
+// feature ID falls through to the inner Settings so guard.Wrap on
+// real AI features continues to enforce the per-feature toggle.
+//
+// Why a wrapper instead of editing guard.go:
+//   - guard.go is NOT in this slice's allowed-files list.
+//   - The wrapper isolates the meta-feature carve-out at the call
+//     site (this file) so future readers see the special case in
+//     context rather than buried in the guard package.
+type usageGuardSettings struct {
+	inner guard.Settings
+}
+
+func (u usageGuardSettings) AIMode(ctx context.Context) (string, error) {
+	return u.inner.AIMode(ctx)
+}
+
+func (u usageGuardSettings) AIFeatureEnabled(ctx context.Context, featureID string) (bool, error) {
+	if featureID == AIUsageFeatureID {
+		mode, err := u.inner.AIMode(ctx)
+		if err != nil {
+			return false, err
+		}
+		return mode != "off", nil
+	}
+	return u.inner.AIFeatureEnabled(ctx, featureID)
+}
+
+// AIUsageHandler bundles the three usage endpoints with the dependencies
+// they need.
+type AIUsageHandler struct {
+	repo       *database.AICallLogRepo
+	headerName string // FORWARD_AUTH_HEADER name; "" in open mode.
+}
+
+// NewAIUsageHandler constructs the handler. Both repo and headerName
+// are required; repo MUST be the same instance the audit decorator
+// writes to so reads see the writes promptly.
+func NewAIUsageHandler(repo *database.AICallLogRepo, headerName string) *AIUsageHandler {
+	if repo == nil {
+		panic("api: NewAIUsageHandler called with nil repo")
+	}
+	return &AIUsageHandler{repo: repo, headerName: headerName}
+}
+
+// mountAIUsageRoutes registers the /ai/usage/* endpoints under the
+// supplied parent router (typically the /api/v1 subroute). The routes
+// are wrapped by a usage-aware guard so off-mode returns 404 and any
+// non-off mode returns the user's data without requiring a separate
+// per-feature toggle.
+//
+// Adding a new usage route MUST go through this function so tools/aivet
+// can statically prove the /ai/usage subtree stays guarded.
+func mountAIUsageRoutes(
+	r chi.Router,
+	settings guard.Settings,
+	repo *database.AICallLogRepo,
+	headerName string,
+) {
+	usageGuard := guard.New(usageGuardSettings{inner: settings})
+	h := NewAIUsageHandler(repo, headerName)
+
+	r.Route("/ai/usage", func(r chi.Router) {
+		r.Get("/today", usageGuard.Wrap(AIUsageFeatureID, h.Today))
+		r.Get("/by-feature", usageGuard.Wrap(AIUsageFeatureID, h.ByFeature))
+		r.Get("/recent", usageGuard.Wrap(AIUsageFeatureID, h.Recent))
+	})
+}
+
+// Today returns the user's aggregate spend + volume since 00:00 UTC.
+// Open mode reads the empty-subject rows; forward-auth mode scopes by
+// the FORWARD_AUTH_HEADER subject value.
+func (h *AIUsageHandler) Today(w http.ResponseWriter, r *http.Request) {
+	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	agg, err := h.repo.Today(r.Context(), subject)
+	if err != nil {
+		log.Error().Err(err).Msg("ai_usage Today failed")
+		writeError(w, http.StatusInternalServerError, "ai usage today failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, agg)
+}
+
+// ByFeature returns the per-feature breakdown over a configurable
+// window. ?since accepts either an RFC3339 timestamp or a Go duration
+// string ("24h", "7d-equivalent like 168h"). Defaults to seven days.
+func (h *AIUsageHandler) ByFeature(w http.ResponseWriter, r *http.Request) {
+	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	since, err := parseUsageSince(r.URL.Query().Get("since"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid since parameter: "+err.Error())
+		return
+	}
+	rows, err := h.repo.ByFeature(r.Context(), subject, since)
+	if err != nil {
+		log.Error().Err(err).Msg("ai_usage ByFeature failed")
+		writeError(w, http.StatusInternalServerError, "ai usage by-feature failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"since": since.UTC().Format(time.RFC3339),
+		"rows":  rows,
+	})
+}
+
+// Recent returns the last N audit rows for the user, newest-first.
+// ?limit defaults to usageDefaultRecentLimit and is clamped server-
+// side to AICallRecentMax so a misbehaving client cannot pump the row
+// count.
+func (h *AIUsageHandler) Recent(w http.ResponseWriter, r *http.Request) {
+	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
+	limit := parseUsageLimit(r.URL.Query().Get("limit"))
+	rows, err := h.repo.Recent(r.Context(), subject, limit)
+	if err != nil {
+		log.Error().Err(err).Msg("ai_usage Recent failed")
+		writeError(w, http.StatusInternalServerError, "ai usage recent failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"limit": limit,
+		"rows":  rows,
+	})
+}
+
+// parseUsageSince accepts:
+//   - "" → default 7-day window (now - 7d).
+//   - RFC3339 timestamp → that exact instant.
+//   - Go duration string ("24h", "168h", "30m") → now - duration.
+//
+// Returns the resolved instant in UTC. Negative durations are rejected
+// because "since the future" makes no sense and would silently return
+// zero rows.
+func parseUsageSince(raw string) (time.Time, error) {
+	if raw == "" {
+		return time.Now().UTC().Add(-usageDefaultByFeatureWindow), nil
+	}
+	if t, err := time.Parse(time.RFC3339, raw); err == nil {
+		return t.UTC(), nil
+	}
+	d, err := time.ParseDuration(raw)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if d <= 0 {
+		return time.Time{}, errInvalidSinceDuration
+	}
+	return time.Now().UTC().Add(-d), nil
+}
+
+// errInvalidSinceDuration is returned by parseUsageSince when the
+// supplied duration is non-positive.
+var errInvalidSinceDuration = stringError("since duration must be positive")
+
+// parseUsageLimit returns a clamped, valid limit for /recent. Values ≤
+// 0 fall back to the default; values > AICallRecentMax clamp to the
+// max. Non-numeric input also falls back to the default — a typo
+// shouldn't 400 a read endpoint that can be served safely with a
+// reasonable default.
+func parseUsageLimit(raw string) int {
+	if raw == "" {
+		return usageDefaultRecentLimit
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		return usageDefaultRecentLimit
+	}
+	if n <= 0 {
+		return usageDefaultRecentLimit
+	}
+	if n > database.AICallRecentMax {
+		return database.AICallRecentMax
+	}
+	return n
+}
+
+// stringError is a zero-allocation error type for the package's small
+// constant errors.
+type stringError string
+
+func (s stringError) Error() string { return string(s) }

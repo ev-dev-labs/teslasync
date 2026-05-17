@@ -1,0 +1,13 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_watch_context_ask_battery_status_1
+        name: query_watch_context
+        arguments: '{}'
+    input_tokens: 56
+    output_tokens: 24
+  - finish_reason: stop
+    content: |
+      You have 82 percent battery, roughly 248 km of rated range.
+    input_tokens: 220
+    output_tokens: 18

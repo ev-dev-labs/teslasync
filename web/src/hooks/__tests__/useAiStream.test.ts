@@ -1,0 +1,328 @@
+// Phase-50 / 0006 — F5 SSE Streaming.
+//
+// Unit tests for `useAiStream`. Mocks `global.fetch` to return a
+// ReadableStream of canned SSE bytes; exercises the parser, the
+// state machine, the cancellation path, and the off-mode 404 path.
+
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { renderHook, act, waitFor } from '@testing-library/react';
+
+import {
+  useAiStream,
+  parseSSEFrame,
+  type AiStreamEvent,
+} from '../useAiStream';
+
+// Helper: build a ReadableStream<Uint8Array> from a list of byte
+// chunks. Used to simulate a server pushing SSE frames in arbitrary
+// fragments (sometimes a frame splits across chunks; the hook must
+// handle the buffer correctly).
+function makeReadableStream(chunks: Array<string>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+  let i = 0;
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      if (i < chunks.length) {
+        controller.enqueue(encoder.encode(chunks[i]));
+        i++;
+      } else {
+        controller.close();
+      }
+    },
+  });
+}
+
+function sseFrame(event: string, data: unknown): string {
+  return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+}
+
+// Mock fetch helper. Returns a Response whose body is a stream of
+// the supplied chunks.
+function mockFetchOK(chunks: Array<string>): typeof globalThis.fetch {
+  return vi.fn(async () =>
+    new Response(makeReadableStream(chunks), {
+      status: 200,
+      headers: { 'Content-Type': 'text/event-stream' },
+    }),
+  ) as unknown as typeof globalThis.fetch;
+}
+
+function mockFetchStatus(status: number): typeof globalThis.fetch {
+  return vi.fn(async () => new Response(null, { status })) as unknown as typeof globalThis.fetch;
+}
+
+beforeEach(() => {
+  // Each test installs its own fetch mock; default to a noop so an
+  // accidentally-uninstalled fetch surfaces as a clear failure.
+  globalThis.fetch = vi.fn(async () => {
+    throw new Error('fetch not mocked');
+  }) as unknown as typeof globalThis.fetch;
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('parseSSEFrame', () => {
+  it('parses a delta frame', () => {
+    const ev = parseSSEFrame('event: delta\ndata: {"text":"hello"}');
+    expect(ev).toEqual({ type: 'delta', text: 'hello' });
+  });
+
+  it('parses a tool_call frame', () => {
+    const ev = parseSSEFrame(
+      'event: tool_call\ndata: {"id":"c1","name":"ping","arguments":{"x":1}}',
+    );
+    expect(ev).toEqual({
+      type: 'tool_call',
+      id: 'c1',
+      name: 'ping',
+      arguments: { x: 1 },
+    });
+  });
+
+  it('parses a tool_result frame with data', () => {
+    const ev = parseSSEFrame(
+      'event: tool_result\ndata: {"id":"c1","name":"ping","ok":true,"data":{"pong":"ok"}}',
+    );
+    expect(ev).toMatchObject({
+      type: 'tool_result',
+      id: 'c1',
+      name: 'ping',
+      ok: true,
+      data: { pong: 'ok' },
+    });
+  });
+
+  it('parses a tool_result error frame', () => {
+    const ev = parseSSEFrame(
+      'event: tool_result\ndata: {"id":"c1","name":"ping","ok":false,"error":"boom"}',
+    );
+    expect(ev).toMatchObject({
+      type: 'tool_result',
+      id: 'c1',
+      ok: false,
+      error: 'boom',
+    });
+  });
+
+  it('parses a confirm_request frame', () => {
+    const ev = parseSSEFrame(
+      'event: confirm_request\ndata: {"continuation_id":"k1","tool":"create_alert","args":{"n":"x"},"summary":"sum"}',
+    );
+    expect(ev).toMatchObject({
+      type: 'confirm_request',
+      continuation_id: 'k1',
+      tool: 'create_alert',
+      summary: 'sum',
+    });
+  });
+
+  it('parses a done frame', () => {
+    const ev = parseSSEFrame(
+      'event: done\ndata: {"finish_reason":"stop","usage":{"in":10,"out":20}}',
+    );
+    expect(ev).toEqual({
+      type: 'done',
+      finish_reason: 'stop',
+      usage: { in: 10, out: 20 },
+    });
+  });
+
+  it('parses an error frame', () => {
+    const ev = parseSSEFrame('event: error\ndata: {"message":"boom"}');
+    expect(ev).toEqual({ type: 'error', message: 'boom' });
+  });
+
+  it('returns null for unknown event types', () => {
+    expect(parseSSEFrame('event: weird\ndata: {}')).toBeNull();
+  });
+
+  it('returns null for malformed JSON', () => {
+    expect(parseSSEFrame('event: delta\ndata: {not json}')).toBeNull();
+  });
+
+  it('skips comment lines (leading colon)', () => {
+    const ev = parseSSEFrame(': keepalive\nevent: delta\ndata: {"text":"x"}');
+    expect(ev).toEqual({ type: 'delta', text: 'x' });
+  });
+});
+
+describe('useAiStream — happy path', () => {
+  it('accumulates delta text and transitions through states', async () => {
+    globalThis.fetch = mockFetchOK([
+      sseFrame('delta', { text: 'The ' }),
+      sseFrame('delta', { text: 'car ' }),
+      sseFrame('delta', { text: 'is ready.' }),
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 10, out: 20 } }),
+    ]);
+
+    const events: AiStreamEvent[] = [];
+    const { result } = renderHook(() =>
+      useAiStream({
+        url: '/ai/chatbot',
+        body: { messages: [] },
+        onEvent: (ev) => {
+          events.push(ev);
+        },
+      }),
+    );
+
+    expect(result.current.state).toBe('idle');
+
+    act(() => {
+      result.current.start();
+    });
+
+    // Wait for the stream to run to completion.
+    await waitFor(() => expect(result.current.state).toBe('done'));
+
+    expect(result.current.text).toBe('The car is ready.');
+    expect(events).toHaveLength(4);
+    expect(events[0]).toMatchObject({ type: 'delta', text: 'The ' });
+    expect(events[3]).toMatchObject({ type: 'done', finish_reason: 'stop' });
+  });
+
+  it('handles SSE frames split across multiple network chunks', async () => {
+    // Concatenate the events then split arbitrarily — the parser
+    // must reassemble across the boundaries.
+    const full =
+      sseFrame('delta', { text: 'a' }) +
+      sseFrame('delta', { text: 'b' }) +
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 0, out: 0 } });
+    const half = Math.floor(full.length / 2);
+    globalThis.fetch = mockFetchOK([full.slice(0, half), full.slice(half)]);
+
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('done'));
+    expect(result.current.text).toBe('ab');
+  });
+
+  it('moves to paused-confirm on confirm_request', async () => {
+    globalThis.fetch = mockFetchOK([
+      sseFrame('delta', { text: 'I will ' }),
+      sseFrame('confirm_request', {
+        continuation_id: 'k_xyz',
+        tool: 'create_alert',
+        args: { name: 'speed cap' },
+        summary: 'Create an alert',
+      }),
+    ]);
+
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/chatbot', body: {}, onEvent: () => {} }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('paused-confirm'));
+    expect(result.current.text).toBe('I will ');
+  });
+});
+
+describe('useAiStream — error paths', () => {
+  it('surfaces a 404 (off-mode) as state=error', async () => {
+    globalThis.fetch = mockFetchStatus(404);
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/chatbot', body: {}, onEvent: () => {} }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('error'));
+    expect(result.current.error).toBe('stream_http_404');
+  });
+
+  it('surfaces a server error event as state=error', async () => {
+    globalThis.fetch = mockFetchOK([sseFrame('error', { message: 'stream_stalled' })]);
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('error'));
+    expect(result.current.error).toBe('stream_stalled');
+  });
+
+  it('drops malformed events and continues', async () => {
+    globalThis.fetch = mockFetchOK([
+      'event: delta\ndata: {not json}\n\n',
+      sseFrame('delta', { text: 'good' }),
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 0, out: 0 } }),
+    ]);
+    const events: AiStreamEvent[] = [];
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/x', body: {}, onEvent: (e) => events.push(e) }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('done'));
+    expect(result.current.text).toBe('good');
+    expect(events.filter((e) => e.type === 'delta')).toHaveLength(1);
+  });
+});
+
+describe('useAiStream — cancellation', () => {
+  it('aborts the in-flight fetch on cancel()', async () => {
+    let abortSignal: AbortSignal | undefined;
+    globalThis.fetch = vi.fn(async (_input, init: RequestInit | undefined) => {
+      abortSignal = init?.signal ?? undefined;
+      // Return a stream that never closes — only abort terminates it.
+      return new Response(
+        new ReadableStream<Uint8Array>({
+          start() {
+            // never enqueue, never close
+          },
+        }),
+        { status: 200 },
+      );
+    }) as unknown as typeof globalThis.fetch;
+
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('streaming'));
+
+    act(() => result.current.cancel());
+    expect(abortSignal?.aborted).toBe(true);
+  });
+
+  it('aborts on unmount', async () => {
+    let abortSignal: AbortSignal | undefined;
+    globalThis.fetch = vi.fn(async (_input, init: RequestInit | undefined) => {
+      abortSignal = init?.signal ?? undefined;
+      return new Response(
+        new ReadableStream<Uint8Array>({ start() {} }),
+        { status: 200 },
+      );
+    }) as unknown as typeof globalThis.fetch;
+
+    const { result, unmount } = renderHook(() =>
+      useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('streaming'));
+
+    unmount();
+    expect(abortSignal?.aborted).toBe(true);
+  });
+
+  it('coalesces duplicate start() calls', async () => {
+    const fetchMock = vi.fn(async () =>
+      new Response(makeReadableStream([sseFrame('done', { finish_reason: 'stop', usage: { in: 0, out: 0 } })]), {
+        status: 200,
+      }),
+    ) as unknown as typeof globalThis.fetch;
+    globalThis.fetch = fetchMock;
+
+    const { result } = renderHook(() =>
+      useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
+    );
+    act(() => {
+      result.current.start();
+      result.current.start();
+      result.current.start();
+    });
+    await waitFor(() => expect(result.current.state).toBe('done'));
+    // Exactly one fetch fired despite three start() calls.
+    expect((fetchMock as unknown as { mock: { calls: unknown[] } }).mock.calls.length).toBe(1);
+  });
+});

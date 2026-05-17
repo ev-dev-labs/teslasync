@@ -1,0 +1,40 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_train_anomaly_baseline_fallback_to_safe_ranges_1
+        name: train_anomaly_baseline
+        arguments: '{"vehicle_id": 7, "days": 7}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_anomaly_baseline_fallback_to_safe_ranges_1
+        name: query_anomaly_baseline
+        arguments: '{"vehicle_id": 7}'
+    input_tokens: 96
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Battery — for vehicle <vehicle id='7'/> BatteryLevel and
+      PackVoltage both returned source="safe_ranges_fallback" with
+      sample_count below the 30-sample floor: this window simply
+      doesn't have enough observations yet for a learned envelope,
+      so the trainer falls back to the static safe-range bounds
+      (the same bounds the deterministic detector already uses).
+      Once the vehicle accumulates more samples this would
+      tighten.
+
+      Thermal — same story: ModuleTempMax / ModuleTempMin both
+      reported source="safe_ranges_fallback" with low sample_count.
+      The proposed envelope therefore matches the static
+      safe-range bounds for now; nothing has changed for the
+      detector.
+
+      Tires — TpmsPressureFl / Fr / Rl / Rr returned
+      source="safe_ranges_fallback" with sample_count well below
+      30 for this vehicle this window. The currently-effective
+      detector continues to use the static [2.0, 3.5] bar window
+      and the proposed envelope is identical to it for now. No
+      learned tightening is in scope until more samples land.
+    input_tokens: 240
+    output_tokens: 152

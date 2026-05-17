@@ -1,0 +1,16 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_search_retrieve_multi_1
+        name: retrieve_chunks
+        arguments: '{"query": "last week charging sessions and alerts during them", "source_types": ["charge_session", "alert_history"], "k": 8}'
+    input_tokens: 56
+    output_tokens: 40
+  - finish_reason: stop
+    content: |
+      Last week's retrieval returned a few charging sessions and one
+      alert that fired during the longest charging session. Check the
+      cited entries above for the per-session detail and the alert
+      payload.
+    input_tokens: 138
+    output_tokens: 44

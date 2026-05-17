@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_stream_inspector_typical_healthy_streams_1
+        name: query_stream_inspector
+        arguments: '{"from_unix": 1700000000, "to_unix": 1700001800}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      The MQTT broker is connected and serving the live signal
+      pipeline cleanly across the 30-minute window. The
+      deterministic envelope reports a small fleet of vehicles
+      currently known to the broker with zero stale streams and
+      a steady aggregate signals-per-second rate consistent
+      with healthy ingest. The SSE hub has connected operator
+      clients with zero dropped frames, and every background
+      job in the watch list reports a recent successful run.
+      No further root-cause inference is supportable from the
+      envelope alone — use the deterministic broker-status
+      snapshot above for raw inspection of the per-vehicle
+      breakdown.
+    input_tokens: 240
+    output_tokens: 96

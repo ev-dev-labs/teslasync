@@ -1,0 +1,28 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_quiet_hours_window_work_meeting_window_1
+        name: draft_quiet_hours_window
+        arguments: '{"user_id": "user-1"}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_validate_quiet_hours_window_work_meeting_window_1
+        name: validate_quiet_hours_window
+        arguments: '{"user_id": "user-1", "start_local": "09:00", "end_local": "17:00", "timezone": "America/Los_Angeles", "weekdays": 62, "bypass_severities": ["critical"]}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I suggest a workday quiet-hours window from 09:00 to
+      17:00 in your local timezone (America/Los_Angeles),
+      covering Monday through Friday only (the weekdays
+      bitmask 62 leaves Saturday and Sunday unaffected). The
+      window keeps critical alerts in bypass_severities so
+      emergency notifications can still interrupt during
+      meetings. Remember this candidate is based on your recent notification history,
+      not a snapshot of future meeting traffic — adjust the
+      window if your meeting cadence changes.
+    input_tokens: 320
+    output_tokens: 160

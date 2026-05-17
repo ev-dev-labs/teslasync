@@ -89,5 +89,16 @@ scripts/check-loc.js
 /.github/prompts
 /.github/prompts/db-refactor/logs
 
+# Phase-50 AI adoption planning artifacts are committed branch inputs.
+!/.github/prompts/
+/.github/prompts/features/
+!/.github/prompts/db-refactor/
+/.github/prompts/db-refactor/*
+!/.github/prompts/db-refactor/adrs/
+/.github/prompts/db-refactor/adrs/*
+!/.github/prompts/db-refactor/adrs/ADR-015-ai-off-contract.md
+!/.github/prompts/db-refactor/phase-50-ai-adoption/
+!/.github/prompts/db-refactor/phase-50-ai-adoption/**
+
 # Redesign working notes (Phase 50+ /charging redesign)
 REDESIGN-NOTES.md

@@ -1,0 +1,16 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_anomaly_ctx_critical_1
+        name: query_anomaly_context
+        arguments: '{"vehicle_id": 1, "days": 7}'
+    input_tokens: 32
+    output_tokens: 22
+  - finish_reason: stop
+    content: |
+      Roadie has one critical alert from the last 7 days. The front-left tire
+      pressure dropped to 1.20 bar, well below the safe minimum of 2.0 bar —
+      please check that tire as soon as possible. Battery, motors, climate,
+      and charging all read normal.
+    input_tokens: 90
+    output_tokens: 56

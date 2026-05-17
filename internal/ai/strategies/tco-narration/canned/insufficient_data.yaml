@@ -1,0 +1,22 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_tco_summary_insufficient_data_1
+        name: query_tco_summary
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Vehicle <vehicle id='42'/> does not yet have enough history
+      for me to narrate an ownership-cost story — the
+      deterministic envelope returned total_sessions = 0 and
+      months_of_ownership = 1 (the floor when the date range is
+      undefined), so total_savings is also zero by construction.
+      I will not invent a savings figure, a cost-per-km gap, or a
+      monthly trend without underlying data. Once a few charging
+      sessions and drives land, the deterministic envelope will
+      have material to report; the operating-cost narrator can
+      revisit then.
+    input_tokens: 240
+    output_tokens: 96

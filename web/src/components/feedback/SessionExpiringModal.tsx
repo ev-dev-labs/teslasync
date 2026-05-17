@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Modal, Button } from '@/components/ui'
 import { Clock, AlertTriangle } from 'lucide-react'
 import { useSessionMonitor } from '@/hooks/useSessionMonitor'
+import { navigateToReauth } from '@/lib/resilience'
 
 /**
  * Phase-46 / Prompt 05 — SessionExpiringModal.
@@ -34,7 +35,6 @@ import { useSessionMonitor } from '@/hooks/useSessionMonitor'
  */
 
 const DRAFT_KEY_PREFIX = 'teslasync:draft:v'
-const RETURN_URL_KEY = 'teslasync-return-url'
 
 interface DraftSummary {
   /** Display label derived from the draft's storage key. */
@@ -136,12 +136,11 @@ export function SessionExpiringModal() {
   }
 
   const handleSignOut = () => {
-    try {
-      window.sessionStorage.setItem(RETURN_URL_KEY, window.location.href)
-    } catch {
-      /* private mode — best-effort */
-    }
-    window.location.assign('/')
+    // Explicit IdP handoff via the shared helper — preserves the
+    // current URL as `rd=` so Authentik deep-links the user back to
+    // where they were, and writes the same value to sessionStorage as
+    // a fallback for proxies that strip the redirect param.
+    navigateToReauth()
   }
 
   // The shared Modal handles Esc + backdrop close. We map that to the

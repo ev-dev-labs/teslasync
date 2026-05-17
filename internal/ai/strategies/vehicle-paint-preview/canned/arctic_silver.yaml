@@ -1,0 +1,19 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_paint_preview_arctic_silver_1
+        name: draft_paint_preview_prompt
+        arguments: '{"vehicle_id": 12, "proposed_color": "Arctic Silver", "style_hint": "studio"}'
+    input_tokens: 50
+    output_tokens: 38
+  - finish_reason: stop
+    content: |
+      I drafted an Arctic Silver paint-preview image prompt for the
+      vehicle in scope using a studio-shot style. The proposed
+      image prompt describes the model and trim in a cool,
+      metallic Arctic Silver finish lit from above with soft
+      diffused studio lighting. Review the structured proposal
+      in the AI panel, then apply the new color via the existing
+      per-vehicle Color setting if you'd like to keep it.
+    input_tokens: 98
+    output_tokens: 58

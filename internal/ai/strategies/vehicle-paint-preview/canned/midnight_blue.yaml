@@ -1,0 +1,19 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_paint_preview_midnight_blue_1
+        name: draft_paint_preview_prompt
+        arguments: '{"vehicle_id": 7, "proposed_color": "Midnight Blue", "style_hint": "studio"}'
+    input_tokens: 48
+    output_tokens: 36
+  - finish_reason: stop
+    content: |
+      I drafted a Midnight Blue paint-preview image prompt for the
+      vehicle in scope using a studio-shot style. The proposed
+      image prompt describes the model and trim in a deep,
+      pearlescent Midnight Blue finish under soft studio
+      lighting. Review the structured proposal in the AI panel,
+      then apply the new color via the existing per-vehicle
+      Color setting if you'd like to keep it.
+    input_tokens: 96
+    output_tokens: 56

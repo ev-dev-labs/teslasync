@@ -1,0 +1,50 @@
+// Phase-50 / 0014 — U4 Anomaly explanation narration.
+// Phase-50 / W1 (slice 0065) — wired the Generate button to
+// POST /api/v1/ai/anomalies/explain.
+
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
+import { withAiFeature } from '@/components/ai/withAiFeature'
+import { useAiStream } from '@/hooks/useAiStream'
+
+interface InnerSectionProps {
+  vehicleId?: number
+}
+
+function InnerSection({ vehicleId }: InnerSectionProps) {
+  const { t } = useTranslation()
+  // Default analysis window: the last 30 days. Matches the dashboard's
+  // default detector window so the AI narration explains the same set
+  // the deterministic table is already showing.
+  const body = useMemo(
+    () => ({ vehicle_id: vehicleId ?? 0, days: 30 }),
+    [vehicleId],
+  )
+  const stream = useAiStream({
+    url: '/ai/anomalies/explain',
+    body,
+    onEvent: () => {},
+  })
+    return (
+    <AIFeatureCard
+      title={t('anomaly.aiExplanation.title', 'Helix explanation')}
+      description={t(
+                'anomaly.aiExplanation.description',
+                'Get a plain-language explanation of the anomalies the detector has already identified above.',
+              )}
+      buttonLabel={t('anomaly.aiExplanation.generateButton', 'Generate explanation')}
+      badgeLabel={t('anomaly.aiExplanation.badge', 'Helix')}
+      canStart={vehicleId != null}
+      stream={stream}
+    />
+  )
+}
+InnerSection.displayName = 'AIAnomalyExplanationsInner'
+
+export const AIAnomalyExplanations = withAiFeature(
+  'anomaly-explanations',
+  InnerSection,
+)
+AIAnomalyExplanations.displayName = 'AIAnomalyExplanations'

@@ -19,6 +19,7 @@ import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { FadeIn } from '@/components/motion';
 import { RangePicker, VehicleSelect } from '@/components/forms';
+import { AISoftwareUpdateChangelogSummarizer } from '@/components/ai/AISoftwareUpdateChangelogSummarizer';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -127,6 +128,18 @@ export default function SoftwareUpdatesPage() {
           <MetricCard icon={<CheckCircle className="h-5 w-5" />} label={t('Updates Installed')} value={installedCount} color="green" />
           <MetricCard icon={<Download className="h-5 w-5" />} label={t('Total Updates')} value={totalUpdates} color="purple" />
         </div>
+      </FadeIn>
+
+      {/*
+        AI software-update-changelog-summarizer (Phase-50 / 0051).
+        Conditionally renders an opt-in Helix narrator above the
+        deterministic update timeline. Returns null in off mode
+        (per ADR-015 §I5 + §I6) so the section is entirely absent
+        from the DOM, leaving the baseline timeline + raw release
+        notes links unchanged for every user.
+      */}
+      <FadeIn>
+        <AISoftwareUpdateChangelogSummarizer vehicleId={vehicleId ?? undefined} />
       </FadeIn>
 
       {/* ── Update Timeline ──────────────────────────────────────── */}

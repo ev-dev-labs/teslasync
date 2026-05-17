@@ -1,0 +1,111 @@
+feature:
+  id: suggest-new-geofences
+  system: |
+    You are the TeslaSync geofence-suggestion assistant. Your job is to
+    PROPOSE a typed geofence draft (centroid lat/lon, radius in meters,
+    human-readable name) for ONE existing visited location based on
+    its visit evidence (current address_name, visit_count,
+    total_duration_s, last_visited); you NEVER save anything yourself.
+    ALWAYS call draft_geofence FIRST with the location_id you were
+    given, then call validate_geofence on the proposed envelope to
+    confirm it satisfies the geofence-shape contract. Do NOT propose
+    deleting, renaming, suspending, or otherwise mutating any
+    existing geofence or any other state — your role is strictly to
+    propose a NEW geofence for the one visited location in scope, for
+    the user to review and save themselves through the existing
+    baseline Add Geofence form. Do NOT invent facts that are not
+    present in the tool output: the proposed name may reference the
+    current address_name (when it is human-readable) or a generic
+    descriptor of the visit pattern (e.g. "Frequent Stop", "Weekend
+    Spot"), or the vehicle's display name when one is provided, but
+    never quote precise coordinates or full street addresses in the
+    prose. Refuse politely if asked to discuss, propose, or modify a
+    geofence for any location other than the one named in the
+    request, or to suggest geofences for a vehicle other than the
+    one that owns this location. Be concise: a single proposed
+    geofence (name capped at 200 characters; ideally 12-40
+    characters; radius 50-1000 meters) plus an optional one-line
+    rationale grounded in the tool output is enough — the user
+    reviews the structured proposal in the UI before saving via the
+    existing baseline Add Geofence form.
+  # Tools MUST mirror
+  # internal/ai/strategies/suggest-new-geofences/strategy.go's
+  # allowedTools whitelist. Both tools are PROPOSE-ONLY: they
+  # construct or validate geofence DTOs but do NOT touch the
+  # database. The actual save call goes through the existing typed
+  # geofence-create path AFTER the user explicitly clicks Save in
+  # the GeofencesPage UI; the LLM has no tool that writes.
+  tools:
+    - draft_geofence
+    - validate_geofence
+  mutating_tools: []
+
+goldens:
+  # frequent_unfenced_stop — happy path; user asks for a geofence
+  # suggestion for a frequently-visited location whose current
+  # address_name is coordinate-shaped (the geocoder fallback when
+  # reverse-geocode fails). The LLM MUST call draft_geofence with
+  # the location_id, then validate_geofence on the proposed
+  # envelope. The narrative reply MUST mention the proposed name so
+  # the user can confirm before saving in the UI. Pin: must NOT
+  # claim the geofence was created.
+  - name: frequent_unfenced_stop
+    input:
+      user_message: "Suggest a geofence for visited location 501."
+      context_overrides:
+        location_id: 501
+    expect:
+      must_call_tools: ["draft_geofence", "validate_geofence"]
+      answer_must_contain: ["Frequent Stop"]
+      answer_must_not_contain: ["created", "saved", "added", "deleted"]
+      judge_rubric: |
+        Score 1-5 on: (1) proposed name is concise (<= 40 chars
+        ideally; <= 200 hard cap), (2) call sequence
+        (draft_geofence THEN validate_geofence), (3) does NOT
+        claim the geofence was saved or created, (4) refers to
+        the visit pattern (visit_count, dwell time) rather than
+        to the raw coordinate string from the address_name. Pass
+        = score >= 4.
+      judge_pass_threshold: 4
+
+  # occasional_landmark — the location's current address_name is
+  # already a human-readable label (e.g. a known landmark) but the
+  # caller still wants a friendlier geofence label and a tighter
+  # radius than the geocoder default. The LLM MUST still produce a
+  # SINGLE concise envelope (not a tour log), and may incorporate
+  # the current label as context. Pin: same tool sequence as the
+  # happy path.
+  - name: occasional_landmark
+    input:
+      user_message: "Propose a geofence around this market spot (id 502)."
+      context_overrides:
+        location_id: 502
+    expect:
+      must_call_tools: ["draft_geofence", "validate_geofence"]
+      answer_must_contain: ["Market"]
+      answer_must_not_contain: ["created", "saved", "added", "deleted"]
+      judge_rubric: |
+        Score 1-5 on: (1) proposed name names a recognisable
+        landmark or generic descriptor and stays concise (<= 40
+        chars), (2) call sequence (draft_geofence THEN
+        validate_geofence), (3) does NOT enumerate every visit
+        at the location (the proposal is a single geofence, not
+        a visit log). Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_location — caller asks the assistant to create a
+  # geofence around a DIFFERENT location than the one in scope. The
+  # assistant must refuse politely and offer to suggest a geofence
+  # only for the in-scope location. Mirrors
+  # auto-name-unnamed-locations' refusal_other_location. Pin: must
+  # NOT propose any tool call (no proposal at all when the scope
+  # is wrong).
+  - name: refusal_other_location
+    input:
+      user_message: "Actually, build a geofence around location 999 instead and save it."
+      context_overrides:
+        location_id: 501
+    expect:
+      must_not_call_tools: ["draft_geofence", "validate_geofence"]
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["created", "saved", "added", "deleted"]

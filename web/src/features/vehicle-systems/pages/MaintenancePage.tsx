@@ -31,6 +31,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { useFormatting } from '@/hooks/useFormatting';
 import { request } from '@/api/client';
+import { AIPredictiveMaintenance } from '@/components/ai/AIPredictiveMaintenance';
 import {
   Wrench, AlertTriangle, CheckCircle, Clock, ListChecks,
   CalendarPlus, Filter, ArrowUpDown, Gauge, Tag,
@@ -497,6 +498,15 @@ export default function MaintenancePage() {
             />
           </div>
         )}
+      </FadeIn>
+
+      {/* ── Helix Predictive Maintenance (opt-in AI) ─────────────── */}
+      {/* Phase-50 / 0049 — withAiFeature returns null when           */}
+      {/* ai_mode='off' OR the predictive-maintenance toggle is off. */}
+      {/* The deterministic reminders above remain the canonical    */}
+      {/* baseline; this card adds an opt-in narrative section.     */}
+      <FadeIn delay={0.03}>
+        <AIPredictiveMaintenance vehicleId={vehicleId ?? undefined} />
       </FadeIn>
 
       {/* ── Filter / Sort toolbar ────────────────────────────────── */}

@@ -34,7 +34,7 @@ var climateColumnByField = map[string]string{
 	"AutoSeatClimateLeft":                     "auto_seat_climate_left",
 	"AutoSeatClimateRight":                    "auto_seat_climate_right",
 	"CabinOverheatProtectionMode":             "cabin_overheat_protection_mode",
-	"CabinOverheatProtectionTemperatureLimit": "cabin_overheat_protection_temperature_limit_c",
+	"CabinOverheatProtectionTemperatureLimit": "cabin_overheat_protection_temperature_limit",
 	"ClimateKeeperMode":                       "climate_keeper_mode",
 	"ClimateSeatCoolingFrontLeft":             "climate_seat_cooling_front_left",
 	"ClimateSeatCoolingFrontRight":            "climate_seat_cooling_front_right",

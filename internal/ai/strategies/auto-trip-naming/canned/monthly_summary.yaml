@@ -1,0 +1,23 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_trip_draft_monthly_1
+        name: draft_trip_name
+        arguments: '{"trip_id": 202, "proposed_name": "October Tour 2024"}'
+    input_tokens: 48
+    output_tokens: 36
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_trip_validate_monthly_1
+        name: validate_trip_name
+        arguments: '{"trip_id": 202, "proposed_name": "October Tour 2024"}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I drafted the name "October Tour 2024" because the trip's drives
+      span most of October and follow a recurring corridor. The proposal
+      keeps the name short — review it in the side panel and click Save
+      to apply it to trip 202.
+    input_tokens: 142
+    output_tokens: 56

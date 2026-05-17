@@ -1,4 +1,4 @@
-.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage quality pre-commit gen-tesla gen-tesla-check arch-baseline arch-check
+.PHONY: all build build-worker build-export-worker run test lint clean docker docker-up docker-down migrate web check coverage quality pre-commit gen-tesla gen-tesla-check arch-baseline arch-check generate generate-check ai-vet ai-eval-fast ai-eval-full ai-eval-judged
 
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
@@ -126,6 +126,45 @@ arch-baseline:
 ## arch-check: Fail if architecture regresses against the committed baseline
 arch-check:
 	go run ./tools/archmetrics -compare tools/archmetrics/baseline.json
+
+## generate: Regenerate cross-language artefacts (TS mirror of the AI feature registry).
+##           Phase-50 / 0001 — F0 AI-Off Contract. Adding a new AI
+##           feature in internal/ai/features/registry.go MUST be
+##           followed by `make generate` so web/src/ai/features.ts
+##           stays in sync. CI fails on drift via `make generate-check`.
+generate:
+	go run ./tools/aigen
+
+## generate-check: Fail if generated artefacts drift from their generators.
+generate-check:
+	go run ./tools/aigen --check
+
+## ai-vet: Phase-50 / 0001 — enforce the AI-Off Contract at the
+##         type-system level (registry coverage + every /api/v1/ai/*
+##         route mounted via guard.Wrap). Run by CI on every PR.
+ai-vet:
+	go run ./tools/aivet
+
+## ai-eval-fast: Phase-50 / 0007 — F6 eval harness, fast mode.
+##               Runs every goldens.yaml under internal/ai/strategies
+##               with the canned mock provider only. Zero network egress.
+##               Used by PR CI as an advisory gate.
+ai-eval-fast:
+	go run ./cmd/ai-eval --all
+
+## ai-eval-full: Phase-50 / 0007 — F6 eval harness, full mode.
+##               Same coverage as ai-eval-fast but emits a JUnit XML
+##               artifact for the main-branch CI to publish + diff
+##               pass-rate. Still 100% offline (no real provider).
+ai-eval-full:
+	go run ./cmd/ai-eval --all --output ai-eval.junit.xml
+
+## ai-eval-judged: Phase-50 / 0007 — F6 eval harness, LLM-as-judge mode.
+##                 Re-scores each canned answer using an LLM judge
+##                 (seed=42, temperature=0). Requires JUDGE_PROVIDER +
+##                 JUDGE_API_KEY env vars; nightly CI use only.
+ai-eval-judged:
+	go run ./cmd/ai-eval --all --judge --output ai-eval.judged.junit.xml
 
 ## help: Show this help message
 help:

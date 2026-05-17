@@ -4,7 +4,7 @@
  * Shows stats, bar charts (visits + time), and paginated location list.
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Clock, Hash, Trophy, Navigation, Building2 } from 'lucide-react';
@@ -30,6 +30,7 @@ import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
+import { AIAutoNameUnnamedLocations } from '@/components/ai/AIAutoNameUnnamedLocations';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -39,6 +40,24 @@ interface VisitedLocation {
   visit_count: number;
   total_duration_s: number;
   last_visited: string | null;
+}
+
+// isUnnamedLocation reports whether a visited-location row should
+// surface the AI auto-name affordance. Three buckets count as
+// "unnamed": empty/whitespace, the literal "Unknown" sentinel the
+// reverse-geocoder emits, and the coordinate-pair fallback shape
+// the geocoder emits when reverse-geocode fails. Documented in the
+// slice prompt — the AI is propose-only and only worth offering
+// when the existing label is unhelpful.
+function isUnnamedLocation(addressName: string): boolean {
+  const trimmed = (addressName ?? '').trim();
+  if (trimmed === '') return true;
+  if (trimmed.toLowerCase() === 'unknown') return true;
+  // Coordinate fallback: e.g. "47.6062,-122.3321" or
+  // "47.6062, -122.3321". Two signed decimals separated by a comma
+  // (with optional whitespace) and nothing else.
+  if (/^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(trimmed)) return true;
+  return false;
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────
@@ -57,6 +76,12 @@ export default function LocationsPage() {
   const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
   const [search, setSearch] = useUrlString('q', '');
+  // AI applied-name pending hand-off — when the user clicks Apply on
+  // an AI proposal, the proposed name is parked here keyed by
+  // location.id. The user then writes it into the canonical
+  // baseline geofence-create / location-rename UI; the AI panel
+  // never persists. (ADR-015 §I3 + §I8 propose-only contract.)
+  const [appliedName, setAppliedName] = useState<{ id: number; name: string } | null>(null);
   const { start, end, setRange } = useRangeState({
     persistKey: 'locations.range',
     defaultPresetId: 'all',
@@ -252,24 +277,39 @@ export default function LocationsPage() {
             <>
               <div className="space-y-2">
                 {filteredLocations.map((loc, i) => (
-                  <GlassPanel key={loc.id} className="p-4 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors">
-                    <div className={cn(
-                      'h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
-                      i === 0 ? 'bg-neon-amber/20 text-neon-amber' : i < 3 ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
-                    )}>
-                      #{i + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium truncate block text-[var(--text-primary)]">{loc.address_name}</span>
-                      <span className="text-[11px] text-[var(--text-muted)]">
-                        {loc.visit_count} {t('visits')} · {formatDuration(loc.total_duration_s)} {t('total')} · ~{formatDuration(loc.visit_count > 0 ? loc.total_duration_s / loc.visit_count : 0)} {t('avg')}
-                        {loc.last_visited && ` · ${t('Last')}: ${formatDate(loc.last_visited)}`}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1 text-emerald-300 text-xs font-medium shrink-0">
-                      <Hash className="h-3 w-3" />{loc.visit_count}
-                    </div>
-                  </GlassPanel>
+                  <div key={loc.id} className="space-y-2">
+                    <GlassPanel className="p-4 flex items-center gap-4 hover:border-[var(--border-subtle)] transition-colors">
+                      <div className={cn(
+                        'h-8 w-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0',
+                        i === 0 ? 'bg-neon-amber/20 text-neon-amber' : i < 3 ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
+                      )}>
+                        #{i + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-medium truncate block text-[var(--text-primary)]">{loc.address_name}</span>
+                        <span className="text-[11px] text-[var(--text-muted)]">
+                          {loc.visit_count} {t('visits')} · {formatDuration(loc.total_duration_s)} {t('total')} · ~{formatDuration(loc.visit_count > 0 ? loc.total_duration_s / loc.visit_count : 0)} {t('avg')}
+                          {loc.last_visited && ` · ${t('Last')}: ${formatDate(loc.last_visited)}`}
+                        </span>
+                        {appliedName?.id === loc.id && (
+                          <span className="mt-1 inline-block text-[11px] text-emerald-300">
+                            {t('locations.aiAutoName.applied', 'Suggested name ready to save:')}{' '}
+                            <span className="text-white/90">{appliedName.name}</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-emerald-300 text-xs font-medium shrink-0">
+                        <Hash className="h-3 w-3" />{loc.visit_count}
+                      </div>
+                    </GlassPanel>
+                    {isUnnamedLocation(loc.address_name) && (
+                      <AIAutoNameUnnamedLocations
+                        locationId={loc.id}
+                        currentName={loc.address_name}
+                        onApplyName={(name) => setAppliedName({ id: loc.id, name })}
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
               <Pagination

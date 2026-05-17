@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"sort"
 	"strings"
 	"time"
@@ -473,11 +474,16 @@ func quietHoursStableID(w *models.QuietHoursWindow) string {
 // settingsEquivalent reports whether two Settings structs are field-
 // for-field equal. Used by the import path to surface unchanged
 // imports as "skipped" instead of "updated".
+//
+// reflect.DeepEqual is used (instead of ==) because Settings now
+// contains map[string]bool / map[string]any fields (ai_features /
+// ai_provider_config, ADR-015) which the language forbids from
+// direct struct comparison.
 func settingsEquivalent(a, b *models.Settings) bool {
 	if a == nil || b == nil {
 		return a == b
 	}
-	return *a == *b
+	return reflect.DeepEqual(*a, *b)
 }
 
 // alertRulesEquivalent compares the user-authored fields of two rules.

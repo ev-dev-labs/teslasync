@@ -31,6 +31,7 @@ import {
   useRatePlans,
 } from '@/api/hooks/useCharging';
 import { RateTimeline } from '../components/RateTimeline';
+import { AISmartChargeScheduleSuggestion } from '@/components/ai/AISmartChargeScheduleSuggestion';
 import type { OptimizeChargeResponse } from '@/types/charging';
 
 const defaultDepartBy = () => {
@@ -118,6 +119,18 @@ export default function SmartChargePage() {
       subtitle={t('chargePlanner.subtitle', 'Optimize charging schedule for the cheapest TOU rates')}
       actions={<VehicleSelect />}
     >
+      {/* ── AI Smart-Charge Schedule Suggestion (opt-in, hidden when ai_mode='off') ── */}
+      <FadeIn>
+        <AISmartChargeScheduleSuggestion
+          vehicleId={vehicleIdNum}
+          targetSoc={targetSoc}
+          departBy={departBy}
+          ratePlanId={ratePlanId}
+          maxAmps={maxAmps}
+          batteryCapacityKwh={batteryCapacity}
+        />
+      </FadeIn>
+
       {/* ── Settings Section ── */}
       <FadeIn>
         <GlassPanel className="p-6">

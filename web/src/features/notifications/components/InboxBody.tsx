@@ -59,6 +59,7 @@ import {
 import type { NotificationLog, AlertRule, Vehicle, Alert } from '@/api/types';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { NotificationFilterBar } from './NotificationFilterBar';
+import { AIInboxAutoCategorization } from '@/components/ai/AIInboxAutoCategorization';
 import { NotificationRow } from './NotificationRow';
 import { NotificationGroupRow } from './NotificationGroupRow';
 import { PullToRefresh, SwipeRow } from '@/components/mobile';
@@ -200,6 +201,20 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
       from: next.from ?? null,
       to: next.to ?? null,
       read: readValue,
+    });
+  }, [setFiltersBatch]);
+
+  // Phase-50 / 0035 — A2 inbox-auto-categorization apply callback.
+  // The AI panel's "Apply categories as filter" button passes a
+  // deduped rule_id list back to the inbox; we copy it into the
+  // existing URL-backed rule_id filter so the deterministic
+  // baseline NotificationFilterBar / useNotificationLogs path
+  // narrows the list. The AI component itself NEVER persists
+  // state — this callback is the canonical hand-off into the
+  // baseline filter (ADR-015 §I3 + §I8 propose-only contract).
+  const handleApplyAICategories = useCallback((newRuleIds: number[]) => {
+    setFiltersBatch({
+      rule_id: newRuleIds.map(String).join(',') || null,
     });
   }, [setFiltersBatch]);
 
@@ -499,6 +514,19 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
           rules={rules}
         />
       </FadeIn>
+
+      {/* Phase-50 / 0035 — A2 inbox-auto-categorization. The
+        component is wrapped with withAiFeature, so it is ABSENT
+        when ai_mode='off' OR the per-feature toggle is off
+        (ADR-015 §I5). The "Apply categories as filter" callback
+        narrows the existing URL-backed rule_id filter — the AI
+        never persists state directly. */}
+      <AIInboxAutoCategorization
+        vehicleId={vehicleIds.length === 1 ? vehicleIds[0] : null}
+        severities={severity}
+        ruleIds={ruleIds}
+        onApplyCategories={handleApplyAICategories}
+      />
 
       <BulkActionsToolbar
         selectedIds={Array.from(selected)}

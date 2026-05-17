@@ -1,0 +1,19 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_incident_timeline_zero_updates_incident_1
+        name: query_incident_timeline
+        arguments: '{"incident_id": 7}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Incident <id='7'/> was opened recently and currently has
+      only its single opening update on the timeline, so there
+      is no further status progression to summarize. The
+      incident remains in its initial investigating state with
+      no recorded mitigation steps yet. Once the on-call adds
+      additional updates, the deterministic timeline will
+      surface them and a richer summary will be available.
+    input_tokens: 240
+    output_tokens: 80

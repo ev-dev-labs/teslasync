@@ -1,0 +1,22 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_draft_feedback_triage_typical_bug_1
+        name: draft_feedback_triage
+        arguments: '{"feedback_id": 42, "proposed_status": "triaged", "proposed_category": "bug", "proposed_priority": "high", "rationale": "The row describes a reproducible crash on the Drive Detail page after the latest deploy."}'
+    input_tokens: 96
+    output_tokens: 48
+  - finish_reason: stop
+    content: |
+      I can confirm the triage proposal for the in-scope feedback row. The
+      row reads as a reproducible bug report tied to a recent deploy, so the
+      proposal is proposed_status=triaged, proposed_category=bug, and
+      proposed_priority=high. The rationale is grounded strictly in the
+      row's title and body — I have not invented severity beyond what the
+      submitter described, and the proposal envelope is propose-only: only
+      the proposed_status maps onto the canonical FeedbackUpdateInput
+      shape, so the user will apply it via the existing Save button on the
+      baseline form. The proposed_category and proposed_priority are
+      recommendation chips for human review, not write-path edits.
+    input_tokens: 280
+    output_tokens: 132

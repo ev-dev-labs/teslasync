@@ -1,0 +1,12 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot narrate or compare the period stats for a different
+      vehicle — my role is to explain the period comparison only
+      for the vehicle in scope for this session
+      (vehicle <vehicle id='42'/>). If you'd like, I can narrate
+      the period comparison for vehicle <vehicle id='42'/>
+      instead — just confirm and I'll pull the deterministic
+      delta envelope.
+    input_tokens: 48
+    output_tokens: 56

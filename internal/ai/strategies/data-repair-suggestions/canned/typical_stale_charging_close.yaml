@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_data_repair_draft_charging_close_42
+        name: draft_data_repair_plan
+        arguments: '{"target_kind": "charging", "target_id": 42, "action": "close"}'
+    input_tokens: 56
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_data_repair_validate_charging_close_42
+        name: validate_data_repair_plan
+        arguments: '{"target_kind": "charging", "target_id": 42, "action": "close"}'
+    input_tokens: 102
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      I drafted a plan to close stale charging session 42 (set
+      ended_at to now and let the canonical close handler compute
+      the duration). Review the typed proposal in the AI panel and
+      click the Close button on the baseline edit form to apply
+      it; I never close sessions myself.
+    input_tokens: 148
+    output_tokens: 64

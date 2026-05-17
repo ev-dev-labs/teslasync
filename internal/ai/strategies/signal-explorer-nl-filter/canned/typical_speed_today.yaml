@@ -1,0 +1,24 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_signal_filter_draft_speed_today
+        name: draft_signal_filter
+        arguments: '{"vehicle_id": 7, "signals": ["VehicleSpeed"], "range_preset": "today", "per_page": 25}'
+    input_tokens: 56
+    output_tokens: 32
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_signal_filter_validate_speed_today
+        name: validate_signal_filter
+        arguments: '{"vehicle_id": 7, "signals": ["VehicleSpeed"], "range_preset": "today", "per_page": 25}'
+    input_tokens: 102
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      I drafted a SignalFilter that selects VehicleSpeed for the
+      today range with 25 rows per page. Review the typed proposal
+      in the AI panel and click the Apply button to copy it into
+      the baseline filter form on /signals/explorer; I never apply
+      filters myself.
+    input_tokens: 148
+    output_tokens: 64

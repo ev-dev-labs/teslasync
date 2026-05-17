@@ -124,7 +124,7 @@ export const DRIVING_WIDGETS: WidgetDef[] = [
   {
     id: 'driving-coach',
     name: 'Driving Coach',
-    description: 'AI-powered driving tips: personalized efficiency recommendations',
+    description: 'Helix-powered driving tips: personalized efficiency recommendations',
     icon: Lightbulb,
     category: 'driving',
     defaultSize: { cols: 2, rows: 4 },

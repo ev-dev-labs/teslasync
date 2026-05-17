@@ -629,6 +629,70 @@ func (s *PipelineSubscriber) Stop() {
 	s.logger.Info().Str("topic", topic).Msg("phase-42 PipelineSubscriber stopped")
 }
 
+// OnBrokerReconnect re-establishes the SUBSCRIBE on every paho OnConnect
+// callback after the initial Start. Production wiring threads this through
+// the SetOnConnectHandler in NewProductionPipelineMQTT so the paho v1.5.0
+// reconnect path (which by default does NOT re-issue SUBSCRIBE — see
+// SetResumeSubs in dlq_production.go) cannot leave the client connected to
+// the broker indefinitely with subscriptions=0.
+//
+// Failure modes addressed:
+//   - EMQX session_expiry_interval (default 7200s) elapses while the
+//     subscriber is disconnected — the broker drops the persistent session
+//     and the next reconnect creates a fresh empty session.
+//   - EMQX node restart wipes session state for clients whose home node was
+//     the restarted one (this cluster does not session-replicate cross-node).
+//
+// Concurrency: paho invokes OnConnect on an internal goroutine. The method
+// guards against the first OnConnect (which may fire before or
+// concurrently with Start in pathological cases) by requiring started==true
+// && stopped==false; the initial Subscribe is owned by Start. Subsequent
+// reconnect-driven invocations re-issue SUBSCRIBE and reset the redelivery
+// tracker because the broker's prior in-flight bookkeeping is gone after a
+// session-expired reconnect — keeping stale counts would skew the
+// poison-pill DLQ threshold.
+func (s *PipelineSubscriber) OnBrokerReconnect(client pahomqtt.Client) {
+	s.mu.Lock()
+	started := s.started
+	stopped := s.stopped
+	s.mu.Unlock()
+	if !started || stopped {
+		// First OnConnect during initial Connect, or post-Stop reconnect:
+		// the initial Subscribe is owned by Start, post-Stop reconnects are
+		// not our concern. Either way: no-op.
+		return
+	}
+	if client == nil {
+		client = s.client
+	}
+	topic := s.pipelineTopicFilter()
+	token := client.Subscribe(topic, s.cfg.SubscribeQoS, s.onPipelineMessage)
+	if !token.WaitTimeout(s.cfg.SubscribeTimeout) {
+		s.logger.Error().
+			Str("topic", topic).
+			Dur("timeout", s.cfg.SubscribeTimeout).
+			Msg("mqtt: PipelineSubscriber: re-subscribe timeout on broker reconnect; telemetry stream will be silent until next reconnect")
+		return
+	}
+	if err := token.Error(); err != nil {
+		s.logger.Error().
+			Err(err).
+			Str("topic", topic).
+			Msg("mqtt: PipelineSubscriber: re-subscribe failed on broker reconnect; telemetry stream will be silent until next reconnect")
+		return
+	}
+	// Broker-side bookkeeping (in-flight, awaiting_rel, redelivery counters)
+	// is gone after a session-expired reconnect. Reset our local tracker so
+	// the MaxRedeliveries DLQ threshold restarts at zero for any messages
+	// the broker may still re-deliver from its queue (or the new session's
+	// queue going forward).
+	s.tracker.Reset()
+	s.logger.Info().
+		Str("topic", topic).
+		Int("max_redeliveries", s.cfg.MaxRedeliveries).
+		Msg("phase-42 PipelineSubscriber re-subscribed on broker reconnect")
+}
+
 // mqttPayload is the test-friendly seam for the Paho-specific
 // pahomqtt.Message. handlePayload takes this struct so unit tests can
 // exercise the full handler logic without instantiating a paho client.

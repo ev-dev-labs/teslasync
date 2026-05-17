@@ -1,0 +1,11 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot advise on a different vehicle than the one
+      currently in scope (vehicle_id=42). The per-request
+      scope binding refuses any tool call outside that
+      vehicle. If you want maintenance risk for another
+      vehicle, please reopen the AI panel from the
+      Maintenance page after switching the vehicle selector.
+    input_tokens: 96
+    output_tokens: 64

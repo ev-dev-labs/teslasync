@@ -1,0 +1,9 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot draft an automation for another user's vehicle. I can
+      only build automations for the vehicle in scope for this session.
+      If you'd like, I can draft a morning pre-conditioning automation
+      for the current vehicle instead — just confirm.
+    input_tokens: 48
+    output_tokens: 42

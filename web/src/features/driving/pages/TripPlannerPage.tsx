@@ -12,6 +12,7 @@ import { StatCard } from '@/components/data-display';
 import { AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { VehicleSelect } from '@/components/forms';
+import { AITripPlannerLLMAgent } from '@/components/ai/AITripPlannerLLMAgent';
 import { usePlanTrip } from '@/api/hooks/useDriving';
 import { AddressInput } from '../components/AddressInput';
 import { SOCRouteChart } from '../components/SOCRouteChart';
@@ -117,6 +118,22 @@ export default function TripPlannerPage() {
       subtitle={t('tripPlanner.subtitle', 'Plan your route with range estimation and charging stops')}
       actions={<VehicleSelect />}
     >
+      {/* Opt-in AI trip-planner agent (renders only when ai_mode is local|cloud
+          and the trip-planner-llm-agent feature toggle is on). Stays absent
+          and emits zero DOM in off mode per ADR-015 §I5 + §I6. The baseline
+          form below is the canonical, deterministic view. */}
+      <FadeIn>
+        <AITripPlannerLLMAgent
+          vehicleId={vehicleId ?? undefined}
+          origin={origin}
+          destination={destination}
+          currentSoc={currentSOC}
+          minArrivalSoc={minArrivalSOC}
+          chargeLimitSoc={90}
+          speedFactor={speedFactor}
+        />
+      </FadeIn>
+
       {/* Route Input Form */}
       <FadeIn>
         <GlassPanel className="p-6">

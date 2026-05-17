@@ -5,7 +5,6 @@ import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgressBoundary'
-import { AuthExpiredOverlay } from '@/components/feedback'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
 import { DensityApplier } from '@/components/ui/DensityApplier'
 import { ContextMenuRoot } from '@/components/ui/ContextMenu'
@@ -143,6 +142,11 @@ const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalV
 const FeedbackQueue = lazy(() => import('./features/admin/pages/FeedbackQueuePage'))
 const FleetTelemetryCoverage = lazy(() => import('./features/admin/pages/FleetTelemetryCoveragePage'))
 
+// Power user
+const PowerSqlPlayground = lazy(() => import('./features/power-user/pages/SqlPlaygroundPage'))
+const PowerGrafanaPanel = lazy(() => import('./features/power-user/pages/GrafanaPanelPage'))
+const PowerDashboards = lazy(() => import('./features/power-user/pages/DashboardsPage'))
+
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
 const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
@@ -163,6 +167,13 @@ const MyActivity = lazy(() => import('./features/system/pages/MyActivityPage'))
 
 // Settings
 const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
+// Phase-50 / 0054 — P3 safety setting explainer host page. Distinct
+// from /safety-settings (vehicle telemetry) — this page hosts the
+// safety-RELATED APPLICATION settings (notification quiet hours,
+// alert digest mode, critical-flash, tab-badge, api_suspended) plus
+// the opt-in Helix narrator. Routed at /settings/safety to live
+// under the /settings family.
+const SafetySettingsPage = lazy(() => import('./features/settings/pages/SafetyPage'))
 // Account-level security pages promoted out of Settings (Phase-50 split):
 //   /account/2fa       — Two-factor authentication enrollment / disable
 //   /account/sessions  — Active browser/device sessions + revoke
@@ -182,6 +193,8 @@ const Search = lazy(() => import('./features/system/pages/SearchPage'))
 
 // Sharing (public)
 const SharedDrive = lazy(() => import('./features/sharing/pages/SharedDrivePage'))
+// Sharing (authenticated, in Layout) — Phase-50 / 0060 GEN1 trip postcard.
+const SharingTrips = lazy(() => import('./features/sharing/pages/SharingTripsPage'))
 
 // Watch (standalone — no Layout, API key auth)
 const WatchFace = lazy(() => import('./features/watch/pages/WatchFacePage'))
@@ -279,7 +292,6 @@ export default function App() {
 
   return (
     <>
-      <AuthExpiredOverlay />
       <OnboardingGate />
       <ScrollRestoration />
       <DensityApplier />
@@ -310,6 +322,7 @@ export default function App() {
         <Route path="digital-twin" element={<SafeRoute name="DigitalTwin"><DigitalTwin /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
+        <Route path="battery/health" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
         <Route path="drives" element={<SafeRoute name="Drives"><Drives /></SafeRoute>} />
         <Route path="charging" element={<SafeRoute name="Charging"><Charging /></SafeRoute>} />
         <Route path="analytics" element={<SafeRoute name="Analytics"><Analytics /></SafeRoute>} />
@@ -335,6 +348,7 @@ export default function App() {
         <Route path="notifications/audit" element={<SafeRoute name="NotificationsAudit"><NotificationsAudit /></SafeRoute>} />
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
+        <Route path="settings/safety" element={<SafeRoute name="SafetySettingsPage"><SafetySettingsPage /></SafeRoute>} />
         <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />
         <Route path="account/sessions" element={<SafeRoute name="ActiveSessions"><ActiveSessions /></SafeRoute>} />
         <Route path="account/privacy" element={<SafeRoute name="Privacy"><Privacy /></SafeRoute>} />
@@ -344,23 +358,53 @@ export default function App() {
         <Route path="chatbot" element={<SafeRoute name="Chatbot"><Chatbot /></SafeRoute>} />
         <Route path="tire-pressure" element={<SafeRoute name="TirePressure"><TirePressure /></SafeRoute>} />
         <Route path="software-updates" element={<SafeRoute name="SoftwareUpdates"><SoftwareUpdates /></SafeRoute>} />
+        {/* Phase-50 / 0051 alias: the slice prompt registered the AI feature
+            against frontend route `/vehicle-systems/software`; the canonical
+            app path stays `/software-updates` for back-compat, but mounting
+            the same page at `/vehicle-systems/software` lets the registry's
+            RouteSet.Frontend entry land users on the deterministic
+            baseline. */}
+        <Route path="vehicle-systems/software" element={<SafeRoute name="SoftwareUpdates"><SoftwareUpdates /></SafeRoute>} />
         <Route path="vampire-drain" element={<SafeRoute name="VampireDrain"><VampireDrain /></SafeRoute>} />
+        {/* Phase-50 / 0030 alias: the slice prompt registered the AI feature
+            against frontend route `/charging/vampire-drain`; the canonical
+            app path stays `/vampire-drain` for back-compat, but mounting the
+            same page at `/charging/vampire-drain` lets the registry's
+            RouteSet.Frontend entry land users on the deterministic
+            baseline. */}
+        <Route path="charging/vampire-drain" element={<SafeRoute name="VampireDrain"><VampireDrain /></SafeRoute>} />
         <Route path="locations" element={<SafeRoute name="Locations"><Locations /></SafeRoute>} />
         <Route path="timeline" element={<SafeRoute name="Timeline"><Timeline /></SafeRoute>} />
         <Route path="mileage" element={<SafeRoute name="Mileage"><Mileage /></SafeRoute>} />
         <Route path="projected-range" element={<SafeRoute name="ProjectedRange"><ProjectedRange /></SafeRoute>} />
+        {/* Phase-50 / 0063 alias: the slice prompt registered the AI feature
+            `range-prediction-model` against frontend route `/analytics/range`;
+            the canonical app path stays `/projected-range` for back-compat,
+            but mounting the same page at `/analytics/range` lets the
+            registry's RouteSet.Frontend entry land users on the deterministic
+            baseline (which also hosts the opt-in AIRangePrediction section
+            when AI mode is on and the toggle is enabled). */}
+        <Route path="analytics/range" element={<SafeRoute name="ProjectedRange"><ProjectedRange /></SafeRoute>} />
         <Route path="efficiency" element={<SafeRoute name="Efficiency"><Efficiency /></SafeRoute>} />
         <Route path="trips" element={<SafeRoute name="Trips"><Trips /></SafeRoute>} />
         <Route path="trips/:id" element={<SafeRoute name="TripDetail"><TripDetail /></SafeRoute>} />
+        {/* Phase-50 / 0060 — GEN1 trip-postcard-share-card-image-generation
+            registers frontend route `/sharing/trips`. The page renders the
+            deterministic recent-trips list + static-share-card hints
+            regardless of AI mode; the opt-in AI card is gated by
+            withAiFeature and absent in off mode. */}
+        <Route path="sharing/trips" element={<SafeRoute name="SharingTrips"><SharingTrips /></SafeRoute>} />
         <Route path="trip-planner" element={<SafeRoute name="TripPlanner"><TripPlanner /></SafeRoute>} />
         <Route path="statistics" element={<SafeRoute name="Statistics"><Statistics /></SafeRoute>} />
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
+        <Route path="analytics/lifetime" element={<Navigate to="/lifetime-stats" replace />} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
         <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
         <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
         <Route path="compare" element={<Navigate to="/period-compare" replace />} />
+        <Route path="analytics/compare" element={<Navigate to="/period-compare" replace />} />
         <Route path="period-compare" element={<SafeRoute name="PeriodCompare"><PeriodCompare /></SafeRoute>} />
         <Route path="admin" element={<Navigate to="/system-status" replace />} />
         <Route path="admin/feedback" element={<SafeRoute name="FeedbackQueue"><FeedbackQueue /></SafeRoute>} />
@@ -373,6 +417,9 @@ export default function App() {
         <Route path="gas-price" element={<SafeRoute name="GasPriceAutoPoll"><GasPriceAutoPoll /></SafeRoute>} />
         <Route path="dev-tools" element={<SafeRoute name="DevTools"><DevTools /></SafeRoute>} />
         <Route path="api-playground" element={<SafeRoute name="ApiPlayground"><ApiPlayground /></SafeRoute>} />
+        <Route path="power/sql" element={<SafeRoute name="PowerSqlPlayground"><PowerSqlPlayground /></SafeRoute>} />
+        <Route path="power/grafana" element={<SafeRoute name="PowerGrafanaPanel"><PowerGrafanaPanel /></SafeRoute>} />
+        <Route path="power/dashboards" element={<SafeRoute name="PowerDashboards"><PowerDashboards /></SafeRoute>} />
         <Route path="redis-signals" element={<SafeRoute name="RedisSignalViewer"><RedisSignalViewer /></SafeRoute>} />
         <Route path="signals" element={<SafeRoute name="SignalsWorkspace"><SignalsWorkspace /></SafeRoute>} />
         <Route path="signal-explorer" element={<SafeRoute name="SignalExplorer"><SignalExplorer /></SafeRoute>} />
@@ -384,14 +431,43 @@ export default function App() {
         <Route path="db-health" element={<SafeRoute name="DBHealthDashboard"><DBHealthDashboard /></SafeRoute>} />
         <Route path="mqtt-inspector" element={<SafeRoute name="MQTTInspector"><MQTTInspector /></SafeRoute>} />
         <Route path="anomaly-detection" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
+        {/* Phase-50 / 0062 alias: the slice prompt registered the AI feature
+            `learned-per-vehicle-anomaly-baselines` against frontend route
+            `/analytics/anomalies`; the canonical app path stays
+            `/anomaly-detection` for back-compat, but mounting the same page
+            at `/analytics/anomalies` lets the registry's RouteSet.Frontend
+            entry land users on the deterministic baseline (which also hosts
+            the opt-in AILearnedAnomalyBaselines section when AI mode is on
+            and the toggle is enabled). */}
+        <Route path="analytics/anomalies" element={<SafeRoute name="AnomalyDashboard"><AnomalyDashboard /></SafeRoute>} />
         <Route path="driving-dynamics" element={<SafeRoute name="DrivingDynamics"><DrivingDynamics /></SafeRoute>} />
         <Route path="climate-control" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
+        {/* Phase-50 / 0031 alias: the slice prompt registered the AI feature
+            against frontend route `/climate`; the canonical app path stays
+            `/climate-control` for back-compat, but mounting the same page at
+            `/climate` lets the registry's RouteSet.Frontend entry land users
+            on the deterministic baseline (which also hosts the opt-in
+            AIPreheatPrecoolRecommender section when AI mode is on). */}
+        <Route path="climate" element={<SafeRoute name="ClimateControl"><ClimateControl /></SafeRoute>} />
         <Route path="security-access" element={<SafeRoute name="SecurityAccess"><SecurityAccess /></SafeRoute>} />
         <Route path="charging-curve" element={<SafeRoute name="ChargingCurve"><ChargingCurve /></SafeRoute>} />
+        {/* Phase-50 / 0028 alias: the slice prompt registered the AI feature
+            against frontend route `/charging/curves`; the canonical app path
+            stays `/charging-curve` for back-compat, but mounting the same
+            page at `/charging/curves` lets the registry's RouteSet.Frontend
+            entry land users on the deterministic baseline. */}
+        <Route path="charging/curves" element={<SafeRoute name="ChargingCurve"><ChargingCurve /></SafeRoute>} />
         <Route path="cost-analysis" element={<SafeRoute name="CostAnalysis"><CostAnalysis /></SafeRoute>} />
+        {/* Phase-50 / 0029 alias: the slice prompt registered the AI feature
+            against frontend route `/charging/costs`; the canonical app path
+            stays `/cost-analysis` for back-compat, but mounting the same
+            page at `/charging/costs` lets the registry's RouteSet.Frontend
+            entry land users on the deterministic baseline. */}
+        <Route path="charging/costs" element={<SafeRoute name="CostAnalysis"><CostAnalysis /></SafeRoute>} />
         <Route path="tesla-charging-history" element={<SafeRoute name="TeslaChargingHistory"><TeslaChargingHistory /></SafeRoute>} />
         <Route path="tesla-charging-sessions" element={<SafeRoute name="TeslaChargingSessions"><TeslaChargingSessions /></SafeRoute>} />
         <Route path="smart-charge" element={<SafeRoute name="SmartCharge"><SmartCharge /></SafeRoute>} />
+        <Route path="charging/schedule" element={<SafeRoute name="SmartCharge"><SmartCharge /></SafeRoute>} />
         <Route path="powershare" element={<SafeRoute name="Powershare"><Powershare /></SafeRoute>} />
         <Route path="battery-cells" element={<SafeRoute name="BatteryCells"><BatteryCells /></SafeRoute>} />
         <Route path="drive-score" element={<SafeRoute name="DriveScore"><DriveScore /></SafeRoute>} />
@@ -414,6 +490,13 @@ export default function App() {
         <Route path="regen-efficiency" element={<SafeRoute name="RegenEfficiency"><RegenEfficiency /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
+        {/* Phase-50 / 0050 alias: the slice prompt registered the AI feature
+            against frontend route `/analytics/tco`; the canonical app path
+            stays `/tco` for back-compat (it predates the /analytics/* family),
+            but mounting the same page at `/analytics/tco` lets the registry's
+            RouteSet.Frontend entry land users on the deterministic baseline
+            without surprising 404s. */}
+        <Route path="analytics/tco" element={<SafeRoute name="TrueCostOwnership"><TrueCostOwnership /></SafeRoute>} />
         <Route path="vehicle-comparison" element={<SafeRoute name="FleetCompare"><FleetCompare /></SafeRoute>} />
         <Route path="sleep-efficiency" element={<SafeRoute name="SleepEfficiency"><SleepEfficiency /></SafeRoute>} />
         <Route path="charging-heatmap" element={<SafeRoute name="ChargingHeatmap"><ChargingHeatmap /></SafeRoute>} />

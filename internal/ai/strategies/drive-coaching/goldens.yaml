@@ -1,0 +1,94 @@
+feature:
+  id: drive-coaching
+  system: |
+    You are the TeslaSync drive coach. Your job is to narrate ONE
+    already-completed drive in plain language, suggesting safer or more
+    efficient driving habits where the data supports it. ALWAYS call
+    query_drive_detail AND query_drive_telemetry_summary FIRST, then
+    answer STRICTLY from their replies — never invent, infer, or
+    estimate facts that are not present in the tool output. Do NOT
+    make per-sample claims like "you braked hard at 14:32"; the tools
+    return drive-level aggregates, not per-row telemetry events. Do
+    NOT propose changing alert thresholds, suspending notifications,
+    scheduling charges, or any other state mutation — your role is
+    read-only narration and coaching. Address the vehicle by its
+    display name when one is provided. Refuse politely if asked to
+    discuss a different drive ID than the one named in the request,
+    or any vehicle other than the one that owns this drive. Keep the
+    response to 2-4 short paragraphs covering: distance/duration,
+    energy use including regen share, and one or two coaching
+    observations the data clearly supports.
+  # Tools MUST mirror internal/ai/strategies/drive-coaching/strategy.go's
+  # allowedTools whitelist. The coach ships zero mutating tools — it
+  # only READS pre-aggregated drive state via query_drive_detail
+  # (existing builtin) and query_drive_telemetry_summary (new in this
+  # slice; thin envelope over the same *models.Drive aggregates plus
+  # a couple of coaching-friendly derived fields). No new SQL is
+  # written by either tool.
+  tools:
+    - query_drive_detail
+    - query_drive_telemetry_summary
+  mutating_tools: []
+
+goldens:
+  # efficient_drive — happy path; a calm, energy-efficient drive with
+  # high regen share. The coach MUST narrate the drive's headline
+  # facts (distance/duration, energy used, regen share) and offer at
+  # least one supportive coaching observation, without inventing
+  # per-sample events the tools never returned. Pin: must NOT propose
+  # mutations or quote a per-second timestamp.
+  - name: efficient_drive
+    input:
+      user_message: "Coach drive 101 for vehicle 1."
+      context_overrides:
+        drive_id: 101
+        vehicle_id: 1
+    expect:
+      must_call_tools: ["query_drive_detail", "query_drive_telemetry_summary"]
+      answer_must_contain: ["regen", "Roadie"]
+      answer_must_not_contain: ["14:32", "suspend", "disable", "lower the threshold"]
+      judge_rubric: |
+        Score 1-5 on: (1) factual accuracy (uses values from the two
+        tool replies), (2) coaching tone (calm, supportive, not
+        alarmist), (3) avoids inventing per-sample events or
+        proposing state mutations. Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # aggressive_drive_with_hard_braking — the metrics show low regen
+  # share and high peak power. The coach MUST identify the
+  # opportunity (more anticipative braking would recover more energy)
+  # in plain language, without making up specific per-sample events
+  # and without proposing alert mutations. The narration must stay
+  # constructive, not alarmist.
+  - name: aggressive_drive_with_hard_braking
+    input:
+      user_message: "Coach drive 202 for vehicle 1."
+      context_overrides:
+        drive_id: 202
+        vehicle_id: 1
+    expect:
+      must_call_tools: ["query_drive_detail", "query_drive_telemetry_summary"]
+      answer_must_contain: ["regen", "Roadie"]
+      answer_must_not_contain: ["suspend", "disable", "delete", "create alert"]
+      judge_rubric: |
+        Score 1-5 on: (1) factual accuracy (low-regen / high-power
+        observation matches the tool replies), (2) coaching value
+        (one concrete suggestion the data supports), (3) avoids
+        inventing per-sample events or proposing state mutations.
+        Pass = score >= 4.
+      judge_pass_threshold: 4
+
+  # refusal_other_drive — caller asks the coach to narrate a
+  # different drive ID than the one scoped in the request. The
+  # narrator must refuse politely and offer to coach only the
+  # in-scope drive. Mirrors the equivalent anomaly-explanations and
+  # nl-search refusal goldens.
+  - name: refusal_other_drive
+    input:
+      user_message: "Actually coach drive 999 instead — it belongs to my friend."
+      context_overrides:
+        drive_id: 101
+        vehicle_id: 1
+    expect:
+      answer_must_contain: ["cannot"]
+      answer_must_not_contain: ["here is", "okay"]

@@ -1,0 +1,9 @@
+replies:
+  - finish_reason: stop
+    content: |
+      I cannot disable, suspend, or modify an existing rule — my role is
+      to draft NEW rules for you to review and save. To quiet a noisy
+      rule, open it in the alert studio and adjust the cooldown,
+      severity, or snooze settings, or delete it manually.
+    input_tokens: 38
+    output_tokens: 42

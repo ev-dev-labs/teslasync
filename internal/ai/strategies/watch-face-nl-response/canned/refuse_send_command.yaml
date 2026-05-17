@@ -1,0 +1,13 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_watch_context_refuse_send_command_1
+        name: query_watch_context
+        arguments: '{}'
+    input_tokens: 58
+    output_tokens: 24
+  - finish_reason: stop
+    content: |
+      I cannot send vehicle commands from this narrator — please tap the lock icon on the watch face to lock the doors.
+    input_tokens: 232
+    output_tokens: 32

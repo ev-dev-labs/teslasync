@@ -11,6 +11,7 @@ import {
   type DistanceUnitPref,
 } from '@/lib/unitConversion';
 import { Zap, Lock, Unlock, Thermometer, Shield } from 'lucide-react';
+import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
 
 /**
  * Watch-optimized page for Apple Watch / Wear OS.
@@ -21,6 +22,18 @@ import { Zap, Lock, Unlock, Thermometer, Shield } from 'lucide-react';
  * - No scrolling — single screen
  * - Auto-refresh every 30s
  * EXCEPTION: watch/PWA route is chrome-less to fit 40-45mm wearable displays.
+ *
+ * Phase-50 / 0056 V2 — opt-in Helix narrator:
+ *   The deterministic <WatchShell> + fixed cards + tap commands
+ *   above are the canonical baseline visible to every user
+ *   (the ONLY view when AI is off — the wearable contract). When
+ *   ai_mode is on AND the watch-face-nl-response toggle is on,
+ *   <AIWatchFaceNLResponse /> renders an OPT-IN narration panel
+ *   BELOW the watch shell. withAiFeature returns null in off
+ *   mode so the wearable chrome-less invariant holds (no second
+ *   element in the doc flow at all). Desktop/tablet users who
+ *   opt in can scroll to use the Helix panel; wearables never
+ *   see it.
  */
 export default function WatchFacePage() {
   const [searchParams] = useSearchParams();
@@ -34,102 +47,117 @@ export default function WatchFacePage() {
     commandMutation.mutate({ vehicleId, command });
   };
 
+  // Render the wearable WatchShell first as the primary surface;
+  // the opt-in Helix narrator is appended as a sibling AFTER so
+  // off-mode users see ONLY the chrome-less wearable shell
+  // (withAiFeature returns null → the sibling is absent from the
+  // DOM, preserving the wearable invariant).
+  let watchContent: React.ReactNode;
   if (isLoading) {
-    return (
-      <WatchShell>
-        <Spinner size="lg" />
-      </WatchShell>
+    watchContent = <Spinner size="lg" />;
+  } else if (error || !data) {
+    watchContent = (
+      <p className="text-[var(--text-secondary)] text-sm text-center px-4">
+        {error ? String(error) : 'No vehicle found'}
+      </p>
+    );
+  } else {
+    // SI boundary: backend `range_km` is in km (not meters per the
+    // Phase-42 SI convention) — derived in watch_handler.go as
+    // RatedRange*1.60934. Multiply by 1000 to feed convertDistanceFromSI,
+    // mirroring the Phase-43/0023 BatteryHandler.Report fromKm pattern.
+    const displayRange = convertDistanceFromSI(
+      data.range_km * 1000,
+      unitPrefs.distance,
+    );
+    // SI boundary: backend `inside_temp_c` is already °C (SI for temp).
+    const displayInsideTemp = convertTempFromSI(
+      data.inside_temp_c,
+      unitPrefs.temperature,
+    );
+
+    watchContent = (
+      <>
+        {/* Vehicle name */}
+        <div className="text-[10px] text-[var(--text-muted)] text-center truncate px-2">
+          {data.vehicle_name}
+        </div>
+
+        {/* Battery gauge — center focus */}
+        <div className="flex-1 flex flex-col items-center justify-center min-h-0">
+          <BatteryGauge
+            level={data.battery_level}
+            rangeDisplay={displayRange}
+            distanceUnit={unitPrefs.distance}
+          />
+
+          {/* Charging status */}
+          {data.is_charging && (
+            <div className="mt-2 flex items-center gap-1 text-emerald-400 text-xs">
+              <Zap className="h-3 w-3" />
+              <span>{Math.round(data.time_to_full)}m to full</span>
+            </div>
+          )}
+
+          {/* State badge */}
+          <Badge
+            variant={watchStateVariant(data.state)}
+            size="sm"
+            className={cn('mt-2 text-[10px] font-medium', watchStateClassName(data.state))}
+          >
+            {data.state}
+          </Badge>
+        </div>
+
+        {/* Quick action icons */}
+        <div className="flex justify-center gap-4 pb-2">
+          <StatusIcon
+            icon={data.is_locked ? Lock : Unlock}
+            active={data.is_locked}
+            color={data.is_locked ? 'emerald' : 'red'}
+            onClick={() => sendCommand(data.is_locked ? 'unlock' : 'lock')}
+            loading={commandMutation.isPending}
+          />
+          <StatusIcon
+            icon={Thermometer}
+            active={data.is_climate_on}
+            label={`${Math.round(displayInsideTemp)}°`}
+            onClick={() => sendCommand(data.is_climate_on ? 'climate_off' : 'climate_on')}
+            loading={commandMutation.isPending}
+          />
+          <StatusIcon
+            icon={Shield}
+            active={data.sentry_mode}
+            color={data.sentry_mode ? 'amber' : undefined}
+          />
+        </div>
+
+        {/* Last updated */}
+        <div className="text-[8px] text-[var(--text-muted)] text-center">
+          {formatRelativeTime(data.last_updated)}
+        </div>
+
+        {/* PWA meta tags (injected via effect) */}
+        <WatchPWAMeta />
+      </>
     );
   }
-
-  if (error || !data) {
-    return (
-      <WatchShell>
-        <p className="text-[var(--text-secondary)] text-sm text-center px-4">
-          {error ? String(error) : 'No vehicle found'}
-        </p>
-      </WatchShell>
-    );
-  }
-
-  // SI boundary: backend `range_km` is in km (not meters per the
-  // Phase-42 SI convention) — derived in watch_handler.go as
-  // RatedRange*1.60934. Multiply by 1000 to feed convertDistanceFromSI,
-  // mirroring the Phase-43/0023 BatteryHandler.Report fromKm pattern.
-  const displayRange = convertDistanceFromSI(
-    data.range_km * 1000,
-    unitPrefs.distance,
-  );
-  // SI boundary: backend `inside_temp_c` is already °C (SI for temp).
-  const displayInsideTemp = convertTempFromSI(
-    data.inside_temp_c,
-    unitPrefs.temperature,
-  );
 
   return (
-    <WatchShell>
-      {/* Vehicle name */}
-      <div className="text-[10px] text-[var(--text-muted)] text-center truncate px-2">
-        {data.vehicle_name}
-      </div>
-
-      {/* Battery gauge — center focus */}
-      <div className="flex-1 flex flex-col items-center justify-center min-h-0">
-        <BatteryGauge
-          level={data.battery_level}
-          rangeDisplay={displayRange}
-          distanceUnit={unitPrefs.distance}
-        />
-
-        {/* Charging status */}
-        {data.is_charging && (
-          <div className="mt-2 flex items-center gap-1 text-emerald-400 text-xs">
-            <Zap className="h-3 w-3" />
-            <span>{Math.round(data.time_to_full)}m to full</span>
-          </div>
-        )}
-
-        {/* State badge */}
-        <Badge
-          variant={watchStateVariant(data.state)}
-          size="sm"
-          className={cn('mt-2 text-[10px] font-medium', watchStateClassName(data.state))}
-        >
-          {data.state}
-        </Badge>
-      </div>
-
-      {/* Quick action icons */}
-      <div className="flex justify-center gap-4 pb-2">
-        <StatusIcon
-          icon={data.is_locked ? Lock : Unlock}
-          active={data.is_locked}
-          color={data.is_locked ? 'emerald' : 'red'}
-          onClick={() => sendCommand(data.is_locked ? 'unlock' : 'lock')}
-          loading={commandMutation.isPending}
-        />
-        <StatusIcon
-          icon={Thermometer}
-          active={data.is_climate_on}
-          label={`${Math.round(displayInsideTemp)}°`}
-          onClick={() => sendCommand(data.is_climate_on ? 'climate_off' : 'climate_on')}
-          loading={commandMutation.isPending}
-        />
-        <StatusIcon
-          icon={Shield}
-          active={data.sentry_mode}
-          color={data.sentry_mode ? 'amber' : undefined}
-        />
-      </div>
-
-      {/* Last updated */}
-      <div className="text-[8px] text-[var(--text-muted)] text-center">
-        {formatRelativeTime(data.last_updated)}
-      </div>
-
-      {/* PWA meta tags (injected via effect) */}
-      <WatchPWAMeta />
-    </WatchShell>
+    <>
+      <WatchShell>{watchContent}</WatchShell>
+      {/*
+        Phase-50 / 0056 V2 — opt-in Helix narrator. Rendered as a
+        sibling AFTER <WatchShell> so the chrome-less wearable
+        layout above is unaffected. withAiFeature returns null
+        when ai_mode='off' or the per-feature toggle is off,
+        keeping the wearable invariant ("single screen, no
+        scroll") intact. On desktop/tablet with AI on, this
+        panel renders below the watch shell for opt-in
+        natural-language Q&A about the current watch face.
+      */}
+      <AIWatchFaceNLResponse />
+    </>
   );
 }
 

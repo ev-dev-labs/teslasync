@@ -144,6 +144,17 @@ func DecodeJSONField(field string, body []byte, vin string, fallbackTs time.Time
 		return nil, nil
 	}
 
+	// Per-field tolerant override: for the small set of fields whose
+	// on-wire JSON shape is known to drift from the declared ValueKind
+	// (see canonicalizeFieldsJSON), bypass the strict switch below and
+	// dispatch to decodeCanonicalJSONField. Returning here is safe
+	// because the override emits the same []Atomic shape the strict
+	// switch would produce — the only difference is which Go type
+	// Atomic.Value carries for that field.
+	if canonicalizeFieldsJSON[field] {
+		return decodeCanonicalJSONField(field, body, ts, vin)
+	}
+
 	switch meta.ValueKind {
 	case protomodel.ValueKindString:
 		var s string

@@ -35,6 +35,10 @@ import { SignalChartPanel } from '../components/SignalChartPanel';
 import { SignalStatsPanel } from '../components/SignalStatsPanel';
 import { SignalHistoryTable } from '../components/SignalHistoryTable';
 import { useLiveSignalStream, type SignalStat } from '../hooks/useLiveSignalStream';
+import {
+  AISignalExplorerNlFilter,
+  type SignalFilterDraft,
+} from '@/components/ai/AISignalExplorerNlFilter';
 
 const MAX_SIGNALS = 5;
 
@@ -55,7 +59,7 @@ export default function SignalExplorerPage() {
   const { data: availableSignals, error: signalsError } = useSignals(vehicleId);
   const [selectedSignals, setSelectedSignals] = useUrlArray('signals');
 
-  const { start, end, setRange } = useRangeState({
+  const { start, end, setRange, setPreset } = useRangeState({
     persistKey: 'signal-explorer.range',
     defaultPresetId: 'today',
   });
@@ -157,6 +161,26 @@ export default function SignalExplorerPage() {
   const hasHistorical = exploreKey !== null;
   const anyError = (signalsError ?? historicalError) as Error | undefined;
 
+  // Phase-50 / 0044 — wire the optional AI natural-language filter
+  // into the deterministic page state. The AI section is opt-in
+  // and entirely absent in off mode (withAiFeature gates it). The
+  // LLM never writes; this callback is invoked only when the user
+  // explicitly clicks "Apply to filters" on a typed proposal.
+  const handleApplyAiDraft = useCallback(
+    (draft: SignalFilterDraft) => {
+      const next = draft.signals
+        .filter((s) => typeof s === 'string' && s.length > 0)
+        .slice(0, MAX_SIGNALS);
+      if (next.length > 0) setSelectedSignals(next);
+      if (draft.range_preset) setPreset(draft.range_preset);
+      if (draft.per_page > 0) {
+        setPerPage(draft.per_page);
+        setPage(1);
+      }
+    },
+    [setSelectedSignals, setPreset, setPerPage, setPage],
+  );
+
   return (
     <PageContainer
       title={t('Signal Explorer')}
@@ -245,6 +269,11 @@ export default function SignalExplorerPage() {
               </div>
             </div>
           </GlassPanel>
+
+          <AISignalExplorerNlFilter
+            vehicleId={vehicleId}
+            onApply={handleApplyAiDraft}
+          />
 
           {!hasHistorical && !isLive ? (
             <EmptyState

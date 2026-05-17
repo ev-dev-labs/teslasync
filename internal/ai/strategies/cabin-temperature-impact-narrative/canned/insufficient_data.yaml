@@ -1,0 +1,20 @@
+replies:
+  - finish_reason: tool_calls
+    tool_calls:
+      - id: call_query_temperature_impact_insufficient_data_1
+        name: query_temperature_impact
+        arguments: '{"vehicle_id": 42}'
+    input_tokens: 64
+    output_tokens: 32
+  - finish_reason: stop
+    content: |
+      Cabin temperature impact for vehicle <vehicle id='42'/>: there is
+      not enough recent driving data to build a reliable temperature
+      profile yet — the deterministic helper returned has_enough_data =
+      false, so I will not invent a percentage drop, a best/worst
+      bucket, or a seasonal pattern. Once the vehicle has a few more
+      drives across a wider temperature range (the deterministic
+      minimum is on the tool's min_required_drives field), the bucket
+      aggregator can return a meaningful breakdown.
+    input_tokens: 240
+    output_tokens: 96
