@@ -26,7 +26,11 @@ permissions:
 jobs:
   lighthouse:
     name: Lighthouse CI
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    # Pin to ubuntu-latest because lighthouse-ci-action requires Chrome,
+    # which the self-hosted arc-runner image does not ship (`CHROME_PATH
+    # environment variable must be set to a Chrome/Chromium executable`).
+    # GitHub-hosted ubuntu-latest has Chrome preinstalled.
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     defaults:
       run:
         working-directory: web

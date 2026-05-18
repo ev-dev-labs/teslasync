@@ -239,7 +239,12 @@ jobs:
 
   docker:
     name: Docker · ${{ matrix.image }}
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    # Pin to ubuntu-latest because self-hosted arc-runner pods have been
+    # observed to stall the export-worker build indefinitely (>35 min vs
+    # ~9 min for the sibling api/notification-worker builds on the same
+    # run). GitHub-hosted ubuntu-latest finishes all three images
+    # consistently. Override via the workflow_dispatch `runner` input.
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     needs: [backend, frontend]
     strategy:
       fail-fast: false
