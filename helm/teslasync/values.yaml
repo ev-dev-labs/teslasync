@@ -393,6 +393,26 @@ fleetTelemetry:
   tolerations: []
   affinity: {}
 
+  # Pod-level security identity. Empty {} defers to the image's USER
+  # directive. ⚠️  tesla/fleet-telemetry currently runs as root because
+  # Tesla's official image does not set USER. Override only if you have
+  # rebuilt the image with a non-root user or you accept that vehicles
+  # cannot connect without a public-CA TLS cert mounted at /certs/ (which
+  # requires either runAsUser=0 or a fsGroup that owns the secret mount).
+  podSecurityContext: {}
+
+  # Container-level hardening — safe even when the image runs as root,
+  # because it only restricts the capability + syscall surface. Drops
+  # NET_BIND_SERVICE indirectly via capabilities.drop=ALL, which is fine
+  # because the chart binds wss to 4443 (>1024) — not a privileged port.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+
   tls:
     # -- K8s TLS secret containing tls.crt and tls.key for the Fleet Telemetry server.
     # Vehicles verify this certificate — must be from a public CA (e.g., Let's Encrypt).
@@ -843,6 +863,24 @@ postgresql:
       cpu: 500m
       memory: 1Gi
 
+  # Pod-level security identity. Empty {} defers to the image's USER directive
+  # (timescaledb-ha runs as postgres, uid 1000). Overriding runAsUser/fsGroup
+  # risks breaking the PGDATA volume permissions, especially on local-path
+  # PVs which are root-owned by default on k3s. Override only after
+  # verifying the target image's runtime UID and re-chowning the volume.
+  podSecurityContext: {}
+
+  # Container-level hardening. Safe across any image because it only drops
+  # privileges — does not change identity. readOnlyRootFilesystem omitted:
+  # Postgres writes to /tmp and /var/run/postgresql.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+
   # External PostgreSQL — used when postgresql.enabled is false.
   external:
     host: ""
@@ -885,6 +923,20 @@ redis:
     requests:
       cpu: 50m
       memory: 32Mi
+
+  # Pod-level security identity. Empty {} defers to the image's USER
+  # directive (redis:7-alpine runs as redis, uid 999). See postgresql
+  # block for the rationale on not setting runAsUser/fsGroup by default.
+  podSecurityContext: {}
+
+  # Container-level hardening — safe across any image.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
 
   # External Redis — used when redis.enabled is false.
   external:
@@ -929,6 +981,19 @@ mqtt:
     requests:
       cpu: 25m
       memory: 16Mi
+
+  # Pod-level security identity. Empty {} defers to the image's USER
+  # directive (eclipse-mosquitto:2 runs as mosquitto, uid 1883).
+  podSecurityContext: {}
+
+  # Container-level hardening — safe across any image.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
 
   # External MQTT — used when mqtt.enabled is false.
   external:
@@ -1049,6 +1114,19 @@ mongodb:
       cpu: 100m
       memory: 128Mi
 
+  # Pod-level security identity. Empty {} defers to the image's USER
+  # directive (mongo:7 runs as mongodb, uid 999).
+  podSecurityContext: {}
+
+  # Container-level hardening — safe across any image.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+
   # External MongoDB — used when mongodb.enabled is false.
   external:
     # Full connection URI (supports auth, replica sets, options).
@@ -1088,6 +1166,19 @@ grafana:
       cpu: 100m
       memory: 64Mi
 
+  # Pod-level security identity. Empty {} defers to the image's USER
+  # directive (grafana:10.4.0 runs as grafana, uid 472).
+  podSecurityContext: {}
+
+  # Container-level hardening — safe across any image.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
+
   # External Grafana — used when grafana.enabled is false.
   external:
     host: ""
@@ -1113,6 +1204,19 @@ jaeger:
     requests:
       cpu: 50m
       memory: 64Mi
+
+  # Pod-level security identity. Empty {} defers to the image's USER
+  # directive (jaegertracing/all-in-one runs as nobody, uid 10001).
+  podSecurityContext: {}
+
+  # Container-level hardening — safe across any image.
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    seccompProfile:
+      type: RuntimeDefault
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Observability stack (phase-44)

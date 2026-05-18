@@ -19,9 +19,17 @@ spec:
         app.kubernetes.io/component: jaeger
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
+      {{- with .Values.jaeger.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: jaeger
           image: {{ .Values.jaeger.image | default "jaegertracing/all-in-one:1.57" }}
+          {{- with .Values.jaeger.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - containerPort: 16686
               name: ui

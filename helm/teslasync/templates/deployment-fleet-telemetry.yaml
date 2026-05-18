@@ -20,10 +20,18 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      {{- with .Values.fleetTelemetry.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: fleet-telemetry
           image: {{ .Values.fleetTelemetry.image | quote }}
           imagePullPolicy: IfNotPresent
+          {{- with .Values.fleetTelemetry.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: wss
               containerPort: 4443

@@ -22,9 +22,17 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      {{- with .Values.mongodb.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: mongodb
           image: {{ .Values.mongodb.image | quote }}
+          {{- with .Values.mongodb.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: mongodb
               containerPort: 27017

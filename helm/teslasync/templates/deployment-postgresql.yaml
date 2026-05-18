@@ -22,10 +22,18 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      {{- with .Values.postgresql.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: postgresql
           image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
           imagePullPolicy: {{ .Values.postgresql.image.pullPolicy | default "IfNotPresent" }}
+          {{- with .Values.postgresql.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: postgres
               containerPort: 5432

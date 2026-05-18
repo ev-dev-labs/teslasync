@@ -22,9 +22,17 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      {{- with .Values.mqtt.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: mosquitto
           image: {{ .Values.mqtt.image | quote }}
+          {{- with .Values.mqtt.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           ports:
             - name: mqtt
               containerPort: 1883
