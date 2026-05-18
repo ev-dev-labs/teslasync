@@ -27,7 +27,13 @@ permissions:
 jobs:
   backend:
     name: Backend (lint + test + build)
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    # Pinned to ubuntu-latest (not the arc-runner default) because `go test
+    # -race` requires CGO, which requires a C compiler at runtime, and the
+    # self-hosted arc-runner image does not currently ship one (`cgo: C
+    # compiler "gcc" not found`). Frontend + Docker jobs can still ride
+    # arc-runner — they do not need CGO. Re-pin to arc-runner once its
+    # image includes build-essential / gcc.
+    runs-on: ubuntu-latest
     services:
       postgres:
         # Use the TimescaleDB image because migration 000142_baseline_typed.up.sql
@@ -62,9 +68,10 @@ jobs:
 
       - name: Test
         env:
-          # -race requires cgo; the self-hosted arc-runner has CGO_ENABLED=0
-          # at the OS level so we must opt back in here. Without this the
-          # test step fails immediately with "go: -race requires cgo".
+          # ubuntu-latest's setup-go@v5 enables CGO by default, but be
+          # explicit so the intent is documented and the step stays
+          # bulletproof against future runner / setup-go changes:
+          # `-race` strictly requires CGO.
           CGO_ENABLED: 1
           DATABASE_HOST: localhost
           DATABASE_PORT: 5432
@@ -134,8 +141,8 @@ jobs:
         # once phase-50 lands.
         continue-on-error: true
         env:
-          # -race requires cgo; the self-hosted arc-runner has CGO_ENABLED=0
-          # at the OS level. The Test step above also opts back in.
+          # ubuntu-latest's setup-go@v5 enables CGO by default; explicit
+          # for the same reasons as the Test step above (`-race` needs CGO).
           CGO_ENABLED: 1
           DATABASE_HOST: localhost
           DATABASE_PORT: 5432
