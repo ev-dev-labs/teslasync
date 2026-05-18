@@ -275,22 +275,36 @@ func TestVIN_ReturnsConfiguredVIN(t *testing.T) {
 // ─── Custom Thresholds ──────────────────────────────────────────────────
 
 func TestCustomThresholds_Respected(t *testing.T) {
+	// This test verifies the FSM honors caller-supplied thresholds. We mutate
+	// lastBatchAt directly (under the FSM mutex) rather than sleeping, so the
+	// assertions are deterministic — under `-race` the scheduler can introduce
+	// arbitrary delays between RecordBatch and CheckTimeouts that would
+	// otherwise make a small-margin time.Sleep based test flaky.
+	stale := 20 * time.Millisecond
+	offline := 50 * time.Millisecond
 	f := New(1, "VIN001",
-		WithStaleThreshold(20*time.Millisecond),
-		WithOfflineThreshold(50*time.Millisecond),
+		WithStaleThreshold(stale),
+		WithOfflineThreshold(offline),
 	)
 	f.RecordBatch(10, "fleet_telemetry")
 	f.RecordBatch(5, "fleet_telemetry")
+	if f.State() != Streaming {
+		t.Fatalf("setup: expected Streaming, got %s", f.State())
+	}
 
-	// 15ms < 20ms stale threshold — should stay streaming
-	time.Sleep(15 * time.Millisecond)
+	// Pretend the last batch arrived 15ms ago — within the 20ms stale threshold.
+	f.mu.Lock()
+	f.lastBatchAt = time.Now().Add(-15 * time.Millisecond)
+	f.mu.Unlock()
 	f.CheckTimeouts()
 	if f.State() != Streaming {
 		t.Fatalf("expected Streaming (within threshold), got %s", f.State())
 	}
 
-	// Wait until > 20ms total — should go stale
-	time.Sleep(10 * time.Millisecond)
+	// Pretend the last batch arrived 25ms ago — past stale, before offline.
+	f.mu.Lock()
+	f.lastBatchAt = time.Now().Add(-25 * time.Millisecond)
+	f.mu.Unlock()
 	f.CheckTimeouts()
 	if f.State() != Stale {
 		t.Fatalf("expected Stale (exceeded custom threshold), got %s", f.State())
