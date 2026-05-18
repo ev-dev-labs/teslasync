@@ -83,7 +83,11 @@ vi.mock('@/components/maps', async () => {
     MarkerCluster: () => null,
     RoutePlayback: () => null,
     describeFence: () => '',
-    latLngBounds: () => ({ isValid: () => false }),
+    latLngBounds: () => ({
+      isValid: () => false,
+      getSouthWest: () => ({ lat: 0, lng: 0 }),
+      getNorthEast: () => ({ lat: 0, lng: 0 }),
+    }),
     useMap: () => ({
       fitBounds: vi.fn(),
       setView: vi.fn(),

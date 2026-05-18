@@ -1,6 +1,83 @@
 import '@testing-library/jest-dom'
-import { beforeEach } from 'vitest'
+import { beforeEach, vi } from 'vitest'
 import * as resilience from '@/lib/resilience'
+
+// Global default mock for useSettings. Many components reach for it
+// transitively via useDateFormat / useUnits / useFormatting; without a
+// stub these components fail with "No QueryClient set" inside jsdom
+// because a bare render() doesn't wrap in QueryClientProvider. Tests
+// that need bespoke settings can still vi.mock('@/hooks/useSettings')
+// in their own file — file-level vi.mock takes precedence over the
+// setupFiles registration. The defaults here mirror the
+// `defaults: AppSettings` object inside the real hook so transitive
+// callers see the exact same values they would in production when no
+// override row exists.
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>(
+    '@/hooks/useSettings',
+  )
+  const defaults = {
+    unit_of_length: 'km' as const,
+    unit_of_temp: 'C' as const,
+    unit_of_pressure: 'bar' as const,
+    preferred_range: 'rated' as const,
+    language: 'en',
+    base_cost_per_kwh: 0.12,
+    api_suspended: false,
+    theme: 'neon-cyan',
+    mode: 'dark' as const,
+    custom_primary: '#00b4d8',
+    custom_accent: '#e63946',
+    gas_price_per_unit: 0,
+    gas_unit: 'gallon' as const,
+    gas_efficiency_mpg: 25,
+    decimal_precision: 2,
+    quiet_hours_enabled: false,
+    quiet_hours_start: '22:00',
+    quiet_hours_end: '07:00',
+    alert_digest_mode: 'instant' as const,
+    currency_symbol: '$',
+    locale: 'en-US',
+    tz_display_default: 'vehicle' as const,
+    timezone_user: '',
+    tab_badge_enabled: true,
+    critical_flash_enabled: true,
+    ui_density: 'comfortable' as const,
+    time_format_default: 'relative' as const,
+    chart_palette: 'cb_safe' as const,
+    ai_mode: 'off' as const,
+    ai_features: {},
+    ai_provider_config: {},
+    ai_cost_cap_cents: 0,
+  }
+  return {
+    ...actual,
+    useSettings: () => ({
+      settings: defaults,
+      isMiles: false,
+      isFahrenheit: false,
+      isPSI: false,
+      decimals: 2,
+      locale: 'en-US',
+      density: 'comfortable' as const,
+      rangeType: 'rated' as const,
+    }),
+  }
+})
+
+// useTimezone() transitively reaches useSelectedVehicle → useVehicles
+// (react-query) AND useMatch / useSearchParams (Router context). Both
+// crash in bare jsdom renders. Stub it to return UTC by default;
+// tests that need vehicle/local-time can still mock it per-file.
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>(
+    '@/lib/timezone',
+  )
+  return {
+    ...actual,
+    useTimezone: () => 'UTC',
+  }
+})
 
 // Reset the module-scoped auth-expired latch in resilience.ts between
 // every test. vitest's per-file isolation is not enough on its own —

@@ -119,7 +119,7 @@ describe('useAvailableSignals', () => {
     })
     const { result } = renderHook(() => useAvailableSignals(7), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(requestMock).toHaveBeenCalledWith('/signals/7/available')
+    expect(requestMock).toHaveBeenCalledWith('/signals/7/available', expect.anything())
     const desc = result.current.data?.signals?.[0]
     expect(desc?.value_kind).toBe('float')
     expect(desc?.unit_kind).toBe('distance')
@@ -147,7 +147,7 @@ describe('useLiveSignals', () => {
     })
     const { result } = renderHook(() => useLiveSignals(7), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(requestMock).toHaveBeenCalledWith('/signals/7/live')
+    expect(requestMock).toHaveBeenCalledWith('/signals/7/live', expect.anything())
     const speed = result.current.data?.signals.VehicleSpeed
     expect(typeof speed?.value).toBe('number')
     expect(speed?.value).toBe(27.7)
