@@ -613,16 +613,3 @@ func ptrFloat(p *float64) float64 {
 	return 0
 }
 
-func ptrInt(p *int) int {
-	if p != nil {
-		return *p
-	}
-	return 0
-}
-
-func ptrInt16(p *int16) int {
-	if p != nil {
-		return int(*p)
-	}
-	return 0
-}

@@ -30,7 +30,6 @@ if (!window.matchMedia) {
 // jsdom lacks Element.prototype.scrollIntoView; the palette calls it on the
 // highlighted row whenever selectedIndex changes (keyboard nav).
 if (!Element.prototype.scrollIntoView) {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   Element.prototype.scrollIntoView = function () {}
 }
 
@@ -356,15 +355,17 @@ vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
 //    contains section group <div>s, NOT individual rows. So scrolling
 //    into view targeted the wrong element (or no-op'd entirely).
 //
-// Tests assert against `aria-selected="true"` on each row's <button> so
-// they're robust against className refactors.
+// Tests assert against `aria-current="true"` on each row's <button> so
+// they're robust against className refactors. (`aria-current` is the
+// ARIA-valid attribute on a button role; `aria-selected` is only valid
+// on option/tab/treeitem/etc roles.)
 
 describe('CommandPalette keyboard navigation', () => {
   function getRows() {
     return screen.queryAllByRole('button').filter((b) => b.hasAttribute('data-palette-row'))
   }
   function getSelectedRow() {
-    return getRows().find((b) => b.getAttribute('aria-selected') === 'true') ?? null
+    return getRows().find((b) => b.getAttribute('aria-current') === 'true') ?? null
   }
   function getSelectedRowIndex() {
     const sel = getSelectedRow()
@@ -493,7 +494,7 @@ describe('CommandPalette keyboard navigation', () => {
     // their action callbacks calling `close()` indirectly, but to keep
     // the test stable across action variants we just assert the row
     // labelled `firstLabel` was the activated one (i.e. firstRow had
-    // aria-selected=true at the moment of Enter).
+    // aria-current=true at the moment of Enter).
     expect(firstLabel.length).toBeGreaterThan(0)
   })
 

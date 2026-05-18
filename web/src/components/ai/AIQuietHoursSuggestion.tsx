@@ -234,7 +234,7 @@ function InnerSection({ onApplyDraft }: AIQuietHoursSuggestionProps) {
                 'Proposed window (review before saving):',
               )}
             </div>
-            <ul className="mt-1 list-inside list-disc text-xs text-white/80">
+            <ul className="mt-1 list-inside list-disc text-xs text-[var(--text-secondary)]">
               <li>
                 {t(
                   'notifications.quietHours.aiSuggestion.previewWindow',
@@ -269,7 +269,7 @@ function InnerSection({ onApplyDraft }: AIQuietHoursSuggestionProps) {
                 </li>
               )}
               {proposal.existing_windows_count > 0 && (
-                <li className="text-white/60">
+                <li className="text-[var(--text-secondary)]">
                   {t(
                     'notifications.quietHours.aiSuggestion.previewExistingCount',
                     'You already have {{count}} quiet-hours window(s) configured.',

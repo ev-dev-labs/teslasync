@@ -350,7 +350,7 @@ func buildDashboardLayoutDraft(input dashboardLayoutInput) *DashboardLayoutDraft
 		}
 		slots[i] = DashboardSlot{
 			PanelName: strings.ToLower(strings.TrimSpace(s.PanelName)),
-			GridPos:   DashboardSlotGrid{X: gp.X, Y: gp.Y, W: gp.W, H: gp.H},
+			GridPos:   DashboardSlotGrid(gp),
 		}
 	}
 	return &DashboardLayoutDraft{

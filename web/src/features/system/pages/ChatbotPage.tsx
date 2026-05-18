@@ -322,7 +322,6 @@ export default function ChatbotPage() {
     if (pendingAiRequest) aiStream.start();
     // intentionally omit aiStream from deps — start is idempotent and
     // including it would re-fire on every state change inside the hook
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingAiRequest]);
 
   // When the AI feature is toggled off mid-stream, cancel the SSE and
@@ -717,7 +716,7 @@ export default function ChatbotPage() {
               aria-label={t('chatbot.history', 'History')}
             >
               <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
                 onClick={() => setShowSessions(false)}
                 aria-hidden="true"
               />

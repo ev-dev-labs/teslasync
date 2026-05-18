@@ -37,7 +37,7 @@ title: TeslaSync — Your fleet. Your data. Your AI.
         <span class="ts-hero-preview-dot"></span>
         <span class="ts-hero-preview-url">teslasync.local / anomaly-detection</span>
       </div>
-      <img src="/teslasync/screenshots/anomaly-detection.png" alt="" loading="eager" decoding="async" />
+      <img src="/screenshots/anomaly-detection.png" alt="" loading="eager" decoding="async" />
     </div>
   </div>
   <div class="ts-hero-glow"></div>
@@ -85,7 +85,7 @@ title: TeslaSync — Your fleet. Your data. Your AI.
       </p>
     </div>
     <div class="ts-split-visual">
-      <img src="/teslasync/screenshots/vehicles.png" alt="TeslaSync vehicles page" loading="lazy" />
+      <img src="/screenshots/vehicles.png" alt="TeslaSync vehicles page" loading="lazy" />
     </div>
   </div>
   <div class="ts-marquee" aria-hidden="true">
@@ -106,7 +106,7 @@ title: TeslaSync — Your fleet. Your data. Your AI.
     <h2 class="ts-title-xl ts-grad-tel">Real-time. Real signals.<br/>Real history.</h2>
     <p class="ts-subtitle">Tesla Fleet Telemetry gRPC stream → MQTT fan-out → in-process L1 → Redis L2 → SSE to the browser. A TimescaleDB hypertable holds every signal forever, and Helix watches the live stream — anomaly detection across battery, charging, HVAC, motors, and tires, with plain-language explanations of what changed and why.</p>
     <div class="ts-screenshot-wide">
-      <img src="/teslasync/screenshots/anomaly-detection.png" alt="TeslaSync anomaly detection page with per-system health and Helix explanations" loading="lazy" />
+      <img src="/screenshots/anomaly-detection.png" alt="TeslaSync anomaly detection page with per-system health and Helix explanations" loading="lazy" />
     </div>
     <p class="ts-cta-row">
       <a class="ts-link" href="/teslasync/guide/fleet-telemetry">Fleet Telemetry setup <span class="ts-chev">›</span></a>
@@ -136,7 +136,7 @@ title: TeslaSync — Your fleet. Your data. Your AI.
       </div>
     </div>
     <div class="ts-split-visual">
-      <img src="/teslasync/screenshots/widget-catalog.png" alt="TeslaSync widget catalogue dialog showing 118 widgets across 16 categories" loading="lazy" />
+      <img src="/screenshots/widget-catalog.png" alt="TeslaSync widget catalogue dialog showing 118 widgets across 16 categories" loading="lazy" />
     </div>
   </div>
 </section>
@@ -152,11 +152,11 @@ title: TeslaSync — Your fleet. Your data. Your AI.
     <p class="ts-subtitle">Every drive your fleet ever takes — auto-detected from the live telemetry stream — with distance, duration, speeds, efficiency, energy used, elevation, and weather. Press <strong>Replay</strong> to scrub the entire route on the map with synced power, battery, speed and elevation traces. Every charging session — AC or DC, home or supercharger — kept with curves, cost breakdown, time-at-amperage, and a plain-language Helix diagnosis when something looks off (trickle, slow ramp, interruption, expensive tariff).</p>
     <div class="ts-screenshot-duo">
       <figure>
-        <img src="/teslasync/screenshots/drive-detail.png" alt="TeslaSync drive detail page with radial gauges, per-trip stats, and a Helix coaching summary" loading="lazy" />
+        <img src="/screenshots/drive-detail.png" alt="TeslaSync drive detail page with radial gauges, per-trip stats, and a Helix coaching summary" loading="lazy" />
         <figcaption>Drive detail · with Replay</figcaption>
       </figure>
       <figure>
-        <img src="/teslasync/screenshots/charging-detail.png" alt="TeslaSync charge session page with radial gauges, battery progress, and a Helix charging diagnosis" loading="lazy" />
+        <img src="/screenshots/charging-detail.png" alt="TeslaSync charge session page with radial gauges, battery progress, and a Helix charging diagnosis" loading="lazy" />
         <figcaption>Charge session · with Helix diagnosis</figcaption>
       </figure>
     </div>
@@ -183,7 +183,7 @@ title: TeslaSync — Your fleet. Your data. Your AI.
       </p>
     </div>
     <div class="ts-split-visual">
-      <img src="/teslasync/screenshots/charging.png" alt="TeslaSync charging analytics" loading="lazy" />
+      <img src="/screenshots/charging.png" alt="TeslaSync charging analytics" loading="lazy" />
     </div>
   </div>
 </section>
@@ -199,11 +199,11 @@ title: TeslaSync — Your fleet. Your data. Your AI.
     <p class="ts-subtitle">Typed triggers — schedule, vehicle event, geofence, signal threshold — composed with AND/OR condition trees and chained into any of the sixty-five remote commands. Twenty quick-start templates install in one click. Describe what you want in plain English and Helix drafts a typed automation you can review before saving. Conflict detection catches collisions before they ever fire, and a live activity feed shows every execution as it happens.</p>
     <div class="ts-screenshot-duo">
       <figure>
-        <img src="/teslasync/screenshots/automations.png" alt="TeslaSync Automations page with the Quick Start Templates gallery expanded showing preset cards" loading="lazy" />
+        <img src="/screenshots/automations.png" alt="TeslaSync Automations page with the Quick Start Templates gallery expanded showing preset cards" loading="lazy" />
         <figcaption>Twenty presets · one-click install</figcaption>
       </figure>
       <figure>
-        <img src="/teslasync/screenshots/automation-builder.png" alt="TeslaSync Automation Builder page with Helix natural-language drafting and geofence-aware suggestion panels" loading="lazy" />
+        <img src="/screenshots/automation-builder.png" alt="TeslaSync Automation Builder page with Helix natural-language drafting and geofence-aware suggestion panels" loading="lazy" />
         <figcaption>Or describe it · Helix drafts it</figcaption>
       </figure>
     </div>
@@ -229,7 +229,7 @@ title: TeslaSync — Your fleet. Your data. Your AI.
       </p>
     </div>
     <div class="ts-split-visual">
-      <img src="/teslasync/screenshots/alert-studio.png" alt="TeslaSync Alert Studio" loading="lazy" />
+      <img src="/screenshots/alert-studio.png" alt="TeslaSync Alert Studio" loading="lazy" />
     </div>
   </div>
 </section>

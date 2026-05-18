@@ -219,14 +219,30 @@ describe('AISettings — §I7 archive restore is explicit, never silent', () => 
 
 describe('AISettings — validate endpoint exercised end-to-end', () => {
   it('POSTs to /settings/ai/validate-config and shows the OK banner on success', async () => {
-    // The validate hook resolves the URL through the standard
-    // request() client; we just need to confirm it hits the right
-    // path with the right body.
-    mockedRequest.mockResolvedValueOnce({
-      ok: true,
-      mode: 'local',
-      base_url: 'http://localhost:11434',
-      pinned_ip: '127.0.0.1',
+    // Route by URL so the AIUsageCard's /ai/usage/today probe doesn't
+    // steal the queued validate response. mockResolvedValueOnce is
+    // fragile when sibling components fire their own first-load
+    // requests on the same shared mock.
+    mockedRequest.mockImplementation(async (path: string) => {
+      if (path === '/ai/usage/today') {
+        return {
+          call_count: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          cost_micro_cents: 0,
+          error_count: 0,
+          avg_latency_ms: 0,
+        }
+      }
+      if (path === '/settings/ai/validate-config') {
+        return {
+          ok: true,
+          mode: 'local',
+          base_url: 'http://localhost:11434',
+          pinned_ip: '127.0.0.1',
+        }
+      }
+      return undefined
     })
     renderPanel({ ...baseSettings, ai_mode: 'local' })
     const baseUrl = screen.getByTestId('ai-provider-base-url') as HTMLInputElement
@@ -237,10 +253,13 @@ describe('AISettings — validate endpoint exercised end-to-end', () => {
         'data-validate-kind',
       )).toBe('ok')
     })
-    // Confirm the call shape.
-    const lastCall = mockedRequest.mock.calls.at(-1)
-    expect(lastCall?.[0]).toBe('/settings/ai/validate-config')
-    const init = lastCall?.[1] as RequestInit
+    // Confirm the validate call shape — there may be earlier /ai/usage
+    // calls so we grep for the validate one explicitly.
+    const validateCall = mockedRequest.mock.calls.find(
+      (c) => c[0] === '/settings/ai/validate-config',
+    )
+    expect(validateCall).toBeDefined()
+    const init = validateCall?.[1] as RequestInit
     expect(init.method).toBe('POST')
     expect(JSON.parse(String(init.body))).toMatchObject({
       mode: 'local',
@@ -249,9 +268,22 @@ describe('AISettings — validate endpoint exercised end-to-end', () => {
   })
 
   it('renders a failure banner when the server returns 422 not_local', async () => {
-    mockedRequest.mockRejectedValueOnce(
-      new ApiError('public IP rejected', 422, 'not_local'),
-    )
+    mockedRequest.mockImplementation(async (path: string) => {
+      if (path === '/ai/usage/today') {
+        return {
+          call_count: 0,
+          input_tokens: 0,
+          output_tokens: 0,
+          cost_micro_cents: 0,
+          error_count: 0,
+          avg_latency_ms: 0,
+        }
+      }
+      if (path === '/settings/ai/validate-config') {
+        throw new ApiError('public IP rejected', 422, 'not_local')
+      }
+      return undefined
+    })
     renderPanel({ ...baseSettings, ai_mode: 'local' })
     const baseUrl = screen.getByTestId('ai-provider-base-url') as HTMLInputElement
     fireEvent.change(baseUrl, { target: { value: 'http://1.2.3.4:11434' } })

@@ -980,22 +980,22 @@ export default function Layout() {
           {navLabel(label)}
         </span>
         {to === '/notifications/alerts' && unreadAlerts > 0 && (
-          <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-red/20 px-1.5 text-[10px] font-bold text-neon-red ring-1 ring-neon-red/30">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-red/20 px-1.5 text-[10px] font-bold text-neon-red ring-1 ring-neon-red/30">
             {unreadAlerts > 9 ? '9+' : unreadAlerts}
           </span>
         )}
         {to === '/vehicles' && vehicles && vehicles.length > 0 && (
-          <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-cyan/10 px-1.5 text-[10px] font-bold text-neon-cyan ring-1 ring-neon-cyan/20">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-cyan/10 px-1.5 text-[10px] font-bold text-neon-cyan ring-1 ring-neon-cyan/20">
             {vehicles.length}
           </span>
         )}
         {to === '/data-repair' && staleCount > 0 && (
-          <span className="relative z-10 ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-amber/20 px-1.5 text-[10px] font-bold text-neon-amber ring-1 ring-neon-amber/30">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-amber/20 px-1.5 text-[10px] font-bold text-neon-amber ring-1 ring-neon-amber/30">
             {staleCount > 9 ? '9+' : staleCount}
           </span>
         )}
         {isActive && !compact && (
-          <span className="absolute right-3 h-1.5 w-1.5 rounded-full bg-neon-cyan shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
+          <span className="absolute end-3 h-1.5 w-1.5 rounded-full bg-neon-cyan shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
         )}
       </GuardedNavLink>
     )
@@ -1049,7 +1049,7 @@ export default function Layout() {
         data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
-          'fixed left-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
+          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
           'flex flex-col border-r border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl lg:shadow-none',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
           // Reserve space for the fixed footer StatusBar (Phase-40 / Prompt 59)
@@ -1265,7 +1265,7 @@ export default function Layout() {
                       <span
                         aria-hidden="true"
                         className={cn(
-                          'ml-1 h-px flex-1 bg-gradient-to-r from-black/15 to-transparent transition-opacity dark:from-white/15',
+                          'ms-1 h-px flex-1 bg-gradient-to-r from-black/15 to-transparent transition-opacity dark:from-white/15',
                           isActiveSection ? 'opacity-60' : 'opacity-25 group-hover/section:opacity-40'
                         )}
                       />
@@ -1325,7 +1325,7 @@ export default function Layout() {
 
       {/* Mobile top bar */}
       {!sidebarOpen && (
-        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed top-0 left-0 right-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
+        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
           <Button
             onClick={() => setSidebarOpen(true)}
             type="button"
@@ -1340,7 +1340,7 @@ export default function Layout() {
           <div className="flex-1 flex justify-center -ml-10">
             <Logo size={26} showWordmark />
           </div>
-          <NotificationBellPopover className="ml-auto" />
+          <NotificationBellPopover className="ms-auto" />
           <ThemeQuickSwitcher />
         </header>
       )}

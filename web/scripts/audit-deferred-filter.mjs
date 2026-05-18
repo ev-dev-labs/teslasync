@@ -55,10 +55,6 @@ const TARGETS = [
     rowComponent: null,
   },
   {
-    path: join(ROOT, 'features', 'notifications', 'pages', 'NotificationsPage.tsx'),
-    rowComponent: null,
-  },
-  {
     path: join(ROOT, 'features', 'telemetry', 'pages', 'SignalLogViewerPage.tsx'),
     rowComponent: null,
   },

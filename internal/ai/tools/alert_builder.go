@@ -422,22 +422,8 @@ func (t *validateAlertRuleTool) Execute(_ context.Context, in any) (any, error) 
 
 	// Reuse buildDraftRule's construction by adapting the input
 	// type. The two input shapes are field-equivalent today; if
-	// they diverge in a future slice, adapt here.
-	rule := buildDraftRule(alertRuleDraftInput{
-		VehicleID:   input.VehicleID,
-		Name:        input.Name,
-		SignalName:  input.SignalName,
-		Op:          input.Op,
-		ValueNum:    input.ValueNum,
-		ValueText:   input.ValueText,
-		ValueBool:   input.ValueBool,
-		ValueMin:    input.ValueMin,
-		ValueMax:    input.ValueMax,
-		Severity:    input.Severity,
-		CooldownMin: input.CooldownMin,
-		TriggerMode: input.TriggerMode,
-		Description: input.Description,
-	})
+	// they diverge in a future slice, expand the conversion here.
+	rule := buildDraftRule(alertRuleDraftInput(input))
 
 	out := &alertRuleValidateOutput{
 		Status: "ok",

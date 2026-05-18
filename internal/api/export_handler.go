@@ -551,20 +551,3 @@ func ptrFloat(p *float64) float64 {
 	return 0
 }
 
-// ptrFloatMpsToMphAPI converts a nullable SI speed value (m/s) to mph for
-// the legacy CSV/JSON export shape served by the public /exports endpoints.
-// Slice 4 of phase-48 will rename the export column to max_speed_mps and
-// drop this conversion.
-func ptrFloatMpsToMphAPI(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p / 0.44704
-}
-
-func ptrInt16(p *int16) int {
-	if p != nil {
-		return int(*p)
-	}
-	return 0
-}

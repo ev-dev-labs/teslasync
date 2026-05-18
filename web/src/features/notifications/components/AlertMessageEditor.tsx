@@ -408,7 +408,6 @@ export const AlertMessageEditor = forwardRef<AlertMessageEditorHandle, AlertMess
         })
       }, PREVIEW_DEBOUNCE_MS)
       return () => window.clearTimeout(handle)
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [previewKey])
 
     // ──────────────── Render ────────────────

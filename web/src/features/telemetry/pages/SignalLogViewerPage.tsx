@@ -118,6 +118,7 @@ export default function SignalLogViewerPage() {
       )}
 
       {vehicleId === 0 ? (
+        // no-action: vehicle picker is in the page header; no inline CTA needed.
         <EmptyState
           icon={<Activity className="h-8 w-8" />}
           title={t('signalLog.noVehicle', 'Select a vehicle to begin')}
@@ -173,6 +174,7 @@ export default function SignalLogViewerPage() {
           </GlassPanel>
 
           {!hasQueried ? (
+            // no-action: signal picker, range, and Query button are directly above this state.
             <EmptyState
               icon={<Database className="h-10 w-10" />}
               title={t('Select signals and click Query')}

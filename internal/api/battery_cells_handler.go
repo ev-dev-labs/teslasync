@@ -298,10 +298,3 @@ func (h *BatteryCellsHandler) getHistory(ctx context.Context, vehicleID int64) [
 	return points
 }
 
-// frontendCell matches the BatteryCell TypeScript interface.
-type frontendCell struct {
-	CellID      int     `json:"cell_id"`
-	Module      int     `json:"module"`
-	Voltage     float64 `json:"voltage"`
-	Temperature float64 `json:"temperature"`
-}

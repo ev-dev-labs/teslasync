@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 
@@ -469,10 +468,3 @@ func (s *staticResolver) For(_ context.Context, _ string) (provider.Provider, er
 	return s.p, nil
 }
 
-// Helper: detect whether an error means "the resolver gate flipped
-// between calls" so a Retrieve loop can degrade silently rather than
-// spam the audit log.
-func isProviderGateClosed(err error) bool {
-	return errors.Is(err, provider.ErrProviderDisabled) ||
-		errors.Is(err, provider.ErrFeatureDisabled)
-}

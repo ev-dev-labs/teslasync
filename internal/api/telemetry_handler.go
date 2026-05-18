@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -18,7 +16,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
-	"github.com/rs/zerolog/log"
 )
 
 // pipelineDispatcher is the interface seam through which TelemetryHandler
@@ -313,133 +310,3 @@ func toFloat(v interface{}) float64 {
 	return 0
 }
 
-func toBool(v interface{}) bool {
-	// Unwrap {"value": X, ...} envelopes from wrapped telemetry payloads
-	if m, ok := v.(map[string]interface{}); ok {
-		if inner, has := m["value"]; has {
-			v = inner
-		} else {
-			// Check if this is a tire-location compound map: any true value → true
-			for _, val := range m {
-				if b, ok := val.(bool); ok && b {
-					return true
-				}
-			}
-			return false
-		}
-	}
-	switch val := v.(type) {
-	case bool:
-		return val
-	case float64:
-		return val != 0
-	case string:
-		if val == "true" || val == "1" {
-			return true
-		}
-		// Handle tire-location JSON strings: {"FrontLeft":true,...} → true if any value is true
-		if len(val) > 2 && val[0] == '{' {
-			var m map[string]interface{}
-			if json.Unmarshal([]byte(val), &m) == nil {
-				for _, v := range m {
-					if b, ok := v.(bool); ok && b {
-						return true
-					}
-				}
-			}
-			return false
-		}
-		return false
-	default:
-		return false
-	}
-}
-
-// parseBuckleStatus converts Tesla's BuckleStatus enum to a boolean.
-// Tesla sends seatbelt signals as enum strings: "BuckleStatusLatched" (buckled)
-// or "BuckleStatusUnlatched" (unbuckled), but may also send booleans.
-func parseBuckleStatus(v interface{}) bool {
-	// Unwrap {"value": X, ...} envelopes
-	if m, ok := v.(map[string]interface{}); ok {
-		if inner, has := m["value"]; has {
-			v = inner
-		} else {
-			return false
-		}
-	}
-	switch val := v.(type) {
-	case bool:
-		return val
-	case string:
-		return val == "BuckleStatusLatched"
-	case float64:
-		return val != 0
-	default:
-		return false
-	}
-}
-
-func toTimestamp(v interface{}) *time.Time {
-	switch val := v.(type) {
-	case string:
-		if t, err := time.Parse(time.RFC3339, val); err == nil {
-			return &t
-		}
-		if t, err := time.Parse(time.RFC3339Nano, val); err == nil {
-			return &t
-		}
-		// Try unix timestamp as string
-		if f, err := strconv.ParseFloat(val, 64); err == nil {
-			sec := int64(f)
-			nsec := int64((f - float64(sec)) * 1e9)
-			t := time.Unix(sec, nsec)
-			return &t
-		}
-	case float64:
-		sec := int64(val)
-		nsec := int64((val - float64(sec)) * 1e9)
-		t := time.Unix(sec, nsec)
-		return &t
-	case int64:
-		t := time.Unix(val, 0)
-		return &t
-	}
-	return nil
-}
-
-// Phase-42 (prompt 0077): trackSecurity was deleted with security_repo.go.
-// Security signals (Locked, SentryMode, DoorState, FdWindow, etc.) flow
-// through the typed signal_log pipeline (000167+); the legacy snapshot
-// row writer has no SI replacement.
-
-// trackVehicleConfig tracks firmware version changes via swUpdateRepo.
-func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
-	v, ok := signals["Version"]
-	if !ok {
-		return
-	}
-	version := toString(v)
-	if version == "" {
-		return
-	}
-	go func(vid int64, ver string) {
-		fwCtx, cancel := context.WithTimeout(h.bgCtx, 5*time.Second)
-		defer cancel()
-		inserted, err := h.swUpdateRepo.InsertIfChanged(fwCtx, vid, ver, "installed")
-		if err != nil {
-			log.Warn().Err(err).Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: failed to track firmware version")
-		} else if inserted {
-			log.Info().Int64("vehicle_id", vid).Str("version", ver).Msg("telemetry: new firmware version detected")
-		}
-	}(vehicleID, version)
-}
-
-// Phase-42 (prompt 0077): trackUserPreferences was deleted with the
-// vehicle_units table. Per-vehicle unit display preferences now live in
-// tesla_vehicle_unit_history (000181) populated by internal/tesla/unit_history.
-
-// formatSignalName converts camelCase signal names to snake_case for MQTT topic consistency.
-var _ = formatSignalName // kept for potential future use
-func formatSignalName(name string) string {
-	return strings.ToLower(name)
-}

@@ -287,7 +287,6 @@ func buildHistoryWhere(f HistoryFilter) (string, []interface{}) {
 	if !f.Since.IsZero() {
 		clauses = append(clauses, fmt.Sprintf("triggered_at >= $%d", idx))
 		args = append(args, f.Since)
-		idx++
 	}
 
 	if len(clauses) == 0 {

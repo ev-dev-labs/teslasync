@@ -233,7 +233,7 @@ export default function SqlPlaygroundPage() {
     <div className="space-y-6 p-6" data-testid="power-sql-playground-root">
       <PageTitle>{t('powerSql.title', 'SQL Playground')}</PageTitle>
 
-      <p className="text-sm text-white/70">
+      <p className="text-sm text-[var(--text-secondary)]">
         {t(
           'powerSql.intro',
           'Write read-only SELECT or WITH queries against the curated schema catalog below. Queries do NOT execute from the browser; copy your query into your preferred database client.',
@@ -282,7 +282,7 @@ export default function SqlPlaygroundPage() {
           <PanelTitle>
             {t('powerSql.catalog.title', 'Curated schema catalog')}
           </PanelTitle>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-[var(--text-secondary)]">
             {t(
               'powerSql.catalog.intro',
               'These tables are the only tables the curated catalog exposes. The Helix natural-language drafter refuses any query referencing tables outside this list.',
@@ -290,20 +290,20 @@ export default function SqlPlaygroundPage() {
           </p>
           <ul className="space-y-4">
             {sortedTables.map((table) => (
-              <li key={table.name} className="rounded-md border border-white/10 p-4">
+              <li key={table.name} className="rounded-md border border-[var(--border-subtle)] p-4">
                 <div className="flex flex-col gap-1">
                   <span className="font-mono text-base text-cyan-300">
                     {table.name}
                   </span>
-                  <span className="text-sm text-white/70">{table.description}</span>
+                  <span className="text-sm text-[var(--text-secondary)]">{table.description}</span>
                 </div>
                 <ul className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">
                   {table.columns.map((col) => (
-                    <li key={col.name} className="text-xs text-white/80">
+                    <li key={col.name} className="text-xs text-[var(--text-secondary)]">
                       <span className="font-mono text-emerald-300">{col.name}</span>
-                      <span className="text-white/50"> · </span>
-                      <span className="text-white/60">{col.type}</span>
-                      <span className="text-white/50"> — </span>
+                      <span className="text-[var(--text-muted)]"> · </span>
+                      <span className="text-[var(--text-secondary)]">{col.type}</span>
+                      <span className="text-[var(--text-muted)]"> — </span>
                       <span>{col.description}</span>
                     </li>
                   ))}

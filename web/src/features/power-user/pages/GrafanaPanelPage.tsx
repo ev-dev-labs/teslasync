@@ -300,7 +300,7 @@ export default function GrafanaPanelPage() {
     <div className="space-y-6 p-6" data-testid="power-grafana-panel-builder-root">
       <PageTitle>{t('powerGrafana.title', 'Grafana Panel Builder')}</PageTitle>
 
-      <p className="text-sm text-white/70">
+      <p className="text-sm text-[var(--text-secondary)]">
         {t(
           'powerGrafana.intro',
           'Build a Grafana panel JSON envelope against the curated panel-builder catalog below. The browser does not push the panel to Grafana; copy your JSON into your existing Grafana dashboard editor.',
@@ -349,7 +349,7 @@ export default function GrafanaPanelPage() {
           <PanelTitle>
             {t('powerGrafana.panelTypes.title', 'Curated panel types')}
           </PanelTitle>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-[var(--text-secondary)]">
             {t(
               'powerGrafana.panelTypes.intro',
               'These are the panel types the curated catalog exposes. The Helix natural-language drafter refuses any panel type outside this list.',
@@ -357,10 +357,10 @@ export default function GrafanaPanelPage() {
           </p>
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {sortedPanelTypes.map((entry) => (
-              <li key={entry.name} className="rounded-md border border-white/10 p-3">
+              <li key={entry.name} className="rounded-md border border-[var(--border-subtle)] p-3">
                 <div className="flex flex-col gap-1">
                   <span className="font-mono text-sm text-cyan-300">{entry.name}</span>
-                  <span className="text-xs text-white/70">{entry.description}</span>
+                  <span className="text-xs text-[var(--text-secondary)]">{entry.description}</span>
                 </div>
               </li>
             ))}
@@ -373,7 +373,7 @@ export default function GrafanaPanelPage() {
           <PanelTitle>
             {t('powerGrafana.datasourceTypes.title', 'Curated datasource types')}
           </PanelTitle>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-[var(--text-secondary)]">
             {t(
               'powerGrafana.datasourceTypes.intro',
               'These are the datasource types the curated catalog exposes, with their canonical UIDs. The Helix natural-language drafter refuses any datasource type outside this list.',
@@ -381,14 +381,14 @@ export default function GrafanaPanelPage() {
           </p>
           <ul className="space-y-2">
             {sortedDatasourceTypes.map((entry) => (
-              <li key={entry.name} className="rounded-md border border-white/10 p-3">
+              <li key={entry.name} className="rounded-md border border-[var(--border-subtle)] p-3">
                 <div className="flex flex-col gap-1">
                   <span className="font-mono text-sm text-cyan-300">
                     {entry.name}
-                    <span className="text-white/50"> · </span>
+                    <span className="text-[var(--text-muted)]"> · </span>
                     <span className="text-emerald-300">uid={entry.uid}</span>
                   </span>
-                  <span className="text-xs text-white/70">{entry.description}</span>
+                  <span className="text-xs text-[var(--text-secondary)]">{entry.description}</span>
                 </div>
               </li>
             ))}
@@ -401,7 +401,7 @@ export default function GrafanaPanelPage() {
           <PanelTitle>
             {t('powerGrafana.tables.title', 'Curated table catalog (postgres targets)')}
           </PanelTitle>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-[var(--text-secondary)]">
             {t(
               'powerGrafana.tables.intro',
               'These tables are the only tables the curated catalog exposes for postgres-target rawSql. The Helix natural-language drafter refuses any postgres query referencing tables outside this list.',
@@ -409,18 +409,18 @@ export default function GrafanaPanelPage() {
           </p>
           <ul className="space-y-4">
             {sortedTables.map((table) => (
-              <li key={table.name} className="rounded-md border border-white/10 p-4">
+              <li key={table.name} className="rounded-md border border-[var(--border-subtle)] p-4">
                 <div className="flex flex-col gap-1">
                   <span className="font-mono text-base text-cyan-300">{table.name}</span>
-                  <span className="text-sm text-white/70">{table.description}</span>
+                  <span className="text-sm text-[var(--text-secondary)]">{table.description}</span>
                 </div>
                 <ul className="mt-3 grid grid-cols-1 gap-1 sm:grid-cols-2">
                   {table.columns.map((col) => (
-                    <li key={col.name} className="text-xs text-white/80">
+                    <li key={col.name} className="text-xs text-[var(--text-secondary)]">
                       <span className="font-mono text-emerald-300">{col.name}</span>
-                      <span className="text-white/50"> · </span>
-                      <span className="text-white/60">{col.type}</span>
-                      <span className="text-white/50"> — </span>
+                      <span className="text-[var(--text-muted)]"> · </span>
+                      <span className="text-[var(--text-secondary)]">{col.type}</span>
+                      <span className="text-[var(--text-muted)]"> — </span>
                       <span>{col.description}</span>
                     </li>
                   ))}

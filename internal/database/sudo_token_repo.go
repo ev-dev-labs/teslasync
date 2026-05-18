@@ -107,13 +107,6 @@ func NewSudoTokenStore(ttl time.Duration) *SudoTokenStore {
 	}
 }
 
-// withClock is a test seam letting unit tests freeze time without
-// reaching into unexported state from another package.
-func (s *SudoTokenStore) withClock(now func() time.Time) *SudoTokenStore {
-	s.now = now
-	return s
-}
-
 // hashKey returns the storage key for a raw token. We never store the
 // token itself; only its hash, so a memory dump of the process can't be
 // trivially replayed against the API.

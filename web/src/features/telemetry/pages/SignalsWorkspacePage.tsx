@@ -92,7 +92,7 @@ const PER_PAGE_OPTIONS = [
   { value: '500', label: '500' },
 ];
 
-interface CombinedHistoryRow extends SignalLogEntry {}
+type CombinedHistoryRow = SignalLogEntry;
 
 export default function SignalsWorkspacePage() {
   const { t } = useTranslation();
@@ -388,6 +388,7 @@ export default function SignalsWorkspacePage() {
       ) : null}
 
       {vehicleId === 0 ? (
+        // no-action: vehicle picker is in the page header; no inline CTA needed.
         <EmptyState
           icon={<Activity className="h-8 w-8" />}
           title={t('signalsWorkspace.noVehicle', 'Select a vehicle to begin')}
@@ -666,6 +667,7 @@ export default function SignalsWorkspacePage() {
               ) : (
                 <FadeIn>
                   <GlassPanel className="p-4 sm:p-5">
+                    {/* no-action: signal-catalog picker, range, and Run/Live controls are in the panel above this state. */}
                     <EmptyState
                       icon={<Database className="h-8 w-8" />}
                       title={t('signalsWorkspace.emptyTitle', 'Pick signals and run a query')}

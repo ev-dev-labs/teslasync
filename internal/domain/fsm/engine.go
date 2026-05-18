@@ -175,7 +175,7 @@ func (e *Engine[T]) CanFire(currentState State, event Event) bool {
 // AvailableEvents returns all events that can be fired from the given state.
 func (e *Engine[T]) AvailableEvents(currentState State) []Event {
 	var events []Event
-	for key, _ := range e.definition.transitions {
+	for key := range e.definition.transitions {
 		if key.from == currentState {
 			events = append(events, key.event)
 		}

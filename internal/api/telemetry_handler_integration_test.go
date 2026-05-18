@@ -126,7 +126,7 @@ func TestTelemetryReplay(t *testing.T) {
 	// reintroduces a JSONB carve-out.
 	t.Run("zero-jsonb-columns", func(t *testing.T) {
 		var n int
-		err := pool.QueryRow(context.Background(), `
+		err := pool.Pool.QueryRow(context.Background(), `
 			SELECT count(*)
 			  FROM information_schema.columns
 			 WHERE column_name IN ('signals','raw_state','raw_json')
@@ -276,7 +276,7 @@ func buildHandler(t *testing.T, db *database.DB) *api.TelemetryHandler {
 	unitRepo := unithistory.NewRepo(db.Pool, unitCache)
 
 	logger := zerolog.Nop()
-	pipeline := normalize.New(unitRepo, pipelineRouter, &logger)
+	pipeline := normalize.New(unitRepo, pipelineRouter, logger)
 
 	h := api.NewTelemetryHandler(db, nil, nil, time.Minute, nil)
 	h.SetPipeline(pipeline)

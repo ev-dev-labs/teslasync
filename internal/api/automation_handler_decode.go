@@ -570,13 +570,5 @@ func firstRetiredAutomationField(fields map[string]json.RawMessage) (string, boo
 }
 
 func validateAutomationPortable(def automationPortable) (*createAutomationRequest, error) {
-	return validateAutomationInputWire(automationInputWire{
-		Name:        def.Name,
-		Description: def.Description,
-		VehicleID:   def.VehicleID,
-		Enabled:     def.Enabled,
-		Triggers:    def.Triggers,
-		Conditions:  def.Conditions,
-		Actions:     def.Actions,
-	})
+	return validateAutomationInputWire(automationInputWire(def))
 }

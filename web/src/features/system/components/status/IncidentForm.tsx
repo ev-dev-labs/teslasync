@@ -12,7 +12,7 @@
  * surfaces consistent without round-trip.
  */
 
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { Modal, Button, Input, Textarea, Select } from '@/components/ui'
 import { useToast } from '@/components/feedback/Toast'
 import {
@@ -27,6 +27,9 @@ interface IncidentFormProps {
 
 export function IncidentForm({ onClose }: IncidentFormProps) {
   const toast = useToast()
+  const titleId = useId()
+  const componentsId = useId()
+  const messageId = useId()
   const [title, setTitle] = useState('')
   const [severity, setSeverity] = useState<IncidentSeverity>('minor')
   const [status, setStatus] = useState<IncidentStatus>('investigating')
@@ -63,8 +66,9 @@ export function IncidentForm({ onClose }: IncidentFormProps) {
     <Modal open onClose={onClose} title="Log an incident" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Title</label>
+          <label htmlFor={titleId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Title</label>
           <Input
+            id={titleId}
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="e.g. Wall connector restart at 14:00"
@@ -97,16 +101,18 @@ export function IncidentForm({ onClose }: IncidentFormProps) {
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Affected components <span className="text-[var(--text-muted)]">(comma-separated, optional)</span></label>
+          <label htmlFor={componentsId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Affected components <span className="text-[var(--text-muted)]">(comma-separated, optional)</span></label>
           <Input
+            id={componentsId}
             value={components}
             onChange={(e) => setComponents(e.target.value)}
             placeholder="e.g. tesla, telemetry"
           />
         </div>
         <div>
-          <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Initial timeline message <span className="text-[var(--text-muted)]">(optional)</span></label>
+          <label htmlFor={messageId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Initial timeline message <span className="text-[var(--text-muted)]">(optional)</span></label>
           <Textarea
+            id={messageId}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="What's the situation?"

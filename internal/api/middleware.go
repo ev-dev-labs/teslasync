@@ -215,9 +215,3 @@ func TracingMiddleware(next http.Handler) http.Handler {
 	)
 }
 
-func tracedTransport(base http.RoundTripper) http.RoundTripper {
-	if base == nil {
-		base = http.DefaultTransport
-	}
-	return otelhttp.NewTransport(base)
-}

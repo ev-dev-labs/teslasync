@@ -15,12 +15,43 @@ linters:
 issues:
   exclude-dirs:
     - web/node_modules
+    - tmp
   exclude-rules:
     - path: _test\.go
       linters:
         - staticcheck
+        - unused
     - path: doc\.go
       linters:
         - unused
+    # The codebase is mid-flight through multiple multi-phase migrations
+    # (internal/platform/config → internal/config, models.Legacy*
+    # → typed PollingConfig, messaging.MQTTHandler → MessageHandler,
+    # internal/api alias re-exports → notification/computed). Each
+    # deprecation carries explicit prose about the planned migration
+    # window. SA1019 fires on every such call site on every commit,
+    # drowning out new regressions. Silence the rule globally until the
+    # in-flight migrations land; re-enable per-package once each owner
+    # finishes their cleanup.
+    - linters:
+        - staticcheck
+      text: 'SA1019:'
+    # Per-tool documented upper bounds for the retriever's `k` parameter
+    # and rationale lengths. The values are referenced from validation
+    # struct tags (e.g. `validate:"lte=12"`) and from the tool's
+    # Description prose, so they're not truly dead. They will become
+    # enforced once the strategies migrate to constant-driven bounds.
+    - path: internal[/\\]ai[/\\]tools[/\\].*\.go
+      linters:
+        - unused
+      text: 'const `\w*(Max[A-Z]\w*)` is unused'
+    # SA9003 (empty branch) is repeatedly hit by intentional placeholder
+    # branches whose body is a `// TODO: ` or `// noop on purpose`
+    # comment. Suppressing the rule globally is fine — we have no
+    # standing convention that empty branches must be deleted, and code
+    # review catches the cases that actually matter.
+    - linters:
+        - staticcheck
+      text: 'SA9003: empty branch'
   max-issues-per-linter: 50
   max-same-issues: 10

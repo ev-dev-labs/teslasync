@@ -6,6 +6,19 @@ on:
       - 'api/proto/tesla/**'
       - 'internal/tesla/protomodel/**'
       - 'cmd/protogen-tesla/**'
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
+
+concurrency:
+  group: proto-gen-check-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -13,7 +26,7 @@ permissions:
 jobs:
   check:
     name: Verify generated Tesla protomodel matches proto
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5

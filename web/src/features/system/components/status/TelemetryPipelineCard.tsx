@@ -96,7 +96,7 @@ function livenessClasses(l: Liveness): { dot: string; label: string; chip: strin
     case 'offline':
     default:
       return {
-        dot: 'bg-white/30',
+        dot: 'bg-[var(--surface-2)]',
         label: 'offline',
         chip: 'bg-white/[0.06] text-[var(--text-muted)] ring-1 ring-white/10',
       }

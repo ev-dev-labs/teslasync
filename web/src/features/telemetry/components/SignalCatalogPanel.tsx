@@ -145,7 +145,7 @@ export function SignalCatalogPanel({
               onClick={(e) => { e.stopPropagation(); selection.onToggle(s.name); }}
               disabled={disabled}
               className={cn(
-                'flex h-5 w-5 items-center justify-center rounded border transition-colors',
+                'touch-target flex items-center justify-center rounded border transition-colors',
                 checked
                   ? 'border-cyan-400/50 bg-cyan-400/15 text-cyan-300'
                   : disabled

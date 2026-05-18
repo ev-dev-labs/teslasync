@@ -33,7 +33,7 @@ function Endpoint({ method, path, description, query, example }: EndpointProps) 
         <summary className="cursor-pointer text-[var(--text-muted)] hover:text-[var(--text-secondary)]">
           Example response
         </summary>
-        <pre className="mt-2 overflow-x-auto rounded-md bg-black/30 p-3 text-[11px] leading-relaxed text-[var(--text-secondary)]">
+        <pre className="mt-2 overflow-x-auto rounded-md bg-[var(--surface-overlay)] p-3 text-[11px] leading-relaxed text-[var(--text-secondary)]">
 {JSON.stringify(example, null, 2)}
         </pre>
       </details>

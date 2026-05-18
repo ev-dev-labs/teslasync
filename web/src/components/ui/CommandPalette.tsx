@@ -906,7 +906,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
                           <button
                             key={item.id}
                             data-palette-row={globalIndex}
-                            aria-selected={isSelected}
+                            aria-current={isSelected || undefined}
                             onClick={item.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
                             className={cn(

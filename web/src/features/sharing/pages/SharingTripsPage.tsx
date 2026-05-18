@@ -106,6 +106,7 @@ export default function SharingTripsPage() {
               ))}
             </div>
           ) : allTrips.length === 0 ? (
+            // no-action: trips are created automatically by the vehicle driving — no manual action available.
             <EmptyState
               icon={<RouteIcon className="h-12 w-12" />}
               message={t(
@@ -137,7 +138,7 @@ export default function SharingTripsPage() {
                         'w-full text-left rounded-xl border p-3 sm:p-4 transition-colors ' +
                         (isSelected
                           ? 'border-cyan-400/60 bg-cyan-500/5'
-                          : 'border-white/10 bg-white/[0.02] hover:border-white/20 hover:bg-white/[0.04]')
+                          : 'border-[var(--border-subtle)] bg-white/[0.02] hover:border-[var(--border-strong)] hover:bg-white/[0.04]')
                       }
                     >
                       <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">

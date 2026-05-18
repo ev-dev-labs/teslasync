@@ -2,6 +2,16 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
+
+// test-setup.ts installs a global vi.mock for '@/hooks/useSettings'
+// that returns static defaults so most rendering tests don't need a
+// QueryClientProvider. This file IS the test for the real hook, so
+// we restore the actual implementation locally. File-level vi.mock
+// takes precedence over the setupFiles registration.
+vi.mock('@/hooks/useSettings', async () =>
+  await vi.importActual<typeof import('../useSettings')>('../useSettings'),
+)
+
 import { useSettings } from '../useSettings'
 import {
   getGlobalLocale,

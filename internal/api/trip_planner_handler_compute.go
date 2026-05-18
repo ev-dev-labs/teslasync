@@ -350,7 +350,7 @@ func (h *TripPlannerHandler) estimateWeatherImpact(ctx context.Context, vehicleI
 		}
 	}
 
-	factor := 1.0
+	var factor float64
 	var note string
 	temp := *avgTempC
 

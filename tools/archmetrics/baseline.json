@@ -1,8 +1,24 @@
 {
-  "generated_at": "2026-05-08T21:00:44Z",
+  "generated_at": "2026-05-18T07:28:14Z",
   "go_version": "go1.26.1",
-  "commit_sha": "4165c8b011061c276b6af79450d4cb41f0e97428",
+  "commit_sha": "5a5bfd8200a255bbd3910a23ad8026ef94e8c6a1",
   "packages": [
+    {
+      "path": "cmd/ai-eval",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 155,
+      "has_doc_go": true,
+      "layer": "cmd-internal",
+      "imports": [
+        "internal/ai/eval",
+        "internal/ai/provider"
+      ],
+      "files": [
+        "doc.go",
+        "main.go"
+      ]
+    },
     {
       "path": "cmd/automation-worker",
       "go_files": 2,
@@ -64,10 +80,11 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 377,
+      "loc": 424,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
+        "internal/alertmsg",
         "internal/apilog",
         "internal/config",
         "internal/database",
@@ -86,7 +103,7 @@
       "path": "cmd/protogen-tesla",
       "go_files": 4,
       "test_files": 1,
-      "loc": 2156,
+      "loc": 2295,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": null,
@@ -117,7 +134,7 @@
       "path": "cmd/pub-test-signal",
       "go_files": 2,
       "test_files": 0,
-      "loc": 629,
+      "loc": 659,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -380,14 +397,1625 @@
       ]
     },
     {
+      "path": "internal/ai/cost",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 475,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "cost.go",
+        "cost_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/ai/dispatch",
+      "go_files": 5,
+      "test_files": 2,
+      "loc": 1439,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/ai/limit",
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter",
+        "internal/ai/tools"
+      ],
+      "files": [
+        "continuation.go",
+        "dispatch.go",
+        "dispatch_test.go",
+        "doc.go",
+        "prefs.go",
+        "prefs_test.go",
+        "stream.go"
+      ]
+    },
+    {
+      "path": "internal/ai/eval",
+      "go_files": 8,
+      "test_files": 6,
+      "loc": 1916,
+      "has_doc_go": true,
+      "layer": "tool",
+      "imports": [
+        "internal/ai/dispatch",
+        "internal/ai/provider",
+        "internal/ai/provider/mock",
+        "internal/ai/strategy",
+        "internal/ai/tools"
+      ],
+      "files": [
+        "doc.go",
+        "golden.go",
+        "golden_test.go",
+        "judge.go",
+        "judge_test.go",
+        "report.go",
+        "report_test.go",
+        "runner.go",
+        "runner_test.go",
+        "strategy.go",
+        "strategy_test.go",
+        "tools.go",
+        "tools_test.go",
+        "types.go"
+      ]
+    },
+    {
+      "path": "internal/ai/features",
+      "go_files": 3,
+      "test_files": 2,
+      "loc": 4703,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "registry.go",
+        "registry_test.go",
+        "spa_wiring.go",
+        "spa_wiring_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/guard",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 281,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/ai/features"
+      ],
+      "files": [
+        "doc.go",
+        "guard.go",
+        "off_mode_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/health",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 560,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "ollama_poll.go",
+        "ollama_poll_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/limit",
+      "go_files": 6,
+      "test_files": 5,
+      "loc": 1839,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/ai/cost"
+      ],
+      "files": [
+        "clock.go",
+        "clock_test.go",
+        "cost.go",
+        "cost_test.go",
+        "doc.go",
+        "error.go",
+        "error_test.go",
+        "limiter.go",
+        "limiter_test.go",
+        "quota.go",
+        "quota_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/provider",
+      "go_files": 12,
+      "test_files": 10,
+      "loc": 4003,
+      "has_doc_go": true,
+      "layer": "port",
+      "imports": [
+        "internal/ai/cost",
+        "internal/ai/features",
+        "internal/ai/limit",
+        "internal/ai/redact",
+        "internal/tracing"
+      ],
+      "files": [
+        "audit.go",
+        "audit_test.go",
+        "config.go",
+        "config_test.go",
+        "cost_decorator.go",
+        "cost_decorator_test.go",
+        "decorator.go",
+        "decorator_test.go",
+        "doc.go",
+        "errors.go",
+        "local_validator.go",
+        "local_validator_test.go",
+        "provider.go",
+        "provider_test.go",
+        "ratelimit_decorator.go",
+        "ratelimit_decorator_test.go",
+        "redact_decorator.go",
+        "redact_decorator_test.go",
+        "registry.go",
+        "registry_test.go",
+        "trace.go",
+        "trace_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/provider/anthropic",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 547,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/platform/httputil"
+      ],
+      "files": [
+        "anthropic.go",
+        "anthropic_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/ai/provider/azure",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1134,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/platform/httputil"
+      ],
+      "files": [
+        "azure.go",
+        "azure_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/ai/provider/mock",
+      "go_files": 3,
+      "test_files": 2,
+      "loc": 872,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider"
+      ],
+      "files": [
+        "canned.go",
+        "canned_test.go",
+        "doc.go",
+        "mock.go",
+        "mock_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/provider/ollama",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 666,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/platform/httputil"
+      ],
+      "files": [
+        "doc.go",
+        "ollama.go",
+        "ollama_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/provider/openai",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 595,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/platform/httputil"
+      ],
+      "files": [
+        "doc.go",
+        "openai.go",
+        "openai_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/rag",
+      "go_files": 9,
+      "test_files": 7,
+      "loc": 2172,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/ai/provider",
+        "internal/database"
+      ],
+      "files": [
+        "chunker.go",
+        "chunker_test.go",
+        "doc.go",
+        "docs_indexer.go",
+        "docs_indexer_test.go",
+        "factory.go",
+        "factory_test.go",
+        "noop.go",
+        "noop_test.go",
+        "pgvector.go",
+        "pgvector_test.go",
+        "rag.go",
+        "ttl.go",
+        "ttl_test.go",
+        "vector.go",
+        "vector_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/redact",
+      "go_files": 8,
+      "test_files": 5,
+      "loc": 2445,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "class.go",
+        "ctx.go",
+        "ctx_test.go",
+        "detect.go",
+        "detect_test.go",
+        "doc.go",
+        "policies.go",
+        "policy.go",
+        "policy_test.go",
+        "replace.go",
+        "replace_test.go",
+        "roundtrip.go",
+        "roundtrip_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/alert-tuning-suggestions",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 433,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/anomaly-explanations",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 335,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/auto-name-unnamed-locations",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 413,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/auto-trip-naming",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 404,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/battery-health-forecast-narrative",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 401,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/cabin-temperature-impact-narrative",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 423,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/charging-curve-fingerprint-clustering",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 410,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/charging-diagnosis",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 393,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/chatbot-llm",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 294,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/cost-forecast-narration",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 428,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/cross-rule-conflict-detection",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 469,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/data-repair-suggestions",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 388,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/digest-narration",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 304,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/drive-coaching",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 365,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/feedback-queue-triage",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 419,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/geofence-aware-automation-suggestions",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 408,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/inbox-auto-categorization",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 454,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/incident-timeline-summarizer",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 401,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/learned-per-vehicle-anomaly-baselines",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 392,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/lifetime-stats-qa",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 422,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/log-trace-summarization",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 380,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/ml-charging-curve-clustering",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 418,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/mqtt-sse-inspector-explanations",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 389,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/nl-alert-builder",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 350,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/nl-automation-builder",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 357,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/nl-dashboard-composer",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 414,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/nl-drive-search-replay",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 357,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/nl-grafana-panel",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 430,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/nl-search",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 378,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/nl-sql-playground",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 398,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/period-compare-narration",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 411,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/pii-redaction-shared-exports",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 433,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/predictive-maintenance",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 398,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/preheat-precool-recommender",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 440,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/quiet-hours-suggestion",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 456,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/rag-help",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 389,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/range-prediction-model",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 406,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/route-efficiency-suggestions",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 382,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/safety-setting-explainer",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 403,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/signal-explorer-nl-filter",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 392,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/smart-charge-schedule-suggestion",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 418,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/software-update-changelog-summarizer",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 427,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/speed-profile-insights",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 392,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/state-machine-debugger-narrator",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 398,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/suggest-new-geofences",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 406,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/tco-narration",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 456,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/tire-pressure-trend-reasoning",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 433,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/trip-planner-llm-agent",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 423,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/trip-postcard-share-card-image-generation",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 258,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/vampire-drain-explanation",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 450,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/vehicle-paint-preview",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 242,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/voice-mode",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 405,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/watch-face-nl-response",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 421,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategies/yir-narration",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 311,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategy",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 160,
+      "has_doc_go": true,
+      "layer": "port",
+      "imports": [
+        "internal/ai/provider"
+      ],
+      "files": [
+        "doc.go",
+        "strategy.go",
+        "strategy_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/strategy/redactadapter",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 134,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/redact",
+        "internal/ai/strategy",
+        "internal/ai/strategy/redactadapter"
+      ],
+      "files": [
+        "adapter.go",
+        "adapter_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/ai/stream",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1185,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/ai/dispatch",
+        "internal/ai/provider",
+        "internal/ai/stream"
+      ],
+      "files": [
+        "doc.go",
+        "writer.go",
+        "writer_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools",
+      "go_files": 58,
+      "test_files": 51,
+      "loc": 47036,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/rag",
+        "internal/database",
+        "internal/ml/anomaly",
+        "internal/ml/chargingcurves",
+        "internal/ml/range",
+        "internal/models"
+      ],
+      "files": [
+        "alert_builder.go",
+        "alert_builder_test.go",
+        "alert_tuning.go",
+        "alert_tuning_test.go",
+        "anomaly.go",
+        "anomaly_test.go",
+        "auto_name_unnamed_locations.go",
+        "auto_name_unnamed_locations_test.go",
+        "auto_trip_naming.go",
+        "auto_trip_naming_test.go",
+        "automation_builder.go",
+        "automation_builder_test.go",
+        "battery_health_forecast.go",
+        "battery_health_forecast_test.go",
+        "builtins.go",
+        "builtins_test.go",
+        "charge_curve_clustering.go",
+        "charge_curve_clustering_test.go",
+        "charge_curve_clusters.go",
+        "charge_curve_clusters_test.go",
+        "charging_diagnosis.go",
+        "charging_diagnosis_test.go",
+        "cost_forecast.go",
+        "cost_forecast_test.go",
+        "cross_rule_conflict.go",
+        "cross_rule_conflict_test.go",
+        "data_repair_suggestions.go",
+        "data_repair_suggestions_test.go",
+        "digest.go",
+        "digest_test.go",
+        "doc.go",
+        "drive_coaching.go",
+        "drive_coaching_test.go",
+        "drive_search.go",
+        "drive_search_test.go",
+        "export_redaction_plan.go",
+        "export_redaction_plan_test.go",
+        "feedback_queue_triage.go",
+        "feedback_queue_triage_test.go",
+        "fuzz_schema_test.go",
+        "help.go",
+        "help_test.go",
+        "inbox_auto_categorization.go",
+        "inbox_auto_categorization_test.go",
+        "incident_timeline_summarizer.go",
+        "incident_timeline_summarizer_test.go",
+        "learned_anomaly_baseline.go",
+        "learned_anomaly_baseline_test.go",
+        "lifetime_stats_qa.go",
+        "lifetime_stats_qa_test.go",
+        "log_trace_summarizer.go",
+        "log_trace_summarizer_test.go",
+        "mqtt_sse_inspector_explanations.go",
+        "mqtt_sse_inspector_explanations_test.go",
+        "nl_dashboard_composer.go",
+        "nl_grafana_panel.go",
+        "nl_sql_playground.go",
+        "paint_preview.go",
+        "paint_preview_test.go",
+        "period_compare.go",
+        "period_compare_test.go",
+        "predictive_maintenance.go",
+        "predictive_maintenance_test.go",
+        "preheat_precool_recommender.go",
+        "preheat_precool_recommender_test.go",
+        "quiet_hours_suggestion.go",
+        "quiet_hours_suggestion_test.go",
+        "range_predictor.go",
+        "range_predictor_test.go",
+        "registry.go",
+        "registry_test.go",
+        "route_efficiency.go",
+        "route_efficiency_test.go",
+        "safety_setting_explainer.go",
+        "safety_setting_explainer_test.go",
+        "schema.go",
+        "schema_test.go",
+        "search.go",
+        "search_test.go",
+        "share_card_image.go",
+        "share_card_image_test.go",
+        "signal_explorer_nl_filter.go",
+        "signal_explorer_nl_filter_test.go",
+        "smart_charge_schedule_suggestion.go",
+        "smart_charge_schedule_suggestion_test.go",
+        "software_update_summary.go",
+        "software_update_summary_test.go",
+        "speed_profile.go",
+        "speed_profile_test.go",
+        "state_machine_debugger_narrator.go",
+        "state_machine_debugger_narrator_test.go",
+        "suggest_new_geofences.go",
+        "suggest_new_geofences_test.go",
+        "tco_summary.go",
+        "tco_summary_test.go",
+        "temperature_impact.go",
+        "temperature_impact_test.go",
+        "tire_pressure_trend.go",
+        "tool.go",
+        "trip_planner_llm_agent.go",
+        "trip_planner_llm_agent_test.go",
+        "validate.go",
+        "vampire_drain_explanation.go",
+        "vampire_drain_explanation_test.go",
+        "voice_mode.go",
+        "watch_face_nl_response.go",
+        "watch_face_nl_response_test.go",
+        "year_review.go",
+        "year_review_test.go"
+      ]
+    },
+    {
+      "path": "internal/alertmsg",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 981,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/models",
+        "internal/tesla/protomodel"
+      ],
+      "files": [
+        "doc.go",
+        "formatter.go",
+        "formatter_test.go",
+        "presets.go"
+      ]
+    },
+    {
       "path": "internal/api",
-      "go_files": 197,
-      "test_files": 93,
-      "loc": 77662,
+      "go_files": 264,
+      "test_files": 158,
+      "loc": 123720,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
         "internal/adapter/postgres",
+        "internal/ai/dispatch",
+        "internal/ai/guard",
+        "internal/ai/provider",
+        "internal/ai/provider/anthropic",
+        "internal/ai/provider/azure",
+        "internal/ai/provider/mock",
+        "internal/ai/provider/ollama",
+        "internal/ai/provider/openai",
+        "internal/ai/rag",
+        "internal/ai/redact",
+        "internal/ai/strategies/alert-tuning-suggestions",
+        "internal/ai/strategies/anomaly-explanations",
+        "internal/ai/strategies/auto-name-unnamed-locations",
+        "internal/ai/strategies/auto-trip-naming",
+        "internal/ai/strategies/battery-health-forecast-narrative",
+        "internal/ai/strategies/cabin-temperature-impact-narrative",
+        "internal/ai/strategies/charging-curve-fingerprint-clustering",
+        "internal/ai/strategies/charging-diagnosis",
+        "internal/ai/strategies/chatbot-llm",
+        "internal/ai/strategies/cost-forecast-narration",
+        "internal/ai/strategies/cross-rule-conflict-detection",
+        "internal/ai/strategies/data-repair-suggestions",
+        "internal/ai/strategies/digest-narration",
+        "internal/ai/strategies/drive-coaching",
+        "internal/ai/strategies/feedback-queue-triage",
+        "internal/ai/strategies/geofence-aware-automation-suggestions",
+        "internal/ai/strategies/inbox-auto-categorization",
+        "internal/ai/strategies/incident-timeline-summarizer",
+        "internal/ai/strategies/learned-per-vehicle-anomaly-baselines",
+        "internal/ai/strategies/lifetime-stats-qa",
+        "internal/ai/strategies/log-trace-summarization",
+        "internal/ai/strategies/ml-charging-curve-clustering",
+        "internal/ai/strategies/mqtt-sse-inspector-explanations",
+        "internal/ai/strategies/nl-alert-builder",
+        "internal/ai/strategies/nl-automation-builder",
+        "internal/ai/strategies/nl-dashboard-composer",
+        "internal/ai/strategies/nl-drive-search-replay",
+        "internal/ai/strategies/nl-grafana-panel",
+        "internal/ai/strategies/nl-search",
+        "internal/ai/strategies/nl-sql-playground",
+        "internal/ai/strategies/period-compare-narration",
+        "internal/ai/strategies/pii-redaction-shared-exports",
+        "internal/ai/strategies/predictive-maintenance",
+        "internal/ai/strategies/preheat-precool-recommender",
+        "internal/ai/strategies/quiet-hours-suggestion",
+        "internal/ai/strategies/rag-help",
+        "internal/ai/strategies/range-prediction-model",
+        "internal/ai/strategies/route-efficiency-suggestions",
+        "internal/ai/strategies/safety-setting-explainer",
+        "internal/ai/strategies/signal-explorer-nl-filter",
+        "internal/ai/strategies/smart-charge-schedule-suggestion",
+        "internal/ai/strategies/software-update-changelog-summarizer",
+        "internal/ai/strategies/speed-profile-insights",
+        "internal/ai/strategies/state-machine-debugger-narrator",
+        "internal/ai/strategies/suggest-new-geofences",
+        "internal/ai/strategies/tco-narration",
+        "internal/ai/strategies/tire-pressure-trend-reasoning",
+        "internal/ai/strategies/trip-planner-llm-agent",
+        "internal/ai/strategies/trip-postcard-share-card-image-generation",
+        "internal/ai/strategies/vampire-drain-explanation",
+        "internal/ai/strategies/vehicle-paint-preview",
+        "internal/ai/strategies/voice-mode",
+        "internal/ai/strategies/watch-face-nl-response",
+        "internal/ai/strategies/yir-narration",
+        "internal/ai/strategy",
+        "internal/ai/stream",
+        "internal/ai/tools",
+        "internal/alertmsg",
         "internal/api",
         "internal/apilog",
         "internal/app/chargingsvc",
@@ -412,13 +2040,15 @@
         "internal/fsm/charge",
         "internal/fsm/command",
         "internal/fsm/drive",
-        "internal/fsm/notification",
         "internal/fsm/telemetry",
         "internal/geocoding",
         "internal/handler/v1",
         "internal/imaging",
         "internal/integrations",
         "internal/metrics",
+        "internal/ml/anomaly",
+        "internal/ml/chargingcurves",
+        "internal/ml/range",
         "internal/models",
         "internal/mqtt",
         "internal/notification",
@@ -452,10 +2082,133 @@
         "admin_log_stream_handler_test.go",
         "admin_maintenance_handler.go",
         "admin_maintenance_handler_test.go",
+        "ai_admin_handler.go",
+        "ai_admin_handler_test.go",
+        "ai_alert_handler.go",
+        "ai_alert_handler_test.go",
+        "ai_alert_tuning_handler.go",
+        "ai_alert_tuning_handler_test.go",
+        "ai_anomaly_handler.go",
+        "ai_anomaly_handler_test.go",
+        "ai_auto_name_unnamed_locations_handler.go",
+        "ai_auto_name_unnamed_locations_handler_test.go",
+        "ai_auto_trip_name_handler.go",
+        "ai_auto_trip_name_handler_test.go",
+        "ai_automation_handler.go",
+        "ai_automation_handler_test.go",
+        "ai_battery_health_handler.go",
+        "ai_battery_health_handler_test.go",
+        "ai_charging_curve_clustering_handler.go",
+        "ai_charging_curve_clustering_handler_test.go",
+        "ai_charging_diagnosis_handler.go",
+        "ai_charging_diagnosis_handler_test.go",
+        "ai_chatbot_handler.go",
+        "ai_chatbot_handler_test.go",
+        "ai_climate_schedule_handler.go",
+        "ai_climate_schedule_handler_test.go",
+        "ai_cost_forecast_narration_handler.go",
+        "ai_cost_forecast_narration_handler_test.go",
+        "ai_cross_rule_conflict_handler.go",
+        "ai_cross_rule_conflict_handler_test.go",
+        "ai_data_repair_handler.go",
+        "ai_data_repair_handler_test.go",
+        "ai_digest_handler.go",
+        "ai_digest_handler_test.go",
+        "ai_drive_coach_handler.go",
+        "ai_drive_coach_handler_test.go",
+        "ai_drive_search_handler.go",
+        "ai_drive_search_handler_test.go",
+        "ai_drive_search_hydrator.go",
+        "ai_feedback_triage_handler.go",
+        "ai_feedback_triage_handler_test.go",
+        "ai_geofence_aware_automation_handler.go",
+        "ai_geofence_aware_automation_handler_test.go",
+        "ai_inbox_categorization_handler.go",
+        "ai_inbox_categorization_handler_test.go",
+        "ai_incident_timeline_summarizer_handler.go",
+        "ai_incident_timeline_summarizer_handler_test.go",
+        "ai_internal_handler.go",
+        "ai_lifetime_stats_qa_handler.go",
+        "ai_lifetime_stats_qa_handler_test.go",
+        "ai_log_trace_summarization_handler.go",
+        "ai_log_trace_summarization_handler_test.go",
+        "ai_ml_anomaly_baseline_handler.go",
+        "ai_ml_anomaly_baseline_handler_test.go",
+        "ai_ml_anomaly_safe_ranges_parity_test.go",
+        "ai_ml_charging_curve_handler.go",
+        "ai_ml_charging_curve_handler_test.go",
+        "ai_ml_charging_curve_parity_test.go",
+        "ai_ml_range_fallback_parity_test.go",
+        "ai_ml_range_handler.go",
+        "ai_ml_range_handler_test.go",
+        "ai_mqtt_sse_inspector_explanations_handler.go",
+        "ai_mqtt_sse_inspector_explanations_handler_test.go",
+        "ai_nl_dashboard_composer_handler.go",
+        "ai_nl_dashboard_composer_handler_test.go",
+        "ai_nl_grafana_panel_handler.go",
+        "ai_nl_grafana_panel_handler_test.go",
+        "ai_nl_sql_playground_handler.go",
+        "ai_nl_sql_playground_handler_test.go",
+        "ai_period_compare_narration_handler.go",
+        "ai_period_compare_narration_handler_test.go",
+        "ai_pii_redaction_shared_exports_handler.go",
+        "ai_pii_redaction_shared_exports_handler_test.go",
+        "ai_predictive_maintenance_handler.go",
+        "ai_predictive_maintenance_handler_test.go",
+        "ai_quiet_hours_suggestion_handler.go",
+        "ai_quiet_hours_suggestion_handler_test.go",
+        "ai_rag_help_handler.go",
+        "ai_rag_help_handler_test.go",
+        "ai_route_efficiency_handler.go",
+        "ai_route_efficiency_handler_test.go",
+        "ai_routes.go",
+        "ai_safety_setting_explainer_handler.go",
+        "ai_safety_setting_explainer_handler_test.go",
+        "ai_search_handler.go",
+        "ai_search_handler_test.go",
+        "ai_search_hydrator.go",
+        "ai_settings_validate_handler.go",
+        "ai_settings_validate_handler_test.go",
+        "ai_signal_explorer_nl_filter_handler.go",
+        "ai_signal_explorer_nl_filter_handler_test.go",
+        "ai_smart_charge_schedule_handler.go",
+        "ai_smart_charge_schedule_handler_test.go",
+        "ai_software_update_changelog_summarizer_handler.go",
+        "ai_software_update_changelog_summarizer_handler_test.go",
+        "ai_speed_profile_handler.go",
+        "ai_speed_profile_handler_test.go",
+        "ai_state_machine_debugger_narrator_handler.go",
+        "ai_state_machine_debugger_narrator_handler_test.go",
+        "ai_suggest_new_geofences_handler.go",
+        "ai_suggest_new_geofences_handler_test.go",
+        "ai_tco_narration_handler.go",
+        "ai_tco_narration_handler_test.go",
+        "ai_temperature_impact_handler.go",
+        "ai_temperature_impact_handler_test.go",
+        "ai_tire_pressure_trend_handler.go",
+        "ai_tire_pressure_trend_handler_test.go",
+        "ai_trip_planner_llm_handler.go",
+        "ai_trip_planner_llm_handler_test.go",
+        "ai_trip_postcard_share_card_image_handler.go",
+        "ai_trip_postcard_share_card_image_handler_test.go",
+        "ai_usage_handler.go",
+        "ai_usage_handler_test.go",
+        "ai_vampire_drain_handler.go",
+        "ai_vampire_drain_handler_test.go",
+        "ai_vehicle_paint_preview_handler.go",
+        "ai_vehicle_paint_preview_handler_test.go",
+        "ai_voice_mode_handler.go",
+        "ai_voice_mode_handler_test.go",
+        "ai_watch_face_nl_response_handler.go",
+        "ai_watch_face_nl_response_handler_test.go",
+        "ai_year_review_handler.go",
+        "ai_year_review_handler_test.go",
         "alert_handler.go",
         "alert_handler_dtos.go",
+        "alert_handler_multivehicle_test.go",
         "alert_handler_rules.go",
         "alert_handler_test.go",
+        "alert_message_handler.go",
         "alerts_bulk_handler.go",
         "alerts_handler.go",
         "alerts_handler_test.go",
@@ -464,6 +2217,7 @@
         "analytics_handler_queries.go",
         "analytics_handler_test.go",
         "anomaly_handler.go",
+        "anomaly_handler_test.go",
         "api_call_log_handler.go",
         "api_call_log_middleware.go",
         "api_call_log_middleware_test.go",
@@ -519,6 +2273,7 @@
         "chatbot_handler_chat.go",
         "chatbot_handler_dtos.go",
         "chatbot_handler_test.go",
+        "chatbot_responder.go",
         "climate_handler.go",
         "climate_handler_test.go",
         "command_handler.go",
@@ -537,6 +2292,8 @@
         "diagnostic_handler.go",
         "diagnostic_handler_test.go",
         "doc.go",
+        "drive_dynamics_handler.go",
+        "drive_dynamics_handler_test.go",
         "drive_handler.go",
         "drive_handler_detail.go",
         "drive_handler_detail_test.go",
@@ -662,6 +2419,9 @@
         "software_update_handler.go",
         "speed_profile_handler.go",
         "sse_handler.go",
+        "status_incidents_handler.go",
+        "status_v1_handler.go",
+        "status_v1_handler_test.go",
         "sudo_middleware.go",
         "sudo_middleware_test.go",
         "system_auth_mode_handler.go",
@@ -669,6 +2429,8 @@
         "system_handler.go",
         "system_handler_test.go",
         "tco_handler.go",
+        "tco_summary.go",
+        "tco_summary_test.go",
         "telemetry_alerts.go",
         "telemetry_handler.go",
         "telemetry_handler_capture.go",
@@ -741,7 +2503,7 @@
       "path": "internal/apilog",
       "go_files": 4,
       "test_files": 1,
-      "loc": 505,
+      "loc": 496,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -761,7 +2523,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1207,
+      "loc": 1348,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -774,6 +2536,7 @@
         "internal/database",
         "internal/events",
         "internal/geocoding",
+        "internal/jobs",
         "internal/metrics",
         "internal/models",
         "internal/mqtt",
@@ -957,7 +2720,7 @@
       "path": "internal/automation",
       "go_files": 6,
       "test_files": 2,
-      "loc": 1560,
+      "loc": 1561,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1168,12 +2931,14 @@
     },
     {
       "path": "internal/database",
-      "go_files": 96,
-      "test_files": 27,
-      "loc": 23271,
+      "go_files": 98,
+      "test_files": 34,
+      "loc": 25840,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
         "internal/automation/trigger",
         "internal/config",
         "internal/crypto",
@@ -1183,7 +2948,16 @@
       ],
       "files": [
         "achievement_unlock_repo.go",
+        "ai_call_log_repo.go",
+        "ai_call_log_repo_test.go",
+        "ai_chat_continuations_repo.go",
+        "ai_chat_continuations_repo_test.go",
         "alert_repo.go",
+        "alert_repo_test.go",
+        "alert_repo_test_helpers_test.go",
+        "alert_rule_state_repo.go",
+        "alert_rule_state_repo_integration_test.go",
+        "alert_rule_state_repo_test.go",
         "api_call_log_repo.go",
         "audit_repo.go",
         "auth_sessions_repo.go",
@@ -1261,8 +3035,6 @@
         "share_token_repo.go",
         "signal_catalog.go",
         "signal_history_writer.go",
-        "signal_history_writer_buffer.go",
-        "signal_history_writer_flush.go",
         "signal_log_reader.go",
         "signal_log_reader_aggregations.go",
         "signal_log_reader_query.go",
@@ -1270,6 +3042,8 @@
         "signals_catalog_repo.go",
         "signals_catalog_repo_test.go",
         "software_update_repo.go",
+        "software_update_repo_test.go",
+        "status_incidents_repo.go",
         "sudo_token_repo.go",
         "system_state_repo.go",
         "system_state_repo_test.go",
@@ -1485,7 +3259,7 @@
       "path": "internal/export",
       "go_files": 9,
       "test_files": 3,
-      "loc": 2998,
+      "loc": 3000,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1511,7 +3285,7 @@
       "path": "internal/fsm",
       "go_files": 11,
       "test_files": 3,
-      "loc": 2512,
+      "loc": 2514,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1597,15 +3371,13 @@
     },
     {
       "path": "internal/fsm/notification",
-      "go_files": 3,
-      "test_files": 2,
-      "loc": 523,
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 280,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
       "files": [
-        "cooldown.go",
-        "cooldown_test.go",
         "delivery.go",
         "doc.go",
         "notification_test.go"
@@ -1751,10 +3523,49 @@
       ]
     },
     {
+      "path": "internal/jobs",
+      "go_files": 13,
+      "test_files": 12,
+      "loc": 3463,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/ai/rag",
+        "internal/database"
+      ],
+      "files": [
+        "ai_alert_inbox_categorizer.go",
+        "ai_alert_inbox_categorizer_test.go",
+        "ai_charge_curve_indexer.go",
+        "ai_charge_curve_indexer_test.go",
+        "ai_digest_weekly.go",
+        "ai_digest_weekly_test.go",
+        "ai_docs_indexer.go",
+        "ai_docs_indexer_test.go",
+        "ai_drive_indexer.go",
+        "ai_drive_indexer_test.go",
+        "ai_feedback_triage.go",
+        "ai_feedback_triage_test.go",
+        "ai_idle_drain_indexer.go",
+        "ai_idle_drain_indexer_test.go",
+        "ai_log_trace_indexer.go",
+        "ai_log_trace_indexer_test.go",
+        "ai_route_indexer.go",
+        "ai_route_indexer_test.go",
+        "ai_update_notes_indexer.go",
+        "ai_update_notes_indexer_test.go",
+        "ai_yir_pregen.go",
+        "ai_yir_pregen_test.go",
+        "doc.go",
+        "embeddings_ttl.go",
+        "embeddings_ttl_test.go"
+      ]
+    },
+    {
       "path": "internal/metrics",
       "go_files": 5,
       "test_files": 1,
-      "loc": 751,
+      "loc": 782,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
@@ -1768,15 +3579,62 @@
       ]
     },
     {
+      "path": "internal/ml/anomaly",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 746,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "baseline.go",
+        "baseline_test.go",
+        "doc.go",
+        "safe_ranges.go"
+      ]
+    },
+    {
+      "path": "internal/ml/chargingcurves",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 928,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/models"
+      ],
+      "files": [
+        "clustering.go",
+        "clustering_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/ml/range",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 1017,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "linear.go",
+        "trainer.go",
+        "trainer_test.go"
+      ]
+    },
+    {
       "path": "internal/models",
       "go_files": 34,
-      "test_files": 1,
-      "loc": 2838,
+      "test_files": 2,
+      "loc": 3026,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
       "files": [
         "alert.go",
+        "alert_test.go",
         "automation.go",
         "automation_step_action.go",
         "automation_step_condition.go",
@@ -1815,15 +3673,16 @@
     },
     {
       "path": "internal/mqtt",
-      "go_files": 4,
-      "test_files": 4,
-      "loc": 2175,
+      "go_files": 5,
+      "test_files": 5,
+      "loc": 3209,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/config",
         "internal/metrics",
-        "internal/tesla"
+        "internal/tesla",
+        "internal/tesla/codec"
       ],
       "files": [
         "dlq_production.go",
@@ -1833,14 +3692,16 @@
         "log_sampling_test.go",
         "mqtt.go",
         "mqtt_test.go",
-        "tracing_test.go"
+        "tracing_test.go",
+        "vin_cache.go",
+        "vin_cache_test.go"
       ]
     },
     {
       "path": "internal/notification",
       "go_files": 4,
       "test_files": 2,
-      "loc": 1092,
+      "loc": 1135,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1970,7 +3831,7 @@
       "path": "internal/platform/httputil",
       "go_files": 10,
       "test_files": 8,
-      "loc": 2254,
+      "loc": 2242,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2146,7 +4007,7 @@
       "path": "internal/signal",
       "go_files": 11,
       "test_files": 11,
-      "loc": 7233,
+      "loc": 7434,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2242,9 +4103,9 @@
     },
     {
       "path": "internal/tesla/codec",
-      "go_files": 4,
-      "test_files": 2,
-      "loc": 941,
+      "go_files": 6,
+      "test_files": 4,
+      "loc": 2881,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2253,6 +4114,10 @@
       "files": [
         "codec.go",
         "codec_test.go",
+        "coercion.go",
+        "coercion_test.go",
+        "decode_json.go",
+        "decode_json_test.go",
         "doc.go",
         "flatten.go",
         "flatten_test.go",
@@ -2280,7 +4145,7 @@
       "path": "internal/tesla/normalize",
       "go_files": 7,
       "test_files": 5,
-      "loc": 2170,
+      "loc": 2171,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2310,7 +4175,7 @@
       "path": "internal/tesla/protomodel",
       "go_files": 7,
       "test_files": 3,
-      "loc": 5006,
+      "loc": 5071,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
@@ -2395,7 +4260,7 @@
       "path": "internal/tesla/unit_history",
       "go_files": 4,
       "test_files": 2,
-      "loc": 1646,
+      "loc": 1645,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2432,7 +4297,7 @@
       "path": "internal/tesla_pipeline",
       "go_files": 2,
       "test_files": 3,
-      "loc": 2238,
+      "loc": 2419,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2484,7 +4349,7 @@
       "path": "internal/webpush",
       "go_files": 2,
       "test_files": 1,
-      "loc": 455,
+      "loc": 517,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2500,7 +4365,7 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2520,
+      "loc": 2523,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2533,6 +4398,51 @@
       ]
     },
     {
+      "path": "tools/aigen",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 338,
+      "has_doc_go": true,
+      "layer": "tool",
+      "imports": [
+        "internal/ai/features"
+      ],
+      "files": [
+        "doc.go",
+        "main.go",
+        "main_test.go"
+      ]
+    },
+    {
+      "path": "tools/aistream-contract",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 227,
+      "has_doc_go": true,
+      "layer": "tool",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "main.go"
+      ]
+    },
+    {
+      "path": "tools/aivet",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 792,
+      "has_doc_go": true,
+      "layer": "tool",
+      "imports": [
+        "internal/ai/features"
+      ],
+      "files": [
+        "doc.go",
+        "main.go",
+        "main_test.go"
+      ]
+    },
+    {
       "path": "tools/archmetrics",
       "go_files": 2,
       "test_files": 0,
@@ -2544,15 +4454,31 @@
         "doc.go",
         "main.go"
       ]
+    },
+    {
+      "path": "tools/eval-schema-check",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 57,
+      "has_doc_go": true,
+      "layer": "tool",
+      "imports": [
+        "internal/ai/eval"
+      ],
+      "files": [
+        "doc.go",
+        "main.go"
+      ]
     }
   ],
   "cmd_loc": {
+    "cmd/ai-eval": 151,
     "cmd/automation-worker": 272,
     "cmd/export-worker": 172,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 373,
+    "cmd/notification-worker": 420,
     "cmd/protogen-tesla": 73,
-    "cmd/pub-test-signal": 625,
+    "cmd/pub-test-signal": 655,
     "cmd/resubscribe": 363,
     "cmd/slo-coverage-audit": 199,
     "cmd/slogen": 356,
@@ -2563,6 +4489,10 @@
   "forbidden_edges": null,
   "doc_go_coverage": 1,
   "files_by_package": {
+    "cmd/ai-eval": [
+      "doc.go",
+      "main.go"
+    ],
     "cmd/automation-worker": [
       "doc.go",
       "main.go"
@@ -2671,13 +4601,466 @@
       "doc.go",
       "mapper.go"
     ],
+    "internal/ai/cost": [
+      "cost.go",
+      "doc.go"
+    ],
+    "internal/ai/dispatch": [
+      "continuation.go",
+      "dispatch.go",
+      "doc.go",
+      "prefs.go",
+      "stream.go"
+    ],
+    "internal/ai/eval": [
+      "doc.go",
+      "golden.go",
+      "judge.go",
+      "report.go",
+      "runner.go",
+      "strategy.go",
+      "tools.go",
+      "types.go"
+    ],
+    "internal/ai/features": [
+      "doc.go",
+      "registry.go",
+      "spa_wiring.go"
+    ],
+    "internal/ai/guard": [
+      "doc.go",
+      "guard.go"
+    ],
+    "internal/ai/health": [
+      "doc.go",
+      "ollama_poll.go"
+    ],
+    "internal/ai/limit": [
+      "clock.go",
+      "cost.go",
+      "doc.go",
+      "error.go",
+      "limiter.go",
+      "quota.go"
+    ],
+    "internal/ai/provider": [
+      "audit.go",
+      "config.go",
+      "cost_decorator.go",
+      "decorator.go",
+      "doc.go",
+      "errors.go",
+      "local_validator.go",
+      "provider.go",
+      "ratelimit_decorator.go",
+      "redact_decorator.go",
+      "registry.go",
+      "trace.go"
+    ],
+    "internal/ai/provider/anthropic": [
+      "anthropic.go",
+      "doc.go"
+    ],
+    "internal/ai/provider/azure": [
+      "azure.go",
+      "doc.go"
+    ],
+    "internal/ai/provider/mock": [
+      "canned.go",
+      "doc.go",
+      "mock.go"
+    ],
+    "internal/ai/provider/ollama": [
+      "doc.go",
+      "ollama.go"
+    ],
+    "internal/ai/provider/openai": [
+      "doc.go",
+      "openai.go"
+    ],
+    "internal/ai/rag": [
+      "chunker.go",
+      "doc.go",
+      "docs_indexer.go",
+      "factory.go",
+      "noop.go",
+      "pgvector.go",
+      "rag.go",
+      "ttl.go",
+      "vector.go"
+    ],
+    "internal/ai/redact": [
+      "class.go",
+      "ctx.go",
+      "detect.go",
+      "doc.go",
+      "policies.go",
+      "policy.go",
+      "replace.go",
+      "roundtrip.go"
+    ],
+    "internal/ai/strategies/alert-tuning-suggestions": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/anomaly-explanations": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/auto-name-unnamed-locations": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/auto-trip-naming": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/battery-health-forecast-narrative": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/cabin-temperature-impact-narrative": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/charging-curve-fingerprint-clustering": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/charging-diagnosis": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/chatbot-llm": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/cost-forecast-narration": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/cross-rule-conflict-detection": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/data-repair-suggestions": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/digest-narration": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/drive-coaching": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/feedback-queue-triage": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/geofence-aware-automation-suggestions": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/inbox-auto-categorization": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/incident-timeline-summarizer": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/learned-per-vehicle-anomaly-baselines": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/lifetime-stats-qa": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/log-trace-summarization": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/ml-charging-curve-clustering": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/mqtt-sse-inspector-explanations": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/nl-alert-builder": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/nl-automation-builder": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/nl-dashboard-composer": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/nl-drive-search-replay": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/nl-grafana-panel": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/nl-search": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/nl-sql-playground": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/period-compare-narration": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/pii-redaction-shared-exports": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/predictive-maintenance": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/preheat-precool-recommender": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/quiet-hours-suggestion": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/rag-help": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/range-prediction-model": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/route-efficiency-suggestions": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/safety-setting-explainer": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/signal-explorer-nl-filter": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/smart-charge-schedule-suggestion": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/software-update-changelog-summarizer": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/speed-profile-insights": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/state-machine-debugger-narrator": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/suggest-new-geofences": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/tco-narration": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/tire-pressure-trend-reasoning": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/trip-planner-llm-agent": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/trip-postcard-share-card-image-generation": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/vampire-drain-explanation": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/vehicle-paint-preview": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/voice-mode": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/watch-face-nl-response": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategies/yir-narration": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategy": [
+      "doc.go",
+      "strategy.go"
+    ],
+    "internal/ai/strategy/redactadapter": [
+      "adapter.go",
+      "doc.go"
+    ],
+    "internal/ai/stream": [
+      "doc.go",
+      "writer.go"
+    ],
+    "internal/ai/tools": [
+      "alert_builder.go",
+      "alert_tuning.go",
+      "anomaly.go",
+      "auto_name_unnamed_locations.go",
+      "auto_trip_naming.go",
+      "automation_builder.go",
+      "battery_health_forecast.go",
+      "builtins.go",
+      "charge_curve_clustering.go",
+      "charge_curve_clusters.go",
+      "charging_diagnosis.go",
+      "cost_forecast.go",
+      "cross_rule_conflict.go",
+      "data_repair_suggestions.go",
+      "digest.go",
+      "doc.go",
+      "drive_coaching.go",
+      "drive_search.go",
+      "export_redaction_plan.go",
+      "feedback_queue_triage.go",
+      "help.go",
+      "inbox_auto_categorization.go",
+      "incident_timeline_summarizer.go",
+      "learned_anomaly_baseline.go",
+      "lifetime_stats_qa.go",
+      "log_trace_summarizer.go",
+      "mqtt_sse_inspector_explanations.go",
+      "nl_dashboard_composer.go",
+      "nl_grafana_panel.go",
+      "nl_sql_playground.go",
+      "paint_preview.go",
+      "period_compare.go",
+      "predictive_maintenance.go",
+      "preheat_precool_recommender.go",
+      "quiet_hours_suggestion.go",
+      "range_predictor.go",
+      "registry.go",
+      "route_efficiency.go",
+      "safety_setting_explainer.go",
+      "schema.go",
+      "search.go",
+      "share_card_image.go",
+      "signal_explorer_nl_filter.go",
+      "smart_charge_schedule_suggestion.go",
+      "software_update_summary.go",
+      "speed_profile.go",
+      "state_machine_debugger_narrator.go",
+      "suggest_new_geofences.go",
+      "tco_summary.go",
+      "temperature_impact.go",
+      "tire_pressure_trend.go",
+      "tool.go",
+      "trip_planner_llm_agent.go",
+      "validate.go",
+      "vampire_drain_explanation.go",
+      "voice_mode.go",
+      "watch_face_nl_response.go",
+      "year_review.go"
+    ],
+    "internal/alertmsg": [
+      "doc.go",
+      "formatter.go",
+      "presets.go"
+    ],
     "internal/api": [
       "admin_feedback_handler.go",
       "admin_log_stream_handler.go",
       "admin_maintenance_handler.go",
+      "ai_admin_handler.go",
+      "ai_alert_handler.go",
+      "ai_alert_tuning_handler.go",
+      "ai_anomaly_handler.go",
+      "ai_auto_name_unnamed_locations_handler.go",
+      "ai_auto_trip_name_handler.go",
+      "ai_automation_handler.go",
+      "ai_battery_health_handler.go",
+      "ai_charging_curve_clustering_handler.go",
+      "ai_charging_diagnosis_handler.go",
+      "ai_chatbot_handler.go",
+      "ai_climate_schedule_handler.go",
+      "ai_cost_forecast_narration_handler.go",
+      "ai_cross_rule_conflict_handler.go",
+      "ai_data_repair_handler.go",
+      "ai_digest_handler.go",
+      "ai_drive_coach_handler.go",
+      "ai_drive_search_handler.go",
+      "ai_drive_search_hydrator.go",
+      "ai_feedback_triage_handler.go",
+      "ai_geofence_aware_automation_handler.go",
+      "ai_inbox_categorization_handler.go",
+      "ai_incident_timeline_summarizer_handler.go",
+      "ai_internal_handler.go",
+      "ai_lifetime_stats_qa_handler.go",
+      "ai_log_trace_summarization_handler.go",
+      "ai_ml_anomaly_baseline_handler.go",
+      "ai_ml_charging_curve_handler.go",
+      "ai_ml_range_handler.go",
+      "ai_mqtt_sse_inspector_explanations_handler.go",
+      "ai_nl_dashboard_composer_handler.go",
+      "ai_nl_grafana_panel_handler.go",
+      "ai_nl_sql_playground_handler.go",
+      "ai_period_compare_narration_handler.go",
+      "ai_pii_redaction_shared_exports_handler.go",
+      "ai_predictive_maintenance_handler.go",
+      "ai_quiet_hours_suggestion_handler.go",
+      "ai_rag_help_handler.go",
+      "ai_route_efficiency_handler.go",
+      "ai_routes.go",
+      "ai_safety_setting_explainer_handler.go",
+      "ai_search_handler.go",
+      "ai_search_hydrator.go",
+      "ai_settings_validate_handler.go",
+      "ai_signal_explorer_nl_filter_handler.go",
+      "ai_smart_charge_schedule_handler.go",
+      "ai_software_update_changelog_summarizer_handler.go",
+      "ai_speed_profile_handler.go",
+      "ai_state_machine_debugger_narrator_handler.go",
+      "ai_suggest_new_geofences_handler.go",
+      "ai_tco_narration_handler.go",
+      "ai_temperature_impact_handler.go",
+      "ai_tire_pressure_trend_handler.go",
+      "ai_trip_planner_llm_handler.go",
+      "ai_trip_postcard_share_card_image_handler.go",
+      "ai_usage_handler.go",
+      "ai_vampire_drain_handler.go",
+      "ai_vehicle_paint_preview_handler.go",
+      "ai_voice_mode_handler.go",
+      "ai_watch_face_nl_response_handler.go",
+      "ai_year_review_handler.go",
       "alert_handler.go",
       "alert_handler_dtos.go",
       "alert_handler_rules.go",
+      "alert_message_handler.go",
       "alerts_bulk_handler.go",
       "alerts_handler.go",
       "analytics_handler.go",
@@ -2724,6 +5107,7 @@
       "chatbot_handler.go",
       "chatbot_handler_chat.go",
       "chatbot_handler_dtos.go",
+      "chatbot_responder.go",
       "climate_handler.go",
       "command_handler.go",
       "computed_metric_evaluator.go",
@@ -2738,6 +5122,7 @@
       "devtools_handler_logs.go",
       "diagnostic_handler.go",
       "doc.go",
+      "drive_dynamics_handler.go",
       "drive_handler.go",
       "drive_handler_detail.go",
       "drive_handler_listing.go",
@@ -2819,10 +5204,13 @@
       "software_update_handler.go",
       "speed_profile_handler.go",
       "sse_handler.go",
+      "status_incidents_handler.go",
+      "status_v1_handler.go",
       "sudo_middleware.go",
       "system_auth_mode_handler.go",
       "system_handler.go",
       "tco_handler.go",
+      "tco_summary.go",
       "telemetry_alerts.go",
       "telemetry_handler.go",
       "telemetry_handler_capture.go",
@@ -2993,7 +5381,10 @@
     ],
     "internal/database": [
       "achievement_unlock_repo.go",
+      "ai_call_log_repo.go",
+      "ai_chat_continuations_repo.go",
       "alert_repo.go",
+      "alert_rule_state_repo.go",
       "api_call_log_repo.go",
       "audit_repo.go",
       "auth_sessions_repo.go",
@@ -3053,14 +5444,13 @@
       "share_token_repo.go",
       "signal_catalog.go",
       "signal_history_writer.go",
-      "signal_history_writer_buffer.go",
-      "signal_history_writer_flush.go",
       "signal_log_reader.go",
       "signal_log_reader_aggregations.go",
       "signal_log_reader_query.go",
       "signal_log_repo.go",
       "signals_catalog_repo.go",
       "software_update_repo.go",
+      "status_incidents_repo.go",
       "sudo_token_repo.go",
       "system_state_repo.go",
       "tesla_charging_history_repo.go",
@@ -3192,7 +5582,6 @@
       "validation.go"
     ],
     "internal/fsm/notification": [
-      "cooldown.go",
       "delivery.go",
       "doc.go"
     ],
@@ -3247,12 +5636,41 @@
       "doc.go",
       "github_issues.go"
     ],
+    "internal/jobs": [
+      "ai_alert_inbox_categorizer.go",
+      "ai_charge_curve_indexer.go",
+      "ai_digest_weekly.go",
+      "ai_docs_indexer.go",
+      "ai_drive_indexer.go",
+      "ai_feedback_triage.go",
+      "ai_idle_drain_indexer.go",
+      "ai_log_trace_indexer.go",
+      "ai_route_indexer.go",
+      "ai_update_notes_indexer.go",
+      "ai_yir_pregen.go",
+      "doc.go",
+      "embeddings_ttl.go"
+    ],
     "internal/metrics": [
       "business.go",
       "doc.go",
       "metrics.go",
       "metrics_drive_charging.go",
       "metrics_telemetry.go"
+    ],
+    "internal/ml/anomaly": [
+      "baseline.go",
+      "doc.go",
+      "safe_ranges.go"
+    ],
+    "internal/ml/chargingcurves": [
+      "clustering.go",
+      "doc.go"
+    ],
+    "internal/ml/range": [
+      "doc.go",
+      "linear.go",
+      "trainer.go"
     ],
     "internal/models": [
       "alert.go",
@@ -3294,7 +5712,8 @@
       "dlq_production.go",
       "doc.go",
       "log_sampling.go",
-      "mqtt.go"
+      "mqtt.go",
+      "vin_cache.go"
     ],
     "internal/notification": [
       "doc.go",
@@ -3434,6 +5853,8 @@
     ],
     "internal/tesla/codec": [
       "codec.go",
+      "coercion.go",
+      "decode_json.go",
       "doc.go",
       "flatten.go",
       "types.go"
@@ -3522,7 +5943,23 @@
       "worker_jobs.go",
       "worker_lifecycle.go"
     ],
+    "tools/aigen": [
+      "doc.go",
+      "main.go"
+    ],
+    "tools/aistream-contract": [
+      "doc.go",
+      "main.go"
+    ],
+    "tools/aivet": [
+      "doc.go",
+      "main.go"
+    ],
     "tools/archmetrics": [
+      "doc.go",
+      "main.go"
+    ],
+    "tools/eval-schema-check": [
       "doc.go",
       "main.go"
     ]

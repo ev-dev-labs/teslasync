@@ -87,32 +87,32 @@ export function UptimeHeatmap({
         aria-label="Daily status history"
       >
         {days.map((day) => (
-          <Tooltip
-            key={day.date}
-            multiline
-            content={
-              <div className="space-y-1">
-                <div className="text-xs font-semibold">{day.date}</div>
-                <div className="text-xs">{STATUS_LABEL[day.status]}</div>
-                {day.summary && (
-                  <div className="text-xs pt-1 border-t border-white/[0.06]">
-                    {day.summary}
-                  </div>
+          <div role="listitem" key={day.date}>
+            <Tooltip
+              multiline
+              content={
+                <div className="space-y-1">
+                  <div className="text-xs font-semibold">{day.date}</div>
+                  <div className="text-xs">{STATUS_LABEL[day.status]}</div>
+                  {day.summary && (
+                    <div className="text-xs pt-1 border-t border-white/[0.06]">
+                      {day.summary}
+                    </div>
+                  )}
+                </div>
+              }
+            >
+              <button
+                type="button"
+                aria-label={`${day.date}: ${STATUS_LABEL[day.status]}`}
+                className={cn(
+                  'h-3 w-3 shrink-0 rounded-sm transition-colors',
+                  'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
+                  SQUARE_BG[day.status],
                 )}
-              </div>
-            }
-          >
-            <button
-              type="button"
-              role="listitem"
-              aria-label={`${day.date}: ${STATUS_LABEL[day.status]}`}
-              className={cn(
-                'h-3 w-3 shrink-0 rounded-sm transition-colors',
-                'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
-                SQUARE_BG[day.status],
-              )}
-            />
-          </Tooltip>
+              />
+            </Tooltip>
+          </div>
         ))}
       </div>
 

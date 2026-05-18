@@ -135,6 +135,8 @@ export default function AuditLogPage() {
                   data={filtered}
                   keyExtractor={(log) => String(log.id)}
                   compact
+                  exportable
+                  exportFilename="audit-logs"
                   pagination={{ defaultPageSize: 50 }}
                 />
               ) : (

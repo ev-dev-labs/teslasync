@@ -406,7 +406,7 @@ func buildGrafanaPanelDraft(input grafanaPanelInput) *GrafanaPanelDraft {
 				UID:  strings.TrimSpace(input.Panel.Datasource.UID),
 			},
 			Targets: targets,
-			GridPos: GrafanaPanelGridPos{X: gp.X, Y: gp.Y, W: gp.W, H: gp.H},
+			GridPos: GrafanaPanelGridPos(gp),
 		},
 		Rationale:        strings.TrimSpace(input.Rationale),
 		ReferencedTables: tables,

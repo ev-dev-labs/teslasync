@@ -178,9 +178,9 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if efficiency == nil {
 		efficiency = []tempEfficiencyBucket{}
 	}
-	if vampireDrain == nil {
-		vampireDrain = []vampireDrainBucket{}
-	}
+	// vampireDrain is initialised to a non-nil empty slice at the top of
+	// the handler (see Phase-42 comment) so the response shape is stable;
+	// no nil-guard needed here.
 	if monthlyTrend == nil {
 		monthlyTrend = []monthlyTempTrend{}
 	}

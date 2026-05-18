@@ -425,10 +425,8 @@ func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals m
 	// The merged map is also returned in EvalResult.Context so the dispatch
 	// layer can render title/body via internal/alertmsg without re-cloning.
 	mergedSignals := make(map[string]interface{}, len(signals))
-	if prevSignals != nil {
-		for k, v := range prevSignals {
-			mergedSignals[k] = v
-		}
+	for k, v := range prevSignals {
+		mergedSignals[k] = v
 	}
 	for k, v := range signals {
 		mergedSignals[k] = v

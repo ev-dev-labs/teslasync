@@ -468,7 +468,7 @@ function InnerSection(): JSX.Element {
   const inputSlot = (
     <div className="space-y-3">
       <div
-        className="rounded-lg border border-cyan-400/20 bg-cyan-500/5 p-3 text-sm text-white/80 min-h-[3.5rem] whitespace-pre-wrap"
+        className="rounded-lg border border-cyan-400/20 bg-cyan-500/5 p-3 text-sm text-[var(--text-secondary)] min-h-[3.5rem] whitespace-pre-wrap"
         aria-live="polite"
         aria-label={t('voiceMode.transcriptLabel', 'Voice transcript')}
         data-testid="ai-feature-voice-mode-transcript"
@@ -476,7 +476,7 @@ function InnerSection(): JSX.Element {
         {transcript.trim().length > 0 ? (
           transcript
         ) : (
-          <span className="text-white/40">
+          <span className="text-[var(--text-muted)]">
             {listening
               ? t(
                   'voiceMode.listeningHint',
@@ -561,7 +561,7 @@ function InnerSection(): JSX.Element {
         </p>
       )}
       {!sttSupported && !sttError && (
-        <p className="text-xs text-white/40">
+        <p className="text-xs text-[var(--text-muted)]">
           {t(
             'voiceMode.unsupportedHint',
             'Voice input is not available in this browser. You can still type your question into the chatbot below.',

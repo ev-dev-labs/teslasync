@@ -155,13 +155,13 @@ export default function SafetyPage() {
         <GlassPanel data-testid="safety-settings-listing">
           <div className="space-y-4">
             <header className="space-y-1">
-              <h2 className="text-lg font-semibold text-white/90">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                 {t(
                   'safetySettings.listing.title',
                   'Your safety-related settings',
                 )}
               </h2>
-              <p className="text-sm text-white/60">
+              <p className="text-sm text-[var(--text-secondary)]">
                 {t(
                   'safetySettings.listing.subtitle',
                   'Each row shows the current value on this install and links to the canonical Settings page where you can change it.',
@@ -183,7 +183,7 @@ export default function SafetyPage() {
                   >
                     <div className="space-y-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-medium text-white/90">
+                        <span className="text-sm font-medium text-[var(--text-primary)]">
                           {t(row.titleKey, row.titleFallback)}
                         </span>
                         <Badge
@@ -194,7 +194,7 @@ export default function SafetyPage() {
                           {value}
                         </Badge>
                       </div>
-                      <p className="text-xs text-white/60">
+                      <p className="text-xs text-[var(--text-secondary)]">
                         {t(row.descKey, row.descFallback)}
                       </p>
                     </div>
@@ -213,7 +213,7 @@ export default function SafetyPage() {
               })}
             </ul>
 
-            <p className="pt-2 text-xs text-white/50">
+            <p className="pt-2 text-xs text-[var(--text-muted)]">
               {t(
                 'safetySettings.listing.changeHint',
                 'To change a value, open the main Settings page. This page is read-only and never changes a setting on its own.',

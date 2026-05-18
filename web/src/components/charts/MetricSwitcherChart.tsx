@@ -182,6 +182,9 @@ export function MetricSwitcherChart<P extends { date: string }>({
   );
 
   return (
+    // chart-a11y:no-table caller supplies N independent metric series and chooses
+    // one at a time via a pill switcher — there is no single tabular projection
+    // we can render; per-metric tabular access is provided by upstream pages.
     <ChartContainer
       title={title}
       ariaLabel={ariaLabel}

@@ -7,6 +7,18 @@ on:
       - 'web/**'
       - '.github/workflows/perf.yml'
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
+
+concurrency:
+  group: perf-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -14,7 +26,7 @@ permissions:
 jobs:
   lighthouse:
     name: Lighthouse CI
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     defaults:
       run:
         working-directory: web

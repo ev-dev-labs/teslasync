@@ -102,7 +102,7 @@ export function StickyChipBar({ chips, topOffset = 0, className }: StickyChipBar
                 'min-h-[32px] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
                 active
                   ? 'bg-cyan-400/15 text-cyan-200 ring-1 ring-cyan-400/30'
-                  : 'bg-white/5 text-[var(--text-secondary)] hover:bg-white/10 hover:text-[var(--text-primary)]',
+                  : 'bg-[var(--surface-2)] text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
               )}
               aria-current={active ? 'true' : undefined}
             >

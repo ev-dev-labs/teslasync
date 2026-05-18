@@ -161,9 +161,9 @@ function InnerSection({
       buttonTestId="ai-feature-auto-name-unnamed-locations-suggest"
     >
       {currentName && (
-        <p className="text-xs text-white/50">
+        <p className="text-xs text-[var(--text-muted)]">
           {t('locations.aiAutoName.currentLabel', 'Current label')}:{' '}
-          <span className="text-white/70">{currentName}</span>
+          <span className="text-[var(--text-secondary)]">{currentName}</span>
         </p>
       )}
       {draft && (
@@ -176,11 +176,11 @@ function InnerSection({
               <div className="text-xs uppercase tracking-wide text-cyan-300">
                 {t('locations.aiAutoName.proposalLabel', 'Proposed name')}
               </div>
-              <div className="font-medium text-white/90">
+              <div className="font-medium text-[var(--text-primary)]">
                 {draft.proposed_name}
               </div>
               {draft.reason && (
-                <div className="text-xs text-white/60">{draft.reason}</div>
+                <div className="text-xs text-[var(--text-secondary)]">{draft.reason}</div>
               )}
               {draft.status !== 'ok' && (
                 <div className="text-xs text-rose-300">

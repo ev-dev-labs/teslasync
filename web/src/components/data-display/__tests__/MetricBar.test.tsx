@@ -23,8 +23,7 @@ vi.mock('framer-motion', () => ({
         const Component = (props.as as string) ?? 'div'
         const { children, ...rest } = props as { children?: unknown } & Record<string, unknown>
         return (
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          <Component {...(rest as any)}>{children as React.ReactNode}</Component>
+          <Component {...(rest as Record<string, unknown>)}>{children as React.ReactNode}</Component>
         )
       },
     },
