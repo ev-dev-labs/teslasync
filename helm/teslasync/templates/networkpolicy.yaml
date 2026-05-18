@@ -1,0 +1,826 @@
+{{/*
+NetworkPolicy resources — zero-trust pod-to-pod traffic for TeslaSync.
+
+Phase: SOTA hardening (P0 #3). Prior chart shipped zero NetworkPolicy
+resources, so any compromised pod in the namespace had unrestricted
+lateral movement to every other workload. This file applies:
+
+  1. default-deny ingress + egress on every pod in the namespace
+  2. allow-dns egress for everyone (kube-dns / coredns)
+  3. one allow policy per component, opening only the ports each
+     workload actually needs
+
+Override behavior in values.yaml under `networkPolicy.*`.
+*/}}
+{{- if .Values.networkPolicy.enabled }}
+{{- $top := . }}
+{{- $fullName := include "teslasync.fullname" . }}
+{{- $selector := include "teslasync.selectorLabels" . }}
+
+{{- /* ─── default-deny ingress + egress ───────────────────────────────── */}}
+{{- if .Values.networkPolicy.defaultDeny }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-default-deny
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: default-deny
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+---
+{{- end }}
+
+{{- /* ─── allow DNS egress for every pod ──────────────────────────────── */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-allow-dns
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: allow-dns
+spec:
+  podSelector: {}
+  policyTypes:
+    - Egress
+  egress:
+    - to:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.dns.namespaceSelector | nindent 12 }}
+          podSelector:
+            {{- toYaml .Values.networkPolicy.dns.podSelector | nindent 12 }}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+---
+
+{{- /* ─── api (backend) ───────────────────────────────────────────────── */}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-api
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: api
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # From web SPA pod (Nginx reverse proxy)
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: web
+      ports:
+        - protocol: TCP
+          port: 8080
+    # From workers that hit /internal/* endpoints
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - notification-worker
+                  - export-worker
+                  - automation-worker
+                  - command-proxy
+                  - fleet-telemetry
+      ports:
+        - protocol: TCP
+          port: 8080
+    # From ingress controller(s) — required if api is exposed externally
+    {{- if .Values.networkPolicy.ingressNamespaceSelector }}
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    {{- end }}
+    # From monitoring namespace — Prometheus / Grafana scrape of /metrics
+    {{- if .Values.networkPolicy.monitoringNamespaceSelector }}
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.monitoringNamespaceSelector | nindent 12 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    {{- end }}
+  egress:
+    {{- if .Values.networkPolicy.allowAllEgress }}
+    - {}
+    {{- else }}
+    # Postgres / TimescaleDB
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: postgresql
+        {{- with .Values.networkPolicy.externalDatabaseNamespaceSelector }}
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: redis
+        {{- with .Values.networkPolicy.externalRedisNamespaceSelector }}
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 6379
+    # MQTT (mosquitto)
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: mosquitto
+        {{- with .Values.networkPolicy.externalMqttNamespaceSelector }}
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 1883
+        - protocol: TCP
+          port: 8883
+    # MongoDB (if enabled — for Jaeger storage etc.)
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: mongodb
+      ports:
+        - protocol: TCP
+          port: 27017
+    # OTel collector
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: otel-collector
+        {{- with .Values.networkPolicy.externalOtelNamespaceSelector }}
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+    # Command proxy (Tesla vehicle command signing)
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: command-proxy
+      ports:
+        - protocol: TCP
+          port: 4443
+    # External HTTPS to Tesla Fleet API, geocoding, push notification providers.
+    # We cannot restrict by IP because endpoints rotate, so allow 443 to any.
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+    {{- end }}
+---
+
+{{- /* ─── web (Nginx SPA) ─────────────────────────────────────────────── */}}
+{{- if .Values.web.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-web
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: web
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if .Values.networkPolicy.ingressNamespaceSelector }}
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+      ports:
+        - protocol: TCP
+          port: 80
+    {{- else }}
+    # No external ingress configured; allow same-namespace only (e.g. port-forward).
+    - from:
+        - podSelector: {}
+      ports:
+        - protocol: TCP
+          port: 80
+    {{- end }}
+  egress:
+    # Nginx reverse-proxies /api/* to the api pod
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: api
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+{{- end }}
+
+{{- /* ─── workers (notification, export, automation) ──────────────────── */}}
+{{- range $comp := list "notification-worker" "export-worker" "automation-worker" }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-{{ $comp }}
+  labels:
+    {{- include "teslasync.labels" $top | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: {{ $comp }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" $top | nindent 6 }}
+      app.kubernetes.io/component: {{ $comp }}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # Allow metrics scrapes (workers expose Prometheus /metrics)
+    {{- if $top.Values.networkPolicy.monitoringNamespaceSelector }}
+    - from:
+        - namespaceSelector:
+            {{- toYaml $top.Values.networkPolicy.monitoringNamespaceSelector | nindent 12 }}
+    {{- else }}
+    - from:
+        - podSelector: {}
+    {{- end }}
+  egress:
+    {{- if $top.Values.networkPolicy.allowAllEgress }}
+    - {}
+    {{- else }}
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" $top | nindent 14 }}
+              app.kubernetes.io/component: postgresql
+        {{- with $top.Values.networkPolicy.externalDatabaseNamespaceSelector }}
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" $top | nindent 14 }}
+              app.kubernetes.io/component: mosquitto
+        {{- with $top.Values.networkPolicy.externalMqttNamespaceSelector }}
+        - namespaceSelector:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+      ports:
+        - protocol: TCP
+          port: 1883
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" $top | nindent 14 }}
+              app.kubernetes.io/component: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" $top | nindent 14 }}
+              app.kubernetes.io/component: otel-collector
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+    # Notification worker calls external push providers (APNs, FCM, webpush).
+    {{- if eq $comp "notification-worker" }}
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+    {{- end }}
+    {{- end }}
+---
+{{- end }}
+
+{{- /* ─── command-proxy ───────────────────────────────────────────────── */}}
+{{- if .Values.commandProxy.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-command-proxy
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: command-proxy
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: command-proxy
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: api
+      ports:
+        - protocol: TCP
+          port: 4443
+  egress:
+    {{- if .Values.networkPolicy.allowAllEgress }}
+    - {}
+    {{- else }}
+    # Tesla vehicle command endpoint (HTTPS to fleet-api / vehicle-cmd-sdk)
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+      ports:
+        - protocol: TCP
+          port: 443
+    {{- end }}
+---
+{{- end }}
+
+{{- /* ─── fleet-telemetry (Tesla gRPC ingest) ─────────────────────────── */}}
+{{- if .Values.fleetTelemetry.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-fleet-telemetry
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: fleet-telemetry
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: fleet-telemetry
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # mTLS from Tesla vehicles — must accept from the public internet.
+    - from:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+      ports:
+        - protocol: TCP
+          port: 4443
+    # In-cluster ingress for the management dashboard, if any.
+    {{- if .Values.networkPolicy.ingressNamespaceSelector }}
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+    {{- end }}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: mosquitto
+      ports:
+        - protocol: TCP
+          port: 1883
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: api
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+{{- end }}
+
+{{- /* ─── data plane: postgres / redis / mosquitto / mongodb ──────────── */}}
+{{- if .Values.postgresql.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-postgresql
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: postgresql
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: postgresql
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - notification-worker
+                  - export-worker
+                  - automation-worker
+                  - grafana
+                  - jaeger
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow migration job + tests to talk to the DB
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - migrate
+                  - test
+      ports:
+        - protocol: TCP
+          port: 5432
+---
+{{- end }}
+
+{{- if .Values.redis.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-redis
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: redis
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: redis
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - notification-worker
+                  - export-worker
+                  - automation-worker
+      ports:
+        - protocol: TCP
+          port: 6379
+---
+{{- end }}
+
+{{- if .Values.mqtt.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-mosquitto
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: mosquitto
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mosquitto
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - notification-worker
+                  - export-worker
+                  - automation-worker
+                  - fleet-telemetry
+      ports:
+        - protocol: TCP
+          port: 1883
+---
+{{- end }}
+
+{{- if .Values.mongodb.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-mongodb
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: mongodb
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mongodb
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - jaeger
+      ports:
+        - protocol: TCP
+          port: 27017
+---
+{{- end }}
+
+{{- /* ─── observability plane: grafana / jaeger / otel-collector / tempo ─ */}}
+{{- if .Values.grafana.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-grafana
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: grafana
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: grafana
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    {{- if .Values.networkPolicy.ingressNamespaceSelector }}
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+    {{- else }}
+    - from:
+        - podSelector: {}
+    {{- end }}
+      ports:
+        - protocol: TCP
+          port: 3000
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: jaeger
+      ports:
+        - protocol: TCP
+          port: 16686
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: tempo
+      ports:
+        - protocol: TCP
+          port: 3200
+    # Grafana scrapes /metrics from teslasync services
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: api
+      ports:
+        - protocol: TCP
+          port: 8080
+---
+{{- end }}
+
+{{- if .Values.jaeger.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-jaeger
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: jaeger
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: jaeger
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    # OTLP receivers
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - notification-worker
+                  - export-worker
+                  - automation-worker
+                  - otel-collector
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 14250
+        - protocol: TCP
+          port: 14268
+    # UI from grafana / ingress
+    - from:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: grafana
+      ports:
+        - protocol: TCP
+          port: 16686
+    {{- if .Values.networkPolicy.ingressNamespaceSelector }}
+    - from:
+        - namespaceSelector:
+            {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 12 }}
+      ports:
+        - protocol: TCP
+          port: 16686
+    {{- end }}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "teslasync.selectorLabels" . | nindent 14 }}
+              app.kubernetes.io/component: mongodb
+      ports:
+        - protocol: TCP
+          port: 27017
+---
+{{- end }}
+
+{{- /* OTel collector and Tempo: gated by their own .Values toggles where present. */}}
+{{- if (and .Values.observability .Values.observability.otelCollector .Values.observability.otelCollector.enabled) }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-otel-collector
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: otel-collector
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: otel-collector
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - api
+                  - notification-worker
+                  - export-worker
+                  - automation-worker
+                  - command-proxy
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+  egress:
+    - to:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - jaeger
+                  - tempo
+      ports:
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 14250
+    {{- if .Values.networkPolicy.allowAllEgress }}
+    - {}
+    {{- end }}
+---
+{{- end }}
+
+{{- if (and .Values.observability .Values.observability.tempo .Values.observability.tempo.enabled) }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ $fullName }}-tempo
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    networkpolicy.teslasync.io/type: component
+    networkpolicy.teslasync.io/component: tempo
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: tempo
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions:
+              - key: app.kubernetes.io/component
+                operator: In
+                values:
+                  - otel-collector
+                  - grafana
+                  - jaeger
+      ports:
+        - protocol: TCP
+          port: 3200
+        - protocol: TCP
+          port: 4317
+        - protocol: TCP
+          port: 4318
+{{- end }}
+{{- end }}

@@ -85,6 +85,14 @@ securityContext:
   capabilities:
     drop:
       - ALL
+  # Phase: SOTA hardening (P0 #3). Apply RuntimeDefault seccomp profile —
+  # the kernel falls back to a curated syscall allowlist that blocks the
+  # ~40 syscalls (mount, ptrace, kexec_load, etc.) most commonly used in
+  # container escapes. Required for the K8s Pod Security Standard
+  # `restricted` profile. Override per-deployment if a workload genuinely
+  # needs a wider syscall surface (rare).
+  seccompProfile:
+    type: RuntimeDefault
 
 # Pin api + workers (notification, export, automation, command-proxy) to carbon
 # so all teslasync workloads colocate on the node that hosts TimescaleDB, MQTT,
@@ -142,6 +150,9 @@ web:
     capabilities:
       drop:
         - ALL
+    # See top-level securityContext.seccompProfile for rationale.
+    seccompProfile:
+      type: RuntimeDefault
 
   # Colocate web with the rest of the teslasync stack on carbon.
   nodeSelector:
@@ -1211,3 +1222,106 @@ observability:
         sendExemplars: true
         # Optional HTTP headers (e.g., Tenant-ID for Mimir/Cortex).
         headers: {}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NetworkPolicy — zero-trust pod-to-pod traffic (Phase: SOTA hardening, P0 #3)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# Default behavior: a default-deny ingress+egress policy is applied to every
+# pod in the release namespace, then per-component allow rules open exactly
+# the traffic each service needs. This mirrors the SOTA "deny by default,
+# allow by least privilege" posture.
+#
+# Pre-requisite: your cluster CNI must implement NetworkPolicy
+# (Calico, Cilium, Antrea, Weave, AWS VPC CNI w/ policies, GKE w/ enabled,
+# AKS w/ Azure policy, OpenShift OVN, k3s w/ flannel+canal, etc.). On clusters
+# WITHOUT a policy-aware CNI, these resources are silently ignored, so it is
+# always safe to enable — but you will not get enforcement.
+#
+# To disable entirely (escape hatch): networkPolicy.enabled: false.
+#
+# Cross-namespace traffic (most common production case): set
+# `networkPolicy.ingressNamespaceSelector` to the namespace where your ingress
+# controller runs (e.g. `kubernetes.io/metadata.name: ingress-nginx`), and
+# `networkPolicy.monitoringNamespaceSelector` to the namespace running
+# Prometheus / Grafana / scrape targets (e.g. monitoring or kube-prometheus).
+networkPolicy:
+  # Master switch. Disable on shared clusters where another team owns the
+  # namespace's NetworkPolicy stack.
+  enabled: true
+
+  # Apply a default-deny ingress+egress NetworkPolicy that selects all pods
+  # in the release namespace. Per-component policies (below) re-open required
+  # paths. If you set this to false, only the per-component allow policies
+  # are created — your cluster's existing default determines anything else.
+  defaultDeny: true
+
+  # DNS resolution is required by basically everything. The default selector
+  # matches kube-system's kube-dns / coredns. If your cluster runs DNS in a
+  # different namespace, override.
+  dns:
+    namespaceSelector:
+      matchLabels:
+        kubernetes.io/metadata.name: kube-system
+    # Most clusters label DNS pods k8s-app=kube-dns. Cilium installs label
+    # them k8s-app=cilium-dns; Calico uses calico-kube-controllers. Override
+    # via this selector if needed.
+    podSelector:
+      matchLabels:
+        k8s-app: kube-dns
+
+  # Namespace selector for the Ingress controller(s) that send traffic to
+  # the api + web services. Empty matchLabels matches the release namespace
+  # only — fine if you front-end with hostNetwork ingress or are running in
+  # the same namespace. For ingress-nginx in `ingress-nginx`:
+  #   ingressNamespaceSelector:
+  #     matchLabels:
+  #       kubernetes.io/metadata.name: ingress-nginx
+  ingressNamespaceSelector: {}
+
+  # Namespace selector for Prometheus / Grafana scrapes against /metrics
+  # endpoints. Empty = same namespace only.
+  monitoringNamespaceSelector: {}
+
+  # If external Postgres / Redis / MQTT / OTel live in another namespace,
+  # set these so the workloads can egress to them. Each should be a
+  # standard label selector that matches the target namespace.
+  externalDatabaseNamespaceSelector: {}
+  externalRedisNamespaceSelector: {}
+  externalMqttNamespaceSelector: {}
+  externalOtelNamespaceSelector: {}
+
+  # Last-resort escape hatch: allow ALL egress from every pod. Useful only
+  # when you cannot enumerate every outbound dependency (e.g. Tesla API
+  # endpoints resolved by IP, third-party push provider IP rotation). The
+  # api + command-proxy + notification-worker already have allow-all-egress
+  # carve-outs for legitimate external services; flip this only if you need
+  # to debug a misclassified egress.
+  allowAllEgress: false
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Pod Security Standards (Kubernetes 1.25+)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# The chart's default `podSecurityContext` + `securityContext` (above) target
+# the `restricted` Pod Security Standard:
+#   - runAsNonRoot: true
+#   - allowPrivilegeEscalation: false
+#   - readOnlyRootFilesystem: true
+#   - capabilities.drop: [ALL]
+#   - seccompProfile.type: RuntimeDefault (added below)
+#
+# To enforce at the namespace level, label the release namespace:
+#   pod-security.kubernetes.io/enforce=restricted
+#   pod-security.kubernetes.io/audit=restricted
+#   pod-security.kubernetes.io/warn=restricted
+#
+# This block does NOT create the namespace label (the chart cannot
+# safely mutate the namespace it is installed into), it only adjusts
+# the chart's own pod specs to match.
+podSecurityStandards:
+  # When true, every container spec generated by the chart sets
+  # seccompProfile.type: RuntimeDefault at the container level. Disable
+  # only if your container runtime does not support seccomp filtering
+  # (some older managed K8s offerings).
+  seccompProfile: true
