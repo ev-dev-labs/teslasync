@@ -1219,6 +1219,94 @@ jaeger:
       type: RuntimeDefault
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Backup (P0 #5)
+#
+# Schedules a CronJob that runs `pg_dump --format=custom --compress=9`
+# against the configured Postgres and publishes the result to either
+# a local PVC or an S3-compatible bucket (MinIO/B2/R2/Wasabi/AWS S3).
+#
+# Disabled by default — operators must explicitly opt in AND choose a
+# destination AND provide credentials.  See docs/runbooks/backup-restore.md
+# for RPO/RTO targets, restore procedure, and off-site copy guidance.
+# ─────────────────────────────────────────────────────────────────────────────
+backup:
+  enabled: false
+
+  schedule: "30 3 * * *"
+  timeZone: "Etc/UTC"
+
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 600
+  backoffLimit: 2
+  ttlSecondsAfterFinished: 86400
+
+  retainDailyCopies: 7
+  retainWeeklyCopies: 4
+
+  # 9 = best compression at the cost of CPU; appropriate for daily
+  # off-peak runs. Lower to 6 if backups run hot.
+  pgDumpCompressLevel: 9
+
+  logLevel: info
+
+  image:
+    repository: ghcr.io/ev-dev-labs/teslasync-backup
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  # /tmp is mounted as a memory-backed emptyDir so pg_dump can stage
+  # the file before publishing. Size to ~2x your largest expected
+  # compressed dump (a 50 GB raw DB compresses to ~10 GB).
+  tmpSize: "2Gi"
+
+  # One of: "local" | "s3"
+  dest: "local"
+
+  local:
+    # If empty, the chart provisions a PVC of the given size.
+    existingClaim: ""
+    accessMode: ReadWriteOnce
+    size: "20Gi"
+    storageClass: ""
+    mountPath: /backups
+
+  s3:
+    # Leave endpoint empty to use AWS S3. Examples for self-hosters:
+    #   MinIO:        http://minio.minio.svc.cluster.local:9000
+    #   Backblaze B2: https://s3.us-west-002.backblazeb2.com
+    #   Cloudflare R2:https://<accountid>.r2.cloudflarestorage.com
+    #   Wasabi:       https://s3.eu-central-1.wasabisys.com
+    endpoint: ""
+    region: us-east-1
+    bucket: ""
+    prefix: ""
+    # MinIO and B2 require path-style; R2 supports both. Keep true
+    # for maximum interop — virtual-hosted style is only needed when
+    # the bucket name contains characters AWS does not allow in DNS.
+    pathStyle: true
+    # If set, the CronJob reads access-key/secret-key from this
+    # existing Secret instead of the chart-managed one. Use this when
+    # ExternalSecrets/sealed-secrets manages the credentials.
+    credentialsSecret: ""
+    # Chart-managed credentials (only used when credentialsSecret is empty).
+    # Leave both empty to require pre-creating the secret out-of-band.
+    accessKey: ""
+    secretKey: ""
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Observability stack (phase-44)
 #
 # Adds an OpenTelemetry collector that receives OTLP from app pods,

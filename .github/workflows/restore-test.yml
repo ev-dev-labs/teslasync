@@ -1,0 +1,158 @@
+name: backup-restore-drill
+
+# Nightly drill that proves backup → restore round-trips against a
+# fresh Postgres + the current migration set. If this workflow goes
+# red, the backup binary is broken — treat it as a P0 page.
+#
+# Triggered:
+#   - workflow_dispatch (manual)
+#   - nightly at 04:15 UTC (after the prod backup CronJob window)
+#   - on PRs that touch cmd/backup, migrations/, or this workflow
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "15 4 * * *"
+  pull_request:
+    paths:
+      - "cmd/backup/**"
+      - "migrations/**"
+      - ".github/workflows/restore-test.yml"
+      - "Dockerfile.backup"
+
+permissions:
+  contents: read
+
+jobs:
+  dump-restore-roundtrip:
+    name: dump → restore → query
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: timescale/timescaledb-ha:pg17
+        env:
+          POSTGRES_DB: teslasync
+          POSTGRES_USER: teslasync
+          POSTGRES_PASSWORD: drill-only-not-a-real-secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U teslasync"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_HOST: 127.0.0.1
+      DATABASE_PORT: "5432"
+      DATABASE_USER: teslasync
+      DATABASE_PASS: drill-only-not-a-real-secret
+      DATABASE_NAME: teslasync
+      DATABASE_SSL_MODE: disable
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          check-latest: true
+
+      - name: Install postgresql-client (pg17)
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+            -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] \
+            https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client-17
+
+      - name: Run migrations against fresh DB
+        run: |
+          set -euo pipefail
+          go install github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.0
+          export PATH="$HOME/go/bin:$PATH"
+          DSN="postgres://${DATABASE_USER}:${DATABASE_PASS}@${DATABASE_HOST}:${DATABASE_PORT}/${DATABASE_NAME}?sslmode=${DATABASE_SSL_MODE}"
+          migrate -path migrations -database "$DSN" up
+
+      - name: Seed minimal sentinel data
+        run: |
+          PGPASSWORD="$DATABASE_PASS" psql \
+            -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d "$DATABASE_NAME" \
+            -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO vehicles (vin, display_name, model, created_at, updated_at)
+          VALUES ('RESTOREDRILLVIN001', 'restore-drill-sentinel', 'Model 3', NOW(), NOW())
+          ON CONFLICT (vin) DO NOTHING;
+          SQL
+
+      - name: Build backup binary
+        run: go build -o ./backup-bin ./cmd/backup
+
+      - name: Run backup → local dir
+        env:
+          BACKUP_DEST: local
+          BACKUP_LOCAL_PATH: ${{ runner.temp }}/dumps
+          BACKUP_RETAIN_DAILY: "7"
+          BACKUP_RETAIN_WEEKLY: "0"
+          BACKUP_PGDUMP_COMPRESS_LEVEL: "6"
+        run: |
+          set -euo pipefail
+          mkdir -p "$BACKUP_LOCAL_PATH"
+          ./backup-bin
+          ls -lh "$BACKUP_LOCAL_PATH"
+
+      - name: Verify manifest is parseable JSON with non-zero SHA + bytes
+        run: |
+          set -euo pipefail
+          MANIFEST=$(ls ${{ runner.temp }}/dumps/*.manifest.json | head -n 1)
+          test -s "$MANIFEST"
+          jq -e '.dump_sha256 | length == 64' "$MANIFEST"
+          jq -e '.dump_bytes > 0' "$MANIFEST"
+          jq -e '.schema_migration > 0' "$MANIFEST"
+
+      - name: Drop source DB and restore from dump
+        run: |
+          set -euo pipefail
+          DUMP=$(ls ${{ runner.temp }}/dumps/*.dump | head -n 1)
+          PGPASSWORD="$DATABASE_PASS" psql \
+            -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" -d postgres \
+            -v ON_ERROR_STOP=1 \
+            -c "DROP DATABASE IF EXISTS ${DATABASE_NAME}_restored WITH (FORCE);" \
+            -c "CREATE DATABASE ${DATABASE_NAME}_restored;"
+          PGPASSWORD="$DATABASE_PASS" pg_restore \
+            -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" \
+            -d "${DATABASE_NAME}_restored" \
+            --no-owner --no-privileges \
+            --jobs=2 \
+            "$DUMP"
+
+      - name: Sanity-query restored DB
+        run: |
+          set -euo pipefail
+          COUNT=$(PGPASSWORD="$DATABASE_PASS" psql -At \
+            -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" \
+            -d "${DATABASE_NAME}_restored" \
+            -c "SELECT COUNT(*) FROM vehicles WHERE vin = 'RESTOREDRILLVIN001';")
+          if [ "$COUNT" != "1" ]; then
+            echo "::error::sentinel row missing from restored DB (got $COUNT)"
+            exit 1
+          fi
+          # Confirm schema_migrations made the round trip too.
+          PGPASSWORD="$DATABASE_PASS" psql -At \
+            -h "$DATABASE_HOST" -p "$DATABASE_PORT" -U "$DATABASE_USER" \
+            -d "${DATABASE_NAME}_restored" \
+            -c "SELECT version FROM schema_migrations;" | head -n 1
+
+      - name: Upload dump + manifest as artifact (PR debug)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-restore-drill
+          path: ${{ runner.temp }}/dumps/
+          retention-days: 3

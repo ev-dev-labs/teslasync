@@ -1,0 +1,161 @@
+{{- if .Values.backup.enabled }}
+{{- /*
+  Backup CronJob — see cmd/backup and docs/runbooks/backup-restore.md.
+  Disabled by default so the chart is install-clean on a stock cluster;
+  operators flip backup.enabled=true after setting backup.dest +
+  destination-specific configuration in values.yaml.
+*/ -}}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "teslasync.fullname" . }}-backup
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  schedule: {{ .Values.backup.schedule | quote }}
+  timeZone: {{ .Values.backup.timeZone | default "Etc/UTC" | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: {{ .Values.backup.successfulJobsHistoryLimit | default 3 }}
+  failedJobsHistoryLimit: {{ .Values.backup.failedJobsHistoryLimit | default 3 }}
+  startingDeadlineSeconds: {{ .Values.backup.startingDeadlineSeconds | default 600 }}
+  jobTemplate:
+    spec:
+      backoffLimit: {{ .Values.backup.backoffLimit | default 2 }}
+      ttlSecondsAfterFinished: {{ .Values.backup.ttlSecondsAfterFinished | default 86400 }}
+      template:
+        metadata:
+          labels:
+            {{- include "teslasync.selectorLabels" . | nindent 12 }}
+            app.kubernetes.io/component: backup
+        spec:
+          restartPolicy: OnFailure
+          {{- include "teslasync.imagePullSecrets" . | nindent 10 }}
+          serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            fsGroup: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: backup
+              image: "{{ .Values.backup.image.repository }}:{{ .Values.backup.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.backup.image.pullPolicy | default "IfNotPresent" }}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              env:
+                - name: DATABASE_HOST
+                  value: {{ include "teslasync.postgresql.host" . | quote }}
+                - name: DATABASE_PORT
+                  value: {{ include "teslasync.postgresql.port" . | quote }}
+                - name: DATABASE_USER
+                  value: {{ include "teslasync.postgresql.username" . | quote }}
+                - name: DATABASE_NAME
+                  value: {{ include "teslasync.postgresql.database" . | quote }}
+                - name: DATABASE_SSL_MODE
+                  value: {{ include "teslasync.postgresql.sslMode" . | quote }}
+                - name: DATABASE_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "teslasync.fullname" . }}
+                      key: DATABASE_PASS
+                - name: BACKUP_DEST
+                  value: {{ .Values.backup.dest | quote }}
+                {{- if eq .Values.backup.dest "local" }}
+                - name: BACKUP_LOCAL_PATH
+                  value: {{ .Values.backup.local.mountPath | default "/backups" | quote }}
+                {{- end }}
+                {{- if eq .Values.backup.dest "s3" }}
+                - name: BACKUP_S3_ENDPOINT
+                  value: {{ .Values.backup.s3.endpoint | default "" | quote }}
+                - name: BACKUP_S3_REGION
+                  value: {{ .Values.backup.s3.region | default "us-east-1" | quote }}
+                - name: BACKUP_S3_BUCKET
+                  value: {{ .Values.backup.s3.bucket | quote }}
+                - name: BACKUP_S3_PREFIX
+                  value: {{ .Values.backup.s3.prefix | default "" | quote }}
+                - name: BACKUP_S3_PATH_STYLE
+                  value: {{ .Values.backup.s3.pathStyle | default true | quote }}
+                - name: BACKUP_S3_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.backup.s3.credentialsSecret | default (printf "%s-backup-s3" (include "teslasync.fullname" .)) }}
+                      key: access-key
+                - name: BACKUP_S3_SECRET_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ .Values.backup.s3.credentialsSecret | default (printf "%s-backup-s3" (include "teslasync.fullname" .)) }}
+                      key: secret-key
+                {{- end }}
+                - name: BACKUP_RETAIN_DAILY
+                  value: {{ .Values.backup.retainDailyCopies | default 7 | quote }}
+                - name: BACKUP_RETAIN_WEEKLY
+                  value: {{ .Values.backup.retainWeeklyCopies | default 4 | quote }}
+                - name: BACKUP_PGDUMP_COMPRESS_LEVEL
+                  value: {{ .Values.backup.pgDumpCompressLevel | default 9 | quote }}
+                - name: LOG_LEVEL
+                  value: {{ .Values.backup.logLevel | default "info" | quote }}
+              resources:
+                {{- toYaml .Values.backup.resources | nindent 16 }}
+              volumeMounts:
+                # /tmp must be writable for pg_dump's stage file because
+                # readOnlyRootFilesystem: true is enabled above.
+                - name: tmp
+                  mountPath: /tmp
+                {{- if eq .Values.backup.dest "local" }}
+                - name: backup-storage
+                  mountPath: {{ .Values.backup.local.mountPath | default "/backups" | quote }}
+                {{- end }}
+          volumes:
+            - name: tmp
+              emptyDir:
+                medium: Memory
+                sizeLimit: {{ .Values.backup.tmpSize | default "2Gi" | quote }}
+            {{- if eq .Values.backup.dest "local" }}
+            - name: backup-storage
+              {{- if .Values.backup.local.existingClaim }}
+              persistentVolumeClaim:
+                claimName: {{ .Values.backup.local.existingClaim }}
+              {{- else }}
+              persistentVolumeClaim:
+                claimName: {{ include "teslasync.fullname" . }}-backup
+              {{- end }}
+            {{- end }}
+          {{- with .Values.backup.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.backup.tolerations }}
+          tolerations:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.backup.affinity }}
+          affinity:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+{{- if and (eq .Values.backup.dest "local") (not .Values.backup.local.existingClaim) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "teslasync.fullname" . }}-backup
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backup
+spec:
+  accessModes:
+    - {{ .Values.backup.local.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.backup.local.size | default "20Gi" }}
+  {{- with .Values.backup.local.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+{{- end }}
+{{- end }}
