@@ -135,17 +135,6 @@ func NewImpersonationStore() (*ImpersonationStore, error) {
 	return &ImpersonationStore{key: key, now: time.Now}, nil
 }
 
-// MustNewImpersonationStore is the convenience constructor that
-// panics on key-generation failure. Used by router wiring where any
-// failure here means the process cannot serve requests safely.
-func MustNewImpersonationStore() *ImpersonationStore {
-	s, err := NewImpersonationStore()
-	if err != nil {
-		panic(err)
-	}
-	return s
-}
-
 // SetNowForTests replaces the store's internal clock. Tests use this
 // to cover the expiry boundary deterministically; production never
 // touches it.

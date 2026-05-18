@@ -79,16 +79,6 @@ func NewLiveStateReader(live LiveSignalStore, fallback StateReader) (LiveStateRe
 	return &hybridLiveStateReader{live: live, fallback: fallback}, nil
 }
 
-// MustNewLiveStateReader panics on error; intended for router wiring where
-// a missing LiveSignalStore is a programming bug.
-func MustNewLiveStateReader(live LiveSignalStore, fallback StateReader) LiveStateReader {
-	r, err := NewLiveStateReader(live, fallback)
-	if err != nil {
-		panic(fmt.Sprintf("MustNewLiveStateReader: %v", err))
-	}
-	return r
-}
-
 func (h *hybridLiveStateReader) LiveState(ctx context.Context, vehicleID int64) (State, error) {
 	out := State{}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -60,7 +61,12 @@ var _ signal.StateReader = (*fakeStateReader)(nil)
 // State() — letting tests continue to drive responses via fake.stateFn the
 // same way they did before the LiveStateReader boundary was introduced.
 func newTestLiveStateReader(state signal.StateReader) signal.LiveStateReader {
-	return signal.MustNewLiveStateReader(signal.NewNoopLiveSignalStore(), state)
+	r, err := signal.NewLiveStateReader(signal.NewNoopLiveSignalStore(), state)
+	if err != nil {
+		// Unreachable: NewNoopLiveSignalStore() is non-nil by construction.
+		panic(fmt.Sprintf("newTestLiveStateReader: %v", err))
+	}
+	return r
 }
 
 // canonicalMediaKeys is the 11-key media response shape that BOTH List rows

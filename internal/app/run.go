@@ -30,7 +30,7 @@ import (
 //
 // so that Close() runs after Run() returns.
 func (a *App) Run(ctx context.Context) error {
-	r := apirouter.NewRouter(a.DB, a.TeslaClient, a.MQTT, a.Cfg, a.Health, a.StateReader, apirouter.RouterOptions{
+	r, err := apirouter.NewRouter(a.DB, a.TeslaClient, a.MQTT, a.Cfg, a.Health, a.StateReader, apirouter.RouterOptions{
 		AppVersion:       a.Build.Version,
 		Encryptor:        a.Encryptor,
 		TelemetryHandler: a.TelemetryHandler,
@@ -39,6 +39,9 @@ func (a *App) Run(ctx context.Context) error {
 		SignalStore:      a.SignalStore,
 		CacheStore:       a.Cache,
 	})
+	if err != nil {
+		return fmt.Errorf("app: build router: %w", err)
+	}
 	a.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", a.Cfg.Port),
 		Handler:      r,

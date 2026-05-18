@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -148,7 +149,7 @@ import (
 // *database.SignalLogReader (signalLogReader below) is intentionally preserved
 // alongside it during the migration window so the build stays green between
 // prompts; both readers will coexist until the deletion prompts (phases 37–40).
-func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, stateReader signal.StateReader, opts ...RouterOptions) http.Handler {
+func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, stateReader signal.StateReader, opts ...RouterOptions) (http.Handler, error) {
 	r := chi.NewRouter()
 	// stateReader is intentionally not wired into individual handlers in this
 	// prompt — handler-migration prompts (phases 10–36) consume it one file at
@@ -260,7 +261,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if liveSignalStore == nil {
 		liveSignalStore = signal.NewNoopLiveSignalStore()
 	}
-	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
+	liveStateReader, err := signal.NewLiveStateReader(liveSignalStore, stateReader)
+	if err != nil {
+		return nil, fmt.Errorf("router: live state reader: %w", err)
+	}
 
 	// Handlers
 	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient, stateReader)
@@ -473,7 +477,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// candidates store via its ListDistinctActiveSubjects helper —
 	// see audit_repo.go for the rationale on co-locating that query.
 	auditRepo := database.NewAuditRepoWithDB(db)
-	impersonationStore := tsauth.MustNewImpersonationStore()
+	impersonationStore, err := tsauth.NewImpersonationStore()
+	if err != nil {
+		return nil, fmt.Errorf("router: impersonation store: %w", err)
+	}
 	impersonationHandler := NewImpersonationHandler(
 		impersonationStore,
 		auditRepo,
@@ -4060,7 +4067,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 	}
 
-	return r
+	return r, nil
 }
 
 // spaFallback returns an http.Handler that serves static files from dir
