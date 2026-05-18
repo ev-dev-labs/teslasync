@@ -116,6 +116,32 @@ title: TeslaSync — Your fleet. Your data. Your AI.
 </section>
 
 <!-- ╔══════════════════════════════════════════════════════════╗
+     ║  DASHBOARDS + WIDGET CATALOG                             ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+
+<section class="ts-tile ts-mid">
+  <div class="ts-tile-inner ts-split">
+    <div class="ts-split-text">
+      <p class="ts-eyebrow">Dashboards</p>
+      <h2 class="ts-title-xl ts-grad-cmd">One hundred eighteen widgets.<br/>Your view, your way.</h2>
+      <p class="ts-subtitle">A drag-and-drop widget catalogue covering vehicle, battery, charging, energy, climate, drives, telemetry, analytics, automations, alerts, maps, system, security, media, commands and tires. Search by name or category. Build as many dashboards as you want. Every widget auto-hides when the underlying signal isn't reporting, so the layout stays honest.</p>
+      <p class="ts-cta-row">
+        <a class="ts-link" href="/teslasync/features/dashboard#anatomy-of-the-page">Browse the catalogue <span class="ts-chev">›</span></a>
+        <a class="ts-link" href="/teslasync/features/dashboard">Dashboard guide <span class="ts-chev">›</span></a>
+      </p>
+      <div class="ts-stat-row ts-stat-row-compact">
+        <div class="ts-stat"><span class="ts-stat-num" data-count="118">0</span><span class="ts-stat-label">widgets</span></div>
+        <div class="ts-stat"><span class="ts-stat-num" data-count="16">0</span><span class="ts-stat-label">categories</span></div>
+        <div class="ts-stat"><span class="ts-stat-num ts-stat-glyph">∞</span><span class="ts-stat-label">dashboards</span></div>
+      </div>
+    </div>
+    <div class="ts-split-visual">
+      <img src="/teslasync/screenshots/widget-catalog.png" alt="TeslaSync widget catalogue dialog showing 118 widgets across 16 categories" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
      ║  CHARGING + ENERGY                                       ║
      ╚══════════════════════════════════════════════════════════╝ -->
 

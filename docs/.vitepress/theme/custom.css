@@ -1134,6 +1134,29 @@ body:has(.ts-home)::before {
   color: var(--ts-text-3);
 }
 
+/* Compact 3-column stat row for split-text columns — sits flush with the
+ * surrounding paragraph copy rather than spanning the full hero width. */
+.ts-home .ts-stat-row-compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 36px;
+  padding-top: 28px;
+  max-width: 520px;
+}
+.ts-home .ts-stat-row-compact .ts-stat-num {
+  font-size: clamp(30px, 3.4vw, 44px);
+}
+.ts-home .ts-stat-row-compact .ts-stat-label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+}
+
+/* Glyph stat (e.g. ∞) — opts out of the count-up animation. The gradient
+ * stays for visual continuity with the numeric stats around it. */
+.ts-home .ts-stat-glyph {
+  font-weight: 700;
+}
+
 /* ── Split layout (text + visual) ────────────────────────── */
 .ts-home .ts-split {
   display: grid;

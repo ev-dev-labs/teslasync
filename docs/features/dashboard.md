@@ -11,19 +11,43 @@ Every other page in the product is a deeper dive into one of those questions.
 
 ## Anatomy of the page
 
-The dashboard is composed from a fixed set of widgets. The widgets are not pluggable — they are the curated set we believe answers the four questions above without overwhelming a phone screen.
+The dashboard is a **drag-and-drop canvas** built from a catalogue of 118 widgets organised into 16 categories. You build it your way: every widget is opt-in, every layout is yours, and you can keep as many separate dashboards as you want (one for daily driving, one for long trips, one for the garage workbench, etc.).
 
-| Widget                    | Pulls from                                          | Updates via               |
-| ------------------------- | --------------------------------------------------- | ------------------------- |
-| Fleet header              | `GET /api/v1/vehicles`                              | TanStack Query + SSE invalidation |
-| Per-vehicle live card     | `GET /api/v1/vehicles/{id}/state` + live signals    | SSE deltas, polling fallback |
-| Recent activity rail      | `GET /api/v1/drives`, `/charging`, `/alerts`, `/api-logs` (latest 5 each) | Hook revalidation on SSE event |
-| Today at a glance         | `GET /api/v1/analytics/daily?date=today`            | Refetch on focus          |
-| System health strip       | `GET /healthz`, `/readyz`, `/api/v1/system/status`  | 30s interval              |
-| Quick actions             | client-only (deep links into Commands, Alert Studio, etc.) | n/a                |
-| Helix "Daily brief"       | `POST /api/v1/ai/daily-brief/run` (off by default)  | Manual or auto on first load |
+Open the widget catalogue from the floating **+** button (the dashboard's "Add widget" affordance). The dialog lists every widget grouped by category, with a search box that matches against name, description, or category — so typing `battery` jumps you to the 10-widget Battery & Range bucket, and typing `range estimate` jumps you straight to that single widget.
 
-If a widget has no data — a brand-new install with zero drives, for example — it renders an empty state with a one-click path to the first thing you can do. We never collapse the widget away. Hiding empty widgets makes the product feel "broken on day one", which is the worst onboarding experience we can ship.
+| Category        | Widgets | Examples                                                                  |
+| --------------- | -------:| ------------------------------------------------------------------------- |
+| Vehicle         | 16      | Vehicle Hero Card, Digital Twin, Software Update, Drivetrain Health       |
+| Analytics       | 14      | Daily Summary, Year in Review, Cost Trend, Efficiency Index               |
+| Charging        | 13      | Charge Status, Charging Curve, Cost Analysis, 7×24 heatmap                |
+| Driving         | 13      | Recent Drives, Live Drive, Efficiency, Sleep Efficiency                   |
+| System          | 12      | Health Strip, SSE Status, Cache Stats, Background Job Queue               |
+| Battery & range | 10      | Battery Level, Battery Radial Gauge, Range Bar, Degradation Trend         |
+| Energy          | 9       | Energy Flow, Wall Charger, Solar Production, Powerwall                    |
+| Security        | 7       | Sentry Status, Door & Lock State, Cabin Camera, Recent Sentry Events      |
+| Maps            | 5       | Live Location, Recent Routes, Charger Map, Geofence Map                   |
+| Telemetry       | 5       | Live Signal Monitor, Anomaly Spotlight, Signal Catalog, Stream Health     |
+| Climate         | 4       | Climate Status, HVAC History, Seat Heaters, Cabin Comfort                 |
+| Alerts          | 2       | Recent Alerts, Alert Heatmap                                              |
+| Automations     | 2       | Active Automations, Run History                                           |
+| Commands        | 2       | Quick Actions, Recently Sent Commands                                     |
+| Media           | 2       | Now Playing, Volume History                                               |
+| Tires           | 2       | Tire Pressure, Tire Temperature                                           |
+
+Every widget that's already on the active dashboard is badged **Added** in the catalogue, and the picker disables it — so you can't accidentally add the same widget twice. Removing a widget from the dashboard re-enables it in the catalogue.
+
+Widgets are self-rendering: each one declares which signals it depends on, and if the underlying signal isn't reporting (for example, a fleet without solar will never publish a Powerwall reading), the widget renders an empty state with a one-click path to the first thing you can do. We never collapse the widget away — hiding empty widgets makes the product feel "broken on day one", which is the worst onboarding experience we can ship.
+
+## Multiple dashboards
+
+The dashboard switcher in the page header lets you create, rename, duplicate, and switch between an unlimited number of dashboards. Each one has its own widget layout and its own grid arrangement. Common patterns we've seen:
+
+- **Daily** — Vehicle Hero, Battery Level, Quick Actions, Recent Alerts
+- **Long trip** — Live Drive, Charger Map, Range Bar, Tire Pressure, Energy Flow
+- **Garage / diagnostics** — Drivetrain Health, Cell Voltage Spread, SSE Status, Cache Stats
+- **Family** — Vehicle Hero (per car) × N, Quick Actions
+
+There is no per-account limit. Layouts are stored locally and synced to the API so they roam across devices.
 
 ## How real-time works in practice
 
