@@ -142,6 +142,32 @@ title: TeslaSync — Your fleet. Your data. Your AI.
 </section>
 
 <!-- ╔══════════════════════════════════════════════════════════╗
+     ║  DRIVES + CHARGING HISTORY                               ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+
+<section class="ts-tile ts-dark">
+  <div class="ts-tile-inner ts-center">
+    <p class="ts-eyebrow">Drives &amp; charging history</p>
+    <h2 class="ts-title-xl ts-grad-history">Every trip. Every charge.<br/>Forever.</h2>
+    <p class="ts-subtitle">Every drive your fleet ever takes — auto-detected from the live telemetry stream — with distance, duration, speeds, efficiency, energy used, elevation, and weather. Press <strong>Replay</strong> to scrub the entire route on the map with synced power, battery, speed and elevation traces. Every charging session — AC or DC, home or supercharger — kept with curves, cost breakdown, time-at-amperage, and a plain-language Helix diagnosis when something looks off (trickle, slow ramp, interruption, expensive tariff).</p>
+    <div class="ts-screenshot-duo">
+      <figure>
+        <img src="/teslasync/screenshots/drive-detail.png" alt="TeslaSync drive detail page with radial gauges, per-trip stats, and a Helix coaching summary" loading="lazy" />
+        <figcaption>Drive detail · with Replay</figcaption>
+      </figure>
+      <figure>
+        <img src="/teslasync/screenshots/charging-detail.png" alt="TeslaSync charge session page with radial gauges, battery progress, and a Helix charging diagnosis" loading="lazy" />
+        <figcaption>Charge session · with Helix diagnosis</figcaption>
+      </figure>
+    </div>
+    <p class="ts-cta-row">
+      <a class="ts-link" href="/teslasync/features/vehicle-tracking#drives-trips-trip-replay">Trip replay <span class="ts-chev">›</span></a>
+      <a class="ts-link" href="/teslasync/features/analytics">Charging analytics <span class="ts-chev">›</span></a>
+    </p>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
      ║  CHARGING + ENERGY                                       ║
      ╚══════════════════════════════════════════════════════════╝ -->
 
