@@ -15,6 +15,12 @@ on:
           - ubuntu-latest
         default: arc-runner
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  # Cancel superseded runs on PR force-pushes; let main/push runs complete
+  # so release artifacts and coverage uploads are never truncated.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 permissions:
   contents: read
 

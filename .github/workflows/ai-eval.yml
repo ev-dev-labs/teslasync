@@ -44,6 +44,18 @@ on:
     # Daily at 06:00 UTC (10pm Pacific).
     - cron: '0 6 * * *'
   workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
+
+concurrency:
+  group: ai-eval-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -52,7 +64,7 @@ jobs:
   fast:
     name: ai-eval (fast / canned only)
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -74,7 +86,7 @@ jobs:
   full:
     name: ai-eval (full / blocking on main)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -97,7 +109,7 @@ jobs:
   judged:
     name: ai-eval (judged / nightly drift)
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
     timeout-minutes: 30
     env:
       JUDGE_PROVIDER: ${{ secrets.JUDGE_PROVIDER }}
