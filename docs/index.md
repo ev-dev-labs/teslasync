@@ -189,6 +189,32 @@ title: TeslaSync — Your fleet. Your data. Your AI.
 </section>
 
 <!-- ╔══════════════════════════════════════════════════════════╗
+     ║  AUTOMATIONS                                             ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+
+<section class="ts-tile ts-mid">
+  <div class="ts-tile-inner ts-center">
+    <p class="ts-eyebrow">Automations</p>
+    <h2 class="ts-title-xl ts-grad-automation">Set it once.<br/>It runs forever.</h2>
+    <p class="ts-subtitle">Typed triggers — schedule, vehicle event, geofence, signal threshold — composed with AND/OR condition trees and chained into any of the sixty-five remote commands. Twenty quick-start templates install in one click. Describe what you want in plain English and Helix drafts a typed automation you can review before saving. Conflict detection catches collisions before they ever fire, and a live activity feed shows every execution as it happens.</p>
+    <div class="ts-screenshot-duo">
+      <figure>
+        <img src="/teslasync/screenshots/automations.png" alt="TeslaSync Automations page with the Quick Start Templates gallery expanded showing preset cards" loading="lazy" />
+        <figcaption>Twenty presets · one-click install</figcaption>
+      </figure>
+      <figure>
+        <img src="/teslasync/screenshots/automation-builder.png" alt="TeslaSync Automation Builder page with Helix natural-language drafting and geofence-aware suggestion panels" loading="lazy" />
+        <figcaption>Or describe it · Helix drafts it</figcaption>
+      </figure>
+    </div>
+    <p class="ts-cta-row">
+      <a class="ts-link" href="/teslasync/features/automations">Automations guide <span class="ts-chev">›</span></a>
+      <a class="ts-link" href="/teslasync/features/helix-ai">Helix &amp; automations <span class="ts-chev">›</span></a>
+    </p>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
      ║  ALERT STUDIO                                            ║
      ╚══════════════════════════════════════════════════════════╝ -->
 

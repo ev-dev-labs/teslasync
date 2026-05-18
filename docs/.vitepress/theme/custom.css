@@ -1017,6 +1017,17 @@ body:has(.ts-home)::before {
   -webkit-text-fill-color: transparent;
   color: transparent;
 }
+.ts-home .ts-grad-automation {
+  background: linear-gradient(110deg,
+    var(--ts-amber) 0%,
+    #fb7185 35%,
+    #a855f7 70%,
+    #38bdf8 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
 
 .ts-home .ts-subtitle {
   font-size: clamp(17px, 1.5vw, 22px);

@@ -88,6 +88,7 @@ export default withMermaid(defineConfig({
             { text: 'Vehicle Tracking', link: '/features/vehicle-tracking' },
             { text: 'Helix AI', link: '/features/helix-ai' },
             { text: 'Alerts & Notifications', link: '/features/alerts' },
+            { text: 'Automations', link: '/features/automations' },
             { text: 'Data Export', link: '/features/data-export' },
             { text: 'Analytics & Charts', link: '/features/analytics' },
             { text: 'Backup & Restore', link: '/features/backup-restore' },
