@@ -1,6 +1,25 @@
 name: Security
 
+# Why blocking gates: prior to 2026-05 every security step was advisory
+# (govulncheck || echo, trivy --exit-code 0, codeql continue-on-error).
+# Findings were never surfaced to PR authors and never blocked merges, so
+# new CVEs landed silently on main. This workflow now FAILS the build on
+# HIGH+ findings across the supply chain (Go vulns, container/filesystem
+# CVEs, JS deps, leaked secrets, CodeQL). Triage paths:
+#   - Go: add an entry to .govulnignore.yaml (currently absent; create on
+#     first triage need) or upgrade the dep.
+#   - Container/FS: add to .trivyignore with a justification comment.
+#   - JS: pin or upgrade in web/package.json (and matching lockfile).
+#   - Secrets: rotate the secret AND add a finding to .gitleaksignore with
+#     SHA + reason.
+#   - CodeQL: fix the code or add a `// lgtm[<query>]` suppression with a
+#     justification comment.
+
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   schedule:
     - cron: "0 4 * * 1"
   workflow_dispatch:
@@ -9,46 +28,218 @@ on:
         description: 'Runner to use (manual runs only)'
         type: choice
         options:
-          - arc-runner
           - ubuntu-latest
-        default: arc-runner
+          - arc-runner
+        default: ubuntu-latest
 
+concurrency:
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Default to least privilege; jobs that need more (e.g. security-events:
+# write for SARIF uploads) grant per-job.
 permissions:
   contents: read
-  security-events: write
 
 jobs:
-  security:
-    name: Security Scan
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+  govulncheck:
+    name: Go vulnerability scan (govulncheck)
+    # Security scans run on hosted runners by default because they are
+    # I/O and image-pull heavy rather than compile heavy. Self-hosted
+    # arc-runner is opt-in via workflow_dispatch.
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          # MUST stay aligned with go.mod and Dockerfile* `golang:X.Y-alpine`.
+          # The previous workflow pinned 1.24 while the rest of the project
+          # was on 1.25 — govulncheck was effectively scanning a different
+          # toolchain than what shipped.
+          go-version: "1.25"
+          cache: true
 
-      - name: Run govulncheck
-        run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./... || echo "::warning::govulncheck found vulnerabilities"
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
 
-      - name: Trivy filesystem scan
+      - name: Run govulncheck (SARIF for Security tab)
+        run: govulncheck -format sarif ./... > govulncheck.sarif
+
+      - name: Upload SARIF to GitHub Security tab
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: govulncheck.sarif
+          category: govulncheck
+
+      - name: Fail on findings
+        # `govulncheck -format sarif` always exits 0; we gate on the SARIF
+        # `results` array being non-empty. This keeps the SARIF upload step
+        # available for PR annotation while still failing the build.
         run: |
-          docker run --rm -v "$(pwd):/src" -w /src \
-            aquasec/trivy:latest fs --severity CRITICAL,HIGH --exit-code 0 \
-            --format table .
+          count=$(jq '[.runs[].results[]] | length' govulncheck.sarif)
+          echo "govulncheck findings: $count"
+          if [ "$count" -gt 0 ]; then
+            jq '.runs[].results[] | {ruleId, message: .message.text, location: (.locations[0].physicalLocation.artifactLocation.uri // "n/a")}' govulncheck.sarif
+            echo "::error::govulncheck found $count vulnerability finding(s). Triage by upgrading the dep or adding a justified entry to .govulnignore.yaml (see top-of-file comment)."
+            exit 1
+          fi
+
+  trivy-fs:
+    name: Trivy filesystem + secret scan
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy filesystem scan (SARIF)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: sarif
+          output: trivy-fs.sarif
+          severity: CRITICAL,HIGH
+          # Exit non-zero on HIGH+ findings. .trivyignore covers documented
+          # exceptions; new findings must be triaged not silenced.
+          exit-code: '1'
+          ignore-unfixed: true
+          scanners: vuln,secret,misconfig
+
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
+
+  trivy-config-helm:
+    name: Trivy config scan (Helm + Dockerfiles)
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Trivy config scan (Kubernetes/Helm misconfig)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: helm
+          format: sarif
+          output: trivy-helm.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Upload Helm misconfig SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-helm.sarif
+          category: trivy-helm
+
+      - name: Trivy config scan (Dockerfiles)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: config
+          scan-ref: .
+          format: sarif
+          output: trivy-docker.sarif
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Upload Dockerfile misconfig SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-docker.sarif
+          category: trivy-docker
+
+  codeql:
+    name: CodeQL (Go + JS/TS)
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [go, javascript-typescript]
+    steps:
+      - uses: actions/checkout@v4
+
+      - if: matrix.language == 'go'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
-          languages: go
+          languages: ${{ matrix.language }}
+          queries: security-extended,security-and-quality
 
-      - name: CodeQL autobuild
+      - name: Autobuild
         uses: github/codeql-action/autobuild@v4
 
-      - name: CodeQL analysis
+      - name: Analyze
         uses: github/codeql-action/analyze@v4
-        continue-on-error: true
         with:
-          category: /language:go
+          category: /language:${{ matrix.language }}
+
+  gitleaks:
+    name: Secret scan (gitleaks)
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Full history so gitleaks can scan the whole commit graph on
+          # main pushes. PR runs scan only the PR commits via --log-opts.
+          fetch-depth: 0
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "true"
+          GITLEAKS_ENABLE_SUMMARY: "true"
+
+  npm-audit:
+    name: NPM dependency audit (web)
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # Use audit-ci (a dedicated CI gate) because raw `npm audit` exits
+      # non-zero on any severity and lacks a path to allowlist transitive
+      # findings that have no patched version. audit-ci's --high flag
+      # threshold matches our policy of "block HIGH+, surface MEDIUM-".
+      # The .audit-ci.json config file (create on first triage need) lets
+      # us document accepted-risk allowlist entries.
+      - name: Audit JS deps (high+)
+        run: |
+          npx --yes audit-ci@7 --high --pass-enoaudit \
+            $([ -f .audit-ci.json ] && echo "--config .audit-ci.json" || true)
