@@ -27,6 +27,8 @@
 //   - The harness is the regression detector for prompt churn: a
 //     Strategy.System change that no canned reply covers fails
 //     loudly here before it can ship.
+//
+// Layer: tool
 package eval
 
 // File-level doc only; concrete code lives in the per-file sources.

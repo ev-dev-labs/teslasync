@@ -28,4 +28,6 @@
 // this package's [Registry.For] returns [ErrProviderDisabled] when
 // AI mode is off so a misconfigured handler that bypasses the guard
 // still cannot egress to a provider.
+//
+// Layer: port
 package provider

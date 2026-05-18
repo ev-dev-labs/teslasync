@@ -46,4 +46,6 @@
 // to throttle a runaway loop of normal-sized requests, not to enforce
 // per-call size limits — for that, configure MaxTokens at the
 // strategy.
+//
+// Layer: platform
 package limit

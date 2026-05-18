@@ -46,4 +46,6 @@
 // own context propagation and IO; the registry + dispatcher only
 // shuffle bytes. AI-off mode reaches this package only because the
 // dispatcher (which DOES check the off gate) refuses to call into it.
+//
+// Layer: platform
 package tools

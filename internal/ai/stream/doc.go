@@ -44,4 +44,6 @@
 //   - I12 #4 (baseline routes byte-identical): the Writer is mounted
 //     ONLY on /api/v1/ai/* routes. No baseline endpoint imports this
 //     package.
+//
+// Layer: platform
 package stream

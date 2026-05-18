@@ -61,4 +61,6 @@
 // the request handler returns. A handler that calls [Restore] on a
 // fresh response (rather than the one that produced the manifest) gets
 // the response back unchanged — there is no token table to consult.
+//
+// Layer: platform
 package redact

@@ -29,7 +29,7 @@ describe('InlineCallout', () => {
         1 anomaly
       </InlineCallout>,
     );
-    const link = screen.getByRole('status');
+    const link = screen.getByRole('link');
     expect(link.tagName.toLowerCase()).toBe('a');
     expect(link).toHaveAttribute('href', '/drives/1');
   });
