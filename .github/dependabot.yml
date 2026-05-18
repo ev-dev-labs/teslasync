@@ -1,24 +1,99 @@
 version: 2
+# Update strategy:
+#  - groups: roll patch + minor bumps into a single weekly PR per
+#    ecosystem so the queue does not balloon. Majors stay separate
+#    because they often need code changes.
+#  - ignore: pin the Go toolchain via go.mod (not Docker tag) — we
+#    let Dockerfile bumps land for the alpine version only.
+#  - schedule: weekly Monday 09:00 UTC keeps the PR firehose
+#    predictable and lets the triage workflow fire on a known cadence.
 updates:
   - package-ecosystem: gomod
     directory: /
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+      time: "09:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 10
     labels:
       - dependencies
       - backend
+    groups:
+      go-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+      aws-sdk:
+        patterns:
+          - "github.com/aws/aws-sdk-go-v2*"
+      opentelemetry:
+        patterns:
+          - "go.opentelemetry.io/*"
+      prometheus:
+        patterns:
+          - "github.com/prometheus/*"
+    ignore:
+      # Toolchain is pinned via go.mod + CI matrix. Don't try to
+      # bump the runtime independently.
+      - dependency-name: "golang.org/x/*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /web
     schedule:
       interval: weekly
       day: monday
-    open-pull-requests-limit: 5
+      time: "09:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 10
     labels:
       - dependencies
       - frontend
+    groups:
+      types:
+        patterns:
+          - "@types/*"
+      eslint:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@typescript-eslint/*"
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "@testing-library/*"
+      react-ecosystem:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      tanstack:
+        patterns:
+          - "@tanstack/*"
+      web-minor-and-patch:
+        update-types:
+          - minor
+          - patch
+        exclude-patterns:
+          - "react"
+          - "react-dom"
+          - "tailwindcss"
+          - "react-leaflet"
+          - "recharts"
+    ignore:
+      # Major bumps for the chart-of-the-app libraries land as
+      # individual PRs so they get reviewed.
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "tailwindcss"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-leaflet"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /docs
@@ -28,21 +103,57 @@ updates:
     labels:
       - dependencies
       - docs
+    groups:
+      docs-all:
+        patterns:
+          - "*"
 
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 3
+      day: monday
+      time: "09:00"
+      timezone: Etc/UTC
+    open-pull-requests-limit: 5
     labels:
       - dependencies
       - docker
+    groups:
+      base-images:
+        patterns:
+          - "alpine"
+          - "golang"
+          - "node"
+          - "nginx"
+          - "redis"
+          - "mongo"
+          - "eclipse-mosquitto"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # Pinned via go.mod / package.json — chase those, not Docker tag.
+      - dependency-name: "golang"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Etc/UTC
     open-pull-requests-limit: 5
     labels:
       - dependencies
       - ci
+    groups:
+      actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
