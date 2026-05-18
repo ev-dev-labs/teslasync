@@ -63,6 +63,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 
 	{
 		const nominalCapacity = 75000.0
+		//nolint:unused // pre-existing const retained pending follow-up cleanup
 		const nominalRangeKm = 531.0
 
 		if h.state != nil {

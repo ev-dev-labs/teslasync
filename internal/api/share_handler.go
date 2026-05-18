@@ -324,6 +324,7 @@ func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShar
 
 const clipPoints = 3 // number of points to clip from start/end for privacy
 
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func (h *ShareHandler) buildFromTelemetry(resp *publicShareResponse, readings []*models.DriveTelemetryReading, share *models.ShareToken) {
 	n := len(readings)
 	if n <= clipPoints*2 {

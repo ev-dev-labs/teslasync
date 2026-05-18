@@ -158,7 +158,7 @@ func (r *NotificationRepo) GetAllChannels(ctx context.Context) ([]*models.Notifi
 // upsertChannelConfig inserts or updates the per-kind CTI child table row
 // for the given channel, keyed off Config map entries.
 func (r *NotificationRepo) upsertChannelConfig(ctx context.Context, ch *models.NotificationChannel) error {
-	if ch.Config == nil || len(ch.Config) == 0 {
+	if len(ch.Config) == 0 {
 		return nil
 	}
 	cfg := ch.Config

@@ -104,7 +104,6 @@ export function UptimeHeatmap({
           >
             <button
               type="button"
-              role="listitem"
               aria-label={`${day.date}: ${STATUS_LABEL[day.status]}`}
               className={cn(
                 'h-3 w-3 shrink-0 rounded-sm transition-colors',

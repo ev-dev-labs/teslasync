@@ -48,16 +48,16 @@ export interface ListIncidentsParams {
   limit?: number
 }
 
-export function listIncidents(p: ListIncidentsParams = {}) {
+export function listIncidents(p: ListIncidentsParams = {}, opts?: { signal?: AbortSignal }) {
   const q = new URLSearchParams()
   if (p.activeOnly) q.set('active', '1')
   if (p.limit) q.set('limit', String(p.limit))
   const qs = q.toString()
-  return request<IncidentListResponse>(`${INCIDENTS_BASE}${qs ? `?${qs}` : ''}`)
+  return request<IncidentListResponse>(`${INCIDENTS_BASE}${qs ? `?${qs}` : ''}`, { signal: opts?.signal })
 }
 
-export function getIncident(id: number) {
-  return request<Incident>(`${INCIDENTS_BASE}/${id}`)
+export function getIncident(id: number, opts?: { signal?: AbortSignal }) {
+  return request<Incident>(`${INCIDENTS_BASE}/${id}`, { signal: opts?.signal })
 }
 
 export interface CreateIncidentPayload {
@@ -119,7 +119,7 @@ const KEY_DETAIL = (id: number) => ['status-incidents', 'detail', id] as const
 export function useIncidents(p: ListIncidentsParams = {}) {
   return useQuery({
     queryKey: KEY_LIST(p),
-    queryFn: () => listIncidents(p),
+    queryFn: ({ signal }) => listIncidents(p, { signal }),
     refetchInterval: 30_000,
   })
 }
@@ -127,7 +127,7 @@ export function useIncidents(p: ListIncidentsParams = {}) {
 export function useIncident(id: number | null) {
   return useQuery({
     queryKey: id == null ? ['status-incidents', 'detail', 'noop'] : KEY_DETAIL(id),
-    queryFn: () => getIncident(id!),
+    queryFn: ({ signal }) => getIncident(id!, { signal }),
     enabled: id != null,
   })
 }

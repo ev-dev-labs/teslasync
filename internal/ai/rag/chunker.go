@@ -81,9 +81,7 @@ func ChunkText(text string, maxBytes int) []string {
 		// Paragraph too large — flush whatever we have, then split
 		// the paragraph itself.
 		flush()
-		for _, sub := range splitLargeParagraph(p, maxBytes) {
-			out = append(out, sub)
-		}
+		out = append(out, splitLargeParagraph(p, maxBytes)...)
 	}
 	flush()
 

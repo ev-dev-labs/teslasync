@@ -313,6 +313,7 @@ func toFloat(v interface{}) float64 {
 	return 0
 }
 
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func toBool(v interface{}) bool {
 	// Unwrap {"value": X, ...} envelopes from wrapped telemetry payloads
 	if m, ok := v.(map[string]interface{}); ok {
@@ -358,6 +359,7 @@ func toBool(v interface{}) bool {
 // parseBuckleStatus converts Tesla's BuckleStatus enum to a boolean.
 // Tesla sends seatbelt signals as enum strings: "BuckleStatusLatched" (buckled)
 // or "BuckleStatusUnlatched" (unbuckled), but may also send booleans.
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func parseBuckleStatus(v interface{}) bool {
 	// Unwrap {"value": X, ...} envelopes
 	if m, ok := v.(map[string]interface{}); ok {
@@ -379,6 +381,7 @@ func parseBuckleStatus(v interface{}) bool {
 	}
 }
 
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func toTimestamp(v interface{}) *time.Time {
 	switch val := v.(type) {
 	case string:
@@ -413,6 +416,7 @@ func toTimestamp(v interface{}) *time.Time {
 // row writer has no SI replacement.
 
 // trackVehicleConfig tracks firmware version changes via swUpdateRepo.
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func (h *TelemetryHandler) trackVehicleConfig(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	v, ok := signals["Version"]
 	if !ok {

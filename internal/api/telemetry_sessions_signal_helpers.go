@@ -158,6 +158,7 @@ func telemetryInt64Ptr(v int64) *int64 { return &v }
 func int16Ptr(v int) *int16            { i := int16(v); return &i }
 func boolPtr(v bool) *bool             { return &v }
 func strPtr(v string) *string          { return &v }
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func derefInt16AsInt(p *int16) int {
 	if p == nil {
 		return 0

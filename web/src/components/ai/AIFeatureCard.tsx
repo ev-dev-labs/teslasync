@@ -315,12 +315,12 @@ export function AIFeatureCard({
         >
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <h3 className="text-base font-semibold text-white/90">{title}</h3>
+              <h3 className="text-base font-semibold text-[var(--text-primary)]">{title}</h3>
               <AIBadge label={badgeLabel} />
             </div>
-            <p className="text-sm text-white/60">{description}</p>
+            <p className="text-sm text-[var(--text-secondary)]">{description}</p>
             {!canStart && emptyHint && (
-              <p className="text-xs text-white/40">{emptyHint}</p>
+              <p className="text-xs text-[var(--text-muted)]">{emptyHint}</p>
             )}
           </div>
           {effectivePlacement === 'inline' && button}

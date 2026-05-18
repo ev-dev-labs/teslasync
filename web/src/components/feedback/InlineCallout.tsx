@@ -84,7 +84,6 @@ export function InlineCallout({
         href={action.href}
         className={baseClass}
         data-testid={testId}
-        role="status"
       >
         {content}
       </a>

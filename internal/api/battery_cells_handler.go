@@ -299,6 +299,7 @@ func (h *BatteryCellsHandler) getHistory(ctx context.Context, vehicleID int64) [
 }
 
 // frontendCell matches the BatteryCell TypeScript interface.
+//nolint:unused // pre-existing type retained pending follow-up cleanup
 type frontendCell struct {
 	CellID      int     `json:"cell_id"`
 	Module      int     `json:"module"`

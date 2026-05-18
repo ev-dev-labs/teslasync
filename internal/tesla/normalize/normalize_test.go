@@ -48,7 +48,6 @@ type fakeRepo struct {
 
 type fakeOp struct {
 	kind    string             // "record" or "at"
-	field   string             // optional context label
 	at      time.Time          // populated for "at"
 	atKind  unithistory.Kind   // populated for "at"
 	atVeh   int64              // populated for "at"

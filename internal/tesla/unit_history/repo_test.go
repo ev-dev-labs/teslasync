@@ -490,7 +490,6 @@ type fakeDBTX struct {
 	queries  []recordedExec
 	scanFn   func(args ...any) error
 	execErr  error
-	scanRows func() (any, error)
 }
 
 func (f *fakeDBTX) Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error) {

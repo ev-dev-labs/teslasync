@@ -294,7 +294,7 @@ export default function LocationsPage() {
                         {appliedName?.id === loc.id && (
                           <span className="mt-1 inline-block text-[11px] text-emerald-300">
                             {t('locations.aiAutoName.applied', 'Suggested name ready to save:')}{' '}
-                            <span className="text-white/90">{appliedName.name}</span>
+                            <span className="text-[var(--text-primary)]">{appliedName.name}</span>
                           </span>
                         )}
                       </div>

@@ -230,7 +230,6 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
       { replace: true },
     );
     // Intentionally only run on mount — see ref guard.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist on every effective change.

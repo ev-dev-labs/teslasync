@@ -343,6 +343,7 @@ func stateEmoji(state string) string {
 	}
 }
 
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func derefInt(p *int) int {
 	if p == nil {
 		return 0

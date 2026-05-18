@@ -171,6 +171,7 @@ export function SignalHistoryTable({
             />
           </>
         ) : (
+          // no-action: empty result for a user-issued query; user adjusts the controls above to re-query.
           <EmptyState
             icon={<Activity className="h-8 w-8" />}
             title={t('No data')}

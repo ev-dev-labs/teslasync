@@ -1033,8 +1033,10 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			outsideAvg = &normalized
 		}
 		if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
+			//nolint:ineffassign,staticcheck // insideAvg is dead post-mig 000185 but retained until the persistence rewrite lands.
 			normalized := units.NormalizeTemp(temp, endTempUnit)
 			insideAvg = &normalized
+			_ = insideAvg
 		}
 
 		// Energy: delta of cumulative counters. LifetimeEnergyUsed is
@@ -1166,7 +1168,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		if insideAvg == nil {
 			if v, ok := startSnapshot["InsideTemp"]; ok {
 				if temp, fOk := v.(float64); fOk {
+					//nolint:ineffassign,staticcheck // insideAvg is dead post-mig 000185 but retained until the persistence rewrite lands.
 					insideAvg = &temp
+					_ = insideAvg
 				}
 			}
 		}

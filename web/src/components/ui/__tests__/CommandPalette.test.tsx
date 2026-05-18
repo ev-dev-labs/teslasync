@@ -30,7 +30,6 @@ if (!window.matchMedia) {
 // jsdom lacks Element.prototype.scrollIntoView; the palette calls it on the
 // highlighted row whenever selectedIndex changes (keyboard nav).
 if (!Element.prototype.scrollIntoView) {
-  // eslint-disable-next-line @typescript-eslint/no-empty-function
   Element.prototype.scrollIntoView = function () {}
 }
 

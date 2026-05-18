@@ -223,7 +223,7 @@ export default function IncidentTimelinePage() {
           </h3>
           <ul className="space-y-3">
             {[...incident.updates].reverse().map((u, idx) => (
-              <li key={`${u.at}-${idx}`} className="flex gap-3 border-l-2 border-white/10 pl-3">
+              <li key={`${u.at}-${idx}`} className="flex gap-3 border-l-2 border-[var(--border-subtle)] pl-3">
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     <Badge variant={STATUS_BADGE[u.status]}>{STATUS_LABEL[u.status]}</Badge>

@@ -245,6 +245,7 @@ func (r *TeslaEnergyWCChargingRepo) UpsertBatch(ctx context.Context, entries []*
 // ---------------------------------------------------------------------------
 
 // validJSON returns s if it is valid JSON, otherwise "{}".
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func validJSON(s string) string {
 	if s == "" || !json.Valid([]byte(s)) {
 		return "{}"

@@ -57,7 +57,7 @@ export function AiOutputPanel({
   if (!hasAnything) return null
   return (
     <div
-      className="rounded-lg border border-white/10 bg-white/[0.02] p-4"
+      className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4"
       data-testid="ai-output-panel"
     >
       {state === 'error' ? (
@@ -78,7 +78,7 @@ export function AiOutputPanel({
           pendingChild
         )
       ) : (
-        <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/85">{text}</p>
+        <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--text-primary)]">{text}</p>
       )}
     </div>
   )

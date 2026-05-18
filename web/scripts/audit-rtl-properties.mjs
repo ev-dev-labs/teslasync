@@ -51,7 +51,7 @@ const FILES_GLOB = '**/*.tsx';
 //
 // Ratchet this number DOWN every time a follow-up sweep replaces
 // physical utilities with logical equivalents. Never raise it.
-const MAX_PHYSICAL = 400;
+const MAX_PHYSICAL = 395;
 
 const WAIVER_RE = /\/\/\s*rtl-audit:no-physical\b/;
 

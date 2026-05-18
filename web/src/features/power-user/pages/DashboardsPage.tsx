@@ -216,7 +216,7 @@ export default function DashboardsPage() {
     <div className="space-y-6 p-6" data-testid="power-dashboards-composer-root">
       <PageTitle>{t('powerDashboards.title', 'Dashboard Composer')}</PageTitle>
 
-      <p className="text-sm text-white/70">
+      <p className="text-sm text-[var(--text-secondary)]">
         {t(
           'powerDashboards.intro',
           'Compose a Grafana dashboard JSON envelope by picking panels from the curated catalog below and placing them on the 24-column grid. The browser does not push the dashboard to Grafana; copy your JSON into your existing Grafana dashboard editor.',
@@ -263,7 +263,7 @@ export default function DashboardsPage() {
       <GlassPanel>
         <Stack className="gap-4">
           <PanelTitle>{t('powerDashboards.panels.title', 'Curated panel catalog')}</PanelTitle>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-[var(--text-secondary)]">
             {t(
               'powerDashboards.panels.intro',
               'These are the panels the curated catalog exposes. The Helix natural-language composer refuses any panel_name outside this list, and each dashboard may use each panel_name at most once.',
@@ -271,10 +271,10 @@ export default function DashboardsPage() {
           </p>
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {sortedPanels.map((panel) => (
-              <li key={panel.name} className="rounded-md border border-white/10 p-3">
+              <li key={panel.name} className="rounded-md border border-[var(--border-subtle)] p-3">
                 <div className="flex flex-col gap-1">
                   <span className="font-mono text-sm text-cyan-300">{panel.name}</span>
-                  <span className="text-xs text-white/70">{panel.description}</span>
+                  <span className="text-xs text-[var(--text-secondary)]">{panel.description}</span>
                 </div>
               </li>
             ))}

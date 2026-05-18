@@ -45,7 +45,6 @@ export function initRum(): void {
   const endpoint = (import.meta.env.VITE_OTLP_HTTP_ENDPOINT ?? '').trim();
   if (!endpoint) {
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.info(
         '[rum] VITE_OTLP_HTTP_ENDPOINT not set; OpenTelemetry RUM disabled.'
       );

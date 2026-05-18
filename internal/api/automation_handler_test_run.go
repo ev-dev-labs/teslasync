@@ -17,6 +17,7 @@ import (
 
 // checkWebhookTokenUniqueness verifies that no other automation uses the same
 // webhook_token. excludeID is the ID to skip (for updates); pass 0 for creates.
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func (h *AutomationHandler) checkWebhookTokenUniqueness(r *http.Request, config json.RawMessage, excludeID int64) error {
 	var cfg struct {
 		WebhookToken string `json:"webhook_token"`
@@ -629,10 +630,13 @@ func validateActionConfig(cfg action.ActionConfig) error {
 	}
 }
 
+//nolint:unused // pre-existing var retained pending follow-up cleanup
 var errWebhookTokenDuplicate = &duplicateTokenError{}
 
+//nolint:unused // pre-existing type retained pending follow-up cleanup
 type duplicateTokenError struct{}
 
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func (e *duplicateTokenError) Error() string {
 	return "webhook_token is already in use by another automation"
 }

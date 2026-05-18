@@ -59,7 +59,7 @@ export function ActionItem({ severity, title, description, cta }: ActionItemProp
 function ActionCTA({ cta, severityText }: { cta: NonNullable<ActionItemProps['cta']>; severityText: string }) {
   const baseClasses = cn(
     'inline-flex items-center gap-1 shrink-0 rounded-md px-3 py-1.5 text-xs font-medium',
-    'min-h-[36px] transition-colors hover:bg-white/10',
+    'min-h-[36px] transition-colors hover:bg-[var(--surface-2)]',
     'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
     severityText,
   )

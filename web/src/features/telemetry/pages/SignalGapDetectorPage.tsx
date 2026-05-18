@@ -30,6 +30,7 @@ export default function SignalGapDetectorPage() {
       actions={<VehicleSelect />}
     >
       {!vehicleId || vehicleId <= 0 ? (
+        // no-action: vehicle picker is in the page header; no inline CTA needed.
         <EmptyState
           icon={<Activity className="h-8 w-8" />}
           title={t('signalGap.noVehicle', 'Select a vehicle to begin')}

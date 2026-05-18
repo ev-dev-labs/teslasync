@@ -137,7 +137,7 @@ export default function HelpPage() {
     <PageContainer title={t('help.title', 'Help')}>
       <div className="space-y-6">
         <GlassPanel>
-          <p className="text-sm text-white/70">
+          <p className="text-sm text-[var(--text-secondary)]">
             {t(
               'help.intro',
               'Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation.',
@@ -165,15 +165,15 @@ export default function HelpPage() {
                   </span>
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-base font-semibold text-white/90">
+                      <h3 className="text-base font-semibold text-[var(--text-primary)]">
                         {t(link.titleKey, link.titleFallback)}
                       </h3>
                       <ArrowRight
-                        className="h-4 w-4 text-white/40 transition group-hover:translate-x-0.5 group-hover:text-cyan-300"
+                        className="h-4 w-4 text-[var(--text-muted)] transition group-hover:translate-x-0.5 group-hover:text-cyan-300"
                         aria-hidden="true"
                       />
                     </div>
-                    <p className="text-sm text-white/60">
+                    <p className="text-sm text-[var(--text-secondary)]">
                       {t(link.descKey, link.descFallback)}
                     </p>
                   </div>

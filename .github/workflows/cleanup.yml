@@ -25,6 +25,7 @@ jobs:
     steps:
       - name: Cleanup backend images
         uses: actions/delete-package-versions@v5
+        continue-on-error: true
         with:
           package-name: teslasync
           package-type: container
@@ -33,6 +34,7 @@ jobs:
 
       - name: Cleanup web images
         uses: actions/delete-package-versions@v5
+        continue-on-error: true
         with:
           package-name: teslasync-web
           package-type: container

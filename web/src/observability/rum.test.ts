@@ -15,8 +15,6 @@ import {
 } from '@opentelemetry/sdk-trace-base';
 import { trace } from '@opentelemetry/api';
 
-import { installRouteSpanEmitter, installGlobalErrorRecorder } from './rum';
-
 let exporter: InMemorySpanExporter;
 let provider: BasicTracerProvider;
 

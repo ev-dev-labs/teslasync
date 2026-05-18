@@ -82,7 +82,7 @@ func main() {
 	if firstRouteMatch == nil {
 		findings = append(findings, fmt.Sprintf("MISSING_METRIC: zero routes detected in %s — regex broken or file empty", routerPath))
 	} else if mwIdx >= 0 && mwIdx > firstRouteMatch[0] {
-		findings = append(findings, fmt.Sprintf("MISSING_METRIC: MetricsMiddleware appears AFTER the first route declaration — earlier routes will skip RED metrics"))
+		findings = append(findings, "MISSING_METRIC: MetricsMiddleware appears AFTER the first route declaration — earlier routes will skip RED metrics")
 	}
 
 	// 3. Count routes for an honest coverage figure.

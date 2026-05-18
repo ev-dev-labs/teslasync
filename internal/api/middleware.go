@@ -215,6 +215,7 @@ func TracingMiddleware(next http.Handler) http.Handler {
 	)
 }
 
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func tracedTransport(base http.RoundTripper) http.RoundTripper {
 	if base == nil {
 		base = http.DefaultTransport

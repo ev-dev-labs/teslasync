@@ -91,6 +91,7 @@ func (h *ChatbotHandler) vehicleLocationLine(ctx context.Context, vehicleID int6
 // goes through signal.LiveStateReader) — never via a raw snapshot-table
 // lookup against `positions`, which would miss the last-known coordinates
 // for a vehicle that has been parked beyond the snapshot lookback window.
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func (h *ChatbotHandler) queryVehicleLocation(ctx context.Context) string {
 	if h.vehicleSvc == nil || h.live == nil {
 		return "I couldn't retrieve location info right now."

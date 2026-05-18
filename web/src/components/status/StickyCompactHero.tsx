@@ -108,7 +108,7 @@ export function StickyCompactHero({
             disabled={refreshing}
             aria-label="Refresh status"
             className={cn(
-              'shrink-0 rounded-md p-2 text-[var(--text-secondary)] hover:bg-white/10 hover:text-[var(--text-primary)]',
+              'shrink-0 rounded-md p-2 text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
               'min-h-[36px] min-w-[36px] flex items-center justify-center',
               'focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
               refreshing && 'opacity-60',

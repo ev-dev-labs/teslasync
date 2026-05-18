@@ -211,7 +211,7 @@ function InnerSection({
       buttonTestId="ai-feature-cross-rule-conflict-detection-detect"
     >
       {conflicts != null && conflicts.length === 0 && (
-        <div className="rounded-md border border-white/10 bg-white/5 p-3 text-sm text-white/70">
+        <div className="rounded-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3 text-sm text-[var(--text-secondary)]">
           {t(
             'notifications.alertStudio.aiConflicts.emptyMessage',
             'No structural conflicts found in the current rule set.',
@@ -231,7 +231,7 @@ function InnerSection({
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="font-medium">{labelForKind(c.kind)}</div>
-                  <div className="text-xs text-white/80">
+                  <div className="text-xs text-[var(--text-secondary)]">
                     Rule {c.rule_a_id}
                     {c.rule_a_name ? ` (${c.rule_a_name})` : ''} ↔ Rule{' '}
                     {c.rule_b_id}
@@ -239,7 +239,7 @@ function InnerSection({
                     {c.signal_name ? ` · ${c.signal_name}` : ''}
                   </div>
                   {c.reason && (
-                    <div className="text-xs text-white/70">{c.reason}</div>
+                    <div className="text-xs text-[var(--text-secondary)]">{c.reason}</div>
                   )}
                   <div className="flex flex-wrap gap-1.5 pt-1">
                     {c.subsumes && (

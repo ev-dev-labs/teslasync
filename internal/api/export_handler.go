@@ -555,6 +555,7 @@ func ptrFloat(p *float64) float64 {
 // the legacy CSV/JSON export shape served by the public /exports endpoints.
 // Slice 4 of phase-48 will rename the export column to max_speed_mps and
 // drop this conversion.
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func ptrFloatMpsToMphAPI(p *float64) float64 {
 	if p == nil {
 		return 0
@@ -562,6 +563,7 @@ func ptrFloatMpsToMphAPI(p *float64) float64 {
 	return *p / 0.44704
 }
 
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func ptrInt16(p *int16) int {
 	if p != nil {
 		return int(*p)

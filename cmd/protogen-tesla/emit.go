@@ -1156,6 +1156,9 @@ var scalarVariantKinds = map[string]string{
 // hand-written compounds.go file in the same package; keep this map in sync
 // with the type declarations there. New compounds require updating both
 // compoundNames (above) and compoundDecoderBody (below) too.
+//
+//nolint:unused // Reference table kept in lock-step with compounds.go;
+// surfaced via documentation rather than direct consumption.
 var compoundGoTypeName = map[string]string{
 	"LocationValue": "Location",
 	"Doors":         "Doors",
@@ -1478,6 +1481,9 @@ func goCamelCase(s string) string {
 // protoTypeToGo maps a proto3 scalar type name to the Go type used in
 // emitted compound structs. Non-scalar types pass through unchanged so the
 // emitted code references the user-defined message/enum directly.
+//
+//nolint:unused // Retained alongside scalarVariantKinds for parity with
+// the proto-to-go mapping documented in compounds.go.
 func protoTypeToGo(t string) string {
 	switch t {
 	case "double":

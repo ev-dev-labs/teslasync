@@ -144,7 +144,7 @@ export function AiLimitBanner({
       <div className="space-y-2">
         <p>{description}</p>
         {!retryReady && (
-          <p className="text-white/60">
+          <p className="text-[var(--text-secondary)]">
             {t('ai.limit.retryIn', `Try again in ${secondsLeft}s`, {
               seconds: secondsLeft,
               defaultValue: `Try again in ${secondsLeft}s`,

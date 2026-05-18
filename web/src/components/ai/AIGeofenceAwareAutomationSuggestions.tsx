@@ -237,29 +237,29 @@ function InnerSection({
                   'Proposed automation',
                 )}
               </div>
-              <div className="font-medium text-white/90">
+              <div className="font-medium text-[var(--text-primary)]">
                 {draft.draft.name || t(
                   'automations.builder.aiGeofenceAware.unnamed',
                   '(unnamed)',
                 )}
               </div>
               {draft.draft.description && (
-                <div className="text-xs text-white/60">
+                <div className="text-xs text-[var(--text-secondary)]">
                   {draft.draft.description}
                 </div>
               )}
-              <div className="text-xs text-white/60">
+              <div className="text-xs text-[var(--text-secondary)]">
                 {t('automations.builder.aiGeofenceAware.triggersLabel', 'Triggers')}:{' '}
-                <span className="text-white/80">{draft.draft.triggers.length}</span>
+                <span className="text-[var(--text-secondary)]">{draft.draft.triggers.length}</span>
                 {' · '}
                 {t('automations.builder.aiGeofenceAware.conditionsLabel', 'Conditions')}:{' '}
-                <span className="text-white/80">{draft.draft.conditions.length}</span>
+                <span className="text-[var(--text-secondary)]">{draft.draft.conditions.length}</span>
                 {' · '}
                 {t('automations.builder.aiGeofenceAware.actionsLabel', 'Actions')}:{' '}
-                <span className="text-white/80">{draft.draft.actions.length}</span>
+                <span className="text-[var(--text-secondary)]">{draft.draft.actions.length}</span>
               </div>
               {draft.validation_error && (
-                <div className="text-xs text-white/60">
+                <div className="text-xs text-[var(--text-secondary)]">
                   {draft.validation_error}
                 </div>
               )}

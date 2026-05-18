@@ -82,7 +82,7 @@ function severityClasses(s: Severity): { dot: string; chip: string; label: strin
     case 'unknown':
     default:
       return {
-        dot: 'bg-white/30',
+        dot: 'bg-[var(--surface-2)]',
         chip: 'bg-white/[0.06] text-[var(--text-muted)] ring-1 ring-white/10',
         label: 'unknown',
       }

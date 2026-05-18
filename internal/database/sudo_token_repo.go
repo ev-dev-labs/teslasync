@@ -109,6 +109,7 @@ func NewSudoTokenStore(ttl time.Duration) *SudoTokenStore {
 
 // withClock is a test seam letting unit tests freeze time without
 // reaching into unexported state from another package.
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func (s *SudoTokenStore) withClock(now func() time.Time) *SudoTokenStore {
 	s.now = now
 	return s

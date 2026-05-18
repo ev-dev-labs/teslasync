@@ -146,17 +146,6 @@ func TestShutdown_ContextCancelled(t *testing.T) {
 	}
 }
 
-type capturingSink struct {
-	mu      sync.Mutex
-	records []httputil.APICallRecord
-}
-
-func (c *capturingSink) Enqueue(r httputil.APICallRecord) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.records = append(c.records, r)
-}
-
 type capturingLogger struct {
 	mu      sync.Mutex
 	entries []*models.APICallLog

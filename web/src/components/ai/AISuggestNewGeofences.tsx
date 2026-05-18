@@ -202,9 +202,9 @@ function InnerSection({
       buttonTestId="ai-feature-suggest-new-geofences-suggest"
     >
       {currentName && (
-        <p className="text-xs text-white/50">
+        <p className="text-xs text-[var(--text-muted)]">
           {t('geofences.aiSuggest.currentLabel', 'Current label')}:{' '}
-          <span className="text-white/70">{currentName}</span>
+          <span className="text-[var(--text-secondary)]">{currentName}</span>
         </p>
       )}
       {draft && (
@@ -217,17 +217,17 @@ function InnerSection({
               <div className="text-xs uppercase tracking-wide text-cyan-300">
                 {t('geofences.aiSuggest.proposalLabel', 'Proposed geofence')}
               </div>
-              <div className="font-medium text-white/90">
+              <div className="font-medium text-[var(--text-primary)]">
                 {draft.proposed_name}
               </div>
-              <div className="text-xs text-white/60">
+              <div className="text-xs text-[var(--text-secondary)]">
                 {t('geofences.aiSuggest.radiusLabel', 'Radius')}:{' '}
-                <span className="text-white/80">
+                <span className="text-[var(--text-secondary)]">
                   {Math.round(draft.radius_m)} m
                 </span>
               </div>
               {draft.validation_error && (
-                <div className="text-xs text-white/60">
+                <div className="text-xs text-[var(--text-secondary)]">
                   {draft.validation_error}
                 </div>
               )}

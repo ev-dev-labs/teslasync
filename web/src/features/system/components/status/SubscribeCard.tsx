@@ -27,7 +27,7 @@ function ChannelTile({ to, icon: Icon, label, description }: ChannelTileProps) {
   return (
     <Link
       to={to}
-      className="flex items-start gap-3 rounded-lg border border-white/5 bg-white/[0.02] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
+      className="flex items-start gap-3 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] px-3 py-2.5 text-left transition-colors hover:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/50"
     >
       <Icon className="h-4 w-4 mt-0.5 shrink-0 text-cyan-300" aria-hidden />
       <div className="min-w-0">

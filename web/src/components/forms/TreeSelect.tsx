@@ -34,6 +34,7 @@ import {
 } from 'react';
 import { ChevronDown, ChevronRight, Search, X } from 'lucide-react';
 import { Button, Checkbox, Input } from '@/components/ui';
+import { VisuallyHidden } from '@/components/a11y';
 import { cn } from '@/lib/cn';
 
 export interface TreeLeaf<T> {
@@ -458,6 +459,7 @@ export function TreeSelect<T>({
         aria-multiselectable="true"
         aria-label={ariaLabel}
         onKeyDown={handleKeyDown}
+        tabIndex={-1}
         className={cn(
           'overflow-y-auto rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)]',
           maxHeightClassName,
@@ -472,7 +474,7 @@ export function TreeSelect<T>({
                 aria-hidden="true"
               />
             ))}
-            <span className="sr-only">Loading…</span>
+            <VisuallyHidden>Loading…</VisuallyHidden>
           </div>
         )}
 
@@ -513,6 +515,7 @@ export function TreeSelect<T>({
                     role="treeitem"
                     aria-level={1}
                     aria-expanded={expanded}
+                    aria-selected={allGroupSelected}
                     aria-checked={
                       allGroupSelected ? 'true' : someGroupSelected ? 'mixed' : 'false'
                     }
@@ -581,6 +584,7 @@ export function TreeSelect<T>({
                             key={leaf.id}
                             role="treeitem"
                             aria-level={2}
+                            aria-selected={leafSelected}
                             aria-checked={leafSelected ? 'true' : 'false'}
                             aria-disabled={leafDisabled || undefined}
                             aria-label={
@@ -634,10 +638,10 @@ export function TreeSelect<T>({
       </div>
 
       {/* sr-only summary for screen readers */}
-      <div className="sr-only" aria-live="polite" id={`${treeId}-summary`}>
+      <VisuallyHidden as="div" aria-live="polite" id={`${treeId}-summary`}>
         {selectedIds.length} selected of {totalLeafCount} total
         {isSearching ? `, ${visibleLeafIds.length} visible` : ''}
-      </div>
+      </VisuallyHidden>
     </div>
   );
 }

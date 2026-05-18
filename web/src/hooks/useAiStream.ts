@@ -271,7 +271,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
           // Each event is delimited by a blank line; the buffer may
           // contain multiple events in a single chunk on a fast
           // backend.
-          let parts = buffer.split(SSE_DELIM_RE);
+          const parts = buffer.split(SSE_DELIM_RE);
           // Last fragment may be incomplete — keep it for the next read.
           buffer = parts.pop() ?? '';
           for (const raw of parts) {
@@ -363,7 +363,7 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
  */
 export function parseSSEFrame(raw: string): AiStreamEvent | null {
   let event = '';
-  let dataParts: string[] = [];
+  const dataParts: string[] = [];
   for (const line of raw.split(LINE_DELIM_RE)) {
     if (line.startsWith(':')) continue; // comment per SSE spec
     if (line.startsWith('event: ')) {

@@ -65,6 +65,7 @@ export function DensityToggle({
       aria-label={groupLabel}
       data-testid={testId}
       onKeyDown={onKeyDown}
+      tabIndex={-1}
       className={cn(
         'inline-flex items-center gap-0.5 rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)]/40 p-0.5',
         className,

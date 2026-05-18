@@ -142,7 +142,6 @@ export default function MQTTInspectorPage() {
   const aiWindow = useMemo(() => {
     const now = Math.floor(Date.now() / 1000);
     return { fromUnix: now - 30 * 60, toUnix: now };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

@@ -285,7 +285,7 @@ func (a *Adapter) chatEndpoint(req provider.ChatRequest) (endpoint string, model
 		if identity == "" {
 			return "", "", fmt.Errorf("azure: empty foundry model")
 		}
-		u, err := a.buildURL(nil, "chat", "completions")
+		u, err := a.buildURL("chat", "completions")
 		if err != nil {
 			return "", "", err
 		}
@@ -295,7 +295,7 @@ func (a *Adapter) chatEndpoint(req provider.ChatRequest) (endpoint string, model
 		if deployment == "" {
 			return "", "", fmt.Errorf("azure: empty chat deployment")
 		}
-		u, err := a.buildURL(nil, "openai", "deployments", deployment, "chat", "completions")
+		u, err := a.buildURL("openai", "deployments", deployment, "chat", "completions")
 		if err != nil {
 			return "", "", err
 		}
@@ -337,9 +337,9 @@ func (a *Adapter) embedIdentity(req provider.EmbedRequest) string {
 func (a *Adapter) embedURL(identity string) (string, error) {
 	switch a.cfg.Flavor {
 	case provider.AzureFlavorFoundry:
-		return a.buildURL(nil, "embeddings")
+		return a.buildURL("embeddings")
 	default:
-		return a.buildURL(nil, "openai", "deployments", identity, "embeddings")
+		return a.buildURL("openai", "deployments", identity, "embeddings")
 	}
 }
 
@@ -349,7 +349,7 @@ func (a *Adapter) embedURL(identity string) (string, error) {
 // underscores) round-trip correctly. The variadic segments are joined
 // with path.Join after PathEscape so a user-typed deployment name
 // containing a slash cannot escape the intended sub-tree.
-func (a *Adapter) buildURL(_ context.Context, segments ...string) (string, error) {
+func (a *Adapter) buildURL(segments ...string) (string, error) {
 	u, err := url.Parse(a.cfg.BaseURL)
 	if err != nil {
 		return "", fmt.Errorf("azure: parse base_url: %w", err)

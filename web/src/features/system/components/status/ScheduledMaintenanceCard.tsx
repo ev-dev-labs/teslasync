@@ -23,7 +23,7 @@
  * "active now" case; we don't double up.
  */
 
-import { useMemo, useState, type FormEvent } from 'react'
+import { useId, useMemo, useState, type FormEvent } from 'react'
 import { CalendarClock, AlertTriangle, X } from 'lucide-react'
 import { GlassPanel, Button, Input, Badge } from '@/components/ui'
 import { useToast } from '@/components/feedback/Toast'
@@ -42,6 +42,8 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
   const mutation = useUpdateMaintenance()
   const toast = useToast()
   const { formatDateTime } = useDateFormat()
+  const startId = useId()
+  const durationId = useId()
   const [showSchedule, setShowSchedule] = useState(false)
   const [whenLocal, setWhenLocal] = useState('')
   const [duration, setDuration] = useState('60')
@@ -140,15 +142,15 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
         )}
 
         {!isActive && showSchedule && (
-          <form onSubmit={handleSchedule} className="space-y-3 border-t border-white/5 pt-3">
+          <form onSubmit={handleSchedule} className="space-y-3 border-t border-[var(--border-subtle)] pt-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Start (local)</label>
-                <Input type="datetime-local" value={whenLocal} onChange={(e) => setWhenLocal(e.target.value)} required />
+                <label htmlFor={startId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Start (local)</label>
+                <Input id={startId} type="datetime-local" value={whenLocal} onChange={(e) => setWhenLocal(e.target.value)} required />
               </div>
               <div>
-                <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Duration (minutes)</label>
-                <Input type="number" min={5} max={1440} value={duration} onChange={(e) => setDuration(e.target.value)} />
+                <label htmlFor={durationId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Duration (minutes)</label>
+                <Input id={durationId} type="number" min={5} max={1440} value={duration} onChange={(e) => setDuration(e.target.value)} />
               </div>
             </div>
             <Input

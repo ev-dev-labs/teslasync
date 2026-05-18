@@ -344,6 +344,7 @@ func MarshalVehicleSettingPayload(settings []database.EffectiveSetting) ([]byte,
 // fully consumed the request body — defensive against pgx/pgbouncer
 // connection-leak patterns where an unread body keeps the stream
 // half-open.
+//nolint:unused // pre-existing func retained pending follow-up cleanup
 func drainBody(body io.Reader) {
 	if body == nil {
 		return

@@ -40,10 +40,16 @@ const ROOT = join('src');
  * - `VisuallyHidden.tsx` is the canonical implementation.
  * - The matching test file asserts the exact class name lands on the
  *   rendered DOM, so it has to spell `sr-only` to make assertions.
+ * - `Checkbox.tsx` (UI primitive) layers a real `<input type="checkbox">`
+ *   underneath a styled indicator. The native input MUST be `peer sr-only`
+ *   so Tailwind `peer-*:` variants on the indicator can read its state
+ *   while it stays in the accessibility tree. Wrapping it in
+ *   `<VisuallyHidden>` would break the `peer` sibling relationship.
  */
 const ALLOWED_FILES = new Set([
   toAllowKey(join('src', 'components', 'a11y', 'VisuallyHidden.tsx')),
   toAllowKey(join('src', 'components', 'a11y', '__tests__', 'VisuallyHidden.test.tsx')),
+  toAllowKey(join('src', 'components', 'ui', 'Checkbox.tsx')),
 ]);
 
 function toAllowKey(p) {

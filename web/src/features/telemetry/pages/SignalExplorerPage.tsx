@@ -203,6 +203,7 @@ export default function SignalExplorerPage() {
       ) : null}
 
       {vehicleId === 0 ? (
+        // no-action: vehicle picker is in the page header; no inline CTA needed.
         <EmptyState
           icon={<Activity className="h-8 w-8" />}
           title={t('signalExplorer.noVehicle', 'Select a vehicle to begin')}
@@ -276,6 +277,7 @@ export default function SignalExplorerPage() {
           />
 
           {!hasHistorical && !isLive ? (
+            // no-action: signal picker, range, and Explore/Live controls are directly above this state.
             <EmptyState
               icon={<Database className="h-10 w-10" />}
               title={t('Pick signals and click Explore')}

@@ -171,20 +171,6 @@ func (s *fakeSink) len() int {
 	return len(s.records)
 }
 
-// trackingSink fails the test if any method is called. Used to verify the
-// nil-Sink-equivalent path (Sink == nil) does not invoke any sink methods.
-type trackingSink struct {
-	t *testing.T
-}
-
-func (s *trackingSink) Enqueue(APICallRecord) {
-	s.t.Fatalf("trackingSink.Enqueue unexpectedly called")
-}
-func (s *trackingSink) CaptureBodies() bool {
-	s.t.Fatalf("trackingSink.CaptureBodies unexpectedly called")
-	return false
-}
-
 // T01 — single GET maps cleanly to a single api_call_logs record.
 func TestLoggedTransport_SinkRecordsSuccessfulGet(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

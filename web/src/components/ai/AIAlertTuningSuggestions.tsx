@@ -207,7 +207,7 @@ function InnerSection({
                 'Proposed patch (review before saving):',
               )}
             </div>
-            <ul className="mt-1 list-inside list-disc text-xs text-white/80">
+            <ul className="mt-1 list-inside list-disc text-xs text-[var(--text-secondary)]">
               {proposal.value_num != null && (
                 <li>value_num: {proposal.value_num}</li>
               )}

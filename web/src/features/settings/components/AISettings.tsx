@@ -259,7 +259,6 @@ export function AISettings() {
     setRestoreDismissed(false)
     // Intentionally depend on the JSON snapshot, not the object
     // reference, to avoid infinite re-renders.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aiSnapshot])
 
   // ── Mode change ──────────────────────────────────────────────────
@@ -579,6 +578,7 @@ function ModeRadio(props: {
   return (
     <label
       htmlFor={id}
+      aria-label={label}
       className={
         'flex flex-col gap-1 rounded-md border px-3 py-2 cursor-pointer transition-colors ' +
         (checked
@@ -675,7 +675,7 @@ function AICostCapSpendBar({ capCents }: { capCents: number }) {
         </span>
       </div>
       <div
-        className="h-2 w-full overflow-hidden rounded-full bg-white/10"
+        className="h-2 w-full overflow-hidden rounded-full bg-[var(--surface-2)]"
         role="progressbar"
         aria-valuemin={0}
         aria-valuemax={100}
