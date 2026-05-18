@@ -94,11 +94,17 @@ securityContext:
   seccompProfile:
     type: RuntimeDefault
 
-# Pin api + workers (notification, export, automation, command-proxy) to carbon
-# so all teslasync workloads colocate on the node that hosts TimescaleDB, MQTT,
-# and Redis. Empty {} restores default Kubernetes scheduling.
-nodeSelector:
-  kubernetes.io/hostname: carbon
+# Optional: pin api + workers to a specific node so all teslasync workloads
+# colocate on the node that hosts TimescaleDB, MQTT, and Redis. Self-hosted
+# users on single-node k3s do not need this. Multi-node operators should
+# override with their own hostname or topology-aware label, e.g.:
+#   nodeSelector:
+#     kubernetes.io/hostname: my-host
+#   # or, to colocate by topology:
+#   #   teslasync.io/storage-class: timescaledb
+# Empty {} restores default Kubernetes scheduling, which is correct for the
+# common single-node-k3s deployment.
+nodeSelector: {}
 tolerations: []
 affinity: {}
 
@@ -154,9 +160,10 @@ web:
     seccompProfile:
       type: RuntimeDefault
 
-  # Colocate web with the rest of the teslasync stack on carbon.
-  nodeSelector:
-    kubernetes.io/hostname: carbon
+  # Optional: colocate web with the rest of the teslasync stack. See the
+  # top-level nodeSelector comment for guidance — empty {} is the right
+  # default for single-node k3s.
+  nodeSelector: {}
   tolerations: []
   affinity: {}
 
@@ -361,10 +368,11 @@ fleetTelemetry:
   image: tesla/fleet-telemetry:latest
 
   service:
-    # NodePort opens port 30443 on every node's host network. The router
-    # forwards WAN 8443 → carbon:30443 (carbon's real MAC keeps Deco happy).
-    # nodePort must be in k3s's default range 30000-32767 unless the
-    # apiserver --service-node-port-range flag has been customized.
+    # NodePort opens a port on every node's host network. Self-hosted users
+    # typically forward WAN 8443 → <node>:30443 at their edge router; vehicles
+    # connect over WAN to that forwarded port. nodePort must be in k3s's
+    # default range 30000-32767 unless the apiserver --service-node-port-range
+    # flag has been customized.
     type: NodePort
     port: 4443
     nodePort: 30443
@@ -373,14 +381,14 @@ fleetTelemetry:
     # a real node MAC for port-forwarding (e.g., TP-Link Deco) and a virtual
     # MetalLB IP isn't acceptable. Leave empty unless you know you need this.
     # The IPs MUST belong to a node already running the fleet-telemetry pod.
-    # Example: ["192.168.68.112"]  (carbon's host IP)
+    # Example: ["192.168.1.10"]
     externalIPs: []
 
-  # -- Pin the fleet-telemetry pod to a specific node. Required when
+  # -- Optional: pin the fleet-telemetry pod to a specific node. Required when
   # service.externalIPs is set so the bound IP belongs to the same node that
-  # actually runs the pod.
-  nodeSelector:
-    kubernetes.io/hostname: carbon
+  # actually runs the pod. Override with your own hostname for multi-node
+  # clusters; empty {} is correct for single-node k3s.
+  nodeSelector: {}
 
   tolerations: []
   affinity: {}
@@ -1232,19 +1240,20 @@ observability:
 # the traffic each service needs. This mirrors the SOTA "deny by default,
 # allow by least privilege" posture.
 #
-# Pre-requisite: your cluster CNI must implement NetworkPolicy
-# (Calico, Cilium, Antrea, Weave, AWS VPC CNI w/ policies, GKE w/ enabled,
-# AKS w/ Azure policy, OpenShift OVN, k3s w/ flannel+canal, etc.). On clusters
-# WITHOUT a policy-aware CNI, these resources are silently ignored, so it is
-# always safe to enable — but you will not get enforcement.
+# Self-hosted / k3s defaults (this chart's primary target):
+#   k3s 1.20+ ships with an embedded kube-router NetworkPolicy controller
+#   alongside Flannel, so NetworkPolicy IS enforced on a stock k3s install
+#   — no extra CNI plugin required. CoreDNS labels match the upstream
+#   defaults below. The default ingressNamespaceSelector targets Traefik
+#   which k3s installs in `kube-system`.
+#
+# Other CNIs that enforce NetworkPolicy: Calico, Cilium, Antrea, Weave,
+# AWS VPC CNI (with policy enabled), GKE (with NetworkPolicy add-on),
+# AKS (with Azure NetworkPolicy), OpenShift OVN. On clusters WITHOUT a
+# policy-aware CNI, these resources are silently ignored, so it is always
+# safe to enable — you just will not get enforcement.
 #
 # To disable entirely (escape hatch): networkPolicy.enabled: false.
-#
-# Cross-namespace traffic (most common production case): set
-# `networkPolicy.ingressNamespaceSelector` to the namespace where your ingress
-# controller runs (e.g. `kubernetes.io/metadata.name: ingress-nginx`), and
-# `networkPolicy.monitoringNamespaceSelector` to the namespace running
-# Prometheus / Grafana / scrape targets (e.g. monitoring or kube-prometheus).
 networkPolicy:
   # Master switch. Disable on shared clusters where another team owns the
   # namespace's NetworkPolicy stack.
@@ -1257,30 +1266,38 @@ networkPolicy:
   defaultDeny: true
 
   # DNS resolution is required by basically everything. The default selector
-  # matches kube-system's kube-dns / coredns. If your cluster runs DNS in a
-  # different namespace, override.
+  # matches kube-system's CoreDNS (used by k3s, kubeadm, kOps, GKE, AKS, EKS).
+  # If your cluster runs DNS in a different namespace, override.
   dns:
     namespaceSelector:
       matchLabels:
         kubernetes.io/metadata.name: kube-system
-    # Most clusters label DNS pods k8s-app=kube-dns. Cilium installs label
-    # them k8s-app=cilium-dns; Calico uses calico-kube-controllers. Override
-    # via this selector if needed.
+    # CoreDNS (k3s, kubeadm) and kube-dns both label pods k8s-app=kube-dns.
+    # Cilium installs label them k8s-app=cilium-dns; override if needed.
     podSelector:
       matchLabels:
         k8s-app: kube-dns
 
   # Namespace selector for the Ingress controller(s) that send traffic to
-  # the api + web services. Empty matchLabels matches the release namespace
-  # only — fine if you front-end with hostNetwork ingress or are running in
-  # the same namespace. For ingress-nginx in `ingress-nginx`:
+  # the api + web services. Default points at kube-system so the k3s-bundled
+  # Traefik (the chart ships a Traefik IngressRoute in ingressRoute.yaml) can
+  # reach api + web pods without further config. Override for other ingress
+  # controllers, e.g.:
   #   ingressNamespaceSelector:
   #     matchLabels:
   #       kubernetes.io/metadata.name: ingress-nginx
-  ingressNamespaceSelector: {}
+  # Set to {} (empty map) to allow only same-namespace ingress traffic.
+  ingressNamespaceSelector:
+    matchLabels:
+      kubernetes.io/metadata.name: kube-system
 
   # Namespace selector for Prometheus / Grafana scrapes against /metrics
-  # endpoints. Empty = same namespace only.
+  # endpoints. Empty = same namespace only (the chart bundles Grafana in
+  # the release namespace by default, which is fine for self-hosted).
+  # For Prometheus-Operator in `monitoring`:
+  #   monitoringNamespaceSelector:
+  #     matchLabels:
+  #       kubernetes.io/metadata.name: monitoring
   monitoringNamespaceSelector: {}
 
   # If external Postgres / Redis / MQTT / OTel live in another namespace,
@@ -1312,9 +1329,14 @@ networkPolicy:
 #   - seccompProfile.type: RuntimeDefault (added below)
 #
 # To enforce at the namespace level, label the release namespace:
-#   pod-security.kubernetes.io/enforce=restricted
-#   pod-security.kubernetes.io/audit=restricted
-#   pod-security.kubernetes.io/warn=restricted
+#   kubectl label namespace <ns> \
+#     pod-security.kubernetes.io/enforce=restricted \
+#     pod-security.kubernetes.io/audit=restricted \
+#     pod-security.kubernetes.io/warn=restricted
+#
+# k3s ships with the PodSecurity admission plugin enabled by default
+# (Kubernetes 1.25+), so the label above is the only step required for
+# enforcement on self-hosted k3s.
 #
 # This block does NOT create the namespace label (the chart cannot
 # safely mutate the namespace it is installed into), it only adjusts
@@ -1323,5 +1345,5 @@ podSecurityStandards:
   # When true, every container spec generated by the chart sets
   # seccompProfile.type: RuntimeDefault at the container level. Disable
   # only if your container runtime does not support seccomp filtering
-  # (some older managed K8s offerings).
+  # (some older managed K8s offerings; k3s on containerd supports it).
   seccompProfile: true
