@@ -18,10 +18,6 @@ func GuardName(g Guard) string {
 	return ""
 }
 
-// guardNames maps guard functions to their string names for logging.
-//nolint:unused // pre-existing var retained pending follow-up cleanup
-var guardNames = map[string]Guard{}
-
 // Transition defines a single valid state change in the vehicle FSM.
 type Transition struct {
 	From    State

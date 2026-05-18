@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -154,16 +153,6 @@ func pollEngineConfig(engine *polling.PollEngine) http.HandlerFunc {
 			},
 		})
 	}
-}
-
-// writeJSON is a helper that writes JSON responses.
-// If the api package already has one, this will be a duplicate — but it's
-// defined here as a fallback to avoid import cycles.
-//nolint:unused // pre-existing func retained pending follow-up cleanup
-func writeJSONPolling(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(data) //nolint:errcheck
 }
 
 // POST /api/v1/polling/demo — seeds the engine with realistic test data so

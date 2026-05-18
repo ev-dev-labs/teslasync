@@ -324,62 +324,6 @@ func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShar
 
 const clipPoints = 3 // number of points to clip from start/end for privacy
 
-//nolint:unused // pre-existing func retained pending follow-up cleanup
-func (h *ShareHandler) buildFromTelemetry(resp *publicShareResponse, readings []*models.DriveTelemetryReading, share *models.ShareToken) {
-	n := len(readings)
-	if n <= clipPoints*2 {
-		return
-	}
-
-	// Clip start and end points for privacy
-	clipped := readings[clipPoints : n-clipPoints]
-
-	var cumulativeDistM float64
-	var prevLat, prevLng float64
-
-	for i, tp := range clipped {
-		lat := derefFloat(tp.Latitude)
-		lng := derefFloat(tp.Longitude)
-
-		if lat == 0 && lng == 0 {
-			continue
-		}
-
-		// Accumulate distance
-		if i > 0 && prevLat != 0 {
-			cumulativeDistM += haversineKm(prevLat, prevLng, lat, lng) * 1000.0
-		}
-		prevLat, prevLng = lat, lng
-
-		if share.IncludeMap {
-			resp.MapPoints = append(resp.MapPoints, publicMapPoint{Lat: lat, Lng: lng})
-		}
-
-		if tp.Elevation != nil {
-			resp.ElevationProfile = append(resp.ElevationProfile, publicElevationPoint{
-				DistanceM:  cumulativeDistM,
-				ElevationM: *tp.Elevation,
-			})
-		}
-
-		if share.IncludeSpeed && tp.Speed != nil {
-			resp.SpeedProfile = append(resp.SpeedProfile, publicSpeedPoint{
-				DistanceM: cumulativeDistM,
-				SpeedMps:  *tp.Speed * 0.44704,
-			})
-		}
-
-		if share.IncludeTelemetry {
-			resp.Telemetry = append(resp.Telemetry, publicTelemetryPoint{
-				DistanceM:    cumulativeDistM,
-				BatteryLevel: tp.BatteryLevel,
-				Power:        tp.Power,
-				Elevation:    tp.Elevation,
-			})
-		}
-	}
-}
-
 func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions []models.Position, share *models.ShareToken) {
 	n := len(positions)
 	if n <= clipPoints*2 {

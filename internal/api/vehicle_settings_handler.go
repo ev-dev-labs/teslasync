@@ -27,7 +27,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"time"
 
@@ -340,14 +339,3 @@ func MarshalVehicleSettingPayload(settings []database.EffectiveSetting) ([]byte,
 	return json.Marshal(vehicleSettingsListResponse{Settings: settings})
 }
 
-// drainBody is exported for tests that want to assert the handler
-// fully consumed the request body — defensive against pgx/pgbouncer
-// connection-leak patterns where an unread body keeps the stream
-// half-open.
-//nolint:unused // pre-existing func retained pending follow-up cleanup
-func drainBody(body io.Reader) {
-	if body == nil {
-		return
-	}
-	_, _ = io.Copy(io.Discard, body)
-}

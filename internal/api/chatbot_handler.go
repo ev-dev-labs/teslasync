@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -83,43 +82,6 @@ func (h *ChatbotHandler) vehicleLocationLine(ctx context.Context, vehicleID int6
 		return fmt.Sprintf("- **%s**: Location unknown", name), nil
 	}
 	return fmt.Sprintf("- **%s**: %.5f, %.5f", name, lat, lon), nil
-}
-
-// queryVehicleLocation answers "where is my car?" / "show me the location"
-// fleet-wide. For every vehicle owned by the user it derives the most
-// recent Latitude/Longitude pair via vehicleLocationLine (which itself
-// goes through signal.LiveStateReader) — never via a raw snapshot-table
-// lookup against `positions`, which would miss the last-known coordinates
-// for a vehicle that has been parked beyond the snapshot lookback window.
-//nolint:unused // pre-existing func retained pending follow-up cleanup
-func (h *ChatbotHandler) queryVehicleLocation(ctx context.Context) string {
-	if h.vehicleSvc == nil || h.live == nil {
-		return "I couldn't retrieve location info right now."
-	}
-	vehicles, err := h.vehicleSvc.VehicleRepo().GetAll(ctx)
-	if err != nil {
-		return "I couldn't retrieve location info right now."
-	}
-
-	var lines []string
-	for _, v := range vehicles {
-		if v == nil {
-			continue
-		}
-		name := v.DisplayName
-		if name == "" {
-			name = "Unknown"
-		}
-		line, err := h.vehicleLocationLine(ctx, v.ID, name)
-		if err != nil {
-			return "I couldn't retrieve location info right now."
-		}
-		lines = append(lines, line)
-	}
-	if len(lines) == 0 {
-		return "No vehicles found. Sync your fleet first."
-	}
-	return "**Vehicle Location:**\n" + strings.Join(lines, "\n")
 }
 
 // toFloat64 normalizes a signal.SignalValue (which is `any`) into a float64.

@@ -15,28 +15,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// checkWebhookTokenUniqueness verifies that no other automation uses the same
-// webhook_token. excludeID is the ID to skip (for updates); pass 0 for creates.
-//nolint:unused // pre-existing func retained pending follow-up cleanup
-func (h *AutomationHandler) checkWebhookTokenUniqueness(r *http.Request, config json.RawMessage, excludeID int64) error {
-	var cfg struct {
-		WebhookToken string `json:"webhook_token"`
-	}
-	if err := json.Unmarshal(config, &cfg); err != nil || cfg.WebhookToken == "" {
-		return nil // webhook token extraction not possible — skip check
-	}
-
-	existing, err := (*models.Automation)(nil), error(nil) // webhook token lookup removed in post-migration schema
-	if err != nil {
-		log.Warn().Err(err).Msg("webhook uniqueness check failed")
-		return nil // non-blocking: allow save on lookup failure
-	}
-	if existing != nil && existing.ID != excludeID {
-		return errWebhookTokenDuplicate
-	}
-	return nil
-}
-
 // ── Test Run ────────────────────────────────────────────────────────────
 
 // TestRun performs a dry-run of an automation: evaluates the trigger snapshot,
@@ -628,17 +606,6 @@ func validateActionConfig(cfg action.ActionConfig) error {
 	default:
 		return nil
 	}
-}
-
-//nolint:unused // pre-existing var retained pending follow-up cleanup
-var errWebhookTokenDuplicate = &duplicateTokenError{}
-
-//nolint:unused // pre-existing type retained pending follow-up cleanup
-type duplicateTokenError struct{}
-
-//nolint:unused // pre-existing func retained pending follow-up cleanup
-func (e *duplicateTokenError) Error() string {
-	return "webhook_token is already in use by another automation"
 }
 
 // scrubWebhookSecrets removes webhook token fields from shared exports.

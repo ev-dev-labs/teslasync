@@ -638,13 +638,6 @@ func ptrStringEq(a, b *string) bool {
 	}
 	return a == nil || *a == *b
 }
-//nolint:unused // pre-existing func retained pending follow-up cleanup
-func ptrInt64Eq(a, b *int64) bool {
-	if (a == nil) != (b == nil) {
-		return false
-	}
-	return a == nil || *a == *b
-}
 func ptrFloatEq(a, b *float64) bool {
 	if (a == nil) != (b == nil) {
 		return false

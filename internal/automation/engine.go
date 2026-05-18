@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"sync"
 	"time"
 
 	"github.com/rs/zerolog"
@@ -56,9 +55,6 @@ type PlaceProvider interface {
 //
 //	trigger fires → rate limit → loop detection → conditions → actions → history
 type Engine struct {
-	//nolint:unused // pre-existing field retained pending follow-up cleanup
-	mu sync.Mutex // serializes Evaluate per automation (lightweight guard)
-
 	automationRepo AutomationStore
 	historyRepo    HistoryStore
 	chainExecutor  *action.ChainExecutor

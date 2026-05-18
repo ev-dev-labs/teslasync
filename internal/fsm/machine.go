@@ -354,11 +354,6 @@ func (m *VehicleFSM) commit(ctx context.Context, vehicleID int64, tr Transition,
 	return nil
 }
 
-//nolint:unused // pre-existing func retained pending follow-up cleanup
-func (m *VehicleFSM) buildSignalContext(signals map[string]interface{}) *SignalContext {
-	return m.buildSignalContextAt(signals, time.Time{})
-}
-
 // buildSignalContextAt is the event-time-aware constructor. When
 // payloadTs is zero it falls back to wall-clock so non-pipeline
 // callers (HandleTimeout, HandleSignalReceived, tests) keep their
