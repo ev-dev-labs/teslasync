@@ -84,7 +84,7 @@ See [Remote Commands](/guide/remote-commands) for the full 65-endpoint reference
 ```mermaid
 sequenceDiagram
     participant UI as React AIFeatureCard
-    participant Route as /api/v1/ai/&lt;feature&gt;/run
+    participant Route as "/api/v1/ai/{feature}/run"
     participant Wrap as g.Wrap (feature toggle)
     participant Strat as Strategy
     participant Disp as Dispatcher
@@ -125,10 +125,10 @@ graph TB
     Routes --> Theme
     Routes --> AI
     Query --> Client[request API client]
-    Client --> API[/api/v1]
-    SSE --> Events[/api/v1/events]
-    AI --> AIAPI[/api/v1/ai/*]
-    PWA --> Assets[Static assets, fonts, map tiles]
+    Client --> API["/api/v1"]
+    SSE --> Events["/api/v1/events"]
+    AI --> AIAPI["/api/v1/ai/*"]
+    PWA --> Assets["Static assets, fonts, map tiles"]
 ```
 
 ## Database relationship sketch

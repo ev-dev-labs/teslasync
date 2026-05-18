@@ -1,100 +1,216 @@
 ---
-layout: home
-
-hero:
-  name: TeslaSync
-  text: Tesla fleet intelligence — with Helix AI built in
-  tagline: Self-hosted telemetry, analytics, automation, remote control, and an opt-in AI assistant for one car or a fleet. Runs entirely on your own infrastructure.
-  actions:
-    - theme: brand
-      text: Get Started
-      link: /guide/getting-started
-    - theme: alt
-      text: Helix AI
-      link: /guide/helix-ai
-    - theme: alt
-      text: Remote commands
-      link: /guide/remote-commands
-
-features:
-  - icon: 🧠
-    title: Helix AI
-    details: 54 opt-in user features — chatbot with tool-use, NL builders for alerts and dashboards, narratives, predictions, ML clustering, voice mode, and more. Off by default, audited per call, with PII redaction at the network edge.
-  - icon: 🎮
-    title: 65 remote commands
-    details: Every Tesla Fleet API command — wake, lock, climate, sentry, charging, schedules, valet, sunroof, sound system, navigation, software updates — routed through the Vehicle Command Proxy when signing is required.
-  - icon: 📡
-    title: Real-time telemetry
-    details: Tesla Fleet Telemetry gRPC streaming, MQTT publish/subscribe, SSE to browsers, two-layer signal store (in-process L1 + Redis L2), TimescaleDB hypertable for durable history.
-  - icon: 🚗
-    title: Fleet command center
-    details: Dashboard, live map with 6 tile layers, vehicle detail, command history, state-machine timeline, trip replay, 21 frontend feature areas across 69 pages.
-  - icon: 🔋
-    title: Battery & charging intelligence
-    details: Battery health with degradation projection, cell voltage spread, pack voltage / current, BMS, charging curve, cost analysis, 7×24 charging heatmap, Tesla billing history.
-  - icon: 📊
-    title: Analytics & diagnostics
-    details: True cost of ownership, sleep efficiency, temperature impact, weekly digest, year-in-review, projected range, fleet comparison. Plus a full diagnostics suite — live signal monitor, signal explorer, MQTT inspector, DB health.
-  - icon: 🔔
-    title: Alerts & automation
-    details: Alert Studio with visual rule builder, CEP rule engine with recursive condition trees and temporal sustain, 50+ templates, quiet hours, per-rule cooldown, multi-channel dispatch, automation builder.
-  - icon: 🛠️
-    title: Operations built in
-    details: Admin pages, API logs, API playground, Redis signal viewer, DB health dashboard, scheduled backups (Local / S3 / Azure / GCS), data repair, 25+ Tesla developer tools.
-  - icon: 🎨
-    title: Modern responsive UI
-    details: Glass panels, 5 dynamic themes × 4 display modes, command palette, PWA installable, mobile bottom tabs, SI canonical with units converted only at the render boundary.
+layout: page
+title: TeslaSync — Your fleet. Your data. Your AI.
 ---
 
-## What TeslaSync is
+<div class="ts-home">
 
-A self-hosted **Tesla Fleet Intelligence Platform**. A Go 1.25 backend, a
-React 18 SPA, TimescaleDB / PostgreSQL 17 storage, Redis, MQTT, Grafana,
-Prometheus, optional Tesla Fleet Telemetry streaming, and an optional AI
-layer called **Helix** — all bundled into a Docker Compose stack or a
-production-ready Helm chart.
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  HERO                                                    ║
+     ╚══════════════════════════════════════════════════════════╝ -->
 
-The platform is designed for owners and small fleets that want to keep
-Tesla data under their own control while still getting a polished dashboard,
-live state, long-term analytics, notifications, automation, deployment-friendly
-operations, and an AI assistant they can audit and turn off feature by feature.
+<section class="ts-tile ts-hero">
+  <div class="ts-hero-orb ts-hero-orb-1" aria-hidden="true"></div>
+  <div class="ts-hero-orb ts-hero-orb-2" aria-hidden="true"></div>
+  <div class="ts-tile-inner ts-center">
+    <p class="ts-eyebrow ts-fade" style="--d:0ms">TeslaSync</p>
+    <h1 class="ts-title">
+      <span class="ts-line ts-fade-up" style="--d:80ms">Your fleet.</span>
+      <span class="ts-line ts-fade-up" style="--d:200ms">Your data.</span>
+      <span class="ts-line ts-fade-up ts-shimmer" style="--d:320ms">Your AI.</span>
+    </h1>
+    <p class="ts-subtitle ts-fade" style="--d:480ms">A self-hosted Tesla intelligence platform with Helix AI built in. Stream every signal. Send any command. Audit every call.</p>
+    <p class="ts-cta-row ts-fade" style="--d:620ms">
+      <a class="ts-pill ts-pill-primary" href="/teslasync/guide/getting-started">Get started <span class="ts-chev">›</span></a>
+      <a class="ts-pill ts-pill-ghost" href="/teslasync/guide/helix-ai">Meet Helix AI <span class="ts-chev">›</span></a>
+    </p>
+    <ul class="ts-hero-kpis ts-fade" style="--d:780ms" aria-label="At a glance">
+      <li><span class="ts-hero-kpi-num" data-count="150" data-suffix="+">0</span><span class="ts-hero-kpi-label">signals tracked</span></li>
+      <li><span class="ts-hero-kpi-num" data-count="65">0</span><span class="ts-hero-kpi-label">remote commands</span></li>
+      <li><span class="ts-hero-kpi-num" data-count="54">0</span><span class="ts-hero-kpi-label">helix features</span></li>
+      <li><span class="ts-hero-kpi-num" data-count="100" data-suffix="%">0%</span><span class="ts-hero-kpi-label">audited &amp; self-hosted</span></li>
+    </ul>
+    <div class="ts-hero-preview ts-fade" style="--d:900ms" aria-hidden="true">
+      <div class="ts-hero-preview-chrome">
+        <span class="ts-hero-preview-dot"></span>
+        <span class="ts-hero-preview-dot"></span>
+        <span class="ts-hero-preview-dot"></span>
+        <span class="ts-hero-preview-url">teslasync.local / anomaly-detection</span>
+      </div>
+      <img src="/teslasync/screenshots/anomaly-detection.png" alt="" loading="eager" decoding="async" />
+    </div>
+  </div>
+  <div class="ts-hero-glow"></div>
+  <div class="ts-hero-cursor"></div>
+  <a class="ts-scroll-indicator" href="#helix" aria-label="Scroll down">
+    <span class="ts-scroll-mouse"><span class="ts-scroll-wheel"></span></span>
+  </a>
+</section>
 
-## Current architecture at a glance
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  HELIX AI                                                ║
+     ╚══════════════════════════════════════════════════════════╝ -->
 
-| Layer | Implementation |
-|---|---|
-| Backend | Go 1.25 · Chi v5 · pgx v5 · zerolog · Prometheus · OpenTelemetry · circuit breakers |
-| Frontend | React 18 · TypeScript · Vite 5 · TanStack Query 5 · Tailwind · Framer Motion · i18next |
-| Data | TimescaleDB / PostgreSQL 17 · pgvector · Redis 7 |
-| Streaming | Tesla Fleet Telemetry (gRPC) · MQTT · SSE · polling fallback |
-| Vehicle control | 65 command endpoints · optional Vehicle Command Proxy |
-| AI | **Helix** — 54 opt-in user features · pluggable provider chain (OpenAI · Azure OpenAI · Anthropic · Ollama) |
-| Deployment | Docker Compose (13 services) · Helm chart · Traefik IngressRoute · Authentik / ForwardAuth · PWA web container |
-| Observability | Prometheus `/metrics` · 28 Grafana dashboards · OpenTelemetry traces (Jaeger profile) |
+<section class="ts-tile ts-dark" id="helix">
+  <div class="ts-tile-inner ts-center">
+    <p class="ts-eyebrow ts-eyebrow-helix">Helix AI</p>
+    <h2 class="ts-title-xl">Your Tesla, now with<br/>intelligence.</h2>
+    <p class="ts-subtitle">54 opt-in features. Chatbot with tool use. Natural-language alerts. Anomaly explanations. Predictions. All on your hardware, or your cloud provider — your choice, your audit log.</p>
+    <p class="ts-cta-row">
+      <a class="ts-link" href="/teslasync/guide/helix-ai">Learn about Helix <span class="ts-chev">›</span></a>
+      <a class="ts-link" href="/teslasync/features/helix-ai">See all 54 features <span class="ts-chev">›</span></a>
+    </p>
+    <div class="ts-stat-row">
+      <div class="ts-stat"><span class="ts-stat-num" data-count="54">0</span><span class="ts-stat-label">user features</span></div>
+      <div class="ts-stat"><span class="ts-stat-num" data-count="4">0</span><span class="ts-stat-label">providers</span></div>
+      <div class="ts-stat"><span class="ts-stat-num" data-count="5">0</span><span class="ts-stat-label">layer decorator chain</span></div>
+      <div class="ts-stat"><span class="ts-stat-num" data-count="100" data-suffix="%">0%</span><span class="ts-stat-label">audited per call</span></div>
+    </div>
+  </div>
+</section>
 
-## Quick start
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  REMOTE COMMANDS                                         ║
+     ╚══════════════════════════════════════════════════════════╝ -->
 
-```bash
-git clone https://github.com/ev-dev-labs/teslasync.git
-cd teslasync
-cp .env.example .env
-# Edit .env with Tesla Developer credentials and deployment URLs
-docker compose up -d --build
-```
+<section class="ts-tile ts-mid">
+  <div class="ts-tile-inner ts-split">
+    <div class="ts-split-text">
+      <p class="ts-eyebrow">Remote commands</p>
+      <h2 class="ts-title-xl ts-grad-cmd">Sixty-five.<br/>Every endpoint.</h2>
+      <p class="ts-subtitle">Lock. Unlock. Climate. Sentry. Charge. Frunk. Trunk. Horn. Flash. Navigate. Schedule. Valet. Sunroof. Software updates. And fifty-one more — every command Tesla's Fleet API exposes, routed through the Vehicle Command Proxy when signing is required.</p>
+      <p class="ts-cta-row">
+        <a class="ts-link" href="/teslasync/guide/remote-commands">See all 65 commands <span class="ts-chev">›</span></a>
+        <a class="ts-link" href="/teslasync/guide/tesla-fleet-api">Tesla Fleet API setup <span class="ts-chev">›</span></a>
+      </p>
+    </div>
+    <div class="ts-split-visual">
+      <img src="/teslasync/screenshots/vehicles.png" alt="TeslaSync vehicles page" loading="lazy" />
+    </div>
+  </div>
+  <div class="ts-marquee" aria-hidden="true">
+    <div class="ts-marquee-track">
+      <span>Lock</span><span>·</span><span>Unlock</span><span>·</span><span>Climate</span><span>·</span><span>Sentry</span><span>·</span><span>Charge start</span><span>·</span><span>Charge stop</span><span>·</span><span>Charge limit</span><span>·</span><span>Charge amps</span><span>·</span><span>Frunk</span><span>·</span><span>Trunk</span><span>·</span><span>Horn</span><span>·</span><span>Flash lights</span><span>·</span><span>Navigate</span><span>·</span><span>Schedule charge</span><span>·</span><span>Valet</span><span>·</span><span>Sunroof</span><span>·</span><span>Window vent</span><span>·</span><span>Defrost</span><span>·</span><span>Seat heater</span><span>·</span><span>Steering heater</span><span>·</span><span>Sentry clip</span><span>·</span><span>Software update</span><span>·</span><span>Remote start</span><span>·</span><span>Speed limit</span><span>·</span><span>Media play</span><span>·</span><span>Media volume</span><span>·</span><span>Homelink</span><span>·</span>
+      <span>Lock</span><span>·</span><span>Unlock</span><span>·</span><span>Climate</span><span>·</span><span>Sentry</span><span>·</span><span>Charge start</span><span>·</span><span>Charge stop</span><span>·</span><span>Charge limit</span><span>·</span><span>Charge amps</span><span>·</span><span>Frunk</span><span>·</span><span>Trunk</span><span>·</span><span>Horn</span><span>·</span><span>Flash lights</span><span>·</span><span>Navigate</span><span>·</span><span>Schedule charge</span><span>·</span><span>Valet</span><span>·</span><span>Sunroof</span><span>·</span><span>Window vent</span><span>·</span><span>Defrost</span><span>·</span><span>Seat heater</span><span>·</span><span>Steering heater</span><span>·</span><span>Sentry clip</span><span>·</span><span>Software update</span><span>·</span><span>Remote start</span><span>·</span><span>Speed limit</span><span>·</span><span>Media play</span><span>·</span><span>Media volume</span><span>·</span><span>Homelink</span><span>·</span>
+    </div>
+  </div>
+</section>
 
-Open the web UI at `http://localhost:3000`. The API listens on
-`http://localhost:8080`, Grafana on `http://localhost:3001`, Prometheus on
-`http://localhost:9099`. With the `tracing` profile, Jaeger is at
-`http://localhost:16686`.
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  REAL-TIME TELEMETRY                                     ║
+     ╚══════════════════════════════════════════════════════════╝ -->
 
-Continue to [Getting Started](/guide/getting-started) for Tesla Developer
-registration and partner-key flow.
+<section class="ts-tile ts-dark">
+  <div class="ts-tile-inner ts-center">
+    <p class="ts-eyebrow">Live telemetry</p>
+    <h2 class="ts-title-xl ts-grad-tel">Real-time. Real signals.<br/>Real history.</h2>
+    <p class="ts-subtitle">Tesla Fleet Telemetry gRPC stream → MQTT fan-out → in-process L1 → Redis L2 → SSE to the browser. A TimescaleDB hypertable holds every signal forever, and Helix watches the live stream — anomaly detection across battery, charging, HVAC, motors, and tires, with plain-language explanations of what changed and why.</p>
+    <div class="ts-screenshot-wide">
+      <img src="/teslasync/screenshots/anomaly-detection.png" alt="TeslaSync anomaly detection page with per-system health and Helix explanations" loading="lazy" />
+    </div>
+    <p class="ts-cta-row">
+      <a class="ts-link" href="/teslasync/guide/fleet-telemetry">Fleet Telemetry setup <span class="ts-chev">›</span></a>
+      <a class="ts-link" href="/teslasync/guide/architecture">Architecture <span class="ts-chev">›</span></a>
+    </p>
+  </div>
+</section>
 
-## Where to next
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  CHARGING + ENERGY                                       ║
+     ╚══════════════════════════════════════════════════════════╝ -->
 
-- 🧠 **[Helix AI](/guide/helix-ai)** — features, providers, safety model
-- 🎮 **[Remote commands](/guide/remote-commands)** — the full 65-endpoint reference
-- 🏛 **[Architecture](/guide/architecture)** — services, data flow, schema
-- ⚙ **[Configuration](/guide/configuration)** — every environment variable
-- 📡 **[Fleet Telemetry](/guide/fleet-telemetry)** — gRPC streaming setup
-- 🐳 **[Docker deployment](/deployment/docker)** · ☸ **[Kubernetes](/deployment/kubernetes)**
+<section class="ts-tile ts-mid">
+  <div class="ts-tile-inner ts-split ts-split-reverse">
+    <div class="ts-split-text">
+      <p class="ts-eyebrow">Charging &amp; energy</p>
+      <h2 class="ts-title-xl ts-grad-energy">Knows everything<br/>about your car.</h2>
+      <p class="ts-subtitle">Battery health with degradation projection. Cell-voltage spread. Pack voltage and current. BMS state. Charging curve. Cost analysis. 7×24 charging heatmap. Tesla billing history. Year-in-review. Sleep efficiency. Temperature impact on range.</p>
+      <p class="ts-cta-row">
+        <a class="ts-link" href="/teslasync/features/analytics">Analytics &amp; charts <span class="ts-chev">›</span></a>
+        <a class="ts-link" href="/teslasync/features/vehicle-tracking">Vehicle tracking <span class="ts-chev">›</span></a>
+      </p>
+    </div>
+    <div class="ts-split-visual">
+      <img src="/teslasync/screenshots/charging.png" alt="TeslaSync charging analytics" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  ALERT STUDIO                                            ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+
+<section class="ts-tile ts-dark">
+  <div class="ts-tile-inner ts-split">
+    <div class="ts-split-text">
+      <p class="ts-eyebrow">Alert Studio</p>
+      <h2 class="ts-title-xl ts-grad-alert">Type a sentence.<br/>Get a rule.</h2>
+      <p class="ts-subtitle">Natural-language alert builder powered by Helix. Visual rule editor. CEP engine with recursive condition trees and temporal sustain. Fifty-plus templates. Quiet hours. Per-rule cooldown. Multi-channel dispatch — webhooks, MQTT, push, email.</p>
+      <p class="ts-cta-row">
+        <a class="ts-link" href="/teslasync/features/alerts">See Alert Studio <span class="ts-chev">›</span></a>
+      </p>
+    </div>
+    <div class="ts-split-visual">
+      <img src="/teslasync/screenshots/alert-studio.png" alt="TeslaSync Alert Studio" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  SELF-HOSTED                                             ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+
+<section class="ts-tile ts-deep">
+  <div class="ts-tile-inner ts-center">
+    <p class="ts-eyebrow">Self-hosted</p>
+    <h2 class="ts-title-xl">Yours, entirely.</h2>
+    <p class="ts-subtitle">Docker Compose for a single laptop. Helm chart for production Kubernetes. Your hardware. Your encryption keys. Your audit log. Your data never leaves the network you control unless you explicitly point Helix at a cloud provider.</p>
+    <p class="ts-cta-row">
+      <a class="ts-pill ts-pill-primary" href="/teslasync/deployment/docker">Docker <span class="ts-chev">›</span></a>
+      <a class="ts-pill ts-pill-ghost" href="/teslasync/deployment/kubernetes">Kubernetes <span class="ts-chev">›</span></a>
+    </p>
+    <div class="ts-stat-row">
+      <div class="ts-stat"><span class="ts-stat-num" data-count="13">0</span><span class="ts-stat-label">docker services</span></div>
+      <div class="ts-stat"><span class="ts-stat-num" data-count="46">0</span><span class="ts-stat-label">helm values to tune</span></div>
+      <div class="ts-stat"><span class="ts-stat-num" data-count="70">0</span><span class="ts-stat-label">grafana dashboards</span></div>
+      <div class="ts-stat"><span class="ts-stat-num" data-count="0">0</span><span class="ts-stat-label">data leaves your network</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  TECH STACK STRIP                                        ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+
+<section class="ts-tile ts-mid ts-stack-tile">
+  <div class="ts-tile-inner">
+    <p class="ts-eyebrow ts-center-text">Built on</p>
+    <div class="ts-stack-grid">
+      <div class="ts-stack-cell"><span class="ts-stack-name">Go</span><span class="ts-stack-meta">1.25 · Chi v5 · pgx v5</span></div>
+      <div class="ts-stack-cell"><span class="ts-stack-name">React</span><span class="ts-stack-meta">18 · Vite 5 · TanStack Query 5</span></div>
+      <div class="ts-stack-cell"><span class="ts-stack-name">TimescaleDB</span><span class="ts-stack-meta">Postgres 17 · pgvector</span></div>
+      <div class="ts-stack-cell"><span class="ts-stack-name">Redis</span><span class="ts-stack-meta">L2 cache · Pub/Sub · rate limit</span></div>
+      <div class="ts-stack-cell"><span class="ts-stack-name">MQTT</span><span class="ts-stack-meta">Mosquitto · typed topics</span></div>
+      <div class="ts-stack-cell"><span class="ts-stack-name">Helix AI</span><span class="ts-stack-meta">Ollama · OpenAI · Azure · Anthropic</span></div>
+      <div class="ts-stack-cell"><span class="ts-stack-name">Prometheus</span><span class="ts-stack-meta">28 Grafana dashboards</span></div>
+      <div class="ts-stack-cell"><span class="ts-stack-name">OpenTelemetry</span><span class="ts-stack-meta">OTLP gRPC · Jaeger</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ╔══════════════════════════════════════════════════════════╗
+     ║  FOOTER CTA                                              ║
+     ╚══════════════════════════════════════════════════════════╝ -->
+
+<section class="ts-tile ts-hero ts-footer-tile">
+  <div class="ts-tile-inner ts-center">
+    <h2 class="ts-title">Ready when you are.</h2>
+    <p class="ts-subtitle">Fifteen minutes from <code>git clone</code> to your fleet on the dashboard.</p>
+    <p class="ts-cta-row">
+      <a class="ts-pill ts-pill-primary" href="/teslasync/guide/getting-started">Get started <span class="ts-chev">›</span></a>
+      <a class="ts-pill ts-pill-ghost" href="https://github.com/ev-dev-labs/teslasync">View on GitHub <span class="ts-chev">›</span></a>
+    </p>
+  </div>
+</section>
+
+</div>

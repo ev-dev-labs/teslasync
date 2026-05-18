@@ -42,7 +42,7 @@ graph TB
     Broker --> API[teslasync-api telemetry subscriber]
     TeslaAPI[Tesla Fleet API polling] --> API
     API --> SignalStore[L1 in-process signal.Store]
-    API --> Redis[L2 Redis vehicle:{id}:signals]
+    API --> Redis["L2 Redis vehicle:{id}:signals"]
     Redis --> Pubsub[Pub/Sub fanout]
     API --> SignalLog[(signal_log hypertable)]
     API --> Sessions[(drives, charging_sessions)]

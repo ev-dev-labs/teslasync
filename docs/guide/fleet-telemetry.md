@@ -19,7 +19,7 @@ graph LR
     FT -->|"MQTT publish"| MQ["Mosquitto"]
     MQ -->|"subscribe"| TS["teslasync-api"]
     TS -->|"L1 write"| Live[(signal.Store)]
-    TS -->|"L2 mirror"| Redis[(Redis vehicle:{id}:signals)]
+    TS -->|"L2 mirror"| Redis[("Redis vehicle:{id}:signals")]
     TS -->|"append"| History[(signal_log hypertable)]
     TS -->|"broadcast"| SSE["SSE hub"]
     SSE --> UI["React live pages"]
