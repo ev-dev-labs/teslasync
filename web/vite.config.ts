@@ -138,6 +138,14 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
+    // Default is 5000ms. CI runners (especially shared / cgroup-throttled
+    // self-hosted ones) routinely starve vitest workers enough that 5s
+    // is below the noise floor for tests that mount QueryClient + Router
+    // + lazy-loaded chart components. 30s is generous enough to absorb
+    // CI jitter while still catching genuinely runaway tests. Locally
+    // the suite still completes in ~80s.
+    testTimeout: 30000,
+    hookTimeout: 30000,
     coverage: {
       reporter: ['text', 'lcov', 'html', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],

@@ -180,7 +180,13 @@ jobs:
 
   frontend:
     name: Frontend (lint + test + build)
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    # Pinned to ubuntu-latest to match the Backend job: the arc-runner is
+    # too resource-starved for vitest's default 5s testTimeout (45+ tests
+    # routinely time out under load even though the same suite finishes
+    # in ~80s locally and on ubuntu-latest). Re-pin to arc-runner once
+    # the runner image has the bandwidth budget for jsdom + chart-heavy
+    # component trees.
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: web

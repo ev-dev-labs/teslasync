@@ -116,6 +116,23 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
   globalThis.IntersectionObserver = MockIntersectionObserver as any
 }
 
+// Polyfill ResizeObserver for jsdom (used by Recharts ResponsiveContainer,
+// react-grid-layout, and a handful of our own chart wrappers). Individual
+// test files used to install ad-hoc `vi.stubGlobal('ResizeObserver', …)`,
+// but as soon as a non-stubbing test imports a chart/grid component
+// transitively, jsdom throws `ReferenceError: ResizeObserver is not
+// defined`. Installing it globally here matches what we do for
+// IntersectionObserver and EventSource and removes the per-test boilerplate.
+class MockResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = MockResizeObserver as any
+}
+
 // Mock EventSource for SSE tests (not available in jsdom)
 global.EventSource = class EventSource {
   static CONNECTING = 0
