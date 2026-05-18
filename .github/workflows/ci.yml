@@ -55,7 +55,44 @@ jobs:
           DATABASE_USER: test
           DATABASE_PASS: test
           DATABASE_NAME: teslasync_test
-        run: go test -race -coverprofile=coverage.out ./...
+        run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Generate backend coverage reports
+        if: always() && hashFiles('coverage.out') != ''
+        run: |
+          go tool cover -func=coverage.out > coverage.txt
+          go tool cover -html=coverage.out -o coverage.html
+          # Per-package roll-up (statement coverage averaged across the package's funcs)
+          awk '
+            /^total:/ { next }
+            {
+              n = split($1, parts, "/")
+              file = parts[n]; sub(/:.*$/, "", file)
+              pkg = parts[1]
+              for (i = 2; i < n; i++) pkg = pkg "/" parts[i]
+              gsub("%", "", $3)
+              sum[pkg] += $3
+              cnt[pkg]++
+            }
+            END {
+              for (p in sum) printf "%6.2f%%  %s\n", sum[p]/cnt[p], p
+            }
+          ' coverage.txt | sort -nr > coverage-by-package.txt
+          TOTAL_LINE=$(grep '^total:' coverage.txt || echo "total: (statements) 0.0%")
+          {
+            echo "## 📊 Backend Coverage"
+            echo ""
+            echo "**$TOTAL_LINE**"
+            echo ""
+            echo "Full HTML + per-function reports are attached to this run as the **backend-coverage** artifact."
+            echo ""
+            echo "<details><summary>Per-package coverage (top 50)</summary>"
+            echo ""
+            echo '```'
+            head -n 50 coverage-by-package.txt
+            echo '```'
+            echo "</details>"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Architecture test (no forbidden import edges)
         run: |
@@ -91,10 +128,15 @@ jobs:
           CGO_ENABLED=0 go build -ldflags="-s -w" -o export-worker ./cmd/export-worker
 
       - name: Upload coverage
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: coverage
-          path: coverage.out
+          name: backend-coverage
+          path: |
+            coverage.out
+            coverage.html
+            coverage.txt
+            coverage-by-package.txt
 
   frontend:
     name: Frontend (lint + test + build)
@@ -115,7 +157,37 @@ jobs:
       - name: Lint
         run: npm run lint
       - name: Test
-        run: npx vitest run --reporter=verbose
+        run: npx vitest run --coverage --reporter=verbose
+
+      - name: Generate frontend coverage report
+        if: always() && hashFiles('web/coverage/coverage-summary.json') != ''
+        run: |
+          node -e '
+            const fs = require("fs");
+            const path = "coverage/coverage-summary.json";
+            if (!fs.existsSync(path)) { process.exit(0); }
+            const t = JSON.parse(fs.readFileSync(path, "utf8")).total;
+            const out = [];
+            out.push("## 📊 Frontend Coverage");
+            out.push("");
+            out.push("| Metric | Covered | Total | % |");
+            out.push("|--------|--------:|------:|--:|");
+            for (const k of ["statements","branches","functions","lines"]) {
+              const m = t[k];
+              out.push(`| ${k} | ${m.covered} | ${m.total} | ${m.pct}% |`);
+            }
+            out.push("");
+            out.push("Browsable HTML report attached as the **frontend-coverage** artifact (open `coverage/index.html`).");
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, out.join("\n") + "\n");
+          '
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: web/coverage/
+
       - name: Build
         run: npm run build
 

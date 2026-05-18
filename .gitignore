@@ -22,6 +22,8 @@ vendor/
 coverage/
 coverage.out
 coverage.html
+coverage.txt
+coverage-by-package.txt
 
 # Node
 node_modules/
@@ -58,6 +60,9 @@ docs/.vitepress/dist/
 test-results/
 coverage.out
 coverage.html
+coverage.txt
+coverage-by-package.txt
+web/coverage/
 *.test.log
 
 PROMPT_COMMANDS.txt
