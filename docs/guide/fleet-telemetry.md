@@ -1,19 +1,15 @@
 # Fleet Telemetry
 
-Fleet Telemetry is TeslaSync's preferred high-frequency data path. It streams vehicle signals instead of relying only on Fleet API polling, then feeds the same live-state, analytics, alerting, and UI systems.
+Tesla Fleet Telemetry is TeslaSync's preferred high-frequency data path. It streams vehicle signals over WSS into a Tesla-provided server, which republishes them through MQTT for TeslaSync to ingest. It supplements rather than replaces Tesla Fleet API polling.
 
 ## Why use it
 
-| Capability | Polling | Fleet Telemetry |
-|---|---|---|
-| Latency | Poll interval dependent | Near real-time while the vehicle streams |
-| API usage | Higher | Lower for state changes |
-| Vehicle wake behavior | Can require wake/refresh calls | Streams when the vehicle is online and configured |
-| Setup | Simple | Requires public TLS endpoint and Tesla telemetry setup |
-
-::: warning
-Do not document exact Tesla billing savings unless you have current billing data for your account. Costs and product terms can change.
-:::
+| Capability             | Polling                       | Fleet Telemetry                                |
+| ---------------------- | ----------------------------- | ---------------------------------------------- |
+| Latency                | Poll-interval bound           | Near real-time while the vehicle streams       |
+| API usage              | Higher                        | Lower for state changes                        |
+| Vehicle wake behaviour | May require wake/refresh      | Streams when the vehicle is online + configured|
+| Setup                  | Simple                        | Requires public TLS endpoint + Tesla setup     |
 
 ## Architecture
 
@@ -21,11 +17,11 @@ Do not document exact Tesla billing savings unless you have current billing data
 graph LR
     V["🚗 Tesla Vehicle"] -->|"wss:// telemetry"| FT["Fleet Telemetry Server"]
     FT -->|"MQTT publish"| MQ["Mosquitto"]
-    MQ -->|"subscribe"| TS["TeslaSync API"]
-    TS -->|"update L1"| Live[(SignalStore)]
-    TS -->|"mirror L2"| Redis[(Redis)]
-    TS -->|"append"| History[(signal_log / telemetry history)]
-    TS -->|"broadcast"| SSE["SSE Hub"]
+    MQ -->|"subscribe"| TS["teslasync-api"]
+    TS -->|"L1 write"| Live[(signal.Store)]
+    TS -->|"L2 mirror"| Redis[("Redis vehicle:{id}:signals")]
+    TS -->|"append"| History[(signal_log hypertable)]
+    TS -->|"broadcast"| SSE["SSE hub"]
     SSE --> UI["React live pages"]
 
     style V fill:#1a1a2e,stroke:#00f0ff,color:#e4e4ef
@@ -41,31 +37,31 @@ graph LR
 ```mermaid
 sequenceDiagram
     participant FT as Fleet Telemetry
-    participant MQTT as MQTT
-    participant API as TeslaSync API
-    participant Store as SignalStore
-    participant Redis as Redis
-    participant DB as Database
+    participant MQTT as Mosquitto
+    participant API as teslasync-api
+    participant L1 as signal.Store (L1)
+    participant L2 as Redis (L2)
+    participant DB as TimescaleDB
     participant UI as Browser
 
     FT->>MQTT: Publish signal batch
     MQTT->>API: Deliver message
-    API->>API: Normalize identifiers and units
-    API->>Store: Update current in-memory state
-    API->>Redis: Mirror live signals and publish fanout
-    API->>DB: Flush live state and historical records
-    API-->>UI: Send SSE update
+    API->>API: Decode + normalise to SI
+    API->>L1: Write-through (FSM, typed rules, sessions)
+    API->>L2: Mirror + Pub/Sub fanout
+    API->>DB: Flush live state + append signal_log
+    API-->>UI: SSE delta
 ```
 
 ## Required production pieces
 
-| Requirement | Notes |
-|---|---|
-| Tesla Developer account | Fleet Telemetry access must be available for your app/account. |
-| Public HTTPS/WSS endpoint | Vehicles require a publicly trusted TLS certificate. |
-| Tesla public key URL | Serve `/.well-known/appspecific/com.tesla.3p.public-key.pem`. |
-| MQTT broker | Compose and Helm include Mosquitto by default. |
-| API config | Set Fleet Telemetry env/Helm values and confirm stale fallback intervals. |
+| Requirement                  | Notes                                                                              |
+| ---------------------------- | ---------------------------------------------------------------------------------- |
+| Tesla Developer account      | Fleet Telemetry must be enabled on your app / account                              |
+| Public HTTPS/WSS endpoint    | Vehicles require a publicly trusted TLS certificate                                |
+| Tesla public-key URL         | Serve `/.well-known/appspecific/com.tesla.3p.public-key.pem` unauthenticated       |
+| MQTT broker                  | Compose and Helm include Mosquitto by default                                      |
+| API config                   | Set `FLEET_TELEMETRY_*` envs (see [Configuration](/guide/configuration))           |
 
 ## Docker Compose
 
@@ -75,11 +71,11 @@ Fleet Telemetry is optional and runs under the `telemetry` profile:
 docker compose --profile telemetry up -d --build
 ```
 
-Configure the public host, TLS certificates, topic base, and Tesla Developer settings in `.env` and the Fleet Telemetry config file before enabling it.
+Configure the public host, TLS certificates, topic base, and Tesla Developer settings in `.env` and `fleet-telemetry/config.json` before enabling it.
 
 ## Kubernetes
 
-Use Helm values for Fleet Telemetry and ingress/TLS. The web route must allow `/.well-known` without the normal app auth middleware so Tesla can fetch the public key.
+Use Helm values for Fleet Telemetry and the ingress/TLS. The web route must allow `/.well-known` without app auth so Tesla can fetch the public key.
 
 ```yaml
 fleetTelemetry:
@@ -92,21 +88,32 @@ config:
   apiEndpoint: "http://teslasync-api.teslasync.svc.cluster.local:8080"
 ```
 
-Check `helm/teslasync/values.yaml` for TLS, resource, and external Fleet Telemetry options before applying.
+Check `helm/teslasync/values.yaml` for TLS, resources, and external Fleet Telemetry options before applying.
 
-## Public key verification
+## Public-key verification
 
 ```bash
 curl https://your-domain/.well-known/appspecific/com.tesla.3p.public-key.pem
 ```
 
-The response should be a PEM public key. Keep the private key secret.
+The response must be a PEM public key, served unauthenticated. Keep the private key secret.
+
+## Diagnostics
+
+The platform exposes Tesla's Fleet Telemetry errors directly:
+
+| Endpoint                                              | Purpose                                |
+| ----------------------------------------------------- | -------------------------------------- |
+| `GET /api/v1/tesla/fleet-telemetry/errors`            | Recent stream errors per vehicle       |
+| `GET /api/v1/tesla/fleet-telemetry/error-vins`        | VINs currently reporting telemetry errors |
+
+The web UI surfaces these in **System → Telemetry pipeline** and on the per-vehicle diagnostics page.
 
 ## Troubleshooting
 
-| Symptom | Check |
-|---|---|
-| Tesla cannot verify domain | `/.well-known` route bypasses app auth and returns the public key. |
-| No telemetry arrives | MQTT broker is reachable, topic base matches config, and Fleet Telemetry server logs show vehicle connections. |
-| Live UI stale | SignalStore L1 and Redis L2 are updating, `signal_log` append is healthy, and the SSE connection is not blocked by auth/CORS. |
-| Polling still active | This is expected for setup, refresh, commands, and stale telemetry fallback. |
+| Symptom                       | Check                                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| Tesla cannot verify domain    | `/.well-known` route bypasses app auth and returns the PEM key                 |
+| No telemetry arrives          | Mosquitto reachable, topic base matches config, Fleet Telemetry server logs    |
+| Live UI stale                 | L1 store updating, Redis L2 mirroring, `signal_log` appending, SSE connected    |
+| Polling still active          | Expected for setup, refresh, commands, and stale-stream fallback               |

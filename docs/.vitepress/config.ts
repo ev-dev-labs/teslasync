@@ -8,6 +8,23 @@ export default withMermaid(defineConfig({
 
   ignoreDeadLinks: true,
 
+  srcExclude: [
+    'A11Y_GUIDELINES.md',
+    'FORM_GUIDELINES.md',
+    'I18N_GUIDELINES.md',
+    'ICON_GUIDELINES.md',
+    'MOBILE_GUIDELINES.md',
+    'TABLE_GUIDELINES.md',
+    'URL_STATE_GUIDELINES.md',
+    'audits/**',
+    'runbooks/**',
+    'signal-audits/**',
+    'observability/**',
+    'architecture/**',
+    'user/**',
+    'upgrade-notes-*.md',
+  ],
+
   head: [
     ['link', { rel: 'icon', type: 'image/svg+xml', href: '/teslasync/logo.svg' }],
     ['meta', { name: 'theme-color', content: '#00f0ff' }],
@@ -34,6 +51,7 @@ export default withMermaid(defineConfig({
           text: 'Guide',
           items: [
             { text: 'Getting Started', link: '/guide/getting-started' },
+            { text: 'Tesla Fleet API Setup', link: '/guide/tesla-fleet-api' },
             { text: 'Configuration', link: '/guide/configuration' },
             { text: 'Local Development', link: '/guide/local-development' },
             { text: 'Architecture', link: '/guide/architecture' },
@@ -43,6 +61,8 @@ export default withMermaid(defineConfig({
             { text: 'Database Schema', link: '/guide/database' },
             { text: 'Technology Stack', link: '/guide/technology' },
             { text: 'Fleet Telemetry', link: '/guide/fleet-telemetry' },
+            { text: 'Helix AI', link: '/guide/helix-ai' },
+            { text: 'Remote Commands', link: '/guide/remote-commands' },
             { text: 'Troubleshooting', link: '/guide/troubleshooting' },
             { text: 'Printing pages', link: '/guide/printing' },
             { text: 'FAQ', link: '/guide/faq' },
@@ -66,7 +86,9 @@ export default withMermaid(defineConfig({
           items: [
             { text: 'Dashboard', link: '/features/dashboard' },
             { text: 'Vehicle Tracking', link: '/features/vehicle-tracking' },
+            { text: 'Helix AI', link: '/features/helix-ai' },
             { text: 'Alerts & Notifications', link: '/features/alerts' },
+            { text: 'Automations', link: '/features/automations' },
             { text: 'Data Export', link: '/features/data-export' },
             { text: 'Analytics & Charts', link: '/features/analytics' },
             { text: 'Backup & Restore', link: '/features/backup-restore' },

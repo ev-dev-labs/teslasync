@@ -1,50 +1,39 @@
 # API Reference
 
-This page is a compact reference for the public HTTP surface. The source of truth is `internal/api/router.go`; frontend hooks live under `web/src/api/hooks/` and call paths without the `/api/v1` prefix because the request client adds it.
+The HTTP API has two flavours of reference depending on who you are.
 
-## Base paths
+## If you're using TeslaSync
 
-| Path | Purpose | Auth |
-|---|---|---|
-| `/healthz` | Liveness probe | Public |
-| `/readyz` | Dependency readiness probe | Public |
-| `/metrics` | Prometheus metrics | Usually internal only |
-| `/internal/flush` | Kubernetes PreStop flush hook | Internal only |
-| `/api/v1/*` | Main API | ForwardAuth/header protected when configured |
-| `/api/v1/share/{token}` | Public shared drive report | Token + rate limit |
-| `/api/v1/automations/webhook/{token}` | Public automation webhook trigger | Token + rate limit |
+→ Go to [Guide → API Endpoints](/guide/api-endpoints).
 
-## Main resource groups
+That page lists every endpoint the platform exposes, grouped by resource, with examples. It's the document you want if you're integrating something else against the TeslaSync API or troubleshooting a request the frontend made.
 
-| Group | Examples |
-|---|---|
-| Auth | `/auth/login`, `/auth/url`, `/auth/callback`, `/auth/status`, `/auth/refresh`, `/auth/disconnect` |
-| Vehicles | `/vehicles`, `/vehicles/{vehicle_id}`, `/vehicles/{vehicle_id}/state`, `/wake`, `/command`, `/drivers`, `/invitations`, `/guard` |
-| Drives | `/drives`, `/drives/stats`, `/drives/score`, `/drives/dynamics`, `/drives/{drive_id}/positions`, `/drives/{drive_id}/telemetry` |
-| Charging | `/charging`, `/charging/{session_id}`, `/charging/{session_id}/telemetry`, `/tesla/charging/history`, `/tesla/charging/sessions` |
-| Battery and energy | `/vehicles/{vehicle_id}/battery`, `/battery/cells`, `/battery/projected-range`, `/energy/flow`, `/tesla/energy-sites` |
-| Analytics | `/analytics/fleet`, `/analytics/tco`, `/analytics/sleep`, `/analytics/regen`, `/analytics/battery-degradation`, `/analytics/route-efficiency` |
-| Maps and location | `/geofences`, `/locations`, `/trips`, drive positions, geofence events |
-| Alerts and notifications | `/alerts`, `/alerts/rules`, `/notifications`, `/notifications/logs`, `/notifications/stats` |
-| Automations | `/automations`, `/automations/events`, `/automations/webhook/{token}` |
-| Admin and ops | `/system/status`, `/system/health`, `/system/version`, `/api-logs`, `/exports`, `/backup` |
-| Telemetry diagnostics | `/signals/history`, `/signals/available`, `/signals/stats`, `/signals/{vehicle_id}/available`, `/signals/{vehicle_id}/live`, `/signals/{vehicle_id}/{signal_name}/history` |
+## If you're building TeslaSync
 
-## Request conventions
+→ Go to [Contributing → API Reference](/contributing/api-reference).
 
-- Use snake_case query parameters: `vehicle_id`, `drive_id`, `start_date`, `end_date`.
-- Do not include `/api/v1` inside frontend hook URLs; `request()` prepends it.
-- List endpoints use `limit` and `offset` where pagination is supported.
-- Write endpoints are rate-limited, especially auth, refresh, vehicle commands, Tesla refreshes, and public webhooks.
-- Production deployments should expose `/api` through the web/Nginx route or an authenticated ingress route, never as an unauthenticated public API service.
+That page covers the conventions every endpoint follows, the layering rules, the Helix AI route-wrapping contract, the per-endpoint review checklist, and the end-to-end pattern for adding a new resource. It's the document you want if you're writing code that adds, changes, or refactors API routes.
 
-## Example requests
+## Quick fact sheet
 
-```bash
-curl https://teslasync.example.com/api/v1/vehicles
-curl "https://teslasync.example.com/api/v1/drives?vehicle_id=1&limit=50"
-curl https://teslasync.example.com/api/v1/vehicles/1/state
-curl -X POST https://teslasync.example.com/api/v1/vehicles/1/wake
-```
+| Thing                          | Value                                                      |
+| ------------------------------ | ---------------------------------------------------------- |
+| Base path                      | `/api/v1`                                                  |
+| Default port                   | `8080`                                                     |
+| Auth model                     | Forward-auth header (`FORWARD_AUTH_HEADER`, default `X-Forwarded-User`) |
+| Time format                    | RFC3339 (`time.RFC3339Nano` from Go)                       |
+| Numeric units                  | SI everywhere (meters, m/s, °C, Pa, kWh stored as Joules)  |
+| Path / query param case        | snake_case                                                 |
+| List response shape            | `{ "<resource>": [ … ] }`                                  |
+| Error response shape           | `{ "error": "...", "code": "..." }`                        |
+| Tesla command endpoints        | 65 unique across 17 categories — see [Remote Commands](/guide/remote-commands) |
+| Helix AI endpoints             | 54 user-facing features, wrapped with off-by-default — see [Helix AI](/guide/helix-ai) |
+| Live updates                   | SSE at `/api/v1/events` with adaptive polling fallback     |
+| Health / readiness             | `/healthz`, `/readyz` (no auth)                            |
 
-See [Detailed API Endpoints](/guide/api-endpoints) for the route tree and [Contributing API Reference](/contributing/api-reference) for hook patterns.
+## Where else to look
+
+- [Architecture](/guide/architecture) for the runtime view of how requests flow through the stack
+- [Configuration](/guide/configuration) for every environment variable that affects the API
+- [Caching](/caching) for the L1 / L2 / TanStack / service-worker layering that wraps the API
+- [Troubleshooting](/guide/troubleshooting) for what to do when a request misbehaves

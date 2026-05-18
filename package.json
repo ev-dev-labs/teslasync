@@ -1,0 +1,12 @@
+{
+  "name": "teslasync-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Repo-root helper scripts (docs screenshots, etc.) — see scripts/.",
+  "scripts": {
+    "screenshots": "node scripts/screenshots.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.48.0"
+  }
+}

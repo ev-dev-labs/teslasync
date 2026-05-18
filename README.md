@@ -5,639 +5,440 @@
 <h1 align="center">TeslaSync</h1>
 
 <p align="center">
-  <strong>Tesla Fleet Intelligence Platform</strong><br>
-  Self-hosted real-time monitoring, advanced analytics, and remote control for your Tesla vehicles.
+  <strong>Self-hosted Tesla fleet intelligence — with Helix AI built in.</strong><br>
+  Telemetry, analytics, automation, remote control, and an opt-in AI assistant for one car or a fleet — all on infrastructure you control.
 </p>
 
 <p align="center">
-  <a href="#features">Features</a> •
-  <a href="#quick-start">Quick Start</a> •
+  <a href="#what-it-does">What it does</a> •
+  <a href="#helix-ai">Helix AI</a> •
+  <a href="#remote-vehicle-control">Remote control</a> •
+  <a href="#quick-start">Quick start</a> •
   <a href="#architecture">Architecture</a> •
-  <a href="#api">API</a> •
-  <a href="#deployment">Deployment</a> •
+  <a href="#documentation">Documentation</a> •
   <a href="#contributing">Contributing</a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white" alt="Go 1.25" />
-  <img src="https://img.shields.io/badge/SI-canonical-success" alt="SI canonical" />
-  <img src="https://img.shields.io/badge/coverage-race%20enabled-blue" alt="Race-enabled tests" />
+  <img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=black" alt="React 18" />
+  <img src="https://img.shields.io/badge/TimescaleDB-PostgreSQL%2017-336791?logo=postgresql&logoColor=white" alt="TimescaleDB" />
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License" />
 </p>
 
 ---
 
-## Overview
+## What it does
 
-TeslaSync is a self-hosted platform for collecting, analyzing, and visualizing data from your Tesla fleet. Built from the ground up with **Go** and **React**, it delivers a modern glassmorphism UI, real-time streaming, multi-theme support, and enterprise-grade observability — all running on your own infrastructure.
+TeslaSync is a self-hosted platform that turns your Tesla data into a real
+product: ingestion, history, dashboards, alerts, automations, remote commands,
+and an optional AI assistant called **Helix**. Everything runs in Docker or
+Kubernetes on hardware you control. Your telemetry never leaves your network
+unless you choose to send it somewhere.
 
-### Highlights
+### At a glance
 
-- **Lightweight** — Go backend with a small memory footprint and efficient pgx connection pooling
-- **Phase-48 SI canonical** — Every DB column, API field, and Go/TS type stores SI units (meters, m/s, °C, Pa, Wh). User display preference (mi/km, °F/°C, psi/bar) is applied **only** at the React render boundary by `useUnits()` / `useFormatting()`. No legacy unit converters anywhere downstream.
-- **69 interactive pages** — Dashboard, live map, drives, charging, energy, battery health, analytics, Alert Studio, trip replay, backup & restore, and more
-- **5 dynamic themes** — Neon Cyan, Tesla Red, Matrix Green, Royal Purple, Solar Amber (each with 4 display modes)
-- **Real-time SSE streaming** — Singleton connection per browser tab, instant vehicle + alert updates pushed to connected browsers
-- **CEP Rule Engine** — Complex Event Processing with recursive condition trees, temporal sustain, transition detection, cooldown, and 50+ templates
-- **Alert Studio** — Visual rule builder with full Tesla signal catalog, test notifications, quiet hours, multi-channel dispatch
-- **14 remote commands** — Lock, unlock, climate, sentry, charge, frunk, trunk, horn, flash, and more
-- **Smart Insights** — Auto-generated data analysis with actionable recommendations
-- **28 Grafana dashboards** — Pre-built dashboards for deep analytics, CEP monitoring, SSE real-time, and infrastructure
-- **100% Tesla Fleet Telemetry coverage** — Vendored `vehicle_data.proto` + `go generate` keep the codec, signal metadata, and routing table in lock-step with upstream
-- **Layered live state** — `signal.Store` L1 (in-process, nanosecond reads, FSM/sessions hot path) + Redis L2 (`vehicle:{id}:signals` HSET + Pub/Sub for cross-pod + restart recovery) + `signal_log` durable history
-- **TimescaleDB hypertable** — `signal_log` persists every Tesla telemetry signal for charts, replay, and point-in-time reconstruction; continuous aggregates (`cagg_fleet_stats`, `cagg_battery_daily`) drive fast analytics
-- **8 Diagnostics Tools** — Live signal monitor, signal explorer, signal diff, gap detector, state machine debugger, MQTT inspector, DB health dashboard, signal log viewer
-- **Helm chart** — Production-ready Kubernetes deployment with external service support
-- **Complete CI/CD** — 14 GitHub Actions workflows for build, test, security, and release
-- **25 Developer Tools** — Built-in Tesla API diagnostics, VIN decoder, JWT decoder, partner registration, and 20+ utilities
+| | |
+|---|---|
+| Backend | Go 1.25 · Chi v5 · pgx v5 · zerolog · Prometheus · OpenTelemetry |
+| Frontend | React 18 + TypeScript · Vite 5 · TanStack Query 5 · Tailwind · Framer Motion · i18next |
+| Storage | PostgreSQL 17 + TimescaleDB · pgvector · Redis 7 |
+| Streaming | Tesla Fleet Telemetry (gRPC) · MQTT · SSE · polling fallback |
+| Deployment | Docker Compose (13 services) · Helm chart |
+| Vehicle control | 65+ Tesla command endpoints via Fleet API or Vehicle Command Proxy |
+| AI | **Helix** — 54 opt-in user features powered by a pluggable provider chain |
+| Schema | 197 numbered SQL migrations · TimescaleDB hypertable for `signal_log` |
+| Frontend feature areas | 21 (admin, analytics, automations, battery, charging, dashboard, diagnostics, driving, exports, maps, notifications, onboarding, power-user, settings, sharing, system, telemetry, trips, vehicle-systems, vehicles, watch) |
+
+---
+
+## Helix AI
+
+Helix is TeslaSync's optional AI layer. The brand mark (`HelixMark`) appears
+anywhere AI is in play — sidebar nav, chatbot avatar, feature badges, AI
+settings header.
+
+> **Off by default, opt-in per feature.** There is no global "AI on" switch.
+> Each Helix feature is individually enabled from **Settings → AI**. Disabled
+> features are *invisible*: their HTTP routes return 404, their React routes
+> mount no AI UI, their background jobs and push notifications never fire.
+
+### Surfaces
+
+| Surface | Route | What it is |
+|---|---|---|
+| **Helix Chat** | `/chatbot` | Conversational assistant with tool-use over your fleet data |
+| **AI Settings** | `/settings/ai` | Per-feature toggles, provider config, usage card, redaction controls |
+| **AI Usage Card** | `/settings/ai` | Per-call audit log + spend visualisation across providers |
+| **AI Restore Panel** | `/settings/ai` | Re-issue a past AI answer from the audit log |
+| **Inline AI components** | various pages | 55+ `AI*.tsx` widgets gated by `withAiFeature` |
+
+### The 54 features (grouped)
+
+**Narratives & summaries**
+Weekly digest narration · Year-in-review narration · Period-compare narration ·
+TCO narration · Cost-forecast narration · Battery-health forecast narrative ·
+Cabin-temperature impact narrative · Vampire-drain explanation
+
+**Natural-language builders**
+NL alert rule builder · NL automation builder · NL dashboard composer ·
+NL Grafana panel builder · NL SQL playground · NL drive search & replay ·
+NL signal-explorer filter · NL search
+
+**Predictions & ML**
+Range prediction model · Predictive maintenance · Smart charge schedule ·
+Preheat / precool recommender · Charging-curve fingerprint clustering ·
+ML charging-curve clustering · Learned per-vehicle anomaly baselines
+
+**Explainers & coaching**
+Drive coaching · Safety-setting explainer · Anomaly explanations ·
+MQTT / SSE inspector explanations · State-machine debugger narrator ·
+Log / trace summarization · Software-update changelog summarizer ·
+Incident timeline summarizer · Charging diagnosis · Speed-profile insights ·
+Route-efficiency suggestions · Tire-pressure trend reasoning
+
+**Automation & operations**
+Alert-tuning suggestions · Cross-rule conflict detection · Quiet-hours
+suggestion · Inbox auto-categorization · Feedback-queue triage ·
+Data-repair suggestions · Geofence-aware automation suggestions ·
+Suggest new geofences · Auto-name unnamed locations · Auto trip naming
+
+**Multimodal & misc**
+Voice mode · Watch-face NL response · Trip planner LLM agent ·
+Trip postcard share-card image generation · Vehicle paint preview ·
+PII redaction for shared exports · RAG help · Lifetime stats Q&A ·
+Chatbot LLM
+
+Plus 3 ops-only features: AI Usage Card, AI Provider Health, AI Redaction
+Bypass Report — also off by default.
+
+### How Helix stays trustworthy
+
+- **Single source of truth** — every feature lives in
+  `internal/ai/features/registry.go`. Adding a feature means adding an entry,
+  not touching the form. The frontend mirror `web/src/ai/features.ts` is
+  **generated** by `tools/aigen`; CI runs `go run ./tools/aigen --check` and
+  blocks merge if the two drift.
+- **Off-by-default contract** — verified by `tools/aivet` and a final-gate
+  test suite. Every surface (HTTP route, React route, background job, push
+  kind) is enumerated in the registry and walked in CI to assert that
+  `ai_mode='off'` produces 404s, no DOM nodes carrying `data-ai-feature`,
+  no job execution, and no push delivery.
+- **Per-call audit log** — every invocation is recorded with feature ID,
+  provider, latency, token counts, and redaction status. Visible in the
+  AI Usage Card.
+- **Outbound PII redaction** — every request passes through an F8 redact
+  decorator before leaving the network. Per-(feature, provider) bypass
+  events are surfaced in the Redaction Bypass Report.
+- **Pluggable provider chain** — adapters for OpenAI, Azure OpenAI,
+  Anthropic, and local Ollama; primary + fallback configurable per feature.
+- **Strict per-feature gate** — `g.Wrap("<feature-id>", handler)` wraps every
+  route; `withAiFeature("<feature-id>")` wraps every React component;
+  `aivet` refuses to build if either is missing.
+
+Full Helix documentation: [`docs/guide/helix-ai.md`](docs/guide/helix-ai.md).
+
+---
+
+## Remote vehicle control
+
+TeslaSync exposes **65 unique Tesla Fleet API command endpoints** organised by
+domain. Commands that require Tesla's signed-command envelope (Model 3/Y from
+2021+, all Model S/X refresh, all Cybertruck) are routed automatically through
+a [Vehicle Command Proxy](https://github.com/teslamotors/vehicle-command) when
+one is configured; `wake_up` always goes direct to Fleet API.
+
+| Category | Endpoints | Examples |
+|---|---:|---|
+| Wake | 1 | `wake_up` |
+| Security & access | 10 | `door_lock`, `door_unlock`, `set_sentry_mode`, `speed_limit_activate/deactivate/set_limit/clear_pin/clear_pin_admin`, `guest_mode`, `erase_user_data` |
+| Valet & PIN-to-drive | 5 | `set_valet_mode`, `reset_valet_pin`, `set_pin_to_drive`, `reset_pin_to_drive_pin`, `clear_pin_to_drive_admin` |
+| Climate | 3 | `auto_conditioning_start/stop`, `set_temps` |
+| Seat & steering heat | 6 | `remote_seat_heater_request`, `remote_seat_cooler_request`, `remote_auto_seat_climate_request`, `remote_steering_wheel_heater_request`, `remote_steering_wheel_heat_level_request`, `remote_auto_steering_wheel_heat_climate_request` |
+| Climate protection | 7 | `set_bioweapon_mode`, `set_cabin_overheat_protection` (incl. fan-only), `set_cop_temp`, `set_climate_keeper_mode` (Off / Keep / Dog / Camp), `set_preconditioning_max` |
+| Charging | 8 | `charge_port_door_open/close`, `charge_start`, `charge_stop`, `set_charge_limit`, `set_charging_amps`, `charge_max_range`, `charge_standard` |
+| Trunk & frunk | 1 | `actuate_trunk` (`which_trunk=front` or `rear`) |
+| Alerts | 2 | `honk_horn`, `flash_lights` |
+| Boombox | 1 | `remote_boombox` (fart, ping, custom) |
+| Windows & sunroof | 2 | `window_control` (vent / close), `sun_roof_control` (vent / close / stop) |
+| HomeLink | 1 | `trigger_homelink` |
+| Remote start | 1 | `remote_start_drive` |
+| Media | 7 | `media_toggle_playback`, `media_next_track`, `media_prev_track`, `media_next_fav`, `media_prev_fav`, `media_volume_down`, `adjust_volume` |
+| Charge & precondition schedules | 6 | `add_charge_schedule`, `remove_charge_schedule`, `add_precondition_schedule`, `remove_precondition_schedule`, `set_scheduled_charging`, `set_scheduled_departure` |
+| Navigation | 3 | `navigation_request`, `navigation_gps_request`, `navigation_sc_request` |
+| Software updates | 2 | `schedule_software_update`, `cancel_software_update` |
+| Vehicle metadata | 1 | `set_vehicle_name` |
+
+Full per-command reference (friendly aliases, parameters, signing
+requirements): [`docs/guide/remote-commands.md`](docs/guide/remote-commands.md)
+and source of truth `internal/tesla/client_commands.go`.
+
+---
+
+## Real-time telemetry
+
+- **Tesla Fleet Telemetry** — gRPC streaming. The vendored `vehicle_data.proto`
+  plus `go generate` keep the codec, signal metadata, and routing table in
+  lock-step with upstream.
+- **MQTT** — publish / subscribe to live signals; embedded Mosquitto in
+  Docker Compose, any external broker via Helm.
+- **SSE** — Server-Sent Events push live state to the browser. Singleton
+  connection per tab, automatic reconnect, instant vehicle + alert updates.
+- **Polling fallback** — `/api/1/vehicles/{id}/vehicle_data` on a schedule
+  when streaming is unavailable.
+- **Two-layer signal store**
+  - L1: in-process `signal.Store` (nanosecond reads, FSM / sessions hot path)
+  - L2: Redis `vehicle:{id}:signals` HSET + Pub/Sub (cross-pod, restart recovery)
+  - Durable history: `signal_log` TimescaleDB hypertable (every signal kept
+    forever for charts, replay, and point-in-time reconstruction)
+
+---
 
 ## Features
 
-### 🚗 Real-Time Fleet Intelligence
-- **Live Dashboard** — Battery, range, location, climate, and charging status at a glance
-- **Live Map** — Track all vehicles with real-time GPS position updates and animated markers
-- **SSE Streaming** — Server-Sent Events push vehicle updates and alerts instantly
-- **Vehicle State Timeline** — Visual history of driving, charging, sleeping, and online states
+### Operations & fleet
+Dashboard · Live map with 5 tile layers (CARTO Dark default, Azure Maps,
+Google Maps, Esri Satellite, OpenStreetMap, OpenTopoMap) · Vehicle detail ·
+Command history · State-machine timeline · Command palette (Cmd/Ctrl+K) ·
+PWA installable · 5 dynamic themes × 4 display modes
 
-### 📊 Advanced Analytics & Visualization
-- **Energy Analytics** — Consumption patterns, efficiency scoring, cost tracking
-- **Battery Health** — Degradation monitoring, charge cycle estimation, capacity projection
-- **Drive Analytics** — Distance, speed, efficiency trends with detailed per-drive breakdowns
-- **Charging Intelligence** — Session analysis, cost per kWh tracking, charger type breakdown
-- **Monthly Statistics** — Rich data tables with inline spark bars for period-over-period analysis
-- **Projected Range** — Range prediction under different conditions (highway, city, cold, hot, sentry)
-- **Vampire Drain** — Idle battery drain analysis with sentry mode correlation
-- **Fleet Comparison** — Side-by-side vehicle metrics, utilization, and cost allocation
-- **Smart Insights Engine** — Auto-generated insights from driving and charging patterns
-- 🏎️ **Driving Dynamics** — Motor torque, G-forces, acceleration patterns, pedal usage, stator temperature
-- 🌡️ **Climate Control** — HVAC power & fan speed, thermal comfort scoring, cabin/outside temperature trends
-- ⚡ **Charging Curve** — Charge rate vs SOC% visualization, session comparison, charging speed degradation
-- 💰 **Cost Analysis** — Monthly cost trends, gas vs electric savings calculator, cost per mile, lifetime savings
-- 🔋 **Battery Cells** — Cell voltage spread, module temperature balance, 4×23 pack visualization, degradation correlation
-- 🏆 **Drive Score** — Gamified 0-100 efficiency scoring, smoothness/speed breakdown, improvement tips
-- 📊 **Weekly Digest** — Auto-generated weekly car summary with highlights, fun facts, week-over-week comparison
-- 🔧 **Maintenance** — Service schedule tracker with odometer-based progress bars, service log, cost estimates
-- 📦 **Data Export** — Export drives, charging, positions in CSV/JSON format with job management
-- 🔁 **Trip Replay** — Animated drive replay with duration, battery, temperature, range, and elevation stats
-- ⚡ **Energy Flow** — Pack voltage/current, cell balance, module temps, BMS status, powershare
-- 🔩 **Drivetrain Health** — Quad-motor thermal monitoring, stator/heatsink/inverter temps
-- 🎵 **Media Player** — Now playing, volume, playback history, source distribution
-- 🛡️ **Safety Settings** — ADAS configuration, collision warnings, FSD statistics
-- 🗺️ **Navigation** — Active route, destination, home/work/favorite indicators
+### Charging
+Sessions · Charging curve · Cost analysis · Charging heatmap (7×24) ·
+Tesla billing history · Charge limit & amp control · Schedules (legacy +
+firmware 2024.26+) · Preconditioning
 
-### 🧠 Cross-Table Intelligence (NEW)
-- 💰 **True Cost of Ownership** — EV vs gas cumulative savings calculator with monthly breakdown
-- 🛏️ **Sleep Efficiency** — Vehicle state distribution, time-to-sleep, sentry mode cost analysis
-- 🔥 **Charging Heatmap** — 7×24 grid of charging patterns (when × where × how much)
-- 🏎️ **Speed Profile** — Speed distribution histogram, efficiency vs speed scatter, optimization insights
-- 🌡️ **Temperature Impact** — Efficiency vs temperature curve, winter/summer penalty quantification
-- 🛣️ **Route Efficiency** — Same-route comparison across trips with weather/speed correlation
-- ♻️ **Regen Braking** — Regenerative energy capture ratio, per-drive scoring, monthly trends
-- 📉 **Battery Degradation** — Health trend with linear regression projection, risk factor analysis
+### Energy & battery
+Battery health · Cell voltage spread (4×23 pack visualisation) ·
+Pack voltage / current · BMS · Powershare · Vampire drain · Energy flow ·
+Degradation projection with linear regression
 
-### 🔍 Diagnostics & Signal Intelligence (NEW)
-- 🟢 **Live Signal Monitor** — Real-time SSE feed of all incoming signals with pause/resume, filter, and signals/sec rate
-- 📊 **Signal Log Viewer** — Browse `signal_log` (TimescaleDB hypertable) with pagination, time range, and signal filtering
-- ⚡ **Signal Explorer** — Chart any Tesla telemetry signal over time with configurable time ranges
-- 🔀 **Signal Diff** — Compare a signal's values across two time ranges side-by-side
-- ⚠️ **Signal Gap Detector** — Identify stale or missing signals with color-coded staleness indicators
-- ⚙️ **State Machine Debugger** — Vehicle state visualization with transition timeline, duration distribution, and per-state 'since' field
-- 📡 **MQTT Inspector** — MQTT connection status, throughput chart, and per-vehicle signal breakdown
-- 🗄️ **DB Health Dashboard** — PostgreSQL table sizes, row counts, index stats, and migration status
+### Driving
+Drive list · Drive detail · Drive Score (0–100 efficiency) · Speed profile ·
+Motor torque · G-forces · Pedal usage · Stator / inverter / heatsink temps ·
+Trip replay (animated) · Route efficiency comparison · Regen ratio
 
-### 📊 Materialized Views & Analytics (NEW)
-- 📈 **mv_energy_daily** — Daily aggregated energy consumption metrics for fast dashboard queries
-- 🗺️ **mv_position_hourly** — Hourly position summaries for efficient map and route analytics
-- 📡 **mv_signal_stats** — Signal-level statistics for diagnostics and coverage analysis
-- 🔋 **Battery Health Generator** — Daily automated battery snapshot generation from charging telemetry in maintenance worker
-- 🧹 **Zero-Value Filtering** — Positions (0,0) and all-zero tire pressure filtered on insert and query
-- 📄 **Alerts Pagination** — Client-side pagination (20 per page) on alerts list
+### Analytics
+Monthly statistics · True cost of ownership (EV vs gas) · Sleep efficiency ·
+Temperature impact (efficiency vs ambient) · Weekly digest · Year-in-review ·
+Projected range under different conditions (highway, city, cold, hot, sentry) ·
+Fleet comparison
 
-### ⚡ CEP Rule Engine & Alert Studio (NEW)
-- 🧠 **Complex Event Processing** — Recursive condition tree evaluation with AND/OR/NOT grouping, 11 operators, temporal `for_seconds` sustain, `changed_to`/`changed_from` transition detection
-- 🎨 **Alert Studio** — Visual rule editor at `/alert-studio` with drag-and-drop condition builder, 50+ pre-built templates across 12 categories, search filter, inline delete with confirm
-- 📋 **Signal Catalog** — 230 signal metadata entries with name, category, type, unit, and description for rule building
-- 🔕 **Quiet Hours** — Server-side suppression of non-critical alerts during configured hours; critical alerts always fire
-- 🧪 **Test Notifications** — Fire test alerts with real signal value interpolation (`{{BatteryLevel}}`, `{{VehicleSpeed}}`, etc.) and dispatch to selected channels
-- ⏱️ **Per-Rule Cooldown** — Configurable cooldown (default 15min) prevents alert spam, tracked in-memory + DB
-- 📊 **CEP Grafana Dashboard** — 12 panels: active rules, eval rate, alerts fired, cooldown skips, latency percentiles, condition errors
-- 📡 **SSE & Real-Time Dashboard** — 18 panels: active SSE clients, events by type, bandwidth, broadcast latency, drops, MQTT status
+### Alerts & automation
+**Alert Studio** at `/alert-studio` — visual rule builder over the full Tesla
+signal catalog (230 entries). **CEP rule engine** with recursive AND/OR/NOT
+condition trees, 11 operators, `for_seconds` temporal sustain,
+`changed_to`/`changed_from` transition detection, per-rule cooldown,
+multi-channel dispatch, server-side quiet hours, 50+ rule templates,
+test-notification flow with signal-value interpolation
+(`{{BatteryLevel}}` etc.).
 
-### 🎮 Remote Vehicle Control
-- Wake / Lock / Unlock
-- Climate On/Off
-- Sentry Mode toggle
-- Charge Port / Start / Stop Charging
-- Frunk / Trunk Open
-- Horn / Flash Lights
-- Speed Limit toggle
+### Diagnostics & developer tools
+Live signal monitor · Signal log viewer · Signal explorer (chart any signal) ·
+Signal diff · Signal gap detector · State-machine debugger · MQTT inspector ·
+DB health dashboard · 25+ Tesla API developer tools (VIN decoder, JWT decoder,
+partner registration, API playground, raw fleet-telemetry config / errors,
+signal config modal, …)
 
-### 🔒 Security & Access
-- Lock status, sentry mode, door/window state visualization, event timeline
+### Backup & restore
+Scheduled automated backups (daily to every 30 days) · Full + incremental ·
+Multi-provider storage (Local, Amazon S3, Azure Blob, Google Cloud Storage) ·
+Gzip + SHA-256 integrity verification · Configurable retention (last N,
+max 100) · Download, verify, preview restore from UI · Complete run history ·
+One-click manual quick backup
 
-### 💾 Backup & Restore
-- Scheduled automated backups (daily to every 30 days)
-- Full and incremental backup types
-- Multi-provider storage: Local, Amazon S3, Azure Blob, Google Cloud Storage
-- Configurable retention (keep last N backups, max 100)
-- Gzip compression + SHA-256 integrity verification
-- Download, verify, and preview restore from UI
-- Complete run history with status tracking
-- Manual quick backup via one click
+### Maps & geocoding
+Multi-provider map tiles with auto-selection by API key · Layer switcher on
+all 5 map pages · Geocoding priority: geofence name → places cache →
+Google/Azure/Nominatim · Places cache (~90% API call reduction) ·
+Reverse-geocoded drives and charging sessions
 
-### 🗺️ Maps & Geocoding
-- **Multi-provider map tiles** — auto-selects based on configured API key:
-  - 🌐 **CARTO Dark** (default, free, no key needed)
-  - 📍 **Azure Maps** (dark, road, satellite — 250K free/month)
-  - 🔵 **Google Maps** (road, satellite, terrain — 100K free/month)
-  - Free fallbacks: Esri Satellite, OpenStreetMap, OpenTopoMap
-- **Layer switcher** on all 5 map pages (Dark / Satellite / Streets / Terrain)
-- **Geocoding priority**: Geofence name → Places cache → Google/Azure/Nominatim
-- **Places cache** — resolved locations stored locally for ~90% API call reduction
-- **Reverse geocoding** — drives and charging sessions auto-resolve to place names
+### Observability
+Prometheus `/metrics` · 28 Grafana dashboards (deep analytics, CEP, SSE
+real-time, infrastructure) · OpenTelemetry instrumentation (OTLP gRPC export) ·
+Jaeger profile in Docker Compose · Structured zerolog JSON logs ·
+Per-repo DB spans with semantic conventions
 
-### 🔭 Distributed Tracing (Optional)
-- OpenTelemetry instrumentation with OTLP gRPC export
-- Per-repo DB spans with semantic conventions (table, operation, entity IDs)
-- Handler-level spans with custom vehicle/drive attributes
-- Transaction tracing with error recording
-- Jaeger integration (Docker Compose profile + Helm chart)
-- Zero overhead when disabled (noop provider)
+### Engineering invariants
+- **SI canonical** — every DB column, API field, and Go/TS type stores SI
+  units (m, m/s, °C, Pa, Wh). User display preference (mi/km, °F/°C, psi/bar)
+  is applied **only at the React render boundary** by `useUnits()` /
+  `useFormatting()`. No legacy unit converters downstream.
+- **100% Tesla Fleet Telemetry coverage** — vendored proto + `go generate`.
+- **Auto-generated AI feature mirror** — backend and frontend cannot drift
+  on the set of Helix feature IDs.
 
-### 🎨 Modern UX
-- **Glassmorphism Design** — Frosted glass panels, neon accents, smooth animations
-- **5 Color Themes** — Dynamic theme switching with CSS variables
-- **Map Layer Switcher** — Dark, Satellite, Streets, Terrain on all map pages
-- **Command Palette** — `Cmd+K` / `Ctrl+K` for instant navigation across all 69 pages
-- **Animated Car SVG** — Subtle automobile animations on loading states and docs
-- **Code-Split Routes** — Lightning-fast page loads with React lazy loading
-- **PWA-Ready** — Installable as a native app with custom splash screen
-- **Error Boundaries** — Graceful error recovery without full page crashes
-- **Responsive** — Works on desktop, tablet, and mobile
+---
 
-### 🔒 Enterprise-Grade Backend
-- **Go 1.25** — Fast, concurrent, minimal memory footprint
-- **Circuit Breaker** — Automatic Tesla API backoff with gobreaker
-- **Rate Limiting** — Configurable per-IP rate limiting
-- **Prometheus Metrics** — `/metrics` endpoint for monitoring
-- **Structured Logging** — JSON logs via zerolog
-- **PostgreSQL 17 + TimescaleDB** — Hypertable for `signal_log`, continuous aggregates (`cagg_fleet_stats`, `cagg_battery_daily`), natively partitioned tables for position data, DBTX transaction support for critical paths, [interactive database diagram](https://teslasync-labs.github.io/teslasync/guide/architecture) in docs (current migration count: see `migrations/`)
-  - `motor_snapshots` — Drivetrain telemetry (torque, RPM, G-forces, pedal position)
-  - `climate_snapshots` — HVAC telemetry (temps, fan speed, power, defrost)
-  - `security_events` — Security state (locks, sentry, doors, windows)
-  - `charging_telemetry` — SI-canonical charging telemetry (pack voltage/current, cell voltages, BMS, powershare)
-  - `media_snapshots` — Now playing, volume, playback source
-  - `vehicle_config_snapshots` — Trim, color, software updates
-  - `location_snapshots` — Navigation destination, route, home/work/favorite detection
-  - `safety_snapshots` — ADAS settings, collision warnings, FSD distance
-  - `user_preference_snapshots` — Unit settings, time format
-  - `signal_log` — TimescaleDB hypertable storing every Tesla telemetry signal forever for charts, replay, and point-in-time reconstruction
-- **MQTT Publishing** — Real-time vehicle telemetry to any MQTT subscriber
-- **MQTT Workers** — Notification worker + export worker for async processing
-- **Redis Caching** — Fast lookups for vehicle state and sessions; L2 layer for cross-pod live signals (`vehicle:{id}:signals` HSET + Pub/Sub)
-- **In-Memory SignalStore (L1)** — Per-vehicle signal map with nanosecond reads, FSM/sessions hot path, restart recovery from L2 + `signal_log`
-- **Durable Signal History** — `signal_log` TimescaleDB hypertable indexed for per-signal queryable history (replaces the legacy `vehicle_live_state` UPSERT model — see Phase-42 ADR-004)
-- **FSM (Vehicle State Engine)** — 20-transition declarative table covering drive / charge / park / online / offline with gear-based transitions, traffic light guard, charging orphan detection, stale freshness, and hysteresis to prevent flapping; reconciliation loop every 15s
-- **CEP Rule Engine** — Recursive condition tree evaluator with temporal sustain, transition detection, per-rule cooldown, and template rendering
-- **SSE Singleton** — One EventSource per browser tab shared across all hooks; 11 Prometheus metrics (active clients, events by type, drops, broadcast latency, bandwidth)
-- **Adaptive Polling** — 3s interval when SSE disconnected, 30s when connected (via `useAdaptiveInterval` hook)
-- **7-Channel Notifications**— Discord, Slack, Telegram, Email, Webhooks, ntfy, Pushover
-- **Maintenance Worker** — Automated materialized view refresh, daily battery health snapshot generation, and cleanup of zero-value data
-- **Adaptive Sleep Backoff** — Exponential backoff for asleep vehicles (60s → 10 min cap) to minimize wasted API calls
-- **API Suspend Toggle** — Suspend all Tesla Fleet API calls from Settings UI or API when vehicle is in service
-- **Granular Endpoint Controls** — Enable/disable individual Tesla Fleet API endpoints for both automatic polling and on-demand calls (20 independent toggles across polling, on-demand, and commands)
-
-### 🛠 Developer Tools
-- **Tesla Fleet API** — Region detection, partner registration, API connectivity test, token inspector
-- **Public Key Management** — Generate ECDSA P-256 keypairs, auto-serve at `.well-known` path, upload existing keys
-- **Infrastructure Diagnostics** — Database stats, migration status, MQTT connectivity test, environment check
-- **Client-Side Utilities** — VIN decoder, JWT decoder, JSON formatter, UUID generator, regex tester, and more
-- **Fleet Telemetry** — Status monitoring with 100% Tesla protocol coverage via vendored proto + `go generate`, enable/disable visibility in system status
-- **Vehicle Data Queries** — Fleet telemetry errors table with download, vehicle data queries tool
-- **Tesla Fleet API** — Nearby charging sites, release notes, recent alerts, service data
-- **Signal Configuration Modal** — Full-screen per-signal interval configuration with presets (Real-time Driving, Balanced, Low Power, Track Mode)
-- **Raw Telemetry Capture** — `signal_log`-backed raw signal recording with export capability
-
-## Architecture
-
-```
- ┌──────────────────────────────────────────────────────────────────┐
- │                        CLIENT LAYER                             │
- │                                                                  │
- │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────────┐  │
- │  │  React SPA   │  │  PWA Shell   │  │  Grafana Dashboards  │  │
- │  │  (Vite 5)    │  │  (manifest)  │  │  (28 dashboards)     │  │
- │  └──────┬───────┘  └──────┬───────┘  └──────────┬───────────┘  │
- └─────────┼─────────────────┼─────────────────────┼──────────────┘
-           │                 │                     │ SQL
- ┌─────────┴─────────────────┴─────────────────────┤              │
- │                   INGRESS LAYER                  │              │
- │         (Traefik / Nginx Ingress Controller)     │              │
- └──────────────────────┬──────────────────────────┘              │
-                        │ single route (all traffic)              │
- ┌──────────────────────┴──────────────────────────────────────────┐
- │                     WEB LAYER (Nginx)                           │
- │                                                                  │
- │  ┌────────────────────────────────────────────────────────────┐ │
- │  │              teslasync-web (Nginx :80)                     │ │
- │  │  ┌─────────────────┐  ┌────────────────────────────────┐  │ │
- │  │  │  Static Files   │  │  Reverse Proxy (internal k8s)  │  │ │
- │  │  │  /index.html    │  │  /api/*  → teslasync-api:8080  │  │ │
- │  │  │  /assets/*      │  │  /.well-known/* → api:8080     │  │ │
- │  │  │  (served direct)│  │  /healthz,/readyz → api:8080   │  │ │
- │  │  └─────────────────┘  │  /metrics → api:8080           │  │ │
- │  │                       └────────────────────────────────┘  │ │
- │  └────────────────────────────────────────────────────────────┘ │
- └──────────────────────────────┬───────────────────────────────────┘
-                                │ proxy_pass (cluster-internal)
- ┌──────────────────────────────┴──────────────────────────────────┐
- │                        API LAYER                                │
- │                                                                  │
- │  ┌──────────────────────────────────────────────────────────┐  │
- │  │                   Go API Server (:8080)                   │  │
- │  │  ┌──────────┐ ┌──────────┐ ┌────────────┐ ┌──────────┐ │  │
- │  │  │  Router   │ │ Handlers │ │ Middleware  │ │   SSE    │ │  │
- │  │  │  (chi)    │ │ (28 API) │ │(rate/CORS) │ │EventHub  │ │  │
- │  │  └──────────┘ └──────────┘ └────────────┘ └──────────┘ │  │
- │  │  ┌──────────┐ ┌──────────┐ ┌────────────┐ ┌──────────┐ │  │
- │  │  │ Circuit  │ │  Worker  │ │ Prometheus  │ │   CEP    │ │  │
- │  │  │ Breaker  │ │  Poller  │ │  Metrics    │ │  Engine  │ │  │
- │  │  └──────────┘ └──────────┘ └────────────┘ └──────────┘ │  │
- │  └──────────────────────────────────────────────────────────┘  │
- └────────┬──────────────┬──────────────┬──────────────┬──────────┘
-          │              │              │              │
- ┌────────┴────┐ ┌───────┴─────┐ ┌─────┴─────┐ ┌─────┴─────┐
- │ PostgreSQL  │ │   Redis 7   │ │ Mosquitto  │ │   Tesla   │
- │ (PG 17)     │ │   Cache     │ │ MQTT 2     │ │ Fleet API │
- └─────────────┘ └─────────────┘ └───────────┘ └───────────┘
-```
-
-> **Traffic Flow:** In Kubernetes, all external traffic enters through a single ingress route pointing to `teslasync-web` (Nginx). Nginx serves static files directly and proxies API paths (`/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics`) to `teslasync-api` over the internal Kubernetes network. API traffic never traverses the ingress controller — only the initial page load does.
-
-### Signal Processing Pipeline (Phase-42)
-
-> Canonical reference: `.github/ARCHITECTURE.md` ADR-004.
-> File-level rules: `.github/instructions/tesla-pipeline.instructions.md`.
-
-```
-Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶ Mosquitto MQTT (telemetry/{VIN}/v/{Field})
-                                                                         │
-                                                                         ▼
-                                                         PipelineSubscriber  (internal/mqtt)
-                                                         ▸ ack-after-process
-                                                         ▸ tracker (4096 capacity)
-                                                         ▸ max_redeliveries=5
-                                                         ▸ topic filter: {base}/+/v/+
-                                                                         │
-                                                                         ▼
-                                                         Codec  (internal/tesla/codec)
-                                                         per-field JSON body → []codec.Atomic
-                                                         (DecodeJSONField; ErrPayloadDrop ⇒ DLQ)
-                                                                         │
-                                                                         ▼
-                                                         normalize.Pipeline  (internal/tesla/normalize)
-                                                         ▸ THE one ingest entry (ProcessAtomics)
-                                                         ▸ ToSI(field, raw, vehicleUnits) using
-                                                           per-vehicle Setting*Unit history
-                                                                         │
-                                                                         ▼
-                                                         Router  (internal/tesla/router)
-                                                         routing.yaml — field-static, vehicle-agnostic
-                                                                         │
-                                       ┌─────────────────────────────────┼─────────────────────────────────┐
-                                       ▼                                 ▼                                 ▼
-                       Writers (per dest table)              signal.Store (L1, in-process)        signal_log (TimescaleDB hypertable)
-                       drive_telemetry, charging_           hot path: FSM, sessions,             durable history, charts,
-                       telemetry, positions,                 merge context                        replay, point-in-time
-                       tesla_charging_history, ...                       │                                 ▲
-                       writer fail ⇒ log+counter,                        │ pubsub                          │
-                       NEVER MQTT redeliver                              ▼                                 │
-                                                             Redis L2 (vehicle:{id}:signals                │
-                                                             HSET + Pub/Sub) ─▶ SSE hub ─▶ SPA EventSource │
-                                                                                                           │
-                                                                              FSM (drive/charge/park, 20-transition table, 15s reconciliation)
-                                                                              REST handlers (history reads)
-```
-
-**Five non-negotiable rules** (enforced by tests / startup checks):
-
-1. **`normalize.Pipeline.ProcessAtomics` is THE one ingest entry.** A reflective coverage test pins this. Vendor-specific decode lives in `internal/tesla/*`; vendor-agnostic signal primitives in `internal/signal/*`.
-2. **SI on disk, always.** Meters, m/s, °C, Pa, Wh in every column / API field / Go struct / TS interface. Display conversion only at the React render boundary via `useUnits()` / `useFormatting()`.
-3. **`routing.yaml` is field-static, vehicle-agnostic.** Per-vehicle or value-conditional routing is forbidden by ADR-004 #8.
-4. **Failure semantics are split.** Codec failures (malformed JSON, kind mismatch, unknown enum) wrap `codec.ErrPayloadDrop` and route to the DLQ. Writer failures (DB down, schema mismatch) only log + increment `tesla_router_writer_failures_total` and never propagate to MQTT — otherwise a stuck table blocks the whole stream.
-5. **Live state is layered, not replaced.** L1 `signal.Store` for hot paths (FSM, sessions). L2 Redis for cross-pod + restart recovery. Durable `signal_log` for charts and replay.
-
-### Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| **Backend** | Go 1.25 · Chi router · pgx/v5 · zerolog · gobreaker |
-| **Frontend** | React 18 · TypeScript · Vite 5 · Tailwind CSS · Recharts · Leaflet · Framer Motion |
-| **Database** | PostgreSQL 17 + **TimescaleDB** (hypertables for `signal_log`, continuous aggregates for fleet/battery analytics) |
-| **Cache / Pub-Sub** | Redis 7 (L2 live state, SSE fanout, restart recovery) |
-| **Messaging** | MQTT (Mosquitto 2) — Tesla Fleet Telemetry per-field topic `telemetry/{VIN}/v/{Field}` |
-| **Monitoring** | Grafana 10.4 · Prometheus · OpenTelemetry (optional Jaeger) |
-| **Deployment** | Docker Compose · Helm 3 · GitHub Actions |
-
-### Key Packages
-
-```
-internal/
-├── api/            # HTTP handlers, router, SSE, middleware
-├── backup/         # Scheduled & manual backup engine, multi-provider storage
-├── cache/          # Redis caching layer
-├── config/         # Environment + YAML configuration
-├── crypto/         # ECDSA key management
-├── database/       # PostgreSQL queries, DBTX transactions, places cache, 57 migrations, 3 materialized views
-├── events/         # SSE event hub
-├── export/         # CSV/JSON export engine
-├── geocoding/      # Multi-provider reverse geocoding (Google, Azure, Nominatim)
-├── metrics/        # Prometheus metric declarations (11 SSE + 7 CEP + core)
-├── models/         # Domain models
-├── mqtt/           # MQTT publisher
-├── notification/   # 7-channel notification dispatch
-├── resilience/     # Circuit breaker, rate limiter
-├── tesla/          # Tesla Fleet API client
-├── tracing/        # OpenTelemetry instrumentation (OTLP gRPC, Jaeger)
-└── worker/         # Background pollers, MQTT workers
-```
-
-## Quick Start
-
-### Prerequisites
-
-- Docker and Docker Compose v2+
-- Tesla Developer API credentials ([developer.tesla.com](https://developer.tesla.com/))
-
-### 1. Clone & Configure
+## Quick start
 
 ```bash
 git clone https://github.com/ev-dev-labs/teslasync.git
 cd teslasync
 cp .env.example .env
-# Edit .env with your TESLA_CLIENT_ID and TESLA_CLIENT_SECRET
-```
-
-### 2. Launch
-
-```bash
-docker compose up -d
-```
-
-This starts 8 services: Go API server, React web UI, notification worker, export worker, PostgreSQL 17, Redis, MQTT, and Grafana.
-
-### 3. Access
-
-| Service | URL |
-|---------|-----|
-| **Web UI** | http://localhost:3000 |
-| **API** | http://localhost:8080 |
-| **Grafana** | http://localhost:3001 |
-| **MQTT** | localhost:1883 |
-
-### 4. Connect Your Tesla
-
-Navigate to **Settings** in the web UI and connect your Tesla account via OAuth2. Vehicles sync automatically.
-
-### 5. Optional Configuration
-
-| Feature | Environment Variable | Description |
-|---------|---------------------|-------------|
-| **OpenTelemetry** | `OTEL_ENABLED=true` | Enable distributed tracing (OTLP gRPC export) |
-| **Jaeger UI** | `docker compose --profile jaeger up -d` | Start Jaeger for trace visualization |
-| **Backup** | Configure via **Settings → Backup & Restore** in the web UI | Schedule, storage provider, retention policy |
-
-## Grafana Dashboards
-
-TeslaSync ships with **28 pre-built Grafana dashboards**:
-
-| Dashboard | Description |
-|-----------|-------------|
-| Vehicle Overview | Battery, range, speed, temperature, odometer |
-| Fleet Overview | Cross-vehicle comparison, fleet totals |
-| Charging | Session stats, energy added, charger analysis |
-| Charging Stats | Cost tracking, cost per kWh trends |
-| Drives | Distance, speed, efficiency, drive history |
-| Efficiency | Wh/km patterns, temperature correlation |
-| Battery Health | Degradation trend, capacity, charge cycles |
-| Vampire Drain | Parasitic drain analysis, sentry mode impact |
-| Mileage | Daily/monthly distance, drive count |
-| Tire Pressure | Per-tire PSI tracking and trends |
-| Software Updates | OTA version history and timeline |
-| Timeline | Vehicle state transitions over time |
-| Locations | Visited places, frequency, duration |
-| Trips | Multi-drive journey tracking |
-| Statistics | Long-term averages, totals, best/worst |
-| Projected Range | Range prediction and degradation forecast |
-| Motor / Powertrain | Motor torque, axle speed, G-forces, pedal position |
-| Climate / HVAC | Cabin/outside temps, HVAC power, fan speed, defrost |
-| Security / Access | Lock state, sentry mode, doors, windows, HomeLink |
-| Tire Pressure Detail | Per-tire trends, balance scoring, alert thresholds |
-| Fleet Health | Multi-vehicle health comparison, utilization, cost |
-| API Usage | Request counts, cost tracking, rate limit monitoring |
-| Energy Flow | Pack voltage/current, charging power, cell spread, BMS |
-| Drivetrain Thermal | Stator/heatsink/inverter temps, motor currents |
-| Comfort & Media | Seat heaters, HVAC modes, now playing, volume |
-| Vehicle Intelligence | Config, software, safety, navigation, preferences |
-| CEP Rule Engine | Active rules, eval rate, alerts fired, cooldown skips, latency, errors |
-| SSE & Real-Time | Active clients, events by type, bandwidth, broadcast latency, drops, MQTT |
-
-## Development
-
-### Backend
-
-```bash
-go mod download        # Install dependencies
-make run               # Run locally (needs Postgres, Redis, MQTT)
-make test              # Run tests with coverage
-make lint              # golangci-lint
-```
-
-- **14 Go test packages** covering API, cache, config, crypto, database, events, export, geocoding, models, MQTT, notification, resilience, Tesla client, and worker
-- **Race condition detection** enabled in CI (`go test -race`)
-- **Migration rollback testing** — all 57 up/down migrations verified in CI
-
-### Frontend
-
-```bash
-cd web
-npm install            # Install dependencies
-npm run dev            # Dev server at :3000 (proxies API to :8080)
-npm run build          # Production build
-npm run lint           # ESLint
-```
-
-- **41 frontend tests** with Vitest
-
-### Docker
-
-```bash
-docker compose up -d          # Start all 8 services
-docker compose logs -f        # Tail logs
-docker compose down           # Stop everything
-docker compose build          # Rebuild images
-```
-
-## Deployment
-
-### Docker Compose (Recommended)
-
-```bash
+# Edit .env with Tesla Developer credentials and your deployment URLs
 docker compose up -d --build
 ```
 
-### Kubernetes (Helm)
+Windows users: replace `cp .env.example .env` with `Copy-Item .env.example .env`.
 
-```bash
-helm install teslasync ./helm/teslasync \
-  --set tesla.clientId=$TESLA_CLIENT_ID \
-  --set tesla.clientSecret=$TESLA_CLIENT_SECRET \
-  --set ingress.enabled=true \
-  --set ingress.hosts[0].host=teslasync.example.com
-```
+Default ports:
 
-The Helm chart uses a **single ingress route** pointing all traffic to `teslasync-web` (Nginx). Nginx serves the React SPA and proxies API requests (`/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics`) to `teslasync-api` over the internal Kubernetes network — no separate `/api` ingress path is needed. The chart supports embedded or external services (PostgreSQL, Redis, MQTT, Grafana), Traefik IngressRoute, HPA, PDB, and helm test. See [helm/teslasync/README.md](helm/teslasync/README.md) for full documentation.
+| Service | URL |
+|---|---|
+| Web UI | http://localhost:3000 |
+| API | http://localhost:8080 |
+| Grafana | http://localhost:3001 |
+| Prometheus | http://localhost:9099 |
+| Jaeger (optional, `--profile tracing`) | http://localhost:16686 |
 
-## API
+### What the quick start actually gives you
 
-### Core
+`docker compose up -d --build` brings up the stack in **open mode** (no `FORWARD_AUTH_HEADER` set) — fine for a local trial on `localhost`, **not** safe to expose publicly. The Tesla OAuth flow needs all five scopes ticked on your Tesla Developer application (`openid offline_access vehicle_device_data vehicle_location vehicle_cmds vehicle_charging_cmds`); any missing scope produces a working-looking dashboard with empty vehicle pages. The compose file uses `timescale/timescaledb-ha:pg17` because migration 1 installs TimescaleDB + pgvector — upstream `postgres:17` will fail to start.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/healthz` | Liveness probe |
-| GET | `/readyz` | Readiness probe |
-| GET | `/metrics` | Prometheus metrics |
-| GET | `/api/v1/events` | SSE real-time event stream |
-| GET | `/api/v1/export/{type}` | Export data (CSV/JSON) — synchronous |
-| POST | `/api/v1/export/jobs` | Submit async export job |
-| GET | `/api/v1/export/jobs` | List export jobs |
-| GET | `/api/v1/export/jobs/:id` | Get export job status |
-| GET | `/api/v1/export/jobs/:id/download` | Download completed export |
-| POST | `/api/v1/export/jobs/import` | Submit async CSV import job |
+For Fleet Telemetry streaming or signed commands you also need:
 
-### Vehicles
+- A publicly-reachable HTTPS domain with valid TLS
+- A registered partner account with Tesla (one-time `POST /api/v1/devtools/register-partner` once the public domain is live)
+- The `commands` and/or `telemetry` Compose profiles enabled
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/vehicles` | List vehicles |
-| POST | `/api/v1/vehicles/sync` | Sync from Tesla |
-| GET | `/api/v1/vehicles/:id/state` | Live state |
-| GET | `/api/v1/vehicles/:id/positions` | Position history |
-| POST | `/api/v1/vehicles/:id/command` | Send command |
+Full step-by-step setup including the auth model decision, partner-key flow, regional Fleet API bases, and Helix AI provider choices:
+[`docs/guide/getting-started.md`](docs/guide/getting-started.md) · [`docs/guide/tesla-fleet-api.md`](docs/guide/tesla-fleet-api.md).
 
-### Data & Analytics
+---
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/drives` | Drive history |
-| GET | `/api/v1/charging` | Charging sessions |
-| GET | `/api/v1/analytics/fleet` | Fleet analytics |
-| GET | `/api/v1/energy/stats` | Energy statistics |
-| GET | `/api/v1/battery/report` | Battery health report |
-| GET | `/api/v1/mileage/daily` | Daily mileage |
-| GET | `/api/v1/mileage/monthly` | Monthly mileage |
-| GET | `/api/v1/timeline` | Vehicle state timeline |
-| GET | `/api/v1/locations` | Visited locations |
-| GET | `/api/v1/vampire-drain/events` | Vampire drain events |
-| GET | `/api/v1/motor` | Motor/drivetrain telemetry |
-| GET | `/api/v1/climate` | Climate/HVAC telemetry |
-| GET | `/api/v1/security` | Security state & events |
-| GET | `/api/v1/charging-telemetry` | Charging telemetry (pack, cells, BMS) |
-| GET | `/api/v1/media` | Media snapshots |
-| GET | `/api/v1/vehicle-config` | Vehicle config snapshots |
-| GET | `/api/v1/location-snapshots` | Location/navigation snapshots |
-| GET | `/api/v1/safety` | Safety/ADAS snapshots |
-| GET | `/api/v1/user-preferences` | User preference snapshots |
-| GET | `/api/v1/drives/:id/positions` | Drive route positions |
-
-### Notifications & Alerts
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/notifications` | List channels |
-| POST | `/api/v1/notifications` | Create channel |
-| POST | `/api/v1/notifications/:id/test` | Test channel |
-| GET | `/api/v1/alerts` | List alerts |
-| POST | `/api/v1/alerts/:id/read` | Mark alert as read |
-| GET | `/api/v1/alerts/rules` | List CEP rules |
-| POST | `/api/v1/alerts/rules` | Create CEP rule |
-| PUT | `/api/v1/alerts/rules/:id` | Update CEP rule |
-| DELETE | `/api/v1/alerts/rules/:id` | Delete CEP rule |
-| POST | `/api/v1/alerts/rules/:id/toggle` | Enable/disable rule |
-| POST | `/api/v1/alerts/test` | Fire test alert with template rendering |
-
-### Settings
-
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/api/v1/settings/suspend-api` | Suspend or resume all Tesla API calls (`{"suspended": true/false}`) |
-| GET | `/api/v1/settings/polling-config` | Get granular endpoint polling configuration (per-endpoint on/off toggles) |
-| PUT | `/api/v1/settings/polling-config` | Update endpoint polling configuration |
-
-### Developer Tools
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/api/v1/dev-tools/fleet-api-info` | Fleet API configuration |
-| GET | `/api/v1/dev-tools/detect-region` | Detect account region |
-| POST | `/api/v1/dev-tools/register-partner` | Register partner account |
-| GET | `/api/v1/dev-tools/test-api` | Test API connectivity |
-| GET | `/api/v1/dev-tools/token-info` | Token validity info |
-| GET | `/api/v1/dev-tools/db-stats` | Database statistics |
-| GET | `/api/v1/dev-tools/migration-status` | Migration version |
-| POST | `/api/v1/dev-tools/mqtt-test` | Test MQTT connectivity |
-| GET | `/api/v1/dev-tools/env-check` | Environment variable check |
-| GET | `/api/v1/dev-tools/runtime-info` | Go runtime information |
-| POST | `/api/v1/dev-tools/generate-keypair` | Generate ECDSA P-256 keypair |
-| POST | `/api/v1/dev-tools/upload-public-key` | Upload existing public key |
-| GET | `/api/v1/dev-tools/public-key-status` | Public key configuration status |
-| DELETE | `/api/v1/dev-tools/public-key` | Remove stored public key |
-| GET | `/api/v1/dev-tools/nearby-charging` | Nearby Superchargers via Tesla API |
-| GET | `/api/v1/dev-tools/release-notes` | Firmware release notes via Tesla API |
-| GET | `/api/v1/dev-tools/recent-alerts` | Vehicle alerts from Tesla API |
-| GET | `/api/v1/dev-tools/service-data` | Service history via Tesla API |
-| POST | `/api/v1/auth/disconnect` | Disconnect Tesla account (clear tokens) |
-| GET | `/.well-known/appspecific/com.tesla.3p.public-key.pem` | Serve Tesla public key |
-
-## MQTT Topics
-
-Vehicle telemetry is published to `teslasync/vehicles/{vin}/`:
+## Architecture
 
 ```
-teslasync/vehicles/{vin}/battery_level      # 0-100
-teslasync/vehicles/{vin}/rated_range        # km
-teslasync/vehicles/{vin}/latitude           # GPS lat
-teslasync/vehicles/{vin}/longitude          # GPS lon
-teslasync/vehicles/{vin}/speed              # km/h
-teslasync/vehicles/{vin}/power              # kW
-teslasync/vehicles/{vin}/inside_temp        # °C
-teslasync/vehicles/{vin}/outside_temp       # °C
-teslasync/vehicles/{vin}/sentry_mode        # bool
-teslasync/vehicles/{vin}/is_charging        # bool
-teslasync/vehicles/{vin}/vehicle_data       # full JSON
+                ┌──────────────────────┐
+                │      Browsers        │
+                │  React SPA + PWA     │
+                └─────────┬────────────┘
+                          │  HTTPS / SSE
+                          ▼
+┌────────────────────────────────────────────────────┐
+│              Go API (Chi v5)                       │
+│  ┌────────────────┐   ┌───────────────────────┐    │
+│  │ Vehicle ops    │   │ Helix AI router       │    │
+│  │ Telemetry      │   │  • feature gate       │    │
+│  │ Charging       │   │  • redact decorator   │    │
+│  │ Alerts / CEP   │   │  • provider chain     │    │
+│  │ Automations    │   │  • per-call audit     │    │
+│  │ Backups        │   │  • tool registry      │    │
+│  └────────────────┘   └───────────────────────┘    │
+└─────┬───────────────────┬────────────────────┬─────┘
+      │                   │                    │
+      ▼                   ▼                    ▼
+┌───────────┐      ┌─────────────┐       ┌──────────┐
+│ Postgres  │      │ Redis 7     │       │ MQTT     │
+│ Timescale │      │  • L2 store │       │ Mosquitto│
+│  + signal │      │  • cache    │       └──────────┘
+│   _log    │      │  • Pub/Sub  │
+└───────────┘      └─────────────┘
+      ▲                   ▲
+      │                   │
+┌─────┴───────────────────┴─────┐    ┌──────────────────────┐
+│   Tesla Fleet Telemetry       │    │ Vehicle Command      │
+│   gRPC subscriber + codec     │    │ Proxy (signs cmds)   │
+└──────────────────────────────┬┘    └──────────┬───────────┘
+                               │                │
+                               ▼                ▼
+                          ┌──────────────────────────┐
+                          │     Tesla Fleet API      │
+                          └──────────────────────────┘
 ```
+
+Detail: [`docs/guide/architecture.md`](docs/guide/architecture.md).
+
+---
 
 ## Documentation
 
-Full documentation is available at the [TeslaSync Docs](https://teslasync-labs.github.io/teslasync/) site, covering:
+| | |
+|---|---|
+| 🚀 [Getting started](docs/guide/getting-started.md) | Install, configure, first run |
+| 🔑 [Tesla Fleet API setup](docs/guide/tesla-fleet-api.md) | Developer app, scopes, regions, partner registration |
+| 🧠 [Helix AI](docs/guide/helix-ai.md) | Features, providers, audit, redaction |
+| 🎮 [Remote commands](docs/guide/remote-commands.md) | All 65 Tesla commands |
+| 🏛 [Architecture](docs/guide/architecture.md) | Services, data flow, schema |
+| ⚙ [Configuration](docs/guide/configuration.md) | Environment variables |
+| 📡 [Fleet Telemetry](docs/guide/fleet-telemetry.md) | gRPC streaming setup |
+| 🗄 [Database](docs/guide/database.md) | Schema, hypertables, migrations |
+| 🔌 [API endpoints](docs/guide/api-endpoints.md) | REST + SSE reference |
+| 🐳 [Docker deployment](docs/deployment/docker.md) | Compose setup |
+| ☸ [Kubernetes](docs/deployment/kubernetes.md) | Helm chart |
+| 🛟 [Troubleshooting](docs/guide/troubleshooting.md) | Common issues |
+| ❓ [FAQ](docs/guide/faq.md) | |
+| 🛠 [Local development](docs/guide/local-development.md) | Dev loop |
+| 🤝 [Contributing](docs/contributing/code-structure.md) | |
 
-- [Getting Started](https://teslasync-labs.github.io/teslasync/guide/getting-started)
-- [Architecture & Diagrams](https://teslasync-labs.github.io/teslasync/guide/architecture)
-- [Configuration](https://teslasync-labs.github.io/teslasync/guide/configuration)
-- [Technology Stack](https://teslasync-labs.github.io/teslasync/guide/technology)
-- [Troubleshooting](https://teslasync-labs.github.io/teslasync/guide/troubleshooting)
-- [FAQ](https://teslasync-labs.github.io/teslasync/guide/faq)
+---
+
+## Repository layout
+
+```
+.
+├─ cmd/                       Go entry points (api, workers, tools)
+├─ internal/
+│  ├─ api/                    HTTP handlers (incl. 57 ai_*_handler.go files)
+│  ├─ ai/
+│  │  ├─ features/registry.go Source of truth for AI features
+│  │  ├─ strategies/          Per-feature strategy.go + goldens.yaml (53 strategies)
+│  │  └─ tools/               Tool registry the LLM can call (50+ tools)
+│  ├─ tesla/                  Fleet API client, 65 command endpoints, proxy router
+│  ├─ signal/                 L1 in-process store
+│  ├─ fsm/                    Vehicle state machine
+│  ├─ cep/                    Complex-event processing for alerts
+│  └─ ...
+├─ web/
+│  └─ src/
+│     ├─ ai/features.ts       Auto-generated from internal/ai/features
+│     ├─ components/
+│     │  ├─ ai/               55+ AI* components, gated by withAiFeature
+│     │  └─ branding/         HelixMark — the Helix brand icon
+│     ├─ features/            21 feature areas
+│     └─ ...
+├─ migrations/                197 numbered SQL migration files
+├─ docs/                      User & contributor documentation
+├─ helm/teslasync/            Production Helm chart
+├─ tools/
+│  ├─ aigen/                  Generates web/src/ai/features.ts from Go registry
+│  └─ aivet/                  CI vet for AI feature contract
+└─ docker-compose.yml         13 services
+```
+
+---
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'feat: add amazing feature'`
-4. Push: `git push origin feature/amazing-feature`
-5. Open a Pull Request
+See [`docs/contributing/code-structure.md`](docs/contributing/code-structure.md)
+and the topical instructions under [`.github/instructions/`](.github/instructions/)
+(Go backend, React frontend, Tesla pipeline, telemetry pipeline, observability,
+data modeling, i18n, prompt engineering, Helm / Docker).
 
-Please see [SECURITY.md](.github/SECURITY.md) for vulnerability reporting.
+Before opening a PR:
+
+```bash
+# backend
+go test ./... -race
+go vet ./...
+go run ./tools/aivet          # AI feature contract check
+go run ./tools/aigen --check  # ensure web/src/ai/features.ts is in sync
+
+# frontend
+cd web
+npm install
+npm run lint                  # ESLint + 25+ custom audit scripts
+npm run test                  # Vitest
+```
+
+---
 
 ## License
 
-MIT
+MIT — see [`LICENSE`](LICENSE).
+
+## Acknowledgements
+
+Built on Tesla's [Fleet API](https://developer.tesla.com/docs/fleet-api),
+[Fleet Telemetry](https://github.com/teslamotors/fleet-telemetry), and the
+[Vehicle Command Proxy](https://github.com/teslamotors/vehicle-command).
