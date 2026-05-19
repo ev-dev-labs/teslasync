@@ -1,0 +1,36 @@
+# EditorConfig — single source of truth for whitespace + line endings.
+# https://editorconfig.org/
+#
+# Picked up automatically by VS Code, JetBrains IDEs, Vim plugin,
+# Sublime, and most other editors. Keeps `git diff` clean across
+# contributors using different default editor settings.
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+[*.go]
+indent_style = tab
+indent_size = 4
+
+[Makefile]
+indent_style = tab
+
+[*.{md,markdown}]
+# Markdown trailing spaces are significant (line break).
+trim_trailing_whitespace = false
+
+[*.{yaml,yml}]
+indent_size = 2
+
+[*.{json,jsonc}]
+indent_size = 2
+
+[*.{sql,sh}]
+indent_size = 2

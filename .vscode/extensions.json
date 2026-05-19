@@ -1,0 +1,18 @@
+{
+  // Recommended extensions — VS Code prompts new contributors to
+  // install these on first open. Match the languages/tools the
+  // project actually uses; keep the list short to avoid bloat.
+  "recommendations": [
+    "golang.go",
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "bradlc.vscode-tailwindcss",
+    "editorconfig.editorconfig",
+    "ms-azuretools.vscode-docker",
+    "redhat.vscode-yaml",
+    "ms-kubernetes-tools.vscode-kubernetes-tools",
+    "ms-vscode-remote.remote-containers",
+    "ms-playwright.playwright",
+    "vitest.explorer"
+  ]
+}

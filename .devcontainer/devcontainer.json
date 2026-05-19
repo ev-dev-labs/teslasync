@@ -1,0 +1,62 @@
+{
+  "name": "TeslaSync dev",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  "features": {
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "1.25"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "minikube": "none"
+    },
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": false,
+      "username": "vscode"
+    }
+  },
+
+  "forwardPorts": [
+    8080,
+    5173,
+    5432,
+    6379,
+    1883
+  ],
+  "portsAttributes": {
+    "8080": { "label": "API server" },
+    "5173": { "label": "Vite dev server" },
+    "5432": { "label": "TimescaleDB" },
+    "6379": { "label": "Redis" },
+    "1883": { "label": "Mosquitto MQTT" }
+  },
+
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "editorconfig.editorconfig",
+        "ms-azuretools.vscode-docker",
+        "redhat.vscode-yaml",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "ms-playwright.playwright",
+        "vitest.explorer"
+      ]
+    }
+  },
+
+  "remoteUser": "vscode"
+}

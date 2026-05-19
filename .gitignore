@@ -8,7 +8,13 @@ bin/
 
 # IDE
 .idea/
-.vscode/
+# .vscode/ — keep settings.json/extensions.json/launch.json (shared)
+# but ignore per-user state.
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
 *.swp
 *.swo
 *.sublime-*
@@ -68,6 +74,10 @@ web/test-results/
 web/blob-report/
 web/playwright/.cache/
 *.test.log
+
+# Hot-reload (Air) build dir
+.air-tmp/
+air-build-errors.log
 
 PROMPT_COMMANDS.txt
 
