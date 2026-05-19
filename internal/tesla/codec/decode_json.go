@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/prometheus/client_golang/prometheus"
@@ -77,6 +78,20 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 	"Per-field MQTT messages that parsed as JSON but failed compound flattening.",
 )
 
+// jsonInvalidFieldNameTotal counts per-field MQTT messages dropped
+// because the topic-derived field name was not valid UTF-8. Prometheus
+// metric labels REQUIRE valid UTF-8, so we cannot route such field
+// names through any of the per-field counters above without panicking
+// the consumer. A non-zero rate here means a hostile or buggy
+// publisher is publishing to non-UTF-8 topic paths — investigate the
+// broker ACL.
+var jsonInvalidFieldNameTotal = promauto.NewCounter(prometheus.CounterOpts{
+	Namespace: "teslasync",
+	Subsystem: "codec",
+	Name:      "json_invalid_field_name_total",
+	Help:      "Per-field MQTT messages dropped because the topic-derived field name was not valid UTF-8.",
+})
+
 // DecodeJSONField is the per-field MQTT entry point. The Tesla Fleet
 // Telemetry MQTT producer publishes one signal per topic in the form
 // `{topicBase}/{VIN}/v/{key}` with the raw json.Marshal of the producer's
@@ -127,6 +142,16 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 // (Phase-41 codec canonical-string contract, Rule 11 in
 // .github/instructions/tesla-pipeline.instructions.md).
 func DecodeJSONField(field string, body []byte, vin string, fallbackTs time.Time) ([]Atomic, error) {
+	// Prometheus metric labels MUST be valid UTF-8 or every
+	// .WithLabelValues(field) call below will panic. Reject early
+	// with a label-less counter so a hostile or buggy publisher
+	// cannot crash the consumer (regression guard: see
+	// fuzz_test.go::FuzzDecodeJSONField).
+	if !utf8.ValidString(field) {
+		jsonInvalidFieldNameTotal.Inc()
+		return nil, fmt.Errorf("codec: field name is not valid UTF-8 (%d bytes): %w", len(field), ErrPayloadDrop)
+	}
+
 	meta, ok := protomodel.SignalsByName[field]
 	if !ok {
 		jsonFieldUnknownTotal.WithLabelValues(field).Inc()
