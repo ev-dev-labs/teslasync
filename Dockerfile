@@ -1,5 +1,5 @@
 # Build stage — Go binary
-FROM golang:1.25-alpine AS go-builder
+FROM golang:1.25-alpine@sha256:8d22e29d960bc50cd025d93d5b7c7d220b1ee9aa7a239b3c8f55a57e987e8d45 AS go-builder
 
 RUN apk add --no-cache git ca-certificates tzdata
 
@@ -31,7 +31,7 @@ RUN GOMEMLIMIT=2GiB CGO_ENABLED=0 GOOS=linux go build \
     -o /bin/teslasync ./cmd/teslasync
 
 # Build stage — frontend assets
-FROM node:20-alpine AS web-builder
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS web-builder
 
 WORKDIR /app
 
@@ -45,7 +45,7 @@ COPY CHANGELOG.md /CHANGELOG.md
 RUN npm run build
 
 # Runtime stage — distroless (no shell, no package manager, minimal attack surface)
-FROM gcr.io/distroless/static:nonroot
+FROM gcr.io/distroless/static:nonroot@sha256:963fa6c544fe5ce420f1f54fb88b6fb01479f054c8056d0f74cc2c6000df5240
 
 COPY --from=go-builder /usr/share/zoneinfo /usr/share/zoneinfo
 COPY --from=go-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/

@@ -55,6 +55,19 @@ metrics:
     metricRelabelings: []      # Metric relabeling rules
     relabelings: []            # Target relabeling rules
 
+# PrometheusRule CRs wrap the generated recording + burn-rate alert
+# rules from slo/catalog.yaml so the Prometheus Operator picks them up
+# alongside the application Service. Requires monitoring.coreos.com CRDs
+# (Prometheus Operator / kube-prometheus-stack). If the operator is not
+# installed, leave this disabled and load
+# helm/teslasync/files/prometheus/*.yaml via a vanilla Prometheus
+# `rule_files:` directive instead.
+prometheusRule:
+  enabled: false
+  # labels:
+  #   release: kube-prometheus-stack    # Match the Prometheus instance's ruleSelector
+  # namespace: monitoring               # Deploy CRs to a specific namespace
+
 resources:
   limits:
     cpu: 500m

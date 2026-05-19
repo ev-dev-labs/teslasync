@@ -1,0 +1,58 @@
+name: pr-title
+
+# Enforces Conventional Commits in PR titles so the release workflow
+# (which derives the next version from commit messages) gets clean
+# input. Failing this check is non-blocking until a repository setting
+# is changed to make it required — see CONTRIBUTING.md.
+#
+# Spec: https://www.conventionalcommits.org/
+# Allowed types are aligned with the scopes documented in
+# .github/copilot-instructions.md (feat, fix, refactor, perf, docs,
+# test, chore, ci, style, build, revert).
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+
+permissions:
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Conventional Commits
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate PR title
+        uses: amannn/action-semantic-pull-request@0723387faaf9b38adef4775cd42cfd5155ed6017 # v5.5.3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            refactor
+            perf
+            docs
+            test
+            chore
+            ci
+            style
+            build
+            revert
+          requireScope: false
+          subjectPattern: ^(?![A-Z]).+$
+          subjectPatternError: |
+            The PR title subject must start with a lowercase letter
+            (e.g. "feat(api): add foo", not "Feat(api): Add foo").
+          # Don't validate single-commit PR squash messages (which use
+          # the commit subject) — the commit hook + CI already cover
+          # that case.
+          validateSingleCommit: false
