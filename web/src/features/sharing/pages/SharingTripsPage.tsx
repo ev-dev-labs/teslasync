@@ -129,6 +129,11 @@ export default function SharingTripsPage() {
                 )
                 return (
                   <li key={trip.id}>
+                    {/* role="option" inside role="listbox" — deliberate ARIA
+                        listbox pattern. Shared <Button> variants don't fit a
+                        full-card selectable row with selected/unselected
+                        border styling, and converting would break the
+                        listbox contract. */}
                     <button
                       type="button"
                       role="option"

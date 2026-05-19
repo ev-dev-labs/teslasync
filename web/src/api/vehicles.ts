@@ -2,6 +2,7 @@ import { request } from './client'
 import type {
   Vehicle,
   VehicleState,
+  VehicleStateResponse,
   Position,
   CommandResult,
   TirePressureSnapshot,
@@ -35,8 +36,7 @@ export const syncVehicles = () => request<{ synced: number; vehicles: Vehicle[] 
  *  This function normalises both into { state?: VehicleState; live: boolean }.
  */
 export const getVehicleState = async (id: number): Promise<{ state?: VehicleState; live: boolean }> => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const res = await request<any>(`/vehicles/${id}/state`)
+  const res = await request<VehicleStateResponse>(`/vehicles/${id}/state`)
   if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
     return { state: res.state as VehicleState, live: res.live ?? false }
   }
@@ -61,7 +61,7 @@ export const getVehicleState = async (id: number): Promise<{ state?: VehicleStat
     charger_power: res.charger_power ?? 0,
     charge_rate: res.charge_rate ?? 0,
     time_to_full_charge: res.time_to_full_charge ?? 0,
-    is_locked: res.is_locked ?? v?.is_locked ?? true,
+    is_locked: res.is_locked ?? p?.is_locked ?? true,
     sentry_mode: res.sentry_mode ?? false,
     software_version: res.software_version ?? v?.software_version ?? '',
   }

@@ -6,7 +6,7 @@ import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useAsOfDate, AS_OF_QUERY_PARAM } from '@/hooks/useAsOfDate';
 import type { Vehicle } from '@/types/vehicle';
-import type { VehicleState } from '../types';
+import type { VehicleState, VehicleStateResponse } from '../types';
 export { deriveVehicleStatus as getVehicleStatus } from '../types';
 
 export const vehicleKeys = {
@@ -54,8 +54,7 @@ export function useVehicleState(vehicleId: number, options?: { refetchInterval?:
   return useQuery({
     queryKey: vehicleKeys.state(vehicleId, asOf),
     queryFn: async ({ signal }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const res = await request<any>(withAsOf(`/vehicles/${vehicleId}/state`, asOf), { signal })
+      const res = await request<VehicleStateResponse>(withAsOf(`/vehicles/${vehicleId}/state`, asOf), { signal })
       if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
         return { state: res.state as VehicleState, live: res.live ?? false }
       }
@@ -80,7 +79,7 @@ export function useVehicleState(vehicleId: number, options?: { refetchInterval?:
         charger_power: res.charger_power ?? 0,
         charge_rate: res.charge_rate ?? 0,
         time_to_full_charge: res.time_to_full_charge ?? 0,
-        is_locked: res.is_locked ?? v?.is_locked ?? true,
+        is_locked: res.is_locked ?? p?.is_locked ?? true,
         sentry_mode: res.sentry_mode ?? false,
         software_version: res.software_version ?? v?.software_version ?? '',
       }
@@ -269,8 +268,7 @@ export function useUserPreferenceLatest(vehicleId: number, refetchInterval?: num
 
 /** Raw async function for fetching vehicle state — use in batch queries where hooks can't be used */
 export async function fetchVehicleState(vehicleId: number): Promise<{ state?: VehicleState; live: boolean }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const res = await request<any>(`/vehicles/${vehicleId}/state`)
+  const res = await request<VehicleStateResponse>(`/vehicles/${vehicleId}/state`)
   if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
     return { state: res.state as VehicleState, live: res.live ?? false }
   }
@@ -295,7 +293,7 @@ export async function fetchVehicleState(vehicleId: number): Promise<{ state?: Ve
     charger_power: res.charger_power ?? 0,
     charge_rate: res.charge_rate ?? 0,
     time_to_full_charge: res.time_to_full_charge ?? 0,
-    is_locked: res.is_locked ?? v?.is_locked ?? true,
+    is_locked: res.is_locked ?? p?.is_locked ?? true,
     sentry_mode: res.sentry_mode ?? false,
     software_version: res.software_version ?? v?.software_version ?? '',
   }

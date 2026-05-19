@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { GlassPanel, Badge } from '@/components/ui';
+import { GlassPanel, Badge, Checkbox } from '@/components/ui';
 import { BulkActionToolbar } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -136,6 +136,12 @@ export default function AutomationListPage() {
               }}
             />
           ) : (
+            // Semantic <table> for tabular automation data. A future
+            // refactor (Phase-49 candidate) should convert this to the
+            // shared DataTable component with selectable="multi"; that's a
+            // structural change with selection-wiring regression risk and
+            // deserves its own dedicated prompt + test sweep. The shared
+            // <Checkbox> primitive is already in use for bulk selection.
             <table className="w-full text-sm">
               <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-2)] text-left text-[var(--text-secondary)]">
                 <tr>
@@ -143,15 +149,11 @@ export default function AutomationListPage() {
                     <VisuallyHidden as="label" htmlFor="automations-master">
                       {t('bulk.selectAll', 'Select all')}
                     </VisuallyHidden>
-                    <input
+                    <Checkbox
                       id="automations-master"
-                      type="checkbox"
                       checked={masterState === 'all'}
-                      ref={(el) => {
-                        if (el) el.indeterminate = masterState === 'some';
-                      }}
+                      indeterminate={masterState === 'some'}
                       onChange={onMasterToggle}
-                      className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-transparent"
                       aria-label={t('bulk.selectAll', 'Select all')}
                     />
                   </th>
@@ -174,12 +176,10 @@ export default function AutomationListPage() {
                         <VisuallyHidden as="label" htmlFor={`automation-${a.id}`}>
                           {t('bulk.selectRow', 'Select row')}
                         </VisuallyHidden>
-                        <input
+                        <Checkbox
                           id={`automation-${a.id}`}
-                          type="checkbox"
                           checked={checked}
                           onChange={() => sel.toggle(a.id)}
-                          className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-transparent"
                           aria-label={t('automationList.selectAutomation', 'Select automation {{name}}', { name: a.name })}
                         />
                       </td>

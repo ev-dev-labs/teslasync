@@ -2,7 +2,7 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 
-import { GlassPanel, Badge, EditableText } from '@/components/ui';
+import { GlassPanel, Badge, EditableText, Button, Checkbox } from '@/components/ui';
 import { BulkActionToolbar, SeverityBadge } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -152,6 +152,13 @@ export default function AlertRulesPage() {
               }}
             />
           ) : (
+            // Semantic <table> for tabular alert rules data. A future
+            // refactor (Phase-49 candidate) should convert this to the
+            // shared DataTable component with selectable="multi"; that's a
+            // structural change with selection-wiring regression risk and
+            // deserves its own dedicated prompt + test sweep. The shared
+            // <Checkbox> primitive is already in use for bulk selection
+            // and the <Button> for the inline rename action.
             <table className="w-full text-sm">
               <thead className="border-b border-[var(--border-subtle)] bg-[var(--surface-2)] text-left text-[var(--text-secondary)]">
                 <tr>
@@ -159,15 +166,11 @@ export default function AlertRulesPage() {
                     <VisuallyHidden as="label" htmlFor="alert-rules-master">
                       {t('bulk.selectAll', 'Select all')}
                     </VisuallyHidden>
-                    <input
+                    <Checkbox
                       id="alert-rules-master"
-                      type="checkbox"
                       checked={masterState === 'all'}
-                      ref={(el) => {
-                        if (el) el.indeterminate = masterState === 'some';
-                      }}
+                      indeterminate={masterState === 'some'}
                       onChange={onMasterToggle}
-                      className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-transparent"
                       aria-label={t('bulk.selectAll', 'Select all')}
                     />
                   </th>
@@ -190,12 +193,10 @@ export default function AlertRulesPage() {
                         <VisuallyHidden as="label" htmlFor={`alert-rule-${r.id}`}>
                           {t('bulk.selectRow', 'Select row')}
                         </VisuallyHidden>
-                        <input
+                        <Checkbox
                           id={`alert-rule-${r.id}`}
-                          type="checkbox"
                           checked={checked}
                           onChange={() => sel.toggle(r.id)}
-                          className="h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-transparent"
                           aria-label={t('alertRules.selectRule', 'Select rule {{name}}', { name: r.name })}
                         />
                       </td>
@@ -220,14 +221,16 @@ export default function AlertRulesPage() {
                               >
                                 {value}
                               </Link>
-                              <button
+                              <Button
                                 type="button"
+                                variant="ghost"
+                                size="sm"
                                 onClick={onStartEdit}
                                 aria-label={t('editableText.rename.alertRule', 'Rename alert rule {{name}}', { name: r.name })}
-                                className="rounded p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                                className="!h-7 !px-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                               >
                                 <Icons.edit className="h-3.5 w-3.5" />
-                              </button>
+                              </Button>
                             </span>
                           )}
                         />

@@ -12,11 +12,23 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
 
 - Transitive coverage from `api_availability`: **true**
 - Per-route SLOs registered for:
+  - `/api/v1/analytics/battery-degradation`
+  - `/api/v1/analytics/fleet`
+  - `/api/v1/charging`
+  - `/api/v1/charging/{sessionID}/telemetry`
+  - `/api/v1/drives`
+  - `/api/v1/drives/{driveID}/telemetry`
+  - `/api/v1/signals/{vehicleID}/live`
+  - `/api/v1/signals/{vehicleID}/{signalName}/history`
+  - `/api/v1/system/health`
+  - `/api/v1/vehicles`
+  - `/api/v1/vehicles/{vehicleID}/battery`
+  - `/api/v1/vehicles/{vehicleID}/energy`
   - `/api/v1/vehicles/{vehicleID}/state`
 
 ## Findings
 
-All 185 user-facing routes are covered.
+All 189 user-facing routes are covered.
 
 ## Per-route coverage table
 
@@ -110,6 +122,9 @@ All 185 user-facing routes are covered.
 | `/mark-read` | transitive (api_availability) |
 | `/mark-unread` | transitive (api_availability) |
 | `/matrix` | transitive (api_availability) |
+| `/message-placeholders` | transitive (api_availability) |
+| `/message-presets` | transitive (api_availability) |
+| `/message-preview` | transitive (api_availability) |
 | `/migration-status` | transitive (api_availability) |
 | `/mobile-enabled` | transitive (api_availability) |
 | `/monthly` | transitive (api_availability) |
@@ -155,6 +170,7 @@ All 185 user-facing routes are covered.
 | `/sessions` | transitive (api_availability) |
 | `/sessions/{id}` | transitive (api_availability) |
 | `/settings` | transitive (api_availability) |
+| `/settings/ai/validate-config` | transitive (api_availability) |
 | `/settings/dashboard-layouts` | transitive (api_availability) |
 | `/settings/export` | transitive (api_availability) |
 | `/settings/polling-config` | transitive (api_availability) |

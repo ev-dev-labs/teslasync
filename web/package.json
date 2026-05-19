@@ -1,6 +1,6 @@
 {
   "name": "teslasync-web",
-  "description": "TeslaSync frontend — glassmorphism React dashboard for Tesla fleet monitoring",
+  "description": "TeslaSync frontend \u2014 glassmorphism React dashboard for Tesla fleet monitoring",
   "private": true,
   "version": "2.0.0",
   "type": "module",
@@ -49,7 +49,8 @@
     "audit:i18n": "pwsh ../scripts/i18n-coverage.ps1",
     "i18n:validate": "node ../scripts/i18n-validate-keys.mjs",
     "i18n:validate:strict": "node ../scripts/i18n-validate-keys.mjs --strict",
-    "i18n:extract": "node ../scripts/i18n-validate-keys.mjs --extract"
+    "i18n:extract": "node ../scripts/i18n-validate-keys.mjs --extract",
+    "build:analyze": "ANALYZE=1 vite build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -114,6 +115,7 @@
     "eslint-plugin-react-refresh": "^0.4.5",
     "jsdom": "^29.0.1",
     "postcss": "^8.4.35",
+    "rollup-plugin-visualizer": "^5.12.0",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5.4.2",

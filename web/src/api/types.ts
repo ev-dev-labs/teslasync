@@ -416,6 +416,54 @@ export interface VehicleState {
   software_version: string
 }
 
+/**
+ * Wire shape of `GET /api/v1/vehicles/{id}/state`. The handler returns one of
+ * two formats depending on whether a fresh telemetry sample is available:
+ *
+ *   - Live  : { state: VehicleState, live: true, ...session fields }
+ *   - Cached: { vehicle: Vehicle, position: Position+legacy, live: false,
+ *               ...session fields }
+ *
+ * Callers normalise both into `{ state?: VehicleState; live: boolean }`
+ * via `getVehicleState` / `useVehicleState` / `fetchVehicleState`. The
+ * shared response type below makes that normalisation type-safe without
+ * resorting to `any`. The cached branch is currently unreachable on the
+ * production handler (it always emits the live shape) but the legacy
+ * payload shape is preserved here so older deployments stay parseable.
+ */
+export interface VehicleStateResponse {
+  state?: VehicleState
+  vehicle?: Vehicle | null
+  position?: VehicleStateLegacyPosition | null
+  live?: boolean
+  is_charging?: boolean
+  charger_power?: number
+  charge_rate?: number
+  time_to_full_charge?: number
+  is_locked?: boolean
+  sentry_mode?: boolean
+  software_version?: string
+}
+
+/**
+ * Superset of {@link Position} that documents the optional fields older
+ * versions of the `/vehicles/{id}/state` handler attached to the `position`
+ * envelope. Only the cached/fallback branch of {@link VehicleStateResponse}
+ * uses these.
+ */
+export interface VehicleStateLegacyPosition extends Partial<Position> {
+  speed?: number | null
+  power?: number | null
+  battery_level?: number | null
+  rated_range?: number | null
+  ideal_range?: number | null
+  odometer?: number | null
+  inside_temp?: number | null
+  outside_temp?: number | null
+  is_climate_on?: boolean | null
+  is_locked?: boolean | null
+}
+
 export interface AuthStatus {
   authenticated: boolean
   expires_at?: string

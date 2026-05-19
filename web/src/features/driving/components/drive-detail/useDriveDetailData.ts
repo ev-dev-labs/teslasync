@@ -107,8 +107,31 @@ export function useDriveDetailData(id: string) {
         fanStatus: tp.fanStatus ?? null,
       }));
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- positions may have snake_case fallback fields
-    return (drive.positions ?? []).map((p: any) => ({
+    // Position rows may arrive with snake_case fallback fields (e.g. when
+    // the response still carries legacy `created_at` / `outside_temp` keys
+    // alongside the canonical camelCase). Declare the loose shape inline so
+    // the compiler still type-checks every access.
+    type LoosePositionRow = {
+      latitude?: number | null
+      longitude?: number | null
+      createdAt?: string | null
+      created_at?: string | null
+      timestamp?: string | null
+      speed?: number | null
+      batteryLevel?: number | null
+      battery_level?: number | null
+      elevation?: number | null
+      power?: number | null
+      outsideTemp?: number | null
+      outside_temp?: number | null
+      insideTemp?: number | null
+      inside_temp?: number | null
+      idealRange?: number | null
+      ideal_range?: number | null
+      ratedRange?: number | null
+      rated_range?: number | null
+    };
+    return ((drive.positions ?? []) as LoosePositionRow[]).map((p) => ({
       time: formatTime(p.createdAt ?? p.created_at ?? p.timestamp),
       // Position.speed comes from drivePositionFieldMappings VehicleSpeed -> speed_mph
       // -> aliasPositionFields renames to 'speed'. The value is still m/s SI; the
@@ -117,12 +140,12 @@ export function useDriveDetailData(id: string) {
       battery: p.batteryLevel ?? p.battery_level ?? 0,
       elevation: p.elevation ?? 0,
       power: p.power ?? 0,
-      outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTempFromSI(p.outsideTemp ?? p.outside_temp, unitPrefs.temperature) : null,
-      insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTempFromSI(p.insideTemp ?? p.inside_temp, unitPrefs.temperature) : null,
+      outsideTemp: (p.outsideTemp ?? p.outside_temp) != null ? convertTempFromSI(p.outsideTemp ?? p.outside_temp ?? 0, unitPrefs.temperature) : null,
+      insideTemp: (p.insideTemp ?? p.inside_temp) != null ? convertTempFromSI(p.insideTemp ?? p.inside_temp ?? 0, unitPrefs.temperature) : null,
       driverTemp: null as number | null,
       passengerTemp: null as number | null,
-      idealRange: (p.idealRange ?? p.ideal_range) != null ? convertDistanceFromSI(p.idealRange ?? p.ideal_range, unitPrefs.distance) : null,
-      ratedRange: (p.ratedRange ?? p.rated_range) != null ? convertDistanceFromSI(p.ratedRange ?? p.rated_range, unitPrefs.distance) : null,
+      idealRange: (p.idealRange ?? p.ideal_range) != null ? convertDistanceFromSI(p.idealRange ?? p.ideal_range ?? 0, unitPrefs.distance) : null,
+      ratedRange: (p.ratedRange ?? p.rated_range) != null ? convertDistanceFromSI(p.ratedRange ?? p.rated_range ?? 0, unitPrefs.distance) : null,
       estRange: null as number | null,
       odometer: p.odometer != null ? convertDistanceFromSI(p.odometer, unitPrefs.distance) : null,
       soc: null as number | null,

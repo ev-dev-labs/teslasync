@@ -59,8 +59,7 @@ export function ElevationProfile({
   }, [currentIndex, data]);
 
   const handleClick = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (state: any) => {
+    (state: { activeTooltipIndex?: number } | null | undefined) => {
       if (!onClickIndex || !state) return;
       const idx = state.activeTooltipIndex;
       if (typeof idx === 'number' && idx >= 0 && idx < data.length) {

@@ -93,3 +93,220 @@ slos:
     window: 28d
     owner: frontend
     tags: [frontend, web-vitals]
+
+  # --- Per-route HTTP latency SLOs (hot user-facing paths) ---
+  # These supplement transitive coverage from api_availability with explicit
+  # latency objectives for paths whose perceived performance drives core UX.
+  # Coverage audit: `go run ./cmd/slo-coverage-audit`.
+
+  - name: vehicles_list_latency_p95_300ms
+    description: "p95 latency of GET /api/v1/vehicles (dashboard load) must stay under 300ms."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles\",le=\"0.3\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, latency, dashboard]
+
+  - name: vehicle_energy_latency_p95_500ms
+    description: "p95 latency of GET /api/v1/vehicles/{vehicleID}/energy must stay under 500ms."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/energy\",le=\"0.5\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/energy\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, latency, vehicle-detail]
+
+  - name: vehicle_battery_latency_p95_500ms
+    description: "p95 latency of GET /api/v1/vehicles/{vehicleID}/battery must stay under 500ms."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/battery\",le=\"0.5\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/battery\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, latency, vehicle-detail]
+
+  - name: signals_live_latency_p95_400ms
+    description: "p95 latency of GET /api/v1/signals/{vehicleID}/live (live-state hot path) must stay under 400ms."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/signals/{vehicleID}/live\",le=\"0.4\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/signals/{vehicleID}/live\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: ingest
+    tags: [http, latency, live-state]
+
+  - name: signals_history_latency_p95_1500ms
+    description: "p95 latency of GET /api/v1/signals/{vehicleID}/{signalName}/history (chart load) must stay under 1.5s."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/signals/{vehicleID}/{signalName}/history\",le=\"1.5\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/signals/{vehicleID}/{signalName}/history\"}[5m]))"
+    objective: 95.0
+    window: 30d
+    owner: ingest
+    tags: [http, latency, history]
+
+  - name: drives_list_latency_p95_800ms
+    description: "p95 latency of GET /api/v1/drives (drive list page) must stay under 800ms."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/drives\",le=\"0.8\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/drives\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, latency, drives]
+
+  - name: drive_telemetry_latency_p95_2000ms
+    description: "p95 latency of GET /api/v1/drives/{driveID}/telemetry (drive detail chart) must stay under 2s."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/drives/{driveID}/telemetry\",le=\"2.0\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/drives/{driveID}/telemetry\"}[5m]))"
+    objective: 95.0
+    window: 30d
+    owner: platform
+    tags: [http, latency, drives]
+
+  - name: charging_list_latency_p95_800ms
+    description: "p95 latency of GET /api/v1/charging (charging list page) must stay under 800ms."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/charging\",le=\"0.8\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/charging\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, latency, charging]
+
+  - name: charging_telemetry_latency_p95_2000ms
+    description: "p95 latency of GET /api/v1/charging/{sessionID}/telemetry must stay under 2s."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/charging/{sessionID}/telemetry\",le=\"2.0\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/charging/{sessionID}/telemetry\"}[5m]))"
+    objective: 95.0
+    window: 30d
+    owner: platform
+    tags: [http, latency, charging]
+
+  - name: analytics_fleet_latency_p95_1500ms
+    description: "p95 latency of GET /api/v1/analytics/fleet (analytics dashboard) must stay under 1.5s."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/fleet\",le=\"1.5\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/fleet\"}[5m]))"
+    objective: 95.0
+    window: 30d
+    owner: analytics
+    tags: [http, latency, analytics]
+
+  - name: analytics_battery_degradation_latency_p95_2000ms
+    description: "p95 latency of GET /api/v1/analytics/battery-degradation must stay under 2s."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/battery-degradation\",le=\"2.0\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-degradation\"}[5m]))"
+    objective: 95.0
+    window: 30d
+    owner: analytics
+    tags: [http, latency, analytics]
+
+  - name: system_health_latency_p99_100ms
+    description: "p99 latency of GET /api/v1/system/health (kube-probe) must stay under 100ms."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/system/health\",le=\"0.1\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/system/health\"}[5m]))"
+    objective: 99.9
+    window: 7d
+    owner: platform
+    tags: [http, latency, health]
+
+  # --- Operational + reliability SLOs (non-HTTP) ---
+
+  - name: backup_success_rate
+    description: "Nightly backup runs must succeed. Good = runs where status=success."
+    sli:
+      good_events: "sum(rate(teslasync_backup_runs_total{status=\"success\"}[7d]))"
+      valid_events: "sum(rate(teslasync_backup_runs_total[7d]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [backup, dr]
+
+  - name: cache_hit_ratio
+    description: "Shared cache hit ratio must exceed 80% across all caches."
+    sli:
+      good_events: "sum(rate(teslasync_cache_hits_total[5m]))"
+      valid_events: "sum(rate(teslasync_cache_hits_total[5m])) + sum(rate(teslasync_cache_misses_total[5m]))"
+    objective: 80.0
+    window: 7d
+    owner: platform
+    tags: [cache, performance]
+
+  - name: auth_success_rate
+    description: "Authentication attempt success ratio must exceed 95% (failures may indicate provider outage or attack)."
+    sli:
+      good_events: "sum(rate(teslasync_auth_attempts_total{result=\"success\"}[5m]))"
+      valid_events: "sum(rate(teslasync_auth_attempts_total[5m]))"
+    objective: 95.0
+    window: 7d
+    owner: platform
+    tags: [auth, security]
+
+  - name: notification_delivery_rate
+    description: "Notifications must be delivered successfully. Good = sent with result=success."
+    sli:
+      good_events: "sum(rate(teslasync_notifications_sent_total{result=\"success\"}[5m]))"
+      valid_events: "sum(rate(teslasync_notifications_sent_total[5m]))"
+    objective: 98.0
+    window: 7d
+    owner: platform
+    tags: [notifications, delivery]
+
+  - name: geocoding_success_rate
+    description: "Geocoding lookups must succeed (success or cached count as good; geofence-only counts as good)."
+    sli:
+      good_events: "sum(rate(teslasync_geocoding_total{result=~\"success|cached|geofence\"}[5m]))"
+      valid_events: "sum(rate(teslasync_geocoding_total[5m]))"
+    objective: 99.0
+    window: 7d
+    owner: platform
+    tags: [geocoding, upstream]
+
+  - name: db_query_latency_p99_100ms
+    description: "p99 of all database queries must stay under 100ms (excludes long analytics scans)."
+    sli:
+      good_events: "sum(rate(teslasync_db_query_duration_seconds_bucket{le=\"0.1\",operation!~\"analytics_.*\"}[5m]))"
+      valid_events: "sum(rate(teslasync_db_query_duration_seconds_count{operation!~\"analytics_.*\"}[5m]))"
+    objective: 99.0
+    window: 7d
+    owner: platform
+    tags: [database, latency]
+
+  - name: db_circuit_breaker_closed
+    description: "Database circuit breaker must remain closed. Mirrors tesla_api_availability for the DB path."
+    sli:
+      good_events: "sum_over_time((max(teslasync_db_circuit_breaker_state) == 0)[5m:30s])"
+      valid_events: "count_over_time(teslasync_db_circuit_breaker_state[5m:30s])"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [database, breaker]
+
+  - name: rate_limit_pressure
+    description: "Sustained rate-limit rejections indicate undersized buckets or abuse. Good = no rejections in window."
+    sli:
+      good_events: "sum_over_time((sum(rate(teslasync_rate_limit_exceeded_total[5m])) == 0)[5m:30s])"
+      valid_events: "count_over_time(teslasync_rate_limit_exceeded_total[5m:30s])"
+    objective: 99.0
+    window: 7d
+    owner: platform
+    tags: [rate-limit, abuse]
+
+  - name: mqtt_connected
+    description: "MQTT broker connection must remain up. teslasync_mqtt_connected==1 when healthy."
+    sli:
+      good_events: "sum_over_time((max(teslasync_mqtt_connected) == 1)[5m:30s])"
+      valid_events: "count_over_time(teslasync_mqtt_connected[5m:30s])"
+    objective: 99.9
+    window: 30d
+    owner: ingest
+    tags: [mqtt, connectivity]

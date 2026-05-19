@@ -2,11 +2,40 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import type { PluginOption } from 'vite'
 import { execSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import path from 'path'
 
 const enablePwaInDev = process.env.VITE_PWA_DEV === 'true'
+
+/**
+ * Bundle analyser. Activated by `ANALYZE=1 npm run build` (or
+ * `npm run build:analyze`). When off, the import is never resolved so the
+ * dev/CI build stays exactly as fast and reproducible as before. Loaded via
+ * `require()` rather than a top-level `import` so contributors who have
+ * not yet run `npm install` can still build without errors (the missing
+ * module path is only touched when ANALYZE=1).
+ */
+function bundleVisualizer(): PluginOption | null {
+  if (process.env.ANALYZE !== '1') return null
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+    const { visualizer } = require('rollup-plugin-visualizer') as typeof import('rollup-plugin-visualizer')
+    return visualizer({
+      filename: 'dist/stats.html',
+      open: false,
+      gzipSize: true,
+      brotliSize: true,
+      template: 'treemap',
+      title: 'TeslaSync bundle analyser',
+    }) as PluginOption
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn('[vite] ANALYZE=1 set but rollup-plugin-visualizer is not installed. Run `npm install` to enable.', err)
+    return null
+  }
+}
 
 // Build-time provenance for the footer status bar (Phase-40 / Prompt 59).
 //   - VITE_APP_VERSION: package.json `version`, overridable via env.
@@ -114,6 +143,7 @@ export default defineConfig({
         type: 'module',
       },
     }),
+    bundleVisualizer(),
   ],
   resolve: {
     alias: {

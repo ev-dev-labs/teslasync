@@ -1,15 +1,52 @@
 import { formatDate, formatDateTime } from './dateFormat'
 import { fmtNumber } from './numberFormat'
 
-export function generateDriveReport(drive: any, vehicle: any) {
+/**
+ * Loose drive/vehicle/stats input shapes accepted by the report builders.
+ *
+ * The report functions are deliberately permissive — they accept anything
+ * that loosely matches the wire shape because reports are produced from
+ * pages that combine multiple API responses (drive detail, vehicle list,
+ * derived stats) and several legacy fields. The interfaces below let the
+ * compiler verify field names without forcing every caller to map their
+ * shape into a strict {@link import('../api/types').Drive} first.
+ */
+export interface DriveReportInput {
+  id?: number
+  start_date?: string | null
+  end_date?: string | null
+  /** Distance in kilometres (already converted by the page). */
+  distance?: number | null
+  duration_min?: number | null
+  speed_max?: number | null
+  start_battery_level?: number | null
+  end_battery_level?: number | null
+  start_range_km?: number | null
+  end_range_km?: number | null
+}
+
+export interface VehicleReportInput {
+  display_name?: string | null
+}
+
+export interface MonthlyReportStats {
+  total_distance_km?: number | null
+  total_drives?: number | null
+  total_energy_kwh?: number | null
+  total_cost?: number | null
+  avg_efficiency_wh_km?: number | null
+}
+
+export function generateDriveReport(drive: DriveReportInput, vehicle: VehicleReportInput | null | undefined) {
   const printWindow = window.open('', '_blank')
   if (!printWindow) return
 
+  const startDate = drive.start_date ?? ''
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Drive Report - ${formatDate(drive.start_date)}</title>
+      <title>Drive Report - ${formatDate(startDate)}</title>
       <style>
         body { font-family: system-ui, sans-serif; padding: 40px; color: #1a1a2e; }
         h1 { color: #0077b6; border-bottom: 2px solid #0077b6; padding-bottom: 8px; }
@@ -26,7 +63,7 @@ export function generateDriveReport(drive: any, vehicle: any) {
     </head>
     <body>
       <h1>TeslaSync — Drive Report</h1>
-      <p><strong>Vehicle:</strong> ${vehicle?.display_name || 'N/A'} | <strong>Date:</strong> ${formatDateTime(drive.start_date)}</p>
+      <p><strong>Vehicle:</strong> ${vehicle?.display_name || 'N/A'} | <strong>Date:</strong> ${formatDateTime(startDate)}</p>
 
       <div>
         <div class="stat"><div class="stat-value">${drive.distance != null ? fmtNumber(drive.distance, 1) : '—'}</div><div class="stat-label">km Distance</div></div>
@@ -37,9 +74,9 @@ export function generateDriveReport(drive: any, vehicle: any) {
 
       <h2>Details</h2>
       <table>
-        <tr><td>Start Time</td><td>${formatDateTime(drive.start_date)}</td></tr>
+        <tr><td>Start Time</td><td>${formatDateTime(startDate)}</td></tr>
         <tr><td>End Time</td><td>${drive.end_date ? formatDateTime(drive.end_date) : 'In progress'}</td></tr>
-        <tr><td>Distance</td><td>${fmtNumber(drive.distance, 1)} km</td></tr>
+        <tr><td>Distance</td><td>${fmtNumber(drive.distance ?? 0, 1)} km</td></tr>
         <tr><td>Duration</td><td>${Math.floor((drive.duration_min || 0) / 60)}h ${Math.round((drive.duration_min || 0) % 60)}m</td></tr>
         <tr><td>Average Speed</td><td>${fmtNumber((drive.distance || 0) / ((drive.duration_min || 1) / 60), 0)} km/h</td></tr>
         <tr><td>Max Speed</td><td>${drive.speed_max != null ? fmtNumber(drive.speed_max, 0) : '—'} km/h</td></tr>
@@ -56,7 +93,10 @@ export function generateDriveReport(drive: any, vehicle: any) {
   printWindow.print()
 }
 
-export function generateMonthlyReport(stats: any, vehicles: any[]) {
+export function generateMonthlyReport(
+  stats: MonthlyReportStats | null | undefined,
+  vehicles: ReadonlyArray<VehicleReportInput> | null | undefined,
+) {
   const printWindow = window.open('', '_blank')
   if (!printWindow) return
 
@@ -80,11 +120,11 @@ export function generateMonthlyReport(stats: any, vehicles: any[]) {
       <table>
         <tr><th>Metric</th><th>Value</th></tr>
         <tr><td>Total Vehicles</td><td>${vehicles?.length || 0}</td></tr>
-        <tr><td>Total Distance</td><td>${fmtNumber(stats?.total_distance_km, 0)} km</td></tr>
+        <tr><td>Total Distance</td><td>${fmtNumber(stats?.total_distance_km ?? 0, 0)} km</td></tr>
         <tr><td>Total Drives</td><td>${stats?.total_drives || 0}</td></tr>
-        <tr><td>Total Energy</td><td>${fmtNumber(stats?.total_energy_kwh, 0)} kWh</td></tr>
-        <tr><td>Total Cost</td><td>$${fmtNumber(stats?.total_cost, 2)}</td></tr>
-        <tr><td>Avg Efficiency</td><td>${fmtNumber(stats?.avg_efficiency_wh_km, 0)} Wh/km</td></tr>
+        <tr><td>Total Energy</td><td>${fmtNumber(stats?.total_energy_kwh ?? 0, 0)} kWh</td></tr>
+        <tr><td>Total Cost</td><td>$${fmtNumber(stats?.total_cost ?? 0, 2)}</td></tr>
+        <tr><td>Avg Efficiency</td><td>${fmtNumber(stats?.avg_efficiency_wh_km ?? 0, 0)} Wh/km</td></tr>
       </table>
       <div class="footer">Generated by TeslaSync · ${new Date().toLocaleString()}</div>
     </body>

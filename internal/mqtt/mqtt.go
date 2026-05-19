@@ -99,6 +99,28 @@ func (c *Client) PublishJSON(topic string, payload interface{}) {
 	c.Publish(topic, string(data))
 }
 
+// PublishJSONContext is the trace-context-aware counterpart to PublishJSON.
+// When ctx carries a valid OpenTelemetry span context, the payload is
+// wrapped in a `{"_tc": {...}, "payload": <payload>}` envelope so subscribers
+// that call extractTraceContext (or use the same internal/mqtt package) can
+// continue the trace across the broker hop. When ctx is nil or carries no
+// span, behaviour is identical to PublishJSON.
+//
+// This is the recommended call when the publisher is downstream of an HTTP
+// handler or a worker job that runs under a span — see the API server's
+// telemetry ingest handler and the notification/export workers. Tesla Fleet
+// Telemetry messages are not produced by this client, so the consumer-side
+// PipelineSubscriber is unaffected.
+func (c *Client) PublishJSONContext(ctx context.Context, topic string, payload interface{}) {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		log.Error().Err(err).Str("topic", topic).Msg("failed to marshal MQTT payload")
+		return
+	}
+	wrapped := wrapJSONWithTraceContext(ctx, data)
+	c.Publish(topic, string(wrapped))
+}
+
 // PublishVehicleData publishes vehicle telemetry to multiple MQTT topics.
 func (c *Client) PublishVehicleData(vin string, data *tesla.VehicleDataResponse) {
 	base := vin
@@ -704,16 +726,24 @@ type mqttPayload struct {
 }
 
 func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.Message) {
+	// W3C trace-context propagation: if the publisher wrapped the payload
+	// in our JSON envelope (`{"_tc": ..., "payload": ...}`), strip the
+	// envelope here so the rest of the pipeline sees the raw payload AND
+	// the consume span below becomes a child of the publisher span. Tesla
+	// telemetry payloads (bare scalars / `{"value": ...}`) pass through
+	// unchanged because unwrapJSONTraceContext recognises only envelopes
+	// with both `_tc` AND `payload` keys.
+	payload, ctxIn, _ := unwrapJSONTraceContext(s.ctx, msg.Payload())
 	// Phase-44 prompt 0014: open the receive-boundary span. The ctx returned
 	// here MUST be threaded through handlePayload → pipeline.Process so all
 	// normalize / router / writer spans become children of mqtt.consume.
 	ctx, span := otel.Tracer(mqttTracerName).Start(
-		s.ctx,
+		ctxIn,
 		"mqtt.consume",
 		trace.WithSpanKind(trace.SpanKindConsumer),
 		trace.WithAttributes(
 			attribute.String("mqtt.topic", msg.Topic()),
-			attribute.Int("mqtt.message_size", len(msg.Payload())),
+			attribute.Int("mqtt.message_size", len(payload)),
 			attribute.Int("mqtt.message_id", int(msg.MessageID())),
 		),
 	)
@@ -737,7 +767,7 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 	}()
 	s.handlePayload(ctx, mqttPayload{
 		Topic:     msg.Topic(),
-		Payload:   msg.Payload(),
+		Payload:   payload,
 		MessageID: msg.MessageID(),
 		Ack:       msg.Ack,
 	})

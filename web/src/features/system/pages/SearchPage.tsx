@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import {
@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Input } from '@/components/ui'
+import { GlassPanel, Input, Button } from '@/components/ui'
 import { TimeStamp } from '@/components/data-display'
 import { EmptyState, Skeleton } from '@/components/feedback'
 import { AINLSearch } from '@/components/ai/AINLSearch'
@@ -51,7 +51,6 @@ const ALL_TYPES: SearchHitType[] = [
  */
 export default function SearchPage() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const [query, setQuery] = useUrlString('q', '')
   const [activeTypes, setActiveTypes] = useUrlArray('types')
 
@@ -122,6 +121,9 @@ export default function SearchPage() {
         />
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
+          {/* Multi-select aria-pressed toggle chips — deliberate raw <button>
+              for the toggle-group pattern. PillFilterBar/Toggle are
+              single-select, so they don't fit. */}
           {ALL_TYPES.map((type) => {
             const active = typesFilter.includes(type)
             return (
@@ -143,13 +145,15 @@ export default function SearchPage() {
             )
           })}
           {typesFilter.length > 0 && (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={clearFilters}
-              className="rounded-full border border-[var(--glass-border)] bg-[var(--surface-1)] px-3 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              className="!h-7 rounded-full !px-3 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             >
               {t('search.filters.clear', 'Clear filters')}
-            </button>
+            </Button>
           )}
         </div>
       </GlassPanel>
@@ -210,9 +214,8 @@ export default function SearchPage() {
                 <ul className="divide-y divide-[var(--glass-border)]">
                   {group.hits.map((hit) => (
                     <li key={`${hit.type}-${hit.id}`}>
-                      <button
-                        type="button"
-                        onClick={() => navigate(hit.url)}
+                      <Link
+                        to={hit.url}
                         className="flex w-full items-center gap-3 rounded-lg px-2 py-3 text-left transition-colors hover:bg-[var(--surface-2)]"
                       >
                         <span className="text-[var(--text-muted)]">
@@ -230,7 +233,7 @@ export default function SearchPage() {
                           </span>
                         )}
                         <ArrowRight className="h-4 w-4 flex-shrink-0 text-[var(--text-muted)]" />
-                      </button>
+                      </Link>
                     </li>
                   ))}
                 </ul>
