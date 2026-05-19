@@ -69,4 +69,6 @@
 //   - docs/runbooks/backup-restore.md — restore procedure + RPO/RTO.
 //   - helm/teslasync/templates/cronjob-backup.yaml — scheduled run.
 //   - .github/workflows/restore-test.yml — nightly restore drill.
+//
+// Layer: cmd-internal
 package main

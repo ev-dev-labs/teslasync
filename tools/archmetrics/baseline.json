@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-18T07:28:14Z",
-  "go_version": "go1.26.1",
-  "commit_sha": "5a5bfd8200a255bbd3910a23ad8026ef94e8c6a1",
+  "generated_at": "2026-05-19T16:54:03Z",
+  "go_version": "go1.26.3",
+  "commit_sha": "6507bbf67759e5f4b280bd188a2534e8497c1019",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -41,6 +41,22 @@
       "files": [
         "doc.go",
         "main.go"
+      ]
+    },
+    {
+      "path": "cmd/backup",
+      "go_files": 4,
+      "test_files": 1,
+      "loc": 911,
+      "has_doc_go": true,
+      "layer": "cmd-internal",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "main.go",
+        "main_test.go",
+        "storage_local.go",
+        "storage_s3.go"
       ]
     },
     {
@@ -665,7 +681,7 @@
       "path": "internal/ai/rag",
       "go_files": 9,
       "test_files": 7,
-      "loc": 2172,
+      "loc": 2163,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1941,9 +1957,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 264,
-      "test_files": 158,
-      "loc": 123720,
+      "go_files": 269,
+      "test_files": 159,
+      "loc": 123580,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2082,6 +2098,7 @@
         "admin_log_stream_handler_test.go",
         "admin_maintenance_handler.go",
         "admin_maintenance_handler_test.go",
+        "ai_adapters.go",
         "ai_admin_handler.go",
         "ai_admin_handler_test.go",
         "ai_alert_handler.go",
@@ -2251,6 +2268,7 @@
         "battery_degradation_handler_test.go",
         "battery_handler.go",
         "battery_handler_test.go",
+        "body_limits.go",
         "bulk_handlers_phase45_test.go",
         "bulk_handlers_test.go",
         "bulk_helpers.go",
@@ -2280,6 +2298,8 @@
         "computed_metric_evaluator.go",
         "computed_metrics.go",
         "converters.go",
+        "cors.go",
+        "cors_test.go",
         "cost_forecast_handler.go",
         "dashboard_layout_handler.go",
         "dashboard_layout_handler_test.go",
@@ -2341,6 +2361,7 @@
         "lifetime_handler_test.go",
         "location_snapshot_handler.go",
         "location_snapshot_handler_test.go",
+        "log_stream_tap.go",
         "maintenance_handler.go",
         "media_handler.go",
         "media_handler_test.go",
@@ -2417,6 +2438,7 @@
         "signals_catalog_handler_test.go",
         "sleep_handler.go",
         "software_update_handler.go",
+        "spa_fallback.go",
         "speed_profile_handler.go",
         "sse_handler.go",
         "status_incidents_handler.go",
@@ -2523,7 +2545,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1348,
+      "loc": 1351,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -2697,7 +2719,7 @@
       "path": "internal/auth",
       "go_files": 6,
       "test_files": 4,
-      "loc": 2384,
+      "loc": 2374,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2720,7 +2742,7 @@
       "path": "internal/automation",
       "go_files": 6,
       "test_files": 2,
-      "loc": 1561,
+      "loc": 1558,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2933,7 +2955,7 @@
       "path": "internal/database",
       "go_files": 98,
       "test_files": 34,
-      "loc": 25840,
+      "loc": 25814,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3259,7 +3281,7 @@
       "path": "internal/export",
       "go_files": 9,
       "test_files": 3,
-      "loc": 3000,
+      "loc": 2986,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3285,7 +3307,7 @@
       "path": "internal/fsm",
       "go_files": 11,
       "test_files": 3,
-      "loc": 2514,
+      "loc": 2507,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3387,7 +3409,7 @@
       "path": "internal/fsm/telemetry",
       "go_files": 3,
       "test_files": 1,
-      "loc": 720,
+      "loc": 734,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3512,14 +3534,15 @@
     {
       "path": "internal/integrations",
       "go_files": 2,
-      "test_files": 0,
-      "loc": 134,
+      "test_files": 1,
+      "loc": 350,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
       "files": [
         "doc.go",
-        "github_issues.go"
+        "github_issues.go",
+        "github_issues_test.go"
       ]
     },
     {
@@ -3673,9 +3696,9 @@
     },
     {
       "path": "internal/mqtt",
-      "go_files": 5,
-      "test_files": 5,
-      "loc": 3209,
+      "go_files": 6,
+      "test_files": 6,
+      "loc": 3532,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3692,7 +3715,9 @@
         "log_sampling_test.go",
         "mqtt.go",
         "mqtt_test.go",
+        "tracing.go",
         "tracing_test.go",
+        "tracing_w3c_test.go",
         "vin_cache.go",
         "vin_cache_test.go"
       ]
@@ -4006,8 +4031,8 @@
     {
       "path": "internal/signal",
       "go_files": 11,
-      "test_files": 11,
-      "loc": 7434,
+      "test_files": 12,
+      "loc": 7515,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4022,6 +4047,7 @@
         "coerce.go",
         "coerce_test.go",
         "doc.go",
+        "fuzz_test.go",
         "live_state_reader.go",
         "live_state_reader_test.go",
         "live_store.go",
@@ -4104,8 +4130,8 @@
     {
       "path": "internal/tesla/codec",
       "go_files": 6,
-      "test_files": 4,
-      "loc": 2881,
+      "test_files": 5,
+      "loc": 2987,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4121,6 +4147,7 @@
         "doc.go",
         "flatten.go",
         "flatten_test.go",
+        "fuzz_test.go",
         "types.go"
       ]
     },
@@ -4335,13 +4362,14 @@
     {
       "path": "internal/units",
       "go_files": 2,
-      "test_files": 0,
-      "loc": 63,
+      "test_files": 1,
+      "loc": 185,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
       "files": [
         "convert.go",
+        "convert_test.go",
         "doc.go"
       ]
     },
@@ -4474,6 +4502,7 @@
   "cmd_loc": {
     "cmd/ai-eval": 151,
     "cmd/automation-worker": 272,
+    "cmd/backup": 396,
     "cmd/export-worker": 172,
     "cmd/metric-coverage-audit": 126,
     "cmd/notification-worker": 420,
@@ -4496,6 +4525,12 @@
     "cmd/automation-worker": [
       "doc.go",
       "main.go"
+    ],
+    "cmd/backup": [
+      "doc.go",
+      "main.go",
+      "storage_local.go",
+      "storage_s3.go"
     ],
     "cmd/export-worker": [
       "doc.go",
@@ -4996,6 +5031,7 @@
       "admin_feedback_handler.go",
       "admin_log_stream_handler.go",
       "admin_maintenance_handler.go",
+      "ai_adapters.go",
       "ai_admin_handler.go",
       "ai_alert_handler.go",
       "ai_alert_tuning_handler.go",
@@ -5092,6 +5128,7 @@
       "battery_degradation_handler_calculations.go",
       "battery_degradation_handler_dtos.go",
       "battery_handler.go",
+      "body_limits.go",
       "bulk_helpers.go",
       "charge_planner_handler.go",
       "charge_planner_handler_compute.go",
@@ -5113,6 +5150,7 @@
       "computed_metric_evaluator.go",
       "computed_metrics.go",
       "converters.go",
+      "cors.go",
       "cost_forecast_handler.go",
       "dashboard_layout_handler.go",
       "data_repair_handler.go",
@@ -5155,6 +5193,7 @@
       "import_handler.go",
       "lifetime_handler.go",
       "location_snapshot_handler.go",
+      "log_stream_tap.go",
       "maintenance_handler.go",
       "media_handler.go",
       "metrics.go",
@@ -5202,6 +5241,7 @@
       "signals_catalog_handler.go",
       "sleep_handler.go",
       "software_update_handler.go",
+      "spa_fallback.go",
       "speed_profile_handler.go",
       "sse_handler.go",
       "status_incidents_handler.go",
@@ -5713,6 +5753,7 @@
       "doc.go",
       "log_sampling.go",
       "mqtt.go",
+      "tracing.go",
       "vin_cache.go"
     ],
     "internal/notification": [
