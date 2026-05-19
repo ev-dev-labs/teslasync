@@ -168,9 +168,25 @@ export default defineConfig({
     setupFiles: ['./src/test-setup.ts'],
     include: ['src/**/*.test.{ts,tsx}'],
     coverage: {
+      provider: 'v8',
       reporter: ['text', 'lcov', 'html', 'json-summary'],
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx'],
+      exclude: [
+        'src/**/*.test.{ts,tsx}',
+        'src/**/__tests__/**',
+        'src/main.tsx',
+        'src/sw/**',
+        'src/i18n/**',
+      ],
+      // Baseline taken on 2026-05-19 at HEAD 7326929f (4169 tests passing).
+      // These thresholds protect against regression — bump them upwards
+      // any time a PR materially improves coverage, never downwards.
+      thresholds: {
+        statements: 35,
+        branches: 25,
+        functions: 28,
+        lines: 38,
+      },
     },
   },
   build: {

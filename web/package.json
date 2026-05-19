@@ -1,6 +1,6 @@
 {
   "name": "teslasync-web",
-  "description": "TeslaSync frontend \u2014 glassmorphism React dashboard for Tesla fleet monitoring",
+  "description": "TeslaSync frontend — glassmorphism React dashboard for Tesla fleet monitoring",
   "private": true,
   "version": "2.0.0",
   "type": "module",
@@ -93,8 +93,8 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@tailwindcss/container-queries": "^0.1.1",
     "@playwright/test": "^1.46.0",
+    "@tailwindcss/container-queries": "^0.1.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -125,6 +125,14 @@
     "typescript": "^5.4.2",
     "vite": "^5.1.6",
     "vite-plugin-pwa": "^1.2.0",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.0",
+    "vitest-axe": "^0.1.0"
+  },
+  "overrides": {
+    "protobufjs": "^8.2.0",
+    "@protobufjs/utf8": "^1.1.1",
+    "vitest": {
+      "vite": "^8.0.5"
+    }
   }
 }

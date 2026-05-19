@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom'
-import { beforeEach, vi } from 'vitest'
+import * as matchers from 'vitest-axe/matchers'
+import { beforeEach, expect, vi } from 'vitest'
 import * as resilience from '@/lib/resilience'
+
+// vitest-axe provides toHaveNoViolations() — wires the matcher into
+// vitest's expect() so a11y tests read identically to jest-axe ones.
+expect.extend(matchers)
 
 // Global default mock for useSettings. Many components reach for it
 // transitively via useDateFormat / useUnits / useFormatting; without a
