@@ -63,6 +63,10 @@ coverage.html
 coverage.txt
 coverage-by-package.txt
 web/coverage/
+web/playwright-report/
+web/test-results/
+web/blob-report/
+web/playwright/.cache/
 *.test.log
 
 PROMPT_COMMANDS.txt
