@@ -89,7 +89,7 @@ export function useVehicleState(vehicleId: number, options?: { refetchInterval?:
         time_to_full_charge: res.time_to_full_charge ?? 0,
         is_locked: res.is_locked ?? p?.is_locked ?? true,
         sentry_mode: res.sentry_mode ?? false,
-        software_version: res.software_version ?? v?.software_version ?? '',
+        software_version: res.software_version ?? '',
       }
       return { state, live: res.live ?? false }
     },
@@ -303,7 +303,7 @@ export async function fetchVehicleState(vehicleId: number): Promise<{ state?: Ve
     time_to_full_charge: res.time_to_full_charge ?? 0,
     is_locked: res.is_locked ?? p?.is_locked ?? true,
     sentry_mode: res.sentry_mode ?? false,
-    software_version: res.software_version ?? v?.software_version ?? '',
+    software_version: res.software_version ?? '',
   }
   return { state, live: res.live ?? false }
 }

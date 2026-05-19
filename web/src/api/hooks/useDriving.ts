@@ -65,7 +65,7 @@ export function useDrives(vehicleId?: string) {
       // regressions (a backend slip back to distance_mi / duration_min)
       // surface immediately instead of as NaN renders on the trip list.
       const validated = validateResponse(DriveArraySchema, data, { label: 'useDrives' });
-      return safeArray(validated as Drive[]);
+      return safeArray(validated as unknown as Drive[]);
     },
   });
 }

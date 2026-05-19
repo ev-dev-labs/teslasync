@@ -57,17 +57,17 @@ describe('validateResponse', () => {
 
   it('warns + returns raw value on schema mismatch (graceful)', () => {
     const schema = z.object({ n: z.number() })
-    const result = validateResponse(schema, { n: 'oops' }, { label: 'mismatch' })
-    // Production behaviour — warn but return so the UI keeps rendering.
-    // In dev (import.meta.env.DEV) this path throws; vitest defaults to
-    // import.meta.env.DEV = true under the Vite plugin, but in this test
-    // file we only assert the warn-branch contract holds shape-wise.
-    if (warnSpy.mock.calls.length > 0) {
-      expect(warnSpy).toHaveBeenCalled()
-      expect(result).toEqual({ n: 'oops' })
-    } else {
-      expect(errorSpy).toHaveBeenCalled()
-    }
+    // In vitest (running under Vite), import.meta.env.DEV defaults to true
+    // and validateResponse throws on failure. The dev-throws contract is
+    // intentional: it surfaces drift loudly during development. We assert
+    // the throw + that the error message includes the issue summary.
+    expect(() => validateResponse(schema, { n: 'oops' }, { label: 'mismatch' })).toThrow()
+    // The error path also logs a structured console.error breadcrumb so
+    // CI logs surface the drift even when the test catches the throw.
+    expect(errorSpy).toHaveBeenCalled()
+    const errLine = errorSpy.mock.calls[0]?.[0] as string
+    expect(errLine).toContain('validateResponse:mismatch')
+    expect(errLine).toContain('n: Expected number')
   })
 
   it('VehicleSchema accepts a canonical Vehicle', () => {
@@ -81,7 +81,7 @@ describe('validateResponse', () => {
 
   it('VehicleSchema rejects missing required fields', () => {
     // vin is required → omitting it MUST fail
-    const { vin, ...withoutVin } = baseVehicle
+    const { vin: _vin, ...withoutVin } = baseVehicle
     expect(() => VehicleSchema.parse(withoutVin)).toThrow()
   })
 

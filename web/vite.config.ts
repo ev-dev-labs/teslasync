@@ -20,7 +20,7 @@ const enablePwaInDev = process.env.VITE_PWA_DEV === 'true'
 function bundleVisualizer(): PluginOption | null {
   if (process.env.ANALYZE !== '1') return null
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports, @typescript-eslint/no-var-requires
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { visualizer } = require('rollup-plugin-visualizer') as typeof import('rollup-plugin-visualizer')
     return visualizer({
       filename: 'dist/stats.html',
@@ -31,7 +31,6 @@ function bundleVisualizer(): PluginOption | null {
       title: 'TeslaSync bundle analyser',
     }) as PluginOption
   } catch (err) {
-    // eslint-disable-next-line no-console
     console.warn('[vite] ANALYZE=1 set but rollup-plugin-visualizer is not installed. Run `npm install` to enable.', err)
     return null
   }

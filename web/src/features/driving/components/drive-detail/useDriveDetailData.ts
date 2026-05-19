@@ -130,6 +130,11 @@ export function useDriveDetailData(id: string) {
       ideal_range?: number | null
       ratedRange?: number | null
       rated_range?: number | null
+      odometer?: number | null
+      isClimateOn?: boolean | null
+      is_climate_on?: boolean | null
+      fanStatus?: number | null
+      fan_status?: number | null
     };
     return ((drive.positions ?? []) as LoosePositionRow[]).map((p) => ({
       time: formatTime(p.createdAt ?? p.created_at ?? p.timestamp),
