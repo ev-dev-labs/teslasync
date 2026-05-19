@@ -346,6 +346,57 @@ secrets:
   existingSecret: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
+# External Secrets Operator integration (opt-in, disabled by default)
+#
+# When enabled, the chart synthesises an ExternalSecret CR that pulls
+# the required credential keys from your configured backend (Vault, AWS
+# Secrets Manager, GCP Secret Manager, Doppler, 1Password, etc.) and
+# materialises a Kubernetes Secret with the same name the rest of the
+# chart references. The chart-managed plaintext Secret in templates/
+# is suppressed when an existingSecret name is set.
+#
+# Prerequisite: External Secrets Operator (≥ 0.9.x) installed cluster-wide.
+# https://external-secrets.io/
+#
+# Typical setup for a single-node k3s + Vault dev install:
+#   externalSecrets:
+#     enabled: true
+#     refreshInterval: "1h"
+#     secretStoreRef:
+#       name: vault-backend
+#       kind: ClusterSecretStore
+#     dataFrom:
+#       - extract:
+#           key: secret/data/teslasync/prod
+#   secrets:
+#     existingSecret: teslasync   # MUST match the chart's fullname
+#
+# Required keys the synthesised Secret MUST expose (see secret.yaml
+# for the authoritative list):
+#   TESLA_CLIENT_ID, TESLA_CLIENT_SECRET, DATABASE_PASS,
+#   AUTH_JWT_SECRET, ENCRYPTION_KEY, MQTT_PASSWORD,
+#   TESLASYNC_VAPID_PRIVATE_KEY, TESLASYNC_VAPID_SUBJECT,
+#   TESLASYNC_OPERATOR_TOKEN
+# ─────────────────────────────────────────────────────────────────────────────
+externalSecrets:
+  enabled: false
+  refreshInterval: "1h"
+  annotations: {}
+  secretStoreRef:
+    name: ""
+    kind: ClusterSecretStore
+  # Use `dataFrom` to extract every key from a single remote secret in one go.
+  # Most operators prefer this so the chart doesn't have to enumerate keys.
+  dataFrom: []
+  # Use `data` for explicit per-key mappings if your backend stores each key
+  # under its own remote name. Mutually compatible with `dataFrom`.
+  data: []
+    # - secretKey: TESLA_CLIENT_SECRET
+    #   remoteRef:
+    #     key: secret/data/teslasync/prod
+    #     property: tesla_client_secret
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Fleet Telemetry (Tesla streaming data)
 #
 # Deploys Tesla's official Fleet Telemetry server (bundled) alongside TeslaSync.
