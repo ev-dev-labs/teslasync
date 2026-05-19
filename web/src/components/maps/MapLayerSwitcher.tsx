@@ -1,4 +1,4 @@
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import type { MapStyle } from './MapTileLayer'
 
 interface MapLayerSwitcherProps {
@@ -16,7 +16,7 @@ const layers: { id: MapStyle; icon: string; label: string }[] = [
 export function MapLayerSwitcher({ current, onChange }: MapLayerSwitcherProps) {
   return (
     <div
-      className={clsx(
+      className={cn(
         'absolute bottom-6 left-2 z-[1000] flex gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-overlay)] backdrop-blur-md p-1 shadow-lg',
         // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
         // The semi-transparent overlay surface + alpha border vanish under
@@ -32,7 +32,7 @@ export function MapLayerSwitcher({ current, onChange }: MapLayerSwitcherProps) {
           key={l.id}
           onClick={() => onChange(l.id)}
           title={l.label}
-          className={clsx(
+          className={cn(
             'flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium transition-colors',
             // Phase-46 / Prompt 11 — give each tile-style button its own
             // system-colour border so the active selection (which only

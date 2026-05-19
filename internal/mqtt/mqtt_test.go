@@ -789,16 +789,6 @@ func TestNewPipelineSubscriber_DefaultsApplied(t *testing.T) {
 	}
 }
 
-func TestSetPayloadDropSentinel_Removed(t *testing.T) {
-	// Documents that the SetPayloadDropSentinel public API was removed when
-	// the per-field MQTT cutover landed. The handler now wraps every
-	// codec.DecodeJSONField error in the package-private errPayloadDrop
-	// sentinel directly, eliminating the indirection that had been used
-	// to bridge to normalize.ErrPayloadDrop. If a future refactor wants
-	// the indirection back it will need to add new public API + new test.
-	t.Skip("SetPayloadDropSentinel removed in per-field MQTT cutover")
-}
-
 func TestDLQEntryRoundTrip(t *testing.T) {
 	in := DLQEntry{
 		Reason:       "test",

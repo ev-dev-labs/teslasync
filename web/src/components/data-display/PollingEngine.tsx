@@ -9,7 +9,7 @@ import { GlassPanel } from '../ui/GlassPanel'
 import { Button } from '../ui/Button'
 import { AnimatedNumber } from './AnimatedNumber'
 import { motion } from 'framer-motion'
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import { useState } from 'react'
 import { activityColor } from '@/lib/colors'
 
@@ -77,7 +77,7 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
             <Clock size={12} />
             Next: {formatTimeUntil(status.next_poll_after)}
           </span>
-          <ChevronDown size={14} className={clsx('transition-transform', expanded && 'rotate-180')} />
+          <ChevronDown size={14} className={cn('transition-transform', expanded && 'rotate-180')} />
         </div>
       </Button>
 

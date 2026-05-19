@@ -2758,6 +2758,20 @@
     },
     "chunkLoad": {
       "body": "A new version was deployed. Click Reload to load the latest assets."
+    },
+    "boundary": {
+      "inlineTitle": "Component failed to load",
+      "fullTitle": "Something went wrong",
+      "fullBody": "An unexpected error occurred. Please try again.",
+      "chunkTitle": "New Version Deployed",
+      "networkTitle": "Connection Lost",
+      "networkBody": "Unable to reach the server. Check your connection and try again.",
+      "tooManyRetries": "Multiple retries failed. Try refreshing the page or checking system status.",
+      "tryAgain": "Try Again",
+      "tryAgainAnyway": "Try Again Anyway",
+      "goHome": "Go Home",
+      "retryAttempt": "Retry attempt {{count}}",
+      "retry": "Retry"
     }
   },
   "playground": {

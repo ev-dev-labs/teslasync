@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Search, Zap, Battery, Gauge, Shield, Thermometer, Radio, Settings, Wrench, ChevronDown, CheckCircle } from 'lucide-react'
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import { Input, Modal, Select } from '.'
 
 const INTERVAL_OPTIONS = [
@@ -202,10 +202,10 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
         {/* Master Toggle + Master Interval */}
         <div className="flex items-center gap-4 flex-wrap">
           <button onClick={() => toggleAll(!allSelected)}
-            className={clsx('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+            className={cn('flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
               allSelected ? 'bg-neon-cyan/10 border-neon-cyan/30 text-neon-cyan' : 'bg-white/[0.03] border-white/[0.08] text-[var(--text-secondary)]'
             )}>
-            <div className={clsx('h-3 w-3 rounded border flex items-center justify-center', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]')}>
+            <div className={cn('h-3 w-3 rounded border flex items-center justify-center', allSelected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]')}>
               {allSelected && <CheckCircle className="h-2 w-2 text-black" />}
             </div>
             {allSelected ? 'Deselect All' : 'Select All'}
@@ -250,9 +250,9 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                   return next
                 })
               }}>
-                <ChevronDown className={clsx('h-3.5 w-3.5 text-[var(--text-muted)] transition-transform', !expanded && '-rotate-90')} />
+                <ChevronDown className={cn('h-3.5 w-3.5 text-[var(--text-muted)] transition-transform', !expanded && '-rotate-90')} />
                 <button onClick={e => { e.stopPropagation(); toggleCategory(category) }}
-                  className={clsx('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
+                  className={cn('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
                     allCatSelected ? 'bg-neon-cyan border-neon-cyan' : someCatSelected ? 'bg-neon-cyan/40 border-neon-cyan/60' : 'border-[var(--border-strong)]'
                   )}>
                   {allCatSelected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
@@ -277,12 +277,12 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                   {catSignals.map(sig => {
                     const intervalOpt = INTERVAL_OPTIONS.find(o => o.value === sig.interval) || INTERVAL_OPTIONS[3]
                     return (
-                      <div key={sig.name} className={clsx(
+                      <div key={sig.name} className={cn(
                         'flex items-center gap-2 px-4 py-1.5 transition-colors',
                         sig.selected ? 'bg-white/[0.01]' : 'opacity-40'
                       )}>
                         <button onClick={() => updateSignal(sig.name, { selected: !sig.selected })}
-                          className={clsx('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
+                          className={cn('touch-target-overlay h-3.5 w-3.5 rounded border flex items-center justify-center shrink-0',
                             sig.selected ? 'bg-neon-cyan border-neon-cyan' : 'border-[var(--border-strong)]'
                           )}>
                           {sig.selected && <CheckCircle className="h-2.5 w-2.5 text-black" />}
@@ -290,7 +290,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                         <span className="text-xs font-mono flex-1 truncate">{sig.name}</span>
                         <Select value={String(sig.interval)}
                           onChange={e => updateSignal(sig.name, { interval: Number(e.target.value) })}
-                          className={clsx(
+                          className={cn(
                             'border border-white/[0.1] rounded px-2 py-0.5 text-xs min-w-[80px]',
                             intervalOpt.color
                           )}

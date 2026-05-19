@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { batteryColor, boolColor } from '@/lib/colors'
 
@@ -213,7 +213,7 @@ export function TeslaCarViz({
   const h = w * aspect
 
   return (
-    <div className={clsx('relative flex items-center justify-center', className)}>
+    <div className={cn('relative flex items-center justify-center', className)}>
       {/* Ambient glow behind car */}
       <div
         className="absolute rounded-full blur-[60px] opacity-30"

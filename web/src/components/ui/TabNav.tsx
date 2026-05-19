@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 
 /** Horizontal tab navigation bar with icon support. */
 export function TabNav({ tabs, active, onChange }: { tabs: { key: string; label: string; icon?: ReactNode }[]; active: string; onChange: (key: string) => void }) {
@@ -9,7 +9,7 @@ export function TabNav({ tabs, active, onChange }: { tabs: { key: string; label:
         <button
           key={t.key}
           onClick={() => onChange(t.key)}
-          className={clsx(
+          className={cn(
             'flex items-center gap-1.5 sm:gap-2 rounded-lg px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-all duration-normal whitespace-nowrap shrink-0',
             active === t.key
               ? 'bg-white/[0.08] text-[var(--text-primary)] shadow-sm'

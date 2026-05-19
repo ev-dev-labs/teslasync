@@ -1,9 +1,9 @@
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 
 /** Skeleton shaped like a chart area — shows animated bars growing. */
 export function ChartSkeleton({ className = '', bars = 7 }: { className?: string; bars?: number }) {
   return (
-    <div className={clsx('rounded-xl bg-white/[0.02] p-4 flex items-end gap-2', className)}>
+    <div className={cn('rounded-xl bg-white/[0.02] p-4 flex items-end gap-2', className)}>
       {Array.from({ length: bars }).map((_, i) => (
         <div
           key={i}

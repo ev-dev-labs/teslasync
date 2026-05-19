@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useCallback, type ReactNode } from
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 
 /**
@@ -172,7 +172,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={reduce ? { opacity: 0 } : { opacity: 0, x: 80, scale: 0.95 }}
                 transition={reduce ? { duration: 0 } : { type: 'spring', bounce: 0.2, duration: 0.4 }}
-                className={clsx(
+                className={cn(
                   'pointer-events-auto rounded-xl border backdrop-blur-xl p-4 bg-white/[0.03]',
                   // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
                   // Toast borders are tinted alpha (e.g. `border-emerald-500/30`)
@@ -186,7 +186,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 )}
               >
                 <div className="flex items-start gap-3">
-                  <div className={clsx('mt-0.5 flex-shrink-0', s.icon)} aria-hidden="true">
+                  <div className={cn('mt-0.5 flex-shrink-0', s.icon)} aria-hidden="true">
                     {icons[t.type]}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -197,7 +197,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                         <Link
                           to={t.action.to}
                           onClick={() => dismiss(t.id)}
-                          className={clsx(
+                          className={cn(
                             'mt-2 inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded',
                             s.icon,
                           )}
@@ -211,7 +211,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                             t.action!.onClick!()
                             dismiss(t.id)
                           }}
-                          className={clsx(
+                          className={cn(
                             'mt-2 inline-flex items-center gap-1 text-xs font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent rounded',
                             s.icon,
                           )}
