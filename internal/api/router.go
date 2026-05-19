@@ -5,13 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
@@ -33,7 +30,6 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
 	"github.com/pquerna/otp/totp"
-	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation"
@@ -4071,182 +4067,4 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 
 	return r, nil
-}
-
-// spaFallback returns an http.Handler that serves static files from dir
-// and falls back to index.html for paths that don't match a file on disk.
-// This enables client-side routing so that direct navigation or page
-// reload on paths like /api-logs works correctly.
-func spaFallback(dir string, fs http.Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		// Only serve SPA fallback for GET requests
-		if r.Method != http.MethodGet {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-
-		// Don't intercept API paths ╬ô├ç├╢ let them 404 naturally
-		if strings.HasPrefix(r.URL.Path, "/api/") {
-			http.Error(w, "Not Found", http.StatusNotFound)
-			return
-		}
-
-		// If the file exists on disk, serve it directly
-		path := filepath.Join(dir, filepath.Clean(r.URL.Path))
-		if info, err := os.Stat(path); err == nil && !info.IsDir() {
-			fs.ServeHTTP(w, r)
-			return
-		}
-
-		// SPA fallback ╬ô├ç├╢ serve index.html for client-side routing
-		http.ServeFile(w, r, filepath.Join(dir, "index.html"))
-	}
-}
-
-// adminLogStreamTapState guards installAdminLogStreamTap so the global
-// zerolog.Logger is teed to a LogSubscriberRegistry exactly once per
-// process even when NewRouter is invoked multiple times (router tests
-// run in parallel inside the same binary). The first call captures the
-// pre-existing logger sink as `primary` and re-assigns the global
-// log.Logger to a MultiLevelWriter; subsequent calls swap the registry
-// pointer in-place via SetTarget so a fresh router still receives
-// events without rebuilding the underlying tee.
-var adminLogStreamTapState struct {
-	mu      sync.Mutex
-	primary io.Writer
-	current *adminLogStreamTapForwarder
-}
-
-// adminLogStreamTapForwarder satisfies zerolog.LevelWriter by
-// delegating to a swappable target registry. SetTarget is called on
-// every NewRouter invocation so each router instance owns the
-// registry it hands to its handler — without this, a stale registry
-// from a previous test would silently swallow events.
-type adminLogStreamTapForwarder struct {
-	mu     sync.RWMutex
-	target zerolog.LevelWriter
-}
-
-func (f *adminLogStreamTapForwarder) Write(p []byte) (int, error) {
-	f.mu.RLock()
-	t := f.target
-	f.mu.RUnlock()
-	if t == nil {
-		return len(p), nil
-	}
-	return t.Write(p)
-}
-
-func (f *adminLogStreamTapForwarder) WriteLevel(level zerolog.Level, p []byte) (int, error) {
-	f.mu.RLock()
-	t := f.target
-	f.mu.RUnlock()
-	if t == nil {
-		return len(p), nil
-	}
-	return t.WriteLevel(level, p)
-}
-
-func (f *adminLogStreamTapForwarder) SetTarget(t zerolog.LevelWriter) {
-	f.mu.Lock()
-	f.target = t
-	f.mu.Unlock()
-}
-
-// installAdminLogStreamTap wires the zerolog global logger so every
-// log record fans out to the supplied registry in addition to the
-// configured primary sink. The first invocation chooses the primary
-// sink (ConsoleWriter when TESLASYNC_DEV=true, otherwise os.Stdout)
-// and rewires log.Logger via zerolog.MultiLevelWriter; subsequent
-// invocations only swap the registry pointer.
-func installAdminLogStreamTap(reg *platform.LogSubscriberRegistry) {
-	adminLogStreamTapState.mu.Lock()
-	defer adminLogStreamTapState.mu.Unlock()
-	if adminLogStreamTapState.current == nil {
-		var primary io.Writer = os.Stdout
-		if strings.EqualFold(os.Getenv("TESLASYNC_DEV"), "true") {
-			primary = zerolog.ConsoleWriter{Out: os.Stderr}
-		}
-		fwd := &adminLogStreamTapForwarder{target: reg}
-		adminLogStreamTapState.primary = primary
-		adminLogStreamTapState.current = fwd
-		log.Logger = log.Logger.Output(zerolog.MultiLevelWriter(primary, fwd))
-		return
-	}
-	adminLogStreamTapState.current.SetTarget(reg)
-}
-
-// isVehiclePhotoUploadPath returns true when the request is the
-// vehicle photo upload endpoint (POST /api/v1/vehicles/{id}/photo).
-// Used by the global body-limit middleware to bypass the 1 MB cap
-// for photo uploads — a wrapped http.MaxBytesReader can't be
-// loosened later, so the bypass MUST happen at the global layer.
-func isVehiclePhotoUploadPath(method, path string) bool {
-	if method != http.MethodPost {
-		return false
-	}
-	const prefix = "/api/v1/vehicles/"
-	if !strings.HasPrefix(path, prefix) {
-		return false
-	}
-	rest := path[len(prefix):]
-	idx := strings.Index(rest, "/")
-	if idx <= 0 {
-		return false
-	}
-	tail := rest[idx:]
-	// Accept exactly /photo (no trailing slash, no sub-path) so
-	// future endpoints under /vehicles/{id}/photo/X don't
-	// inherit the 12 MB limit.
-	return tail == "/photo"
-}
-
-// aiSettingsReader adapts *database.SettingsRepo to the
-// provider.SettingsReader port. The repo natively exposes
-// AIMode + AIFeatureEnabled (cheap single-row PK lookups). The
-// AIProviderConfig accessor is implemented here by calling
-// the existing typed Get() and pulling out the AIProviderConfig
-// JSONB field — keeping the repo single-purpose (R5 mitigation)
-// and avoiding a settings-repo migration in slice F1.
-type aiSettingsReader struct {
-	repo *database.SettingsRepo
-}
-
-func (a aiSettingsReader) AIMode(ctx context.Context) (string, error) {
-	return a.repo.AIMode(ctx)
-}
-
-func (a aiSettingsReader) AIFeatureEnabled(ctx context.Context, featureID string) (bool, error) {
-	return a.repo.AIFeatureEnabled(ctx, featureID)
-}
-
-func (a aiSettingsReader) AIProviderConfig(ctx context.Context) (map[string]any, error) {
-	s, err := a.repo.Get(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if s == nil || s.AIProviderConfig == nil {
-		return map[string]any{}, nil
-	}
-	return s.AIProviderConfig, nil
-}
-
-// aiToolsStateAdapter bridges signal.StateReader (whose SignalAt
-// returns signal.SignalValue, a defined type whose underlying type
-// is any) to ai/tools.VehicleStateSource (whose SignalAt returns
-// any). Go interface satisfaction is by type identity, not
-// underlying-type compatibility, so a tiny wrapper is the minimal
-// safe bridge.
-//
-// The adapter forwards the call verbatim; the implicit conversion
-// from SignalValue to any is the entire bridge. Any future change
-// to either signature will surface here as a compile error before
-// the AI handler ships.
-type aiToolsStateAdapter struct {
-	r signal.StateReader
-}
-
-// SignalAt implements ai/tools.VehicleStateSource.
-func (a aiToolsStateAdapter) SignalAt(ctx context.Context, vehicleID int64, name string, at time.Time) (any, error) {
-	return a.r.SignalAt(ctx, vehicleID, name, at)
 }
