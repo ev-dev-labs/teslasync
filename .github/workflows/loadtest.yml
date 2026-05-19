@@ -1,0 +1,83 @@
+name: loadtest
+
+# Runs the k6 baseline against a fresh docker-compose stack. Triggered
+# manually (workflow_dispatch) or on demand by adding the `loadtest`
+# label to a PR. Not in the always-on CI matrix because a 5-min load
+# stage blocks merges; the smoke stage is fast enough to be informative
+# but isn't gating either — operators decide when they want the signal.
+
+on:
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'k6 stage (smoke / load / soak)'
+        required: true
+        default: smoke
+        type: choice
+        options:
+          - smoke
+          - load
+          - soak
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: loadtest-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  k6:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'loadtest'
+    name: k6 ${{ github.event.inputs.stage || 'smoke' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Boot docker-compose stack
+        run: |
+          # docker compose is preinstalled on ubuntu-24.04 runners.
+          docker compose up -d --quiet-pull --wait --wait-timeout 120 || \
+            docker compose up -d
+          echo "stack started"
+
+      - name: Wait for /readyz
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/readyz >/dev/null; then
+              echo "ready after ${i}s"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::API did not become ready within 120s"
+          docker compose logs --tail 200
+          exit 1
+
+      - name: Install k6
+        run: |
+          curl -fsSL https://github.com/grafana/k6/releases/download/v0.50.0/k6-v0.50.0-linux-amd64.tar.gz -o /tmp/k6.tar.gz
+          tar -xzf /tmp/k6.tar.gz -C /tmp
+          sudo mv /tmp/k6-v0.50.0-linux-amd64/k6 /usr/local/bin/
+          k6 version
+
+      - name: Run k6
+        env:
+          STAGE: ${{ github.event.inputs.stage || 'smoke' }}
+          BASE_URL: http://localhost:8080
+        run: k6 run --summary-export=k6-summary.json loadtest/baseline.js
+
+      - name: Upload k6 summary
+        if: always()
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882 # v4.4.3
+        with:
+          name: k6-summary-${{ github.event.inputs.stage || 'smoke' }}
+          path: k6-summary.json
+          if-no-files-found: ignore
+
+      - name: Dump logs on failure
+        if: failure()
+        run: docker compose logs --tail 500

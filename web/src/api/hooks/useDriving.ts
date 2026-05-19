@@ -5,6 +5,7 @@ import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
 import { useMutationToast } from './_toastHelpers';
 import type { Drive as ApiDrive } from '../types';
+import { DriveArraySchema, validateResponse } from '@/api/schemas';
 import type {
   Drive,
   DriveDetail,
@@ -59,7 +60,13 @@ export function useDrives(vehicleId?: string) {
     queryFn: ({ signal }) =>
       request<Drive[]>(vehicleId ? `/drives?vehicle_id=${vehicleId}` : '/drives', { signal }),
     enabled: !!vehicleId,
-    select: safeArray,
+    select: (data) => {
+      // Runtime-validate the SI canonical Drive[] shape so Phase-48
+      // regressions (a backend slip back to distance_mi / duration_min)
+      // surface immediately instead of as NaN renders on the trip list.
+      const validated = validateResponse(DriveArraySchema, data, { label: 'useDrives' });
+      return safeArray(validated as Drive[]);
+    },
   });
 }
 

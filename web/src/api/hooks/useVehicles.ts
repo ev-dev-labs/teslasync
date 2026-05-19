@@ -7,6 +7,7 @@ import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useAsOfDate, AS_OF_QUERY_PARAM } from '@/hooks/useAsOfDate';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState, VehicleStateResponse } from '../types';
+import { VehicleArraySchema, validateResponse } from '@/api/schemas';
 export { deriveVehicleStatus as getVehicleStatus } from '../types';
 
 export const vehicleKeys = {
@@ -33,7 +34,14 @@ export function useVehicles() {
     queryKey: vehicleKeys.all,
     queryFn: ({ signal }) => request<Vehicle[]>('/vehicles', { signal }),
     staleTime: STALE_TIMES.FAST,
-    select: safeArray,
+    select: (data) => {
+      // Runtime-validate the API payload so a Go-side shape change
+      // surfaces as a console warning + dev throw instead of silent
+      // stale rendering. Schema uses .passthrough() so backwards-
+      // compatible additions don't break the UI.
+      const validated = validateResponse(VehicleArraySchema, data, { label: 'useVehicles' });
+      return safeArray(validated as Vehicle[]);
+    },
   });
 }
 
