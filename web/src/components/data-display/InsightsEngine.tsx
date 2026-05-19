@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-// @ts-nocheck -- legacy API types; will be rewired in a later phase
 import { useMemo } from 'react'
+import type { ElementType } from 'react'
 import {
   Lightbulb, TrendingUp, TrendingDown, ArrowRight, DollarSign,
   Battery, BatteryCharging, Zap, Shield, Car, Clock, Leaf,
@@ -12,8 +11,31 @@ import { useFormatting } from '@/hooks/useFormatting'
 import { trendColor } from '@/lib/colors'
 import type {
   Drive, ChargingSession, EnergyStats, BatteryReport,
-  MileageStats, VampireDrainStats,
-} from '@/api/client'
+  VampireDrainStats,
+} from '@/api/types'
+
+// SI → display conversions. The API stores canonical SI everywhere
+// (Wh, m, m/s, Wh/m). This component renders kWh / km / Wh/km because
+// those are the units our insight copy quotes ("18 kWh consumed",
+// "150 Wh/km"). Conversion lives here, not in the API layer, per the
+// frontend-si-cutover convention.
+const WH_PER_KWH = 1000
+const M_PER_KM = 1000
+const whToKwh = (wh: number | null | undefined): number => (wh ?? 0) / WH_PER_KWH
+const mToKm = (m: number | null | undefined): number => (m ?? 0) / M_PER_KM
+const whPerMToWhPerKm = (whPerM: number | null | undefined): number => (whPerM ?? 0) * M_PER_KM
+
+// Charger types we treat as DC fast / Supercharger for the cost-comparison
+// insight. Anything else is bucketed as "home / AC". Comparison is
+// case-insensitive against the canonical ChargerType strings TeslaMate uses.
+const FAST_CHARGER_PATTERNS = ['supercharger', 'dc_fast', 'ccs', 'chademo'] as const
+const isFastCharger = (chargerType: string | null | undefined): boolean => {
+  if (!chargerType) return false
+  const normalised = chargerType.toLowerCase().replace(/[\s-]/g, '_')
+  return FAST_CHARGER_PATTERNS.some(p => normalised.includes(p))
+}
+const sessionCostOf = (s: ChargingSession): number | null => s.cost ?? s.cost_decimal ?? null
+const sessionEnergyKwhOf = (s: ChargingSession): number => whToKwh(s.total_energy_added_wh)
 
 // ─── Types ────────────────────────────────────────────────────
 
@@ -22,7 +44,6 @@ export interface InsightData {
   chargingSessions?: ChargingSession[]
   energyStats?: EnergyStats
   batteryReport?: BatteryReport
-  mileageStats?: MileageStats
   vampireDrainStats?: VampireDrainStats
 }
 
@@ -31,7 +52,7 @@ type Trend = 'up' | 'down' | 'neutral'
 
 interface Insight {
   id: string
-  icon: React.ElementType
+  icon: ElementType
   title: string
   description: string
   trend: Trend
@@ -57,16 +78,16 @@ const TREND_ICON: Record<Trend, { Icon: React.ElementType; color: string }> = {
 // ─── Analysis helpers ─────────────────────────────────────────
 
 function analyzeChargingCost(sessions: ChargingSession[], formatCurrency: (amount: number, decimals?: number) => string): Insight | null {
-  const withCost = sessions.filter(s => s.cost != null && s.charge_energy_added > 0)
+  const withCost = sessions.filter(s => sessionCostOf(s) != null && sessionEnergyKwhOf(s) > 0)
   if (withCost.length < 2) return null
 
-  const supercharger = withCost.filter(s => s.fast_charger_type)
-  const home = withCost.filter(s => !s.fast_charger_type)
+  const supercharger = withCost.filter(s => isFastCharger(s.charger_type))
+  const home = withCost.filter(s => !isFastCharger(s.charger_type))
 
   const avgCost = (arr: ChargingSession[]) => {
-    const totalCost = arr.reduce((a, s) => a + (s.cost ?? 0), 0)
-    const totalEnergy = arr.reduce((a, s) => a + s.charge_energy_added, 0)
-    return totalEnergy > 0 ? totalCost / totalEnergy : 0
+    const totalCost = arr.reduce((a, s) => a + (sessionCostOf(s) ?? 0), 0)
+    const totalEnergyKwh = arr.reduce((a, s) => a + sessionEnergyKwhOf(s), 0)
+    return totalEnergyKwh > 0 ? totalCost / totalEnergyKwh : 0
   }
 
   const overall = avgCost(withCost)
@@ -170,11 +191,11 @@ function analyzeBatteryHealth(report: BatteryReport): Insight | null {
 }
 
 function analyzeOptimalCharging(sessions: ChargingSession[]): Insight | null {
-  const withEnd = sessions.filter(s => s.end_battery_level != null)
+  const withEnd = sessions.filter(s => s.end_soc_pct != null)
   if (withEnd.length < 3) return null
 
-  const avgEndLevel = withEnd.reduce((a, s) => a + s.end_battery_level!, 0) / withEnd.length
-  const above80 = withEnd.filter(s => s.end_battery_level! > 80).length
+  const avgEndLevel = withEnd.reduce((a, s) => a + (s.end_soc_pct ?? 0), 0) / withEnd.length
+  const above80 = withEnd.filter(s => (s.end_soc_pct ?? 0) > 80).length
   const above80Pct = (above80 / withEnd.length) * 100
 
   let description = `You charge most often to ${fmtNumber(avgEndLevel, 0)}%.`
@@ -270,10 +291,12 @@ function analyzeDrivingPatterns(drives: Drive[]): Insight | null {
 }
 
 function analyzeCostSavings(energy: EnergyStats, formatCurrency: (amount: number, decimals?: number) => string): Insight | null {
-  if (energy.total_energy_used_kwh <= 0) return null
+  const totalKwh = whToKwh(energy.total_energy_used_wh)
+  const totalKm = mToKm(energy.total_distance_m)
+  if (totalKwh <= 0) return null
 
   // Average gas car: 8.5 L/100km, avg gas price ~$1.50/L
-  const gasEquivalent = (energy.total_distance_km / 100) * 8.5 * 1.50
+  const gasEquivalent = (totalKm / 100) * 8.5 * 1.50
   const evCost = energy.total_cost
   const savings = gasEquivalent - evCost
 
@@ -283,7 +306,7 @@ function analyzeCostSavings(energy: EnergyStats, formatCurrency: (amount: number
     id: 'cost-savings',
     icon: Leaf,
     title: 'EV Cost Savings',
-    description: `You've saved approximately ${formatCurrency(savings, 0)} vs. gasoline based on ${fmtNumber(energy.total_energy_used_kwh, 0)} kWh consumed over ${fmtNumber(energy.total_distance_km, 0)} km. That's also ${fmtNumber(energy.co2_saved_kg, 0)} kg of CO₂ saved!`,
+    description: `You've saved approximately ${formatCurrency(savings, 0)} vs. gasoline based on ${fmtNumber(totalKwh, 0)} kWh consumed over ${fmtNumber(totalKm, 0)} km. That's also ${fmtNumber(energy.co2_saved_kg, 0)} kg of CO₂ saved!`,
     trend: 'up',
     trendGood: true,
     severity: 'success',
@@ -291,9 +314,9 @@ function analyzeCostSavings(energy: EnergyStats, formatCurrency: (amount: number
 }
 
 function analyzeRangeOptimization(energy: EnergyStats, battery?: BatteryReport): Insight | null {
-  if (energy.avg_efficiency_wh_km <= 0) return null
+  const effWhKm = whPerMToWhPerKm(energy.avg_efficiency_wh_per_m)
+  if (effWhKm <= 0) return null
 
-  const effWhKm = energy.avg_efficiency_wh_km
   const ratedRange = battery?.estimated_range_new_km ?? 500
   const currentRange = battery?.estimated_range_current_km ?? ratedRange
 
