@@ -199,12 +199,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 	})
 
-	// CORS ╬ô├ç├╢ use explicit origins in production. The wildcard is kept for
-	// development convenience but paired with AllowCredentials=false to comply
-	// with the Fetch spec. Set CORS_ORIGINS env var for production.
-	corsOrigins := []string{"*"}
-	if cfg.CORSOrigins != "" {
-		corsOrigins = []string{cfg.CORSOrigins}
+	// CORS — fail-closed in production. When TESLASYNC_ENVIRONMENT is
+	// "production" the wildcard "*" is rejected at startup and an
+	// explicit CORS_ORIGINS allowlist must be configured. In dev the
+	// wildcard remains a convenience but credentials stay disabled
+	// per the Fetch spec, so cookies/auth headers can't leak to
+	// arbitrary origins.
+	corsOrigins, err := resolveCORSOrigins(cfg)
+	if err != nil {
+		return nil, err
 	}
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: corsOrigins,

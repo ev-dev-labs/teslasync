@@ -149,7 +149,10 @@ func observeDurationWithExemplar(ctx context.Context, method, route string, dura
 //     are limited to non-request operational probes such as local healthchecks
 //     and Prometheus scrape clients.
 
-// LoggerMiddleware logs HTTP requests using zerolog.
+// LoggerMiddleware logs HTTP requests using zerolog. When a trace
+// context is present (TracingMiddleware ran first), the trace_id and
+// span_id are added to the log line so a 5xx in Loki maps 1:1 to a
+// span in Tempo. See docs/runbooks/phase-44-trace-coverage-audit.md.
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
@@ -168,15 +171,20 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 			} else if status >= 400 {
 				logger = log.Warn()
 			}
-			logger.
+			event := logger.
 				Str("method", r.Method).
 				Str("path", r.URL.Path).
 				Int("status", status).
 				Int("bytes", ww.BytesWritten()).
 				Dur("duration", duration).
 				Str("ip", r.RemoteAddr).
-				Str("request_id", chimw.GetReqID(r.Context())).
-				Msg("http request")
+				Str("request_id", chimw.GetReqID(r.Context()))
+			if sc := trace.SpanContextFromContext(r.Context()); sc.IsValid() {
+				event = event.
+					Str("trace_id", sc.TraceID().String()).
+					Str("span_id", sc.SpanID().String())
+			}
+			event.Msg("http request")
 		}()
 
 		next.ServeHTTP(ww, r)
@@ -184,19 +192,25 @@ func LoggerMiddleware(next http.Handler) http.Handler {
 }
 
 // RecoveryMiddleware catches panics in HTTP handlers and returns a 500 response
-// with structured error logging including stack traces.
+// with structured error logging including stack traces. trace_id/span_id are
+// included whenever a span is in scope so panics can be tied back to a trace.
 func RecoveryMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if rec := recover(); rec != nil {
 				stack := string(debug.Stack())
-				log.Error().
+				event := log.Error().
 					Str("method", r.Method).
 					Str("path", r.URL.Path).
 					Str("request_id", chimw.GetReqID(r.Context())).
 					Str("stack", stack).
-					Str("panic", fmt.Sprintf("%v", rec)).
-					Msg("panic recovered in HTTP handler")
+					Str("panic", fmt.Sprintf("%v", rec))
+				if sc := trace.SpanContextFromContext(r.Context()); sc.IsValid() {
+					event = event.
+						Str("trace_id", sc.TraceID().String()).
+						Str("span_id", sc.SpanID().String())
+				}
+				event.Msg("panic recovered in HTTP handler")
 
 				writeError(w, http.StatusInternalServerError, "internal server error")
 			}

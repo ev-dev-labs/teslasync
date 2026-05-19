@@ -20,7 +20,8 @@ concurrency:
 permissions:
   contents: write
   packages: write
-  id-token: write  # Required for cosign keyless signing
+  id-token: write  # Required for cosign keyless signing + SLSA provenance
+  attestations: write  # Required for actions/attest-build-provenance
 
 env:
   REGISTRY: ghcr.io
@@ -158,6 +159,11 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
           build-args: ${{ matrix.build-args }}
+          # SBOM + provenance attestations attached at build time
+          # (BuildKit metadata) so they travel with the image manifest
+          # in addition to the GitHub Attestations API below.
+          sbom: true
+          provenance: mode=max
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
@@ -170,6 +176,46 @@ jobs:
           IMAGE=$(echo "$TAGS" | cut -d',' -f1)
           cosign sign --yes "${IMAGE}@${DIGEST}"
           echo "✅ Signed ${IMAGE}@${DIGEST}"
+
+      # Generate a CycloneDX SBOM for the built image. Syft introspects
+      # both OS packages (apk/dpkg/rpm) and language ecosystems
+      # (go.mod, package.json) so the SBOM covers our application
+      # dependencies AND the base-image surface — the latter is where
+      # most CVEs land in container scans.
+      - name: Generate SBOM (CycloneDX)
+        id: sbom
+        uses: anchore/sbom-action@v0
+        with:
+          image: "ghcr.io/${{ github.repository }}-${{ matrix.image }}@${{ steps.docker-build.outputs.digest }}"
+          format: cyclonedx-json
+          output-file: "sbom-${{ matrix.image }}.cdx.json"
+          upload-artifact: true
+          upload-release-assets: false
+
+      # Attach the SBOM to the image manifest via cosign so consumers
+      # can `cosign download sbom <image>` without leaving the registry.
+      - name: Attach SBOM to image (cosign attest)
+        env:
+          DIGEST: ${{ steps.docker-build.outputs.digest }}
+          IMAGE_BASE: "ghcr.io/${{ github.repository }}-${{ matrix.image }}"
+        run: |
+          cosign attest \
+            --yes \
+            --predicate "sbom-${{ matrix.image }}.cdx.json" \
+            --type cyclonedx \
+            "${IMAGE_BASE}@${DIGEST}"
+          echo "✅ Attached CycloneDX SBOM to ${IMAGE_BASE}@${DIGEST}"
+
+      # SLSA Build Level 3 provenance via the GitHub-native attestation
+      # API. The resulting attestation is verifiable with
+      # `gh attestation verify oci://<image>` and complies with
+      # https://slsa.dev/spec/v1.0/requirements.
+      - name: Generate SLSA provenance attestation
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: "ghcr.io/${{ github.repository }}-${{ matrix.image }}"
+          subject-digest: ${{ steps.docker-build.outputs.digest }}
+          push-to-registry: true
 
   helm:
     name: Publish Helm Chart
@@ -257,12 +303,24 @@ jobs:
 
           ### 🔐 Image Verification
 
-          All images are signed with [cosign](https://github.com/sigstore/cosign) (keyless, via GitHub OIDC):
+          All images are signed with [cosign](https://github.com/sigstore/cosign)
+          (keyless, via GitHub OIDC), have CycloneDX SBOMs attached,
+          and ship with SLSA Build L3 provenance attestations:
 
           \`\`\`bash
+          # 1. Verify the cosign signature
           cosign verify ghcr.io/${{ github.repository }}-api:${VERSION} \\
             --certificate-identity-regexp="github.com/${{ github.repository }}" \\
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
+
+          # 2. Pull and inspect the CycloneDX SBOM
+          cosign download attestation ghcr.io/${{ github.repository }}-api:${VERSION} \\
+            | jq -r '.payload | @base64d | fromjson | .predicate'
+
+          # 3. Verify SLSA build provenance (gh CLI 2.49+)
+          gh attestation verify \\
+            oci://ghcr.io/${{ github.repository }}-api:${VERSION} \\
+            --owner ${{ github.repository_owner }}
           \`\`\`
 
           ### 📝 Changes

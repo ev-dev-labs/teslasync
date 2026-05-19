@@ -1,0 +1,476 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/ev-dev-labs/teslasync/helm/teslasync/values.schema.json",
+  "title": "TeslaSync Helm values",
+  "description": "Schema for helm/teslasync/values.yaml. Helm runs this on install/upgrade and rejects values that violate the schema before any resource is created.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "image",
+    "postgresql",
+    "redis",
+    "mqtt"
+  ],
+  "definitions": {
+    "imageRef": {
+      "description": "Either a fully-qualified image reference string (e.g. 'redis:7-alpine') or a structured object.",
+      "oneOf": [
+        { "type": "string", "minLength": 1 },
+        {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string", "minLength": 1 },
+            "tag":        { "type": "string" },
+            "digest":     { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+            "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+          },
+          "additionalProperties": true
+        }
+      ]
+    }
+  },
+  "properties": {
+    "global": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "imageRegistry": { "type": "string" },
+        "storageClass": { "type": "string" }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": { "name": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "nameOverride": { "type": "string" },
+    "fullnameOverride": { "type": "string" },
+
+    "replicaCount": { "type": "integer", "minimum": 0, "maximum": 100 },
+
+    "image": {
+      "type": "object",
+      "required": ["repository"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag":        { "type": "string" },
+        "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+
+    "service": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["ClusterIP", "NodePort", "LoadBalancer", "ExternalName"] },
+        "port": { "type": "integer", "minimum": 1, "maximum": 65535 }
+      }
+    },
+
+    "ingress": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "className":   { "type": "string" },
+        "hosts":       { "type": "array" },
+        "tls":         { "type": "array" },
+        "annotations": { "type": "object" }
+      }
+    },
+
+    "autoscaling": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "minReplicas": { "type": "integer", "minimum": 1 },
+        "maxReplicas": { "type": "integer", "minimum": 1 },
+        "targetCPUUtilizationPercentage":    { "type": "integer", "minimum": 1, "maximum": 100 },
+        "targetMemoryUtilizationPercentage": { "type": "integer", "minimum": 1, "maximum": 100 }
+      }
+    },
+
+    "podDisruptionBudget": {
+      "type": "object",
+      "properties": {
+        "enabled":        { "type": "boolean" },
+        "minAvailable":   { "oneOf": [{ "type": "integer" }, { "type": "string" }] },
+        "maxUnavailable": { "oneOf": [{ "type": "integer" }, { "type": "string" }] }
+      }
+    },
+
+    "podSecurityStandards": {
+      "type": "object",
+      "properties": {
+        "enabled":  { "type": "boolean" },
+        "enforce":  { "type": "string", "enum": ["privileged", "baseline", "restricted"] },
+        "audit":    { "type": "string", "enum": ["privileged", "baseline", "restricted"] },
+        "warn":     { "type": "string", "enum": ["privileged", "baseline", "restricted"] }
+      }
+    },
+
+    "networkPolicy": {
+      "type": "object",
+      "properties": {
+        "enabled":                   { "type": "boolean" },
+        "defaultDeny":               { "type": "boolean" },
+        "allowAllEgress":            { "type": "boolean" },
+        "ingressNamespaceSelector":  { "type": "object" }
+      }
+    },
+
+    "postgresql": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled":      { "type": "boolean" },
+        "image":        { "$ref": "#/definitions/imageRef" },
+        "auth":         { "type": "object" },
+        "service":      { "type": "object" },
+        "persistence":  { "type": "object" },
+        "resources":    { "type": "object" },
+        "external":     { "type": "object" }
+      }
+    },
+
+    "redis": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "image":       { "$ref": "#/definitions/imageRef" },
+        "service":     { "type": "object" },
+        "persistence": { "type": "object" },
+        "resources":   { "type": "object" }
+      }
+    },
+
+    "mqtt": {
+      "type": "object",
+      "required": ["enabled"],
+      "properties": {
+        "enabled":   { "type": "boolean" },
+        "image":     { "$ref": "#/definitions/imageRef" },
+        "service":   { "type": "object" },
+        "resources": { "type": "object" }
+      }
+    },
+
+    "mongodb": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "image":       { "$ref": "#/definitions/imageRef" },
+        "service":     { "type": "object" },
+        "persistence": { "type": "object" }
+      }
+    },
+
+    "fleetTelemetry": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "image":       { "$ref": "#/definitions/imageRef" },
+        "service":     { "type": "object" },
+        "config":      { "type": "object" }
+      }
+    },
+
+    "commandProxy": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "image":       { "$ref": "#/definitions/imageRef" }
+      }
+    },
+
+    "notificationWorker": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "image":       { "$ref": "#/definitions/imageRef" },
+        "replicaCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "exportWorker": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "image":       { "$ref": "#/definitions/imageRef" },
+        "replicaCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "automationWorker": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "image":       { "$ref": "#/definitions/imageRef" },
+        "replicaCount": { "type": "integer", "minimum": 0 }
+      }
+    },
+
+    "unitDriftValidator": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "schedule":    { "type": "string" }
+      }
+    },
+
+    "tesla": {
+      "type": "object",
+      "properties": {
+        "clientId":     { "type": "string" },
+        "clientSecret": { "type": "string" },
+        "redirectURI":  { "type": "string" },
+        "scopes":       { "type": "string" }
+      }
+    },
+
+    "auth": {
+      "type": "object",
+      "properties": {
+        "enabled":       { "type": "boolean" },
+        "type":          { "type": "string", "enum": ["forward", "oidc", "none"] }
+      }
+    },
+
+    "config": {
+      "type": "object",
+      "properties": {
+        "environment": {
+          "type": "string",
+          "enum": ["development", "dev", "staging", "production", "prod"],
+          "description": "Drives fail-closed behaviour (CORS rejects '*' when production). Optional; defaults to 'development' if unset."
+        },
+        "logLevel": {
+          "type": "string",
+          "enum": ["trace", "debug", "info", "warn", "error", "fatal", "panic"]
+        },
+        "corsOrigins": {
+          "type": "string",
+          "description": "Comma-separated allowlist. MUST be set and MUST NOT contain '*' when environment is production."
+        }
+      },
+      "additionalProperties": true,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "environment": { "enum": ["production", "prod"] }
+            },
+            "required": ["environment"]
+          },
+          "then": {
+            "required": ["corsOrigins"],
+            "properties": {
+              "corsOrigins": {
+                "type": "string",
+                "minLength": 1,
+                "not": { "const": "*" },
+                "pattern": "^[^*]*$"
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "encryption": {
+      "type": "object",
+      "properties": {
+        "key": { "type": "string" }
+      }
+    },
+
+    "secrets": {
+      "type": "object",
+      "additionalProperties": true
+    },
+
+    "webPush": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "publicKey":   { "type": "string" },
+        "privateKey":  { "type": "string" }
+      }
+    },
+
+    "vehiclePhotos": {
+      "type": "object",
+      "properties": {
+        "enabled":   { "type": "boolean" },
+        "directory": { "type": "string" }
+      }
+    },
+
+    "gasPrice": {
+      "type": "object",
+      "properties": {
+        "perGallon": { "type": "number", "minimum": 0 },
+        "currency":  { "type": "string" }
+      }
+    },
+
+    "github": {
+      "type": "object",
+      "properties": {
+        "token": { "type": "string" }
+      }
+    },
+
+    "retention": {
+      "type": "object",
+      "properties": {
+        "signalLogDays":     { "type": "integer", "minimum": 1 },
+        "fsmTransitionsDays":{ "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "system": {
+      "type": "object",
+      "additionalProperties": true
+    },
+
+    "operator": {
+      "type": "object",
+      "additionalProperties": true
+    },
+
+    "metrics": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "serviceMonitor": { "type": "object" }
+      }
+    },
+
+    "observability": {
+      "type": "object",
+      "properties": {
+        "otelCollector": {
+          "type": "object",
+          "properties": {
+            "enabled":   { "type": "boolean" },
+            "image":     { "$ref": "#/definitions/imageRef" },
+            "resources": { "type": "object" }
+          }
+        }
+      }
+    },
+
+    "grafana": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "image":       { "$ref": "#/definitions/imageRef" },
+        "persistence": { "type": "object" }
+      }
+    },
+
+    "jaeger": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" },
+        "image":       { "$ref": "#/definitions/imageRef" }
+      }
+    },
+
+    "ingressRoute": {
+      "type": "object",
+      "properties": {
+        "enabled":     { "type": "boolean" }
+      }
+    },
+
+    "serviceAccount": {
+      "type": "object",
+      "properties": {
+        "create":      { "type": "boolean" },
+        "name":        { "type": "string" },
+        "annotations": { "type": "object" }
+      }
+    },
+
+    "backup": {
+      "type": "object",
+      "properties": {
+        "enabled":                  { "type": "boolean" },
+        "schedule":                 { "type": "string" },
+        "timeZone":                 { "type": "string" },
+        "successfulJobsHistoryLimit": { "type": "integer", "minimum": 0 },
+        "failedJobsHistoryLimit":   { "type": "integer", "minimum": 0 },
+        "startingDeadlineSeconds":  { "type": "integer", "minimum": 0 },
+        "backoffLimit":             { "type": "integer", "minimum": 0 },
+        "ttlSecondsAfterFinished":  { "type": "integer", "minimum": 0 },
+        "retainDailyCopies":        { "type": "integer", "minimum": 0 },
+        "retainWeeklyCopies":       { "type": "integer", "minimum": 0 },
+        "pgDumpCompressLevel":      { "type": "integer", "minimum": 0, "maximum": 9 },
+        "logLevel":                 { "type": "string", "enum": ["trace", "debug", "info", "warn", "error"] },
+        "tmpSize":                  { "type": "string" },
+        "dest":                     { "type": "string", "enum": ["local", "s3"] },
+        "image": {
+          "type": "object",
+          "properties": {
+            "repository": { "type": "string", "minLength": 1 },
+            "tag":        { "type": "string" },
+            "pullPolicy": { "type": "string", "enum": ["Always", "IfNotPresent", "Never"] }
+          }
+        },
+        "local": {
+          "type": "object",
+          "properties": {
+            "existingClaim": { "type": "string" },
+            "accessMode":    { "type": "string", "enum": ["ReadWriteOnce", "ReadWriteMany", "ReadOnlyMany"] },
+            "size":          { "type": "string" },
+            "storageClass":  { "type": "string" },
+            "mountPath":     { "type": "string" }
+          }
+        },
+        "s3": {
+          "type": "object",
+          "properties": {
+            "endpoint":          { "type": "string" },
+            "region":            { "type": "string" },
+            "bucket":            { "type": "string" },
+            "prefix":            { "type": "string" },
+            "pathStyle":         { "type": "boolean" },
+            "credentialsSecret": { "type": "string" },
+            "accessKey":         { "type": "string" },
+            "secretKey":         { "type": "string" }
+          }
+        },
+        "resources":    { "type": "object" },
+        "nodeSelector": { "type": "object" },
+        "tolerations":  { "type": "array" },
+        "affinity":     { "type": "object" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": { "const": true },
+              "dest":    { "const": "s3" }
+            },
+            "required": ["enabled", "dest"]
+          },
+          "then": {
+            "properties": {
+              "s3": {
+                "type": "object",
+                "required": ["bucket"],
+                "properties": {
+                  "bucket": { "type": "string", "minLength": 1 }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
