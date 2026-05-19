@@ -36,9 +36,29 @@ if (!Element.prototype.scrollIntoView) {
 // ─── Test plumbing ──────────────────────────────────────────────────────────
 
 function makeVehicles(): Vehicle[] {
+  // Fixture must satisfy VehicleSchema (web/src/api/schemas/vehicle.ts), which
+  // validateResponse() runs inside useVehicles' `select`. Under vitest
+  // import.meta.env.DEV defaults to true, so a missing required field would
+  // throw and the palette would see an empty fleet.
+  const base = {
+    trim_badging: 'LR',
+    exterior_color: 'Pearl White',
+    wheel_type: 'Aero',
+    healthy: true,
+    created_at: '2024-01-01T00:00:00Z',
+    updated_at: '2024-01-01T00:00:00Z',
+  }
   return [
-    { id: 1, vin: 'VIN1', display_name: 'Model 3', model: 'Model 3', state: 'online' } as Vehicle,
-    { id: 2, vin: 'VIN2', display_name: 'Model Y', model: 'Model Y', state: 'asleep' } as Vehicle,
+    {
+      id: 1, vehicle_id: 1001, vin: 'VIN1',
+      display_name: 'Model 3', model: 'Model 3', state: 'online',
+      ...base,
+    } as Vehicle,
+    {
+      id: 2, vehicle_id: 1002, vin: 'VIN2',
+      display_name: 'Model Y', model: 'Model Y', state: 'asleep',
+      ...base,
+    } as Vehicle,
   ]
 }
 
