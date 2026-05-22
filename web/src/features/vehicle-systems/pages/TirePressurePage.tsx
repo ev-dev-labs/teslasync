@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, DataTable, type Column } from '@/components/ui';
+import { GlassPanel, Badge, DataTable, useSortToggle, type Column } from '@/components/ui';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
 import { MetricCard } from '@/components/data-display';
@@ -249,9 +249,21 @@ export default function TirePressurePage() {
     return { avg, min, warningCount };
   }, [latest]);
 
-  const chartData: ChartDatum[] = useMemo(() => {
+  // Canonical chronological order (oldest first). The /tire-pressure endpoint
+  // forwards rows in StateReader.Timeline order (ASC) but the contract doesn't
+  // pin that, so we sort defensively here. This becomes the single source of
+  // truth for both the chart (renders left=oldest, right=newest) and the
+  // newest-first table derivation below.
+  const historyAsc = useMemo<TirePressureReading[]>(() => {
     if (!history?.length) return [];
-    return [...history].reverse().map((r) => ({
+    return [...history].sort((a, b) =>
+      (a.created_at ?? '').localeCompare(b.created_at ?? ''),
+    );
+  }, [history]);
+
+  const chartData: ChartDatum[] = useMemo(() => {
+    if (historyAsc.length === 0) return [];
+    return historyAsc.map((r) => ({
       time: formatDateTime(r.created_at),
       fl: pressureDisplayValue(normaliseTpmsToPa(r.front_left)),
       fr: pressureDisplayValue(normaliseTpmsToPa(r.front_right)),
@@ -261,7 +273,48 @@ export default function TirePressurePage() {
     // unitPrefs.pressure is the only relevant primitive dep — depending on
     // the closure-captured `pressureDisplayValue` would also work but referencing
     // the primitive keeps the dep list stable for memo invalidation.
-  }, [history, unitPrefs.pressure]);
+  }, [historyAsc, unitPrefs.pressure]);
+
+  // Newest entry in the selected range — used to populate "Last Updated"
+  // because /tire-pressure/latest returns only field values (no timestamp).
+  // This is the freshness of the visible window, not necessarily global
+  // freshness; the label is range-bound by design.
+  const lastUpdatedAt = useMemo<string | null>(() => {
+    if (historyAsc.length === 0) return null;
+    return historyAsc[historyAsc.length - 1].created_at ?? null;
+  }, [historyAsc]);
+
+  /* ---- Table sort: newest-first by default, all sortable columns wired ---- */
+
+  // Accessor used by useSortToggle to extract a comparable value per
+  // column key. Numeric tire columns sort by their normalised Pa value so
+  // the Badge-wrapped renders sort by magnitude, not by Badge label text.
+  const sortAccessor = useCallback(
+    (row: TirePressureReading, key: string): number | string => {
+      switch (key) {
+        case 'created_at':
+          return row.created_at ?? '';
+        case 'fl':
+        case 'fr':
+        case 'rl':
+        case 'rr':
+          return getTirePressureValue(row, key);
+        default:
+          return '';
+      }
+    },
+    [],
+  );
+
+  const { sortKey, sortDir, onSort, sortFn } = useSortToggle(
+    'created_at',
+    'desc',
+  );
+
+  const tableData = useMemo(
+    () => sortFn(historyAsc, sortAccessor),
+    [historyAsc, sortFn, sortAccessor],
+  );
 
   /* ---- Table columns ---- */
 
@@ -454,7 +507,7 @@ export default function TirePressurePage() {
           />
           <MetricCard
             label={t('Last Updated')}
-            value={latest ? formatDateTime(latest.created_at) : '—'}
+            value={lastUpdatedAt ? formatDateTime(lastUpdatedAt) : '—'}
             icon={<Clock className="h-5 w-5" />}
             color="purple"
           />
@@ -532,8 +585,11 @@ export default function TirePressurePage() {
               <DataTable
                 tableId="vehicle-systems:tire-pressure-history"
                 columns={historyColumns}
-                data={history}
+                data={tableData}
                 keyExtractor={(row) => row.id}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={onSort}
                 emptyMessage={t('No History Data')}
                 compact
                 pagination
