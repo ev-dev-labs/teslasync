@@ -481,6 +481,25 @@ type PipelineSubscriberConfig struct {
 
 	// SubscribeTimeout caps how long Start waits for the SUBACK. Default 10s.
 	SubscribeTimeout time.Duration
+
+	// StreamingRecorder, when non-nil, receives a callback for every
+	// successfully decoded MQTT batch (after pipeline dispatch returns
+	// nil). It powers the /telemetry status MQTT Inspector — pre-Phase-42
+	// only the HTTP TelemetryIngest path updated streaming state, so the
+	// Inspector silently zeroed out once the per-field MQTT cutover
+	// became the production path. Implementations MUST be safe for
+	// concurrent calls (paho dispatches messages on multiple goroutines).
+	StreamingRecorder StreamingHealthRecorder
+}
+
+// StreamingHealthRecorder bridges PipelineSubscriber to the per-VIN streaming
+// health state exposed by GET /api/v1/telemetry (the MQTT Inspector page).
+// Callbacks fire exactly once per successful pipeline dispatch — codec
+// drops and pipeline errors do NOT invoke RecordStream because they do
+// not represent a successful signal observation. Implementations should
+// be cheap (the call runs on the message-handling goroutine).
+type StreamingHealthRecorder interface {
+	RecordStream(vin string, atomics []codec.Atomic)
 }
 
 func (c *PipelineSubscriberConfig) withDefaults() {
@@ -858,6 +877,14 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	if err := s.pipeline.ProcessAtomics(ctx, atomics, vehicleID); err != nil {
 		s.handlePipelineError(ctx, msg, vehicleID, vin, err)
 		return
+	}
+
+	// Phase-48 inspector fix: notify the optional StreamingHealthRecorder
+	// AFTER the pipeline accepted the batch so /telemetry status only
+	// counts signals that actually persisted. The hot-path guard keeps
+	// the nil check off the panic-recovery slow path.
+	if recorder := s.cfg.StreamingRecorder; recorder != nil {
+		recorder.RecordStream(vin, atomics)
 	}
 
 	span.SetAttributes(attribute.String("mqtt.disposition", "ack"))

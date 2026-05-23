@@ -637,7 +637,8 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		dlq,
 		vinCache.Resolve,
 		mqtt.PipelineSubscriberConfig{
-			TopicBase: a.Cfg.FleetTelemetry.TopicBase,
+			TopicBase:         a.Cfg.FleetTelemetry.TopicBase,
+			StreamingRecorder: a.TelemetryHandler,
 		},
 		pipelineLogger,
 	)
