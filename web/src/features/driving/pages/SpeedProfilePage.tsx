@@ -49,8 +49,12 @@ function categoryIcon(range: string): React.ReactNode {
 }
 
 function getEfficiency(drive: Drive): number | null {
+  if (!(drive.distanceM > 0)) return null;
+  if (drive.energyUsedWh != null && drive.energyUsedWh > 0) {
+    return drive.energyUsedWh / (drive.distanceM / 1000);
+  }
   const battUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (drive.distanceM > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1000);
+  if (battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1000);
   return null;
 }
 
@@ -111,36 +115,39 @@ export default function SpeedProfilePage() {
 
   /* ---- Per-bucket efficiency from drives ---- */
   const bucketEfficiency = useMemo(() => {
-    if (!drives) return new Map<string, { avgEff: number; avgSpeed: number }>();
-    const map = new Map<string, { totalEff: number; totalSpd: number; count: number }>();
+    if (!drives) return new Map<string, { avgEff: number; avgSpeedMps: number }>();
+    const map = new Map<string, { totalEff: number; totalSpdMps: number; count: number }>();
     const ranges = data?.distribution ?? [];
     drives.forEach((d) => {
       if (d.avgSpeedMps == null) return;
       const eff = getEfficiency(d);
       if (!eff) return;
-      const avgSpeed = toSpeedDisplay(d.avgSpeedMps);
+      // Bucket label literals ("0-15", "15-30", ...) are in the user's
+      // display speed unit, so compare against the converted value while
+      // accumulating the SI value (m/s) for later conversion at display.
+      const speedDisplay = toSpeedDisplay(d.avgSpeedMps);
       for (const r of ranges) {
         const bucket = r.speedBucket ?? r.speed_bucket ?? '';
         const parts = bucket.match(/(\d+)/g);
         if (!parts) continue;
         const lo = Number(parts[0]);
         const hi = parts.length > 1 ? Number(parts[1]) : 999;
-        if (avgSpeed >= lo && avgSpeed < hi) {
-          const existing = map.get(bucket) ?? { totalEff: 0, totalSpd: 0, count: 0 };
+        if (speedDisplay >= lo && speedDisplay < hi) {
+          const existing = map.get(bucket) ?? { totalEff: 0, totalSpdMps: 0, count: 0 };
           existing.totalEff += eff;
-          existing.totalSpd += avgSpeed;
+          existing.totalSpdMps += d.avgSpeedMps;
           existing.count++;
           map.set(bucket, existing);
           break;
         }
       }
     });
-    const result = new Map<string, { avgEff: number; avgSpeed: number }>();
+    const result = new Map<string, { avgEff: number; avgSpeedMps: number }>();
     map.forEach((v, k) => {
-      result.set(k, { avgEff: v.totalEff / v.count, avgSpeed: v.totalSpd / v.count });
+      result.set(k, { avgEff: v.totalEff / v.count, avgSpeedMps: v.totalSpdMps / v.count });
     });
     return result;
-  }, [drives, data]);
+  }, [drives, data, toSpeedDisplay]);
 
   return (
     <PageContainer
@@ -249,7 +256,7 @@ export default function SpeedProfilePage() {
                           <div className="flex justify-between">
                             <span className="text-[10px] text-[var(--text-muted)]">{t('speedProfile.avgSpeed', 'Avg Speed')}</span>
                             <span className="text-sm font-bold text-[var(--text-secondary)]">
-                              {fmtNumber(toSpeedDisplay(effData.avgSpeed))} {speedUnit}
+                              {fmtNumber(toSpeedDisplay(effData.avgSpeedMps))} {speedUnit}
                             </span>
                           </div>
                           <div className="flex justify-between">
