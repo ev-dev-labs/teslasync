@@ -1,6 +1,8 @@
 package api
 
 import (
+	"errors"
+	"fmt"
 	"math"
 	"net/http"
 
@@ -276,9 +278,88 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		points = []efficiencyPoint{}
 	}
 
+	// Hero-gauge aggregates (avg / peak / optimal). SpeedProfilePage's
+	// three RadialGauges read these via toSpeedDisplay = convertSpeedFromSI
+	// which expects SI m/s — so we emit SI canonical (_mps) per Phase-48
+	// rather than the old _kmh shape (the gauges were unwired entirely
+	// before this fix and rendered as 0 mph). Optimal = midpoint of the
+	// speed bucket with the lowest mean Wh/km — same six 15-mph buckets
+	// the distribution chart uses, mapped to m/s midpoints (7.5/22.5/.../
+	// 80 mph × 0.44704). Falls back to JSON null when no qualifying drive
+	// has both energy_used_wh AND distance_m > 0.
+	var avgMps, peakMps, optimalMps *float64
+	heroSQL := `
+WITH eligible AS (
+  SELECT
+    avg_speed_mps,
+    max_speed_mps,
+    energy_used_wh,
+    distance_m,
+    CASE
+      WHEN avg_speed_mps < 6.7056  THEN 3.3528
+      WHEN avg_speed_mps < 13.4112 THEN 10.0584
+      WHEN avg_speed_mps < 20.1168 THEN 16.7640
+      WHEN avg_speed_mps < 26.8224 THEN 23.4696
+      WHEN avg_speed_mps < 33.528  THEN 30.1752
+      ELSE 35.7632
+    END AS bucket_midpoint_mps
+  FROM drives
+  WHERE vehicle_id = $1
+    AND avg_speed_mps IS NOT NULL AND avg_speed_mps > 0
+    %s
+)
+SELECT
+  AVG(avg_speed_mps) AS avg_speed_mps,
+  MAX(max_speed_mps) AS peak_speed_mps,
+  (
+    SELECT bucket_midpoint_mps
+    FROM (
+      SELECT bucket_midpoint_mps,
+             AVG(energy_used_wh / (distance_m / 1000.0)) AS wh_per_km
+      FROM eligible
+      WHERE distance_m > 0
+        AND energy_used_wh IS NOT NULL
+        AND energy_used_wh > 0
+      GROUP BY bucket_midpoint_mps
+      ORDER BY wh_per_km ASC
+      LIMIT 1
+    ) sub
+  ) AS optimal_speed_mps
+FROM eligible
+`
+	var heroErr error
+	if hasRange {
+		heroErr = h.db.Pool.QueryRow(ctx, fmt.Sprintf(heroSQL, "AND started_at BETWEEN $2 AND $3"), vehicleID, startTime, endTime).
+			Scan(&avgMps, &peakMps, &optimalMps)
+	} else {
+		heroErr = h.db.Pool.QueryRow(ctx, fmt.Sprintf(heroSQL, ""), vehicleID).
+			Scan(&avgMps, &peakMps, &optimalMps)
+	}
+	if heroErr != nil && !errors.Is(heroErr, pgx.ErrNoRows) {
+		// Log + degrade to zero rather than 500 the whole payload —
+		// distribution/categories/points are already computed and are
+		// useful even if the aggregates query fails.
+		log.Error().Err(heroErr).Int64("vehicleID", vehicleID).Msg("speed profile: failed to compute hero aggregates")
+	}
+	avgSpeedMps := 0.0
+	if avgMps != nil {
+		avgSpeedMps = math.Round(*avgMps*100) / 100
+	}
+	peakSpeedMps := 0.0
+	if peakMps != nil {
+		peakSpeedMps = math.Round(*peakMps*100) / 100
+	}
+	optimalSpeedMps := 0.0
+	if optimalMps != nil {
+		optimalSpeedMps = math.Round(*optimalMps*100) / 100
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"distribution": distribution,
-		"categories":   categories,
-		"points":       points,
+		"distribution":      distribution,
+		"categories":        categories,
+		"points":            points,
+		"avg_speed_mps":     avgSpeedMps,
+		"peak_speed_mps":    peakSpeedMps,
+		"optimal_speed_mps": optimalSpeedMps,
 	})
 }

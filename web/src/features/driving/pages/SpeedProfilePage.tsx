@@ -168,22 +168,22 @@ export default function SpeedProfilePage() {
             <GlassPanel className="p-4 sm:p-6">
               <div className="grid grid-cols-3 gap-4 sm:gap-6 items-center">
                 <RadialGauge
-                  value={Math.round(toSpeedDisplay(data.avgSpeedKmh ?? 0))}
-                  max={Math.round(toSpeedDisplay(200))}
+                  value={Math.round(toSpeedDisplay(data.avgSpeedMps ?? 0))}
+                  max={Math.round(toSpeedDisplay(55.56))}
                   label={t('speedProfile.avgSpeed', 'Avg Speed')}
                   unit={speedUnit}
                   color="#00f0ff"
                 />
                 <RadialGauge
-                  value={Math.round(toSpeedDisplay(data.peakSpeedKmh ?? 0))}
-                  max={Math.round(toSpeedDisplay(250))}
+                  value={Math.round(toSpeedDisplay(data.peakSpeedMps ?? 0))}
+                  max={Math.round(toSpeedDisplay(69.44))}
                   label={t('speedProfile.peakSpeed', 'Peak Speed')}
                   unit={speedUnit}
                   color="#ef4444"
                 />
                 <RadialGauge
-                  value={Math.round(toSpeedDisplay(data.optimalSpeedKmh ?? 0))}
-                  max={Math.round(toSpeedDisplay(200))}
+                  value={Math.round(toSpeedDisplay(data.optimalSpeedMps ?? 0))}
+                  max={Math.round(toSpeedDisplay(55.56))}
                   label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
                   unit={speedUnit}
                   color="#10b981"
@@ -306,7 +306,7 @@ export default function SpeedProfilePage() {
           )}
 
           {/* Efficiency insight */}
-          {(data.optimalSpeedKmh ?? 0) > 0 && (
+          {(data.optimalSpeedMps ?? 0) > 0 && (
             <FadeIn>
               <GlassPanel className="p-4 border-l-4 border-green-400">
                 <div className="flex items-start gap-3">
@@ -317,7 +317,7 @@ export default function SpeedProfilePage() {
                     </p>
                     <p className="text-xs text-[var(--text-secondary)]">
                       {t('speedProfile.insightText', 'Drives around {{speed}} {{unit}} show the best energy efficiency. Reducing highway speed could improve efficiency by ~15%.', {
-                        speed: fmtNumber(toSpeedDisplay(data.optimalSpeedKmh ?? 0)),
+                        speed: fmtNumber(toSpeedDisplay(data.optimalSpeedMps ?? 0)),
                         unit: speedUnit,
                       })}
                     </p>
