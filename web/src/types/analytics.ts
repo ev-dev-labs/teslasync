@@ -18,19 +18,65 @@ export interface VehicleComparisonEntry {
   efficiency: number;
 }
 
+/**
+ * MileageStats matches the backend `MileageStatsResponse`
+ * (internal/api/mileage_handler.go) — Phase-43a / Prompt 0004
+ * restored the endpoint with the snake_case lifetime + window
+ * rollup shape. Distances are kilometres (SI conversion happens
+ * in the SELECT list); times are RFC3339 strings nullable for
+ * vehicles with zero recorded drives.
+ */
 export interface MileageStats {
-  totalDistance: number;
-  avgDaily: number;
-  maxDaily: number;
-  totalEnergy: number;
-  totalDrives: number;
-  daysTracked: number;
+  vehicle_id: number;
+  lifetime_km: number;
+  last_7d_km: number;
+  last_30d_km: number;
+  last_365d_km: number;
+  drive_count_lifetime: number;
+  drive_count_30d: number;
+  first_drive_at: string | null;
+  last_drive_at: string | null;
 }
 
-export interface MonthlyStat {
-  month: string;
-  distance: number;
-  drives: number;
+/**
+ * MonthlyMileageBucket matches the backend `MileageMonthlyBucket`
+ * (internal/api/mileage_handler.go) — one bucket per UTC calendar
+ * month, year_month rendered as 'YYYY-MM', distances in kilometres,
+ * energy in watt-hours.
+ */
+export interface MonthlyMileageBucket {
+  year_month: string;
+  drive_count: number;
+  total_km: number;
+  total_wh_consumed: number | null;
+  avg_efficiency_wh_per_km: number | null;
+}
+
+/** Envelope returned by GET /mileage/monthly. */
+export interface MonthlyMileageResponse {
+  vehicle_id: number;
+  months: MonthlyMileageBucket[];
+}
+
+/**
+ * DailyMileageBucket matches the backend `MileageDailyBucket`
+ * (internal/api/mileage_handler.go) — Phase-43a / Prompt 0009
+ * (fix/misc-fixes) restored per-day buckets so MileagePage can
+ * render its Odometer Over Time and Daily Distance charts.
+ * Date is 'YYYY-MM-DD'; end_odometer_km is null when no qualifying
+ * drive in the bucket recorded a final odometer reading.
+ */
+export interface DailyMileageBucket {
+  date: string;
+  drive_count: number;
+  total_km: number;
+  end_odometer_km: number | null;
+}
+
+/** Envelope returned by GET /mileage/daily. */
+export interface DailyMileageResponse {
+  vehicle_id: number;
+  days: DailyMileageBucket[];
 }
 
 export interface CostBreakdown {

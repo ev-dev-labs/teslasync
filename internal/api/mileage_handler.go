@@ -34,6 +34,7 @@ type mileageRepository interface {
 	VehicleExists(ctx context.Context, vehicleID int64) (bool, error)
 	Monthly(ctx context.Context, vehicleID int64, windowStart time.Time) ([]database.MileageMonthlyRow, error)
 	Stats(ctx context.Context, vehicleID int64, since7d, since30d, since365d time.Time) (database.MileageStats, error)
+	Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]database.MileageDailyRow, error)
 }
 
 // mileageClock is injected so handler tests can pin the window
@@ -62,6 +63,15 @@ const (
 	// with one row per trip, so 10 years of monthly aggregation is
 	// bounded by trip frequency rather than telemetry tick rate.
 	mileageMaxMonths = 120
+	// mileageDefaultDays is the default per-day window for /mileage/daily
+	// (Phase-43a / Prompt 0009 — fix/misc-fixes). MileagePage.tsx today
+	// requests limit=90; 90 daily buckets renders cleanly on the
+	// Odometer Over Time area chart and Daily Distance bar chart.
+	mileageDefaultDays = 90
+	// mileageMaxDays caps the per-day window. 730 days = 2 years —
+	// plenty for the page's pagination patterns without unbounded
+	// growth in the response payload.
+	mileageMaxDays = 730
 )
 
 // parseMonthlyParams extracts and validates vehicle_id + months for
@@ -266,6 +276,120 @@ func (h *MileageHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// parseDailyParams extracts and validates vehicle_id + days for
+// /mileage/daily. Returns ok=false after writing the appropriate 4xx
+// response so the caller can early-return.
+//
+// Phase-43a / Prompt 0009 (fix/misc-fixes). Mirrors parseMonthlyParams
+// but with the days cap (Decision #3 of Prompt 0004 generalised to
+// daily granularity).
+func (h *MileageHandler) parseDailyParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, days int, ok bool) {
+	q := r.URL.Query()
+
+	vidStr := q.Get("vehicle_id")
+	if vidStr == "" {
+		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		return 0, 0, false
+	}
+	vid, err := strconv.ParseInt(vidStr, 10, 64)
+	if err != nil || vid <= 0 {
+		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		return 0, 0, false
+	}
+
+	days = mileageDefaultDays
+	if d := q.Get("days"); d != "" {
+		v, err := strconv.Atoi(d)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "days must be an integer")
+			return 0, 0, false
+		}
+		if v < 1 {
+			writeError(w, http.StatusBadRequest, "days must be >= 1")
+			return 0, 0, false
+		}
+		if v > mileageMaxDays {
+			writeJSON(w, http.StatusBadRequest, map[string]any{
+				"error": "days exceeds maximum",
+				"max":   mileageMaxDays,
+				"code":  httpStatusCode(http.StatusBadRequest),
+			})
+			return 0, 0, false
+		}
+		days = v
+	}
+	return vid, days, true
+}
+
+// MileageDailyBucket is one bucket in the /mileage/daily response.
+// Date is rendered as YYYY-MM-DD so consumers can sort lexically or
+// pass it directly into Date/dayjs constructors. end_odometer_km is
+// a pointer so a day with non-null distance but all-null end_odometer_m
+// (rare but possible when a drive ends abnormally) reports JSON null
+// for the odometer field instead of a fabricated zero.
+type MileageDailyBucket struct {
+	Date          string   `json:"date"`
+	DriveCount    int      `json:"drive_count"`
+	TotalKm       float64  `json:"total_km"`
+	EndOdometerKm *float64 `json:"end_odometer_km"`
+}
+
+// MileageDailyResponse is the envelope returned by Daily. Mirrors the
+// MileageMonthlyResponse shape so the frontend hook layer can reuse
+// the same envelope-unwrap pattern.
+type MileageDailyResponse struct {
+	VehicleID int64                `json:"vehicle_id"`
+	Days      []MileageDailyBucket `json:"days"`
+}
+
+// Daily serves GET /mileage/daily?vehicle_id=...&days=N.
+//
+// Returns 200 with {vehicle_id, days: []} for an existing vehicle even
+// when no drives are recorded — consistent with Monthly's Decision #6.
+// 404 only when the vehicle id is unknown.
+func (h *MileageHandler) Daily(w http.ResponseWriter, r *http.Request) {
+	vehicleID, days, ok := h.parseDailyParams(w, r)
+	if !ok {
+		return
+	}
+
+	ctx := r.Context()
+	exists, err := h.repo.VehicleExists(ctx, vehicleID)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("mileage.daily: existence probe failed")
+		writeError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		return
+	}
+	if !exists {
+		writeError(w, http.StatusNotFound, "vehicle not found")
+		return
+	}
+
+	now := h.now()
+	windowStart := daysAgo(now, days)
+	rows, err := h.repo.Daily(ctx, vehicleID, windowStart)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", days).Msg("mileage.daily: query failed")
+		writeError(w, http.StatusInternalServerError, "failed to load daily mileage")
+		return
+	}
+
+	out := MileageDailyResponse{
+		VehicleID: vehicleID,
+		Days:      make([]MileageDailyBucket, 0, len(rows)),
+	}
+	for _, row := range rows {
+		out.Days = append(out.Days, MileageDailyBucket{
+			Date:          row.Day.UTC().Format("2006-01-02"),
+			DriveCount:    row.DriveCount,
+			TotalKm:       row.TotalKm,
+			EndOdometerKm: row.EndOdometerKm,
+		})
+	}
+
+	writeJSON(w, http.StatusOK, out)
+}
+
 // now returns the injected clock value or wall time if no clock is
 // configured. Splitting it out keeps every time-derived computation in
 // the handler reading from the same source.
@@ -290,4 +414,15 @@ func monthsAgo(now time.Time, months int) time.Time {
 	// includes drives from the start of that month rather than from
 	// `now.Day()` of that month (which would clip the earliest bucket).
 	return time.Date(t.Year(), t.Month(), 1, 0, 0, 0, 0, time.UTC)
+}
+
+// daysAgo subtracts `days` calendar days from `now` and snaps to UTC
+// midnight so the earliest bucket includes drives from the start of
+// that day rather than from `now.Hour()` of that day (which would clip
+// the earliest bucket exactly like monthsAgo's month-snap does).
+//
+// Phase-43a / Prompt 0009 (fix/misc-fixes).
+func daysAgo(now time.Time, days int) time.Time {
+	t := now.AddDate(0, 0, -days)
+	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 }
