@@ -44,10 +44,20 @@ import (
 	"time"
 
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
 )
+
+// sideEffectsTracerName is the OpenTelemetry tracer name for the
+// observer parent span and the per-effect child spans. The Phase-10
+// trace-coverage audit greps for this exact constant so the observer
+// stays accounted for in the tesla_signal_ingest_to_db flow.
+const sideEffectsTracerName = "teslapipeline"
 
 // LiveSignalStore mirrors the subset of internal/signal.LiveSignalStore
 // the SideEffectsObserver needs. The legacy method on the concrete
@@ -288,6 +298,17 @@ func New(cfg Config) *SideEffectsObserver {
 // atomics slice; we read it for the conversion to a map and never
 // write back.
 func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID int64, atomics []codec.Atomic) {
+	ctx, parent := otel.Tracer(sideEffectsTracerName).Start(
+		ctx,
+		"observer.side_effects",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.Int64("vehicle_id", vehicleID),
+			attribute.Int("atomic_count", len(atomics)),
+		),
+	)
+	defer parent.End()
+
 	signals := make(map[string]any, len(atomics))
 	// fieldTs preserves per-atomic EmittedAt across the map-reduction.
 	// Reducing []codec.Atomic → map[Field]Value collapses duplicate
@@ -309,22 +330,47 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 			payloadTs = a.EmittedAt
 		}
 	}
+	parent.SetAttributes(attribute.Int("signal_count", len(signals)))
 
 	// Step 1: live store FIRST so FSM may read live state AND so the
 	// accumulated snapshot built in step 3 reflects the current
 	// payload's atomics merged with all prior batches.
-	if err := o.live.UpdateAll(ctx, vehicleID, signals); err != nil {
-		o.log.Warn().
-			Err(err).
-			Int64("vehicle_id", vehicleID).
-			Int("signal_count", len(signals)).
-			Msg("teslapipeline: live signal store update failed")
+	{
+		stepCtx, span := otel.Tracer(sideEffectsTracerName).Start(
+			ctx, "signal.live_store.update_all",
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(
+				attribute.Int64("vehicle_id", vehicleID),
+				attribute.Int("signal_count", len(signals)),
+			),
+		)
+		if err := o.live.UpdateAll(stepCtx, vehicleID, signals); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "live.update_all")
+			o.log.Warn().
+				Err(err).
+				Int64("vehicle_id", vehicleID).
+				Int("signal_count", len(signals)).
+				Msg("teslapipeline: live signal store update failed")
+		}
+		span.End()
 	}
 
 	// Step 2: FSM dispatch. The FSM may read live state populated by
 	// step 1 — calling FSM before live is the regression that
 	// Decision #10(e) explicitly guards against.
-	o.fsm.ProcessSignalsAt(ctx, vehicleID, signals, payloadTs, fieldTs)
+	{
+		stepCtx, span := otel.Tracer(sideEffectsTracerName).Start(
+			ctx, "fsm.dispatch_signals",
+			trace.WithSpanKind(trace.SpanKindInternal),
+			trace.WithAttributes(
+				attribute.Int64("vehicle_id", vehicleID),
+				attribute.Int("signal_count", len(signals)),
+			),
+		)
+		o.fsm.ProcessSignalsAt(stepCtx, vehicleID, signals, payloadTs, fieldTs)
+		span.End()
+	}
 
 	// Step 3: build the cross-batch accumulated snapshot. Per-field
 	// MQTT delivers one atomic per payload, so the per-payload
@@ -335,34 +381,88 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 	// payload's atomics. On error (or nil snapshot — first message
 	// ever), fall back to the per-payload map and log at DEBUG so
 	// the regression is surfaced without flooding WARN.
-	accumulated, err := o.live.GetAll(ctx, vehicleID)
+	fallbackUsed := false
+	stepCtx, getAllSpan := otel.Tracer(sideEffectsTracerName).Start(
+		ctx, "signal.live_store.get_all",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(attribute.Int64("vehicle_id", vehicleID)),
+	)
+	accumulated, err := o.live.GetAll(stepCtx, vehicleID)
 	if err != nil {
+		getAllSpan.RecordError(err)
+		getAllSpan.SetStatus(codes.Error, "live.get_all")
 		o.log.Debug().
 			Err(err).
 			Int64("vehicle_id", vehicleID).
 			Msg("teslapipeline: live signal store GetAll failed; falling back to per-payload signals map for accumulated")
 		accumulated = signals
+		fallbackUsed = true
 	} else if accumulated == nil {
 		accumulated = signals
+		fallbackUsed = true
 	}
+	getAllSpan.SetAttributes(
+		attribute.Int("signal_count", len(accumulated)),
+		attribute.Bool("fallback_used", fallbackUsed),
+	)
+	getAllSpan.End()
 
 	// Step 5: VIN-keyed sessions + alerts. A VIN lookup failure
 	// SKIPS this pair only; live / history / FSM / SSE proceed.
-	vin, err := o.vinResolver.VINByID(ctx, vehicleID)
+	vinCtx, vinSpan := otel.Tracer(sideEffectsTracerName).Start(
+		ctx, "observer.vin_resolve",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(attribute.Int64("vehicle_id", vehicleID)),
+	)
+	vin, err := o.vinResolver.VINByID(vinCtx, vehicleID)
 	if err != nil {
+		vinSpan.RecordError(err)
+		vinSpan.SetStatus(codes.Error, "vin_resolve")
+		vinSpan.SetAttributes(
+			attribute.String("result", "error"),
+			attribute.Bool("sessions_alerts_skipped", true),
+		)
+		vinSpan.End()
 		o.log.Warn().
 			Err(err).
 			Int64("vehicle_id", vehicleID).
 			Msg("teslapipeline: VIN lookup failed; skipping sessions + alerts")
 	} else {
+		vinSpan.SetAttributes(
+			attribute.String("result", "ok"),
+			attribute.Bool("sessions_alerts_skipped", false),
+		)
+		vinSpan.End()
 		// `signals` is the per-payload current view; `accumulated`
 		// is the cross-batch snapshot from the live store. They are
 		// distinct maps under per-field MQTT (a payload typically
 		// has 1 entry; accumulated has hundreds). Downstream
 		// consumers MUST NOT mutate either map — both are shared
 		// with FSM / SSE / live store under Decision #10(d).
-		o.sessions.ProcessSignalsAt(ctx, vehicleID, vin, signals, accumulated, payloadTs, fieldTs)
-		o.alerts.Evaluate(ctx, vehicleID, vin, signals, accumulated)
+		{
+			sessCtx, sessSpan := otel.Tracer(sideEffectsTracerName).Start(
+				ctx, "sessions.process_signals_at",
+				trace.WithSpanKind(trace.SpanKindInternal),
+				trace.WithAttributes(
+					attribute.Int64("vehicle_id", vehicleID),
+					attribute.Int("signal_count", len(signals)),
+				),
+			)
+			o.sessions.ProcessSignalsAt(sessCtx, vehicleID, vin, signals, accumulated, payloadTs, fieldTs)
+			sessSpan.End()
+		}
+		{
+			alertCtx, alertSpan := otel.Tracer(sideEffectsTracerName).Start(
+				ctx, "alerts.evaluate",
+				trace.WithSpanKind(trace.SpanKindInternal),
+				trace.WithAttributes(
+					attribute.Int64("vehicle_id", vehicleID),
+					attribute.Int("signal_count", len(signals)),
+				),
+			)
+			o.alerts.Evaluate(alertCtx, vehicleID, vin, signals, accumulated)
+			alertSpan.End()
+		}
 	}
 
 	// Step 6: SSE fanout LAST so the broadcast reflects all

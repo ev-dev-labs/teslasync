@@ -106,3 +106,25 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
 - Matched files:
   - `internal/ai/provider/trace.go`
 
+## Tesla per-field MQTT signal → VIN resolve → codec decode → router → writers → DB save → side-effects — `tesla_signal_ingest_to_db`
+
+- Status: **OK**
+- Instrumented files matched: 16 (threshold ≥ 14)
+- Matched files:
+  - `internal/api/telemetry_handler_ingest.go`
+  - `internal/mqtt/mqtt.go`
+  - `internal/mqtt/vin_cache.go`
+  - `internal/signal/redis_cache.go`
+  - `internal/signal/state_reader_log.go`
+  - `internal/tesla/codec/decode_json.go`
+  - `internal/tesla/normalize/setting_unit_observer.go`
+  - `internal/tesla/router/router.go`
+  - `internal/tesla/router/writers/positions_writer.go`
+  - `internal/tesla/router/writers/security_event_writer.go`
+  - `internal/tesla/router/writers/signal_log_writer.go`
+  - `internal/tesla/router/writers/snapshot_base.go`
+  - `internal/tesla/router/writers/tire_pressure_writer.go`
+  - `internal/tesla/router/writers/tracing.go`
+  - `internal/tesla/unit_history/repo.go`
+  - `internal/tesla_pipeline/side_effects_observer.go`
+

@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
@@ -236,6 +237,10 @@ ON CONFLICT (vehicle_id, ts) DO UPDATE SET
 func (w *positionsWriter) Write(ctx context.Context, atom codec.Atomic, dst router.Entry) error {
 	_ = dst // see godoc above — column mapping is hard-coded per Decision #5.
 
+	ctx, span, end := startWriterSpan(ctx, "positions", atom.Field)
+	var err error
+	defer func() { end(err) }()
+
 	// 1. Validate field + runtime value type WITHOUT mutating writer state.
 	var lat, lng *float64
 	var headingDeg *float64
@@ -244,13 +249,15 @@ func (w *positionsWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 	case "LocationLatitude":
 		v, ok := atom.Value.(float64)
 		if !ok {
-			return fmt.Errorf("positionsWriter[positions].LocationLatitude: expected float64, got %T", atom.Value)
+			err = fmt.Errorf("positionsWriter[positions].LocationLatitude: expected float64, got %T", atom.Value)
+			return err
 		}
 		lat = &v
 	case "LocationLongitude":
 		v, ok := atom.Value.(float64)
 		if !ok {
-			return fmt.Errorf("positionsWriter[positions].LocationLongitude: expected float64, got %T", atom.Value)
+			err = fmt.Errorf("positionsWriter[positions].LocationLongitude: expected float64, got %T", atom.Value)
+			return err
 		}
 		lng = &v
 	case "GpsHeading":
@@ -261,20 +268,23 @@ func (w *positionsWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 		// keeps the snapshotted struct uniform.
 		v, ok := coercePositionsFloat(atom.Value)
 		if !ok {
-			return fmt.Errorf("positionsWriter[positions].GpsHeading: expected float32 or float64, got %T", atom.Value)
+			err = fmt.Errorf("positionsWriter[positions].GpsHeading: expected float32 or float64, got %T", atom.Value)
+			return err
 		}
 		headingDeg = &v
 	case "GpsState":
 		v, ok := atom.Value.(string)
 		if !ok {
-			return fmt.Errorf("positionsWriter[positions].GpsState: expected string, got %T", atom.Value)
+			err = fmt.Errorf("positionsWriter[positions].GpsState: expected string, got %T", atom.Value)
+			return err
 		}
 		gpsState = &v
 	default:
 		// routing.yaml is the gate — any field here is a drift between
 		// routing.yaml and this switch. The error message is verbatim
 		// per Decision #5.
-		return fmt.Errorf("positionsWriter: unrouted field %q", atom.Field)
+		err = fmt.Errorf("positionsWriter: unrouted field %q", atom.Field)
+		return err
 	}
 
 	// 2. Normalise timestamp. EmittedAt comes from timestamppb.AsTime()
@@ -292,7 +302,8 @@ func (w *positionsWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 	if !exists {
 		if len(w.pending) >= w.maxPending {
 			w.mu.Unlock()
-			return fmt.Errorf("positionsWriter[positions]: pending buffer full (max=%d)", w.maxPending)
+			err = fmt.Errorf("positionsWriter[positions]: pending buffer full (max=%d)", w.maxPending)
+			return err
 		}
 		p = &positionsPending{firstSeenAt: w.now()}
 		w.pending[key] = p
@@ -316,6 +327,7 @@ func (w *positionsWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 	if !p.hasLat || !p.hasLng {
 		// 4. Buffered; partner not yet arrived.
 		w.mu.Unlock()
+		span.SetAttributes(attribute.String("outcome", "buffered"))
 		return nil
 	}
 
@@ -340,13 +352,15 @@ func (w *positionsWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 	if err != nil {
 		return fmt.Errorf("positionsWriter[positions]: %w", err)
 	}
+	span.SetAttributes(attribute.Int64("rows_affected", tag.RowsAffected()), attribute.String("outcome", "flushed"))
 	if tag.RowsAffected() == 0 {
 		// VIN deliberately not in the message — it is PII. The
 		// router's writer_failures_total{dest=positions, reason="other"}
 		// counter increments on this path; the upstream MQTT
 		// subscriber log already records the (topic, vehicle) context
 		// if forensic correlation is needed.
-		return fmt.Errorf("positionsWriter[positions]: vehicle not registered")
+		err = fmt.Errorf("positionsWriter[positions]: vehicle not registered")
+		return err
 	}
 	return nil
 }

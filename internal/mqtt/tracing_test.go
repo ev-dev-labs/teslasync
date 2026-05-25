@@ -102,12 +102,31 @@ func TestOnPipelineMessage_OpensConsumeSpan_PropagatesContext(t *testing.T) {
 	}
 
 	spans := rec.Ended()
-	if len(spans) != 1 {
-		t.Fatalf("expected exactly 1 ended span (mqtt.consume), got %d", len(spans))
+	// Phase 10 added a codec.decode_json_field child span. The
+	// mqtt.consume parent is still emitted exactly once — we look
+	// it up by name now that the recorder captures the child too.
+	// (mqtt.vin_resolve is only emitted when the resolver is wrapped
+	// in a VINCache; the test injects a bare staticResolver so the
+	// cache-level span is absent here.)
+	var consume sdktrace.ReadOnlySpan
+	var codecDecode sdktrace.ReadOnlySpan
+	for _, s := range spans {
+		switch s.Name() {
+		case "mqtt.consume":
+			consume = s
+		case "codec.decode_json_field":
+			codecDecode = s
+		}
 	}
-	consume := spans[0]
-	if consume.Name() != "mqtt.consume" {
-		t.Fatalf("span name = %q, want %q", consume.Name(), "mqtt.consume")
+	if consume == nil {
+		t.Fatalf("expected an mqtt.consume span, got names: %v", spanNamesFromSpans(spans))
+	}
+	if codecDecode == nil {
+		t.Fatalf("Phase 10: expected a codec.decode_json_field child span, got names: %v", spanNamesFromSpans(spans))
+	}
+	if codecDecode.Parent().SpanID() != consume.SpanContext().SpanID() {
+		t.Fatalf("codec.decode_json_field parent span_id = %s, want %s (mqtt.consume)",
+			codecDecode.Parent().SpanID(), consume.SpanContext().SpanID())
 	}
 	if consume.SpanKind() != trace.SpanKindConsumer {
 		t.Fatalf("span kind = %v, want Consumer", consume.SpanKind())
@@ -172,4 +191,14 @@ func TestOnPipelineMessage_BadTopic_AckDropDisposition(t *testing.T) {
 		}
 	}
 	t.Fatalf("expected mqtt.disposition=ack-drop-bad-topic on span attributes, got: %+v", spans[0].Attributes())
+}
+
+// spanNamesFromSpans returns the names of ended spans for use in
+// diagnostic test failure messages.
+func spanNamesFromSpans(spans []sdktrace.ReadOnlySpan) []string {
+	out := make([]string, 0, len(spans))
+	for _, s := range spans {
+		out = append(out, s.Name())
+	}
+	return out
 }

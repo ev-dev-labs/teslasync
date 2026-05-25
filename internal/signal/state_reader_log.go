@@ -16,9 +16,18 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
+
+// signalLogTracerName is the OpenTelemetry tracer name for signal_log
+// read spans (State / SignalAt / Timeline). The Phase-10 trace-coverage
+// audit greps for this exact constant.
+const signalLogTracerName = "signal"
 
 // pgxQuerier is the narrow query seam consumed by LogStateReader. *pgxpool.Pool
 // satisfies it directly via its Query method, so production wiring passes the
@@ -131,7 +140,21 @@ var _ StateReader = (*LogStateReader)(nil)
 // Location compounds are flattened by the codec (prompt 0063) into
 // Latitude/Longitude atomics before they reach signal_log; the cold path
 // never sees a compound row. See ADR-002 + ADR-004.
-func (r *LogStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (State, error) {
+func (r *LogStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (s State, err error) {
+	ctx, span := otel.Tracer(signalLogTracerName).Start(
+		ctx,
+		"signal_log.read_state",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(attribute.Int64("vehicle_id", vehicleID)),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "signal_log.read_state")
+		}
+		span.End()
+	}()
+
 	if at.IsZero() {
 		// A zero `at` would silently match no rows because every ts
 		// is after time.Time{} when serialized through pgx — but worse, a
@@ -181,6 +204,7 @@ ORDER BY field, ts DESC`
 			Msg("slow state read")
 	}
 
+	span.SetAttributes(attribute.Int("signals_returned", len(state)))
 	return state, nil
 }
 
@@ -230,7 +254,24 @@ ORDER BY field, ts DESC`
 // the codec (prompt 0063) into Latitude/Longitude atomics before reaching
 // signal_log, so callers asking for "Location" via SignalAt will see no
 // row; they must request "Latitude"/"Longitude" individually.
-func (r *LogStateReader) SignalAt(ctx context.Context, vehicleID int64, signal string, at time.Time) (SignalValue, error) {
+func (r *LogStateReader) SignalAt(ctx context.Context, vehicleID int64, signal string, at time.Time) (val SignalValue, err error) {
+	ctx, span := otel.Tracer(signalLogTracerName).Start(
+		ctx,
+		"signal_log.read_signal_at",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.Int64("vehicle_id", vehicleID),
+			attribute.String("field", signal),
+		),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "signal_log.read_signal_at")
+		}
+		span.End()
+	}()
+
 	if at.IsZero() {
 		// A zero `at` would silently match no rows because every ts
 		// is after time.Time{} when serialized through pgx — but worse, a
@@ -306,6 +347,7 @@ LIMIT 1`
 			Msg("slow signal_at read")
 	}
 
+	span.SetAttributes(attribute.Bool("found", value != nil))
 	return value, nil
 }
 
@@ -379,7 +421,25 @@ LIMIT 1`
 // Location compounds are flattened by the codec (prompt 0063) into
 // Latitude/Longitude atomics before signal_log writes; the cold path
 // never observes a Location compound row.
-func (r *LogStateReader) Timeline(ctx context.Context, vehicleID int64, fields []FieldMapping, from, to time.Time, opts TimelineOptions) ([]TimelineRow, error) {
+func (r *LogStateReader) Timeline(ctx context.Context, vehicleID int64, fields []FieldMapping, from, to time.Time, opts TimelineOptions) (rowsOut []TimelineRow, err error) {
+	ctx, span := otel.Tracer(signalLogTracerName).Start(
+		ctx,
+		"signal_log.read_timeline",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.Int64("vehicle_id", vehicleID),
+			attribute.Int("field_count", len(fields)),
+			attribute.Float64("window_seconds", to.Sub(from).Seconds()),
+		),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "signal_log.read_timeline")
+		}
+		span.End()
+	}()
+
 	// Edge guards run BEFORE any SQL. A misconfigured caller (zero `at`,
 	// inverted window, accidental whole-history scan) must be a loud error
 	// at the contract boundary, not a silent zero-row result or an
@@ -573,9 +633,12 @@ ORDER BY ts ASC`
 		// nil. Empty CollapseBy is a no-op inside collapseTimeline, so
 		// the chart-mode return below is functionally equivalent — the
 		// branch exists only to keep the chart-mode code path zero-alloc.
-		return collapseTimeline(rows, opts.CollapseBy), nil
+		collapsed := collapseTimeline(rows, opts.CollapseBy)
+		span.SetAttributes(attribute.Int("rows_returned", len(collapsed)))
+		return collapsed, nil
 	}
 
+	span.SetAttributes(attribute.Int("rows_returned", len(rows)))
 	return rows, nil
 }
 

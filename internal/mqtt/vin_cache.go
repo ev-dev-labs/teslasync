@@ -10,6 +10,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // VINCacheLoader is the data-source side of NewVINCache. It returns every
@@ -184,16 +188,44 @@ func (c *VINCache) Close() {
 // second, and the wrapped resolver last; the resolver result is
 // memoised in either the positive or the negative cache so a repeat
 // lookup is O(1).
-func (c *VINCache) Resolve(ctx context.Context, vin string) (int64, error) {
+//
+// Phase-10 tracing: emits an `mqtt.vin_resolve` child span under the
+// caller's mqtt.consume parent. The span attributes carry result =
+// hit | miss_known | miss_unknown | miss_error and vehicle_id (0 for
+// negative cache / errors) so an operator can see exactly why a given
+// MQTT message was acked/dropped from the trace tree alone, without
+// needing to correlate the structured log line. VIN itself is NOT
+// added as a span attribute (PII); the upstream mqtt.consume span
+// already carries vin_prefix via redactVIN.
+func (c *VINCache) Resolve(ctx context.Context, vin string) (id int64, err error) {
+	ctx, span := otel.Tracer(vinCacheTracerName).Start(
+		ctx,
+		"mqtt.vin_resolve",
+		trace.WithSpanKind(trace.SpanKindInternal),
+	)
+	defer func() {
+		if err != nil && !errors.Is(err, ErrUnknownVIN) {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "vin resolver error")
+		}
+		span.End()
+	}()
+	_ = ctx // hot-path: the wrapped resolver re-derives ctx via WithTimeout
+
 	c.mu.RLock()
-	if id, ok := c.vinToID[vin]; ok {
+	if cached, ok := c.vinToID[vin]; ok {
 		c.mu.RUnlock()
 		vinCacheLookupsTotal.WithLabelValues("hit").Inc()
-		return id, nil
+		span.SetAttributes(
+			attribute.String("result", "hit"),
+			attribute.Int64("vehicle_id", cached),
+		)
+		return cached, nil
 	}
 	if _, ok := c.negativeCache[vin]; ok {
 		c.mu.RUnlock()
 		vinCacheLookupsTotal.WithLabelValues("miss_known").Inc()
+		span.SetAttributes(attribute.String("result", "miss_known"))
 		return 0, ErrUnknownVIN
 	}
 	c.mu.RUnlock()
@@ -202,27 +234,38 @@ func (c *VINCache) Resolve(ctx context.Context, vin string) (int64, error) {
 	// cannot block ingest indefinitely.
 	missCtx, cancel := context.WithTimeout(ctx, c.cfg.MissTimeout)
 	defer cancel()
-	id, err := c.resolver(missCtx, vin)
-	if err != nil {
-		if errors.Is(err, ErrUnknownVIN) {
+	resolved, rerr := c.resolver(missCtx, vin)
+	if rerr != nil {
+		if errors.Is(rerr, ErrUnknownVIN) {
 			c.mu.Lock()
 			c.negativeCache[vin] = struct{}{}
 			c.mu.Unlock()
 			vinCacheLookupsTotal.WithLabelValues("miss_unknown").Inc()
+			span.SetAttributes(attribute.String("result", "miss_unknown"))
 			return 0, ErrUnknownVIN
 		}
 		vinCacheLookupsTotal.WithLabelValues("miss_error").Inc()
-		return 0, err
+		span.SetAttributes(attribute.String("result", "miss_error"))
+		return 0, rerr
 	}
 	c.mu.Lock()
-	c.vinToID[vin] = id
-	c.idToVIN[id] = vin
+	c.vinToID[vin] = resolved
+	c.idToVIN[resolved] = vin
 	delete(c.negativeCache, vin)
 	c.mu.Unlock()
 	vinCacheSize.Set(float64(c.size()))
 	vinCacheLookupsTotal.WithLabelValues("miss_known").Inc()
-	return id, nil
+	span.SetAttributes(
+		attribute.String("result", "miss_fill"),
+		attribute.Int64("vehicle_id", resolved),
+	)
+	return resolved, nil
 }
+
+// vinCacheTracerName is the OpenTelemetry tracer name for VIN cache
+// spans. Kept as a package constant so the Phase-10 trace-coverage
+// audit can grep for it.
+const vinCacheTracerName = "mqtt"
 
 // VINByID returns the cached VIN for a vehicleID, or ("", false) if no
 // reverse mapping has been established yet. Used by observers and the

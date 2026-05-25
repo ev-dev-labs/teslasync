@@ -866,7 +866,7 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	// clock would silently misattribute event-time.
 	receivedAt := time.Now().UTC()
 
-	atomics, err := codec.DecodeJSONField(field, msg.Payload, vin, receivedAt)
+	atomics, err := codec.DecodeJSONFieldCtx(ctx, field, msg.Payload, vin, receivedAt)
 	if err != nil {
 		// Per the codec contract, every err from DecodeJSONField wraps
 		// codec.ErrPayloadDrop; rather than inventing a separate sentinel

@@ -207,9 +207,55 @@ var flows = []flow{
 			"internal/ai/provider/trace.go",
 		},
 	},
+
+	// Phase-10 — full Tesla signal-ingestion pipeline tracing.
+	// From MQTT receive → VIN resolve → codec decode → normalize.process_atomics
+	// → router.route → writers DB save → side-effects (live store + L1/L2 +
+	// FSM + sessions + alerts + SSE Redis Pub/Sub publish) + Setting*Unit
+	// short-circuit → unit_history.record + signal_log reads.
+	{
+		Name:        "tesla_signal_ingest_to_db",
+		Description: "Tesla per-field MQTT signal → VIN resolve → codec decode → router → writers → DB save → side-effects",
+		GlobPatterns: []string{
+			"internal/mqtt/mqtt.go",
+			"internal/mqtt/vin_cache.go",
+			"internal/tesla/codec/decode_json.go",
+			"internal/tesla/router/router.go",
+			"internal/tesla/router/writers/tracing.go",
+			"internal/tesla/router/writers/snapshot_base.go",
+			"internal/tesla/router/writers/signal_log_writer.go",
+			"internal/tesla/router/writers/positions_writer.go",
+			"internal/tesla/router/writers/security_event_writer.go",
+			"internal/tesla/router/writers/tire_pressure_writer.go",
+			"internal/tesla/normalize/setting_unit_observer.go",
+			"internal/tesla/unit_history/repo.go",
+			"internal/tesla_pipeline/side_effects_observer.go",
+			"internal/signal/redis_cache.go",
+			"internal/signal/state_reader_log.go",
+			"internal/api/telemetry_handler_ingest.go",
+		},
+		MinSpanFiles: 14,
+		RequiredFiles: []string{
+			"internal/mqtt/vin_cache.go",
+			"internal/tesla/codec/decode_json.go",
+			"internal/tesla/router/router.go",
+			"internal/tesla/router/writers/tracing.go",
+			"internal/tesla/router/writers/snapshot_base.go",
+			"internal/tesla/router/writers/signal_log_writer.go",
+			"internal/tesla/router/writers/positions_writer.go",
+			"internal/tesla/router/writers/security_event_writer.go",
+			"internal/tesla/router/writers/tire_pressure_writer.go",
+			"internal/tesla/normalize/setting_unit_observer.go",
+			"internal/tesla/unit_history/repo.go",
+			"internal/tesla_pipeline/side_effects_observer.go",
+			"internal/signal/redis_cache.go",
+			"internal/signal/state_reader_log.go",
+			"internal/api/telemetry_handler_ingest.go",
+		},
+	},
 }
 
-var spanRE = regexp.MustCompile(`tracer\.Start\(|otel\.Tracer\(|otelhttp\.NewHandler\(|otelpgx\.NewTracer\(|StartSpan\(|startSpan\(|startProcessSpan\(|startChildSpan\(|otelhttp\.NewTransport\(|tracing\.StartSpan\(|GetTextMapPropagator\(`)
+var spanRE = regexp.MustCompile(`tracer\.Start\(|otel\.Tracer\(|otelhttp\.NewHandler\(|otelpgx\.NewTracer\(|StartSpan\(|startSpan\(|startProcessSpan\(|startChildSpan\(|startWriterSpan\(|otelhttp\.NewTransport\(|tracing\.StartSpan\(|GetTextMapPropagator\(`)
 
 func main() {
 	var reportPath string

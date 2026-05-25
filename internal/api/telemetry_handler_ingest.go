@@ -8,6 +8,11 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -16,6 +21,11 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/rs/zerolog/log"
 )
+
+// sseRedisPubsubTracerName is the OpenTelemetry tracer name for the SSE
+// Redis Pub/Sub publish goroutine span. The Phase-10 trace-coverage
+// audit greps for this exact constant.
+const sseRedisPubsubTracerName = "signal"
 
 // errPipelineNotWired is returned by ProcessBatch when SetPipeline has not yet
 // been called. Surfaced as a typed sentinel so the HTTP TelemetryIngest can
@@ -447,10 +457,29 @@ func (h *TelemetryHandler) broadcastSSE(ctx context.Context, payload map[string]
 			return
 		}
 		msg := fmt.Appendf(nil, "event: vehicle_update\ndata: %s\n\n", jsonData)
+		// Phase-10: trace.continuity=false is set explicitly because the
+		// publish goroutine intentionally detaches from the caller ctx
+		// via context.Background()+2s timeout — the 2s ceiling is a
+		// liveness/back-pressure guarantee and the detach is by design,
+		// not a propagation bug. Tempo dashboards filter on
+		// trace.continuity=false to flag honestly-detached spans.
 		safeGo("redis-pubsub-publish", func() {
 			pubCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
+			pubCtx, span := otel.Tracer(sseRedisPubsubTracerName).Start(
+				pubCtx,
+				"signal.redis_pubsub.publish",
+				trace.WithSpanKind(trace.SpanKindProducer),
+				trace.WithAttributes(
+					attribute.Bool("trace.continuity", false),
+					attribute.String("event_type", "vehicle_update"),
+					attribute.Int("payload_size", len(msg)),
+				),
+			)
+			defer span.End()
 			if err := h.redisCache.PublishSignals(pubCtx, msg); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "redis_pubsub.publish")
 				log.Warn().Err(err).Msg("redis pub/sub publish failed, falling back to local broadcast")
 				h.eventHub.BroadcastWithContext(ctx, "vehicle_update", payload)
 			}

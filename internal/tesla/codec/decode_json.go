@@ -2,6 +2,7 @@ package codec
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -11,6 +12,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // registerCodecCounter registers a single CounterVec in the
@@ -126,35 +131,85 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 // pipeline; downstream code MUST consume []Atomic, never the raw body
 // (Phase-41 codec canonical-string contract, Rule 11 in
 // .github/instructions/tesla-pipeline.instructions.md).
+//
+// Pure-function variant retained for tests and any caller that doesn't
+// have an OpenTelemetry context handy. Production hot path (mqtt
+// PipelineSubscriber) uses DecodeJSONFieldCtx which threads the
+// mqtt.consume parent ctx so the codec.decode_json_field span links
+// into the broader trace tree.
 func DecodeJSONField(field string, body []byte, vin string, fallbackTs time.Time) ([]Atomic, error) {
+	return DecodeJSONFieldCtx(context.Background(), field, body, vin, fallbackTs)
+}
+
+// DecodeJSONFieldCtx is the context-aware variant of DecodeJSONField
+// added by Phase-10 tracing. It emits a codec.decode_json_field child
+// span carrying field, body_size, atomics_emitted, and outcome
+// attributes so the codec boundary becomes visible in the trace tree.
+//
+// The body slice MUST NOT be retained beyond the call (a bytes.NewReader
+// is captured for one Unmarshal, then released to the caller's pool).
+func DecodeJSONFieldCtx(ctx context.Context, field string, body []byte, vin string, fallbackTs time.Time) (atoms []Atomic, err error) {
+	_, span := otel.Tracer(codecTracerName).Start(
+		ctx,
+		"codec.decode_json_field",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("field", field),
+			attribute.Int("body_size", len(body)),
+		),
+	)
+	defer func() {
+		span.SetAttributes(attribute.Int("atomics_emitted", len(atoms)))
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "decode_json_field")
+		}
+		span.End()
+	}()
+
 	meta, ok := protomodel.SignalsByName[field]
 	if !ok {
 		jsonFieldUnknownTotal.WithLabelValues(field).Inc()
+		span.SetAttributes(attribute.String("outcome", "unknown_field"))
 		return nil, nil
 	}
 
 	body, ts, err := unwrapEnvelope(body, fallbackTs)
 	if err != nil {
 		jsonDecodeErrorsTotal.WithLabelValues(field).Inc()
+		span.SetAttributes(attribute.String("outcome", "envelope_error"))
 		return nil, fmt.Errorf("codec: field %q envelope: %v: %w", field, err, ErrPayloadDrop)
 	}
 
 	if isJSONNull(body) {
 		jsonInvalidValuesTotal.WithLabelValues(field).Inc()
+		span.SetAttributes(attribute.String("outcome", "invalid_null"))
 		return nil, nil
 	}
+	span.SetAttributes(attribute.String("value_kind", meta.ValueKind.String()))
 
-	// Per-field tolerant override: for the small set of fields whose
-	// on-wire JSON shape is known to drift from the declared ValueKind
-	// (see canonicalizeFieldsJSON), bypass the strict switch below and
-	// dispatch to decodeCanonicalJSONField. Returning here is safe
-	// because the override emits the same []Atomic shape the strict
-	// switch would produce — the only difference is which Go type
-	// Atomic.Value carries for that field.
 	if canonicalizeFieldsJSON[field] {
-		return decodeCanonicalJSONField(field, body, ts, vin)
+		atoms, err = decodeCanonicalJSONField(field, body, ts, vin)
+		if err == nil {
+			span.SetAttributes(attribute.String("outcome", "ok_canonical"))
+		}
+		return atoms, err
 	}
 
+	atoms, err = decodeJSONFieldStrict(meta, field, body, ts, vin)
+	if err == nil {
+		span.SetAttributes(attribute.String("outcome", "ok"))
+	}
+	return atoms, err
+}
+
+// codecTracerName is the OpenTelemetry tracer name for codec spans.
+const codecTracerName = "codec"
+
+// decodeJSONFieldStrict is the strict-typed dispatch branch extracted
+// from the legacy DecodeJSONField so DecodeJSONFieldCtx can wrap the
+// entry boundary in a single span without bracketing every case arm.
+func decodeJSONFieldStrict(meta *protomodel.SignalMeta, field string, body []byte, ts time.Time, vin string) ([]Atomic, error) {
 	switch meta.ValueKind {
 	case protomodel.ValueKindString:
 		var s string
