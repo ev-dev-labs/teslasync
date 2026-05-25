@@ -53,7 +53,7 @@ func sendSystemNotification(ctx context.Context, notifRepo *database.Notificatio
 			Message:     message,
 			ChannelID:   ch.ID,
 		}
-		if err := notification.Publish(mqttClient.Underlying(), req); err != nil {
+		if err := notification.PublishCtx(ctx, mqttClient.Underlying(), req); err != nil {
 			log.Warn().Err(err).Int64("channel_id", ch.ID).Msg("failed to send system notification")
 		}
 	}

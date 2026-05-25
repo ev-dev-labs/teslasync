@@ -118,8 +118,12 @@ func (h *TelemetryHandler) SetEventHub(hub *EventHub) {
 // (broadcastSSE method) stays unexported; this is the public seam.
 // A nil eventHub at call time is a no-op (matches the legacy
 // HTTP-ingest behaviour).
-func (h *TelemetryHandler) BroadcastSSE(payload map[string]any) {
-	h.broadcastSSE(payload)
+//
+// Takes a ctx so the resulting sse.broadcast / sse.redis_fanout spans
+// nest under the caller's trace (typically a normalize.Pipeline
+// ProcessAtomics span from MQTT telemetry consumer).
+func (h *TelemetryHandler) BroadcastSSE(ctx context.Context, payload map[string]any) {
+	h.broadcastSSE(ctx, payload)
 }
 
 // GetSignalStore returns the signal store (for use by other handlers).

@@ -39,7 +39,20 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 
 	"github.com/ev-dev-labs/teslasync/internal/adapter/gasprices"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
+
+// appBackgroundTracerName scopes spans for in-API background ticker loops
+// owned by App (signal-history TTL, trip generator, AI background jobs,
+// health watchdog). Each loop's per-iteration span lets dashboards
+// distinguish a slow tick from a stuck tick.
+const appBackgroundTracerName = "internal/app/background"
+
+func appBackgroundTracer() oteltrace.Tracer { return otel.Tracer(appBackgroundTracerName) }
 
 // New constructs the App in the SAME order as the legacy
 // cmd/teslasync/main.go body (lines 78-889 prior to phase-47/04). Each
@@ -499,8 +512,8 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		Sessions:    a.TelemetryHandler.SessionTracker(),
 		Alerts:      a.TelemetryHandler.AlertEvaluator(),
 		VINResolver: vinByID,
-		BroadcastSSE: func(payload map[string]any) {
-			a.TelemetryHandler.BroadcastSSE(payload)
+		BroadcastSSE: func(ctx context.Context, payload map[string]any) {
+			a.TelemetryHandler.BroadcastSSE(ctx, payload)
 		},
 		Logger: pipelineLogger,
 	})
@@ -691,7 +704,7 @@ func (a *App) initSignalHistoryCleanup(ctx context.Context) {
 		return
 	}
 	go func() {
-		a.SignalHistoryWriter.Cleanup(ctx, a.Cfg.Retention.SignalHistoryRetentionDays)
+		runSignalHistoryCleanupTick(ctx, a.SignalHistoryWriter, a.Cfg.Retention.SignalHistoryRetentionDays)
 
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
@@ -700,22 +713,33 @@ func (a *App) initSignalHistoryCleanup(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				a.SignalHistoryWriter.Cleanup(ctx, a.Cfg.Retention.SignalHistoryRetentionDays)
+				runSignalHistoryCleanupTick(ctx, a.SignalHistoryWriter, a.Cfg.Retention.SignalHistoryRetentionDays)
 			}
 		}
 	}()
 	log.Info().Int("retention_days", a.Cfg.Retention.SignalHistoryRetentionDays).Msg("signal_history TTL cleanup scheduled")
 }
 
+// signalHistoryCleaner is the minimal contract runSignalHistoryCleanupTick
+// needs from *SignalHistoryWriter. The interface lets us swap the
+// concrete type for a fake in unit tests.
+type signalHistoryCleaner interface {
+	Cleanup(ctx context.Context, retentionDays int)
+}
+
+func runSignalHistoryCleanupTick(ctx context.Context, writer signalHistoryCleaner, retentionDays int) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "signal_history.cleanup_tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(attribute.Int("signal_history.retention_days", retentionDays)),
+	)
+	defer span.End()
+	writer.Cleanup(tickCtx, retentionDays)
+}
+
 func (a *App) initTripGenerator(ctx context.Context) {
 	tripRepo := database.NewTripRepo(a.DB)
 	go func() {
-		count, err := tripRepo.GenerateMonthlyTrips(ctx)
-		if err != nil {
-			log.Warn().Err(err).Msg("trip generator: backfill failed")
-		} else if count > 0 {
-			log.Info().Int("created", count).Msg("trip generator: backfilled monthly summaries")
-		}
+		runTripGeneratorTick(ctx, tripRepo, "backfill")
 
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
@@ -724,15 +748,34 @@ func (a *App) initTripGenerator(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				n, err := tripRepo.GenerateMonthlyTrips(ctx)
-				if err != nil {
-					log.Warn().Err(err).Msg("trip generator: periodic run failed")
-				} else if n > 0 {
-					log.Info().Int("created", n).Msg("trip generator: new monthly summaries")
-				}
+				runTripGeneratorTick(ctx, tripRepo, "periodic")
 			}
 		}
 	}()
+}
+
+// tripGenerator is the minimal contract runTripGeneratorTick needs.
+type tripGenerator interface {
+	GenerateMonthlyTrips(ctx context.Context) (int, error)
+}
+
+func runTripGeneratorTick(ctx context.Context, gen tripGenerator, reason string) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "trip_generator.tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(attribute.String("trip_generator.reason", reason)),
+	)
+	defer span.End()
+	count, err := gen.GenerateMonthlyTrips(tickCtx)
+	span.SetAttributes(attribute.Int("trip_generator.created", count))
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "generate monthly trips failed")
+		log.Warn().Err(err).Str("reason", reason).Msg("trip generator: run failed")
+		return
+	}
+	if count > 0 {
+		log.Info().Int("created", count).Str("reason", reason).Msg("trip generator: created monthly summaries")
+	}
 }
 
 func (a *App) initGasPriceWorker(ctx context.Context) {
@@ -793,9 +836,7 @@ func (a *App) initAIBackgroundJobs(ctx context.Context) {
 	// Run once at boot so a long-running tick interval doesn't leave
 	// expired rows visible immediately after a restart.
 	go func() {
-		if _, err := jobs.RunEmbeddingsTTL(ctx, a.DB, settingsRepo); err != nil {
-			log.Warn().Err(err).Msg("ai background jobs: initial embeddings TTL run failed")
-		}
+		runEmbeddingsTTLTick(ctx, a.DB, settingsRepo, "initial")
 	}()
 
 	resilience.SafeGoLoop(ctx, "embeddings-ttl-cron", func(loopCtx context.Context) {
@@ -806,13 +847,32 @@ func (a *App) initAIBackgroundJobs(ctx context.Context) {
 			case <-loopCtx.Done():
 				return
 			case <-ticker.C:
-				if _, err := jobs.RunEmbeddingsTTL(loopCtx, a.DB, settingsRepo); err != nil {
-					log.Warn().Err(err).Msg("ai background jobs: embeddings TTL run failed")
-				}
+				runEmbeddingsTTLTick(loopCtx, a.DB, settingsRepo, "periodic")
 			}
 		}
 	})
 	log.Info().Msg("ai background jobs scheduled (embeddings_ttl re-checks ai_mode per ADR-015 §I12)")
+}
+
+func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *database.SettingsRepo, reason string) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "ai.background_tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("ai.job", "embeddings_ttl"),
+			attribute.String("ai.reason", reason),
+		),
+	)
+	defer span.End()
+	result, err := jobs.RunEmbeddingsTTL(tickCtx, db, settingsRepo)
+	span.SetAttributes(
+		attribute.Int64("ai.embeddings_ttl.deleted_768", result.Deleted768),
+		attribute.Int64("ai.embeddings_ttl.deleted_1536", result.Deleted1536),
+	)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "embeddings TTL failed")
+		log.Warn().Err(err).Str("reason", reason).Msg("ai background jobs: embeddings TTL run failed")
+	}
 }
 
 func (a *App) initHealthWatchdog(ctx context.Context) {
@@ -825,70 +885,91 @@ func (a *App) initHealthWatchdog(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				checkCtx, checkCancel := context.WithTimeout(ctx, 5*time.Second)
-				if dbErr := a.DB.Health(checkCtx); dbErr != nil {
-					a.Health.RecordFailure("database", dbErr)
-					log.Warn().Err(dbErr).Msg("database health check failed")
-				} else {
-					a.Health.RecordSuccess("database")
-				}
-				checkCancel()
-
-				if a.MQTT != nil {
-					if a.MQTT.IsConnected() {
-						a.Health.RecordSuccess("mqtt")
-					} else {
-						a.Health.RecordFailure("mqtt", fmt.Errorf("MQTT broker not connected"))
-					}
-				}
-
-				if a.TeslaClient.HasValidToken() {
-					a.Health.RecordSuccess("tesla_api")
-				}
-
-				a.Health.RecordSuccess("worker")
-
-				components := a.Health.GetStatus()
-				for name, comp := range components {
-					prev, seen := a.prevHealthState[name]
-					if !seen {
-						a.prevHealthState[name] = comp.Status
-						continue
-					}
-
-					if prev == resilience.StatusHealthy && comp.Status >= resilience.StatusDegraded {
-						severity := "warning"
-						if comp.Status == resilience.StatusUnhealthy {
-							severity = "critical"
-						}
-						title := fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String())
-						message := fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError)
-						_ = severity
-						sendSystemNotification(ctx, a.notifRepo, a.MQTT, "⚠️ "+title, message)
-						log.Warn().Str("component", name).Str("status", comp.Status.String()).Str("severity", severity).Msg("system alert: component degraded")
-					}
-
-					if prev >= resilience.StatusDegraded && comp.Status == resilience.StatusHealthy {
-						title := fmt.Sprintf("%s recovered", componentDisplayName(name))
-						message := fmt.Sprintf("Component %s is healthy again", name)
-						sendSystemNotification(ctx, a.notifRepo, a.MQTT, "✅ "+title, message)
-						log.Info().Str("component", name).Msg("system alert: component recovered")
-					}
-
-					a.prevHealthState[name] = comp.Status
-				}
-
-				overall := a.Health.OverallStatus()
-				if overall != resilience.StatusHealthy {
-					for name, comp := range components {
-						if comp.Status != resilience.StatusHealthy {
-							log.Warn().Str("component", name).Str("status", comp.Status.String()).Int("consec_fails", comp.ConsecFails).Msg("degraded component")
-						}
-					}
-				}
+				a.runHealthWatchdogTick(ctx)
 			}
 		}
 	})
+}
+
+func (a *App) runHealthWatchdogTick(ctx context.Context) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "health_watchdog.tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+	defer span.End()
+
+	checkCtx, checkCancel := context.WithTimeout(tickCtx, 5*time.Second)
+	if dbErr := a.DB.Health(checkCtx); dbErr != nil {
+		a.Health.RecordFailure("database", dbErr)
+		span.RecordError(dbErr)
+		log.Warn().Err(dbErr).Msg("database health check failed")
+	} else {
+		a.Health.RecordSuccess("database")
+	}
+	checkCancel()
+
+	if a.MQTT != nil {
+		if a.MQTT.IsConnected() {
+			a.Health.RecordSuccess("mqtt")
+		} else {
+			err := fmt.Errorf("MQTT broker not connected")
+			a.Health.RecordFailure("mqtt", err)
+			span.RecordError(err)
+		}
+	}
+
+	if a.TeslaClient.HasValidToken() {
+		a.Health.RecordSuccess("tesla_api")
+	}
+
+	a.Health.RecordSuccess("worker")
+
+	components := a.Health.GetStatus()
+	degradedCount := 0
+	for name, comp := range components {
+		prev, seen := a.prevHealthState[name]
+		if !seen {
+			a.prevHealthState[name] = comp.Status
+			continue
+		}
+
+		if prev == resilience.StatusHealthy && comp.Status >= resilience.StatusDegraded {
+			severity := "warning"
+			if comp.Status == resilience.StatusUnhealthy {
+				severity = "critical"
+			}
+			title := fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String())
+			message := fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError)
+			_ = severity
+			sendSystemNotification(tickCtx, a.notifRepo, a.MQTT, "⚠️ "+title, message)
+			log.Warn().Str("component", name).Str("status", comp.Status.String()).Str("severity", severity).Msg("system alert: component degraded")
+		}
+
+		if prev >= resilience.StatusDegraded && comp.Status == resilience.StatusHealthy {
+			title := fmt.Sprintf("%s recovered", componentDisplayName(name))
+			message := fmt.Sprintf("Component %s is healthy again", name)
+			sendSystemNotification(tickCtx, a.notifRepo, a.MQTT, "✅ "+title, message)
+			log.Info().Str("component", name).Msg("system alert: component recovered")
+		}
+
+		a.prevHealthState[name] = comp.Status
+		if comp.Status != resilience.StatusHealthy {
+			degradedCount++
+		}
+	}
+
+	overall := a.Health.OverallStatus()
+	span.SetAttributes(
+		attribute.String("health.overall", overall.String()),
+		attribute.Int("health.component_count", len(components)),
+		attribute.Int("health.degraded_count", degradedCount),
+	)
+	if overall != resilience.StatusHealthy {
+		span.SetStatus(codes.Error, "one or more components degraded")
+		for name, comp := range components {
+			if comp.Status != resilience.StatusHealthy {
+				log.Warn().Str("component", name).Str("status", comp.Status.String()).Int("consec_fails", comp.ConsecFails).Msg("degraded component")
+			}
+		}
+	}
 }
 
 func (a *App) loadOpenAPISpec() {

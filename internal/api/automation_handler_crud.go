@@ -115,7 +115,7 @@ func (h *AutomationHandler) Create(w http.ResponseWriter, r *http.Request) {
 		h.auditor.LogCreated(r.Context(), a.ID, a.Name, firstTriggerKind(req), a.Enabled, r.RemoteAddr)
 	}
 
-	h.notifyReload("created", a.ID)
+	h.notifyReload(r.Context(), "created", a.ID)
 
 	writeJSON(w, http.StatusCreated, resp)
 }
@@ -184,7 +184,7 @@ func (h *AutomationHandler) Update(w http.ResponseWriter, r *http.Request) {
 		h.auditor.LogUpdated(r.Context(), existing.ID, existing.Name, firstTriggerKind(req), r.RemoteAddr)
 	}
 
-	h.notifyReload("updated", existing.ID)
+	h.notifyReload(r.Context(), "updated", existing.ID)
 
 	writeJSON(w, http.StatusOK, resp)
 }
@@ -226,7 +226,7 @@ func (h *AutomationHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		h.auditor.LogDeleted(r.Context(), id, existing.Name, r.RemoteAddr)
 	}
 
-	h.notifyReload("deleted", id)
+	h.notifyReload(r.Context(), "deleted", id)
 
 	w.WriteHeader(http.StatusNoContent)
 }

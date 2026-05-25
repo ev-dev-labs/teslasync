@@ -425,7 +425,13 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 // available the payload is published to the vehicle_signals channel so all
 // pods receive it (including this one, via SubscribeRedis). When Redis is
 // not configured, falls back to direct in-process broadcast (single-pod mode).
-func (h *TelemetryHandler) broadcastSSE(payload map[string]any) {
+//
+// The ctx is threaded through to BroadcastWithContext so the per-broadcast
+// sse.broadcast span (and, on the Redis path, the cross-pod sse.redis_fanout
+// span) chains under the caller's trace. Callers from the MQTT telemetry
+// pipeline pass the normalize.Pipeline.ProcessAtomics ctx so SSE delivery
+// becomes a true descendant of the original MQTT consume span.
+func (h *TelemetryHandler) broadcastSSE(ctx context.Context, payload map[string]any) {
 	if h.eventHub == nil {
 		return
 	}
@@ -437,23 +443,23 @@ func (h *TelemetryHandler) broadcastSSE(payload map[string]any) {
 		if err != nil {
 			log.Error().Err(err).Msg("failed to marshal SSE payload for Redis Pub/Sub")
 			// Fall through to local broadcast as safety net
-			h.eventHub.Broadcast("vehicle_update", payload)
+			h.eventHub.BroadcastWithContext(ctx, "vehicle_update", payload)
 			return
 		}
 		msg := fmt.Appendf(nil, "event: vehicle_update\ndata: %s\n\n", jsonData)
 		safeGo("redis-pubsub-publish", func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			pubCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
-			if err := h.redisCache.PublishSignals(ctx, msg); err != nil {
+			if err := h.redisCache.PublishSignals(pubCtx, msg); err != nil {
 				log.Warn().Err(err).Msg("redis pub/sub publish failed, falling back to local broadcast")
-				h.eventHub.Broadcast("vehicle_update", payload)
+				h.eventHub.BroadcastWithContext(ctx, "vehicle_update", payload)
 			}
 		})
 		return
 	}
 
 	// No Redis — single-pod fallback
-	h.eventHub.Broadcast("vehicle_update", payload)
+	h.eventHub.BroadcastWithContext(ctx, "vehicle_update", payload)
 }
 
 // Phase-42 (prompt 0079a): the buildHotRow / bucketAtomics / bucketResult

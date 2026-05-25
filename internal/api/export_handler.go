@@ -149,7 +149,7 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 		Columns: req.Columns,
 	}
 
-	if err := export.Publish(h.mqttClient, mqttReq); err != nil {
+	if err := export.PublishCtx(r.Context(), h.mqttClient, mqttReq); err != nil {
 		log.Error().Err(err).Str("job_id", jobID).Msg("export: failed to publish to MQTT")
 		// Mark as failed since worker won't pick it up
 		_ = h.jobRepo.Fail(r.Context(), jobID, "failed to queue: "+err.Error())
@@ -287,7 +287,7 @@ func (h *ExportHandler) SubmitImportJob(w http.ResponseWriter, r *http.Request) 
 			Format: "csv",
 		},
 	}
-	if err := export.Publish(h.mqttClient, mqttReq); err != nil {
+	if err := export.PublishCtx(r.Context(), h.mqttClient, mqttReq); err != nil {
 		_ = h.jobRepo.Fail(r.Context(), jobID, "failed to queue: "+err.Error())
 		writeError(w, http.StatusServiceUnavailable, "import service unavailable")
 		return
@@ -366,7 +366,7 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 			EndDate:   endDate,
 		},
 	}
-	if err := export.Publish(h.mqttClient, mqttReq); err != nil {
+	if err := export.PublishCtx(r.Context(), h.mqttClient, mqttReq); err != nil {
 		log.Error().Err(err).Str("job_id", jobID).Msg("export account: failed to publish to MQTT")
 		_ = h.jobRepo.Fail(r.Context(), jobID, "failed to queue: "+err.Error())
 		writeError(w, http.StatusServiceUnavailable, "export service unavailable, MQTT not connected")

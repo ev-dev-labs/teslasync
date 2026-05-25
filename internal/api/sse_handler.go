@@ -11,7 +11,17 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
+
+// sseTracerName scopes spans emitted by the SSE event hub. Per-broadcast
+// spans give visibility into fan-out latency + drop rate.
+const sseTracerName = "internal/api/sse"
+
+func sseTracer() oteltrace.Tracer { return otel.Tracer(sseTracerName) }
 
 // SignalChangeEvent is the Phase-42 typed-envelope SSE payload emitted by
 // BroadcastSignalChange for a single live-signal update. Wire shape:
@@ -65,31 +75,63 @@ func (h *EventHub) Subscribe(id string) (<-chan []byte, func()) {
 }
 
 // Broadcast sends a message to all connected clients.
+//
+// Deprecated: prefer BroadcastWithContext so the per-broadcast span nests
+// under the caller's trace context. This shim exists only for back-compat
+// with non-ctx call sites and silently runs without parent linkage.
 func (h *EventHub) Broadcast(eventType string, data interface{}) {
+	h.BroadcastWithContext(context.Background(), eventType, data)
+}
+
+// BroadcastWithContext is the ctx-aware variant of Broadcast. The emitted
+// sse.broadcast span carries the parent trace context from ctx so a full
+// chain from API request (or MQTT consume) -> signal update -> SSE
+// fan-out is one continuous trace in Tempo.
+func (h *EventHub) BroadcastWithContext(ctx context.Context, eventType string, data interface{}) {
+	ctx, span := sseTracer().Start(ctx, "sse.broadcast",
+		oteltrace.WithSpanKind(oteltrace.SpanKindProducer),
+		oteltrace.WithAttributes(
+			attribute.String("sse.event_type", eventType),
+		),
+	)
+	defer span.End()
+
 	payload, err := json.Marshal(data)
 	if err != nil {
+		span.RecordError(err)
 		log.Error().Err(err).Msg("failed to marshal SSE event")
 		return
 	}
 
 	msg := fmt.Appendf(nil, "event: %s\ndata: %s\n\n", eventType, payload)
 	msgLen := float64(len(msg))
+	span.SetAttributes(attribute.Int("sse.message_size_bytes", len(msg)))
 
 	start := time.Now()
 	h.mu.RLock()
-	defer h.mu.RUnlock()
-
+	clientCount := len(h.clients)
+	delivered := 0
+	dropped := 0
 	for id, ch := range h.clients {
 		select {
 		case ch <- msg:
 			SSEEventsSent.WithLabelValues(eventType).Inc()
 			SSEBytesSent.Add(msgLen)
+			delivered++
 		default:
 			SSEEventsDropped.WithLabelValues(eventType).Inc()
+			dropped++
 			log.Warn().Str("client", id).Msg("SSE client buffer full, dropping event")
 		}
 	}
+	h.mu.RUnlock()
 	SSEBroadcastDuration.Observe(time.Since(start).Seconds())
+	span.SetAttributes(
+		attribute.Int("sse.client_count", clientCount),
+		attribute.Int("sse.delivered_count", delivered),
+		attribute.Int("sse.dropped_count", dropped),
+	)
+	_ = ctx
 }
 
 // ClientCount returns the number of connected SSE clients.
@@ -115,6 +157,14 @@ func (h *EventHub) ClientCount() int {
 // vehicle_signals via SubscribeRedis (preserved channel name per
 // ARCHITECTURE.md ADR for layered live-state).
 func (h *EventHub) BroadcastSignalChange(vehicleID int64, field string, val *signal.Value) {
+	h.BroadcastSignalChangeWithContext(context.Background(), vehicleID, field, val)
+}
+
+// BroadcastSignalChangeWithContext is the ctx-aware variant. Prefer it
+// over BroadcastSignalChange when the caller has a live trace context
+// (e.g. MQTT telemetry consumer span) so the resulting sse.broadcast
+// span nests under the same trace as the producer.
+func (h *EventHub) BroadcastSignalChangeWithContext(ctx context.Context, vehicleID int64, field string, val *signal.Value) {
 	if val == nil {
 		return
 	}
@@ -122,7 +172,7 @@ func (h *EventHub) BroadcastSignalChange(vehicleID int64, field string, val *sig
 	if meta, ok := protomodel.SignalsByName[field]; ok && meta != nil {
 		kind = meta.ValueKind
 	}
-	h.Broadcast("signal_change", SignalChangeEvent{
+	h.BroadcastWithContext(ctx, "signal_change", SignalChangeEvent{
 		VehicleID: vehicleID,
 		Field:     field,
 		Kind:      kind,
@@ -146,20 +196,48 @@ func (h *EventHub) SubscribeRedis(ctx context.Context, redisCache *signal.RedisS
 	go func() {
 		log.Info().Msg("SSE event hub: Redis Pub/Sub subscription started")
 		for payload := range ch {
+			// Each Redis-fanout fan-out gets its own root span because
+			// cross-pod trace context propagation through Redis Pub/Sub
+			// is out of scope (see plan.md `trace.continuity=false`
+			// caveat). Operators can still see fan-out latency + drop
+			// rate per message; future work can attach a span Link
+			// when the producer pod's trace id is embedded in payload.
+			ctx, span := sseTracer().Start(ctx, "sse.redis_fanout",
+				oteltrace.WithSpanKind(oteltrace.SpanKindConsumer),
+				oteltrace.WithAttributes(
+					semconv.MessagingSystemKey.String("redis"),
+					semconv.MessagingDestinationName("vehicle_signals"),
+					semconv.MessagingOperationTypeKey.String("process"),
+					attribute.Bool("trace.continuity", false),
+					attribute.Int("messaging.message.payload_size_bytes", len(payload)),
+				),
+			)
 			// payload is pre-formatted SSE data: "event: vehicle_update\ndata: ...\n\n"
 			msg := []byte(payload)
 			h.mu.RLock()
+			clientCount := len(h.clients)
+			delivered := 0
+			dropped := 0
 			for id, c := range h.clients {
 				select {
 				case c <- msg:
 					SSEEventsSent.WithLabelValues("vehicle_update").Inc()
 					SSEBytesSent.Add(float64(len(msg)))
+					delivered++
 				default:
 					SSEEventsDropped.WithLabelValues("vehicle_update").Inc()
+					dropped++
 					log.Warn().Str("client", id).Msg("SSE client buffer full (redis), dropping event")
 				}
 			}
 			h.mu.RUnlock()
+			span.SetAttributes(
+				attribute.Int("sse.client_count", clientCount),
+				attribute.Int("sse.delivered_count", delivered),
+				attribute.Int("sse.dropped_count", dropped),
+			)
+			span.End()
+			_ = ctx
 		}
 		log.Info().Msg("SSE event hub: Redis Pub/Sub subscription ended")
 	}()

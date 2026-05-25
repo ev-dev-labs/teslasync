@@ -9,9 +9,17 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
+
+const tracerName = "internal/export"
 
 // Worker subscribes to the internal MQTT export topic and processes
 // export jobs asynchronously with retry logic.
@@ -51,15 +59,36 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 		}
 
 		token := mqttClient.Subscribe(InternalTopic, 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+			msgCtx, payload := tsmqtt.ExtractTraceContext(ctx, msg.Payload())
+			tracer := otel.Tracer(tracerName)
+			msgCtx, span := tracer.Start(msgCtx, "export.consume_mqtt",
+				oteltrace.WithSpanKind(oteltrace.SpanKindConsumer),
+				oteltrace.WithAttributes(
+					semconv.MessagingSystemKey.String("mqtt"),
+					semconv.MessagingDestinationName(InternalTopic),
+					semconv.MessagingOperationTypeKey.String("process"),
+					attribute.Int("messaging.message.payload_size_bytes", len(msg.Payload())),
+				),
+			)
+
 			var req JobRequest
-			if err := json.Unmarshal(msg.Payload(), &req); err != nil {
+			if err := json.Unmarshal(payload, &req); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "invalid message")
+				span.End()
 				log.Error().Err(err).Msg("export worker: invalid message")
 				return
 			}
+			span.SetAttributes(
+				attribute.String("export.job_id", req.JobID),
+				attribute.String("export.type", req.Type),
+				attribute.String("export.format", req.Format),
+			)
 			w.wg.Add(1)
 			go func() {
 				defer w.wg.Done()
-				w.processJob(ctx, &req)
+				defer span.End()
+				w.processJob(msgCtx, &req)
 			}()
 		})
 
@@ -98,7 +127,7 @@ func (w *Worker) processJob(ctx context.Context, req *JobRequest) {
 		log.Debug().Str("job_id", req.JobID).Msg("export worker: job already claimed by another worker")
 		return
 	}
-	w.publishStatusEvent(req.JobID, string(StatusProcessing), req.Type, "", 0)
+	w.publishStatusEvent(ctx, req.JobID, string(StatusProcessing), req.Type, "", 0)
 
 	// Process the export
 	result, err := w.processor.Process(ctx, req)
@@ -107,7 +136,7 @@ func (w *Worker) processJob(ctx context.Context, req *JobRequest) {
 		if failErr := w.repo.Fail(ctx, req.JobID, err.Error()); failErr != nil {
 			log.Error().Err(failErr).Str("job_id", req.JobID).Msg("export worker: failed to mark as failed")
 		}
-		w.publishStatusEvent(req.JobID, string(StatusFailed), req.Type, err.Error(), 0)
+		w.publishStatusEvent(ctx, req.JobID, string(StatusFailed), req.Type, err.Error(), 0)
 		return
 	}
 
@@ -117,7 +146,7 @@ func (w *Worker) processJob(ctx context.Context, req *JobRequest) {
 		if failErr := w.repo.Fail(ctx, req.JobID, "failed to store result: "+err.Error()); failErr != nil {
 			log.Error().Err(failErr).Str("job_id", req.JobID).Msg("export worker: failed to mark as failed")
 		}
-		w.publishStatusEvent(req.JobID, string(StatusFailed), req.Type, "failed to store result", 0)
+		w.publishStatusEvent(ctx, req.JobID, string(StatusFailed), req.Type, "failed to store result", 0)
 		return
 	}
 
@@ -131,7 +160,7 @@ func (w *Worker) processJob(ctx context.Context, req *JobRequest) {
 		Dur("elapsed", elapsed).
 		Msg("export worker: job completed")
 
-	w.publishStatusEvent(req.JobID, string(StatusReady), req.Type, "", result.RecordCount)
+	w.publishStatusEvent(ctx, req.JobID, string(StatusReady), req.Type, "", result.RecordCount)
 }
 
 // Shutdown waits for all in-flight export jobs to complete,
@@ -156,7 +185,10 @@ func (w *Worker) Shutdown() {
 const StatusTopic = "teslasync/events/export.status"
 
 // publishStatusEvent sends a status change event via MQTT for SSE relay.
-func (w *Worker) publishStatusEvent(jobID, status, jobType, errMsg string, recordCount int) {
+// The trace context from ctx is injected into the MQTT envelope so the
+// SSE-relay span in the API server's subscriber callback (router.go)
+// can chain under this worker's job-processing span.
+func (w *Worker) publishStatusEvent(ctx context.Context, jobID, status, jobType, errMsg string, recordCount int) {
 	if w.mqttClient == nil || !w.mqttClient.IsConnected() {
 		return
 	}
@@ -174,12 +206,27 @@ func (w *Worker) publishStatusEvent(jobID, status, jobType, errMsg string, recor
 	if err != nil {
 		return
 	}
-	token := w.mqttClient.Publish(StatusTopic, 1, false, data)
+	wrapped, err := tsmqtt.InjectTraceContext(ctx, data)
+	if err != nil {
+		log.Warn().Err(err).Str("job_id", jobID).Msg("export worker: failed to inject trace context into status event")
+		wrapped = data
+	}
+	token := w.mqttClient.Publish(StatusTopic, 1, false, wrapped)
 	token.WaitTimeout(2 * time.Second)
 }
 
 // Publish sends an export job request to the MQTT topic for async processing.
+//
+// Deprecated: prefer PublishCtx. This shim exists only for back-compat
+// with non-ctx call sites.
 func Publish(mqttClient pahomqtt.Client, req *JobRequest) error {
+	return PublishCtx(context.Background(), mqttClient, req)
+}
+
+// PublishCtx injects W3C trace context from ctx into the MQTT envelope
+// so the consumer-side export.consume_mqtt span nests under the
+// caller's request span.
+func PublishCtx(ctx context.Context, mqttClient pahomqtt.Client, req *JobRequest) error {
 	if mqttClient == nil || !mqttClient.IsConnected() {
 		return fmt.Errorf("MQTT not available")
 	}
@@ -189,9 +236,38 @@ func Publish(mqttClient pahomqtt.Client, req *JobRequest) error {
 		return err
 	}
 
-	token := mqttClient.Publish(InternalTopic, 1, false, data)
-	if !token.WaitTimeout(5 * time.Second) {
-		return fmt.Errorf("MQTT publish timeout")
+	tracer := otel.Tracer(tracerName)
+	ctx, span := tracer.Start(ctx, "export.publish_mqtt",
+		oteltrace.WithSpanKind(oteltrace.SpanKindProducer),
+		oteltrace.WithAttributes(
+			semconv.MessagingSystemKey.String("mqtt"),
+			semconv.MessagingDestinationName(InternalTopic),
+			semconv.MessagingOperationTypePublish,
+			attribute.String("export.job_id", req.JobID),
+			attribute.String("export.type", req.Type),
+			attribute.String("export.format", req.Format),
+		),
+	)
+	defer span.End()
+
+	wrapped, err := tsmqtt.InjectTraceContext(ctx, data)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "inject trace context")
+		return err
 	}
-	return token.Error()
+
+	token := mqttClient.Publish(InternalTopic, 1, false, wrapped)
+	if !token.WaitTimeout(5 * time.Second) {
+		err := fmt.Errorf("MQTT publish timeout")
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "mqtt publish timeout")
+		return err
+	}
+	if err := token.Error(); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "mqtt publish error")
+		return err
+	}
+	return nil
 }

@@ -1,9 +1,8 @@
-// Package telemetry bootstraps the OpenTelemetry tracer/metric providers.
+// Package telemetry retains the Prometheus metrics + zerolog bootstrap
+// helpers used by internal/handler/middleware. Tracer-init responsibility
+// was consolidated into internal/tracing (single canonical OTel bootstrap
+// used by cmd/teslasync via internal/app.New and by every worker main via
+// tracing.Init with WithServiceName). See .github/ARCHITECTURE.md ADR-008.
 //
 // Layer: platform
-//
-// Per ADR-007: this package KEEPS its current charter (OpenTelemetry
-// plumbing) but will be RENAMED to internal/platform/observability in
-// phase-48 to avoid name collision with internal/telemetry (phase-42
-// territory). See docs/architecture/platform-consolidation-todo.md.
 package telemetry

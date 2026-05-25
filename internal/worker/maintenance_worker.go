@@ -9,7 +9,16 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
+
+// maintenanceTracerName scopes spans for the periodic database maintenance worker.
+const maintenanceTracerName = "internal/worker/maintenance"
+
+func maintenanceTracer() oteltrace.Tracer { return otel.Tracer(maintenanceTracerName) }
 
 // StartMaintenanceWorker runs periodic database cleanup on a 24-hour schedule.
 // It deletes old positions and vehicle states based on configured retention
@@ -43,6 +52,10 @@ func StartMaintenanceWorker(ctx context.Context, db *database.DB, cfg *config.Co
 }
 
 func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
+	ctx, span := maintenanceTracer().Start(ctx, "maintenance.tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+	defer span.End()
+
 	log.Info().Msg("starting scheduled maintenance")
 	start := time.Now()
 
@@ -56,6 +69,7 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		var err error
 		posDeleted, err = db.CleanupOldPositions(maintCtx, cfg.Retention.PositionRetentionDays)
 		if err != nil {
+			span.RecordError(err)
 			log.Error().Err(err).Msg("position cleanup failed")
 		}
 	}
@@ -66,6 +80,7 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 		var err error
 		statesDeleted, err = db.CleanupOldStates(maintCtx, cfg.Retention.DataRetentionDays)
 		if err != nil {
+			span.RecordError(err)
 			log.Error().Err(err).Msg("vehicle state cleanup failed")
 		}
 	}
@@ -73,12 +88,14 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	// Clean up old API call logs (keep 30 days)
 	apiLogsDeleted, err := cleanupOldLogs(maintCtx, db, "api_call_logs", "ts", 30)
 	if err != nil {
+		span.RecordError(err)
 		log.Error().Err(err).Msg("API call log cleanup failed")
 	}
 
 	// Clean up old notification logs (keep 90 days)
 	notifLogsDeleted, err := cleanupOldLogs(maintCtx, db, "notification_logs", "created_at", 90)
 	if err != nil {
+		span.RecordError(err)
 		log.Error().Err(err).Msg("notification log cleanup failed")
 	}
 
@@ -88,6 +105,7 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	if cfg.Retention.AuditRetentionDays > 0 {
 		auditLogsDeleted, err = cleanupOldLogs(maintCtx, db, "audit_logs", "ts", cfg.Retention.AuditRetentionDays)
 		if err != nil {
+			span.RecordError(err)
 			log.Error().Err(err).Msg("audit log cleanup failed")
 		}
 	}
@@ -100,6 +118,7 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	if cfg.Retention.AuditIPRetentionDays > 0 {
 		auditIPsRedacted, err = redactOldAuditIPs(maintCtx, db, cfg.Retention.AuditIPRetentionDays)
 		if err != nil {
+			span.RecordError(err)
 			log.Error().Err(err).Msg("audit IP redaction failed")
 		}
 	}
@@ -109,14 +128,27 @@ func runMaintenance(ctx context.Context, db *database.DB, cfg *config.Config) {
 	// dead tuples over a long retention window.
 	if posDeleted > 0 || statesDeleted > 0 || auditLogsDeleted > 0 {
 		if err := db.VacuumAnalyze(maintCtx); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "vacuum analyze failed")
 			log.Error().Err(err).Msg("VACUUM ANALYZE failed")
 		}
 	}
 
 	// Refresh cagg_fleet_stats materialized view (regular MV, not TimescaleDB CAGG)
 	if err := refreshFleetStats(maintCtx, db); err != nil {
+		span.RecordError(err)
 		log.Error().Err(err).Msg("cagg_fleet_stats refresh failed")
 	}
+
+	span.SetAttributes(
+		attribute.Int64("maintenance.positions_deleted", posDeleted),
+		attribute.Int64("maintenance.states_deleted", statesDeleted),
+		attribute.Int64("maintenance.api_logs_deleted", apiLogsDeleted),
+		attribute.Int64("maintenance.notif_logs_deleted", notifLogsDeleted),
+		attribute.Int64("maintenance.audit_logs_deleted", auditLogsDeleted),
+		attribute.Int64("maintenance.audit_ips_redacted", auditIPsRedacted),
+		attribute.Float64("maintenance.duration_seconds", time.Since(start).Seconds()),
+	)
 
 	log.Info().
 		Int64("positions_deleted", posDeleted).

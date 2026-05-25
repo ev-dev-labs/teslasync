@@ -11,13 +11,12 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
 ## GET /vehicles/{id}/state — `vehicle_state_read`
 
 - Status: **OK**
-- Instrumented files matched: 6 (threshold ≥ 4)
+- Instrumented files matched: 5 (threshold ≥ 4)
 - Matched files:
   - `internal/api/middleware.go`
   - `internal/database/database.go`
   - `internal/platform/httputil/client.go`
   - `internal/platform/httputil/timeout.go`
-  - `internal/platform/telemetry/tracer.go`
   - `internal/tracing/span.go`
 
 ## POST /commands/{vehicleId}/wake — `wake_command`
@@ -42,4 +41,68 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
   - `internal/mqtt/mqtt.go`
   - `internal/tesla/normalize/pipeline.go`
   - `internal/tesla/normalize/tracing.go`
+
+## Notification publish → MQTT envelope → consume → send — `notification_dispatch`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/notification-worker/main.go`
+  - `internal/mqtt/propagation.go`
+  - `internal/notification/worker.go`
+
+## Export publish → MQTT envelope → process → SSE status — `export_job`
+
+- Status: **OK**
+- Instrumented files matched: 3 (threshold ≥ 3)
+- Matched files:
+  - `cmd/export-worker/main.go`
+  - `internal/export/worker.go`
+  - `internal/mqtt/propagation.go`
+
+## Automation engine Evaluate span + action dispatch — `automation_evaluate`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `cmd/automation-worker/main.go`
+  - `internal/automation/engine.go`
+
+## SSE BroadcastWithContext + Redis fanout per-payload span — `sse_broadcast`
+
+- Status: **OK**
+- Instrumented files matched: 1 (threshold ≥ 1)
+- Matched files:
+  - `internal/api/sse_handler.go`
+
+## cmd/resubscribe per-vehicle Tesla MQTT push — `resubscribe_push`
+
+- Status: **OK**
+- Instrumented files matched: 1 (threshold ≥ 1)
+- Matched files:
+  - `cmd/resubscribe/main.go`
+
+## fsm.Engine.Fire span via tracing.NewFSMTracer adapter — `fsm_transitions`
+
+- Status: **OK**
+- Instrumented files matched: 1 (threshold ≥ 1)
+- Matched files:
+  - `internal/tracing/fsmtracer.go`
+
+## Per-iteration spans for in-API background tickers — `in_api_workers`
+
+- Status: **OK**
+- Instrumented files matched: 4 (threshold ≥ 4)
+- Matched files:
+  - `internal/app/new.go`
+  - `internal/worker/gas_price_worker.go`
+  - `internal/worker/maintenance_worker.go`
+  - `internal/worker/unit_drift_validator.go`
+
+## AI provider call → traced provider decorator → strategy — `ai_inference`
+
+- Status: **OK**
+- Instrumented files matched: 1 (threshold ≥ 1)
+- Matched files:
+  - `internal/ai/provider/trace.go`
 

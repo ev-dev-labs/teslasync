@@ -8,10 +8,20 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
+
+// tracerName for the package-level otel.Tracer. Stable so dashboards can
+// filter by instrumentation scope.
+const tracerName = "internal/notification"
 
 // Worker subscribes to the internal MQTT notification topic and delivers
 // notifications asynchronously with retry logic and metrics tracking.
@@ -60,15 +70,38 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 		}
 
 		token := mqttClient.Subscribe(InternalTopic, 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+			// Extract upstream trace context (set by the API server or
+			// in-API worker that called PublishCtx). Legacy passthrough
+			// returns the input ctx when the envelope is absent.
+			msgCtx, payload := tsmqtt.ExtractTraceContext(ctx, msg.Payload())
+			tracer := otel.Tracer(tracerName)
+			msgCtx, span := tracer.Start(msgCtx, "notification.consume_mqtt",
+				oteltrace.WithSpanKind(oteltrace.SpanKindConsumer),
+				oteltrace.WithAttributes(
+					semconv.MessagingSystemKey.String("mqtt"),
+					semconv.MessagingDestinationName(InternalTopic),
+					semconv.MessagingOperationTypeKey.String("process"),
+					attribute.Int("messaging.message.payload_size_bytes", len(msg.Payload())),
+				),
+			)
+
 			var req Request
-			if err := json.Unmarshal(msg.Payload(), &req); err != nil {
+			if err := json.Unmarshal(payload, &req); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "invalid message")
+				span.End()
 				log.Error().Err(err).Msg("notification worker: invalid message")
 				return
 			}
+			span.SetAttributes(
+				attribute.String("notification.severity", req.Severity),
+				attribute.Int64("notification.channel_id", req.ChannelID),
+			)
 			w.wg.Add(1)
 			go func() {
 				defer w.wg.Done()
-				w.processNotification(ctx, &req)
+				defer span.End()
+				w.processNotification(msgCtx, &req)
 			}()
 		})
 
@@ -94,19 +127,32 @@ func (w *Worker) Start(ctx context.Context, mqttClient pahomqtt.Client) {
 }
 
 func (w *Worker) processNotification(ctx context.Context, req *Request) {
+	tracer := otel.Tracer(tracerName)
+	procCtx, procSpan := tracer.Start(ctx, "notification.process",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("notification.channel_type", req.ChannelType),
+			attribute.Int64("notification.channel_id", req.ChannelID),
+			attribute.String("notification.severity", req.Severity),
+		),
+	)
+	defer procSpan.End()
+
 	// Phase-46 / Prompt 19 — Do-Not-Disturb gate. When a quiet-hours
 	// window is active and the request severity is not on its bypass
 	// list, skip delivery and persist a deferred row so the replay loop
 	// in cmd/notification-worker can dispatch it later.
 	if w.decider != nil && req.ChannelID > 0 {
-		shouldDefer, win, err := w.decider.ShouldDefer(ctx, req.Severity, time.Now())
+		shouldDefer, win, err := w.decider.ShouldDefer(procCtx, req.Severity, time.Now())
 		if err != nil {
 			// Don't block delivery on a transient lookup failure;
 			// fall through to the normal Send path so the user still
 			// gets the notification.
+			procSpan.RecordError(err)
 			log.Warn().Err(err).Str("channel", req.ChannelType).Msg("notification: quiet-hours decider failed, delivering anyway")
 		} else if shouldDefer {
-			w.persistDeferred(ctx, req, win)
+			procSpan.SetAttributes(attribute.String("notification.outcome", "deferred_dnd"))
+			w.persistDeferred(procCtx, req, win)
 			return
 		}
 	}
@@ -116,7 +162,18 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 
 	// Retry up to 3 times with backoff
 	for attempt := 0; attempt < 3; attempt++ {
-		if err := Send(req); err != nil {
+		_, sendSpan := tracer.Start(procCtx, "notification.send",
+			oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+			oteltrace.WithAttributes(
+				attribute.String("notification.channel_type", req.ChannelType),
+				attribute.Int("notification.attempt", attempt+1),
+			),
+		)
+		err := Send(req)
+		if err != nil {
+			sendSpan.RecordError(err)
+			sendSpan.SetStatus(codes.Error, "send failed")
+			sendSpan.End()
 			lastErr = err
 			log.Warn().Err(err).
 				Str("channel", req.ChannelType).
@@ -125,6 +182,7 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 			time.Sleep(time.Duration(1<<uint(attempt)) * time.Second)
 			continue
 		}
+		sendSpan.End()
 
 		latencyMs := int(time.Since(startTime).Milliseconds())
 
@@ -140,14 +198,19 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 				alertID := req.AlertID
 				logEntry.AlertID = &alertID
 			}
-			if err := w.repo.CreateLog(ctx, logEntry); err != nil {
+			if err := w.repo.CreateLog(procCtx, logEntry); err != nil {
 				log.Warn().Err(err).Msg("notification: failed to create success log")
 			}
 			// Record delivery metric
-			if err := w.metricRepo.Record(ctx, req.ChannelID, true, latencyMs); err != nil {
+			if err := w.metricRepo.Record(procCtx, req.ChannelID, true, latencyMs); err != nil {
 				log.Warn().Err(err).Msg("notification: failed to record metric")
 			}
 		}
+		procSpan.SetAttributes(
+			attribute.String("notification.outcome", "delivered"),
+			attribute.Int("notification.latency_ms", latencyMs),
+			attribute.Int("notification.attempts", attempt+1),
+		)
 		log.Info().Str("channel", req.ChannelType).Str("title", req.Title).Int("latency_ms", latencyMs).Msg("notification delivered")
 		return
 	}
@@ -155,6 +218,14 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 	latencyMs := int(time.Since(startTime).Milliseconds())
 
 	// All retries exhausted
+	procSpan.SetAttributes(
+		attribute.String("notification.outcome", "failed_retries_exhausted"),
+		attribute.Int("notification.latency_ms", latencyMs),
+	)
+	if lastErr != nil {
+		procSpan.RecordError(lastErr)
+		procSpan.SetStatus(codes.Error, "all retries failed")
+	}
 	if req.ChannelID > 0 {
 		errStr := ""
 		if lastErr != nil {
@@ -171,11 +242,11 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 			alertID := req.AlertID
 			logEntry.AlertID = &alertID
 		}
-		if err := w.repo.CreateLog(ctx, logEntry); err != nil {
+		if err := w.repo.CreateLog(procCtx, logEntry); err != nil {
 			log.Warn().Err(err).Msg("notification: failed to create failure log")
 		}
 		// Record failure metric
-		if err := w.metricRepo.Record(ctx, req.ChannelID, false, latencyMs); err != nil {
+		if err := w.metricRepo.Record(procCtx, req.ChannelID, false, latencyMs); err != nil {
 			log.Warn().Err(err).Msg("notification: failed to record failure metric")
 		}
 	}
@@ -322,9 +393,25 @@ func (w *Worker) ReplayDeferred(ctx context.Context) (replayed, failed int, err 
 
 // Publish sends a notification request to the MQTT topic for async delivery.
 // If MQTT is not available, it falls back to synchronous delivery.
+//
+// Deprecated: prefer PublishCtx — it injects W3C trace context into the
+// MQTT envelope so notification.consume_mqtt spans in the worker nest
+// under the caller's span (true end-to-end traces from API request →
+// notification dispatch). This shim exists only for back-compat with
+// non-ctx call sites.
 func Publish(mqttClient pahomqtt.Client, req *Request) error {
+	return PublishCtx(context.Background(), mqttClient, req)
+}
+
+// PublishCtx is the ctx-aware variant. Trace context from ctx is
+// injected into the JSON envelope; consumer-side Worker.Start uses
+// tsmqtt.ExtractTraceContext to restore parent-child linkage across
+// the process boundary.
+func PublishCtx(ctx context.Context, mqttClient pahomqtt.Client, req *Request) error {
 	if mqttClient == nil || !mqttClient.IsConnected() {
-		// Fallback to direct send
+		// Fallback to direct send. We deliberately don't emit a span
+		// here because the caller's span already covers this code
+		// path; adding another would just be noise.
 		return Send(req)
 	}
 
@@ -333,11 +420,38 @@ func Publish(mqttClient pahomqtt.Client, req *Request) error {
 		return err
 	}
 
-	token := mqttClient.Publish(InternalTopic, 1, false, data)
+	tracer := otel.Tracer(tracerName)
+	ctx, span := tracer.Start(ctx, "notification.publish_mqtt",
+		oteltrace.WithSpanKind(oteltrace.SpanKindProducer),
+		oteltrace.WithAttributes(
+			semconv.MessagingSystemKey.String("mqtt"),
+			semconv.MessagingDestinationName(InternalTopic),
+			semconv.MessagingOperationTypePublish,
+			attribute.String("notification.severity", req.Severity),
+		),
+	)
+	defer span.End()
+
+	wrapped, err := tsmqtt.InjectTraceContext(ctx, data)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "inject trace context")
+		return err
+	}
+
+	token := mqttClient.Publish(InternalTopic, 1, false, wrapped)
 	if !token.WaitTimeout(5 * time.Second) {
-		// Fallback to direct send on timeout
+		// Fallback to direct send on timeout. Mark the publish span as
+		// errored (the operation we measured failed) — Send below
+		// creates its own logging path.
+		span.SetStatus(codes.Error, "mqtt publish timeout, falling back to direct send")
 		log.Warn().Msg("notification: MQTT publish timeout, falling back to direct send")
 		return Send(req)
 	}
-	return token.Error()
+	if err := token.Error(); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "mqtt publish error")
+		return err
+	}
+	return nil
 }

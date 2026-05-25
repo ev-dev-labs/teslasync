@@ -11,17 +11,28 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
+
 	"github.com/ev-dev-labs/teslasync/internal/backup"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/export"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 var Version = "dev"
+
+// tracerName scopes spans emitted by the export-worker process.
+const tracerName = "cmd/export-worker"
+
+func workerTracer() oteltrace.Tracer { return otel.Tracer(tracerName) }
 
 func main() {
 	// Built-in healthcheck for distroless containers
@@ -42,6 +53,19 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// ── OpenTelemetry tracing ────────────────────────────────────────
+	// Worker-owned TracerProvider tagged service.name=teslasync-export-worker.
+	// Init is non-fatal — see ADR-008.
+	tracingShutdown, err := tracing.Init(ctx, cfg, tracing.WithServiceName("teslasync-export-worker"))
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize tracing, continuing without it")
+	} else if cfg.OpenTelemetry.Enabled {
+		log.Info().
+			Str("service", "teslasync-export-worker").
+			Str("endpoint", cfg.OTLPEndpoint).
+			Msg("OpenTelemetry tracing enabled")
+	}
 
 	// Database connection
 	var db *database.DB
@@ -95,12 +119,18 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				deleted, err := exportJobRepo.CleanupOld(ctx, 7*24*time.Hour)
+				tickCtx, span := workerTracer().Start(ctx, "export.cleanup_tick",
+					oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+				deleted, err := exportJobRepo.CleanupOld(tickCtx, 7*24*time.Hour)
 				if err != nil {
+					span.RecordError(err)
+					span.SetStatus(codes.Error, "cleanup failed")
 					log.Error().Err(err).Msg("export cleanup: failed")
 				} else if deleted > 0 {
+					span.SetAttributes(attribute.Int64("export.cleanup.deleted", deleted))
 					log.Info().Int64("deleted", deleted).Msg("export cleanup: removed old jobs")
 				}
+				span.End()
 			}
 		}
 	}()
@@ -119,11 +149,17 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				dueConfigs, err := backupCfgRepo.GetDueConfigs(ctx)
+				tickCtx, span := workerTracer().Start(ctx, "export.backup_tick",
+					oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+				dueConfigs, err := backupCfgRepo.GetDueConfigs(tickCtx)
 				if err != nil {
+					span.RecordError(err)
+					span.SetStatus(codes.Error, "list due configs failed")
 					log.Warn().Err(err).Msg("backup: failed to check due configs")
+					span.End()
 					continue
 				}
+				span.SetAttributes(attribute.Int("backup.due_count", len(dueConfigs)))
 				for _, cfg := range dueConfigs {
 					run := &models.BackupRun{
 						ConfigID:   &cfg.ID,
@@ -133,13 +169,35 @@ func main() {
 						Provider:   cfg.Provider,
 						Metadata:   []byte(`{"trigger": "scheduled"}`),
 					}
-					if err := backupRunRepo.Create(ctx, run); err != nil {
+					if err := backupRunRepo.Create(tickCtx, run); err != nil {
+						span.RecordError(err)
 						log.Error().Err(err).Int64("config_id", cfg.ID).Msg("backup: failed to create scheduled run")
 						continue
 					}
 					log.Info().Int64("config_id", cfg.ID).Str("name", cfg.Name).Msg("backup: starting scheduled backup")
-					go processor.RunBackup(ctx, cfg, run)
+					// Each backup run gets its own root context so the lifetime
+					// outlives this tick. The per-run span links to the
+					// scheduling tick via a Link attribute so dashboards can
+					// trace "which tick scheduled this backup" without making
+					// the tick wait synchronously.
+					tickSpanCtx := span.SpanContext()
+					go func(cfg *models.BackupConfig, run *models.BackupRun) {
+						runCtx, runSpan := workerTracer().Start(
+							context.Background(),
+							"export.backup_run",
+							oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+							oteltrace.WithLinks(oteltrace.Link{SpanContext: tickSpanCtx}),
+							oteltrace.WithAttributes(
+								attribute.Int64("backup.config_id", cfg.ID),
+								attribute.String("backup.provider", cfg.Provider),
+								attribute.String("backup.type", cfg.BackupType),
+							),
+						)
+						processor.RunBackup(runCtx, cfg, run)
+						runSpan.End()
+					}(cfg, run)
 				}
+				span.End()
 			}
 		}
 	}()
@@ -175,6 +233,13 @@ func main() {
 	log.Info().Str("signal", sig.String()).Msg("shutting down export worker")
 	cancel()
 	worker.Shutdown()
+	if tracingShutdown != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := tracingShutdown(shutdownCtx); err != nil {
+			log.Warn().Err(err).Msg("tracing shutdown failed")
+		}
+		shutdownCancel()
+	}
 	log.Info().Msg("export worker stopped")
 }
 

@@ -281,7 +281,7 @@ func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *models.Veh
 				Message:     message,
 				ChannelID:   ch.ID,
 			}
-			if err := notification.Publish(w.mqttClient.Underlying(), req); err != nil {
+			if err := notification.PublishCtx(ctx, w.mqttClient.Underlying(), req); err != nil {
 				log.Warn().Err(err).Int64("channel_id", ch.ID).Msg("alert: failed to publish notification")
 			}
 		}

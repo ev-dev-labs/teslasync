@@ -157,7 +157,12 @@ type VINResolver interface {
 // (*internal/api.TelemetryHandler).broadcastSSE method. The legacy
 // method handles Redis pub/sub fanout vs single-pod fallback
 // internally; the bridge just delivers the wire-shaped payload.
-type BroadcastSSEFunc func(payload map[string]any)
+//
+// Takes a context so the SSE fan-out span nests under the same trace
+// as the upstream MQTT consume → normalize → ProcessAtomics path.
+// Implementations MUST honour ctx for cancellation when their fan-out
+// involves blocking I/O (e.g. Redis publish).
+type BroadcastSSEFunc func(ctx context.Context, payload map[string]any)
 
 // Config bundles the SideEffectsObserver's callback dependencies
 // plus optional logger and clock. Required dependencies are checked
@@ -372,7 +377,7 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 	// existing sseManager.ts consumer of the legacy payload remains
 	// driven by the legacy ProcessSignals path until phase-42a/0090
 	// retires it.
-	o.broadcastSSE(map[string]any{
+	o.broadcastSSE(ctx, map[string]any{
 		"vehicle_id": vehicleID,
 		"ts":         o.now(),
 		"signals":    signals,

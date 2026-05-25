@@ -1,11 +1,24 @@
 // Phase 44 / Prompt 0080 — trace-coverage audit.
 //
 // Static analyzer that walks the Go source tree and counts trace
-// instrumentation sites along three critical request flows:
+// instrumentation sites along every critical request flow.
 //
-//   1. GET /vehicles/{id}/state           → http handler → service → repo → cache
-//   2. POST /commands/{vehicleId}/wake    → http handler → service → tesla client
-//   3. MQTT consume → normalize → store   → mqtt subscriber → pipeline → routers
+// Flows (kept in sync with .github/instructions/observability.instructions.md):
+//
+//   API hot paths (Phase-44 baseline):
+//     1. GET /vehicles/{id}/state           → http handler → service → repo → cache
+//     2. POST /commands/{vehicleId}/wake    → http handler → service → tesla client
+//     3. MQTT consume → normalize → store   → mqtt subscriber → pipeline → routers
+//
+//   Full-coverage expansion (Phase-44b — every async path covered):
+//     4. notification_dispatch     → API publish → MQTT envelope → consume → send
+//     5. export_job                → API publish → MQTT envelope → consume → process → SSE
+//     6. automation_evaluate       → engine.Evaluate span + actions
+//     7. sse_broadcast             → BroadcastWithContext + Redis fanout
+//     8. resubscribe_push          → cmd/resubscribe per-vehicle Tesla MQTT push
+//     9. fsm_transitions           → fsm.Engine.Fire span via tracing.NewFSMTracer adapter
+//    10. in_api_workers            → per-iteration spans for the in-API background tickers
+//    11. ai_inference              → AI dispatcher / strategy spans (existing)
 //
 // For each flow we look for at least 4 distinct files containing
 // `tracer.Start(`, `otel.Tracer(`, `otelhttp.NewHandler(`, or
@@ -14,9 +27,11 @@
 //
 // This is a static audit, not a runtime one. The gate only requires that
 // the docs/runbooks/phase-44-trace-coverage-audit.md report does NOT
-// contain INSUFFICIENT_SPANS or MISSING_FLOW substrings. Adding spans is
-// tracked by separate prompts (0010-0016); this prompt only verifies the
-// landed instrumentation actually covers the critical flows end-to-end.
+// contain INSUFFICIENT_SPANS or MISSING_FLOW substrings. Runtime
+// regression coverage lives in the unit tests under each instrumented
+// package (e.g. internal/mqtt/propagation_test.go, internal/tracing/
+// fsmtracer_test.go) — those exercise the Init+SpanRecorder pattern and
+// would fail compilation if a span was deleted.
 package main
 
 import (
@@ -88,9 +103,113 @@ var flows = []flow{
 			"internal/tesla/normalize/pipeline.go",
 		},
 	},
+
+	// Phase-44b expansion — full coverage of every async path.
+
+	{
+		Name:        "notification_dispatch",
+		Description: "Notification publish → MQTT envelope → consume → send",
+		GlobPatterns: []string{
+			"internal/notification/worker.go",
+			"internal/mqtt/propagation.go",
+			"cmd/notification-worker/main.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"internal/notification/worker.go",
+			"internal/mqtt/propagation.go",
+		},
+	},
+	{
+		Name:        "export_job",
+		Description: "Export publish → MQTT envelope → process → SSE status",
+		GlobPatterns: []string{
+			"internal/export/worker.go",
+			"internal/mqtt/propagation.go",
+			"cmd/export-worker/main.go",
+		},
+		MinSpanFiles: 3,
+		RequiredFiles: []string{
+			"internal/export/worker.go",
+		},
+	},
+	{
+		Name:        "automation_evaluate",
+		Description: "Automation engine Evaluate span + action dispatch",
+		GlobPatterns: []string{
+			"internal/automation/engine.go",
+			"cmd/automation-worker/main.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"internal/automation/engine.go",
+		},
+	},
+	{
+		Name:        "sse_broadcast",
+		Description: "SSE BroadcastWithContext + Redis fanout per-payload span",
+		GlobPatterns: []string{
+			"internal/api/sse_handler.go",
+		},
+		MinSpanFiles: 1,
+		RequiredFiles: []string{
+			"internal/api/sse_handler.go",
+		},
+	},
+	{
+		Name:        "resubscribe_push",
+		Description: "cmd/resubscribe per-vehicle Tesla MQTT push",
+		GlobPatterns: []string{
+			"cmd/resubscribe/main.go",
+		},
+		MinSpanFiles: 1,
+		RequiredFiles: []string{
+			"cmd/resubscribe/main.go",
+		},
+	},
+	{
+		Name:        "fsm_transitions",
+		Description: "fsm.Engine.Fire span via tracing.NewFSMTracer adapter",
+		GlobPatterns: []string{
+			"internal/tracing/fsmtracer.go",
+		},
+		MinSpanFiles: 1,
+		RequiredFiles: []string{
+			"internal/tracing/fsmtracer.go",
+		},
+	},
+	{
+		Name:        "in_api_workers",
+		Description: "Per-iteration spans for in-API background tickers",
+		GlobPatterns: []string{
+			"internal/worker/gas_price_worker.go",
+			"internal/worker/maintenance_worker.go",
+			"internal/worker/unit_drift_validator.go",
+			"internal/app/new.go",
+		},
+		MinSpanFiles: 4,
+		RequiredFiles: []string{
+			"internal/worker/gas_price_worker.go",
+			"internal/worker/maintenance_worker.go",
+			"internal/worker/unit_drift_validator.go",
+			"internal/app/new.go",
+		},
+	},
+	{
+		Name:        "ai_inference",
+		Description: "AI provider call → traced provider decorator → strategy",
+		GlobPatterns: []string{
+			"internal/ai/provider/trace.go",
+			"internal/ai/dispatch/dispatch.go",
+		},
+		MinSpanFiles: 1,
+		RequiredFiles: []string{
+			"internal/ai/provider/trace.go",
+		},
+	},
 }
 
-var spanRE = regexp.MustCompile(`tracer\.Start\(|otel\.Tracer\(|otelhttp\.NewHandler\(|otelpgx\.NewTracer\(|StartSpan\(|startSpan\(|startProcessSpan\(|startChildSpan\(|otelhttp\.NewTransport\(`)
+var spanRE = regexp.MustCompile(`tracer\.Start\(|otel\.Tracer\(|otelhttp\.NewHandler\(|otelpgx\.NewTracer\(|StartSpan\(|startSpan\(|startProcessSpan\(|startChildSpan\(|otelhttp\.NewTransport\(|tracing\.StartSpan\(|GetTextMapPropagator\(`)
 
 func main() {
 	var reportPath string

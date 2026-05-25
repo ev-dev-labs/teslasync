@@ -42,6 +42,10 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -49,10 +53,16 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	teslaconfig "github.com/ev-dev-labs/teslasync/internal/tesla/config"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
 // Version is set via -ldflags at build time (matches other cmd/* binaries).
 var Version = "dev"
+
+// tracerName scopes spans for the resubscribe binary.
+const tracerName = "cmd/resubscribe"
+
+func cmdTracer() oteltrace.Tracer { return otel.Tracer(tracerName) }
 
 // operatorTokenEnv is the env var that must be set for the binary to run.
 // The token value is not validated cryptographically; presence is the
@@ -148,6 +158,39 @@ func run(args []string, stdout, stderr *os.File, getenv func(string) string) int
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	// ── OpenTelemetry tracing ────────────────────────────────────────
+	// resubscribe is a short-lived one-shot. We skip tracing init on
+	// --dry-run so CI runs (which exercise the full code path against
+	// a fake pusher) stay fast and don't touch a collector. In
+	// real-world operator runs the per-vehicle push spans nest under a
+	// root resubscribe.run span emitted by runWithDeps — see the
+	// resubscribe_push entry in cmd/trace-coverage-audit.
+	var tracingShutdown func(context.Context) error
+	if !*dryRun {
+		shutdown, err := tracing.Init(ctx, cfg, tracing.WithServiceName("teslasync-resubscribe"))
+		if err != nil {
+			log.Warn().Err(err).Msg("failed to initialize tracing, continuing without it")
+		} else {
+			tracingShutdown = shutdown
+			if cfg.OpenTelemetry.Enabled {
+				log.Info().
+					Str("service", "teslasync-resubscribe").
+					Str("endpoint", cfg.OTLPEndpoint).
+					Msg("OpenTelemetry tracing enabled")
+			}
+		}
+	}
+	defer func() {
+		if tracingShutdown == nil {
+			return
+		}
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := tracingShutdown(shutdownCtx); err != nil {
+			log.Warn().Err(err).Msg("tracing shutdown failed")
+		}
+		shutdownCancel()
+	}()
+
 	var db *database.DB
 	if err := resilience.ConnectWithRetry(ctx, "database", 5, func(ctx context.Context) error {
 		var connErr error
@@ -193,14 +236,29 @@ type runConfig struct {
 // runs the bounded worker pool, then emits resubscribe.end with the
 // summary. Returns 0 only if every vehicle succeeded.
 func runWithDeps(ctx context.Context, rc runConfig, vehicles vehicleLister, push pusher, stdout *os.File) int {
+	ctx, runSpan := cmdTracer().Start(ctx, "resubscribe.run",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.Bool("resubscribe.dry_run", rc.dryRun),
+			attribute.Int("resubscribe.workers", rc.workers),
+			attribute.Int64("resubscribe.vehicle_filter", rc.vehicleFilter),
+			attribute.String("resubscribe.operator", rc.operatorEnv),
+		),
+	)
+	defer runSpan.End()
+
 	all, err := vehicles.GetAll(ctx)
 	if err != nil {
+		runSpan.RecordError(err)
+		runSpan.SetStatus(codes.Error, "list vehicles failed")
 		log.Error().Err(err).Msg("list vehicles")
 		return 1
 	}
 	targets := filterVehicles(all, rc.vehicleFilter)
+	runSpan.SetAttributes(attribute.Int("resubscribe.target_count", len(targets)))
 	if len(targets) == 0 {
 		if rc.vehicleFilter != 0 {
+			runSpan.SetStatus(codes.Error, "vehicle not found")
 			log.Error().Int64("vehicle_id", rc.vehicleFilter).Msg("vehicle not found")
 			return 1
 		}
@@ -217,11 +275,14 @@ func runWithDeps(ctx context.Context, rc runConfig, vehicles vehicleLister, push
 	}
 	canonical, err := builder.BuildSubscription()
 	if err != nil {
+		runSpan.RecordError(err)
+		runSpan.SetStatus(codes.Error, "build subscription failed")
 		log.Error().Err(err).Msg("build subscription")
 		return 1
 	}
 	cfgSHA := sha256.Sum256(canonical)
 	cfgSHAHex := hex.EncodeToString(cfgSHA[:])
+	runSpan.SetAttributes(attribute.String("resubscribe.config_sha256", cfgSHAHex))
 
 	fields := buildFieldMap(builder)
 
@@ -276,6 +337,15 @@ func runWithDeps(ctx context.Context, rc runConfig, vehicles vehicleLister, push
 	if failed.Load() > 0 || skipped.Load() > 0 {
 		exitCode = 1
 	}
+	runSpan.SetAttributes(
+		attribute.Int64("resubscribe.succeeded", succeeded.Load()),
+		attribute.Int64("resubscribe.failed", failed.Load()),
+		attribute.Int64("resubscribe.skipped", skipped.Load()),
+		attribute.Int("resubscribe.exit_code", exitCode),
+	)
+	if exitCode != 0 {
+		runSpan.SetStatus(codes.Error, "one or more vehicles failed or were skipped")
+	}
 
 	log.Info().
 		Str("event", "resubscribe.end").
@@ -304,11 +374,22 @@ const (
 // status is treated as failure (logged WARN, counted as failed) so the
 // summary distinguishes "Tesla rejected" from "we never tried".
 func pushOne(ctx context.Context, rc runConfig, v *models.Vehicle, fields map[string]tesla.FleetTelemetryField, push pusher) pushResult {
+	ctx, span := cmdTracer().Start(ctx, "resubscribe.push_vehicle",
+		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
+		oteltrace.WithAttributes(
+			attribute.Int64("vehicle.id", v.ID),
+			attribute.Bool("resubscribe.dry_run", rc.dryRun),
+		),
+	)
+	defer span.End()
+
 	if v.VIN == "" {
+		span.SetAttributes(attribute.String("resubscribe.outcome", "skipped_empty_vin"))
 		log.Warn().Int64("vehicle_id", v.ID).Msg("skipping vehicle with empty VIN")
 		return resultSkipped
 	}
 	if rc.dryRun {
+		span.SetAttributes(attribute.String("resubscribe.outcome", "dry_run_ok"))
 		log.Info().
 			Int64("vehicle_id", v.ID).
 			Str("vin", v.VIN).
@@ -330,7 +411,11 @@ func pushOne(ctx context.Context, rc runConfig, v *models.Vehicle, fields map[st
 	}
 
 	_, status, err := push.SubscribeFleetTelemetry(callCtx, sub)
+	span.SetAttributes(attribute.Int("http.status_code", status))
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "subscribe failed")
+		span.SetAttributes(attribute.String("resubscribe.outcome", "failed_error"))
 		log.Warn().
 			Err(err).
 			Int64("vehicle_id", v.ID).
@@ -340,6 +425,8 @@ func pushOne(ctx context.Context, rc runConfig, v *models.Vehicle, fields map[st
 		return resultFailed
 	}
 	if status < 200 || status >= 300 {
+		span.SetStatus(codes.Error, "non-2xx status")
+		span.SetAttributes(attribute.String("resubscribe.outcome", "failed_status"))
 		log.Warn().
 			Int64("vehicle_id", v.ID).
 			Str("vin", v.VIN).
@@ -347,6 +434,7 @@ func pushOne(ctx context.Context, rc runConfig, v *models.Vehicle, fields map[st
 			Msg("subscribe returned non-success status")
 		return resultFailed
 	}
+	span.SetAttributes(attribute.String("resubscribe.outcome", "ok"))
 	log.Info().
 		Int64("vehicle_id", v.ID).
 		Str("vin", v.VIN).

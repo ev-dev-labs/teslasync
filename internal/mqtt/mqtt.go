@@ -81,22 +81,54 @@ func NewClient(cfg config.MQTTConfig) (*Client, error) {
 }
 
 // Publish publishes a string message to a topic.
+//
+// Deprecated: prefer PublishCtx which injects W3C trace context so the
+// consumer-side span (e.g. automation reload, webhook forwarding)
+// nests under the API request span. This shim exists only for
+// back-compat with callers that don't yet have a context handy.
 func (c *Client) Publish(topic, payload string) {
+	c.PublishCtx(context.Background(), topic, payload)
+}
+
+// PublishCtx publishes payload to topic with W3C trace context injected
+// into a JSON envelope when ctx carries an active span. The QoS+retain
+// semantics match Publish (QoS=0, retain=true) — the envelope wrapping
+// is independent of delivery guarantees. Consumers that don't know
+// about the envelope shape transparently fall back to legacy
+// passthrough via mqtt.ExtractTraceContext.
+func (c *Client) PublishCtx(ctx context.Context, topic, payload string) {
 	fullTopic := c.prefix + "/" + topic
-	token := c.client.Publish(fullTopic, 0, true, payload)
+	body := []byte(payload)
+	// Only wrap if the payload is JSON-shaped — wrapping a plain
+	// string would corrupt it for legacy consumers that parse it as
+	// a non-JSON value (e.g. the vehicle_data topic family).
+	if len(body) > 0 && body[0] == '{' {
+		wrapped, err := InjectTraceContext(ctx, body)
+		if err == nil {
+			body = wrapped
+		}
+	}
+	token := c.client.Publish(fullTopic, 0, true, body)
 	if !token.WaitTimeout(5 * time.Second) {
 		log.Warn().Str("topic", fullTopic).Msg("MQTT publish timeout")
 	}
 }
 
 // PublishJSON publishes a JSON-encoded message.
+//
+// Deprecated: prefer PublishJSONCtx for trace continuity.
 func (c *Client) PublishJSON(topic string, payload interface{}) {
+	c.PublishJSONCtx(context.Background(), topic, payload)
+}
+
+// PublishJSONCtx marshals and publishes with trace context injected.
+func (c *Client) PublishJSONCtx(ctx context.Context, topic string, payload interface{}) {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		log.Error().Err(err).Str("topic", topic).Msg("failed to marshal MQTT payload")
 		return
 	}
-	c.Publish(topic, string(data))
+	c.PublishCtx(ctx, topic, string(data))
 }
 
 // PublishVehicleData publishes vehicle telemetry to multiple MQTT topics.

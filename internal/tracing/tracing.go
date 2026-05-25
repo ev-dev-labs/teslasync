@@ -18,14 +18,40 @@ import (
 )
 
 // defaultHeadSamplingRatio is the head-sampling ratio applied when the
-// caller did not provide a valid OTEL_TRACES_SAMPLER_ARG. The collector
-// applies tail-based sampling on top of this baseline (errors and slow
-// requests are kept regardless).
-const defaultHeadSamplingRatio = 0.01
+// caller did not provide a valid OTEL_TRACES_SAMPLER_ARG. We always
+// head-sample by default (ratio = 1.0) because TeslaSync is a
+// self-hosted single-tenant tool with negligible trace volume.
+// The OTel collector applies tail-based sampling on top of this
+// baseline (see helm/teslasync/files/otel-collector/config.yaml:
+// errors + slow >1s are always kept; OK traces are downsampled to 10%).
+// Operators can override with OTEL_TRACES_SAMPLER_ARG (e.g., 0.1 for
+// high-volume fleets).
+const defaultHeadSamplingRatio = 1.0
+
+// Option configures Init via functional options. Use WithServiceName to
+// override the default service.name resource attribute (per-binary,
+// e.g. "teslasync-notification-worker" so Tempo can separate worker
+// spans from API spans).
+type Option func(*options)
+
+type options struct {
+	serviceName string
+}
+
+// WithServiceName overrides the OTel resource service.name attribute.
+// When unset, Init falls back to cfg.OpenTelemetry.ServiceName.
+// Workers MUST set this so traces emitted by, e.g.,
+// teslasync-notification-worker do not get bucketed under
+// teslasync-api in Tempo. The override is required because all binaries
+// share one config.Config — the OpenTelemetry block in config carries
+// the API's service name and is not safe to mutate.
+func WithServiceName(name string) Option {
+	return func(o *options) { o.serviceName = strings.TrimSpace(name) }
+}
 
 // Init initializes the OpenTelemetry tracer provider with an OTLP gRPC exporter.
 // It returns a shutdown function that must be called on application exit.
-func Init(ctx context.Context, cfg *config.Config) (func(context.Context) error, error) {
+func Init(ctx context.Context, cfg *config.Config, opts ...Option) (func(context.Context) error, error) {
 	if cfg == nil || !cfg.OpenTelemetry.Enabled || strings.TrimSpace(cfg.OTLPEndpoint) == "" {
 		otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(
 			propagation.TraceContext{},
@@ -34,16 +60,24 @@ func Init(ctx context.Context, cfg *config.Config) (func(context.Context) error,
 		return func(context.Context) error { return nil }, nil
 	}
 
+	o := options{serviceName: cfg.OpenTelemetry.ServiceName}
+	for _, opt := range opts {
+		opt(&o)
+	}
+	if o.serviceName == "" {
+		o.serviceName = cfg.OpenTelemetry.ServiceName
+	}
+
 	endpoint, insecureTLS := normalizeEndpoint(cfg.OTLPEndpoint, cfg.OpenTelemetry.Insecure)
-	opts := []otlptracegrpc.Option{
+	exporterOpts := []otlptracegrpc.Option{
 		otlptracegrpc.WithEndpoint(endpoint),
 	}
 	if insecureTLS {
-		opts = append(opts, otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
-		opts = append(opts, otlptracegrpc.WithInsecure())
+		exporterOpts = append(exporterOpts, otlptracegrpc.WithDialOption(grpc.WithTransportCredentials(insecure.NewCredentials())))
+		exporterOpts = append(exporterOpts, otlptracegrpc.WithInsecure())
 	}
 
-	exporter, err := otlptracegrpc.New(ctx, opts...)
+	exporter, err := otlptracegrpc.New(ctx, exporterOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("create otlp exporter: %w", err)
 	}
@@ -53,7 +87,7 @@ func Init(ctx context.Context, cfg *config.Config) (func(context.Context) error,
 		resource.WithProcess(),
 		resource.WithTelemetrySDK(),
 		resource.WithAttributes(
-			attribute.String("service.name", cfg.OpenTelemetry.ServiceName),
+			attribute.String("service.name", o.serviceName),
 			attribute.String("service.version", cfg.ServiceVersion),
 			attribute.String("deployment.environment", cfg.Environment),
 		),

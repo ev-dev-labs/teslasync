@@ -263,7 +263,7 @@ type fakeBroadcaster struct {
 	orderTick int64
 }
 
-func (b *fakeBroadcaster) call(payload map[string]any) {
+func (b *fakeBroadcaster) call(_ context.Context, payload map[string]any) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	b.calls++

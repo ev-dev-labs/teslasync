@@ -104,14 +104,14 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 
 	// Publish SSE events for the test-run
 	if h.eventPublisher != nil {
-		h.eventPublisher.PublishTriggered(a.ID, a.Name, "", "unknown", "test")
+		h.eventPublisher.PublishTriggered(r.Context(), a.ID, a.Name, "", "unknown", "test")
 		if !allMet {
-			h.eventPublisher.PublishSkipped(a.ID, a.Name, "conditions not met (test-run)", "test")
+			h.eventPublisher.PublishSkipped(r.Context(), a.ID, a.Name, "conditions not met (test-run)", "test")
 		} else if validCount == len(actionResults) {
 			durationMs := time.Since(now).Milliseconds()
-			h.eventPublisher.PublishSucceeded(a.ID, a.Name, durationMs, validCount, "test")
+			h.eventPublisher.PublishSucceeded(r.Context(), a.ID, a.Name, durationMs, validCount, "test")
 		} else {
-			h.eventPublisher.PublishFailed(a.ID, a.Name, "some actions invalid (test-run)", -1, "test")
+			h.eventPublisher.PublishFailed(r.Context(), a.ID, a.Name, "some actions invalid (test-run)", -1, "test")
 		}
 	}
 

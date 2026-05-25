@@ -135,6 +135,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -3977,6 +3978,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		exportSvc := exportsvc.New(exportRepo, fsmHistoryRepo, nil)
 		dashboardSvc := dashboardsvc.New(vehicleRepo, chargingRepo, tripRepo)
 
+		// Wire OTel FSM tracers so every Fire() emits a span. The fsm.Tracer
+		// port is implemented by tracing.NewFSMTracer (the OTel adapter); the
+		// svc layer depends only on the port (ADR-006: zero-deps domain).
+		// Each tracer name surfaces as the instrumentation scope in Tempo, so
+		// dashboards can filter `fsm.vehicle` vs `fsm.charging` etc.
+		vehicleSvc.SetTracer(tracing.NewFSMTracer("fsm.vehicle"))
+		chargingSvc.SetTracer(tracing.NewFSMTracer("fsm.charging"))
+		exportSvc.SetTracer(tracing.NewFSMTracer("fsm.export"))
+
 		// Handlers
 		v1VehicleHandler := v1handlers.NewVehicleHandler(vehicleSvc)
 		v1ChargingHandler := v1handlers.NewChargingHandler(chargingSvc)
@@ -4049,14 +4059,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	fs := http.FileServer(http.Dir(staticDir))
 	r.NotFound(spaFallback(staticDir, fs))
 
-	// Subscribe to export status events from the export worker and relay via SSE
+	// Subscribe to export status events from the export worker and relay via SSE.
+	// The publish path injects W3C trace context into the MQTT envelope so the
+	// SSE relay span here chains under the worker's processJob span — Tempo can
+	// then render export-publish→export-process→export.status→sse.broadcast as a
+	// single end-to-end trace across processes.
 	if mqttClient != nil {
 		mqttClient.Underlying().Subscribe("teslasync/events/export.status", 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+			consumeCtx, payload := mqtt.ExtractTraceContext(context.Background(), msg.Payload())
 			var evt map[string]interface{}
-			if err := json.Unmarshal(msg.Payload(), &evt); err != nil {
+			if err := json.Unmarshal(payload, &evt); err != nil {
 				return
 			}
-			eventHub.Broadcast("export_status", evt)
+			eventHub.BroadcastWithContext(consumeCtx, "export_status", evt)
 		})
 	}
 

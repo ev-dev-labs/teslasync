@@ -39,10 +39,19 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
+
+// unitDriftTracerName scopes spans for the periodic unit-drift validator.
+const unitDriftTracerName = "internal/worker/unit_drift"
+
+func unitDriftTracer() oteltrace.Tracer { return otel.Tracer(unitDriftTracerName) }
 
 // vehicleRepoAdapter wraps *database.VehicleRepo so its GetAll method
 // (which returns []*models.Vehicle) satisfies vehicleLister (which
@@ -284,6 +293,15 @@ func (v *UnitDriftValidator) Start(ctx context.Context, opts Options) {
 //
 // Safe to call concurrently with Start (counters are atomic).
 func (v *UnitDriftValidator) Run(ctx context.Context, opts Options) error {
+	ctx, span := unitDriftTracer().Start(ctx, "unit_drift.validate_tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.Bool("unit_drift.dry_run", opts.DryRun),
+			attribute.Int64("unit_drift.only_vehicle", opts.OnlyVehicle),
+		),
+	)
+	defer span.End()
+
 	v.applyDryRun(opts.DryRun)
 
 	lookback := opts.Lookback
@@ -295,11 +313,16 @@ func (v *UnitDriftValidator) Run(ctx context.Context, opts Options) error {
 
 	vehicles, err := v.listVehicles(ctx, opts.OnlyVehicle)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "list vehicles failed")
 		return fmt.Errorf("list vehicles: %w", err)
 	}
+	span.SetAttributes(attribute.Int("unit_drift.vehicle_count", len(vehicles)))
 
 	for _, vid := range vehicles {
 		if ctx.Err() != nil {
+			span.RecordError(ctx.Err())
+			span.SetStatus(codes.Error, "context cancelled")
 			return ctx.Err()
 		}
 		v.checkVehicle(ctx, vid, from, now)

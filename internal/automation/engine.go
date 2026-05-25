@@ -11,6 +11,10 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/automation/safety"
@@ -194,23 +198,45 @@ func (e *Engine) Reload(ctx context.Context) error {
 	return nil
 }
 
+// tracerName scopes spans emitted by the automation engine. Spans are
+// emitted as a child of the trigger's context so the full chain
+// (trigger -> evaluate -> action) is one trace.
+const tracerName = "internal/automation"
+
+func tracer() oteltrace.Tracer { return otel.Tracer(tracerName) }
+
 // ── Evaluate (AutomationEngine interface) ──────────────────────────────
 
 // Evaluate is called by triggers when an automation should fire. It runs
 // the full execution pipeline: load → rate-limit → loop-detect → conditions
 // → actions → history → counters.
 func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapshot json.RawMessage) error {
+	ctx, span := tracer().Start(ctx, "automation.evaluate",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.Int64("automation.id", automationID),
+		),
+	)
+	defer span.End()
+
 	start := time.Now().UTC()
 
 	// Load the automation.
 	a, err := e.automationRepo.GetByID(ctx, automationID)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "load automation failed")
 		return fmt.Errorf("load automation %d: %w", automationID, err)
 	}
 	if a == nil {
-		return fmt.Errorf("automation %d not found", automationID)
+		err := fmt.Errorf("automation %d not found", automationID)
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "automation not found")
+		return err
 	}
+	span.SetAttributes(attribute.String("automation.name", a.Name))
 	if !a.Enabled || a.AutoDisabled() {
+		span.SetAttributes(attribute.String("automation.outcome", "skipped_disabled"))
 		e.logger.Debug().
 			Int64("automation_id", automationID).
 			Bool("enabled", a.Enabled).
@@ -220,8 +246,11 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	}
 	triggerKind, err := validateTypedTriggers(a)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "invalid triggers")
 		return fmt.Errorf("validate typed triggers for automation %d: %w", automationID, err)
 	}
+	span.SetAttributes(attribute.String("automation.trigger_kind", triggerKind))
 
 	// Rate limit check — MaxExecutionsHour removed in typed migration (000142).
 	// Per-automation rate-limiting will be re-derived from step-level config
@@ -232,6 +261,10 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	if e.loopDetector != nil {
 		newCtx, err := e.loopDetector.BeforeExecute(ctx, automationID)
 		if err != nil {
+			span.SetAttributes(
+				attribute.String("automation.outcome", "skipped_loop_detected"),
+				attribute.String("automation.skip_reason", err.Error()),
+			)
 			e.logger.Warn().Err(err).
 				Int64("automation_id", automationID).
 				Str("automation", a.Name).
@@ -245,6 +278,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	// Evaluate conditions.
 	conditionsMet, conditionsSnapshot := e.evaluateConditions(a, start)
 	if !conditionsMet {
+		span.SetAttributes(attribute.String("automation.outcome", "skipped_conditions_unmet"))
 		e.logger.Info().
 			Int64("automation_id", automationID).
 			Str("automation", a.Name).
@@ -266,14 +300,19 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 		Status:             "running",
 	}
 	if err := e.historyRepo.Create(ctx, hist); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "history insert failed")
 		e.logger.Error().Err(err).
 			Int64("automation_id", automationID).
 			Msg("failed to create history record")
 		return fmt.Errorf("create history: %w", err)
 	}
+	span.SetAttributes(attribute.Int64("automation.history_id", hist.ID))
 
 	actions, err := buildTypedActionConfigs(a.Actions)
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "invalid actions")
 		errMsg := fmt.Sprintf("invalid actions: %v", err)
 		e.completeHistory(ctx, hist.ID, "failed", &errMsg, start)
 		_ = e.automationRepo.IncrementExecution(ctx, automationID, false)
@@ -301,6 +340,16 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	}
 	if succeeded == 0 && failed > 0 {
 		status = "failed"
+	}
+	span.SetAttributes(
+		attribute.String("automation.outcome", status),
+		attribute.Int("automation.actions.total", total),
+		attribute.Int("automation.actions.succeeded", succeeded),
+		attribute.Int("automation.actions.failed", failed),
+		attribute.Int("automation.actions.skipped", skipped),
+	)
+	if status == "failed" {
+		span.SetStatus(codes.Error, "all actions failed")
 	}
 
 	e.completeHistory(ctx, hist.ID, status, errStr, start)

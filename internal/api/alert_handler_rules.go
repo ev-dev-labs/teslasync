@@ -635,7 +635,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 
 	// Broadcast via SSE
 	if h.eventHub != nil {
-		h.eventHub.Broadcast("alert", map[string]interface{}{
+		h.eventHub.BroadcastWithContext(r.Context(), "alert", map[string]interface{}{
 			"id":        nlog.ID,
 			"type":      "test",
 			"severity":  severity,
@@ -662,7 +662,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 				ChannelID:              ch.ID,
 				SuppressTransportTitle: suppressTransportTitle,
 			}
-			if pubErr := notification.Publish(h.mqttClient, req); pubErr == nil {
+			if pubErr := notification.PublishCtx(r.Context(), h.mqttClient, req); pubErr == nil {
 				dispatched++
 			}
 		}
@@ -681,7 +681,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 					ChannelID:              ch.ID,
 					SuppressTransportTitle: suppressTransportTitle,
 				}
-				if pubErr := notification.Publish(h.mqttClient, req); pubErr == nil {
+				if pubErr := notification.PublishCtx(r.Context(), h.mqttClient, req); pubErr == nil {
 					dispatched++
 				}
 			}
@@ -706,7 +706,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 			Title:   title,
 			Message: message,
 		}
-		if pubErr := notification.Publish(h.mqttClient, pushReq); pubErr == nil {
+		if pubErr := notification.PublishCtx(r.Context(), h.mqttClient, pushReq); pubErr == nil {
 			dispatched++
 		}
 	}

@@ -8,10 +8,20 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
+
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
 )
+
+// gasPriceTracerName scopes spans for the gas-price polling worker.
+const gasPriceTracerName = "internal/worker/gas_price"
+
+func gasPriceTracer() oteltrace.Tracer { return otel.Tracer(gasPriceTracerName) }
 
 // gallonToKWhFactor converts a gallon price to kWh-equivalent cost.
 // Must match the factor in the EIA adapter.
@@ -104,13 +114,20 @@ func (w *GasPriceWorker) Start(ctx context.Context) {
 
 // Poll fetches the latest gas price via the configured provider and records it.
 func (w *GasPriceWorker) Poll(ctx context.Context) {
+	ctx, span := gasPriceTracer().Start(ctx, "gas_price.refresh_tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+	defer span.End()
+
 	if w.provider == nil {
+		span.SetAttributes(attribute.String("gas_price.outcome", "skipped_no_provider"))
 		log.Warn().Msg("gas price poll skipped: no provider configured")
 		return
 	}
 
 	result, err := w.provider.GetCurrentPrice(ctx, "US")
 	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "provider fetch failed")
 		log.Error().Err(err).Msg("gas price poll: provider fetch failed")
 		return
 	}
@@ -120,12 +137,16 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 
 	// Record in gas_price_history (close current period, insert new)
 	if err := w.recordPrice(ctx, price); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "record price failed")
 		log.Error().Err(err).Float64("price", price).Msg("gas price poll: failed to record price")
 		return
 	}
 
 	// Update settings table with the new price
 	if err := w.updateSettingsPrice(ctx, price); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "update settings failed")
 		log.Error().Err(err).Float64("price", price).Msg("gas price poll: failed to update settings")
 		return
 	}
@@ -139,6 +160,12 @@ func (w *GasPriceWorker) Poll(ctx context.Context) {
 	// Persist poll state
 	w.persistState(ctx)
 
+	span.SetAttributes(
+		attribute.Float64("gas_price.value", price),
+		attribute.String("gas_price.region", result.Region),
+		attribute.String("gas_price.currency", result.Currency),
+		attribute.String("gas_price.outcome", "ok"),
+	)
 	log.Info().
 		Float64("price", price).
 		Str("region", result.Region).
