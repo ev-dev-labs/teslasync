@@ -627,6 +627,70 @@ services:
         reservations:
           memory: 32M
 
+  # Toxiproxy chaos / fault-injection harness (optional — docker compose --profile chaos up)
+  # Phase-49 / p49-chaos. Programmable TCP proxy that injects latency,
+  # drops, and bandwidth limits between TeslaSync and its backing
+  # services. The cmd/chaos-runner binary drives it via the admin API
+  # on :8474. See internal/chaos/scenarios.go for the default suite.
+  #
+  # NOT used in steady-state operation — operators bring this profile
+  # up to exercise the recovery contracts of the FSM, signal pipeline,
+  # and reconciliation loop. The runner removes every injected toxic
+  # on completion; restart toxiproxy to clear any state if a run is
+  # killed mid-execution.
+  #
+  # Ports:
+  #   8474 - Toxiproxy HTTP admin API (host-bound for the runner)
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    container_name: teslasync-toxiproxy
+    restart: unless-stopped
+    profiles:
+      - chaos
+    ports:
+      - "${TOXIPROXY_PORT:-8474}:8474"
+    command: ["-host=0.0.0.0", "-config=/etc/toxiproxy/config.json"]
+    volumes:
+      - ./observability/toxiproxy/config.json:/etc/toxiproxy/config.json:ro
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 16M
+
+  # OCPP 1.6-J CSMS (optional — docker compose --profile ocpp up)
+  # Phase-50 / p50-ocpp. Accepts WebSocket connections from non-Tesla
+  # chargers (Wallbox, OpenEVSE, EVlink) on the `ocpp1.6` subprotocol
+  # and routes messages through internal/ocpp.Dispatcher.
+  #
+  # Foundation PR uses the in-memory session store; a Postgres-backed
+  # store can be wired in a follow-up without touching the protocol
+  # layer.
+  #
+  # Ports:
+  #   9090 - OCPP WebSocket endpoint at /ocpp/<chargePointId> + /healthz
+  ocpp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.ocpp-server
+    container_name: teslasync-ocpp-server
+    restart: unless-stopped
+    profiles:
+      - ocpp
+    ports:
+      - "${OCPP_PORT:-9090}:9090"
+    environment:
+      - OCPP_LISTEN_ADDR=:9090
+      - OCPP_HEARTBEAT_INTERVAL=${OCPP_HEARTBEAT_INTERVAL:-300s}
+      - OCPP_READ_DEADLINE=${OCPP_READ_DEADLINE:-900s}
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+        reservations:
+          memory: 16M
+
 volumes:
   postgres_data:
   grafana_data:
