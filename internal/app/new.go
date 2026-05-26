@@ -13,6 +13,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
+	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
@@ -28,6 +29,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/rotation"
+	"github.com/ev-dev-labs/teslasync/internal/schemacheck"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
@@ -91,6 +94,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initMQTT(ctx)
 	a.initCache()
 	a.initFlagStore(ctx)
+	a.initObservabilityPhase45(ctx)
 	a.initEventBus()
 	a.initEncryptor()
 	a.initTeslaClient()
@@ -228,6 +232,90 @@ func (a *App) initEventBus() {
 		a.EventBus = events.NewBus(nil)
 	}
 }
+
+// initObservabilityPhase45 wires the Phase-45 operator-confidence
+// subsystems: hash-chained audit recorder, schema-fingerprint seed,
+// slow-query / disk-forecast / per-vehicle-cost / GDPR-artifact repos,
+// and secret rotation tracker. All are best-effort — when a backing
+// dependency is missing (DB not up, pg_stat_statements absent,
+// timescaledb absent), the corresponding handler returns 503 instead
+// of crashing on a nil pointer.
+//
+// The schema-fingerprint seed is computed on first call and persisted
+// in schema_fingerprint so subsequent boots compare against the
+// original deploy snapshot rather than the live schema (the diff
+// against live always reads zero).
+//
+// APP_SECRET_PEPPER is required for HMAC-based secret rotation
+// fingerprinting; when missing, the rotation tracker is disabled and
+// the admin handler returns 503 for the rotation route.
+func (a *App) initObservabilityPhase45(ctx context.Context) {
+	if a.DB == nil {
+		log.Warn().Msg("phase-45: database not initialised — observability surface unavailable")
+		return
+	}
+	a.AuditLogQueryRepo = database.NewAuditLogQueryRepo(a.DB)
+	a.SlowQueriesRepo = database.NewSlowQueriesRepo(a.DB)
+	a.HypertableMetricsRepo = database.NewHypertableMetricsRepo(a.DB)
+	a.IngestXRayRepo = database.NewIngestXRayRepo(a.DB.Pool)
+	a.GDPRArtifactRepo = database.NewGDPRArtifactRepo(a.DB)
+
+	// Audit recorder is the unified hash-chained writer. Falls back
+	// to deny-all redactor; callers pass an explicit redactor when
+	// recording fields that may contain PII.
+	a.AuditRecorder = audit.New(a.DB.Pool, audit.DenyAllRedactor{})
+	if err := a.AuditRecorder.Hydrate(ctx); err != nil {
+		log.Warn().Err(err).Msg("phase-45: audit recorder hydrate failed — chain may restart")
+	}
+
+	// Schema fingerprint seed — load from schema_fingerprint or
+	// compute + persist on first boot.
+	if seed, err := loadOrComputeSchemaSeed(ctx, a); err != nil {
+		log.Warn().Err(err).Msg("phase-45: schema seed unavailable — drift report degraded")
+	} else {
+		a.SchemaSeed = seed
+	}
+
+	// Secret rotation tracker — requires APP_SECRET_PEPPER.
+	if pepper := envValue("APP_SECRET_PEPPER"); pepper != "" {
+		a.RotationTracker = rotation.New(a.DB.Pool, pepper)
+	} else {
+		log.Warn().Msg("phase-45: APP_SECRET_PEPPER not set — secret rotation tracker disabled")
+	}
+
+	log.Info().
+		Bool("audit_recorder", a.AuditRecorder != nil).
+		Bool("rotation_tracker", a.RotationTracker != nil).
+		Bool("schema_seed", a.SchemaSeed.SHA256 != "").
+		Msg("phase-45 operator confidence initialised")
+}
+
+// loadOrComputeSchemaSeed reads the most-recent schema_fingerprint
+// row; if absent, computes one and inserts it.
+func loadOrComputeSchemaSeed(ctx context.Context, a *App) (schemacheck.Fingerprint, error) {
+	var seed schemacheck.Fingerprint
+	err := a.DB.Pool.QueryRow(ctx,
+		`SELECT sha256_hash, column_count, index_count, table_count
+		   FROM schema_fingerprint ORDER BY generated_at DESC LIMIT 1`).
+		Scan(&seed.SHA256, &seed.ColumnCount, &seed.IndexCount, &seed.TableCount)
+	if err == nil && seed.SHA256 != "" {
+		return seed, nil
+	}
+	// No seed row — compute + persist.
+	seed, err = schemacheck.Compute(ctx, a.DB.Pool, []string{"schema_migrations"})
+	if err != nil {
+		return schemacheck.Fingerprint{}, err
+	}
+	_, _ = a.DB.Pool.Exec(ctx,
+		`INSERT INTO schema_fingerprint (sha256_hash, column_count, index_count, table_count, git_sha, generated_at)
+		 VALUES ($1, $2, $3, $4, $5, now())`,
+		seed.SHA256, seed.ColumnCount, seed.IndexCount, seed.TableCount, envValue("GIT_SHA"))
+	return seed, nil
+}
+
+// envValue is a tiny wrapper so callers don't need an os import here
+// — keeps the new.go import list minimal.
+func envValue(key string) string { return os.Getenv(key) }
 
 func (a *App) initEncryptor() {
 	a.Encryptor = crypto.NewFromEnv()

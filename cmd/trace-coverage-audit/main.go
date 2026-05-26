@@ -255,7 +255,7 @@ var flows = []flow{
 	},
 }
 
-var spanRE = regexp.MustCompile(`tracer\.Start\(|otel\.Tracer\(|otelhttp\.NewHandler\(|otelpgx\.NewTracer\(|StartSpan\(|startSpan\(|startProcessSpan\(|startChildSpan\(|startWriterSpan\(|otelhttp\.NewTransport\(|tracing\.StartSpan\(|GetTextMapPropagator\(`)
+var spanRE = regexp.MustCompile(`tracer\.Start\(|otel\.Tracer\(|otelhttp\.NewHandler\(|otelpgx\.NewTracer\(|newCompositeTracer\(|StartSpan\(|startSpan\(|startProcessSpan\(|startChildSpan\(|startWriterSpan\(|otelhttp\.NewTransport\(|tracing\.StartSpan\(|GetTextMapPropagator\(`)
 
 func main() {
 	var reportPath string

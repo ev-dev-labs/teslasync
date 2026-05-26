@@ -44,6 +44,16 @@ func (a *App) Run(ctx context.Context) error {
 		DLQReplayAuditRepo:     a.DLQReplayAuditRepo,
 		FlagStore:              a.FlagStore,
 		FeatureFlagChangesRepo: a.FeatureFlagChangesRepo,
+
+		// Phase-45 — Operator confidence.
+		AuditRecorder:         a.AuditRecorder,
+		AuditLogQueryRepo:     a.AuditLogQueryRepo,
+		SlowQueriesRepo:       a.SlowQueriesRepo,
+		HypertableMetricsRepo: a.HypertableMetricsRepo,
+		IngestXRayRepo:        a.IngestXRayRepo,
+		GDPRArtifactRepo:      a.GDPRArtifactRepo,
+		RotationTracker:       a.RotationTracker,
+		SchemaSeed:            a.SchemaSeed,
 	})
 	a.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", a.Cfg.Port),

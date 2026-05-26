@@ -130,10 +130,14 @@ import (
 
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
+	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
+	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
@@ -3631,6 +3635,48 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					r.With(httprate.LimitByIP(30, 1*time.Minute)).Delete("/", incidentsHandler.Delete)
 				})
 			})
+		})
+
+		// Phase-45 — Operator confidence admin surface. Five
+		// read-only observability routes + audit viewer + GDPR
+		// export download. Each backing repo can be nil; the
+		// handler returns 503 SUBSYSTEM_NOT_CONFIGURED instead of
+		// crashing. Sudo gating is intentionally NOT applied yet —
+		// the routes are read-only (or stream-only for GDPR
+		// download which is governed by the artifact's expires_at
+		// TTL); a future tightening will move them behind the
+		// sudoStore middleware once the page-builder UI is shipped.
+		adminobsSvc := adminobssvc.New(adminobssvc.Options{
+			Rotation:      opt.RotationTracker,
+			SchemaPool:    db.Pool,
+			SchemaSeed:    opt.SchemaSeed,
+			SlowQueries:   opt.SlowQueriesRepo,
+			Hypertable:    opt.HypertableMetricsRepo,
+			IngestXRay:    opt.IngestXRayRepo,
+			AuditRecorder: opt.AuditRecorder,
+			ExcludeTables: []string{"schema_migrations"},
+		})
+		auditViewerSvc := auditviewersvc.New(opt.AuditLogQueryRepo, opt.AuditRecorder)
+		v1AdminObs := v1handlers.NewAdminObservabilityHandler(adminobsSvc)
+		v1AdminAudit := v1handlers.NewAdminAuditHandler(auditViewerSvc)
+		v1GDPRExport := v1handlers.NewGDPRExportHandler(gdprexportsvc.New(opt.GDPRArtifactRepo))
+		r.Group(func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(handlermw.QueryBudget(handlermw.QueryBudgets{
+				"GET /admin/observability/schema-drift":   5,
+				"GET /admin/observability/slow-queries":   3,
+				"GET /admin/observability/vehicle-cost":   3,
+				"GET /admin/observability/disk-forecast":  5,
+				"GET /admin/observability/secret-rotation": 2,
+				"GET /admin/audit-log":                    3,
+				"GET /admin/audit-log/categories":         2,
+				"GET /admin/audit-log/actions":            2,
+				"GET /admin/audit-log/verify":             2,
+				"GET /admin/gdpr/exports/{id}":            2,
+			}))
+			v1AdminObs.Register(r)
+			v1AdminAudit.Register(r)
+			v1GDPRExport.Register(r)
 		})
 
 		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).

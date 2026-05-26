@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
@@ -20,6 +21,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/rotation"
+	"github.com/ev-dev-labs/teslasync/internal/schemacheck"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
@@ -90,6 +93,18 @@ type App struct {
 	// feature-flag store (Redis-backed) + change audit repo.
 	FlagStore              *flags.Store
 	FeatureFlagChangesRepo *database.FeatureFlagChangesRepo
+
+	// Phase-45 — Operator confidence. Constructed in
+	// initObservabilityPhase45 once DB is up; passed through
+	// RouterOptions to the handler/v1 admin observability surface.
+	AuditRecorder         *audit.Recorder
+	AuditLogQueryRepo     *database.AuditLogQueryRepo
+	SlowQueriesRepo       *database.SlowQueriesRepo
+	HypertableMetricsRepo *database.HypertableMetricsRepo
+	IngestXRayRepo        *database.IngestXRayRepo
+	GDPRArtifactRepo      *database.GDPRArtifactRepo
+	RotationTracker       *rotation.Tracker
+	SchemaSeed            schemacheck.Fingerprint
 
 	// Workers
 	Worker         *worker.Worker

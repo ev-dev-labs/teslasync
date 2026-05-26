@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 
+	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -10,6 +11,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
+	"github.com/ev-dev-labs/teslasync/internal/rotation"
+	"github.com/ev-dev-labs/teslasync/internal/schemacheck"
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
@@ -34,8 +37,21 @@ type RouterOptions struct {
 
 	// Phase-44 / observability-batch / Prompt F8. FlagStore +
 	// changes-audit repo enable /system/flags{,/{key},/changes} when set.
-	FlagStore             *flags.Store
+	FlagStore              *flags.Store
 	FeatureFlagChangesRepo *database.FeatureFlagChangesRepo
+
+	// Phase-45 — Operator confidence subsystems. Each pointer is
+	// optional; when nil the corresponding admin handler returns 503
+	// with the SUBSYSTEM_NOT_CONFIGURED code so the SPA can render
+	// a clean "not available on this deployment" panel.
+	AuditRecorder         *audit.Recorder
+	AuditLogQueryRepo     *database.AuditLogQueryRepo
+	SlowQueriesRepo       *database.SlowQueriesRepo
+	HypertableMetricsRepo *database.HypertableMetricsRepo
+	IngestXRayRepo        *database.IngestXRayRepo
+	GDPRArtifactRepo      *database.GDPRArtifactRepo
+	RotationTracker       *rotation.Tracker
+	SchemaSeed            schemacheck.Fingerprint
 }
 
 // settingsCheckerAdapter wraps *database.SettingsRepo to satisfy action.SettingsChecker.
