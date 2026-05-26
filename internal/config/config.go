@@ -44,6 +44,7 @@ type Config struct {
 	SLO                  SLOConfig
 	DataQuality          DataQualityConfig
 	Synthetic            SyntheticConfig
+	HomeAssistant        HomeAssistantConfig
 	GoogleMaps           GoogleMapsConfig
 	AzureMaps            AzureMapsConfig
 	APILogs              APILogsConfig
@@ -244,6 +245,23 @@ type SyntheticConfig struct {
 	// probes so /admin/observability/synthetic returns an empty
 	// snapshot.
 	ProbeURLs string
+}
+
+// HomeAssistantConfig — Phase-47 / p47-homeassist. MQTT discovery
+// publisher that emits a Home Assistant entity catalog for every
+// vehicle on a periodic tick. Opt-in via HOMEASSISTANT_ENABLED=true
+// to avoid surprising operators who don't run HA.
+type HomeAssistantConfig struct {
+	// Enabled gates the publisher. Default false.
+	Enabled bool
+	// DiscoveryPrefix matches HA's "discovery prefix" setting.
+	// Default "homeassistant".
+	DiscoveryPrefix string
+	// PublishInterval controls how often the publisher reasserts
+	// the full catalog. Default 1h — HA's discovery listener
+	// caches retained config topics, so the interval primarily
+	// guards against schema drift / display-name changes.
+	PublishInterval time.Duration
 }
 
 // GasPriceConfig controls automated gas price polling from the EIA API.
@@ -522,6 +540,12 @@ func Load() (*Config, error) {
 			IntervalSeconds: envInt("SYNTHETIC_INTERVAL_SECONDS", 60),
 			TimeoutSeconds:  envInt("SYNTHETIC_TIMEOUT_SECONDS", 30),
 			ProbeURLs:       envStr("SYNTHETIC_PROBE_URLS", ""),
+		},
+
+		HomeAssistant: HomeAssistantConfig{
+			Enabled:         envBool("HOMEASSISTANT_ENABLED", false),
+			DiscoveryPrefix: envStr("HOMEASSISTANT_DISCOVERY_PREFIX", "homeassistant"),
+			PublishInterval: envDuration("HOMEASSISTANT_PUBLISH_INTERVAL", time.Hour),
 		},
 
 		GoogleMaps: GoogleMapsConfig{

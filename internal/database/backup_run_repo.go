@@ -2,7 +2,10 @@ package database
 
 import (
 	"context"
+	"errors"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -108,6 +111,28 @@ func (r *BackupRunRepo) ListByConfig(ctx context.Context, configID int64, limit 
 		runs = append(runs, run)
 	}
 	return runs, rows.Err()
+}
+
+// LatestSuccessful returns the most recent successful backup run.
+// Returns (nil, nil) when no successful backup exists yet — callers
+// MUST treat this as a verification failure rather than a transient
+// error. Phase-49 / p49-backup-verify.
+func (r *BackupRunRepo) LatestSuccessful(ctx context.Context) (*models.BackupRun, error) {
+	query := `SELECT id, config_id, run_type, backup_type, status, provider, file_name, file_path, file_size, record_count, table_count, checksum, duration_ms, error_message, metadata, started_at, completed_at, created_at
+		FROM backup_runs WHERE status = 'success' AND file_path IS NOT NULL ORDER BY created_at DESC LIMIT 1`
+	run := &models.BackupRun{}
+	if err := r.db.Pool.QueryRow(ctx, query).Scan(
+		&run.ID, &run.ConfigID, &run.RunType, &run.BackupType, &run.Status, &run.Provider,
+		&run.FileName, &run.FilePath, &run.FileSize, &run.RecordCount, &run.TableCount,
+		&run.Checksum, &run.DurationMs, &run.ErrorMessage, &run.Metadata,
+		&run.StartedAt, &run.CompletedAt, &run.CreatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return run, nil
 }
 
 func (r *BackupRunRepo) CleanupOld(ctx context.Context, configID int64, keepN int) (int64, error) {

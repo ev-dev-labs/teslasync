@@ -22,6 +22,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	hadiscovery "github.com/ev-dev-labs/teslasync/internal/integrations/homeassistant"
 	"github.com/ev-dev-labs/teslasync/internal/jobs"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -99,6 +100,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initFlagStore(ctx)
 	a.initObservabilityPhase45(ctx)
 	a.initObservabilityPhase46(ctx)
+	a.initHomeAssistantPublisher(ctx)
 	a.initEventBus()
 	a.initEncryptor()
 	a.initTeslaClient()
@@ -398,6 +400,92 @@ func buildSyntheticProbes(raw string) []synthetic.Probe {
 		probes = append(probes, synthetic.NewHTTPProbe(fmt.Sprintf("http_%d", i), url))
 	}
 	return probes
+}
+
+// initHomeAssistantPublisher wires the Phase-47 HomeAssistant MQTT
+// discovery publisher when HOMEASSISTANT_ENABLED=true and the MQTT
+// client is available. The publisher reasserts the full per-vehicle
+// entity catalog on PublishInterval (default 1h); HA's discovery
+// listener caches retained config topics so the interval primarily
+// guards against display-name / model / sw_version drift.
+//
+// Failure modes are non-fatal: missing MQTT client logs + skips; the
+// per-tick publish error is logged but doesn't kill the ticker.
+func (a *App) initHomeAssistantPublisher(ctx context.Context) {
+	if !a.Cfg.HomeAssistant.Enabled {
+		return
+	}
+	if a.MQTT == nil {
+		log.Warn().Msg("phase-47: homeassistant publisher requires MQTT — disabled")
+		return
+	}
+	if a.DB == nil {
+		log.Warn().Msg("phase-47: homeassistant publisher requires DB — disabled")
+		return
+	}
+	publisher := hadiscovery.NewPublisher(
+		a.MQTT.Underlying(),
+		a.Cfg.HomeAssistant.DiscoveryPrefix,
+		a.MQTT.Prefix(),
+	)
+	vehicleRepo := database.NewVehicleRepo(a.DB)
+	interval := a.Cfg.HomeAssistant.PublishInterval
+	if interval <= 0 {
+		interval = time.Hour
+	}
+	publishOnce := func() {
+		vehicles, err := vehicleRepo.GetAll(ctx)
+		if err != nil {
+			log.Warn().Err(err).Msg("phase-47: homeassistant publisher could not list vehicles")
+			return
+		}
+		entities := hadiscovery.DefaultEntities()
+		for _, v := range vehicles {
+			if v == nil || v.VIN == "" {
+				continue
+			}
+			model := ""
+			if v.Model != nil {
+				model = *v.Model
+			}
+			ha := hadiscovery.Vehicle{
+				VIN:         v.VIN,
+				DisplayName: v.DisplayName,
+				Model:       model,
+			}
+			if err := publisher.PublishVehicle(ctx, ha, entities); err != nil {
+				log.Warn().Err(err).Str("vin_prefix", redactVINPrefix(v.VIN)).
+					Msg("phase-47: homeassistant publish failed")
+			}
+		}
+	}
+	go func() {
+		// First publish right after boot so HA sees entities immediately.
+		publishOnce()
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				publishOnce()
+			}
+		}
+	}()
+	log.Info().
+		Str("discovery_prefix", a.Cfg.HomeAssistant.DiscoveryPrefix).
+		Dur("interval", interval).
+		Msg("phase-47 homeassistant discovery publisher started")
+}
+
+// redactVINPrefix preserves the manufacturer WMI (first 3 chars) but
+// strips the rest so VIN doesn't leak into log files.
+func redactVINPrefix(vin string) string {
+	if len(vin) < 3 {
+		return "***"
+	}
+	return vin[:3] + "***"
 }
 
 // loadOrComputeSchemaSeed reads the most-recent schema_fingerprint
