@@ -9,10 +9,15 @@ import {
   setAchievementCelebrationPrefs,
 } from '@/hooks/useAchievementCelebrationPrefs'
 import { cn } from '@/lib/cn'
-import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw } from 'lucide-react'
+import { Palette, CheckCircle, Rows3, PanelBottom, Trophy, Clock, Eye, PlayCircle, RotateCcw, Sidebar } from 'lucide-react'
 import { CHART_COLORS_CB_SAFE, CHART_COLORS_NEON } from '@/lib/colors'
 import { startTour } from '@/lib/tourLauncher'
 import { resetAllTours } from '@/lib/tourRegistry'
+import {
+  useSidebarStyle,
+  setSidebarStyle,
+  type SidebarStyle,
+} from '@/hooks/useSidebarStyle'
 
 type DensityId = 'compact' | 'comfortable' | 'spacious'
 type TimeFormatId = 'relative' | 'absolute'
@@ -104,6 +109,37 @@ export function AppearanceSettings() {
     { id: 'compact', label: t('theme.density.compact', 'Compact'), help: t('theme.density.compactHelp', 'Tight rows — fits more on screen') },
     { id: 'comfortable', label: t('theme.density.comfortable', 'Comfortable'), help: t('theme.density.comfortableHelp', 'Default sizing') },
     { id: 'spacious', label: t('theme.density.spacious', 'Spacious'), help: t('theme.density.spaciousHelp', 'Roomy — easier to read at distance') },
+  ]
+
+  // Sidebar style — localStorage-backed, instant + cross-tab sync. See
+  // hooks/useSidebarStyle.ts for the rationale on why this lives on the
+  // client (vs the server settings blob).
+  const sidebarStyle = useSidebarStyle()
+  const sidebarStyleChoices: { id: SidebarStyle; label: string; help: string }[] = [
+    {
+      id: 'linear',
+      label: t('theme.sidebarStyle.linear', 'Minimal'),
+      help: t(
+        'theme.sidebarStyle.linearHelp',
+        'Single column with section headers and a 2px accent bar on the active row. Recommended.',
+      ),
+    },
+    {
+      id: 'notion',
+      label: t('theme.sidebarStyle.notion', 'Compact'),
+      help: t(
+        'theme.sidebarStyle.notionHelp',
+        'Tighter rows with collapsible sections. Best for fitting many pages on screen.',
+      ),
+    },
+    {
+      id: 'legacy',
+      label: t('theme.sidebarStyle.legacy', 'Classic'),
+      help: t(
+        'theme.sidebarStyle.legacyHelp',
+        'Colorful icon tiles with a pill on the active item. The most visual option.',
+      ),
+    },
   ]
 
   return (
@@ -216,6 +252,56 @@ export function AppearanceSettings() {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Sidebar style — localStorage-backed user preference. */}
+        <div data-tour="settings-sidebar-style" data-testid="settings-sidebar-style">
+          <div className="flex items-center gap-2 mb-3">
+            <Sidebar className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <p className="text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]">
+              {t('theme.sidebarStyle.label', 'Sidebar style')}
+            </p>
+          </div>
+          <div
+            role="radiogroup"
+            aria-label={t('theme.sidebarStyle.label', 'Sidebar style')}
+            className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+          >
+            {sidebarStyleChoices.map(choice => {
+              const active = sidebarStyle === choice.id
+              return (
+                <Button
+                  key={choice.id}
+                  variant="ghost"
+                  role="radio"
+                  aria-checked={active}
+                  data-testid={`sidebar-style-${choice.id}`}
+                  onClick={() => setSidebarStyle(choice.id)}
+                  className={cn(
+                    'flex items-start gap-3 rounded-xl border p-3.5 h-auto transition-all duration-normal justify-start text-left',
+                    active
+                      ? 'border-[var(--theme-primary)] bg-[var(--surface-3)]'
+                      : 'border-[var(--glass-border)] bg-[var(--surface-2)] hover:border-[var(--theme-primary)]/30',
+                  )}
+                >
+                  <SidebarStyleSwatch style={choice.id} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-[var(--text-primary)]">{choice.label}</p>
+                    <p className="text-[11px] text-[var(--text-muted)]">{choice.help}</p>
+                  </div>
+                  {active && (
+                    <CheckCircle className="h-4 w-4 ml-auto shrink-0 text-[var(--theme-primary)]" />
+                  )}
+                </Button>
+              )
+            })}
+          </div>
+          <p className="mt-2 text-xs text-[var(--text-muted)]">
+            {t(
+              'theme.sidebarStyle.help',
+              'Applies instantly. Saved per device — your other devices keep their own choice.',
+            )}
+          </p>
         </div>
 
         {/* Time format default (Phase-45 / Prompt 22) */}
@@ -500,5 +586,70 @@ export function AppearanceSettings() {
         </div>
       </GlassPanel>
     </FadeIn>
+  )
+}
+
+/**
+ * SidebarStyleSwatch — miniature visual preview rendered next to each
+ * sidebar-style choice button. Pure CSS bars (no real navigation) so it
+ * stays fast and never out-of-sync with the live sidebar code (it just
+ * communicates the silhouette: accent bar vs caret-on-row vs icon-tile).
+ */
+function SidebarStyleSwatch({ style }: { style: SidebarStyle }) {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex h-12 w-9 shrink-0 flex-col gap-1 rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] p-1.5"
+    >
+      {style === 'linear' && (
+        <>
+          {/* Three rows. The middle one is "active" — 2px left accent bar. */}
+          <div className="h-1 w-full rounded bg-[var(--text-muted)]/30" />
+          <div className="relative flex h-1 items-center">
+            <span className="absolute left-[-6px] h-2 w-[2px] rounded-full bg-[var(--theme-primary)]" />
+            <span className="ms-0.5 h-1 w-full rounded bg-[var(--text-primary)]/80" />
+          </div>
+          <div className="h-1 w-3/4 rounded bg-[var(--text-muted)]/30" />
+        </>
+      )}
+      {style === 'notion' && (
+        <>
+          {/* Four denser rows. Active row uses subtle bg-tint, no accent. */}
+          <div className="flex h-1 items-center gap-0.5">
+            <span className="h-1 w-1 rounded-full bg-[var(--text-muted)]/60" />
+            <span className="h-1 flex-1 rounded bg-[var(--text-muted)]/30" />
+          </div>
+          <div className="flex h-1 items-center gap-0.5 rounded bg-white/[0.08] px-0.5">
+            <span className="h-1 w-1 rounded-full bg-[var(--text-primary)]" />
+            <span className="h-1 flex-1 rounded bg-[var(--text-primary)]/80" />
+          </div>
+          <div className="flex h-1 items-center gap-0.5">
+            <span className="h-1 w-1 rounded-full bg-[var(--text-muted)]/60" />
+            <span className="h-1 flex-1 rounded bg-[var(--text-muted)]/30" />
+          </div>
+          <div className="flex h-1 items-center gap-0.5">
+            <span className="h-1 w-1 rounded-full bg-[var(--text-muted)]/60" />
+            <span className="h-1 flex-1 rounded bg-[var(--text-muted)]/30" />
+          </div>
+        </>
+      )}
+      {style === 'legacy' && (
+        <>
+          {/* Two rows with colored icon tiles — the "loudest" silhouette. */}
+          <div className="flex h-2 items-center gap-1">
+            <span className="h-2 w-2 rounded bg-cyan-400/70 ring-1 ring-cyan-400/30" />
+            <span className="h-1 flex-1 rounded bg-[var(--text-primary)]/80" />
+          </div>
+          <div className="flex h-2 items-center gap-1">
+            <span className="h-2 w-2 rounded bg-violet-400/70 ring-1 ring-violet-400/30" />
+            <span className="h-1 flex-1 rounded bg-[var(--text-muted)]/40" />
+          </div>
+          <div className="flex h-2 items-center gap-1">
+            <span className="h-2 w-2 rounded bg-emerald-400/70 ring-1 ring-emerald-400/30" />
+            <span className="h-1 flex-1 rounded bg-[var(--text-muted)]/40" />
+          </div>
+        </>
+      )}
+    </div>
   )
 }

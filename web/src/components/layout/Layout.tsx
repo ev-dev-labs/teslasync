@@ -41,6 +41,9 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { RouteTransition } from '@/components/motion'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
+import { LinearSidebar } from './sidebar/LinearSidebar'
+import { NotionSidebar } from './sidebar/NotionSidebar'
+import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
@@ -163,6 +166,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/account/2fa': ['2fa', 'two factor', 'two-factor', 'mfa', 'totp', 'authenticator', 'security', 'account', 'verify', 'enroll'],
   '/account/sessions': ['sessions', 'devices', 'sign out', 'logout', 'revoke', 'active sessions', 'security', 'account'],
   '/account/privacy': ['privacy', 'recent pages', 'recently viewed', 'cookies', 'consent', 'gdpr', 'analytics', 'tracking', 'account'],
+  '/integrations/helix': ['helix', 'ai', 'assistant', 'llm', 'gpt', 'openai', 'anthropic', 'integration', 'provider', 'cost cap', 'api key'],
   '/live-monitor': ['live signals', 'monitor', 'telemetry'],
   '/signal-log': ['signals', 'signal log', 'telemetry log'],
   '/signal-explorer': ['explore signals', 'signal explorer'],
@@ -211,11 +215,34 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
 // dot, page-level badges, and stale-data banner all derive from a single
 // `useLiveConnection` source of truth.
 
+/**
+ * Feature switch for the sidebar "Recently Used" surface — disabled per
+ * UX review on 2026-05-26 (duplicated items across Pinned + Recently
+ * Used + canonical section added noise). Code is kept in place so we
+ * can re-enable it by flipping this flag back to `true` without a diff.
+ * Recent-page tracking itself still runs (it's wired into the command
+ * palette + the dashboard widget) — only the sidebar render is muted.
+ */
+const SHOW_RECENTLY_USED_NAV = false;
+
+/**
+ * Sidebar style is now a user preference (Settings → Appearance →
+ * Sidebar style). Backed by localStorage via `useSidebarStyle`, with
+ * cross-tab sync via the `storage` event. Default is 'linear'.
+ *
+ * The legacy `<nav>` block below is preserved verbatim so users can
+ * choose 'legacy' at any time and get a byte-identical sidebar.
+ */
+// Trial flag retained for cmd+line debugging — uncomment to force a
+// specific style regardless of the user's saved preference.
+// const FORCE_SIDEBAR_STYLE: SidebarStyle | null = null;
+
 export const navSections = [
   {
     title: 'Home',
     items: [
       { to: '/', icon: Icons.layoutDashboard, label: 'Dashboard', color: 'text-blue-400' },
+      { to: '/explore', icon: Icons.sparkles, label: 'Explore Features', color: 'text-amber-400' },
       { to: '/live', icon: Icons.radar, label: 'Live Map', color: 'text-emerald-400' },
       { to: '/timeline', icon: Icons.clock, label: 'Timeline', color: 'text-sky-400' },
       { to: '/weekly-digest', icon: Icons.calendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
@@ -358,13 +385,14 @@ export const navSections = [
     title: 'Settings',
     items: [
       { to: '/settings', icon: Icons.settings, label: 'General Settings', color: 'text-[var(--text-muted)]' },
-      { to: '/chatbot', icon: HelixMark, label: 'Helix', color: 'text-purple-400' },
+      { to: '/chatbot', icon: HelixMark, label: 'Helix Chat', color: 'text-purple-400' },
       { to: '/dev-tools', icon: Icons.hammer, label: 'Developer Tools', color: 'text-cyan-400' },
     ],
   },
   {
     title: 'Integrations',
     items: [
+      { to: '/integrations/helix', icon: HelixMark, label: 'Helix', color: 'text-purple-400' },
       { to: '/api-keys', icon: Icons.key, label: 'API Keys', color: 'text-amber-400' },
       { to: '/gas-price', icon: Icons.fuel, label: 'Gas Prices', color: 'text-orange-400' },
     ],
@@ -599,6 +627,9 @@ function ThemeQuickSwitcher({
 }
 
 export default function Layout() {
+  // Sidebar style preference — localStorage-backed, cross-tab synced.
+  // Defaults to 'linear'; user can change via Settings → Appearance.
+  const sidebarStyle = useSidebarStyle()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(() => {
     try {
@@ -1113,6 +1144,35 @@ export default function Layout() {
         <VehiclePicker />
 
         {/* Navigation */}
+        {sidebarStyle === 'linear' ? (
+          <LinearSidebar
+            sections={visibleNavSections}
+            pinnedItems={pinnedNavItems}
+            pathname={location.pathname}
+            navLabel={navLabel}
+            onPin={pinNavPath}
+            onUnpin={unpinNavPath}
+            onItemSelect={() => setSidebarOpen(false)}
+            activeSectionTitle={activeSectionTitle}
+            alertCount={unreadAlerts}
+            vehicleCount={vehicleCount}
+            staleCount={staleCount}
+          />
+        ) : sidebarStyle === 'notion' ? (
+          <NotionSidebar
+            sections={visibleNavSections}
+            pinnedItems={pinnedNavItems}
+            pathname={location.pathname}
+            navLabel={navLabel}
+            onPin={pinNavPath}
+            onUnpin={unpinNavPath}
+            onItemSelect={() => setSidebarOpen(false)}
+            activeSectionTitle={activeSectionTitle}
+            alertCount={unreadAlerts}
+            vehicleCount={vehicleCount}
+            staleCount={staleCount}
+          />
+        ) : (
         <nav
           className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 lg:py-4 px-3 space-y-3 scrollbar-thin"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
@@ -1182,7 +1242,7 @@ export default function Layout() {
             </div>
           )}
 
-          {recentNavItems.length > 0 && (
+          {SHOW_RECENTLY_USED_NAV && recentNavItems.length > 0 && (
             <div>
               <NavSectionHeader
                 id="nav-recent-label"
@@ -1322,6 +1382,7 @@ export default function Layout() {
             })}
           </div>
         </nav>
+        )}
 
         {/* Sidebar footer note:
             "Press ? for shortcuts · Take a tour · Report bug" was moved to

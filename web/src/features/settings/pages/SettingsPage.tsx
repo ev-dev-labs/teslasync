@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '@/api/hooks/useSettings'
 import { PageContainer } from '@/components/layout'
@@ -17,7 +17,6 @@ import {
   GeneralSettings,
   AppearanceSettings,
   AdvancedSettings,
-  AISettings,
   SettingsSearch,
 } from '../components'
 // Phase-46 / Prompt 36 — Settings export/import has moved to the
@@ -41,6 +40,12 @@ import { ResetSection } from '../components/ResetSection'
 // link card were removed: every target is reachable from the
 // Integrations side-nav group, so the in-page placeholders were just
 // duplicate redirects.
+//
+// Helix (AI integration) moved to its own page at /integrations/helix
+// for the same reason — it is a service connection with credentials +
+// cost ceiling, not a "preference". A small breadcrumb card below
+// keeps it discoverable from /settings, and the legacy /settings#ai
+// deep link redirects automatically.
 
 export default function SettingsPage() {
   const { t } = useTranslation('settings')
@@ -48,6 +53,7 @@ export default function SettingsPage() {
   const { isLoading } = useSettings()
   const toast = useToast()
   const location = useLocation()
+  const navigate = useNavigate()
 
   // Phase-46 / Prompt 66 — claim an edit lease for the entire settings
   // page so a second tab editing the same settings sees a banner before
@@ -57,6 +63,16 @@ export default function SettingsPage() {
   // when multi-tenant settings land.
   const settingsLeaseKey = 'settings/general'
   useEditLease(settingsLeaseKey)
+
+  // Legacy /settings#ai → /integrations/helix redirect. Fires before
+  // the hash-anchor scroll effect below so #ai never resolves to a
+  // missing section. Replaces history so the back button still works
+  // intuitively (skips the stale /settings entry).
+  useEffect(() => {
+    if (location.hash === '#ai') {
+      navigate('/integrations/helix', { replace: true })
+    }
+  }, [location.hash, navigate])
 
   // Hash-anchor scroll: when /settings#appearance (or any other anchor)
   // loads, scroll the corresponding <section id="..."> into view. Triggered
@@ -100,12 +116,11 @@ export default function SettingsPage() {
       <section id="appearance">
         <AppearanceSettings />
       </section>
-      {/* Phase-50 / 0003 — F2 Settings UI for AI. AI is opt-in
-          AFTER onboarding; the panel itself always renders so users
-          can discover and enable it (ADR-015 §I7). */}
-      <section id="ai">
-        <AISettings />
-      </section>
+      {/* Helix (AI) was promoted out of /settings to /integrations/helix
+          because it's a service connection (provider, key, cost cap),
+          not a preference. The legacy `/settings#ai` hash is still
+          redirected by the effect above, and the settings search box
+          retains a cross-page entry pointing to the new home. */}
       <section id="advanced">
         <AdvancedSettings />
       </section>
