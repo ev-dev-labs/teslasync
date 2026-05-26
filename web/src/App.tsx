@@ -147,6 +147,15 @@ const DLQInspector = lazy(() => import('./features/admin/pages/DLQInspectorPage'
 const FeatureFlagsAdmin = lazy(() => import('./features/admin/pages/FeatureFlagsPage'))
 const IngestXRay = lazy(() => import('./features/admin/pages/IngestXRayPage'))
 const LiveSignalInspector = lazy(() => import('./features/admin/pages/LiveSignalInspectorPage'))
+// Phase-45 Operator Confidence admin surfaces — backed by
+// /api/v1/admin/observability/*, /admin/audit-log, /admin/gdpr/exports.
+const SchemaDrift = lazy(() => import('./features/admin/pages/SchemaDriftPage'))
+const SlowQueriesAdmin = lazy(() => import('./features/admin/pages/SlowQueriesPage'))
+const VehicleCostAdmin = lazy(() => import('./features/admin/pages/VehicleCostPage'))
+const DiskForecast = lazy(() => import('./features/admin/pages/DiskForecastPage'))
+const SecretRotation = lazy(() => import('./features/admin/pages/SecretRotationPage'))
+const AuditLogAdmin = lazy(() => import('./features/admin/pages/AuditLogPage'))
+const GDPRExportAdmin = lazy(() => import('./features/admin/pages/GDPRExportPage'))
 
 // Power user
 const PowerSqlPlayground = lazy(() => import('./features/power-user/pages/SqlPlaygroundPage'))
@@ -420,6 +429,14 @@ export default function App() {
         <Route path="admin/flags" element={<SafeRoute name="FeatureFlagsAdmin"><FeatureFlagsAdmin /></SafeRoute>} />
         <Route path="admin/ingest-xray" element={<SafeRoute name="IngestXRay"><IngestXRay /></SafeRoute>} />
         <Route path="admin/live-signals" element={<SafeRoute name="LiveSignalInspector"><LiveSignalInspector /></SafeRoute>} />
+        {/* Phase-45 Operator Confidence admin surfaces */}
+        <Route path="admin/schema-drift" element={<SafeRoute name="SchemaDrift"><SchemaDrift /></SafeRoute>} />
+        <Route path="admin/slow-queries" element={<SafeRoute name="SlowQueries"><SlowQueriesAdmin /></SafeRoute>} />
+        <Route path="admin/vehicle-cost" element={<SafeRoute name="VehicleCost"><VehicleCostAdmin /></SafeRoute>} />
+        <Route path="admin/disk-forecast" element={<SafeRoute name="DiskForecast"><DiskForecast /></SafeRoute>} />
+        <Route path="admin/secret-rotation" element={<SafeRoute name="SecretRotation"><SecretRotation /></SafeRoute>} />
+        <Route path="admin/audit-log" element={<SafeRoute name="AuditLog"><AuditLogAdmin /></SafeRoute>} />
+        <Route path="admin/gdpr-exports" element={<SafeRoute name="GDPRExport"><GDPRExportAdmin /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
         <Route path="tesla-features" element={<SafeRoute name="TeslaFeatureFlags"><TeslaFeatureFlags /></SafeRoute>} />
