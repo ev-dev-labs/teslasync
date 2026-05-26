@@ -15,5 +15,6 @@ export { TemperatureSection } from './TemperatureSection';
 export { SpeedHistogramChart } from './SpeedHistogramChart';
 export { PowerProfileChart } from './PowerProfileChart';
 export { TirePressureSection } from './TirePressureSection';
+export { WhyEndedPanel } from './WhyEndedPanel';
 export { useDriveDetailData } from './useDriveDetailData';
 export type { ChartDataPoint, DriveStats, SpeedSegment, SpeedHistogramBucket } from './types';

@@ -1,29 +1,30 @@
-# TeslaSync architecture metrics ΓÇö baseline
+# TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-08T21:00:44Z, Go go1.26.1, commit 4165c8b011061c276b6af79450d4cb41f0e97428_
+_Generated 2026-05-26T09:05:48Z, Go go1.26.1, commit a1e930ebac49bdabf81b85db3735092fb7a38c7a_
 
 ## Summary
 
-- Packages: 104
+- Packages: 188
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 0
-- Total non-blank LOC under cmd/+internal/+tools/: 198007
+- Total non-blank LOC under cmd/+internal/+tools/: 359403
 
 ## cmd/* main.go LOC
 
 | cmd | LOC |
 |---|---:|
-| cmd/automation-worker/main.go | 272 |
-| cmd/export-worker/main.go | 172 |
+| cmd/ai-eval/main.go | 151 |
+| cmd/automation-worker/main.go | 333 |
+| cmd/export-worker/main.go | 233 |
 | cmd/metric-coverage-audit/main.go | 126 |
-| cmd/notification-worker/main.go | 373 |
+| cmd/notification-worker/main.go | 496 |
 | cmd/protogen-tesla/main.go | 73 |
-| cmd/pub-test-signal/main.go | 625 |
-| cmd/resubscribe/main.go | 363 |
+| cmd/pub-test-signal/main.go | 655 |
+| cmd/resubscribe/main.go | 446 |
 | cmd/slo-coverage-audit/main.go | 199 |
 | cmd/slogen/main.go | 356 |
 | cmd/teslasync/main.go | 71 |
-| cmd/trace-coverage-audit/main.go | 219 |
+| cmd/trace-coverage-audit/main.go | 381 |
 | cmd/unit-drift-validator/main.go | 154 |
 
 ## Forbidden edges
@@ -34,18 +35,19 @@ _None._
 
 | Package | .go | _test.go | LOC | doc.go | Layer |
 |---|---:|---:|---:|:---:|---|
-| cmd/automation-worker | 2 | 0 | 276 | yes | cmd-internal |
-| cmd/export-worker | 2 | 0 | 176 | yes | cmd-internal |
+| cmd/ai-eval | 2 | 0 | 155 | yes | cmd-internal |
+| cmd/automation-worker | 2 | 0 | 337 | yes | cmd-internal |
+| cmd/export-worker | 2 | 0 | 237 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
-| cmd/notification-worker | 2 | 0 | 377 | yes | cmd-internal |
-| cmd/protogen-tesla | 4 | 1 | 2156 | yes | cmd-internal |
+| cmd/notification-worker | 2 | 0 | 500 | yes | cmd-internal |
+| cmd/protogen-tesla | 4 | 1 | 2295 | yes | cmd-internal |
 | cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
-| cmd/pub-test-signal | 2 | 0 | 629 | yes | cmd-internal |
-| cmd/resubscribe | 2 | 1 | 588 | yes | cmd-internal |
+| cmd/pub-test-signal | 2 | 0 | 659 | yes | cmd-internal |
+| cmd/resubscribe | 2 | 1 | 671 | yes | cmd-internal |
 | cmd/slo-coverage-audit | 2 | 0 | 203 | yes | cmd-internal |
 | cmd/slogen | 5 | 4 | 1342 | yes | cmd-internal |
 | cmd/teslasync | 6 | 1 | 144 | yes | cmd-internal |
-| cmd/trace-coverage-audit | 2 | 0 | 223 | yes | cmd-internal |
+| cmd/trace-coverage-audit | 2 | 0 | 385 | yes | cmd-internal |
 | cmd/unit-drift-validator | 2 | 1 | 296 | yes | cmd-internal |
 | internal/adapter/gasprices | 2 | 1 | 358 | yes | adapter |
 | internal/adapter/geocoding | 2 | 0 | 35 | yes | adapter |
@@ -55,18 +57,92 @@ _None._
 | internal/adapter/redis | 2 | 0 | 59 | yes | adapter |
 | internal/adapter/storage | 2 | 0 | 65 | yes | adapter |
 | internal/adapter/tesla | 3 | 0 | 200 | yes | adapter |
-| internal/api | 197 | 93 | 77662 | yes | handler |
-| internal/apilog | 4 | 1 | 505 | yes | platform |
-| internal/app | 6 | 1 | 1207 | yes | app |
-| internal/app/chargingsvc | 2 | 1 | 295 | yes | app |
+| internal/ai/cost | 2 | 1 | 475 | yes | platform |
+| internal/ai/dispatch | 5 | 2 | 1439 | yes | platform |
+| internal/ai/eval | 8 | 6 | 1916 | yes | tool |
+| internal/ai/features | 3 | 2 | 4703 | yes | platform |
+| internal/ai/guard | 2 | 1 | 281 | yes | platform |
+| internal/ai/health | 2 | 1 | 560 | yes | platform |
+| internal/ai/limit | 6 | 5 | 1839 | yes | platform |
+| internal/ai/provider | 12 | 10 | 4003 | yes | port |
+| internal/ai/provider/anthropic | 2 | 1 | 547 | yes | adapter |
+| internal/ai/provider/azure | 2 | 1 | 1134 | yes | adapter |
+| internal/ai/provider/mock | 3 | 2 | 872 | yes | adapter |
+| internal/ai/provider/ollama | 2 | 1 | 666 | yes | adapter |
+| internal/ai/provider/openai | 2 | 1 | 595 | yes | adapter |
+| internal/ai/rag | 9 | 7 | 2163 | yes | platform |
+| internal/ai/redact | 8 | 5 | 2445 | yes | platform |
+| internal/ai/strategies/alert-tuning-suggestions | 2 | 1 | 433 | yes | adapter |
+| internal/ai/strategies/anomaly-explanations | 2 | 1 | 335 | yes | adapter |
+| internal/ai/strategies/auto-name-unnamed-locations | 2 | 1 | 413 | yes | adapter |
+| internal/ai/strategies/auto-trip-naming | 2 | 1 | 404 | yes | adapter |
+| internal/ai/strategies/battery-health-forecast-narrative | 2 | 1 | 401 | yes | adapter |
+| internal/ai/strategies/cabin-temperature-impact-narrative | 2 | 1 | 423 | yes | adapter |
+| internal/ai/strategies/charging-curve-fingerprint-clustering | 2 | 1 | 410 | yes | adapter |
+| internal/ai/strategies/charging-diagnosis | 2 | 1 | 393 | yes | adapter |
+| internal/ai/strategies/chatbot-llm | 2 | 1 | 294 | yes | adapter |
+| internal/ai/strategies/cost-forecast-narration | 2 | 1 | 428 | yes | adapter |
+| internal/ai/strategies/cross-rule-conflict-detection | 2 | 1 | 469 | yes | adapter |
+| internal/ai/strategies/data-repair-suggestions | 2 | 1 | 388 | yes | adapter |
+| internal/ai/strategies/digest-narration | 2 | 1 | 304 | yes | adapter |
+| internal/ai/strategies/drive-coaching | 2 | 1 | 365 | yes | adapter |
+| internal/ai/strategies/feedback-queue-triage | 2 | 1 | 419 | yes | adapter |
+| internal/ai/strategies/geofence-aware-automation-suggestions | 2 | 1 | 408 | yes | adapter |
+| internal/ai/strategies/inbox-auto-categorization | 2 | 1 | 454 | yes | adapter |
+| internal/ai/strategies/incident-timeline-summarizer | 2 | 1 | 401 | yes | adapter |
+| internal/ai/strategies/learned-per-vehicle-anomaly-baselines | 2 | 1 | 392 | yes | adapter |
+| internal/ai/strategies/lifetime-stats-qa | 2 | 1 | 422 | yes | adapter |
+| internal/ai/strategies/log-trace-summarization | 2 | 1 | 380 | yes | adapter |
+| internal/ai/strategies/ml-charging-curve-clustering | 2 | 1 | 418 | yes | adapter |
+| internal/ai/strategies/mqtt-sse-inspector-explanations | 2 | 1 | 389 | yes | adapter |
+| internal/ai/strategies/nl-alert-builder | 2 | 1 | 350 | yes | adapter |
+| internal/ai/strategies/nl-automation-builder | 2 | 1 | 357 | yes | adapter |
+| internal/ai/strategies/nl-dashboard-composer | 2 | 1 | 414 | yes | adapter |
+| internal/ai/strategies/nl-drive-search-replay | 2 | 1 | 357 | yes | adapter |
+| internal/ai/strategies/nl-grafana-panel | 2 | 1 | 430 | yes | adapter |
+| internal/ai/strategies/nl-search | 2 | 1 | 378 | yes | adapter |
+| internal/ai/strategies/nl-sql-playground | 2 | 1 | 398 | yes | adapter |
+| internal/ai/strategies/period-compare-narration | 2 | 1 | 411 | yes | adapter |
+| internal/ai/strategies/pii-redaction-shared-exports | 2 | 1 | 433 | yes | adapter |
+| internal/ai/strategies/predictive-maintenance | 2 | 1 | 398 | yes | adapter |
+| internal/ai/strategies/preheat-precool-recommender | 2 | 1 | 440 | yes | adapter |
+| internal/ai/strategies/quiet-hours-suggestion | 2 | 1 | 456 | yes | adapter |
+| internal/ai/strategies/rag-help | 2 | 1 | 389 | yes | adapter |
+| internal/ai/strategies/range-prediction-model | 2 | 1 | 406 | yes | adapter |
+| internal/ai/strategies/route-efficiency-suggestions | 2 | 1 | 382 | yes | adapter |
+| internal/ai/strategies/safety-setting-explainer | 2 | 1 | 403 | yes | adapter |
+| internal/ai/strategies/signal-explorer-nl-filter | 2 | 1 | 392 | yes | adapter |
+| internal/ai/strategies/smart-charge-schedule-suggestion | 2 | 1 | 418 | yes | adapter |
+| internal/ai/strategies/software-update-changelog-summarizer | 2 | 1 | 427 | yes | adapter |
+| internal/ai/strategies/speed-profile-insights | 2 | 1 | 392 | yes | adapter |
+| internal/ai/strategies/state-machine-debugger-narrator | 2 | 1 | 398 | yes | adapter |
+| internal/ai/strategies/suggest-new-geofences | 2 | 1 | 406 | yes | adapter |
+| internal/ai/strategies/tco-narration | 2 | 1 | 456 | yes | adapter |
+| internal/ai/strategies/tire-pressure-trend-reasoning | 2 | 1 | 433 | yes | adapter |
+| internal/ai/strategies/trip-planner-llm-agent | 2 | 1 | 423 | yes | adapter |
+| internal/ai/strategies/trip-postcard-share-card-image-generation | 2 | 1 | 258 | yes | adapter |
+| internal/ai/strategies/vampire-drain-explanation | 2 | 1 | 450 | yes | adapter |
+| internal/ai/strategies/vehicle-paint-preview | 2 | 1 | 242 | yes | adapter |
+| internal/ai/strategies/voice-mode | 2 | 1 | 405 | yes | adapter |
+| internal/ai/strategies/watch-face-nl-response | 2 | 1 | 421 | yes | adapter |
+| internal/ai/strategies/yir-narration | 2 | 1 | 311 | yes | adapter |
+| internal/ai/strategy | 2 | 1 | 160 | yes | port |
+| internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
+| internal/ai/stream | 2 | 1 | 1185 | yes | platform |
+| internal/ai/tools | 58 | 51 | 47036 | yes | platform |
+| internal/alertmsg | 3 | 1 | 981 | yes | domain |
+| internal/api | 268 | 163 | 125531 | yes | handler |
+| internal/apilog | 4 | 1 | 496 | yes | platform |
+| internal/app | 6 | 1 | 1487 | yes | app |
+| internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
 | internal/app/dashboardsvc | 2 | 1 | 322 | yes | app |
-| internal/app/exportsvc | 2 | 1 | 274 | yes | app |
-| internal/app/notificationsvc | 2 | 1 | 305 | yes | app |
-| internal/app/tripsvc | 2 | 1 | 308 | yes | app |
-| internal/app/vehiclesvc | 3 | 1 | 342 | yes | app |
+| internal/app/exportsvc | 2 | 1 | 280 | yes | app |
+| internal/app/notificationsvc | 2 | 1 | 311 | yes | app |
+| internal/app/tripsvc | 2 | 1 | 314 | yes | app |
+| internal/app/vehiclesvc | 3 | 1 | 350 | yes | app |
 | internal/arch | 2 | 1 | 976 | yes | tool |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
-| internal/automation | 6 | 2 | 1560 | yes | platform |
+| internal/automation | 6 | 2 | 1604 | yes | platform |
 | internal/automation/action | 6 | 5 | 3822 | yes | platform |
 | internal/automation/condition | 9 | 8 | 3651 | yes | platform |
 | internal/automation/presets | 3 | 1 | 595 | yes | platform |
@@ -74,37 +150,42 @@ _None._
 | internal/automation/trigger | 7 | 0 | 946 | yes | platform |
 | internal/backup | 3 | 1 | 668 | yes | platform |
 | internal/cache | 3 | 1 | 262 | yes | platform |
-| internal/config | 3 | 1 | 595 | yes | platform |
+| internal/config | 3 | 1 | 619 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 96 | 27 | 23271 | yes | platform |
+| internal/database | 102 | 34 | 26605 | yes | platform |
 | internal/domain | 2 | 1 | 114 | yes | domain |
 | internal/domain/charging | 6 | 1 | 357 | yes | domain |
 | internal/domain/export | 3 | 1 | 126 | yes | domain |
-| internal/domain/fsm | 6 | 1 | 933 | yes | domain |
+| internal/domain/fsm | 6 | 1 | 992 | yes | domain |
 | internal/domain/notification | 3 | 1 | 116 | yes | domain |
 | internal/domain/trip | 4 | 1 | 146 | yes | domain |
 | internal/domain/user | 3 | 1 | 98 | yes | domain |
 | internal/domain/vehicle | 5 | 1 | 350 | yes | domain |
 | internal/enums | 5 | 1 | 304 | yes | platform |
 | internal/events | 2 | 1 | 145 | yes | platform |
-| internal/export | 9 | 3 | 2998 | yes | platform |
-| internal/fsm | 11 | 3 | 2512 | yes | platform |
+| internal/export | 9 | 3 | 3057 | yes | platform |
+| internal/flags | 2 | 1 | 556 | yes | platform |
+| internal/fsm | 11 | 3 | 2507 | yes | platform |
 | internal/fsm/automation | 2 | 1 | 798 | yes | platform |
 | internal/fsm/charge | 3 | 1 | 621 | yes | platform |
 | internal/fsm/command | 2 | 1 | 410 | yes | platform |
 | internal/fsm/drive | 4 | 1 | 706 | yes | platform |
-| internal/fsm/notification | 3 | 2 | 523 | yes | platform |
-| internal/fsm/telemetry | 3 | 1 | 720 | yes | platform |
+| internal/fsm/notification | 2 | 1 | 280 | yes | platform |
+| internal/fsm/telemetry | 3 | 1 | 734 | yes | platform |
 | internal/geocoding | 6 | 1 | 532 | yes | platform |
 | internal/handler/dto | 6 | 0 | 94 | yes | handler |
 | internal/handler/middleware | 10 | 1 | 742 | yes | handler |
 | internal/handler/v1 | 8 | 1 | 427 | yes | handler |
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
-| internal/metrics | 5 | 1 | 751 | yes | platform |
-| internal/models | 34 | 1 | 2838 | yes | domain |
-| internal/mqtt | 4 | 4 | 2175 | yes | platform |
-| internal/notification | 4 | 2 | 1092 | yes | platform |
+| internal/jobs | 13 | 12 | 3463 | yes | platform |
+| internal/metrics | 6 | 2 | 1073 | yes | platform |
+| internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
+| internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
+| internal/ml/range | 3 | 1 | 1017 | yes | platform |
+| internal/models | 34 | 2 | 3026 | yes | domain |
+| internal/mqtt | 7 | 7 | 4248 | yes | platform |
+| internal/notification | 4 | 2 | 1243 | yes | platform |
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |
 | internal/notifier | 2 | 1 | 450 | yes | platform |
 | internal/platform | 3 | 2 | 702 | yes | platform |
@@ -112,32 +193,36 @@ _None._
 | internal/platform/cache | 2 | 0 | 101 | yes | platform |
 | internal/platform/config | 2 | 1 | 326 | yes | platform |
 | internal/platform/database | 3 | 0 | 138 | yes | platform |
-| internal/platform/httputil | 10 | 8 | 2254 | yes | platform |
-| internal/platform/telemetry | 4 | 0 | 143 | yes | platform |
+| internal/platform/httputil | 10 | 8 | 2242 | yes | platform |
+| internal/platform/telemetry | 3 | 0 | 87 | yes | platform |
 | internal/polling | 11 | 1 | 1413 | yes | platform |
 | internal/port/external | 5 | 0 | 87 | yes | port |
 | internal/port/messaging | 3 | 1 | 272 | yes | port |
 | internal/port/repository | 8 | 0 | 110 | yes | port |
 | internal/resilience | 2 | 4 | 722 | yes | platform |
 | internal/service | 4 | 1 | 1377 | yes | platform |
-| internal/signal | 11 | 11 | 7233 | yes | platform |
+| internal/signal | 11 | 11 | 7539 | yes | platform |
 | internal/signal/signaltest | 2 | 0 | 103 | yes | platform |
 | internal/tesla | 11 | 3 | 2267 | yes | platform |
 | internal/tesla/bootstrap | 3 | 1 | 1037 | yes | platform |
-| internal/tesla/codec | 4 | 2 | 941 | yes | platform |
+| internal/tesla/codec | 6 | 4 | 2932 | yes | platform |
 | internal/tesla/config | 3 | 1 | 473 | yes | platform |
-| internal/tesla/normalize | 7 | 5 | 2170 | yes | platform |
-| internal/tesla/protomodel | 7 | 3 | 5006 | yes | platform |
-| internal/tesla/router | 4 | 2 | 877 | yes | platform |
-| internal/tesla/router/writers | 14 | 13 | 6749 | yes | platform |
-| internal/tesla/unit_history | 4 | 2 | 1646 | yes | platform |
+| internal/tesla/normalize | 7 | 5 | 2199 | yes | platform |
+| internal/tesla/protomodel | 7 | 3 | 5071 | yes | platform |
+| internal/tesla/router | 5 | 3 | 1180 | yes | platform |
+| internal/tesla/router/writers | 15 | 13 | 6856 | yes | platform |
+| internal/tesla/unit_history | 4 | 2 | 1673 | yes | platform |
 | internal/tesla/units | 4 | 1 | 477 | yes | platform |
-| internal/tesla_pipeline | 2 | 3 | 2238 | yes | platform |
-| internal/tracing | 3 | 1 | 242 | yes | platform |
+| internal/tesla_pipeline | 2 | 5 | 2858 | yes | platform |
+| internal/tracing | 4 | 2 | 481 | yes | platform |
 | internal/units | 2 | 0 | 63 | yes | platform |
-| internal/webpush | 2 | 1 | 455 | yes | platform |
-| internal/worker | 8 | 3 | 2520 | yes | platform |
+| internal/webpush | 2 | 1 | 517 | yes | platform |
+| internal/worker | 8 | 3 | 2594 | yes | platform |
+| tools/aigen | 2 | 1 | 338 | yes | tool |
+| tools/aistream-contract | 2 | 0 | 227 | yes | tool |
+| tools/aivet | 2 | 1 | 792 | yes | tool |
 | tools/archmetrics | 2 | 0 | 484 | yes | tool |
+| tools/eval-schema-check | 2 | 0 | 57 | yes | tool |
 
 ## doc.go adoption
 

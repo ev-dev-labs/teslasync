@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
+	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
@@ -79,6 +80,16 @@ type App struct {
 
 	// Phase-42a pipeline subscriber resources
 	pipelineSubscriber *mqtt.PipelineSubscriber
+
+	// Phase-44 / observability-batch / Prompt F4 — DLQ Inspector
+	// (subscribes to {TopicBase}/dlq/#; serves /system/dlq/*).
+	DLQInspector       *mqtt.DLQInspector
+	DLQReplayAuditRepo *database.DLQReplayAuditRepo
+
+	// Phase-44 / observability-batch / Prompt F8 — Dynamic
+	// feature-flag store (Redis-backed) + change audit repo.
+	FlagStore              *flags.Store
+	FeatureFlagChangesRepo *database.FeatureFlagChangesRepo
 
 	// Workers
 	Worker         *worker.Worker

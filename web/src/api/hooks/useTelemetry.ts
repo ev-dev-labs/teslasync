@@ -87,12 +87,29 @@ export function getVehicleLiveSignals(
   });
 }
 
-export function useVehicleLiveSignals(vehicleId?: number) {
+export interface UseVehicleLiveSignalsOptions {
+  /**
+   * Override the default refetch cadence. The page-level Live Signal
+   * Inspector uses 1 s for a near-realtime feel; widgets embedded on
+   * a dashboard can stay on STALE_TIMES.REALTIME (5 s) to keep cost low.
+   */
+  refetchInterval?: number;
+  /** Disable polling without unmounting the hook. */
+  enabled?: boolean;
+}
+
+export function useVehicleLiveSignals(
+  vehicleId?: number,
+  opts?: UseVehicleLiveSignalsOptions,
+) {
+  const enabled = opts?.enabled ?? true;
   return useQuery({
     queryKey: telemetryKeys.liveSignals(vehicleId),
     queryFn: ({ signal }) => getVehicleLiveSignals(vehicleId ?? 0, { signal }),
-    enabled: !!vehicleId,
+    enabled: !!vehicleId && enabled,
     staleTime: STALE_TIMES.REALTIME,
+    refetchInterval: opts?.refetchInterval ?? false,
+    refetchIntervalInBackground: false,
     retry: 1,
   });
 }

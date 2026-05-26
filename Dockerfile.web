@@ -9,6 +9,20 @@ COPY web/ .
 # buildChangelog.mjs (prebuild) reads <repo-root>/CHANGELOG.md; place it where
 # the script's REPO_ROOT (resolve(__dirname, '..', '..')) → '/' resolves it.
 COPY CHANGELOG.md /CHANGELOG.md
+
+# Observability build args — Vite reads VITE_* at build time, so these MUST
+# be ARG-declared (not just ENV-defaulted) for `docker compose build` to
+# thread them through. Empty values disable the browser RUM gracefully
+# (see web/src/observability/rum.ts).
+ARG VITE_OTLP_HTTP_ENDPOINT=""
+ARG VITE_OTEL_SERVICE_NAME="teslasync-web"
+ARG VITE_OTEL_DEPLOY_ENV="dev-compose"
+ARG VITE_APP_VERSION="dev"
+ENV VITE_OTLP_HTTP_ENDPOINT=$VITE_OTLP_HTTP_ENDPOINT \
+    VITE_OTEL_SERVICE_NAME=$VITE_OTEL_SERVICE_NAME \
+    VITE_OTEL_DEPLOY_ENV=$VITE_OTEL_DEPLOY_ENV \
+    VITE_APP_VERSION=$VITE_APP_VERSION
+
 RUN npm run build
 
 # Serve with nginx

@@ -46,9 +46,32 @@ type Config struct {
 	WebPush              WebPushConfig
 	System               SystemConfig
 	GitHub               GitHubConfig
+
+	// Phase-44 / observability-batch / Prompt F4 + F8. Operator-toggled
+	// behaviors that we don't want gated on a code change.
+	Features FeaturesConfig
 }
 
-// GitHubConfig holds the credentials used by the optional GitHub Issues
+// FeaturesConfig holds operator-toggled behaviors that we don't want
+// gated on a code change. These are read at startup; the dynamic
+// internal/flags store is for runtime toggles that can change without
+// a restart.
+//
+// Phase-44 / observability-batch / Prompt F4 + F8.
+type FeaturesConfig struct {
+	// DLQReplayEnabled gates the POST /system/dlq/{id}/replay endpoint.
+	// Default false — an operator must explicitly opt in (env var or
+	// helm values) because replay re-publishes a payload that already
+	// triggered an exception in production. Replay is also gated by
+	// sudo-token middleware AND audited on every code path.
+	DLQReplayEnabled bool
+	// DLQRingCapacity bounds the in-memory ring buffer the inspector
+	// subscriber maintains. Default 200 entries (~800KB). Older
+	// entries rotate out; audit rows survive ring rotation.
+	DLQRingCapacity int
+}
+
+
 // bridge in the admin feedback queue (Phase-46 / Prompt 08). When Repo
 // or Token is empty the bridge is disabled — the admin endpoint
 // surfaces this in its response and the SPA hides the "Forward to
@@ -442,6 +465,11 @@ func Load() (*Config, error) {
 		GitHub: GitHubConfig{
 			Repo:  envStr("TESLASYNC_GITHUB_REPO", ""),
 			Token: envStr("TESLASYNC_GITHUB_TOKEN", ""),
+		},
+
+		Features: FeaturesConfig{
+			DLQReplayEnabled: envBool("DLQ_REPLAY_ENABLED", false),
+			DLQRingCapacity:  envInt("DLQ_RING_CAPACITY", 200),
 		},
 	}
 

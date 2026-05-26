@@ -1,0 +1,233 @@
+name: si-canonical-gate
+
+# Phase-44 / observability-batch / Prompt F7 — SI Canonical Gate.
+#
+# Blocks PRs that introduce NEW legacy unit-suffixed Go field names,
+# JSON tags, or DB column references. The Phase-48 mandate is clear:
+# we ship SI only. Pre-existing legacy identifiers in the codebase
+# (~7 files at gate inception) are grandfathered via the
+# CI_ALLOWLIST_PATHS variable; everything else is rejected.
+#
+# Two passes:
+#
+#   1. Backend Go — bans Go identifiers / JSON tags / struct fields /
+#      DB column literals containing legacy unit suffixes.
+#
+#   2. Frontend TS — bans new callers of the @deprecated unit
+#      conversion helpers in web/src/lib/unitConversion.ts.
+#
+# The gate inspects ADDED lines only via `git diff origin/main...HEAD`,
+# so refactors that move existing legacy identifiers between files do
+# NOT trip the gate (the moved + added cancel out at line-count level
+# but ADDED lines do appear in the diff — the allowlist therefore
+# applies to both pre-existing files and the legacy-suffix patterns
+# themselves).
+
+on:
+  pull_request:
+    paths:
+      - 'internal/**/*.go'
+      - 'cmd/**/*.go'
+      - 'web/src/**/*.ts'
+      - 'web/src/**/*.tsx'
+      - 'migrations/**/*.sql'
+      - '.github/workflows/si-canonical-gate.yml'
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
+
+concurrency:
+  group: si-canonical-gate-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Block new legacy unit-suffixed identifiers
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Fetch enough history to compute the diff against the merge
+          # base. depth: 0 is wasteful but reliable on shallow clones.
+          fetch-depth: 0
+
+      - name: Compute diff against PR base
+        id: diff
+        run: |
+          set -euo pipefail
+          BASE="${GITHUB_BASE_REF:-main}"
+          git fetch --no-tags --depth=200 origin "+refs/heads/${BASE}:refs/remotes/origin/${BASE}"
+          # Use the merge-base so file moves and rebases don't false-positive.
+          MERGE_BASE=$(git merge-base "origin/${BASE}" HEAD)
+          echo "merge_base=${MERGE_BASE}" >>"$GITHUB_OUTPUT"
+          git diff --unified=0 "${MERGE_BASE}...HEAD" -- \
+            'internal/**/*.go' 'cmd/**/*.go' \
+            'web/src/**/*.ts' 'web/src/**/*.tsx' \
+            'migrations/**/*.sql' \
+            > /tmp/si.diff || true
+          wc -l /tmp/si.diff
+
+      - name: Check for new legacy unit-suffixed Go identifiers
+        run: |
+          set -euo pipefail
+          # Allowlist of grandfathered files. New entries require team
+          # sign-off via PR review; this is intentionally short.
+          ALLOWLIST=(
+            'internal/ai/tools/'
+            'internal/api/ai_watch_face_nl_response_handler'
+            'internal/api/range_projection_handler'
+            'docs/'
+            'migrations/'
+          )
+          # Extract added lines (lines beginning with '+' but not '+++ ').
+          # Track current file via the '+++ b/<path>' headers so we can
+          # apply the allowlist per-file.
+          python3 - <<'PY'
+import re, sys
+
+ALLOWED_PREFIXES = [
+    'internal/ai/tools/',
+    'internal/api/ai_watch_face_nl_response_handler',
+    'internal/api/range_projection_handler',
+    'docs/',
+    'migrations/',
+]
+
+# Legacy unit-suffixed identifier patterns. Word-boundary anchored to
+# avoid clobbering identifiers like `kWh` (which is fine) or
+# `MileageRepo` (M for Miles is NOT a banned suffix in struct names —
+# only field/var/JSON tag suffixes are banned).
+BANNED = [
+    # Go struct field / variable names
+    re.compile(r'\b\w*(?:Distance|Range|Odometer|StartOdometer|EndOdometer)Mi\b'),
+    re.compile(r'\b\w*(?:Duration|Idle|Active)Min\b'),
+    re.compile(r'\b\w*(?:Energy|Charge|Regen|EnergyUsed|EnergyAdded|EnergyDelivered)Kwh\b'),
+    re.compile(r'\b\w*(?:Power|AvgPower|MaxPower|ChargerPower)Kw\b'),
+    re.compile(r'\b\w*(?:Speed|AvgSpeed|MaxSpeed|GroundSpeed)Mph\b'),
+    re.compile(r'\b\w*(?:Pressure|TirePressure)Psi\b'),
+    re.compile(r'\b\w*(?:Temp|Temperature|InsideTemp|OutsideTemp)F\b'),
+    # JSON tags
+    re.compile(r'json:"\w*_(?:mi|min|kwh|kw|mph|psi)"'),
+    re.compile(r'json:"\w*_(?:mi|min|kwh|kw|mph|psi),omitempty"'),
+    # DB column names (migration SQL)
+    re.compile(r'\b\w+_(?:mi|min|kwh|kw|mph|psi)\b\s+(?:NUMERIC|FLOAT|REAL|DOUBLE|INT|BIGINT|SMALLINT)'),
+]
+
+current_file = None
+violations = []
+
+with open('/tmp/si.diff', 'r', encoding='utf-8', errors='replace') as f:
+    for line in f:
+        if line.startswith('+++ '):
+            # '+++ b/path/to/file' OR '+++ /dev/null'
+            path = line[6:].strip()  # strip '+++ b/'
+            if path == 'dev/null':
+                current_file = None
+            else:
+                current_file = path
+            continue
+        if line.startswith('---'):
+            continue
+        if not line.startswith('+'):
+            continue
+        if line.startswith('+++'):
+            continue
+        added = line[1:]
+        if current_file is None:
+            continue
+        # Skip allowlisted files.
+        if any(current_file.startswith(pfx) for pfx in ALLOWED_PREFIXES):
+            continue
+        # Skip comments — they don't affect the data model.
+        s = added.lstrip()
+        if s.startswith('//') or s.startswith('#') or s.startswith('--'):
+            continue
+        for pat in BANNED:
+            if pat.search(added):
+                violations.append(f"{current_file}: {added.rstrip()}")
+                break
+
+if violations:
+    print("SI canonical gate FAILED. The following added lines introduce")
+    print("legacy unit-suffixed identifiers (mi/min/kwh/kw/mph/psi).")
+    print("Rename them to SI (m/s/wh/w/mps/kpa) per Phase-48 mandate:")
+    print()
+    for v in violations:
+        print(f"  {v}")
+    sys.exit(1)
+
+print("SI canonical gate PASSED — no new legacy unit-suffixed identifiers added.")
+PY
+
+      - name: Check for new callers of @deprecated unit conversion helpers
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+import re, sys
+
+# These FE helpers are marked @deprecated in
+# web/src/lib/unitConversion.ts (block at L397+) and being deleted in
+# Phase-48 Slice 5. New callers must use useUnits() + the SI
+# converters/formatters in the same file (L1-395).
+DEPRECATED_CALLERS = re.compile(
+    r'\b(convertDistance|convertSpeed|convertTemp|convertEfficiency|'
+    r'convertPressure|fmtDistance|fmtSpeed|fmtTemp|fmtPressure)\s*\('
+)
+
+# Allowlist: the helpers themselves + their tests + the legacy block
+# in useSettings.ts which is being removed in Slice 5.
+ALLOWLIST_PATHS = [
+    'web/src/lib/unitConversion.ts',
+    'web/src/lib/unitConversion.test.ts',
+    'web/src/hooks/useSettings.ts',
+    'web/src/hooks/useSettings.test.ts',
+]
+
+current_file = None
+violations = []
+
+with open('/tmp/si.diff', 'r', encoding='utf-8', errors='replace') as f:
+    for line in f:
+        if line.startswith('+++ '):
+            path = line[6:].strip()
+            current_file = None if path == 'dev/null' else path
+            continue
+        if line.startswith('---'):
+            continue
+        if not line.startswith('+'):
+            continue
+        if line.startswith('+++'):
+            continue
+        if current_file is None:
+            continue
+        if current_file in ALLOWLIST_PATHS:
+            continue
+        # Only Frontend TS/TSX files matter.
+        if not (current_file.endswith('.ts') or current_file.endswith('.tsx')):
+            continue
+        added = line[1:]
+        s = added.lstrip()
+        if s.startswith('//') or s.startswith('*'):
+            continue
+        if DEPRECATED_CALLERS.search(added):
+            violations.append(f"{current_file}: {added.rstrip()}")
+
+if violations:
+    print("SI canonical gate FAILED. Added lines call @deprecated unit")
+    print("conversion helpers. Use useUnits() + SI helpers instead:")
+    print()
+    for v in violations:
+        print(f"  {v}")
+    sys.exit(1)
+
+print("SI canonical gate (FE) PASSED.")
+PY

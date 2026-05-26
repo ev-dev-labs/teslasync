@@ -1,0 +1,143 @@
+/**
+ * Feature Flags — change-audit panel.
+ *
+ * Renders the recent flag-change log, optionally scoped to a single
+ * flag key. Always rendered in its own panel shell so the loading + empty
+ * states surface in-place rather than gating the whole page.
+ */
+import { useTranslation } from 'react-i18next';
+
+import { Badge, DataTable, type Column } from '@/components/ui';
+import { TimeStamp } from '@/components/data-display';
+import { EmptyState } from '@/components/feedback';
+import type {
+  FeatureFlagChange,
+  FeatureFlagOperation,
+} from '@/types/admin-diagnostics';
+
+interface ChangesPanelProps {
+  rows: FeatureFlagChange[];
+  loading: boolean;
+  scopedKey?: string | null;
+}
+
+const OP_VARIANT: Record<FeatureFlagOperation, 'success' | 'danger'> = {
+  set: 'success',
+  delete: 'danger',
+};
+
+function compact(value: unknown): string {
+  if (value == null) return '—';
+  try {
+    const s = JSON.stringify(value);
+    if (s && s.length > 60) return `${s.slice(0, 57)}…`;
+    return s ?? '—';
+  } catch {
+    return '—';
+  }
+}
+
+export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
+  const { t } = useTranslation();
+
+  const columns: Column<FeatureFlagChange>[] = [
+    {
+      key: 'changed_at',
+      header: t('admin.flags.audit.cols.changedAt', 'Changed at'),
+      visibleOnMobile: true,
+      render: (row) => <TimeStamp value={row.changed_at} format="absolute" />,
+    },
+    {
+      key: 'actor',
+      header: t('admin.flags.audit.cols.actor', 'Actor'),
+      visibleOnMobile: true,
+      render: (row) => (
+        <span className="font-mono text-xs text-[var(--text-muted)]">
+          {row.actor || '—'}
+        </span>
+      ),
+    },
+    {
+      key: 'flag_key',
+      header: t('admin.flags.audit.cols.flagKey', 'Key'),
+      render: (row) => (
+        <span className="font-mono text-xs">{row.flag_key}</span>
+      ),
+    },
+    {
+      key: 'operation',
+      header: t('admin.flags.audit.cols.operation', 'Op'),
+      visibleOnMobile: true,
+      render: (row) => (
+        <Badge variant={OP_VARIANT[row.operation] ?? 'neutral'}>
+          {row.operation}
+        </Badge>
+      ),
+    },
+    {
+      key: 'old_value',
+      header: t('admin.flags.audit.cols.oldValue', 'Old'),
+      render: (row) => (
+        <span className="font-mono text-xs text-[var(--text-muted)]">
+          {compact(row.old_value)}
+        </span>
+      ),
+    },
+    {
+      key: 'new_value',
+      header: t('admin.flags.audit.cols.newValue', 'New'),
+      render: (row) => (
+        <span className="font-mono text-xs text-[var(--text-muted)]">
+          {compact(row.new_value)}
+        </span>
+      ),
+    },
+    {
+      key: 'reason',
+      header: t('admin.flags.audit.cols.reason', 'Reason'),
+      render: (row) => (
+        <span className="text-xs text-[var(--text-muted)]">
+          {row.reason || '—'}
+        </span>
+      ),
+    },
+  ];
+
+  if (!loading && rows.length === 0) {
+    return (
+      <EmptyState
+        title={t('admin.flags.audit.empty.title', 'No flag changes yet')}
+        message={
+          scopedKey
+            ? t(
+                'admin.flags.audit.empty.scopedMessage',
+                'No audit rows for "{{key}}" — edit the value above to start the trail.',
+                { key: scopedKey },
+              )
+            : t(
+                'admin.flags.audit.empty.globalMessage',
+                'Flag changes will appear here once an operator edits a value.',
+              )
+        }
+        // no-action: the trigger surface is the flags table directly above.
+      />
+    );
+  }
+
+  return (
+    <DataTable<FeatureFlagChange>
+      tableId={scopedKey ? 'admin:flag-changes-scoped' : 'admin:flag-changes'}
+      name="flag-changes"
+      columns={columns}
+      data={rows}
+      keyExtractor={(row) => row.id}
+      emptyMessage={
+        loading
+          ? t('admin.flags.audit.loading', 'Loading audit log…')
+          : t('admin.flags.audit.empty.title', 'No flag changes yet')
+      }
+      pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
+      mobileColumns={['changed_at', 'actor', 'operation']}
+    />
+  );
+}

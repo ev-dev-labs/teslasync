@@ -2790,6 +2790,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// Share link management
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.Create)
 				r.Get("/shares", shareHandler.List)
+				// Phase-44 / observability-batch / Prompt F10 —
+				// Drive-end diagnostic. Returns the fsm_transitions
+				// + signal_window centered on the drive's end_ts
+				// (or NOW for in-progress drives), explaining WHY
+				// the FSM ended the drive. Read-only, 60/min IP
+				// throttle, inherits /api/v1 forward-auth gate.
+				driveDiagnosticHandler := NewDriveDiagnosticHandler(
+					database.NewDriveRepo(db),
+					database.NewDriveDiagnosticRepo(db.Pool),
+				)
+				r.With(httprate.LimitByIP(60, 1*time.Minute)).
+					Get("/why-ended", driveDiagnosticHandler.Get)
 			})
 		})
 
@@ -3510,6 +3522,76 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				Get("/queues", queueStatusHandler.ServeStatus)
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/queues/{worker}/jobs", queueStatusHandler.ServeJobs)
+
+			// Phase-44 / observability-batch / Prompt F4 — DLQ
+			// Inspector. List + per-entry GET are read-only and
+			// per-IP throttled at 60/min. Replay is gated by
+			// sudo-token (RequireSudo) AND by DLQ_REPLAY_ENABLED
+			// (cfg.Features.DLQReplayEnabled). Audit endpoints
+			// are read-only. The handler degrades to 503 when
+			// opt.DLQInspector or opt.DLQReplayAuditRepo is nil,
+			// so a deployment without MQTT still serves the rest
+			// of /system unchanged.
+			dlqHandler := NewDLQHandler(
+				opt.DLQInspector,
+				opt.DLQReplayAuditRepo,
+				cfg.Auth.ForwardAuthHeader,
+				cfg.Features.DLQReplayEnabled,
+			)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/dlq", dlqHandler.List)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/dlq/audit", dlqHandler.Audit)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/dlq/{id}", dlqHandler.Get)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/dlq/{id}/audit", dlqHandler.Audit)
+			r.With(
+				httprate.LimitByIP(10, 1*time.Minute),
+				RequireSudo(sudoStore, sudoCfg),
+			).Post("/dlq/{id}/replay", dlqHandler.Replay)
+
+			// Phase-44 / observability-batch / Prompt F8 — Feature
+			// Flags. List + GET + audit are read-only (60/min).
+			// PUT + DELETE are sudo-gated + audited via the
+			// feature_flag_changes table; the dynamic
+			// internal/flags store invalidates other processes via
+			// Redis Pub/Sub. The handler degrades to 503 when
+			// opt.FlagStore is nil so a redis-disabled deployment
+			// still serves the rest of /system unchanged.
+			flagsHandler := NewFlagsHandler(
+				opt.FlagStore,
+				opt.FeatureFlagChangesRepo,
+				cfg.Auth.ForwardAuthHeader,
+			)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/flags", flagsHandler.List)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/flags/changes", flagsHandler.Changes)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/flags/{key}", flagsHandler.Get)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/flags/{key}/changes", flagsHandler.Changes)
+			r.With(
+				httprate.LimitByIP(20, 1*time.Minute),
+				RequireSudo(sudoStore, sudoCfg),
+			).Put("/flags/{key}", flagsHandler.Set)
+			r.With(
+				httprate.LimitByIP(20, 1*time.Minute),
+				RequireSudo(sudoStore, sudoCfg),
+			).Delete("/flags/{key}", flagsHandler.Delete)
+
+			// Phase-44 / observability-batch / Prompt F6 —
+			// Per-vehicle ingest X-Ray. Returns per-field
+			// sample counts + last-seen + time-bucket histogram
+			// over a configurable window. Read-only, 60/min IP
+			// throttle, inherits /api/v1 forward-auth gate. The
+			// vehicleID is in the URL because the cost of an
+			// unbounded fleet-wide query is too high for the
+			// signal_log hypertable.
+			ingestXRayHandler := NewIngestXRayHandler(database.NewIngestXRayRepo(db.Pool))
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/ingest-xray/{vehicleID}", ingestXRayHandler.Get)
 		})
 
 		// Phase-2 / Status API — operator-grade /api/v1/status/* endpoints.

@@ -23,6 +23,10 @@ import type {
   TripPlanRequest,
   GeocodeResult,
 } from '@/types/driving';
+import type {
+  DriveDiagnosticResponse,
+  DriveDiagnosticWindow,
+} from '@/types/admin-diagnostics';
 
 /** Fetches paginated driving sessions for a vehicle, optionally filtered by date range. */
 export const getDrives = (vehicleId: number, limit = 50, offset = 0, start?: string, end?: string) => {
@@ -51,6 +55,8 @@ export const drivingKeys = {
   regenEfficiency: (vehicleId?: string) => ['regen-efficiency', vehicleId] as const,
   routeEfficiency: (vehicleId?: string) => ['route-efficiency', vehicleId] as const,
   coach: (vehicleId?: string, days?: number) => ['driving-coach', vehicleId, days] as const,
+  whyEnded: (driveId: string, window: DriveDiagnosticWindow) =>
+    ['drive', driveId, 'why-ended', window] as const,
 };
 
 export function useDrives(vehicleId?: string) {
@@ -268,6 +274,40 @@ export function useBulkDeleteDrives() {
     },
     onError: (err) =>
       error(err, 'toast.bulk.delete.error', 'Failed to delete selection'),
+  });
+}
+
+/**
+ * `useDriveWhyEnded` — diagnostic feed for the "Why did this drive end?"
+ * section on DriveDetailPage. Joins the FSM transition history with the
+ * raw signal window around the drive's end_ts (or now() while live).
+ *
+ * Lazy by default: pass `enabled=false` while the section is collapsed so
+ * the network request only fires on operator expand. Refetches every
+ * INTERVALS.STANDARD because both feeds are append-only on the server.
+ *
+ * Server validates `window` ∈ {30s, 60s, 5m, 15m} and rejects anything
+ * else with 400 — the page renders a server-validated dropdown so this
+ * hook does not pre-validate.
+ */
+export function useDriveWhyEnded(
+  driveId: string | number,
+  window: DriveDiagnosticWindow = '60s',
+  enabled = true,
+) {
+  const id = String(driveId);
+  return useQuery({
+    queryKey: drivingKeys.whyEnded(id, window),
+    queryFn: ({ signal }) =>
+      request<DriveDiagnosticResponse>(
+        `/drives/${encodeURIComponent(id)}/why-ended?window=${window}`,
+        { signal },
+      ),
+    enabled: enabled && id !== '' && id !== '0',
+    staleTime: STALE_TIMES.MODERATE,
+    refetchInterval: INTERVALS.STANDARD,
+    refetchIntervalInBackground: false,
+    retry: 1,
   });
 }
 

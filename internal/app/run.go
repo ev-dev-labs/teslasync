@@ -38,6 +38,12 @@ func (a *App) Run(ctx context.Context) error {
 		PollEngine:       a.PollEngine,
 		SignalStore:      a.SignalStore,
 		CacheStore:       a.Cache,
+
+		// Phase-44 / observability-batch.
+		DLQInspector:           a.DLQInspector,
+		DLQReplayAuditRepo:     a.DLQReplayAuditRepo,
+		FlagStore:              a.FlagStore,
+		FeatureFlagChangesRepo: a.FeatureFlagChangesRepo,
 	})
 	a.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", a.Cfg.Port),

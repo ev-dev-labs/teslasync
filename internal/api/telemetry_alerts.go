@@ -100,7 +100,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		}
 	}
 	metrics.ActiveAlertRules.Set(float64(enabledCount))
-	metrics.AlertRuleEvalDuration.Observe(time.Since(evalStart).Seconds())
+	metrics.ObserveDurationWithExemplar(ctx, metrics.AlertRuleEvalDuration, time.Since(evalStart).Seconds())
 }
 
 // fireAlert broadcasts via SSE and dispatches to notification channels.

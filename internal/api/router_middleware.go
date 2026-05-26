@@ -6,7 +6,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
@@ -22,6 +24,18 @@ type RouterOptions struct {
 	SignalStore      *signal.Store          // If set, enables /internal/flush endpoint
 	WebhookTrigger   WebhookProcessor       // If set, enables public webhook receiver endpoint
 	CacheStore       *cache.Store           // If set, enables cached endpoints (trip planner, etc.)
+
+	// Phase-44 / observability-batch / Prompt F4. DLQInspector + replay
+	// audit repo enable /system/dlq{,/{id},/{id}/replay} when set.
+	// Constructed by internal/app once the production paho client is
+	// connected (see internal/app/new.go::initFleetTelemetryPipeline).
+	DLQInspector       *mqtt.DLQInspector
+	DLQReplayAuditRepo *database.DLQReplayAuditRepo
+
+	// Phase-44 / observability-batch / Prompt F8. FlagStore +
+	// changes-audit repo enable /system/flags{,/{key},/changes} when set.
+	FlagStore             *flags.Store
+	FeatureFlagChangesRepo *database.FeatureFlagChangesRepo
 }
 
 // settingsCheckerAdapter wraps *database.SettingsRepo to satisfy action.SettingsChecker.

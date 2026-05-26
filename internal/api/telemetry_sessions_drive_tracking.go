@@ -9,6 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
@@ -1363,7 +1364,7 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	// 3. Reverse geocode via Nominatim (or Google when configured)
 	geocodeStart := time.Now()
 	result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
-	GeocodingDuration.Observe(time.Since(geocodeStart).Seconds())
+	metrics.ObserveDurationWithExemplar(ctx, GeocodingDuration, time.Since(geocodeStart).Seconds())
 	if err != nil {
 		GeocodingTotal.WithLabelValues("failure").Inc()
 		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")

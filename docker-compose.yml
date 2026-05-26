@@ -49,11 +49,17 @@ services:
       - FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL=${FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL:-1s}
       - LIVE_SIGNAL_STORE_MODE=${LIVE_SIGNAL_STORE_MODE:-hybrid}
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
-      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
+      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://otel-collector:4317}
       - OTEL_TRACES_SAMPLER_ARG=${OTEL_TRACES_SAMPLER_ARG:-1.0}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-api}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      # Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
+      # Replay is opt-in because re-publishing a payload that already
+      # triggered a production exception is consequential. Replay is
+      # also gated by sudo-token AND audited on every code path.
+      - DLQ_REPLAY_ENABLED=${DLQ_REPLAY_ENABLED:-false}
+      - DLQ_RING_CAPACITY=${DLQ_RING_CAPACITY:-200}
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
       - AZURE_MAPS_API_KEY=${AZURE_MAPS_API_KEY:-}
       # Inbound api_call_logs middleware (Phase 38-10).
@@ -143,6 +149,16 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+      # Frontend RUM is build-time inlined: Vite reads VITE_* at build to bake
+      # them into the bundle. Forwarding them as build args means a single
+      # `docker compose build web` picks up changes to the collector endpoint
+      # without re-engineering the Dockerfile. The SPA gracefully no-ops when
+      # VITE_OTLP_HTTP_ENDPOINT is unset (see web/src/observability/rum.ts).
+      args:
+        VITE_OTLP_HTTP_ENDPOINT: ${VITE_OTLP_HTTP_ENDPOINT:-}
+        VITE_OTEL_SERVICE_NAME: ${VITE_OTEL_SERVICE_NAME:-teslasync-web}
+        VITE_OTEL_DEPLOY_ENV: ${VITE_OTEL_DEPLOY_ENV:-dev-compose}
+        VITE_APP_VERSION: ${VERSION:-dev}
     container_name: teslasync-web
     restart: unless-stopped
     ports:
@@ -177,7 +193,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8081
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
-      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
+      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-notification-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
       # Web Push (VAPID) — same env vars as the API server. Required so
@@ -278,11 +294,24 @@ services:
       - "${PROMETHEUS_PORT:-9099}:9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      # SLO recording + alerting rules are generated from slo/catalog.yaml by
+      # `go run ./cmd/slogen generate {recording,alerting}` and committed under
+      # helm/teslasync/files/prometheus/. Mounting the same artefacts here keeps
+      # dev and K8s on identical rule definitions — drift would mean a SLO
+      # tested in dev does not exist in prod.
+      - ./helm/teslasync/files/prometheus/recording-rules.yaml:/etc/prometheus/rules/recording-rules.yaml:ro
+      - ./helm/teslasync/files/prometheus/alerting-rules.yaml:/etc/prometheus/rules/alerting-rules.yaml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=15d'
       - '--web.enable-lifecycle'
+      # exemplar-storage retains the trace_id/span_id labels attached to
+      # histogram observations by internal/api/middleware.go +
+      # internal/metrics/exemplar.go so Grafana can render the "View trace"
+      # dot on RED latency panels. Without this flag the labels are accepted
+      # at ingest but dropped at query time, hiding the link entirely.
+      - '--enable-feature=exemplar-storage'
     depends_on:
       teslasync-api:
         condition: service_healthy
@@ -356,7 +385,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8082
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
-      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
+      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-export-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
     depends_on:
@@ -400,7 +429,7 @@ services:
       - LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8083
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
-      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-jaeger:4317}
+      - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-automation-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
     depends_on:
@@ -424,6 +453,12 @@ services:
   # Jaeger (optional — docker compose --profile tracing up)
   # Provides distributed tracing via OpenTelemetry (OTLP gRPC).
   # Jaeger UI: http://localhost:16686
+  #
+  # In the dev compose layout, services emit spans to the otel-collector below
+  # rather than direct to jaeger, so the collector's batching + tail-sampling
+  # (when enabled) takes effect even locally. The collector then forwards to
+  # jaeger:4317 via the otlp/jaeger exporter. Jaeger no longer needs to bind
+  # 4317 to the host — the host-facing OTLP ingest is owned by otel-collector.
   jaeger:
     image: jaegertracing/all-in-one:1.57
     container_name: teslasync-jaeger
@@ -432,13 +467,48 @@ services:
       - tracing
     ports:
       - "${JAEGER_UI_PORT:-16686}:16686"
-      - "${JAEGER_OTLP_PORT:-4317}:4317"
     environment:
       - COLLECTOR_OTLP_ENABLED=true
     deploy:
       resources:
         limits:
           memory: 256M
+
+  # OpenTelemetry Collector (optional — docker compose --profile tracing up)
+  # Dev variant of helm/teslasync/files/otel-collector/config.yaml — 100%
+  # sampling (no tail policy), CORS-enabled OTLP HTTP receiver for browser
+  # RUM, and Jaeger as the trace backend instead of Tempo. See
+  # observability/otel-collector/config.yaml for the full pipeline and the
+  # rationale behind each dev-specific divergence.
+  #
+  # Ports:
+  #   4317 - OTLP gRPC (Go services)
+  #   4318 - OTLP HTTP (browser RUM, with CORS)
+  #   9464 - Prometheus exposition of collector + forwarded OTLP metrics
+  #   8888 - Collector's own internal telemetry metrics
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.1
+    container_name: teslasync-otel-collector
+    restart: unless-stopped
+    profiles:
+      - tracing
+    command:
+      - "--config=/etc/otelcol/config.yaml"
+    volumes:
+      - ./observability/otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "${OTEL_COLLECTOR_GRPC_PORT:-4317}:4317"
+      - "${OTEL_COLLECTOR_HTTP_PORT:-4318}:4318"
+      - "${OTEL_COLLECTOR_METRICS_PORT:-9464}:9464"
+    depends_on:
+      jaeger:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 64M
 
   # Fleet Telemetry Server (optional — docker compose --profile telemetry up)
   # Receives streaming data from Tesla vehicles via WebSocket and publishes

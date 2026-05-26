@@ -141,6 +141,12 @@ const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPag
 const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalViewerPage'))
 const FeedbackQueue = lazy(() => import('./features/admin/pages/FeedbackQueuePage'))
 const FleetTelemetryCoverage = lazy(() => import('./features/admin/pages/FleetTelemetryCoveragePage'))
+// Phase-tracing diagnostic surfaces — DLQ / Flags / Ingest-XRay / Live Signals.
+// Each pages a Go handler under /api/v1/system/* added in this branch.
+const DLQInspector = lazy(() => import('./features/admin/pages/DLQInspectorPage'))
+const FeatureFlagsAdmin = lazy(() => import('./features/admin/pages/FeatureFlagsPage'))
+const IngestXRay = lazy(() => import('./features/admin/pages/IngestXRayPage'))
+const LiveSignalInspector = lazy(() => import('./features/admin/pages/LiveSignalInspectorPage'))
 
 // Power user
 const PowerSqlPlayground = lazy(() => import('./features/power-user/pages/SqlPlaygroundPage'))
@@ -409,6 +415,11 @@ export default function App() {
         <Route path="admin" element={<Navigate to="/system-status" replace />} />
         <Route path="admin/feedback" element={<SafeRoute name="FeedbackQueue"><FeedbackQueue /></SafeRoute>} />
         <Route path="admin/telemetry/coverage" element={<SafeRoute name="FleetTelemetryCoverage"><FleetTelemetryCoverage /></SafeRoute>} />
+        {/* Phase-tracing diagnostic surfaces */}
+        <Route path="admin/dlq" element={<SafeRoute name="DLQInspector"><DLQInspector /></SafeRoute>} />
+        <Route path="admin/flags" element={<SafeRoute name="FeatureFlagsAdmin"><FeatureFlagsAdmin /></SafeRoute>} />
+        <Route path="admin/ingest-xray" element={<SafeRoute name="IngestXRay"><IngestXRay /></SafeRoute>} />
+        <Route path="admin/live-signals" element={<SafeRoute name="LiveSignalInspector"><LiveSignalInspector /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
         <Route path="tesla-features" element={<SafeRoute name="TeslaFeatureFlags"><TeslaFeatureFlags /></SafeRoute>} />

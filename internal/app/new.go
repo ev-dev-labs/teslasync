@@ -18,6 +18,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
+	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/jobs"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -89,6 +90,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 
 	a.initMQTT(ctx)
 	a.initCache()
+	a.initFlagStore(ctx)
 	a.initEventBus()
 	a.initEncryptor()
 	a.initTeslaClient()
@@ -192,6 +194,31 @@ func (a *App) initCache() {
 		a.Cache.Close()
 		return nil
 	})
+}
+
+// initFlagStore wires the dynamic feature-flag store + change audit
+// repo. Phase-44 / observability-batch / Prompt F8.
+//
+// The store gracefully degrades to in-process cache + defaults when
+// Redis is disabled (a.Cache.Underlying() returns nil). The audit repo
+// is wired only when a.DB is initialised — read-only handlers degrade
+// to 503 when nil. Pub/Sub invalidation runs in a background goroutine
+// shut down via a.addCloser.
+func (a *App) initFlagStore(ctx context.Context) {
+	var rdb = a.Cache.Underlying() // may be nil — store handles that
+	a.FlagStore = flags.NewStore(rdb)
+	shutdown := a.FlagStore.Start(ctx)
+	a.addCloser("flag-store", func(_ context.Context) error {
+		shutdown()
+		return nil
+	})
+	if a.DB != nil {
+		a.FeatureFlagChangesRepo = database.NewFeatureFlagChangesRepo(a.DB)
+	}
+	log.Info().
+		Bool("redis_backed", rdb != nil).
+		Bool("audit_repo", a.FeatureFlagChangesRepo != nil).
+		Msg("dynamic feature flag store initialised")
 }
 
 func (a *App) initEventBus() {
@@ -638,6 +665,36 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		Int("writer_count", len(pipelineWriters)).
 		Dur("stale_timeout", a.Cfg.FleetTelemetry.StaleTimeout).
 		Msg("phase-42a: fleet-telemetry PipelineSubscriber active")
+
+	// Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
+	// Subscribes to {dlqTopic}/# on the SAME paho client the pipeline
+	// already uses, keeping connection count + DLQ topic semantics
+	// single-sourced. Inspector failures degrade /system/dlq* to 503
+	// but MUST NOT halt the pipeline — best-effort observability.
+	dlqInspector, err := mqtt.NewDLQInspector(pahoClient, dlqTopic, mqtt.DLQInspectorConfig{
+		Capacity:      a.Cfg.Features.DLQRingCapacity,
+		ReplayEnabled: a.Cfg.Features.DLQReplayEnabled,
+		ReplayQoS:     0,
+	}, pipelineLogger)
+	if err != nil {
+		log.Warn().Err(err).Msg("phase-44: DLQInspector construction failed; /system/dlq endpoints will be 503")
+	} else if startErr := dlqInspector.Start(); startErr != nil {
+		log.Warn().Err(startErr).Str("dlq_topic", dlqTopic).
+			Msg("phase-44: DLQInspector subscribe failed; /system/dlq endpoints will be 503")
+	} else {
+		a.DLQInspector = dlqInspector
+		a.DLQReplayAuditRepo = database.NewDLQReplayAuditRepo(a.DB)
+		a.addCloser("dlq-inspector", func(_ context.Context) error {
+			dlqInspector.Stop()
+			return nil
+		})
+		log.Info().
+			Str("dlq_topic", dlqTopic).
+			Int("ring_capacity", a.Cfg.Features.DLQRingCapacity).
+			Bool("replay_enabled", a.Cfg.Features.DLQReplayEnabled).
+			Msg("phase-44: DLQ Inspector active")
+	}
+
 	return nil
 }
 
