@@ -40,6 +40,10 @@ type Config struct {
 	MongoDB              MongoDBConfig
 	GasPrice             GasPriceConfig
 	OpenTelemetry        OpenTelemetryConfig
+	Profiling            ProfilingConfig
+	SLO                  SLOConfig
+	DataQuality          DataQualityConfig
+	Synthetic            SyntheticConfig
 	GoogleMaps           GoogleMapsConfig
 	AzureMaps            AzureMapsConfig
 	APILogs              APILogsConfig
@@ -177,6 +181,69 @@ type OpenTelemetryConfig struct {
 	Endpoint    string `json:"endpoint"`
 	ServiceName string `json:"service_name"`
 	Insecure    bool   `json:"insecure"`
+}
+
+// ProfilingConfig controls Pyroscope continuous profiling. Defaults to
+// disabled — when ServerAddress is empty the profiler is a no-op and
+// the runtime profilers stay at their stock rates. When enabled, every
+// long-lived binary (API + 3 workers) uploads CPU/heap/goroutine/mutex
+// profiles to the Pyroscope server using godeltaprof deltas (<1% CPU
+// overhead). See docs/runbooks/phase-49-pyroscope.md for the dashboard
+// taxonomy.
+//
+// Phase-49 / Prompt p49-profiling.
+type ProfilingConfig struct {
+	// Enabled gates the entire profiler. Default false.
+	Enabled bool
+	// ServerAddress is the Pyroscope server's ingest URL
+	// (e.g. http://pyroscope:4040). Required when Enabled is true.
+	ServerAddress string
+	// UploadRate controls how often deltas are pushed. Default 15s
+	// matches Pyroscope's documented baseline; lower values increase
+	// resolution at the cost of network bytes.
+	UploadRate time.Duration
+}
+
+// SLOConfig — Phase-46 / p46-slo. Live SLO board configuration.
+type SLOConfig struct {
+	// CatalogPath points at slo/catalog.yaml. Default
+	// "slo/catalog.yaml" (relative to the binary's CWD).
+	CatalogPath string
+	// PromBaseURL is the Prometheus HTTP API base
+	// (e.g. http://prometheus:9090). Empty disables live tier
+	// evaluation — the catalog metadata is still served so the SPA
+	// can render names + targets + a "Prometheus not configured"
+	// banner.
+	PromBaseURL string
+}
+
+// DataQualityConfig — Phase-46 / p46-dq-lineage. Per-field freshness /
+// gap / duplicate scoring from signal_log.
+type DataQualityConfig struct {
+	// Enabled gates the scorer. Default true — lineage graph is
+	// always served because it reads embedded routing.yaml.
+	Enabled bool
+	// WindowMins is the lookback window for every aggregate.
+	// Default 60.
+	WindowMins int
+}
+
+// SyntheticConfig — Phase-46 / p46-synthetic. Outside-in canary
+// probes that exercise health/readiness endpoints.
+type SyntheticConfig struct {
+	// Enabled gates the runner. Default false (opt-in to keep test
+	// + local dev quiet).
+	Enabled bool
+	// IntervalSeconds between probe ticks. Default 60.
+	IntervalSeconds int
+	// TimeoutSeconds per probe invocation. Default 30.
+	TimeoutSeconds int
+	// ProbeURLs is the comma-separated list of full URLs to probe
+	// (e.g. "http://localhost:8080/healthz,http://localhost:8080/readyz").
+	// Default empty — runner is configured but registers zero
+	// probes so /admin/observability/synthetic returns an empty
+	// snapshot.
+	ProbeURLs string
 }
 
 // GasPriceConfig controls automated gas price polling from the EIA API.
@@ -432,6 +499,29 @@ func Load() (*Config, error) {
 			Endpoint:    envStr("OTEL_ENDPOINT", "localhost:4317"),
 			ServiceName: envStr("OTEL_SERVICE_NAME", "teslasync"),
 			Insecure:    envBool("OTEL_INSECURE", true),
+		},
+
+		Profiling: ProfilingConfig{
+			Enabled:       envBool("PYROSCOPE_ENABLED", false),
+			ServerAddress: envStr("PYROSCOPE_SERVER_ADDRESS", ""),
+			UploadRate:    envDuration("PYROSCOPE_UPLOAD_RATE", 15*time.Second),
+		},
+
+		SLO: SLOConfig{
+			CatalogPath: envStr("SLO_CATALOG_PATH", "slo/catalog.yaml"),
+			PromBaseURL: envStr("PROMETHEUS_BASE_URL", ""),
+		},
+
+		DataQuality: DataQualityConfig{
+			Enabled:    envBool("DATA_QUALITY_ENABLED", true),
+			WindowMins: envInt("DATA_QUALITY_WINDOW_MINS", 60),
+		},
+
+		Synthetic: SyntheticConfig{
+			Enabled:         envBool("SYNTHETIC_ENABLED", false),
+			IntervalSeconds: envInt("SYNTHETIC_INTERVAL_SECONDS", 60),
+			TimeoutSeconds:  envInt("SYNTHETIC_TIMEOUT_SECONDS", 30),
+			ProbeURLs:       envStr("SYNTHETIC_PROBE_URLS", ""),
 		},
 
 		GoogleMaps: GoogleMapsConfig{

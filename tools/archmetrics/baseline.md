@@ -1,23 +1,23 @@
-# TeslaSync architecture metrics — baseline
+# TeslaSync architecture metrics ΓÇö baseline
 
-_Generated 2026-05-26T09:05:48Z, Go go1.26.1, commit a1e930ebac49bdabf81b85db3735092fb7a38c7a_
+_Generated 2026-05-26T16:37:59Z, Go go1.26.1, commit f93d78eccf8b31a2204de542298f575920f8625c_
 
 ## Summary
 
-- Packages: 188
-- doc.go coverage: 100.0%
+- Packages: 198
+- doc.go coverage: 98.5%
 - Forbidden edges detected: 0
-- Total non-blank LOC under cmd/+internal/+tools/: 359403
+- Total non-blank LOC under cmd/+internal/+tools/: 364645
 
 ## cmd/* main.go LOC
 
 | cmd | LOC |
 |---|---:|
 | cmd/ai-eval/main.go | 151 |
-| cmd/automation-worker/main.go | 333 |
-| cmd/export-worker/main.go | 233 |
+| cmd/automation-worker/main.go | 350 |
+| cmd/export-worker/main.go | 250 |
 | cmd/metric-coverage-audit/main.go | 126 |
-| cmd/notification-worker/main.go | 496 |
+| cmd/notification-worker/main.go | 517 |
 | cmd/protogen-tesla/main.go | 73 |
 | cmd/pub-test-signal/main.go | 655 |
 | cmd/resubscribe/main.go | 446 |
@@ -36,10 +36,10 @@ _None._
 | Package | .go | _test.go | LOC | doc.go | Layer |
 |---|---:|---:|---:|:---:|---|
 | cmd/ai-eval | 2 | 0 | 155 | yes | cmd-internal |
-| cmd/automation-worker | 2 | 0 | 337 | yes | cmd-internal |
-| cmd/export-worker | 2 | 0 | 237 | yes | cmd-internal |
+| cmd/automation-worker | 2 | 0 | 354 | yes | cmd-internal |
+| cmd/export-worker | 2 | 0 | 254 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
-| cmd/notification-worker | 2 | 0 | 500 | yes | cmd-internal |
+| cmd/notification-worker | 2 | 0 | 521 | yes | cmd-internal |
 | cmd/protogen-tesla | 4 | 1 | 2295 | yes | cmd-internal |
 | cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
 | cmd/pub-test-signal | 2 | 0 | 659 | yes | cmd-internal |
@@ -131,16 +131,20 @@ _None._
 | internal/ai/stream | 2 | 1 | 1185 | yes | platform |
 | internal/ai/tools | 58 | 51 | 47036 | yes | platform |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 268 | 163 | 125531 | yes | handler |
+| internal/api | 271 | 163 | 125773 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
-| internal/app | 6 | 1 | 1487 | yes | app |
+| internal/app | 6 | 1 | 1708 | yes | app |
+| internal/app/adminobssvc | 3 | 0 | 168 | yes | app |
+| internal/app/auditviewersvc | 3 | 0 | 77 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
 | internal/app/dashboardsvc | 2 | 1 | 322 | yes | app |
 | internal/app/exportsvc | 2 | 1 | 280 | yes | app |
+| internal/app/gdprexportsvc | 2 | 0 | 68 | yes | app |
 | internal/app/notificationsvc | 2 | 1 | 311 | yes | app |
 | internal/app/tripsvc | 2 | 1 | 314 | yes | app |
 | internal/app/vehiclesvc | 3 | 1 | 350 | yes | app |
 | internal/arch | 2 | 1 | 976 | yes | tool |
+| internal/audit | 2 | 1 | 375 | yes | platform |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1604 | yes | platform |
 | internal/automation/action | 6 | 5 | 3822 | yes | platform |
@@ -150,9 +154,10 @@ _None._
 | internal/automation/trigger | 7 | 0 | 946 | yes | platform |
 | internal/backup | 3 | 1 | 668 | yes | platform |
 | internal/cache | 3 | 1 | 262 | yes | platform |
-| internal/config | 3 | 1 | 619 | yes | platform |
+| internal/config | 3 | 1 | 701 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 102 | 34 | 26605 | yes | platform |
+| internal/database | 108 | 35 | 27708 | yes | platform |
+| internal/dataquality | 3 | 0 | 323 |   |  |
 | internal/domain | 2 | 1 | 114 | yes | domain |
 | internal/domain/charging | 6 | 1 | 357 | yes | domain |
 | internal/domain/export | 3 | 1 | 126 | yes | domain |
@@ -164,6 +169,7 @@ _None._
 | internal/enums | 5 | 1 | 304 | yes | platform |
 | internal/events | 2 | 1 | 145 | yes | platform |
 | internal/export | 9 | 3 | 3057 | yes | platform |
+| internal/export/gdpr | 2 | 0 | 254 | yes | platform |
 | internal/flags | 2 | 1 | 556 | yes | platform |
 | internal/fsm | 11 | 3 | 2507 | yes | platform |
 | internal/fsm/automation | 2 | 1 | 798 | yes | platform |
@@ -174,8 +180,8 @@ _None._
 | internal/fsm/telemetry | 3 | 1 | 734 | yes | platform |
 | internal/geocoding | 6 | 1 | 532 | yes | platform |
 | internal/handler/dto | 6 | 0 | 94 | yes | handler |
-| internal/handler/middleware | 10 | 1 | 742 | yes | handler |
-| internal/handler/v1 | 8 | 1 | 427 | yes | handler |
+| internal/handler/middleware | 11 | 1 | 821 | yes | handler |
+| internal/handler/v1 | 11 | 1 | 828 | yes | handler |
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/jobs | 13 | 12 | 3463 | yes | platform |
@@ -200,9 +206,13 @@ _None._
 | internal/port/messaging | 3 | 1 | 272 | yes | port |
 | internal/port/repository | 8 | 0 | 110 | yes | port |
 | internal/resilience | 2 | 4 | 722 | yes | platform |
+| internal/rotation | 2 | 1 | 360 | yes | platform |
+| internal/schemacheck | 2 | 1 | 234 | yes | platform |
 | internal/service | 4 | 1 | 1377 | yes | platform |
 | internal/signal | 11 | 11 | 7539 | yes | platform |
 | internal/signal/signaltest | 2 | 0 | 103 | yes | platform |
+| internal/slo | 2 | 1 | 699 |   |  |
+| internal/synthetic | 2 | 1 | 375 |   |  |
 | internal/tesla | 11 | 3 | 2267 | yes | platform |
 | internal/tesla/bootstrap | 3 | 1 | 1037 | yes | platform |
 | internal/tesla/codec | 6 | 4 | 2932 | yes | platform |
@@ -214,7 +224,7 @@ _None._
 | internal/tesla/unit_history | 4 | 2 | 1673 | yes | platform |
 | internal/tesla/units | 4 | 1 | 477 | yes | platform |
 | internal/tesla_pipeline | 2 | 5 | 2858 | yes | platform |
-| internal/tracing | 4 | 2 | 481 | yes | platform |
+| internal/tracing | 5 | 3 | 607 | yes | platform |
 | internal/units | 2 | 0 | 63 | yes | platform |
 | internal/webpush | 2 | 1 | 517 | yes | platform |
 | internal/worker | 8 | 3 | 2594 | yes | platform |
@@ -226,4 +236,12 @@ _None._
 
 ## doc.go adoption
 
-- Packages WITHOUT doc.go: 0
+- Packages WITHOUT doc.go: 3
+
+<details><summary>List</summary>
+
+- `internal/dataquality`
+- `internal/slo`
+- `internal/synthetic`
+
+</details>

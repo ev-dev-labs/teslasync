@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -24,6 +25,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/rotation"
 	"github.com/ev-dev-labs/teslasync/internal/schemacheck"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/slo"
+	"github.com/ev-dev-labs/teslasync/internal/synthetic"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
@@ -105,6 +108,12 @@ type App struct {
 	GDPRArtifactRepo      *database.GDPRArtifactRepo
 	RotationTracker       *rotation.Tracker
 	SchemaSeed            schemacheck.Fingerprint
+
+	// Phase-46 SOTA observability batch.
+	SLOCatalog        *slo.Catalog
+	SLOTracker        *slo.Tracker
+	DataQualityScorer *dataquality.Scorer
+	SyntheticRunner   *synthetic.Runner
 
 	// Workers
 	Worker         *worker.Worker

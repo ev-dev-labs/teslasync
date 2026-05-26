@@ -70,6 +70,17 @@ func main() {
 			Msg("OpenTelemetry tracing enabled")
 	}
 
+	// Pyroscope continuous profiling — non-fatal (Phase-49 / p49-profiling).
+	profilerShutdown, err := tracing.StartProfiler(ctx, cfg, "teslasync-automation-worker")
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize pyroscope profiler, continuing without it")
+	} else if cfg.Profiling.Enabled && cfg.Profiling.ServerAddress != "" {
+		log.Info().
+			Str("service", "teslasync-automation-worker").
+			Str("server", cfg.Profiling.ServerAddress).
+			Msg("Pyroscope continuous profiling enabled")
+	}
+
 	// ── Database ───────────────────────────────────────────────────────
 	var db *database.DB
 	err = resilience.ConnectWithRetry(ctx, "database", 10, func(ctx context.Context) error {
@@ -316,6 +327,13 @@ func main() {
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		if err := tracingShutdown(shutdownCtx); err != nil {
 			log.Warn().Err(err).Msg("tracing shutdown failed")
+		}
+		shutdownCancel()
+	}
+	if profilerShutdown != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := profilerShutdown(shutdownCtx); err != nil {
+			log.Warn().Err(err).Msg("profiler shutdown failed")
 		}
 		shutdownCancel()
 	}

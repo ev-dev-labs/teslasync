@@ -18,6 +18,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
@@ -32,6 +33,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/rotation"
 	"github.com/ev-dev-labs/teslasync/internal/schemacheck"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/slo"
+	"github.com/ev-dev-labs/teslasync/internal/synthetic"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
@@ -95,6 +98,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initCache()
 	a.initFlagStore(ctx)
 	a.initObservabilityPhase45(ctx)
+	a.initObservabilityPhase46(ctx)
 	a.initEventBus()
 	a.initEncryptor()
 	a.initTeslaClient()
@@ -136,6 +140,24 @@ func (a *App) initTracing(ctx context.Context) {
 			shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			return shutdownTracer(shutdownCtx)
+		})
+	}
+
+	shutdownProfiler, err := tracing.StartProfiler(ctx, a.Cfg, a.Cfg.OpenTelemetry.ServiceName)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize pyroscope profiler, continuing without it")
+		return
+	}
+	if a.Cfg.Profiling.Enabled && a.Cfg.Profiling.ServerAddress != "" {
+		log.Info().
+			Str("server", a.Cfg.Profiling.ServerAddress).
+			Str("service", a.Cfg.OpenTelemetry.ServiceName).
+			Dur("upload_rate", a.Cfg.Profiling.UploadRate).
+			Msg("Pyroscope continuous profiling enabled")
+		a.addCloser("profiler", func(ctx context.Context) error {
+			shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			return shutdownProfiler(shutdownCtx)
 		})
 	}
 }
@@ -288,6 +310,94 @@ func (a *App) initObservabilityPhase45(ctx context.Context) {
 		Bool("rotation_tracker", a.RotationTracker != nil).
 		Bool("schema_seed", a.SchemaSeed.SHA256 != "").
 		Msg("phase-45 operator confidence initialised")
+}
+
+// initObservabilityPhase46 wires the Phase-46 SOTA observability batch:
+//
+//	SLO catalog + tracker — slo/catalog.yaml + Prometheus-backed
+//	  live tier evaluation. Catalog load failure surfaces 503 on
+//	  /admin/observability/slo; PROMETHEUS_BASE_URL empty disables
+//	  live tier evaluation but still serves catalog metadata.
+//
+//	Data-quality scorer — pgxpool-backed per-field freshness / gap /
+//	  duplicate scoring over signal_log. DATA_QUALITY_ENABLED=false
+//	  flips /admin/observability/data-quality to 503.
+//
+//	Synthetic runner — outside-in HTTP canary probes. Reads
+//	  SYNTHETIC_PROBE_URLS (comma-separated). Disabled by default
+//	  to keep test + dev quiet; opt in via SYNTHETIC_ENABLED=true.
+//
+// Lineage (/admin/observability/lineage) is always-on because it
+// reads the embedded routing.yaml — no runtime dependency.
+//
+// Each subsystem is independent: SLO load failure does NOT block
+// data-quality or synthetic; synthetic disabled does NOT block SLO.
+func (a *App) initObservabilityPhase46(ctx context.Context) {
+	// SLO catalog + tracker.
+	if path := a.Cfg.SLO.CatalogPath; path != "" {
+		if cat, err := slo.LoadCatalog(path); err != nil {
+			log.Warn().Err(err).Str("path", path).Msg("phase-46: SLO catalog load failed — slo board degraded")
+		} else {
+			a.SLOCatalog = cat
+		}
+	}
+	if a.SLOCatalog != nil {
+		tracker, err := slo.NewTracker(a.Cfg.SLO.PromBaseURL)
+		if err != nil {
+			log.Warn().Err(err).Msg("phase-46: SLO tracker init failed — live tier evaluation disabled")
+		} else {
+			a.SLOTracker = tracker
+		}
+	}
+
+	// Data-quality scorer.
+	if a.Cfg.DataQuality.Enabled && a.DB != nil {
+		a.DataQualityScorer = dataquality.NewScorerFromPool(a.DB.Pool, a.Cfg.DataQuality.WindowMins)
+	}
+
+	// Synthetic runner — built unconditionally so the admin board
+	// can report "synthetic monitoring not enabled" honestly when
+	// disabled. Started only when enabled to avoid background work.
+	if a.Cfg.Synthetic.Enabled {
+		probes := buildSyntheticProbes(a.Cfg.Synthetic.ProbeURLs)
+		interval := time.Duration(a.Cfg.Synthetic.IntervalSeconds) * time.Second
+		timeout := time.Duration(a.Cfg.Synthetic.TimeoutSeconds) * time.Second
+		runner := synthetic.NewRunner(probes, interval, timeout)
+		runner.Start(ctx)
+		a.SyntheticRunner = runner
+		a.addCloser("synthetic-runner", func(_ context.Context) error {
+			runner.Stop()
+			return nil
+		})
+	}
+
+	log.Info().
+		Bool("slo_catalog", a.SLOCatalog != nil).
+		Bool("slo_tracker", a.SLOTracker != nil).
+		Bool("dq_scorer", a.DataQualityScorer != nil).
+		Bool("synthetic_runner", a.SyntheticRunner != nil).
+		Msg("phase-46 observability batch initialised")
+}
+
+// buildSyntheticProbes parses the comma-separated SYNTHETIC_PROBE_URLS
+// list into a set of HTTP probes. Each url becomes a probe named
+// "http_<index>" so the synthetic board has stable identifiers across
+// reorders; operators that want stable names should run the canary in
+// its own deployment with one probe per binary.
+func buildSyntheticProbes(raw string) []synthetic.Probe {
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	probes := make([]synthetic.Probe, 0, len(parts))
+	for i, p := range parts {
+		url := strings.TrimSpace(p)
+		if url == "" {
+			continue
+		}
+		probes = append(probes, synthetic.NewHTTPProbe(fmt.Sprintf("http_%d", i), url))
+	}
+	return probes
 }
 
 // loadOrComputeSchemaSeed reads the most-recent schema_fingerprint

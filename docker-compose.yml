@@ -54,6 +54,26 @@ services:
       - OTEL_TRACES_SAMPLER_ARG=${OTEL_TRACES_SAMPLER_ARG:-1.0}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-api}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      # Pyroscope continuous profiling — opt-in via PYROSCOPE_ENABLED.
+      # When enabled the API uploads CPU/heap/goroutine/mutex/block deltas
+      # to the Pyroscope server every PYROSCOPE_UPLOAD_RATE (default 15s).
+      # Phase-49 / p49-profiling.
+      - PYROSCOPE_ENABLED=${PYROSCOPE_ENABLED:-false}
+      - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-http://pyroscope:4040}
+      - PYROSCOPE_UPLOAD_RATE=${PYROSCOPE_UPLOAD_RATE:-15s}
+      # Phase-46 / SOTA observability batch.
+      # SLO board — empty PROMETHEUS_BASE_URL serves catalog
+      # metadata only (no live tier evaluation).
+      - SLO_CATALOG_PATH=${SLO_CATALOG_PATH:-slo/catalog.yaml}
+      - PROMETHEUS_BASE_URL=${PROMETHEUS_BASE_URL:-}
+      # Data quality scoring over signal_log.
+      - DATA_QUALITY_ENABLED=${DATA_QUALITY_ENABLED:-true}
+      - DATA_QUALITY_WINDOW_MINS=${DATA_QUALITY_WINDOW_MINS:-60}
+      # Synthetic monitoring (outside-in probes). Opt-in.
+      - SYNTHETIC_ENABLED=${SYNTHETIC_ENABLED:-false}
+      - SYNTHETIC_INTERVAL_SECONDS=${SYNTHETIC_INTERVAL_SECONDS:-60}
+      - SYNTHETIC_TIMEOUT_SECONDS=${SYNTHETIC_TIMEOUT_SECONDS:-30}
+      - SYNTHETIC_PROBE_URLS=${SYNTHETIC_PROBE_URLS:-}
       # Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
       # Replay is opt-in because re-publishing a payload that already
       # triggered a production exception is consequential. Replay is
@@ -196,6 +216,9 @@ services:
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-notification-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      - PYROSCOPE_ENABLED=${PYROSCOPE_ENABLED:-false}
+      - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-http://pyroscope:4040}
+      - PYROSCOPE_UPLOAD_RATE=${PYROSCOPE_UPLOAD_RATE:-15s}
       # Web Push (VAPID) — same env vars as the API server. Required so
       # the notification worker can deliver "webpush" Requests pulled
       # from the MQTT internal topic.
@@ -388,6 +411,9 @@ services:
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-export-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      - PYROSCOPE_ENABLED=${PYROSCOPE_ENABLED:-false}
+      - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-http://pyroscope:4040}
+      - PYROSCOPE_UPLOAD_RATE=${PYROSCOPE_UPLOAD_RATE:-15s}
     depends_on:
       postgres:
         condition: service_healthy
@@ -432,6 +458,9 @@ services:
       - OTEL_ENDPOINT=${OTEL_ENDPOINT:-otel-collector:4317}
       - OTEL_SERVICE_NAME=${OTEL_SERVICE_NAME:-teslasync-automation-worker}
       - OTEL_INSECURE=${OTEL_INSECURE:-true}
+      - PYROSCOPE_ENABLED=${PYROSCOPE_ENABLED:-false}
+      - PYROSCOPE_SERVER_ADDRESS=${PYROSCOPE_SERVER_ADDRESS:-http://pyroscope:4040}
+      - PYROSCOPE_UPLOAD_RATE=${PYROSCOPE_UPLOAD_RATE:-15s}
     depends_on:
       postgres:
         condition: service_healthy
@@ -510,6 +539,32 @@ services:
         reservations:
           memory: 64M
 
+  # Pyroscope continuous profiling server (optional — docker compose --profile profiling up)
+  # Receives godeltaprof uploads from API + 3 workers. Surfaces CPU, heap,
+  # goroutine, mutex, block profiles in Grafana via the Pyroscope datasource.
+  # Phase-49 / p49-profiling. See docs/runbooks/phase-49-pyroscope.md.
+  #
+  # Ports:
+  #   4040 - Pyroscope HTTP ingest + UI
+  pyroscope:
+    image: grafana/pyroscope:1.7.1
+    container_name: teslasync-pyroscope
+    restart: unless-stopped
+    profiles:
+      - profiling
+    ports:
+      - "${PYROSCOPE_PORT:-4040}:4040"
+    command:
+      - "server"
+    volumes:
+      - pyroscope_data:/var/lib/pyroscope
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
   # Fleet Telemetry Server (optional — docker compose --profile telemetry up)
   # Receives streaming data from Tesla vehicles via WebSocket and publishes
   # to MQTT (Mosquitto). TeslaSync's MQTT subscriber picks up the signals.
@@ -578,4 +633,5 @@ volumes:
   mosquitto_data:
   redis_data:
   prometheus_data:
+  pyroscope_data:
   vehicle_photos:

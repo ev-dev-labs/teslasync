@@ -54,6 +54,12 @@ func (a *App) Run(ctx context.Context) error {
 		GDPRArtifactRepo:      a.GDPRArtifactRepo,
 		RotationTracker:       a.RotationTracker,
 		SchemaSeed:            a.SchemaSeed,
+
+		// Phase-46 SOTA observability batch.
+		SLOCatalog:        a.SLOCatalog,
+		SLOTracker:        a.SLOTracker,
+		DataQualityScorer: a.DataQualityScorer,
+		SyntheticRunner:   a.SyntheticRunner,
 	})
 	a.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", a.Cfg.Port),

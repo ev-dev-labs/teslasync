@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-26T09:05:42Z",
+  "generated_at": "2026-05-26T16:37:58Z",
   "go_version": "go1.26.1",
-  "commit_sha": "a1e930ebac49bdabf81b85db3735092fb7a38c7a",
+  "commit_sha": "f93d78eccf8b31a2204de542298f575920f8625c",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -23,7 +23,7 @@
       "path": "cmd/automation-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 337,
+      "loc": 354,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -49,7 +49,7 @@
       "path": "cmd/export-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 237,
+      "loc": 254,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -83,7 +83,7 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 500,
+      "loc": 521,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -1946,9 +1946,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 268,
+      "go_files": 271,
       "test_files": 163,
-      "loc": 125531,
+      "loc": 125773,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2023,10 +2023,14 @@
         "internal/alertmsg",
         "internal/api",
         "internal/apilog",
+        "internal/app/adminobssvc",
+        "internal/app/auditviewersvc",
         "internal/app/chargingsvc",
         "internal/app/dashboardsvc",
         "internal/app/exportsvc",
+        "internal/app/gdprexportsvc",
         "internal/app/vehiclesvc",
+        "internal/audit",
         "internal/auth",
         "internal/automation",
         "internal/automation/action",
@@ -2038,6 +2042,7 @@
         "internal/config",
         "internal/crypto",
         "internal/database",
+        "internal/dataquality",
         "internal/enums",
         "internal/events",
         "internal/export",
@@ -2048,6 +2053,7 @@
         "internal/fsm/drive",
         "internal/fsm/telemetry",
         "internal/geocoding",
+        "internal/handler/middleware",
         "internal/handler/v1",
         "internal/imaging",
         "internal/integrations",
@@ -2065,8 +2071,12 @@
         "internal/platform/httputil",
         "internal/polling",
         "internal/resilience",
+        "internal/rotation",
+        "internal/schemacheck",
         "internal/service",
         "internal/signal",
+        "internal/slo",
+        "internal/synthetic",
         "internal/tesla",
         "internal/tesla/codec",
         "internal/tesla/config",
@@ -2290,6 +2300,7 @@
         "dashboard_layout_handler.go",
         "dashboard_layout_handler_test.go",
         "data_repair_handler.go",
+        "dataquality_handler.go",
         "devtools_handler.go",
         "devtools_handler_database.go",
         "devtools_handler_dtos.go",
@@ -2430,6 +2441,7 @@
         "signals_catalog_handler.go",
         "signals_catalog_handler_test.go",
         "sleep_handler.go",
+        "slo_handler.go",
         "software_update_handler.go",
         "speed_profile_handler.go",
         "sse_handler.go",
@@ -2439,6 +2451,7 @@
         "status_v1_handler_test.go",
         "sudo_middleware.go",
         "sudo_middleware_test.go",
+        "synthetic_handler.go",
         "system_auth_mode_handler.go",
         "system_auth_mode_handler_test.go",
         "system_handler.go",
@@ -2538,17 +2551,19 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1487,
+      "loc": 1708,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
         "internal/adapter/gasprices",
         "internal/api",
         "internal/apilog",
+        "internal/audit",
         "internal/cache",
         "internal/config",
         "internal/crypto",
         "internal/database",
+        "internal/dataquality",
         "internal/events",
         "internal/flags",
         "internal/geocoding",
@@ -2560,7 +2575,11 @@
         "internal/platform/httputil",
         "internal/polling",
         "internal/resilience",
+        "internal/rotation",
+        "internal/schemacheck",
         "internal/signal",
+        "internal/slo",
+        "internal/synthetic",
         "internal/tesla",
         "internal/tesla/normalize",
         "internal/tesla/router",
@@ -2579,6 +2598,42 @@
         "new.go",
         "run.go",
         "wiring_test.go"
+      ]
+    },
+    {
+      "path": "internal/app/adminobssvc",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 168,
+      "has_doc_go": true,
+      "layer": "app",
+      "imports": [
+        "internal/audit",
+        "internal/database",
+        "internal/rotation",
+        "internal/schemacheck"
+      ],
+      "files": [
+        "doc.go",
+        "service.go",
+        "types.go"
+      ]
+    },
+    {
+      "path": "internal/app/auditviewersvc",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 77,
+      "has_doc_go": true,
+      "layer": "app",
+      "imports": [
+        "internal/audit",
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "service.go",
+        "types.go"
       ]
     },
     {
@@ -2635,6 +2690,21 @@
         "doc.go",
         "service.go",
         "service_test.go"
+      ]
+    },
+    {
+      "path": "internal/app/gdprexportsvc",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 68,
+      "has_doc_go": true,
+      "layer": "app",
+      "imports": [
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "service.go"
       ]
     },
     {
@@ -2707,6 +2777,20 @@
         "arch_test.go",
         "doc.go",
         "rules.go"
+      ]
+    },
+    {
+      "path": "internal/audit",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 375,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "recorder.go",
+        "recorder_test.go"
       ]
     },
     {
@@ -2918,7 +3002,7 @@
       "path": "internal/config",
       "go_files": 3,
       "test_files": 1,
-      "loc": 619,
+      "loc": 701,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
@@ -2947,9 +3031,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 102,
-      "test_files": 34,
-      "loc": 26605,
+      "go_files": 108,
+      "test_files": 35,
+      "loc": 27708,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2975,6 +3059,7 @@
         "alert_rule_state_repo_integration_test.go",
         "alert_rule_state_repo_test.go",
         "api_call_log_repo.go",
+        "audit_log_query_repo.go",
         "audit_repo.go",
         "auth_sessions_repo.go",
         "auth_sessions_repo_test.go",
@@ -3016,12 +3101,14 @@
         "feature_flag_changes_repo.go",
         "from_map.go",
         "fsm_transition_repo.go",
+        "gdpr_artifact_repo.go",
         "geofence_repo.go",
         "geofence_repo_bulk.go",
         "guard_repo.go",
         "guard_repo_test.go",
         "helpers.go",
         "helpers_test.go",
+        "hypertable_metrics_repo.go",
         "ingest_xray_repo.go",
         "maintenance.go",
         "migrate.go",
@@ -3037,6 +3124,8 @@
         "places_cache_repo.go",
         "position_repo.go",
         "push_subscriptions_repo.go",
+        "query_budget_tracer.go",
+        "query_budget_tracer_test.go",
         "quiet_hours_repo.go",
         "quiet_hours_repo_test.go",
         "raw_telemetry_repo.go",
@@ -3061,6 +3150,7 @@
         "signal_log_repo.go",
         "signals_catalog_repo.go",
         "signals_catalog_repo_test.go",
+        "slow_queries_repo.go",
         "software_update_repo.go",
         "software_update_repo_test.go",
         "status_incidents_repo.go",
@@ -3087,6 +3177,7 @@
         "user_feedback_repo_test.go",
         "vampire_drain_repo.go",
         "vampire_drain_repo_test.go",
+        "vehicle_cost_repo.go",
         "vehicle_photo_repo.go",
         "vehicle_repo.go",
         "vehicle_settings_repo.go",
@@ -3099,6 +3190,21 @@
         "worker_status_repo.go",
         "write_buffer.go",
         "write_buffer_test.go"
+      ]
+    },
+    {
+      "path": "internal/dataquality",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 323,
+      "has_doc_go": false,
+      "imports": [
+        "internal/tesla/router"
+      ],
+      "files": [
+        "lineage.go",
+        "pgxpool_adapter.go",
+        "scorer.go"
       ]
     },
     {
@@ -3303,6 +3409,19 @@
       ]
     },
     {
+      "path": "internal/export/gdpr",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 254,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "exporter.go"
+      ]
+    },
+    {
       "path": "internal/flags",
       "go_files": 2,
       "test_files": 1,
@@ -3477,12 +3596,13 @@
     },
     {
       "path": "internal/handler/middleware",
-      "go_files": 10,
+      "go_files": 11,
       "test_files": 1,
-      "loc": 742,
+      "loc": 821,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
+        "internal/database",
         "internal/domain",
         "internal/platform/httputil",
         "internal/platform/telemetry"
@@ -3496,6 +3616,7 @@
         "idempotency.go",
         "logging.go",
         "metrics.go",
+        "query_budget.go",
         "ratelimit.go",
         "recovery.go",
         "security_headers.go"
@@ -3503,15 +3624,18 @@
     },
     {
       "path": "internal/handler/v1",
-      "go_files": 8,
+      "go_files": 11,
       "test_files": 1,
-      "loc": 427,
+      "loc": 828,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
+        "internal/app/adminobssvc",
+        "internal/app/auditviewersvc",
         "internal/app/chargingsvc",
         "internal/app/dashboardsvc",
         "internal/app/exportsvc",
+        "internal/app/gdprexportsvc",
         "internal/app/tripsvc",
         "internal/app/vehiclesvc",
         "internal/domain/export",
@@ -3519,11 +3643,14 @@
         "internal/platform/httputil"
       ],
       "files": [
+        "admin_audit_handler.go",
+        "admin_observability_handler.go",
         "charging_handler.go",
         "dashboard_handler.go",
         "doc.go",
         "example_thin_handler_test.go",
         "export_handler.go",
+        "gdpr_export_handler.go",
         "helpers.go",
         "trip_handler.go",
         "user_handler.go",
@@ -4020,6 +4147,34 @@
       ]
     },
     {
+      "path": "internal/rotation",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 360,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "tracker.go",
+        "tracker_test.go"
+      ]
+    },
+    {
+      "path": "internal/schemacheck",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 234,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "schemacheck.go",
+        "schemacheck_test.go"
+      ]
+    },
+    {
       "path": "internal/service",
       "go_files": 4,
       "test_files": 1,
@@ -4092,6 +4247,32 @@
       "files": [
         "doc.go",
         "live_state_reader.go"
+      ]
+    },
+    {
+      "path": "internal/slo",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 699,
+      "has_doc_go": false,
+      "imports": null,
+      "files": [
+        "catalog.go",
+        "tracker.go",
+        "tracker_test.go"
+      ]
+    },
+    {
+      "path": "internal/synthetic",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 375,
+      "has_doc_go": false,
+      "imports": null,
+      "files": [
+        "probe_http.go",
+        "runner.go",
+        "runner_test.go"
       ]
     },
     {
@@ -4361,9 +4542,9 @@
     },
     {
       "path": "internal/tracing",
-      "go_files": 4,
-      "test_files": 2,
-      "loc": 481,
+      "go_files": 5,
+      "test_files": 3,
+      "loc": 607,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4374,6 +4555,8 @@
         "doc.go",
         "fsmtracer.go",
         "fsmtracer_test.go",
+        "profiling.go",
+        "profiling_test.go",
         "span.go",
         "tracing.go",
         "tracing_test.go"
@@ -4520,10 +4703,10 @@
   ],
   "cmd_loc": {
     "cmd/ai-eval": 151,
-    "cmd/automation-worker": 333,
-    "cmd/export-worker": 233,
+    "cmd/automation-worker": 350,
+    "cmd/export-worker": 250,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 496,
+    "cmd/notification-worker": 517,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 655,
     "cmd/resubscribe": 446,
@@ -4534,7 +4717,7 @@
     "cmd/unit-drift-validator": 154
   },
   "forbidden_edges": null,
-  "doc_go_coverage": 1,
+  "doc_go_coverage": 0.9848484848484849,
   "files_by_package": {
     "cmd/ai-eval": [
       "doc.go",
@@ -5163,6 +5346,7 @@
       "cost_forecast_handler.go",
       "dashboard_layout_handler.go",
       "data_repair_handler.go",
+      "dataquality_handler.go",
       "devtools_handler.go",
       "devtools_handler_database.go",
       "devtools_handler_dtos.go",
@@ -5252,12 +5436,14 @@
       "signals.go",
       "signals_catalog_handler.go",
       "sleep_handler.go",
+      "slo_handler.go",
       "software_update_handler.go",
       "speed_profile_handler.go",
       "sse_handler.go",
       "status_incidents_handler.go",
       "status_v1_handler.go",
       "sudo_middleware.go",
+      "synthetic_handler.go",
       "system_auth_mode_handler.go",
       "system_handler.go",
       "tco_handler.go",
@@ -5323,6 +5509,16 @@
       "new.go",
       "run.go"
     ],
+    "internal/app/adminobssvc": [
+      "doc.go",
+      "service.go",
+      "types.go"
+    ],
+    "internal/app/auditviewersvc": [
+      "doc.go",
+      "service.go",
+      "types.go"
+    ],
     "internal/app/chargingsvc": [
       "doc.go",
       "service.go"
@@ -5332,6 +5528,10 @@
       "service.go"
     ],
     "internal/app/exportsvc": [
+      "doc.go",
+      "service.go"
+    ],
+    "internal/app/gdprexportsvc": [
       "doc.go",
       "service.go"
     ],
@@ -5351,6 +5551,10 @@
     "internal/arch": [
       "doc.go",
       "rules.go"
+    ],
+    "internal/audit": [
+      "doc.go",
+      "recorder.go"
     ],
     "internal/auth": [
       "doc.go",
@@ -5437,6 +5641,7 @@
       "alert_repo.go",
       "alert_rule_state_repo.go",
       "api_call_log_repo.go",
+      "audit_log_query_repo.go",
       "audit_repo.go",
       "auth_sessions_repo.go",
       "auth_subjects_repo.go",
@@ -5470,10 +5675,12 @@
       "feature_flag_changes_repo.go",
       "from_map.go",
       "fsm_transition_repo.go",
+      "gdpr_artifact_repo.go",
       "geofence_repo.go",
       "geofence_repo_bulk.go",
       "guard_repo.go",
       "helpers.go",
+      "hypertable_metrics_repo.go",
       "ingest_xray_repo.go",
       "maintenance.go",
       "migrate.go",
@@ -5487,6 +5694,7 @@
       "places_cache_repo.go",
       "position_repo.go",
       "push_subscriptions_repo.go",
+      "query_budget_tracer.go",
       "quiet_hours_repo.go",
       "raw_telemetry_repo.go",
       "retry.go",
@@ -5504,6 +5712,7 @@
       "signal_log_reader_query.go",
       "signal_log_repo.go",
       "signals_catalog_repo.go",
+      "slow_queries_repo.go",
       "software_update_repo.go",
       "status_incidents_repo.go",
       "sudo_token_repo.go",
@@ -5524,6 +5733,7 @@
       "trips_detail_repo.go",
       "user_feedback_repo.go",
       "vampire_drain_repo.go",
+      "vehicle_cost_repo.go",
       "vehicle_photo_repo.go",
       "vehicle_repo.go",
       "vehicle_settings_repo.go",
@@ -5533,6 +5743,11 @@
       "worker_status_queue_repo.go",
       "worker_status_repo.go",
       "write_buffer.go"
+    ],
+    "internal/dataquality": [
+      "lineage.go",
+      "pgxpool_adapter.go",
+      "scorer.go"
     ],
     "internal/domain": [
       "doc.go",
@@ -5604,6 +5819,10 @@
       "types.go",
       "worker.go"
     ],
+    "internal/export/gdpr": [
+      "doc.go",
+      "exporter.go"
+    ],
     "internal/flags": [
       "doc.go",
       "store.go"
@@ -5673,15 +5892,19 @@
       "idempotency.go",
       "logging.go",
       "metrics.go",
+      "query_budget.go",
       "ratelimit.go",
       "recovery.go",
       "security_headers.go"
     ],
     "internal/handler/v1": [
+      "admin_audit_handler.go",
+      "admin_observability_handler.go",
       "charging_handler.go",
       "dashboard_handler.go",
       "doc.go",
       "export_handler.go",
+      "gdpr_export_handler.go",
       "helpers.go",
       "trip_handler.go",
       "user_handler.go",
@@ -5871,6 +6094,14 @@
       "doc.go",
       "resilience.go"
     ],
+    "internal/rotation": [
+      "doc.go",
+      "tracker.go"
+    ],
+    "internal/schemacheck": [
+      "doc.go",
+      "schemacheck.go"
+    ],
     "internal/service": [
       "doc.go",
       "energy_service.go",
@@ -5893,6 +6124,14 @@
     "internal/signal/signaltest": [
       "doc.go",
       "live_state_reader.go"
+    ],
+    "internal/slo": [
+      "catalog.go",
+      "tracker.go"
+    ],
+    "internal/synthetic": [
+      "probe_http.go",
+      "runner.go"
     ],
     "internal/tesla": [
       "auth.go",
@@ -5986,6 +6225,7 @@
     "internal/tracing": [
       "doc.go",
       "fsmtracer.go",
+      "profiling.go",
       "span.go",
       "tracing.go"
     ],

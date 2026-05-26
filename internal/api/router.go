@@ -3668,6 +3668,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				"GET /admin/observability/vehicle-cost":   3,
 				"GET /admin/observability/disk-forecast":  5,
 				"GET /admin/observability/secret-rotation": 2,
+				"GET /admin/observability/slo":            3,
+				"GET /admin/observability/data-quality":   3,
+				"GET /admin/observability/lineage":        1,
+				"GET /admin/observability/synthetic":      1,
 				"GET /admin/audit-log":                    3,
 				"GET /admin/audit-log/categories":         2,
 				"GET /admin/audit-log/actions":            2,
@@ -3677,6 +3681,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			v1AdminObs.Register(r)
 			v1AdminAudit.Register(r)
 			v1GDPRExport.Register(r)
+
+			// Phase-46 SOTA observability batch (p46-slo, p46-dq-lineage,
+			// p46-synthetic). Each handler degrades to 503 SUBSYSTEM_NOT_CONFIGURED
+			// when its backing subsystem wasn't wired in opt — see
+			// RouterOptions for the optionality contract.
+			sloHandler := NewSLOHandler(opt.SLOCatalog, opt.SLOTracker)
+			r.Get("/admin/observability/slo", sloHandler.Snapshot)
+
+			dqHandler := NewDataQualityHandler(opt.DataQualityScorer)
+			r.Get("/admin/observability/data-quality", dqHandler.Score)
+			r.Get("/admin/observability/lineage", dqHandler.Lineage)
+
+			syntheticHandler := NewSyntheticHandler(opt.SyntheticRunner)
+			r.Get("/admin/observability/synthetic", syntheticHandler.Snapshot)
 		})
 
 		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
