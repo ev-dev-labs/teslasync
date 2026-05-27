@@ -51,7 +51,12 @@ const FILES_GLOB = '**/*.tsx';
 //
 // Ratchet this number DOWN every time a follow-up sweep replaces
 // physical utilities with logical equivalents. Never raise it.
-const MAX_PHYSICAL = 395;
+//
+// History:
+//   • 395 — Phase-46 / Prompt 48 (RTL support landing).
+//   • 393 — chore/repo-reorganization A1.8 (YearReviewPage + DashboardPage
+//           top-2 offender sweep migrated 16 utilities to ms-/me-/start-/end-).
+const MAX_PHYSICAL = 393;
 
 const WAIVER_RE = /\/\/\s*rtl-audit:no-physical\b/;
 

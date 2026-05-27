@@ -327,7 +327,7 @@ export default function DashboardPage() {
     <div data-print-hide className="flex items-center gap-2 flex-wrap">
       {editMode ? (
         <>
-          <div className="flex items-center gap-1 mr-1">
+          <div className="flex items-center gap-1 me-1">
             <Button
               variant="ghost"
               size="sm"
@@ -355,19 +355,19 @@ export default function DashboardPage() {
             )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => setShowPicker(true)}>
-            <Icons.add className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.add className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.addWidget', 'Add Widget')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={autoArrange}>
-            <Icons.layoutGrid className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.layoutGrid className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.autoArrange', 'Auto Arrange')}</span>
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowTemplates(true)} className="hidden sm:flex">
-            <Icons.layoutTemplate className="h-3.5 w-3.5 mr-1" />
+            <Icons.layoutTemplate className="h-3.5 w-3.5 me-1" />
             {t('dashboard.templates', 'Templates')}
           </Button>
           <Button variant="ghost" size="sm" onClick={resetToDefault} className="hidden sm:flex">
-            <Icons.undo className="h-3.5 w-3.5 mr-1" />
+            <Icons.undo className="h-3.5 w-3.5 me-1" />
             {t('dashboard.reset', 'Reset')}
           </Button>
           <Button size="sm" onClick={() => setEditMode(false)}>
@@ -386,11 +386,11 @@ export default function DashboardPage() {
             <Icons.upload className="h-3.5 w-3.5" />
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)} className="hidden sm:flex">
-            <Icons.tv className="h-3.5 w-3.5 mr-1" />
+            <Icons.tv className="h-3.5 w-3.5 me-1" />
             {t('dashboard.kiosk', 'Kiosk')}
           </Button>
           <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} data-tour="edit-mode-btn">
-            <Icons.settings className="h-3.5 w-3.5 sm:mr-1" />
+            <Icons.settings className="h-3.5 w-3.5 sm:me-1" />
             <span className="hidden sm:inline">{t('dashboard.customize', 'Customize')}</span>
           </Button>
         </>
@@ -709,7 +709,7 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
           ) : (
             <Link to="/settings">
               <Button variant="primary">
-                {t('onboarding.connect', 'Connect Tesla Account')} <Icons.drillThrough className="h-4 w-4 ml-1 inline-block" />
+                {t('onboarding.connect', 'Connect Tesla Account')} <Icons.drillThrough className="h-4 w-4 ms-1 inline-block" />
               </Button>
             </Link>
           )}
