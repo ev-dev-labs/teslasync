@@ -107,6 +107,17 @@ data:
   OTEL_SERVICE_NAME: {{ .Values.config.openTelemetry.serviceName | quote }}
   OTEL_INSECURE: {{ .Values.config.openTelemetry.insecure | quote }}
   {{- end }}
+  # Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
+  # Replay is opt-in because re-publishing a payload that already
+  # triggered a production exception is consequential. Replay is
+  # also gated by sudo-token AND audited on every code path.
+  {{- if .Values.config.dlq }}
+  DLQ_REPLAY_ENABLED: {{ .Values.config.dlq.replayEnabled | default false | quote }}
+  DLQ_RING_CAPACITY: {{ .Values.config.dlq.ringCapacity | default 200 | quote }}
+  {{- else }}
+  DLQ_REPLAY_ENABLED: "false"
+  DLQ_RING_CAPACITY: "200"
+  {{- end }}
   {{- if not .Values.secrets.existingSecret }}
   {{- if .Values.config.googleMaps.apiKey }}
   GOOGLE_MAPS_API_KEY: {{ .Values.config.googleMaps.apiKey | quote }}

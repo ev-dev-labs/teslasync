@@ -56,9 +56,39 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 )
+
+// redisCacheTracerName is the OpenTelemetry tracer name for Redis L2
+// cache spans. The Phase-10 trace-coverage audit greps for this exact
+// constant.
+const redisCacheTracerName = "signal"
+
+// redisAsyncCtxKey is the unexported key the L2 mirror goroutine in
+// HybridLiveSignalStore.UpdateNonBlocking uses to mark its detached
+// Redis write as async=true. The L1 hot path (Update) leaves the value
+// unset so the span's async attr defaults to false.
+type redisAsyncCtxKey struct{}
+
+// contextWithRedisAsync marks ctx as carrying an async Redis L2 write.
+// Used by HybridLiveSignalStore.UpdateNonBlocking before spawning the
+// detached goroutine. The receiver reads via redisAsyncFromContext.
+func contextWithRedisAsync(ctx context.Context) context.Context {
+	return context.WithValue(ctx, redisAsyncCtxKey{}, true)
+}
+
+// redisAsyncFromContext returns whether the caller propagated an async
+// marker. Used by RedisSignalCache.Update to stamp the async=true
+// attribute on its span.
+func redisAsyncFromContext(ctx context.Context) bool {
+	v, _ := ctx.Value(redisAsyncCtxKey{}).(bool)
+	return v
+}
 
 const signalKeyTTL = 7 * 24 * time.Hour // auto-expire stale vehicles after 7 days
 
@@ -182,10 +212,28 @@ func NewRedisSignalCache(rdb *redis.Client, opts ...RedisSignalCacheOption) *Red
 //
 // If Redis is unreachable, the error is logged as a warning and swallowed -
 // the in-memory store remains the primary source of truth.
-func (c *RedisSignalCache) Update(ctx context.Context, vehicleID int64, signals map[string]interface{}) error {
+func (c *RedisSignalCache) Update(ctx context.Context, vehicleID int64, signals map[string]interface{}) (err error) {
 	if len(signals) == 0 {
 		return nil
 	}
+
+	ctx, span := otel.Tracer(redisCacheTracerName).Start(
+		ctx,
+		"signal.redis_cache.update",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.Int64("vehicle_id", vehicleID),
+			attribute.Int("signal_count", len(signals)),
+			attribute.Bool("async", redisAsyncFromContext(ctx)),
+		),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "redis_cache.update")
+		}
+		span.End()
+	}()
 
 	key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
 	now := time.Now().UTC()
@@ -204,25 +252,28 @@ func (c *RedisSignalCache) Update(ctx context.Context, vehicleID int64, signals 
 				}
 			}
 		}
-		encoded, err := encodeTimestampedSignalValueForField(name, val, now)
-		if err != nil {
-			return fmt.Errorf("encode redis signal %s: %w", name, err)
+		encoded, encErr := encodeTimestampedSignalValueForField(name, val, now)
+		if encErr != nil {
+			err = fmt.Errorf("encode redis signal %s: %w", name, encErr)
+			return err
 		}
 		fields = append(fields, name, encoded)
 	}
 
+	span.SetAttributes(attribute.Int("written_count", len(fields)/2))
 	if len(fields) == 0 {
 		return nil
 	}
 
-	if err := c.rdb.HSet(ctx, key, fields...).Err(); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: HSET failed")
+	if hsetErr := c.rdb.HSet(ctx, key, fields...).Err(); hsetErr != nil {
+		log.Warn().Err(hsetErr).Int64("vehicle_id", vehicleID).Msg("redis signal cache: HSET failed")
+		err = hsetErr
 		return err
 	}
 
 	// Refresh TTL so actively-streaming vehicles never expire
-	if err := c.rdb.Expire(ctx, key, signalKeyTTL).Err(); err != nil {
-		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: EXPIRE failed")
+	if expErr := c.rdb.Expire(ctx, key, signalKeyTTL).Err(); expErr != nil {
+		log.Warn().Err(expErr).Int64("vehicle_id", vehicleID).Msg("redis signal cache: EXPIRE failed")
 	}
 
 	return nil

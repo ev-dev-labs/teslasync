@@ -1,0 +1,69 @@
+name: span-budget-gate
+
+# Phase-44 / observability-batch / Prompt F12 — Span Budget Gate.
+#
+# Asserts that a single Tesla signal-ingest path emits at most
+# SpanBudgetPerPayload spans (currently 25). This guards against the
+# R9 risk (Phase-10 plan): a regression that adds a span inside a
+# per-atomic hot loop would scale spans linearly with batch size and
+# blow Tempo's storage budget.
+#
+# The test is at internal/tesla_pipeline/span_budget_test.go. It runs
+# under normal `go test ./...`, but this dedicated workflow targets
+# JUST that test so the developer sees a budget overrun within ~30
+# seconds of pushing — rather than at the end of the full CI run.
+
+on:
+  pull_request:
+    paths:
+      - 'internal/tracing/**'
+      - 'internal/tesla_pipeline/**'
+      - 'internal/tesla/**'
+      - 'internal/signal/**'
+      - 'internal/mqtt/**'
+      - 'internal/domain/fsm/**'
+      - 'internal/api/sse_handler.go'
+      - 'internal/api/sse_handler_tracing_test.go'
+      - '.github/workflows/span-budget-gate.yml'
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
+
+concurrency:
+  group: span-budget-gate-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  span-budget:
+    name: TestSpanBudget (≤ 25 spans per ingest)
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: TestSpanBudget
+        run: go test -race -timeout 60s -count=1 ./internal/tesla_pipeline/ -run TestSpanBudget -v
+
+      - name: Phase-10 contract tests (parent linkage + per-flow shape)
+        # The runtime contract tests prove the trace tree shape — they
+        # complement the budget by ensuring removing a required span
+        # to fit the budget still fails. Run both.
+        run: go test -race -timeout 120s -count=1 ./internal/tesla_pipeline/ -run 'TestPhase10|TestSpanBudget' -v
+
+      - name: trace-coverage-audit (static guard)
+        # The static audit fails if a Phase-10 flow loses its required
+        # spans entirely. Pairs with the runtime budget: budget+shape
+        # vs static-presence-in-source.
+        run: go run ./cmd/trace-coverage-audit

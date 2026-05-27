@@ -34,6 +34,15 @@ func New(
 	return s
 }
 
+// SetTracer wires an FSM tracer into the underlying engine so transitions
+// emit OTel spans. The svc package depends on the fsm.Tracer abstraction
+// (zero-dep domain port), so concrete OTel wiring stays in the composition
+// root. Safe to call once, after construction, before the service is used
+// concurrently — no internal locking.
+func (s *Service) SetTracer(t fsm.Tracer) {
+	s.engine.SetTracer(t)
+}
+
 // Create registers a new vehicle.
 func (s *Service) Create(ctx context.Context, v *vehicle.Vehicle) error {
 	if err := v.Validate(); err != nil {

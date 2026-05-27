@@ -1,26 +1,34 @@
 // Phase-45 / Prompt 24 — Settings find-as-you-type index.
 //
-// Each entry maps a single user-discoverable setting to the section
-// anchor that contains its control. The `<SettingsSearch>` component
-// uses substring + fuzzy-subsequence matching against `title`,
-// `description`, and `keywords` to surface the right entry as the
-// user types.
+// Each entry maps a single user-discoverable setting to its target URL,
+// which is usually a hash anchor on `/settings` itself (`#general`,
+// `#appearance`, etc.) but can also be a full path on another page when
+// a setting has been promoted out of `/settings` (e.g. Helix lives at
+// `/integrations/helix` but should still surface when the user types
+// "ai" here). The `<SettingsSearch>` component uses substring + fuzzy-
+// subsequence matching against `title`, `description`, and `keywords`
+// to surface the right entry as the user types.
 //
 // Adding a new entry
 // ------------------
-// 1. Add the section's `id="..."` anchor to `SettingsPage.tsx` if it
-//    doesn't already exist.
-// 2. Append an entry below with a stable `id` slug, the anchor `href`,
-//    and human-meaningful `title`/`description`/`keywords` so users
-//    typing common synonyms (e.g. "psi" for tire pressure unit)
-//    still find the right setting.
+// 1. For an in-page entry: add the section's `id="..."` anchor to
+//    `SettingsPage.tsx` if it doesn't already exist.
+// 2. Append an entry below with a stable `id` slug, the `href`, and
+//    human-meaningful `title`/`description`/`keywords` so users typing
+//    common synonyms (e.g. "psi" for tire pressure unit) still find
+//    the right setting.
 
 import type { TFunction } from 'i18next';
 
 export interface SettingsEntry {
   /** Stable slug. Used as the React key and for analytics if added later. */
   id: string;
-  /** Anchor href, e.g. `/settings#appearance`. Must match a `<section id>` rendered on the settings page. */
+  /**
+   * Target URL. Usually a hash anchor on `/settings` itself
+   * (e.g. `/settings#appearance`) but may be a full path on another
+   * page when a setting has been promoted out of `/settings`
+   * (e.g. `/integrations/helix`).
+   */
   href: string;
   /** Translated title shown in the dropdown. */
   title: string;
@@ -547,6 +555,35 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
         'factory',
         'erase',
         'fresh start',
+      ],
+    },
+    // ── Helix (AI integration, lives on its own page) ───────────────
+    // Cross-page entry: clicking it navigates to /integrations/helix
+    // rather than scrolling to an anchor on /settings. Kept here so
+    // users who think of AI/Helix as a "setting" still find it from
+    // the settings search box.
+    {
+      id: 'helix.integration',
+      href: '/integrations/helix',
+      section: 'integrations',
+      title: t('search.entries.helix.integration.title', 'Helix (AI integration)'),
+      description: t(
+        'search.entries.helix.integration.desc',
+        'Optional AI integration — provider, API key, cost cap, and per-feature opt-in toggles. Off by default.',
+      ),
+      keywords: [
+        'ai',
+        'helix',
+        'assistant',
+        'llm',
+        'gpt',
+        'openai',
+        'anthropic',
+        'chatbot',
+        'provider',
+        'cost cap',
+        'api key',
+        'model',
       ],
     },
   ];

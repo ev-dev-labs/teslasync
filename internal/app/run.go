@@ -38,6 +38,28 @@ func (a *App) Run(ctx context.Context) error {
 		PollEngine:       a.PollEngine,
 		SignalStore:      a.SignalStore,
 		CacheStore:       a.Cache,
+
+		// Phase-44 / observability-batch.
+		DLQInspector:           a.DLQInspector,
+		DLQReplayAuditRepo:     a.DLQReplayAuditRepo,
+		FlagStore:              a.FlagStore,
+		FeatureFlagChangesRepo: a.FeatureFlagChangesRepo,
+
+		// Phase-45 — Operator confidence.
+		AuditRecorder:         a.AuditRecorder,
+		AuditLogQueryRepo:     a.AuditLogQueryRepo,
+		SlowQueriesRepo:       a.SlowQueriesRepo,
+		HypertableMetricsRepo: a.HypertableMetricsRepo,
+		IngestXRayRepo:        a.IngestXRayRepo,
+		GDPRArtifactRepo:      a.GDPRArtifactRepo,
+		RotationTracker:       a.RotationTracker,
+		SchemaSeed:            a.SchemaSeed,
+
+		// Phase-46 SOTA observability batch.
+		SLOCatalog:        a.SLOCatalog,
+		SLOTracker:        a.SLOTracker,
+		DataQualityScorer: a.DataQualityScorer,
+		SyntheticRunner:   a.SyntheticRunner,
 	})
 	a.server = &http.Server{
 		Addr:         fmt.Sprintf(":%d", a.Cfg.Port),

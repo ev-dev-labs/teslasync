@@ -87,10 +87,13 @@ func (e *Engine[T]) FireSub(
 
 	transition, ok := sub.Definition.FindTransition(sub.CurrentState, subEvent)
 	if !ok {
-		return sub.CurrentState, fmt.Errorf(
+		err := fmt.Errorf(
 			"SubFSM %s: no transition from %s on event %s: %w",
 			sub.Definition.Name, sub.CurrentState, subEvent, ErrInvalidTransition,
 		)
+		span.RecordError(err)
+		span.SetStatus(StatusError, "invalid_sub_transition")
+		return sub.CurrentState, err
 	}
 
 	sub.CurrentState = transition.To
@@ -104,9 +107,19 @@ func (e *Engine[T]) FireSub(
 		if newSubState == terminal {
 			// Fire the parent transition (may reset SubFSM via OnExit hook)
 			_, err := e.Fire(ctx, entity, parentState, sub.Config.OnTerminalEvent)
+			if err != nil {
+				// Parent.Fire already recorded its own error on the
+				// inner span; surface the failure here too so the
+				// SubFSM.Fire span is also marked red.
+				span.RecordError(err)
+				span.SetStatus(StatusError, "parent_transition_failed")
+			} else {
+				span.SetStatus(StatusOk, "")
+			}
 			return newSubState, err
 		}
 	}
 
+	span.SetStatus(StatusOk, "")
 	return newSubState, nil
 }

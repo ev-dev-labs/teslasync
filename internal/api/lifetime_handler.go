@@ -38,9 +38,10 @@ type achievementUnlockStore interface {
 
 // achievementEventBroadcaster is the slice of *EventHub used to publish
 // `achievement_unlocked` events. Extracted so tests can record the
-// broadcasts without spinning up an SSE hub goroutine.
+// broadcasts without spinning up an SSE hub goroutine. Ctx threads through
+// so the sse.broadcast span chains under the achievement evaluation span.
 type achievementEventBroadcaster interface {
-	Broadcast(eventType string, data interface{})
+	BroadcastWithContext(ctx context.Context, eventType string, data interface{})
 }
 
 // NewLifetimeHandler creates a new LifetimeHandler.
@@ -648,7 +649,7 @@ func (h *LifetimeHandler) evaluateAchievements(ctx context.Context, vehicleID in
 			if a.UnlockedAt != nil {
 				unlockedAt = *a.UnlockedAt
 			}
-			h.eventHub.Broadcast("achievement_unlocked", achievementUnlockedEvent{
+			h.eventHub.BroadcastWithContext(ctx, "achievement_unlocked", achievementUnlockedEvent{
 				VehicleID:   vehicleID,
 				UnlockedAt:  unlockedAt,
 				Achievement: a,

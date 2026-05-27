@@ -1,0 +1,104 @@
+name: load-test
+
+# Nightly smoke + soak load tests against an ephemeral docker-compose
+# stack. Catches p99 regressions before they ship.
+#
+# Phase-53 / p53-loadtest.
+#
+# Why nightly + on-demand (not on every PR)
+# ─────────────────────────────────────────
+# Each soak run takes ~6 min plus ~3 min stack boot, which would
+# inflate every PR's CI wallclock by ~10 min and is not actionable
+# on every commit. Lighthouse CI (perf.yml) already catches frontend
+# regressions on PRs; this workflow is the BACKEND counterpart and
+# runs on the schedule the SRE team can react to.
+
+on:
+  schedule:
+    - cron: '0 3 * * *'  # daily at 03:00 UTC
+  workflow_dispatch:
+    inputs:
+      scenario:
+        description: 'k6 scenario to run'
+        type: choice
+        options:
+          - smoke
+          - soak
+        default: smoke
+      runner:
+        description: 'Runner to use'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: ubuntu-latest
+
+concurrency:
+  group: load-test-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  k6:
+    name: k6 ${{ github.event.inputs.scenario || 'smoke' }}
+    # ubuntu-latest needed for docker compose + grafana/k6-action's
+    # consistent Chrome-free environment.
+    runs-on: ${{ github.event.inputs.runner || 'ubuntu-latest' }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Boot ephemeral TeslaSync stack
+        env:
+          POSTGRES_PASSWORD: ci_loadtest
+          SECRET_KEY: ci_loadtest_secret_32chars_minimum_padding
+        run: |
+          # Bring up only the services k6 actually exercises; skip
+          # MQTT + Tesla pipeline so the stack starts faster.
+          docker compose up -d timescaledb redis api
+          # Wait for the API to report healthy.
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/healthz -o /dev/null; then
+              echo "API up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "API failed to start" >&2
+          docker compose logs api >&2
+          exit 1
+
+      - name: Run k6
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: tests/k6/api_smoke.js
+        env:
+          BASE_URL: http://localhost:8080
+          SCENARIO: ${{ github.event.inputs.scenario || 'smoke' }}
+
+      - name: Upload k6 summary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-summary-${{ github.run_number }}
+          path: tests/k6/summary.json
+          if-no-files-found: warn
+
+      - name: Capture API logs on failure
+        if: failure()
+        run: docker compose logs api > api.log
+        continue-on-error: true
+
+      - name: Upload API logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-logs-${{ github.run_number }}
+          path: api.log
+          if-no-files-found: ignore
+
+      - name: Tear down stack
+        if: always()
+        run: docker compose down -v

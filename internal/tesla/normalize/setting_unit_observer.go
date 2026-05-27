@@ -4,10 +4,20 @@ import (
 	"context"
 	"fmt"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
 )
+
+// settingUnitTracerName is the OpenTelemetry tracer name for spans
+// emitted by observeSettingUnit. The Phase-10 trace-coverage audit
+// greps for this constant.
+const settingUnitTracerName = "normalize"
 
 // observeSettingUnit records a Setting*Unit atomic into
 // vehicle_unit_history. It is the dispatcher's only writer for the
@@ -46,11 +56,32 @@ import (
 // writes zero rows the second time and the cache invalidation still
 // fires (the next read will repopulate from PG and observe the same
 // state).
-func (p *Pipeline) observeSettingUnit(ctx context.Context, atomic codec.Atomic, vehicleIntID int64) error {
+func (p *Pipeline) observeSettingUnit(ctx context.Context, atomic codec.Atomic, vehicleIntID int64) (err error) {
+	ctx, span := otel.Tracer(settingUnitTracerName).Start(
+		ctx,
+		"normalize.observe_setting_unit",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("field", atomic.Field),
+			attribute.Int64("vehicle_id", vehicleIntID),
+		),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "observe_setting_unit")
+		}
+		span.End()
+	}()
+
 	kind, value, err := settingUnitKindAndValue(atomic.Field, atomic.Value)
 	if err != nil {
 		return err
 	}
+	span.SetAttributes(
+		attribute.String("unit_kind", string(kind)),
+		attribute.String("unit", string(value)),
+	)
 	entry := unithistory.Entry{
 		VehicleID:     vehicleIntID,
 		Kind:          kind,

@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
@@ -139,12 +140,19 @@ func newSnapshotWriter(db pgxPool, table string, columnFor func(field string) (c
 func (w *snapshotWriter) Write(ctx context.Context, atom codec.Atomic, dst router.Entry) error {
 	_ = dst // see godoc above — column is sourced from columnFor, not dst.
 
+	ctx, span, end := startWriterSpan(ctx, w.table, atom.Field)
+	var err error
+	defer func() { end(err) }()
+
 	col, ok := w.columnFor(atom.Field)
 	if !ok {
-		return fmt.Errorf("snapshotWriter[%s].%s: no column mapping for field", w.table, atom.Field)
+		err = fmt.Errorf("snapshotWriter[%s].%s: no column mapping for field", w.table, atom.Field)
+		return err
 	}
+	span.SetAttributes(attribute.String("column", col), attribute.String("table", w.table))
 	if !safeIdentRE.MatchString(col) {
-		return fmt.Errorf("snapshotWriter[%s].%s: invalid column identifier %q (must match %s)", w.table, atom.Field, col, safeIdentRE.String())
+		err = fmt.Errorf("snapshotWriter[%s].%s: invalid column identifier %q (must match %s)", w.table, atom.Field, col, safeIdentRE.String())
+		return err
 	}
 
 	bound, err := bindSnapshotValue(atom.Value)
@@ -166,13 +174,15 @@ func (w *snapshotWriter) Write(ctx context.Context, atom codec.Atomic, dst route
 	if err != nil {
 		return fmt.Errorf("snapshotWriter[%s].%s: %w", w.table, atom.Field, err)
 	}
+	span.SetAttributes(attribute.Int64("rows_affected", tag.RowsAffected()))
 	if tag.RowsAffected() == 0 {
 		// VIN deliberately not in the message — it is PII. The
 		// router's writer_failures_total{dest, reason="other"}
 		// counter increments on this path; the upstream MQTT
 		// subscriber log already records the (topic, vehicle)
 		// context if forensic correlation is needed.
-		return fmt.Errorf("snapshotWriter[%s].%s: vehicle not registered", w.table, atom.Field)
+		err = fmt.Errorf("snapshotWriter[%s].%s: vehicle not registered", w.table, atom.Field)
+		return err
 	}
 	return nil
 }

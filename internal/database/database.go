@@ -8,12 +8,10 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
-	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rs/zerolog/log"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 // DBTX is an interface satisfied by both *pgxpool.Pool and pgx.Tx,
@@ -90,10 +88,7 @@ func configurePoolTracing(poolCfg *pgxpool.Config) {
 	if poolCfg == nil || poolCfg.ConnConfig == nil {
 		return
 	}
-	poolCfg.ConnConfig.Tracer = otelpgx.NewTracer(
-		otelpgx.WithTracerAttributes(attribute.String("db.system", "postgresql")),
-		otelpgx.WithSpanNameFunc(pgSpanName),
-	)
+	poolCfg.ConnConfig.Tracer = newCompositeTracer()
 }
 
 func pgSpanName(stmt string) string {

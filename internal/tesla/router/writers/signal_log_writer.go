@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
@@ -189,10 +190,15 @@ func NewSignalLogWriter(pool *pgxpool.Pool) router.Writer {
 func (w *signalLogWriter) Write(ctx context.Context, atom codec.Atomic, dst router.Entry) error {
 	_ = dst // see godoc above — typed column is sourced from atom.Value, not dst.
 
+	ctx, span, end := startWriterSpan(ctx, "signal_log", atom.Field)
+	var err error
+	defer func() { end(err) }()
+
 	bound, err := signalLogClassify(atom.Value)
 	if err != nil {
 		return fmt.Errorf("signalLogWriter.%s: %w", atom.Field, err)
 	}
+	span.SetAttributes(attribute.Int("value_kind", int(bound.kind)))
 
 	ts := atom.EmittedAt.UTC().Round(0)
 
@@ -212,13 +218,15 @@ func (w *signalLogWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 	if err != nil {
 		return fmt.Errorf("signalLogWriter.%s: %w", atom.Field, err)
 	}
+	span.SetAttributes(attribute.Int64("rows_affected", tag.RowsAffected()))
 	if tag.RowsAffected() == 0 {
 		// VIN deliberately not in the message — it is PII. The
 		// router's writer_failures_total{dest=signal_log,
 		// reason="other"} counter increments on this path; the
 		// upstream MQTT subscriber log already records the
 		// (topic, vehicle) context if forensic correlation is needed.
-		return fmt.Errorf("signalLogWriter.%s: vehicle not registered", atom.Field)
+		err = fmt.Errorf("signalLogWriter.%s: vehicle not registered", atom.Field)
+		return err
 	}
 	return nil
 }

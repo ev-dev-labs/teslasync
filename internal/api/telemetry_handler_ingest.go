@@ -8,6 +8,11 @@ import (
 	"net/http"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -16,6 +21,11 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/rs/zerolog/log"
 )
+
+// sseRedisPubsubTracerName is the OpenTelemetry tracer name for the SSE
+// Redis Pub/Sub publish goroutine span. The Phase-10 trace-coverage
+// audit greps for this exact constant.
+const sseRedisPubsubTracerName = "signal"
 
 // errPipelineNotWired is returned by ProcessBatch when SetPipeline has not yet
 // been called. Surfaced as a typed sentinel so the HTTP TelemetryIngest can
@@ -453,7 +463,13 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 // available the payload is published to the vehicle_signals channel so all
 // pods receive it (including this one, via SubscribeRedis). When Redis is
 // not configured, falls back to direct in-process broadcast (single-pod mode).
-func (h *TelemetryHandler) broadcastSSE(payload map[string]any) {
+//
+// The ctx is threaded through to BroadcastWithContext so the per-broadcast
+// sse.broadcast span (and, on the Redis path, the cross-pod sse.redis_fanout
+// span) chains under the caller's trace. Callers from the MQTT telemetry
+// pipeline pass the normalize.Pipeline.ProcessAtomics ctx so SSE delivery
+// becomes a true descendant of the original MQTT consume span.
+func (h *TelemetryHandler) broadcastSSE(ctx context.Context, payload map[string]any) {
 	if h.eventHub == nil {
 		return
 	}
@@ -465,23 +481,42 @@ func (h *TelemetryHandler) broadcastSSE(payload map[string]any) {
 		if err != nil {
 			log.Error().Err(err).Msg("failed to marshal SSE payload for Redis Pub/Sub")
 			// Fall through to local broadcast as safety net
-			h.eventHub.Broadcast("vehicle_update", payload)
+			h.eventHub.BroadcastWithContext(ctx, "vehicle_update", payload)
 			return
 		}
 		msg := fmt.Appendf(nil, "event: vehicle_update\ndata: %s\n\n", jsonData)
+		// Phase-10: trace.continuity=false is set explicitly because the
+		// publish goroutine intentionally detaches from the caller ctx
+		// via context.Background()+2s timeout — the 2s ceiling is a
+		// liveness/back-pressure guarantee and the detach is by design,
+		// not a propagation bug. Tempo dashboards filter on
+		// trace.continuity=false to flag honestly-detached spans.
 		safeGo("redis-pubsub-publish", func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+			pubCtx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
-			if err := h.redisCache.PublishSignals(ctx, msg); err != nil {
+			pubCtx, span := otel.Tracer(sseRedisPubsubTracerName).Start(
+				pubCtx,
+				"signal.redis_pubsub.publish",
+				trace.WithSpanKind(trace.SpanKindProducer),
+				trace.WithAttributes(
+					attribute.Bool("trace.continuity", false),
+					attribute.String("event_type", "vehicle_update"),
+					attribute.Int("payload_size", len(msg)),
+				),
+			)
+			defer span.End()
+			if err := h.redisCache.PublishSignals(pubCtx, msg); err != nil {
+				span.RecordError(err)
+				span.SetStatus(codes.Error, "redis_pubsub.publish")
 				log.Warn().Err(err).Msg("redis pub/sub publish failed, falling back to local broadcast")
-				h.eventHub.Broadcast("vehicle_update", payload)
+				h.eventHub.BroadcastWithContext(ctx, "vehicle_update", payload)
 			}
 		})
 		return
 	}
 
 	// No Redis — single-pod fallback
-	h.eventHub.Broadcast("vehicle_update", payload)
+	h.eventHub.BroadcastWithContext(ctx, "vehicle_update", payload)
 }
 
 // Phase-42 (prompt 0079a): the buildHotRow / bucketAtomics / bucketResult

@@ -113,3 +113,64 @@ var fixedBarPressureFields = map[string]bool{
 func isFixedBarPressureField(field string) bool {
 	return fixedBarPressureFields[field]
 }
+
+// fixedMileDistanceFields lists Tesla Fleet Telemetry distance fields
+// whose raw value is ALWAYS reported in miles regardless of the user's
+// SettingDistanceUnit (which only controls how the in-car UI renders
+// the value, not the wire format). Without this override, ToSI would
+// multiply a 27,210 mi odometer reading by 1000 when
+// SettingDistanceUnit=Kilometers, storing 27,210,000 m instead of the
+// correct 43,790,000 m — a 1.609× error that corrupts cumulative
+// drive-distance math (drives spanning a mid-drive unit transition
+// produce nonsense distances such as 10,334 mi for a 10 mi trip).
+//
+// Source: empirical Fleet Telemetry capture 2026-05-24 across a
+// user-initiated mi → km → mi transition (vehicle_id=1). The raw
+// numeric Odometer wire value stayed continuous across the unit
+// change (27,210.92 mi → 27,211.26 → ... → 27,254.78 → 27,254.36 mi)
+// only under the always-miles interpretation; the km interpretation
+// would require the vehicle's lifetime mileage to drop by 16,000 mi
+// in under a minute, which is physically impossible. Same pattern was
+// confirmed for RatedRange (153.66 → 153.58 numeric continuity across
+// the same transition).
+//
+// MilesSinceReset / SelfDrivingMilesSinceReset are included because
+// their proto field names explicitly encode the wire unit (Tesla's
+// convention for fields whose wire value is fixed in miles, distinct
+// from settings-following fields like VehicleSpeed).
+//
+// MilesToArrival is included for the same reason: the name encodes
+// the wire unit and the field carries a remaining-distance scalar
+// whose semantics are identical to Odometer.
+//
+// CurrentLimitMph is INTENTIONALLY EXCLUDED: although its name encodes
+// mph, it carries a speed-limit value whose downstream semantics are
+// unclear and it is not exercised by current TeslaSync feature paths.
+// Add it here only with empirical evidence its wire value is always
+// miles AND a downstream consumer that depends on the conversion.
+//
+// ChargeRateMilePerHour is INTENTIONALLY EXCLUDED: it is pinned by
+// the Phase-48 R2 audit (units_test.go TestRangeAddedMetersPerHour_R2_AuditPin)
+// as UnitKindDistance with a deliberate misnomer in its proto
+// identifier (the wire payload is meters of range added per hour, not
+// mph). Changing its conversion path requires a coordinated codec +
+// JSON rename and is out of scope for the always-miles override.
+var fixedMileDistanceFields = map[string]bool{
+	"Odometer":                   true,
+	"RatedRange":                 true,
+	"EstBatteryRange":            true,
+	"IdealBatteryRange":          true,
+	"MilesToArrival":             true,
+	"MilesSinceReset":            true,
+	"SelfDrivingMilesSinceReset": true,
+}
+
+// IsFixedMileDistanceField reports whether the given field name is a
+// Tesla distance/range field whose wire-format unit is fixed at miles
+// regardless of SettingDistanceUnit. Exported so the normalize
+// pipeline can bypass the per-vehicle unit-history lookup for these
+// fields — they need no unit context and MUST NOT be dropped on
+// histRepo.ErrNotFound.
+func IsFixedMileDistanceField(field string) bool {
+	return fixedMileDistanceFields[field]
+}

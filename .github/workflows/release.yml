@@ -171,6 +171,48 @@ jobs:
           cosign sign --yes "${IMAGE}@${DIGEST}"
           echo "✅ Signed ${IMAGE}@${DIGEST}"
 
+      # Phase-53 / p53-sbom — Software Bill of Materials.
+      # syft generates a CycloneDX SBOM of the image contents (every
+      # Go module, OS package, and JS dependency that landed in the
+      # final layer). The SBOM is attested to the image via cosign so
+      # consumers can `cosign verify-attestation --type cyclonedx`
+      # without trusting any side-channel artifact server.
+      - name: Install syft
+        uses: anchore/sbom-action/download-syft@v0.17.8
+
+      - name: Generate SBOM (CycloneDX)
+        env:
+          DIGEST: ${{ steps.docker-build.outputs.digest }}
+          TAGS: ${{ steps.tags.outputs.tags }}
+        run: |
+          IMAGE=$(echo "$TAGS" | cut -d',' -f1)
+          syft "${IMAGE}@${DIGEST}" \
+            -o cyclonedx-json="sbom-${{ matrix.image }}.cdx.json" \
+            -o spdx-json="sbom-${{ matrix.image }}.spdx.json"
+          echo "✅ Generated SBOMs for ${IMAGE}"
+          ls -la sbom-${{ matrix.image }}.*.json
+
+      - name: Attest SBOM with cosign (keyless)
+        env:
+          DIGEST: ${{ steps.docker-build.outputs.digest }}
+          TAGS: ${{ steps.tags.outputs.tags }}
+        run: |
+          IMAGE=$(echo "$TAGS" | cut -d',' -f1)
+          cosign attest --yes \
+            --predicate "sbom-${{ matrix.image }}.cdx.json" \
+            --type cyclonedx \
+            "${IMAGE}@${DIGEST}"
+          echo "✅ Attested CycloneDX SBOM to ${IMAGE}@${DIGEST}"
+
+      - name: Upload SBOM artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom-${{ matrix.image }}-${{ needs.version-tag.outputs.version }}
+          path: |
+            sbom-${{ matrix.image }}.cdx.json
+            sbom-${{ matrix.image }}.spdx.json
+          retention-days: 90
+
   helm:
     name: Publish Helm Chart
     needs: [version-tag, docker]
@@ -257,12 +299,21 @@ jobs:
 
           ### 🔐 Image Verification
 
-          All images are signed with [cosign](https://github.com/sigstore/cosign) (keyless, via GitHub OIDC):
+          All images are signed with [cosign](https://github.com/sigstore/cosign) (keyless, via GitHub OIDC) and ship with a CycloneDX SBOM attestation:
 
           \`\`\`bash
+          # Verify image signature
           cosign verify ghcr.io/${{ github.repository }}-api:${VERSION} \\
             --certificate-identity-regexp="github.com/${{ github.repository }}" \\
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com"
+
+          # Verify + extract SBOM attestation
+          cosign verify-attestation \\
+            --type cyclonedx \\
+            --certificate-identity-regexp="github.com/${{ github.repository }}" \\
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \\
+            ghcr.io/${{ github.repository }}-api:${VERSION} \\
+            | jq -r '.payload' | base64 -d | jq '.predicate' > sbom.cdx.json
           \`\`\`
 
           ### 📝 Changes

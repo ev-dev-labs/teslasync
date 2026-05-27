@@ -50,6 +50,13 @@ func (s *Service) setupFSM() *fsm.Engine[*charging.ChargingSession] {
 	return engine
 }
 
+// SetTracer wires an FSM tracer into the underlying engine so transitions
+// emit OTel spans. Domain depends only on the fsm.Tracer port; concrete
+// OTel adapter is installed by the composition root.
+func (s *Service) SetTracer(t fsm.Tracer) {
+	s.engine.SetTracer(t)
+}
+
 // Create starts a new charging session.
 func (s *Service) Create(ctx context.Context, session *charging.ChargingSession) error {
 	if err := session.Validate(); err != nil {

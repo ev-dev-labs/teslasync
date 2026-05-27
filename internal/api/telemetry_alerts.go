@@ -100,7 +100,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 		}
 	}
 	metrics.ActiveAlertRules.Set(float64(enabledCount))
-	metrics.AlertRuleEvalDuration.Observe(time.Since(evalStart).Seconds())
+	metrics.ObserveDurationWithExemplar(ctx, metrics.AlertRuleEvalDuration, time.Since(evalStart).Seconds())
 }
 
 // fireAlert broadcasts via SSE and dispatches to notification channels.
@@ -185,7 +185,7 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.Al
 	//    suppresses the transport bold-header. include_title is
 	//    deliberately a transport-layer concern only.
 	if e.eventHub != nil {
-		e.eventHub.Broadcast("alert", map[string]interface{}{
+		e.eventHub.BroadcastWithContext(ctx, "alert", map[string]interface{}{
 			"vehicle_id":       vehicleID,
 			"vehicle_name":     vehicleName,
 			"vin":              vin,
@@ -259,7 +259,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 			AlertID:                ruleID,
 			SuppressTransportTitle: suppressTransportTitle,
 		}
-		if err := notification.Publish(e.mqttClient, req); err != nil {
+		if err := notification.PublishCtx(ctx, e.mqttClient, req); err != nil {
 			log.Warn().Int64("channel_id", ch.ID).Str("type", ch.Type).Err(err).Msg("alert_rules: notification dispatch failed")
 		} else {
 			metrics.NotificationsDispatched.WithLabelValues(ch.Type).Inc()
@@ -288,7 +288,7 @@ func (e *TelemetryAlertEvaluator) dispatchNotifications(title, message, severity
 		Message: message,
 		AlertID: ruleID,
 	}
-	if err := notification.Publish(e.mqttClient, pushReq); err != nil {
+	if err := notification.PublishCtx(ctx, e.mqttClient, pushReq); err != nil {
 		log.Warn().Err(err).Msg("alert_rules: webpush fan-out dispatch failed")
 	}
 }

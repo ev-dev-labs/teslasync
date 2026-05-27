@@ -430,7 +430,7 @@ type e2eSSE struct {
 	calls []e2eSSECall
 }
 
-func (s *e2eSSE) broadcast(payload map[string]any) {
+func (s *e2eSSE) broadcast(_ context.Context, payload map[string]any) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.calls = append(s.calls, e2eSSECall{Payload: copyAnyMapE2E(payload)})

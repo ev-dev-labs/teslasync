@@ -13,12 +13,16 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
+	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
+	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
+	hadiscovery "github.com/ev-dev-labs/teslasync/internal/integrations/homeassistant"
 	"github.com/ev-dev-labs/teslasync/internal/jobs"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -27,7 +31,11 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/rotation"
+	"github.com/ev-dev-labs/teslasync/internal/schemacheck"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/slo"
+	"github.com/ev-dev-labs/teslasync/internal/synthetic"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
@@ -39,7 +47,20 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 
 	"github.com/ev-dev-labs/teslasync/internal/adapter/gasprices"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
+
+// appBackgroundTracerName scopes spans for in-API background ticker loops
+// owned by App (signal-history TTL, trip generator, AI background jobs,
+// health watchdog). Each loop's per-iteration span lets dashboards
+// distinguish a slow tick from a stuck tick.
+const appBackgroundTracerName = "internal/app/background"
+
+func appBackgroundTracer() oteltrace.Tracer { return otel.Tracer(appBackgroundTracerName) }
 
 // New constructs the App in the SAME order as the legacy
 // cmd/teslasync/main.go body (lines 78-889 prior to phase-47/04). Each
@@ -76,6 +97,10 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 
 	a.initMQTT(ctx)
 	a.initCache()
+	a.initFlagStore(ctx)
+	a.initObservabilityPhase45(ctx)
+	a.initObservabilityPhase46(ctx)
+	a.initHomeAssistantPublisher(ctx)
 	a.initEventBus()
 	a.initEncryptor()
 	a.initTeslaClient()
@@ -117,6 +142,24 @@ func (a *App) initTracing(ctx context.Context) {
 			shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 			defer cancel()
 			return shutdownTracer(shutdownCtx)
+		})
+	}
+
+	shutdownProfiler, err := tracing.StartProfiler(ctx, a.Cfg, a.Cfg.OpenTelemetry.ServiceName)
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize pyroscope profiler, continuing without it")
+		return
+	}
+	if a.Cfg.Profiling.Enabled && a.Cfg.Profiling.ServerAddress != "" {
+		log.Info().
+			Str("server", a.Cfg.Profiling.ServerAddress).
+			Str("service", a.Cfg.OpenTelemetry.ServiceName).
+			Dur("upload_rate", a.Cfg.Profiling.UploadRate).
+			Msg("Pyroscope continuous profiling enabled")
+		a.addCloser("profiler", func(ctx context.Context) error {
+			shutdownCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+			defer cancel()
+			return shutdownProfiler(shutdownCtx)
 		})
 	}
 }
@@ -181,6 +224,31 @@ func (a *App) initCache() {
 	})
 }
 
+// initFlagStore wires the dynamic feature-flag store + change audit
+// repo. Phase-44 / observability-batch / Prompt F8.
+//
+// The store gracefully degrades to in-process cache + defaults when
+// Redis is disabled (a.Cache.Underlying() returns nil). The audit repo
+// is wired only when a.DB is initialised — read-only handlers degrade
+// to 503 when nil. Pub/Sub invalidation runs in a background goroutine
+// shut down via a.addCloser.
+func (a *App) initFlagStore(ctx context.Context) {
+	var rdb = a.Cache.Underlying() // may be nil — store handles that
+	a.FlagStore = flags.NewStore(rdb)
+	shutdown := a.FlagStore.Start(ctx)
+	a.addCloser("flag-store", func(_ context.Context) error {
+		shutdown()
+		return nil
+	})
+	if a.DB != nil {
+		a.FeatureFlagChangesRepo = database.NewFeatureFlagChangesRepo(a.DB)
+	}
+	log.Info().
+		Bool("redis_backed", rdb != nil).
+		Bool("audit_repo", a.FeatureFlagChangesRepo != nil).
+		Msg("dynamic feature flag store initialised")
+}
+
 func (a *App) initEventBus() {
 	if a.MQTT != nil {
 		a.EventBus = events.NewBus(a.MQTT.Underlying())
@@ -188,6 +256,264 @@ func (a *App) initEventBus() {
 		a.EventBus = events.NewBus(nil)
 	}
 }
+
+// initObservabilityPhase45 wires the Phase-45 operator-confidence
+// subsystems: hash-chained audit recorder, schema-fingerprint seed,
+// slow-query / disk-forecast / per-vehicle-cost / GDPR-artifact repos,
+// and secret rotation tracker. All are best-effort — when a backing
+// dependency is missing (DB not up, pg_stat_statements absent,
+// timescaledb absent), the corresponding handler returns 503 instead
+// of crashing on a nil pointer.
+//
+// The schema-fingerprint seed is computed on first call and persisted
+// in schema_fingerprint so subsequent boots compare against the
+// original deploy snapshot rather than the live schema (the diff
+// against live always reads zero).
+//
+// APP_SECRET_PEPPER is required for HMAC-based secret rotation
+// fingerprinting; when missing, the rotation tracker is disabled and
+// the admin handler returns 503 for the rotation route.
+func (a *App) initObservabilityPhase45(ctx context.Context) {
+	if a.DB == nil {
+		log.Warn().Msg("phase-45: database not initialised — observability surface unavailable")
+		return
+	}
+	a.AuditLogQueryRepo = database.NewAuditLogQueryRepo(a.DB)
+	a.SlowQueriesRepo = database.NewSlowQueriesRepo(a.DB)
+	a.HypertableMetricsRepo = database.NewHypertableMetricsRepo(a.DB)
+	a.IngestXRayRepo = database.NewIngestXRayRepo(a.DB.Pool)
+	a.GDPRArtifactRepo = database.NewGDPRArtifactRepo(a.DB)
+
+	// Audit recorder is the unified hash-chained writer. Falls back
+	// to deny-all redactor; callers pass an explicit redactor when
+	// recording fields that may contain PII.
+	a.AuditRecorder = audit.New(a.DB.Pool, audit.DenyAllRedactor{})
+	if err := a.AuditRecorder.Hydrate(ctx); err != nil {
+		log.Warn().Err(err).Msg("phase-45: audit recorder hydrate failed — chain may restart")
+	}
+
+	// Schema fingerprint seed — load from schema_fingerprint or
+	// compute + persist on first boot.
+	if seed, err := loadOrComputeSchemaSeed(ctx, a); err != nil {
+		log.Warn().Err(err).Msg("phase-45: schema seed unavailable — drift report degraded")
+	} else {
+		a.SchemaSeed = seed
+	}
+
+	// Secret rotation tracker — requires APP_SECRET_PEPPER.
+	if pepper := envValue("APP_SECRET_PEPPER"); pepper != "" {
+		a.RotationTracker = rotation.New(a.DB.Pool, pepper)
+	} else {
+		log.Warn().Msg("phase-45: APP_SECRET_PEPPER not set — secret rotation tracker disabled")
+	}
+
+	log.Info().
+		Bool("audit_recorder", a.AuditRecorder != nil).
+		Bool("rotation_tracker", a.RotationTracker != nil).
+		Bool("schema_seed", a.SchemaSeed.SHA256 != "").
+		Msg("phase-45 operator confidence initialised")
+}
+
+// initObservabilityPhase46 wires the Phase-46 SOTA observability batch:
+//
+//	SLO catalog + tracker — slo/catalog.yaml + Prometheus-backed
+//	  live tier evaluation. Catalog load failure surfaces 503 on
+//	  /admin/observability/slo; PROMETHEUS_BASE_URL empty disables
+//	  live tier evaluation but still serves catalog metadata.
+//
+//	Data-quality scorer — pgxpool-backed per-field freshness / gap /
+//	  duplicate scoring over signal_log. DATA_QUALITY_ENABLED=false
+//	  flips /admin/observability/data-quality to 503.
+//
+//	Synthetic runner — outside-in HTTP canary probes. Reads
+//	  SYNTHETIC_PROBE_URLS (comma-separated). Disabled by default
+//	  to keep test + dev quiet; opt in via SYNTHETIC_ENABLED=true.
+//
+// Lineage (/admin/observability/lineage) is always-on because it
+// reads the embedded routing.yaml — no runtime dependency.
+//
+// Each subsystem is independent: SLO load failure does NOT block
+// data-quality or synthetic; synthetic disabled does NOT block SLO.
+func (a *App) initObservabilityPhase46(ctx context.Context) {
+	// SLO catalog + tracker.
+	if path := a.Cfg.SLO.CatalogPath; path != "" {
+		if cat, err := slo.LoadCatalog(path); err != nil {
+			log.Warn().Err(err).Str("path", path).Msg("phase-46: SLO catalog load failed — slo board degraded")
+		} else {
+			a.SLOCatalog = cat
+		}
+	}
+	if a.SLOCatalog != nil {
+		tracker, err := slo.NewTracker(a.Cfg.SLO.PromBaseURL)
+		if err != nil {
+			log.Warn().Err(err).Msg("phase-46: SLO tracker init failed — live tier evaluation disabled")
+		} else {
+			a.SLOTracker = tracker
+		}
+	}
+
+	// Data-quality scorer.
+	if a.Cfg.DataQuality.Enabled && a.DB != nil {
+		a.DataQualityScorer = dataquality.NewScorerFromPool(a.DB.Pool, a.Cfg.DataQuality.WindowMins)
+	}
+
+	// Synthetic runner — built unconditionally so the admin board
+	// can report "synthetic monitoring not enabled" honestly when
+	// disabled. Started only when enabled to avoid background work.
+	if a.Cfg.Synthetic.Enabled {
+		probes := buildSyntheticProbes(a.Cfg.Synthetic.ProbeURLs)
+		interval := time.Duration(a.Cfg.Synthetic.IntervalSeconds) * time.Second
+		timeout := time.Duration(a.Cfg.Synthetic.TimeoutSeconds) * time.Second
+		runner := synthetic.NewRunner(probes, interval, timeout)
+		runner.Start(ctx)
+		a.SyntheticRunner = runner
+		a.addCloser("synthetic-runner", func(_ context.Context) error {
+			runner.Stop()
+			return nil
+		})
+	}
+
+	log.Info().
+		Bool("slo_catalog", a.SLOCatalog != nil).
+		Bool("slo_tracker", a.SLOTracker != nil).
+		Bool("dq_scorer", a.DataQualityScorer != nil).
+		Bool("synthetic_runner", a.SyntheticRunner != nil).
+		Msg("phase-46 observability batch initialised")
+}
+
+// buildSyntheticProbes parses the comma-separated SYNTHETIC_PROBE_URLS
+// list into a set of HTTP probes. Each url becomes a probe named
+// "http_<index>" so the synthetic board has stable identifiers across
+// reorders; operators that want stable names should run the canary in
+// its own deployment with one probe per binary.
+func buildSyntheticProbes(raw string) []synthetic.Probe {
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	probes := make([]synthetic.Probe, 0, len(parts))
+	for i, p := range parts {
+		url := strings.TrimSpace(p)
+		if url == "" {
+			continue
+		}
+		probes = append(probes, synthetic.NewHTTPProbe(fmt.Sprintf("http_%d", i), url))
+	}
+	return probes
+}
+
+// initHomeAssistantPublisher wires the Phase-47 HomeAssistant MQTT
+// discovery publisher when HOMEASSISTANT_ENABLED=true and the MQTT
+// client is available. The publisher reasserts the full per-vehicle
+// entity catalog on PublishInterval (default 1h); HA's discovery
+// listener caches retained config topics so the interval primarily
+// guards against display-name / model / sw_version drift.
+//
+// Failure modes are non-fatal: missing MQTT client logs + skips; the
+// per-tick publish error is logged but doesn't kill the ticker.
+func (a *App) initHomeAssistantPublisher(ctx context.Context) {
+	if !a.Cfg.HomeAssistant.Enabled {
+		return
+	}
+	if a.MQTT == nil {
+		log.Warn().Msg("phase-47: homeassistant publisher requires MQTT — disabled")
+		return
+	}
+	if a.DB == nil {
+		log.Warn().Msg("phase-47: homeassistant publisher requires DB — disabled")
+		return
+	}
+	publisher := hadiscovery.NewPublisher(
+		a.MQTT.Underlying(),
+		a.Cfg.HomeAssistant.DiscoveryPrefix,
+		a.MQTT.Prefix(),
+	)
+	vehicleRepo := database.NewVehicleRepo(a.DB)
+	interval := a.Cfg.HomeAssistant.PublishInterval
+	if interval <= 0 {
+		interval = time.Hour
+	}
+	publishOnce := func() {
+		vehicles, err := vehicleRepo.GetAll(ctx)
+		if err != nil {
+			log.Warn().Err(err).Msg("phase-47: homeassistant publisher could not list vehicles")
+			return
+		}
+		entities := hadiscovery.DefaultEntities()
+		for _, v := range vehicles {
+			if v == nil || v.VIN == "" {
+				continue
+			}
+			model := ""
+			if v.Model != nil {
+				model = *v.Model
+			}
+			ha := hadiscovery.Vehicle{
+				VIN:         v.VIN,
+				DisplayName: v.DisplayName,
+				Model:       model,
+			}
+			if err := publisher.PublishVehicle(ctx, ha, entities); err != nil {
+				log.Warn().Err(err).Str("vin_prefix", redactVINPrefix(v.VIN)).
+					Msg("phase-47: homeassistant publish failed")
+			}
+		}
+	}
+	go func() {
+		// First publish right after boot so HA sees entities immediately.
+		publishOnce()
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				publishOnce()
+			}
+		}
+	}()
+	log.Info().
+		Str("discovery_prefix", a.Cfg.HomeAssistant.DiscoveryPrefix).
+		Dur("interval", interval).
+		Msg("phase-47 homeassistant discovery publisher started")
+}
+
+// redactVINPrefix preserves the manufacturer WMI (first 3 chars) but
+// strips the rest so VIN doesn't leak into log files.
+func redactVINPrefix(vin string) string {
+	if len(vin) < 3 {
+		return "***"
+	}
+	return vin[:3] + "***"
+}
+
+// loadOrComputeSchemaSeed reads the most-recent schema_fingerprint
+// row; if absent, computes one and inserts it.
+func loadOrComputeSchemaSeed(ctx context.Context, a *App) (schemacheck.Fingerprint, error) {
+	var seed schemacheck.Fingerprint
+	err := a.DB.Pool.QueryRow(ctx,
+		`SELECT sha256_hash, column_count, index_count, table_count
+		   FROM schema_fingerprint ORDER BY generated_at DESC LIMIT 1`).
+		Scan(&seed.SHA256, &seed.ColumnCount, &seed.IndexCount, &seed.TableCount)
+	if err == nil && seed.SHA256 != "" {
+		return seed, nil
+	}
+	// No seed row — compute + persist.
+	seed, err = schemacheck.Compute(ctx, a.DB.Pool, []string{"schema_migrations"})
+	if err != nil {
+		return schemacheck.Fingerprint{}, err
+	}
+	_, _ = a.DB.Pool.Exec(ctx,
+		`INSERT INTO schema_fingerprint (sha256_hash, column_count, index_count, table_count, git_sha, generated_at)
+		 VALUES ($1, $2, $3, $4, $5, now())`,
+		seed.SHA256, seed.ColumnCount, seed.IndexCount, seed.TableCount, envValue("GIT_SHA"))
+	return seed, nil
+}
+
+// envValue is a tiny wrapper so callers don't need an os import here
+// — keeps the new.go import list minimal.
+func envValue(key string) string { return os.Getenv(key) }
 
 func (a *App) initEncryptor() {
 	a.Encryptor = crypto.NewFromEnv()
@@ -499,8 +825,8 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		Sessions:    a.TelemetryHandler.SessionTracker(),
 		Alerts:      a.TelemetryHandler.AlertEvaluator(),
 		VINResolver: vinByID,
-		BroadcastSSE: func(payload map[string]any) {
-			a.TelemetryHandler.BroadcastSSE(payload)
+		BroadcastSSE: func(ctx context.Context, payload map[string]any) {
+			a.TelemetryHandler.BroadcastSSE(ctx, payload)
 		},
 		Logger: pipelineLogger,
 	})
@@ -665,6 +991,36 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		Int("writer_count", len(pipelineWriters)).
 		Dur("stale_timeout", a.Cfg.FleetTelemetry.StaleTimeout).
 		Msg("phase-42a: fleet-telemetry PipelineSubscriber active")
+
+	// Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
+	// Subscribes to {dlqTopic}/# on the SAME paho client the pipeline
+	// already uses, keeping connection count + DLQ topic semantics
+	// single-sourced. Inspector failures degrade /system/dlq* to 503
+	// but MUST NOT halt the pipeline — best-effort observability.
+	dlqInspector, err := mqtt.NewDLQInspector(pahoClient, dlqTopic, mqtt.DLQInspectorConfig{
+		Capacity:      a.Cfg.Features.DLQRingCapacity,
+		ReplayEnabled: a.Cfg.Features.DLQReplayEnabled,
+		ReplayQoS:     0,
+	}, pipelineLogger)
+	if err != nil {
+		log.Warn().Err(err).Msg("phase-44: DLQInspector construction failed; /system/dlq endpoints will be 503")
+	} else if startErr := dlqInspector.Start(); startErr != nil {
+		log.Warn().Err(startErr).Str("dlq_topic", dlqTopic).
+			Msg("phase-44: DLQInspector subscribe failed; /system/dlq endpoints will be 503")
+	} else {
+		a.DLQInspector = dlqInspector
+		a.DLQReplayAuditRepo = database.NewDLQReplayAuditRepo(a.DB)
+		a.addCloser("dlq-inspector", func(_ context.Context) error {
+			dlqInspector.Stop()
+			return nil
+		})
+		log.Info().
+			Str("dlq_topic", dlqTopic).
+			Int("ring_capacity", a.Cfg.Features.DLQRingCapacity).
+			Bool("replay_enabled", a.Cfg.Features.DLQReplayEnabled).
+			Msg("phase-44: DLQ Inspector active")
+	}
+
 	return nil
 }
 
@@ -731,7 +1087,7 @@ func (a *App) initSignalHistoryCleanup(ctx context.Context) {
 		return
 	}
 	go func() {
-		a.SignalHistoryWriter.Cleanup(ctx, a.Cfg.Retention.SignalHistoryRetentionDays)
+		runSignalHistoryCleanupTick(ctx, a.SignalHistoryWriter, a.Cfg.Retention.SignalHistoryRetentionDays)
 
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
@@ -740,22 +1096,33 @@ func (a *App) initSignalHistoryCleanup(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				a.SignalHistoryWriter.Cleanup(ctx, a.Cfg.Retention.SignalHistoryRetentionDays)
+				runSignalHistoryCleanupTick(ctx, a.SignalHistoryWriter, a.Cfg.Retention.SignalHistoryRetentionDays)
 			}
 		}
 	}()
 	log.Info().Int("retention_days", a.Cfg.Retention.SignalHistoryRetentionDays).Msg("signal_history TTL cleanup scheduled")
 }
 
+// signalHistoryCleaner is the minimal contract runSignalHistoryCleanupTick
+// needs from *SignalHistoryWriter. The interface lets us swap the
+// concrete type for a fake in unit tests.
+type signalHistoryCleaner interface {
+	Cleanup(ctx context.Context, retentionDays int)
+}
+
+func runSignalHistoryCleanupTick(ctx context.Context, writer signalHistoryCleaner, retentionDays int) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "signal_history.cleanup_tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(attribute.Int("signal_history.retention_days", retentionDays)),
+	)
+	defer span.End()
+	writer.Cleanup(tickCtx, retentionDays)
+}
+
 func (a *App) initTripGenerator(ctx context.Context) {
 	tripRepo := database.NewTripRepo(a.DB)
 	go func() {
-		count, err := tripRepo.GenerateMonthlyTrips(ctx)
-		if err != nil {
-			log.Warn().Err(err).Msg("trip generator: backfill failed")
-		} else if count > 0 {
-			log.Info().Int("created", count).Msg("trip generator: backfilled monthly summaries")
-		}
+		runTripGeneratorTick(ctx, tripRepo, "backfill")
 
 		ticker := time.NewTicker(24 * time.Hour)
 		defer ticker.Stop()
@@ -764,15 +1131,34 @@ func (a *App) initTripGenerator(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				n, err := tripRepo.GenerateMonthlyTrips(ctx)
-				if err != nil {
-					log.Warn().Err(err).Msg("trip generator: periodic run failed")
-				} else if n > 0 {
-					log.Info().Int("created", n).Msg("trip generator: new monthly summaries")
-				}
+				runTripGeneratorTick(ctx, tripRepo, "periodic")
 			}
 		}
 	}()
+}
+
+// tripGenerator is the minimal contract runTripGeneratorTick needs.
+type tripGenerator interface {
+	GenerateMonthlyTrips(ctx context.Context) (int, error)
+}
+
+func runTripGeneratorTick(ctx context.Context, gen tripGenerator, reason string) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "trip_generator.tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(attribute.String("trip_generator.reason", reason)),
+	)
+	defer span.End()
+	count, err := gen.GenerateMonthlyTrips(tickCtx)
+	span.SetAttributes(attribute.Int("trip_generator.created", count))
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "generate monthly trips failed")
+		log.Warn().Err(err).Str("reason", reason).Msg("trip generator: run failed")
+		return
+	}
+	if count > 0 {
+		log.Info().Int("created", count).Str("reason", reason).Msg("trip generator: created monthly summaries")
+	}
 }
 
 func (a *App) initGasPriceWorker(ctx context.Context) {
@@ -833,9 +1219,7 @@ func (a *App) initAIBackgroundJobs(ctx context.Context) {
 	// Run once at boot so a long-running tick interval doesn't leave
 	// expired rows visible immediately after a restart.
 	go func() {
-		if _, err := jobs.RunEmbeddingsTTL(ctx, a.DB, settingsRepo); err != nil {
-			log.Warn().Err(err).Msg("ai background jobs: initial embeddings TTL run failed")
-		}
+		runEmbeddingsTTLTick(ctx, a.DB, settingsRepo, "initial")
 	}()
 
 	resilience.SafeGoLoop(ctx, "embeddings-ttl-cron", func(loopCtx context.Context) {
@@ -846,13 +1230,32 @@ func (a *App) initAIBackgroundJobs(ctx context.Context) {
 			case <-loopCtx.Done():
 				return
 			case <-ticker.C:
-				if _, err := jobs.RunEmbeddingsTTL(loopCtx, a.DB, settingsRepo); err != nil {
-					log.Warn().Err(err).Msg("ai background jobs: embeddings TTL run failed")
-				}
+				runEmbeddingsTTLTick(loopCtx, a.DB, settingsRepo, "periodic")
 			}
 		}
 	})
 	log.Info().Msg("ai background jobs scheduled (embeddings_ttl re-checks ai_mode per ADR-015 §I12)")
+}
+
+func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *database.SettingsRepo, reason string) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "ai.background_tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(
+			attribute.String("ai.job", "embeddings_ttl"),
+			attribute.String("ai.reason", reason),
+		),
+	)
+	defer span.End()
+	result, err := jobs.RunEmbeddingsTTL(tickCtx, db, settingsRepo)
+	span.SetAttributes(
+		attribute.Int64("ai.embeddings_ttl.deleted_768", result.Deleted768),
+		attribute.Int64("ai.embeddings_ttl.deleted_1536", result.Deleted1536),
+	)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "embeddings TTL failed")
+		log.Warn().Err(err).Str("reason", reason).Msg("ai background jobs: embeddings TTL run failed")
+	}
 }
 
 func (a *App) initHealthWatchdog(ctx context.Context) {
@@ -865,70 +1268,91 @@ func (a *App) initHealthWatchdog(ctx context.Context) {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				checkCtx, checkCancel := context.WithTimeout(ctx, 5*time.Second)
-				if dbErr := a.DB.Health(checkCtx); dbErr != nil {
-					a.Health.RecordFailure("database", dbErr)
-					log.Warn().Err(dbErr).Msg("database health check failed")
-				} else {
-					a.Health.RecordSuccess("database")
-				}
-				checkCancel()
-
-				if a.MQTT != nil {
-					if a.MQTT.IsConnected() {
-						a.Health.RecordSuccess("mqtt")
-					} else {
-						a.Health.RecordFailure("mqtt", fmt.Errorf("MQTT broker not connected"))
-					}
-				}
-
-				if a.TeslaClient.HasValidToken() {
-					a.Health.RecordSuccess("tesla_api")
-				}
-
-				a.Health.RecordSuccess("worker")
-
-				components := a.Health.GetStatus()
-				for name, comp := range components {
-					prev, seen := a.prevHealthState[name]
-					if !seen {
-						a.prevHealthState[name] = comp.Status
-						continue
-					}
-
-					if prev == resilience.StatusHealthy && comp.Status >= resilience.StatusDegraded {
-						severity := "warning"
-						if comp.Status == resilience.StatusUnhealthy {
-							severity = "critical"
-						}
-						title := fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String())
-						message := fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError)
-						_ = severity
-						sendSystemNotification(ctx, a.notifRepo, a.MQTT, "⚠️ "+title, message)
-						log.Warn().Str("component", name).Str("status", comp.Status.String()).Str("severity", severity).Msg("system alert: component degraded")
-					}
-
-					if prev >= resilience.StatusDegraded && comp.Status == resilience.StatusHealthy {
-						title := fmt.Sprintf("%s recovered", componentDisplayName(name))
-						message := fmt.Sprintf("Component %s is healthy again", name)
-						sendSystemNotification(ctx, a.notifRepo, a.MQTT, "✅ "+title, message)
-						log.Info().Str("component", name).Msg("system alert: component recovered")
-					}
-
-					a.prevHealthState[name] = comp.Status
-				}
-
-				overall := a.Health.OverallStatus()
-				if overall != resilience.StatusHealthy {
-					for name, comp := range components {
-						if comp.Status != resilience.StatusHealthy {
-							log.Warn().Str("component", name).Str("status", comp.Status.String()).Int("consec_fails", comp.ConsecFails).Msg("degraded component")
-						}
-					}
-				}
+				a.runHealthWatchdogTick(ctx)
 			}
 		}
 	})
+}
+
+func (a *App) runHealthWatchdogTick(ctx context.Context) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "health_watchdog.tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+	defer span.End()
+
+	checkCtx, checkCancel := context.WithTimeout(tickCtx, 5*time.Second)
+	if dbErr := a.DB.Health(checkCtx); dbErr != nil {
+		a.Health.RecordFailure("database", dbErr)
+		span.RecordError(dbErr)
+		log.Warn().Err(dbErr).Msg("database health check failed")
+	} else {
+		a.Health.RecordSuccess("database")
+	}
+	checkCancel()
+
+	if a.MQTT != nil {
+		if a.MQTT.IsConnected() {
+			a.Health.RecordSuccess("mqtt")
+		} else {
+			err := fmt.Errorf("MQTT broker not connected")
+			a.Health.RecordFailure("mqtt", err)
+			span.RecordError(err)
+		}
+	}
+
+	if a.TeslaClient.HasValidToken() {
+		a.Health.RecordSuccess("tesla_api")
+	}
+
+	a.Health.RecordSuccess("worker")
+
+	components := a.Health.GetStatus()
+	degradedCount := 0
+	for name, comp := range components {
+		prev, seen := a.prevHealthState[name]
+		if !seen {
+			a.prevHealthState[name] = comp.Status
+			continue
+		}
+
+		if prev == resilience.StatusHealthy && comp.Status >= resilience.StatusDegraded {
+			severity := "warning"
+			if comp.Status == resilience.StatusUnhealthy {
+				severity = "critical"
+			}
+			title := fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String())
+			message := fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError)
+			_ = severity
+			sendSystemNotification(tickCtx, a.notifRepo, a.MQTT, "⚠️ "+title, message)
+			log.Warn().Str("component", name).Str("status", comp.Status.String()).Str("severity", severity).Msg("system alert: component degraded")
+		}
+
+		if prev >= resilience.StatusDegraded && comp.Status == resilience.StatusHealthy {
+			title := fmt.Sprintf("%s recovered", componentDisplayName(name))
+			message := fmt.Sprintf("Component %s is healthy again", name)
+			sendSystemNotification(tickCtx, a.notifRepo, a.MQTT, "✅ "+title, message)
+			log.Info().Str("component", name).Msg("system alert: component recovered")
+		}
+
+		a.prevHealthState[name] = comp.Status
+		if comp.Status != resilience.StatusHealthy {
+			degradedCount++
+		}
+	}
+
+	overall := a.Health.OverallStatus()
+	span.SetAttributes(
+		attribute.String("health.overall", overall.String()),
+		attribute.Int("health.component_count", len(components)),
+		attribute.Int("health.degraded_count", degradedCount),
+	)
+	if overall != resilience.StatusHealthy {
+		span.SetStatus(codes.Error, "one or more components degraded")
+		for name, comp := range components {
+			if comp.Status != resilience.StatusHealthy {
+				log.Warn().Str("component", name).Str("status", comp.Status.String()).Int("consec_fails", comp.ConsecFails).Msg("degraded component")
+			}
+		}
+	}
 }
 
 func (a *App) loadOpenAPISpec() {

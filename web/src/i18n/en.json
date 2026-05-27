@@ -2894,7 +2894,10 @@
       "unsecure": "Unsecure",
       "windowDetail": "Window Status Detail",
       "title": "Security & Access",
-      "subtitle": "Lock status, sentry mode, doors, and windows"
+      "subtitle": "Lock status, sentry mode, doors, and windows",
+      "noEvents": "No security events recorded yet.",
+      "open": "Open",
+      "alert": "⚠ Vehicle may not be secure — check lock, door, and window status."
     },
     "audit": {
       "searchPlaceholder": "Search by action, resource, or details…",
@@ -2910,6 +2913,224 @@
       "topOffenders": "Top error sources",
       "noErrors": "No frontend errors reported in the last hour.",
       "unableToLoad": "Unable to load error summary."
+    },
+    "dlq": {
+      "audit": {
+        "cols": {
+          "replayedAt": "Replayed at",
+          "actor": "Actor",
+          "dlqId": "DLQ ID",
+          "result": "Result",
+          "dstTopic": "Destination",
+          "error": "Error",
+          "traceId": "Trace ID"
+        },
+        "empty": {
+          "title": "No replay attempts yet",
+          "scopedMessage": "This entry has not been replayed. Use the Replay action above to send it back to its source topic.",
+          "globalMessage": "Replay attempts will appear here once an operator triggers one."
+        },
+        "loading": "Loading audit log…"
+      },
+      "cols": {
+        "arrived": "Arrived",
+        "reason": "Reason",
+        "vin": "VIN",
+        "topic": "Source topic",
+        "redeliveries": "Redel.",
+        "size": "Payload",
+        "replayable": "Replayable",
+        "actions": "Actions"
+      },
+      "actions": {
+        "inspect": "Inspect"
+      },
+      "table": {
+        "loading": "Loading…",
+        "empty": "No DLQ entries — the pipeline is clean."
+      },
+      "drawer": {
+        "tabs": {
+          "inner": "Inner payload",
+          "raw": "Raw envelope"
+        },
+        "title": "DLQ entry #{{id}}",
+        "titleFallback": "DLQ entry",
+        "replay": "Replay",
+        "id": "ID",
+        "arrivedAt": "Arrived",
+        "dlqTopic": "DLQ topic",
+        "reason": "Reason",
+        "vin": "VIN",
+        "sourceTopic": "Source topic",
+        "redeliveries": "Redeliveries",
+        "parseError": "Parse error",
+        "binaryPayload": "(non-UTF-8 binary, {{n}} bytes — use the copy button to download base64)",
+        "binaryEnvelope": "(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)"
+      },
+      "stats": {
+        "total": "Total entries",
+        "totalSub": "in dead-letter queue",
+        "replayable": "Replayable",
+        "replayableSub": "parsed with source topic",
+        "replayMode": "Replay mode",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "replayModeSub": "DLQ_REPLAY_ENABLED env"
+      },
+      "banners": {
+        "disabledTitle": "DLQ replay is disabled",
+        "disabledMessage": "The DLQ_REPLAY_ENABLED env flag is not set on this server. Replay attempts will return HTTP 403 and be logged as result=\"disabled\".",
+        "replayBlockedTitle": "Replay blocked",
+        "replayBlockedMessage": "The server rejected the replay because DLQ_REPLAY_ENABLED is not set. Restart the worker with this env var to enable replays."
+      },
+      "pageTitle": "DLQ Inspector",
+      "subtitle": "Dead-letter queue — inspect failed ingests and replay them back to their source topic.",
+      "panels": {
+        "entries": "Dead-letter entries",
+        "audit": "Recent replay activity"
+      },
+      "confirm": {
+        "title": "Replay DLQ entry?",
+        "message": "This will republish entry #{{id}} to its source topic. The action is logged and rate-limited.",
+        "confirm": "Replay"
+      }
+    },
+    "flags": {
+      "audit": {
+        "cols": {
+          "changedAt": "Changed at",
+          "actor": "Actor",
+          "flagKey": "Key",
+          "operation": "Op",
+          "oldValue": "Old",
+          "newValue": "New",
+          "reason": "Reason"
+        },
+        "empty": {
+          "title": "No flag changes yet",
+          "scopedMessage": "No audit rows for \"{{key}}\" — edit the value above to start the trail.",
+          "globalMessage": "Flag changes will appear here once an operator edits a value."
+        },
+        "loading": "Loading audit log…"
+      },
+      "editor": {
+        "valueEmpty": "Value is required.",
+        "valueInvalid": "Invalid JSON: {{msg}}",
+        "keyLabel": "Flag key",
+        "keyPlaceholder": "feature.dlq.replay_enabled",
+        "keyImmutable": "Flag keys are immutable once created. Delete + re-create to rename.",
+        "valueLabel": "Value (JSON)",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why this change? (logged in audit)"
+      },
+      "drawer": {
+        "editTitle": "Edit flag \"{{key}}\"",
+        "createTitle": "Create flag",
+        "save": "Save flag"
+      },
+      "cols": {
+        "key": "Flag key",
+        "value": "Value",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "add": "Add flag"
+      },
+      "table": {
+        "loading": "Loading flags…",
+        "empty": "No feature flags are set on this server."
+      },
+      "pageTitle": "Feature Flags",
+      "subtitle": "Typed feature-flag registry — all changes are sudo-gated and logged.",
+      "panels": {
+        "registry": "Registry",
+        "changes": "Recent changes"
+      },
+      "delete": {
+        "title": "Delete flag?",
+        "message": "Permanently remove flag \"{{key}}\". This is logged as a delete operation in the audit feed.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why this delete? (logged in audit)",
+        "confirm": "Delete flag"
+      }
+    },
+    "xray": {
+      "chart": {
+        "title": "Samples per bucket",
+        "subtitle": "Time-series of ingested telemetry rows over the selected window.",
+        "ariaLabel": "Bar chart of ingest sample counts per time bucket.",
+        "cols": {
+          "bucket": "Bucket",
+          "count": "Samples"
+        },
+        "tooltip": "Samples"
+      },
+      "controls": {
+        "selectVehicle": "Select vehicle…",
+        "vehicleAria": "Vehicle",
+        "windowAria": "Window",
+        "bucketAria": "Bucket"
+      },
+      "fields": {
+        "cols": {
+          "field": "Field",
+          "count": "Samples",
+          "lastSeen": "Last seen",
+          "kind": "Kind"
+        },
+        "loading": "Loading…",
+        "empty": "No samples in this window. Try widening the window or confirm the vehicle is publishing."
+      },
+      "stats": {
+        "samples": "Total samples",
+        "samplesSub": "within selected window",
+        "fields": "Distinct fields",
+        "fieldsSub": "unique signal names",
+        "window": "Window",
+        "windowSub": "observation horizon"
+      },
+      "pageTitle": "Ingest X-Ray",
+      "subtitle": "Per-vehicle telemetry sample counts — pick a vehicle to inspect what the ingest pipeline is receiving.",
+      "noVehicle": {
+        "title": "Select a vehicle",
+        "message": "Pick a vehicle from the dropdown above to load its ingest X-Ray for the selected window."
+      },
+      "panels": {
+        "fields": "Field statistics"
+      }
+    },
+    "liveSignals": {
+      "cols": {
+        "name": "Signal",
+        "value": "Value",
+        "timestamp": "Last update"
+      },
+      "filterPlaceholder": "Filter signal names…",
+      "filterAria": "Filter signals",
+      "empty": {
+        "title": "No live signals cached",
+        "message": "Redis has no live snapshot for this vehicle yet. Confirm the vehicle is online and publishing."
+      },
+      "table": {
+        "loading": "Loading…",
+        "filtered": "No signals match this filter."
+      },
+      "pageTitle": "Live Signal Inspector",
+      "controls": {
+        "selectVehicle": "Select vehicle…",
+        "vehicleAria": "Vehicle"
+      },
+      "subtitle": "Realtime view of the Redis-cached live signal snapshot. Refreshes every second while this tab is in the foreground.",
+      "noVehicle": {
+        "title": "Select a vehicle",
+        "message": "Pick a vehicle from the dropdown above to start streaming its live signal cache."
+      },
+      "panels": {
+        "snapshot": "Live snapshot"
+      }
     }
   },
   "apiLogs": {
@@ -6010,6 +6231,29 @@
     "col": {
       "range": "Speed range",
       "pct": "% of drive"
+    },
+    "whyEnded": {
+      "signal": {
+        "cols": {
+          "ts": "Timestamp",
+          "field": "Field",
+          "value": "Value"
+        }
+      },
+      "title": "Why did this drive end?",
+      "windowAria": "Diagnostic window",
+      "error": {
+        "title": "Could not load diagnostic",
+        "message": "Try a different window or reload the page."
+      },
+      "fsmTitle": "FSM transitions",
+      "fsmEmpty": {
+        "title": "No transitions in window",
+        "message": "No FSM state changes recorded near the drive end. Try a wider window."
+      },
+      "trigger": "trigger: {{trigger}}",
+      "signalTitle": "Signal window",
+      "signalEmpty": "No signals in this window for the default whitelist."
     }
   },
   "drivetrain": {

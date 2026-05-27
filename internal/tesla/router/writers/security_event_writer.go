@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
@@ -244,10 +245,16 @@ func NewSecurityEventWriter(pool *pgxpool.Pool) router.Writer {
 func (w *securityEventWriter) Write(ctx context.Context, atom codec.Atomic, dst router.Entry) error {
 	_ = dst // see godoc above — event_type is sourced from securityEventTypeByField, not dst.
 
+	ctx, span, end := startWriterSpan(ctx, "security_event", atom.Field)
+	var err error
+	defer func() { end(err) }()
+
 	eventType, ok := securityEventTypeFor(atom.Field)
 	if !ok {
-		return fmt.Errorf("securityEventWriter[security_events].%s: no event_type mapping for field", atom.Field)
+		err = fmt.Errorf("securityEventWriter[security_events].%s: no event_type mapping for field", atom.Field)
+		return err
 	}
+	span.SetAttributes(attribute.String("event_type", eventType))
 
 	toState, err := bindSecurityEventState(atom.Value)
 	if err != nil {
@@ -260,7 +267,9 @@ func (w *securityEventWriter) Write(ctx context.Context, atom codec.Atomic, dst 
 	if err != nil {
 		return fmt.Errorf("securityEventWriter[security_events].%s: %w", atom.Field, err)
 	}
+	span.SetAttributes(attribute.Int64("rows_affected", tag.RowsAffected()))
 	if tag.RowsAffected() == 1 {
+		span.SetAttributes(attribute.String("outcome", "inserted"))
 		return nil
 	}
 
@@ -269,8 +278,9 @@ func (w *securityEventWriter) Write(ctx context.Context, atom codec.Atomic, dst 
 	// Per the VIN RESOLUTION CONTRACT this only runs on the slow path,
 	// not per-write, so the steady-state cost stays at one round-trip.
 	var vehicleExists bool
-	if err := w.db.QueryRow(ctx, securityEventVehicleExistsSQL, atom.VehicleID).Scan(&vehicleExists); err != nil {
-		return fmt.Errorf("securityEventWriter[security_events].%s: disambiguation query: %w", atom.Field, err)
+	if existsErr := w.db.QueryRow(ctx, securityEventVehicleExistsSQL, atom.VehicleID).Scan(&vehicleExists); existsErr != nil {
+		err = fmt.Errorf("securityEventWriter[security_events].%s: disambiguation query: %w", atom.Field, existsErr)
+		return err
 	}
 	if !vehicleExists {
 		// VIN deliberately not in the message — it is PII. The
@@ -278,13 +288,15 @@ func (w *securityEventWriter) Write(ctx context.Context, atom codec.Atomic, dst 
 		// reason="other"} counter increments on this path; the
 		// upstream MQTT subscriber log already records the
 		// (topic, vehicle) context if forensic correlation is needed.
-		return fmt.Errorf("securityEventWriter[security_events].%s: vehicle not registered", atom.Field)
+		err = fmt.Errorf("securityEventWriter[security_events].%s: vehicle not registered", atom.Field)
+		return err
 	}
 	// Vehicle exists but RowsAffected==0 → duplicate event. Per
 	// Decision #3 the writer is idempotent: re-delivery of the same
 	// (vehicle_id, ts, event_type) is a no-op success outcome, NOT a
 	// failure, so the router's writer_failures_total counter does NOT
 	// increment.
+	span.SetAttributes(attribute.String("outcome", "duplicate"))
 	return nil
 }
 

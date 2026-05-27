@@ -90,7 +90,7 @@ func (h *AutomationHandler) BulkUpdate(w http.ResponseWriter, r *http.Request) {
 		// Notify worker so trigger configurations reload promptly.
 		if h.mqttPublisher != nil {
 			for _, id := range existing {
-				h.mqttPublisher.PublishReload("toggled", id)
+				h.mqttPublisher.PublishReload(r.Context(), "toggled", id)
 			}
 		}
 		writeJSON(w, http.StatusOK, bulkOperationResult{Updated: &updated, Failed: failed})
@@ -107,7 +107,7 @@ func (h *AutomationHandler) BulkUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 		if h.mqttPublisher != nil {
 			for _, id := range existing {
-				h.mqttPublisher.PublishReload("deleted", id)
+				h.mqttPublisher.PublishReload(r.Context(), "deleted", id)
 			}
 		}
 		writeJSON(w, http.StatusOK, bulkOperationResult{Deleted: &deleted, Failed: failed})

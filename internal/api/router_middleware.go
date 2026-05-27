@@ -3,12 +3,20 @@ package api
 import (
 	"context"
 
+	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/dataquality"
+	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
+	"github.com/ev-dev-labs/teslasync/internal/rotation"
+	"github.com/ev-dev-labs/teslasync/internal/schemacheck"
 	signal "github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/slo"
+	"github.com/ev-dev-labs/teslasync/internal/synthetic"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 )
 
@@ -22,6 +30,47 @@ type RouterOptions struct {
 	SignalStore      *signal.Store          // If set, enables /internal/flush endpoint
 	WebhookTrigger   WebhookProcessor       // If set, enables public webhook receiver endpoint
 	CacheStore       *cache.Store           // If set, enables cached endpoints (trip planner, etc.)
+
+	// Phase-44 / observability-batch / Prompt F4. DLQInspector + replay
+	// audit repo enable /system/dlq{,/{id},/{id}/replay} when set.
+	// Constructed by internal/app once the production paho client is
+	// connected (see internal/app/new.go::initFleetTelemetryPipeline).
+	DLQInspector       *mqtt.DLQInspector
+	DLQReplayAuditRepo *database.DLQReplayAuditRepo
+
+	// Phase-44 / observability-batch / Prompt F8. FlagStore +
+	// changes-audit repo enable /system/flags{,/{key},/changes} when set.
+	FlagStore              *flags.Store
+	FeatureFlagChangesRepo *database.FeatureFlagChangesRepo
+
+	// Phase-45 — Operator confidence subsystems. Each pointer is
+	// optional; when nil the corresponding admin handler returns 503
+	// with the SUBSYSTEM_NOT_CONFIGURED code so the SPA can render
+	// a clean "not available on this deployment" panel.
+	AuditRecorder         *audit.Recorder
+	AuditLogQueryRepo     *database.AuditLogQueryRepo
+	SlowQueriesRepo       *database.SlowQueriesRepo
+	HypertableMetricsRepo *database.HypertableMetricsRepo
+	IngestXRayRepo        *database.IngestXRayRepo
+	GDPRArtifactRepo      *database.GDPRArtifactRepo
+	RotationTracker       *rotation.Tracker
+	SchemaSeed            schemacheck.Fingerprint
+
+	// Phase-46 SOTA observability batch. Each pointer is optional —
+	// nil flips the corresponding admin endpoint to 503
+	// SUBSYSTEM_NOT_CONFIGURED so the SPA can render a clean
+	// "not enabled on this deployment" panel instead of crashing.
+	//
+	//   SLOCatalog + SLOTracker:    p46-slo,        /admin/observability/slo
+	//   DataQualityScorer:          p46-dq-lineage, /admin/observability/data-quality
+	//   SyntheticRunner:            p46-synthetic,  /admin/observability/synthetic
+	//
+	// Lineage (/admin/observability/lineage) is always-on because it
+	// reads the embedded routing.yaml — no runtime dependency.
+	SLOCatalog        *slo.Catalog
+	SLOTracker        *slo.Tracker
+	DataQualityScorer *dataquality.Scorer
+	SyntheticRunner   *synthetic.Runner
 }
 
 // settingsCheckerAdapter wraps *database.SettingsRepo to satisfy action.SettingsChecker.

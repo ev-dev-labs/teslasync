@@ -8,6 +8,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
@@ -209,8 +210,15 @@ func (w *tirePressureWriter) Write(ctx context.Context, atom codec.Atomic, dst r
 //     server-local timezone configuration from leaking into
 //     stored timestamps.
 func (w *tirePressureWriter) writeTimestamp(ctx context.Context, atom codec.Atomic, col string) error {
+	ctx, span, end := startWriterSpan(ctx, "tire_pressure_snapshot", atom.Field)
+	var err error
+	defer func() { end(err) }()
+
+	span.SetAttributes(attribute.String("column", col), attribute.String("table", w.table), attribute.String("path", "timestamp"))
+
 	if !safeIdentRE.MatchString(col) {
-		return fmt.Errorf("snapshotWriter[%s].%s: invalid column identifier %q (must match %s)", w.table, atom.Field, col, safeIdentRE.String())
+		err = fmt.Errorf("snapshotWriter[%s].%s: invalid column identifier %q (must match %s)", w.table, atom.Field, col, safeIdentRE.String())
+		return err
 	}
 
 	ts, err := coerceEpochToTime(atom.Value)
@@ -232,12 +240,14 @@ func (w *tirePressureWriter) writeTimestamp(ctx context.Context, atom codec.Atom
 	if err != nil {
 		return fmt.Errorf("snapshotWriter[%s].%s: %w", w.table, atom.Field, err)
 	}
+	span.SetAttributes(attribute.Int64("rows_affected", tag.RowsAffected()))
 	if tag.RowsAffected() == 0 {
 		// VIN deliberately not in the message — it is PII. Same
 		// PII-clean error as snapshot_base.go so the router's
 		// writer_failures_total{dest, reason="other"} counter
 		// increments on a single, recognisable error.
-		return fmt.Errorf("snapshotWriter[%s].%s: vehicle not registered", w.table, atom.Field)
+		err = fmt.Errorf("snapshotWriter[%s].%s: vehicle not registered", w.table, atom.Field)
+		return err
 	}
 	return nil
 }

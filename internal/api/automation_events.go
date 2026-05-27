@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"time"
 )
 
@@ -65,8 +66,10 @@ type automationStateChangedEvent struct {
 }
 
 // PublishTriggered broadcasts that an automation trigger has fired.
-func (p *AutomationEventPublisher) PublishTriggered(automationID int64, name, vehicle, triggerType, mode string) {
-	p.hub.Broadcast("automation.triggered", automationTriggeredEvent{
+// ctx threads through to the SSE span so the event nests under the caller's
+// trace (typically an HTTP test-run handler or the automation engine eval span).
+func (p *AutomationEventPublisher) PublishTriggered(ctx context.Context, automationID int64, name, vehicle, triggerType, mode string) {
+	p.hub.BroadcastWithContext(ctx, "automation.triggered", automationTriggeredEvent{
 		AutomationID: automationID,
 		Name:         name,
 		Vehicle:      vehicle,
@@ -77,8 +80,8 @@ func (p *AutomationEventPublisher) PublishTriggered(automationID int64, name, ve
 }
 
 // PublishSucceeded broadcasts that all actions completed successfully.
-func (p *AutomationEventPublisher) PublishSucceeded(automationID int64, name string, durationMs int64, actions int, mode string) {
-	p.hub.Broadcast("automation.succeeded", automationSucceededEvent{
+func (p *AutomationEventPublisher) PublishSucceeded(ctx context.Context, automationID int64, name string, durationMs int64, actions int, mode string) {
+	p.hub.BroadcastWithContext(ctx, "automation.succeeded", automationSucceededEvent{
 		AutomationID: automationID,
 		Name:         name,
 		DurationMs:   durationMs,
@@ -88,8 +91,8 @@ func (p *AutomationEventPublisher) PublishSucceeded(automationID int64, name str
 }
 
 // PublishFailed broadcasts that an action failed.
-func (p *AutomationEventPublisher) PublishFailed(automationID int64, name, errMsg string, actionIndex int, mode string) {
-	p.hub.Broadcast("automation.failed", automationFailedEvent{
+func (p *AutomationEventPublisher) PublishFailed(ctx context.Context, automationID int64, name, errMsg string, actionIndex int, mode string) {
+	p.hub.BroadcastWithContext(ctx, "automation.failed", automationFailedEvent{
 		AutomationID: automationID,
 		Name:         name,
 		Error:        errMsg,
@@ -99,8 +102,8 @@ func (p *AutomationEventPublisher) PublishFailed(automationID int64, name, errMs
 }
 
 // PublishSkipped broadcasts that conditions were not met.
-func (p *AutomationEventPublisher) PublishSkipped(automationID int64, name, reason, mode string) {
-	p.hub.Broadcast("automation.skipped", automationSkippedEvent{
+func (p *AutomationEventPublisher) PublishSkipped(ctx context.Context, automationID int64, name, reason, mode string) {
+	p.hub.BroadcastWithContext(ctx, "automation.skipped", automationSkippedEvent{
 		AutomationID: automationID,
 		Name:         name,
 		Reason:       reason,
@@ -109,8 +112,8 @@ func (p *AutomationEventPublisher) PublishSkipped(automationID int64, name, reas
 }
 
 // PublishStateChanged broadcasts a generic FSM state transition.
-func (p *AutomationEventPublisher) PublishStateChanged(automationID int64, name, from, to, trigger, mode string, retryCount, consecutiveFailures int) {
-	p.hub.Broadcast("automation.state_changed", automationStateChangedEvent{
+func (p *AutomationEventPublisher) PublishStateChanged(ctx context.Context, automationID int64, name, from, to, trigger, mode string, retryCount, consecutiveFailures int) {
+	p.hub.BroadcastWithContext(ctx, "automation.state_changed", automationStateChangedEvent{
 		AutomationID:        automationID,
 		Name:                name,
 		From:                from,

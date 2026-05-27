@@ -165,7 +165,7 @@ func (s *HybridLiveSignalStore) UpdateNonBlocking(ctx context.Context, vehicleID
 
 	signalsCopy := copyLiveSignalBatch(signals)
 	go func() {
-		redisCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), liveSignalRedisMirrorTimeout)
+		redisCtx, cancel := context.WithTimeout(contextWithRedisAsync(context.WithoutCancel(ctx)), liveSignalRedisMirrorTimeout)
 		defer cancel()
 		if err := l2.Update(redisCtx, vehicleID, signalsCopy); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("live signal store: Redis mirror failed")

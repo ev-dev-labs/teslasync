@@ -54,8 +54,8 @@ func (f *fakeAchievementUnlockStore) RecordUnlock(_ context.Context, achievement
 	return true, when, nil
 }
 
-// recordingBroadcaster captures every Broadcast call so tests can assert
-// which events were emitted (and that no double-broadcasts happen on
+// recordingBroadcaster captures every BroadcastWithContext call so tests can
+// assert which events were emitted (and that no double-broadcasts happen on
 // re-evaluation).
 type recordingBroadcaster struct {
 	mu     sync.Mutex
@@ -67,7 +67,7 @@ type recordedEvent struct {
 	Data interface{}
 }
 
-func (r *recordingBroadcaster) Broadcast(eventType string, data interface{}) {
+func (r *recordingBroadcaster) BroadcastWithContext(_ context.Context, eventType string, data interface{}) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.events = append(r.events, recordedEvent{Type: eventType, Data: data})

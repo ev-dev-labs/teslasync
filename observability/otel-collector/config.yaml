@@ -1,0 +1,105 @@
+# Dev OpenTelemetry Collector configuration for the docker-compose stack.
+#
+# This is a STRICTLY DEV variant of helm/teslasync/files/otel-collector/config.yaml.
+# It differs in three deliberate ways:
+#
+#   1. NO tail sampling. Devs need to see the exact trace they just generated;
+#      a 1% baseline policy makes the dev experience look broken. The K8s
+#      variant keeps tail sampling because prod span volume requires it.
+#
+#   2. CORS enabled on the OTLP/HTTP receiver. The frontend RUM
+#      (web/src/observability/rum.ts) POSTs spans from the browser at
+#      http://localhost:4318/v1/traces. Without CORS the browser blocks the
+#      export and the SPA -> API trace chain silently fails.
+#
+#   3. Trace exporter targets the in-network Jaeger container instead of
+#      Tempo. Dev compose has no Tempo deployment; Jaeger 1.57's all-in-one
+#      image accepts OTLP/gRPC on 4317.
+#
+# Pipeline:
+#   receivers (otlp gRPC :4317, otlp HTTP :4318 with CORS)
+#     -> processors (memory_limiter, batch)
+#     -> exporters (otlp/jaeger -> jaeger:4317, prometheus :9464)
+#
+# Promotion criteria for any change here: update helm/.../otel-collector/config.yaml
+# in lockstep when the change is policy-relevant (receivers, processors), and
+# leave the K8s tail_sampling block alone (a dev-only change MUST NOT delete
+# the prod sampling matrix).
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+        # Browser RUM origin allow-list. The web container serves on :80 inside
+        # the compose network and is exposed on the host as :3000 by default
+        # (TESLASYNC_WEB_PORT). Add additional origins if you front the SPA
+        # with a custom hostname.
+        cors:
+          allowed_origins:
+            - "http://localhost"
+            - "http://localhost:3000"
+            - "http://localhost:5173"
+            - "http://127.0.0.1:3000"
+            - "http://127.0.0.1:5173"
+          allowed_headers:
+            - "*"
+          max_age: 7200
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_percentage: 80
+    spike_limit_percentage: 25
+
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+    send_batch_max_size: 2048
+
+  # Stamp every span with deployment.environment=dev so we can filter the
+  # cluster Jaeger backend by environment when running mixed stacks.
+  resource/dev:
+    attributes:
+      - key: deployment.environment
+        value: dev-compose
+        action: upsert
+
+exporters:
+  # Jaeger 1.57 all-in-one accepts OTLP/gRPC directly on 4317 — no jaeger
+  # exporter needed (the legacy exporter was removed in collector contrib v0.85).
+  otlp/jaeger:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true
+
+  # Prometheus exposition for the collector's own metrics + any metrics
+  # forwarded through OTLP. Scraped by the dev Prometheus at otel-collector:9464.
+  prometheus:
+    endpoint: 0.0.0.0:9464
+    namespace: otelcol
+    send_timestamps: true
+    metric_expiration: 5m
+
+  # Debug exporter — uncomment locally to dump every received span to stderr
+  # when diagnosing why the SDK isn't shipping spans.
+  # debug:
+  #   verbosity: detailed
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resource/dev, batch]
+      exporters: [otlp/jaeger]
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]
+  telemetry:
+    logs:
+      level: info
+    metrics:
+      address: 0.0.0.0:8888

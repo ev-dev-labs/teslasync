@@ -45,17 +45,28 @@ func TestToSI(t *testing.T) {
 		eps       float64
 		wantErrIs error
 	}{
-		// --- DISTANCE: 5 fields x {miles, km} = 10 rows ---
-		{name: "Odometer/miles", field: "Odometer", raw: 1, active: ActiveUnitMiles, want: 1609.344, eps: epsTight},
-		{name: "Odometer/km", field: "Odometer", raw: 1, active: ActiveUnitKilometers, want: 1000, eps: epsTight},
-		{name: "RatedRange/miles", field: "RatedRange", raw: 200, active: ActiveUnitMiles, want: 321868.8, eps: epsLoose},
-		{name: "RatedRange/km", field: "RatedRange", raw: 300, active: ActiveUnitKilometers, want: 300000, eps: epsTight},
-		{name: "EstBatteryRange/miles", field: "EstBatteryRange", raw: 150, active: ActiveUnitMiles, want: 241401.6, eps: epsLoose},
-		{name: "EstBatteryRange/km", field: "EstBatteryRange", raw: 240, active: ActiveUnitKilometers, want: 240000, eps: epsTight},
-		{name: "IdealBatteryRange/miles", field: "IdealBatteryRange", raw: 180, active: ActiveUnitMiles, want: 289681.92, eps: epsLoose},
-		{name: "IdealBatteryRange/km", field: "IdealBatteryRange", raw: 290, active: ActiveUnitKilometers, want: 290000, eps: epsTight},
-		{name: "MilesToArrival/miles", field: "MilesToArrival", raw: 10, active: ActiveUnitMiles, want: 16093.44, eps: epsTight},
-		{name: "MilesToArrival/km", field: "MilesToArrival", raw: 15, active: ActiveUnitKilometers, want: 15000, eps: epsTight},
+		// --- DISTANCE: fixed-mile fields (Odometer, RatedRange, etc.) ---
+		// These fields are ALWAYS emitted in miles over the wire
+		// regardless of SettingDistanceUnit; the active arg must be
+		// ignored. Mirror the TpmsPressure fixed-bar coverage pattern:
+		// every active value (mi, km, "") must produce the same SI
+		// output. See conversions.go's fixedMileDistanceFields comment.
+		{name: "Odometer/active=mi_treated_as_mi", field: "Odometer", raw: 27210.92, active: ActiveUnitMiles, want: 27210.92 * 1609.344, eps: epsLoose},
+		{name: "Odometer/active=km_treated_as_mi", field: "Odometer", raw: 27210.92, active: ActiveUnitKilometers, want: 27210.92 * 1609.344, eps: epsLoose},
+		{name: "Odometer/no_active_still_converts", field: "Odometer", raw: 27210.92, active: "", want: 27210.92 * 1609.344, eps: epsLoose},
+		{name: "Odometer/wrong_unit_treated_as_mi", field: "Odometer", raw: 100, active: ActiveUnitPSI, want: 100 * 1609.344, eps: epsLoose},
+		{name: "RatedRange/active=mi_treated_as_mi", field: "RatedRange", raw: 200, active: ActiveUnitMiles, want: 321868.8, eps: epsLoose},
+		{name: "RatedRange/active=km_treated_as_mi", field: "RatedRange", raw: 200, active: ActiveUnitKilometers, want: 321868.8, eps: epsLoose},
+		{name: "EstBatteryRange/active=mi_treated_as_mi", field: "EstBatteryRange", raw: 150, active: ActiveUnitMiles, want: 241401.6, eps: epsLoose},
+		{name: "EstBatteryRange/active=km_treated_as_mi", field: "EstBatteryRange", raw: 150, active: ActiveUnitKilometers, want: 241401.6, eps: epsLoose},
+		{name: "IdealBatteryRange/active=mi_treated_as_mi", field: "IdealBatteryRange", raw: 180, active: ActiveUnitMiles, want: 289681.92, eps: epsLoose},
+		{name: "IdealBatteryRange/active=km_treated_as_mi", field: "IdealBatteryRange", raw: 180, active: ActiveUnitKilometers, want: 289681.92, eps: epsLoose},
+		{name: "MilesToArrival/active=mi_treated_as_mi", field: "MilesToArrival", raw: 10, active: ActiveUnitMiles, want: 16093.44, eps: epsTight},
+		{name: "MilesToArrival/active=km_treated_as_mi", field: "MilesToArrival", raw: 10, active: ActiveUnitKilometers, want: 16093.44, eps: epsTight},
+		{name: "MilesSinceReset/active=mi_treated_as_mi", field: "MilesSinceReset", raw: 50, active: ActiveUnitMiles, want: 50 * 1609.344, eps: epsTight},
+		{name: "MilesSinceReset/active=km_treated_as_mi", field: "MilesSinceReset", raw: 50, active: ActiveUnitKilometers, want: 50 * 1609.344, eps: epsTight},
+		{name: "SelfDrivingMilesSinceReset/active=mi_treated_as_mi", field: "SelfDrivingMilesSinceReset", raw: 25, active: ActiveUnitMiles, want: 25 * 1609.344, eps: epsTight},
+		{name: "SelfDrivingMilesSinceReset/active=km_treated_as_mi", field: "SelfDrivingMilesSinceReset", raw: 25, active: ActiveUnitKilometers, want: 25 * 1609.344, eps: epsTight},
 
 		// --- TEMPERATURE: 5 fields x {F, C} = 10 rows ---
 		{name: "DiHeatsinkTR/F", field: "DiHeatsinkTR", raw: 32, active: ActiveUnitFahrenheit, want: 0, eps: epsTight},
@@ -94,13 +105,29 @@ func TestToSI(t *testing.T) {
 		{name: "CruiseSetSpeed/mph_to_ms", field: "CruiseSetSpeed", raw: 70, active: ActiveUnitMiles, want: 70 * 0.44704, eps: epsLoose},
 
 		// --- ERROR PATHS ---
-		{name: "Odometer/no_active", field: "Odometer", raw: 100, active: "", wantErrIs: ErrNoUnitContext},
+		// The Odometer no_active / wrong_unit cases moved to the
+		// fixed-mile success arm above. VehicleSpeed retains its
+		// active-unit-required contract since speed follows the user
+		// setting (see normalize_test.go TestPipelineHappyPath for
+		// the empirical evidence — VehicleSpeed wire values change
+		// numerically across a SettingDistanceUnit transition,
+		// Odometer does not).
 		{name: "PackVoltage/non_unit_bearing", field: "PackVoltage", raw: 400, active: ActiveUnitMiles, wantErrIs: ErrUnsupportedField},
-		{name: "Odometer/wrong_unit", field: "Odometer", raw: 100, active: ActiveUnitPSI, wantErrIs: ErrUnsupportedUnit},
 		{name: "Unknown/unknown_field", field: "NotARealField", raw: 1, active: ActiveUnitMiles, wantErrIs: ErrUnsupportedField},
 		{name: "VehicleSpeed/no_active", field: "VehicleSpeed", raw: 60, active: "", wantErrIs: ErrNoUnitContext},
 		{name: "VehicleSpeed/wrong_unit", field: "VehicleSpeed", raw: 60, active: ActiveUnitPSI, wantErrIs: ErrUnsupportedUnit},
 		{name: "Soc/no_charge_conversion", field: "Soc", raw: 80, active: ActiveUnitPercent, wantErrIs: ErrUnsupportedUnit},
+		// InsideTemp is a UnitKindTemperature field that DOES follow
+		// the user setting (SettingTemperatureUnit) and still
+		// requires unit context; pin the contract.
+		{name: "InsideTemp/no_active", field: "InsideTemp", raw: 70, active: "", wantErrIs: ErrNoUnitContext},
+		{name: "InsideTemp/wrong_unit", field: "InsideTemp", raw: 70, active: ActiveUnitPSI, wantErrIs: ErrUnsupportedUnit},
+		// CurrentLimitMph is UnitKindDistance but INTENTIONALLY
+		// EXCLUDED from the fixed-mile override (semantics unclear,
+		// not exercised by feature paths). It must still require
+		// unit context so a future change to its classification is
+		// loud rather than silent.
+		{name: "CurrentLimitMph/no_active", field: "CurrentLimitMph", raw: 65, active: "", wantErrIs: ErrNoUnitContext},
 	}
 
 	for _, tc := range cases {

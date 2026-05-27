@@ -40,15 +40,43 @@ type Config struct {
 	MongoDB              MongoDBConfig
 	GasPrice             GasPriceConfig
 	OpenTelemetry        OpenTelemetryConfig
+	Profiling            ProfilingConfig
+	SLO                  SLOConfig
+	DataQuality          DataQualityConfig
+	Synthetic            SyntheticConfig
+	HomeAssistant        HomeAssistantConfig
 	GoogleMaps           GoogleMapsConfig
 	AzureMaps            AzureMapsConfig
 	APILogs              APILogsConfig
 	WebPush              WebPushConfig
 	System               SystemConfig
 	GitHub               GitHubConfig
+
+	// Phase-44 / observability-batch / Prompt F4 + F8. Operator-toggled
+	// behaviors that we don't want gated on a code change.
+	Features FeaturesConfig
 }
 
-// GitHubConfig holds the credentials used by the optional GitHub Issues
+// FeaturesConfig holds operator-toggled behaviors that we don't want
+// gated on a code change. These are read at startup; the dynamic
+// internal/flags store is for runtime toggles that can change without
+// a restart.
+//
+// Phase-44 / observability-batch / Prompt F4 + F8.
+type FeaturesConfig struct {
+	// DLQReplayEnabled gates the POST /system/dlq/{id}/replay endpoint.
+	// Default false — an operator must explicitly opt in (env var or
+	// helm values) because replay re-publishes a payload that already
+	// triggered an exception in production. Replay is also gated by
+	// sudo-token middleware AND audited on every code path.
+	DLQReplayEnabled bool
+	// DLQRingCapacity bounds the in-memory ring buffer the inspector
+	// subscriber maintains. Default 200 entries (~800KB). Older
+	// entries rotate out; audit rows survive ring rotation.
+	DLQRingCapacity int
+}
+
+
 // bridge in the admin feedback queue (Phase-46 / Prompt 08). When Repo
 // or Token is empty the bridge is disabled — the admin endpoint
 // surfaces this in its response and the SPA hides the "Forward to
@@ -154,6 +182,86 @@ type OpenTelemetryConfig struct {
 	Endpoint    string `json:"endpoint"`
 	ServiceName string `json:"service_name"`
 	Insecure    bool   `json:"insecure"`
+}
+
+// ProfilingConfig controls Pyroscope continuous profiling. Defaults to
+// disabled — when ServerAddress is empty the profiler is a no-op and
+// the runtime profilers stay at their stock rates. When enabled, every
+// long-lived binary (API + 3 workers) uploads CPU/heap/goroutine/mutex
+// profiles to the Pyroscope server using godeltaprof deltas (<1% CPU
+// overhead). See docs/runbooks/phase-49-pyroscope.md for the dashboard
+// taxonomy.
+//
+// Phase-49 / Prompt p49-profiling.
+type ProfilingConfig struct {
+	// Enabled gates the entire profiler. Default false.
+	Enabled bool
+	// ServerAddress is the Pyroscope server's ingest URL
+	// (e.g. http://pyroscope:4040). Required when Enabled is true.
+	ServerAddress string
+	// UploadRate controls how often deltas are pushed. Default 15s
+	// matches Pyroscope's documented baseline; lower values increase
+	// resolution at the cost of network bytes.
+	UploadRate time.Duration
+}
+
+// SLOConfig — Phase-46 / p46-slo. Live SLO board configuration.
+type SLOConfig struct {
+	// CatalogPath points at slo/catalog.yaml. Default
+	// "slo/catalog.yaml" (relative to the binary's CWD).
+	CatalogPath string
+	// PromBaseURL is the Prometheus HTTP API base
+	// (e.g. http://prometheus:9090). Empty disables live tier
+	// evaluation — the catalog metadata is still served so the SPA
+	// can render names + targets + a "Prometheus not configured"
+	// banner.
+	PromBaseURL string
+}
+
+// DataQualityConfig — Phase-46 / p46-dq-lineage. Per-field freshness /
+// gap / duplicate scoring from signal_log.
+type DataQualityConfig struct {
+	// Enabled gates the scorer. Default true — lineage graph is
+	// always served because it reads embedded routing.yaml.
+	Enabled bool
+	// WindowMins is the lookback window for every aggregate.
+	// Default 60.
+	WindowMins int
+}
+
+// SyntheticConfig — Phase-46 / p46-synthetic. Outside-in canary
+// probes that exercise health/readiness endpoints.
+type SyntheticConfig struct {
+	// Enabled gates the runner. Default false (opt-in to keep test
+	// + local dev quiet).
+	Enabled bool
+	// IntervalSeconds between probe ticks. Default 60.
+	IntervalSeconds int
+	// TimeoutSeconds per probe invocation. Default 30.
+	TimeoutSeconds int
+	// ProbeURLs is the comma-separated list of full URLs to probe
+	// (e.g. "http://localhost:8080/healthz,http://localhost:8080/readyz").
+	// Default empty — runner is configured but registers zero
+	// probes so /admin/observability/synthetic returns an empty
+	// snapshot.
+	ProbeURLs string
+}
+
+// HomeAssistantConfig — Phase-47 / p47-homeassist. MQTT discovery
+// publisher that emits a Home Assistant entity catalog for every
+// vehicle on a periodic tick. Opt-in via HOMEASSISTANT_ENABLED=true
+// to avoid surprising operators who don't run HA.
+type HomeAssistantConfig struct {
+	// Enabled gates the publisher. Default false.
+	Enabled bool
+	// DiscoveryPrefix matches HA's "discovery prefix" setting.
+	// Default "homeassistant".
+	DiscoveryPrefix string
+	// PublishInterval controls how often the publisher reasserts
+	// the full catalog. Default 1h — HA's discovery listener
+	// caches retained config topics, so the interval primarily
+	// guards against schema drift / display-name changes.
+	PublishInterval time.Duration
 }
 
 // GasPriceConfig controls automated gas price polling from the EIA API.
@@ -411,6 +519,35 @@ func Load() (*Config, error) {
 			Insecure:    envBool("OTEL_INSECURE", true),
 		},
 
+		Profiling: ProfilingConfig{
+			Enabled:       envBool("PYROSCOPE_ENABLED", false),
+			ServerAddress: envStr("PYROSCOPE_SERVER_ADDRESS", ""),
+			UploadRate:    envDuration("PYROSCOPE_UPLOAD_RATE", 15*time.Second),
+		},
+
+		SLO: SLOConfig{
+			CatalogPath: envStr("SLO_CATALOG_PATH", "slo/catalog.yaml"),
+			PromBaseURL: envStr("PROMETHEUS_BASE_URL", ""),
+		},
+
+		DataQuality: DataQualityConfig{
+			Enabled:    envBool("DATA_QUALITY_ENABLED", true),
+			WindowMins: envInt("DATA_QUALITY_WINDOW_MINS", 60),
+		},
+
+		Synthetic: SyntheticConfig{
+			Enabled:         envBool("SYNTHETIC_ENABLED", false),
+			IntervalSeconds: envInt("SYNTHETIC_INTERVAL_SECONDS", 60),
+			TimeoutSeconds:  envInt("SYNTHETIC_TIMEOUT_SECONDS", 30),
+			ProbeURLs:       envStr("SYNTHETIC_PROBE_URLS", ""),
+		},
+
+		HomeAssistant: HomeAssistantConfig{
+			Enabled:         envBool("HOMEASSISTANT_ENABLED", false),
+			DiscoveryPrefix: envStr("HOMEASSISTANT_DISCOVERY_PREFIX", "homeassistant"),
+			PublishInterval: envDuration("HOMEASSISTANT_PUBLISH_INTERVAL", time.Hour),
+		},
+
 		GoogleMaps: GoogleMapsConfig{
 			APIKey: envStr("GOOGLE_MAPS_API_KEY", ""),
 		},
@@ -442,6 +579,11 @@ func Load() (*Config, error) {
 		GitHub: GitHubConfig{
 			Repo:  envStr("TESLASYNC_GITHUB_REPO", ""),
 			Token: envStr("TESLASYNC_GITHUB_TOKEN", ""),
+		},
+
+		Features: FeaturesConfig{
+			DLQReplayEnabled: envBool("DLQ_REPLAY_ENABLED", false),
+			DLQRingCapacity:  envInt("DLQ_RING_CAPACITY", 200),
 		},
 	}
 

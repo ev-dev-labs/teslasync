@@ -21,9 +21,17 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
+
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 var Version = "dev"
@@ -48,6 +56,30 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// ── OpenTelemetry tracing ────────────────────────────────────────
+	// Worker-owned TracerProvider tagged service.name=teslasync-automation-worker.
+	// Init is non-fatal — see ADR-008.
+	tracingShutdown, err := tracing.Init(ctx, cfg, tracing.WithServiceName("teslasync-automation-worker"))
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize tracing, continuing without it")
+	} else if cfg.OpenTelemetry.Enabled {
+		log.Info().
+			Str("service", "teslasync-automation-worker").
+			Str("endpoint", cfg.OTLPEndpoint).
+			Msg("OpenTelemetry tracing enabled")
+	}
+
+	// Pyroscope continuous profiling — non-fatal (Phase-49 / p49-profiling).
+	profilerShutdown, err := tracing.StartProfiler(ctx, cfg, "teslasync-automation-worker")
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize pyroscope profiler, continuing without it")
+	} else if cfg.Profiling.Enabled && cfg.Profiling.ServerAddress != "" {
+		log.Info().
+			Str("service", "teslasync-automation-worker").
+			Str("server", cfg.Profiling.ServerAddress).
+			Msg("Pyroscope continuous profiling enabled")
+	}
 
 	// ── Database ───────────────────────────────────────────────────────
 	var db *database.DB
@@ -174,11 +206,29 @@ func main() {
 	// ── Subscribe to Reload Channel ───────────────────────────────────
 	reloadTopic := cfg.MQTT.Prefix + "/automations/reload"
 	reloadToken := mqttClient.Subscribe(reloadTopic, 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+		// Extract upstream trace context so the reload-handler span
+		// nests under the API request span that triggered this reload.
+		// Legacy passthrough means in-flight messages from older API
+		// pods still work during a rolling deploy.
+		msgCtx, payload := tsmqtt.ExtractTraceContext(ctx, msg.Payload())
+		tracer := otel.Tracer("cmd/automation-worker")
+		msgCtx, span := tracer.Start(msgCtx, "automation.reload_signal",
+			oteltrace.WithSpanKind(oteltrace.SpanKindConsumer),
+			oteltrace.WithAttributes(
+				semconv.MessagingSystemKey.String("mqtt"),
+				semconv.MessagingDestinationName(reloadTopic),
+				semconv.MessagingOperationTypeKey.String("process"),
+				attribute.Int("messaging.message.payload_size_bytes", len(msg.Payload())),
+			),
+		)
+		defer span.End()
 		log.Info().
 			Str("topic", msg.Topic()).
-			Str("payload", string(msg.Payload())).
+			Str("payload", string(payload)).
 			Msg("received automation reload signal")
-		if err := engine.Reload(ctx); err != nil {
+		if err := engine.Reload(msgCtx); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "engine reload failed")
 			log.Error().Err(err).Msg("failed to reload engine after signal")
 		}
 	})
@@ -193,17 +243,34 @@ func main() {
 	// ── Subscribe to Webhook Forwarding Channel ───────────────────────
 	webhookTopic := cfg.MQTT.Prefix + "/internal/automations/webhook"
 	webhookToken := mqttClient.Subscribe(webhookTopic, 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+		msgCtx, body := tsmqtt.ExtractTraceContext(ctx, msg.Payload())
+		tracer := otel.Tracer("cmd/automation-worker")
+		msgCtx, span := tracer.Start(msgCtx, "automation.webhook_forward",
+			oteltrace.WithSpanKind(oteltrace.SpanKindConsumer),
+			oteltrace.WithAttributes(
+				semconv.MessagingSystemKey.String("mqtt"),
+				semconv.MessagingDestinationName(webhookTopic),
+				semconv.MessagingOperationTypeKey.String("process"),
+				attribute.Int("messaging.message.payload_size_bytes", len(msg.Payload())),
+			),
+		)
+		defer span.End()
 		var payload struct {
 			Token     string          `json:"token"`
 			Body      json.RawMessage `json:"body"`
 			Signature string          `json:"signature"`
 			RemoteIP  string          `json:"remote_ip"`
 		}
-		if err := json.Unmarshal(msg.Payload(), &payload); err != nil {
+		if err := json.Unmarshal(body, &payload); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "invalid webhook payload")
 			log.Error().Err(err).Msg("invalid webhook forwarding payload")
 			return
 		}
-		if err := webhookTrig.HandleWebhook(ctx, payload.Token, payload.Body, payload.Signature, payload.RemoteIP); err != nil {
+		span.SetAttributes(attribute.String("automation.webhook.token_prefix", safePrefix(payload.Token)))
+		if err := webhookTrig.HandleWebhook(msgCtx, payload.Token, payload.Body, payload.Signature, payload.RemoteIP); err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "webhook processing failed")
 			log.Error().Err(err).Str("token_prefix", safePrefix(payload.Token)).Msg("webhook processing failed")
 		}
 	})
@@ -255,6 +322,20 @@ func main() {
 			log.Info().Msg("automation-worker api_call_logs writer drained")
 		}
 		drainCancel()
+	}
+	if tracingShutdown != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := tracingShutdown(shutdownCtx); err != nil {
+			log.Warn().Err(err).Msg("tracing shutdown failed")
+		}
+		shutdownCancel()
+	}
+	if profilerShutdown != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := profilerShutdown(shutdownCtx); err != nil {
+			log.Warn().Err(err).Msg("profiler shutdown failed")
+		}
+		shutdownCancel()
 	}
 	log.Info().Msg("automation worker stopped")
 }

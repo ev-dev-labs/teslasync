@@ -130,11 +130,16 @@ import (
 
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
+	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
+	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -2789,6 +2794,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// Share link management
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.Create)
 				r.Get("/shares", shareHandler.List)
+				// Phase-44 / observability-batch / Prompt F10 —
+				// Drive-end diagnostic. Returns the fsm_transitions
+				// + signal_window centered on the drive's end_ts
+				// (or NOW for in-progress drives), explaining WHY
+				// the FSM ended the drive. Read-only, 60/min IP
+				// throttle, inherits /api/v1 forward-auth gate.
+				driveDiagnosticHandler := NewDriveDiagnosticHandler(
+					database.NewDriveRepo(db),
+					database.NewDriveDiagnosticRepo(db.Pool),
+				)
+				r.With(httprate.LimitByIP(60, 1*time.Minute)).
+					Get("/why-ended", driveDiagnosticHandler.Get)
 			})
 		})
 
@@ -3514,6 +3531,76 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				Get("/queues", queueStatusHandler.ServeStatus)
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/queues/{worker}/jobs", queueStatusHandler.ServeJobs)
+
+			// Phase-44 / observability-batch / Prompt F4 — DLQ
+			// Inspector. List + per-entry GET are read-only and
+			// per-IP throttled at 60/min. Replay is gated by
+			// sudo-token (RequireSudo) AND by DLQ_REPLAY_ENABLED
+			// (cfg.Features.DLQReplayEnabled). Audit endpoints
+			// are read-only. The handler degrades to 503 when
+			// opt.DLQInspector or opt.DLQReplayAuditRepo is nil,
+			// so a deployment without MQTT still serves the rest
+			// of /system unchanged.
+			dlqHandler := NewDLQHandler(
+				opt.DLQInspector,
+				opt.DLQReplayAuditRepo,
+				cfg.Auth.ForwardAuthHeader,
+				cfg.Features.DLQReplayEnabled,
+			)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/dlq", dlqHandler.List)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/dlq/audit", dlqHandler.Audit)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/dlq/{id}", dlqHandler.Get)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/dlq/{id}/audit", dlqHandler.Audit)
+			r.With(
+				httprate.LimitByIP(10, 1*time.Minute),
+				RequireSudo(sudoStore, sudoCfg),
+			).Post("/dlq/{id}/replay", dlqHandler.Replay)
+
+			// Phase-44 / observability-batch / Prompt F8 — Feature
+			// Flags. List + GET + audit are read-only (60/min).
+			// PUT + DELETE are sudo-gated + audited via the
+			// feature_flag_changes table; the dynamic
+			// internal/flags store invalidates other processes via
+			// Redis Pub/Sub. The handler degrades to 503 when
+			// opt.FlagStore is nil so a redis-disabled deployment
+			// still serves the rest of /system unchanged.
+			flagsHandler := NewFlagsHandler(
+				opt.FlagStore,
+				opt.FeatureFlagChangesRepo,
+				cfg.Auth.ForwardAuthHeader,
+			)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/flags", flagsHandler.List)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/flags/changes", flagsHandler.Changes)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/flags/{key}", flagsHandler.Get)
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/flags/{key}/changes", flagsHandler.Changes)
+			r.With(
+				httprate.LimitByIP(20, 1*time.Minute),
+				RequireSudo(sudoStore, sudoCfg),
+			).Put("/flags/{key}", flagsHandler.Set)
+			r.With(
+				httprate.LimitByIP(20, 1*time.Minute),
+				RequireSudo(sudoStore, sudoCfg),
+			).Delete("/flags/{key}", flagsHandler.Delete)
+
+			// Phase-44 / observability-batch / Prompt F6 —
+			// Per-vehicle ingest X-Ray. Returns per-field
+			// sample counts + last-seen + time-bucket histogram
+			// over a configurable window. Read-only, 60/min IP
+			// throttle, inherits /api/v1 forward-auth gate. The
+			// vehicleID is in the URL because the cost of an
+			// unbounded fleet-wide query is too high for the
+			// signal_log hypertable.
+			ingestXRayHandler := NewIngestXRayHandler(database.NewIngestXRayRepo(db.Pool))
+			r.With(httprate.LimitByIP(60, 1*time.Minute)).
+				Get("/ingest-xray/{vehicleID}", ingestXRayHandler.Get)
 		})
 
 		// Phase-2 / Status API — operator-grade /api/v1/status/* endpoints.
@@ -3553,6 +3640,66 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					r.With(httprate.LimitByIP(30, 1*time.Minute)).Delete("/", incidentsHandler.Delete)
 				})
 			})
+		})
+
+		// Phase-45 — Operator confidence admin surface. Five
+		// read-only observability routes + audit viewer + GDPR
+		// export download. Each backing repo can be nil; the
+		// handler returns 503 SUBSYSTEM_NOT_CONFIGURED instead of
+		// crashing. Sudo gating is intentionally NOT applied yet —
+		// the routes are read-only (or stream-only for GDPR
+		// download which is governed by the artifact's expires_at
+		// TTL); a future tightening will move them behind the
+		// sudoStore middleware once the page-builder UI is shipped.
+		adminobsSvc := adminobssvc.New(adminobssvc.Options{
+			Rotation:      opt.RotationTracker,
+			SchemaPool:    db.Pool,
+			SchemaSeed:    opt.SchemaSeed,
+			SlowQueries:   opt.SlowQueriesRepo,
+			Hypertable:    opt.HypertableMetricsRepo,
+			IngestXRay:    opt.IngestXRayRepo,
+			AuditRecorder: opt.AuditRecorder,
+			ExcludeTables: []string{"schema_migrations"},
+		})
+		auditViewerSvc := auditviewersvc.New(opt.AuditLogQueryRepo, opt.AuditRecorder)
+		v1AdminObs := v1handlers.NewAdminObservabilityHandler(adminobsSvc)
+		v1AdminAudit := v1handlers.NewAdminAuditHandler(auditViewerSvc)
+		v1GDPRExport := v1handlers.NewGDPRExportHandler(gdprexportsvc.New(opt.GDPRArtifactRepo))
+		r.Group(func(r chi.Router) {
+			r.Use(httprate.LimitByIP(60, 1*time.Minute))
+			r.Use(handlermw.QueryBudget(handlermw.QueryBudgets{
+				"GET /admin/observability/schema-drift":   5,
+				"GET /admin/observability/slow-queries":   3,
+				"GET /admin/observability/vehicle-cost":   3,
+				"GET /admin/observability/disk-forecast":  5,
+				"GET /admin/observability/secret-rotation": 2,
+				"GET /admin/observability/slo":            3,
+				"GET /admin/observability/data-quality":   3,
+				"GET /admin/observability/lineage":        1,
+				"GET /admin/observability/synthetic":      1,
+				"GET /admin/audit-log":                    3,
+				"GET /admin/audit-log/categories":         2,
+				"GET /admin/audit-log/actions":            2,
+				"GET /admin/audit-log/verify":             2,
+				"GET /admin/gdpr/exports/{id}":            2,
+			}))
+			v1AdminObs.Register(r)
+			v1AdminAudit.Register(r)
+			v1GDPRExport.Register(r)
+
+			// Phase-46 SOTA observability batch (p46-slo, p46-dq-lineage,
+			// p46-synthetic). Each handler degrades to 503 SUBSYSTEM_NOT_CONFIGURED
+			// when its backing subsystem wasn't wired in opt — see
+			// RouterOptions for the optionality contract.
+			sloHandler := NewSLOHandler(opt.SLOCatalog, opt.SLOTracker)
+			r.Get("/admin/observability/slo", sloHandler.Snapshot)
+
+			dqHandler := NewDataQualityHandler(opt.DataQualityScorer)
+			r.Get("/admin/observability/data-quality", dqHandler.Score)
+			r.Get("/admin/observability/lineage", dqHandler.Lineage)
+
+			syntheticHandler := NewSyntheticHandler(opt.SyntheticRunner)
+			r.Get("/admin/observability/synthetic", syntheticHandler.Snapshot)
 		})
 
 		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
@@ -3982,6 +4129,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		exportSvc := exportsvc.New(exportRepo, fsmHistoryRepo, nil)
 		dashboardSvc := dashboardsvc.New(vehicleRepo, chargingRepo, tripRepo)
 
+		// Wire OTel FSM tracers so every Fire() emits a span. The fsm.Tracer
+		// port is implemented by tracing.NewFSMTracer (the OTel adapter); the
+		// svc layer depends only on the port (ADR-006: zero-deps domain).
+		// Each tracer name surfaces as the instrumentation scope in Tempo, so
+		// dashboards can filter `fsm.vehicle` vs `fsm.charging` etc.
+		vehicleSvc.SetTracer(tracing.NewFSMTracer("fsm.vehicle"))
+		chargingSvc.SetTracer(tracing.NewFSMTracer("fsm.charging"))
+		exportSvc.SetTracer(tracing.NewFSMTracer("fsm.export"))
+
 		// Handlers
 		v1VehicleHandler := v1handlers.NewVehicleHandler(vehicleSvc)
 		v1ChargingHandler := v1handlers.NewChargingHandler(chargingSvc)
@@ -4054,14 +4210,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	fs := http.FileServer(http.Dir(staticDir))
 	r.NotFound(spaFallback(staticDir, fs))
 
-	// Subscribe to export status events from the export worker and relay via SSE
+	// Subscribe to export status events from the export worker and relay via SSE.
+	// The publish path injects W3C trace context into the MQTT envelope so the
+	// SSE relay span here chains under the worker's processJob span — Tempo can
+	// then render export-publish→export-process→export.status→sse.broadcast as a
+	// single end-to-end trace across processes.
 	if mqttClient != nil {
 		mqttClient.Underlying().Subscribe("teslasync/events/export.status", 1, func(_ pahomqtt.Client, msg pahomqtt.Message) {
+			consumeCtx, payload := mqtt.ExtractTraceContext(context.Background(), msg.Payload())
 			var evt map[string]interface{}
-			if err := json.Unmarshal(msg.Payload(), &evt); err != nil {
+			if err := json.Unmarshal(payload, &evt); err != nil {
 				return
 			}
-			eventHub.Broadcast("export_status", evt)
+			eventHub.BroadcastWithContext(consumeCtx, "export_status", evt)
 		})
 	}
 

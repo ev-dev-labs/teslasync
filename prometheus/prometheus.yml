@@ -1,8 +1,52 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    deployment: dev-compose
+
+# SLO recording + alerting rules generated from slo/catalog.yaml by
+# `go run ./cmd/slogen generate {recording,alerting}`. Mounted by
+# docker-compose at /etc/prometheus/rules/. Keeping dev and K8s on the
+# same artefact ensures a SLO that tests green in dev is also defined
+# in prod — drift would silently disable burn-rate alerts.
+rule_files:
+  - /etc/prometheus/rules/recording-rules.yaml
+  - /etc/prometheus/rules/alerting-rules.yaml
 
 scrape_configs:
   - job_name: "teslasync-api"
     static_configs:
       - targets: ["teslasync-api:8080"]
+        labels:
+          service: "teslasync-api"
+
+  # Workers expose /metrics on their health-port (HEALTH_PORT=8081 by
+  # convention). Their RED middleware histograms feed the worker-availability
+  # SLOs and the queue-status panel (see internal/api/queue_status_handler.go).
+  - job_name: "teslasync-notification-worker"
+    static_configs:
+      - targets: ["notification-worker:8081"]
+        labels:
+          service: "teslasync-notification-worker"
+
+  - job_name: "teslasync-export-worker"
+    static_configs:
+      - targets: ["export-worker:8081"]
+        labels:
+          service: "teslasync-export-worker"
+
+  - job_name: "teslasync-automation-worker"
+    static_configs:
+      - targets: ["automation-worker:8081"]
+        labels:
+          service: "teslasync-automation-worker"
+
+  # OpenTelemetry Collector exposition — gives us span-rate, dropped-spans,
+  # exporter-queue-depth, and the collector's own pipeline health. Only
+  # available when running with `--profile tracing`; Prometheus will mark
+  # this target down otherwise — that's expected and an honest signal.
+  - job_name: "otel-collector"
+    static_configs:
+      - targets: ["otel-collector:9464", "otel-collector:8888"]
+        labels:
+          service: "otel-collector"

@@ -53,7 +53,10 @@ type automationRepository interface {
 // AutomationMQTTPublisher publishes automation config change notifications.
 // The worker subscribes to these to reload trigger configurations.
 type AutomationMQTTPublisher interface {
-	PublishReload(action string, automationID int64)
+	// PublishReload publishes an automation reload signal. The ctx
+	// carries W3C trace context so the worker-side handler span nests
+	// under the API request span that triggered the change.
+	PublishReload(ctx context.Context, action string, automationID int64)
 }
 
 // AutomationHandlerOption configures optional AutomationHandler dependencies.
@@ -203,7 +206,7 @@ func (h *AutomationHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	h.notifyReload("toggled", id)
+	h.notifyReload(r.Context(), "toggled", id)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":      id,
@@ -248,7 +251,7 @@ func (h *AutomationHandler) ReEnable(w http.ResponseWriter, r *http.Request) {
 		h.auditor.LogReEnabled(r.Context(), id, existing.Name, r.RemoteAddr)
 	}
 
-	h.notifyReload("re_enabled", id)
+	h.notifyReload(r.Context(), "re_enabled", id)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"id":            id,
@@ -261,9 +264,10 @@ func (h *AutomationHandler) ReEnable(w http.ResponseWriter, r *http.Request) {
 
 // notifyReload publishes an automation config change to MQTT so the automation
 // worker reloads its trigger configurations. Fire-and-forget — never blocks the response.
-func (h *AutomationHandler) notifyReload(action string, automationID int64) {
+// The ctx carries W3C trace context for cross-process span linkage.
+func (h *AutomationHandler) notifyReload(ctx context.Context, action string, automationID int64) {
 	if h.mqttPublisher != nil {
-		h.mqttPublisher.PublishReload(action, automationID)
+		h.mqttPublisher.PublishReload(ctx, action, automationID)
 	}
 }
 

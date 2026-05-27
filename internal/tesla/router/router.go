@@ -8,7 +8,17 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
+
+// routerTracerName is the OpenTelemetry tracer name for spans emitted
+// by Router.Route. The Phase-10 trace-coverage audit greps for this
+// exact constant so the router stays accounted for in the
+// tesla_signal_ingest_to_db flow.
+const routerTracerName = "tesla.router"
 
 // ErrNoRoute is returned by Router.Route when the inbound atomic's
 // Field is not declared in routing.yaml. Per ADR-004 #8 the router
@@ -180,13 +190,32 @@ func New(writers map[Destination]Writer) (*Router, error) {
 //
 // Returns nil for entries whose Destination is DestDrop — that is
 // the explicit "discard" path and is a successful outcome.
-func (r *Router) Route(ctx context.Context, atomic codec.Atomic) error {
+func (r *Router) Route(ctx context.Context, atomic codec.Atomic) (err error) {
+	ctx, span := otel.Tracer(routerTracerName).Start(
+		ctx,
+		"tesla.router.route",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(
+			attribute.String("field", atomic.Field),
+		),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "router.route")
+		}
+		span.End()
+	}()
+
 	e, ok := r.entries[atomic.Field]
 	if !ok {
 		noRouteTotal.WithLabelValues(atomic.Field).Inc()
+		span.SetAttributes(attribute.String("outcome", "no_route"))
 		return fmt.Errorf("%w: %s", ErrNoRoute, atomic.Field)
 	}
+	span.SetAttributes(attribute.String("destination", string(e.Destination)))
 	if e.Destination == DestDrop {
+		span.SetAttributes(attribute.String("outcome", "drop"))
 		return nil
 	}
 	w, ok := r.writers[e.Destination]
@@ -194,10 +223,17 @@ func (r *Router) Route(ctx context.Context, atomic codec.Atomic) error {
 		// Unreachable because New() rejects this state, but defended
 		// here so a future refactor that registers writers post-New
 		// fails loudly rather than nil-dereferencing.
+		span.SetAttributes(attribute.String("outcome", "no_writer"))
 		return fmt.Errorf("router: no writer for destination %q (field %s)", e.Destination, atomic.Field)
 	}
 
-	primaryErr := w.Write(ctx, atomic, e)
+	// Phase-10: write.role context value is propagated into the writer so
+	// the writer's own tesla.writer.<dest> child span can stamp
+	// write.role={primary|dual}. The writer doesn't import the router
+	// package — the key type is shared via the codec.Atomic ctx
+	// propagation chain. The key constant is declared in tracing.go.
+	primaryCtx := contextWithWriteRole(ctx, writeRolePrimary)
+	primaryErr := w.Write(primaryCtx, atomic, e)
 	if primaryErr != nil {
 		writerFailuresTotal.WithLabelValues(string(e.Destination), classifyError(primaryErr)).Inc()
 	}
@@ -207,18 +243,38 @@ func (r *Router) Route(ctx context.Context, atomic codec.Atomic) error {
 	// the reasoning. Synthesises a fresh Entry with Destination =
 	// DestSignalLog so the signal_log writer's compile-time contract
 	// (dst.Destination == its registered destination) is preserved.
+	dualWriteAttempted := false
 	if e.Destination != DestSignalLog && e.Destination != DestUnitHistory {
 		if logWriter, ok := r.writers[DestSignalLog]; ok {
+			dualWriteAttempted = true
 			logEntry := Entry{Field: e.Field, Destination: DestSignalLog}
-			if logErr := logWriter.Write(ctx, atomic, logEntry); logErr != nil {
+			dualCtx := contextWithWriteRole(ctx, writeRoleDual)
+			if logErr := logWriter.Write(dualCtx, atomic, logEntry); logErr != nil {
 				writerFailuresTotal.WithLabelValues(string(DestSignalLog), classifyError(logErr)).Inc()
 				// Best-effort: do not surface to caller. Observable
 				// via the metric. See godoc for reasoning.
 			}
 		}
 	}
+	span.SetAttributes(
+		attribute.Bool("dual_log_write", dualWriteAttempted),
+		attribute.String("outcome", routeOutcome(primaryErr)),
+	)
 
 	return primaryErr
+}
+
+func routeOutcome(primaryErr error) string {
+	if primaryErr == nil {
+		return "ok"
+	}
+	if errors.Is(primaryErr, context.Canceled) {
+		return "canceled"
+	}
+	if errors.Is(primaryErr, context.DeadlineExceeded) {
+		return "timeout"
+	}
+	return "primary_error"
 }
 
 // classifyError reduces a writer error to a short bounded label for

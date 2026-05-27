@@ -65,6 +65,17 @@ func ToSI(field string, raw float64, active ActiveUnit) (float64, error) {
 		return raw * 100000.0, nil
 	}
 
+	// Odometer / RatedRange / EstBatteryRange / IdealBatteryRange /
+	// MilesToArrival / MilesSinceReset / SelfDrivingMilesSinceReset
+	// are emitted in miles over the wire, independent of
+	// SettingDistanceUnit. Apply the miles conversion directly so a
+	// Km user setting does not produce a 1.609× under-conversion that
+	// corrupts cumulative drive-distance math. See conversions.go's
+	// fixedMileDistanceFields comment for the empirical evidence.
+	if IsFixedMileDistanceField(field) {
+		return raw * 1609.344, nil
+	}
+
 	if meta.UnitKind == protomodel.UnitKindNone {
 		return 0, fmt.Errorf("%w: %q", ErrUnsupportedField, field)
 	}

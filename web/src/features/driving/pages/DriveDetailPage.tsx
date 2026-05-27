@@ -28,6 +28,7 @@ import {
   SpeedHistogramChart,
   PowerProfileChart,
   TirePressureSection,
+  WhyEndedPanel,
 } from '../components/drive-detail';
 
 export default function DriveDetailPage() {
@@ -198,6 +199,11 @@ export default function DriveDetailPage() {
           <SectionErrorBoundary name="drive-detail:tire-pressure" fallbackTitle={t('driveDetail.section.tirePressureFailed', 'Tire pressure section failed to load')}>
             <TirePressureSection chartData={chartData} stats={stats} />
           </SectionErrorBoundary>
+          {id && (
+            <SectionErrorBoundary name="drive-detail:why-ended" fallbackTitle={t('driveDetail.section.whyEndedFailed', 'Why-ended diagnostic failed to load')}>
+              <WhyEndedPanel driveId={id} />
+            </SectionErrorBoundary>
+          )}
         </>
       )}
       {id && (

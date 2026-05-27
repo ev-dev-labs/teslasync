@@ -141,6 +141,21 @@ const ApiPlayground = lazy(() => import('./features/admin/pages/ApiPlaygroundPag
 const RedisSignalViewer = lazy(() => import('./features/admin/pages/RedisSignalViewerPage'))
 const FeedbackQueue = lazy(() => import('./features/admin/pages/FeedbackQueuePage'))
 const FleetTelemetryCoverage = lazy(() => import('./features/admin/pages/FleetTelemetryCoveragePage'))
+// Phase-tracing diagnostic surfaces — DLQ / Flags / Ingest-XRay / Live Signals.
+// Each pages a Go handler under /api/v1/system/* added in this branch.
+const DLQInspector = lazy(() => import('./features/admin/pages/DLQInspectorPage'))
+const FeatureFlagsAdmin = lazy(() => import('./features/admin/pages/FeatureFlagsPage'))
+const IngestXRay = lazy(() => import('./features/admin/pages/IngestXRayPage'))
+const LiveSignalInspector = lazy(() => import('./features/admin/pages/LiveSignalInspectorPage'))
+// Phase-45 Operator Confidence admin surfaces — backed by
+// /api/v1/admin/observability/*, /admin/audit-log, /admin/gdpr/exports.
+const SchemaDrift = lazy(() => import('./features/admin/pages/SchemaDriftPage'))
+const SlowQueriesAdmin = lazy(() => import('./features/admin/pages/SlowQueriesPage'))
+const VehicleCostAdmin = lazy(() => import('./features/admin/pages/VehicleCostPage'))
+const DiskForecast = lazy(() => import('./features/admin/pages/DiskForecastPage'))
+const SecretRotation = lazy(() => import('./features/admin/pages/SecretRotationPage'))
+const AuditLogAdmin = lazy(() => import('./features/admin/pages/AuditLogPage'))
+const GDPRExportAdmin = lazy(() => import('./features/admin/pages/GDPRExportPage'))
 
 // Power user
 const PowerSqlPlayground = lazy(() => import('./features/power-user/pages/SqlPlaygroundPage'))
@@ -181,9 +196,16 @@ const SafetySettingsPage = lazy(() => import('./features/settings/pages/SafetyPa
 const TwoFactorAuth = lazy(() => import('./features/settings/pages/TwoFactorAuthPage'))
 const ActiveSessions = lazy(() => import('./features/settings/pages/ActiveSessionsPage'))
 const Privacy = lazy(() => import('./features/settings/pages/PrivacyPage'))
+// Helix (AI integration) — promoted out of /settings into its own page
+// under the Integrations side-nav group. AISettings (the configuration
+// component) is unchanged; this page is just chrome.
+const Helix = lazy(() => import('./features/settings/pages/HelixPage'))
 
 // Onboarding (Phase 40 / Prompt 18 — first-run experience)
 const Onboarding = lazy(() => import('./features/onboarding/pages/OnboardingPage'))
+
+// Feature Hub — discoverable browse-and-search front door to every page.
+const Explore = lazy(() => import('./features/explore/pages/ExplorePage'))
 
 // 404 (Phase 40 / Prompt 38 — catch-all route)
 const NotFound = lazy(() => import('./features/system/pages/NotFoundPage'))
@@ -315,6 +337,7 @@ export default function App() {
       <Route path="onboarding" element={<SafeRoute name="Onboarding"><Onboarding /></SafeRoute>} />
       <Route path="/" element={<Layout />}>
         <Route index element={<SafeRoute name="Dashboard"><Dashboard /></SafeRoute>} />
+        <Route path="explore" element={<SafeRoute name="Explore"><Explore /></SafeRoute>} />
         <Route path="live" element={<SafeRoute name="LiveMap"><LiveMap /></SafeRoute>} />
         <Route path="vehicles" element={<SafeRoute name="Vehicles"><Vehicles /></SafeRoute>} />
         <Route path="vehicles/:id" element={<SafeRoute name="VehicleDetail"><VehicleDetail /></SafeRoute>} />
@@ -352,6 +375,7 @@ export default function App() {
         <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />
         <Route path="account/sessions" element={<SafeRoute name="ActiveSessions"><ActiveSessions /></SafeRoute>} />
         <Route path="account/privacy" element={<SafeRoute name="Privacy"><Privacy /></SafeRoute>} />
+        <Route path="integrations/helix" element={<SafeRoute name="Helix"><Helix /></SafeRoute>} />
         <Route path="drives/:id" element={<SafeRoute name="DriveDetail"><DriveDetail /></SafeRoute>} />
         <Route path="drives/:id/replay" element={<SafeRoute name="TripReplay"><TripReplay /></SafeRoute>} />
         <Route path="charging/:id" element={<SafeRoute name="ChargeDetail"><ChargeDetail /></SafeRoute>} />
@@ -409,6 +433,19 @@ export default function App() {
         <Route path="admin" element={<Navigate to="/system-status" replace />} />
         <Route path="admin/feedback" element={<SafeRoute name="FeedbackQueue"><FeedbackQueue /></SafeRoute>} />
         <Route path="admin/telemetry/coverage" element={<SafeRoute name="FleetTelemetryCoverage"><FleetTelemetryCoverage /></SafeRoute>} />
+        {/* Phase-tracing diagnostic surfaces */}
+        <Route path="admin/dlq" element={<SafeRoute name="DLQInspector"><DLQInspector /></SafeRoute>} />
+        <Route path="admin/flags" element={<SafeRoute name="FeatureFlagsAdmin"><FeatureFlagsAdmin /></SafeRoute>} />
+        <Route path="admin/ingest-xray" element={<SafeRoute name="IngestXRay"><IngestXRay /></SafeRoute>} />
+        <Route path="admin/live-signals" element={<SafeRoute name="LiveSignalInspector"><LiveSignalInspector /></SafeRoute>} />
+        {/* Phase-45 Operator Confidence admin surfaces */}
+        <Route path="admin/schema-drift" element={<SafeRoute name="SchemaDrift"><SchemaDrift /></SafeRoute>} />
+        <Route path="admin/slow-queries" element={<SafeRoute name="SlowQueries"><SlowQueriesAdmin /></SafeRoute>} />
+        <Route path="admin/vehicle-cost" element={<SafeRoute name="VehicleCost"><VehicleCostAdmin /></SafeRoute>} />
+        <Route path="admin/disk-forecast" element={<SafeRoute name="DiskForecast"><DiskForecast /></SafeRoute>} />
+        <Route path="admin/secret-rotation" element={<SafeRoute name="SecretRotation"><SecretRotation /></SafeRoute>} />
+        <Route path="admin/audit-log" element={<SafeRoute name="AuditLog"><AuditLogAdmin /></SafeRoute>} />
+        <Route path="admin/gdpr-exports" element={<SafeRoute name="GDPRExport"><GDPRExportAdmin /></SafeRoute>} />
         <Route path="api-logs" element={<SafeRoute name="ApiLogs"><ApiLogs /></SafeRoute>} />
         <Route path="fleet-api" element={<SafeRoute name="FleetAPI"><FleetAPI /></SafeRoute>} />
         <Route path="tesla-features" element={<SafeRoute name="TeslaFeatureFlags"><TeslaFeatureFlags /></SafeRoute>} />

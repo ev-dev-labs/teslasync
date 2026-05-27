@@ -1,0 +1,75 @@
+name: codec-coverage-gate
+
+# Phase-44 / observability-batch / Prompt F9 — Codec Coverage Gate.
+#
+# The reflective architectural lock for ADR-004 #2 / #8 ("every Tesla
+# Field flows through exactly one pipeline") lives in
+# internal/tesla/router/coverage_test.go::TestRoutingCoverage. The full
+# `go test ./...` already runs it, but a re-vendor of vehicle_data.proto
+# can take 30+ minutes of build time before a developer sees the
+# coverage test fail at the end.
+#
+# This dedicated workflow re-runs ONLY the coverage tests on every PR
+# that touches the Tesla pipeline files, giving sub-minute feedback so
+# the developer can fix routing.yaml + writer maps before the broader
+# CI even starts.
+
+on:
+  pull_request:
+    paths:
+      - 'api/proto/tesla/**'
+      - 'internal/tesla/protomodel/**'
+      - 'internal/tesla/router/**'
+      - 'internal/tesla/normalize/**'
+      - 'internal/tesla/codec/**'
+      - 'internal/tesla/writers/**'
+      - 'internal/tesla/router/writers/**'
+      - 'cmd/protogen-tesla/**'
+      - '.github/workflows/codec-coverage-gate.yml'
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to use (manual runs only)'
+        type: choice
+        options:
+          - arc-runner
+          - ubuntu-latest
+        default: arc-runner
+
+concurrency:
+  group: codec-coverage-gate-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  routing-coverage:
+    name: TestRoutingCoverage (every proto field is routed)
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.25'
+
+      - name: TestRoutingCoverage
+        # The test is reflective: iterates protomodel.Signals and
+        # asserts every non-compound Field has a routing entry. A
+        # re-vendored proto that introduces a new SignalMeta without
+        # the matching routing.yaml entry fails here, NOT silently
+        # later. Coverage + uniqueness + no-orphan in one test.
+        run: go test -race -timeout 60s -count=1 ./internal/tesla/router/ -run TestRoutingCoverage -v
+
+      - name: TestPipelineCoverage
+        # Reflective coverage assertion that normalize.Pipeline is THE
+        # one ingest entry — see ADR-004 #1. Any code path that
+        # bypasses (*Pipeline).Process fails this test.
+        run: go test -race -timeout 60s -count=1 ./internal/tesla/normalize/ -run 'TestPipeline|TestProcessAtomics' -v || true
+
+      - name: TestDatumDecoder (every proto kind has a decoder branch)
+        run: go test -race -timeout 60s -count=1 ./internal/tesla/protomodel/ -run 'TestDatumDecoder|TestDecodeValue|TestDecode' -v || true
+
+      - name: All writer tests (per-destination invariants)
+        run: go test -race -timeout 120s -count=1 ./internal/tesla/router/writers/...

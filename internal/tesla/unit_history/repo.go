@@ -8,9 +8,18 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
+
+// unitHistoryTracerName is the OpenTelemetry tracer name for spans
+// emitted by Repo.Record. The Phase-10 trace-coverage audit greps for
+// this exact constant.
+const unitHistoryTracerName = "tesla.unit_history"
 
 // Repo is the unit-history persistence contract. It is an interface so
 // callers can substitute a fake in unit tests (see repo_test.go's
@@ -111,7 +120,26 @@ ORDER BY effective_from DESC, id DESC
 LIMIT 1
 `
 
-func (r *pgRepo) Record(ctx context.Context, e Entry) error {
+func (r *pgRepo) Record(ctx context.Context, e Entry) (err error) {
+	ctx, span := otel.Tracer(unitHistoryTracerName).Start(
+		ctx,
+		"unit_history.record",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.Int64("vehicle_id", e.VehicleID),
+			attribute.String("unit_kind", string(e.Kind)),
+			attribute.String("unit", string(e.Value)),
+			attribute.String("source", string(e.Source)),
+		),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "unit_history.record")
+		}
+		span.End()
+	}()
+
 	if e.VehicleID == 0 {
 		return fmt.Errorf("unit_history: Record: vehicle_id is zero")
 	}
@@ -135,11 +163,13 @@ func (r *pgRepo) Record(ctx context.Context, e Entry) error {
 	// pre-write canonicalization, not a behavioral change.
 	effFrom := e.EffectiveFrom.UTC()
 
-	if _, err := r.db.Exec(ctx, recordSQL,
+	tag, err := r.db.Exec(ctx, recordSQL,
 		e.VehicleID, string(e.Kind), string(e.Value), effFrom, string(e.Source),
-	); err != nil {
+	)
+	if err != nil {
 		return fmt.Errorf("unit_history: Record: %w", err)
 	}
+	span.SetAttributes(attribute.Int64("rows_affected", tag.RowsAffected()))
 
 	// Cache-invalidate AFTER the PG commit per the cross-pod contract.
 	// A nil cache (degraded / test mode) is a no-op. A Redis DEL failure

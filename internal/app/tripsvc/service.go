@@ -34,6 +34,13 @@ func New(
 	}
 }
 
+// SetTracer wires an FSM tracer into the underlying engine so transitions
+// emit OTel spans. Domain depends only on the fsm.Tracer port; concrete
+// OTel adapter is installed by the composition root.
+func (s *Service) SetTracer(t fsm.Tracer) {
+	s.engine.SetTracer(t)
+}
+
 // Create starts a new trip.
 func (s *Service) Create(ctx context.Context, t *trip.Trip) error {
 	if err := t.Validate(); err != nil {

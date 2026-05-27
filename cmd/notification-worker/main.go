@@ -11,6 +11,10 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
@@ -20,12 +24,20 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
 var Version = "dev"
+
+// tracerName is the instrumentation scope for spans emitted by this
+// worker process. Dashboards filter by this attribute to scope
+// telemetry to "notification-worker tick loops".
+const tracerName = "cmd/notification-worker"
+
+func workerTracer() oteltrace.Tracer { return otel.Tracer(tracerName) }
 
 func main() {
 	// Built-in healthcheck for distroless containers
@@ -46,6 +58,38 @@ func main() {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+
+	// ── OpenTelemetry tracing ────────────────────────────────────────
+	// Each worker process owns its own TracerProvider because they run
+	// in distinct OS processes (and distinct containers in prod). The
+	// service.name resource attribute distinguishes their spans in
+	// Tempo. Init is non-fatal: if the OTLP collector is unreachable
+	// the worker continues unsampled — same pattern as internal/app.New
+	// initTracing() — see ADR-008.
+	tracingShutdown, err := tracing.Init(ctx, cfg, tracing.WithServiceName("teslasync-notification-worker"))
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize tracing, continuing without it")
+	} else if cfg.OpenTelemetry.Enabled {
+		log.Info().
+			Str("service", "teslasync-notification-worker").
+			Str("endpoint", cfg.OTLPEndpoint).
+			Msg("OpenTelemetry tracing enabled")
+	}
+
+	// ── Pyroscope continuous profiling ──────────────────────────────
+	// Phase-49 / p49-profiling. Same non-fatal pattern as tracing.Init:
+	// when the Pyroscope server is unreachable the worker continues
+	// without profile uploads. UploadRate defaults to 15s — see
+	// internal/config.ProfilingConfig and docs/runbooks/phase-49-pyroscope.md.
+	profilerShutdown, err := tracing.StartProfiler(ctx, cfg, "teslasync-notification-worker")
+	if err != nil {
+		log.Warn().Err(err).Msg("failed to initialize pyroscope profiler, continuing without it")
+	} else if cfg.Profiling.Enabled && cfg.Profiling.ServerAddress != "" {
+		log.Info().
+			Str("service", "teslasync-notification-worker").
+			Str("server", cfg.Profiling.ServerAddress).
+			Msg("Pyroscope continuous profiling enabled")
+	}
 
 	// Database connection
 	var db *database.DB
@@ -159,14 +203,24 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				replayed, failed, err := worker.ReplayDeferred(ctx)
+				tickCtx, span := workerTracer().Start(ctx, "notification.dnd_replay_tick",
+					oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+				replayed, failed, err := worker.ReplayDeferred(tickCtx)
+				span.SetAttributes(
+					attribute.Int("notification.replayed", replayed),
+					attribute.Int("notification.failed", failed),
+				)
 				if err != nil {
+					span.RecordError(err)
+					span.SetStatus(codes.Error, "replay deferred failed")
 					log.Error().Err(err).Msg("notification: deferred replay failed")
+					span.End()
 					continue
 				}
 				if replayed > 0 || failed > 0 {
 					log.Info().Int("replayed", replayed).Int("failed", failed).Msg("notification: deferred replay tick")
 				}
+				span.End()
 			}
 		}
 	}()
@@ -181,13 +235,20 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				due, err := schedRepo.GetDue(ctx)
+				tickCtx, span := workerTracer().Start(ctx, "notification.schedule_tick",
+					oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+				due, err := schedRepo.GetDue(tickCtx)
 				if err != nil {
+					span.RecordError(err)
+					span.SetStatus(codes.Error, "fetch due failed")
 					log.Error().Err(err).Msg("schedule: failed to fetch due notifications")
+					span.End()
 					continue
 				}
+				span.SetAttributes(attribute.Int("notification.schedule.due_count", len(due)))
+				dispatched := 0
 				for _, s := range due {
-					ch, err := database.NewNotificationRepo(db).GetChannel(ctx, s.ChannelID)
+					ch, err := database.NewNotificationRepo(db).GetChannel(tickCtx, s.ChannelID)
 					if err != nil || ch == nil {
 						log.Warn().Int64("schedule_id", s.ID).Msg("schedule: channel not found, skipping")
 						continue
@@ -199,15 +260,21 @@ func main() {
 						Message:     s.Message,
 						ChannelID:   ch.ID,
 					}
-					if pubErr := notification.Publish(mqttClient, req); pubErr != nil {
+					if pubErr := notification.PublishCtx(tickCtx, mqttClient, req); pubErr != nil {
+						span.RecordError(pubErr)
 						log.Error().Err(pubErr).Int64("schedule_id", s.ID).Msg("schedule: failed to publish")
+					} else {
+						dispatched++
 					}
 					// Mark as run (one-time schedules get disabled)
-					if markErr := schedRepo.MarkRun(ctx, s.ID, nil); markErr != nil {
+					if markErr := schedRepo.MarkRun(tickCtx, s.ID, nil); markErr != nil {
+						span.RecordError(markErr)
 						log.Error().Err(markErr).Int64("schedule_id", s.ID).Msg("schedule: failed to mark run")
 					}
 					log.Info().Int64("schedule_id", s.ID).Str("title", s.Title).Msg("schedule: dispatched")
 				}
+				span.SetAttributes(attribute.Int("notification.schedule.dispatched", dispatched))
+				span.End()
 			}
 		}
 	}()
@@ -230,7 +297,10 @@ func main() {
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				runComputedMetricTick(ctx, alertRuleRepo, vehicleRepo, notifRepoForCM, computedEval, mqttClient)
+				tickCtx, span := workerTracer().Start(ctx, "notification.computed_metric_tick",
+					oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+				runComputedMetricTick(tickCtx, alertRuleRepo, vehicleRepo, notifRepoForCM, computedEval, mqttClient, span)
+				span.End()
 			}
 		}
 	}()
@@ -279,6 +349,24 @@ func main() {
 		}
 		drainCancel()
 	}
+	// Flush remaining spans to the collector with a fresh, bounded
+	// context. 5s mirrors internal/app.initTracing(). Must come AFTER
+	// worker.Shutdown so any spans started inside in-flight handlers
+	// are ended before the provider drains.
+	if tracingShutdown != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := tracingShutdown(shutdownCtx); err != nil {
+			log.Warn().Err(err).Msg("tracing shutdown failed")
+		}
+		shutdownCancel()
+	}
+	if profilerShutdown != nil {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		if err := profilerShutdown(shutdownCtx); err != nil {
+			log.Warn().Err(err).Msg("profiler shutdown failed")
+		}
+		shutdownCancel()
+	}
 	log.Info().Msg("notification worker stopped")
 }
 
@@ -306,12 +394,16 @@ vehicleRepo *database.VehicleRepo,
 notifRepo *database.NotificationRepo,
 evaluator *computed.Evaluator,
 mqttClient pahomqtt.Client,
+span oteltrace.Span,
 ) {
 rules, err := alertRuleRepo.GetEnabledByKind(ctx, "computed_metric")
 if err != nil {
+span.RecordError(err)
+span.SetStatus(codes.Error, "load rules failed")
 log.Error().Err(err).Msg("computed-metric: failed to load rules")
 return
 }
+span.SetAttributes(attribute.Int("notification.computed_metric.rule_count", len(rules)))
 if len(rules) == 0 {
 return
 }
@@ -321,21 +413,27 @@ return
 // per rule.
 allVehicles, err := vehicleRepo.GetAll(ctx)
 if err != nil {
+span.RecordError(err)
+span.SetStatus(codes.Error, "load vehicles failed")
 log.Error().Err(err).Msg("computed-metric: failed to load vehicles")
 return
 }
 
 channels, err := notifRepo.GetAllChannels(ctx)
 if err != nil {
+span.RecordError(err)
+span.SetStatus(codes.Error, "load channels failed")
 log.Error().Err(err).Msg("computed-metric: failed to load channels")
 return
 }
 
+triggered := 0
 for _, rule := range rules {
 targets := vehiclesForRule(rule, allVehicles)
 for _, vid := range targets {
 result, evalErr := evaluator.Evaluate(ctx, rule, vid)
 if evalErr != nil {
+span.RecordError(evalErr)
 log.Warn().
 Err(evalErr).
 Int64("rule_id", rule.ID).
@@ -346,6 +444,7 @@ continue
 if !result.Triggered {
 continue
 }
+triggered++
 // Resolve a friendly vehicle name for the message template,
 // falling back silently when the vehicle is missing — the
 // renderer is tolerant of an empty VehicleName.
@@ -360,9 +459,10 @@ vehicleName = v.VIN
 break
 }
 }
-dispatchComputedMetricNotification(rule, vid, vehicleName, result, channels, mqttClient)
+dispatchComputedMetricNotification(ctx, rule, vid, vehicleName, result, channels, mqttClient)
 }
 }
+span.SetAttributes(attribute.Int("notification.computed_metric.triggered", triggered))
 }
 
 func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
@@ -389,6 +489,7 @@ func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
 }
 
 func dispatchComputedMetricNotification(
+ctx context.Context,
 rule *models.AlertRule,
 vehicleID int64,
 vehicleName string,
@@ -429,7 +530,7 @@ AlertID:                rule.ID,
 Severity:               rule.Severity,
 SuppressTransportTitle: suppressTransportTitle,
 }
-if pubErr := notification.Publish(mqttClient, req); pubErr != nil {
+if pubErr := notification.PublishCtx(ctx, mqttClient, req); pubErr != nil {
 log.Error().
 Err(pubErr).
 Int64("rule_id", rule.ID).

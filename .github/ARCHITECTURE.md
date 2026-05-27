@@ -1254,6 +1254,26 @@ ROLLBACK:
   freeze.
 ```
 
+### ADR-009 Exceptions
+
+Each row below is an explicit, reviewer-approved exception to the
+internal/api freeze. Refreshing the archmetrics baseline alone is NOT
+enough — every new file must be listed here with rationale, otherwise
+it will be reverted on next review.
+
+| Date       | Phase / Prompt                | Files (relative to internal/api/)                                                                                                                                                                                 | Rationale                                                                                                                                                                                                                                                                                                                                                                                |
+|------------|-------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 2026-05    | phase-43a/0007                | `signals_catalog_handler.go` + `_test.go`                                                                                                                                                                         | Admin diagnostics endpoint; constructed in `router.go` from `routing.yaml` (compile-time embedded) + `signals_catalog_repo`; thin orchestration only. handler/v1 would have required a `port/signalcatalog` + `app/signalcatalogsvc` for a read-only admin surface with zero domain logic — high churn for no testability gain.                                                          |
+| 2026-05    | phase-43a/0008                | `trips_detail_handler.go` + `_test.go`                                                                                                                                                                            | Co-located with `trip_handler.go` (also legacy in internal/api); detail endpoint is a SUPERSET of the list shape and shares the same DTO assumptions. Splitting only the detail route across two layers would break that invariant.                                                                                                                                                       |
+| 2026-05    | phase-46/41                   | `queue_status_handler.go` + `_test.go`                                                                                                                                                                            | Admin job-queue inspector for the React Diagnostics panel; reads `WorkerStatusStore` (Redis) + `WorkerQueueRepo` (pg). The store + repo already live under their canonical packages; handler is the THIN orchestrator the freeze is meant to permit when no app/svc is justified.                                                                                                          |
+| 2026-05    | phase-44 (observability batch) | `dlq_handler.go` + `_test.go`<br>`flags_handler.go` + `_test.go`<br>`ingest_xray_handler.go` + `_test.go`<br>`drive_diagnostic_handler.go` + `_test.go`                                                              | Admin observability surface for the React Diagnostics panel. Each handler accepts a narrow interface (`ingestXRayRepo`, `driveLookup`, `driveDiagnosticReader`, `*flags.Store`, `*mqtt.DLQInspector`) constructed in `router.go` from canonical packages (`internal/database`, `internal/flags`, `internal/mqtt`). Follows the same precedent as phase-43a/phase-46 admin handlers above. |
+| 2026-05    | phase-46 SOTA batch           | `slo_handler.go`<br>`dataquality_handler.go`<br>`synthetic_handler.go`                                                                                                                                              | Live SLO board (`/admin/observability/slo`), data-quality scoring + lineage (`/admin/observability/data-quality`, `/admin/observability/lineage`), and synthetic monitoring (`/admin/observability/synthetic`). Each handler is a 30-50 LOC orchestrator over `internal/slo`, `internal/dataquality`, and `internal/synthetic` — the substantive logic + tests live in those packages. handler/v1 would require 3 mirror packages (`port/slo`, `app/slosvc`, etc.) per subsystem for zero behaviour; the freeze is meant to permit exactly this case.            |
+
+Future admin/observability handlers SHOULD follow the same pattern:
+narrow interface in the handler file, concrete `*Repo` from
+`internal/database`, wired in `router.go`. A new row in this table per
+batch keeps the exception ledger honest.
+
 
 ## ADR-006: Models vs Domain Charter
 
