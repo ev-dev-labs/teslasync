@@ -1,0 +1,18 @@
+# .git-blame-ignore-revs
+#
+# Git commits listed here are skipped by `git blame` and the GitHub
+# blame UI. Use ONLY for purely mechanical, repo-wide reformatting
+# commits — never for behavioural changes.
+#
+# How to use locally:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# GitHub honours this file automatically when present at the repo root.
+#
+# Format: one full 40-char commit SHA per line. Inline `# comment` is
+# allowed after the SHA.
+
+# A2.4a — repo-wide gofmt -s + goimports drift fix (351 files,
+# format-only, prep for adding gofmt/goimports pre-commit hooks).
+# See commit message for full rationale.
+4b97069d738986ff6927c441d24b77d69818befb
