@@ -24,6 +24,9 @@ coverage.out
 coverage.html
 coverage.txt
 coverage-by-package.txt
+# Stray go-test coverage files (no extension)
+/cover
+/coverage
 
 # Node
 node_modules/
@@ -71,8 +74,8 @@ PROMPT_COMMANDS.txt
 .copilot/
 
 # Temporary files from audits/scripts
-/tmp/old_*.tsx
-/tmp/old_*.go
+/tmp/
+!/tmp/.gitkeep
 
 # Signal exports (large data files)
 scripts/signals-export.json

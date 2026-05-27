@@ -38,7 +38,7 @@ kubectl exec -n postgres-v17 postgres-v17-postgresql-0 -c postgresql -- \
   "COPY (SELECT * FROM signal_history WHERE vehicle_id = <PROD_VID> ORDER BY ts DESC LIMIT 1000) TO STDOUT WITH CSV HEADER" \
   > tests/fixtures/prod-replay/signal_history_last_1k.csv
 
-# 2. Publish to local MQTT using publish_test.sh or a custom script
+# 2. Publish to local MQTT using scripts/publish_test.sh or a custom script
 # The telemetry handler listens on teslasync/+/# and routes by VIN
 ```
 

@@ -1,6 +1,6 @@
 -- TeslaSync Comprehensive Seed Data
 -- Generates realistic Tesla Model Y data from 2020-01-01 to 2026-03-31
--- Run: docker cp seed_comprehensive.sql teslasync-postgres:/tmp/seed.sql
+-- Run: docker cp db/seeds/seed_comprehensive.sql teslasync-postgres:/tmp/seed.sql
 --      docker exec teslasync-postgres psql -U teslasync -d teslasync -f /tmp/seed.sql
 BEGIN;
 

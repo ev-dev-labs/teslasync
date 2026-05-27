@@ -8,7 +8,7 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 $failures = @()
 $dockerfiles = Get-ChildItem -Path $repoRoot -Filter 'Dockerfile*' -File |
-  Where-Object { $_.Name -notmatch '\.web$' -and $_.Name -ne 'Dockerfile.README.md' }
+  Where-Object { $_.Name -notmatch '\.web$' }
 
 foreach ($df in $dockerfiles) {
   $content = Get-Content $df.FullName -Raw

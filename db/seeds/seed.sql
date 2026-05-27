@@ -1,5 +1,5 @@
 -- TeslaSync Sample Seed Data
--- Run: docker exec -i teslasync-postgres psql -U teslasync -d teslasync < db/seed.sql
+-- Run: docker exec -i teslasync-postgres psql -U teslasync -d teslasync < db/seeds/seed.sql
 
 BEGIN;
 
