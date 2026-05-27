@@ -1,27 +1,36 @@
 /**
  * TelemetryPipelineCard — operator-grade per-vehicle telemetry liveness.
  *
- * Replaces the bare 5-row fleet rollup with:
+ * Renders:
  *  - Compact fleet stats grid (vehicles · positions · drives · charges · signals)
  *  - Per-vehicle list showing which vehicles are sending data right now,
- *    when each was last polled, what state it's in, battery %, and the
- *    next scheduled poll
+ *    when each was last seen (most recent of MQTT stream OR REST poll),
+ *    what state it's in, battery %, and the next scheduled poll.
  *
- * Combines the already-loaded `useVehicles()` data with `/polling/status`
- * (per-VIN engine state). No backend changes required.
+ * TeslaSync has TWO ingest paths and a vehicle can be live on either:
+ *   1. Fleet Telemetry streaming → MQTT broker → `/telemetry` (useMQTTStatus)
+ *      — primary path for phase-42+ deployments
+ *   2. Legacy REST polling engine → `/polling/status` (getPollingStatus)
+ *      — fallback for vehicles not enrolled in Fleet Telemetry
  *
- * Liveness severity is derived from the polling engine's `last_poll_time`:
+ * Liveness is the MOST RECENT of {last MQTT message, last poll}.
+ * Threshold ladder (applied to the union timestamp):
  *   < 5 min   → green (sending)
  *   5–30 min  → amber (slow / asleep cadence)
  *   > 30 min  → red   (stale)
- *   no poll   → grey  (offline / not yet polled)
+ *   no signal → grey  (offline)
+ *
+ * The "polling engine disabled" chip is informational, NOT a problem
+ * state, when MQTT streaming is healthy — many production setups disable
+ * polling entirely once Fleet Telemetry is wired up.
  */
 
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { Activity, Battery, Car, ExternalLink, Wifi, WifiOff } from 'lucide-react'
+import { Activity, Battery, Car, ExternalLink, Radio, Wifi, WifiOff } from 'lucide-react'
 
 import { getPollingStatus, type VehiclePollingStatus } from '@/api/polling'
+import { useMQTTStatus } from '@/api/hooks/useTelemetry'
 import type { Vehicle } from '@/api/types'
 import { fmtInt } from '@/lib/numberFormat'
 
@@ -36,6 +45,7 @@ interface TelemetryPipelineCardProps {
 }
 
 type Liveness = 'sending' | 'slow' | 'stale' | 'offline'
+type LivenessSource = 'stream' | 'poll' | 'none'
 
 const POLLING_REFRESH_MS = 15_000
 
@@ -63,14 +73,59 @@ function relativeTime(iso: string | undefined, now: number): string {
   return past ? `${day}d ago` : `in ${day}d`
 }
 
-function liveness(lastPollIso: string | undefined, now: number): Liveness {
-  if (!lastPollIso) return 'offline'
-  const t = Date.parse(lastPollIso)
-  if (!Number.isFinite(t)) return 'offline'
-  const ageMin = (now - t) / 60_000
-  if (ageMin < 5) return 'sending'
-  if (ageMin < 30) return 'slow'
-  return 'stale'
+// Parse an ISO timestamp into ms-since-epoch, returning undefined for
+// null / empty / malformed input. Used to defensively union the polling
+// and streaming last-seen timestamps before applying the age ladder.
+function parseIso(iso: string | undefined | null): number | undefined {
+  if (!iso) return undefined
+  const t = Date.parse(iso)
+  return Number.isFinite(t) ? t : undefined
+}
+
+/**
+ * Derive per-vehicle liveness from the UNION of both ingest paths.
+ * Returns the severity bucket and which source produced the freshest
+ * timestamp so the UI can label the chip with "stream" or "poll".
+ */
+function liveness(
+  lastPollIso: string | undefined,
+  lastStreamIso: string | undefined,
+  now: number,
+): { level: Liveness; source: LivenessSource; lastSeenIso: string | undefined } {
+  const pollMs = parseIso(lastPollIso)
+  const streamMs = parseIso(lastStreamIso)
+
+  let lastSeenMs: number | undefined
+  let source: LivenessSource = 'none'
+  let lastSeenIso: string | undefined
+
+  if (pollMs != null && streamMs != null) {
+    if (streamMs >= pollMs) {
+      lastSeenMs = streamMs
+      source = 'stream'
+      lastSeenIso = lastStreamIso
+    } else {
+      lastSeenMs = pollMs
+      source = 'poll'
+      lastSeenIso = lastPollIso
+    }
+  } else if (streamMs != null) {
+    lastSeenMs = streamMs
+    source = 'stream'
+    lastSeenIso = lastStreamIso
+  } else if (pollMs != null) {
+    lastSeenMs = pollMs
+    source = 'poll'
+    lastSeenIso = lastPollIso
+  }
+
+  if (lastSeenMs == null) {
+    return { level: 'offline', source: 'none', lastSeenIso: undefined }
+  }
+  const ageMin = (now - lastSeenMs) / 60_000
+  if (ageMin < 5) return { level: 'sending', source, lastSeenIso }
+  if (ageMin < 30) return { level: 'slow', source, lastSeenIso }
+  return { level: 'stale', source, lastSeenIso }
 }
 
 function livenessClasses(l: Liveness): { dot: string; label: string; chip: string } {
@@ -139,16 +194,36 @@ export function TelemetryPipelineCard({
     refetchInterval: POLLING_REFRESH_MS,
   })
 
+  // Fleet Telemetry streaming status — same source the MQTT Inspector
+  // page uses. Without this, vehicles that stream via MQTT but are not
+  // REST-polled would render as "offline" even when they're actively
+  // sending 240+ signals per minute.
+  const { data: mqttStatus } = useMQTTStatus()
+
   const list = vehicles ?? []
   const pollingMap: Record<string, VehiclePollingStatus> = pollingStatus?.vehicles ?? {}
   const pollingEnabled = pollingStatus?.enabled !== false
+
+  // Index streaming vehicles by VIN so we can join against the vehicle list.
+  const streamMap: Record<string, { lastReceived?: string; signalsPerSecond?: number; signalCount?: number }> = {}
+  const mqttVehicles = mqttStatus?.vehicles ?? []
+  for (const sv of mqttVehicles) {
+    if (!sv?.vin) continue
+    streamMap[sv.vin] = {
+      lastReceived: sv.lastReceived ?? sv.last_received,
+      signalsPerSecond: sv.signalsPerSecond ?? sv.signals_per_second,
+      signalCount: sv.signalCount ?? sv.signal_count,
+    }
+  }
+  const mqttConnected = mqttStatus?.connected === true
 
   // Fleet-wide liveness summary used in the sub-header
   const counts = list.reduce(
     (acc, v) => {
       const ps = pollingMap[v.vin]
-      const l = liveness(ps?.last_poll_time, now)
-      acc[l] = (acc[l] ?? 0) + 1
+      const ss = streamMap[v.vin]
+      const { level } = liveness(ps?.last_poll_time, ss?.lastReceived, now)
+      acc[level] = (acc[level] ?? 0) + 1
       return acc
     },
     { sending: 0, slow: 0, stale: 0, offline: 0 } as Record<Liveness, number>,
@@ -200,10 +275,27 @@ export function TelemetryPipelineCard({
                 </span>
               )
             })}
-          {!pollingEnabled && (
-            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
-              <WifiOff className="h-3 w-3" /> polling engine disabled
+          {/* MQTT broker connectivity — neutral when connected, warning when not */}
+          {mqttConnected ? (
+            <span className="inline-flex items-center gap-1 rounded-md bg-cyan-500/10 px-1.5 py-0.5 text-cyan-300 ring-1 ring-cyan-400/20">
+              <Radio className="h-3 w-3" /> Fleet Telemetry connected
             </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
+              <WifiOff className="h-3 w-3" /> MQTT broker disconnected
+            </span>
+          )}
+          {/* Polling-engine state — informational when MQTT is healthy, warning otherwise */}
+          {!pollingEnabled && (
+            mqttConnected ? (
+              <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.06] px-1.5 py-0.5 text-[var(--text-muted)] ring-1 ring-white/10">
+                polling engine off (streaming-only)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-amber-300 ring-1 ring-amber-500/30">
+                <WifiOff className="h-3 w-3" /> polling engine disabled
+              </span>
+            )
           )}
         </div>
       )}
@@ -221,10 +313,12 @@ export function TelemetryPipelineCard({
         <ul className="divide-y divide-white/[0.06] overflow-hidden rounded-lg bg-white/[0.03]">
           {list.map((v) => {
             const ps = pollingMap[v.vin]
-            const live = liveness(ps?.last_poll_time, now)
-            const cls = livenessClasses(live)
+            const ss = streamMap[v.vin]
+            const { level, source, lastSeenIso } = liveness(ps?.last_poll_time, ss?.lastReceived, now)
+            const cls = livenessClasses(level)
             const stateLabel = vehicleStateBadge(v.state)
             const battery = ps?.battery_level ?? null
+            const sourceLabel = source === 'stream' ? 'stream' : source === 'poll' ? 'poll' : null
             return (
               <li key={v.id} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3">
                 {/* Status pip + name */}
@@ -277,12 +371,16 @@ export function TelemetryPipelineCard({
                 </div>
 
                 {/* Liveness chip + last/next poll */}
-                <div className="flex shrink-0 flex-col items-start gap-0.5 sm:w-44 sm:items-end">
+                <div className="flex shrink-0 flex-col items-start gap-0.5 sm:w-52 sm:items-end">
                   <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${cls.chip}`}>
-                    <Wifi className="h-3 w-3" /> {cls.label}
+                    {source === 'stream' ? <Radio className="h-3 w-3" /> : <Wifi className="h-3 w-3" />}
+                    {cls.label}
+                    {sourceLabel && (
+                      <span className="ml-1 text-[10px] uppercase tracking-wide opacity-70">{sourceLabel}</span>
+                    )}
                   </span>
                   <div className="text-[11px] tabular-nums text-[var(--text-muted)]">
-                    last: {relativeTime(ps?.last_poll_time, now)}
+                    last: {relativeTime(lastSeenIso, now)}
                     {ps?.next_poll_after && (
                       <>
                         <span className="mx-1" aria-hidden>·</span>
@@ -305,6 +403,13 @@ export function TelemetryPipelineCard({
         >
           Open Telemetry Coverage
           <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+        <Link
+          to="/mqtt-inspector"
+          className="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs text-cyan-300 hover:text-cyan-200 hover:bg-white/[0.04] min-h-[36px]"
+        >
+          <Radio className="h-3.5 w-3.5" />
+          MQTT Inspector
         </Link>
         <Link
           to="/vehicles"
