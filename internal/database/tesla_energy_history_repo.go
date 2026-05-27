@@ -238,4 +238,3 @@ func (r *TeslaEnergyWCChargingRepo) UpsertBatch(ctx context.Context, entries []*
 	}
 	return upserted, nil
 }
-

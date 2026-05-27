@@ -125,11 +125,11 @@ type shareCardImageDraftOutput struct {
 // a usable proposal (defence-in-depth for the no-tool-output
 // failure mode).
 type shareCardImageSuggestion struct {
-	TripID         int64  `json:"trip_id"`
-	VehicleID      int64  `json:"vehicle_id"`
-	ProposedTitle  string `json:"proposed_title"`
-	ImagePrompt    string `json:"image_prompt"`
-	StyleHint      string `json:"style_hint,omitempty"`
+	TripID        int64  `json:"trip_id"`
+	VehicleID     int64  `json:"vehicle_id"`
+	ProposedTitle string `json:"proposed_title"`
+	ImagePrompt   string `json:"image_prompt"`
+	StyleHint     string `json:"style_hint,omitempty"`
 }
 
 // shareCardImagePreviewInput is the typed input for

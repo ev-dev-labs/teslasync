@@ -138,24 +138,33 @@ type AIPredictiveMaintenanceHandler struct {
 // request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             query_maintenance_context AND
-//             retrieve_maintenance_chunks (registered by
-//             tools.RegisterPredictiveMaintenanceTools in
-//             router.go).
+//
+//	query_maintenance_context AND
+//	retrieve_maintenance_chunks (registered by
+//	tools.RegisterPredictiveMaintenanceTools in
+//	router.go).
+//
 // strat:      the predictive-maintenance Strategy (one per
-//             process).
+//
+//	process).
+//
 // source:     the production
-//             tools.MaintenancePredictionContextSource
-//             (currently AIPredictiveMaintenanceContextSource —
-//             wraps the SAME default-items + Redis-odometer
-//             reader the canonical baseline GET
-//             /api/v1/maintenance handler already serves; the
-//             canonical baseline surface remains reachable to
-//             the operator at all times).
+//
+//	tools.MaintenancePredictionContextSource
+//	(currently AIPredictiveMaintenanceContextSource —
+//	wraps the SAME default-items + Redis-odometer
+//	reader the canonical baseline GET
+//	/api/v1/maintenance handler already serves; the
+//	canonical baseline surface remains reachable to
+//	the operator at all times).
+//
 // headerName: forward-auth header name; used to extract subject
-//             for audit.
+//
+//	for audit.
 func NewAIPredictiveMaintenanceHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/rs/zerolog/log"
 )
 
 // auditEntry is the canonical write-shape for audit_logs (Phase-40 / Prompt 49).

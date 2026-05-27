@@ -40,8 +40,8 @@ type AlertRule struct {
 	// alert_rule_vehicles junction table. Always non-nil after a repo
 	// read (empty slice when AllVehicles=true). Sorted ascending for
 	// deterministic equality comparison + JSON output. Phase-49 / Slice 0005.
-	VehicleIDs []int64    `db:"-"            json:"vehicle_ids"`
-	SignalName string     `db:"signal_name"  json:"signal_name"`
+	VehicleIDs []int64 `db:"-"            json:"vehicle_ids"`
+	SignalName string  `db:"signal_name"  json:"signal_name"`
 	// Op is one of: '=','!=','<','<=','>','>=','changed','between','outside'.
 	Op string `db:"op" json:"op"`
 	// Value* columns hold the comparison operand for the rule. Exactly which

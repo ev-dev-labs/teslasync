@@ -37,13 +37,13 @@ func pollEngineStatus(engine *polling.PollEngine) http.HandlerFunc {
 		result := make(map[string]interface{}, len(vehicles))
 		for vin, vs := range vehicles {
 			result[vin] = map[string]interface{}{
-				"activity":       vs.CurrentActivity.String(),
-				"profile":        vs.CurrentProfile,
-				"consec_idle":    vs.ConsecIdle,
-				"last_poll_time": vs.LastPollTime,
+				"activity":        vs.CurrentActivity.String(),
+				"profile":         vs.CurrentProfile,
+				"consec_idle":     vs.ConsecIdle,
+				"last_poll_time":  vs.LastPollTime,
 				"next_poll_after": vs.NextPollAfter,
-				"battery_level":  vs.LastBatteryLevel,
-				"last_decision":  vs.LastDecision,
+				"battery_level":   vs.LastBatteryLevel,
+				"last_decision":   vs.LastDecision,
 			}
 		}
 

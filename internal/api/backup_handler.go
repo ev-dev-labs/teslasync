@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // BackupHandler provides endpoints for database backup and restore operations.

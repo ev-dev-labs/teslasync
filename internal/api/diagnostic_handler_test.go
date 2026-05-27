@@ -71,10 +71,10 @@ func stubCheck(id, status string, delay time.Duration) DiagnosticCheckFn {
 
 func TestDiagnosticRunner_AggregatesOverallStatus(t *testing.T) {
 	tests := []struct {
-		name            string
-		checks          []DiagnosticCheckFn
-		wantOverall     string
-		wantCheckCount  int
+		name           string
+		checks         []DiagnosticCheckFn
+		wantOverall    string
+		wantCheckCount int
 	}{
 		{
 			name: "all ok",

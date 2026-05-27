@@ -179,7 +179,7 @@ func (m *VehicleFSM) HandleTimeout(ctx context.Context, vehicleID int64) error {
 	defer m.mu.Unlock()
 
 	sctx := &SignalContext{
-		CurrentState: m.current,
+		CurrentState:  m.current,
 		IsGearCapable: m.isGearCapable,
 		Now:           time.Now().UTC(),
 	}
@@ -196,7 +196,7 @@ func (m *VehicleFSM) HandleSignalReceived(ctx context.Context, vehicleID int64) 
 	}
 
 	sctx := &SignalContext{
-		CurrentState: m.current,
+		CurrentState:  m.current,
 		IsGearCapable: m.isGearCapable,
 		Now:           time.Now().UTC(),
 	}

@@ -61,23 +61,23 @@ type ScheduledExportDelivery struct {
 // pointers so the JSON layer can omitempty without lying about a
 // present-but-empty value.
 type ScheduledExportRow struct {
-	ID            int64                   `json:"id"`
-	OwnerSubject  string                  `json:"owner_subject"`
-	Name          string                  `json:"name"`
-	ExportType    string                  `json:"export_type"`
-	Format        string                  `json:"format"`
-	VehicleID     *int64                  `json:"vehicle_id,omitempty"`
-	Columns       []string                `json:"columns,omitempty"`
-	ScheduleCron  string                  `json:"schedule_cron"`
-	Delivery      ScheduledExportDelivery `json:"delivery"`
-	RangeWindow   string                  `json:"range_window"`
-	Enabled       bool                    `json:"enabled"`
-	LastRunAt     *time.Time              `json:"last_run_at,omitempty"`
-	LastStatus    *string                 `json:"last_status,omitempty"`
-	LastError     *string                 `json:"last_error,omitempty"`
-	NextRunAt     *time.Time              `json:"next_run_at,omitempty"`
-	CreatedAt     time.Time               `json:"created_at"`
-	UpdatedAt     time.Time               `json:"updated_at"`
+	ID           int64                   `json:"id"`
+	OwnerSubject string                  `json:"owner_subject"`
+	Name         string                  `json:"name"`
+	ExportType   string                  `json:"export_type"`
+	Format       string                  `json:"format"`
+	VehicleID    *int64                  `json:"vehicle_id,omitempty"`
+	Columns      []string                `json:"columns,omitempty"`
+	ScheduleCron string                  `json:"schedule_cron"`
+	Delivery     ScheduledExportDelivery `json:"delivery"`
+	RangeWindow  string                  `json:"range_window"`
+	Enabled      bool                    `json:"enabled"`
+	LastRunAt    *time.Time              `json:"last_run_at,omitempty"`
+	LastStatus   *string                 `json:"last_status,omitempty"`
+	LastError    *string                 `json:"last_error,omitempty"`
+	NextRunAt    *time.Time              `json:"next_run_at,omitempty"`
+	CreatedAt    time.Time               `json:"created_at"`
+	UpdatedAt    time.Time               `json:"updated_at"`
 }
 
 // ScheduledExportInput is the validated payload accepted by Create /

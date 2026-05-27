@@ -36,16 +36,16 @@ import (
 // and ImpersonationAuditWriter so a single value covers all the seams
 // the handler depends on.
 type fakeImpersonationStore struct {
-	mu              sync.Mutex
-	subjects        []string
-	subjectsErr     error
-	startEvents     []database.AuditImpersonationEvent
-	endEvents       []database.AuditImpersonationEvent
-	startErr        error
-	endErr          error
-	startCalled     int32
-	endCalled       int32
-	subjectsCalled  int32
+	mu             sync.Mutex
+	subjects       []string
+	subjectsErr    error
+	startEvents    []database.AuditImpersonationEvent
+	endEvents      []database.AuditImpersonationEvent
+	startErr       error
+	endErr         error
+	startCalled    int32
+	endCalled      int32
+	subjectsCalled int32
 }
 
 func (s *fakeImpersonationStore) ListDistinctActiveSubjects(_ context.Context) ([]string, error) {
@@ -416,8 +416,8 @@ func TestImpersonationHandler_Candidates_ExcludesActor(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", rr.Code, rr.Body.String())
 	}
 	var env struct {
-		Mode       string                   `json:"mode"`
-		Candidates []map[string]string      `json:"candidates"`
+		Mode       string              `json:"mode"`
+		Candidates []map[string]string `json:"candidates"`
 	}
 	if err := json.Unmarshal(rr.Body.Bytes(), &env); err != nil {
 		t.Fatalf("unmarshal: %v", err)

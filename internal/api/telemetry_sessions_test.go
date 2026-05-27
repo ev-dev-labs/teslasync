@@ -6,11 +6,11 @@ import (
 
 func TestSignalFloat(t *testing.T) {
 	tests := []struct {
-		name     string
-		signals  map[string]interface{}
-		keys     []string
-		wantVal  float64
-		wantOk   bool
+		name    string
+		signals map[string]interface{}
+		keys    []string
+		wantVal float64
+		wantOk  bool
 	}{
 		{"float value", map[string]interface{}{"Speed": 65.5}, []string{"Speed"}, 65.5, true},
 		{"int value", map[string]interface{}{"Speed": 65}, []string{"Speed"}, 65, true},

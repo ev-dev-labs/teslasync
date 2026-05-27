@@ -150,7 +150,7 @@ type MileageMonthlyBucket struct {
 	YearMonth            string   `json:"year_month"`
 	DriveCount           int      `json:"drive_count"`
 	TotalKm              float64  `json:"total_km"`
-	TotalWhConsumed     *float64 `json:"total_wh_consumed"`
+	TotalWhConsumed      *float64 `json:"total_wh_consumed"`
 	AvgEfficiencyWhPerKm *float64 `json:"avg_efficiency_wh_per_km"`
 }
 
@@ -219,7 +219,7 @@ func (h *MileageHandler) Monthly(w http.ResponseWriter, r *http.Request) {
 			YearMonth:            row.Bucket.UTC().Format("2006-01"),
 			DriveCount:           row.DriveCount,
 			TotalKm:              row.TotalKm,
-			TotalWhConsumed:     row.TotalWhConsumed,
+			TotalWhConsumed:      row.TotalWhConsumed,
 			AvgEfficiencyWhPerKm: row.AvgEfficiencyWhPerKm,
 		})
 	}

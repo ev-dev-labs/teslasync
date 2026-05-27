@@ -43,12 +43,12 @@ type DomainExtractor interface {
 
 // BundleResult is the outcome reported back to the export job manifest.
 type BundleResult struct {
-	Path         string
-	SHA256       string
-	ByteCount    int64
-	RowCount     int64
-	CreatedAt    time.Time
-	Domains      []DomainStat
+	Path      string
+	SHA256    string
+	ByteCount int64
+	RowCount  int64
+	CreatedAt time.Time
+	Domains   []DomainStat
 }
 
 // DomainStat is the per-domain row + byte count, for the bundle manifest.

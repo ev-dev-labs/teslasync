@@ -36,10 +36,10 @@ import (
 //     lines 917-922 explicitly assign the epoch→TIMESTAMPTZ
 //     conversion to THIS writer:
 //
-//       "the tire_pressure_snapshots writer converts to TIMESTAMPTZ
-//       when populating the per-corner *_last_seen_at columns.
-//       UnitKindNone so normalize.toSI is a pass-through — the
-//       writer owns the epoch→timestamp conversion."
+//     "the tire_pressure_snapshots writer converts to TIMESTAMPTZ
+//     when populating the per-corner *_last_seen_at columns.
+//     UnitKindNone so normalize.toSI is a pass-through — the
+//     writer owns the epoch→timestamp conversion."
 //
 //     snapshotWriter.bindSnapshotValue rejects time.Time, so the
 //     timestamp branch CANNOT delegate; it implements its own

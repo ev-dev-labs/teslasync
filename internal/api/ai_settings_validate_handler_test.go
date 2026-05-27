@@ -495,8 +495,8 @@ func TestApplyAIArchiveOnModeFlip_LocalToOff_Archives(t *testing.T) {
 	existing := &models.Settings{
 		AIMode: "local",
 		AIFeatures: map[string]bool{
-			"chatbot-llm":         true,
-			"ai-provider-health":  false, // explicitly false → not archived
+			"chatbot-llm":        true,
+			"ai-provider-health": false, // explicitly false → not archived
 		},
 	}
 	incoming := &models.Settings{

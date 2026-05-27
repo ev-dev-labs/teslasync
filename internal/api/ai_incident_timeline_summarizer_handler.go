@@ -116,9 +116,12 @@ type AIIncidentTimelineSummarizerHandler struct {
 //	in router.go).
 //
 // strat:      the incident-timeline-summarizer Strategy (one per
-//             process).
+//
+//	process).
+//
 // headerName: forward-auth header name; used to extract subject for
-//             audit.
+//
+//	audit.
 func NewAIIncidentTimelineSummarizerHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

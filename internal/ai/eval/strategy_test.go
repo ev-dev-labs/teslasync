@@ -10,12 +10,14 @@ import (
 
 type fakeStrategy struct{ id string }
 
-func (f fakeStrategy) FeatureID() string                                                          { return f.id }
-func (f fakeStrategy) System() string                                                             { return "real" }
-func (f fakeStrategy) Tools() []string                                                            { return []string{"t1"} }
-func (f fakeStrategy) Context(context.Context, strategy.StrategyInput) ([]provider.Message, error) { return nil, nil }
-func (f fakeStrategy) RedactionPolicy() strategy.RedactionPolicy                                  { return strategy.NoRedaction{} }
-func (f fakeStrategy) EvalGoldens() []strategy.EvalGolden                                         { return nil }
+func (f fakeStrategy) FeatureID() string { return f.id }
+func (f fakeStrategy) System() string    { return "real" }
+func (f fakeStrategy) Tools() []string   { return []string{"t1"} }
+func (f fakeStrategy) Context(context.Context, strategy.StrategyInput) ([]provider.Message, error) {
+	return nil, nil
+}
+func (f fakeStrategy) RedactionPolicy() strategy.RedactionPolicy { return strategy.NoRedaction{} }
+func (f fakeStrategy) EvalGoldens() []strategy.EvalGolden        { return nil }
 
 func TestRegisterStrategy_PrefersOverride(t *testing.T) {
 	resetStrategyRegistry()

@@ -15,7 +15,7 @@ import (
 type ComponentStatus int
 
 const (
-	StatusHealthy  ComponentStatus = iota
+	StatusHealthy ComponentStatus = iota
 	StatusDegraded
 	StatusUnhealthy
 	StatusUnknown
@@ -142,8 +142,8 @@ func (hm *HealthMonitor) IsDegraded() bool {
 
 // HealthSnapshot represents a point-in-time health check result.
 type HealthSnapshot struct {
-	Timestamp time.Time                  `json:"timestamp"`
-	Overall   ComponentStatus            `json:"overall"`
+	Timestamp  time.Time                  `json:"timestamp"`
+	Overall    ComponentStatus            `json:"overall"`
 	Components map[string]ComponentStatus `json:"components"`
 }
 

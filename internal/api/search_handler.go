@@ -358,11 +358,11 @@ func (p *pgSearcher) SearchVehicles(ctx context.Context, q string, idHint int64,
 	args := []any{likePattern(q), prefixPattern(q), limit, idHint}
 	return p.scanQueryRows(ctx, sql, args, func(rows pgx.Rows) (SearchHit, bool, error) {
 		var (
-			id            int64
-			displayName   string
-			model         string
-			vin           string
-			rank          float64
+			id          int64
+			displayName string
+			model       string
+			vin         string
+			rank        float64
 		)
 		if err := rows.Scan(&id, &displayName, &model, &vin, &rank); err != nil {
 			return SearchHit{}, false, err

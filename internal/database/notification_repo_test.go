@@ -104,12 +104,12 @@ func TestIsValidNotificationGroupKey(t *testing.T) {
 
 	bad := []string{
 		"",
-		"deadbeef",                                                          // too short
-		strings.Repeat("a", 63),                                             // 63 chars
-		strings.Repeat("a", 65),                                             // 65 chars
-		strings.Repeat("g", 64),                                             // out-of-range hex char
-		strings.ToUpper(*good),                                              // uppercase rejected — derived form is lower
-		strings.Repeat("0", 32) + " " + strings.Repeat("0", 31),             // embedded space
+		"deadbeef",              // too short
+		strings.Repeat("a", 63), // 63 chars
+		strings.Repeat("a", 65), // 65 chars
+		strings.Repeat("g", 64), // out-of-range hex char
+		strings.ToUpper(*good),  // uppercase rejected — derived form is lower
+		strings.Repeat("0", 32) + " " + strings.Repeat("0", 31), // embedded space
 	}
 	for _, b := range bad {
 		b := b

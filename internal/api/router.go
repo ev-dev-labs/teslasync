@@ -68,74 +68,74 @@ import (
 	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. The chatbot strategy +
 	// the shared tool registry are constructed at boot and shared with
 	// the AI chatbot HTTP handler.
-	chatbotllm "github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm"
-	digestnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration"
-	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
+	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	alerttuningsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions"
 	anomalyexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/anomaly-explanations"
+	autonameunnamedlocations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations"
+	autotripnaming "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming"
+	batteryhealthforecastnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative"
+	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
+	chargingcurvefingerprintclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering"
+	chargingdiagnosis "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis"
+	chatbotllm "github.com/ev-dev-labs/teslasync/internal/ai/strategies/chatbot-llm"
+	costforecastnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration"
+	crossruleconflictdetection "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection"
+	datarepairsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/data-repair-suggestions"
+	digestnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/digest-narration"
+	drivecoaching "github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching"
+	feedbackqueuetriage "github.com/ev-dev-labs/teslasync/internal/ai/strategies/feedback-queue-triage"
+	geofenceawareautomationsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/geofence-aware-automation-suggestions"
+	inboxautocategorization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization"
+	incidenttimelinesummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/incident-timeline-summarizer"
+	learnedanomalybaselines "github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines"
+	lifetimestatsqa "github.com/ev-dev-labs/teslasync/internal/ai/strategies/lifetime-stats-qa"
+	logtracesummarization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/log-trace-summarization"
+	mlchargingcurveclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/ml-charging-curve-clustering"
+	mqttsseinspectorexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/mqtt-sse-inspector-explanations"
 	nlalertbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-alert-builder"
 	nlautomationbuilder "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-automation-builder"
-	nlsearch "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search"
-	drivecoaching "github.com/ev-dev-labs/teslasync/internal/ai/strategies/drive-coaching"
-	chargingdiagnosis "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-diagnosis"
-	raghelp "github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help"
+	nldashboardcomposer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-dashboard-composer"
 	nldrivesearchreplay "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-drive-search-replay"
-	speedprofileinsights "github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights"
-	routeefficiencysuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions"
-	autotripnaming "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-trip-naming"
-	tripplannerllmagent "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent"
-	smartchargeschedulesuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion"
-	batteryhealthforecastnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/battery-health-forecast-narrative"
-	chargingcurvefingerprintclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/charging-curve-fingerprint-clustering"
-	costforecastnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cost-forecast-narration"
+	nlgrafanapanel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-grafana-panel"
+	nlsearch "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-search"
+	nlsqlplayground "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-sql-playground"
 	periodcomparenarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/period-compare-narration"
-	lifetimestatsqa "github.com/ev-dev-labs/teslasync/internal/ai/strategies/lifetime-stats-qa"
-	incidenttimelinesummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/incident-timeline-summarizer"
-	datarepairsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/data-repair-suggestions"
-	signalexplorernlfilter "github.com/ev-dev-labs/teslasync/internal/ai/strategies/signal-explorer-nl-filter"
-	logtracesummarization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/log-trace-summarization"
-	feedbackqueuetriage "github.com/ev-dev-labs/teslasync/internal/ai/strategies/feedback-queue-triage"
-	mqttsseinspectorexplanations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/mqtt-sse-inspector-explanations"
-	statemachinedebuggernarrator "github.com/ev-dev-labs/teslasync/internal/ai/strategies/state-machine-debugger-narrator"
-	predictivemaintenance "github.com/ev-dev-labs/teslasync/internal/ai/strategies/predictive-maintenance"
-	tconarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/tco-narration"
-	softwareupdatechangelogsummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/software-update-changelog-summarizer"
 	piiredactionsharedexports "github.com/ev-dev-labs/teslasync/internal/ai/strategies/pii-redaction-shared-exports"
+	predictivemaintenance "github.com/ev-dev-labs/teslasync/internal/ai/strategies/predictive-maintenance"
+	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
 	quiethourssuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/quiet-hours-suggestion"
+	raghelp "github.com/ev-dev-labs/teslasync/internal/ai/strategies/rag-help"
+	rangepredictionmodel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model"
+	routeefficiencysuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/route-efficiency-suggestions"
 	safetysettingexplainer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/safety-setting-explainer"
+	signalexplorernlfilter "github.com/ev-dev-labs/teslasync/internal/ai/strategies/signal-explorer-nl-filter"
+	smartchargeschedulesuggestion "github.com/ev-dev-labs/teslasync/internal/ai/strategies/smart-charge-schedule-suggestion"
+	softwareupdatechangelogsummarizer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/software-update-changelog-summarizer"
+	speedprofileinsights "github.com/ev-dev-labs/teslasync/internal/ai/strategies/speed-profile-insights"
+	statemachinedebuggernarrator "github.com/ev-dev-labs/teslasync/internal/ai/strategies/state-machine-debugger-narrator"
+	suggestnewgeofences "github.com/ev-dev-labs/teslasync/internal/ai/strategies/suggest-new-geofences"
+	tconarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/tco-narration"
+	tirepressuretrendreasoning "github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning"
+	tripplannerllmagent "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-planner-llm-agent"
+	trippostcardsharecardimagegeneration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-postcard-share-card-image-generation"
+	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
+	vehiclepaintpreview "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vehicle-paint-preview"
 	voicemode "github.com/ev-dev-labs/teslasync/internal/ai/strategies/voice-mode"
 	watchfacenlresponse "github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response"
-	nlsqlplayground "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-sql-playground"
-	nlgrafanapanel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-grafana-panel"
-	nldashboardcomposer "github.com/ev-dev-labs/teslasync/internal/ai/strategies/nl-dashboard-composer"
-	trippostcardsharecardimagegeneration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/trip-postcard-share-card-image-generation"
-	vehiclepaintpreview "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vehicle-paint-preview"
-	vampiredrainexplanation "github.com/ev-dev-labs/teslasync/internal/ai/strategies/vampire-drain-explanation"
-	preheatprecoolrecommender "github.com/ev-dev-labs/teslasync/internal/ai/strategies/preheat-precool-recommender"
-	cabintemperatureimpactnarrative "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cabin-temperature-impact-narrative"
-	tirepressuretrendreasoning "github.com/ev-dev-labs/teslasync/internal/ai/strategies/tire-pressure-trend-reasoning"
-	alerttuningsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/alert-tuning-suggestions"
-	inboxautocategorization "github.com/ev-dev-labs/teslasync/internal/ai/strategies/inbox-auto-categorization"
-	crossruleconflictdetection "github.com/ev-dev-labs/teslasync/internal/ai/strategies/cross-rule-conflict-detection"
-	autonameunnamedlocations "github.com/ev-dev-labs/teslasync/internal/ai/strategies/auto-name-unnamed-locations"
-	suggestnewgeofences "github.com/ev-dev-labs/teslasync/internal/ai/strategies/suggest-new-geofences"
-	geofenceawareautomationsuggestions "github.com/ev-dev-labs/teslasync/internal/ai/strategies/geofence-aware-automation-suggestions"
-	learnedanomalybaselines "github.com/ev-dev-labs/teslasync/internal/ai/strategies/learned-per-vehicle-anomaly-baselines"
-	rangepredictionmodel "github.com/ev-dev-labs/teslasync/internal/ai/strategies/range-prediction-model"
-	mlchargingcurveclustering "github.com/ev-dev-labs/teslasync/internal/ai/strategies/ml-charging-curve-clustering"
-	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
-	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
+	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 
 	// New hexagonal architecture packages
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
-	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
@@ -3668,20 +3668,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Group(func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Use(handlermw.QueryBudget(handlermw.QueryBudgets{
-				"GET /admin/observability/schema-drift":   5,
-				"GET /admin/observability/slow-queries":   3,
-				"GET /admin/observability/vehicle-cost":   3,
-				"GET /admin/observability/disk-forecast":  5,
+				"GET /admin/observability/schema-drift":    5,
+				"GET /admin/observability/slow-queries":    3,
+				"GET /admin/observability/vehicle-cost":    3,
+				"GET /admin/observability/disk-forecast":   5,
 				"GET /admin/observability/secret-rotation": 2,
-				"GET /admin/observability/slo":            3,
-				"GET /admin/observability/data-quality":   3,
-				"GET /admin/observability/lineage":        1,
-				"GET /admin/observability/synthetic":      1,
-				"GET /admin/audit-log":                    3,
-				"GET /admin/audit-log/categories":         2,
-				"GET /admin/audit-log/actions":            2,
-				"GET /admin/audit-log/verify":             2,
-				"GET /admin/gdpr/exports/{id}":            2,
+				"GET /admin/observability/slo":             3,
+				"GET /admin/observability/data-quality":    3,
+				"GET /admin/observability/lineage":         1,
+				"GET /admin/observability/synthetic":       1,
+				"GET /admin/audit-log":                     3,
+				"GET /admin/audit-log/categories":          2,
+				"GET /admin/audit-log/actions":             2,
+				"GET /admin/audit-log/verify":              2,
+				"GET /admin/gdpr/exports/{id}":             2,
 			}))
 			v1AdminObs.Register(r)
 			v1AdminAudit.Register(r)

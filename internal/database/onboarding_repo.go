@@ -40,11 +40,11 @@ type OnboardingStatus struct {
 // Get returns the current onboarding status. It runs two cheap
 // queries:
 //
-//   1. count(*) on `vehicles`
-//   2. EXISTS(...) over `signal_log` constrained to the last 24 hours
-//      — the constraint is critical because `signal_log` is a
-//      TimescaleDB hypertable and an unbounded scan would touch every
-//      chunk.
+//  1. count(*) on `vehicles`
+//  2. EXISTS(...) over `signal_log` constrained to the last 24 hours
+//     — the constraint is critical because `signal_log` is a
+//     TimescaleDB hypertable and an unbounded scan would touch every
+//     chunk.
 //
 // Errors from either query are wrapped with context so the caller can
 // distinguish which dependency failed.

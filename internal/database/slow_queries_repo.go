@@ -30,15 +30,15 @@ var ErrPgStatStatementsUnavailable = errors.New("pg_stat_statements extension is
 
 // SlowQuery is the wire shape for both live and historical results.
 type SlowQuery struct {
-	QueryID         int64   `json:"query_id"`
-	Fingerprint     string  `json:"fingerprint"`
-	Calls           int64   `json:"calls"`
-	TotalTimeMs     float64 `json:"total_time_ms"`
-	MeanTimeMs      float64 `json:"mean_time_ms"`
-	MaxTimeMs       float64 `json:"max_time_ms"`
-	RowsReturned    int64   `json:"rows_returned"`
-	SharedBlksHit   *int64  `json:"shared_blks_hit,omitempty"`
-	SharedBlksRead  *int64  `json:"shared_blks_read,omitempty"`
+	QueryID        int64   `json:"query_id"`
+	Fingerprint    string  `json:"fingerprint"`
+	Calls          int64   `json:"calls"`
+	TotalTimeMs    float64 `json:"total_time_ms"`
+	MeanTimeMs     float64 `json:"mean_time_ms"`
+	MaxTimeMs      float64 `json:"max_time_ms"`
+	RowsReturned   int64   `json:"rows_returned"`
+	SharedBlksHit  *int64  `json:"shared_blks_hit,omitempty"`
+	SharedBlksRead *int64  `json:"shared_blks_read,omitempty"`
 }
 
 // SlowQueriesRepo is the read+snapshot path for slow query analytics.

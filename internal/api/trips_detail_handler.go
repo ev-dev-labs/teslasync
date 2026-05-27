@@ -56,12 +56,12 @@ type tripDriveSummaryDTO struct {
 // tripDetailResponse is the wire DTO. SUPERSET shape per Decision D2:
 //
 //   - frontend Trip interface fields:
-//       id, vehicle_id, name, start_date, end_date,
-//       total_distance_m, total_energy_wh, total_cost,
-//       drive_count, charge_count, created_at
+//     id, vehicle_id, name, start_date, end_date,
+//     total_distance_m, total_energy_wh, total_cost,
+//     drive_count, charge_count, created_at
 //   - prompt Decision #3 fields:
-//       started_at, ended_at, total_duration_s,
-//       energy_used_wh (alias), drives:[...]
+//     started_at, ended_at, total_duration_s,
+//     energy_used_wh (alias), drives:[...]
 //
 // Notes:
 //   - created_at is derived from started_at because the SI trips

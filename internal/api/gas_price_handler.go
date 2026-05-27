@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
+	"github.com/rs/zerolog/log"
 )
 
 // GasPriceHandler handles gas price auto-poll management endpoints.
@@ -23,13 +23,13 @@ func NewGasPriceHandler(db *database.DB, w *worker.GasPriceWorker) *GasPriceHand
 
 // gasPriceHistoryRow represents a row from gas_price_history.
 type gasPriceHistoryRow struct {
-	ID           int64      `json:"id"`
-	PricePerUnit float64    `json:"price_per_unit"`
-	Unit         string     `json:"unit"`
-	EfficiencyMPG float64   `json:"efficiency_mpg"`
-	EffectiveFrom time.Time `json:"effective_from"`
-	EffectiveTo  *time.Time `json:"effective_to"`
-	CreatedAt    time.Time  `json:"created_at"`
+	ID            int64      `json:"id"`
+	PricePerUnit  float64    `json:"price_per_unit"`
+	Unit          string     `json:"unit"`
+	EfficiencyMPG float64    `json:"efficiency_mpg"`
+	EffectiveFrom time.Time  `json:"effective_from"`
+	EffectiveTo   *time.Time `json:"effective_to"`
+	CreatedAt     time.Time  `json:"created_at"`
 }
 
 // Status returns the current gas price poll status.

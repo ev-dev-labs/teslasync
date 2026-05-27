@@ -8,9 +8,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/rs/zerolog/log"
 )
 
 // geofenceCreateRequest is the wire shape accepted by Create/Update.

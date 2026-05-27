@@ -7,7 +7,7 @@ const (
 	ColTypeNumeric   ColumnType = iota // float64 → double precision
 	ColTypeVarchar                     // string → text/varchar
 	ColTypeBool                        // bool → boolean
-	ColTypeTimestamp                    // time.Time → timestamptz
+	ColTypeTimestamp                   // time.Time → timestamptz
 )
 
 // SignalMapping defines how a Tesla signal maps to a DB column.

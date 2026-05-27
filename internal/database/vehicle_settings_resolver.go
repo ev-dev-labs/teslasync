@@ -3,9 +3,9 @@
 // `Resolver.Resolve` returns the EFFECTIVE value for every supported
 // key, layered in this order:
 //
-//	1. vehicle_settings override (this prompt's table)
-//	2. install-global SettingsRepo value
-//	3. hard-coded default (DefaultsForKey below)
+//  1. vehicle_settings override (this prompt's table)
+//  2. install-global SettingsRepo value
+//  3. hard-coded default (DefaultsForKey below)
 //
 // The vehicles base table is consulted only for the `nickname` key
 // because vehicles.display_name is a per-row attribute, not a

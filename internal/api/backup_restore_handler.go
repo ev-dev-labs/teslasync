@@ -349,8 +349,8 @@ func (h *BackupRestoreHandler) PreviewRestore(w http.ResponseWriter, r *http.Req
 	}
 
 	type tableInfo struct {
-		Name  string `json:"name"`
-		Rows  int    `json:"rows"`
+		Name string `json:"name"`
+		Rows int    `json:"rows"`
 	}
 	var tables []tableInfo
 	for name, raw := range data {
@@ -369,8 +369,8 @@ func (h *BackupRestoreHandler) PreviewRestore(w http.ResponseWriter, r *http.Req
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"tables":   tables,
-		"metadata": meta,
+		"tables":            tables,
+		"metadata":          meta,
 		"checksum_verified": run.Checksum != nil,
 	})
 }

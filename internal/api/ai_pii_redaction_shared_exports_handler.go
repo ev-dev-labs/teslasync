@@ -137,16 +137,23 @@ type AIPiiRedactionSharedExportsHandler struct {
 // request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             draft_export_redaction_plan AND
-//             validate_export_redaction_plan (registered by
-//             tools.RegisterPiiRedactionSharedExportsTools in
-//             router.go).
+//
+//	draft_export_redaction_plan AND
+//	validate_export_redaction_plan (registered by
+//	tools.RegisterPiiRedactionSharedExportsTools in
+//	router.go).
+//
 // strat:      the pii-redaction-shared-exports Strategy (one
-//             per process).
+//
+//	per process).
+//
 // headerName: forward-auth header name; used to extract subject
-//             for audit.
+//
+//	for audit.
 func NewAIPiiRedactionSharedExportsHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

@@ -34,11 +34,11 @@ type fakeIngestXRayRepo struct {
 	errBuckets  error
 	errLastSeen error
 
-	gotFieldsVehicleID  int64
-	gotBucketsVehicleID int64
+	gotFieldsVehicleID   int64
+	gotBucketsVehicleID  int64
 	gotLastSeenVehicleID int64
-	gotBucketWidth     time.Duration
-	gotLimit           int
+	gotBucketWidth       time.Duration
+	gotLimit             int
 }
 
 func (f *fakeIngestXRayRepo) FieldStats(_ context.Context, vid int64, _ time.Time, limit int) ([]database.IngestXRayFieldStat, error) {

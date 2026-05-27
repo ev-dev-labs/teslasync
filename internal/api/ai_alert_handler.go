@@ -105,8 +105,10 @@ type AIAlertHandler struct {
 //
 // registry:   AI provider registry (decorator chain already applied).
 // toolReg:    process-wide tool registry. MUST contain
-//             draft_alert_rule + validate_alert_rule (registered by
-//             tools.RegisterAlertBuilderTools in router.go).
+//
+//	draft_alert_rule + validate_alert_rule (registered by
+//	tools.RegisterAlertBuilderTools in router.go).
+//
 // strat:      the nl-alert-builder Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
 func NewAIAlertHandler(

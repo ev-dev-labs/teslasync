@@ -39,12 +39,12 @@ func NewAlertMessageHandler() *AlertMessageHandler {
 // because the editor may call this before all required fields are
 // filled in.
 type alertMessagePreviewRequest struct {
-	Name        string  `json:"name"`
-	Kind        string  `json:"kind"`
-	SignalName  string  `json:"signal_name"`
-	Op          string  `json:"op"`
-	Severity    string  `json:"severity"`
-	VehicleName string  `json:"vehicle_name"`
+	Name        string `json:"name"`
+	Kind        string `json:"kind"`
+	SignalName  string `json:"signal_name"`
+	Op          string `json:"op"`
+	Severity    string `json:"severity"`
+	VehicleName string `json:"vehicle_name"`
 
 	ValueNum  *float64 `json:"value_num"`
 	ValueText *string  `json:"value_text"`

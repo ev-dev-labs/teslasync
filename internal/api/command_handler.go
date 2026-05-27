@@ -6,12 +6,12 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	cmdFSM "github.com/ev-dev-labs/teslasync/internal/fsm/command"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/rs/zerolog/log"
 )
 
 // CommandHandler handles vehicle command HTTP requests.
@@ -41,40 +41,40 @@ func (h *CommandHandler) WithRedisCache(cache *signal.RedisSignalCache) *Command
 // allowedCommands is the whitelist of Tesla commands that can be sent via the API.
 // Names must match the frontend command names and the `commands` map in tesla/client.go.
 var allowedCommands = map[string]bool{
-	"wake_up":                 true,
-	"wake":                    true,
-	"lock":                    true,
-	"unlock":                  true,
-	"honk_horn":               true,
-	"honk":                    true,
-	"flash_lights":            true,
-	"flash":                   true,
-	"climate_on":              true,
-	"climate_off":             true,
-	"set_temps":               true,
-	"charge_start":            true,
-	"charge_stop":             true,
-	"set_charge_limit":        true,
-	"open_charge_port":        true,
-	"close_charge_port":       true,
-	"charge_port_open":        true,
-	"charge_port_close":       true,
-	"charge_max_range":        true,
-	"charge_standard":         true,
-	"set_charging_amps":       true,
-	"actuate_frunk":           true,
-	"actuate_trunk":           true,
-	"frunk":                   true,
-	"frunk_open":              true,
-	"trunk_open":              true,
-	"set_sentry_mode":         true,
-	"sentry_on":               true,
-	"sentry_off":              true,
-	"speed_limit_on":          true,
-	"speed_limit_off":         true,
-	"vent_windows":            true,
-	"close_windows":           true,
-	"remote_start_drive":      true,
+	"wake_up":                      true,
+	"wake":                         true,
+	"lock":                         true,
+	"unlock":                       true,
+	"honk_horn":                    true,
+	"honk":                         true,
+	"flash_lights":                 true,
+	"flash":                        true,
+	"climate_on":                   true,
+	"climate_off":                  true,
+	"set_temps":                    true,
+	"charge_start":                 true,
+	"charge_stop":                  true,
+	"set_charge_limit":             true,
+	"open_charge_port":             true,
+	"close_charge_port":            true,
+	"charge_port_open":             true,
+	"charge_port_close":            true,
+	"charge_max_range":             true,
+	"charge_standard":              true,
+	"set_charging_amps":            true,
+	"actuate_frunk":                true,
+	"actuate_trunk":                true,
+	"frunk":                        true,
+	"frunk_open":                   true,
+	"trunk_open":                   true,
+	"set_sentry_mode":              true,
+	"sentry_on":                    true,
+	"sentry_off":                   true,
+	"speed_limit_on":               true,
+	"speed_limit_off":              true,
+	"vent_windows":                 true,
+	"close_windows":                true,
+	"remote_start_drive":           true,
 	"set_scheduled_departure":      true,
 	"set_scheduled_charging":       true,
 	"add_charge_schedule":          true,

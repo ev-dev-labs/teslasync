@@ -18,7 +18,7 @@ import (
 
 // fakeIdleDrainIndexerSettings is a tiny in-memory implementation
 // of AIIdleDrainIndexerSettingsReader for the unit tests. The
-// zero value returns ai_mode='' (which is NOT 'off' but ALSO not
+// zero value returns ai_mode=” (which is NOT 'off' but ALSO not
 // 'cloud'/'local' — the function treats anything other than 'off'
 // as on, then re-checks the per-feature toggle).
 type fakeIdleDrainIndexerSettings struct {

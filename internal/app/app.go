@@ -54,9 +54,9 @@ var ErrMigrateOnly = errors.New("app: MIGRATE_ONLY=true; migrations applied, exi
 // reads many of them and several startup goroutines hold references
 // to others. New fields should be added only with a clear consumer.
 type App struct {
-	Cfg     *config.Config
-	Build   BuildInfo
-	Health  *resilience.HealthMonitor
+	Cfg    *config.Config
+	Build  BuildInfo
+	Health *resilience.HealthMonitor
 
 	startupStart time.Time
 

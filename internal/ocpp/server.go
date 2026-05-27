@@ -35,7 +35,7 @@ type Server struct {
 // transport. readDeadline of 0 disables the read deadline.
 func NewServer(d *Dispatcher, readDeadline time.Duration) *Server {
 	return &Server{
-		dispatcher: d,
+		dispatcher:   d,
 		readDeadline: readDeadline,
 		upgrader: websocket.Upgrader{
 			// OCPP-J 1.6 requires the `ocpp1.6` Sec-WebSocket-Protocol.

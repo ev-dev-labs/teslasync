@@ -22,8 +22,8 @@ type fakeJudgeProvider struct {
 	err       error
 }
 
-func (f *fakeJudgeProvider) Name() string                          { return "fake-judge" }
-func (f *fakeJudgeProvider) Capabilities() provider.Capabilities   { return provider.Capabilities{} }
+func (f *fakeJudgeProvider) Name() string                        { return "fake-judge" }
+func (f *fakeJudgeProvider) Capabilities() provider.Capabilities { return provider.Capabilities{} }
 func (f *fakeJudgeProvider) Stream(context.Context, provider.ChatRequest) (<-chan provider.Chunk, error) {
 	return nil, provider.ErrCapabilityNotSupported
 }

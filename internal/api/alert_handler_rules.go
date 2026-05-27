@@ -496,8 +496,9 @@ func (h *AlertHandler) DeleteRule(w http.ResponseWriter, r *http.Request) {
 }
 
 // SnoozeRule sets snoozed_until on a rule. Body accepts exactly one of:
-//   {"minutes": <int>}  - snooze for N minutes from now (<= 0 clears).
-//   {"until":   <ISO>}  - snooze until the given timestamp (past = clear).
+//
+//	{"minutes": <int>}  - snooze for N minutes from now (<= 0 clears).
+//	{"until":   <ISO>}  - snooze until the given timestamp (past = clear).
 //
 // Snooze is layered on top of cooldown / trigger_mode: while a rule is
 // snoozed, the engine suppresses all evaluations regardless of condition.
@@ -813,13 +814,13 @@ func validateAlertSeverity(severity string) (string, error) {
 
 // validateAlertRuleEscalation enforces the four invariants on the
 // Phase-49 / Slice 0009 escalation pair:
-//   1. mutual presence — both nil or both set
-//   2. positive duration when set
-//   3. valid severity literal when set
-//   4. strict severity ordering — escalated severity must be HIGHER than
-//      the rule's base severity (info < warn < critical). Equal or lower
-//      escalations would be downgrades or no-ops, which the user mental
-//      model and the DB CHECK constraint both forbid.
+//  1. mutual presence — both nil or both set
+//  2. positive duration when set
+//  3. valid severity literal when set
+//  4. strict severity ordering — escalated severity must be HIGHER than
+//     the rule's base severity (info < warn < critical). Equal or lower
+//     escalations would be downgrades or no-ops, which the user mental
+//     model and the DB CHECK constraint both forbid.
 //
 // Repeat-only is enforced by the DB CHECK constraint and the engine's
 // `if rule.TriggerMode != "once"` guard. Defence-in-depth at the handler
@@ -1058,7 +1059,7 @@ func validateAlertTestTarget(target *alertTestTargetRequest) ([]int64, bool, err
 // ListMetrics returns the registry of computed-metric definitions for the
 // rule builder UI. Stable, sorted by metric ID.
 func (h *AlertHandler) ListMetrics(w http.ResponseWriter, r *http.Request) {
-writeJSON(w, http.StatusOK, ListMetricSummaries())
+	writeJSON(w, http.StatusOK, ListMetricSummaries())
 }
 
 // previewComputedMetric handles the "kind=computed_metric" branch of TestRule.
@@ -1066,47 +1067,47 @@ writeJSON(w, http.StatusOK, ListMetricSummaries())
 // in preview mode (bypasses cooldown/snooze), and returns the computed value
 // plus whether the configured operator+threshold would have matched.
 func (h *AlertHandler) previewComputedMetric(w http.ResponseWriter, r *http.Request, body alertTestRequest) {
-if h.computedEval == nil {
-writeError(w, http.StatusServiceUnavailable, "computed-metric evaluator unavailable")
-return
-}
-rule := &models.AlertRule{
-Kind:            models.AlertRuleKindComputedMetric,
-MetricID:        body.MetricID,
-MetricWindow:    body.MetricWindow,
-MetricOp:        body.MetricOp,
-MetricThreshold: body.MetricThreshold,
-CooldownMin:     1,
-Severity:        "info",
-TriggerMode:     "repeat",
-Name:            "preview",
-}
-if err := validateComputedMetricRule(rule); err != nil {
-writeError(w, http.StatusBadRequest, err.Error())
-return
-}
-var vehicleID int64
-if body.VehicleID != nil {
-vehicleID = *body.VehicleID
-}
-res, matched, err := h.computedEval.Preview(r.Context(), rule, vehicleID)
-if err != nil {
-log.Error().Err(err).Str("metric_id", *rule.MetricID).Msg("preview computed metric failed")
-writeError(w, http.StatusInternalServerError, "failed to compute metric")
-return
-}
-resp := map[string]interface{}{
-"kind":          models.AlertRuleKindComputedMetric,
-"metric_id":     *rule.MetricID,
-"metric_window": *rule.MetricWindow,
-"metric_op":     *rule.MetricOp,
-"threshold":     *rule.MetricThreshold,
-"value":         res.Value,
-"would_trigger": matched,
-}
-if IsPercentChangeOp(*rule.MetricOp) {
-resp["previous_value"] = res.PreviousValue
-resp["percent_change"] = res.PercentChange
-}
-writeJSON(w, http.StatusOK, resp)
+	if h.computedEval == nil {
+		writeError(w, http.StatusServiceUnavailable, "computed-metric evaluator unavailable")
+		return
+	}
+	rule := &models.AlertRule{
+		Kind:            models.AlertRuleKindComputedMetric,
+		MetricID:        body.MetricID,
+		MetricWindow:    body.MetricWindow,
+		MetricOp:        body.MetricOp,
+		MetricThreshold: body.MetricThreshold,
+		CooldownMin:     1,
+		Severity:        "info",
+		TriggerMode:     "repeat",
+		Name:            "preview",
+	}
+	if err := validateComputedMetricRule(rule); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var vehicleID int64
+	if body.VehicleID != nil {
+		vehicleID = *body.VehicleID
+	}
+	res, matched, err := h.computedEval.Preview(r.Context(), rule, vehicleID)
+	if err != nil {
+		log.Error().Err(err).Str("metric_id", *rule.MetricID).Msg("preview computed metric failed")
+		writeError(w, http.StatusInternalServerError, "failed to compute metric")
+		return
+	}
+	resp := map[string]interface{}{
+		"kind":          models.AlertRuleKindComputedMetric,
+		"metric_id":     *rule.MetricID,
+		"metric_window": *rule.MetricWindow,
+		"metric_op":     *rule.MetricOp,
+		"threshold":     *rule.MetricThreshold,
+		"value":         res.Value,
+		"would_trigger": matched,
+	}
+	if IsPercentChangeOp(*rule.MetricOp) {
+		resp["previous_value"] = res.PreviousValue
+		resp["percent_change"] = res.PercentChange
+	}
+	writeJSON(w, http.StatusOK, resp)
 }

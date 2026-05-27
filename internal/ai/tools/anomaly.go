@@ -202,13 +202,13 @@ func (t *queryAnomalyContext) Execute(ctx context.Context, in any) (any, error) 
 	// digest tools' shape, keeping the dispatcher's serialisation
 	// path uniform across read tools).
 	return map[string]any{
-		"vehicle_id":          input.VehicleID,
-		"days":                days,
-		"anomalies":           result.Anomalies,
-		"health_summary":      result.HealthSummary,
-		"signals_monitored":   result.SignalsMonitored,
-		"anomalies_last_7d":   result.AnomaliesLast7d,
-		"anomalies_last_24h":  result.AnomaliesLast24h,
+		"vehicle_id":         input.VehicleID,
+		"days":               days,
+		"anomalies":          result.Anomalies,
+		"health_summary":     result.HealthSummary,
+		"signals_monitored":  result.SignalsMonitored,
+		"anomalies_last_7d":  result.AnomaliesLast7d,
+		"anomalies_last_24h": result.AnomaliesLast24h,
 	}, nil
 }
 

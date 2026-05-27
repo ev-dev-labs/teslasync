@@ -4,15 +4,15 @@
 // Worker. Every tick (default 60 s) it asks the repo for rows where
 // `enabled AND next_run_at <= now()`, then for each row:
 //
-//   1. Builds a one-shot JobRequest from the schedule's parameters
-//      and a relative date window (range_window).
-//   2. Hands it straight to *Processor.Process — the same code path
-//      that one-shot HTTP submissions use.
-//   3. Dispatches the produced bytes via Delivery.kind (download is
-//      stored on the row; email/webhook log + reserve a hook for
-//      future Phase-46 prompts).
-//   4. Records last_run_at / last_status / last_error and recomputes
-//      next_run_at via cron.
+//  1. Builds a one-shot JobRequest from the schedule's parameters
+//     and a relative date window (range_window).
+//  2. Hands it straight to *Processor.Process — the same code path
+//     that one-shot HTTP submissions use.
+//  3. Dispatches the produced bytes via Delivery.kind (download is
+//     stored on the row; email/webhook log + reserve a hook for
+//     future Phase-46 prompts).
+//  4. Records last_run_at / last_status / last_error and recomputes
+//     next_run_at via cron.
 //
 // Per-row try / catch
 // -------------------
@@ -37,6 +37,7 @@
 //   - MarkRunResult advances next_run_at past the cutoff, so the
 //     second pod's update finds last_run_at already past now() and
 //     becomes a no-op.
+//
 // A future "FOR UPDATE SKIP LOCKED" upgrade can land cleanly here
 // without changing the public scheduler surface.
 package export

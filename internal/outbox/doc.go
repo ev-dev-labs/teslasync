@@ -25,6 +25,7 @@
 //
 // Two-phase delivery contract
 // ───────────────────────────
+//
 //  1. Producer (e.g., drive completion handler) calls
 //     Store.Append(tx, Event) INSIDE the same pgx.Tx that updates
 //     drives.end_ts. Commit semantics: if the domain write rolls

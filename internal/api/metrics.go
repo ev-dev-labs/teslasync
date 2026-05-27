@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 // Re-export metrics for use within the api package. Other packages should
@@ -20,9 +20,9 @@ var (
 	ActiveStreamingVehicles     = metrics.ActiveStreamingVehicles
 
 	// Sessions
-	DriveSessionsActive    = metrics.DriveSessionsActive
-	DriveSessionsCompleted = metrics.DriveSessionsCompleted
-	ChargeSessionsActive   = metrics.ChargeSessionsActive
+	DriveSessionsActive     = metrics.DriveSessionsActive
+	DriveSessionsCompleted  = metrics.DriveSessionsCompleted
+	ChargeSessionsActive    = metrics.ChargeSessionsActive
 	ChargeSessionsCompleted = metrics.ChargeSessionsCompleted
 
 	// Database
@@ -32,8 +32,8 @@ var (
 
 	// Alerts
 	AlertsEvaluated   = metrics.AlertsEvaluated
-	AlertsFired        = metrics.AlertsFired
-	NotificationsSent  = metrics.NotificationsSent
+	AlertsFired       = metrics.AlertsFired
+	NotificationsSent = metrics.NotificationsSent
 
 	// API
 	APIErrors          = metrics.APIErrors
@@ -58,8 +58,8 @@ var (
 	SSEBytesSent         = metrics.SSEBytesSent
 
 	// Auth
-	AuthAttempts    = metrics.AuthAttempts
-	TokenRefreshes  = metrics.TokenRefreshes
+	AuthAttempts   = metrics.AuthAttempts
+	TokenRefreshes = metrics.TokenRefreshes
 
 	// Business
 	TotalDistanceKm = metrics.TotalDistanceKm

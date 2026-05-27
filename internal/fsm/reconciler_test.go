@@ -12,8 +12,8 @@ func TestDeriveExpectedState(t *testing.T) {
 	// store's Update path. We call Update just before tests, so this
 	// is effectively time.Now(). Freshness is controlled by the `now`
 	// parameter passed to DeriveExpectedState.
-	fresh := time.Now()                                    // "now" for fresh signals
-	stale := time.Now().Add(3 * time.Minute)               // "now" that makes signals 3 min old → stale
+	fresh := time.Now()                                       // "now" for fresh signals
+	stale := time.Now().Add(3 * time.Minute)                  // "now" that makes signals 3 min old → stale
 	slightlyStale := time.Now().Add(SignalFreshnessThreshold) // exactly at threshold boundary
 
 	tests := []struct {

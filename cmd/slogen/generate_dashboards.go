@@ -16,18 +16,18 @@ const defaultDashboardsDir = "helm/teslasync/files/grafana/dashboards"
 // uses public Grafana JSON keys so the output round-trips through the
 // "Import dashboard" UI.
 type dashboard struct {
-	UID         string             `json:"uid"`
-	Title       string             `json:"title"`
-	Description string             `json:"description"`
-	Tags        []string           `json:"tags"`
-	Schema      int                `json:"schemaVersion"`
-	Version     int                `json:"version"`
-	Time        timeRange          `json:"time"`
-	Refresh     string             `json:"refresh"`
-	Panels      []panel            `json:"panels"`
-	Templating  templating         `json:"templating"`
-	Links       []dashboardLink    `json:"links,omitempty"`
-	Annotations annotationsList    `json:"annotations,omitempty"`
+	UID         string          `json:"uid"`
+	Title       string          `json:"title"`
+	Description string          `json:"description"`
+	Tags        []string        `json:"tags"`
+	Schema      int             `json:"schemaVersion"`
+	Version     int             `json:"version"`
+	Time        timeRange       `json:"time"`
+	Refresh     string          `json:"refresh"`
+	Panels      []panel         `json:"panels"`
+	Templating  templating      `json:"templating"`
+	Links       []dashboardLink `json:"links,omitempty"`
+	Annotations annotationsList `json:"annotations,omitempty"`
 }
 
 type timeRange struct {
@@ -51,14 +51,14 @@ type dashboardLink struct {
 }
 
 type panel struct {
-	ID          int        `json:"id"`
-	Type        string     `json:"type"`
-	Title       string     `json:"title"`
-	Description string     `json:"description,omitempty"`
-	Datasource  datasource `json:"datasource"`
-	GridPos     gridPos    `json:"gridPos"`
-	Targets     []target   `json:"targets"`
-	FieldConfig fieldCfg   `json:"fieldConfig"`
+	ID          int            `json:"id"`
+	Type        string         `json:"type"`
+	Title       string         `json:"title"`
+	Description string         `json:"description,omitempty"`
+	Datasource  datasource     `json:"datasource"`
+	GridPos     gridPos        `json:"gridPos"`
+	Targets     []target       `json:"targets"`
+	FieldConfig fieldCfg       `json:"fieldConfig"`
 	Options     map[string]any `json:"options,omitempty"`
 }
 
@@ -82,20 +82,20 @@ type target struct {
 }
 
 type fieldCfg struct {
-	Defaults  fieldDefaults  `json:"defaults"`
-	Overrides []any          `json:"overrides"`
+	Defaults  fieldDefaults `json:"defaults"`
+	Overrides []any         `json:"overrides"`
 }
 
 type fieldDefaults struct {
-	Unit      string  `json:"unit,omitempty"`
-	Min       *float64 `json:"min,omitempty"`
-	Max       *float64 `json:"max,omitempty"`
-	Decimals  *int     `json:"decimals,omitempty"`
+	Unit       string      `json:"unit,omitempty"`
+	Min        *float64    `json:"min,omitempty"`
+	Max        *float64    `json:"max,omitempty"`
+	Decimals   *int        `json:"decimals,omitempty"`
 	Thresholds *thresholds `json:"thresholds,omitempty"`
 }
 
 type thresholds struct {
-	Mode  string         `json:"mode"`
+	Mode  string          `json:"mode"`
 	Steps []thresholdStep `json:"steps"`
 }
 

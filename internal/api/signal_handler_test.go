@@ -248,8 +248,8 @@ func TestDiffOmitsUnchanged(t *testing.T) {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
 	var body struct {
-		Count int                  `json:"count"`
-		Data  []map[string]any     `json:"data"`
+		Count int              `json:"count"`
+		Data  []map[string]any `json:"data"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode: %v", err)

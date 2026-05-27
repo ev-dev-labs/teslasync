@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // LifetimeHandler serves all-time aggregated statistics with achievements.
@@ -133,12 +133,12 @@ var achievementDefs = []achievementDef{
 // frontend contract is unchanged.
 type LifetimeStatsResult struct {
 	// Driving aggregates
-	TotalDrives        int     `json:"total_drives"`
-	TotalDistanceKm    float64 `json:"total_distance_km"`
-	TotalDrivingHours  float64 `json:"total_driving_hours"`
-	LongestDriveKm     float64 `json:"longest_drive_km"`
-	HighestSpeedKmh    float64 `json:"highest_speed_kmh"`
-	AvgEfficiencyWhKm  float64 `json:"avg_efficiency_wh_km"`
+	TotalDrives       int     `json:"total_drives"`
+	TotalDistanceKm   float64 `json:"total_distance_km"`
+	TotalDrivingHours float64 `json:"total_driving_hours"`
+	LongestDriveKm    float64 `json:"longest_drive_km"`
+	HighestSpeedKmh   float64 `json:"highest_speed_kmh"`
+	AvgEfficiencyWhKm float64 `json:"avg_efficiency_wh_km"`
 
 	// Charging aggregates
 	TotalChargeSessions int     `json:"total_charge_sessions"`
@@ -415,12 +415,12 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 	totalChargingHours := totalChargingMin / 60.0
 
 	return &LifetimeStatsResult{
-		TotalDrives:        totalDrives,
-		TotalDistanceKm:    safeFloat(math.Round(totalDistKm*100) / 100),
-		TotalDrivingHours:  safeFloat(math.Round(totalDrivingHours*100) / 100),
-		LongestDriveKm:     safeFloat(math.Round(longestDriveKm*100) / 100),
-		HighestSpeedKmh:    safeFloat(math.Round(highestSpeedKmh*10) / 10),
-		AvgEfficiencyWhKm:  safeFloat(math.Round(avgEffWhKm*10) / 10),
+		TotalDrives:       totalDrives,
+		TotalDistanceKm:   safeFloat(math.Round(totalDistKm*100) / 100),
+		TotalDrivingHours: safeFloat(math.Round(totalDrivingHours*100) / 100),
+		LongestDriveKm:    safeFloat(math.Round(longestDriveKm*100) / 100),
+		HighestSpeedKmh:   safeFloat(math.Round(highestSpeedKmh*10) / 10),
+		AvgEfficiencyWhKm: safeFloat(math.Round(avgEffWhKm*10) / 10),
 
 		TotalChargeSessions: totalChargeSessions,
 		TotalEnergyKwh:      safeFloat(math.Round(totalEnergyKwh*100) / 100),
@@ -568,7 +568,6 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 
 	writeJSON(w, http.StatusOK, result)
 }
-
 
 // evaluateAchievements computes the achievement list for the given field
 // values, persists any newly-crossed unlocks, and broadcasts an

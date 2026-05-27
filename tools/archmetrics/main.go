@@ -102,13 +102,13 @@ type PkgMetric struct {
 
 // Snapshot is the full report — JSON-serialised to baseline.json.
 type Snapshot struct {
-	GeneratedAt    string              `json:"generated_at"`
-	GoVersion      string              `json:"go_version"`
-	CommitSHA      string              `json:"commit_sha"`
-	Packages       []PkgMetric         `json:"packages"`
-	CmdLOC         map[string]int      `json:"cmd_loc"`
-	ForbiddenEdges []string            `json:"forbidden_edges"`
-	DocGoCoverage  float64             `json:"doc_go_coverage"`
+	GeneratedAt    string         `json:"generated_at"`
+	GoVersion      string         `json:"go_version"`
+	CommitSHA      string         `json:"commit_sha"`
+	Packages       []PkgMetric    `json:"packages"`
+	CmdLOC         map[string]int `json:"cmd_loc"`
+	ForbiddenEdges []string       `json:"forbidden_edges"`
+	DocGoCoverage  float64        `json:"doc_go_coverage"`
 	// FilesByPackage maps a repo-relative package path (e.g. "internal/api")
 	// to the sorted list of production .go file basenames in that package
 	// (excludes _test.go). Phase-47/06 added this map so arch_test can

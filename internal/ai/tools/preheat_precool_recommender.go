@@ -78,12 +78,12 @@ import (
 // is reserved as a future signal so the port can grow without a
 // breaking change.
 type ClimateScheduleDraftRequest struct {
-	VehicleID          int64
-	DepartBy           string  // RFC3339
-	CurrentCabinTempC  float64 // °C
-	OutsideTempC       float64 // °C
-	TargetCabinTempC   float64 // °C
-	Now                string  // RFC3339; optional override (tests inject a stable wall clock)
+	VehicleID         int64
+	DepartBy          string  // RFC3339
+	CurrentCabinTempC float64 // °C
+	OutsideTempC      float64 // °C
+	TargetCabinTempC  float64 // °C
+	Now               string  // RFC3339; optional override (tests inject a stable wall clock)
 }
 
 // ClimateScheduleDraftResult is the typed result envelope

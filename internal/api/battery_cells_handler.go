@@ -297,4 +297,3 @@ func (h *BatteryCellsHandler) getHistory(ctx context.Context, vehicleID int64) [
 	}
 	return points
 }
-

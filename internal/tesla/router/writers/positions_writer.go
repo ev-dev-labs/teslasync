@@ -85,9 +85,9 @@ type positionsWriter struct {
 	// cost does not scale linearly with the buffer size.
 	evictionInterval time.Duration
 
-	mu            sync.Mutex
-	pending       map[positionsKey]*positionsPending
-	lastEviction  time.Time
+	mu           sync.Mutex
+	pending      map[positionsKey]*positionsPending
+	lastEviction time.Time
 }
 
 // positionsKey is the (VIN, normalised-ts) tuple that pairs lat/lng

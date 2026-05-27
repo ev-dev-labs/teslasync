@@ -74,16 +74,16 @@ func (c *CostTracker) RecordBaselineTick() {
 
 // CostSnapshot is the serialisable output for the dashboard.
 type CostSnapshot struct {
-	PollsMade          int64              `json:"polls_made"`
-	PollsSaved         int64              `json:"polls_saved"`
-	SavingsBreakdown   map[string]int64   `json:"savings_breakdown"`
-	SavingsPercent     float64            `json:"savings_percent"`
-	EstimatedCost      float64            `json:"estimated_cost"`
-	EstimatedWithout   float64            `json:"estimated_cost_without_engine"`
-	EstimatedSavings   float64            `json:"estimated_savings"`
-	MonthlyCredit      float64            `json:"monthly_credit"`
-	RemainingCredit    float64            `json:"remaining_credit"`
-	ProjectedMonthEnd  float64            `json:"projected_month_end"`
+	PollsMade         int64            `json:"polls_made"`
+	PollsSaved        int64            `json:"polls_saved"`
+	SavingsBreakdown  map[string]int64 `json:"savings_breakdown"`
+	SavingsPercent    float64          `json:"savings_percent"`
+	EstimatedCost     float64          `json:"estimated_cost"`
+	EstimatedWithout  float64          `json:"estimated_cost_without_engine"`
+	EstimatedSavings  float64          `json:"estimated_savings"`
+	MonthlyCredit     float64          `json:"monthly_credit"`
+	RemainingCredit   float64          `json:"remaining_credit"`
+	ProjectedMonthEnd float64          `json:"projected_month_end"`
 }
 
 // Snapshot returns a point-in-time view of cost savings.
@@ -128,7 +128,7 @@ func (c *CostTracker) Snapshot() CostSnapshot {
 	}
 
 	return CostSnapshot{
-		PollsMade: made,
+		PollsMade:  made,
 		PollsSaved: saved,
 		SavingsBreakdown: map[string]int64{
 			"fleet_telemetry": byFT,

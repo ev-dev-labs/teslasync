@@ -186,7 +186,7 @@ func TestGetVehicleData_Unauthorized(t *testing.T) {
 
 	client := newTestClient(server)
 	_, err := client.GetVehicleData(context.Background(), "5YJ3E1EA1PF000001")
-	if !errors.Is(err, ErrUnauthorized){
+	if !errors.Is(err, ErrUnauthorized) {
 		t.Errorf("expected ErrUnauthorized, got %v", err)
 	}
 }
@@ -212,7 +212,7 @@ func TestGetVehicleData_VehicleAsleep(t *testing.T) {
 
 	client := newTestClient(server)
 	_, err := client.GetVehicleData(context.Background(), "5YJ3E1EA1PF000001")
-	if !errors.Is(err, ErrVehicleAsleep){
+	if !errors.Is(err, ErrVehicleAsleep) {
 		t.Errorf("expected ErrVehicleAsleep, got %v", err)
 	}
 }
@@ -260,7 +260,7 @@ func TestWakeUp_Unauthorized(t *testing.T) {
 
 	client := newTestClient(server)
 	err := client.WakeUp(context.Background(), "5YJ3E1EA1PF000001")
-	if !errors.Is(err, ErrUnauthorized){
+	if !errors.Is(err, ErrUnauthorized) {
 		t.Errorf("expected ErrUnauthorized, got %v", err)
 	}
 }

@@ -230,8 +230,8 @@ type DashboardEnvelope struct {
 // be in the in-scope curated panel catalog the AI handler
 // installs.
 type DashboardSlot struct {
-	PanelName string             `json:"panel_name"`
-	GridPos   DashboardSlotGrid  `json:"grid_pos"`
+	PanelName string            `json:"panel_name"`
+	GridPos   DashboardSlotGrid `json:"grid_pos"`
 }
 
 // DashboardSlotGrid is the dashboard-grid placement of a slot.
@@ -271,8 +271,8 @@ type dashboardLayoutInput struct {
 
 // dashboardLayoutInputEnvelope is the nested dashboard shape.
 type dashboardLayoutInputEnvelope struct {
-	Title string                       `json:"title" validate:"required,min=1,max=120" desc:"Human-readable dashboard title."`
-	Slots []dashboardLayoutInputSlot   `json:"slots" validate:"required,min=1,max=12" desc:"The dashboard's panel slots. At least 1, at most 12. Each slot picks a panel by name from the in-scope curated panel catalog."`
+	Title string                     `json:"title" validate:"required,min=1,max=120" desc:"Human-readable dashboard title."`
+	Slots []dashboardLayoutInputSlot `json:"slots" validate:"required,min=1,max=12" desc:"The dashboard's panel slots. At least 1, at most 12. Each slot picks a panel by name from the in-scope curated panel catalog."`
 }
 
 // dashboardLayoutInputSlot is one slot in the proposed

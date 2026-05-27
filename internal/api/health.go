@@ -9,13 +9,13 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/sony/gobreaker"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/sony/gobreaker"
 )
 
 // MaintenanceView is the resolved service-mode snapshot returned by the
@@ -188,11 +188,11 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 		if cfg != nil && cfg.FleetTelemetry.Enabled {
 			ftStatus = "enabled"
 			ftDetails = map[string]interface{}{
-				"enabled":  true,
-				"host":     cfg.FleetTelemetry.Host,
-				"port":     cfg.FleetTelemetry.Port,
-				"endpoint": "/api/v1/telemetry",
-				"protocol": "HTTP POST (JSON)",
+				"enabled":           true,
+				"host":              cfg.FleetTelemetry.Host,
+				"port":              cfg.FleetTelemetry.Port,
+				"endpoint":          "/api/v1/telemetry",
+				"protocol":          "HTTP POST (JSON)",
 				"supported_signals": SubscribedSignals,
 			}
 		}

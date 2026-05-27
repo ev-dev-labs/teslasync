@@ -118,10 +118,10 @@ var queueDisplayNames = map[string]string{
 // nil queue repo produces zero counters; a nil heartbeat store
 // reports every worker as "down").
 type QueueStatusHandlerConfig struct {
-	QueueRepo         queueStatusRepo
-	HeartbeatStore    queueStatusHeartbeatStore
-	KnownWorkerNames  []string
-	NowFunc           func() time.Time
+	QueueRepo        queueStatusRepo
+	HeartbeatStore   queueStatusHeartbeatStore
+	KnownWorkerNames []string
+	NowFunc          func() time.Time
 }
 
 // queueStatusRepo is the narrow read interface the handler uses.

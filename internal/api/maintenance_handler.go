@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/rs/zerolog/log"
 )
 
 // MaintenanceHandler serves maintenance schedule and service record endpoints.

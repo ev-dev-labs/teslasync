@@ -31,10 +31,10 @@ const (
 // Assistant messages that propose a tool call set Tool to the parsed
 // proposal; Content may be empty in that case.
 type Message struct {
-	Role    string    `json:"role"`
-	Content string    `json:"content"`
-	Name    string    `json:"name,omitempty"`
-	ToolID  string    `json:"tool_id,omitempty"`
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Name    string `json:"name,omitempty"`
+	ToolID  string `json:"tool_id,omitempty"`
 	// Tool is the legacy single-tool-call carrier kept for callers
 	// that built provider.Message values by hand (test fixtures and
 	// pre-Phase-50 code). New code should use [ToolCalls] (plural)

@@ -29,7 +29,7 @@
 //   - I3 baseline intact: this strategy never replaces the template slides.
 //   - I7 per-feature:     the AI route is gated by guard.Wrap("yir-narration").
 //   - I9 redaction:       PolicyYearInReview restricts cleartext to vehicle
-//                         name only (mirrors PolicyDigest's posture).
+//     name only (mirrors PolicyDigest's posture).
 package yirnarration
 
 import (

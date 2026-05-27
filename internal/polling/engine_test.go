@@ -66,8 +66,8 @@ func TestChargeEvaluator_CompletePluggedIn(t *testing.T) {
 	ctx := &EvalContext{
 		Current: &tesla.VehicleDataResponse{
 			ChargeState: tesla.ChargeState{
-				ChargingState:    "Complete",
-				ChargePortLatch:  "Engaged",
+				ChargingState:      "Complete",
+				ChargePortLatch:    "Engaged",
 				ChargePortDoorOpen: true,
 			},
 		},

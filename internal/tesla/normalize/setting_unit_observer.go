@@ -10,8 +10,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // settingUnitTracerName is the OpenTelemetry tracer name for spans
@@ -158,4 +158,3 @@ func settingUnitKindAndValue(field string, value any) (unithistory.Kind, units.A
 		return "", "", fmt.Errorf("%w: %q is not a Setting*Unit field", units.ErrUnsupportedField, field)
 	}
 }
-

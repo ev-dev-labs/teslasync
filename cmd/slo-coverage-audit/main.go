@@ -9,16 +9,16 @@
 //
 // This audit:
 //
-//   1. Walks `internal/api/router.go` and extracts every chi route literal.
-//   2. Filters out internal/operator routes (`/internal/`, `/healthz`,
-//      `/readyz`, `/metrics`, `/debug/pprof/`).
-//   3. Loads `slo/catalog.yaml` and gathers the set of routes referenced
-//      by per-route SLOs (search for `route="..."` literals) plus the
-//      transitive coverage flag (true if any SLO's SLI references
-//      `teslasync_red_http_requests_total` without a route filter).
-//   4. For each user-facing route, marks it OK if (a) transitively covered
-//      OR (b) appears in a per-route SLO. Otherwise emits MISSING_SLO and
-//      the gate blocks.
+//  1. Walks `internal/api/router.go` and extracts every chi route literal.
+//  2. Filters out internal/operator routes (`/internal/`, `/healthz`,
+//     `/readyz`, `/metrics`, `/debug/pprof/`).
+//  3. Loads `slo/catalog.yaml` and gathers the set of routes referenced
+//     by per-route SLOs (search for `route="..."` literals) plus the
+//     transitive coverage flag (true if any SLO's SLI references
+//     `teslasync_red_http_requests_total` without a route filter).
+//  4. For each user-facing route, marks it OK if (a) transitively covered
+//     OR (b) appears in a per-route SLO. Otherwise emits MISSING_SLO and
+//     the gate blocks.
 package main
 
 import (

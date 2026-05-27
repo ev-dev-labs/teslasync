@@ -119,8 +119,11 @@ func (n *nonFlushable) Header() http.Header {
 	}
 	return n.header
 }
-func (n *nonFlushable) Write(b []byte) (int, error) { n.body = append(n.body, b...); return len(b), nil }
-func (n *nonFlushable) WriteHeader(statusCode int)  { n.status = statusCode }
+func (n *nonFlushable) Write(b []byte) (int, error) {
+	n.body = append(n.body, b...)
+	return len(b), nil
+}
+func (n *nonFlushable) WriteHeader(statusCode int) { n.status = statusCode }
 
 func TestNew_RejectsNonFlushable(t *testing.T) {
 	t.Parallel()

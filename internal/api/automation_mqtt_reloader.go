@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/rs/zerolog/log"
 )
 
 // automationMQTTReloader publishes automation config change notifications to

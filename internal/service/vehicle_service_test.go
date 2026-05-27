@@ -436,17 +436,17 @@ func TestBuildStateFromSignalStore_AcceptsPhase42CodecNumericTypes(t *testing.T)
 	const vehicleID int64 = 7
 	store := newStore(t, vehicleID, map[string]interface{}{
 		// Float5 codec fields → float32 in the live store
-		"VehicleSpeed":            float32(42.5),
-		"Odometer":                float32(98765.5),
-		"IdealBatteryRange":       float32(310.25),
-		"RatedRange":              float32(305.5),
-		"InsideTemp":              float32(22.75),
-		"OutsideTemp":             float32(14.5),
-		"Latitude":                float32(37.4419),
-		"Longitude":               float32(-122.143),
-		"ACChargingPower":         float32(7.2),
-		"ChargeRateMilePerHour":   float32(28.5),
-		"TimeToFullCharge":        float32(2.5),
+		"VehicleSpeed":          float32(42.5),
+		"Odometer":              float32(98765.5),
+		"IdealBatteryRange":     float32(310.25),
+		"RatedRange":            float32(305.5),
+		"InsideTemp":            float32(22.75),
+		"OutsideTemp":           float32(14.5),
+		"Latitude":              float32(37.4419),
+		"Longitude":             float32(-122.143),
+		"ACChargingPower":       float32(7.2),
+		"ChargeRateMilePerHour": float32(28.5),
+		"TimeToFullCharge":      float32(2.5),
 		// Int3/Int4 codec fields → int32 in the live store
 		"BatteryLevel": int32(72),
 		"GpsHeading":   int32(180),

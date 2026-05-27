@@ -37,14 +37,14 @@ const (
 // Length bounds enforced before the row hits the database. Keep these
 // in sync with the zod schema in web/src/components/feedback/FeedbackModal.tsx.
 const (
-	FeedbackTitleMinLen     = 5
-	FeedbackTitleMaxLen     = 120
-	FeedbackBodyMinLen      = 20
-	FeedbackBodyMaxLen      = 4000
-	FeedbackUserAgentMaxLen = 500
-	FeedbackPageRouteMaxLen = 200
-	FeedbackAppVersionMaxLen = 64
-	FeedbackUserEmailMaxLen = 200
+	FeedbackTitleMinLen       = 5
+	FeedbackTitleMaxLen       = 120
+	FeedbackBodyMinLen        = 20
+	FeedbackBodyMaxLen        = 4000
+	FeedbackUserAgentMaxLen   = 500
+	FeedbackPageRouteMaxLen   = 200
+	FeedbackAppVersionMaxLen  = 64
+	FeedbackUserEmailMaxLen   = 200
 	FeedbackConsoleTailMaxLen = 16 * 1024 // 16 KiB cap for opt-in console capture
 	// FeedbackRecentErrorsMaxBytes caps the JSON byte length of the
 	// recent_errors payload accepted by the public ingest endpoint.
@@ -220,14 +220,14 @@ func (r *UserFeedbackRepo) Insert(ctx context.Context, in FeedbackInsert) (UserF
 
 	row := UserFeedback{}
 	var (
-		pageRoute      = nullString(clean.PageRoute)
-		userAgent      = nullString(clean.UserAgent)
-		appVersion     = nullString(clean.AppVersion)
-		userEmail      = nullString(clean.UserEmail)
-		recentErrors   any
-		consoleTail    = nullString(clean.ConsoleTail)
-		submitterSubj  = nullString(clean.SubmitterSubject)
-		submitterIP    = nullString(clean.SubmitterIP)
+		pageRoute     = nullString(clean.PageRoute)
+		userAgent     = nullString(clean.UserAgent)
+		appVersion    = nullString(clean.AppVersion)
+		userEmail     = nullString(clean.UserEmail)
+		recentErrors  any
+		consoleTail   = nullString(clean.ConsoleTail)
+		submitterSubj = nullString(clean.SubmitterSubject)
+		submitterIP   = nullString(clean.SubmitterIP)
 	)
 	if len(clean.RecentErrors) > 0 {
 		recentErrors = []byte(clean.RecentErrors)

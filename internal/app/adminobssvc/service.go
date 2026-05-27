@@ -38,16 +38,16 @@ type Service struct {
 
 // Options bundles constructor params.
 type Options struct {
-	Now              func() time.Time
-	Rotation         *rotation.Tracker
-	SchemaPool       schemacheck.Querier
-	SchemaSeed       schemacheck.Fingerprint
-	SlowQueries      *database.SlowQueriesRepo
-	Hypertable       *database.HypertableMetricsRepo
-	IngestXRay       *database.IngestXRayRepo
-	AuditRecorder    *audit.Recorder
-	ExcludeTables    []string
-	QuotaBytes       int64
+	Now           func() time.Time
+	Rotation      *rotation.Tracker
+	SchemaPool    schemacheck.Querier
+	SchemaSeed    schemacheck.Fingerprint
+	SlowQueries   *database.SlowQueriesRepo
+	Hypertable    *database.HypertableMetricsRepo
+	IngestXRay    *database.IngestXRayRepo
+	AuditRecorder *audit.Recorder
+	ExcludeTables []string
+	QuotaBytes    int64
 }
 
 // New constructs the service.

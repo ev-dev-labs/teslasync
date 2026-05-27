@@ -57,9 +57,9 @@ var allowedVitalNames = map[string]struct{}{
 // Unknown ratings are normalised to "unknown" so a client that ships a
 // novel rating string can't spawn an unbounded label.
 var allowedRatings = map[string]struct{}{
-	"good":               {},
-	"needs-improvement":  {},
-	"poor":               {},
+	"good":              {},
+	"needs-improvement": {},
+	"poor":              {},
 }
 
 // webVitalsHistogram is the single Prometheus surface exposed by this

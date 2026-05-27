@@ -159,17 +159,26 @@ type AIDataRepairSuggestionsHandler struct {
 // nil so the wiring bug surfaces at boot, not at first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             draft_data_repair_plan AND validate_data_repair_plan
-//             (registered by tools.RegisterDataRepairSuggestionsTools
-//             in router.go).
+//
+//	draft_data_repair_plan AND validate_data_repair_plan
+//	(registered by tools.RegisterDataRepairSuggestionsTools
+//	in router.go).
+//
 // strat:      the data-repair-suggestions Strategy (one per
-//             process).
+//
+//	process).
+//
 // source:     the production AIDataRepairSource (composes
-//             ChargingRepo.GetStale + DriveRepo.GetStale).
+//
+//	ChargingRepo.GetStale + DriveRepo.GetStale).
+//
 // headerName: forward-auth header name; used to extract subject for
-//             audit.
+//
+//	audit.
 func NewAIDataRepairSuggestionsHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

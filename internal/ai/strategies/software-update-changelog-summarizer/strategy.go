@@ -20,10 +20,12 @@
 //
 //   - the two read-only tools the LLM is allowed to call in
 //     this surface:
+//
 //   - query_vehicle_software — REQUIRED, called FIRST. Loads
 //     the in-scope vehicle's deterministic software-updates
 //     envelope (current installed version, recent
 //     install/scheduled history, derived install cadence).
+//
 //   - retrieve_update_notes — OPTIONAL, called AFTER
 //     query_vehicle_software when the LLM wants to ground a
 //     per-version commentary in the cached release-note

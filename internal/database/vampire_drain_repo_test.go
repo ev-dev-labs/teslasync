@@ -71,10 +71,10 @@ func TestComputeDrainEvents_WorkedExample(t *testing.T) {
 	w2Hours := w2End.Sub(w2Start).Hours()
 
 	cases := []struct {
-		idx          int
-		hours        float64
-		drainPct     float64
-		drainPerDay  float64
+		idx         int
+		hours       float64
+		drainPct    float64
+		drainPerDay float64
 	}{
 		{0, w1Hours, 2.0, 2.0 * 24.0 / w1Hours},
 		{1, w2Hours, 4.0, 4.0 * 24.0 / w2Hours},
@@ -111,11 +111,11 @@ func TestComputeDrainEvents_DrainPerDayFormula(t *testing.T) {
 		startPct float64
 		endPct   float64
 	}{
-		{"24h_clean_day", 24 * time.Hour, 100, 95},     // 5%/day exact
-		{"12h_half_day", 12 * time.Hour, 100, 95},      // 10%/day (5% over half-day)
-		{"6h_quarter_day", 6 * time.Hour, 100, 99},     // 4%/day (1% over quarter-day)
-		{"1h_hour", 1 * time.Hour, 100, 95},            // 120%/day (extreme)
-		{"48h_two_days", 48 * time.Hour, 100, 90},      // 5%/day
+		{"24h_clean_day", 24 * time.Hour, 100, 95},          // 5%/day exact
+		{"12h_half_day", 12 * time.Hour, 100, 95},           // 10%/day (5% over half-day)
+		{"6h_quarter_day", 6 * time.Hour, 100, 99},          // 4%/day (1% over quarter-day)
+		{"1h_hour", 1 * time.Hour, 100, 95},                 // 120%/day (extreme)
+		{"48h_two_days", 48 * time.Hour, 100, 90},           // 5%/day
 		{"36h_one_and_half_day", 36 * time.Hour, 90, 87.75}, // 1.5%/day
 	}
 	for _, c := range cases {
@@ -308,7 +308,7 @@ func TestPercentileCont_KnownValues(t *testing.T) {
 		{"two_p_quarter", []float64{0, 100}, 0.25, 25},
 		{"two_p_75pct", []float64{0, 100}, 0.75, 75},
 		{"five_p_50_is_middle", []float64{1, 2, 3, 4, 5}, 0.5, 3},
-		{"five_p_25", []float64{1, 2, 3, 4, 5}, 0.25, 2},   // rank = 0.25*4 = 1.0
+		{"five_p_25", []float64{1, 2, 3, 4, 5}, 0.25, 2},            // rank = 0.25*4 = 1.0
 		{"five_p_95_near_max", []float64{1, 2, 3, 4, 5}, 0.95, 4.8}, // rank = 3.8 → 4 + 0.8*1
 		{"p_negative_clamps_to_min", []float64{10, 20, 30}, -0.5, 10},
 		{"p_above_one_clamps_to_max", []float64{10, 20, 30}, 1.5, 30},

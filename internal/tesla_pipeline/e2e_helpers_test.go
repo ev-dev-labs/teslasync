@@ -37,8 +37,8 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // e2eVehicleID is the canonical numeric vehicle id used by every e2e

@@ -61,10 +61,10 @@ func TestEventHub_BroadcastWithContext_EmitsSSEBroadcastSpan(t *testing.T) {
 	}
 	attrs := got.Attributes()
 	mustAttr := map[string]bool{
-		"sse.event_type":        false,
-		"sse.client_count":      false,
-		"sse.delivered_count":   false,
-		"sse.dropped_count":     false,
+		"sse.event_type":         false,
+		"sse.client_count":       false,
+		"sse.delivered_count":    false,
+		"sse.dropped_count":      false,
 		"sse.message_size_bytes": false,
 	}
 	for _, a := range attrs {

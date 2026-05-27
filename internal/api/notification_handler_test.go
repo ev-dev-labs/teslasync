@@ -833,10 +833,10 @@ func TestNotificationsBulkMarkRead_ByGroupKey(t *testing.T) {
 // an unbounded UPDATE.
 func TestNotificationsBulkMarkRead_GroupKeyValidation(t *testing.T) {
 	cases := map[string]string{
-		"too-short":       "deadbeef",
-		"uppercase":       strings.ToUpper(validGroupKey()),
-		"non-hex":         strings.Repeat("g", 64),
-		"trailing-space":  validGroupKey() + "  ",
+		"too-short":      "deadbeef",
+		"uppercase":      strings.ToUpper(validGroupKey()),
+		"non-hex":        strings.Repeat("g", 64),
+		"trailing-space": validGroupKey() + "  ",
 	}
 	// Note: the handler trims, so trailing-space actually validates after
 	// the trim. Keep it anyway to document the trimming behaviour.

@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/rs/zerolog/log"
 )
 
 // AuthHandler handles OAuth flow with Tesla.

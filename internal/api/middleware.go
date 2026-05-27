@@ -20,7 +20,7 @@ import (
 // by MetricsMiddleware. Label vocabulary:
 //   - method:       HTTP verb (GET/POST/...)
 //   - route:        canonical chi route pattern (e.g. "/api/v1/drives/{driveID}")
-//                   falls back to URL path when chi has no match (404 / unrouted).
+//     falls back to URL path when chi has no match (404 / unrouted).
 //   - status_class: "2xx" | "3xx" | "4xx" | "5xx" | "1xx"
 //
 // Names intentionally use the "red_" prefix so they coexist with the legacy
@@ -214,4 +214,3 @@ func TracingMiddleware(next http.Handler) http.Handler {
 		}),
 	)
 }
-

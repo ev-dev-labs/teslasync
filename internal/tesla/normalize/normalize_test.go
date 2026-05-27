@@ -18,8 +18,8 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // ---------------------------------------------------------------------------
@@ -47,11 +47,11 @@ type fakeRepo struct {
 }
 
 type fakeOp struct {
-	kind    string             // "record" or "at"
-	at      time.Time          // populated for "at"
-	atKind  unithistory.Kind   // populated for "at"
-	atVeh   int64              // populated for "at"
-	entry   unithistory.Entry  // populated for "record"
+	kind   string            // "record" or "at"
+	at     time.Time         // populated for "at"
+	atKind unithistory.Kind  // populated for "at"
+	atVeh  int64             // populated for "at"
+	entry  unithistory.Entry // populated for "record"
 }
 
 func (r *fakeRepo) Record(_ context.Context, e unithistory.Entry) error {

@@ -48,7 +48,7 @@ type Limiter struct {
 	clock        Clock
 	tiers        TierResolver
 	quotas       QuotaResolver // optional; nil = always use defaults
-	buckets      sync.Map       // map[bucketKey]*bucket
+	buckets      sync.Map      // map[bucketKey]*bucket
 	suspMu       sync.RWMutex
 	suspProvider map[string]time.Time // provider name -> suspended-until
 }
@@ -114,14 +114,14 @@ type bucket struct {
 	lastRefill time.Time
 
 	// Per-day rolling counter, reset at the next UTC midnight.
-	dayCount    int
-	dayStart    time.Time
+	dayCount int
+	dayStart time.Time
 
 	// Per-minute observed token windows. Reset on every minute
 	// boundary read.
-	minuteStart  time.Time
-	minuteIn     int
-	minuteOut    int
+	minuteStart time.Time
+	minuteIn    int
+	minuteOut   int
 
 	// Inflight count (BurstReq).
 	inflight int
@@ -371,11 +371,11 @@ func (l *Limiter) bucketFor(subject, featureID string, q Quota, now time.Time) *
 		return v.(*bucket)
 	}
 	candidate := &bucket{
-		quota:        q,
-		tokens:       float64(q.PerMinute),
-		lastRefill:   now,
-		dayStart:     truncateToUTCDay(now),
-		minuteStart:  truncateToMinute(now),
+		quota:       q,
+		tokens:      float64(q.PerMinute),
+		lastRefill:  now,
+		dayStart:    truncateToUTCDay(now),
+		minuteStart: truncateToMinute(now),
 	}
 	actual, _ := l.buckets.LoadOrStore(key, candidate)
 	return actual.(*bucket)

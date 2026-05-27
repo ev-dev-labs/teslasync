@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // AutomationVariableRepo provides key-value storage for cross-automation state.

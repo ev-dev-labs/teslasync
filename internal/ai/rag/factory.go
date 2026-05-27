@@ -42,12 +42,12 @@ const AIModeOff = "off"
 // Pre-conditions and error cases:
 //   - settings : non-nil. Programmer error → panic.
 //   - db       : non-nil when not in off-mode. (When off-mode, db
-//                may be nil — the noop never touches it.)
+//     may be nil — the noop never touches it.)
 //   - resolver : non-nil when not in off-mode. Same rationale.
 //   - featureID: non-empty when not in off-mode. PgvectorRetriever
-//                requires it to stamp the audit log row.
+//     requires it to stamp the audit log row.
 //   - model    : when not in off-mode, must be present in
-//                [modelDims]. Returns [ErrUnknownModel] otherwise.
+//     [modelDims]. Returns [ErrUnknownModel] otherwise.
 //
 // Why fail-closed on settings error: an admin who flipped AI off
 // expects no further AI calls. If we returned an error and the

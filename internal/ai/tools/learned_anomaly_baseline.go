@@ -257,11 +257,11 @@ func envelopeOutput(vehicleID int64, days int, baselines []anomaly.LearnedBaseli
 		signals = append(signals, entry)
 	}
 	out := map[string]any{
-		"vehicle_id":          vehicleID,
-		"signals":             signals,
-		"signal_count":        len(signals),
-		"learned_count":       learnedCount,
-		"fallback_count":      fallbackCount,
+		"vehicle_id":              vehicleID,
+		"signals":                 signals,
+		"signal_count":            len(signals),
+		"learned_count":           learnedCount,
+		"fallback_count":          fallbackCount,
 		"min_samples_for_learned": anomaly.DefaultMinSamples,
 	}
 	if days > 0 {

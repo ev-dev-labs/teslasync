@@ -169,13 +169,18 @@ type AIVoiceModeHandler struct {
 //
 // chat:       persistence for user/assistant turns.
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             stream_chatbot_response (registered by
-//             tools.RegisterVoiceModeTools in router.go).
+//
+//	stream_chatbot_response (registered by
+//	tools.RegisterVoiceModeTools in router.go).
+//
 // strat:      the voice-mode Strategy (one per process).
 // headerName: forward-auth header name; used to extract
-//             subject for audit.
+//
+//	subject for audit.
 func NewAIVoiceModeHandler(
 	chat *database.ChatRepo,
 	registry *provider.Registry,

@@ -43,13 +43,13 @@ import (
 // proxy that strips UA may legitimately omit them; we record an empty
 // string in that case and let the SPA render an em-dash.
 type AuthSessionRow struct {
-	ID          uuid.UUID
-	Subject     string
-	UserAgent   string
-	IP          string
-	CreatedAt   time.Time
-	LastSeenAt  time.Time
-	RevokedAt   *time.Time
+	ID         uuid.UUID
+	Subject    string
+	UserAgent  string
+	IP         string
+	CreatedAt  time.Time
+	LastSeenAt time.Time
+	RevokedAt  *time.Time
 }
 
 // ErrAuthSessionNotFound is returned by the lookup methods when no row

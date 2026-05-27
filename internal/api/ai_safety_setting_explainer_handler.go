@@ -132,18 +132,25 @@ type AISafetySettingExplainerHandler struct {
 // first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             query_safety_settings (registered by
-//             tools.RegisterSafetySettingExplainerTools in
-//             router.go) and retrieve_docs (registered globally
-//             by tools.RegisterHelpTools).
+//
+//	query_safety_settings (registered by
+//	tools.RegisterSafetySettingExplainerTools in
+//	router.go) and retrieve_docs (registered globally
+//	by tools.RegisterHelpTools).
+//
 // strat:      the safety-setting-explainer Strategy (one per
-//             process).
+//
+//	process).
+//
 // headerName: forward-auth header name; used for audit
-//             annotations only — the safety envelope is global,
-//             so a missing subject does NOT prevent the
-//             request from running.
+//
+//	annotations only — the safety envelope is global,
+//	so a missing subject does NOT prevent the
+//	request from running.
 func NewAISafetySettingExplainerHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -452,6 +459,6 @@ func projectSafetySettingsEnvelope(cur *models.Settings) *tools.SafetySettingsEn
 // satisfies http.Handler and AISafetySettingExplainerSource
 // satisfies tools.SafetySettingsSource.
 var (
-	_ http.Handler              = (*AISafetySettingExplainerHandler)(nil)
+	_ http.Handler               = (*AISafetySettingExplainerHandler)(nil)
 	_ tools.SafetySettingsSource = (*AISafetySettingExplainerSource)(nil)
 )

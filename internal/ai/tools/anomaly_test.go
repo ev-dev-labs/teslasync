@@ -20,11 +20,11 @@ import (
 // recordedDays field captures the most recent `days` argument so a
 // test can assert the tool propagated the input correctly.
 type fakeAnomalySource struct {
-	result        *AnomalyContextResult
-	err           error
-	recordedID    int64
-	recordedDays  int
-	callCount     int
+	result       *AnomalyContextResult
+	err          error
+	recordedID   int64
+	recordedDays int
+	callCount    int
 }
 
 func (f *fakeAnomalySource) DetectAnomalies(_ context.Context, vehicleID int64, days int) (*AnomalyContextResult, error) {

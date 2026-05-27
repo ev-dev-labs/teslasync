@@ -64,16 +64,16 @@ func TestQueryChargersAlongRoute_FiltersByCorridor(t *testing.T) {
 		// 2 visits to "Halfway SC" inside corridor
 		{
 			ID: 1, VehicleID: 42, StartedAt: sf,
-			EndedAt:    ended(sf, 30),
-			StartLat:   ptrFloat64(35.92), StartLng: ptrFloat64(-120.30),
+			EndedAt:  ended(sf, 30),
+			StartLat: ptrFloat64(35.92), StartLng: ptrFloat64(-120.30),
 			StartPlace: ptrStr("Halfway SC"),
 			PeakPowerW: ptrFloat64(150000), AvgPowerW: ptrFloat64(100000),
 			DeltaSocPct: ptrFloat64(40), TotalEnergyAddedWh: ptrFloat64(30000),
 		},
 		{
 			ID: 2, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 7),
-			EndedAt:    ended(sf.AddDate(0, 0, 7), 25),
-			StartLat:   ptrFloat64(35.92), StartLng: ptrFloat64(-120.30),
+			EndedAt:  ended(sf.AddDate(0, 0, 7), 25),
+			StartLat: ptrFloat64(35.92), StartLng: ptrFloat64(-120.30),
 			StartPlace: ptrStr("Halfway SC"),
 			PeakPowerW: ptrFloat64(140000), AvgPowerW: ptrFloat64(95000),
 			DeltaSocPct: ptrFloat64(35), TotalEnergyAddedWh: ptrFloat64(28000),
@@ -81,8 +81,8 @@ func TestQueryChargersAlongRoute_FiltersByCorridor(t *testing.T) {
 		// 1 visit to "Near LA SC" inside corridor
 		{
 			ID: 3, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 14),
-			EndedAt:    ended(sf.AddDate(0, 0, 14), 20),
-			StartLat:   ptrFloat64(34.5), StartLng: ptrFloat64(-118.5),
+			EndedAt:  ended(sf.AddDate(0, 0, 14), 20),
+			StartLat: ptrFloat64(34.5), StartLng: ptrFloat64(-118.5),
 			StartPlace: ptrStr("Near LA SC"),
 			PeakPowerW: ptrFloat64(150000), AvgPowerW: ptrFloat64(110000),
 			DeltaSocPct: ptrFloat64(30), TotalEnergyAddedWh: ptrFloat64(22000),
@@ -90,8 +90,8 @@ func TestQueryChargersAlongRoute_FiltersByCorridor(t *testing.T) {
 		// 1 visit to "Kansas SC" OUT of corridor — must be skipped.
 		{
 			ID: 4, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 21),
-			EndedAt:    ended(sf.AddDate(0, 0, 21), 60),
-			StartLat:   ptrFloat64(40.0), StartLng: ptrFloat64(-100.0),
+			EndedAt:  ended(sf.AddDate(0, 0, 21), 60),
+			StartLat: ptrFloat64(40.0), StartLng: ptrFloat64(-100.0),
 			StartPlace: ptrStr("Kansas SC"),
 			PeakPowerW: ptrFloat64(150000), AvgPowerW: ptrFloat64(120000),
 			DeltaSocPct: ptrFloat64(50), TotalEnergyAddedWh: ptrFloat64(40000),
@@ -248,18 +248,18 @@ func TestQueryUserChargeDwells_AggregatesByPlace(t *testing.T) {
 		// 2 visits to "Home" — 30min and 50min dwell.
 		{
 			ID: 1, VehicleID: 42, StartedAt: sf, EndedAt: ended(sf, 30),
-			StartPlace: ptrStr("Home"),
+			StartPlace:  ptrStr("Home"),
 			DeltaSocPct: ptrFloat64(20), TotalEnergyAddedWh: ptrFloat64(15000),
 		},
 		{
 			ID: 2, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 1), EndedAt: ended(sf.AddDate(0, 0, 1), 50),
-			StartPlace: ptrStr("Home"),
+			StartPlace:  ptrStr("Home"),
 			DeltaSocPct: ptrFloat64(30), TotalEnergyAddedWh: ptrFloat64(22000),
 		},
 		// 1 visit to "Work" — 60min dwell.
 		{
 			ID: 3, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 2), EndedAt: ended(sf.AddDate(0, 0, 2), 60),
-			StartPlace: ptrStr("Work"),
+			StartPlace:  ptrStr("Work"),
 			DeltaSocPct: ptrFloat64(15), TotalEnergyAddedWh: ptrFloat64(11000),
 		},
 	}

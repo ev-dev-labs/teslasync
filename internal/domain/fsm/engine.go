@@ -67,10 +67,10 @@ func (noopTracer) StartSpan(ctx context.Context, _ string, _ map[string]string) 
 
 type noopSpan struct{}
 
-func (noopSpan) End()                                  {}
-func (noopSpan) SetAttribute(_, _ string)              {}
-func (noopSpan) RecordError(_ error)                   {}
-func (noopSpan) SetStatus(_ SpanStatus, _ string)      {}
+func (noopSpan) End()                             {}
+func (noopSpan) SetAttribute(_, _ string)         {}
+func (noopSpan) RecordError(_ error)              {}
+func (noopSpan) SetStatus(_ SpanStatus, _ string) {}
 
 // NewEngine creates an FSM engine for a specific entity type.
 func NewEngine[T any](def *Definition) *Engine[T] {

@@ -60,7 +60,7 @@ func NewSettingsImportHandler(serializer *database.SettingsSerializer, forwardAu
 // `dry_run` defaults to false (apply) when omitted; the SPA always
 // sends it explicitly so the omitted case is purely defensive.
 type settingsImportRequest struct {
-	DryRun bool                      `json:"dry_run"`
+	DryRun bool                     `json:"dry_run"`
 	Bundle *database.SettingsBundle `json:"bundle"`
 }
 

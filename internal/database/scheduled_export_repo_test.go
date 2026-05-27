@@ -101,11 +101,11 @@ func TestValidateScheduledExportDelivery_KindWhitelistAndTargets(t *testing.T) {
 
 func TestValidateScheduledExportCron_AcceptsStandardExpressions(t *testing.T) {
 	for _, expr := range []string{
-		"0 9 * * 0",      // weekly Sunday 09:00
-		"*/15 * * * *",   // every 15 min
-		"0 */6 * * *",    // every 6 hours
-		"@daily",         // descriptor
-		"0 0 1 * *",      // monthly
+		"0 9 * * 0",    // weekly Sunday 09:00
+		"*/15 * * * *", // every 15 min
+		"0 */6 * * *",  // every 6 hours
+		"@daily",       // descriptor
+		"0 0 1 * *",    // monthly
 	} {
 		if _, err := ValidateScheduledExportCron(expr); err != nil {
 			t.Errorf("cron=%q: unexpected error %v", expr, err)
@@ -123,10 +123,10 @@ func TestValidateScheduledExportCron_RejectsBadExpressions(t *testing.T) {
 
 func TestParseRangeWindow_HandlesAllUnits(t *testing.T) {
 	cases := map[string]time.Duration{
-		"":     7 * 24 * time.Hour, // default
-		"7d":   7 * 24 * time.Hour,
-		"24h":  24 * time.Hour,
-		"30m":  30 * time.Minute,
+		"":      7 * 24 * time.Hour, // default
+		"7d":    7 * 24 * time.Hour,
+		"24h":   24 * time.Hour,
+		"30m":   30 * time.Minute,
 		"  1d ": 24 * time.Hour,
 	}
 	for in, want := range cases {

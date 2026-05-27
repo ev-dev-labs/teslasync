@@ -6,9 +6,9 @@ import (
 	"math"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
+	"github.com/jackc/pgx/v5"
 )
 
 // SI canonical schema (migration 000185_drives_si). The drives table is

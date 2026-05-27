@@ -89,8 +89,8 @@ import (
 //   - energy_used_kwh:           display-unit kWh
 //   - avg_efficiency_wh_per_km:  display-unit Wh/km
 //   - total_cost:                best-effort monetary; may mix
-//                                currencies (the system prompt
-//                                discloses this caveat)
+//     currencies (the system prompt
+//     discloses this caveat)
 //   - co2_saved_kg:              display-unit kg
 type PeriodComparePeriod struct {
 	Days                 int     `json:"days"`

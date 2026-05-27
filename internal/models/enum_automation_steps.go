@@ -22,10 +22,10 @@ package models
 type AutomationConditionKind string
 
 const (
-	ConditionSignal           AutomationConditionKind = "condition_signal"
-	ConditionTimeWindow       AutomationConditionKind = "condition_time_window"
-	ConditionGeofence         AutomationConditionKind = "condition_geofence"
-	ConditionOtherAutomation  AutomationConditionKind = "condition_other_automation"
+	ConditionSignal          AutomationConditionKind = "condition_signal"
+	ConditionTimeWindow      AutomationConditionKind = "condition_time_window"
+	ConditionGeofence        AutomationConditionKind = "condition_geofence"
+	ConditionOtherAutomation AutomationConditionKind = "condition_other_automation"
 )
 
 // Valid reports whether k is one of the closed condition_* enum members.

@@ -14,12 +14,12 @@ const signalLogCollection = "signal_log"
 
 // SignalLogEntry represents a single signal value at a point in time.
 type SignalLogEntry struct {
-	VehicleID int64       `bson:"vehicle_id" json:"vehicle_id"`
-	Signal    string      `bson:"signal" json:"signal"`
-	ValueNum  *float64    `bson:"value_num,omitempty" json:"value_num,omitempty"`
-	ValueStr  *string     `bson:"value_str,omitempty" json:"value_str,omitempty"`
-	ValueBool *bool       `bson:"value_bool,omitempty" json:"value_bool,omitempty"`
-	Timestamp time.Time   `bson:"timestamp" json:"timestamp"`
+	VehicleID int64     `bson:"vehicle_id" json:"vehicle_id"`
+	Signal    string    `bson:"signal" json:"signal"`
+	ValueNum  *float64  `bson:"value_num,omitempty" json:"value_num,omitempty"`
+	ValueStr  *string   `bson:"value_str,omitempty" json:"value_str,omitempty"`
+	ValueBool *bool     `bson:"value_bool,omitempty" json:"value_bool,omitempty"`
+	Timestamp time.Time `bson:"timestamp" json:"timestamp"`
 }
 
 // SignalLogRepo stores per-signal telemetry data in MongoDB for full history.

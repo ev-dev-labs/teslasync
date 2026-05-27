@@ -18,6 +18,7 @@
 //
 //   - the two read-only typed tools the LLM is allowed to call in
 //     this surface:
+//
 //   - query_safety_settings — REQUIRED, called FIRST. Reads the
 //     deterministic SettingsRepo via the SafetySettingsSource
 //     port and returns a typed envelope keyed by setting ID
@@ -28,6 +29,7 @@
 //     short_description, docs_anchor} so the narrator has a
 //     schema-plus-state envelope and never needs to invent a
 //     setting that does not exist. NO database write.
+//
 //   - retrieve_docs — OPTIONAL. Reuses the SHARED F7-backed
 //     RAG tool registered by the rag-help slice (0020). The
 //     strategy's system prompt CONSTRAINS the source_types

@@ -111,7 +111,7 @@ func TestMediaWriter_TypeMatrix(t *testing.T) {
 	ts := time.Date(2026, 5, 6, 12, 34, 56, 0, time.UTC)
 
 	cases := []struct {
-		name  string
+		name    string
 		field   string
 		col     string
 		val     any

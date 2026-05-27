@@ -311,4 +311,3 @@ func isAllowedSeverity(s string) bool {
 	}
 	return false
 }
-

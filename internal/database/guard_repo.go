@@ -44,15 +44,15 @@ import (
 // zero — the frontend's `acknowledged: boolean` derives from
 // `acknowledged_at != null`.
 type GuardEvent struct {
-	ID             int64           `json:"id"`
-	VehicleID      int64           `json:"vehicle_id"`
-	TS             time.Time       `json:"ts"`
-	EventType      string          `json:"event_type"`
-	FromState      *string         `json:"from_state"`
-	ToState        *string         `json:"to_state"`
-	Details        map[string]any  `json:"details"`
-	AcknowledgedAt *time.Time      `json:"acknowledged_at"`
-	AcknowledgedBy *string         `json:"acknowledged_by"`
+	ID             int64          `json:"id"`
+	VehicleID      int64          `json:"vehicle_id"`
+	TS             time.Time      `json:"ts"`
+	EventType      string         `json:"event_type"`
+	FromState      *string        `json:"from_state"`
+	ToState        *string        `json:"to_state"`
+	Details        map[string]any `json:"details"`
+	AcknowledgedAt *time.Time     `json:"acknowledged_at"`
+	AcknowledgedBy *string        `json:"acknowledged_by"`
 }
 
 // GuardStatus is the /vehicles/{id}/guard response shape per Decision #1.
@@ -62,11 +62,11 @@ type GuardEvent struct {
 // frontend renders an explicit "no data" state for nil LastStateAt,
 // per the project-wide null-safety rules in `.github/instructions`.
 type GuardStatus struct {
-	VehicleID            int64      `json:"vehicle_id"`
-	SentryModeActive     bool       `json:"sentry_mode_active"`
-	LastState            *string    `json:"last_state"`
-	LastStateAt          *time.Time `json:"last_state_at"`
-	RecentEventCount24h  int        `json:"recent_event_count_24h"`
+	VehicleID           int64      `json:"vehicle_id"`
+	SentryModeActive    bool       `json:"sentry_mode_active"`
+	LastState           *string    `json:"last_state"`
+	LastStateAt         *time.Time `json:"last_state_at"`
+	RecentEventCount24h int        `json:"recent_event_count_24h"`
 }
 
 // guardPool is the minimal pgxpool subset GuardRepo needs. Declared

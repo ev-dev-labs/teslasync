@@ -112,9 +112,9 @@ type fakeStrategy struct {
 	ctx    []provider.Message
 }
 
-func (f fakeStrategy) FeatureID() string                                 { return "test" }
-func (f fakeStrategy) System() string                                    { return f.system }
-func (f fakeStrategy) Tools() []string                                   { return f.tools }
+func (f fakeStrategy) FeatureID() string { return "test" }
+func (f fakeStrategy) System() string    { return f.system }
+func (f fakeStrategy) Tools() []string   { return f.tools }
 func (f fakeStrategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return f.ctx, nil
 }

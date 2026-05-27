@@ -51,13 +51,13 @@ func (f *fakeSettingsRepo) Upsert(_ context.Context, s *models.Settings) error {
 
 // fakeAlertRepo mirrors the SettingsSerializerAlertRepo surface.
 type fakeAlertRepo struct {
-	rules    []*models.AlertRule
-	created  []*models.AlertRule
-	updated  map[int64]*models.AlertRule
-	listErr  error
+	rules     []*models.AlertRule
+	created   []*models.AlertRule
+	updated   map[int64]*models.AlertRule
+	listErr   error
 	createErr error
 	updateErr error
-	nextID   int64
+	nextID    int64
 }
 
 func (f *fakeAlertRepo) GetAll(_ context.Context) ([]*models.AlertRule, error) {
@@ -190,13 +190,13 @@ func (f *fakeQuietHoursRepo) Insert(_ context.Context, userID string, in databas
 	}
 	f.nextID++
 	w := &models.QuietHoursWindow{
-		ID:        f.nextID,
-		UserID:    userID,
-		Enabled:   true,
-		Weekdays:  models.QuietHoursWeekdayAll,
+		ID:               f.nextID,
+		UserID:           userID,
+		Enabled:          true,
+		Weekdays:         models.QuietHoursWeekdayAll,
 		BypassSeverities: []string{"critical"},
-		CreatedAt: time.Now().UTC(),
-		UpdatedAt: time.Now().UTC(),
+		CreatedAt:        time.Now().UTC(),
+		UpdatedAt:        time.Now().UTC(),
 	}
 	if in.Enabled != nil {
 		w.Enabled = *in.Enabled

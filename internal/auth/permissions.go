@@ -4,9 +4,9 @@
 // permission catalog the RBAC matrix admin page renders. Adding a new
 // permission is a two-file change:
 //
-//	1. Append a Permission{ID, Name, Category} to AllPermissions below
-//	2. Reference its constant ID from the handler / service that
-//	   wants to gate on it
+//  1. Append a Permission{ID, Name, Category} to AllPermissions below
+//  2. Reference its constant ID from the handler / service that
+//     wants to gate on it
 //
 // The catalog is deliberately a hand-maintained slice rather than a
 // database table because:

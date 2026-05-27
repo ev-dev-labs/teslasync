@@ -180,17 +180,26 @@ type AISignalExplorerNlFilterHandler struct {
 // nil so the wiring bug surfaces at boot, not at first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             draft_signal_filter AND validate_signal_filter
-//             (registered by tools.RegisterSignalExplorerNlFilterTools
-//             in router.go).
+//
+//	draft_signal_filter AND validate_signal_filter
+//	(registered by tools.RegisterSignalExplorerNlFilterTools
+//	in router.go).
+//
 // strat:      the signal-explorer-nl-filter Strategy (one per
-//             process).
+//
+//	process).
+//
 // source:     the production AISignalCatalogSource (currently
-//             api.AvailableSignals adapter).
+//
+//	api.AvailableSignals adapter).
+//
 // headerName: forward-auth header name; used to extract subject for
-//             audit.
+//
+//	audit.
 func NewAISignalExplorerNlFilterHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

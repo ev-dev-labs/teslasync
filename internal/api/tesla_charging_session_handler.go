@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/rs/zerolog/log"
 )
 
 // TeslaChargingSessionHandler serves Tesla fleet charging sessions (business accounts only).
@@ -166,19 +166,19 @@ type teslaChargingSessionsResponse struct {
 }
 
 type teslaChargingSessionItem struct {
-	SessionID           int64                      `json:"sessionId"`
-	VIN                 string                     `json:"vin"`
-	ChargerID           string                     `json:"chargerId"`
-	SiteLocationName    string                     `json:"siteLocationName"`
-	ChargeStartDateTime string                     `json:"chargeStartDateTime"`
-	ChargeStopDateTime  string                     `json:"chargeStopDateTime"`
-	EnergyAddedKWh      *float64                   `json:"energyAdded_kWh"`
-	PeakPowerKW         *float64                   `json:"peakPower_kW"`
-	MaxChargeRateKW     *float64                   `json:"maxChargeRate_kW"`
-	ChargeDurationS     *int                       `json:"chargeDuration_s"`
-	ChargerType         string                     `json:"chargerType"`
-	Cost                *teslaChargingSessionCost  `json:"cost"`
-	Location            *teslaChargingSessionLoc   `json:"location"`
+	SessionID           int64                     `json:"sessionId"`
+	VIN                 string                    `json:"vin"`
+	ChargerID           string                    `json:"chargerId"`
+	SiteLocationName    string                    `json:"siteLocationName"`
+	ChargeStartDateTime string                    `json:"chargeStartDateTime"`
+	ChargeStopDateTime  string                    `json:"chargeStopDateTime"`
+	EnergyAddedKWh      *float64                  `json:"energyAdded_kWh"`
+	PeakPowerKW         *float64                  `json:"peakPower_kW"`
+	MaxChargeRateKW     *float64                  `json:"maxChargeRate_kW"`
+	ChargeDurationS     *int                      `json:"chargeDuration_s"`
+	ChargerType         string                    `json:"chargerType"`
+	Cost                *teslaChargingSessionCost `json:"cost"`
+	Location            *teslaChargingSessionLoc  `json:"location"`
 }
 
 type teslaChargingSessionCost struct {
@@ -244,7 +244,7 @@ func parseTeslaChargingSessions(items []teslaChargingSessionItem) []*models.Tesl
 			s.Longitude = &item.Location.Longitude
 		}
 
-		results= append(results, s)
+		results = append(results, s)
 	}
 
 	return results

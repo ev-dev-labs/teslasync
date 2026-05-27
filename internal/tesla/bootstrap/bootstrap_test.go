@@ -14,8 +14,8 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/rs/zerolog"
 
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // ---------------------------------------------------------------------------

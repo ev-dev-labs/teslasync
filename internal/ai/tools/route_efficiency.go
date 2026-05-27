@@ -353,18 +353,18 @@ type queryRouteEfficiencyInput struct {
 // the in-memory group-by. Mirrors the SQL handler's CASE/AVG/MIN/MAX
 // expressions but executed in Go on a *models.Drive slice.
 type routeAgg struct {
-	startPlace    string
-	endPlace      string
-	tripCount     int
-	distanceMSum  float64
-	durationSSum  float64
-	avgSpeedMpsN  int
-	avgSpeedSum   float64
-	tempCN        int
-	tempCSum      float64
-	bestKwhPer100 *float64
-	avgKwhSum     float64
-	avgKwhN       int
+	startPlace     string
+	endPlace       string
+	tripCount      int
+	distanceMSum   float64
+	durationSSum   float64
+	avgSpeedMpsN   int
+	avgSpeedSum    float64
+	tempCN         int
+	tempCSum       float64
+	bestKwhPer100  *float64
+	avgKwhSum      float64
+	avgKwhN        int
 	worstKwhPer100 *float64
 }
 

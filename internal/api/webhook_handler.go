@@ -18,7 +18,7 @@ func NewWebhookHandler() *WebhookHandler {
 // InboundWebhook accepts external events and creates alerts or triggers actions.
 func (h *WebhookHandler) InboundWebhook(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
-		Event    string                 `json:"event"`    // "alert", "command", "note"
+		Event    string                 `json:"event"` // "alert", "command", "note"
 		Title    string                 `json:"title"`
 		Message  string                 `json:"message"`
 		Severity string                 `json:"severity"` // info, warning, critical

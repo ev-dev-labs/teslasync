@@ -485,8 +485,8 @@ func TestRegisterPredictiveMaintenanceTools_AddsBothTools(t *testing.T) {
 	})
 	names := r.Names()
 	wantSet := map[string]bool{
-		"query_maintenance_context":    false,
-		"retrieve_maintenance_chunks":  false,
+		"query_maintenance_context":   false,
+		"retrieve_maintenance_chunks": false,
 	}
 	for _, n := range names {
 		if _, ok := wantSet[n]; ok {

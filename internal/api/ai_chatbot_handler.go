@@ -82,13 +82,13 @@ const aiChatbotMaxIterations = 6
 // stateless beyond its constructor inputs and is safe for concurrent
 // use across requests.
 type AIChatbotHandler struct {
-	chat        *database.ChatRepo
-	registry    *provider.Registry
-	tools       *tools.Registry
-	strategy    strategy.Strategy
-	headerName  string
-	maxIters    int
-	historyN    int
+	chat       *database.ChatRepo
+	registry   *provider.Registry
+	tools      *tools.Registry
+	strategy   strategy.Strategy
+	headerName string
+	maxIters   int
+	historyN   int
 }
 
 // NewAIChatbotHandler constructs the handler. All non-pointer

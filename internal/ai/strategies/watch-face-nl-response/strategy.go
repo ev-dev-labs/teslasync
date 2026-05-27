@@ -19,6 +19,7 @@
 //     command path.
 //
 //   - the one read-only typed tool the LLM is allowed to call:
+//
 //   - query_watch_context — REQUIRED, called FIRST. Reads
 //     the canonical VehicleRepo (primary vehicle), the
 //     signal.LiveStateReader (battery, range, charging,

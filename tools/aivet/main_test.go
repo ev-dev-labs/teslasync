@@ -107,11 +107,11 @@ func TestImportsUseAiStream(t *testing.T) {
 // TestJSIdentifierOf documents the kebab→camelCase fallback.
 func TestJSIdentifierOf(t *testing.T) {
 	cases := map[string]string{
-		"chatbot-llm":                "chatbotLlm",
-		"nl-alert-builder":           "nlAlertBuilder",
-		"trip-planner-llm-agent":     "tripPlannerLlmAgent",
-		"foo":                        "foo",
-		"x":                          "x",
+		"chatbot-llm":            "chatbotLlm",
+		"nl-alert-builder":       "nlAlertBuilder",
+		"trip-planner-llm-agent": "tripPlannerLlmAgent",
+		"foo":                    "foo",
+		"x":                      "x",
 	}
 	for in, want := range cases {
 		if got := jsIdentifierOf(in); got != want {

@@ -34,17 +34,18 @@
 //
 // ADR-015 invariants this package enforces
 // ----------------------------------------
-//   §I1  Default-off          — [New] returns NoopRetriever for off.
-//   §I4  Zero outbound egress — Noop never calls Embed; pgvector
-//                               wraps ctx with WithSubject + WithFeatureID
-//                               so every Embed lands in ai_call_log.
-//   §I7  Per-feature opt-in   — [PgvectorRetriever] resolves its
-//                               [provider.Provider] via the registry
-//                               on every call, so a per-feature
-//                               toggle flip takes effect without a
-//                               restart.
-//   §I8  Survives downgrade   — rows are persisted, never auto-purged
-//                               on a mode flip; the TTL cron is the
-//                               only deletion path (apart from
-//                               explicit Forget).
+//
+//	§I1  Default-off          — [New] returns NoopRetriever for off.
+//	§I4  Zero outbound egress — Noop never calls Embed; pgvector
+//	                            wraps ctx with WithSubject + WithFeatureID
+//	                            so every Embed lands in ai_call_log.
+//	§I7  Per-feature opt-in   — [PgvectorRetriever] resolves its
+//	                            [provider.Provider] via the registry
+//	                            on every call, so a per-feature
+//	                            toggle flip takes effect without a
+//	                            restart.
+//	§I8  Survives downgrade   — rows are persisted, never auto-purged
+//	                            on a mode flip; the TTL cron is the
+//	                            only deletion path (apart from
+//	                            explicit Forget).
 package rag

@@ -20,7 +20,7 @@ func (f *fakeTool) InputSchema() json.RawMessage { return json.RawMessage(`{"typ
 func (f *fakeTool) OutputSchema() json.RawMessage {
 	return nil
 }
-func (f *fakeTool) Mutates() bool       { return f.mutates }
+func (f *fakeTool) Mutates() bool         { return f.mutates }
 func (f *fakeTool) RequiredScope() string { return f.scope }
 func (f *fakeTool) Validate(raw json.RawMessage) (any, error) {
 	return struct{}{}, nil

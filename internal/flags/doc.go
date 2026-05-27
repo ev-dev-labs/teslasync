@@ -27,7 +27,7 @@
 //
 // Concurrency:
 //
-//   The package is safe for concurrent use. All mutation goes through
-//   atomic Redis HSET / HDEL; the Pub/Sub broadcast is best-effort
-//   and never blocks the write path.
+//	The package is safe for concurrent use. All mutation goes through
+//	atomic Redis HSET / HDEL; the Pub/Sub broadcast is best-effort
+//	and never blocks the write path.
 package flags

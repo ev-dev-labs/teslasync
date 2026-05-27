@@ -34,12 +34,12 @@ import (
 // fakeSessionStore is an in-memory SessionStore for tests. The HMAC
 // secret is fixed so we can recompute hashes from the test body.
 type fakeSessionStore struct {
-	rowsByHash map[string]*database.AuthSessionRow
-	mintToken  string
-	mintErr    error
-	createErr  error
-	bumpedID   uuid.UUID
-	bumpCalls  int32
+	rowsByHash  map[string]*database.AuthSessionRow
+	mintToken   string
+	mintErr     error
+	createErr   error
+	bumpedID    uuid.UUID
+	bumpCalls   int32
 	createCalls int32
 }
 

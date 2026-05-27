@@ -47,19 +47,19 @@ const (
 // Anything outside this set is bucketed as "Other" so a malicious or
 // buggy client cannot spawn unbounded label sets.
 var allowedWebErrorNames = map[string]struct{}{
-	"Error":                  {},
-	"TypeError":              {},
-	"ReferenceError":         {},
-	"SyntaxError":            {},
-	"RangeError":             {},
-	"URIError":               {},
-	"EvalError":              {},
-	"AbortError":             {},
-	"ChunkLoadError":         {},
-	"ApiError":               {},
-	"RateLimitError":         {},
+	"Error":                    {},
+	"TypeError":                {},
+	"ReferenceError":           {},
+	"SyntaxError":              {},
+	"RangeError":               {},
+	"URIError":                 {},
+	"EvalError":                {},
+	"AbortError":               {},
+	"ChunkLoadError":           {},
+	"ApiError":                 {},
+	"RateLimitError":           {},
 	"UpstreamUnavailableError": {},
-	"NotFoundError":          {},
+	"NotFoundError":            {},
 }
 
 type webErrorReport struct {

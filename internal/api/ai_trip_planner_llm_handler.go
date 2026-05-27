@@ -74,13 +74,13 @@ const aiTripPlannerLLMAgentMaxIterations = 8
 // of POST /api/v1/trip-planner/plan so a SPA call site can construct
 // the AI draft request from the same form state.
 type aiTripPlannerLLMDraftRequest struct {
-	VehicleID      int64                          `json:"vehicle_id"`
-	Origin         aiTripPlannerLLMDraftLocation  `json:"origin"`
-	Destination    aiTripPlannerLLMDraftLocation  `json:"destination"`
-	CurrentSOC     float64                        `json:"current_soc"`
-	ChargeLimitSOC float64                        `json:"charge_limit_soc,omitempty"`
-	MinArrivalSOC  float64                        `json:"min_arrival_soc,omitempty"`
-	SpeedFactor    float64                        `json:"speed_factor,omitempty"`
+	VehicleID      int64                         `json:"vehicle_id"`
+	Origin         aiTripPlannerLLMDraftLocation `json:"origin"`
+	Destination    aiTripPlannerLLMDraftLocation `json:"destination"`
+	CurrentSOC     float64                       `json:"current_soc"`
+	ChargeLimitSOC float64                       `json:"charge_limit_soc,omitempty"`
+	MinArrivalSOC  float64                       `json:"min_arrival_soc,omitempty"`
+	SpeedFactor    float64                       `json:"speed_factor,omitempty"`
 }
 
 // aiTripPlannerLLMDraftLocation mirrors tripPlanLocation (the

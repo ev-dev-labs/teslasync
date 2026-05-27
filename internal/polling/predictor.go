@@ -14,9 +14,9 @@ import (
 // and predicts upcoming state changes. It queries the existing drives and
 // charging_sessions tables — no schema changes required.
 type Predictor struct {
-	mu          sync.RWMutex
-	patterns    map[string]*VehiclePattern // keyed by VIN
-	pool        *pgxpool.Pool
+	mu           sync.RWMutex
+	patterns     map[string]*VehiclePattern // keyed by VIN
+	pool         *pgxpool.Pool
 	refreshEvery time.Duration
 	lastRefresh  time.Time
 	lookbackDays int
@@ -30,10 +30,10 @@ type VehiclePattern struct {
 
 // TimeSlot represents a recurring time window with a confidence score.
 type TimeSlot struct {
-	Hour       int     `json:"hour"`       // 0–23
+	Hour       int     `json:"hour"`        // 0–23
 	DayOfWeek  int     `json:"day_of_week"` // 0=Sun … 6=Sat
-	Frequency  int     `json:"frequency"`  // occurrences in the lookback window
-	Confidence float64 `json:"confidence"` // 0.0–1.0
+	Frequency  int     `json:"frequency"`   // occurrences in the lookback window
+	Confidence float64 `json:"confidence"`  // 0.0–1.0
 }
 
 // NewPredictor creates a predictor that refreshes patterns periodically.

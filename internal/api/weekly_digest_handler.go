@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // WeeklyDigestHandler returns aggregated stats comparing current vs previous week.
@@ -73,15 +73,15 @@ func (h *WeeklyDigestHandler) Get(w http.ResponseWriter, r *http.Request) {
 	prev := query(prevWeekStart, weekStart)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"drives":          curr.Drives,
-		"distance_km":     curr.DistanceKm,
-		"energy_kwh":      curr.EnergyKwh,
-		"cost":            curr.Cost,
-		"efficiency":      curr.Efficiency,
-		"prev_drives":     prev.Drives,
+		"drives":           curr.Drives,
+		"distance_km":      curr.DistanceKm,
+		"energy_kwh":       curr.EnergyKwh,
+		"cost":             curr.Cost,
+		"efficiency":       curr.Efficiency,
+		"prev_drives":      prev.Drives,
 		"prev_distance_km": prev.DistanceKm,
-		"prev_energy_kwh": prev.EnergyKwh,
-		"prev_cost":       prev.Cost,
-		"prev_efficiency": prev.Efficiency,
+		"prev_energy_kwh":  prev.EnergyKwh,
+		"prev_cost":        prev.Cost,
+		"prev_efficiency":  prev.Efficiency,
 	})
 }

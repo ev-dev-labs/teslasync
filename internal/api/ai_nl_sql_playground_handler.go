@@ -195,16 +195,23 @@ type AINLSQLPlaygroundHandler struct {
 // nil so the wiring bug surfaces at boot, not at first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             draft_readonly_sql AND validate_readonly_sql
-//             (registered by tools.RegisterNLSqlPlaygroundTools
-//             in router.go).
+//
+//	draft_readonly_sql AND validate_readonly_sql
+//	(registered by tools.RegisterNLSqlPlaygroundTools
+//	in router.go).
+//
 // strat:      the nl-sql-playground Strategy (one per process).
 // source:     the production AINLSQLSchemaCatalogSource
-//             (AINLSQLSchemaCatalogSourceImpl in router.go).
+//
+//	(AINLSQLSchemaCatalogSourceImpl in router.go).
+//
 // headerName: forward-auth header name; used to extract subject
-//             for audit.
+//
+//	for audit.
 func NewAINLSQLPlaygroundHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -441,17 +448,17 @@ var _ http.Handler = (*AINLSQLPlaygroundHandler)(nil)
 // Tables present:
 //
 //   - drives:             Per-trip aggregates (start/end times,
-//                         distance, energy used, average power).
+//     distance, energy used, average power).
 //   - charging_sessions:  Per-charge aggregates (start/end times,
-//                         energy added, cost, charger info).
+//     energy added, cost, charger info).
 //   - vehicles:           Vehicle metadata (id, vin, display_name,
-//                         model, color).
+//     model, color).
 //   - alerts:             User-defined alerts that fired
-//                         (vehicle_id, alert_id, fired_at, level).
+//     (vehicle_id, alert_id, fired_at, level).
 //   - signal_log_view:    Telemetry signal history (vehicle_id,
-//                         signal_name, ts, num_value, str_value)
-//                         exposed via a view that hides the raw
-//                         hypertable details.
+//     signal_name, ts, num_value, str_value)
+//     exposed via a view that hides the raw
+//     hypertable details.
 //
 // Each entry carries a small column list — enough for the LLM to
 // pick correct WHERE filters and aggregation columns without

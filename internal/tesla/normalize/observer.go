@@ -15,7 +15,7 @@ import (
 //   - L1 live-state updates  (signal.LiveSignalStore.UpdateAll)
 //   - FSM dispatch           (FSMHandler.ProcessSignals)
 //   - sessions + alerts      (TelemetrySessionTracker.ProcessSignals
-//                             + TelemetryAlertEvaluator.Evaluate)
+//   - TelemetryAlertEvaluator.Evaluate)
 //   - SSE fanout             (TelemetryHandler.broadcastSSE)
 //
 // (Durable signal_log writes are owned by the router signal_log

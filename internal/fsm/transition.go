@@ -89,7 +89,7 @@ func LookupTransition(current State, trigger Trigger, ctx *SignalContext) (Trans
 
 // private registry for guard name lookup (not needed externally)
 var guardRegistry = map[string]Guard{
-	"GuardNoCharge":      GuardNoCharge,
-	"GuardNoGear":        GuardNoGear,
+	"GuardNoCharge":       GuardNoCharge,
+	"GuardNoGear":         GuardNoGear,
 	"GuardUnexpectedLoss": GuardUnexpectedLoss,
 }

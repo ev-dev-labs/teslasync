@@ -177,8 +177,8 @@ func (h *GuardHandler) Status(w http.ResponseWriter, r *http.Request) {
 // /vampire-drain envelope shape so the frontend can use the same
 // `select: (data) => safeArray(data?.events)` extraction pattern.
 type GuardEventsResponse struct {
-	VehicleID int64                  `json:"vehicle_id"`
-	Events    []database.GuardEvent  `json:"events"`
+	VehicleID int64                 `json:"vehicle_id"`
+	Events    []database.GuardEvent `json:"events"`
 }
 
 // Events serves GET /vehicles/{vehicleID}/guard/events?limit=N.
@@ -328,9 +328,9 @@ var guardPanicCommands = []string{
 // overall HTTP status is 502 so the SPA can render a degraded-success
 // banner.
 type GuardPanicResponse struct {
-	VehicleID int64               `json:"vehicle_id"`
-	VIN       string              `json:"vin"`
-	Results   []GuardPanicResult  `json:"results"`
+	VehicleID int64              `json:"vehicle_id"`
+	VIN       string             `json:"vin"`
+	Results   []GuardPanicResult `json:"results"`
 }
 
 // GuardPanicResult is one entry in GuardPanicResponse.results.

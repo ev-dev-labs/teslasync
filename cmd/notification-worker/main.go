@@ -388,81 +388,81 @@ func setupLogger(level string) {
 // signal-rule behavior in TelemetryAlertEvaluator: VehicleID == nil means
 // "fan out across all vehicles in the fleet".
 func runComputedMetricTick(
-ctx context.Context,
-alertRuleRepo *database.AlertRuleRepo,
-vehicleRepo *database.VehicleRepo,
-notifRepo *database.NotificationRepo,
-evaluator *computed.Evaluator,
-mqttClient pahomqtt.Client,
-span oteltrace.Span,
+	ctx context.Context,
+	alertRuleRepo *database.AlertRuleRepo,
+	vehicleRepo *database.VehicleRepo,
+	notifRepo *database.NotificationRepo,
+	evaluator *computed.Evaluator,
+	mqttClient pahomqtt.Client,
+	span oteltrace.Span,
 ) {
-rules, err := alertRuleRepo.GetEnabledByKind(ctx, "computed_metric")
-if err != nil {
-span.RecordError(err)
-span.SetStatus(codes.Error, "load rules failed")
-log.Error().Err(err).Msg("computed-metric: failed to load rules")
-return
-}
-span.SetAttributes(attribute.Int("notification.computed_metric.rule_count", len(rules)))
-if len(rules) == 0 {
-return
-}
+	rules, err := alertRuleRepo.GetEnabledByKind(ctx, "computed_metric")
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "load rules failed")
+		log.Error().Err(err).Msg("computed-metric: failed to load rules")
+		return
+	}
+	span.SetAttributes(attribute.Int("notification.computed_metric.rule_count", len(rules)))
+	if len(rules) == 0 {
+		return
+	}
 
-// Resolve the target vehicle list once per tick — almost every fleet
-// reuses it across rules, so a single batched query is cheaper than one
-// per rule.
-allVehicles, err := vehicleRepo.GetAll(ctx)
-if err != nil {
-span.RecordError(err)
-span.SetStatus(codes.Error, "load vehicles failed")
-log.Error().Err(err).Msg("computed-metric: failed to load vehicles")
-return
-}
+	// Resolve the target vehicle list once per tick — almost every fleet
+	// reuses it across rules, so a single batched query is cheaper than one
+	// per rule.
+	allVehicles, err := vehicleRepo.GetAll(ctx)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "load vehicles failed")
+		log.Error().Err(err).Msg("computed-metric: failed to load vehicles")
+		return
+	}
 
-channels, err := notifRepo.GetAllChannels(ctx)
-if err != nil {
-span.RecordError(err)
-span.SetStatus(codes.Error, "load channels failed")
-log.Error().Err(err).Msg("computed-metric: failed to load channels")
-return
-}
+	channels, err := notifRepo.GetAllChannels(ctx)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "load channels failed")
+		log.Error().Err(err).Msg("computed-metric: failed to load channels")
+		return
+	}
 
-triggered := 0
-for _, rule := range rules {
-targets := vehiclesForRule(rule, allVehicles)
-for _, vid := range targets {
-result, evalErr := evaluator.Evaluate(ctx, rule, vid)
-if evalErr != nil {
-span.RecordError(evalErr)
-log.Warn().
-Err(evalErr).
-Int64("rule_id", rule.ID).
-Int64("vehicle_id", vid).
-Msg("computed-metric: evaluator failed")
-continue
-}
-if !result.Triggered {
-continue
-}
-triggered++
-// Resolve a friendly vehicle name for the message template,
-// falling back silently when the vehicle is missing — the
-// renderer is tolerant of an empty VehicleName.
-vehicleName := ""
-for _, v := range allVehicles {
-if v != nil && v.ID == vid {
-if v.DisplayName != "" {
-vehicleName = v.DisplayName
-} else {
-vehicleName = v.VIN
-}
-break
-}
-}
-dispatchComputedMetricNotification(ctx, rule, vid, vehicleName, result, channels, mqttClient)
-}
-}
-span.SetAttributes(attribute.Int("notification.computed_metric.triggered", triggered))
+	triggered := 0
+	for _, rule := range rules {
+		targets := vehiclesForRule(rule, allVehicles)
+		for _, vid := range targets {
+			result, evalErr := evaluator.Evaluate(ctx, rule, vid)
+			if evalErr != nil {
+				span.RecordError(evalErr)
+				log.Warn().
+					Err(evalErr).
+					Int64("rule_id", rule.ID).
+					Int64("vehicle_id", vid).
+					Msg("computed-metric: evaluator failed")
+				continue
+			}
+			if !result.Triggered {
+				continue
+			}
+			triggered++
+			// Resolve a friendly vehicle name for the message template,
+			// falling back silently when the vehicle is missing — the
+			// renderer is tolerant of an empty VehicleName.
+			vehicleName := ""
+			for _, v := range allVehicles {
+				if v != nil && v.ID == vid {
+					if v.DisplayName != "" {
+						vehicleName = v.DisplayName
+					} else {
+						vehicleName = v.VIN
+					}
+					break
+				}
+			}
+			dispatchComputedMetricNotification(ctx, rule, vid, vehicleName, result, channels, mqttClient)
+		}
+	}
+	span.SetAttributes(attribute.Int("notification.computed_metric.triggered", triggered))
 }
 
 func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
@@ -489,62 +489,62 @@ func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
 }
 
 func dispatchComputedMetricNotification(
-ctx context.Context,
-rule *models.AlertRule,
-vehicleID int64,
-vehicleName string,
-result computed.Result,
-channels []*models.NotificationChannel,
-mqttClient pahomqtt.Client,
+	ctx context.Context,
+	rule *models.AlertRule,
+	vehicleID int64,
+	vehicleName string,
+	result computed.Result,
+	channels []*models.NotificationChannel,
+	mqttClient pahomqtt.Client,
 ) {
-// Phase-50 / ADR-005: route computed-metric dispatch through the
-// shared alertmsg package so the message is rendered identically to
-// the telemetry path. Without this, a custom msg_template on a
-// computed-metric rule would be ignored and the IncludeTitle toggle
-// would never reach the transports.
-msgCtx := alertmsg.BuildContext(rule, vehicleName, nil, map[string]any{
-"Severity":        rule.Severity,
-"MetricValue":     result.Value,
-"MetricPrevValue": result.PreviousValue,
-"MetricChangePct": result.PercentChange,
-})
-title := alertmsg.RenderTitle(rule, msgCtx)
-body := alertmsg.RenderBody(rule, msgCtx)
-if !rule.IncludeTitle && body == "" {
-body = rule.Name
-}
-suppressTransportTitle := !rule.IncludeTitle
+	// Phase-50 / ADR-005: route computed-metric dispatch through the
+	// shared alertmsg package so the message is rendered identically to
+	// the telemetry path. Without this, a custom msg_template on a
+	// computed-metric rule would be ignored and the IncludeTitle toggle
+	// would never reach the transports.
+	msgCtx := alertmsg.BuildContext(rule, vehicleName, nil, map[string]any{
+		"Severity":        rule.Severity,
+		"MetricValue":     result.Value,
+		"MetricPrevValue": result.PreviousValue,
+		"MetricChangePct": result.PercentChange,
+	})
+	title := alertmsg.RenderTitle(rule, msgCtx)
+	body := alertmsg.RenderBody(rule, msgCtx)
+	if !rule.IncludeTitle && body == "" {
+		body = rule.Name
+	}
+	suppressTransportTitle := !rule.IncludeTitle
 
-dispatched := 0
-for _, ch := range channels {
-if ch == nil || !ch.Enabled {
-continue
-}
-req := &notification.Request{
-ChannelType:            ch.Type,
-Config:                 ch.Config,
-Title:                  title,
-Message:                body,
-ChannelID:              ch.ID,
-AlertID:                rule.ID,
-Severity:               rule.Severity,
-SuppressTransportTitle: suppressTransportTitle,
-}
-if pubErr := notification.PublishCtx(ctx, mqttClient, req); pubErr != nil {
-log.Error().
-Err(pubErr).
-Int64("rule_id", rule.ID).
-Int64("vehicle_id", vehicleID).
-Int64("channel_id", ch.ID).
-Msg("computed-metric: publish failed")
-continue
-}
-dispatched++
-}
-log.Info().
-Int64("rule_id", rule.ID).
-Int64("vehicle_id", vehicleID).
-Float64("value", result.Value).
-Int("dispatched", dispatched).
-Msg("computed-metric: alert fired")
+	dispatched := 0
+	for _, ch := range channels {
+		if ch == nil || !ch.Enabled {
+			continue
+		}
+		req := &notification.Request{
+			ChannelType:            ch.Type,
+			Config:                 ch.Config,
+			Title:                  title,
+			Message:                body,
+			ChannelID:              ch.ID,
+			AlertID:                rule.ID,
+			Severity:               rule.Severity,
+			SuppressTransportTitle: suppressTransportTitle,
+		}
+		if pubErr := notification.PublishCtx(ctx, mqttClient, req); pubErr != nil {
+			log.Error().
+				Err(pubErr).
+				Int64("rule_id", rule.ID).
+				Int64("vehicle_id", vehicleID).
+				Int64("channel_id", ch.ID).
+				Msg("computed-metric: publish failed")
+			continue
+		}
+		dispatched++
+	}
+	log.Info().
+		Int64("rule_id", rule.ID).
+		Int64("vehicle_id", vehicleID).
+		Float64("value", result.Value).
+		Int("dispatched", dispatched).
+		Msg("computed-metric: alert fired")
 }

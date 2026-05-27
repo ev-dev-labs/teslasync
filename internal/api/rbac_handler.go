@@ -100,14 +100,14 @@ type rbacRoleInfo struct {
 // stable across calls so the SPA renders identical column / row
 // sequences on every refresh.
 type rbacMatrixResponse struct {
-	Mode             string                     `json:"mode"`
-	Roles            []rbacRoleInfo             `json:"roles"`
-	Permissions      []tsauth.Permission        `json:"permissions"`
+	Mode             string                      `json:"mode"`
+	Roles            []rbacRoleInfo              `json:"roles"`
+	Permissions      []tsauth.Permission         `json:"permissions"`
 	Categories       []tsauth.PermissionCategory `json:"categories"`
-	Matrix           map[string]map[string]bool `json:"matrix"`
-	EffectiveForMe   map[string]bool            `json:"effective_for_me"`
-	MyRoles          []string                   `json:"my_roles"`
-	GroupsHeaderName string                     `json:"groups_header_name,omitempty"`
+	Matrix           map[string]map[string]bool  `json:"matrix"`
+	EffectiveForMe   map[string]bool             `json:"effective_for_me"`
+	MyRoles          []string                    `json:"my_roles"`
+	GroupsHeaderName string                      `json:"groups_header_name,omitempty"`
 }
 
 // rbacUpsertRequest is the body shape accepted by PUT

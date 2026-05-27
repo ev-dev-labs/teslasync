@@ -26,12 +26,12 @@
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the detector
-//                         or the static safeRanges-based messages
-//                         emitted by anomaly_handler.go.
+//     or the static safeRanges-based messages
+//     emitted by anomaly_handler.go.
 //   - I7 per-feature:     the AI route is gated by guard.Wrap("anomaly-explanations").
 //   - I9 redaction:       PolicyDigest restricts cleartext to vehicle
-//                         name only; numeric anomaly facts are bounded
-//                         and contain no free-form PII.
+//     name only; numeric anomaly facts are bounded
+//     and contain no free-form PII.
 package anomalyexplanations
 
 import (

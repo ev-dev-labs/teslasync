@@ -58,11 +58,11 @@ type SystemStateStore interface {
 // so an operator can see "what's in the table" even while an env
 // override is shadowing it on /system/health.
 type AdminMaintenanceHandler struct {
-	store    SystemStateStore
-	cfg      *config.Config
-	db       *database.DB
-	authHdr  string
-	envMode  string // captured at construction so the resolver and admin agree on env winner
+	store   SystemStateStore
+	cfg     *config.Config
+	db      *database.DB
+	authHdr string
+	envMode string // captured at construction so the resolver and admin agree on env winner
 }
 
 // NewAdminMaintenanceHandler wires the handler against the shared repo.
@@ -89,13 +89,13 @@ type adminMaintenanceRequest struct {
 // adminMaintenanceResponse is the JSON shape of both GET and POST
 // responses. snake_case keys match the rest of the API surface.
 type adminMaintenanceResponse struct {
-	Mode             string  `json:"mode"`
-	Message          string  `json:"maintenance_message,omitempty"`
-	Until            *string `json:"maintenance_until,omitempty"`
-	UpdatedAt        string  `json:"updated_at"`
-	UpdatedBy        string  `json:"updated_by,omitempty"`
-	Source           string  `json:"source"`
-	EnvOverrideMode  string  `json:"env_override_mode,omitempty"`
+	Mode            string  `json:"mode"`
+	Message         string  `json:"maintenance_message,omitempty"`
+	Until           *string `json:"maintenance_until,omitempty"`
+	UpdatedAt       string  `json:"updated_at"`
+	UpdatedBy       string  `json:"updated_by,omitempty"`
+	Source          string  `json:"source"`
+	EnvOverrideMode string  `json:"env_override_mode,omitempty"`
 }
 
 // Get handles GET /admin/maintenance. Returns the current persisted

@@ -19,6 +19,7 @@
 //
 //   - the two read-only typed tools the LLM is allowed to call in
 //     this surface:
+//
 //   - draft_export_redaction_plan — REQUIRED, called FIRST.
 //     Reads a STATIC Go catalog keyed by export_type and returns
 //     a typed envelope listing the PII classes typically present
@@ -26,6 +27,7 @@
 //     ({redact, hash, drop, keep_if_consent}), and limiting-
 //     assumption disclosures (catalog-based, NOT a per-row PII
 //     scan). NO database IO.
+//
 //   - validate_export_redaction_plan — REQUIRED, called SECOND.
 //     Accepts a candidate plan and asserts every cited class is
 //     recognized for the export_type, every "highly recommended"

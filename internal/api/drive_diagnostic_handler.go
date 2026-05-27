@@ -87,14 +87,14 @@ func newDriveDiagnosticHandlerForTest(driveRepo driveLookup, diagRepo driveDiagn
 
 // DriveDiagnosticResponse is the JSON shape returned by Get.
 type DriveDiagnosticResponse struct {
-	DriveID        int64                                  `json:"drive_id"`
-	VehicleID      int64                                  `json:"vehicle_id"`
-	StartTs        string                                 `json:"start_ts"`
-	EndTs          *string                                `json:"end_ts,omitempty"`
-	EndedStatus    *string                                `json:"ended_status,omitempty"`
-	Window         string                                 `json:"window"`
-	FSMTransitions []database.DriveDiagnosticTransition   `json:"fsm_transitions"`
-	SignalWindow   []database.DriveDiagnosticSignal       `json:"signal_window"`
+	DriveID        int64                                `json:"drive_id"`
+	VehicleID      int64                                `json:"vehicle_id"`
+	StartTs        string                               `json:"start_ts"`
+	EndTs          *string                              `json:"end_ts,omitempty"`
+	EndedStatus    *string                              `json:"ended_status,omitempty"`
+	Window         string                               `json:"window"`
+	FSMTransitions []database.DriveDiagnosticTransition `json:"fsm_transitions"`
+	SignalWindow   []database.DriveDiagnosticSignal     `json:"signal_window"`
 }
 
 var driveDiagnosticAllowedWindows = map[string]time.Duration{

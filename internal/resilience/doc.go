@@ -8,5 +8,4 @@
 // goroutines with panic recovery and optional automatic restart, ensuring
 // background tasks do not crash the process.
 // Layer: platform
-//
 package resilience

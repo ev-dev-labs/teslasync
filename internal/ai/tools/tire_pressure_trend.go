@@ -90,10 +90,10 @@ import (
 // to the user's display unit (bar/psi/kPa) at the render
 // boundary.
 type TirePressureThresholds struct {
-	SoftLowPa    float64 `json:"soft_low_pa"`
-	NormalMinPa  float64 `json:"normal_min_pa"`
-	NormalMaxPa  float64 `json:"normal_max_pa"`
-	SoftHighPa   float64 `json:"soft_high_pa"`
+	SoftLowPa   float64 `json:"soft_low_pa"`
+	NormalMinPa float64 `json:"normal_min_pa"`
+	NormalMaxPa float64 `json:"normal_max_pa"`
+	SoftHighPa  float64 `json:"soft_high_pa"`
 }
 
 // TirePressureCorner mirrors the per-tire trend summary for one
@@ -102,16 +102,16 @@ type TirePressureThresholds struct {
 // LatestPa + RatePaPerDay — when RatePaPerDay >= 0 (no leak) it
 // is nil and the narrator must NOT invent a deflation timeline.
 type TirePressureCorner struct {
-	Position                  string   `json:"position"`
-	Label                     string   `json:"label"`
-	Status                    string   `json:"status"`
-	ReadingCount              int      `json:"reading_count"`
-	LatestPa                  float64  `json:"latest_pa"`
-	AveragePa                 float64  `json:"average_pa"`
-	MinPa                     float64  `json:"min_pa"`
-	MaxPa                     float64  `json:"max_pa"`
-	RatePaPerDay              float64  `json:"rate_pa_per_day"`
-	DaysUntilSoftLowEstimate  *int     `json:"days_until_soft_low_estimate"`
+	Position                 string  `json:"position"`
+	Label                    string  `json:"label"`
+	Status                   string  `json:"status"`
+	ReadingCount             int     `json:"reading_count"`
+	LatestPa                 float64 `json:"latest_pa"`
+	AveragePa                float64 `json:"average_pa"`
+	MinPa                    float64 `json:"min_pa"`
+	MaxPa                    float64 `json:"max_pa"`
+	RatePaPerDay             float64 `json:"rate_pa_per_day"`
+	DaysUntilSoftLowEstimate *int    `json:"days_until_soft_low_estimate"`
 }
 
 // TireOutsideTempSummary mirrors the rolling outside ambient
@@ -141,18 +141,18 @@ type TireOutsideTempSummary struct {
 // production adapter clears the per-tire status / rate / insights
 // so the narrator must say so plainly.
 type TirePressureTrend struct {
-	VehicleID            int64                   `json:"vehicle_id"`
-	WindowDays           int                     `json:"window_days"`
-	MinRequiredReadings  int                     `json:"min_required_readings"`
-	SampleSize           int                     `json:"sample_size"`
-	HasEnoughData        bool                    `json:"has_enough_data"`
-	Method               string                  `json:"method"`
-	Assumptions          []string                `json:"assumptions"`
-	Thresholds           TirePressureThresholds  `json:"thresholds"`
-	Tires                []TirePressureCorner    `json:"tires"`
-	OutsideTempSummary   *TireOutsideTempSummary `json:"outside_temp_summary,omitempty"`
-	LikelyCauses         []string                `json:"likely_causes"`
-	Insights             []string                `json:"insights"`
+	VehicleID           int64                   `json:"vehicle_id"`
+	WindowDays          int                     `json:"window_days"`
+	MinRequiredReadings int                     `json:"min_required_readings"`
+	SampleSize          int                     `json:"sample_size"`
+	HasEnoughData       bool                    `json:"has_enough_data"`
+	Method              string                  `json:"method"`
+	Assumptions         []string                `json:"assumptions"`
+	Thresholds          TirePressureThresholds  `json:"thresholds"`
+	Tires               []TirePressureCorner    `json:"tires"`
+	OutsideTempSummary  *TireOutsideTempSummary `json:"outside_temp_summary,omitempty"`
+	LikelyCauses        []string                `json:"likely_causes"`
+	Insights            []string                `json:"insights"`
 }
 
 // ---------------------------------------------------------------------------

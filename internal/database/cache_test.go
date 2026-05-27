@@ -100,9 +100,9 @@ func TestCache_NilSafe(t *testing.T) {
 	var c *Cache
 	ctx := context.Background()
 
-	c.Set(ctx, "k", "v", time.Minute)   // should not panic
-	c.Delete(ctx, "k")                   // should not panic
-	c.Close()                            // should not panic
+	c.Set(ctx, "k", "v", time.Minute) // should not panic
+	c.Delete(ctx, "k")                // should not panic
+	c.Close()                         // should not panic
 
 	var v string
 	if c.Get(ctx, "k", &v) {

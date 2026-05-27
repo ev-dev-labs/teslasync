@@ -9,5 +9,4 @@
 // cleanup, and periodic PostgreSQL VACUUM to reclaim storage. Both
 // workers shut down gracefully on context cancellation.
 // Layer: platform
-//
 package worker

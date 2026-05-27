@@ -262,24 +262,24 @@ func New(cfg Config) *SideEffectsObserver {
 //
 //  1. live.UpdateAll(...)               — L1 in-process state
 //  2. fsm.ProcessSignals(...)           — drive/charge/sleep FSM
-//                                          (may read live state from
-//                                          step 1)
+//     (may read live state from
+//     step 1)
 //  3. live.GetAll(...)                  — cross-batch accumulated
-//                                          snapshot for sessions +
-//                                          alerts (per-field MQTT
-//                                          delivers one atomic per
-//                                          payload, so the per-batch
-//                                          signals map alone is
-//                                          insufficient)
+//     snapshot for sessions +
+//     alerts (per-field MQTT
+//     delivers one atomic per
+//     payload, so the per-batch
+//     signals map alone is
+//     insufficient)
 //  4. sessions.ProcessSignals(...)      — drive/charge sessions
 //     alerts.Evaluate(...)              — alert rule fanout
-//                                          (current=signals from
-//                                          this payload;
-//                                          accumulated=snapshot
-//                                          from step 3)
+//     (current=signals from
+//     this payload;
+//     accumulated=snapshot
+//     from step 3)
 //  5. broadcastSSE(...)                 — SSE fanout LAST so the
-//                                          wire view reflects all
-//                                          upstream side-effects
+//     wire view reflects all
+//     upstream side-effects
 //
 // VIN resolution is performed once via vinResolver.VINByID. If the
 // lookup fails (vehicle not registered, transient pgx error) the

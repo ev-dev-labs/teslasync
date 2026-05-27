@@ -124,7 +124,7 @@ type impersonationStateResponse struct {
 // impersonationCandidatesResponse is the GET
 // /admin/impersonate/candidates envelope.
 type impersonationCandidatesResponse struct {
-	Mode       string                  `json:"mode"`
+	Mode       string                   `json:"mode"`
 	Candidates []impersonationCandidate `json:"candidates"`
 }
 

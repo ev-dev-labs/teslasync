@@ -277,8 +277,8 @@ func TestRankAndCap_StableTieBreaking(t *testing.T) {
 
 func TestParseTypesFilter(t *testing.T) {
 	cases := []struct {
-		raw      string
-		wantAll  bool
+		raw        string
+		wantAll    bool
 		wantSubset []string
 	}{
 		{"", true, nil},

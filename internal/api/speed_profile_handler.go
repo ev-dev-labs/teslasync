@@ -6,9 +6,9 @@ import (
 	"math"
 	"net/http"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // SpeedProfileHandler serves speed-distribution and efficiency analytics.

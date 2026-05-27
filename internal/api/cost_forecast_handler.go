@@ -25,11 +25,11 @@ func NewCostForecastHandler(db *database.DB) *CostForecastHandler {
 // ── Response types ───────────────────────────────────────────
 
 type costForecastResponse struct {
-	Historical    []historicalMonth  `json:"historical"`
-	Forecast      []forecastMonth    `json:"forecast"`
-	Breakdown     costBreakdown      `json:"breakdown"`
-	GasComparison gasComparison      `json:"gas_comparison"`
-	Insights      []string           `json:"insights"`
+	Historical    []historicalMonth `json:"historical"`
+	Forecast      []forecastMonth   `json:"forecast"`
+	Breakdown     costBreakdown     `json:"breakdown"`
+	GasComparison gasComparison     `json:"gas_comparison"`
+	Insights      []string          `json:"insights"`
 }
 
 type historicalMonth struct {
@@ -41,11 +41,11 @@ type historicalMonth struct {
 }
 
 type forecastMonth struct {
-	Month   string  `json:"month"`
-	Cost    float64 `json:"cost"`
-	CostLow float64 `json:"cost_low"`
+	Month    string  `json:"month"`
+	Cost     float64 `json:"cost"`
+	CostLow  float64 `json:"cost_low"`
 	CostHigh float64 `json:"cost_high"`
-	KWh     float64 `json:"kwh"`
+	KWh      float64 `json:"kwh"`
 }
 
 type costBreakdown struct {
@@ -60,12 +60,12 @@ type chargerCategory struct {
 }
 
 type gasComparison struct {
-	AvgKmPerMonth    float64 `json:"avg_km_per_month"`
-	GasCostPerMonth  float64 `json:"gas_cost_per_month"`
-	EvCostPerMonth   float64 `json:"ev_cost_per_month"`
-	MonthlySavings   float64 `json:"monthly_savings"`
-	AnnualSavings    float64 `json:"annual_savings"`
-	LifetimeSavings  float64 `json:"lifetime_savings"`
+	AvgKmPerMonth   float64 `json:"avg_km_per_month"`
+	GasCostPerMonth float64 `json:"gas_cost_per_month"`
+	EvCostPerMonth  float64 `json:"ev_cost_per_month"`
+	MonthlySavings  float64 `json:"monthly_savings"`
+	AnnualSavings   float64 `json:"annual_savings"`
+	LifetimeSavings float64 `json:"lifetime_savings"`
 }
 
 // ── Handler ──────────────────────────────────────────────────
@@ -413,7 +413,7 @@ func (h *CostForecastHandler) computeBreakdown(ctx context.Context, vehicleID in
 // ── Gas comparison ───────────────────────────────────────────
 
 func (h *CostForecastHandler) computeGasComparison(ctx context.Context, vehicleID int64, historical []historicalMonth) gasComparison {
-	const defaultGasPrice = 1.50 // $/L
+	const defaultGasPrice = 1.50     // $/L
 	const defaultConsumption = 0.085 // L/km (gas car)
 
 	// Average km/month from drives

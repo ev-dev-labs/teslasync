@@ -126,14 +126,14 @@ func (s *fakeLiveStore) seed(vehicleID int64, signals map[string]any) {
 }
 
 type fakeFSMHandler struct {
-	mu             sync.Mutex
-	calls          int
-	lastVeh        int64
-	lastSigs       map[string]any
-	lastPayloadTs  time.Time
-	lastFieldTs    map[string]time.Time
-	rec            *callRecorder
-	orderTick      int64
+	mu            sync.Mutex
+	calls         int
+	lastVeh       int64
+	lastSigs      map[string]any
+	lastPayloadTs time.Time
+	lastFieldTs   map[string]time.Time
+	rec           *callRecorder
+	orderTick     int64
 }
 
 func (f *fakeFSMHandler) ProcessSignals(_ context.Context, vehicleID int64, signals map[string]any) {
@@ -168,16 +168,16 @@ func (f *fakeFSMHandler) ProcessSignalsAt(_ context.Context, vehicleID int64, si
 }
 
 type fakeSessionTracker struct {
-	mu             sync.Mutex
-	calls          int
-	lastVeh        int64
-	lastVin        string
-	lastSigs       map[string]any
-	lastAccum      map[string]any
-	lastPayloadTs  time.Time
-	lastFieldTs    map[string]time.Time
-	rec            *callRecorder
-	orderTick      int64
+	mu            sync.Mutex
+	calls         int
+	lastVeh       int64
+	lastVin       string
+	lastSigs      map[string]any
+	lastAccum     map[string]any
+	lastPayloadTs time.Time
+	lastFieldTs   map[string]time.Time
+	rec           *callRecorder
+	orderTick     int64
 }
 
 func (s *fakeSessionTracker) ProcessSignals(_ context.Context, vehicleID int64, vin string, signals, accumulated map[string]any) {
@@ -216,14 +216,14 @@ func (s *fakeSessionTracker) ProcessSignalsAt(_ context.Context, vehicleID int64
 }
 
 type fakeAlertEvaluator struct {
-	mu         sync.Mutex
-	calls      int
-	lastVeh    int64
-	lastVin    string
-	lastSigs   map[string]any
-	lastAccum  map[string]any
-	rec        *callRecorder
-	orderTick  int64
+	mu        sync.Mutex
+	calls     int
+	lastVeh   int64
+	lastVin   string
+	lastSigs  map[string]any
+	lastAccum map[string]any
+	rec       *callRecorder
+	orderTick int64
 }
 
 func (e *fakeAlertEvaluator) Evaluate(_ context.Context, vehicleID int64, vin string, signals, accumulated map[string]any) {
@@ -314,9 +314,9 @@ func TestSideEffectsObserver_AtomicsConvertedToSignalsMap(t *testing.T) {
 	obs, live, _, _, _, _, _ := newDefaultObserver(t)
 
 	atomics := []codec.Atomic{
-		{Field: "VehicleSpeed", Value: 12.5, EmittedAt: time.Now(), VehicleID: "VIN-A"},     // SI value (m/s)
-		{Field: "BatteryHeaterOn", Value: true, EmittedAt: time.Now(), VehicleID: "VIN-A"},  // pass-through bool
-		{Field: "Gear", Value: "P", EmittedAt: time.Now(), VehicleID: "VIN-A"},              // string enum
+		{Field: "VehicleSpeed", Value: 12.5, EmittedAt: time.Now(), VehicleID: "VIN-A"},    // SI value (m/s)
+		{Field: "BatteryHeaterOn", Value: true, EmittedAt: time.Now(), VehicleID: "VIN-A"}, // pass-through bool
+		{Field: "Gear", Value: "P", EmittedAt: time.Now(), VehicleID: "VIN-A"},             // string enum
 	}
 	obs.OnPayloadProcessed(context.Background(), 1, atomics)
 
@@ -423,6 +423,7 @@ func TestSideEffectsObserver_DuplicateFieldKeepsLatestEmittedAtInFieldTs(t *test
 		t.Errorf("fsm.lastFieldTs[Gear] = %v, want %v (latest)", got, second)
 	}
 }
+
 // ---------------------------------------------------------------------------
 // Decision #10 (b): all 4 callbacks invoked exactly once per payload
 // (live, fsm, sessions, alerts). SSE counts as a 5th callback —

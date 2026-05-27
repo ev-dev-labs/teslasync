@@ -18,14 +18,14 @@ import (
 // unit tests. It captures the last Set arguments so assertions can
 // inspect them and supports forced-error injection for the failure paths.
 type fakeSystemStateStore struct {
-	state    database.SystemState
-	getErr   error
-	setErr   error
-	lastMode string
-	lastMsg  string
+	state     database.SystemState
+	getErr    error
+	setErr    error
+	lastMode  string
+	lastMsg   string
 	lastUntil *time.Time
-	lastBy   string
-	calls    int
+	lastBy    string
+	calls     int
 }
 
 func (f *fakeSystemStateStore) Get(_ context.Context) (database.SystemState, error) {

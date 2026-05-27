@@ -90,9 +90,9 @@ func TestChargingCurveClusterParity_MLvsTools(t *testing.T) {
 
 	// Pin the labels at every representative power point.
 	cases := []struct {
-		name    string
-		peakW   *float64
-		want    string
+		name  string
+		peakW *float64
+		want  string
 	}{
 		{"nil", nil, "unknown"},
 		{"zero", floatPtrParity(0), "unknown"},

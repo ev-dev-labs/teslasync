@@ -5,8 +5,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // geofenceColumns is the canonical projection for every SELECT in this file.

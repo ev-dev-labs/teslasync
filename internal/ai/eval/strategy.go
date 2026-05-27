@@ -19,8 +19,8 @@ import (
 //   - System     → spec.System
 //   - Tools      → spec.Tools
 //   - Context    → []provider.Message{} (the dispatcher seeds the user
-//                  message itself from StrategyInput.LastMessage by way
-//                  of in.History — see ChatRequestFromInput below).
+//     message itself from StrategyInput.LastMessage by way
+//     of in.History — see ChatRequestFromInput below).
 //   - Redaction  → strategy.NoRedaction{}
 //   - EvalGoldens→ nil (the harness owns goldens; no recursion).
 //

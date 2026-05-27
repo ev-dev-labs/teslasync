@@ -19,22 +19,22 @@ import (
 
 // VehicleCostRow is the per-vehicle cost summary.
 type VehicleCostRow struct {
-	VehicleID       int64     `json:"vehicle_id"`
-	DisplayName     *string   `json:"display_name,omitempty"`
-	SignalRowCount  int64     `json:"signal_row_count"`
-	SignalBytesEst  int64     `json:"signal_bytes_est"`
-	IngestRate24h   float64   `json:"ingest_rate_per_minute_24h"`
-	DLQFailures24h  int64     `json:"dlq_failures_24h"`
-	LastSeenAt      time.Time `json:"last_seen_at"`
+	VehicleID      int64     `json:"vehicle_id"`
+	DisplayName    *string   `json:"display_name,omitempty"`
+	SignalRowCount int64     `json:"signal_row_count"`
+	SignalBytesEst int64     `json:"signal_bytes_est"`
+	IngestRate24h  float64   `json:"ingest_rate_per_minute_24h"`
+	DLQFailures24h int64     `json:"dlq_failures_24h"`
+	LastSeenAt     time.Time `json:"last_seen_at"`
 }
 
 // VehicleCostTotals is the fleet sum surfaced alongside the rows so the
 // UI can compute % share without re-summing client-side.
 type VehicleCostTotals struct {
-	TotalRows      int64   `json:"total_rows"`
-	TotalBytesEst  int64   `json:"total_bytes_est"`
-	TotalRate24h   float64 `json:"total_rate_per_minute_24h"`
-	TotalFailures  int64   `json:"total_failures_24h"`
+	TotalRows     int64   `json:"total_rows"`
+	TotalBytesEst int64   `json:"total_bytes_est"`
+	TotalRate24h  float64 `json:"total_rate_per_minute_24h"`
+	TotalFailures int64   `json:"total_failures_24h"`
 }
 
 // VehicleCostReport bundles per-vehicle rows + totals.

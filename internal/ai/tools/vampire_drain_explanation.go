@@ -95,9 +95,9 @@ import (
 // lands, it should promote these strings to rag.SourceIdleDrain /
 // rag.SourceVehicleState / rag.SourceClimateState in one place.
 const (
-	vampireDrainSourceIdleDrain     = "idle_drain"
-	vampireDrainSourceVehicleState  = "vehicle_state"
-	vampireDrainSourceClimateState  = "climate_state"
+	vampireDrainSourceIdleDrain    = "idle_drain"
+	vampireDrainSourceVehicleState = "vehicle_state"
+	vampireDrainSourceClimateState = "climate_state"
 )
 
 // vampireDrainAllowedSourceTypes is the per-feature allowlist of

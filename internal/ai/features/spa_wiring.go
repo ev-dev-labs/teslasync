@@ -6,16 +6,16 @@
 // be represented in SPAWiringTable below. The table is the single
 // source of truth that pairs a feature ID with:
 //
-//   1. The SPA component file (under web/src/) whose top-level
-//      JSX renders the feature's AI surface and consumes
-//      useAiStream against the registered backend route.
-//   2. The canonical backend endpoint string (taken verbatim from
-//      Registry[id].Routes.Backend[0]) so the W1-B aivet rule can
-//      assert the component references the right URL.
-//   3. The render contract (Narrative / Proposal / Suggestion) that
-//      classifies how the streamed SSE events are surfaced inside
-//      the AI panel. The current shipping pattern across every wired
-//      feature is RenderNarrative (delta-accumulator → AiOutputPanel).
+//  1. The SPA component file (under web/src/) whose top-level
+//     JSX renders the feature's AI surface and consumes
+//     useAiStream against the registered backend route.
+//  2. The canonical backend endpoint string (taken verbatim from
+//     Registry[id].Routes.Backend[0]) so the W1-B aivet rule can
+//     assert the component references the right URL.
+//  3. The render contract (Narrative / Proposal / Suggestion) that
+//     classifies how the streamed SSE events are surfaced inside
+//     the AI panel. The current shipping pattern across every wired
+//     feature is RenderNarrative (delta-accumulator → AiOutputPanel).
 //
 // Why is this contract NOT part of the runtime Registry?
 //

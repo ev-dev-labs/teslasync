@@ -194,9 +194,9 @@ func CategoryForSignal(signalName string) string {
 // Count DESC then Label ASC so the LLM's narration is reproducible
 // across calls with the same window.
 type CategoryCount struct {
-	Label          string  `json:"label"`
-	Count          int     `json:"count"`
-	SampleRuleIDs  []int64 `json:"sample_rule_ids"`
+	Label          string   `json:"label"`
+	Count          int      `json:"count"`
+	SampleRuleIDs  []int64  `json:"sample_rule_ids"`
 	SeveritiesSeen []string `json:"severities_seen,omitempty"`
 }
 
@@ -533,10 +533,10 @@ type alertCategoryValidateInput struct {
 // echoes back any rejected labels so the LLM can self-correct
 // without a second tool call.
 type alertCategoryValidateOutput struct {
-	OK                bool     `json:"ok"`
-	InvalidLabels     []string `json:"invalid_labels,omitempty"`
-	AllowedTaxonomy   []string `json:"allowed_taxonomy"`
-	Source            string   `json:"source"`
+	OK              bool     `json:"ok"`
+	InvalidLabels   []string `json:"invalid_labels,omitempty"`
+	AllowedTaxonomy []string `json:"allowed_taxonomy"`
+	Source          string   `json:"source"`
 }
 
 // validateAlertCategory is the propose-only tool that asserts

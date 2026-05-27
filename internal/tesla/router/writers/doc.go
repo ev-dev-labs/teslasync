@@ -7,5 +7,4 @@
 // Per ADR-004 #8 writers are best-effort, idempotent on (vehicle_id, ts,
 // field), and MUST NOT retry internally.
 // Layer: platform
-//
 package writers

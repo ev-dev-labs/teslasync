@@ -2,37 +2,37 @@
 // the type-system level (methodology principle P6). It performs four
 // static checks on the repository and exits non-zero on any failure:
 //
-//   1. CoverageOK  — every entry in internal/ai/features.Registry has
-//      populated surface metadata (Routes, Name, Tier, …) and no
-//      DefaultOn=true entry.
+//  1. CoverageOK  — every entry in internal/ai/features.Registry has
+//     populated surface metadata (Routes, Name, Tier, …) and no
+//     DefaultOn=true entry.
 //
-//   2. Wrap-only — every /api/v1/ai/* route mounted in
-//      internal/api/router.go (or any sibling file in internal/api) is
-//      registered via `g.Wrap(...)` (or the equivalent `aiGuard.Wrap`).
-//      A bare HandlerFunc on an /ai/* path is rejected.
+//  2. Wrap-only — every /api/v1/ai/* route mounted in
+//     internal/api/router.go (or any sibling file in internal/api) is
+//     registered via `g.Wrap(...)` (or the equivalent `aiGuard.Wrap`).
+//     A bare HandlerFunc on an /ai/* path is rejected.
 //
-//   3. Registry coverage — every backend pattern in
-//      features.Registry[id].Routes.Backend is present in the router,
-//      and every router pattern under /api/v1/ai/ is owned by exactly
-//      one registry entry's Backend list.
+//  3. Registry coverage — every backend pattern in
+//     features.Registry[id].Routes.Backend is present in the router,
+//     and every router pattern under /api/v1/ai/ is owned by exactly
+//     one registry entry's Backend list.
 //
-//   4. TS mirror in sync — the generator (tools/aigen) reports the
-//      web/src/ai/features.ts file as up-to-date.
+//  4. TS mirror in sync — the generator (tools/aigen) reports the
+//     web/src/ai/features.ts file as up-to-date.
 //
-//   5. W1-A (slice 0065) — no shipped AI component contains a
-//      placeholder ("future slice", "coming soon", "wiring lands",
-//      "would call POST") OR a literal `disabled` / `disabled={true}`
-//      attribute on a JSX Button. Computed disabled expressions
-//      (`disabled={!ready || streaming}`) are allowed.
+//  5. W1-A (slice 0065) — no shipped AI component contains a
+//     placeholder ("future slice", "coming soon", "wiring lands",
+//     "would call POST") OR a literal `disabled` / `disabled={true}`
+//     attribute on a JSX Button. Computed disabled expressions
+//     (`disabled={!ready || streaming}`) are allowed.
 //
-//   6. W1-B (slice 0065) — every entry in features.SPAWiringTable
-//      points at a SPA component that (a) imports `useAiStream` from
-//      `@/hooks/useAiStream` and (b) references either the canonical
-//      endpoint's path-prefix (everything before the first `{`
-//      placeholder, e.g. `/ai/drives/` for a parameterised route) or
-//      the generated SPA_WIRING_BY_ID map from `web/src/ai/spaWiring`.
-//      Files allowlisted via features.SPAWiringIndicatorOnly are
-//      exempt from (a) and (b) but still subject to W1-A.
+//  6. W1-B (slice 0065) — every entry in features.SPAWiringTable
+//     points at a SPA component that (a) imports `useAiStream` from
+//     `@/hooks/useAiStream` and (b) references either the canonical
+//     endpoint's path-prefix (everything before the first `{`
+//     placeholder, e.g. `/ai/drives/` for a parameterised route) or
+//     the generated SPA_WIRING_BY_ID map from `web/src/ai/spaWiring`.
+//     Files allowlisted via features.SPAWiringIndicatorOnly are
+//     exempt from (a) and (b) but still subject to W1-A.
 //
 // Usage:
 //

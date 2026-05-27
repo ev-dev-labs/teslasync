@@ -398,4 +398,3 @@ func TestObserveDurationWithExemplar_NotSampledSpanIsSkipped(t *testing.T) {
 		t.Errorf("did not expect exemplar for unsampled span, got %+v", ex)
 	}
 }
-

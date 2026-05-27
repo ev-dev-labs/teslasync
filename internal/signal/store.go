@@ -299,8 +299,9 @@ func (s *Store) GetRawMap(vehicleID int64) map[string]interface{} {
 
 // LoadFromDB loads vehicle state into memory for pod restart recovery.
 // Two-tier fallback chain:
-//   Tier 1: Redis HSET (has ALL 230+ signals, survives pod restart)
-//   Tier 2: signal_log (query latest value per signal — prompt 06)
+//
+//	Tier 1: Redis HSET (has ALL 230+ signals, survives pod restart)
+//	Tier 2: signal_log (query latest value per signal — prompt 06)
 func (s *Store) LoadFromDB(ctx context.Context, vehicleID int64) {
 	// Tier 1: Redis HSET (has ALL 230+ signals, survives pod restart)
 	if s.redisCache != nil {

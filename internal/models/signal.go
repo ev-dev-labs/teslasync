@@ -23,18 +23,18 @@ type SignalObservation struct {
 // (ADR-009 onboarding source of truth). Every signal name ever seen is
 // recorded here; signal_observations.signal_name FKs into this table.
 type SignalCatalog struct {
-	Name             string    `db:"name"              json:"name"`
-	FirstSeenAt      time.Time `db:"first_seen_at"     json:"first_seen_at"`
-	LastSeenAt       time.Time `db:"last_seen_at"      json:"last_seen_at"`
-	ObservationCount int64     `db:"observation_count" json:"observation_count"`
+	Name             string            `db:"name"              json:"name"`
+	FirstSeenAt      time.Time         `db:"first_seen_at"     json:"first_seen_at"`
+	LastSeenAt       time.Time         `db:"last_seen_at"      json:"last_seen_at"`
+	ObservationCount int64             `db:"observation_count" json:"observation_count"`
 	StorageTier      SignalStorageTier `db:"storage_tier"      json:"storage_tier"`
 	TypedTable       *string           `db:"typed_table"       json:"typed_table"`
 	TypedColumn      *string           `db:"typed_column"      json:"typed_column"`
 	DataKind         *SignalDataKind   `db:"data_kind"         json:"data_kind"`
-	Unit             *string   `db:"unit"              json:"unit"`
-	Notes            *string   `db:"notes"             json:"notes"`
-	CreatedAt        time.Time `db:"created_at"        json:"created_at"`
-	UpdatedAt        time.Time `db:"updated_at"        json:"updated_at"`
+	Unit             *string           `db:"unit"              json:"unit"`
+	Notes            *string           `db:"notes"             json:"notes"`
+	CreatedAt        time.Time         `db:"created_at"        json:"created_at"`
+	UpdatedAt        time.Time         `db:"updated_at"        json:"updated_at"`
 }
 
 // IsHot reports whether this catalog entry has been promoted to a typed

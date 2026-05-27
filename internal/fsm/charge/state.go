@@ -8,10 +8,10 @@ type State string
 
 const (
 	Pending    State = "pending"    // Charge detected; waiting for start snapshot
-	Active     State = "active"    // Start values captured; accumulating
+	Active     State = "active"     // Start values captured; accumulating
 	Completing State = "completing" // Charge ended; waiting for end snapshot
-	Done       State = "done"      // Final metrics computed, persisted
-	Recovered  State = "recovered" // Reconstructed from DB after pod restart
+	Done       State = "done"       // Final metrics computed, persisted
+	Recovered  State = "recovered"  // Reconstructed from DB after pod restart
 )
 
 // Trigger represents an event in the charge session lifecycle.

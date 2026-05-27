@@ -6,7 +6,7 @@
 // Two cross-cutting concerns share a common Decision shape:
 //
 //   - Token bucket per (subject, feature) — bounds inflight + per-minute
-//     + per-day call volume.
+//   - per-day call volume.
 //   - Daily cost cap per subject — bounds dollar spend on cloud
 //     providers.
 //

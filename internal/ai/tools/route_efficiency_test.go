@@ -27,8 +27,8 @@ import (
 )
 
 // ptrStr is a helper for *string fields on models.Drive.
-func ptrStr(s string) *string { return &s }
-func ptrInt16(v int16) *int16 { return &v }
+func ptrStr(s string) *string       { return &s }
+func ptrInt16(v int16) *int16       { return &v }
 func ptrFloat64(v float64) *float64 { return &v }
 
 // ---------------------------------------------------------------------------
@@ -283,9 +283,9 @@ func TestQueryRouteEfficiency_HappyPath_GroupsRoutesAndComputesMetrics(t *testin
 	src := &fakeDrives{
 		rows: []*models.Drive{
 			// Home → Work: 3 drives
-			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 80, 70),  // 16.09 kWh/100mi
-			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 80, 68),  // 19.31 kWh/100mi
-			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 75, 67),  // 12.87 kWh/100mi (best)
+			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 80, 70), // 16.09 kWh/100mi
+			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 80, 68), // 19.31 kWh/100mi
+			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 75, 67), // 12.87 kWh/100mi (best)
 			// Work → Home: 2 drives
 			makeRouteDrive("Work", "Home", 10000, 1200, 8.3, 20, 70, 60),
 			makeRouteDrive("Work", "Home", 10000, 1200, 8.3, 20, 70, 62),
@@ -378,11 +378,11 @@ func TestQueryRouteEfficiency_Validate_RejectsBadInputs(t *testing.T) {
 	t.Parallel()
 	tool := &queryRouteEfficiency{src: &fakeDrives{}, now: fixedNow}
 	for _, raw := range []string{
-		`{}`,                                       // missing vehicle_id
-		`{"vehicle_id": 0}`,                        // zero
-		`{"vehicle_id": -1}`,                       // negative
-		`{"vehicle_id": 1, "lookback_days": 366}`,  // over cap
-		`{"vehicle_id": 1, "lookback_days": -1}`,   // negative
+		`{}`,                 // missing vehicle_id
+		`{"vehicle_id": 0}`,  // zero
+		`{"vehicle_id": -1}`, // negative
+		`{"vehicle_id": 1, "lookback_days": 366}`, // over cap
+		`{"vehicle_id": 1, "lookback_days": -1}`,  // negative
 	} {
 		if _, err := tool.Validate(json.RawMessage(raw)); err == nil {
 			t.Errorf("Validate(%q) want err", raw)

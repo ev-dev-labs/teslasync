@@ -158,17 +158,24 @@ type AIWatchFaceNLResponseHandler struct {
 // first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             query_watch_context (registered by
-//             tools.RegisterWatchFaceNLResponseTools in
-//             router.go).
+//
+//	query_watch_context (registered by
+//	tools.RegisterWatchFaceNLResponseTools in
+//	router.go).
+//
 // strat:      the watch-face-nl-response Strategy (one per
-//             process).
+//
+//	process).
+//
 // headerName: forward-auth header name; used for audit
-//             annotations only — the watch envelope is install-
-//             scoped, so a missing subject does NOT prevent
-//             the request from running.
+//
+//	annotations only — the watch envelope is install-
+//	scoped, so a missing subject does NOT prevent
+//	the request from running.
 func NewAIWatchFaceNLResponseHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -437,9 +444,9 @@ func (a *AIWatchFaceNLContextSource) LoadWatchContext(ctx context.Context) (*too
 //
 //   - BatteryLevel → SOCPercent (int %)
 //   - RatedRange   → RangeMi (verbatim, miles canonical wire
-//                   format) AND RangeKm (×1.60934)
+//     format) AND RangeKm (×1.60934)
 //   - InsideTemp   → InsideTempC (°C SI) AND InsideTempF
-//                   (cToFPtr-style precomputed °F)
+//     (cToFPtr-style precomputed °F)
 //   - OutsideTemp  → OutsideTempC + OutsideTempF
 //   - ChargeState  → IsCharging bool
 //   - TimeToFullCharge → TimeToFullMin (×60 for minutes)
@@ -609,7 +616,7 @@ func projectWatchAlertEntries(rows []*models.NotificationLog, max int, now time.
 // satisfies http.Handler and the production source adapters
 // satisfy their respective tool ports.
 var (
-	_ http.Handler              = (*AIWatchFaceNLResponseHandler)(nil)
-	_ tools.WatchContextSource  = (*AIWatchFaceNLContextSource)(nil)
-	_ tools.AlertHistorySource  = (*AIWatchFaceNLAlertHistorySource)(nil)
+	_ http.Handler             = (*AIWatchFaceNLResponseHandler)(nil)
+	_ tools.WatchContextSource = (*AIWatchFaceNLContextSource)(nil)
+	_ tools.AlertHistorySource = (*AIWatchFaceNLAlertHistorySource)(nil)
 )

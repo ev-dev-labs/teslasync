@@ -28,11 +28,11 @@ import (
 // so a test can assert the tool routes through the port and
 // surface the canned shape the test author wants.
 type stubInboxCategorizationSource struct {
-	counts          []CategoryCount
-	totalInWindow   int
-	minRequired     int
-	loadErr         error
-	loadFilters     []database.NotificationLogFilters
+	counts        []CategoryCount
+	totalInWindow int
+	minRequired   int
+	loadErr       error
+	loadFilters   []database.NotificationLogFilters
 }
 
 func (s *stubInboxCategorizationSource) LoadCategoryCounts(_ context.Context, f database.NotificationLogFilters) ([]CategoryCount, int, int, error) {

@@ -67,11 +67,11 @@ func (f *fakeFeedbackQueueStore) Update(_ context.Context, id int64, upd databas
 // fakeGitHubIssuesPoster captures the last CreateIssue call so the
 // "forward to GitHub" branch can be asserted without real HTTP traffic.
 type fakeGitHubIssuesPoster struct {
-	url       string
-	err       error
-	calls     int
-	lastTitle string
-	lastBody  string
+	url        string
+	err        error
+	calls      int
+	lastTitle  string
+	lastBody   string
 	lastLabels []string
 }
 
@@ -255,11 +255,11 @@ func TestAdminFeedbackPatchForwardWithoutBridgeReturns400(t *testing.T) {
 func TestAdminFeedbackPatchForwardSuccess(t *testing.T) {
 	store := &fakeFeedbackQueueStore{
 		getResult: database.UserFeedback{
-			ID:       5,
-			Category: "bug",
-			Title:    "Battery widget glitch",
-			Body:     "shows NaN after sleep",
-			Status:   "new",
+			ID:        5,
+			Category:  "bug",
+			Title:     "Battery widget glitch",
+			Body:      "shows NaN after sleep",
+			Status:    "new",
 			CreatedAt: time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC),
 			PageRoute: "/dashboard",
 		},

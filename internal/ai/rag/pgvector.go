@@ -36,11 +36,11 @@ type ProviderResolver interface {
 // The struct holds:
 //   - db        : the pgx pool used for both read and write paths.
 //   - providers : resolver that returns the audited provider chain
-//                 on every call (re-resolution per call lets a
-//                 settings update take effect without a restart).
+//     on every call (re-resolution per call lets a
+//     settings update take effect without a restart).
 //   - featureID : the registry feature ID this retriever was built
-//                 for. Used to (a) gate the resolver call, and (b)
-//                 stamp ai_call_log rows via WithFeatureID(ctx).
+//     for. Used to (a) gate the resolver call, and (b)
+//     stamp ai_call_log rows via WithFeatureID(ctx).
 //   - model     : the embedding model name (e.g. "nomic-embed-text").
 //   - dim       : the vector dimensionality derived from model.
 //   - table     : the physical table name picked by [tableForDim].
@@ -63,12 +63,12 @@ type PgvectorRetriever struct {
 //
 // Pre-conditions:
 //   - db        : non-nil. A nil pool is a programmer error and
-//                 panics rather than fail at the first query.
+//     panics rather than fail at the first query.
 //   - providers : non-nil. Same rationale.
 //   - featureID : non-empty. The audit decorator records this on
-//                 every embed call; an empty string would attribute
-//                 the spend to "no feature" and confuse the usage
-//                 card.
+//     every embed call; an empty string would attribute
+//     the spend to "no feature" and confuse the usage
+//     card.
 //   - model     : must be present in [modelDims].
 func NewPgvectorRetriever(
 	db *database.DB,
@@ -467,4 +467,3 @@ func NewStaticResolver(p provider.Provider) ProviderResolver {
 func (s *staticResolver) For(_ context.Context, _ string) (provider.Provider, error) {
 	return s.p, nil
 }
-

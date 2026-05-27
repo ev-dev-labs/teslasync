@@ -29,9 +29,9 @@ func TestExportColumnsHandler_ListColumns(t *testing.T) {
 			t.Fatalf("status = %d, want 200", rec.Code)
 		}
 		var body struct {
-			Type              string               `json:"type"`
-			Columns           []export.ColumnInfo  `json:"columns"`
-			SupportsSelection bool                 `json:"supports_selection"`
+			Type              string              `json:"type"`
+			Columns           []export.ColumnInfo `json:"columns"`
+			SupportsSelection bool                `json:"supports_selection"`
 		}
 		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 			t.Fatalf("decode: %v", err)
@@ -68,9 +68,9 @@ func TestExportColumnsHandler_ListColumns(t *testing.T) {
 			t.Fatalf("status = %d, want 200", rec.Code)
 		}
 		var body struct {
-			Type              string               `json:"type"`
-			Columns           []export.ColumnInfo  `json:"columns"`
-			SupportsSelection bool                 `json:"supports_selection"`
+			Type              string              `json:"type"`
+			Columns           []export.ColumnInfo `json:"columns"`
+			SupportsSelection bool                `json:"supports_selection"`
 		}
 		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 			t.Fatalf("decode: %v", err)

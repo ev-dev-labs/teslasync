@@ -149,20 +149,29 @@ type AIMqttSseInspectorExplanationsHandler struct {
 // boot, not at first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             query_stream_inspector AND retrieve_stream_chunks
-//             (registered by tools.RegisterMqttSseInspectorExplanationsTools
-//             in router.go).
+//
+//	query_stream_inspector AND retrieve_stream_chunks
+//	(registered by tools.RegisterMqttSseInspectorExplanationsTools
+//	in router.go).
+//
 // strat:      the mqtt-sse-inspector-explanations Strategy (one
-//             per process).
+//
+//	per process).
+//
 // source:     the production tools.StreamInspectorSource
-//             (currently AIStreamInspectorSource — a
-//             deterministic empty adapter; the canonical
-//             baseline /api/v1/admin/mqtt/status surface remains
-//             reachable to the operator at all times).
+//
+//	(currently AIStreamInspectorSource — a
+//	deterministic empty adapter; the canonical
+//	baseline /api/v1/admin/mqtt/status surface remains
+//	reachable to the operator at all times).
+//
 // headerName: forward-auth header name; used to extract subject
-//             for audit.
+//
+//	for audit.
 func NewAIMqttSseInspectorExplanationsHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

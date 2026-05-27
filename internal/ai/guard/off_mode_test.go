@@ -4,14 +4,14 @@
 // handlers return 404") for every feature in the registry. It walks
 // every Backend route from features.Registry and asserts:
 //
-//   1. With ai_mode = "off", the wrapped handler returns 404.
-//   2. With ai_mode = "local" but the per-feature toggle = false, the
-//      wrapped handler still returns 404 (ADR-015 §I7 "per-feature
-//      opt-in inside non-off modes").
-//   3. With ai_mode = "local" AND the feature toggle = true, the
-//      wrapped handler is reached (proving the gate is correctly
-//      open in the on case — without this assertion the test could
-//      pass by always returning 404).
+//  1. With ai_mode = "off", the wrapped handler returns 404.
+//  2. With ai_mode = "local" but the per-feature toggle = false, the
+//     wrapped handler still returns 404 (ADR-015 §I7 "per-feature
+//     opt-in inside non-off modes").
+//  3. With ai_mode = "local" AND the feature toggle = true, the
+//     wrapped handler is reached (proving the gate is correctly
+//     open in the on case — without this assertion the test could
+//     pass by always returning 404).
 //
 // The test uses a deterministic in-memory fake of the Settings
 // interface so it has no DB / network / time dependency.

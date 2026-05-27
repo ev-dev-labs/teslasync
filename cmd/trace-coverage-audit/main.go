@@ -5,20 +5,20 @@
 //
 // Flows (kept in sync with .github/instructions/observability.instructions.md):
 //
-//   API hot paths (Phase-44 baseline):
-//     1. GET /vehicles/{id}/state           → http handler → service → repo → cache
-//     2. POST /commands/{vehicleId}/wake    → http handler → service → tesla client
-//     3. MQTT consume → normalize → store   → mqtt subscriber → pipeline → routers
+//	API hot paths (Phase-44 baseline):
+//	  1. GET /vehicles/{id}/state           → http handler → service → repo → cache
+//	  2. POST /commands/{vehicleId}/wake    → http handler → service → tesla client
+//	  3. MQTT consume → normalize → store   → mqtt subscriber → pipeline → routers
 //
-//   Full-coverage expansion (Phase-44b — every async path covered):
-//     4. notification_dispatch     → API publish → MQTT envelope → consume → send
-//     5. export_job                → API publish → MQTT envelope → consume → process → SSE
-//     6. automation_evaluate       → engine.Evaluate span + actions
-//     7. sse_broadcast             → BroadcastWithContext + Redis fanout
-//     8. resubscribe_push          → cmd/resubscribe per-vehicle Tesla MQTT push
-//     9. fsm_transitions           → fsm.Engine.Fire span via tracing.NewFSMTracer adapter
-//    10. in_api_workers            → per-iteration spans for the in-API background tickers
-//    11. ai_inference              → AI dispatcher / strategy spans (existing)
+//	Full-coverage expansion (Phase-44b — every async path covered):
+//	  4. notification_dispatch     → API publish → MQTT envelope → consume → send
+//	  5. export_job                → API publish → MQTT envelope → consume → process → SSE
+//	  6. automation_evaluate       → engine.Evaluate span + actions
+//	  7. sse_broadcast             → BroadcastWithContext + Redis fanout
+//	  8. resubscribe_push          → cmd/resubscribe per-vehicle Tesla MQTT push
+//	  9. fsm_transitions           → fsm.Engine.Fire span via tracing.NewFSMTracer adapter
+//	 10. in_api_workers            → per-iteration spans for the in-API background tickers
+//	 11. ai_inference              → AI dispatcher / strategy spans (existing)
 //
 // For each flow we look for at least 4 distinct files containing
 // `tracer.Start(`, `otel.Tracer(`, `otelhttp.NewHandler(`, or
@@ -45,11 +45,11 @@ import (
 )
 
 type flow struct {
-	Name           string
-	Description    string
-	GlobPatterns   []string
-	MinSpanFiles   int
-	RequiredFiles  []string
+	Name          string
+	Description   string
+	GlobPatterns  []string
+	MinSpanFiles  int
+	RequiredFiles []string
 }
 
 var flows = []flow{

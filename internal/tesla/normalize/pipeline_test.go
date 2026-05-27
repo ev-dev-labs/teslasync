@@ -11,8 +11,8 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // TestPipelineProcess_ObserverInvokedFromBytesEntry exercises the FULL
@@ -193,4 +193,3 @@ func TestPipelineProcessAtomics_EmptyBatchIsNoOp(t *testing.T) {
 		t.Errorf("router received %d routes for empty batch, want 0: %+v", len(got), got)
 	}
 }
-

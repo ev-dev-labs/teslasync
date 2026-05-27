@@ -131,11 +131,11 @@ func (h *AdminAuditHandler) Verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httputil.Respond(w, http.StatusOK, map[string]any{
-		"intact":          badID == 0,
-		"first_bad_id":    badID,
-		"rows_checked":    checked,
-		"since":           since.UTC(),
-		"limit":           limit,
+		"intact":       badID == 0,
+		"first_bad_id": badID,
+		"rows_checked": checked,
+		"since":        since.UTC(),
+		"limit":        limit,
 	})
 }
 

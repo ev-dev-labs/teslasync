@@ -20,7 +20,7 @@
 // committed *_gen.go files; that drift gate is what guarantees the
 // generated artefacts always match the vendored proto bit-for-bit.
 //
-//go:generate go run ../../../cmd/protogen-tesla --proto ../../../api/proto/tesla/vehicle_data.proto --out .
 // Layer: platform
 //
+//go:generate go run ../../../cmd/protogen-tesla --proto ../../../api/proto/tesla/vehicle_data.proto --out .
 package protomodel

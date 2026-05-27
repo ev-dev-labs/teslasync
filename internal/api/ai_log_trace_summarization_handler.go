@@ -152,19 +152,28 @@ type AILogTraceSummarizationHandler struct {
 // nil so the wiring bug surfaces at boot, not at first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             query_trace_window AND retrieve_log_chunks
-//             (registered by tools.RegisterLogTraceSummarizerTools
-//             in router.go).
+//
+//	query_trace_window AND retrieve_log_chunks
+//	(registered by tools.RegisterLogTraceSummarizerTools
+//	in router.go).
+//
 // strat:      the log-trace-summarization Strategy (one per
-//             process).
+//
+//	process).
+//
 // source:     the production tools.TraceWindowSource (currently
-//             AILogTraceWindowSource — a deterministic empty
-//             adapter; the operator-facing log surface is
-//             stream-only and has no historical reader yet).
+//
+//	AILogTraceWindowSource — a deterministic empty
+//	adapter; the operator-facing log surface is
+//	stream-only and has no historical reader yet).
+//
 // headerName: forward-auth header name; used to extract subject
-//             for audit.
+//
+//	for audit.
 func NewAILogTraceSummarizationHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

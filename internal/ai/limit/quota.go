@@ -107,22 +107,22 @@ type FeatureTier string
 // Tier constants mirror the Phase-50 methodology slice prefixes.
 // Keep in lockstep with [internal/ai/features.Feature.Tier].
 const (
-	TierFoundation     FeatureTier = "F"
-	TierUpgrade        FeatureTier = "U"
-	TierNew            FeatureTier = "N"
-	TierDriving        FeatureTier = "D"
-	TierCharging       FeatureTier = "C"
-	TierThermal        FeatureTier = "T"
-	TierAlerts         FeatureTier = "A"
-	TierGeofence       FeatureTier = "G"
-	TierAnalytics      FeatureTier = "X"
-	TierSystem         FeatureTier = "S"
-	TierMaintenance    FeatureTier = "M"
-	TierPrivacy        FeatureTier = "P"
-	TierVoice          FeatureTier = "V"
-	TierPowerUser      FeatureTier = "PU"
-	TierGenerative     FeatureTier = "GEN"
-	TierMachineLearn   FeatureTier = "ML"
+	TierFoundation   FeatureTier = "F"
+	TierUpgrade      FeatureTier = "U"
+	TierNew          FeatureTier = "N"
+	TierDriving      FeatureTier = "D"
+	TierCharging     FeatureTier = "C"
+	TierThermal      FeatureTier = "T"
+	TierAlerts       FeatureTier = "A"
+	TierGeofence     FeatureTier = "G"
+	TierAnalytics    FeatureTier = "X"
+	TierSystem       FeatureTier = "S"
+	TierMaintenance  FeatureTier = "M"
+	TierPrivacy      FeatureTier = "P"
+	TierVoice        FeatureTier = "V"
+	TierPowerUser    FeatureTier = "PU"
+	TierGenerative   FeatureTier = "GEN"
+	TierMachineLearn FeatureTier = "ML"
 )
 
 // DefaultQuotaForTier returns the conservative default quota for a

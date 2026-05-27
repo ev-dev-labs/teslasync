@@ -136,17 +136,24 @@ type AIFeedbackQueueTriageHandler struct {
 // nil so the wiring bug surfaces at boot, not at first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             draft_feedback_triage AND validate_feedback_triage
-//             AND retrieve_feedback_chunks (registered by
-//             tools.RegisterFeedbackQueueTriageTools in router.go).
+//
+//	draft_feedback_triage AND validate_feedback_triage
+//	AND retrieve_feedback_chunks (registered by
+//	tools.RegisterFeedbackQueueTriageTools in router.go).
+//
 // strat:      the feedback-queue-triage Strategy (one per process).
 // source:     the production tools.FeedbackTriageSource (a thin
-//             wrapper around *database.UserFeedbackRepo.Get that
-//             PII-minimizes the row into a FeedbackTriageEntry).
+//
+//	wrapper around *database.UserFeedbackRepo.Get that
+//	PII-minimizes the row into a FeedbackTriageEntry).
+//
 // headerName: forward-auth header name; used to extract subject
-//             for audit.
+//
+//	for audit.
 func NewAIFeedbackQueueTriageHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

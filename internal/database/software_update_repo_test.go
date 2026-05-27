@@ -144,16 +144,16 @@ RETURNING id`
 	repo := NewSoftwareUpdateRepo(&DB{Pool: pool})
 
 	const (
-		concurrency  = 50 // Mirror the prod observation — 50 rows of one version.
-		raceVersion  = "2026.14.3-race-test"
-		raceStatus   = "installed"
+		concurrency = 50 // Mirror the prod observation — 50 rows of one version.
+		raceVersion = "2026.14.3-race-test"
+		raceStatus  = "installed"
 	)
 
 	var (
-		wg             sync.WaitGroup
-		insertedCount  int64
+		wg              sync.WaitGroup
+		insertedCount   int64
 		suppressedCount int64
-		errCount       int64
+		errCount        int64
 	)
 	wg.Add(concurrency)
 	for i := 0; i < concurrency; i++ {

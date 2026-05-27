@@ -45,67 +45,67 @@ import (
 //   - g          : the AI feature guard (mode + per-feature toggle).
 //   - registry   : the provider registry (Phase-50 / F1, slice 0002).
 //   - sudoMW     : RequireSudo middleware factory baked with the live
-//                  sudoStore + sudoCfg. Wrapped around ops-only routes
-//                  like /_internal/health so an attacker who somehow
-//                  opens the feature toggle still needs a fresh sudo
-//                  token to reach the diagnostic.
+//     sudoStore + sudoCfg. Wrapped around ops-only routes
+//     like /_internal/health so an attacker who somehow
+//     opens the feature toggle still needs a fresh sudo
+//     token to reach the diagnostic.
 //   - aiChatbot  : the real LLM-backed handler from
-//                  internal/api/ai_chatbot_handler.go (Phase-50 / U1).
-//                  May be nil during early bring-up; nil falls back to
-//                  the F0 501 stub so the off-mode 404 invariant still
-//                  holds.
+//     internal/api/ai_chatbot_handler.go (Phase-50 / U1).
+//     May be nil during early bring-up; nil falls back to
+//     the F0 501 stub so the off-mode 404 invariant still
+//     holds.
 //   - aiDigest   : the real LLM-backed handler for the weekly digest
-//                  narration (Phase-50 / U2). May be nil during early
-//                  bring-up; nil falls back to the same 501 stub.
+//     narration (Phase-50 / U2). May be nil during early
+//     bring-up; nil falls back to the same 501 stub.
 //   - aiYIR      : the real LLM-backed handler for the year-in-review
-//                  narration (Phase-50 / U3, slice 0013). Same nil
-//                  fallback as the chatbot/digest handlers.
+//     narration (Phase-50 / U3, slice 0013). Same nil
+//     fallback as the chatbot/digest handlers.
 //   - aiAnomaly  : the real LLM-backed handler for the anomaly
-//                  explanation narration (Phase-50 / U4, slice 0014).
-//                  Same nil fallback pattern.
+//     explanation narration (Phase-50 / U4, slice 0014).
+//     Same nil fallback pattern.
 //   - aiAlert    : the real LLM-backed handler for the natural-language
-//                  alert builder (Phase-50 / N1, slice 0015). Same nil
-//                  fallback pattern.
+//     alert builder (Phase-50 / N1, slice 0015). Same nil
+//     fallback pattern.
 //   - aiAutomation: the real LLM-backed handler for the natural-language
-//                  automation builder (Phase-50 / N2, slice 0016). Same
-//                  nil fallback pattern.
+//     automation builder (Phase-50 / N2, slice 0016). Same
+//     nil fallback pattern.
 //   - aiSearch   : the real LLM-backed handler for the natural-language
-//                  search across drives, charges, and alerts
-//                  (Phase-50 / N3, slice 0017). Same nil fallback pattern.
+//     search across drives, charges, and alerts
+//     (Phase-50 / N3, slice 0017). Same nil fallback pattern.
 //   - aiDriveCoach: the real LLM-backed handler for the per-drive
-//                  coaching narrative (Phase-50 / N4, slice 0018). Same
-//                  nil fallback pattern.
+//     coaching narrative (Phase-50 / N4, slice 0018). Same
+//     nil fallback pattern.
 //   - aiChargingDiagnosis: the real LLM-backed handler for the per-charging-
-//                  session diagnosis (Phase-50 / N5, slice 0019). Same
-//                  nil fallback pattern.
+//     session diagnosis (Phase-50 / N5, slice 0019). Same
+//     nil fallback pattern.
 //   - aiRagHelp  : the real LLM-backed handler for the RAG-backed app
-//                  help assistant (Phase-50 / N6, slice 0020). Same
-//                  nil fallback pattern.
+//     help assistant (Phase-50 / N6, slice 0020). Same
+//     nil fallback pattern.
 //   - aiDriveSearch: the real LLM-backed handler for the natural-language
-//                  drive search and replay assistant (Phase-50 / D1,
-//                  slice 0021). Same nil fallback pattern.
+//     drive search and replay assistant (Phase-50 / D1,
+//     slice 0021). Same nil fallback pattern.
 //   - aiSpeedProfileInsights: the real LLM-backed handler for the per-drive
-//                  speed-profile insights narrative (Phase-50 / D2,
-//                  slice 0022). Same nil fallback pattern.
+//     speed-profile insights narrative (Phase-50 / D2,
+//     slice 0022). Same nil fallback pattern.
 //   - aiRouteEfficiencySuggestions: the real LLM-backed handler for the
-//                  route-efficiency suggestions narrative (Phase-50 / D3,
-//                  slice 0023). Same nil fallback pattern.
+//     route-efficiency suggestions narrative (Phase-50 / D3,
+//     slice 0023). Same nil fallback pattern.
 //   - aiAutoTripName: the real LLM-backed handler for the auto trip
-//                  naming suggestion (Phase-50 / D4, slice 0024). Same
-//                  nil fallback pattern.
+//     naming suggestion (Phase-50 / D4, slice 0024). Same
+//     nil fallback pattern.
 //   - aiTripPlannerLLM: the real LLM-backed handler for the
-//                  trip-planner LLM agent (Phase-50 / D5, slice 0025).
-//                  Same nil fallback pattern.
+//     trip-planner LLM agent (Phase-50 / D5, slice 0025).
+//     Same nil fallback pattern.
 //   - aiSmartChargeSchedule: the real LLM-backed handler for the
-//                  smart-charge schedule suggestion (Phase-50 / C1,
-//                  slice 0026). Same nil fallback pattern.
+//     smart-charge schedule suggestion (Phase-50 / C1,
+//     slice 0026). Same nil fallback pattern.
 //   - aiBatteryHealth: the real LLM-backed handler for the battery
-//                  health forecast narrative (Phase-50 / C2,
-//                  slice 0027). Same nil fallback pattern.
+//     health forecast narrative (Phase-50 / C2,
+//     slice 0027). Same nil fallback pattern.
 //   - aiChargingCurveClustering: the real LLM-backed handler for
-//                  the charging-curve fingerprint clustering
-//                  narrator (Phase-50 / C3, slice 0028). Same nil
-//                  fallback pattern.
+//     the charging-curve fingerprint clustering
+//     narrator (Phase-50 / C3, slice 0028). Same nil
+//     fallback pattern.
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,

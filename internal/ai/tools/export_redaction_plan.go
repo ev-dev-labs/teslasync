@@ -166,15 +166,15 @@ var exportTypesHint = strings.Join(exportTypes, ", ")
 // MUST refuse to narrate a plan whose mode is outside this set.
 //
 //   - redact:          replace the field with a placeholder ("***")
-//                      so the export still parses but the value is
-//                      removed.
+//     so the export still parses but the value is
+//     removed.
 //   - hash:            replace the field with a deterministic hash
-//                      so duplicates remain detectable but the
-//                      original value cannot be recovered.
+//     so duplicates remain detectable but the
+//     original value cannot be recovered.
 //   - drop:            omit the field from the export entirely.
 //   - keep_if_consent: keep the value in cleartext ONLY if the
-//                      user has explicitly opted in for this
-//                      export. The default is to redact.
+//     user has explicitly opted in for this
+//     export. The default is to redact.
 //
 // Kept in lex order so error messages list a stable allowed-set.
 var redactionModes = []string{

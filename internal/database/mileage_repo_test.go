@@ -68,9 +68,9 @@ func TestStatsSelectSQL_Shape(t *testing.T) {
 	mustContain := []string{
 		"FROM drives",
 		"vehicle_id = $1",
-		"FILTER (WHERE started_at >= $2)",  // 7d window
-		"FILTER (WHERE started_at >= $3)",  // 30d window (used twice — once for sum, once for count)
-		"FILTER (WHERE started_at >= $4)",  // 365d window
+		"FILTER (WHERE started_at >= $2)", // 7d window
+		"FILTER (WHERE started_at >= $3)", // 30d window (used twice — once for sum, once for count)
+		"FILTER (WHERE started_at >= $4)", // 365d window
 		"COALESCE(SUM(distance_m), 0)",
 		"distance_m IS NOT NULL AND distance_m > 0",
 		"MIN(started_at)",

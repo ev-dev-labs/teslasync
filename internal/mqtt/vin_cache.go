@@ -93,17 +93,17 @@ var (
 // pattern would translate into ~200 vehicle-table SELECTs per second per
 // vehicle. This cache:
 //
-//   1. Preloads the full vin->id snapshot on startup so the steady state
-//      hit rate is ~100%.
-//   2. Refreshes the snapshot periodically (5 min default) so newly-
-//      registered vehicles become resolvable without restart.
-//   3. On miss, falls back to the wrapped Resolver (DB lookup) and
-//      memoises the result — including ErrUnknownVIN, so a flood of
-//      mis-routed messages from a foreign tenant cannot DoS the DB.
-//   4. Exposes vehicleID -> VIN reverse lookup for any future producer
-//      path that needs it (the per-field MQTT path itself only needs
-//      vin -> id, but observers and the replay tool both occasionally
-//      need the reverse direction).
+//  1. Preloads the full vin->id snapshot on startup so the steady state
+//     hit rate is ~100%.
+//  2. Refreshes the snapshot periodically (5 min default) so newly-
+//     registered vehicles become resolvable without restart.
+//  3. On miss, falls back to the wrapped Resolver (DB lookup) and
+//     memoises the result — including ErrUnknownVIN, so a flood of
+//     mis-routed messages from a foreign tenant cannot DoS the DB.
+//  4. Exposes vehicleID -> VIN reverse lookup for any future producer
+//     path that needs it (the per-field MQTT path itself only needs
+//     vin -> id, but observers and the replay tool both occasionally
+//     need the reverse direction).
 //
 // Concurrency: all public methods are safe for concurrent use. The
 // background refresh runs on a dedicated goroutine launched by

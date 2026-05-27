@@ -206,14 +206,14 @@ type queryChargingAggregation struct {
 // Pinned thresholds. MUST match
 // web/src/lib/chargingAggregation.ts → DEFAULT_THRESHOLDS.
 const (
-	chargingFlagExpensiveCostPerKwh = 0.50  // USD per kWh (frontend default)
-	chargingFlagTricklePowerKw      = 5.0   // kW
-	chargingFlagTrickleMinDurMin    = 360.0 // 6 hours, in minutes
-	chargingFlagTelemetryGapKwhFloor = 0.1  // kWh
-	chargingFlagTelemetryGapMinDur   = 5.0  // minutes
-	chargingFlagCostZeroKwhFloor     = 1.0  // kWh
-	chargingFlagBadPowerKw           = 3.0  // kW
-	chargingFlagBadPowerMinDur       = 30.0 // minutes
+	chargingFlagExpensiveCostPerKwh  = 0.50  // USD per kWh (frontend default)
+	chargingFlagTricklePowerKw       = 5.0   // kW
+	chargingFlagTrickleMinDurMin     = 360.0 // 6 hours, in minutes
+	chargingFlagTelemetryGapKwhFloor = 0.1   // kWh
+	chargingFlagTelemetryGapMinDur   = 5.0   // minutes
+	chargingFlagCostZeroKwhFloor     = 1.0   // kWh
+	chargingFlagBadPowerKw           = 3.0   // kW
+	chargingFlagBadPowerMinDur       = 30.0  // minutes
 )
 
 // Name implements [Tool].
@@ -532,11 +532,11 @@ func chargingFlagDetail(flags []string, c *models.ChargingSession, durMin *float
 		switch f {
 		case "telemetry_gap":
 			out[f] = map[string]any{
-				"reason":          "0 kWh added but session ran for >5 minutes",
-				"duration_min":    derefFloatOrNil(durMin),
-				"kwh_added":       derefFloatOrNil(kwhAdded),
-				"threshold_min":   chargingFlagTelemetryGapMinDur,
-				"threshold_kwh":   chargingFlagTelemetryGapKwhFloor,
+				"reason":        "0 kWh added but session ran for >5 minutes",
+				"duration_min":  derefFloatOrNil(durMin),
+				"kwh_added":     derefFloatOrNil(kwhAdded),
+				"threshold_min": chargingFlagTelemetryGapMinDur,
+				"threshold_kwh": chargingFlagTelemetryGapKwhFloor,
 			}
 		case "cost_zero":
 			out[f] = map[string]any{
@@ -546,11 +546,11 @@ func chargingFlagDetail(flags []string, c *models.ChargingSession, durMin *float
 			}
 		case "bad_power":
 			out[f] = map[string]any{
-				"reason":              "Sustained low power on a DC charger",
-				"avg_power_kw":        derefFloatOrNil(avgPowerKw),
-				"duration_min":        derefFloatOrNil(durMin),
-				"threshold_power_kw":  chargingFlagBadPowerKw,
-				"threshold_min":       chargingFlagBadPowerMinDur,
+				"reason":             "Sustained low power on a DC charger",
+				"avg_power_kw":       derefFloatOrNil(avgPowerKw),
+				"duration_min":       derefFloatOrNil(durMin),
+				"threshold_power_kw": chargingFlagBadPowerKw,
+				"threshold_min":      chargingFlagBadPowerMinDur,
 			}
 		case "expensive":
 			var currency string
@@ -558,10 +558,10 @@ func chargingFlagDetail(flags []string, c *models.ChargingSession, durMin *float
 				currency = *c.CostCurrency
 			}
 			out[f] = map[string]any{
-				"reason":               "Cost per kWh is above the configured threshold",
-				"cost_per_kwh":         derefFloatOrNil(cpk),
-				"currency":             currency,
-				"threshold_per_kwh":    chargingFlagExpensiveCostPerKwh,
+				"reason":            "Cost per kWh is above the configured threshold",
+				"cost_per_kwh":      derefFloatOrNil(cpk),
+				"currency":          currency,
+				"threshold_per_kwh": chargingFlagExpensiveCostPerKwh,
 			}
 		case "trickle":
 			out[f] = map[string]any{

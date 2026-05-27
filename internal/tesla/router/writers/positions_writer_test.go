@@ -639,9 +639,9 @@ func TestPositionsWrite_ConcurrentWritesNoRace(t *testing.T) {
 // "no test infrastructure outside writers/" boundary the prompt
 // implies via the allowed-files list.
 type concurrentRecorder struct {
-	mu     sync.Mutex
-	rows   int64
-	calls  int64
+	mu    sync.Mutex
+	rows  int64
+	calls int64
 }
 
 func newConcurrentRecorder() *concurrentRecorder {

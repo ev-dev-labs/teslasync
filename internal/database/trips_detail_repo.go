@@ -72,18 +72,18 @@ func NewTripsDetailRepo(pool tripsDetailPool) *TripsDetailRepo {
 // IEEE-754 double precision) and matches what the existing
 // ChargingSessionRepo already does for cost reads.
 type TripDetail struct {
-	ID            int64
-	VehicleID     int64
-	Name          *string
-	StartedAt     time.Time
-	EndedAt       *time.Time
-	DistanceM     float64
-	EnergyUsedWh  float64
-	DurationS     int64
-	DriveCount    int64
-	ChargeCount   int64
-	TotalCost     float64
-	Drives        []TripDriveSummary
+	ID           int64
+	VehicleID    int64
+	Name         *string
+	StartedAt    time.Time
+	EndedAt      *time.Time
+	DistanceM    float64
+	EnergyUsedWh float64
+	DurationS    int64
+	DriveCount   int64
+	ChargeCount  int64
+	TotalCost    float64
+	Drives       []TripDriveSummary
 }
 
 // TripDriveSummary is the per-drive projection rendered inside the

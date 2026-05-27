@@ -175,7 +175,7 @@ const (
 //   - close   → POST /api/v1/data-repair/{kind}/{id}/close
 //   - discard → DELETE /api/v1/data-repair/{kind}/{id}
 //   - update  → PUT /api/v1/data-repair/{kind}/{id} with the
-//               update_fields map as the request body.
+//     update_fields map as the request body.
 const (
 	dataRepairActionClose   = "close"
 	dataRepairActionDiscard = "discard"

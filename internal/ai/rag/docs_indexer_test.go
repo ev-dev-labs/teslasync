@@ -46,9 +46,9 @@ func TestIndexDocs_WalksMarkdown(t *testing.T) {
 		"docs/getting-started.md": {Data: []byte("# Getting Started\n\nWelcome to the help.")},
 		"docs/charging.md":        {Data: []byte("Charging tips.")},
 		"docs/img/logo.png":       {Data: []byte{0x89, 0x50, 0x4E, 0x47}}, // skipped
-		"docs/_partial.md":        {Data: []byte("partial")},               // skipped (underscore prefix)
-		"docs/.hidden.md":         {Data: []byte("hidden")},                // skipped
-		"docs/notes.txt":          {Data: []byte("plain text")},            // skipped
+		"docs/_partial.md":        {Data: []byte("partial")},              // skipped (underscore prefix)
+		"docs/.hidden.md":         {Data: []byte("hidden")},               // skipped
+		"docs/notes.txt":          {Data: []byte("plain text")},           // skipped
 	}
 	r := &recordingRetriever{}
 	n, err := IndexDocs(context.Background(), r, fsys, "docs", "")

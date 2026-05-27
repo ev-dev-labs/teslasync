@@ -48,9 +48,9 @@ const (
 // IncidentTitleMinLen / Max bound the title and message lengths.
 // Consistent with the SPA form constraints in IncidentForm.tsx.
 const (
-	IncidentTitleMinLen   = 3
-	IncidentTitleMaxLen   = 200
-	IncidentMessageMaxLen = 4000
+	IncidentTitleMinLen       = 3
+	IncidentTitleMaxLen       = 200
+	IncidentMessageMaxLen     = 4000
 	IncidentDescriptionMaxLen = 4000
 )
 
@@ -67,20 +67,20 @@ var (
 // Incident is the canonical row shape. JSON tags align with the
 // /api/v1/status/incidents response contract.
 type Incident struct {
-	ID                 int64           `json:"id"`
-	Title              string          `json:"title"`
-	Description        string          `json:"description"`
-	Severity           string          `json:"severity"`
-	Status             string          `json:"status"`
-	Source             string          `json:"source"`
-	AffectedComponents []string        `json:"affected_components"`
+	ID                 int64            `json:"id"`
+	Title              string           `json:"title"`
+	Description        string           `json:"description"`
+	Severity           string           `json:"severity"`
+	Status             string           `json:"status"`
+	Source             string           `json:"source"`
+	AffectedComponents []string         `json:"affected_components"`
 	Updates            []IncidentUpdate `json:"updates"`
-	StartedAt          time.Time       `json:"started_at"`
-	ResolvedAt         *time.Time      `json:"resolved_at,omitempty"`
-	CreatedAt          time.Time       `json:"created_at"`
-	UpdatedAt          time.Time       `json:"updated_at"`
-	CreatedBy          string          `json:"created_by,omitempty"`
-	AutoDedupeKey      string          `json:"-"`
+	StartedAt          time.Time        `json:"started_at"`
+	ResolvedAt         *time.Time       `json:"resolved_at,omitempty"`
+	CreatedAt          time.Time        `json:"created_at"`
+	UpdatedAt          time.Time        `json:"updated_at"`
+	CreatedBy          string           `json:"created_by,omitempty"`
+	AutoDedupeKey      string           `json:"-"`
 }
 
 // IncidentUpdate is one timeline entry. Append-only — the operator

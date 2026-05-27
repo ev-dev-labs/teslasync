@@ -28,8 +28,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
+	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fakeChargeSessionSource is a deterministic in-memory

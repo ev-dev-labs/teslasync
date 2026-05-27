@@ -41,18 +41,18 @@
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the typed
-//                         SearchHandler or the SearchPage typed-filter
-//                         form. Result rendering still flows through
-//                         the existing canonical query path; the AI
-//                         only proposes a NARRATIVE over already-
-//                         retrieved entities.
+//     SearchHandler or the SearchPage typed-filter
+//     form. Result rendering still flows through
+//     the existing canonical query path; the AI
+//     only proposes a NARRATIVE over already-
+//     retrieved entities.
 //   - I4 zero egress:     all retrieval is local (F7 pgvector against
-//                         a self-hosted database); the LLM call
-//                         itself only fires when ai_mode != 'off' AND
-//                         the per-feature toggle is on.
+//     a self-hosted database); the LLM call
+//     itself only fires when ai_mode != 'off' AND
+//     the per-feature toggle is on.
 //   - I7 per-feature:     the AI route is gated by guard.Wrap("nl-search").
 //   - I9 redaction:       PolicyChatbot denies all classes; identifiers
-//                         flow through tools, not prose.
+//     flow through tools, not prose.
 package nlsearch
 
 import (

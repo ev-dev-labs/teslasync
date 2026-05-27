@@ -3,12 +3,12 @@ package vehiclesvc
 import (
 	"context"
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/domain/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/port/external"
 	"github.com/ev-dev-labs/teslasync/internal/port/repository"
-	"testing"
 )
 
 // mockVehicleRepo implements repository.VehicleRepository for testing.

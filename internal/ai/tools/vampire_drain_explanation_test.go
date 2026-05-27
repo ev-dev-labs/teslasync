@@ -249,10 +249,10 @@ type fakeVampireDrainSource struct {
 		limit       int
 	}
 	statCalls []struct {
-		vehicleID    int64
-		windowStart  time.Time
-		sampleDays   int
-		limit        int
+		vehicleID   int64
+		windowStart time.Time
+		sampleDays  int
+		limit       int
 	}
 	events    []database.VampireDrainEvent
 	stats     database.VampireDrainStats
@@ -274,10 +274,10 @@ func (f *fakeVampireDrainSource) Events(_ context.Context, vehicleID int64, wind
 
 func (f *fakeVampireDrainSource) Stats(_ context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (database.VampireDrainStats, error) {
 	f.statCalls = append(f.statCalls, struct {
-		vehicleID    int64
-		windowStart  time.Time
-		sampleDays   int
-		limit        int
+		vehicleID   int64
+		windowStart time.Time
+		sampleDays  int
+		limit       int
 	}{vehicleID, windowStart, sampleWindowDays, limit})
 	if f.statsErr != nil {
 		return database.VampireDrainStats{}, f.statsErr
@@ -529,8 +529,8 @@ func TestRegisterVampireDrainExplanationTools_RegistersBoth(t *testing.T) {
 	})
 	names := r.Names()
 	wantSet := map[string]bool{
-		"retrieve_idle_drain_chunks":   false,
-		"query_vampire_drain_windows":  false,
+		"retrieve_idle_drain_chunks":  false,
+		"query_vampire_drain_windows": false,
 	}
 	for _, n := range names {
 		if _, ok := wantSet[n]; ok {

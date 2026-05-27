@@ -11,8 +11,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // installNormalizeRecorder swaps the global TracerProvider for a tracetest
@@ -32,7 +32,7 @@ func installNormalizeRecorder(t *testing.T) *tracetest.SpanRecorder {
 //   - normalize.process is the parent span
 //   - normalize.parse / normalize.route / normalize.write are children
 //   - the parent carries signal.count + vehicle_id + normalize.duration_us
-//     + normalize.dropped + normalize.errors attributes
+//   - normalize.dropped + normalize.errors attributes
 func TestPipelineProcessAtomics_EmitsParentAndChildSpans(t *testing.T) {
 	rec := installNormalizeRecorder(t)
 

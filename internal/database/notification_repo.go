@@ -467,7 +467,7 @@ func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg s
 // or one of the read paths will break at runtime.
 //
 // `severity` and `error` are nullable in the DB but the model uses non-pointer
-// `string` fields, so both columns must be COALESCEd to '' to avoid pgx
+// `string` fields, so both columns must be COALESCEd to ” to avoid pgx
 // "cannot scan NULL into *string" failures on rows with no error message.
 const notificationLogColumns = `id, channel_id, alert_id, title, message, status, COALESCE(severity, ''), COALESCE(error, ''), created_at, sent_at, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note`
 
@@ -551,6 +551,7 @@ func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*mode
 	}
 	return logs, rows.Err()
 }
+
 // via GET /notifications query params. All fields are optional; zero values
 // mean "no constraint". The Archived field is a tri-state (nil = both, false
 // = inbox only, true = archived only) because the inbox view defaults to the
@@ -875,7 +876,7 @@ func (r *NotificationRepo) BulkSetReadAll(ctx context.Context) (int64, error) {
 // have to expand the group and enumerate each member id.
 //
 // Empty / invalid group_key returns (0, nil) — refusing to dispatch to
-// the database with an unbounded match (group_key='' would catch any
+// the database with an unbounded match (group_key=” would catch any
 // row written before the column existed, which is NOT what the caller
 // wants). The handler validates shape via IsValidNotificationGroupKey
 // before reaching here; this is a defense-in-depth check.

@@ -7,11 +7,11 @@
 // The repo is intentionally narrow:
 //   - Save             — insert one continuation row with a 24h expiry
 //   - Load             — read a row by id (returns ErrContinuationNotFound
-//                        if the row is missing OR expired)
+//     if the row is missing OR expired)
 //   - Delete           — remove a row after the dispatcher resumes
 //   - CleanupExpired   — bulk delete rows whose expires_at < now() (called
-//                        by a periodic worker tick — wiring lands in the
-//                        next worker-touching slice)
+//     by a periodic worker tick — wiring lands in the
+//     next worker-touching slice)
 //
 // Subject scoping: every call carries the FORWARD_AUTH_HEADER subject
 // so a multi-user deployment can attribute paused conversations to a

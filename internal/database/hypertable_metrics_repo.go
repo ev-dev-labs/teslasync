@@ -21,14 +21,14 @@ import (
 
 // HypertableSize is the per-hypertable summary returned by Forecast.
 type HypertableSize struct {
-	HypertableName     string  `json:"hypertable_name"`
-	TotalBytes         int64   `json:"total_bytes"`
-	UncompressedBytes  int64   `json:"uncompressed_bytes"`
-	CompressedBytes    int64   `json:"compressed_bytes"`
-	ChunkCount         int64   `json:"chunk_count"`
-	GrowthBytesPerDay  float64 `json:"growth_bytes_per_day"`
-	EstDaysToQuota     *int    `json:"est_days_to_quota,omitempty"`
-	Severity           string  `json:"severity"`
+	HypertableName    string  `json:"hypertable_name"`
+	TotalBytes        int64   `json:"total_bytes"`
+	UncompressedBytes int64   `json:"uncompressed_bytes"`
+	CompressedBytes   int64   `json:"compressed_bytes"`
+	ChunkCount        int64   `json:"chunk_count"`
+	GrowthBytesPerDay float64 `json:"growth_bytes_per_day"`
+	EstDaysToQuota    *int    `json:"est_days_to_quota,omitempty"`
+	Severity          string  `json:"severity"`
 }
 
 // HypertableMetricsRepo is the disk-usage read path.

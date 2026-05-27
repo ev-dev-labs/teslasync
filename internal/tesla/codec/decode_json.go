@@ -93,24 +93,24 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 //
 // Inputs:
 //   - field      The canonical proto field name from topic segment 4
-//                (e.g. "Soc", "Gear", "Location"). Used to look up the
-//                ValueKind, CompoundKind, and EnumStringPrefix in
-//                protomodel.SignalsByName so the body is decoded against
-//                the SAME schema the proto-batch path uses.
+//     (e.g. "Soc", "Gear", "Location"). Used to look up the
+//     ValueKind, CompoundKind, and EnumStringPrefix in
+//     protomodel.SignalsByName so the body is decoded against
+//     the SAME schema the proto-batch path uses.
 //   - body       The raw MQTT message body. Either bare JSON
-//                (production) or an envelope `{"value":...,"ts":...}`
-//                (replay/test). Envelope detection is unambiguous: every
-//                Tesla compound uses domain-specific top-level keys
-//                (latitude/longitude, DriverFront/etc., FrontLeft/etc.)
-//                and "value" is reserved for the envelope.
+//     (production) or an envelope `{"value":...,"ts":...}`
+//     (replay/test). Envelope detection is unambiguous: every
+//     Tesla compound uses domain-specific top-level keys
+//     (latitude/longitude, DriverFront/etc., FrontLeft/etc.)
+//     and "value" is reserved for the envelope.
 //   - vin        The VIN from topic segment 2. Threaded into every emitted
-//                Atomic.VehicleID; the caller must validate it earlier so
-//                a malformed topic can't poison signal_log.
+//     Atomic.VehicleID; the caller must validate it earlier so
+//     a malformed topic can't poison signal_log.
 //   - fallbackTs The wall-clock at which the subscriber received the
-//                message. Used as Atomic.EmittedAt when the body is bare
-//                (production) since Tesla's per-field publisher does NOT
-//                include event-time. The envelope's "ts" overrides this
-//                when present (replay path preserves producer time).
+//     message. Used as Atomic.EmittedAt when the body is bare
+//     (production) since Tesla's per-field publisher does NOT
+//     include event-time. The envelope's "ts" overrides this
+//     when present (replay path preserves producer time).
 //
 // Output:
 //   - On success: ([]Atomic, nil). Atomics for an atomic ValueKind have

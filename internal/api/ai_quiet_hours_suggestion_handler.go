@@ -177,18 +177,25 @@ type AIQuietHoursSuggestionHandler struct {
 // request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             draft_quiet_hours_window AND
-//             validate_quiet_hours_window (registered by
-//             tools.RegisterQuietHoursSuggestionTools in
-//             router.go).
+//
+//	draft_quiet_hours_window AND
+//	validate_quiet_hours_window (registered by
+//	tools.RegisterQuietHoursSuggestionTools in
+//	router.go).
+//
 // strat:      the quiet-hours-suggestion Strategy (one per
-//             process).
+//
+//	process).
+//
 // headerName: forward-auth header name; used to extract subject
-//             for audit AND for the per-request user scope
-//             binding (the candidate-finder reads only this
-//             user's notification_logs).
+//
+//	for audit AND for the per-request user scope
+//	binding (the candidate-finder reads only this
+//	user's notification_logs).
 func NewAIQuietHoursSuggestionHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -517,6 +524,6 @@ func (a *AIQuietHoursSuggestionSource) CountExistingWindows(ctx context.Context,
 // satisfies http.Handler and AIQuietHoursSuggestionSource
 // satisfies tools.QuietHoursSuggestionSource.
 var (
-	_ http.Handler                    = (*AIQuietHoursSuggestionHandler)(nil)
+	_ http.Handler                     = (*AIQuietHoursSuggestionHandler)(nil)
 	_ tools.QuietHoursSuggestionSource = (*AIQuietHoursSuggestionSource)(nil)
 )

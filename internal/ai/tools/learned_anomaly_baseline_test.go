@@ -2,20 +2,20 @@
 //
 // learned_anomaly_baseline_test.go covers:
 //
-//   1. train_anomaly_baseline.Validate rejects non-positive
-//      vehicle_id, days outside [1,30], and missing vehicle_id.
-//   2. query_anomaly_baseline.Validate rejects non-positive
-//      vehicle_id and missing vehicle_id.
-//   3. train_anomaly_baseline.Execute returns the LearnedBaseline
-//      envelope from the trainer, with per-signal source label and
-//      learned/fallback counts that match the trainer's output.
-//   4. query_anomaly_baseline.Execute returns the
-//      CurrentEffectiveEnvelope (every entry SourceSafeRangesFallback)
-//      grounded by vehicle_id.
-//   5. Both tools report Mutates()=false — the dispatcher must
-//      never pause for confirmation on these read-only tools.
-//   6. RegisterLearnedAnomalyBaselineTools installs both tools by
-//      canonical name on a fresh Registry.
+//  1. train_anomaly_baseline.Validate rejects non-positive
+//     vehicle_id, days outside [1,30], and missing vehicle_id.
+//  2. query_anomaly_baseline.Validate rejects non-positive
+//     vehicle_id and missing vehicle_id.
+//  3. train_anomaly_baseline.Execute returns the LearnedBaseline
+//     envelope from the trainer, with per-signal source label and
+//     learned/fallback counts that match the trainer's output.
+//  4. query_anomaly_baseline.Execute returns the
+//     CurrentEffectiveEnvelope (every entry SourceSafeRangesFallback)
+//     grounded by vehicle_id.
+//  5. Both tools report Mutates()=false — the dispatcher must
+//     never pause for confirmation on these read-only tools.
+//  6. RegisterLearnedAnomalyBaselineTools installs both tools by
+//     canonical name on a fresh Registry.
 package tools
 
 import (

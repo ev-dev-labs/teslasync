@@ -98,8 +98,10 @@ type AIRangePredictionHandler struct {
 //
 // registry:   AI provider registry (decorator chain already applied).
 // toolReg:    process-wide tool registry. MUST contain
-//             train_range_model + query_range_prediction (registered
-//             by tools.RegisterRangePredictorTools in router.go).
+//
+//	train_range_model + query_range_prediction (registered
+//	by tools.RegisterRangePredictorTools in router.go).
+//
 // strat:      the range-prediction-model Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
 func NewAIRangePredictionHandler(

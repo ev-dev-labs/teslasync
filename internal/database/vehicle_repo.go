@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
+	"github.com/jackc/pgx/v5"
 )
 
 // VehicleRepo provides vehicle data access operations.

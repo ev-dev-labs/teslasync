@@ -342,4 +342,3 @@ func stateEmoji(state string) string {
 		return "⚫"
 	}
 }
-

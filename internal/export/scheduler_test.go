@@ -5,12 +5,12 @@
 // touch a real DB or filesystem. The goal is to pin three
 // behaviours the production deployment must keep:
 //
-//   1. Per-row try/catch — one panicking or erroring row MUST NOT
-//      block its siblings.
-//   2. Outcome propagation — every row finishes by writing exactly
-//      one MarkRunResult call carrying the recomputed next_run_at.
-//   3. Cancellation — a cancelled context drops the in-flight tick
-//      cleanly.
+//  1. Per-row try/catch — one panicking or erroring row MUST NOT
+//     block its siblings.
+//  2. Outcome propagation — every row finishes by writing exactly
+//     one MarkRunResult call carrying the recomputed next_run_at.
+//  3. Cancellation — a cancelled context drops the in-flight tick
+//     cleanly.
 package export
 
 import (

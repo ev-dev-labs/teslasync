@@ -165,7 +165,7 @@ func (f *fakePipeline) Calls() []fakePipelineCall {
 // fakeDLQ is a recording stub of DLQPublisher with a configurable failure
 // queue (returns an error per call until exhausted).
 type fakeDLQ struct {
-	mu      sync.Mutex
+	mu       sync.Mutex
 	failNext []error
 	entries  []DLQEntry
 }
@@ -557,13 +557,13 @@ func TestPipelineSubscriber_TopicMismatch_AckAndDrop(t *testing.T) {
 	for _, topic := range []string{
 		"unrelated/topic",
 		"telemetry/something_else",
-		"telemetry/VIN",                          // missing /v/{field}
-		"telemetry/VIN/v",                        // missing {field}
-		"telemetry/VIN/v/",                       // empty {field}
-		"telemetry//v/Soc",                       // empty VIN
-		"telemetry/VIN/x/Soc",                    // wrong segment-3 marker
-		"telemetry/VIN/v/Soc/extra",              // too many segments
-		"telemetry/payload/5YJ3E1EA1LF000001",    // legacy proto-batch shape
+		"telemetry/VIN",                       // missing /v/{field}
+		"telemetry/VIN/v",                     // missing {field}
+		"telemetry/VIN/v/",                    // empty {field}
+		"telemetry//v/Soc",                    // empty VIN
+		"telemetry/VIN/x/Soc",                 // wrong segment-3 marker
+		"telemetry/VIN/v/Soc/extra",           // too many segments
+		"telemetry/payload/5YJ3E1EA1LF000001", // legacy proto-batch shape
 	} {
 		sub.handlePayload(context.Background(), mqttPayload{
 			Topic:     topic,
@@ -701,9 +701,9 @@ func TestRedeliveryTracker_Reset(t *testing.T) {
 
 func TestParsePipelineTopic(t *testing.T) {
 	cases := []struct {
-		base, topic            string
-		wantVIN, wantField     string
-		wantOK                 bool
+		base, topic        string
+		wantVIN, wantField string
+		wantOK             bool
 	}{
 		{"telemetry", "telemetry/5YJ3E1EA1LF000001/v/Soc", "5YJ3E1EA1LF000001", "Soc", true},
 		{"telemetry/", "telemetry/X/v/Gear", "X", "Gear", true},
@@ -897,15 +897,17 @@ func (f *fakePahoClient) LastQoS() byte {
 
 // Unused pahomqtt.Client methods. They panic so that an accidental
 // dependency on broker-side behaviour in a test surfaces immediately.
-func (f *fakePahoClient) IsConnected() bool                                       { return true }
-func (f *fakePahoClient) IsConnectionOpen() bool                                  { return true }
-func (f *fakePahoClient) Connect() pahoToken                                      { panic("Connect not used") }
-func (f *fakePahoClient) Disconnect(_ uint)                                       { panic("Disconnect not used") }
-func (f *fakePahoClient) Publish(_ string, _ byte, _ bool, _ interface{}) pahoToken { panic("Publish not used") }
+func (f *fakePahoClient) IsConnected() bool      { return true }
+func (f *fakePahoClient) IsConnectionOpen() bool { return true }
+func (f *fakePahoClient) Connect() pahoToken     { panic("Connect not used") }
+func (f *fakePahoClient) Disconnect(_ uint)      { panic("Disconnect not used") }
+func (f *fakePahoClient) Publish(_ string, _ byte, _ bool, _ interface{}) pahoToken {
+	panic("Publish not used")
+}
 func (f *fakePahoClient) SubscribeMultiple(_ map[string]byte, _ pahoMessageHandler) pahoToken {
 	panic("SubscribeMultiple not used")
 }
-func (f *fakePahoClient) Unsubscribe(_ ...string) pahoToken      { panic("Unsubscribe not used") }
+func (f *fakePahoClient) Unsubscribe(_ ...string) pahoToken       { panic("Unsubscribe not used") }
 func (f *fakePahoClient) AddRoute(_ string, _ pahoMessageHandler) {}
 func (f *fakePahoClient) OptionsReader() pahoOptionsReader        { panic("OptionsReader not used") }
 

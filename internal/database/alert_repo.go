@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // AlertRuleRepo provides alert rule data access.
@@ -141,8 +141,8 @@ func (errInvalidVehicleSelection) Error() string {
 //   - AllVehicles=TRUE              -> NULL
 //   - AllVehicles=FALSE, len 1      -> that vehicle ID
 //   - AllVehicles=FALSE, len > 1    -> MIN(vehicleIDs); other vehicles
-//                                      are not visible to the old binary
-//                                      until the deploy completes.
+//     are not visible to the old binary
+//     until the deploy completes.
 func legacyVehicleIDFor(allVehicles bool, vehicleIDs []int64) *int64 {
 	if allVehicles || len(vehicleIDs) == 0 {
 		return nil

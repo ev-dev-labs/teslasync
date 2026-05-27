@@ -2,19 +2,19 @@
 //
 // Exposes a single read-only endpoint the SPA polls to discover:
 //
-//   1. Whether the deployment is in open mode or behind a ForwardAuth
-//      provider.
-//   2. The exact header name TeslaSync reads (so the SPA never has to
-//      hard-code "X-Forwarded-User").
-//   3. The current request's resolved subject value (or null in open
-//      mode / when the proxy stripped the header).
-//   4. An operator-supplied free-text provider hint (Authentik /
-//      Authelia / oauth2-proxy / Keycloak / …) used purely as
-//      copy in the SPA — never as a routing key, never to dispatch
-//      vendor-specific admin API calls.
-//   5. A capability matrix the SPA uses to decide which sections to
-//      mount vs. replace with the inline "feature requires
-//      authentication" placeholder.
+//  1. Whether the deployment is in open mode or behind a ForwardAuth
+//     provider.
+//  2. The exact header name TeslaSync reads (so the SPA never has to
+//     hard-code "X-Forwarded-User").
+//  3. The current request's resolved subject value (or null in open
+//     mode / when the proxy stripped the header).
+//  4. An operator-supplied free-text provider hint (Authentik /
+//     Authelia / oauth2-proxy / Keycloak / …) used purely as
+//     copy in the SPA — never as a routing key, never to dispatch
+//     vendor-specific admin API calls.
+//  5. A capability matrix the SPA uses to decide which sections to
+//     mount vs. replace with the inline "feature requires
+//     authentication" placeholder.
 //
 // The endpoint is deliberately UNGUARDED — it must answer in open
 // mode without a sudo token, and it must answer in forward-auth mode

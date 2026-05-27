@@ -162,9 +162,9 @@ func (t *queryWeeklyDigestContext) Execute(ctx context.Context, in any) (any, er
 // stays focused on IO + error wrapping.
 func aggregateWeeklyDigest(drives []*models.Drive, charges []*models.ChargingSession) map[string]any {
 	var (
-		drivesCount               int
+		drivesCount                  int
 		distM, energyUsedWh, regenWh float64
-		durS                      int64
+		durS                         int64
 	)
 	for _, d := range drives {
 		if d == nil {

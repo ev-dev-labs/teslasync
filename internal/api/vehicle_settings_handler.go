@@ -338,4 +338,3 @@ func (a *vehicleExistenceCheckerAdapter) Exists(ctx context.Context, vehicleID i
 func MarshalVehicleSettingPayload(settings []database.EffectiveSetting) ([]byte, error) {
 	return json.Marshal(vehicleSettingsListResponse{Settings: settings})
 }
-

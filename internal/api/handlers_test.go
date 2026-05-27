@@ -41,10 +41,10 @@ func TestPagination(t *testing.T) {
 		{"", 50, 0},
 		{"?limit=10", 10, 0},
 		{"?limit=10&offset=20", 10, 20},
-		{"?limit=2000", 50, 0},   // exceeds max, uses default
-		{"?limit=-5", 50, 0},     // negative, uses default
-		{"?limit=abc", 50, 0},    // invalid, uses default
-		{"?offset=-1", 50, 0},    // negative offset, uses default
+		{"?limit=2000", 50, 0}, // exceeds max, uses default
+		{"?limit=-5", 50, 0},   // negative, uses default
+		{"?limit=abc", 50, 0},  // invalid, uses default
+		{"?offset=-1", 50, 0},  // negative offset, uses default
 	}
 
 	for _, tt := range tests {

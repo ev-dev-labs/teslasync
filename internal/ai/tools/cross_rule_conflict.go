@@ -120,22 +120,22 @@ var ConflictKinds = []string{
 // the LLM never sees fields it doesn't need (msg_template,
 // snoozed_until, etc.).
 type AlertRuleSummary struct {
-	ID           int64    `json:"id"`
-	Name         string   `json:"name"`
-	Enabled      bool     `json:"enabled"`
-	Kind         string   `json:"kind"`
-	SignalName   string   `json:"signal_name"`
-	Op           string   `json:"op"`
-	ValueNum     *float64 `json:"value_num,omitempty"`
-	ValueText    *string  `json:"value_text,omitempty"`
-	ValueBool    *bool    `json:"value_bool,omitempty"`
-	ValueMin     *float64 `json:"value_min,omitempty"`
-	ValueMax     *float64 `json:"value_max,omitempty"`
-	Severity     string   `json:"severity"`
-	CooldownMin  int      `json:"cooldown_min"`
-	TriggerMode  string   `json:"trigger_mode"`
-	AllVehicles  bool     `json:"all_vehicles"`
-	VehicleIDs   []int64  `json:"vehicle_ids"`
+	ID          int64    `json:"id"`
+	Name        string   `json:"name"`
+	Enabled     bool     `json:"enabled"`
+	Kind        string   `json:"kind"`
+	SignalName  string   `json:"signal_name"`
+	Op          string   `json:"op"`
+	ValueNum    *float64 `json:"value_num,omitempty"`
+	ValueText   *string  `json:"value_text,omitempty"`
+	ValueBool   *bool    `json:"value_bool,omitempty"`
+	ValueMin    *float64 `json:"value_min,omitempty"`
+	ValueMax    *float64 `json:"value_max,omitempty"`
+	Severity    string   `json:"severity"`
+	CooldownMin int      `json:"cooldown_min"`
+	TriggerMode string   `json:"trigger_mode"`
+	AllVehicles bool     `json:"all_vehicles"`
+	VehicleIDs  []int64  `json:"vehicle_ids"`
 }
 
 // AlertRuleListEnvelope is the typed envelope query_alert_rules
@@ -178,17 +178,17 @@ type AlertRuleListEnvelope struct {
 //     the narrower would). Stays as METADATA, not a conflict
 //     kind.
 type RuleConflict struct {
-	Kind                 string `json:"kind"`
-	RuleAID              int64  `json:"rule_a_id"`
-	RuleBID              int64  `json:"rule_b_id"`
-	RuleAName            string `json:"rule_a_name"`
-	RuleBName            string `json:"rule_b_name"`
-	SignalName           string `json:"signal_name"`
-	Reason               string `json:"reason"`
-	SeverityMismatch     bool   `json:"severity_mismatch"`
-	CooldownMismatch     bool   `json:"cooldown_mismatch"`
-	TriggerModeMismatch  bool   `json:"trigger_mode_mismatch"`
-	Subsumes             bool   `json:"subsumes"`
+	Kind                string `json:"kind"`
+	RuleAID             int64  `json:"rule_a_id"`
+	RuleBID             int64  `json:"rule_b_id"`
+	RuleAName           string `json:"rule_a_name"`
+	RuleBName           string `json:"rule_b_name"`
+	SignalName          string `json:"signal_name"`
+	Reason              string `json:"reason"`
+	SeverityMismatch    bool   `json:"severity_mismatch"`
+	CooldownMismatch    bool   `json:"cooldown_mismatch"`
+	TriggerModeMismatch bool   `json:"trigger_mode_mismatch"`
+	Subsumes            bool   `json:"subsumes"`
 }
 
 // RuleConflictEnvelope is the typed envelope
@@ -987,8 +987,8 @@ func boolPtrEqual(a, b *bool) bool {
 //  4. For each overlapping-vehicle pair:
 //     a. If predicatesByteEqual → emit redundant_duplicate.
 //     b. Else if both ops are numeric AND
-//        numericIntervalsOverlap → emit overlapping_threshold
-//        with the appropriate Subsumes metadata.
+//     numericIntervalsOverlap → emit overlapping_threshold
+//     with the appropriate Subsumes metadata.
 //     c. Otherwise no conflict.
 //  5. Each conflict carries METADATA flags
 //     (severity_mismatch, cooldown_mismatch,

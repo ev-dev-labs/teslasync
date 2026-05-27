@@ -7,7 +7,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-func sp(s string) *string { return &s }
+func sp(s string) *string   { return &s }
 func fp(f float64) *float64 { return &f }
 func bp(b bool) *bool       { return &b }
 
@@ -313,10 +313,10 @@ func TestPlaceholdersComputedKind(t *testing.T) {
 // render literal {{Min}} text).
 func TestPlaceholdersOpConditional(t *testing.T) {
 	cases := []struct {
-		name      string
-		op        string
-		wantKeys  []string
-		omitKeys  []string
+		name     string
+		op       string
+		wantKeys []string
+		omitKeys []string
 	}{
 		{"less-than", "<", []string{"Threshold", "SignalName"}, []string{"Min", "Max"}},
 		{"greater-equal", ">=", []string{"Threshold", "SignalName"}, []string{"Min", "Max"}},

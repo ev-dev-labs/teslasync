@@ -39,12 +39,12 @@ func (s State) IsValid() bool { return ValidStates[s] }
 type Trigger string
 
 const (
-	TriggerFirstBatch      Trigger = "first_batch"       // first-ever signal batch from this vehicle
-	TriggerBatchReceived   Trigger = "batch_received"    // subsequent batch within threshold
-	TriggerStaleTimeout    Trigger = "stale_timeout"     // no batch for > staleThreshold
-	TriggerOfflineTimeout  Trigger = "offline_timeout"   // no batch for > offlineThreshold
-	TriggerReconnected     Trigger = "reconnected"       // batch received after stale/disconnected
-	TriggerPollingDetected Trigger = "polling_detected"  // data arriving via fleet_api, not fleet_telemetry
+	TriggerFirstBatch       Trigger = "first_batch"       // first-ever signal batch from this vehicle
+	TriggerBatchReceived    Trigger = "batch_received"    // subsequent batch within threshold
+	TriggerStaleTimeout     Trigger = "stale_timeout"     // no batch for > staleThreshold
+	TriggerOfflineTimeout   Trigger = "offline_timeout"   // no batch for > offlineThreshold
+	TriggerReconnected      Trigger = "reconnected"       // batch received after stale/disconnected
+	TriggerPollingDetected  Trigger = "polling_detected"  // data arriving via fleet_api, not fleet_telemetry
 	TriggerStreamingResumed Trigger = "streaming_resumed" // switched from polling back to streaming
 )
 

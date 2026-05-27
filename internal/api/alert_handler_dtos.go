@@ -3,10 +3,10 @@ package api
 import "time"
 
 type createAlertRuleRequest struct {
-	Name         *string    `json:"name"`
-	Description  *string    `json:"description"`
-	Enabled      *bool      `json:"enabled"`
-	VehicleID    *int64     `json:"vehicle_id"`
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	Enabled     *bool   `json:"enabled"`
+	VehicleID   *int64  `json:"vehicle_id"`
 	// AllVehicles + VehicleIDs are the new canonical multi-select shape
 	// (Phase-49 / Slice 0005). On write the handler coalesces all three
 	// spellings via coalesceVehicleSelection. Legacy clients that only
@@ -62,10 +62,10 @@ type createAlertRuleRequest struct {
 }
 
 type updateAlertRuleRequest struct {
-	Name         *string    `json:"name"`
-	Description  *string    `json:"description"`
-	Enabled      *bool      `json:"enabled"`
-	VehicleID    *int64     `json:"vehicle_id"`
+	Name        *string `json:"name"`
+	Description *string `json:"description"`
+	Enabled     *bool   `json:"enabled"`
+	VehicleID   *int64  `json:"vehicle_id"`
 	// AllVehicles + VehicleIDs — see createAlertRuleRequest. Update
 	// semantics: omitting all three vehicle keys preserves the existing
 	// rule's vehicle assignment; sending any of them switches the rule
@@ -155,4 +155,3 @@ type alertTestTargetRequest struct {
 	AllChannels bool    `json:"all_channels"`
 	ChannelIDs  []int64 `json:"channel_ids"`
 }
-

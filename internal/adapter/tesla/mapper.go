@@ -11,15 +11,15 @@ import (
 // mapVehicleState converts raw Tesla API JSON into a domain VehicleState.
 func mapVehicleState(data json.RawMessage) (external.VehicleState, error) {
 	var raw struct {
-		VIN          string `json:"vin"`
-		State        string `json:"state"`
-		ChargeState  struct {
-			BatteryLevel     int     `json:"battery_level"`
-			BatteryRange     float64 `json:"battery_range"`
-			ChargingState    string  `json:"charging_state"`
-			ChargeRate       float64 `json:"charge_rate"`
-			ChargerPower     int     `json:"charger_power"`
-			ConnChargeCable  string  `json:"conn_charge_cable"`
+		VIN         string `json:"vin"`
+		State       string `json:"state"`
+		ChargeState struct {
+			BatteryLevel    int     `json:"battery_level"`
+			BatteryRange    float64 `json:"battery_range"`
+			ChargingState   string  `json:"charging_state"`
+			ChargeRate      float64 `json:"charge_rate"`
+			ChargerPower    int     `json:"charger_power"`
+			ConnChargeCable string  `json:"conn_charge_cable"`
 		} `json:"charge_state"`
 		DriveState struct {
 			Latitude  float64 `json:"latitude"`
@@ -27,8 +27,8 @@ func mapVehicleState(data json.RawMessage) (external.VehicleState, error) {
 			Speed     *int    `json:"speed"`
 		} `json:"drive_state"`
 		VehicleState struct {
-			Odometer        float64 `json:"odometer"`
-			SoftwareUpdate  struct {
+			Odometer       float64 `json:"odometer"`
+			SoftwareUpdate struct {
 				Version string `json:"version"`
 			} `json:"software_update"`
 		} `json:"vehicle_state"`

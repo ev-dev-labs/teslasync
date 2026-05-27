@@ -97,16 +97,28 @@ func rule(id int64, name, signal, op string, opts ...func(*models.AlertRule)) *m
 func withVehicleSubset(ids ...int64) func(*models.AlertRule) {
 	return func(r *models.AlertRule) { r.AllVehicles = false; r.VehicleIDs = ids }
 }
-func withValueNum(v float64) func(*models.AlertRule)         { return func(r *models.AlertRule) { r.ValueNum = f64(v) } }
-func withValueText(v string) func(*models.AlertRule)         { return func(r *models.AlertRule) { r.ValueText = sptr(v) } }
-func withValueBool(v bool) func(*models.AlertRule)           { return func(r *models.AlertRule) { r.ValueBool = bptr(v) } }
+func withValueNum(v float64) func(*models.AlertRule) {
+	return func(r *models.AlertRule) { r.ValueNum = f64(v) }
+}
+func withValueText(v string) func(*models.AlertRule) {
+	return func(r *models.AlertRule) { r.ValueText = sptr(v) }
+}
+func withValueBool(v bool) func(*models.AlertRule) {
+	return func(r *models.AlertRule) { r.ValueBool = bptr(v) }
+}
 func withValueRange(lo, hi float64) func(*models.AlertRule) {
 	return func(r *models.AlertRule) { r.ValueMin = f64(lo); r.ValueMax = f64(hi) }
 }
-func withSeverity(s string) func(*models.AlertRule)   { return func(r *models.AlertRule) { r.Severity = s } }
-func withCooldown(m int) func(*models.AlertRule)      { return func(r *models.AlertRule) { r.CooldownMin = m } }
-func withTriggerMode(m string) func(*models.AlertRule) { return func(r *models.AlertRule) { r.TriggerMode = m } }
-func disabled() func(*models.AlertRule)                { return func(r *models.AlertRule) { r.Enabled = false } }
+func withSeverity(s string) func(*models.AlertRule) {
+	return func(r *models.AlertRule) { r.Severity = s }
+}
+func withCooldown(m int) func(*models.AlertRule) {
+	return func(r *models.AlertRule) { r.CooldownMin = m }
+}
+func withTriggerMode(m string) func(*models.AlertRule) {
+	return func(r *models.AlertRule) { r.TriggerMode = m }
+}
+func disabled() func(*models.AlertRule) { return func(r *models.AlertRule) { r.Enabled = false } }
 func computedMetric() func(*models.AlertRule) {
 	return func(r *models.AlertRule) { r.Kind = models.AlertRuleKindComputedMetric }
 }
@@ -489,13 +501,13 @@ func TestVehicleScopesOverlap_Cases(t *testing.T) {
 func TestNumericIntervalForRule_Ops(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name      string
-		op        string
-		valNum    *float64
-		valMin    *float64
-		valMax    *float64
-		wantOK    bool
-		wantSegs  int
+		name     string
+		op       string
+		valNum   *float64
+		valMin   *float64
+		valMax   *float64
+		wantOK   bool
+		wantSegs int
 	}{
 		{"lt with value", "<", f64(20), nil, nil, true, 1},
 		{"lt missing value", "<", nil, nil, nil, false, 0},

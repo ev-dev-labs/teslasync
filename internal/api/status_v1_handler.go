@@ -42,14 +42,14 @@ import (
 // StatusSnapshot is the canonical shape returned by /api/v1/status and
 // pushed by /api/v1/status/live. Stable contract — additive only.
 type StatusSnapshot struct {
-	Status      string                       `json:"status"` // operational | degraded | down | maintenance
-	GeneratedAt time.Time                    `json:"generated_at"`
-	Version     StatusVersion                `json:"version"`
-	Components  []StatusComponent            `json:"components"`
-	Resources   StatusResources              `json:"resources"`
-	Maintenance *StatusMaintenance           `json:"maintenance,omitempty"`
-	Incidents   []StatusIncident             `json:"incidents"` // active only — empty array (never null) for stability
-	Counts      StatusCounts                 `json:"counts"`
+	Status      string             `json:"status"` // operational | degraded | down | maintenance
+	GeneratedAt time.Time          `json:"generated_at"`
+	Version     StatusVersion      `json:"version"`
+	Components  []StatusComponent  `json:"components"`
+	Resources   StatusResources    `json:"resources"`
+	Maintenance *StatusMaintenance `json:"maintenance,omitempty"`
+	Incidents   []StatusIncident   `json:"incidents"` // active only — empty array (never null) for stability
+	Counts      StatusCounts       `json:"counts"`
 }
 
 // StatusVersion mirrors a subset of /system/version for self-contained
@@ -83,10 +83,10 @@ type StatusResources struct {
 // StatusMaintenance is omitted when mode == ok. When set, the operator's
 // integration knows to suppress paging and surface the message instead.
 type StatusMaintenance struct {
-	Mode      string  `json:"mode"`              // ok | maintenance | degraded
+	Mode      string  `json:"mode"` // ok | maintenance | degraded
 	Message   string  `json:"message,omitempty"`
-	Until     *string `json:"until,omitempty"`   // RFC3339
-	Source    string  `json:"source"`            // env | db | default
+	Until     *string `json:"until,omitempty"` // RFC3339
+	Source    string  `json:"source"`          // env | db | default
 	UpdatedAt *string `json:"updated_at,omitempty"`
 }
 
@@ -94,14 +94,14 @@ type StatusMaintenance struct {
 // model. Until incidents land we always emit an empty array — that way
 // downstream JSON schemas don't break when incidents go live.
 type StatusIncident struct {
-	ID         string    `json:"id"`
-	Title      string    `json:"title"`
-	Status     string    `json:"status"`        // investigating | identified | monitoring | resolved
-	Severity   string    `json:"severity"`      // minor | major | critical
-	StartedAt  time.Time `json:"started_at"`
-	UpdatedAt  time.Time `json:"updated_at"`
+	ID         string     `json:"id"`
+	Title      string     `json:"title"`
+	Status     string     `json:"status"`   // investigating | identified | monitoring | resolved
+	Severity   string     `json:"severity"` // minor | major | critical
+	StartedAt  time.Time  `json:"started_at"`
+	UpdatedAt  time.Time  `json:"updated_at"`
 	ResolvedAt *time.Time `json:"resolved_at,omitempty"`
-	Components []string  `json:"affected_components,omitempty"`
+	Components []string   `json:"affected_components,omitempty"`
 }
 
 // StatusCounts is the at-a-glance roll-up the operator dashboards graph.
@@ -117,13 +117,13 @@ type StatusCounts struct {
 // from the *current* health monitor view — explicitly marked as such so
 // downstream consumers don't draw the wrong conclusion.
 type StatusUptimeWindow struct {
-	Window           string  `json:"window"`            // 24h | 7d | 30d | 90d | 1y
-	UptimePercent    float64 `json:"uptime_percent"`
-	HealthyCount     int     `json:"healthy_count"`
-	TotalCount       int     `json:"total_count"`
+	Window           string    `json:"window"` // 24h | 7d | 30d | 90d | 1y
+	UptimePercent    float64   `json:"uptime_percent"`
+	HealthyCount     int       `json:"healthy_count"`
+	TotalCount       int       `json:"total_count"`
 	GeneratedAt      time.Time `json:"generated_at"`
-	HistoricalSource string  `json:"historical_source"` // "current_snapshot" until heartbeat history wires
-	Note             string  `json:"note,omitempty"`
+	HistoricalSource string    `json:"historical_source"` // "current_snapshot" until heartbeat history wires
+	Note             string    `json:"note,omitempty"`
 }
 
 // StatusV1Config groups the dependencies the handlers need. Pass these

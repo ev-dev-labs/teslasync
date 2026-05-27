@@ -6,32 +6,32 @@
 // SideEffectsObserver chain end-to-end in three tests, satisfying
 // Decisions #4-#6 of the Phase-42a/0080 prompt:
 //
-//   TestE2EPipeline_AllDestinationsAndObserverFire
-//     A real Tesla Fleet-Telemetry Payload with one routed sentinel
-//     field per destination flows through proto.Marshal -> Process
-//     and lands in the expected per-destination recording fake
-//     writer; ALL 6 SideEffectsObserver callbacks are invoked
-//     exactly once.
+//	TestE2EPipeline_AllDestinationsAndObserverFire
+//	  A real Tesla Fleet-Telemetry Payload with one routed sentinel
+//	  field per destination flows through proto.Marshal -> Process
+//	  and lands in the expected per-destination recording fake
+//	  writer; ALL 6 SideEffectsObserver callbacks are invoked
+//	  exactly once.
 //
-//   TestE2EPipeline_MalformedPayloadIsolatesFailure
-//     Truncated proto bytes flow through Process and:
-//       (a) Process returns an error wrapping normalize.ErrPayloadDrop
-//       (b) NO writers are invoked (codec.Decode fails before the
-//           dispatch loop)
-//       (c) NO observer callbacks are invoked (per phase-42a/0030
-//           Decision #1 — observer NOT called when codec.Decode fails)
+//	TestE2EPipeline_MalformedPayloadIsolatesFailure
+//	  Truncated proto bytes flow through Process and:
+//	    (a) Process returns an error wrapping normalize.ErrPayloadDrop
+//	    (b) NO writers are invoked (codec.Decode fails before the
+//	        dispatch loop)
+//	    (c) NO observer callbacks are invoked (per phase-42a/0030
+//	        Decision #1 — observer NOT called when codec.Decode fails)
 //
-//   TestE2EPipeline_ProductionWiringSmoke
-//     Reproduces the cmd/teslasync wiring shape (12 router.Writer
-//     destinations + 1 observer) using the SAME constructors
-//     (router.New + normalize.New + teslapipeline.New) but with the
-//     in-memory recording-fake writers, then sends the e2e fixture
-//     payload through and asserts:
-//       (a) all 12 writer destinations are present in the writers map
-//       (b) the observer list contains exactly one observer
-//       (c) router.New succeeded
-//       (d) the fixture's atomics reach 10 of the 11 routed
-//           destinations (DestLocationSnapshot exempt — see below)
+//	TestE2EPipeline_ProductionWiringSmoke
+//	  Reproduces the cmd/teslasync wiring shape (12 router.Writer
+//	  destinations + 1 observer) using the SAME constructors
+//	  (router.New + normalize.New + teslapipeline.New) but with the
+//	  in-memory recording-fake writers, then sends the e2e fixture
+//	  payload through and asserts:
+//	    (a) all 12 writer destinations are present in the writers map
+//	    (b) the observer list contains exactly one observer
+//	    (c) router.New succeeded
+//	    (d) the fixture's atomics reach 10 of the 11 routed
+//	        destinations (DestLocationSnapshot exempt — see below)
 //
 // === FIELD → DESTINATION → TABLE → COLUMN → SENTINEL ===
 //
@@ -243,23 +243,23 @@ func e2eBuildSideEffects() (*SideEffectsObserver, *e2eFakes) {
 // proto with one routed sentinel field per destination flows through
 // proto.Marshal -> normalize.Pipeline.Process and:
 //
-//   1. Each per-destination recording-fake writer receives exactly
-//      one Write call for its expected sentinel field, with the
-//      sentinel value preserved (with the documented SI conversion
-//      for InsideTemp).
-//   2. The unit-history Repo receives exactly one Record call for
-//      SettingDistanceUnit (the unit_history router writer is a
-//      no-op per phase-42a/0022).
-//   3. Each of the 5 SideEffectsObserver callbacks (live store,
-//      FSM, sessions, alerts, SSE) is invoked exactly once with
-//      the per-payload signals map. (signal_log writes are owned
-//      by the router signal_log writer, not the observer.)
-//   4. The observer's signals map carries every routed atomic plus
-//      the SettingDistanceUnit short-circuited atomic (12 entries
-//      total — the 11 routed sentinels above + the second
-//      LocationLatitude/Longitude pair from the Location compound,
-//      MINUS one because Location flattens to TWO atomics not one;
-//      11 routed sentinels + 1 free-rider LocationLongitude = 12).
+//  1. Each per-destination recording-fake writer receives exactly
+//     one Write call for its expected sentinel field, with the
+//     sentinel value preserved (with the documented SI conversion
+//     for InsideTemp).
+//  2. The unit-history Repo receives exactly one Record call for
+//     SettingDistanceUnit (the unit_history router writer is a
+//     no-op per phase-42a/0022).
+//  3. Each of the 5 SideEffectsObserver callbacks (live store,
+//     FSM, sessions, alerts, SSE) is invoked exactly once with
+//     the per-payload signals map. (signal_log writes are owned
+//     by the router signal_log writer, not the observer.)
+//  4. The observer's signals map carries every routed atomic plus
+//     the SettingDistanceUnit short-circuited atomic (12 entries
+//     total — the 11 routed sentinels above + the second
+//     LocationLatitude/Longitude pair from the Location compound,
+//     MINUS one because Location flattens to TWO atomics not one;
+//     11 routed sentinels + 1 free-rider LocationLongitude = 12).
 func TestE2EPipeline_AllDestinationsAndObserverFire(t *testing.T) {
 	t.Parallel()
 
@@ -448,10 +448,10 @@ func TestE2EPipeline_AllDestinationsAndObserverFire(t *testing.T) {
 // TestE2EPipeline_MalformedPayloadIsolatesFailure exercises the
 // codec.Decode failure path:
 //
-//   (a) Process returns an error wrapping normalize.ErrPayloadDrop.
-//   (b) NO router.Writer Write is invoked.
-//   (c) NO observer callback is invoked (per phase-42a/0030
-//       Decision #1: observer NOT called when codec.Decode fails).
+//	(a) Process returns an error wrapping normalize.ErrPayloadDrop.
+//	(b) NO router.Writer Write is invoked.
+//	(c) NO observer callback is invoked (per phase-42a/0030
+//	    Decision #1: observer NOT called when codec.Decode fails).
 //
 // This is the contract the MQTT subscriber's poison-pill / DLQ
 // policy depends on (Phase-42a/0040): the payload must NOT cause

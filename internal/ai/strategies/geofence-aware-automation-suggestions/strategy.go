@@ -50,15 +50,15 @@
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the typed
-//                         Automation validator or the existing
-//                         AutomationBuilderPage editor. Save path
-//                         is the existing handler; the AI only
-//                         DRAFTS.
+//     Automation validator or the existing
+//     AutomationBuilderPage editor. Save path
+//     is the existing handler; the AI only
+//     DRAFTS.
 //   - I7 per-feature:     the AI route is gated by
-//                         guard.Wrap("geofence-aware-automation-suggestions").
+//     guard.Wrap("geofence-aware-automation-suggestions").
 //   - I9 redaction:       PolicyAlertBuilder denies all classes;
-//                         identifiers (vehicle_id, place_id) flow
-//                         through tools, not prose.
+//     identifiers (vehicle_id, place_id) flow
+//     through tools, not prose.
 package geofenceawareautomationsuggestions
 
 import (

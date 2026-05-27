@@ -53,31 +53,31 @@ func TestSafetyHandler_History_CarriesForwardEnableFlags(t *testing.T) {
 	t0 := time.Date(2026, 4, 30, 9, 0, 0, 0, time.UTC)
 	folded := []signal.TimelineRow{
 		{Timestamp: t0, Fields: map[string]signal.SignalValue{
-			"automatic_emergency_braking_off":    false,
-			"lane_departure_avoidance":           "WARN",
-			"forward_collision_warning":          "MEDIUM",
-			"pin_to_drive_enabled":               true,
-			"cruise_follow_distance":             3.0,
-			"miles_since_reset":                  1234.5,
-			"self_driving_miles_since_reset":     500.0,
+			"automatic_emergency_braking_off": false,
+			"lane_departure_avoidance":        "WARN",
+			"forward_collision_warning":       "MEDIUM",
+			"pin_to_drive_enabled":            true,
+			"cruise_follow_distance":          3.0,
+			"miles_since_reset":               1234.5,
+			"self_driving_miles_since_reset":  500.0,
 		}},
 		{Timestamp: t0.Add(30 * time.Second), Fields: map[string]signal.SignalValue{
-			"automatic_emergency_braking_off":    false,
-			"lane_departure_avoidance":           "WARN",
-			"forward_collision_warning":          "MEDIUM",
-			"pin_to_drive_enabled":               true,
-			"cruise_follow_distance":             3.0,
-			"miles_since_reset":                  1240.0,
-			"self_driving_miles_since_reset":     505.0,
+			"automatic_emergency_braking_off": false,
+			"lane_departure_avoidance":        "WARN",
+			"forward_collision_warning":       "MEDIUM",
+			"pin_to_drive_enabled":            true,
+			"cruise_follow_distance":          3.0,
+			"miles_since_reset":               1240.0,
+			"self_driving_miles_since_reset":  505.0,
 		}},
 		{Timestamp: t0.Add(60 * time.Second), Fields: map[string]signal.SignalValue{
-			"automatic_emergency_braking_off":    false,
-			"lane_departure_avoidance":           "WARN",
-			"forward_collision_warning":          "MEDIUM",
-			"pin_to_drive_enabled":               true,
-			"cruise_follow_distance":             3.0,
-			"miles_since_reset":                  1245.5,
-			"self_driving_miles_since_reset":     510.0,
+			"automatic_emergency_braking_off": false,
+			"lane_departure_avoidance":        "WARN",
+			"forward_collision_warning":       "MEDIUM",
+			"pin_to_drive_enabled":            true,
+			"cruise_follow_distance":          3.0,
+			"miles_since_reset":               1245.5,
+			"self_driving_miles_since_reset":  510.0,
 		}},
 	}
 	fake := &fakeStateReader{
@@ -165,13 +165,13 @@ func TestSafetyHandler_Latest_UsesNow(t *testing.T) {
 			gotAt = at
 			gotVehicleID = vid
 			return signal.State{
-				"AutomaticEmergencyBrakingOff":    false,
-				"LaneDepartureAvoidance":          "WARN",
-				"ForwardCollisionWarning":         "MEDIUM",
-				"PinToDriveEnabled":               true,
-				"CruiseFollowDistance":            3.0,
-				"SpeedLimitWarning":               "DISPLAY",
-				"MilesSinceReset":                 1234.5,
+				"AutomaticEmergencyBrakingOff": false,
+				"LaneDepartureAvoidance":       "WARN",
+				"ForwardCollisionWarning":      "MEDIUM",
+				"PinToDriveEnabled":            true,
+				"CruiseFollowDistance":         3.0,
+				"SpeedLimitWarning":            "DISPLAY",
+				"MilesSinceReset":              1234.5,
 				// SelfDrivingMilesSinceReset / AutomaticBlindSpotCamera /
 				// BlindSpotCollisionWarningChime /
 				// EmergencyLaneDepartureAvoidance intentionally absent

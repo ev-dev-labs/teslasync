@@ -5,5 +5,4 @@
 // scheduling, while shared logic like session tracking, vehicle state
 // assembly, and energy calculations live in one testable place.
 // Layer: platform
-//
 package service

@@ -469,8 +469,8 @@ func (t *queryIncidentTimeline) Execute(ctx context.Context, in any) (any, error
 // IncidentTimelineSource adapter the rest of the AI surface is
 // built around; tests substitute deterministic fakes per-source.
 type IncidentTimelineSummarizerSources struct {
-	Retriever         rag.Retriever
-	IncidentTimeline  IncidentTimelineSource
+	Retriever        rag.Retriever
+	IncidentTimeline IncidentTimelineSource
 }
 
 // RegisterIncidentTimelineSummarizerTools installs the

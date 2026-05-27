@@ -97,9 +97,9 @@ type adminFeedbackListResponse struct {
 // updated row — even if the caller did not pass status/url
 // explicitly.
 type adminFeedbackPatchRequest struct {
-	Status           *string `json:"status,omitempty"`
-	GitHubIssueURL   *string `json:"github_issue_url,omitempty"`
-	ForwardToGitHub  bool    `json:"forward_to_github,omitempty"`
+	Status          *string `json:"status,omitempty"`
+	GitHubIssueURL  *string `json:"github_issue_url,omitempty"`
+	ForwardToGitHub bool    `json:"forward_to_github,omitempty"`
 }
 
 // List handles GET /api/v1/admin/feedback.

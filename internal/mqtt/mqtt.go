@@ -810,18 +810,18 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 //     VIN lookup MUST NOT lose data.)
 //  3. codec.DecodeJSONField(field, body, vin, receivedAt). Three outcomes:
 //     a. (nil, nil)        Producer flagged Value.invalid (body=null) OR
-//                          field is unknown to SignalsByName. Counter
-//                          incremented inside the codec. Forget tracker, ack.
+//     field is unknown to SignalsByName. Counter
+//     incremented inside the codec. Forget tracker, ack.
 //     b. (atomics, nil)    Forward to pipeline.ProcessAtomics. The
-//                          pipeline contract says ProcessAtomics returns
-//                          nil for per-atomic failures (visible only via
-//                          metrics) so the disposition mirrors 3a:
-//                          forget tracker, ack.
+//     pipeline contract says ProcessAtomics returns
+//     nil for per-atomic failures (visible only via
+//     metrics) so the disposition mirrors 3a:
+//     forget tracker, ack.
 //     c. (nil, err)        errors.Is(err, errPayloadDrop). Increment
-//                          tracker. If count >= MaxRedeliveries publish
-//                          to DLQ; if DLQ.Publish succeeds ack, else do
-//                          NOT ack (rubber-duck-#3 fix). If count <
-//                          MaxRedeliveries do NOT ack, let MQTT redeliver.
+//     tracker. If count >= MaxRedeliveries publish
+//     to DLQ; if DLQ.Publish succeeds ack, else do
+//     NOT ack (rubber-duck-#3 fix). If count <
+//     MaxRedeliveries do NOT ack, let MQTT redeliver.
 //  4. Defensive: pipeline.ProcessAtomics may itself return an error for
 //     unrecoverable infra failures (e.g. context cancelled mid-batch). We
 //     surface it through handlePipelineError using the same context-cancel /

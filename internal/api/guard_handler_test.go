@@ -52,9 +52,9 @@ type fakeGuardRepo struct {
 	events    map[int64][]database.GuardEvent
 	eventsErr error
 
-	ackEvents       map[ackKey]database.GuardEvent
-	ackErr          error
-	ackUseSentinel  bool // when true, return ErrGuardEventNotFound for any miss
+	ackEvents      map[ackKey]database.GuardEvent
+	ackErr         error
+	ackUseSentinel bool // when true, return ErrGuardEventNotFound for any miss
 
 	gotExistsCalls []int64
 	gotStatusCalls []guardStatusCall
@@ -126,9 +126,9 @@ func (f *fakeGuardRepo) Acknowledge(ctx context.Context, vehicleID, eventID int6
 }
 
 type fakeGuardVehicles struct {
-	byID    map[int64]*models.Vehicle
-	getErr  error
-	gotIDs  []int64
+	byID   map[int64]*models.Vehicle
+	getErr error
+	gotIDs []int64
 }
 
 func (f *fakeGuardVehicles) GetByID(ctx context.Context, id int64) (*models.Vehicle, error) {

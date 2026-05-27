@@ -3,11 +3,11 @@
 // Routes (all mounted under /api/v1/scheduled-exports inside the
 // authenticated /api/v1 group):
 //
-//   GET    /scheduled-exports          — list current user's schedules
-//   POST   /scheduled-exports          — create a new schedule
-//   PUT    /scheduled-exports/{id}     — update an existing schedule
-//   DELETE /scheduled-exports/{id}     — delete a schedule
-//   POST   /scheduled-exports/{id}/run — manual "Run now" trigger
+//	GET    /scheduled-exports          — list current user's schedules
+//	POST   /scheduled-exports          — create a new schedule
+//	PUT    /scheduled-exports/{id}     — update an existing schedule
+//	DELETE /scheduled-exports/{id}     — delete a schedule
+//	POST   /scheduled-exports/{id}/run — manual "Run now" trigger
 //
 // Authentication contract
 // -----------------------
@@ -93,15 +93,15 @@ func NewScheduledExportsHandler(store ScheduledExportStore, forwardAuthHeader st
 // update. Note the deliberate ABSENCE of an owner_subject field —
 // that comes from actorFromRequest only.
 type scheduledExportRequest struct {
-	Name         string                                `json:"name"`
-	ExportType   string                                `json:"export_type"`
-	Format       string                                `json:"format"`
-	VehicleID    *int64                                `json:"vehicle_id,omitempty"`
-	Columns      []string                              `json:"columns,omitempty"`
-	ScheduleCron string                                `json:"schedule_cron"`
-	Delivery     database.ScheduledExportDelivery      `json:"delivery"`
-	RangeWindow  string                                `json:"range_window,omitempty"`
-	Enabled      *bool                                 `json:"enabled,omitempty"`
+	Name         string                           `json:"name"`
+	ExportType   string                           `json:"export_type"`
+	Format       string                           `json:"format"`
+	VehicleID    *int64                           `json:"vehicle_id,omitempty"`
+	Columns      []string                         `json:"columns,omitempty"`
+	ScheduleCron string                           `json:"schedule_cron"`
+	Delivery     database.ScheduledExportDelivery `json:"delivery"`
+	RangeWindow  string                           `json:"range_window,omitempty"`
+	Enabled      *bool                            `json:"enabled,omitempty"`
 }
 
 // toInput converts the wire payload into the validated input the

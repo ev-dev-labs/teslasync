@@ -259,8 +259,8 @@ func TestVINCache_RefreshEvictsRemovedVehicles(t *testing.T) {
 
 func TestVINCache_RefreshClearsNegativeCacheForNowKnownVIN(t *testing.T) {
 	loader := &fakeLoader{snapshots: []fakeLoaderResult{
-		{snap: map[string]int64{}},          // preload empty
-		{snap: map[string]int64{"V1": 42}},  // refresh adds V1
+		{snap: map[string]int64{}},         // preload empty
+		{snap: map[string]int64{"V1": 42}}, // refresh adds V1
 	}}
 	resolver := &fakeResolver{} // empty - will negative-cache V1 first
 	c := newTestCache(t, loader, resolver, VINCacheConfig{

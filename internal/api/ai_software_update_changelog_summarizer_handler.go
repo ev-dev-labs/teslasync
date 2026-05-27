@@ -159,23 +159,32 @@ type AISoftwareUpdateChangelogSummarizerHandler struct {
 // boot, not at first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             query_vehicle_software AND retrieve_update_notes
-//             (registered by
-//             tools.RegisterSoftwareUpdateChangelogSummarizerTools
-//             in router.go).
+//
+//	query_vehicle_software AND retrieve_update_notes
+//	(registered by
+//	tools.RegisterSoftwareUpdateChangelogSummarizerTools
+//	in router.go).
+//
 // strat:      the software-update-changelog-summarizer Strategy
-//             (one per process).
+//
+//	(one per process).
+//
 // source:     the production tools.VehicleSoftwareSource
-//             (currently AIVehicleSoftwareSource — wraps the
-//             SAME database.SoftwareUpdateRepo.GetByVehicle the
-//             canonical baseline GET
-//             /api/v1/vehicles/{id}/software-updates handler
-//             already serves; the canonical baseline surface
-//             remains reachable to the operator at all times).
+//
+//	(currently AIVehicleSoftwareSource — wraps the
+//	SAME database.SoftwareUpdateRepo.GetByVehicle the
+//	canonical baseline GET
+//	/api/v1/vehicles/{id}/software-updates handler
+//	already serves; the canonical baseline surface
+//	remains reachable to the operator at all times).
+//
 // headerName: forward-auth header name; used to extract subject
-//             for audit.
+//
+//	for audit.
 func NewAISoftwareUpdateChangelogSummarizerHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

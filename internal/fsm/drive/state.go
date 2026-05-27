@@ -20,12 +20,12 @@ type Trigger int
 
 const (
 	TriggerStartSnapshotReady Trigger = iota // All required start fields captured
-	TriggerStartTimeout                       // 30s timeout — proceed with partial start data
-	TriggerDriveEnding                        // Vehicle FSM exited Driving state
-	TriggerEndSnapshotReady                   // All required end fields captured
-	TriggerEndTimeout                         // 60s timeout — persist what we have
-	TriggerPodRestart                         // Pod restarted mid-drive
-	TriggerSignalsFlowing                     // Signals resumed after recovery
+	TriggerStartTimeout                      // 30s timeout — proceed with partial start data
+	TriggerDriveEnding                       // Vehicle FSM exited Driving state
+	TriggerEndSnapshotReady                  // All required end fields captured
+	TriggerEndTimeout                        // 60s timeout — persist what we have
+	TriggerPodRestart                        // Pod restarted mid-drive
+	TriggerSignalsFlowing                    // Signals resumed after recovery
 )
 
 // String returns a human-readable trigger name.

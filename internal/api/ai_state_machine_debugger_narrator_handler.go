@@ -159,20 +159,29 @@ type AIStateMachineDebuggerNarratorHandler struct {
 // boot, not at first request.
 //
 // registry:   AI provider registry (decorator chain already
-//             applied).
+//
+//	applied).
+//
 // toolReg:    process-wide tool registry. MUST contain
-//             query_fsm_trace AND retrieve_fsm_chunks
-//             (registered by tools.RegisterStateMachineDebuggerNarratorTools
-//             in router.go).
+//
+//	query_fsm_trace AND retrieve_fsm_chunks
+//	(registered by tools.RegisterStateMachineDebuggerNarratorTools
+//	in router.go).
+//
 // strat:      the state-machine-debugger-narrator Strategy (one
-//             per process).
+//
+//	per process).
+//
 // source:     the production tools.FSMTraceSource (currently
-//             AIFSMTraceSource — a deterministic empty adapter;
-//             the canonical baseline /api/v1/fsm/transitions
-//             surface remains reachable to the operator at all
-//             times).
+//
+//	AIFSMTraceSource — a deterministic empty adapter;
+//	the canonical baseline /api/v1/fsm/transitions
+//	surface remains reachable to the operator at all
+//	times).
+//
 // headerName: forward-auth header name; used to extract subject
-//             for audit.
+//
+//	for audit.
 func NewAIStateMachineDebuggerNarratorHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,

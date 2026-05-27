@@ -20,12 +20,12 @@ const (
 	Executing  State = "executing"  // Conditions met, running actions
 	Succeeded  State = "succeeded"  // All actions completed successfully
 	Partial    State = "partial"    // Some actions succeeded, some failed
-	Failed     State = "failed"    // Action(s) failed
-	Retrying   State = "retrying"  // Retrying failed actions
-	GaveUp     State = "gave_up"   // Max retries exceeded
-	Skipped    State = "skipped"   // Conditions not met
-	Cooldown   State = "cooldown"  // Waiting for cooldown period
-	Disabled   State = "disabled"  // Auto-disabled after repeated failures
+	Failed     State = "failed"     // Action(s) failed
+	Retrying   State = "retrying"   // Retrying failed actions
+	GaveUp     State = "gave_up"    // Max retries exceeded
+	Skipped    State = "skipped"    // Conditions not met
+	Cooldown   State = "cooldown"   // Waiting for cooldown period
+	Disabled   State = "disabled"   // Auto-disabled after repeated failures
 )
 
 // Transition records a single state change in the execution lifecycle.

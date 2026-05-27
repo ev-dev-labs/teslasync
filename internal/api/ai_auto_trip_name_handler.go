@@ -342,6 +342,6 @@ func (a *AITripSourceAdapter) GetTripByID(ctx context.Context, tripID int64) (*m
 
 // Compile-time assertions: the adapters satisfy the tool ports.
 var (
-	_ tools.TripSource       = (*AITripSourceAdapter)(nil)
+	_ tools.TripSource        = (*AITripSourceAdapter)(nil)
 	_ tools.TripNameValidator = (*AITripNameValidator)(nil)
 )

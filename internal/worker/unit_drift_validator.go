@@ -81,9 +81,9 @@ func (a *vehicleRepoAdapter) GetAll(ctx context.Context) ([]int64, error) {
 // driftKind labels for tesla_unit_drift_suspected_total. Closed set —
 // keep this slice in sync with the alert-thresholds runbook.
 const (
-	driftKindSpeed    = "speed"      // VehicleSpeed vs. implied from Location deltas
-	driftKindOdometer = "odometer"   // Odometer trip increment vs. integrated speed
-	driftKindTempHigh = "temp_high"  // InsideTemp / OutsideTemp out of plausible °C range
+	driftKindSpeed    = "speed"     // VehicleSpeed vs. implied from Location deltas
+	driftKindOdometer = "odometer"  // Odometer trip increment vs. integrated speed
+	driftKindTempHigh = "temp_high" // InsideTemp / OutsideTemp out of plausible °C range
 )
 
 // canaryReason labels for tesla_unit_history_canary_total. Same closed-set
@@ -147,8 +147,8 @@ const (
 	// driftSpeedMinMS / driftSpeedMinDistanceM are noise floors. Below
 	// these the GPS quantization error dominates the implied-speed
 	// calculation and the ratio is meaningless.
-	driftSpeedMinMS         = 2.0  // 2 m/s ≈ 4.5 mph (walking pace)
-	driftSpeedMinDistanceM  = 50.0 // 50 m moved across the comparison window
+	driftSpeedMinMS        = 2.0  // 2 m/s ≈ 4.5 mph (walking pace)
+	driftSpeedMinDistanceM = 50.0 // 50 m moved across the comparison window
 
 	// tempPlausibleCelsiusMin/Max gate the temperature sanity check.
 	// Tesla cabins/exteriors stay within these bounds in any

@@ -116,16 +116,16 @@ type validateConfigResponse struct {
 // so a future translation lookup can switch on `code` rather than
 // parsing the human message.
 const (
-	validateConfigCodeNotLocal         = "not_local"
-	validateConfigCodeInvalid          = "invalid"
-	validateConfigCodeUnknownProvider  = "unknown_provider"
-	validateConfigCodeMissingAPIKey    = "missing_api_key"
-	validateConfigCodeMissingBaseURL   = "missing_base_url"
+	validateConfigCodeNotLocal          = "not_local"
+	validateConfigCodeInvalid           = "invalid"
+	validateConfigCodeUnknownProvider   = "unknown_provider"
+	validateConfigCodeMissingAPIKey     = "missing_api_key"
+	validateConfigCodeMissingBaseURL    = "missing_base_url"
 	validateConfigCodeMissingDeployment = "missing_deployment"
-	validateConfigCodeUnauthorized     = "unauthorized"
-	validateConfigCodeNotFound         = "not_found"
-	validateConfigCodeUpstreamError    = "upstream_error"
-	validateConfigCodeTimeout          = "timeout"
+	validateConfigCodeUnauthorized      = "unauthorized"
+	validateConfigCodeNotFound          = "not_found"
+	validateConfigCodeUpstreamError     = "upstream_error"
+	validateConfigCodeTimeout           = "timeout"
 )
 
 // validateConfigLocalTimeout bounds DNS resolution for the local

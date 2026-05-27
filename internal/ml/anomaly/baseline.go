@@ -45,7 +45,7 @@
 //     by guard.Wrap("learned-per-vehicle-anomaly-baselines").
 //   - I9 redaction:      vehicle_id is the only PII the trainer
 //     consumes; the LearnedBaseline DTO surfaces only signal-name
-//     + numeric statistics. The AI route applies PolicyChatbot
+//   - numeric statistics. The AI route applies PolicyChatbot
 //     (deny-all redaction) on top.
 package anomaly
 

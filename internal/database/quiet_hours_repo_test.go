@@ -105,13 +105,13 @@ func TestValidateQuietHours_Severity_LowercasesAndChecks(t *testing.T) {
 
 func TestTrimTimeText(t *testing.T) {
 	cases := map[string]string{
-		"23:00:00":       "23:00",
-		"07:30:00.000":   "07:30",
-		" 09:15:00":      "09:15",
-		"00:00":          "00:00",
-		"":               "",
-		"badbad":         "badbad",
-		"0":              "0",
+		"23:00:00":     "23:00",
+		"07:30:00.000": "07:30",
+		" 09:15:00":    "09:15",
+		"00:00":        "00:00",
+		"":             "",
+		"badbad":       "badbad",
+		"0":            "0",
 	}
 	for in, want := range cases {
 		got := trimTimeText(in)

@@ -18,14 +18,14 @@ import (
 
 // fakeDigestSettings is a tiny in-memory implementation of
 // AIDigestWeeklySettingsReader for the unit tests. The zero value
-// returns ai_mode='' (which is NOT 'off' but ALSO not 'cloud'/'local'
+// returns ai_mode=” (which is NOT 'off' but ALSO not 'cloud'/'local'
 // — the function treats anything other than 'off' as on, then
 // re-checks the per-feature toggle).
 type fakeDigestSettings struct {
-	mode        string
-	modeErr     error
-	enabled     map[string]bool
-	enabledErr  error
+	mode       string
+	modeErr    error
+	enabled    map[string]bool
+	enabledErr error
 }
 
 func (f fakeDigestSettings) AIMode(_ context.Context) (string, error) {

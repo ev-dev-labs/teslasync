@@ -100,11 +100,15 @@ type AILearnedAnomalyBaselineHandler struct {
 //
 // registry:   AI provider registry (decorator chain already applied).
 // toolReg:    process-wide tool registry. MUST contain
-//             train_anomaly_baseline + query_anomaly_baseline
-//             (registered by tools.RegisterLearnedAnomalyBaselineTools
-//             in router.go).
+//
+//	train_anomaly_baseline + query_anomaly_baseline
+//	(registered by tools.RegisterLearnedAnomalyBaselineTools
+//	in router.go).
+//
 // strat:      the learned-per-vehicle-anomaly-baselines Strategy
-//             (one per process).
+//
+//	(one per process).
+//
 // headerName: forward-auth header name; used to extract subject for audit.
 func NewAILearnedAnomalyBaselineHandler(
 	registry *provider.Registry,

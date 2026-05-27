@@ -9,9 +9,9 @@
 //
 //   - types.go           — exported data types (GoldenSet, Result, …).
 //   - golden.go          — YAML loader + Validate (used by
-//                          tools/eval-schema-check too).
+//     tools/eval-schema-check too).
 //   - strategy.go        — GenericStrategy adapter + a per-feature
-//                          Strategy registry hook.
+//     Strategy registry hook.
 //   - tools.go           — stub tool registry (read-only no-ops).
 //   - runner.go          — runs a GoldenSet end-to-end.
 //   - judge.go           — LLM-as-judge with seeded provider.

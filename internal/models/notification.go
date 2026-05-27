@@ -8,7 +8,8 @@ import "time"
 // Attempts (no UpdatedAt — table is effectively immutable per row).
 //
 // Schema source: .github/prompts/db-refactor/schema/20-notifications.sql
-//   (migrations/000142_baseline_typed.up.sql, table `notifications`).
+//
+//	(migrations/000142_baseline_typed.up.sql, table `notifications`).
 //
 // ADR-005: no `raw_json` / JSONB carve-out. All fields are typed columns.
 type Notification struct {

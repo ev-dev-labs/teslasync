@@ -48,9 +48,9 @@ func TestCanonicalResetSection_AcceptsWhitelistedNames(t *testing.T) {
 
 func TestCanonicalResetSection_NormalisesCaseAndWhitespace(t *testing.T) {
 	cases := map[string]SettingsResetSection{
-		"  Alert_Rules ":     ResetSectionAlertRules,
-		"GENERAL":            ResetSectionGeneral,
-		"\tquiet_hours\n":    ResetSectionQuietHours,
+		"  Alert_Rules ":        ResetSectionAlertRules,
+		"GENERAL":               ResetSectionGeneral,
+		"\tquiet_hours\n":       ResetSectionQuietHours,
 		"NOTIFICATION_CHANNELS": ResetSectionNotificationChannels,
 	}
 	for in, want := range cases {

@@ -724,9 +724,9 @@ func TestDecodeJSONField_CabinOverheatLimit_UnknownDrops(t *testing.T) {
 	bodies := []string{
 		`"Unknown"`,
 		`"ClimateOverheatProtectionTempLimitUnknown"`,
-		`"Medi"`,         // partial — would not have a storage mapping
-		`"unknown"`,      // wrong case
-		`"VeryHigh"`,     // not in the enum
+		`"Medi"`,     // partial — would not have a storage mapping
+		`"unknown"`,  // wrong case
+		`"VeryHigh"`, // not in the enum
 	}
 	for _, body := range bodies {
 		t.Run(body, func(t *testing.T) {

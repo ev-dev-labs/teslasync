@@ -164,8 +164,8 @@ var (
 // --- Export ---
 
 var (
-	ErrExportFailed    = &AppError{"EXPORT_FAILED", "data export failed", http.StatusInternalServerError, ErrCatExport}
-	ErrExportNotFound  = &AppError{"EXPORT_NOT_FOUND", "export job not found", http.StatusNotFound, ErrCatExport}
+	ErrExportFailed     = &AppError{"EXPORT_FAILED", "data export failed", http.StatusInternalServerError, ErrCatExport}
+	ErrExportNotFound   = &AppError{"EXPORT_NOT_FOUND", "export job not found", http.StatusNotFound, ErrCatExport}
 	ErrExportInvalidFmt = &AppError{"EXPORT_INVALID_FORMAT", "unsupported export format", http.StatusBadRequest, ErrCatExport}
 )
 

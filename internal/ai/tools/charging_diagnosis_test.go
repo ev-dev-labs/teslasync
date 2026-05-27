@@ -172,7 +172,7 @@ func TestQueryChargingAggregation_TrickleFlag(t *testing.T) {
 	t.Parallel()
 	start := time.Date(2026, 5, 1, 22, 0, 0, 0, time.UTC)
 	end := start.Add(7 * time.Hour)
-	pwr := 1600.0 // W
+	pwr := 1600.0      // W
 	energy := 11_200.0 // Wh — 1.6 kW * 7 h
 	c := &models.ChargingSession{
 		ID:                 501,
@@ -295,7 +295,7 @@ func TestQueryChargingAggregation_BadPowerFlag(t *testing.T) {
 	start := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
 	end := start.Add(45 * time.Minute)
 	chargerType := "DC Fast"
-	pwr := 1000.0 // W = 1 kW
+	pwr := 1000.0   // W = 1 kW
 	energy := 750.0 // Wh — small enough to keep avg power computation honest
 	c := &models.ChargingSession{
 		ID:                 505,

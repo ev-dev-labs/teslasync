@@ -17,6 +17,7 @@
 //
 //   - the one read-only typed tool the LLM is allowed to call in
 //     this surface:
+//
 //   - stream_chatbot_response — REQUIRED, called FIRST. Reads
 //     the canonical ChatRepo via the ChatContextSource port
 //     and projects the vehicle snapshot via the

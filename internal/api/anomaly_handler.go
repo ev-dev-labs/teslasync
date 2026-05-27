@@ -49,11 +49,11 @@ var _ aitools.AnomalySource = (*AnomalyHandler)(nil)
 // downstream consumers continue to see exactly the same field names,
 // types, and ordering as before.
 type anomalyResponse struct {
-	Anomalies         []anomalyEntry    `json:"anomalies"`
-	HealthSummary     map[string]string `json:"health_summary"`
-	SignalsMonitored  int               `json:"signals_monitored"`
-	AnomaliesLast7d   int               `json:"anomalies_last_7d"`
-	AnomaliesLast24h  int               `json:"anomalies_last_24h"`
+	Anomalies        []anomalyEntry    `json:"anomalies"`
+	HealthSummary    map[string]string `json:"health_summary"`
+	SignalsMonitored int               `json:"signals_monitored"`
+	AnomaliesLast7d  int               `json:"anomalies_last_7d"`
+	AnomaliesLast24h int               `json:"anomalies_last_24h"`
 }
 
 type anomalyEntry struct {
@@ -469,7 +469,7 @@ func (h *AnomalyHandler) detectTrendAnomalies(ctx context.Context, vehicleID int
 			continue
 		}
 
-		deviation := math.Abs(*avg24h - *avg7d) / *stddev7d
+		deviation := math.Abs(*avg24h-*avg7d) / *stddev7d
 		if deviation <= 2 {
 			continue
 		}

@@ -409,15 +409,15 @@ type FeedbackTriageDraft struct {
 // Status reports the verdict at the time of the tool call:
 //
 //   - "ok"                  — accepted; the user can copy the draft's
-//                             proposed_status into the baseline form
-//                             and click Save.
+//     proposed_status into the baseline form
+//     and click Save.
 //   - "invalid"             — rejected by the validator; ValidationError
-//                             contains a one-line diagnostic suitable
-//                             for showing in the UI.
+//     contains a one-line diagnostic suitable
+//     for showing in the UI.
 //   - "feedback_not_found"  — the in-scope feedback_id does not exist
-//                             (the source returned nil); the LLM
-//                             should narrate this honestly to the
-//                             user instead of fabricating a proposal.
+//     (the source returned nil); the LLM
+//     should narrate this honestly to the
+//     user instead of fabricating a proposal.
 //
 // Even when invalid or not-found, Draft is returned (with whatever
 // fields the LLM supplied) so the frontend can render the partially-

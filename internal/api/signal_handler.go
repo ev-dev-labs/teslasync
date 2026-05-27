@@ -732,7 +732,7 @@ func (h *SignalHandler) collectSnapshot(ctx context.Context, vehicleID int64, re
 	now := time.Now().UTC()
 	out := map[string]signalSnapshotEntry{}
 
-	if !at.Before(now.Add(-30 * time.Second)) && h.liveSignals != nil {
+	if !at.Before(now.Add(-30*time.Second)) && h.liveSignals != nil {
 		raw, err := h.liveSignals.GetAll(ctx, vehicleID, signal.LiveSignalReadDistributed)
 		if err == nil {
 			wanted := signalSet(requested)

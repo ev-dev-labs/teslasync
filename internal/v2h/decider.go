@@ -142,11 +142,11 @@ type SliceDecision struct {
 
 // Plan is the full output of the planner.
 type Plan struct {
-	Slices        []SliceDecision
-	TotalCost     float64 // sum of slice CostDollars; - means profit
-	FinalSoC      float64
-	GridImportedWh float64
-	GridExportedWh float64
+	Slices              []SliceDecision
+	TotalCost           float64 // sum of slice CostDollars; - means profit
+	FinalSoC            float64
+	GridImportedWh      float64
+	GridExportedWh      float64
 	BatteryChargedWh    float64
 	BatteryDischargedWh float64
 }

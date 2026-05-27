@@ -17,6 +17,7 @@
 //
 //   - the two read-only typed tools the LLM is allowed to call in
 //     this surface:
+//
 //   - draft_quiet_hours_window — REQUIRED, called FIRST. Reads
 //     the trailing notification_logs window (non-critical
 //     severities only) plus existing quiet-hours windows from
@@ -27,6 +28,7 @@
 //     into per-hour event counts BEFORE surfacing anything to
 //     the LLM — individual notification titles/messages NEVER
 //     leave the tool boundary. NO database write.
+//
 //   - validate_quiet_hours_window — REQUIRED, called SECOND.
 //     Accepts a candidate window and asserts every field
 //     satisfies the SAME validation rules the canonical

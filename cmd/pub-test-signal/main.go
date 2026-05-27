@@ -14,7 +14,7 @@
 //     (signal_log / drive_telemetry / charging_telemetry / positions).
 //     Use for smoke-testing the subscriber.
 //
-//        go run ./cmd/pub-test-signal --vin TEST00000000000VIN --count 3
+//     go run ./cmd/pub-test-signal --vin TEST00000000000VIN --count 3
 //
 //  2. CSV-replay mode (--csv): streams a prod-shape signal CSV
 //     (vehicle_id,signal,value_num,value_str,value_bool,created_at) and
@@ -23,10 +23,10 @@
 //     original event-time is preserved end-to-end. Use for full pipeline
 //     validation against EXPECTED_RESULTS.md fixtures.
 //
-//        go run ./cmd/pub-test-signal --vin TEST00000000000VIN \
-//            --csv D:\copilot\teslasync\prod-signals\signal_history_last_7d.csv \
-//            --start "2026-04-18 00:22:00" \
-//            --end   "2026-04-18 00:46:30"
+//     go run ./cmd/pub-test-signal --vin TEST00000000000VIN \
+//     --csv D:\copilot\teslasync\prod-signals\signal_history_last_7d.csv \
+//     --start "2026-04-18 00:22:00" \
+//     --end   "2026-04-18 00:46:30"
 //
 // After publishing, query the DB to see signals land:
 //

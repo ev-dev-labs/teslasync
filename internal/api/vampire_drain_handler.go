@@ -153,8 +153,8 @@ func (h *VampireDrainHandler) parseStatsParams(w http.ResponseWriter, r *http.Re
 // envelope shape (rather than a bare array) matches Decision #2 and
 // the precedent set by /vehicle-states/timeline.
 type VampireDrainEventsResponse struct {
-	VehicleID int64                          `json:"vehicle_id"`
-	Events    []database.VampireDrainEvent   `json:"events"`
+	VehicleID int64                        `json:"vehicle_id"`
+	Events    []database.VampireDrainEvent `json:"events"`
 }
 
 // Events serves GET /vampire-drain?vehicle_id=...&limit=N.

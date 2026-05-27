@@ -81,10 +81,10 @@ func TestSessionHandler_OpenMode(t *testing.T) {
 	h := NewSessionHandler(store, "")
 
 	cases := []struct {
-		name    string
-		method  string
-		path    string
-		exec    func(http.ResponseWriter, *http.Request)
+		name   string
+		method string
+		path   string
+		exec   func(http.ResponseWriter, *http.Request)
 	}{
 		{"List", http.MethodGet, "/auth/sessions", h.List},
 		{"Revoke", http.MethodDelete, "/auth/sessions/" + uuid.NewString(), h.Revoke},

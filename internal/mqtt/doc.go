@@ -8,5 +8,4 @@
 // full JSON payload, enabling fine-grained subscription by home
 // automation systems, dashboards, or other MQTT subscribers.
 // Layer: platform
-//
 package mqtt

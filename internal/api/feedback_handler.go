@@ -31,8 +31,8 @@ import (
 // and resets on restart).
 
 const (
-	feedbackBodyLimit       = 64 * 1024 // 64 KiB — generous for body+console_tail
-	feedbackPerSubmitterMax = 3
+	feedbackBodyLimit          = 64 * 1024 // 64 KiB — generous for body+console_tail
+	feedbackPerSubmitterMax    = 3
 	feedbackPerSubmitterWindow = 1 * time.Hour
 )
 
@@ -46,11 +46,11 @@ type FeedbackStore interface {
 
 // FeedbackHandler serves the public POST /api/v1/feedback endpoint.
 type FeedbackHandler struct {
-	store    FeedbackStore
-	authHdr  string
-	now      func() time.Time
-	maxPer   int
-	window   time.Duration
+	store   FeedbackStore
+	authHdr string
+	now     func() time.Time
+	maxPer  int
+	window  time.Duration
 }
 
 // NewFeedbackHandler constructs the public ingest handler.

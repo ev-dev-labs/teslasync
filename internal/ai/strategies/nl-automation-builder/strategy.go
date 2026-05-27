@@ -32,13 +32,13 @@
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the typed
-//                         Automation validator or the existing
-//                         AutomationBuilderPage editor. Save path
-//                         is the existing handler; the AI only
-//                         DRAFTS.
+//     Automation validator or the existing
+//     AutomationBuilderPage editor. Save path
+//     is the existing handler; the AI only
+//     DRAFTS.
 //   - I7 per-feature:     the AI route is gated by guard.Wrap("nl-automation-builder").
 //   - I9 redaction:       PolicyAutomationBuilder denies all classes;
-//                         identifiers flow through tools, not prose.
+//     identifiers flow through tools, not prose.
 package nlautomationbuilder
 
 import (

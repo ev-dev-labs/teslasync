@@ -193,7 +193,7 @@ const (
 
 // WithSubject returns a derived context carrying subject, used by the
 // audit decorator to populate AuditRecord.UserSubject. The handler
-// passes the empty string in open mode; the decorator stores '' which
+// passes the empty string in open mode; the decorator stores ” which
 // the usage queries treat as "system / open mode" rows.
 func WithSubject(ctx context.Context, subject string) context.Context {
 	return context.WithValue(ctx, ctxKeyUserSubject, subject)

@@ -17,7 +17,7 @@ type SignalContext struct {
 	//                       a 2-hour drive has ONE Gear=D at start, then silence.
 
 	// Speed
-	Speed    float64
+	Speed     float64
 	WasMoving bool // Had Speed > 0 within driveHoldDuration
 
 	// Charging

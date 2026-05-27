@@ -13,9 +13,9 @@ import (
 
 // S3Provider implements external.StorageProvider using AWS S3.
 type S3Provider struct {
-	client     *s3.Client
-	presigner  *s3.PresignClient
-	bucket     string
+	client    *s3.Client
+	presigner *s3.PresignClient
+	bucket    string
 }
 
 // NewS3Provider creates a new S3 storage provider.

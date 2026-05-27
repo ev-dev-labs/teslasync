@@ -18,8 +18,10 @@ type captureProvider struct {
 	chatErr   error
 }
 
-func (c *captureProvider) Name() string               { return "capture" }
-func (c *captureProvider) Capabilities() Capabilities { return Capabilities{Embeddings: true, Streaming: true} }
+func (c *captureProvider) Name() string { return "capture" }
+func (c *captureProvider) Capabilities() Capabilities {
+	return Capabilities{Embeddings: true, Streaming: true}
+}
 func (c *captureProvider) Chat(_ context.Context, req ChatRequest) (*ChatResponse, error) {
 	c.lastChat = req
 	if c.chatErr != nil {

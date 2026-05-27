@@ -184,7 +184,7 @@ func (r *AICallLogRepo) Insert(ctx context.Context, rec *provider.AuditRecord) e
 // no special-case for "no activity yet".
 //
 // Subject scoping: subject == "" returns open-mode rows
-// (user_subject = ''); a non-empty subject returns rows with an
+// (user_subject = ”); a non-empty subject returns rows with an
 // exact match. Cross-user reads are impossible by construction.
 func (r *AICallLogRepo) Today(ctx context.Context, subject string) (*AICallTodayAggregate, error) {
 	const q = `

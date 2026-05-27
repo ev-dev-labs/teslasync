@@ -455,8 +455,8 @@ func (t *streamChatbotResponse) Execute(ctx context.Context, in any) (any, error
 	env := &VoiceModeEnvelope{
 		History:         history,
 		VehicleSnapshot: snapshot,
-		VoiceModeHint: "Reply will be spoken aloud by the browser TTS engine — keep it to 1-3 sentences, use plain sentences (no markdown, no lists, no code blocks, no URLs), and render numbers in TTS-friendly form (\"82 percent\" not \"82%\").",
-		Source:        "readers: internal/database/notification_repo.go ChatRepo.GetHistory (chat history) + internal/database vehicles+state+drives (snapshot)",
+		VoiceModeHint:   "Reply will be spoken aloud by the browser TTS engine — keep it to 1-3 sentences, use plain sentences (no markdown, no lists, no code blocks, no URLs), and render numbers in TTS-friendly form (\"82 percent\" not \"82%\").",
+		Source:          "readers: internal/database/notification_repo.go ChatRepo.GetHistory (chat history) + internal/database vehicles+state+drives (snapshot)",
 	}
 	return env, nil
 }

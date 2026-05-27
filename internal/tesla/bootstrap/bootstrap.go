@@ -9,8 +9,8 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 	unithistory "github.com/ev-dev-labs/teslasync/internal/tesla/unit_history"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/units"
 )
 
 // Bootstrapper orchestrates the REST → unit_history seed for a single

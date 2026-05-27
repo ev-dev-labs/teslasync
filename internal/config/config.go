@@ -76,7 +76,6 @@ type FeaturesConfig struct {
 	DLQRingCapacity int
 }
 
-
 // bridge in the admin feedback queue (Phase-46 / Prompt 08). When Repo
 // or Token is empty the bridge is disabled — the admin endpoint
 // surfaces this in its response and the SPA hides the "Forward to

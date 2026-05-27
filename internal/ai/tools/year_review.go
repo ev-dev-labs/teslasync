@@ -170,9 +170,9 @@ func (t *queryYearInReviewContext) Execute(ctx context.Context, in any) (any, er
 // can be factored out without breaking either tool's golden output.
 func aggregateYearInReview(drives []*models.Drive, charges []*models.ChargingSession) map[string]any {
 	var (
-		drivesCount                     int
-		distM, energyUsedWh, regenWh    float64
-		durS                            int64
+		drivesCount                  int
+		distM, energyUsedWh, regenWh float64
+		durS                         int64
 	)
 	for _, d := range drives {
 		if d == nil {

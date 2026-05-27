@@ -1448,5 +1448,3 @@ func TestValidateAlertRuleEscalation_AllInvariants(t *testing.T) {
 		t.Fatalf("info -> warn must be valid, got %v", err)
 	}
 }
-
-

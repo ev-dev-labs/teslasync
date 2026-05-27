@@ -5,7 +5,8 @@
 // production.
 //
 // Run from repo root:
-//   go run ./cmd/audit-signal-types
+//
+//	go run ./cmd/audit-signal-types
 //
 // Output: a tabular report grouped by mismatch class. Exit code is
 // always 0 — this is a discovery tool, not a CI gate.
@@ -57,7 +58,8 @@ var migrationsToScan = []string{
 var createTableRE = regexp.MustCompile(`(?i)CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_][a-z0-9_]*)\s*\(`)
 
 // columnLineRE captures a column definition line. Lenient: matches
-//   col_name  SQL_TYPE  (constraints...) ,
+//
+//	col_name  SQL_TYPE  (constraints...) ,
 var columnLineRE = regexp.MustCompile(`^\s*([a-z_][a-z0-9_]*)\s+([A-Z][A-Z0-9 _]*)`)
 
 // alterDropRE captures "ALTER TABLE <name> DROP COLUMN [IF EXISTS] <col>".

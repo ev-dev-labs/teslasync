@@ -43,7 +43,7 @@ type MileageMonthlyRow struct {
 	Bucket               time.Time
 	DriveCount           int
 	TotalKm              float64
-	TotalWhConsumed     *float64
+	TotalWhConsumed      *float64
 	AvgEfficiencyWhPerKm *float64
 }
 
@@ -193,7 +193,6 @@ GROUP BY day
 ORDER BY day ASC
 `
 
-
 // VehicleExists reports whether a row exists in the vehicles table for
 // vehicleID. Used by the handler to return 404 (unknown vehicle) vs 200
 // with empty rollups (vehicle exists but has no drives yet).
@@ -290,8 +289,8 @@ func (r *MileageRepo) Daily(ctx context.Context, vehicleID int64, windowStart ti
 	out := make([]MileageDailyRow, 0)
 	for rows.Next() {
 		var (
-			row             MileageDailyRow
-			endOdometerKm   *float64
+			row           MileageDailyRow
+			endOdometerKm *float64
 		)
 		if err := rows.Scan(
 			&row.Day,

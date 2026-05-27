@@ -409,12 +409,12 @@ type userChargeDwellsInput struct {
 // output. Per-place aggregates so the LLM can pick chargers that
 // match the user's typical dwell behaviour.
 type chargerDwellEnvelope struct {
-	StartPlace        string  `json:"start_place"`
-	VisitCount        int     `json:"visit_count"`
-	AvgDwellMinutes   float64 `json:"avg_dwell_minutes"`
-	AvgDeltaSocPct    float64 `json:"avg_delta_soc_pct"`
-	AvgEnergyAddedWh  float64 `json:"avg_energy_added_wh"`
-	LastSeenAt        string  `json:"last_seen_at"`
+	StartPlace       string  `json:"start_place"`
+	VisitCount       int     `json:"visit_count"`
+	AvgDwellMinutes  float64 `json:"avg_dwell_minutes"`
+	AvgDeltaSocPct   float64 `json:"avg_delta_soc_pct"`
+	AvgEnergyAddedWh float64 `json:"avg_energy_added_wh"`
+	LastSeenAt       string  `json:"last_seen_at"`
 }
 
 // queryUserChargeDwells is the read-only tool. Execution: load the
@@ -479,15 +479,15 @@ func (t *queryUserChargeDwells) Execute(ctx context.Context, in any) (any, error
 	}
 
 	type agg struct {
-		startPlace    string
-		visitCount    int
-		dwellMinSum   float64
-		dwellMinN     int
-		deltaSocSum   float64
-		deltaSocN     int
-		energyWhSum   float64
-		energyWhN     int
-		lastSeenAt    time.Time
+		startPlace  string
+		visitCount  int
+		dwellMinSum float64
+		dwellMinN   int
+		deltaSocSum float64
+		deltaSocN   int
+		energyWhSum float64
+		energyWhN   int
+		lastSeenAt  time.Time
 	}
 	groups := map[string]*agg{}
 

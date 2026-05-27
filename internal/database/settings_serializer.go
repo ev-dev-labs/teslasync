@@ -45,19 +45,19 @@ const SettingsBundleSchemaVersion = 1
 // with secrets, OAuth tokens, password hashes, TOTP secrets) are
 // intentionally absent; cf. file-level docstring.
 type SettingsBundle struct {
-	SchemaVersion int                       `json:"schema_version"`
-	ExportedAt    time.Time                 `json:"exported_at"`
-	Sections      SettingsBundleSections    `json:"sections"`
+	SchemaVersion int                    `json:"schema_version"`
+	ExportedAt    time.Time              `json:"exported_at"`
+	Sections      SettingsBundleSections `json:"sections"`
 }
 
 // SettingsBundleSections is the top-level sections map. Each section
 // is independently optional on import — missing sections are simply
 // not touched, so a partial bundle (e.g. only alert_rules) is valid.
 type SettingsBundleSections struct {
-	Settings    *models.Settings              `json:"settings,omitempty"`
-	AlertRules  []*models.AlertRule           `json:"alert_rules,omitempty"`
-	Geofences   []*models.Geofence            `json:"geofences,omitempty"`
-	QuietHours  []*models.QuietHoursWindow    `json:"quiet_hours,omitempty"`
+	Settings   *models.Settings           `json:"settings,omitempty"`
+	AlertRules []*models.AlertRule        `json:"alert_rules,omitempty"`
+	Geofences  []*models.Geofence         `json:"geofences,omitempty"`
+	QuietHours []*models.QuietHoursWindow `json:"quiet_hours,omitempty"`
 }
 
 // SectionResult is the per-section diff/apply summary surfaced to the
@@ -625,9 +625,9 @@ func quietHoursEquivalent(a, b *models.QuietHoursWindow) bool {
 // ptr* helpers — small wrappers used by the apply paths to convert
 // concrete values to the QuietHoursInput pointer fields. Kept here so
 // the call sites stay one-line.
-func ptrBool(v bool) *bool             { return &v }
-func ptrString(v string) *string       { return &v }
-func ptrInt(v int) *int                { return &v }
+func ptrBool(v bool) *bool                { return &v }
+func ptrString(v string) *string          { return &v }
+func ptrInt(v int) *int                   { return &v }
 func ptrStringSlice(v []string) *[]string { return &v }
 
 // ptr*Eq helpers compare two pointer-of-T values: nil/nil → equal,

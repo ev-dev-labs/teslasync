@@ -34,12 +34,12 @@ type QuietHoursWindow struct {
 // Quiet-hours weekday bitmask constants. Matches Go's time.Weekday so the
 // dispatcher can compute (1 << weekday) directly without remapping.
 const (
-	QuietHoursWeekdaySun  = 1 << 0
-	QuietHoursWeekdayMon  = 1 << 1
-	QuietHoursWeekdayTue  = 1 << 2
-	QuietHoursWeekdayWed  = 1 << 3
-	QuietHoursWeekdayThu  = 1 << 4
-	QuietHoursWeekdayFri  = 1 << 5
-	QuietHoursWeekdaySat  = 1 << 6
-	QuietHoursWeekdayAll  = QuietHoursWeekdaySun | QuietHoursWeekdayMon | QuietHoursWeekdayTue | QuietHoursWeekdayWed | QuietHoursWeekdayThu | QuietHoursWeekdayFri | QuietHoursWeekdaySat
+	QuietHoursWeekdaySun = 1 << 0
+	QuietHoursWeekdayMon = 1 << 1
+	QuietHoursWeekdayTue = 1 << 2
+	QuietHoursWeekdayWed = 1 << 3
+	QuietHoursWeekdayThu = 1 << 4
+	QuietHoursWeekdayFri = 1 << 5
+	QuietHoursWeekdaySat = 1 << 6
+	QuietHoursWeekdayAll = QuietHoursWeekdaySun | QuietHoursWeekdayMon | QuietHoursWeekdayTue | QuietHoursWeekdayWed | QuietHoursWeekdayThu | QuietHoursWeekdayFri | QuietHoursWeekdaySat
 )

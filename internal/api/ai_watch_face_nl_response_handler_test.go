@@ -251,8 +251,8 @@ func TestAIWatchFaceNLResponseHandler_RejectsBadBody(t *testing.T) {
 func TestBuildWatchFaceNLResponseUserMessage(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name       string
-		input      string
+		name        string
+		input       string
 		mustInclude []string
 	}{
 		{

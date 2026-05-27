@@ -5,16 +5,16 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // NotificationScheduleHandler manages scheduled notifications.
 type NotificationScheduleHandler struct {
-	schedRepo *database.NotificationScheduleRepo
-	prefRepo  *database.NotificationPreferenceRepo
+	schedRepo  *database.NotificationScheduleRepo
+	prefRepo   *database.NotificationPreferenceRepo
 	metricRepo *database.NotificationMetricRepo
 }
 

@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/rs/zerolog/log"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/rs/zerolog/log"
 )
 
 // EnergySiteHandler serves Tesla energy product (Powerwall, Solar) data.
@@ -248,22 +248,22 @@ func parseProductsResponse(body []byte) ([]*models.TeslaEnergySite, error) {
 		}
 
 		var product struct {
-			EnergySiteID      int64   `json:"energy_site_id"`
-			ResourceType      string  `json:"resource_type"`
-			SiteName          string  `json:"site_name"`
-			GatewayID         *string `json:"gateway_id"`
+			EnergySiteID      int64    `json:"energy_site_id"`
+			ResourceType      string   `json:"resource_type"`
+			SiteName          string   `json:"site_name"`
+			GatewayID         *string  `json:"gateway_id"`
 			TotalPackEnergy   *float64 `json:"total_pack_energy"`
 			PercentageCharged *float64 `json:"percentage_charged"`
 			BatteryType       *string  `json:"battery_type"`
 			BackupCapable     bool     `json:"backup_capable"`
 			StormModeEnabled  bool     `json:"storm_mode_enabled"`
 			Components        struct {
-				Solar           bool   `json:"solar"`
-				Battery         bool   `json:"battery"`
-				Grid            bool   `json:"grid"`
-				LoadMeter       bool   `json:"load_meter"`
-				TOUCapable      bool   `json:"tou_capable"`
-				StormModeCapable bool  `json:"storm_mode_capable"`
+				Solar            bool `json:"solar"`
+				Battery          bool `json:"battery"`
+				Grid             bool `json:"grid"`
+				LoadMeter        bool `json:"load_meter"`
+				TOUCapable       bool `json:"tou_capable"`
+				StormModeCapable bool `json:"storm_mode_capable"`
 			} `json:"components"`
 		}
 		if err := json.Unmarshal(raw, &product); err != nil {

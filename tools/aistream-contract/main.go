@@ -28,15 +28,15 @@
 // What it deliberately does NOT do
 // --------------------------------
 //
-//  - Parse the Go AST or TS AST. The point is to be a fast,
-//    self-evident text-level guard. A future refactor could swap in
-//    a real AST walker, but that adds maintenance cost without
-//    catching anything the literal scan misses (the Go side is
-//    typed; the TS side is typed; this tool catches divergence
-//    BETWEEN them).
+//   - Parse the Go AST or TS AST. The point is to be a fast,
+//     self-evident text-level guard. A future refactor could swap in
+//     a real AST walker, but that adds maintenance cost without
+//     catching anything the literal scan misses (the Go side is
+//     typed; the TS side is typed; this tool catches divergence
+//     BETWEEN them).
 //
-//  - Validate runtime payloads. That's the job of the per-package
-//    unit tests (writer_test.go + useAiStream.test.ts).
+//   - Validate runtime payloads. That's the job of the per-package
+//     unit tests (writer_test.go + useAiStream.test.ts).
 //
 // Usage
 // -----

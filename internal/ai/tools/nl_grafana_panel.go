@@ -228,11 +228,11 @@ type GrafanaPanelDraft struct {
 // propose and let Grafana's own importer fill in the rest with
 // defaults when the user pastes the JSON in.
 type GrafanaPanelEnvelope struct {
-	Title      string                 `json:"title"`
-	Type       string                 `json:"type"`
-	Datasource GrafanaDatasourceRef   `json:"datasource"`
-	Targets    []GrafanaPanelTarget   `json:"targets"`
-	GridPos    GrafanaPanelGridPos    `json:"grid_pos"`
+	Title      string               `json:"title"`
+	Type       string               `json:"type"`
+	Datasource GrafanaDatasourceRef `json:"datasource"`
+	Targets    []GrafanaPanelTarget `json:"targets"`
+	GridPos    GrafanaPanelGridPos  `json:"grid_pos"`
 }
 
 // GrafanaDatasourceRef is the {type, uid} reference Grafana uses
@@ -292,11 +292,11 @@ type grafanaPanelInput struct {
 // follow Grafana's JSON-model naming so the JSON the LLM emits is
 // what the user pastes verbatim into Grafana.
 type grafanaPanelInputEnvelope struct {
-	Title      string                          `json:"title" validate:"required,min=1,max=120" desc:"Human-readable panel title."`
-	Type       string                          `json:"type" validate:"required,min=1,max=64" desc:"Grafana panel type (e.g. timeseries, stat, gauge, table). MUST be in the in-scope curated panel-type catalog the user message lists."`
-	Datasource grafanaPanelInputDatasource     `json:"datasource" validate:"required" desc:"The Grafana datasource reference."`
-	Targets    []grafanaPanelInputTarget       `json:"targets" validate:"required,min=1,max=8" desc:"The panel's query targets. At least 1, at most 8."`
-	GridPos    grafanaPanelInputGridPos        `json:"grid_pos" desc:"The panel's dashboard-grid placement; defaults to {x:0,y:0,w:12,h:8} when omitted."`
+	Title      string                      `json:"title" validate:"required,min=1,max=120" desc:"Human-readable panel title."`
+	Type       string                      `json:"type" validate:"required,min=1,max=64" desc:"Grafana panel type (e.g. timeseries, stat, gauge, table). MUST be in the in-scope curated panel-type catalog the user message lists."`
+	Datasource grafanaPanelInputDatasource `json:"datasource" validate:"required" desc:"The Grafana datasource reference."`
+	Targets    []grafanaPanelInputTarget   `json:"targets" validate:"required,min=1,max=8" desc:"The panel's query targets. At least 1, at most 8."`
+	GridPos    grafanaPanelInputGridPos    `json:"grid_pos" desc:"The panel's dashboard-grid placement; defaults to {x:0,y:0,w:12,h:8} when omitted."`
 }
 
 // grafanaPanelInputDatasource is the datasource reference the LLM

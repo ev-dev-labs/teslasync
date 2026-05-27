@@ -311,11 +311,11 @@ func parseLayer(src string) string {
 // package as the code under test.
 //
 // To intentionally add a file:
-//   1. Get explicit reviewer approval citing why handler/v1 is unsuitable.
-//   2. Add the file.
-//   3. Refresh the baseline (`go run ./tools/archmetrics > tools/archmetrics/baseline.json`).
-//   4. Commit the baseline alongside the new file.
-//   5. Reference the ADR-009 Exceptions block in the PR description.
+//  1. Get explicit reviewer approval citing why handler/v1 is unsuitable.
+//  2. Add the file.
+//  3. Refresh the baseline (`go run ./tools/archmetrics > tools/archmetrics/baseline.json`).
+//  4. Commit the baseline alongside the new file.
+//  5. Reference the ADR-009 Exceptions block in the PR description.
 func TestFrozenPackagesNoNewFiles(t *testing.T) {
 	baseline := loadBaselineOrSkip(t, filepath.Join("..", "..", "tools", "archmetrics", "baseline.json"))
 	if baseline == nil {
@@ -778,4 +778,3 @@ func isOnDenyList(rel string, deny []string) bool {
 	}
 	return false
 }
-

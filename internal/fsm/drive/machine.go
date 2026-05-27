@@ -15,10 +15,10 @@ const (
 
 // SessionFSM manages the lifecycle of a single drive session.
 type SessionFSM struct {
-	mu      sync.Mutex
-	state   State
-	ctx     *Context
-	logger  zerolog.Logger
+	mu     sync.Mutex
+	state  State
+	ctx    *Context
+	logger zerolog.Logger
 }
 
 // NewSessionFSM creates a drive session FSM in Pending state.
