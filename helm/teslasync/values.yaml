@@ -831,6 +831,20 @@ postgresql:
       - vector
       - pg_stat_statements
 
+  # -- Postgres `-c key=value` runtime overrides. Emitted as `args:` on
+  # the deployment so the image entrypoint stays intact.
+  # `shared_preload_libraries` MUST include `pg_stat_statements` for the
+  # Slow Queries admin observability page to surface any data; the
+  # timescaledb-ha image default is `timescaledb,pg_textsearch` which
+  # we extend here. Kept in sync with docker-compose.yml postgres
+  # `command:` block — both surfaces must enable the same extensions
+  # so dev + prod observability features behave identically.
+  serverConfig:
+    max_connections: 100
+    shared_buffers: 256MB
+    shared_preload_libraries: timescaledb,pg_stat_statements,pg_textsearch
+    pg_stat_statements.track: all
+
   resources:
     limits:
       cpu: 2000m

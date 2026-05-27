@@ -26,6 +26,22 @@ spec:
         - name: postgresql
           image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
           imagePullPolicy: {{ .Values.postgresql.image.pullPolicy | default "IfNotPresent" }}
+          {{- /*
+            shared_preload_libraries MUST include pg_stat_statements for
+            the Slow Queries admin page (Phase-45) to surface anything.
+            The timescaledb-ha:pg17 image default is
+            `timescaledb,pg_textsearch` — we extend it via the values
+            list and emit one -c flag per setting. Keep timescaledb +
+            pg_textsearch first to preserve image defaults.
+          */}}
+          {{- with .Values.postgresql.serverConfig }}
+          args:
+            - postgres
+            {{- range $key, $value := . }}
+            - -c
+            - {{ printf "%s=%v" $key $value | quote }}
+            {{- end }}
+          {{- end }}
           ports:
             - name: postgres
               containerPort: 5432

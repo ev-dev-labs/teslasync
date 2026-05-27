@@ -254,7 +254,7 @@ services:
     image: timescale/timescaledb-ha:pg17
     container_name: teslasync-postgres
     restart: unless-stopped
-    command: ["postgres", "-c", "max_connections=100", "-c", "shared_buffers=256MB"]
+    command: ["postgres", "-c", "max_connections=100", "-c", "shared_buffers=256MB", "-c", "shared_preload_libraries=timescaledb,pg_stat_statements,pg_textsearch", "-c", "pg_stat_statements.track=all"]
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     environment:
