@@ -1,0 +1,11 @@
+internal\database\slow_queries_repo.go:89:6: func `orderByColumnSnapshot` is unused (unused)
+func orderByColumnSnapshot(o SlowQueryOrderBy) string {
+     ^
+internal\app\adminobssvc\service.go:35:2: field `pool` is unused (unused)
+	pool          schemacheck.Querier
+	^
+internal\ocpp\dispatcher.go:86:8: SA4001: *&x will be simplified to x. It will not copy x. (staticcheck)
+	cp := *(&s)
+	      ^
+exit_code: 1
+issues_approx: 3

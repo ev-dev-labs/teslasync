@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-26T16:37:58Z",
+  "generated_at": "2026-05-27T20:29:49Z",
   "go_version": "go1.26.1",
-  "commit_sha": "f93d78eccf8b31a2204de542298f575920f8625c",
+  "commit_sha": "e155065542704b7daf060e7a5b881fbfa419f1f9",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -46,6 +46,35 @@
       ]
     },
     {
+      "path": "cmd/backup-verify",
+      "go_files": 1,
+      "test_files": 0,
+      "loc": 95,
+      "has_doc_go": false,
+      "imports": [
+        "internal/backup",
+        "internal/backupverify",
+        "internal/config",
+        "internal/database"
+      ],
+      "files": [
+        "main.go"
+      ]
+    },
+    {
+      "path": "cmd/chaos-runner",
+      "go_files": 1,
+      "test_files": 0,
+      "loc": 144,
+      "has_doc_go": false,
+      "imports": [
+        "internal/chaos"
+      ],
+      "files": [
+        "main.go"
+      ]
+    },
+    {
       "path": "cmd/export-worker",
       "go_files": 2,
       "test_files": 0,
@@ -64,6 +93,20 @@
       "files": [
         "doc.go",
         "main.go"
+      ]
+    },
+    {
+      "path": "cmd/fleet-config-validator",
+      "go_files": 1,
+      "test_files": 1,
+      "loc": 476,
+      "has_doc_go": false,
+      "imports": [
+        "internal/tesla/router"
+      ],
+      "files": [
+        "main.go",
+        "main_test.go"
       ]
     },
     {
@@ -100,6 +143,19 @@
       ],
       "files": [
         "doc.go",
+        "main.go"
+      ]
+    },
+    {
+      "path": "cmd/ocpp-server",
+      "go_files": 1,
+      "test_files": 0,
+      "loc": 91,
+      "has_doc_go": false,
+      "imports": [
+        "internal/ocpp"
+      ],
+      "files": [
         "main.go"
       ]
     },
@@ -1948,7 +2004,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 125773,
+      "loc": 126337,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2551,7 +2607,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1708,
+      "loc": 1832,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -2567,6 +2623,7 @@
         "internal/events",
         "internal/flags",
         "internal/geocoding",
+        "internal/integrations/homeassistant",
         "internal/jobs",
         "internal/metrics",
         "internal/models",
@@ -2982,6 +3039,21 @@
       ]
     },
     {
+      "path": "internal/backupverify",
+      "go_files": 1,
+      "test_files": 1,
+      "loc": 294,
+      "has_doc_go": false,
+      "imports": [
+        "internal/backup",
+        "internal/models"
+      ],
+      "files": [
+        "verifier.go",
+        "verifier_test.go"
+      ]
+    },
+    {
       "path": "internal/cache",
       "go_files": 3,
       "test_files": 1,
@@ -2999,10 +3071,23 @@
       ]
     },
     {
+      "path": "internal/chaos",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 405,
+      "has_doc_go": false,
+      "imports": null,
+      "files": [
+        "client.go",
+        "scenarios.go",
+        "scenarios_test.go"
+      ]
+    },
+    {
       "path": "internal/config",
       "go_files": 3,
       "test_files": 1,
-      "loc": 701,
+      "loc": 723,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
@@ -3033,7 +3118,7 @@
       "path": "internal/database",
       "go_files": 108,
       "test_files": 35,
-      "loc": 27708,
+      "loc": 27854,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3685,6 +3770,19 @@
       ]
     },
     {
+      "path": "internal/integrations/homeassistant",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 495,
+      "has_doc_go": false,
+      "imports": null,
+      "files": [
+        "catalog.go",
+        "discovery.go",
+        "discovery_test.go"
+      ]
+    },
+    {
       "path": "internal/jobs",
       "go_files": 13,
       "test_files": 12,
@@ -3839,7 +3937,7 @@
       "path": "internal/mqtt",
       "go_files": 7,
       "test_files": 7,
-      "loc": 4248,
+      "loc": 4272,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3919,6 +4017,37 @@
         "doc.go",
         "webhook.go",
         "webhook_test.go"
+      ]
+    },
+    {
+      "path": "internal/ocpp",
+      "go_files": 4,
+      "test_files": 1,
+      "loc": 945,
+      "has_doc_go": false,
+      "imports": null,
+      "files": [
+        "dispatcher.go",
+        "dispatcher_test.go",
+        "messages.go",
+        "protocol.go",
+        "server.go"
+      ]
+    },
+    {
+      "path": "internal/outbox",
+      "go_files": 4,
+      "test_files": 1,
+      "loc": 845,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": null,
+      "files": [
+        "dispatcher.go",
+        "dispatcher_test.go",
+        "doc.go",
+        "mqtt_publisher.go",
+        "store.go"
       ]
     },
     {
@@ -4365,7 +4494,7 @@
       "path": "internal/tesla/normalize",
       "go_files": 7,
       "test_files": 5,
-      "loc": 2199,
+      "loc": 2359,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4502,7 +4631,7 @@
       "path": "internal/tesla/units",
       "go_files": 4,
       "test_files": 1,
-      "loc": 477,
+      "loc": 573,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4518,9 +4647,9 @@
     },
     {
       "path": "internal/tesla_pipeline",
-      "go_files": 2,
-      "test_files": 5,
-      "loc": 2858,
+      "go_files": 3,
+      "test_files": 6,
+      "loc": 3222,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4537,6 +4666,8 @@
         "pipeline_tracing_test.go",
         "side_effects_observer.go",
         "side_effects_observer_test.go",
+        "software_update_observer.go",
+        "software_update_observer_test.go",
         "span_budget_test.go"
       ]
     },
@@ -4573,6 +4704,18 @@
       "files": [
         "convert.go",
         "doc.go"
+      ]
+    },
+    {
+      "path": "internal/v2h",
+      "go_files": 1,
+      "test_files": 1,
+      "loc": 528,
+      "has_doc_go": false,
+      "imports": null,
+      "files": [
+        "decider.go",
+        "decider_test.go"
       ]
     },
     {
@@ -4704,9 +4847,13 @@
   "cmd_loc": {
     "cmd/ai-eval": 151,
     "cmd/automation-worker": 350,
+    "cmd/backup-verify": 95,
+    "cmd/chaos-runner": 144,
     "cmd/export-worker": 250,
+    "cmd/fleet-config-validator": 326,
     "cmd/metric-coverage-audit": 126,
     "cmd/notification-worker": 517,
+    "cmd/ocpp-server": 91,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 655,
     "cmd/resubscribe": 446,
@@ -4717,7 +4864,7 @@
     "cmd/unit-drift-validator": 154
   },
   "forbidden_edges": null,
-  "doc_go_coverage": 0.9848484848484849,
+  "doc_go_coverage": 0.9423076923076923,
   "files_by_package": {
     "cmd/ai-eval": [
       "doc.go",
@@ -4727,8 +4874,17 @@
       "doc.go",
       "main.go"
     ],
+    "cmd/backup-verify": [
+      "main.go"
+    ],
+    "cmd/chaos-runner": [
+      "main.go"
+    ],
     "cmd/export-worker": [
       "doc.go",
+      "main.go"
+    ],
+    "cmd/fleet-config-validator": [
       "main.go"
     ],
     "cmd/metric-coverage-audit": [
@@ -4737,6 +4893,9 @@
     ],
     "cmd/notification-worker": [
       "doc.go",
+      "main.go"
+    ],
+    "cmd/ocpp-server": [
       "main.go"
     ],
     "cmd/protogen-tesla": [
@@ -5619,10 +5778,17 @@
       "processor.go",
       "storage.go"
     ],
+    "internal/backupverify": [
+      "verifier.go"
+    ],
     "internal/cache": [
       "cache.go",
       "doc.go",
       "mem.go"
+    ],
+    "internal/chaos": [
+      "client.go",
+      "scenarios.go"
     ],
     "internal/config": [
       "config.go",
@@ -5918,6 +6084,10 @@
       "doc.go",
       "github_issues.go"
     ],
+    "internal/integrations/homeassistant": [
+      "catalog.go",
+      "discovery.go"
+    ],
     "internal/jobs": [
       "ai_alert_inbox_categorizer.go",
       "ai_charge_curve_indexer.go",
@@ -6015,6 +6185,18 @@
     "internal/notifier": [
       "doc.go",
       "webhook.go"
+    ],
+    "internal/ocpp": [
+      "dispatcher.go",
+      "messages.go",
+      "protocol.go",
+      "server.go"
+    ],
+    "internal/outbox": [
+      "dispatcher.go",
+      "doc.go",
+      "mqtt_publisher.go",
+      "store.go"
     ],
     "internal/platform": [
       "doc.go",
@@ -6220,7 +6402,8 @@
     ],
     "internal/tesla_pipeline": [
       "doc.go",
-      "side_effects_observer.go"
+      "side_effects_observer.go",
+      "software_update_observer.go"
     ],
     "internal/tracing": [
       "doc.go",
@@ -6232,6 +6415,9 @@
     "internal/units": [
       "convert.go",
       "doc.go"
+    ],
+    "internal/v2h": [
+      "decider.go"
     ],
     "internal/webpush": [
       "doc.go",

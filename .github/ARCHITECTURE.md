@@ -1459,3 +1459,149 @@ ROLLBACK:
   - If a deprecation creates an unsolvable circular dep, propose a
     superseding ADR with rationale. Do not silently restore.
 ```
+
+
+## ADR-010: Repo Reorganization Mandate (Clean Architecture finishing pass)
+
+```
+STATUS: APPROVED (user mandate, 2026-05-27)
+DATE: 2026-05-27
+BRANCH: chore/repo-reorganization (off main @ e1550655)
+RELATED: ADR-006 (Models vs Domain), ADR-007 (platform/ charter),
+         ADR-009 (handler/v1 canonical, internal/api FROZEN)
+PLAN: docs/architecture/repo-reorganization-plan.md
+
+USER MANDATE (verbatim):
+  > "we need to properly organize our repo code both frontend and
+  >  backend. industry leading guidelines"
+  > "must use proper state of art design patterns"
+  > "Proper Work. Proper linting. proper state of art design patterns.
+  >  No shortcuts no anti-patterns. If you see something broken fix it
+  >  dont leave it. we must not have any tech debt remaining."
+  > "its ok even it takes weeks or months. we need proper work"
+
+DECISION:
+  This branch executes the finishing pass on the Clean Architecture
+  shape established by Phase-47 (ADR-006/007/009) and the SI canonical
+  units shape established by Phase-48. It is NOT a re-architecture: the
+  hexagonal scaffolding (domain/port/adapter/app/handler) already exists
+  on main, the arch_test foundation already gates layering, and the
+  Phase-48 SI rename has already landed. The remaining work is to:
+
+    1. CLEAN UP repo hygiene (root binaries, coverage artifacts,
+       orphan markdown, scattered seeds/scripts).
+    2. SPLIT the .github/ARCHITECTURE.md mega-file into per-ADR files
+       under docs/architecture/adr/. Mirror .github/instructions/ into
+       docs/architecture/instructions/. .github/ stays canonical for
+       Copilot tooling; docs/ is the human-readable canonical source.
+    3. INSTALL frontend FSD layer enforcement via eslint-plugin-boundaries
+       with the current dir → FSD layer mapping (no folder rename).
+       Eliminate cross-feature imports.
+    4. FINISH the frontend SI cutover (classify the ~346 remaining
+       legacy unit-suffixed identifiers as CONFIG / DISPLAY / FIX;
+       execute the FIX set).
+    5. EXTEND tools/archmetrics + add depguard rules to enforce the
+       full Clean Arch DAG with per-legacy-package ratchet (allowlist
+       current count; net-new violations fail CI).
+    6. MIGRATE the remaining ~422 handlers from frozen internal/api/
+       (currently 434 files; 12 migrated to handler/v1/) to
+       handler/v1 + app/<x>svc + dto/, slice-by-slice per the recipe
+       in docs/architecture/repo-reorganization-plan.md §6.
+    7. RESHAPE notification/notifier/webpush into Clean Arch
+       (domain + svc + port + channel adapters) as a single C6 slice.
+    8. AUDIT remaining ADR-009 admin/observability exceptions per file;
+       result is the final justified list, NOT zero.
+
+  Clean Architecture mapping for this codebase:
+    Entities          → internal/domain/<X>/
+    Use Cases         → internal/app/<X>svc/
+    Interface Adapters→ internal/handler/v1/
+                      + internal/handler/dto/
+                      + internal/adapter/<X>/
+                      + internal/database/  (kept as repo layer per ADR-006)
+                      + internal/models/    (persistence/transport DTOs per ADR-006)
+    Frameworks/Drivers→ cmd/* + third-party libs
+
+  Ports live AT THE CONSUMER BOUNDARY (i.e. where the svc consumes the
+  capability), not 1:1 per adapter. Shared interfaces go in
+  internal/port/<domain>/; svc-local interfaces live inline in the svc
+  file. This avoids interface explosion.
+
+RULES:
+  + Every NEW handler MUST land in internal/handler/v1 (already an
+     ADR-009 rule; restated here as the destination).
+  + Every NEW use case MUST land in internal/app/<X>svc.
+  + Every NEW external dependency MUST be expressed as a port; the
+     consuming svc MUST depend on the port, not the concrete adapter.
+  + No new business handler may land in internal/api. Admin/observability
+     thin handlers may be added ONLY with an explicit row in the
+     ADR-009 Exceptions table.
+  + Frontend: no new cross-feature import. Shared logic goes in
+     components/, hooks/, lib/, api/, or entities/.
+  + Behavioural parity is a hard merge gate per migrated route:
+     pre/post JSON snapshot diff reviewed, OpenAPI diff reviewed,
+     frontend hook smoke-tested.
+  + Architecture enforcement runs in RATCHET mode: legacy packages
+     have an allowlist of current violation counts; net-new violations
+     in ANY package fail CI.
+
+  - Do NOT delete internal/api as a goal in itself (admin exceptions
+     stay documented per ADR-009 carve-outs).
+  - Do NOT rename internal/database/ to internal/adapter/postgres/ in
+     this branch (143 files, 208 importers, ADR-002 names accessors
+     explicitly — out of scope).
+  - Do NOT restructure internal/ai/ in this branch (394 files, ADR-015
+     AI-Off Contract owned — separate project).
+  - Do NOT restructure internal/tesla/, internal/signal/,
+     internal/tesla_pipeline/, or any telemetry pipeline package
+     (Phase-42 owned per ADR-004).
+  - Do NOT flip golangci errcheck / SA1019, no-explicit-any, or
+     exhaustive-deps to error in this branch (strict-lint cascade is a
+     separate quality project).
+  - Do NOT rename web/src/features/ to canonical FSD names. FSD =
+     layer RULES, not folder names. The boundaries plugin maps current
+     dirs to FSD layers; existing names are preserved.
+
+RATIONALE:
+  - Phase-47 established the architecture; Phase-48 cleaned the units;
+    this branch finishes the migration that those phases scaffolded.
+  - User mandate explicitly accepts a months-long effort, so we use
+    a slice-atomic, behavioural-parity-gated migration recipe instead
+    of a big-bang rewrite that would create unmergeable conflict
+    surfaces.
+  - Out-of-scope items are excluded not because they don't matter but
+    because they are independent of "repo organization" — each is its
+    own substantive project deserving its own ADR.
+
+ROLLBACK:
+  - Each migrated slice is independent. If a slice introduces a
+    regression caught after merge, revert that slice's commit; the
+    handler under internal/api/ can be restored via git revert and
+    re-mounted on the router. archmetrics baseline ticks back up by N.
+  - If the whole branch is judged a regression, it can be abandoned
+    without affecting Phase-47 (which is already on main) or Phase-48
+    (already on main).
+  - ADR-010 itself is not load-bearing for production; it is a project
+    charter.
+
+DEFINITION OF DONE:
+  See docs/architecture/repo-reorganization-plan.md §8 for the full
+  checklist. Headline:
+    - Root contains no stale binaries / coverage artifacts / orphan md
+    - depguard + archmetrics + eslint-plugin-boundaries enforce DAG
+    - Zero unjustified cross-feature imports in web/src/features/
+    - web/src/entities/ holds genuinely shared types
+    - internal/api/ contains only documented admin exceptions + router
+    - ADR-011 (Clean Arch destination) authored
+    - Behavioural parity: per-route snapshot diffs, OpenAPI diff,
+      Docker smoke + signal-log replay parity, bundle size delta ≤ ±5%
+    - docs/architecture/{clean-architecture,fsd}.md + CONTRIBUTING.md
+    - One consolidated CHANGELOG.md entry
+
+OUT OF SCOPE (explicit, see plan §9):
+  AI subsystem, internal/database rename, strict-lint cascade,
+  telemetry pipeline restructure, Tesla vendored proto, internal/signal
+  layering, FSM design, database schema changes, new frameworks,
+  features/ folder rename.
+```
+

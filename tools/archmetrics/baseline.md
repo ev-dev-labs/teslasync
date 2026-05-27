@@ -1,13 +1,13 @@
-# TeslaSync architecture metrics ΓÇö baseline
+# TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-26T16:37:59Z, Go go1.26.1, commit f93d78eccf8b31a2204de542298f575920f8625c_
+_Generated 2026-05-27T20:29:50Z, Go go1.26.1, commit e155065542704b7daf060e7a5b881fbfa419f1f9_
 
 ## Summary
 
-- Packages: 198
-- doc.go coverage: 98.5%
+- Packages: 208
+- doc.go coverage: 94.2%
 - Forbidden edges detected: 0
-- Total non-blank LOC under cmd/+internal/+tools/: 364645
+- Total non-blank LOC under cmd/+internal/+tools/: 370463
 
 ## cmd/* main.go LOC
 
@@ -15,9 +15,13 @@ _Generated 2026-05-26T16:37:59Z, Go go1.26.1, commit f93d78eccf8b31a2204de542298
 |---|---:|
 | cmd/ai-eval/main.go | 151 |
 | cmd/automation-worker/main.go | 350 |
+| cmd/backup-verify/main.go | 95 |
+| cmd/chaos-runner/main.go | 144 |
 | cmd/export-worker/main.go | 250 |
+| cmd/fleet-config-validator/main.go | 326 |
 | cmd/metric-coverage-audit/main.go | 126 |
 | cmd/notification-worker/main.go | 517 |
+| cmd/ocpp-server/main.go | 91 |
 | cmd/protogen-tesla/main.go | 73 |
 | cmd/pub-test-signal/main.go | 655 |
 | cmd/resubscribe/main.go | 446 |
@@ -37,9 +41,13 @@ _None._
 |---|---:|---:|---:|:---:|---|
 | cmd/ai-eval | 2 | 0 | 155 | yes | cmd-internal |
 | cmd/automation-worker | 2 | 0 | 354 | yes | cmd-internal |
+| cmd/backup-verify | 1 | 0 | 95 |   |  |
+| cmd/chaos-runner | 1 | 0 | 144 |   |  |
 | cmd/export-worker | 2 | 0 | 254 | yes | cmd-internal |
+| cmd/fleet-config-validator | 1 | 1 | 476 |   |  |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
 | cmd/notification-worker | 2 | 0 | 521 | yes | cmd-internal |
+| cmd/ocpp-server | 1 | 0 | 91 |   |  |
 | cmd/protogen-tesla | 4 | 1 | 2295 | yes | cmd-internal |
 | cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
 | cmd/pub-test-signal | 2 | 0 | 659 | yes | cmd-internal |
@@ -131,9 +139,9 @@ _None._
 | internal/ai/stream | 2 | 1 | 1185 | yes | platform |
 | internal/ai/tools | 58 | 51 | 47036 | yes | platform |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 125773 | yes | handler |
+| internal/api | 271 | 163 | 126337 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
-| internal/app | 6 | 1 | 1708 | yes | app |
+| internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 168 | yes | app |
 | internal/app/auditviewersvc | 3 | 0 | 77 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
@@ -153,10 +161,12 @@ _None._
 | internal/automation/safety | 7 | 6 | 3565 | yes | platform |
 | internal/automation/trigger | 7 | 0 | 946 | yes | platform |
 | internal/backup | 3 | 1 | 668 | yes | platform |
+| internal/backupverify | 1 | 1 | 294 |   |  |
 | internal/cache | 3 | 1 | 262 | yes | platform |
-| internal/config | 3 | 1 | 701 | yes | platform |
+| internal/chaos | 2 | 1 | 405 |   |  |
+| internal/config | 3 | 1 | 723 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 108 | 35 | 27708 | yes | platform |
+| internal/database | 108 | 35 | 27854 | yes | platform |
 | internal/dataquality | 3 | 0 | 323 |   |  |
 | internal/domain | 2 | 1 | 114 | yes | domain |
 | internal/domain/charging | 6 | 1 | 357 | yes | domain |
@@ -184,16 +194,19 @@ _None._
 | internal/handler/v1 | 11 | 1 | 828 | yes | handler |
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
+| internal/integrations/homeassistant | 2 | 1 | 495 |   |  |
 | internal/jobs | 13 | 12 | 3463 | yes | platform |
 | internal/metrics | 6 | 2 | 1073 | yes | platform |
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
 | internal/models | 34 | 2 | 3026 | yes | domain |
-| internal/mqtt | 7 | 7 | 4248 | yes | platform |
+| internal/mqtt | 7 | 7 | 4272 | yes | platform |
 | internal/notification | 4 | 2 | 1243 | yes | platform |
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |
 | internal/notifier | 2 | 1 | 450 | yes | platform |
+| internal/ocpp | 4 | 1 | 945 |   |  |
+| internal/outbox | 4 | 1 | 845 | yes | platform |
 | internal/platform | 3 | 2 | 702 | yes | platform |
 | internal/platform/buildinfo | 2 | 1 | 91 | yes | platform |
 | internal/platform/cache | 2 | 0 | 101 | yes | platform |
@@ -217,15 +230,16 @@ _None._
 | internal/tesla/bootstrap | 3 | 1 | 1037 | yes | platform |
 | internal/tesla/codec | 6 | 4 | 2932 | yes | platform |
 | internal/tesla/config | 3 | 1 | 473 | yes | platform |
-| internal/tesla/normalize | 7 | 5 | 2199 | yes | platform |
+| internal/tesla/normalize | 7 | 5 | 2359 | yes | platform |
 | internal/tesla/protomodel | 7 | 3 | 5071 | yes | platform |
 | internal/tesla/router | 5 | 3 | 1180 | yes | platform |
 | internal/tesla/router/writers | 15 | 13 | 6856 | yes | platform |
 | internal/tesla/unit_history | 4 | 2 | 1673 | yes | platform |
-| internal/tesla/units | 4 | 1 | 477 | yes | platform |
-| internal/tesla_pipeline | 2 | 5 | 2858 | yes | platform |
+| internal/tesla/units | 4 | 1 | 573 | yes | platform |
+| internal/tesla_pipeline | 3 | 6 | 3222 | yes | platform |
 | internal/tracing | 5 | 3 | 607 | yes | platform |
 | internal/units | 2 | 0 | 63 | yes | platform |
+| internal/v2h | 1 | 1 | 528 |   |  |
 | internal/webpush | 2 | 1 | 517 | yes | platform |
 | internal/worker | 8 | 3 | 2594 | yes | platform |
 | tools/aigen | 2 | 1 | 338 | yes | tool |
@@ -236,12 +250,21 @@ _None._
 
 ## doc.go adoption
 
-- Packages WITHOUT doc.go: 3
+- Packages WITHOUT doc.go: 12
 
 <details><summary>List</summary>
 
+- `cmd/backup-verify`
+- `cmd/chaos-runner`
+- `cmd/fleet-config-validator`
+- `cmd/ocpp-server`
+- `internal/backupverify`
+- `internal/chaos`
 - `internal/dataquality`
+- `internal/integrations/homeassistant`
+- `internal/ocpp`
 - `internal/slo`
 - `internal/synthetic`
+- `internal/v2h`
 
 </details>
