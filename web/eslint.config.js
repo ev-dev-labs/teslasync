@@ -35,6 +35,7 @@
 
 import { FlatCompat } from '@eslint/eslintrc';
 import js from '@eslint/js';
+import boundaries from 'eslint-plugin-boundaries';
 import jsxA11y from 'eslint-plugin-jsx-a11y';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -146,6 +147,58 @@ export default [
     plugins: { teslasync: teslasyncPlugin },
     rules: {
       'teslasync/ai-component-must-be-wrapped': 'error',
+    },
+  },
+  // chore/repo-reorganization A2.6 — eslint-plugin-boundaries.
+  //
+  // Why this block exists today
+  // ---------------------------
+  // Phase B1 of the v3 reorg plan (docs/architecture/repo-
+  // reorganization-plan.md §4) mechanizes Feature-Sliced Design
+  // layer rules over the current dir mapping
+  // (src/features/, src/components/, src/hooks/, src/lib/, etc.).
+  // The plugin is installed here so B1's diff is the RULES delta
+  // alone, not the install + RULES.
+  //
+  // Today: warn-mode, every element type allowed everywhere
+  // (`default: 'allow'`). This is a true no-op — no `boundaries/*`
+  // warning is possible. The presence of the block proves the
+  // plugin is wired and ready for B1.
+  //
+  // B1 will replace this block with:
+  //   - settings.'boundaries/elements' mapping current dirs to
+  //     FSD layers (app / pages / widgets / features / entities /
+  //     shared / generated).
+  //   - rules['boundaries/element-types'] with the FSD DAG
+  //     (features can only import entities + shared; etc.).
+  //   - rules['boundaries/no-private'] at error.
+  //
+  // Until then the plugin is registered solely so config errors
+  // (wrong export shape, missing plugin) surface NOW rather than
+  // mid-B1.
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    plugins: { boundaries },
+    settings: {
+      // Single catch-all element so the plugin doesn't emit
+      // 'Please provide element descriptors' on every lint run.
+      // B1 replaces this with the real FSD layer mapping
+      // (app / pages / widgets / features / entities / shared /
+      // generated) — see docs/architecture/fsd.md (created in A4).
+      'boundaries/elements': [
+        { type: 'src', pattern: 'src/**/*' },
+      ],
+      'boundaries/include': ['src/**/*'],
+    },
+    rules: {
+      // Permissive defaults. B1 flips to disallow + explicit allow.
+      'boundaries/element-types': [
+        'warn',
+        {
+          default: 'allow',
+          rules: [],
+        },
+      ],
     },
   },
 ];
