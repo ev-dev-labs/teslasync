@@ -23,12 +23,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
 
-type colSpec struct {
-	table  string
-	col    string
-	sqlTyp string // normalised: "BOOLEAN" | "TEXT" | "INTEGER" | "DOUBLE_PRECISION" | "TIMESTAMPTZ" | "JSONB" | "OTHER"
-}
-
 // Maps router.Destination → list of (table_name) candidates the writer
 // might insert into. For destinations that map cleanly to a single
 // table, this is one-element. For DestSignalLog / DestDrop the column
@@ -477,6 +471,24 @@ func main() {
 		}
 		if len(unrouted) > limit {
 			fmt.Printf("  ... and %d more\n", len(unrouted)-limit)
+		}
+		fmt.Println()
+	}
+
+	if len(noColumn) > 0 {
+		sort.Strings(noColumn)
+		fmt.Printf("## Fields routed to a snapshot destination with no column mapping (%d)\n", len(noColumn))
+		fmt.Println("These signals route to a destination table but the routing entry has Column=\"\" — the snapshot writer would no-op.")
+		fmt.Println()
+		limit := 20
+		if len(noColumn) < limit {
+			limit = len(noColumn)
+		}
+		for i := 0; i < limit; i++ {
+			fmt.Printf("  - %s\n", noColumn[i])
+		}
+		if len(noColumn) > limit {
+			fmt.Printf("  ... and %d more\n", len(noColumn)-limit)
 		}
 		fmt.Println()
 	}
