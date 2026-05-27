@@ -83,7 +83,10 @@ func NewMemorySessionStore() *MemorySessionStore {
 func (m *MemorySessionStore) StartSession(_ context.Context, s Session) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	cp := *(&s)
+	// s is already a parameter-passed copy; take its address directly
+	// rather than the prior `*(&s)` deref-then-take-address dance,
+	// which staticcheck SA4001 correctly flagged as a no-op.
+	cp := s
 	m.sessions[s.TransactionID] = &cp
 	return nil
 }

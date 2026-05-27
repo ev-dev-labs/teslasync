@@ -54,7 +54,10 @@ func NewSlowQueriesRepo(db *DB) *SlowQueriesRepo {
 	return &SlowQueriesRepo{db: db}
 }
 
-// OrderBy is the canonical sort key for TopLive / TopSnapshot.
+// OrderBy is the canonical sort key for TopLive. A future TopSnapshot
+// (planned but not implemented) will accept the same enum; for now
+// the snapshot-side ordering is handled by HistoricalForQuery's
+// (queryid, ts DESC) index.
 type SlowQueryOrderBy string
 
 const (
@@ -83,19 +86,6 @@ func orderByColumnLive(o SlowQueryOrderBy) string {
 		return "calls"
 	default:
 		return "mean_exec_time"
-	}
-}
-
-func orderByColumnSnapshot(o SlowQueryOrderBy) string {
-	switch o {
-	case OrderByMeanTime:
-		return "mean_time_ms"
-	case OrderByTotalTime:
-		return "total_time_ms"
-	case OrderByCalls:
-		return "calls"
-	default:
-		return "mean_time_ms"
 	}
 }
 

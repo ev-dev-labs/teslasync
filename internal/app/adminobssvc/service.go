@@ -32,7 +32,6 @@ type Service struct {
 	hypertable    *database.HypertableMetricsRepo
 	ingestXRay    *database.IngestXRayRepo
 	auditRecorder *audit.Recorder
-	pool          schemacheck.Querier
 	excludeTables []string
 	quotaBytes    int64
 }
