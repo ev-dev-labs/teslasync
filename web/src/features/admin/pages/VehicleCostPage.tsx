@@ -57,7 +57,7 @@ export default function VehicleCostPage() {
         header: t('admin.vehicleCost.colVehicle', 'Vehicle'),
         render: (r) => (
           <div className="flex flex-col">
-            <span className="font-medium text-white/90">
+            <span className="font-medium text-[var(--text-primary)]">
               {r.display_name ?? t('admin.vehicleCost.unnamed', 'Vehicle #{{id}}', { id: r.vehicle_id })}
             </span>
             <Caption>ID {fmtNumber(r.vehicle_id)}</Caption>
@@ -88,7 +88,7 @@ export default function VehicleCostPage() {
         align: 'right',
         render: (r) => {
           const failures = r.dlq_failures_24h ?? 0;
-          const cls = failures > 0 ? 'text-amber-300 tabular-nums' : 'tabular-nums text-white/60';
+          const cls = failures > 0 ? 'text-amber-300 tabular-nums' : 'tabular-nums text-[var(--text-secondary)]';
           return <span className={cls}>{fmtNumber(failures)}</span>;
         },
       },
@@ -96,7 +96,7 @@ export default function VehicleCostPage() {
         key: 'last',
         header: t('admin.vehicleCost.colLastSeen', 'Last seen'),
         render: (r) => (
-          <span className="text-white/80">{formatRelative(r.last_seen_at)}</span>
+          <span className="text-[var(--text-primary)]">{formatRelative(r.last_seen_at)}</span>
         ),
       },
     ],

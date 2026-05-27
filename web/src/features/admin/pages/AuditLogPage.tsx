@@ -128,7 +128,7 @@ export default function AuditLogPage() {
         header: t('admin.auditLog.colTs', 'Timestamp'),
         render: (r) => (
           <div>
-            <div className="text-white/90">{formatDateTime(r.ts)}</div>
+            <div className="text-[var(--text-primary)]">{formatDateTime(r.ts)}</div>
             <Caption>{formatRelative(r.ts)}</Caption>
           </div>
         ),
@@ -136,24 +136,24 @@ export default function AuditLogPage() {
       {
         key: 'actor',
         header: t('admin.auditLog.colActor', 'Actor'),
-        render: (r) => <span className="text-white/80">{r.actor || '—'}</span>,
+        render: (r) => <span className="text-[var(--text-primary)]">{r.actor || '—'}</span>,
       },
       {
         key: 'category',
         header: t('admin.auditLog.colCategory', 'Category'),
-        render: (r) => (r.category ? <Badge variant="neutral">{r.category}</Badge> : <span className="text-white/40">—</span>),
+        render: (r) => (r.category ? <Badge variant="neutral">{r.category}</Badge> : <span className="text-[var(--text-muted)]">—</span>),
       },
       {
         key: 'action',
         header: t('admin.auditLog.colAction', 'Action'),
-        render: (r) => <span className="font-medium text-white/90">{r.action}</span>,
+        render: (r) => <span className="font-medium text-[var(--text-primary)]">{r.action}</span>,
       },
       {
         key: 'entity',
         header: t('admin.auditLog.colEntity', 'Entity'),
         render: (r) => (
           <div>
-            <span className="text-white/80">{r.entity_type}</span>
+            <span className="text-[var(--text-primary)]">{r.entity_type}</span>
             {r.entity_id !== null && r.entity_id !== undefined && (
               <Caption>{`#${r.entity_id}`}</Caption>
             )}
@@ -164,7 +164,7 @@ export default function AuditLogPage() {
         key: 'detail',
         header: t('admin.auditLog.colDetail', 'Detail'),
         render: (r) => (
-          <span className="line-clamp-2 text-white/70">{r.detail ?? '—'}</span>
+          <span className="line-clamp-2 text-[var(--text-secondary)]">{r.detail ?? '—'}</span>
         ),
       },
       {
@@ -173,13 +173,13 @@ export default function AuditLogPage() {
         render: (r) =>
           r.trace_id ? (
             <div className="flex items-center gap-1">
-              <span className="font-mono text-xs text-white/70">
+              <span className="font-mono text-xs text-[var(--text-secondary)]">
                 {r.trace_id.slice(0, 8)}…
               </span>
               <CopyButton text={r.trace_id} iconOnly variant="ghost" size="sm" />
             </div>
           ) : (
-            <span className="text-white/40">—</span>
+            <span className="text-[var(--text-muted)]">—</span>
           ),
       },
       {
@@ -429,17 +429,17 @@ function ExpandedDetail({ row }: { row: AuditLogRow }) {
     <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
       <div>
         <Caption>{t('admin.auditLog.detailIp', 'IP')}</Caption>
-        <div className="font-mono text-sm text-white/80">{row.ip ?? '—'}</div>
+        <div className="font-mono text-sm text-[var(--text-primary)]">{row.ip ?? '—'}</div>
       </div>
       <div>
         <Caption>{t('admin.auditLog.detailUa', 'User-agent')}</Caption>
-        <div className="break-all text-sm text-white/80">{row.user_agent ?? '—'}</div>
+        <div className="break-all text-sm text-[var(--text-primary)]">{row.user_agent ?? '—'}</div>
       </div>
       {row.trace_id && (
         <div className="md:col-span-2">
           <Caption>{t('admin.auditLog.detailTrace', 'Trace ID')}</Caption>
           <div className="flex items-center gap-2">
-            <span className="break-all font-mono text-sm text-white/80">{row.trace_id}</span>
+            <span className="break-all font-mono text-sm text-[var(--text-primary)]">{row.trace_id}</span>
             <CopyButton text={row.trace_id} iconOnly variant="ghost" size="sm" />
           </div>
         </div>
@@ -447,7 +447,7 @@ function ExpandedDetail({ row }: { row: AuditLogRow }) {
       {row.before && (
         <div>
           <Caption>{t('admin.auditLog.detailBefore', 'Before')}</Caption>
-          <pre className="max-h-64 overflow-auto rounded bg-black/30 p-3 font-mono text-xs text-white/80">
+          <pre className="max-h-64 overflow-auto rounded bg-[var(--surface-overlay)] p-3 font-mono text-xs text-[var(--text-primary)]">
             {formatJSON(row.before)}
           </pre>
         </div>
@@ -455,7 +455,7 @@ function ExpandedDetail({ row }: { row: AuditLogRow }) {
       {row.after && (
         <div>
           <Caption>{t('admin.auditLog.detailAfter', 'After')}</Caption>
-          <pre className="max-h-64 overflow-auto rounded bg-black/30 p-3 font-mono text-xs text-white/80">
+          <pre className="max-h-64 overflow-auto rounded bg-[var(--surface-overlay)] p-3 font-mono text-xs text-[var(--text-primary)]">
             {formatJSON(row.after)}
           </pre>
         </div>
@@ -464,7 +464,7 @@ function ExpandedDetail({ row }: { row: AuditLogRow }) {
         <div className="md:col-span-2">
           <Caption>{t('admin.auditLog.detailHash', 'Row hash')}</Caption>
           <div className="flex items-center gap-2">
-            <span className="break-all font-mono text-xs text-white/70">{row.row_hash}</span>
+            <span className="break-all font-mono text-xs text-[var(--text-secondary)]">{row.row_hash}</span>
             <CopyButton text={row.row_hash} iconOnly variant="ghost" size="sm" />
           </div>
         </div>

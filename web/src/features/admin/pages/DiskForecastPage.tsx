@@ -65,7 +65,7 @@ export default function DiskForecastPage() {
         header: t('admin.diskForecast.colTable', 'Hypertable'),
         render: (r) => (
           <div className="flex flex-col">
-            <span className="font-medium text-white/90">{r.hypertable_name}</span>
+            <span className="font-medium text-[var(--text-primary)]">{r.hypertable_name}</span>
             <Caption>
               {t('admin.diskForecast.chunkCount', '{{count}} chunks', {
                 count: r.chunk_count,
