@@ -145,6 +145,28 @@ func (p *Pipeline) toSI(ctx context.Context, atomic codec.Atomic, vehicleIntID i
 		return atomic, nil
 	}
 
+	// Fixed-wire-unit fields (Odometer, RatedRange, etc.) bypass the
+	// unit-history lookup entirely: their wire value is always in
+	// miles regardless of SettingDistanceUnit, so units.ToSI applies
+	// the miles conversion with active="" and the atomic MUST NOT be
+	// dropped on unithistory.ErrNotFound. Without this bypass a
+	// fresh vehicle with no unit_history rows would silently drop
+	// every Odometer / range sample. See units.IsFixedMileDistanceField
+	// and the empirical evidence in conversions.go for why these
+	// fields do not follow the user setting.
+	if units.IsFixedMileDistanceField(atomic.Field) {
+		raw, ok := coerceFloat(atomic.Value)
+		if !ok {
+			return codec.Atomic{}, fmt.Errorf("%w: %s value of type %T not coercible to float64", units.ErrUnsupportedField, atomic.Field, atomic.Value)
+		}
+		siValue, err := units.ToSI(atomic.Field, raw, "")
+		if err != nil {
+			return codec.Atomic{}, fmt.Errorf("normalize: units.ToSI(%s, %v, fixed-mile): %w", atomic.Field, raw, err)
+		}
+		atomic.Value = siValue
+		return atomic, nil
+	}
+
 	kind, ok := kindFromMeta(atomic.Field, meta)
 	if !ok {
 		// Defensive: needsConversion returned true so kindFromMeta

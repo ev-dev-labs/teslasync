@@ -124,7 +124,11 @@ func TestPipelineObserver_InvokedWithPostRouteAtomicsSlice(t *testing.T) {
 		t.Fatalf("observer captured %d atomics, want 3: %+v", len(captured), captured)
 	}
 
-	// The observer must see the SI value for Odometer (100 km -> 100000 m).
+	// The observer must see the SI value for Odometer. Odometer is
+	// a fixed-mile field (units.IsFixedMileDistanceField) so the
+	// conversion is raw * 1609.344 regardless of the recorded
+	// SettingDistanceUnit=Kilometers above; the bypass is the
+	// regression net for the "10,334 mi drive" production bug.
 	odo := findAtomic(captured, "Odometer")
 	if odo == nil {
 		t.Fatalf("observer slice missing Odometer; got %+v", captured)
@@ -133,9 +137,9 @@ func TestPipelineObserver_InvokedWithPostRouteAtomicsSlice(t *testing.T) {
 	if !ok {
 		t.Fatalf("observer Odometer Value type = %T, want float64", odo.Value)
 	}
-	const want = 100000.0
+	const want = 100 * 1609.344 // 160934.4
 	if odoSI != want {
-		t.Errorf("observer Odometer Value = %v, want %v (SI value, not raw 100km)", odoSI, want)
+		t.Errorf("observer Odometer Value = %v, want %v (raw * 1609.344, fixed-mile bypass)", odoSI, want)
 	}
 
 	// Pass-through field must retain its codec-original Value.

@@ -142,21 +142,172 @@ func (r *fakeRouter) routesCopy() []codec.Atomic {
 // TestPipelineHappyPath
 // ---------------------------------------------------------------------------
 
+// TestPipeline_FixedMileBypass pins the production fix for the
+// "10,334 mi drive" bug: cumulative-distance fields (Odometer,
+// RatedRange, IdealBatteryRange, EstBatteryRange, MilesToArrival,
+// MilesSinceReset, SelfDrivingMilesSinceReset) MUST bypass the
+// per-vehicle unit-history lookup because their wire value is always
+// in miles regardless of SettingDistanceUnit.
+//
+// Without this bypass:
+//
+//  1. A fresh vehicle with no unit_history rows would drop every
+//     Odometer / range atomic on histRepo.ErrNotFound, silently
+//     stalling drive-distance and range-state computation.
+//
+//  2. A user who toggles SettingDistanceUnit mid-drive would corrupt
+//     the cumulative odometer value by a 1.609× factor at the
+//     transition boundary, producing nonsense drive distances such
+//     as 10,334 mi for an actual 10 mi trip (the bug that motivated
+//     this fix; see prod evidence in commit message / drive ids 30
+//     and 34 for vehicle_id=1 on 2026-05-24).
+//
+// Assertions per fixed-mile field:
+//
+//   - histRepo.At was NEVER called (the bypass elides the lookup).
+//   - The routed SI value equals raw * 1609.344 (always miles).
+//   - A "wrong" recorded SettingDistanceUnit=Kilometers has NO effect
+//     on the routed value — the override wins.
+func TestPipeline_FixedMileBypass(t *testing.T) {
+	t.Parallel()
+
+	const vehicleID int64 = 99
+	tNow := time.Date(2026, 5, 24, 21, 0, 0, 0, time.UTC)
+
+	// The fixed-mile field set whose wire-format unit must NOT
+	// follow SettingDistanceUnit. Keep in lockstep with
+	// units.fixedMileDistanceFields.
+	fixedMileFields := []string{
+		"Odometer",
+		"RatedRange",
+		"EstBatteryRange",
+		"IdealBatteryRange",
+		"MilesToArrival",
+		"MilesSinceReset",
+		"SelfDrivingMilesSinceReset",
+	}
+
+	for _, field := range fixedMileFields {
+		field := field
+		t.Run(field, func(t *testing.T) {
+			t.Parallel()
+
+			// Adversarial input: a Setting*Unit=Kilometers is
+			// already in history, so the OLD code path would have
+			// multiplied raw by 1000 (km factor). The override
+			// must win and apply *1609.344 instead.
+			atomics := []codec.Atomic{
+				{Field: "SettingDistanceUnit", Value: "Kilometers", EmittedAt: tNow.Add(-1 * time.Hour), VehicleID: "VIN-FIXED"},
+				{Field: field, Value: float64(100), EmittedAt: tNow, VehicleID: "VIN-FIXED"},
+			}
+
+			repo := &fakeRepo{}
+			rt := &fakeRouter{}
+			p := New(repo, rt, zerolog.Nop())
+
+			if err := p.processAtomics(context.Background(), atomics, vehicleID); err != nil {
+				t.Fatalf("processAtomics returned error: %v", err)
+			}
+
+			// The only repo op must be the SettingDistanceUnit
+			// "record". histRepo.At MUST NOT have been called for
+			// the fixed-mile field — that is the point of the
+			// bypass and the regression net for the bug.
+			ops := repo.opsCopy()
+			for i, op := range ops {
+				if op.kind == "at" {
+					t.Fatalf("ops[%d]: histRepo.At was called for fixed-mile field %s — bypass regressed; ops=%+v", i, field, ops)
+				}
+			}
+
+			routes := rt.routesCopy()
+			if len(routes) != 1 {
+				t.Fatalf("router received %d routes, want 1 (%s only): %+v", len(routes), field, routes)
+			}
+			if routes[0].Field != field {
+				t.Fatalf("router received %q, want %q", routes[0].Field, field)
+			}
+			si, ok := routes[0].Value.(float64)
+			if !ok {
+				t.Fatalf("%s routed Value type = %T, want float64", field, routes[0].Value)
+			}
+			want := 100 * 1609.344
+			if math.Abs(si-want) > 1e-6 {
+				t.Errorf("%s SI = %v, want %v (always miles, ignoring SettingDistanceUnit=Kilometers)", field, si, want)
+			}
+		})
+	}
+}
+
+// TestPipeline_FixedMileNoUnitHistory pins the no-unit-context
+// branch of the fixed-mile bypass: an Odometer atomic with NO
+// SettingDistanceUnit row in history must still be routed (raw *
+// 1609.344) rather than dropped on ErrNoUnitContext. Without the
+// bypass, a fresh vehicle with no observed Setting*Unit would
+// silently lose every Odometer sample.
+func TestPipeline_FixedMileNoUnitHistory(t *testing.T) {
+	t.Parallel()
+
+	const vehicleID int64 = 101
+	tNow := time.Date(2026, 5, 24, 12, 0, 0, 0, time.UTC)
+
+	atomics := []codec.Atomic{
+		{Field: "Odometer", Value: float64(27210.92), EmittedAt: tNow, VehicleID: "VIN-NOUH"},
+	}
+
+	repo := &fakeRepo{} // empty — At returns ErrNotFound
+	rt := &fakeRouter{}
+	p := New(repo, rt, zerolog.Nop())
+
+	if err := p.processAtomics(context.Background(), atomics, vehicleID); err != nil {
+		t.Fatalf("processAtomics returned error: %v", err)
+	}
+
+	routes := rt.routesCopy()
+	if len(routes) != 1 {
+		t.Fatalf("router received %d routes, want 1: %+v", len(routes), routes)
+	}
+	if routes[0].Field != "Odometer" {
+		t.Fatalf("router received %q, want Odometer", routes[0].Field)
+	}
+	si := routes[0].Value.(float64)
+	want := 27210.92 * 1609.344
+	if math.Abs(si-want) > 1e-3 {
+		t.Errorf("Odometer SI = %v, want %v (always miles, no unit history)", si, want)
+	}
+
+	// Sanity: histRepo.At was not called for Odometer.
+	ops := repo.opsCopy()
+	for _, op := range ops {
+		if op.kind == "at" {
+			t.Errorf("histRepo.At was called for Odometer with no unit history — bypass regressed: %+v", op)
+		}
+	}
+}
+
 // TestPipelineHappyPath exercises the three primary dispatch arms in
 // one payload:
 //
-//  1. A Setting*Unit atomic (SettingDistanceUnit=km) is recorded to
+//  1. A Setting*Unit atomic (SettingTemperatureUnit=C) is recorded to
 //     the unit-history repo via observeSettingUnit and is NOT
 //     routed.
-//  2. A unit-bearing atomic (Odometer=100 km) looks up the active
-//     unit at its EmittedAt, converts to SI (meters), and is routed
-//     to the fake router with the converted value.
+//  2. A unit-bearing atomic (InsideTemp=20 C) looks up the active
+//     unit at its EmittedAt, converts to SI (Celsius, identity here),
+//     and is routed to the fake router with the converted value.
 //  3. A dimensionless atomic (BatteryHeaterOn=true) bypasses the
 //     unit-conversion path and is routed unchanged.
 //
+// Temperature is chosen over distance for arm (2) because Odometer
+// and the other cumulative-distance fields are now fixed-mile
+// (units.IsFixedMileDistanceField) and bypass unit history entirely —
+// the SettingDistanceUnit → Record → unit-history → At → convert flow
+// is no longer exercised by Odometer. InsideTemp still follows
+// SettingTemperatureUnit so it remains the right vehicle for the
+// flow assertion.
+//
 // The assertions cover the SettingUnitFirst ordering (Record happens
-// before At), the conversion correctness (100 km → 100000 m), the
-// router population (exactly two Routes — Odometer + BatteryHeaterOn,
+// before At), the conversion correctness (20 C → 20 C identity), the
+// router population (exactly two Routes — InsideTemp + BatteryHeaterOn,
 // NOT the Setting*Unit), and the pass-through invariance for
 // dimensionless atomics.
 func TestPipelineHappyPath(t *testing.T) {
@@ -165,13 +316,13 @@ func TestPipelineHappyPath(t *testing.T) {
 	const vehicleID int64 = 42
 	tNow := time.Date(2026, 5, 3, 12, 0, 0, 0, time.UTC)
 	// Sibling timestamps are used so the unit-history At lookup at
-	// the Odometer's EmittedAt sees the SettingDistanceUnit row.
+	// the InsideTemp's EmittedAt sees the SettingTemperatureUnit row.
 	tSetting := tNow
 	tValues := tNow.Add(1 * time.Second)
 
 	atomics := []codec.Atomic{
-		{Field: "SettingDistanceUnit", Value: "Kilometers", EmittedAt: tSetting, VehicleID: "VIN-HAPPY"},
-		{Field: "Odometer", Value: float64(100), EmittedAt: tValues, VehicleID: "VIN-HAPPY"},
+		{Field: "SettingTemperatureUnit", Value: "Celsius", EmittedAt: tSetting, VehicleID: "VIN-HAPPY"},
+		{Field: "InsideTemp", Value: float64(20), EmittedAt: tValues, VehicleID: "VIN-HAPPY"},
 		{Field: "BatteryHeaterOn", Value: true, EmittedAt: tValues, VehicleID: "VIN-HAPPY"},
 	}
 
@@ -195,11 +346,11 @@ func TestPipelineHappyPath(t *testing.T) {
 	if gotEntry.VehicleID != vehicleID {
 		t.Errorf("entry.VehicleID = %d, want %d", gotEntry.VehicleID, vehicleID)
 	}
-	if gotEntry.Kind != unithistory.KindDistance {
-		t.Errorf("entry.Kind = %q, want %q", gotEntry.Kind, unithistory.KindDistance)
+	if gotEntry.Kind != unithistory.KindTemperature {
+		t.Errorf("entry.Kind = %q, want %q", gotEntry.Kind, unithistory.KindTemperature)
 	}
-	if gotEntry.Value != units.ActiveUnitKilometers {
-		t.Errorf("entry.Value = %q, want %q", gotEntry.Value, units.ActiveUnitKilometers)
+	if gotEntry.Value != units.ActiveUnitCelsius {
+		t.Errorf("entry.Value = %q, want %q", gotEntry.Value, units.ActiveUnitCelsius)
 	}
 	if gotEntry.Source != unithistory.SourceTelemetry {
 		t.Errorf("entry.Source = %q, want %q", gotEntry.Source, unithistory.SourceTelemetry)
@@ -208,29 +359,29 @@ func TestPipelineHappyPath(t *testing.T) {
 		t.Errorf("entry.EffectiveFrom = %s, want %s", gotEntry.EffectiveFrom, tSetting)
 	}
 
-	// Router must have received exactly two atomics: Odometer +
-	// BatteryHeaterOn. SettingDistanceUnit must NOT have been routed.
+	// Router must have received exactly two atomics: InsideTemp +
+	// BatteryHeaterOn. SettingTemperatureUnit must NOT have been routed.
 	got := rt.routesCopy()
 	if len(got) != 2 {
 		t.Fatalf("router received %d routes, want 2: %+v", len(got), got)
 	}
 	for _, a := range got {
-		if a.Field == "SettingDistanceUnit" {
+		if a.Field == "SettingTemperatureUnit" {
 			t.Fatalf("router received Setting*Unit atomic — should have been observed only: %+v", a)
 		}
 	}
 
-	// Odometer should be converted: 100 km -> 100000 m.
-	odo := findRouted(got, "Odometer")
-	if odo == nil {
-		t.Fatalf("router did not receive Odometer atomic; got %+v", got)
+	// InsideTemp should be converted: 20 C -> 20 C (identity).
+	temp := findRouted(got, "InsideTemp")
+	if temp == nil {
+		t.Fatalf("router did not receive InsideTemp atomic; got %+v", got)
 	}
-	odoSI, ok := odo.Value.(float64)
+	tempSI, ok := temp.Value.(float64)
 	if !ok {
-		t.Fatalf("Odometer routed Value type = %T, want float64", odo.Value)
+		t.Fatalf("InsideTemp routed Value type = %T, want float64", temp.Value)
 	}
-	if math.Abs(odoSI-100000.0) > 1e-9 {
-		t.Errorf("Odometer SI value = %v, want 100000 (100km in meters)", odoSI)
+	if math.Abs(tempSI-20.0) > 1e-9 {
+		t.Errorf("InsideTemp SI value = %v, want 20 (20 C identity)", tempSI)
 	}
 
 	// BatteryHeaterOn should be routed unchanged.
