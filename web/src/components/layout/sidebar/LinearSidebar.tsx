@@ -353,30 +353,6 @@ export function LinearSidebar({
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-role="linear-sidebar">
-      {/* Tree filter — sticky at the top of the scrollable area. Distinct
-          from the command-palette trigger above it: this filters the tree
-          in-place, the palette does cross-app fuzzy search. */}
-      <div className="shrink-0 px-3 pb-2 pt-1">
-        <div className="relative">
-          <Icons.search
-            aria-hidden
-            className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]"
-          />
-          <input
-            type="search"
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-            placeholder={t('nav.filterPlaceholder', 'Filter nav…')}
-            aria-label={t('nav.filterAria', 'Filter sidebar navigation')}
-            className={cn(
-              'w-full rounded-md border border-transparent bg-white/[0.03] py-1 ps-8 pe-2 text-[12px]',
-              'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
-              'focus:border-white/10 focus:bg-white/[0.05] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
-            )}
-          />
-        </div>
-      </div>
-
       {/* Tree */}
       <nav
         aria-label={t('nav.sidebar', 'Sidebar navigation')}

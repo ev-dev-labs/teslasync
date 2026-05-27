@@ -369,28 +369,6 @@ export function NotionSidebar({
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-role="notion-sidebar">
-      {/* Tree filter — Notion's "Search" box at the top of the rail. */}
-      <div className="shrink-0 px-2 pb-1 pt-1">
-        <div className="relative">
-          <Icons.search
-            aria-hidden
-            className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--text-muted)]"
-          />
-          <input
-            type="search"
-            value={filter}
-            onChange={e => setFilter(e.target.value)}
-            placeholder={t('nav.filterPlaceholder', 'Filter nav…')}
-            aria-label={t('nav.filterAria', 'Filter sidebar navigation')}
-            className={cn(
-              'w-full rounded border border-transparent bg-white/[0.025] py-1 ps-7 pe-2 text-[12px]',
-              'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
-              'focus:border-white/10 focus:bg-white/[0.04] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
-            )}
-          />
-        </div>
-      </div>
-
       {/* Tree */}
       <nav
         aria-label={t('nav.sidebar', 'Sidebar navigation')}
