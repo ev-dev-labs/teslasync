@@ -5,7 +5,7 @@
 // production.
 //
 // Run from repo root:
-//   go run ./tmp/audit_signal_types
+//   go run ./cmd/audit-signal-types
 //
 // Output: a tabular report grouped by mismatch class. Exit code is
 // always 0 — this is a discovery tool, not a CI gate.
