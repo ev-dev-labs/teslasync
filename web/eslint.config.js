@@ -70,6 +70,11 @@ export default [
   {
     ignores: [
       'dist/**',
+      // Vite-PWA workbox dev server output (generated; not source).
+      // Gitignored via .gitignore:85 (`web/dev-dist/`); also exempt
+      // from lint to prevent generated workbox-*.js from flagging
+      // 14 false-positive "rule not found" + "unused-disable" errors.
+      'dev-dist/**',
       '.eslintrc.cjs',
       'eslint.config.js',
       // The custom rule itself + its tests are CommonJS files that

@@ -286,7 +286,6 @@ export function NotionSidebar({
         ...section,
         items: section.items.filter(item => matchesFilter(navLabel(item.label))),
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [sections, filterTokens, navLabel],
   )
 
