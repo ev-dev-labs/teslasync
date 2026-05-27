@@ -184,6 +184,7 @@ export default function DiskForecastPage() {
             <PanelTitle className="mb-4">{t('admin.diskForecast.tableTitle', 'Hypertables')}</PanelTitle>
             <SectionErrorBoundary name="disk-forecast-table">
               {rows.length === 0 && !query.isLoading && !subsystemMissing ? (
+                // no-action: hypertable inventory is a TimescaleDB system state; users cannot create hypertables from the UI
                 <EmptyState
                   icon={<Database className="h-8 w-8" />}
                   title={t('admin.diskForecast.emptyTitle', 'No hypertables')}
@@ -194,6 +195,7 @@ export default function DiskForecastPage() {
                 />
               ) : (
                 <DataTable
+                  tableId="admin:disk-forecast"
                   columns={columns}
                   data={rows}
                   keyExtractor={(r) => r.hypertable_name}

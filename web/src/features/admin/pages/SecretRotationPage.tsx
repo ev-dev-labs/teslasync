@@ -190,6 +190,7 @@ export default function SecretRotationPage() {
             <PanelTitle className="mb-4">{t('admin.secretRotation.tableTitle', 'Rotation status')}</PanelTitle>
             <SectionErrorBoundary name="secret-rotation-table">
               {items.length === 0 && !query.isLoading && !subsystemMissing ? (
+                // no-action: rotation events are recorded automatically by the rotation tracker; no user action seeds them
                 <EmptyState
                   icon={<ShieldCheck className="h-8 w-8" />}
                   title={t('admin.secretRotation.emptyTitle', 'No tracked secrets')}
@@ -200,6 +201,7 @@ export default function SecretRotationPage() {
                 />
               ) : (
                 <DataTable
+                  tableId="admin:secret-rotation"
                   columns={columns}
                   data={items}
                   keyExtractor={(r) => `${r.kind}:${r.target_id ?? ''}`}

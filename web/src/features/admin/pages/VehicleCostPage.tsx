@@ -142,6 +142,7 @@ export default function VehicleCostPage() {
             </div>
             <SectionErrorBoundary name="vehicle-cost-table">
               {vehicles.length === 0 && !query.isLoading && !subsystemMissing ? (
+                // no-action: vehicles populate this view by ingesting telemetry; not a user-actionable surface
                 <EmptyState
                   icon={<Wallet className="h-8 w-8" />}
                   title={t('admin.vehicleCost.emptyTitle', 'No vehicle cost data')}
@@ -152,6 +153,7 @@ export default function VehicleCostPage() {
                 />
               ) : (
                 <DataTable
+                  tableId="admin:vehicle-cost"
                   columns={columns}
                   data={vehicles}
                   keyExtractor={(r) => r.vehicle_id}

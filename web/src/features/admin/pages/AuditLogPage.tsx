@@ -395,6 +395,7 @@ export default function AuditLogPage() {
             </div>
             <SectionErrorBoundary name="audit-log-table">
               {rows.length === 0 && !logQuery.isLoading && !subsystemMissing ? (
+                // no-action: filter controls live at the top of the page; the message guides users to widen or clear them
                 <EmptyState
                   icon={<History className="h-8 w-8" />}
                   title={t('admin.auditLog.emptyTitle', 'No audit entries')}
@@ -405,6 +406,7 @@ export default function AuditLogPage() {
                 />
               ) : (
                 <DataTable
+                  tableId="admin:audit-log"
                   columns={columns}
                   data={rows}
                   keyExtractor={(r) => r.id}
@@ -413,6 +415,24 @@ export default function AuditLogPage() {
                   expandedKeys={expanded}
                   onExpandedChange={(next) => setExpanded(next)}
                   renderExpanded={(r) => <ExpandedDetail row={r} />}
+                  exportable
+                  exportFilename={`audit-log-${new Date().toISOString().slice(0, 10)}`}
+                  exportRow={(row) => ({
+                    id: row.id,
+                    ts: row.ts,
+                    actor: row.actor,
+                    category: row.category ?? '',
+                    action: row.action,
+                    entity_type: row.entity_type,
+                    entity_id: row.entity_id ?? '',
+                    detail: row.detail ?? '',
+                    ip: row.ip ?? '',
+                    user_agent: row.user_agent ?? '',
+                    trace_id: row.trace_id ?? '',
+                    success: row.success === null || row.success === undefined ? '' : String(row.success),
+                    prev_row_hash: row.prev_row_hash ?? '',
+                    row_hash: row.row_hash ?? '',
+                  })}
                 />
               )}
             </SectionErrorBoundary>

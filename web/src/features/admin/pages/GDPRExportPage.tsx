@@ -115,6 +115,7 @@ export default function GDPRExportPage() {
 
           {!activeId && (
             <GlassPanel className="p-6">
+              {/* no-action: the artifact-ID lookup input is immediately above this panel; this empty state only renders before submission */}
               <EmptyState
                 icon={<HardDriveDownload className="h-8 w-8" />}
                 title={t('admin.gdprExport.emptyTitle', 'No artifact selected')}

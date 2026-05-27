@@ -61,6 +61,7 @@ export default function SchemaDriftPage() {
 
           {!query.isLoading && !query.data && !subsystemMissing && (
             <GlassPanel className="p-6">
+              {/* no-action: the schema fingerprint is seeded by an API restart, which is an ops action not exposed in the UI */}
               <EmptyState
                 icon={<Fingerprint className="h-8 w-8" />}
                 title={t('admin.schemaDrift.emptyTitle', 'No fingerprint available')}

@@ -356,7 +356,7 @@ export function NotionSidebar({
           if (pinned) onUnpin(item.to)
           else onPin(item.to)
         }}
-        className="h-5 w-5 rounded p-0 text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-secondary)]"
+        className="touch-target-overlay h-5 w-5 rounded p-0 text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-secondary)]"
       >
         {pinned ? <Icons.close className="h-3 w-3" /> : <Icons.star className="h-3 w-3" />}
       </Button>
@@ -406,7 +406,7 @@ export function NotionSidebar({
                           e.preventDefault()
                           onUnpin(item.to)
                         }}
-                        className="h-5 w-5 rounded p-0 text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-secondary)]"
+                        className="touch-target-overlay h-5 w-5 rounded p-0 text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-secondary)]"
                       >
                         <Icons.close className="h-3 w-3" />
                       </Button>

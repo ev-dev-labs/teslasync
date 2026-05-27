@@ -146,6 +146,7 @@ export default function SlowQueriesPage() {
             </div>
             <SectionErrorBoundary name="slow-queries-table">
               {rows.length === 0 && !query.isLoading && !subsystemMissing ? (
+                // no-action: pg_stat_statements is populated by Postgres itself; users cannot seed rows from the UI
                 <EmptyState
                   icon={<Timer className="h-8 w-8" />}
                   title={t('admin.slowQueries.emptyTitle', 'No slow queries')}
@@ -156,6 +157,7 @@ export default function SlowQueriesPage() {
                 />
               ) : (
                 <DataTable
+                  tableId="admin:slow-queries"
                   columns={columns}
                   data={rows}
                   keyExtractor={(r) => r.query_id}
