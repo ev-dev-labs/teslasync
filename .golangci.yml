@@ -5,12 +5,36 @@ linters:
   disable:
     - errcheck
   enable:
+    - depguard
     - govet
     - staticcheck
     - unused
     - gosimple
     - ineffassign
     - typecheck
+
+linters-settings:
+  # depguard is installed in A2.5 as a no-op (allow-everything) ruleset.
+  # Phase A3 mirrors the tools/archmetrics DAG here (handler→database,
+  # app→handler, domain→models, adapter→handler, cmd→internal/api,
+  # …) so the DAG is also enforced inside golangci-lint (IDE hints +
+  # editor underlines), not only via the archmetrics CI step.
+  #
+  # KEEP the rule block present even while empty-of-meaningful-rules:
+  # depguard requires AT LEAST ONE allow or deny entry per rule, so
+  # we list the Go stdlib + this module's own root as the universal
+  # allow set. list-mode: lax means "anything not explicitly denied
+  # is allowed", so this is a true no-op until A3 populates deny.
+  depguard:
+    rules:
+      main:
+        list-mode: lax
+        files:
+          - $all
+        allow:
+          - $gostd
+          - github.com/ev-dev-labs/teslasync
+        deny: []
 
 issues:
   exclude-dirs:
