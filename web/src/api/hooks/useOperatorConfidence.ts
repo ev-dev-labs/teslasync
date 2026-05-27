@@ -32,6 +32,30 @@ import { useQuery } from '@tanstack/react-query';
 
 import { request } from '../client';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+
+/**
+ * Admin observability + audit + GDPR handlers all use the platform
+ * `httputil.Respond` envelope which wraps payloads as `{data: T}`
+ * (see internal/platform/httputil/response.go). The shared `request()`
+ * client does NOT unwrap — older handlers in internal/api/* call
+ * `writeJSON` directly without the envelope, so unwrapping at the
+ * client layer would break them.
+ *
+ * This helper unwraps the envelope per-hook. It's a no-op when the
+ * body has no `data` key (defensive — keeps the hook working if a
+ * handler is ever migrated off `httputil.Respond`).
+ */
+async function fetchEnvelope<T>(promise: Promise<unknown>): Promise<T> {
+  const body = await promise;
+  if (
+    body !== null &&
+    typeof body === 'object' &&
+    'data' in (body as Record<string, unknown>)
+  ) {
+    return (body as { data: T }).data;
+  }
+  return body as T;
+}
 import type {
   AuditActionsResponse,
   AuditCategoriesResponse,
@@ -76,7 +100,9 @@ export function useSchemaDrift() {
   return useQuery({
     queryKey: operatorConfidenceKeys.schemaDrift,
     queryFn: ({ signal }) =>
-      request<SchemaDriftResponse>('/admin/observability/schema-drift', { signal }),
+      fetchEnvelope<SchemaDriftResponse>(
+        request('/admin/observability/schema-drift', { signal }),
+      ),
     staleTime: STALE_TIMES.STANDARD,
     refetchInterval: INTERVALS.SLOW,
     refetchIntervalInBackground: false,
@@ -96,9 +122,11 @@ export function useSlowQueries(orderBy: SlowQueryOrderBy = 'mean_time', limit = 
   return useQuery({
     queryKey: operatorConfidenceKeys.slowQueries(orderBy, limit),
     queryFn: ({ signal }) =>
-      request<SlowQueriesResponse>(
-        `/admin/observability/slow-queries?order_by=${orderBy}&limit=${limit}`,
-        { signal },
+      fetchEnvelope<SlowQueriesResponse>(
+        request(
+          `/admin/observability/slow-queries?order_by=${orderBy}&limit=${limit}`,
+          { signal },
+        ),
       ),
     staleTime: STALE_TIMES.MODERATE,
     refetchInterval: INTERVALS.STANDARD,
@@ -121,9 +149,11 @@ export function useVehicleCost(since: Date | null = null, limit = 100) {
   return useQuery({
     queryKey: operatorConfidenceKeys.vehicleCost(sinceISO, limit),
     queryFn: ({ signal }) =>
-      request<VehicleCostResponse>(
-        `/admin/observability/vehicle-cost?limit=${limit}${sinceParam}`,
-        { signal },
+      fetchEnvelope<VehicleCostResponse>(
+        request(
+          `/admin/observability/vehicle-cost?limit=${limit}${sinceParam}`,
+          { signal },
+        ),
       ),
     staleTime: STALE_TIMES.STANDARD,
     refetchInterval: INTERVALS.SLOW,
@@ -142,7 +172,9 @@ export function useDiskForecast() {
   return useQuery({
     queryKey: operatorConfidenceKeys.diskForecast,
     queryFn: ({ signal }) =>
-      request<DiskForecastResponse>('/admin/observability/disk-forecast', { signal }),
+      fetchEnvelope<DiskForecastResponse>(
+        request('/admin/observability/disk-forecast', { signal }),
+      ),
     staleTime: STALE_TIMES.STANDARD,
     refetchInterval: INTERVALS.SLOW,
     refetchIntervalInBackground: false,
@@ -160,7 +192,9 @@ export function useSecretRotation() {
   return useQuery({
     queryKey: operatorConfidenceKeys.secretRotation,
     queryFn: ({ signal }) =>
-      request<SecretRotationResponse>('/admin/observability/secret-rotation', { signal }),
+      fetchEnvelope<SecretRotationResponse>(
+        request('/admin/observability/secret-rotation', { signal }),
+      ),
     staleTime: STALE_TIMES.STANDARD,
     refetchInterval: INTERVALS.SLOW,
     refetchIntervalInBackground: false,
@@ -182,7 +216,9 @@ export function useAuditLog(params: AuditLogQueryParams, enabled = true) {
   return useQuery({
     queryKey: operatorConfidenceKeys.auditLogList(params),
     queryFn: ({ signal }) =>
-      request<AuditLogListResponse>(`/admin/audit-log${qs}`, { signal }),
+      fetchEnvelope<AuditLogListResponse>(
+        request(`/admin/audit-log${qs}`, { signal }),
+      ),
     enabled,
     staleTime: STALE_TIMES.MODERATE,
     refetchInterval: INTERVALS.STANDARD,
@@ -200,7 +236,9 @@ export function useAuditCategories() {
   return useQuery({
     queryKey: operatorConfidenceKeys.auditCategories,
     queryFn: ({ signal }) =>
-      request<AuditCategoriesResponse>('/admin/audit-log/categories', { signal }),
+      fetchEnvelope<AuditCategoriesResponse>(
+        request('/admin/audit-log/categories', { signal }),
+      ),
     staleTime: STALE_TIMES.EXTENDED,
     refetchInterval: INTERVALS.RARE,
     refetchIntervalInBackground: false,
@@ -213,7 +251,9 @@ export function useAuditActions() {
   return useQuery({
     queryKey: operatorConfidenceKeys.auditActions,
     queryFn: ({ signal }) =>
-      request<AuditActionsResponse>('/admin/audit-log/actions', { signal }),
+      fetchEnvelope<AuditActionsResponse>(
+        request('/admin/audit-log/actions', { signal }),
+      ),
     staleTime: STALE_TIMES.EXTENDED,
     refetchInterval: INTERVALS.RARE,
     refetchIntervalInBackground: false,
@@ -239,9 +279,11 @@ export function useAuditChainVerify(
   return useQuery({
     queryKey: operatorConfidenceKeys.auditVerify(sinceISO, limit),
     queryFn: ({ signal }) =>
-      request<AuditChainVerifyResponse>(
-        `/admin/audit-log/verify?limit=${limit}${sinceParam}`,
-        { signal },
+      fetchEnvelope<AuditChainVerifyResponse>(
+        request(
+          `/admin/audit-log/verify?limit=${limit}${sinceParam}`,
+          { signal },
+        ),
       ),
     enabled,
     staleTime: STALE_TIMES.FAST,
@@ -265,7 +307,9 @@ export function useGDPRExport(id: string | null) {
   return useQuery({
     queryKey: operatorConfidenceKeys.gdprExport(id ?? '__none__'),
     queryFn: ({ signal }) =>
-      request<GDPRExportArtifact>(`/admin/gdpr/exports/${id}`, { signal }),
+      fetchEnvelope<GDPRExportArtifact>(
+        request(`/admin/gdpr/exports/${id}`, { signal }),
+      ),
     enabled: Boolean(id),
     staleTime: STALE_TIMES.QUICK,
     refetchInterval: INTERVALS.FAST,
