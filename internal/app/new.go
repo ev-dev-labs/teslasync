@@ -788,9 +788,9 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 
 // initPipelineSubscriber wires the phase-42a/0050 hard-cutover stack:
 // 12 writers → router.New → unit-history cache+repo → SideEffectsObserver
-// → normalize.Pipeline → MQTT PipelineSubscriber. Any missing writer or
-// invalid routing rule fails the process at startup; per ADR-004 #12
-// there is no feature flag and no parallel pipeline.
+// + SoftwareUpdateObserver → normalize.Pipeline → MQTT PipelineSubscriber.
+// Any missing writer or invalid routing rule fails the process at startup;
+// per ADR-004 #12 there is no feature flag and no parallel pipeline.
 func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.VehicleRepo) error {
 	pipelineLogger := log.With().Str("component", "tesla_pipeline").Logger()
 
@@ -831,9 +831,48 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		Logger: pipelineLogger,
 	})
 
-	normPipeline := normalize.New(unitRepo, pipelineRouter, pipelineLogger, sideEffects)
+	// Restore the firmware-version write path deleted with the legacy
+	// trackVehicleConfig helper. The observer captures every payload that
+	// carries a SoftwareUpdateVersion / Version atomic and forwards it to
+	// software_updates via InsertIfChanged (ON CONFLICT DO NOTHING).
+	// Without this, the Software Updates page goes stale the moment the
+	// vehicle installs a new firmware after the deploy that ripped out
+	// the legacy ingest path.
+	swUpdateRepo := database.NewSoftwareUpdateRepo(a.DB)
+	swUpdateObserver := teslapipeline.NewSoftwareUpdateObserver(swUpdateRepo, pipelineLogger)
+
+	normPipeline := normalize.New(unitRepo, pipelineRouter, pipelineLogger, sideEffects, swUpdateObserver)
 
 	a.TelemetryHandler.SetPipeline(normPipeline)
+
+	// Backfill the current firmware version per vehicle from the
+	// already-hydrated SignalStore. Fleet Telemetry is a change feed —
+	// fields that have not re-emitted since the legacy write path was
+	// deleted (commit fa7440a0, May 18) would otherwise wait for the
+	// next emission before the observer above caught them. The
+	// in-memory SignalStore was populated from signal_log a few lines
+	// above (see "signal store hydrated from signal_log via stateReader"),
+	// so this loop touches no DB beyond the cheap InsertIfChanged
+	// upsert. PickFirmwareVersionFromSignals shares its precedence rule
+	// with the observer so a startup-vs-runtime mismatch is
+	// impossible. Errors are logged and do not abort boot.
+	for _, vid := range a.SignalStore.VehicleIDs() {
+		raw := a.SignalStore.GetRawMap(vid)
+		version := teslapipeline.PickFirmwareVersionFromSignals(raw)
+		if version == "" {
+			continue
+		}
+		backfillCtx, backfillCancel := context.WithTimeout(ctx, 5*time.Second)
+		inserted, err := swUpdateRepo.InsertIfChanged(backfillCtx, vid, version, "installed")
+		backfillCancel()
+		if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vid).Str("version", version).Msg("software updates backfill: InsertIfChanged failed; will retry on next telemetry payload")
+			continue
+		}
+		if inserted {
+			log.Info().Int64("vehicle_id", vid).Str("version", version).Msg("software updates backfill: recorded current firmware version from hydrated signal store")
+		}
+	}
 
 	dlqTopic := strings.TrimSuffix(a.Cfg.FleetTelemetry.TopicBase, "/") + "/dlq"
 
@@ -924,7 +963,8 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 		dlq,
 		vinCache.Resolve,
 		mqtt.PipelineSubscriberConfig{
-			TopicBase: a.Cfg.FleetTelemetry.TopicBase,
+			TopicBase:         a.Cfg.FleetTelemetry.TopicBase,
+			StreamingRecorder: a.TelemetryHandler,
 		},
 		pipelineLogger,
 	)

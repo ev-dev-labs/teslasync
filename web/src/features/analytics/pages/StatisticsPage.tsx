@@ -287,10 +287,10 @@ export default function StatisticsPage() {
                 </h2>
                 {mileage ? (
                   <Grid cols={{ default: 2 }} gap={3}>
-                    <MetricCard label={t('statistics.totalMileage', 'Total Distance')} value={`${fmtInt(fromKm(mileage.totalDistance))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
-                    <MetricCard label={t('statistics.dailyAvg', 'Daily Average')} value={`${fmtNumber(fromKm(mileage.avgDaily))} ${distanceUnit}`} icon={<Car className="h-4 w-4" />} color="green" />
-                    <MetricCard label={t('statistics.daysTracked', 'Days Tracked')} value={fmtInt(mileage.daysTracked)} icon={<Clock className="h-4 w-4" />} color="purple" />
-                    <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(fromKm(mileage.avgDaily * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
+                    <MetricCard label={t('statistics.totalMileage', 'Total Distance')} value={`${fmtInt(fromKm(mileage.lifetime_km))} ${distanceUnit}`} icon={<MapPin className="h-4 w-4" />} color="cyan" />
+                    <MetricCard label={t('statistics.dailyAvg', 'Daily Average (30d)')} value={`${fmtNumber(fromKm((mileage.last_30d_km ?? 0) / 30))} ${distanceUnit}`} icon={<Car className="h-4 w-4" />} color="green" />
+                    <MetricCard label={t('statistics.totalDrives', 'Total Drives')} value={fmtInt(mileage.drive_count_lifetime)} icon={<Clock className="h-4 w-4" />} color="purple" />
+                    <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(fromKm(((mileage.last_30d_km ?? 0) / 30) * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
                   </Grid>
                 ) : (
                   <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={<Car className="h-8 w-8" />} message={t('statistics.noMileage', 'No mileage data available')} className="py-8" />

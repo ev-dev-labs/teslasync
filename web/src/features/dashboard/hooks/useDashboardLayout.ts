@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { verticalCompactor } from 'react-grid-layout';
 import type {
   WidgetInstance,
   WidgetConfig,
@@ -114,6 +115,35 @@ function sanitizeLayouts(layouts: RGLLayouts): RGLLayouts {
   return result;
 }
 
+/**
+ * Apply vertical compaction to every breakpoint's layout — slide items up
+ * to fill `y` gaps left behind by widget removal, add-after-remove, or
+ * other historical edits. Preserves user-resized `w`/`h` and relative
+ * order (compactor only changes `y`, not size).
+ *
+ * Required because react-grid-layout v2 `findOrGenerateResponsiveLayout`
+ * EARLY-RETURNS a clone of the saved layout for the current breakpoint
+ * WITHOUT applying the compactor (chunk-55DQUWLA.js:525-548). So unless
+ * we canonicalize gaps out at the data layer, removed-widget holes survive
+ * across reloads forever and the dashboard accumulates blank vertical
+ * space over the life of the user's saved layout.
+ */
+function compactLayouts(layouts: RGLLayouts): RGLLayouts {
+  const result: RGLLayouts = {};
+  for (const [bp, items] of Object.entries(layouts)) {
+    const cols = GRID_COLS[bp as keyof typeof GRID_COLS];
+    if (cols === undefined || items.length === 0) {
+      result[bp] = items as RGLLayout[];
+      continue;
+    }
+    // verticalCompactor.compact returns a fresh array with each item's `y`
+    // squashed up against the floor + previously placed items in its column
+    // range. It also sets `moved: false` on each item it processed.
+    result[bp] = verticalCompactor.compact(items as RGLLayout[], cols) as RGLLayout[];
+  }
+  return result;
+}
+
 /** Ensure layout has valid items for all widgets and respects current constraints */
 export function reconcileLayouts(
   layouts: RGLLayouts,
@@ -153,7 +183,11 @@ export function reconcileLayouts(
     // Remove stale widget references
     result[bp] = items.filter((item) => widgetIds.has(item.i));
   }
-  return result;
+  // Slide items up to fill gaps left by removed widgets, add-after-remove,
+  // or historical resize-up edits. Without this any code path that flows
+  // through reconcileLayouts would let `y` gaps accumulate indefinitely —
+  // RGL v2 does not compact existing saved breakpoint layouts at mount.
+  return compactLayouts(result);
 }
 
 /* ─── Default / Preset dashboards ─── */
@@ -680,13 +714,17 @@ export function useDashboardLayout() {
       });
 
       // Remap layout item `i` values to match new widget IDs
-      const layouts: RGLLayouts = {};
+      const remappedLayouts: RGLLayouts = {};
       for (const [bp, items] of Object.entries(source.layouts)) {
-        layouts[bp] = (items as RGLLayout[]).map((item) => ({
+        remappedLayouts[bp] = (items as RGLLayout[]).map((item) => ({
           ...item,
           i: idMap.get(item.i) ?? item.i,
         }));
       }
+      // Reconcile (which now also compacts) so a duplicate of a dashboard
+      // that had accumulated gaps comes back clean — and re-clamps to the
+      // current registry min/max in case the source was old.
+      const layouts = reconcileLayouts(remappedLayouts, widgets);
 
       const duplicate: SavedDashboard = {
         ...source,
@@ -825,17 +863,29 @@ export function useDashboardLayout() {
   );
 
   /* ─── Undo / Redo ─── */
+  // Run restored snapshots through reconcileLayouts so they get re-clamped
+  // to the current registry min/max AND vertically compacted — matches the
+  // canonical layout invariant the rest of the app maintains. Without this
+  // an undo/redo could resurface a pre-fix layout with accumulated gaps.
   const undo = useCallback(() => {
     const prev = undoSnapshot();
     if (prev) {
-      updateActive((d) => ({ ...d, widgets: prev.widgets, layouts: prev.layouts }));
+      updateActive((d) => ({
+        ...d,
+        widgets: prev.widgets,
+        layouts: reconcileLayouts(prev.layouts, prev.widgets),
+      }));
     }
   }, [updateActive, undoSnapshot]);
 
   const redo = useCallback(() => {
     const next = redoSnapshot();
     if (next) {
-      updateActive((d) => ({ ...d, widgets: next.widgets, layouts: next.layouts }));
+      updateActive((d) => ({
+        ...d,
+        widgets: next.widgets,
+        layouts: reconcileLayouts(next.layouts, next.widgets),
+      }));
     }
   }, [updateActive, redoSnapshot]);
 

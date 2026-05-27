@@ -1341,9 +1341,15 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	field := "end_address"
+	// SI canonical column names (Phase-48 — migration 000185_drives_si
+	// renamed start_address / end_address -> start_place / end_place).
+	// drivePartialAllowed gates writes to these exact keys; before this
+	// rename, every geocode call silently no-op'd because buildPartialUpdate
+	// skips fields not in the allowlist, leaving end_place permanently NULL
+	// and the Visited Locations page empty.
+	field := "end_place"
 	if isStart {
-		field = "start_address"
+		field = "start_place"
 	}
 
 	// 1. Check geofences first (user-defined names like "Home", "Office")

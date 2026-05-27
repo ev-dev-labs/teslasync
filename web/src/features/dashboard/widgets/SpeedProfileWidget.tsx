@@ -93,12 +93,11 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
   );
 
   const sweetSpot = useMemo(() => {
-    const optimal = data?.optimalSpeedKmh ?? 0;
+    // API provides optimal speed as SI m/s — toSpeedDisplay = convertSpeedFromSI
+    // already expects m/s so it can be passed straight through.
+    const optimal = data?.optimalSpeedMps ?? 0;
     if (optimal > 0) {
-      // API provides optimal speed in km/h — convert from km/h to mph first then apply user conversion
-      // Since toSpeedDisplay expects mph input, convert km/h → mph first
-      const optimalMph = optimal / 1.60934;
-      return `${fmtInt(toSpeedDisplay(optimalMph))}`;
+      return `${fmtInt(toSpeedDisplay(optimal))}`;
     }
     return findSweetSpot(chartData);
   }, [data, chartData, toSpeedDisplay]);

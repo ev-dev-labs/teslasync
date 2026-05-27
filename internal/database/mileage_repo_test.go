@@ -125,3 +125,47 @@ func TestNewMileageRepo_NilPoolPanics(t *testing.T) {
 	}()
 	_ = NewMileageRepo(nil)
 }
+
+// TestDailySelectSQL_Shape pins the per-day query for /mileage/daily
+// (Phase-43a / Prompt 0009 — fix/misc-fixes). A typo on the
+// SI-canonical column names (distance_m, end_odometer_m) would
+// otherwise only surface at runtime against production data.
+func TestDailySelectSQL_Shape(t *testing.T) {
+	t.Parallel()
+	mustContain := []string{
+		"FROM drives",
+		"vehicle_id = $1",
+		"started_at >= $2",
+		"DATE(started_at AT TIME ZONE 'UTC')",
+		"GROUP BY day",
+		"ORDER BY day ASC",
+		"COUNT(*)",
+		"distance_m",
+		"end_odometer_m",
+		"distance_m IS NOT NULL",
+		"distance_m > 0",
+		"/ 1000.0",
+		"MAX(end_odometer_m)",
+	}
+	for _, frag := range mustContain {
+		if !strings.Contains(dailySelectSQL, frag) {
+			t.Errorf("dailySelectSQL missing %q\nfull SQL:\n%s", frag, dailySelectSQL)
+		}
+	}
+	mustNotContain := []string{
+		// Phase-42 / mig 000185 dropped the legacy unit-suffixed columns.
+		// These would be a drift signal (Phase-48 SI canonical contract).
+		"distance_km",
+		"end_odometer_mi",
+		"distance_mi",
+		// daily_mileage was dropped by Phase-42 prompt 0077.
+		"daily_mileage",
+		// /mileage/daily must return ASC ordering (matches monthly + stats).
+		"ORDER BY day DESC",
+	}
+	for _, frag := range mustNotContain {
+		if strings.Contains(dailySelectSQL, frag) {
+			t.Errorf("dailySelectSQL must not contain %q (Phase-42 / mig 000185 drift)\nfull SQL:\n%s", frag, dailySelectSQL)
+		}
+	}
+}

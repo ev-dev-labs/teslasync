@@ -3307,6 +3307,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/monthly", mileageHandler.Monthly)
 			r.Get("/stats", mileageHandler.Stats)
+			// Phase-43a / Prompt 0009 (fix/misc-fixes): per-day buckets
+			// for MileagePage.tsx's "Odometer Over Time" + "Daily
+			// Distance" charts. Page was 404ing since Phase-42/0077
+			// deleted the legacy daily_mileage handler.
+			r.Get("/daily", mileageHandler.Daily)
 		})
 
 		// Trips

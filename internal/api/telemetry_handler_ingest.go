@@ -319,6 +319,34 @@ func (h *TelemetryHandler) recordStreamingHealth(vin string, signalCount int, si
 	h.mu.Unlock()
 }
 
+// RecordStream implements mqtt.StreamingHealthRecorder. The MQTT
+// PipelineSubscriber invokes this once per successfully dispatched
+// per-field message so the /telemetry status endpoint (MQTT Inspector
+// page) sees live streaming activity. Pre-Phase-42 only the HTTP
+// TelemetryIngest path updated streamingState; after the per-field MQTT
+// cutover the Inspector silently showed 0 vehicles / 0 signals / 0
+// batches despite telemetry flowing into signal_log + drives. Empty VIN
+// or zero atomics are no-ops — the codec drop branch is handled upstream
+// and never reaches RecordStream.
+func (h *TelemetryHandler) RecordStream(vin string, atomics []codec.Atomic) {
+	if vin == "" || len(atomics) == 0 {
+		return
+	}
+	// Build a compact LastSignals snapshot keyed by field name so the
+	// inspector retains a small "what was just received" hint without
+	// holding the full Atomic[] across calls. Last write wins for
+	// repeat fields inside a single batch (rare under per-field MQTT
+	// where each message carries one field).
+	last := make(map[string]interface{}, len(atomics))
+	for _, a := range atomics {
+		if a.Field == "" {
+			continue
+		}
+		last[a.Field] = a.Value
+	}
+	h.recordStreamingHealth(vin, len(atomics), last)
+}
+
 // republishToMQTT mirrors the HTTP-ingested signals to MQTT topics so
 // external subscribers (e.g., user automations) see them. Extracted from
 // the legacy ProcessSignals spine. Skipped when no MQTT client is wired.

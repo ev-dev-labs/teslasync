@@ -47,6 +47,24 @@ type MileageMonthlyRow struct {
 	AvgEfficiencyWhPerKm *float64
 }
 
+// MileageDailyRow is one bucket in the daily response. The bucket
+// timestamp is the start of a UTC calendar day (DATE(started_at AT TIME
+// ZONE 'UTC') in PostgreSQL); the handler renders it as 'YYYY-MM-DD'.
+//
+// EndOdometerKm is a pointer because end_odometer_m is nullable on the
+// drives table — a drive that ended before the telemetry plant captured
+// a final odometer reading still contributes to drive_count and total_km
+// but its odometer share is dropped (we never fabricate a zero value).
+//
+// Phase-43a / Prompt 0009 (fix/misc-fixes — restores the per-day endpoint
+// that MileagePage.tsx has been 404ing against since Phase-42 / 0077).
+type MileageDailyRow struct {
+	Day           time.Time
+	DriveCount    int
+	TotalKm       float64
+	EndOdometerKm *float64
+}
+
 // MileageStats is the rollup returned by /mileage/stats. The drive_count_*
 // fields exclude rows with NULL or zero distance_m so per-drive averages
 // downstream don't divide by ghost drives. first_drive_at / last_drive_at
@@ -146,6 +164,36 @@ WHERE vehicle_id = $1
 // for a deleted vehicle would otherwise produce 200 with stale data).
 const mileageVehicleExistsSQL = `SELECT EXISTS (SELECT 1 FROM vehicles WHERE id = $1)`
 
+// dailySelectSQL pins the per-day buckets used by /mileage/daily.
+// Phase-43a / Prompt 0009 (fix/misc-fixes). Same SI-canonical column
+// names as monthlySelectSQL — distance_m is meters, end_odometer_m is
+// meters. Conversion to kilometres happens in the SELECT list so the
+// handler response stays consistent with /mileage/monthly's _km surface.
+//
+// NULL distance rows are skipped (Decision #7e from Prompt 0004 still
+// holds for the entire mileage family). end_odometer_m may still be
+// NULL on rows that DO have a non-zero distance_m — in that case MAX()
+// over the bucket returns NULL and we surface it as JSON null via the
+// repo's *float64 column instead of fabricating a zero.
+//
+// ORDER BY day ASC matches /mileage/monthly's ascending contract so the
+// frontend can render the time series left-to-right without re-sorting.
+const dailySelectSQL = `
+SELECT
+    DATE(started_at AT TIME ZONE 'UTC')         AS day,
+    COUNT(*)                                    AS drive_count,
+    COALESCE(SUM(distance_m), 0) / 1000.0       AS total_km,
+    MAX(end_odometer_m) / 1000.0                AS end_odometer_km
+FROM drives
+WHERE vehicle_id = $1
+  AND started_at >= $2
+  AND distance_m IS NOT NULL
+  AND distance_m > 0
+GROUP BY day
+ORDER BY day ASC
+`
+
+
 // VehicleExists reports whether a row exists in the vehicles table for
 // vehicleID. Used by the handler to return 404 (unknown vehicle) vs 200
 // with empty rollups (vehicle exists but has no drives yet).
@@ -223,4 +271,41 @@ func (r *MileageRepo) Stats(ctx context.Context, vehicleID int64, since7d, since
 		return MileageStats{}, fmt.Errorf("mileage: stats query: %w", err)
 	}
 	return s, nil
+}
+
+// Daily returns one row per UTC calendar day for vehicleID, oldest
+// first, restricted to drives whose started_at is >= windowStart. The
+// caller controls the window width (typically 90 days).
+//
+// Days with no qualifying drives (zero distance_m, or all NULL distance)
+// produce no row — the frontend chart treats absence as a gap rather
+// than imputing zero.
+func (r *MileageRepo) Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]MileageDailyRow, error) {
+	rows, err := r.pool.Query(ctx, dailySelectSQL, vehicleID, windowStart)
+	if err != nil {
+		return nil, fmt.Errorf("mileage: daily query: %w", err)
+	}
+	defer rows.Close()
+
+	out := make([]MileageDailyRow, 0)
+	for rows.Next() {
+		var (
+			row             MileageDailyRow
+			endOdometerKm   *float64
+		)
+		if err := rows.Scan(
+			&row.Day,
+			&row.DriveCount,
+			&row.TotalKm,
+			&endOdometerKm,
+		); err != nil {
+			return nil, fmt.Errorf("mileage: daily row scan: %w", err)
+		}
+		row.EndOdometerKm = endOdometerKm
+		out = append(out, row)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("mileage: daily rows iter: %w", err)
+	}
+	return out, nil
 }

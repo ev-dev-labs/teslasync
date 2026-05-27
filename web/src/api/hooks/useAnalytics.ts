@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES } from '@/lib/constants';
-import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyStat } from '@/types/analytics';
+import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse } from '@/types/analytics';
 import type { FleetAnalytics } from '@/api/types';
 
 export const analyticsKeys = {
@@ -11,6 +11,7 @@ export const analyticsKeys = {
     ['analytics', 'fleet', days, start, end] as const,
   mileage: (vehicleId: string) => ['analytics', 'mileage', vehicleId] as const,
   monthlyMileage: (vehicleId: string) => ['analytics', 'monthly-mileage', vehicleId] as const,
+  dailyMileage: (vehicleId: string, days: number) => ['analytics', 'daily-mileage', vehicleId, days] as const,
   cost: (vehicleId: string) => ['analytics', 'cost', vehicleId] as const,
   timeline: (vehicleId: string) => ['analytics', 'timeline', vehicleId] as const,
   stateSummary: (vehicleId: string) => ['analytics', 'state-summary', vehicleId] as const,
@@ -57,15 +58,12 @@ export function useFleetAnalytics(
 }
 
 /**
- * @deprecated Phase-42 / Prompt 0077 deleted the `/mileage/*` route family
- * (mileage_stats_handler.go, mileage_repo.go, mileage_monthly_handler.go).
- * The hook is kept so out-of-scope dashboard widgets and pages
- * (`MileagePage.tsx`, `StatisticsPage.tsx#mileage`,
- * `FleetComparePage.tsx`, `MonthlyMileageWidget.tsx`) still type-check
- * while their replacement aggregations are designed in a follow-up
- * prompt. Calls return 404 today; the consuming UI surfaces the empty
- * state via TanStack Query's `error` channel per ADR-005 #1
- * (graceful-degradation contract).
+ * GET /mileage/stats — Phase-43a / Prompt 0004 restored the endpoint
+ * deleted by Phase-42 / 0077. Returns a `MileageStats` snake_case
+ * lifetime + window rollup; distances are kilometres (SI in DB,
+ * converted at the SELECT list). Phase-43a / Prompt 0009 (fix/misc-fixes)
+ * dropped the stale `@deprecated` banner that pointed at the now-restored
+ * endpoint family.
  */
 export function useMileageStats(vehicleId: string) {
   return useQuery({
@@ -75,13 +73,34 @@ export function useMileageStats(vehicleId: string) {
   });
 }
 
-/** @deprecated See `useMileageStats` — `/mileage/monthly` was removed by Phase-42 / Prompt 0077. */
+/**
+ * GET /mileage/monthly — Phase-43a / Prompt 0004 restoration. Unwraps
+ * the `{vehicle_id, months}` envelope so callers receive a plain array
+ * of `MonthlyMileageBucket` and don't have to know the envelope shape.
+ * Phase-43a / Prompt 0009 (fix/misc-fixes) corrected the response shape
+ * (previously typed as the legacy camelCase `MonthlyStat[]`).
+ */
 export function useMonthlyMileage(vehicleId: string) {
   return useQuery({
     queryKey: analyticsKeys.monthlyMileage(vehicleId),
-    queryFn: ({ signal }) => request<MonthlyStat[]>(`/mileage/monthly?vehicle_id=${vehicleId}`, { signal }),
+    queryFn: ({ signal }) => request<MonthlyMileageResponse>(`/mileage/monthly?vehicle_id=${vehicleId}`, { signal }),
     enabled: !!vehicleId,
-    select: safeArray,
+    select: (resp) => safeArray<MonthlyMileageBucket>(resp?.months),
+  });
+}
+
+/**
+ * GET /mileage/daily — Phase-43a / Prompt 0009 (fix/misc-fixes) added
+ * the per-day endpoint so MileagePage's Odometer Over Time and Daily
+ * Distance charts can render again. Unwraps the `{vehicle_id, days}`
+ * envelope into a plain array.
+ */
+export function useDailyMileage(vehicleId: string, days = 90) {
+  return useQuery({
+    queryKey: analyticsKeys.dailyMileage(vehicleId, days),
+    queryFn: ({ signal }) => request<DailyMileageResponse>(`/mileage/daily?vehicle_id=${vehicleId}&days=${days}`, { signal }),
+    enabled: !!vehicleId,
+    select: (resp) => safeArray<DailyMileageBucket>(resp?.days),
   });
 }
 
