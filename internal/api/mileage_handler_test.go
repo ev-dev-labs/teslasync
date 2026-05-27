@@ -44,9 +44,13 @@ type fakeMileageRepo struct {
 	stats    database.MileageStats
 	statsErr error
 
+	daily    []database.MileageDailyRow
+	dailyErr error
+
 	gotExistsCalls  []int64
 	gotMonthlyCalls []monthlyCall
 	gotStatsCalls   []statsCall
+	gotDailyCalls   []dailyCall
 }
 
 type monthlyCall struct {
@@ -57,6 +61,11 @@ type monthlyCall struct {
 type statsCall struct {
 	vehicleID                     int64
 	since7d, since30d, since365d time.Time
+}
+
+type dailyCall struct {
+	vehicleID   int64
+	windowStart time.Time
 }
 
 func (f *fakeMileageRepo) VehicleExists(ctx context.Context, vehicleID int64) (bool, error) {
@@ -85,6 +94,14 @@ func (f *fakeMileageRepo) Stats(ctx context.Context, vehicleID int64, since7d, s
 		return database.MileageStats{}, f.statsErr
 	}
 	return f.stats, nil
+}
+
+func (f *fakeMileageRepo) Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]database.MileageDailyRow, error) {
+	f.gotDailyCalls = append(f.gotDailyCalls, dailyCall{vehicleID, windowStart})
+	if f.dailyErr != nil {
+		return nil, f.dailyErr
+	}
+	return f.daily, nil
 }
 
 func newMileageHandlerForTest(repo *fakeMileageRepo, fixedNow time.Time) *MileageHandler {
@@ -646,4 +663,278 @@ func TestMonthsAgo_SnapsToFirstOfMonth(t *testing.T) {
 			}
 		})
 	}
+}
+
+// ============================================================================
+// Phase-43a / Prompt 0009 — /mileage/daily tests
+// ============================================================================
+//
+// Coverage matches the Monthly + Stats matrix:
+//   - days clamp (default 90, max 730, < 1 → 400, non-integer → 400)
+//   - vehicle_id missing / non-numeric / zero / negative → 400
+//   - VehicleExists runs FIRST (404 on unknown vehicle)
+//   - Repo error → 500
+//   - Empty vehicle → 200 with days:[]
+//   - Grouping pass-through (response field-shape + JSON null on
+//     end_odometer_km when EndOdometerKm is nil)
+//   - daysAgo helper snap-to-midnight contract
+
+func TestMileage_Daily_DaysClamp(t *testing.T) {
+t.Parallel()
+now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+
+cases := []struct {
+name        string
+days        string
+wantStatus  int
+wantBodyHas string
+}{
+{name: "default_no_param", days: "", wantStatus: http.StatusOK},
+{name: "explicit_30", days: "30", wantStatus: http.StatusOK},
+{name: "max_730", days: "730", wantStatus: http.StatusOK},
+{name: "over_max_731", days: "731", wantStatus: http.StatusBadRequest, wantBodyHas: "days exceeds maximum"},
+{name: "zero", days: "0", wantStatus: http.StatusBadRequest, wantBodyHas: "days must be"},
+{name: "negative", days: "-5", wantStatus: http.StatusBadRequest, wantBodyHas: "days must be"},
+{name: "non_integer", days: "abc", wantStatus: http.StatusBadRequest, wantBodyHas: "days must be an integer"},
+}
+for _, c := range cases {
+c := c
+t.Run(c.name, func(t *testing.T) {
+t.Parallel()
+repo := &fakeMileageRepo{
+exists: map[int64]bool{42: true},
+}
+h := newMileageHandlerForTest(repo, now)
+target := "/mileage/daily?vehicle_id=42"
+if c.days != "" {
+target += "&days=" + c.days
+}
+rec := httptest.NewRecorder()
+h.Daily(rec, mileageRequest(target))
+if rec.Code != c.wantStatus {
+t.Fatalf("status: got %d, want %d (body=%s)", rec.Code, c.wantStatus, rec.Body.String())
+}
+if c.wantBodyHas != "" && !strings.Contains(rec.Body.String(), c.wantBodyHas) {
+t.Errorf("body %q does not contain %q", rec.Body.String(), c.wantBodyHas)
+}
+})
+}
+}
+
+func TestMileage_Daily_BadVehicleID(t *testing.T) {
+t.Parallel()
+now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+cases := []struct {
+name   string
+target string
+want   string
+}{
+{"missing", "/mileage/daily", "vehicle_id is required"},
+{"non_numeric", "/mileage/daily?vehicle_id=abc", "vehicle_id must be a positive integer"},
+{"zero", "/mileage/daily?vehicle_id=0", "vehicle_id must be a positive integer"},
+{"negative", "/mileage/daily?vehicle_id=-1", "vehicle_id must be a positive integer"},
+}
+for _, c := range cases {
+c := c
+t.Run(c.name, func(t *testing.T) {
+t.Parallel()
+repo := &fakeMileageRepo{}
+h := newMileageHandlerForTest(repo, now)
+rec := httptest.NewRecorder()
+h.Daily(rec, mileageRequest(c.target))
+if rec.Code != http.StatusBadRequest {
+t.Fatalf("status: got %d, want 400 (body=%s)", rec.Code, rec.Body.String())
+}
+if !strings.Contains(rec.Body.String(), c.want) {
+t.Errorf("body %q does not contain %q", rec.Body.String(), c.want)
+}
+if len(repo.gotExistsCalls) != 0 {
+t.Errorf("VehicleExists must not be called on a bad vehicle_id; got %v", repo.gotExistsCalls)
+}
+})
+}
+}
+
+func TestMileage_Daily_UnknownVehicle_404(t *testing.T) {
+t.Parallel()
+now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+repo := &fakeMileageRepo{exists: map[int64]bool{}}
+h := newMileageHandlerForTest(repo, now)
+rec := httptest.NewRecorder()
+h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=99"))
+if rec.Code != http.StatusNotFound {
+t.Fatalf("status: got %d, want 404", rec.Code)
+}
+if len(repo.gotDailyCalls) != 0 {
+t.Errorf("Daily must not run when VehicleExists returns false; got %v", repo.gotDailyCalls)
+}
+}
+
+func TestMileage_Daily_EmptyVehicle_200(t *testing.T) {
+t.Parallel()
+now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+repo := &fakeMileageRepo{
+exists: map[int64]bool{7: true},
+daily:  []database.MileageDailyRow{},
+}
+h := newMileageHandlerForTest(repo, now)
+rec := httptest.NewRecorder()
+h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=7"))
+if rec.Code != http.StatusOK {
+t.Fatalf("status: got %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+}
+
+var resp MileageDailyResponse
+if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+t.Fatalf("unmarshal: %v", err)
+}
+if resp.VehicleID != 7 {
+t.Errorf("vehicle_id: got %d, want 7", resp.VehicleID)
+}
+if resp.Days == nil {
+t.Error("days must be [] not null when empty (frontend depends on non-null array)")
+}
+if len(resp.Days) != 0 {
+t.Errorf("len(days): got %d, want 0", len(resp.Days))
+}
+}
+
+func TestMileage_Daily_RepoError_500(t *testing.T) {
+t.Parallel()
+now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+repo := &fakeMileageRepo{
+exists:   map[int64]bool{7: true},
+dailyErr: errors.New("boom"),
+}
+h := newMileageHandlerForTest(repo, now)
+rec := httptest.NewRecorder()
+h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=7"))
+if rec.Code != http.StatusInternalServerError {
+t.Fatalf("status: got %d, want 500", rec.Code)
+}
+}
+
+func TestMileage_Daily_GroupingPassThrough(t *testing.T) {
+t.Parallel()
+now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+day1 := time.Date(2026, 5, 4, 0, 0, 0, 0, time.UTC)
+day2 := time.Date(2026, 5, 5, 0, 0, 0, 0, time.UTC)
+day3 := time.Date(2026, 5, 6, 0, 0, 0, 0, time.UTC)
+
+odo := 51234.567
+repo := &fakeMileageRepo{
+exists: map[int64]bool{42: true},
+daily: []database.MileageDailyRow{
+{Day: day1, DriveCount: 2, TotalKm: 12.5, EndOdometerKm: &odo},
+{Day: day2, DriveCount: 1, TotalKm: 3.0, EndOdometerKm: nil},
+{Day: day3, DriveCount: 4, TotalKm: 85.42, EndOdometerKm: nil},
+},
+}
+h := newMileageHandlerForTest(repo, now)
+rec := httptest.NewRecorder()
+h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=42&days=90"))
+if rec.Code != http.StatusOK {
+t.Fatalf("status: got %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+}
+
+// Decode into a generic map so we can assert JSON-null vs zero on
+// end_odometer_km without the Go zero-value confusion of an int field.
+var raw struct {
+VehicleID int64 `json:"vehicle_id"`
+Days      []struct {
+Date          string   `json:"date"`
+DriveCount    int      `json:"drive_count"`
+TotalKm       float64  `json:"total_km"`
+EndOdometerKm *float64 `json:"end_odometer_km"`
+} `json:"days"`
+}
+if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+t.Fatalf("unmarshal: %v", err)
+}
+if raw.VehicleID != 42 || len(raw.Days) != 3 {
+t.Fatalf("envelope: %+v", raw)
+}
+// Date formatting: YYYY-MM-DD.
+if raw.Days[0].Date != "2026-05-04" || raw.Days[1].Date != "2026-05-05" || raw.Days[2].Date != "2026-05-06" {
+t.Errorf("date format: %+v", raw.Days)
+}
+// Total_km pass-through.
+if raw.Days[0].TotalKm != 12.5 || raw.Days[1].TotalKm != 3.0 || raw.Days[2].TotalKm != 85.42 {
+t.Errorf("total_km: %+v", raw.Days)
+}
+// End_odometer_km: first day non-null, others null.
+if raw.Days[0].EndOdometerKm == nil || *raw.Days[0].EndOdometerKm != 51234.567 {
+t.Errorf("days[0].end_odometer_km: got %v, want 51234.567", raw.Days[0].EndOdometerKm)
+}
+if raw.Days[1].EndOdometerKm != nil {
+t.Errorf("days[1].end_odometer_km: got %v, want JSON null", *raw.Days[1].EndOdometerKm)
+}
+if raw.Days[2].EndOdometerKm != nil {
+t.Errorf("days[2].end_odometer_km: got %v, want JSON null", *raw.Days[2].EndOdometerKm)
+}
+// Raw body must literally contain "end_odometer_km":null so the
+// frontend can distinguish "no odometer reading" from "zero km".
+if !strings.Contains(rec.Body.String(), `"end_odometer_km":null`) {
+t.Errorf("response body must encode JSON null for absent odometer; got %s", rec.Body.String())
+}
+// Window must be snapped to midnight UTC of (now - days).
+if len(repo.gotDailyCalls) != 1 {
+t.Fatalf("Daily call count: got %d, want 1", len(repo.gotDailyCalls))
+}
+wantWindow := time.Date(2026, 2, 5, 0, 0, 0, 0, time.UTC)
+if !repo.gotDailyCalls[0].windowStart.Equal(wantWindow) {
+t.Errorf("windowStart: got %s, want %s", repo.gotDailyCalls[0].windowStart, wantWindow)
+}
+}
+
+func TestDaysAgo_SnapsToMidnightUTC(t *testing.T) {
+t.Parallel()
+cases := []struct {
+name string
+now  time.Time
+days int
+want time.Time
+}{
+{
+"mid_day_now_90d",
+time.Date(2026, 5, 6, 14, 23, 45, 678, time.UTC),
+90,
+time.Date(2026, 2, 5, 0, 0, 0, 0, time.UTC),
+},
+{
+"midnight_now_30d",
+time.Date(2026, 5, 6, 0, 0, 0, 0, time.UTC),
+30,
+time.Date(2026, 4, 6, 0, 0, 0, 0, time.UTC),
+},
+{
+"crosses_month_boundary",
+time.Date(2026, 3, 1, 23, 59, 59, 0, time.UTC),
+5,
+time.Date(2026, 2, 24, 0, 0, 0, 0, time.UTC),
+},
+{
+"crosses_year_boundary",
+time.Date(2026, 1, 3, 6, 0, 0, 0, time.UTC),
+10,
+time.Date(2025, 12, 24, 0, 0, 0, 0, time.UTC),
+},
+}
+for _, c := range cases {
+c := c
+t.Run(c.name, func(t *testing.T) {
+t.Parallel()
+got := daysAgo(c.now, c.days)
+if !got.Equal(c.want) {
+t.Errorf("daysAgo(%s, %d) = %s, want %s", c.now, c.days, got, c.want)
+}
+if got.Hour() != 0 || got.Minute() != 0 || got.Second() != 0 || got.Nanosecond() != 0 {
+t.Errorf("got HMS = %02d:%02d:%02d.%09d, want 00:00:00.000000000",
+got.Hour(), got.Minute(), got.Second(), got.Nanosecond())
+}
+if got.Location() != time.UTC {
+t.Errorf("got Location = %s, want UTC", got.Location())
+}
+})
+}
 }

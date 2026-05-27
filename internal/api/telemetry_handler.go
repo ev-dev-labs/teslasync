@@ -32,6 +32,12 @@ type pipelineDispatcher interface {
 	ProcessAtomics(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) error
 }
 
+// Compile-time guard: TelemetryHandler must satisfy mqtt.StreamingHealthRecorder
+// so the PipelineSubscriber can notify the MQTT Inspector of per-VIN
+// streaming activity (Phase-48 fix — pre-fix the inspector silently
+// zeroed out after the per-field MQTT cutover).
+var _ mqtt.StreamingHealthRecorder = (*TelemetryHandler)(nil)
+
 // TelemetryHandler receives and processes Tesla Fleet Telemetry data.
 type TelemetryHandler struct {
 	db                    *database.DB

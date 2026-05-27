@@ -61,9 +61,11 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
   const chartData = useMemo<BarDatum[]>(() => {
     const items = data ?? [];
     return items.slice(-12).map((m) => ({
-      month: shortMonth(m.month ?? ''),
-      distance: toDistanceDisplay(m.distance ?? 0),
-      isCurrent: (m.month ?? '') === curMonth,
+      // Backend `/mileage/monthly` returns `year_month` ('YYYY-MM') and
+      // `total_km`. SI-canonical convertDistanceFromSI expects meters.
+      month: shortMonth(m.year_month ?? ''),
+      distance: toDistanceDisplay((m.total_km ?? 0) * 1000),
+      isCurrent: (m.year_month ?? '') === curMonth,
     }));
   }, [data, toDistanceDisplay, curMonth]);
 

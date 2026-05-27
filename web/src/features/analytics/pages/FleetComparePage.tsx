@@ -328,33 +328,39 @@ export default function FleetComparePage() {
     [vehicleList, vehicleIdA],
   );
 
-  /* ── Monthly mileage chart data (merged & aligned) ── */
+  /* ── Monthly mileage chart data (merged & aligned) ──
+     Phase-43a / Prompt 0009 (fix/misc-fixes): backend `/mileage/monthly`
+     returns `MonthlyMileageBucket{year_month, total_km, drive_count, …}`.
+     Distances stay in km here — the chart axis label already shows km
+     elsewhere on the page. */
   const monthlyChartData = useMemo(() => {
     const arrA = monthlyA ?? [];
     const arrB = monthlyB ?? [];
     const monthMap = new Map<string, { month: string; distA: number; distB: number; drivesA: number; drivesB: number }>();
 
     for (const m of arrA) {
-      monthMap.set(m.month, {
-        month: m.month,
-        distA: m.distance,
+      const ym = m.year_month ?? '';
+      monthMap.set(ym, {
+        month: ym,
+        distA: m.total_km ?? 0,
         distB: 0,
-        drivesA: m.drives,
+        drivesA: m.drive_count ?? 0,
         drivesB: 0,
       });
     }
     for (const m of arrB) {
-      const existing = monthMap.get(m.month);
+      const ym = m.year_month ?? '';
+      const existing = monthMap.get(ym);
       if (existing) {
-        existing.distB = m.distance;
-        existing.drivesB = m.drives;
+        existing.distB = m.total_km ?? 0;
+        existing.drivesB = m.drive_count ?? 0;
       } else {
-        monthMap.set(m.month, {
-          month: m.month,
+        monthMap.set(ym, {
+          month: ym,
           distA: 0,
-          distB: m.distance,
+          distB: m.total_km ?? 0,
           drivesA: 0,
-          drivesB: m.drives,
+          drivesB: m.drive_count ?? 0,
         });
       }
     }

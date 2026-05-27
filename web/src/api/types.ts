@@ -1723,6 +1723,9 @@ export interface SpeedProfileData {
   distribution: SpeedBucket[]
   categories: EfficiencyCategory[]
   points: EfficiencyPoint[]
+  avgSpeedMps: number
+  peakSpeedMps: number
+  optimalSpeedMps: number
 }
 
 // === Temperature Impact ===

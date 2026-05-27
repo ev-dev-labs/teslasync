@@ -132,9 +132,9 @@ export interface DrivetrainHealthData {
 
 export interface SpeedProfileData {
   distribution: SpeedBucket[];
-  avgSpeedKmh: number;
-  peakSpeedKmh: number;
-  optimalSpeedKmh: number;
+  avgSpeedMps: number;
+  peakSpeedMps: number;
+  optimalSpeedMps: number;
 }
 
 export interface SpeedBucket {

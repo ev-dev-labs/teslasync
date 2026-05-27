@@ -105,10 +105,16 @@ const aiStateMachineDebuggerNarratorMaxIterations = 8
 const aiStateMachineDebuggerNarratorMaxBodyBytes = 16 * 1024
 
 // aiStateMachineDebuggerNarratorMaxWindowSeconds caps the window
-// the caller may request. 24 hours is generous for an operator
-// FSM-trace investigation workflow and bounds the size of the
-// envelope the source has to compute.
-const aiStateMachineDebuggerNarratorMaxWindowSeconds = 24 * 60 * 60
+// the caller may request. 7 days matches the SPA's
+// StateMachineDebuggerPage default range preset ('7d' — see the
+// useRangeState defaultPresetId in
+// web/src/features/system/pages/StateMachineDebuggerPage.tsx),
+// so the default operator workflow (open page → click "Ask Helix")
+// no longer trips the cap with a stream_http_400. The previous
+// 24-hour cap silently rejected every default-range request and
+// bounds the size of the envelope the source has to compute even
+// at the wider 7-day window.
+const aiStateMachineDebuggerNarratorMaxWindowSeconds = 7 * 24 * 60 * 60
 
 // aiStateMachineDebuggerNarratorMaxFromUnix is a sanity upper
 // bound on from_unix to reject obvious garbage (e.g. epoch year
