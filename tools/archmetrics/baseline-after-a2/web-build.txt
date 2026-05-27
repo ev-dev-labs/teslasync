@@ -1,0 +1,30 @@
+  route       0.3 KB     0.5 KB  parseEnums-CwQPSQXU.js
+  route       0.3 KB     0.4 KB  Stack-3GALEQMQ.js
+  route       0.3 KB     0.5 KB  Grid-jyEUS7El.js
+  route       0.3 KB     0.4 KB  chartDefaults-CFb3QXOr.js
+  route       0.3 KB     0.4 KB  FadeIn-dkF-6Mz8.js
+  route       0.3 KB     0.5 KB  FormSection-ByFCZ3bj.js
+  route       0.3 KB     0.5 KB  InlineMetric-Cn7CeH62.js
+  route       0.3 KB     0.4 KB  useCommands-EneATDSO.js
+  route       0.3 KB     0.4 KB  StaggerItem-DmVT74Cp.js
+  route       0.3 KB     0.4 KB  StaggerContainer-DyBh3OAw.js
+  route       0.3 KB     0.4 KB  usePressureFormat-DOQYdMEZ.js
+  route       0.3 KB     0.4 KB  ChartBrush-C4AQdNvU.js
+  route       0.3 KB     0.3 KB  useAnomalies-CVR5z8wl.js
+  route       0.3 KB     0.4 KB  types-DWX0kjGd.js
+  route       0.3 KB     0.3 KB  useFilteredList-BvS6KSse.js
+  route       0.2 KB     0.3 KB  useChartPalette-Y8hy0WHC.js
+  route       0.2 KB     0.3 KB  LegacyAlertStudioRedirect-C_1nMHwl.js
+  route       0.2 KB     0.3 KB  LegacyAlertRulesRedirect-BQ79ksiZ.js
+  route       0.2 KB     0.2 KB  usePageTitle-DDKvi8mF.js
+  route       0.2 KB     0.2 KB  signalObservation-C-tdRTPs.js
+  route       0.2 KB     0.2 KB  typeGuards-D48Olv5d.js
+  route       0.2 KB     0.2 KB  errorMessage-y8yGOCqp.js
+  -------  ---------  ---------  ----------------------------------------
+  TOTAL              1876.6 KB  6043.8 KB  407 chunks
+    entry     385.1 KB
+    vendor    303.8 KB
+    route    1187.6 KB
+
+[bundle-size] OK (entry ≤ 350 KB, others ≤ 600 KB)
+

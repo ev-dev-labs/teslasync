@@ -1,0 +1,214 @@
+
+> teslasync-web@2.0.0 lint
+> eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text && npm run audit:i18n-shadowed && npm run audit:query-signal && npm run audit:datatable-tableid && npm run audit:filterbar-chips && npm run audit:forced-colors && npm run audit:sr-only && npm run audit:chart-a11y && npm run audit:marker-cluster && npm run audit:deferred-filter && npm run audit:prefetch-link && npm run audit:tag-input && npm run audit:required-fields && npm run audit:unit-input && npm run audit:masked-values && npm run audit:rtl && npm run audit:bg-polling && npm run audit:export-adoption && npm run audit:inline-help && npm run audit:touch-target
+
+[boundaries][warning]: Rule name "boundaries/element-types" is deprecated. Use "boundaries/dependencies" instead.
+  More info: https://www.jsboundaries.dev/docs/releases/migration-guides/v5-to-v6/#rule-element-types-renamed-to-dependencies
+
+
+> teslasync-web@2.0.0 lint:i18n
+> node scripts/lint-i18n-no-template-literals.mjs
+
+[i18n-lint] OK — no template literals in src/i18n/*.json
+
+> teslasync-web@2.0.0 lint:light-mode
+> node scripts/audit-light-mode-parity.mjs
+
+
+Total violations: 0
+
+Allowed drift (LIGHT_MODE_ALLOWED_DRIFT): 0
+
+OK — light-mode CSS-var parity holds.
+
+> teslasync-web@2.0.0 audit:empty-state
+> node scripts/audit-empty-state-cta.mjs
+
+OK — every <EmptyState> in src\features has a CTA or // no-action: exemption
+
+> teslasync-web@2.0.0 audit:tooltip-text
+> node scripts/audit-tooltip-text-color.mjs
+
+OK — no tooltip content overrides intrinsic text colour
+
+> teslasync-web@2.0.0 audit:i18n-shadowed
+> node scripts/audit-i18n-shadowed-keys.mjs
+
+✅ audit:i18n-shadowed-keys — no violations
+
+> teslasync-web@2.0.0 audit:query-signal
+> node scripts/audit-query-signal.mjs
+
+OK — every useQuery/useInfiniteQuery queryFn in src\api\hooks threads { signal } (63 files scanned)
+
+> teslasync-web@2.0.0 audit:datatable-tableid
+> node scripts/audit-datatable-tableid.mjs
+
+OK — every <DataTable> in src\features has a tableId
+
+> teslasync-web@2.0.0 audit:filterbar-chips
+> node scripts/audit-filterbar-chips.mjs
+
+OK — every <FilterBar> in [src\features, src\components\forms] has a sibling <ActiveFilterChips>
+
+> teslasync-web@2.0.0 audit:forced-colors
+> node scripts/audit-forced-colors.mjs
+
+OK — every critical component (11) defines a forced-colors override
+
+> teslasync-web@2.0.0 audit:sr-only
+> node scripts/audit-sr-only.mjs
+
+OK — no ad-hoc `sr-only` outside VisuallyHidden in src
+
+> teslasync-web@2.0.0 audit:chart-a11y
+> node scripts/audit-chart-a11y.mjs
+
+OK — every <ChartContainer> in src has ariaLabel + data/dataColumns or a no-table justification
+
+> teslasync-web@2.0.0 audit:marker-cluster
+> node scripts/audit-marker-cluster.mjs
+
+OK — every <Marker>/<CircleMarker> in src is either inside a <MarkerCluster> file or carries a marker-cluster:no justification (925 files scanned)
+
+> teslasync-web@2.0.0 audit:deferred-filter
+> node scripts/audit-deferred-filter.mjs
+
+OK — 3 configured heavy-filter page(s) either adopt useDeferredFilter / useDeferredValue (with memo() on the row component) or carry a `deferred-filter:no` justification.
+
+> teslasync-web@2.0.0 audit:prefetch-link
+> node scripts/auditPrefetchLink.mjs
+
+OK — every <Link>/<NavLink>/<GuardedLink>/<GuardedNavLink> in the 3 audited layout file(s) is either a <PrefetchLink> or carries a prefetch-link:no justification.
+
+> teslasync-web@2.0.0 audit:tag-input
+> node scripts/auditTagInput.mjs
+
+OK — no hand-rolled tag-input patterns found (923 file(s) scanned, 2 allow-listed primitive(s) skipped).
+
+> teslasync-web@2.0.0 audit:required-fields
+> node scripts/auditRequiredFields.mjs
+
+OK — every <Input|Textarea|Select required> in the 921 scanned file(s) carries a label / aria-label / aria-labelledby or a required-field:no justification.
+
+> teslasync-web@2.0.0 audit:unit-input
+> node scripts/auditUnitInput.mjs
+
+OK — no hand-rolled unit-input patterns found (924 file(s) scanned, 1 allow-listed primitive(s) skipped).
+
+> teslasync-web@2.0.0 audit:masked-values
+> node scripts/auditMaskedValues.mjs
+
+audit:masked-values OK — scanned 924 .tsx file(s); no cleartext sensitive renders found.
+
+> teslasync-web@2.0.0 audit:rtl
+> node scripts/audit-rtl-properties.mjs
+
+[audit:rtl] scanned 1228 .tsx file(s) under D:\repos\teslasync\web\src
+[audit:rtl] physical-direction utility hits: 393 (budget: 393)
+[audit:rtl] top 20 offenders:
+     7  features/dashboard/components/DashboardGrid.tsx
+     7  features/driving/pages/DriveScorePage.tsx
+     7  features/settings/components/AppearanceSettings.tsx
+     6  components/data-display/SavedViewMenu.tsx
+     6  components/forms/Combobox.tsx
+     6  components/layout/status-bar/VersionSegment.tsx
+     6  features/dashboard/components/ImportPreviewModal.tsx
+     6  features/dashboard/components/KioskOverlay.tsx
+     6  features/dashboard/components/LayoutSwitcher.tsx
+     6  features/system/pages/DataRepairPage.tsx
+     5  components/ui/CommandPalette.tsx
+     5  features/automations/pages/AutomationsListPage.tsx
+     5  features/battery/pages/PowerFlowDashboardPage.tsx
+     5  features/settings/components/SettingsExportImport.tsx
+     4  components/forms/ComboboxMulti.tsx
+     4  components/forms/TreeSelect.tsx
+     4  components/maps/MapTileLayer.tsx
+     4  components/ui/Input.tsx
+     4  components/ui/Lightbox.tsx
+     4  components/ui/Tooltip.tsx
+[audit:rtl] OK — count is at or below the baseline budget.
+
+> teslasync-web@2.0.0 audit:bg-polling
+> node scripts/audit-background-polling.mjs
+
+[audit:bg-polling] scanned 1300 file(s); offenders: 0
+[audit:bg-polling] OK — every refetchIntervalInBackground:true is annotated.
+
+> teslasync-web@2.0.0 audit:export-adoption
+> node scripts/audit-export-adoption.mjs
+
+[audit:export-adoption] target pages scanned: 21, passes: 4, waiver-exempt: 0, no-datatable (skipped): 17, failures: 0
+[audit:export-adoption] exportable OK:
+  ✓ features/admin/pages/AuditLogPage.tsx:408#datatable-1
+  ✓ features/charging/pages/TeslaChargingHistoryPage.tsx:440#datatable-1
+  ✓ features/charging/pages/TeslaChargingSessionsPage.tsx:461#datatable-1
+  ✓ features/notifications/pages/AuditLogPage.tsx:132#datatable-1
+[audit:export-adoption] skipped (target page name but no <DataTable/> found):
+  - features/admin/pages/ApiLogsPage.tsx
+  - features/automations/pages/AutomationActivityFeed.tsx
+  - features/automations/pages/AutomationBuilderPage.tsx
+  - features/automations/pages/AutomationCard.tsx
+  - features/automations/pages/AutomationListPage.tsx
+  - features/automations/pages/AutomationsListPage.tsx
+  - features/charging/pages/ChargingCurvePage.tsx
+  - features/charging/pages/ChargingDetailPage.tsx
+  - features/charging/pages/ChargingHeatmapPage.tsx
+  - features/charging/pages/ChargingListPage.tsx
+  - features/charging/pages/TeslaChargingSessionsMap.tsx
+  - features/driving/pages/DriveScorePage.tsx
+  - features/driving/pages/DrivesListPage.tsx
+  - features/notifications/pages/AlertsListPage.tsx
+  - features/notifications/pages/AlertStudioPage.tsx
+  - features/notifications/pages/BrowserNotificationsPage.tsx
+  - features/sharing/pages/SharingTripsPage.tsx
+
+[audit:export-adoption] WARN — 7 page(s) match the long-tail list pattern but render rows outside <DataTable/>:
+  · features/notifications/pages/NotificationsPage.tsx (file missing)
+  · features/notifications/pages/AlertRulesPage.tsx 
+  · features/admin/pages/ApiLogsPage.tsx 
+  · features/driving/pages/DrivesListPage.tsx 
+  · features/charging/pages/ChargingListPage.tsx 
+  · features/trips/pages/TripListPage.tsx 
+  · features/automations/pages/AutomationListPage.tsx 
+  These should migrate to <DataTable exportable .../> in a follow-up sweep.
+
+[audit:export-adoption] OK — every long-tail list page enables exportable.
+
+> teslasync-web@2.0.0 audit:inline-help
+> node scripts/audit-inline-help.mjs
+
+[audit:inline-help] targets: 4, total adoptions: 28 (min 25), failures: 0
+  ✓ settings                8/6 → src/features/settings
+        · src\features\settings\components\AppearanceSettings.tsx (3)
+        · src\features\settings\components\GasPriceSettings.tsx (2)
+        · src\features\settings\components\GeneralSettings.tsx (1)
+        · src\features\settings\components\SettingField.tsx (2)
+  ✓ alert-studio            8/6 → src/features/notifications/pages/AlertStudioPage.tsx
+        · src\features\notifications\pages\AlertStudioPage.tsx (8)
+  ✓ automation-builder      8/6 → src/features/automations
+        · src\features\automations\pages\AutomationBuilderPage.tsx (1)
+        · src\features\automations\pages\ConditionBuilder.tsx (5)
+        · src\features\automations\pages\TriggerConfigurator.tsx (2)
+  ✓ notification-channels   4/4 → src/features/notifications/components/NotificationChannelsView.tsx
+        · src\features\notifications\components\NotificationChannelsView.tsx (4)
+
+[audit:inline-help] inlineHelpAllowlist.ts excuses 9 i18n key(s) from inline help (informational only):
+  · automations.builder.name
+  · automations.builder.description
+  · notifications.alertStudio.editor.nameLabel
+  · notifications.alertStudio.editor.namePlaceholder
+  · notifications.channels.nameLabel
+  · automations.builder.enabled
+  · notifications.alertStudio.editor.enabledLabel
+  · notifications.channels.enabled
+  · notifications.channels.disabled
+
+[audit:inline-help] OK — every target meets its inline-help budget.
+
+> teslasync-web@2.0.0 audit:touch-target
+> node scripts/audit-touch-target.mjs
+
+[audit:touch-target] scanned 925 file(s) / 704 clickable element(s); allowlist=0; failures=0
+[audit:touch-target] OK — every clickable element meets the WCAG 2.5.5 floor.
+
