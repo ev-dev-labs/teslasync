@@ -1,0 +1,18 @@
+
+Dir                   TsFiles
+---                   -------
+web/src/features          839
+web/src/components        465
+web/src/lib               144
+web/src/hooks              95
+web/src/api                94
+web/src/types              41
+web/src/__tests__           4
+web/src/ai                  4
+web/src/observability       2
+web/src/store               2
+web/src/sw                  2
+web/src/generated           1
+web/src/i18n                1
+web/src/test                1
+
