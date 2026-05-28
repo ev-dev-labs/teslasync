@@ -153,45 +153,76 @@ export default [
   //
   // Why this block exists today
   // ---------------------------
-  // Phase B1 of the v3 reorg plan (docs/architecture/repo-
-  // reorganization-plan.md §4) mechanizes Feature-Sliced Design
-  // layer rules over the current dir mapping
-  // (src/features/, src/components/, src/hooks/, src/lib/, etc.).
-  // The plugin is installed here so B1's diff is the RULES delta
-  // alone, not the install + RULES.
+  // Phase B1 of the reorg plan (docs/architecture/repo-reorganization-
+  // plan.md §4) mechanizes Feature-Sliced Design layer rules over the
+  // current dir mapping. The plugin is installed here so B1's diff is
+  // the RULES delta alone, not the install + RULES.
   //
-  // Today: warn-mode, every element type allowed everywhere
-  // (`default: 'allow'`). This is a true no-op — no `boundaries/*`
-  // warning is possible. The presence of the block proves the
-  // plugin is wired and ready for B1.
+  // Today: warn-mode, permissive rules (`default: 'allow'`). This is
+  // a true no-op — no `boundaries/*` warning is possible at error or
+  // warn level under these settings.
   //
-  // B1 will replace this block with:
-  //   - settings.'boundaries/elements' mapping current dirs to
-  //     FSD layers (app / pages / widgets / features / entities /
-  //     shared / generated).
-  //   - rules['boundaries/element-types'] with the FSD DAG
-  //     (features can only import entities + shared; etc.).
-  //   - rules['boundaries/no-private'] at error.
+  // Phase R / R0 (REPORT-MODE descriptors)
+  // ---------------------------------------
+  // The `boundaries/elements` array below declares the bounded-
+  // context subdir patterns planned by ADR-011 §3 (see
+  // docs/architecture/adr/011-bounded-context-subpackages.md).
+  // Today these patterns classify any file ALREADY in a planned
+  // subdir under the corresponding `type` (with a `capture` group
+  // exposing the bounded-context name); files still at the flat
+  // parent fall through to the existing `features` / `components`
+  // / `hooks` / `lib` / `api` types. Rules stay permissive so the
+  // descriptors are INERT — they SHOW the intended shape in lint
+  // reports without ever failing the gate.
   //
-  // Until then the plugin is registered solely so config errors
-  // (wrong export shape, missing plugin) surface NOW rather than
-  // mid-B1.
+  // Pattern roots — IMPORTANT: ESLint runs with cwd=web/, so
+  // descriptors are rooted at `src/...` (NOT `web/src/...`).
+  // Rooting at `web/src/...` here would classify NOTHING and
+  // mask R0.5 / R8-R12 progress signals.
+  //
+  // Phase R13 will replace `default: 'allow'` with `default:
+  // 'disallow'` + explicit FSD DAG (features→entities+shared,
+  // shared can't reach up, etc.) and add `boundaries/no-private`
+  // at error for the `components/*` categories (barrel-only rule
+  // does NOT apply to `lib`/`hooks` per ADR-011 — those allow
+  // direct imports like `@/lib/format/date` for tree-shaking).
   {
     files: ['src/**/*.{ts,tsx}'],
     plugins: { boundaries },
     settings: {
-      // Single catch-all element so the plugin doesn't emit
-      // 'Please provide element descriptors' on every lint run.
-      // B1 replaces this with the real FSD layer mapping
-      // (app / pages / widgets / features / entities / shared /
-      // generated) — see docs/architecture/fsd.md (created in A4).
       'boundaries/elements': [
-        { type: 'src', pattern: 'src/**/*' },
+        // ── Phase R planned bounded-context subdirs (REPORT-MODE) ──
+        // Ordered most-specific-first so the planned-subdir types win
+        // over the existing flat-layer types when a file has already
+        // moved into a subdir.
+        { type: 'dashboard-widget',       pattern: 'src/features/dashboard/widgets/*/**', capture: ['domain'] },
+        { type: 'lib-purpose',            pattern: 'src/lib/*/**',                        capture: ['purpose'] },
+        { type: 'api-hook-domain',        pattern: 'src/api/hooks/*/**',                  capture: ['domain'] },
+        { type: 'app-hook-purpose',       pattern: 'src/hooks/*/**',                      capture: ['purpose'] },
+        { type: 'component-ai',           pattern: 'src/components/ai/*/**',              capture: ['feature'] },
+        { type: 'component-feedback',     pattern: 'src/components/feedback/*/**',        capture: ['kind'] },
+        { type: 'component-data-display', pattern: 'src/components/data-display/*/**',    capture: ['kind'] },
+
+        // ── Existing flat layers (today's reality) ──
+        // These match files NOT YET migrated into a planned subdir.
+        { type: 'pages',      pattern: 'src/features/*/pages/**', capture: ['feature'] },
+        { type: 'features',   pattern: 'src/features/**',         capture: ['feature'] },
+        { type: 'entities',   pattern: 'src/entities/**',         capture: ['entity'] },
+        { type: 'components', pattern: 'src/components/**' },
+        { type: 'hooks',      pattern: 'src/hooks/**' },
+        { type: 'lib',        pattern: 'src/lib/**' },
+        { type: 'api',        pattern: 'src/api/**' },
+        { type: 'app',        pattern: 'src/{App,main}.{ts,tsx}' },
+        { type: 'generated',  pattern: 'src/generated/**' },
+
+        // Catch-all (types/, i18n/, store/, sw/, test-utils/, ...).
+        // Must stay LAST so the more specific patterns above can win.
+        { type: 'src',        pattern: 'src/**/*' },
       ],
       'boundaries/include': ['src/**/*'],
     },
     rules: {
-      // Permissive defaults. B1 flips to disallow + explicit allow.
+      // Permissive defaults. R13 flips to disallow + explicit allow.
       'boundaries/element-types': [
         'warn',
         {
