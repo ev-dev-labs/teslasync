@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T03:46:23Z, Go go1.26.1, commit 6233628078f23d8e585ba956d07a01d3bb9493f9_
+_Generated 2026-05-28T03:48:26Z, Go go1.26.1, commit 9e2c28eb2284eee2c939baf7d9358d802cfc5908_
 
 ## Summary
 
-- Packages: 214
+- Packages: 215
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 371976
+- Total non-blank LOC under cmd/+internal/+tools/: 371997
 
 ## cmd/* main.go LOC
 
@@ -168,7 +168,7 @@ _Generated 2026-05-28T03:46:23Z, Go go1.26.1, commit 6233628078f23d8e585ba956d07
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 108 | 35 | 27849 | yes | platform |
+| internal/database | 108 | 35 | 27850 | yes | platform |
 | internal/dataquality | 4 | 0 | 347 | yes | platform |
 | internal/domain | 2 | 1 | 114 | yes | domain |
 | internal/domain/charging | 6 | 1 | 357 | yes | domain |
@@ -203,11 +203,12 @@ _Generated 2026-05-28T03:46:23Z, Go go1.26.1, commit 6233628078f23d8e585ba956d07
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 33 | 1 | 2686 | yes | domain |
+| internal/models | 33 | 1 | 2679 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/models/auth | 2 | 1 | 66 | yes | domain |
 | internal/models/backup | 2 | 0 | 59 | yes | domain |
 | internal/models/chatbot | 2 | 0 | 38 | yes | domain |
+| internal/models/energy | 2 | 0 | 27 | yes | domain |
 | internal/mqtt | 7 | 7 | 4273 | yes | platform |
 | internal/notification | 4 | 2 | 1243 | yes | platform |
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |
@@ -265,7 +266,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 33 / 1 | 19 | 4 | 15 |
+| `internal/models` | R5 | 36 | 33 / 1 | 19 | 5 | 14 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -281,13 +282,13 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/auth`
 - `internal/models/backup`
 - `internal/models/chatbot`
+- `internal/models/energy`
 
 **Planned but not yet on disk:**
 - `internal/models/automation`
 - `internal/models/charging`
 - `internal/models/dashboard`
 - `internal/models/drive`
-- `internal/models/energy`
 - `internal/models/export`
 - `internal/models/geo`
 - `internal/models/notification`

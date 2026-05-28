@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	energymodel "github.com/ev-dev-labs/teslasync/internal/models/energy"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -92,7 +94,7 @@ func isNotPopulated(err error) bool {
 // canonical energy in Wh and distance in meters. Keep those units at this
 // boundary so the API/FE display layer owns presentation conversion.
 
-func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64, days int) ([]*models.EnergyStatsRow, error) {
+func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64, days int) ([]*energymodel.EnergyStatsRow, error) {
 	query := `SELECT
 		TO_CHAR(day, 'YYYY-MM-DD') AS date,
 		COALESCE(total_energy_wh, 0) AS energy_wh,
@@ -116,9 +118,9 @@ func (r *EnergyStatsRepo) GetDailyBreakdown(ctx context.Context, vehicleID int64
 	}
 	defer rows.Close()
 
-	var stats []*models.EnergyStatsRow
+	var stats []*energymodel.EnergyStatsRow
 	for rows.Next() {
-		s := &models.EnergyStatsRow{}
+		s := &energymodel.EnergyStatsRow{}
 		if err := rows.Scan(&s.Date, &s.EnergyWh, &s.DistanceM, &s.EfficiencyWhPerM, &s.Cost); err != nil {
 			return nil, err
 		}

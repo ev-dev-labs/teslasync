@@ -216,14 +216,7 @@ func (pc *LegacyPollingConfig) EnabledOnDemandVehicleDataEndpoints() []string {
 
 // CommandLog has moved to vehicle.go.
 
-// EnergyStatsRow represents a single day of energy data from cagg_fleet_stats.
-type EnergyStatsRow struct {
-	Date             string  `json:"date"`
-	EnergyWh         float64 `json:"energy_wh"`
-	DistanceM        float64 `json:"distance_m"`
-	EfficiencyWhPerM float64 `json:"efficiency_wh_per_m"`
-	Cost             float64 `json:"cost"`
-}
+// EnergyStatsRow moved to internal/models/energy in phase-R5.5.
 
 // BatterySnapshot was removed with the dropped battery_snapshots table.
 
