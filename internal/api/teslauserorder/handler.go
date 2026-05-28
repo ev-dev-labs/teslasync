@@ -1,28 +1,28 @@
-package api
+package teslauserorder
 
 import (
 	"encoding/json"
 	"net/http"
 	"time"
 
-	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
-
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+
+	"github.com/rs/zerolog/log"
 )
 
-// TeslaUserOrderHandler serves Tesla user order data.
-type TeslaUserOrderHandler struct {
+// Handler serves Tesla user order data.
+type Handler struct {
 	teslaClient *tesla.Client
 	orderRepo   *tesladb.TeslaUserOrderRepo
 }
 
-// NewTeslaUserOrderHandler creates a new handler.
-func NewTeslaUserOrderHandler(tc *tesla.Client, db *database.DB) *TeslaUserOrderHandler {
-	return &TeslaUserOrderHandler{
+// NewHandler creates a new handler.
+func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
+	return &Handler{
 		teslaClient: tc,
 		orderRepo:   tesladb.NewTeslaUserOrderRepo(db),
 	}
@@ -36,11 +36,11 @@ type ordersEnvelope struct {
 
 // Orders returns stored orders from DB with sync metadata.
 // GET /api/v1/tesla/user/orders
-func (h *TeslaUserOrderHandler) Orders(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Orders(w http.ResponseWriter, r *http.Request) {
 	orders, err := h.orderRepo.GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to fetch tesla user orders")
-		writeError(w, http.StatusInternalServerError, "failed to fetch orders")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch orders")
 		return
 	}
 
@@ -54,14 +54,14 @@ func (h *TeslaUserOrderHandler) Orders(w http.ResponseWriter, r *http.Request) {
 		ts := orders[0].FetchedAt.UTC().Format(time.RFC3339)
 		env.FetchedAt = &ts
 	}
-	writeJSON(w, http.StatusOK, env)
+	httpx.WriteJSON(w, http.StatusOK, env)
 }
 
 // RefreshOrders fetches from Tesla API and replaces DB rows.
 // POST /api/v1/tesla/user/orders/refresh
-func (h *TeslaUserOrderHandler) RefreshOrders(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshOrders(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -70,12 +70,12 @@ func (h *TeslaUserOrderHandler) RefreshOrders(w http.ResponseWriter, r *http.Req
 	body, status, err := h.teslaClient.GetUserOrders(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("tesla user orders API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Msg("tesla user orders non-2xx")
-		writeError(w, http.StatusBadGateway, "Tesla API returned non-success status")
+		httpx.WriteError(w, http.StatusBadGateway, "Tesla API returned non-success status")
 		return
 	}
 
@@ -85,7 +85,7 @@ func (h *TeslaUserOrderHandler) RefreshOrders(w http.ResponseWriter, r *http.Req
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		log.Error().Err(err).Msg("failed to parse tesla orders response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *TeslaUserOrderHandler) RefreshOrders(w http.ResponseWriter, r *http.Req
 
 	if err := h.orderRepo.ReplaceAll(r.Context(), orders); err != nil {
 		log.Error().Err(err).Msg("failed to save tesla user orders")
-		writeError(w, http.StatusInternalServerError, "failed to save orders")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save orders")
 		return
 	}
 
