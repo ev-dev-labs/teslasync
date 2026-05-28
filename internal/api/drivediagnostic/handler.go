@@ -32,20 +32,18 @@
 // signal_window covering [now-window, now] — the operator can still
 // inspect "what's it doing right now".
 
-package api
+package drivediagnostic
 
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
-	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
-
-	"github.com/go-chi/chi/v5"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
 // driveLookup is the narrow Drive-load surface used by the handler.
@@ -60,17 +58,17 @@ type driveDiagnosticReader interface {
 	SignalsAround(ctx context.Context, vehicleID int64, ts time.Time, window time.Duration, fields []string) ([]drivedb.DriveDiagnosticSignal, error)
 }
 
-// DriveDiagnosticHandler serves the per-drive "why did it end" view.
-type DriveDiagnosticHandler struct {
+// Handler serves the per-drive "why did it end" view.
+type Handler struct {
 	driveRepo driveLookup
 	diagRepo  driveDiagnosticReader
 }
 
-// NewDriveDiagnosticHandler constructs a handler bound to driveRepo +
+// NewHandler constructs a handler bound to driveRepo +
 // diagRepo. nil-typed args are normalised to nil-interface so the
 // handler's nil-check trips cleanly.
-func NewDriveDiagnosticHandler(driveRepo *drivedb.DriveRepo, diagRepo *drivedb.DriveDiagnosticRepo) *DriveDiagnosticHandler {
-	h := &DriveDiagnosticHandler{}
+func NewHandler(driveRepo *drivedb.DriveRepo, diagRepo *drivedb.DriveDiagnosticRepo) *Handler {
+	h := &Handler{}
 	if driveRepo != nil {
 		h.driveRepo = driveRepo
 	}
@@ -80,10 +78,10 @@ func NewDriveDiagnosticHandler(driveRepo *drivedb.DriveRepo, diagRepo *drivedb.D
 	return h
 }
 
-// newDriveDiagnosticHandlerForTest is the interface-typed constructor
+// newHandlerForTest is the interface-typed constructor
 // for unit tests.
-func newDriveDiagnosticHandlerForTest(driveRepo driveLookup, diagRepo driveDiagnosticReader) *DriveDiagnosticHandler {
-	return &DriveDiagnosticHandler{driveRepo: driveRepo, diagRepo: diagRepo}
+func newHandlerForTest(driveRepo driveLookup, diagRepo driveDiagnosticReader) *Handler {
+	return &Handler{driveRepo: driveRepo, diagRepo: diagRepo}
 }
 
 // DriveDiagnosticResponse is the JSON shape returned by Get.
@@ -118,25 +116,24 @@ var driveDiagnosticSignalFields = []string{
 }
 
 // Get serves the GET endpoint.
-func (h *DriveDiagnosticHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.driveRepo == nil || h.diagRepo == nil {
-		writeError(w, http.StatusServiceUnavailable, "drive diagnostic not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "drive diagnostic not configured")
 		return
 	}
-	idStr := chi.URLParam(r, "driveID")
-	driveID, err := strconv.ParseInt(idStr, 10, 64)
+	driveID, err := apiparams.URLParamInt64(r, "driveID")
 	if err != nil || driveID <= 0 {
-		writeError(w, http.StatusBadRequest, "driveID must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "driveID must be a positive integer")
 		return
 	}
 
 	drive, err := h.driveRepo.GetByID(r.Context(), driveID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	if drive == nil {
-		writeError(w, http.StatusNotFound, "drive not found")
+		httpx.WriteError(w, http.StatusNotFound, "drive not found")
 		return
 	}
 
@@ -146,7 +143,7 @@ func (h *DriveDiagnosticHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	windowDur, ok := driveDiagnosticAllowedWindows[windowStr]
 	if !ok {
-		writeError(w, http.StatusBadRequest, "window must be one of 30s,60s,5m,15m")
+		httpx.WriteError(w, http.StatusBadRequest, "window must be one of 30s,60s,5m,15m")
 		return
 	}
 
@@ -159,12 +156,12 @@ func (h *DriveDiagnosticHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	transitions, err := h.diagRepo.TransitionsAround(r.Context(), drive.VehicleID, anchor, windowDur)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	signals, err := h.diagRepo.SignalsAround(r.Context(), drive.VehicleID, anchor, windowDur, driveDiagnosticSignalFields)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -181,5 +178,5 @@ func (h *DriveDiagnosticHandler) Get(w http.ResponseWriter, r *http.Request) {
 		ts := drive.EndTs.UTC().Format(time.RFC3339Nano)
 		resp.EndTs = &ts
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }

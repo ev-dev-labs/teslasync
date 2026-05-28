@@ -19,6 +19,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
+	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
@@ -2897,7 +2898,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// (or NOW for in-progress drives), explaining WHY
 				// the FSM ended the drive. Read-only, 60/min IP
 				// throttle, inherits /api/v1 forward-auth gate.
-				driveDiagnosticHandler := NewDriveDiagnosticHandler(
+				driveDiagnosticHandler := apidrived.NewHandler(
 					drivedb.NewDriveRepo(db),
 					drivedb.NewDriveDiagnosticRepo(db.Pool),
 				)

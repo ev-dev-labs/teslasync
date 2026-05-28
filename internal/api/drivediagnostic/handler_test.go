@@ -8,7 +8,7 @@
 //   - 200 happy path for ended drive
 //   - 200 in-progress drive returns end_ts null but window populated
 
-package api
+package drivediagnostic
 
 import (
 	"context"
@@ -68,7 +68,7 @@ func (f *fakeDriveDiagReader) SignalsAround(_ context.Context, vid int64, _ time
 
 // ----- routing helper --------------------------------------------
 
-func mountDriveDiagnostic(h *DriveDiagnosticHandler) http.Handler {
+func mountDriveDiagnostic(h *Handler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/drives/{driveID}/why-ended", h.Get)
 	return r
@@ -76,9 +76,9 @@ func mountDriveDiagnostic(h *DriveDiagnosticHandler) http.Handler {
 
 // ----- tests -----------------------------------------------------
 
-func TestDriveDiagnosticHandler_NilRepos_Returns503(t *testing.T) {
+func TestHandler_NilRepos_Returns503(t *testing.T) {
 	t.Parallel()
-	h := NewDriveDiagnosticHandler(nil, nil)
+	h := NewHandler(nil, nil)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/drives/1/why-ended")
@@ -91,7 +91,7 @@ func TestDriveDiagnosticHandler_NilRepos_Returns503(t *testing.T) {
 	}
 }
 
-func TestDriveDiagnosticHandler_BadDriveID(t *testing.T) {
+func TestHandler_BadDriveID(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		name string
@@ -106,7 +106,7 @@ func TestDriveDiagnosticHandler_BadDriveID(t *testing.T) {
 			t.Parallel()
 			drv := &fakeDriveLookup{}
 			diag := &fakeDriveDiagReader{}
-			h := newDriveDiagnosticHandlerForTest(drv, diag)
+			h := newHandlerForTest(drv, diag)
 			srv := httptest.NewServer(mountDriveDiagnostic(h))
 			defer srv.Close()
 			resp, err := http.Get(srv.URL + "/drives/" + tc.id + "/why-ended")
@@ -124,11 +124,11 @@ func TestDriveDiagnosticHandler_BadDriveID(t *testing.T) {
 	}
 }
 
-func TestDriveDiagnosticHandler_DriveNotFound_Returns404(t *testing.T) {
+func TestHandler_DriveNotFound_Returns404(t *testing.T) {
 	t.Parallel()
 	drv := &fakeDriveLookup{drive: nil}
 	diag := &fakeDriveDiagReader{}
-	h := newDriveDiagnosticHandlerForTest(drv, diag)
+	h := newHandlerForTest(drv, diag)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/drives/999/why-ended")
@@ -147,11 +147,11 @@ func TestDriveDiagnosticHandler_DriveNotFound_Returns404(t *testing.T) {
 	}
 }
 
-func TestDriveDiagnosticHandler_DriveRepoErr_Returns500(t *testing.T) {
+func TestHandler_DriveRepoErr_Returns500(t *testing.T) {
 	t.Parallel()
 	drv := &fakeDriveLookup{err: errors.New("db down")}
 	diag := &fakeDriveDiagReader{}
-	h := newDriveDiagnosticHandlerForTest(drv, diag)
+	h := newHandlerForTest(drv, diag)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/drives/1/why-ended")
@@ -164,13 +164,13 @@ func TestDriveDiagnosticHandler_DriveRepoErr_Returns500(t *testing.T) {
 	}
 }
 
-func TestDriveDiagnosticHandler_BadWindow_Returns400(t *testing.T) {
+func TestHandler_BadWindow_Returns400(t *testing.T) {
 	t.Parallel()
 	start := time.Now().UTC().Add(-1 * time.Hour)
 	end := time.Now().UTC().Add(-5 * time.Minute)
 	drv := &fakeDriveLookup{drive: &drivemodel.Drive{ID: 1, VehicleID: 7, StartTs: start, EndTs: &end}}
 	diag := &fakeDriveDiagReader{}
-	h := newDriveDiagnosticHandlerForTest(drv, diag)
+	h := newHandlerForTest(drv, diag)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/drives/1/why-ended?window=bogus")
@@ -183,7 +183,7 @@ func TestDriveDiagnosticHandler_BadWindow_Returns400(t *testing.T) {
 	}
 }
 
-func TestDriveDiagnosticHandler_HappyPath_EndedDrive(t *testing.T) {
+func TestHandler_HappyPath_EndedDrive(t *testing.T) {
 	t.Parallel()
 	start := time.Now().UTC().Add(-1 * time.Hour)
 	end := time.Now().UTC().Add(-5 * time.Minute)
@@ -204,7 +204,7 @@ func TestDriveDiagnosticHandler_HappyPath_EndedDrive(t *testing.T) {
 			{TS: end.Add(-3 * time.Second), Field: "VehicleSpeed", Value: "0"},
 		},
 	}
-	h := newDriveDiagnosticHandlerForTest(drv, diag)
+	h := newHandlerForTest(drv, diag)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/drives/42/why-ended?window=60s")
@@ -248,7 +248,7 @@ func TestDriveDiagnosticHandler_HappyPath_EndedDrive(t *testing.T) {
 	}
 }
 
-func TestDriveDiagnosticHandler_HappyPath_InProgressDrive(t *testing.T) {
+func TestHandler_HappyPath_InProgressDrive(t *testing.T) {
 	t.Parallel()
 	start := time.Now().UTC().Add(-30 * time.Minute)
 	drv := &fakeDriveLookup{drive: &drivemodel.Drive{
@@ -261,7 +261,7 @@ func TestDriveDiagnosticHandler_HappyPath_InProgressDrive(t *testing.T) {
 		transitions: []drivedb.DriveDiagnosticTransition{},
 		signals:     []drivedb.DriveDiagnosticSignal{},
 	}
-	h := newDriveDiagnosticHandlerForTest(drv, diag)
+	h := newHandlerForTest(drv, diag)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/drives/7/why-ended")
@@ -288,13 +288,13 @@ func TestDriveDiagnosticHandler_HappyPath_InProgressDrive(t *testing.T) {
 	}
 }
 
-func TestDriveDiagnosticHandler_DiagRepoErr_Returns500(t *testing.T) {
+func TestHandler_DiagRepoErr_Returns500(t *testing.T) {
 	t.Parallel()
 	start := time.Now().UTC().Add(-1 * time.Hour)
 	end := time.Now().UTC().Add(-5 * time.Minute)
 	drv := &fakeDriveLookup{drive: &drivemodel.Drive{ID: 1, VehicleID: 1, StartTs: start, EndTs: &end}}
 	diag := &fakeDriveDiagReader{errTrans: errors.New("hypertable busy")}
-	h := newDriveDiagnosticHandlerForTest(drv, diag)
+	h := newHandlerForTest(drv, diag)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/drives/1/why-ended")
