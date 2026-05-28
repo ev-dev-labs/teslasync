@@ -44,33 +44,45 @@ Each subpackage row lists:
 
 ### `internal/models/` (36 files, 2 tests) — owner: **R5**
 
-> **R5 SHIPPED — status as of HEAD `97e2242f` (R5.14 + blame-ignore push)**:
-> R5.1–R5.14 + R5.99 cleanup all DONE on `chore/repo-reorganization`.
-> 14 of 19 planned subpackages shipped as standalone bounded contexts:
+> **R5 COMPLETE — status as of HEAD `e2bf8f06` (R5.18 + blame-ignore push)**:
+> R5.1–R5.19 + R5.99 cleanup all DONE on `chore/repo-reorganization`.
+> **All 19 planned subpackages shipped** as standalone bounded contexts:
 > alert (R5.1), auth (R5.2), backup (R5.3), chatbot (R5.4), energy
 > (R5.5), export (R5.6), geo (R5.7), settings (R5.8), notification
 > (R5.9), automation (R5.10), tesla (R5.11), vehicle (R5.12), charging
-> (R5.13), drive (R5.14). The 3 unused `Deref*` helpers were deleted in
-> R5.99 per the no-tech-debt mandate.
+> (R5.13), drive (R5.14), dashboard (R5.15), security (R5.16), signal
+> (R5.17), system (R5.18 — LARGEST single-file cluster, 15 types + 24
+> caller files), telemetry (R5.19). The 3 unused `Deref*` helpers were
+> deleted in R5.99 per the no-tech-debt mandate.
 >
-> **NOT YET SHIPPED (5 remaining):** `models/dashboard`, `models/security`,
-> `models/signal`, `models/system`, `models/telemetry` — these are
-> existing parent-dir files (`dashboard_layout.go`, `security.go`,
-> `signal.go`, `system.go`, `telemetry.go` + co-located files) that
-> still live in `package models`. Future R5.15–R5.19 cluster moves will
-> finish the job; they follow the same `git mv` + package-rename +
-> alias-import recipe used by R5.12/13/14.
+> **DEFERRED REMNANTS (carved as separate phase later):** The
+> formerly-flat parent dir still contains ~16 .go files in `package
+> models` for sub-clusters of already-carved domains:
 >
-> **R5.0 expansion (2026-05-28):** initial R1 audit only classified the
-> 35 single-purpose files. `models.go` (679 lines) is NOT a thin glue
-> file — it hosts 35 concrete domain types + 7 helper funcs/methods
-> that span **7 NEW bounded contexts** not covered by R1 (`auth`,
-> `backup`, `chatbot`, `energy`, `export`, `geo`, `settings`). The
-> target list below grows from 12 → **19 subpkgs**, and the parent
-> retains ONLY `doc.go` after R5 completes. The 3 unused
-> `DerefFloat64/DerefString/DerefBool` helpers (zero callers across
-> the entire repo) are **deleted** as part of R5 per the no-tech-debt
-> mandate.
+> - **`automation*` (6 files):** root `Automation` CTI type +
+>   `automation_step_{action,condition,trigger}.go` + 2 enum files. These
+>   are referenced by 40+ caller files across automation/, api/,
+>   database/. R5.10 intentionally carved only the `Extras`
+>   (AutomationHistory + AutomationVariable) into `models/automation/`
+>   and deferred the root type. Follow-up phase: **R5.20 automation-core**.
+> - **`notification*` (5 files):** root `Notification` + 4 channel-DTO
+>   files + `enum_notification_channels.go`. Referenced by 30+ callers.
+>   R5.9 intentionally carved only the `NotificationLog*` family into
+>   `models/notification/`. Follow-up phase: **R5.21 notification-core**.
+> - **`trip.go` (1 file):** Trip type referenced by 2 callers. Trivial,
+>   but no `trip/` subpackage yet. Follow-up phase: **R5.22 trip**
+>   (could fold into vehicle or stand alone).
+> - **`push_subscription.go`, `quiet_hours.go`:** WebPush + automation
+>   ancillary types. Could fold into notification-core or stay.
+> - **`enum_vehicle_states.go`:** vehicle FSM enums — could fold into
+>   models/vehicle/ in a future trivial move.
+>
+> Per ADR-011 §5 (parent-dir mechanical rule) the long-term destination
+> is "parent contains only doc.go + composition file" — the 16
+> remaining files represent ~6 deferred sub-phases (R5.20–R5.25) of
+> the same recipe but with significantly higher caller blast radius
+> than any single R5.X completed so far. Each one is its own
+> standalone cluster carve with full gate cycle.
 
 - **Files moving out of parent:** 35 (was 33; +`models.go` itself
   split across destinations, +`models_test.go` tests split alongside
