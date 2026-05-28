@@ -28,6 +28,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -121,7 +122,7 @@ func main() {
 	// install a nil sink (LoggedTransport then logs zerolog only).
 	var inboundAPILogger apilog.Logger
 	if cfg.APILogs.Enabled {
-		apiLogRepo := database.NewAPICallLogRepo(db)
+		apiLogRepo := systemdb.NewAPICallLogRepo(db)
 		inboundAPILogger = apilog.NewAsync(apiLogRepo, apilog.AsyncOptions{
 			QueueCapacity: cfg.APILogs.QueueCapacity,
 			BatchSize:     cfg.APILogs.BatchSize,

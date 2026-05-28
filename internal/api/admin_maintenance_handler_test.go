@@ -11,14 +11,14 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 )
 
 // fakeSystemStateStore is an in-memory SystemStateStore used by these
 // unit tests. It captures the last Set arguments so assertions can
 // inspect them and supports forced-error injection for the failure paths.
 type fakeSystemStateStore struct {
-	state     database.SystemState
+	state     systemdb.SystemState
 	getErr    error
 	setErr    error
 	lastMode  string
@@ -28,30 +28,30 @@ type fakeSystemStateStore struct {
 	calls     int
 }
 
-func (f *fakeSystemStateStore) Get(_ context.Context) (database.SystemState, error) {
+func (f *fakeSystemStateStore) Get(_ context.Context) (systemdb.SystemState, error) {
 	if f.getErr != nil {
-		return database.SystemState{}, f.getErr
+		return systemdb.SystemState{}, f.getErr
 	}
 	return f.state, nil
 }
 
-func (f *fakeSystemStateStore) Set(_ context.Context, mode, message string, until *time.Time, updatedBy string) (database.SystemState, error) {
+func (f *fakeSystemStateStore) Set(_ context.Context, mode, message string, until *time.Time, updatedBy string) (systemdb.SystemState, error) {
 	f.calls++
 	f.lastMode = mode
 	f.lastMsg = message
 	f.lastUntil = until
 	f.lastBy = updatedBy
 	if f.setErr != nil {
-		return database.SystemState{}, f.setErr
+		return systemdb.SystemState{}, f.setErr
 	}
-	f.state = database.SystemState{
+	f.state = systemdb.SystemState{
 		Mode:               mode,
-		MaintenanceMessage: database.NormalizeMaintenanceMessage(message),
+		MaintenanceMessage: systemdb.NormalizeMaintenanceMessage(message),
 		MaintenanceUntil:   until,
 		UpdatedAt:          time.Date(2025, 1, 2, 3, 4, 5, 0, time.UTC),
 		UpdatedBy:          updatedBy,
 	}
-	if mode == database.SystemModeOK {
+	if mode == systemdb.SystemModeOK {
 		f.state.MaintenanceMessage = ""
 		f.state.MaintenanceUntil = nil
 	}
@@ -66,8 +66,8 @@ func newTestCfg() *config.Config {
 
 func TestAdminMaintenanceGet(t *testing.T) {
 	store := &fakeSystemStateStore{
-		state: database.SystemState{
-			Mode:               database.SystemModeMaintenance,
+		state: systemdb.SystemState{
+			Mode:               systemdb.SystemModeMaintenance,
 			MaintenanceMessage: "DB upgrade",
 			UpdatedAt:          time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC),
 			UpdatedBy:          "alice",
@@ -228,7 +228,7 @@ func TestBuildMaintenanceProviderEnvWins(t *testing.T) {
 		},
 	}
 	store := &fakeSystemStateStore{
-		state: database.SystemState{Mode: database.SystemModeOK},
+		state: systemdb.SystemState{Mode: systemdb.SystemModeOK},
 	}
 	provider := BuildMaintenanceProvider(store, cfg)
 	view := provider(context.Background())
@@ -244,8 +244,8 @@ func TestBuildMaintenanceProviderEnvWins(t *testing.T) {
 func TestBuildMaintenanceProviderEnvOkClearsBanner(t *testing.T) {
 	cfg := &config.Config{System: config.SystemConfig{Mode: "ok"}}
 	store := &fakeSystemStateStore{
-		state: database.SystemState{
-			Mode:               database.SystemModeMaintenance,
+		state: systemdb.SystemState{
+			Mode:               systemdb.SystemModeMaintenance,
 			MaintenanceMessage: "DB row says maintenance",
 		},
 	}
@@ -261,8 +261,8 @@ func TestBuildMaintenanceProviderDBFallback(t *testing.T) {
 	cfg := &config.Config{System: config.SystemConfig{Mode: ""}}
 	until := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
 	store := &fakeSystemStateStore{
-		state: database.SystemState{
-			Mode:               database.SystemModeMaintenance,
+		state: systemdb.SystemState{
+			Mode:               systemdb.SystemModeMaintenance,
 			MaintenanceMessage: "scheduled outage",
 			MaintenanceUntil:   &until,
 			UpdatedAt:          time.Date(2024, 12, 31, 23, 0, 0, 0, time.UTC),
@@ -282,7 +282,7 @@ func TestBuildMaintenanceProviderDBFallback(t *testing.T) {
 func TestBuildMaintenanceProviderUnknownEnvFallsThrough(t *testing.T) {
 	cfg := &config.Config{System: config.SystemConfig{Mode: "weird"}}
 	store := &fakeSystemStateStore{
-		state: database.SystemState{Mode: database.SystemModeOK},
+		state: systemdb.SystemState{Mode: systemdb.SystemModeOK},
 	}
 	provider := BuildMaintenanceProvider(store, cfg)
 	view := provider(context.Background())
@@ -296,7 +296,7 @@ func TestBuildMaintenanceProviderNilStoreReturnsOk(t *testing.T) {
 	cfg := &config.Config{}
 	provider := BuildMaintenanceProvider(nil, cfg)
 	view := provider(context.Background())
-	if view.Mode != database.SystemModeOK || view.Source != "default" {
+	if view.Mode != systemdb.SystemModeOK || view.Source != "default" {
 		t.Fatalf("nil store fallback wrong: %+v", view)
 	}
 }

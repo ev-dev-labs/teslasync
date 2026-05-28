@@ -1,33 +1,57 @@
-refactor(R4.18): carve internal/database/telemetry (raw + fleet errors)
+refactor(R4.19): carve internal/database/system (software_update + state + api_call_log + guard)
 
-Move Tesla telemetry-state persistence into its own bounded-context
-subpkg per ADR-011.
+Move system-wide admin/observability repos into their own bounded-
+context subpkg per ADR-011.
 
-Files (2 source; 4 caller files swept):
-  internal/database/raw_telemetry_repo.go              -> internal/database/telemetry/raw_repo.go
-  internal/database/tesla_fleet_telemetry_error_repo.go -> internal/database/telemetry/fleet_error_repo.go
-  internal/database/telemetry/doc.go                   (NEW, // Layer: adapter)
+Files (4 source + 3 tests; 21 caller files swept):
+  internal/database/software_update_repo.go       -> internal/database/system/software_update_repo.go
+  internal/database/software_update_repo_test.go  -> internal/database/system/software_update_repo_test.go
+  internal/database/system_state_repo.go          -> internal/database/system/state_repo.go
+  internal/database/system_state_repo_test.go     -> internal/database/system/state_repo_test.go
+  internal/database/api_call_log_repo.go          -> internal/database/system/api_call_log_repo.go
+  internal/database/guard_repo.go                 -> internal/database/system/guard_repo.go
+  internal/database/guard_repo_test.go            -> internal/database/system/guard_repo_test.go
+  internal/database/system/doc.go                 (NEW, // Layer: adapter)
 
-Symbols promoted (alias 	elemetrydb):
-  RawTelemetryRepo, NewRawTelemetryRepo, CaptureStats,
-  TeslaFleetTelemetryErrorRepo, NewTeslaFleetTelemetryErrorRepo,
-  GetActiveErrorVINs, GetErrors, ReplaceErrorVINs, UpsertErrors.
+Symbols promoted (alias systemdb per ADR-011):
+  SoftwareUpdateRepo, NewSoftwareUpdateRepo,
+  SystemStateRepo, NewSystemStateRepo, SystemState,
+  SystemModeOK, SystemModeDegraded, SystemModeMaintenance,
+  ErrInvalidSystemMode, MaintenanceMessageMaxLen,
+  NormalizeMaintenanceMessage, ValidateSystemMode,
+  APICallLogRepo, NewAPICallLogRepo,
+  GuardRepo, NewGuardRepo, GuardEvent, GuardStatus,
+  ErrGuardEventNotFound.
 
-Note: raw_repo.go references *database.MongoClient (qualified to parent
-during transform). MongoClient stays in parent per ADR-006 because it
-is shared infra not specific to telemetry capture.
+Intentionally NOT carved (kept as DB infrastructure in parent):
+  maintenance.go       — methods receive *DB (CleanupOldPositions /
+                         CleanupOldStates / VacuumAnalyze /
+                         GetPositionStats); moving requires DB-method
+                         relocation.
+  query_budget_tracer.go — wired into DB constructor via
+                         newCompositeTracer(); parent database.go
+                         consumes directly.
 
-Callers updated:
-  internal/api/{fleet_telemetry_error_handler,telemetry_handler,
-                telemetry_handler_wiring}.go
-  internal/app/new.go
+Callers updated (database.X -> systemdb.X + import alias):
+  cmd/{automation-worker,notification-worker}/main.go
+  internal/ai/tools/summary/software_update.go
+  internal/api/{admin_maintenance_handler,admin_maintenance_handler_test,
+                ai_software_update_changelog_summarizer_handler,
+                api_call_log_handler,guard_handler,guard_handler_test,
+                health,router,software_update_handler,status_v1_handler,
+                telemetry_handler,telemetry_handler_wiring}.go
+  internal/apilog/logger.go
+  internal/app/{app,new}.go
+  internal/tesla_pipeline/software_update_observer.go
 
-No helper deps. No cycles (parent peers had no symbol references).
+No helper deps. No cycles. LESSON 33 reconfirmed: SystemMode* untyped
+consts surfaced only after first build pass.
 
-internal/database allowlist ratchet: 44 -> 42 src files.
+internal/database allowlist ratchet: 42 -> 38 src files.
 
-Carved subpkgs so far (20): achievement, sharing, admin, gdpr,
+Carved subpkgs so far (21): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
-audit, charging, drive, trip, energy, ai, export, worker, telemetry.
+audit, charging, drive, trip, energy, ai, export, worker, telemetry,
+system.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

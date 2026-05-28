@@ -1,4 +1,4 @@
-package database
+package system
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -141,7 +142,7 @@ RETURNING id`
 		t.Skip("uq_software_updates_vehicle_version not present — apply migration 000197 first")
 	}
 
-	repo := NewSoftwareUpdateRepo(&DB{Pool: pool})
+	repo := NewSoftwareUpdateRepo(&database.DB{Pool: pool})
 
 	const (
 		concurrency = 50 // Mirror the prod observation — 50 rows of one version.
@@ -235,7 +236,7 @@ func TestSoftwareUpdateRepo_InsertIfChanged_DistinctVersions(t *testing.T) {
 		_, _ = pool.Exec(context.Background(), `DELETE FROM vehicles WHERE id = $1`, vehicleID)
 	})
 
-	repo := NewSoftwareUpdateRepo(&DB{Pool: pool})
+	repo := NewSoftwareUpdateRepo(&database.DB{Pool: pool})
 	versions := []string{"2026.14.1-dist", "2026.14.2-dist", "2026.14.3-dist"}
 	for _, v := range versions {
 		inserted, err := repo.InsertIfChanged(ctx, vehicleID, v, "installed")
@@ -293,7 +294,7 @@ func TestSoftwareUpdateRepo_GetLatestVersion_NoRows(t *testing.T) {
 		t.Skipf("TESLASYNC_TEST_DB unreachable: %v", err)
 	}
 
-	repo := NewSoftwareUpdateRepo(&DB{Pool: pool})
+	repo := NewSoftwareUpdateRepo(&database.DB{Pool: pool})
 
 	// Use a clearly-invalid vehicle_id that won't exist in the table —
 	// negative ids are never assigned by BIGSERIAL and the query joins

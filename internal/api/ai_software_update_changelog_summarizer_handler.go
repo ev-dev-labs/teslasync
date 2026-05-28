@@ -97,7 +97,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 )
 
 // aiSoftwareUpdateChangelogSummarizerMaxIterations bounds the
@@ -178,7 +178,7 @@ type AISoftwareUpdateChangelogSummarizerHandler struct {
 // source:     the production summary.VehicleSoftwareSource
 //
 //	(currently AIVehicleSoftwareSource — wraps the
-//	SAME database.SoftwareUpdateRepo.GetByVehicle the
+//	SAME systemdb.SoftwareUpdateRepo.GetByVehicle the
 //	canonical baseline GET
 //	/api/v1/vehicles/{id}/software-updates handler
 //	already serves; the canonical baseline surface
@@ -385,7 +385,7 @@ var _ http.Handler = (*AISoftwareUpdateChangelogSummarizerHandler)(nil)
 // summary.VehicleSoftwareSource. The canonical baseline
 // /api/v1/vehicles/{id}/software-updates surface remains
 // reachable to the operator at all times — this adapter wraps
-// the SAME database.SoftwareUpdateRepo.GetByVehicle the
+// the SAME systemdb.SoftwareUpdateRepo.GetByVehicle the
 // canonical SoftwareUpdateHandler.GetByVehicle already serves,
 // so the LLM and the operator see the SAME firmware history.
 // No new SQL is issued by this adapter; the read path is the
@@ -393,16 +393,16 @@ var _ http.Handler = (*AISoftwareUpdateChangelogSummarizerHandler)(nil)
 // install_cadence_days field is computed in pure Go from the
 // installed_at timestamps the existing query returns.
 type AIVehicleSoftwareSource struct {
-	repo *database.SoftwareUpdateRepo
+	repo *systemdb.SoftwareUpdateRepo
 }
 
 // NewAIVehicleSoftwareSource constructs the production adapter.
 // The repo is required; the constructor panics on a nil so a
 // wiring mistake surfaces at boot rather than as a nil-deref on
 // first AI request.
-func NewAIVehicleSoftwareSource(repo *database.SoftwareUpdateRepo) *AIVehicleSoftwareSource {
+func NewAIVehicleSoftwareSource(repo *systemdb.SoftwareUpdateRepo) *AIVehicleSoftwareSource {
 	if repo == nil {
-		panic("api: NewAIVehicleSoftwareSource: nil *database.SoftwareUpdateRepo")
+		panic("api: NewAIVehicleSoftwareSource: nil *systemdb.SoftwareUpdateRepo")
 	}
 	return &AIVehicleSoftwareSource{repo: repo}
 }

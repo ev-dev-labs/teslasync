@@ -6,17 +6,18 @@ import (
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/rs/zerolog/log"
 )
 
 // APICallLogHandler handles API call log HTTP requests.
 type APICallLogHandler struct {
-	repo *database.APICallLogRepo
+	repo *systemdb.APICallLogRepo
 }
 
 func NewAPICallLogHandler(db *database.DB) *APICallLogHandler {
 	return &APICallLogHandler{
-		repo: database.NewAPICallLogRepo(db),
+		repo: systemdb.NewAPICallLogRepo(db),
 	}
 }
 

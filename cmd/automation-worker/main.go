@@ -24,6 +24,7 @@ import (
 	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -106,7 +107,7 @@ func main() {
 	// (LoggedTransport then logs zerolog only).
 	var inboundAPILogger apilog.Logger
 	if cfg.APILogs.Enabled {
-		apiLogRepo := database.NewAPICallLogRepo(db)
+		apiLogRepo := systemdb.NewAPICallLogRepo(db)
 		inboundAPILogger = apilog.NewAsync(apiLogRepo, apilog.AsyncOptions{
 			QueueCapacity: cfg.APILogs.QueueCapacity,
 			BatchSize:     cfg.APILogs.BatchSize,

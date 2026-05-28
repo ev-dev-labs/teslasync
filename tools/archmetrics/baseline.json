@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:21:22Z",
+  "generated_at": "2026-05-28T16:26:01Z",
   "go_version": "go1.26.1",
-  "commit_sha": "c855100a19b87d9bf33ff21f60c3b0da972b7680",
+  "commit_sha": "891a81906b14767cc1cd6958da6cb9eb47eb7d2a",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -39,7 +39,7 @@
       "path": "cmd/automation-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 357,
+      "loc": 358,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -53,6 +53,7 @@
         "internal/database/automation",
         "internal/database/energy",
         "internal/database/notification",
+        "internal/database/system",
         "internal/mqtt",
         "internal/notification",
         "internal/resilience",
@@ -154,7 +155,7 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 525,
+      "loc": 526,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -164,6 +165,7 @@
         "internal/database",
         "internal/database/alert",
         "internal/database/notification",
+        "internal/database/system",
         "internal/models/alert",
         "internal/models/notification",
         "internal/models/vehicle",
@@ -2508,7 +2510,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126630,
+      "loc": 126638,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2646,6 +2648,7 @@
         "internal/database/notification",
         "internal/database/observability",
         "internal/database/sharing",
+        "internal/database/system",
         "internal/database/telemetry",
         "internal/database/trip",
         "internal/database/user",
@@ -3175,7 +3178,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1842,
+      "loc": 1844,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3191,6 +3194,7 @@
         "internal/database/gdpr",
         "internal/database/notification",
         "internal/database/observability",
+        "internal/database/system",
         "internal/database/telemetry",
         "internal/database/trip",
         "internal/dataquality",
@@ -3705,9 +3709,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 42,
-      "test_files": 17,
-      "loc": 10188,
+      "go_files": 38,
+      "test_files": 14,
+      "loc": 8797,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3722,7 +3726,6 @@
         "internal/tracing"
       ],
       "files": [
-        "api_call_log_repo.go",
         "cache.go",
         "cache_test.go",
         "circuit_breaker.go",
@@ -3734,8 +3737,6 @@
         "from_map.go",
         "geofence_repo.go",
         "geofence_repo_bulk.go",
-        "guard_repo.go",
-        "guard_repo_test.go",
         "helpers.go",
         "helpers_test.go",
         "maintenance.go",
@@ -3762,10 +3763,6 @@
         "signal_log_repo.go",
         "signals_catalog_repo.go",
         "signals_catalog_repo_test.go",
-        "software_update_repo.go",
-        "software_update_repo_test.go",
-        "system_state_repo.go",
-        "system_state_repo_test.go",
         "tesla_charging_history_repo.go",
         "tesla_charging_session_repo.go",
         "tesla_user_config_repo.go",
@@ -4106,6 +4103,29 @@
       "files": [
         "doc.go",
         "token_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/system",
+      "go_files": 5,
+      "test_files": 3,
+      "loc": 1431,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/models/tesla",
+        "internal/models/vehicle"
+      ],
+      "files": [
+        "api_call_log_repo.go",
+        "doc.go",
+        "guard_repo.go",
+        "guard_repo_test.go",
+        "software_update_repo.go",
+        "software_update_repo_test.go",
+        "state_repo.go",
+        "state_repo_test.go"
       ]
     },
     {
@@ -6083,13 +6103,13 @@
   "cmd_loc": {
     "cmd/ai-eval": 151,
     "cmd/audit-signal-types": 498,
-    "cmd/automation-worker": 353,
+    "cmd/automation-worker": 354,
     "cmd/backup-verify": 96,
     "cmd/chaos-runner": 144,
     "cmd/export-worker": 252,
     "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 521,
+    "cmd/notification-worker": 522,
     "cmd/ocpp-server": 91,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 655,
@@ -7141,7 +7161,6 @@
       "totp_secret.go"
     ],
     "internal/database": [
-      "api_call_log_repo.go",
       "cache.go",
       "circuit_breaker.go",
       "database.go",
@@ -7149,7 +7168,6 @@
       "from_map.go",
       "geofence_repo.go",
       "geofence_repo_bulk.go",
-      "guard_repo.go",
       "helpers.go",
       "maintenance.go",
       "migrate.go",
@@ -7169,8 +7187,6 @@
       "signal_log_reader_query.go",
       "signal_log_repo.go",
       "signals_catalog_repo.go",
-      "software_update_repo.go",
-      "system_state_repo.go",
       "tesla_charging_history_repo.go",
       "tesla_charging_session_repo.go",
       "tesla_user_config_repo.go",
@@ -7290,6 +7306,13 @@
     "internal/database/sharing": [
       "doc.go",
       "token_repo.go"
+    ],
+    "internal/database/system": [
+      "api_call_log_repo.go",
+      "doc.go",
+      "guard_repo.go",
+      "software_update_repo.go",
+      "state_repo.go"
     ],
     "internal/database/telemetry": [
       "doc.go",
@@ -8019,8 +8042,8 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 42,
-      "flat_parent_test_files": 17,
+      "flat_parent_go_files": 38,
+      "flat_parent_test_files": 14,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
@@ -8034,7 +8057,8 @@
         "drive",
         "energy",
         "export",
-        "notification"
+        "notification",
+        "system"
       ],
       "missing_subpkgs": [
         "dashboard",
@@ -8044,7 +8068,6 @@
         "onboarding",
         "settings",
         "signal",
-        "system",
         "tesla",
         "vehicle"
       ],

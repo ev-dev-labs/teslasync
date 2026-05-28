@@ -22,7 +22,7 @@
 //	other than Off/Unknown counts as active — Idle, Armed, Aware,
 //	Panic, Quiet all mean Sentry is enabled even when not currently
 //	alarming.
-package database
+package system
 
 import (
 	"context"

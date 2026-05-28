@@ -21,7 +21,7 @@ const softwareUpdateInsertTimeout = 2 * time.Second
 
 // SoftwareUpdateRecorder is the narrow write interface the
 // SoftwareUpdateObserver depends on. It is implemented in production by
-// *database.SoftwareUpdateRepo and mocked in tests. Keeping the surface to
+// *systemdb.SoftwareUpdateRepo and mocked in tests. Keeping the surface to
 // a single method avoids pulling the full repo into observer unit tests.
 //
 // The status argument is forwarded verbatim ("installed" for the observer's

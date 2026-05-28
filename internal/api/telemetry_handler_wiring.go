@@ -6,6 +6,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
@@ -32,9 +33,9 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		db:             db,
 		posRepo:        database.NewPositionRepo(db),
 		vehicleRepo:    database.NewVehicleRepo(db),
-		swUpdateRepo:   database.NewSoftwareUpdateRepo(db),
+		swUpdateRepo:   systemdb.NewSoftwareUpdateRepo(db),
 		mqttClient:     mc,
-		logRepo:        database.NewAPICallLogRepo(db),
+		logRepo:        systemdb.NewAPICallLogRepo(db),
 		eventHub:       hub,
 		sessionTracker: NewTelemetrySessionTracker(db, eventBus, geocoder, nil),
 		alertEvaluator: NewTelemetryAlertEvaluator(db, eventBus, hub, func() pahomqtt.Client {

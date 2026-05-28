@@ -60,7 +60,7 @@
 //     duplicate write paths." → query_vehicle_software delegates
 //     to a narrow VehicleSoftwareSource read interface satisfied
 //     at boot by an adapter that wraps the SAME
-//     database.SoftwareUpdateRepo.GetByVehicle reader the
+//     systemdb.SoftwareUpdateRepo.GetByVehicle reader the
 //     canonical baseline GET /api/v1/vehicles/{id}/software-updates
 //     handler already serves; no new SQL.
 //     retrieve_update_notes delegates to the F7 rag.Retriever
@@ -451,7 +451,7 @@ type VehicleSoftwareEnvelope struct {
 // VehicleSoftwareSource is the narrow port the
 // query_vehicle_software tool delegates to. In production it
 // is satisfied by an AIVehicleSoftwareSource adapter that
-// wraps the SAME database.SoftwareUpdateRepo.GetByVehicle
+// wraps the SAME systemdb.SoftwareUpdateRepo.GetByVehicle
 // reader the canonical baseline GET
 // /api/v1/vehicles/{id}/software-updates handler already
 // serves. The canonical baseline surface remains reachable to

@@ -19,6 +19,7 @@ import (
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
@@ -77,7 +78,7 @@ type App struct {
 	TeslaClient *tesla.Client
 
 	// API call logging (Phase-38)
-	APILogRepo         *database.APICallLogRepo
+	APILogRepo         *systemdb.APICallLogRepo
 	InboundAPILogger   api.APICallLogger
 	OutboundAPILogSink httputil.APICallSink
 

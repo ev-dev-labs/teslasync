@@ -1,10 +1,11 @@
-package database
+package system
 
 import (
 	"context"
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/jackc/pgx/v5"
@@ -12,10 +13,10 @@ import (
 
 // APICallLogRepo provides API call log data access operations.
 type APICallLogRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewAPICallLogRepo(db *DB) *APICallLogRepo {
+func NewAPICallLogRepo(db *database.DB) *APICallLogRepo {
 	return &APICallLogRepo{db: db}
 }
 

@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T16:21:24Z, Go go1.26.1, commit c855100a19b87d9bf33ff21f60c3b0da972b7680_
+_Generated 2026-05-28T16:26:02Z, Go go1.26.1, commit 891a81906b14767cc1cd6958da6cb9eb47eb7d2a_
 
 ## Summary
 
-- Packages: 281
+- Packages: 282
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374566
+- Total non-blank LOC under cmd/+internal/+tools/: 374618
 
 ## cmd/* main.go LOC
 
@@ -15,13 +15,13 @@ _Generated 2026-05-28T16:21:24Z, Go go1.26.1, commit c855100a19b87d9bf33ff21f60c
 |---|---:|
 | cmd/ai-eval/main.go | 151 |
 | cmd/audit-signal-types/main.go | 498 |
-| cmd/automation-worker/main.go | 353 |
+| cmd/automation-worker/main.go | 354 |
 | cmd/backup-verify/main.go | 96 |
 | cmd/chaos-runner/main.go | 144 |
 | cmd/export-worker/main.go | 252 |
 | cmd/fleet-config-validator/main.go | 327 |
 | cmd/metric-coverage-audit/main.go | 126 |
-| cmd/notification-worker/main.go | 521 |
+| cmd/notification-worker/main.go | 522 |
 | cmd/ocpp-server/main.go | 91 |
 | cmd/protogen-tesla/main.go | 73 |
 | cmd/pub-test-signal/main.go | 655 |
@@ -42,13 +42,13 @@ _Generated 2026-05-28T16:21:24Z, Go go1.26.1, commit c855100a19b87d9bf33ff21f60c
 |---|---:|---:|---:|:---:|---|
 | cmd/ai-eval | 2 | 0 | 155 | yes | cmd-internal |
 | cmd/audit-signal-types | 2 | 0 | 521 | yes | cmd-internal |
-| cmd/automation-worker | 2 | 0 | 357 | yes | cmd-internal |
+| cmd/automation-worker | 2 | 0 | 358 | yes | cmd-internal |
 | cmd/backup-verify | 2 | 0 | 110 | yes | cmd-internal |
 | cmd/chaos-runner | 2 | 0 | 156 | yes | cmd-internal |
 | cmd/export-worker | 2 | 0 | 256 | yes | cmd-internal |
 | cmd/fleet-config-validator | 2 | 1 | 491 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
-| cmd/notification-worker | 2 | 0 | 525 | yes | cmd-internal |
+| cmd/notification-worker | 2 | 0 | 526 | yes | cmd-internal |
 | cmd/ocpp-server | 2 | 0 | 103 | yes | cmd-internal |
 | cmd/protogen-tesla | 4 | 1 | 2297 | yes | cmd-internal |
 | cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
@@ -170,9 +170,9 @@ _Generated 2026-05-28T16:21:24Z, Go go1.26.1, commit c855100a19b87d9bf33ff21f60c
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126630 | yes | handler |
+| internal/api | 271 | 163 | 126638 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
-| internal/app | 6 | 1 | 1842 | yes | app |
+| internal/app | 6 | 1 | 1844 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
 | internal/app/auditviewersvc | 3 | 0 | 77 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
@@ -197,7 +197,7 @@ _Generated 2026-05-28T16:21:24Z, Go go1.26.1, commit c855100a19b87d9bf33ff21f60c
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 42 | 17 | 10188 | yes | platform |
+| internal/database | 38 | 14 | 8797 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes | adapter |
 | internal/database/admin | 6 | 0 | 873 | yes | adapter |
 | internal/database/ai | 3 | 2 | 928 | yes | adapter |
@@ -214,6 +214,7 @@ _Generated 2026-05-28T16:21:24Z, Go go1.26.1, commit c855100a19b87d9bf33ff21f60c
 | internal/database/notification | 5 | 1 | 1950 | yes | adapter |
 | internal/database/observability | 7 | 0 | 1396 | yes | adapter |
 | internal/database/sharing | 2 | 0 | 127 | yes | adapter |
+| internal/database/system | 5 | 3 | 1431 | yes | adapter |
 | internal/database/telemetry | 3 | 0 | 287 | yes | adapter |
 | internal/database/trip | 4 | 1 | 775 | yes | adapter |
 | internal/database/user | 3 | 1 | 806 | yes | adapter |
@@ -335,7 +336,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 42 / 17 | 22 | 12 | 10 |
+| `internal/database` | R4 | 143 | 38 / 14 | 22 | 13 | 9 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 
@@ -412,6 +413,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/database/energy`
 - `internal/database/export`
 - `internal/database/notification`
+- `internal/database/system`
 
 **Planned but not yet on disk:**
 - `internal/database/dashboard`
@@ -421,7 +423,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/database/onboarding`
 - `internal/database/settings`
 - `internal/database/signal`
-- `internal/database/system`
 - `internal/database/tesla`
 - `internal/database/vehicle`
 

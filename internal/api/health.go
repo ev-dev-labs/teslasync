@@ -11,6 +11,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -360,7 +361,7 @@ func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, buff
 			"checked_at": time.Now(),
 			// Default service-mode block — overwritten below when systemState is wired.
 			// Always emitted so SPA consumers can rely on the field's presence.
-			"mode":   database.SystemModeOK,
+			"mode":   systemdb.SystemModeOK,
 			"source": "default",
 		}
 		if systemState != nil {

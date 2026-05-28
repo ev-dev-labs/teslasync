@@ -15,7 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 )
 
 // Phase-43a / Prompt 0006 — HTTP tests for GuardHandler.
@@ -47,13 +47,13 @@ type fakeGuardRepo struct {
 	exists    map[int64]bool
 	existsErr error
 
-	status    map[int64]database.GuardStatus
+	status    map[int64]systemdb.GuardStatus
 	statusErr error
 
-	events    map[int64][]database.GuardEvent
+	events    map[int64][]systemdb.GuardEvent
 	eventsErr error
 
-	ackEvents      map[ackKey]database.GuardEvent
+	ackEvents      map[ackKey]systemdb.GuardEvent
 	ackErr         error
 	ackUseSentinel bool // when true, return ErrGuardEventNotFound for any miss
 
@@ -90,15 +90,15 @@ func (f *fakeGuardRepo) VehicleExists(ctx context.Context, vehicleID int64) (boo
 	return f.exists[vehicleID], nil
 }
 
-func (f *fakeGuardRepo) Status(ctx context.Context, vehicleID int64, now time.Time) (database.GuardStatus, error) {
+func (f *fakeGuardRepo) Status(ctx context.Context, vehicleID int64, now time.Time) (systemdb.GuardStatus, error) {
 	f.gotStatusCalls = append(f.gotStatusCalls, guardStatusCall{vehicleID, now})
 	if f.statusErr != nil {
-		return database.GuardStatus{}, f.statusErr
+		return systemdb.GuardStatus{}, f.statusErr
 	}
 	return f.status[vehicleID], nil
 }
 
-func (f *fakeGuardRepo) Events(ctx context.Context, vehicleID int64, limit int) ([]database.GuardEvent, error) {
+func (f *fakeGuardRepo) Events(ctx context.Context, vehicleID int64, limit int) ([]systemdb.GuardEvent, error) {
 	f.gotEventsCalls = append(f.gotEventsCalls, guardEventsCall{vehicleID, limit})
 	if f.eventsErr != nil {
 		return nil, f.eventsErr
@@ -106,17 +106,17 @@ func (f *fakeGuardRepo) Events(ctx context.Context, vehicleID int64, limit int) 
 	return f.events[vehicleID], nil
 }
 
-func (f *fakeGuardRepo) Acknowledge(ctx context.Context, vehicleID, eventID int64, actor string) (database.GuardEvent, error) {
+func (f *fakeGuardRepo) Acknowledge(ctx context.Context, vehicleID, eventID int64, actor string) (systemdb.GuardEvent, error) {
 	f.gotAckCalls = append(f.gotAckCalls, guardAckCall{vehicleID, eventID, actor})
 	if f.ackErr != nil {
-		return database.GuardEvent{}, f.ackErr
+		return systemdb.GuardEvent{}, f.ackErr
 	}
 	ev, ok := f.ackEvents[ackKey{vehicleID, eventID}]
 	if !ok {
 		if f.ackUseSentinel {
-			return database.GuardEvent{}, database.ErrGuardEventNotFound
+			return systemdb.GuardEvent{}, systemdb.ErrGuardEventNotFound
 		}
-		return database.GuardEvent{}, database.ErrGuardEventNotFound
+		return systemdb.GuardEvent{}, systemdb.ErrGuardEventNotFound
 	}
 	// Mutate the returned row to reflect the new ack metadata so the
 	// handler echo back includes the actor.
@@ -197,7 +197,7 @@ func TestGuard_Status_ActiveSentry(t *testing.T) {
 	lastTS := now.Add(-30 * time.Minute)
 	repo := &fakeGuardRepo{
 		exists: map[int64]bool{42: true},
-		status: map[int64]database.GuardStatus{
+		status: map[int64]systemdb.GuardStatus{
 			42: {
 				VehicleID:           42,
 				SentryModeActive:    true,
@@ -241,7 +241,7 @@ func TestGuard_Status_InactiveSentry(t *testing.T) {
 	lastTS := now.Add(-3 * time.Hour)
 	repo := &fakeGuardRepo{
 		exists: map[int64]bool{99: true},
-		status: map[int64]database.GuardStatus{
+		status: map[int64]systemdb.GuardStatus{
 			99: {
 				VehicleID:           99,
 				SentryModeActive:    false,
@@ -309,7 +309,7 @@ func TestGuard_Events_PreservesRepoOrder(t *testing.T) {
 	t3 := now.Add(-3 * time.Hour)
 	repo := &fakeGuardRepo{
 		exists: map[int64]bool{42: true},
-		events: map[int64][]database.GuardEvent{
+		events: map[int64][]systemdb.GuardEvent{
 			42: {
 				{ID: 103, VehicleID: 42, TS: t1, EventType: "sentry_mode", ToState: guardStrPtr("SentryModeStateArmed")},
 				{ID: 102, VehicleID: 42, TS: t2, EventType: "sentry_mode", ToState: guardStrPtr("SentryModeStateAware")},
@@ -384,7 +384,7 @@ func TestGuard_Events_LimitClamp(t *testing.T) {
 			t.Parallel()
 			repo := &fakeGuardRepo{
 				exists: map[int64]bool{42: true},
-				events: map[int64][]database.GuardEvent{42: {}},
+				events: map[int64][]systemdb.GuardEvent{42: {}},
 			}
 			h := newGuardHandlerForTest(repo, nil, nil, false, now)
 			rec := httptest.NewRecorder()
@@ -438,7 +438,7 @@ func TestGuard_Acknowledge_Success(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeGuardRepo{
 		exists: map[int64]bool{42: true},
-		ackEvents: map[ackKey]database.GuardEvent{
+		ackEvents: map[ackKey]systemdb.GuardEvent{
 			{vehicleID: 42, eventID: 5}: {
 				ID: 5, VehicleID: 42, TS: now.Add(-1 * time.Hour),
 				EventType: "sentry_mode", ToState: guardStrPtr("SentryModeStateAware"),
@@ -454,7 +454,7 @@ func TestGuard_Acknowledge_Success(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200, body=%s", rec.Code, rec.Body.String())
 	}
-	var body database.GuardEvent
+	var body systemdb.GuardEvent
 	mustDecode(t, rec.Body.Bytes(), &body)
 	if body.ID != 5 {
 		t.Errorf("id = %d, want 5", body.ID)
@@ -475,7 +475,7 @@ func TestGuard_Acknowledge_EmptyActorAllowed(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeGuardRepo{
 		exists: map[int64]bool{42: true},
-		ackEvents: map[ackKey]database.GuardEvent{
+		ackEvents: map[ackKey]systemdb.GuardEvent{
 			{vehicleID: 42, eventID: 5}: {ID: 5, VehicleID: 42, TS: now, EventType: "sentry_mode"},
 		},
 	}
@@ -504,7 +504,7 @@ func TestGuard_Acknowledge_NotFound_CrossVehicle(t *testing.T) {
 	// succeed and cannot leak the existence of event 5 either.
 	repo := &fakeGuardRepo{
 		exists: map[int64]bool{42: true},
-		ackEvents: map[ackKey]database.GuardEvent{
+		ackEvents: map[ackKey]systemdb.GuardEvent{
 			{vehicleID: 99, eventID: 5}: {ID: 5, VehicleID: 99, TS: now, EventType: "sentry_mode"},
 		},
 		ackUseSentinel: true,

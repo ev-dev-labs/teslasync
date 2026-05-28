@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
@@ -44,9 +45,9 @@ type TelemetryHandler struct {
 	db                    *database.DB
 	posRepo               *database.PositionRepo
 	vehicleRepo           *database.VehicleRepo
-	swUpdateRepo          *database.SoftwareUpdateRepo
+	swUpdateRepo          *systemdb.SoftwareUpdateRepo
 	mqttClient            *mqtt.Client
-	logRepo               *database.APICallLogRepo
+	logRepo               *systemdb.APICallLogRepo
 	eventHub              *EventHub
 	sessionTracker        *TelemetrySessionTracker
 	alertEvaluator        *TelemetryAlertEvaluator

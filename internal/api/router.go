@@ -26,6 +26,7 @@ import (
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
@@ -543,7 +544,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
 	alertMessageHandler := NewAlertMessageHandler()
 	commandHandler := NewCommandHandler(db, teslaClient)
-	guardHandler := NewGuardHandler(database.NewGuardRepo(db.Pool), database.NewVehicleRepo(db), teslaClient, cfg)
+	guardHandler := NewGuardHandler(systemdb.NewGuardRepo(db.Pool), database.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)
 	signalLogReader := database.NewSignalLogReader(db)
 	batteryHandler := NewBatteryHandler(db, stateReader)
@@ -1939,7 +1940,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// banner state. Repo + handler + maintenance provider are constructed
 	// once here so the GET /system/health closure and the admin POST share
 	// the same store and env-vs-DB resolver semantics.
-	systemStateRepo := database.NewSystemStateRepo(db)
+	systemStateRepo := systemdb.NewSystemStateRepo(db)
 	adminMaintenanceHandler := NewAdminMaintenanceHandler(systemStateRepo, cfg, db)
 	maintenanceProvider := BuildMaintenanceProvider(systemStateRepo, cfg)
 
@@ -2234,11 +2235,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// registered before the handler constructor below so the
 	// strategy's allowedTools resolve at boot. The
 	// VehicleSoftware adapter wraps the SAME
-	// database.SoftwareUpdateRepo.GetByVehicle reader the
+	// systemdb.SoftwareUpdateRepo.GetByVehicle reader the
 	// canonical baseline GET /api/v1/vehicles/{id}/software-updates
 	// handler already serves; the canonical baseline surface
 	// remains reachable to the operator at all times.
-	aiVehicleSoftwareSource := NewAIVehicleSoftwareSource(database.NewSoftwareUpdateRepo(db))
+	aiVehicleSoftwareSource := NewAIVehicleSoftwareSource(systemdb.NewSoftwareUpdateRepo(db))
 	summary.RegisterSoftwareUpdateChangelogSummarizerTools(aiToolRegistry, summary.SoftwareUpdateChangelogSummarizerSources{
 		Retriever:       aiSoftwareUpdateChangelogSummarizerRetriever,
 		VehicleSoftware: aiVehicleSoftwareSource,

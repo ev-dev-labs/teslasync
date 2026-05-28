@@ -1,4 +1,4 @@
-package database
+package system
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -49,11 +50,11 @@ type SystemState struct {
 // All accessors target row id=1 (enforced by a CHECK constraint in the
 // migration) so callers don't pass an ID.
 type SystemStateRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewSystemStateRepo wires a repository against the shared pool.
-func NewSystemStateRepo(db *DB) *SystemStateRepo {
+func NewSystemStateRepo(db *database.DB) *SystemStateRepo {
 	return &SystemStateRepo{db: db}
 }
 

@@ -24,6 +24,7 @@ import (
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
@@ -534,7 +535,7 @@ func (a *App) initTeslaClient() {
 }
 
 func (a *App) initAPILogging() {
-	a.APILogRepo = database.NewAPICallLogRepo(a.DB)
+	a.APILogRepo = systemdb.NewAPICallLogRepo(a.DB)
 
 	if a.Cfg.APILogs.Enabled {
 		a.InboundAPILogger = apilog.NewAsync(a.APILogRepo, apilog.AsyncOptions{
@@ -845,7 +846,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 	// Without this, the Software Updates page goes stale the moment the
 	// vehicle installs a new firmware after the deploy that ripped out
 	// the legacy ingest path.
-	swUpdateRepo := database.NewSoftwareUpdateRepo(a.DB)
+	swUpdateRepo := systemdb.NewSoftwareUpdateRepo(a.DB)
 	swUpdateObserver := teslapipeline.NewSoftwareUpdateObserver(swUpdateRepo, pipelineLogger)
 
 	normPipeline := normalize.New(unitRepo, pipelineRouter, pipelineLogger, sideEffects, swUpdateObserver)

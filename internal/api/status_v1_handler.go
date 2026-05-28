@@ -35,7 +35,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 )
 
@@ -205,7 +205,7 @@ func (h *StatusV1Handler) snapshot(ctx context.Context) StatusSnapshot {
 	var maint *StatusMaintenance
 	if h.cfg.MaintenanceState != nil {
 		view := h.cfg.MaintenanceState(ctx)
-		if view.Mode != "" && view.Mode != database.SystemModeOK {
+		if view.Mode != "" && view.Mode != systemdb.SystemModeOK {
 			m := &StatusMaintenance{Mode: view.Mode, Message: view.Message, Source: view.Source}
 			if view.Until != nil {
 				ts := view.Until.UTC().Format(time.RFC3339)

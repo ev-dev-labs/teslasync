@@ -42,6 +42,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -52,9 +53,9 @@ import (
 // follow the same pattern).
 type guardRepository interface {
 	VehicleExists(ctx context.Context, vehicleID int64) (bool, error)
-	Status(ctx context.Context, vehicleID int64, now time.Time) (database.GuardStatus, error)
-	Events(ctx context.Context, vehicleID int64, limit int) ([]database.GuardEvent, error)
-	Acknowledge(ctx context.Context, vehicleID, eventID int64, actor string) (database.GuardEvent, error)
+	Status(ctx context.Context, vehicleID int64, now time.Time) (systemdb.GuardStatus, error)
+	Events(ctx context.Context, vehicleID int64, limit int) ([]systemdb.GuardEvent, error)
+	Acknowledge(ctx context.Context, vehicleID, eventID int64, actor string) (systemdb.GuardEvent, error)
 }
 
 // guardVehicleResolver looks up the VIN required by tesla.Client.SendCommand.
@@ -92,7 +93,7 @@ type GuardHandler struct {
 // 501-vs-attempt decision is stable for the lifetime of the router and
 // can be tested without mutating shared config state.
 func NewGuardHandler(
-	repo *database.GuardRepo,
+	repo *systemdb.GuardRepo,
 	vehicles *database.VehicleRepo,
 	cmd *tesla.Client,
 	cfg *config.Config,
@@ -179,7 +180,7 @@ func (h *GuardHandler) Status(w http.ResponseWriter, r *http.Request) {
 // `select: (data) => safeArray(data?.events)` extraction pattern.
 type GuardEventsResponse struct {
 	VehicleID int64                 `json:"vehicle_id"`
-	Events    []database.GuardEvent `json:"events"`
+	Events    []systemdb.GuardEvent `json:"events"`
 }
 
 // Events serves GET /vehicles/{vehicleID}/guard/events?limit=N.
@@ -237,7 +238,7 @@ func (h *GuardHandler) Events(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if events == nil {
-		events = []database.GuardEvent{}
+		events = []systemdb.GuardEvent{}
 	}
 
 	writeJSON(w, http.StatusOK, GuardEventsResponse{
@@ -295,7 +296,7 @@ func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromRequest(r, h.authHdr)
 
 	updated, err := h.repo.Acknowledge(ctx, vehicleID, eventID, actor)
-	if errors.Is(err, database.ErrGuardEventNotFound) {
+	if errors.Is(err, systemdb.ErrGuardEventNotFound) {
 		writeError(w, http.StatusNotFound, "guard event not found")
 		return
 	}

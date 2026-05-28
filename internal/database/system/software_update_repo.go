@@ -1,20 +1,21 @@
-package database
+package system
 
 import (
 	"context"
 	"errors"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/jackc/pgx/v5"
 )
 
 type SoftwareUpdateRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewSoftwareUpdateRepo(db *DB) *SoftwareUpdateRepo {
+func NewSoftwareUpdateRepo(db *database.DB) *SoftwareUpdateRepo {
 	return &SoftwareUpdateRepo{db: db}
 }
 

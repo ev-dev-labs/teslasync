@@ -13,6 +13,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 )
 
 // Phase-46 / Prompt 04 — admin maintenance handler.
@@ -44,12 +45,12 @@ const (
 )
 
 // SystemStateStore is the narrow interface the handler depends on.
-// Implemented by *database.SystemStateRepo in production; mocked in
+// Implemented by *systemdb.SystemStateRepo in production; mocked in
 // admin_maintenance_handler_test.go so the unit tests don't require a
 // live database.
 type SystemStateStore interface {
-	Get(ctx context.Context) (database.SystemState, error)
-	Set(ctx context.Context, mode, message string, until *time.Time, updatedBy string) (database.SystemState, error)
+	Get(ctx context.Context) (systemdb.SystemState, error)
+	Set(ctx context.Context, mode, message string, until *time.Time, updatedBy string) (systemdb.SystemState, error)
 }
 
 // AdminMaintenanceHandler serves the POST/GET admin endpoints that
@@ -134,7 +135,7 @@ func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	mode, err := database.ValidateSystemMode(req.Mode)
+	mode, err := systemdb.ValidateSystemMode(req.Mode)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid mode (expected ok|degraded|maintenance)")
 		return
@@ -159,7 +160,7 @@ func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 	// Reject obviously-unusable inputs early so the audit row tells the
 	// operator their typo back instead of recording a write nobody can
 	// see in the UI.
-	if mode != database.SystemModeOK && message == "" && untilTime == nil && (req.Message == nil || strings.TrimSpace(*req.Message) == "") {
+	if mode != systemdb.SystemModeOK && message == "" && untilTime == nil && (req.Message == nil || strings.TrimSpace(*req.Message) == "") {
 		// Allow mode-only "degraded" toggles — the SPA will fall back
 		// to the i18n default banner text when message is empty.
 		// This branch only fires when *all* descriptive fields are blank;
@@ -170,7 +171,7 @@ func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 	actor := actorFromRequest(r, h.authHdr)
 	state, err := h.store.Set(r.Context(), mode, message, untilTime, actor)
 	if err != nil {
-		if errors.Is(err, database.ErrInvalidSystemMode) {
+		if errors.Is(err, systemdb.ErrInvalidSystemMode) {
 			writeError(w, http.StatusBadRequest, "invalid mode (expected ok|degraded|maintenance)")
 			return
 		}
@@ -195,7 +196,7 @@ func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 
 // toResponse formats a SystemState into the JSON shape, layering on
 // the env-override marker when the env mode is currently winning.
-func (h *AdminMaintenanceHandler) toResponse(s database.SystemState) adminMaintenanceResponse {
+func (h *AdminMaintenanceHandler) toResponse(s systemdb.SystemState) adminMaintenanceResponse {
 	var until *string
 	if s.MaintenanceUntil != nil {
 		t := s.MaintenanceUntil.UTC().Format(time.RFC3339)
@@ -222,7 +223,7 @@ func (h *AdminMaintenanceHandler) toResponse(s database.SystemState) adminMainte
 // operator can force-clear the banner via the env knob.
 func envWins(envMode string) bool {
 	switch envMode {
-	case database.SystemModeOK, database.SystemModeDegraded, database.SystemModeMaintenance:
+	case systemdb.SystemModeOK, systemdb.SystemModeDegraded, systemdb.SystemModeMaintenance:
 		return true
 	default:
 		return false
@@ -251,7 +252,7 @@ func BuildMaintenanceProvider(store SystemStateStore, cfg *config.Config) func(c
 				Message: envMsg,
 				Source:  "env",
 			}
-			if envMode == database.SystemModeOK {
+			if envMode == systemdb.SystemModeOK {
 				view.Message = ""
 			} else if envParsedUntil != nil {
 				v := *envParsedUntil
@@ -260,12 +261,12 @@ func BuildMaintenanceProvider(store SystemStateStore, cfg *config.Config) func(c
 			return view
 		}
 		if store == nil {
-			return MaintenanceView{Mode: database.SystemModeOK, Source: "default"}
+			return MaintenanceView{Mode: systemdb.SystemModeOK, Source: "default"}
 		}
 		s, err := store.Get(ctx)
 		if err != nil {
 			log.Warn().Err(err).Msg("maintenance provider: system_state read failed; returning ok")
-			return MaintenanceView{Mode: database.SystemModeOK, Source: "default"}
+			return MaintenanceView{Mode: systemdb.SystemModeOK, Source: "default"}
 		}
 		view := MaintenanceView{
 			Mode:      s.Mode,

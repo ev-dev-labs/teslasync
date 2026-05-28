@@ -52,7 +52,7 @@ type Logger interface {
 
 // BatchInserter is the database port the async writer uses to flush a
 // batch of entries. Production wiring uses
-// (*database.APICallLogRepo).CreateBatch which is implemented via
+// (*systemdb.APICallLogRepo).CreateBatch which is implemented via
 // pgx.CopyFrom for low-overhead insertion.
 type BatchInserter interface {
 	CreateBatch(ctx context.Context, batch []*teslamodel.APICallLog) error

@@ -7,15 +7,16 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/rs/zerolog/log"
 )
 
 type SoftwareUpdateHandler struct {
-	repo *database.SoftwareUpdateRepo
+	repo *systemdb.SoftwareUpdateRepo
 }
 
 func NewSoftwareUpdateHandler(db *database.DB) *SoftwareUpdateHandler {
-	return &SoftwareUpdateHandler{repo: database.NewSoftwareUpdateRepo(db)}
+	return &SoftwareUpdateHandler{repo: systemdb.NewSoftwareUpdateRepo(db)}
 }
 
 func (h *SoftwareUpdateHandler) List(w http.ResponseWriter, r *http.Request) {
