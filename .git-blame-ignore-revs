@@ -158,3 +158,5 @@ bd5812ba58cbd3e441ac77e1855aaf152bbf4db6
 cb3900b6b2c77353e7de0f3c0866e6c823a1bdb1
 # R4.14 energy cluster carve (internal/database/energy/) — 4 src files
 5e1f4b2aea2b4a8d9b576ca5ca1d9d6da46b81b3
+# R4.15 ai cluster carve (database/ai_call_log + ai_chat_continuations -> database/ai/)
+6eef54ec1d6cf698d34f49d7096ce914df6638b4
