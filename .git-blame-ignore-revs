@@ -113,3 +113,4 @@ d67d2dc1e1a96abfe5d6b6271541bc0f618ca765  # R6.7.5: toolstest exported fixtures 
 dcb84b30b1c90805766613a48f335f5e476013e5  # R6.22: carve ai/tools/digest (lesson 10: cross-tool DoesNotShadow cycle)
 d65d74f149e515b029f1f3a3746d45d7a7dd353a  # R6.23: carve ai/tools/yir (year-in-review)
 b66486d33deba3a99d69ee53d6f9a08f4cc0d807  # R6.24: carve ai/tools/anomaly (lesson 11: anomalytool alias)
+ceb0b71952bd2147f50451f78de61f9eb8e292db  # R6.25: carve ai/tools/coaching (lessons 12-13: ptr helpers promoted + local fake duplication)
