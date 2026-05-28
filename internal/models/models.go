@@ -70,6 +70,7 @@ package models
 
 // SecurityEvent moved to internal/models/security in phase-R5.16.
 // SignalObservation, SignalCatalog, SignalDataKind, SignalStorageTier moved to internal/models/signal in phase-R5.17.
+// DashboardLayout, ChartAnnotation, AnnotationCategory, SavedView, PinnedItem, PinnedItemType moved to internal/models/dashboard in phase-R5.15.
 
 // ChargingTelemetry moved to charging_telemetry.go (regenerated for post-migration schema).
 

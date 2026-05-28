@@ -11,11 +11,12 @@ import (
 	"testing"
 	"time"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fakeSavedViewsRepo is a goroutine-safe in-memory implementation of
@@ -25,7 +26,7 @@ import (
 // invariants the DB enforces.
 type fakeSavedViewsRepo struct {
 	mu     sync.Mutex
-	rows   map[int64]*models.SavedView
+	rows   map[int64]*dashboardmodel.SavedView
 	nextID int64
 
 	listErr   error
@@ -36,18 +37,18 @@ type fakeSavedViewsRepo struct {
 
 func newFakeSavedViewsRepo() *fakeSavedViewsRepo {
 	return &fakeSavedViewsRepo{
-		rows:   map[int64]*models.SavedView{},
+		rows:   map[int64]*dashboardmodel.SavedView{},
 		nextID: 1,
 	}
 }
 
-func (f *fakeSavedViewsRepo) List(_ context.Context, filter database.SavedViewListFilter) ([]*models.SavedView, error) {
+func (f *fakeSavedViewsRepo) List(_ context.Context, filter database.SavedViewListFilter) ([]*dashboardmodel.SavedView, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.listErr != nil {
 		return nil, f.listErr
 	}
-	out := make([]*models.SavedView, 0)
+	out := make([]*dashboardmodel.SavedView, 0)
 	for _, row := range f.rows {
 		if row.Route != filter.Route {
 			continue
@@ -69,7 +70,7 @@ func (f *fakeSavedViewsRepo) List(_ context.Context, filter database.SavedViewLi
 	return out, nil
 }
 
-func (f *fakeSavedViewsRepo) GetByID(_ context.Context, id int64) (*models.SavedView, error) {
+func (f *fakeSavedViewsRepo) GetByID(_ context.Context, id int64) (*dashboardmodel.SavedView, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	row, ok := f.rows[id]
@@ -79,7 +80,7 @@ func (f *fakeSavedViewsRepo) GetByID(_ context.Context, id int64) (*models.Saved
 	return cloneSavedViewForTest(row), nil
 }
 
-func (f *fakeSavedViewsRepo) Create(_ context.Context, v *models.SavedView) error {
+func (f *fakeSavedViewsRepo) Create(_ context.Context, v *dashboardmodel.SavedView) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.createErr != nil {
@@ -104,7 +105,7 @@ func (f *fakeSavedViewsRepo) Create(_ context.Context, v *models.SavedView) erro
 	return nil
 }
 
-func (f *fakeSavedViewsRepo) Update(_ context.Context, id int64, patch database.SavedViewUpdate) (*models.SavedView, error) {
+func (f *fakeSavedViewsRepo) Update(_ context.Context, id int64, patch database.SavedViewUpdate) (*dashboardmodel.SavedView, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.updateErr != nil {
@@ -167,7 +168,7 @@ func (f *fakeSavedViewsRepo) clearDefaultLocked(userID *int64, route string) {
 	}
 }
 
-func cloneSavedViewForTest(in *models.SavedView) *models.SavedView {
+func cloneSavedViewForTest(in *dashboardmodel.SavedView) *dashboardmodel.SavedView {
 	out := *in
 	if in.UserID != nil {
 		v := *in.UserID
@@ -225,7 +226,7 @@ func TestSavedViews_List_EmptyReturnsArray(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
-	var out []*models.SavedView
+	var out []*dashboardmodel.SavedView
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -242,10 +243,10 @@ func TestSavedViews_List_ScopedByRoute(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	must(repo.Create(context.Background(), &models.SavedView{
+	must(repo.Create(context.Background(), &dashboardmodel.SavedView{
 		Name: "A", Route: "/drives", Query: "from=2025-04-01",
 	}))
-	must(repo.Create(context.Background(), &models.SavedView{
+	must(repo.Create(context.Background(), &dashboardmodel.SavedView{
 		Name: "B", Route: "/charging", Query: "type=supercharger",
 	}))
 
@@ -255,7 +256,7 @@ func TestSavedViews_List_ScopedByRoute(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var out []*models.SavedView
+	var out []*dashboardmodel.SavedView
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -272,17 +273,17 @@ func TestSavedViews_List_PinnedFirst(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	must(repo.Create(context.Background(), &models.SavedView{
+	must(repo.Create(context.Background(), &dashboardmodel.SavedView{
 		Name: "Plain", Route: "/drives", Query: "a=1", SortOrder: 0,
 	}))
-	must(repo.Create(context.Background(), &models.SavedView{
+	must(repo.Create(context.Background(), &dashboardmodel.SavedView{
 		Name: "Pinned", Route: "/drives", Query: "a=2", SortOrder: 5, IsPinned: true,
 	}))
 
 	handler := newSavedViewsHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/saved-views?route=/drives", nil))
-	var out []*models.SavedView
+	var out []*dashboardmodel.SavedView
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -304,7 +305,7 @@ func TestSavedViews_Create_Success(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want 201; body=%s", rec.Code, rec.Body.String())
 	}
-	var out models.SavedView
+	var out dashboardmodel.SavedView
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -327,7 +328,7 @@ func TestSavedViews_Create_StripsLeadingQuestion(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want 201; body=%s", rec.Code, rec.Body.String())
 	}
-	var out models.SavedView
+	var out dashboardmodel.SavedView
 	_ = json.Unmarshal(rec.Body.Bytes(), &out)
 	if out.Query != "sort=date" {
 		t.Fatalf("query should be stripped of leading ?: %q", out.Query)
@@ -426,7 +427,7 @@ func TestSavedViews_Create_DefaultClearsPrior(t *testing.T) {
 	// List the bucket — only B should still be the default.
 	rec = httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/saved-views?route=/drives", nil))
-	var out []*models.SavedView
+	var out []*dashboardmodel.SavedView
 	_ = json.Unmarshal(rec.Body.Bytes(), &out)
 	defaults := 0
 	for _, v := range out {
@@ -452,7 +453,7 @@ func TestSavedViews_Update_Success(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	row := &models.SavedView{Name: "A", Route: "/drives", Query: "a=1"}
+	row := &dashboardmodel.SavedView{Name: "A", Route: "/drives", Query: "a=1"}
 	must(repo.Create(context.Background(), row))
 
 	handler := newSavedViewsHandlerForTest(repo)
@@ -462,7 +463,7 @@ func TestSavedViews_Update_Success(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var out models.SavedView
+	var out dashboardmodel.SavedView
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -499,10 +500,10 @@ func TestSavedViews_Update_SetDefaultClearsPrior(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	must(repo.Create(context.Background(), &models.SavedView{
+	must(repo.Create(context.Background(), &dashboardmodel.SavedView{
 		Name: "A", Route: "/drives", Query: "a=1", IsDefault: true,
 	}))
-	b := &models.SavedView{Name: "B", Route: "/drives", Query: "a=2"}
+	b := &dashboardmodel.SavedView{Name: "B", Route: "/drives", Query: "a=2"}
 	must(repo.Create(context.Background(), b))
 
 	handler := newSavedViewsHandlerForTest(repo)
@@ -515,7 +516,7 @@ func TestSavedViews_Update_SetDefaultClearsPrior(t *testing.T) {
 
 	rec = httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/saved-views?route=/drives", nil))
-	var out []*models.SavedView
+	var out []*dashboardmodel.SavedView
 	_ = json.Unmarshal(rec.Body.Bytes(), &out)
 	for _, v := range out {
 		if v.Name == "A" && v.IsDefault {
@@ -535,7 +536,7 @@ func TestSavedViews_Update_RejectsLongName(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	must(repo.Create(context.Background(), &models.SavedView{
+	must(repo.Create(context.Background(), &dashboardmodel.SavedView{
 		Name: "A", Route: "/drives", Query: "a=1",
 	}))
 
@@ -559,7 +560,7 @@ func TestSavedViews_Delete_Success(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	must(repo.Create(context.Background(), &models.SavedView{
+	must(repo.Create(context.Background(), &dashboardmodel.SavedView{
 		Name: "A", Route: "/drives", Query: "a=1",
 	}))
 

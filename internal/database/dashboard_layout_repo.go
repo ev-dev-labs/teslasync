@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // DashboardLayoutRepo is the data-access layer for the `dashboard_layouts`
@@ -32,7 +32,7 @@ func NewDashboardLayoutRepo(db *DB) *DashboardLayoutRepo {
 // pinned to that vehicle PLUS the user's globals (vehicle_id IS NULL) so
 // the switcher can show "global default" entries even when a vehicle is
 // selected.
-func (r *DashboardLayoutRepo) List(ctx context.Context, userID *int64, vehicleID *int64) ([]*models.DashboardLayout, error) {
+func (r *DashboardLayoutRepo) List(ctx context.Context, userID *int64, vehicleID *int64) ([]*dashboardmodel.DashboardLayout, error) {
 	const query = `
 		SELECT id, user_id, vehicle_id, name, is_default, layout, created_at, updated_at
 		FROM dashboard_layouts
@@ -46,9 +46,9 @@ func (r *DashboardLayoutRepo) List(ctx context.Context, userID *int64, vehicleID
 	}
 	defer rows.Close()
 
-	var out []*models.DashboardLayout
+	var out []*dashboardmodel.DashboardLayout
 	for rows.Next() {
-		l := &models.DashboardLayout{}
+		l := &dashboardmodel.DashboardLayout{}
 		if err := rows.Scan(
 			&l.ID, &l.UserID, &l.VehicleID, &l.Name, &l.IsDefault, &l.Layout,
 			&l.CreatedAt, &l.UpdatedAt,
@@ -61,13 +61,13 @@ func (r *DashboardLayoutRepo) List(ctx context.Context, userID *int64, vehicleID
 }
 
 // GetByID fetches a single layout. Returns (nil, nil) if no row matches.
-func (r *DashboardLayoutRepo) GetByID(ctx context.Context, id int64) (*models.DashboardLayout, error) {
+func (r *DashboardLayoutRepo) GetByID(ctx context.Context, id int64) (*dashboardmodel.DashboardLayout, error) {
 	const query = `
 		SELECT id, user_id, vehicle_id, name, is_default, layout, created_at, updated_at
 		FROM dashboard_layouts
 		WHERE id = $1`
 
-	l := &models.DashboardLayout{}
+	l := &dashboardmodel.DashboardLayout{}
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&l.ID, &l.UserID, &l.VehicleID, &l.Name, &l.IsDefault, &l.Layout,
 		&l.CreatedAt, &l.UpdatedAt,
@@ -83,7 +83,7 @@ func (r *DashboardLayoutRepo) GetByID(ctx context.Context, id int64) (*models.Da
 
 // Create inserts a new layout. The `id`, `created_at`, `updated_at` fields
 // on the supplied struct are populated on success.
-func (r *DashboardLayoutRepo) Create(ctx context.Context, l *models.DashboardLayout) error {
+func (r *DashboardLayoutRepo) Create(ctx context.Context, l *dashboardmodel.DashboardLayout) error {
 	const query = `
 		INSERT INTO dashboard_layouts (user_id, vehicle_id, name, is_default, layout, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $6)

@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // PinnedRepo is the data-access layer for the `pinned_items` table
@@ -32,7 +32,7 @@ func NewPinnedRepo(db *DB) *PinnedRepo {
 // an exact context value.
 type PinnedListFilter struct {
 	UserID   *int64
-	ItemType models.PinnedItemType
+	ItemType dashboardmodel.PinnedItemType
 	// Context filters the results when non-nil. *Context == "" matches rows
 	// whose context column IS NULL (the canonical "no context" state).
 	Context *string
@@ -40,7 +40,7 @@ type PinnedListFilter struct {
 
 // List returns the pinned rows matching the filter, ordered by position
 // ascending then id ascending so the order is stable across reloads.
-func (r *PinnedRepo) List(ctx context.Context, f PinnedListFilter) ([]*models.PinnedItem, error) {
+func (r *PinnedRepo) List(ctx context.Context, f PinnedListFilter) ([]*dashboardmodel.PinnedItem, error) {
 	const query = `
 		SELECT id, user_id, item_type, item_id, position, pinned_at, context
 		FROM pinned_items
@@ -62,9 +62,9 @@ func (r *PinnedRepo) List(ctx context.Context, f PinnedListFilter) ([]*models.Pi
 	}
 	defer rows.Close()
 
-	var out []*models.PinnedItem
+	var out []*dashboardmodel.PinnedItem
 	for rows.Next() {
-		p := &models.PinnedItem{}
+		p := &dashboardmodel.PinnedItem{}
 		if scanErr := rows.Scan(
 			&p.ID, &p.UserID, &p.ItemType, &p.ItemID, &p.Position, &p.PinnedAt, &p.Context,
 		); scanErr != nil {
@@ -80,13 +80,13 @@ func (r *PinnedRepo) List(ctx context.Context, f PinnedListFilter) ([]*models.Pi
 
 // GetByID fetches a single row. Returns (nil, nil) when no row matches so
 // callers can return a clean 404 without unwrapping pgx-specific errors.
-func (r *PinnedRepo) GetByID(ctx context.Context, id int64) (*models.PinnedItem, error) {
+func (r *PinnedRepo) GetByID(ctx context.Context, id int64) (*dashboardmodel.PinnedItem, error) {
 	const query = `
 		SELECT id, user_id, item_type, item_id, position, pinned_at, context
 		FROM pinned_items
 		WHERE id = $1`
 
-	p := &models.PinnedItem{}
+	p := &dashboardmodel.PinnedItem{}
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&p.ID, &p.UserID, &p.ItemType, &p.ItemID, &p.Position, &p.PinnedAt, &p.Context,
 	)
@@ -108,7 +108,7 @@ var ErrPinnedAlreadyExists = errors.New("pinned item already exists")
 // the same (user, type, context) bucket down by one. Wrapped in a
 // transaction so a partial failure can never leave the bucket with two
 // rows at the same position.
-func (r *PinnedRepo) Create(ctx context.Context, p *models.PinnedItem) error {
+func (r *PinnedRepo) Create(ctx context.Context, p *dashboardmodel.PinnedItem) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("pinned_items create begin: %w", err)

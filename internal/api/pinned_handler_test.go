@@ -11,11 +11,12 @@ import (
 	"testing"
 	"time"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fakePinnedRepo is a goroutine-safe in-memory implementation of pinnedRepo.
@@ -24,7 +25,7 @@ import (
 // relies on.
 type fakePinnedRepo struct {
 	mu     sync.Mutex
-	rows   map[int64]*models.PinnedItem
+	rows   map[int64]*dashboardmodel.PinnedItem
 	nextID int64
 
 	listErr   error
@@ -35,18 +36,18 @@ type fakePinnedRepo struct {
 
 func newFakePinnedRepo() *fakePinnedRepo {
 	return &fakePinnedRepo{
-		rows:   map[int64]*models.PinnedItem{},
+		rows:   map[int64]*dashboardmodel.PinnedItem{},
 		nextID: 1,
 	}
 }
 
-func (f *fakePinnedRepo) List(_ context.Context, filter database.PinnedListFilter) ([]*models.PinnedItem, error) {
+func (f *fakePinnedRepo) List(_ context.Context, filter database.PinnedListFilter) ([]*dashboardmodel.PinnedItem, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.listErr != nil {
 		return nil, f.listErr
 	}
-	out := make([]*models.PinnedItem, 0)
+	out := make([]*dashboardmodel.PinnedItem, 0)
 	for _, row := range f.rows {
 		if row.ItemType != filter.ItemType {
 			continue
@@ -68,7 +69,7 @@ func (f *fakePinnedRepo) List(_ context.Context, filter database.PinnedListFilte
 	return out, nil
 }
 
-func (f *fakePinnedRepo) GetByID(_ context.Context, id int64) (*models.PinnedItem, error) {
+func (f *fakePinnedRepo) GetByID(_ context.Context, id int64) (*dashboardmodel.PinnedItem, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	row, ok := f.rows[id]
@@ -78,7 +79,7 @@ func (f *fakePinnedRepo) GetByID(_ context.Context, id int64) (*models.PinnedIte
 	return clonePinnedForTest(row), nil
 }
 
-func (f *fakePinnedRepo) Create(_ context.Context, p *models.PinnedItem) error {
+func (f *fakePinnedRepo) Create(_ context.Context, p *dashboardmodel.PinnedItem) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.createErr != nil {
@@ -153,7 +154,7 @@ func contextValue(c *string) string {
 	return *c
 }
 
-func clonePinnedForTest(in *models.PinnedItem) *models.PinnedItem {
+func clonePinnedForTest(in *dashboardmodel.PinnedItem) *dashboardmodel.PinnedItem {
 	out := *in
 	if in.UserID != nil {
 		v := *in.UserID
@@ -208,7 +209,7 @@ func TestPinned_List_EmptyReturnsArray(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200", rec.Code)
 	}
-	var out []*models.PinnedItem
+	var out []*dashboardmodel.PinnedItem
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -227,11 +228,11 @@ func TestPinned_List_FiltersByContext(t *testing.T) {
 	}
 	glance := "glance"
 	hub := "hub"
-	must(repo.Create(context.Background(), &models.PinnedItem{
-		ItemType: models.PinnedItemTypeWidget, ItemID: "battery", Context: &glance,
+	must(repo.Create(context.Background(), &dashboardmodel.PinnedItem{
+		ItemType: dashboardmodel.PinnedItemTypeWidget, ItemID: "battery", Context: &glance,
 	}))
-	must(repo.Create(context.Background(), &models.PinnedItem{
-		ItemType: models.PinnedItemTypeWidget, ItemID: "speed", Context: &hub,
+	must(repo.Create(context.Background(), &dashboardmodel.PinnedItem{
+		ItemType: dashboardmodel.PinnedItemTypeWidget, ItemID: "speed", Context: &hub,
 	}))
 
 	handler := newPinnedHandlerForTest(repo)
@@ -240,7 +241,7 @@ func TestPinned_List_FiltersByContext(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var out []*models.PinnedItem
+	var out []*dashboardmodel.PinnedItem
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -262,11 +263,11 @@ func TestPinned_Create_Success(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want 201; body=%s", rec.Code, rec.Body.String())
 	}
-	var out models.PinnedItem
+	var out dashboardmodel.PinnedItem
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if out.ID == 0 || out.ItemID != "42" || out.ItemType != models.PinnedItemTypeVehicle {
+	if out.ID == 0 || out.ItemID != "42" || out.ItemType != dashboardmodel.PinnedItemTypeVehicle {
 		t.Fatalf("unexpected response: %#v", out)
 	}
 	if out.Position != 0 {
@@ -327,7 +328,7 @@ func TestPinned_Create_ShiftsExistingPinsDown(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/pinned?type=vehicle", nil))
-	var out []*models.PinnedItem
+	var out []*dashboardmodel.PinnedItem
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -356,7 +357,7 @@ func TestPinned_Update_Success(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	row := &models.PinnedItem{ItemType: models.PinnedItemTypeVehicle, ItemID: "1"}
+	row := &dashboardmodel.PinnedItem{ItemType: dashboardmodel.PinnedItemTypeVehicle, ItemID: "1"}
 	must(repo.Create(context.Background(), row))
 
 	handler := newPinnedHandlerForTest(repo)
@@ -366,7 +367,7 @@ func TestPinned_Update_Success(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var out models.PinnedItem
+	var out dashboardmodel.PinnedItem
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -393,8 +394,8 @@ func TestPinned_Update_RejectsNegativePosition(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	must(repo.Create(context.Background(), &models.PinnedItem{
-		ItemType: models.PinnedItemTypeVehicle, ItemID: "1",
+	must(repo.Create(context.Background(), &dashboardmodel.PinnedItem{
+		ItemType: dashboardmodel.PinnedItemTypeVehicle, ItemID: "1",
 	}))
 
 	handler := newPinnedHandlerForTest(repo)
@@ -414,8 +415,8 @@ func TestPinned_Update_RequiresPosition(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	must(repo.Create(context.Background(), &models.PinnedItem{
-		ItemType: models.PinnedItemTypeVehicle, ItemID: "1",
+	must(repo.Create(context.Background(), &dashboardmodel.PinnedItem{
+		ItemType: dashboardmodel.PinnedItemTypeVehicle, ItemID: "1",
 	}))
 
 	handler := newPinnedHandlerForTest(repo)
@@ -436,8 +437,8 @@ func TestPinned_Delete_Success(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	must(repo.Create(context.Background(), &models.PinnedItem{
-		ItemType: models.PinnedItemTypeVehicle, ItemID: "1",
+	must(repo.Create(context.Background(), &dashboardmodel.PinnedItem{
+		ItemType: dashboardmodel.PinnedItemTypeVehicle, ItemID: "1",
 	}))
 
 	handler := newPinnedHandlerForTest(repo)

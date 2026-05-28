@@ -1,4 +1,4 @@
-package models
+package dashboard
 
 import (
 	"encoding/json"

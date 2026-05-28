@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fakeDashboardLayoutRepo is a goroutine-safe in-memory implementation of
@@ -23,7 +23,7 @@ import (
 // don't need a real Postgres pool.
 type fakeDashboardLayoutRepo struct {
 	mu     sync.Mutex
-	rows   map[int64]*models.DashboardLayout
+	rows   map[int64]*dashboardmodel.DashboardLayout
 	nextID int64
 
 	listErr   error
@@ -36,18 +36,18 @@ type fakeDashboardLayoutRepo struct {
 
 func newFakeDashboardLayoutRepo() *fakeDashboardLayoutRepo {
 	return &fakeDashboardLayoutRepo{
-		rows:   map[int64]*models.DashboardLayout{},
+		rows:   map[int64]*dashboardmodel.DashboardLayout{},
 		nextID: 1,
 	}
 }
 
-func (f *fakeDashboardLayoutRepo) List(_ context.Context, userID *int64, vehicleID *int64) ([]*models.DashboardLayout, error) {
+func (f *fakeDashboardLayoutRepo) List(_ context.Context, userID *int64, vehicleID *int64) ([]*dashboardmodel.DashboardLayout, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.listErr != nil {
 		return nil, f.listErr
 	}
-	out := make([]*models.DashboardLayout, 0, len(f.rows))
+	out := make([]*dashboardmodel.DashboardLayout, 0, len(f.rows))
 	for _, row := range f.rows {
 		if userID != nil && row.UserID != nil && *row.UserID != *userID {
 			continue
@@ -60,7 +60,7 @@ func (f *fakeDashboardLayoutRepo) List(_ context.Context, userID *int64, vehicle
 	return out, nil
 }
 
-func (f *fakeDashboardLayoutRepo) GetByID(_ context.Context, id int64) (*models.DashboardLayout, error) {
+func (f *fakeDashboardLayoutRepo) GetByID(_ context.Context, id int64) (*dashboardmodel.DashboardLayout, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.getErr != nil {
@@ -73,7 +73,7 @@ func (f *fakeDashboardLayoutRepo) GetByID(_ context.Context, id int64) (*models.
 	return cloneDashboardLayoutForTest(row), nil
 }
 
-func (f *fakeDashboardLayoutRepo) Create(_ context.Context, l *models.DashboardLayout) error {
+func (f *fakeDashboardLayoutRepo) Create(_ context.Context, l *dashboardmodel.DashboardLayout) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.createErr != nil {
@@ -152,7 +152,7 @@ func samePtrInt64(a, b *int64) bool {
 	return *a == *b
 }
 
-func cloneDashboardLayoutForTest(in *models.DashboardLayout) *models.DashboardLayout {
+func cloneDashboardLayoutForTest(in *dashboardmodel.DashboardLayout) *dashboardmodel.DashboardLayout {
 	out := *in
 	if in.UserID != nil {
 		v := *in.UserID
@@ -193,7 +193,7 @@ func TestDashboardLayoutList_EmptyReturnsArray(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var out []*models.DashboardLayout
+	var out []*dashboardmodel.DashboardLayout
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -206,9 +206,9 @@ func TestDashboardLayoutList_FiltersByVehicle(t *testing.T) {
 	repo := newFakeDashboardLayoutRepo()
 	v1 := int64(1)
 	v2 := int64(2)
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "global", Layout: json.RawMessage(`{}`)})
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "v1", VehicleID: &v1, Layout: json.RawMessage(`{}`)})
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "v2", VehicleID: &v2, Layout: json.RawMessage(`{}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "global", Layout: json.RawMessage(`{}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "v1", VehicleID: &v1, Layout: json.RawMessage(`{}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "v2", VehicleID: &v2, Layout: json.RawMessage(`{}`)})
 
 	handler := newDashboardLayoutHandlerForTest(repo)
 	rec := httptest.NewRecorder()
@@ -217,7 +217,7 @@ func TestDashboardLayoutList_FiltersByVehicle(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var out []*models.DashboardLayout
+	var out []*dashboardmodel.DashboardLayout
 	_ = json.Unmarshal(rec.Body.Bytes(), &out)
 	gotNames := map[string]bool{}
 	for _, l := range out {
@@ -252,7 +252,7 @@ func TestDashboardLayoutCreate_Happy(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want 201; body=%s", rec.Code, rec.Body.String())
 	}
-	var got models.DashboardLayout
+	var got dashboardmodel.DashboardLayout
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -314,7 +314,7 @@ func TestDashboardLayoutCreate_RejectsLongName(t *testing.T) {
 func TestDashboardLayoutCreate_DefaultClearsOthers(t *testing.T) {
 	repo := newFakeDashboardLayoutRepo()
 	// Pre-existing default for the same scope (global).
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "old", IsDefault: true, Layout: json.RawMessage(`{}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "old", IsDefault: true, Layout: json.RawMessage(`{}`)})
 	handler := newDashboardLayoutHandlerForTest(repo)
 
 	body := `{"name":"new","is_default":true,"layout":{}}`
@@ -358,7 +358,7 @@ func TestDashboardLayoutUpdate_RejectsBadID(t *testing.T) {
 
 func TestDashboardLayoutUpdate_PartialKeepsLayout(t *testing.T) {
 	repo := newFakeDashboardLayoutRepo()
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "orig", Layout: json.RawMessage(`{"keep":1}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "orig", Layout: json.RawMessage(`{"keep":1}`)})
 	handler := newDashboardLayoutHandlerForTest(repo)
 
 	rec := httptest.NewRecorder()
@@ -377,7 +377,7 @@ func TestDashboardLayoutUpdate_PartialKeepsLayout(t *testing.T) {
 
 func TestDashboardLayoutUpdate_RejectsEmptyName(t *testing.T) {
 	repo := newFakeDashboardLayoutRepo()
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "orig", Layout: json.RawMessage(`{}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "orig", Layout: json.RawMessage(`{}`)})
 	handler := newDashboardLayoutHandlerForTest(repo)
 
 	rec := httptest.NewRecorder()
@@ -389,7 +389,7 @@ func TestDashboardLayoutUpdate_RejectsEmptyName(t *testing.T) {
 
 func TestDashboardLayoutUpdate_RejectsNonObjectLayout(t *testing.T) {
 	repo := newFakeDashboardLayoutRepo()
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "orig", Layout: json.RawMessage(`{}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "orig", Layout: json.RawMessage(`{}`)})
 	handler := newDashboardLayoutHandlerForTest(repo)
 
 	rec := httptest.NewRecorder()
@@ -403,7 +403,7 @@ func TestDashboardLayoutUpdate_RejectsNonObjectLayout(t *testing.T) {
 
 func TestDashboardLayoutDelete_Happy(t *testing.T) {
 	repo := newFakeDashboardLayoutRepo()
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "x", Layout: json.RawMessage(`{}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "x", Layout: json.RawMessage(`{}`)})
 	handler := newDashboardLayoutHandlerForTest(repo)
 
 	rec := httptest.NewRecorder()
@@ -438,8 +438,8 @@ func TestDashboardLayoutDelete_RejectsBadID(t *testing.T) {
 
 func TestDashboardLayoutApply_FlipsDefault(t *testing.T) {
 	repo := newFakeDashboardLayoutRepo()
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "a", IsDefault: true, Layout: json.RawMessage(`{}`)})
-	_ = repo.Create(context.Background(), &models.DashboardLayout{Name: "b", IsDefault: false, Layout: json.RawMessage(`{}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "a", IsDefault: true, Layout: json.RawMessage(`{}`)})
+	_ = repo.Create(context.Background(), &dashboardmodel.DashboardLayout{Name: "b", IsDefault: false, Layout: json.RawMessage(`{}`)})
 
 	handler := newDashboardLayoutHandlerForTest(repo)
 	rec := httptest.NewRecorder()

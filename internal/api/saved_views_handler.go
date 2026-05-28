@@ -9,11 +9,12 @@ import (
 	"regexp"
 	"strings"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // savedViewsRepo is the slice of *database.SavedViewsRepo the handler
@@ -21,10 +22,10 @@ import (
 // in-memory fake without standing up a real Postgres pool — same pattern
 // as PinnedHandler (Phase 40 / Prompt 48).
 type savedViewsRepo interface {
-	List(ctx context.Context, f database.SavedViewListFilter) ([]*models.SavedView, error)
-	GetByID(ctx context.Context, id int64) (*models.SavedView, error)
-	Create(ctx context.Context, v *models.SavedView) error
-	Update(ctx context.Context, id int64, patch database.SavedViewUpdate) (*models.SavedView, error)
+	List(ctx context.Context, f database.SavedViewListFilter) ([]*dashboardmodel.SavedView, error)
+	GetByID(ctx context.Context, id int64) (*dashboardmodel.SavedView, error)
+	Create(ctx context.Context, v *dashboardmodel.SavedView) error
+	Update(ctx context.Context, id int64, patch database.SavedViewUpdate) (*dashboardmodel.SavedView, error)
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -112,7 +113,7 @@ func (h *SavedViewsHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rows == nil {
-		rows = []*models.SavedView{}
+		rows = []*dashboardmodel.SavedView{}
 	}
 	writeJSON(w, http.StatusOK, rows)
 }
@@ -152,7 +153,7 @@ func (h *SavedViewsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	row := &models.SavedView{
+	row := &dashboardmodel.SavedView{
 		Name:      name,
 		Route:     route,
 		Query:     query,
@@ -277,7 +278,7 @@ func (h *SavedViewsHandler) audit(r *http.Request, action string, entityID *int6
 	logAuditFromRequest(h.auditDB, r, h.forwardAuthHeader, action, "saved_view", entityID, detail)
 }
 
-func savedViewAuditDetail(v *models.SavedView) string {
+func savedViewAuditDetail(v *dashboardmodel.SavedView) string {
 	if v == nil {
 		return ""
 	}

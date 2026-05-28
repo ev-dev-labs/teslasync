@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // SavedViewsRepo is the data-access layer for the `saved_views` table
@@ -39,7 +39,7 @@ var ErrSavedViewAlreadyExists = errors.New("saved view name already exists")
 // List returns the views matching the filter, ordered with pinned rows
 // first then by sort_order ascending then by id ascending so the order
 // is stable across reloads.
-func (r *SavedViewsRepo) List(ctx context.Context, f SavedViewListFilter) ([]*models.SavedView, error) {
+func (r *SavedViewsRepo) List(ctx context.Context, f SavedViewListFilter) ([]*dashboardmodel.SavedView, error) {
 	const query = `
 		SELECT id, user_id, name, route, query, is_default, is_pinned, sort_order, created_at, updated_at
 		FROM saved_views
@@ -53,9 +53,9 @@ func (r *SavedViewsRepo) List(ctx context.Context, f SavedViewListFilter) ([]*mo
 	}
 	defer rows.Close()
 
-	var out []*models.SavedView
+	var out []*dashboardmodel.SavedView
 	for rows.Next() {
-		v := &models.SavedView{}
+		v := &dashboardmodel.SavedView{}
 		if scanErr := rows.Scan(
 			&v.ID, &v.UserID, &v.Name, &v.Route, &v.Query,
 			&v.IsDefault, &v.IsPinned, &v.SortOrder,
@@ -74,13 +74,13 @@ func (r *SavedViewsRepo) List(ctx context.Context, f SavedViewListFilter) ([]*mo
 // GetByID fetches a single view. Returns (nil, nil) when no row matches
 // so callers can return a clean 404 without unwrapping pgx-specific
 // errors.
-func (r *SavedViewsRepo) GetByID(ctx context.Context, id int64) (*models.SavedView, error) {
+func (r *SavedViewsRepo) GetByID(ctx context.Context, id int64) (*dashboardmodel.SavedView, error) {
 	const query = `
 		SELECT id, user_id, name, route, query, is_default, is_pinned, sort_order, created_at, updated_at
 		FROM saved_views
 		WHERE id = $1`
 
-	v := &models.SavedView{}
+	v := &dashboardmodel.SavedView{}
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&v.ID, &v.UserID, &v.Name, &v.Route, &v.Query,
 		&v.IsDefault, &v.IsPinned, &v.SortOrder,
@@ -99,7 +99,7 @@ func (r *SavedViewsRepo) GetByID(ctx context.Context, id int64) (*models.SavedVi
 // default, the prior default for the same (user, route) is flipped to
 // false in the same transaction so the partial unique index is never
 // violated.
-func (r *SavedViewsRepo) Create(ctx context.Context, v *models.SavedView) error {
+func (r *SavedViewsRepo) Create(ctx context.Context, v *dashboardmodel.SavedView) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("saved_views create begin: %w", err)
@@ -145,7 +145,7 @@ type SavedViewUpdate struct {
 
 // Update applies a partial patch to a saved view. Returns pgx.ErrNoRows
 // when the id is unknown so the handler can return 404 cleanly.
-func (r *SavedViewsRepo) Update(ctx context.Context, id int64, patch SavedViewUpdate) (*models.SavedView, error) {
+func (r *SavedViewsRepo) Update(ctx context.Context, id int64, patch SavedViewUpdate) (*dashboardmodel.SavedView, error) {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("saved_views update begin: %w", err)
@@ -185,7 +185,7 @@ func (r *SavedViewsRepo) Update(ctx context.Context, id int64, patch SavedViewUp
 		WHERE id = $1
 		RETURNING id, user_id, name, route, query, is_default, is_pinned, sort_order, created_at, updated_at`
 
-	v := &models.SavedView{}
+	v := &dashboardmodel.SavedView{}
 	if err := tx.QueryRow(ctx, update,
 		id, patch.Name, patch.Query, patch.IsDefault, patch.IsPinned, patch.SortOrder,
 	).Scan(

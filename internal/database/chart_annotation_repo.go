@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // ChartAnnotationRepo is the data-access layer for the `chart_annotations`
@@ -43,7 +43,7 @@ type ChartAnnotationFilter struct {
 // Vehicle scoping is inclusive: when a VehicleID is supplied, rows pinned to
 // that vehicle PLUS rows with vehicle_id IS NULL (fleet-wide) are returned —
 // so a single utility-rate annotation can annotate every vehicle's cost chart.
-func (r *ChartAnnotationRepo) List(ctx context.Context, f ChartAnnotationFilter) ([]*models.ChartAnnotation, error) {
+func (r *ChartAnnotationRepo) List(ctx context.Context, f ChartAnnotationFilter) ([]*dashboardmodel.ChartAnnotation, error) {
 	const query = `
 		SELECT id, user_id, vehicle_id, occurred_at, category, title, description, scope, color, created_at, updated_at
 		FROM chart_annotations
@@ -59,9 +59,9 @@ func (r *ChartAnnotationRepo) List(ctx context.Context, f ChartAnnotationFilter)
 	}
 	defer rows.Close()
 
-	var out []*models.ChartAnnotation
+	var out []*dashboardmodel.ChartAnnotation
 	for rows.Next() {
-		a := &models.ChartAnnotation{}
+		a := &dashboardmodel.ChartAnnotation{}
 		if scanErr := rows.Scan(
 			&a.ID, &a.UserID, &a.VehicleID, &a.OccurredAt, &a.Category,
 			&a.Title, &a.Description, &a.Scope, &a.Color,
@@ -79,13 +79,13 @@ func (r *ChartAnnotationRepo) List(ctx context.Context, f ChartAnnotationFilter)
 
 // GetByID fetches a single annotation. Returns (nil, nil) if no row matches
 // so callers can render a clean 404 without unwrapping pgx-specific errors.
-func (r *ChartAnnotationRepo) GetByID(ctx context.Context, id int64) (*models.ChartAnnotation, error) {
+func (r *ChartAnnotationRepo) GetByID(ctx context.Context, id int64) (*dashboardmodel.ChartAnnotation, error) {
 	const query = `
 		SELECT id, user_id, vehicle_id, occurred_at, category, title, description, scope, color, created_at, updated_at
 		FROM chart_annotations
 		WHERE id = $1`
 
-	a := &models.ChartAnnotation{}
+	a := &dashboardmodel.ChartAnnotation{}
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&a.ID, &a.UserID, &a.VehicleID, &a.OccurredAt, &a.Category,
 		&a.Title, &a.Description, &a.Scope, &a.Color,
@@ -102,7 +102,7 @@ func (r *ChartAnnotationRepo) GetByID(ctx context.Context, id int64) (*models.Ch
 
 // Create inserts a new annotation. The `id`, `created_at`, `updated_at`
 // fields on the supplied struct are populated on success.
-func (r *ChartAnnotationRepo) Create(ctx context.Context, a *models.ChartAnnotation) error {
+func (r *ChartAnnotationRepo) Create(ctx context.Context, a *dashboardmodel.ChartAnnotation) error {
 	const query = `
 		INSERT INTO chart_annotations (user_id, vehicle_id, occurred_at, category, title, description, scope, color, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
@@ -128,7 +128,7 @@ func (r *ChartAnnotationRepo) Create(ctx context.Context, a *models.ChartAnnotat
 // dashboard layout repo so Update can support partial PATCH semantics.
 type ChartAnnotationUpdate struct {
 	OccurredAt  *time.Time
-	Category    *models.AnnotationCategory
+	Category    *dashboardmodel.AnnotationCategory
 	Title       *string
 	Description *string
 	Scope       *[]string

@@ -10,20 +10,21 @@ import (
 	"strings"
 	"time"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // dashboardLayoutRepo is the small slice of *database.DashboardLayoutRepo the
 // handler depends on. Keeping it as an interface means the unit tests can
 // drop in an in-memory fake without standing up a real Postgres pool.
 type dashboardLayoutRepo interface {
-	List(ctx context.Context, userID *int64, vehicleID *int64) ([]*models.DashboardLayout, error)
-	GetByID(ctx context.Context, id int64) (*models.DashboardLayout, error)
-	Create(ctx context.Context, l *models.DashboardLayout) error
+	List(ctx context.Context, userID *int64, vehicleID *int64) ([]*dashboardmodel.DashboardLayout, error)
+	GetByID(ctx context.Context, id int64) (*dashboardmodel.DashboardLayout, error)
+	Create(ctx context.Context, l *dashboardmodel.DashboardLayout) error
 	Update(ctx context.Context, id int64, name string, layout []byte, isDefault bool) error
 	Delete(ctx context.Context, id int64) error
 	SetDefault(ctx context.Context, id int64) error
@@ -82,7 +83,7 @@ func (h *DashboardLayoutHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if layouts == nil {
-		layouts = []*models.DashboardLayout{}
+		layouts = []*dashboardmodel.DashboardLayout{}
 	}
 	writeJSON(w, http.StatusOK, layouts)
 }
@@ -123,7 +124,7 @@ func (h *DashboardLayoutHandler) Create(w http.ResponseWriter, r *http.Request) 
 	}
 
 	now := time.Now().UTC()
-	layout := &models.DashboardLayout{
+	layout := &dashboardmodel.DashboardLayout{
 		VehicleID: req.VehicleID,
 		Name:      name,
 		IsDefault: boolOr(req.IsDefault, false),

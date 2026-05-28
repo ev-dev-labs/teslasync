@@ -8,20 +8,21 @@ import (
 	"net/http"
 	"strings"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // pinnedRepo is the slice of *database.PinnedRepo the handler depends on.
 // Keeping it as an interface lets the unit tests drop in an in-memory fake
 // without standing up a real Postgres pool.
 type pinnedRepo interface {
-	List(ctx context.Context, f database.PinnedListFilter) ([]*models.PinnedItem, error)
-	GetByID(ctx context.Context, id int64) (*models.PinnedItem, error)
-	Create(ctx context.Context, p *models.PinnedItem) error
+	List(ctx context.Context, f database.PinnedListFilter) ([]*dashboardmodel.PinnedItem, error)
+	GetByID(ctx context.Context, id int64) (*dashboardmodel.PinnedItem, error)
+	Create(ctx context.Context, p *dashboardmodel.PinnedItem) error
 	UpdatePosition(ctx context.Context, id int64, position int) error
 	Delete(ctx context.Context, id int64) error
 }
@@ -93,7 +94,7 @@ func (h *PinnedHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rows == nil {
-		rows = []*models.PinnedItem{}
+		rows = []*dashboardmodel.PinnedItem{}
 	}
 	writeJSON(w, http.StatusOK, rows)
 }
@@ -147,7 +148,7 @@ func (h *PinnedHandler) Create(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	row := &models.PinnedItem{
+	row := &dashboardmodel.PinnedItem{
 		ItemType: itemType,
 		ItemID:   itemID,
 		Context:  contextVal,
@@ -256,10 +257,10 @@ func readPinnedBody(r *http.Request) ([]byte, *pinnedBodyError) {
 }
 
 // parsePinnedItemType validates the supplied type string against the
-// closed enum on `models.PinnedItemType`. Returns the typed value on
+// closed enum on `dashboardmodel.PinnedItemType`. Returns the typed value on
 // success.
-func parsePinnedItemType(raw string) (models.PinnedItemType, bool) {
-	t := models.PinnedItemType(strings.TrimSpace(raw))
+func parsePinnedItemType(raw string) (dashboardmodel.PinnedItemType, bool) {
+	t := dashboardmodel.PinnedItemType(strings.TrimSpace(raw))
 	if !t.Valid() {
 		return "", false
 	}

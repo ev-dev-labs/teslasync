@@ -10,20 +10,21 @@ import (
 	"strings"
 	"time"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // chartAnnotationRepo is the slice of *database.ChartAnnotationRepo the
 // handler depends on. The interface lets the unit tests drop in an in-memory
 // fake without standing up a real Postgres pool.
 type chartAnnotationRepo interface {
-	List(ctx context.Context, f database.ChartAnnotationFilter) ([]*models.ChartAnnotation, error)
-	GetByID(ctx context.Context, id int64) (*models.ChartAnnotation, error)
-	Create(ctx context.Context, a *models.ChartAnnotation) error
+	List(ctx context.Context, f database.ChartAnnotationFilter) ([]*dashboardmodel.ChartAnnotation, error)
+	GetByID(ctx context.Context, id int64) (*dashboardmodel.ChartAnnotation, error)
+	Create(ctx context.Context, a *dashboardmodel.ChartAnnotation) error
 	Update(ctx context.Context, id int64, patch database.ChartAnnotationUpdate) error
 	Delete(ctx context.Context, id int64) error
 }
@@ -113,7 +114,7 @@ func (h *ChartAnnotationHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rows == nil {
-		rows = []*models.ChartAnnotation{}
+		rows = []*dashboardmodel.ChartAnnotation{}
 	}
 	writeJSON(w, http.StatusOK, rows)
 }
@@ -151,7 +152,7 @@ func (h *ChartAnnotationHandler) Create(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "category is required")
 		return
 	}
-	cat := models.AnnotationCategory(*req.Category)
+	cat := dashboardmodel.AnnotationCategory(*req.Category)
 	if !cat.Valid() {
 		writeError(w, http.StatusBadRequest, "invalid category")
 		return
@@ -191,7 +192,7 @@ func (h *ChartAnnotationHandler) Create(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	row := &models.ChartAnnotation{
+	row := &dashboardmodel.ChartAnnotation{
 		VehicleID:  req.VehicleID,
 		OccurredAt: occurredAt,
 		Category:   cat,
@@ -263,7 +264,7 @@ func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) 
 		patch.OccurredAt = &occurredAt
 	}
 	if req.Category != nil {
-		cat := models.AnnotationCategory(*req.Category)
+		cat := dashboardmodel.AnnotationCategory(*req.Category)
 		if !cat.Valid() {
 			writeError(w, http.StatusBadRequest, "invalid category")
 			return

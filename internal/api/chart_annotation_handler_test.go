@@ -10,11 +10,12 @@ import (
 	"testing"
 	"time"
 
+	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fakeChartAnnotationRepo is a goroutine-safe in-memory implementation of
@@ -22,7 +23,7 @@ import (
 // don't need a real Postgres pool.
 type fakeChartAnnotationRepo struct {
 	mu     sync.Mutex
-	rows   map[int64]*models.ChartAnnotation
+	rows   map[int64]*dashboardmodel.ChartAnnotation
 	nextID int64
 
 	listErr   error
@@ -33,18 +34,18 @@ type fakeChartAnnotationRepo struct {
 
 func newFakeChartAnnotationRepo() *fakeChartAnnotationRepo {
 	return &fakeChartAnnotationRepo{
-		rows:   map[int64]*models.ChartAnnotation{},
+		rows:   map[int64]*dashboardmodel.ChartAnnotation{},
 		nextID: 1,
 	}
 }
 
-func (f *fakeChartAnnotationRepo) List(_ context.Context, filter database.ChartAnnotationFilter) ([]*models.ChartAnnotation, error) {
+func (f *fakeChartAnnotationRepo) List(_ context.Context, filter database.ChartAnnotationFilter) ([]*dashboardmodel.ChartAnnotation, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.listErr != nil {
 		return nil, f.listErr
 	}
-	out := make([]*models.ChartAnnotation, 0, len(f.rows))
+	out := make([]*dashboardmodel.ChartAnnotation, 0, len(f.rows))
 	for _, row := range f.rows {
 		// Vehicle scoping is inclusive: include rows pinned to the requested
 		// vehicle PLUS rows with vehicle_id IS NULL (fleet-wide).
@@ -77,7 +78,7 @@ func (f *fakeChartAnnotationRepo) List(_ context.Context, filter database.ChartA
 	return out, nil
 }
 
-func (f *fakeChartAnnotationRepo) GetByID(_ context.Context, id int64) (*models.ChartAnnotation, error) {
+func (f *fakeChartAnnotationRepo) GetByID(_ context.Context, id int64) (*dashboardmodel.ChartAnnotation, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	row, ok := f.rows[id]
@@ -87,7 +88,7 @@ func (f *fakeChartAnnotationRepo) GetByID(_ context.Context, id int64) (*models.
 	return cloneChartAnnotationForTest(row), nil
 }
 
-func (f *fakeChartAnnotationRepo) Create(_ context.Context, a *models.ChartAnnotation) error {
+func (f *fakeChartAnnotationRepo) Create(_ context.Context, a *dashboardmodel.ChartAnnotation) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.createErr != nil {
@@ -156,7 +157,7 @@ func (f *fakeChartAnnotationRepo) Delete(_ context.Context, id int64) error {
 	return nil
 }
 
-func cloneChartAnnotationForTest(in *models.ChartAnnotation) *models.ChartAnnotation {
+func cloneChartAnnotationForTest(in *dashboardmodel.ChartAnnotation) *dashboardmodel.ChartAnnotation {
 	out := *in
 	if in.UserID != nil {
 		v := *in.UserID
@@ -203,7 +204,7 @@ func TestChartAnnotationsList_EmptyReturnsArray(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var out []*models.ChartAnnotation
+	var out []*dashboardmodel.ChartAnnotation
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -222,17 +223,17 @@ func TestChartAnnotationsList_FiltersByVehicleAndScope(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	must(repo.Create(context.Background(), &models.ChartAnnotation{
-		VehicleID: &v1, OccurredAt: now, Category: models.AnnotationCategoryMaintenance,
+	must(repo.Create(context.Background(), &dashboardmodel.ChartAnnotation{
+		VehicleID: &v1, OccurredAt: now, Category: dashboardmodel.AnnotationCategoryMaintenance,
 		Title: "Tire rotation", Scope: []string{"tire"},
 	}))
-	must(repo.Create(context.Background(), &models.ChartAnnotation{
-		VehicleID: &v2, OccurredAt: now, Category: models.AnnotationCategoryUpgrade,
+	must(repo.Create(context.Background(), &dashboardmodel.ChartAnnotation{
+		VehicleID: &v2, OccurredAt: now, Category: dashboardmodel.AnnotationCategoryUpgrade,
 		Title: "Software update", Scope: []string{"battery", "efficiency"},
 	}))
-	must(repo.Create(context.Background(), &models.ChartAnnotation{
+	must(repo.Create(context.Background(), &dashboardmodel.ChartAnnotation{
 		// Fleet-wide annotation (vehicle_id IS NULL) should always show up.
-		OccurredAt: now, Category: models.AnnotationCategoryCustom,
+		OccurredAt: now, Category: dashboardmodel.AnnotationCategoryCustom,
 		Title: "Utility rate change", Scope: []string{"cost"},
 	}))
 
@@ -243,7 +244,7 @@ func TestChartAnnotationsList_FiltersByVehicleAndScope(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var out []*models.ChartAnnotation
+	var out []*dashboardmodel.ChartAnnotation
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
@@ -293,14 +294,14 @@ func TestChartAnnotationsCreate_Success(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want 201; body=%s", rec.Code, rec.Body.String())
 	}
-	var out models.ChartAnnotation
+	var out dashboardmodel.ChartAnnotation
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	if out.ID == 0 {
 		t.Fatal("expected id to be assigned")
 	}
-	if out.Title != "Tire rotation" || out.Category != models.AnnotationCategoryMaintenance {
+	if out.Title != "Tire rotation" || out.Category != dashboardmodel.AnnotationCategoryMaintenance {
 		t.Fatalf("unexpected payload: %#v", out)
 	}
 	if len(out.Scope) != 1 || out.Scope[0] != "tire" {
@@ -352,8 +353,8 @@ func TestChartAnnotationsCreate_AcceptsDateOnlyTimestamp(t *testing.T) {
 func TestChartAnnotationsUpdate_Success(t *testing.T) {
 	repo := newFakeChartAnnotationRepo()
 	now := time.Now().UTC()
-	if err := repo.Create(context.Background(), &models.ChartAnnotation{
-		OccurredAt: now, Category: models.AnnotationCategoryMilestone,
+	if err := repo.Create(context.Background(), &dashboardmodel.ChartAnnotation{
+		OccurredAt: now, Category: dashboardmodel.AnnotationCategoryMilestone,
 		Title: "Original", Scope: []string{"battery"},
 	}); err != nil {
 		t.Fatal(err)
@@ -366,7 +367,7 @@ func TestChartAnnotationsUpdate_Success(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var out models.ChartAnnotation
+	var out dashboardmodel.ChartAnnotation
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatal(err)
 	}
@@ -400,8 +401,8 @@ func TestChartAnnotationsUpdate_BadID(t *testing.T) {
 
 func TestChartAnnotationsDelete_Success(t *testing.T) {
 	repo := newFakeChartAnnotationRepo()
-	if err := repo.Create(context.Background(), &models.ChartAnnotation{
-		OccurredAt: time.Now().UTC(), Category: models.AnnotationCategoryCustom,
+	if err := repo.Create(context.Background(), &dashboardmodel.ChartAnnotation{
+		OccurredAt: time.Now().UTC(), Category: dashboardmodel.AnnotationCategoryCustom,
 		Title: "x",
 	}); err != nil {
 		t.Fatal(err)

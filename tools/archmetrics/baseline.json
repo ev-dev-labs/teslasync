@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:26:39Z",
+  "generated_at": "2026-05-28T04:29:23Z",
   "go_version": "go1.26.1",
-  "commit_sha": "ed25e115c0bf2b7810e6cae0f6770091640e9a26",
+  "commit_sha": "7ca017d668584d9003998baf7c5a095cc10c531c",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2156,6 +2156,7 @@
         "internal/models/backup",
         "internal/models/charging",
         "internal/models/chatbot",
+        "internal/models/dashboard",
         "internal/models/drive",
         "internal/models/export",
         "internal/models/geo",
@@ -3191,6 +3192,7 @@
         "internal/models/backup",
         "internal/models/charging",
         "internal/models/chatbot",
+        "internal/models/dashboard",
         "internal/models/drive",
         "internal/models/energy",
         "internal/models/export",
@@ -3979,9 +3981,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 23,
+      "go_files": 19,
       "test_files": 1,
-      "loc": 1462,
+      "loc": 1295,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -3990,8 +3992,6 @@
         "automation_step_action.go",
         "automation_step_condition.go",
         "automation_step_trigger.go",
-        "chart_annotation.go",
-        "dashboard_layout.go",
         "doc.go",
         "enum_automation_steps.go",
         "enum_automation_triggers.go",
@@ -4004,10 +4004,8 @@
         "notification_channel_email_webhook.go",
         "notification_channel_ntfy_pushover.go",
         "notification_channel_slack_telegram.go",
-        "pinned.go",
         "push_subscription.go",
         "quiet_hours.go",
-        "saved_view.go",
         "system.go",
         "trip.go"
       ]
@@ -4091,6 +4089,22 @@
       "files": [
         "chatbot.go",
         "doc.go"
+      ]
+    },
+    {
+      "path": "internal/models/dashboard",
+      "go_files": 5,
+      "test_files": 0,
+      "loc": 190,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "chart_annotation.go",
+        "dashboard_layout.go",
+        "doc.go",
+        "pinned.go",
+        "saved_view.go"
       ]
     },
     {
@@ -6472,8 +6486,6 @@
       "automation_step_action.go",
       "automation_step_condition.go",
       "automation_step_trigger.go",
-      "chart_annotation.go",
-      "dashboard_layout.go",
       "doc.go",
       "enum_automation_steps.go",
       "enum_automation_triggers.go",
@@ -6485,10 +6497,8 @@
       "notification_channel_email_webhook.go",
       "notification_channel_ntfy_pushover.go",
       "notification_channel_slack_telegram.go",
-      "pinned.go",
       "push_subscription.go",
       "quiet_hours.go",
-      "saved_view.go",
       "system.go",
       "trip.go"
     ],
@@ -6515,6 +6525,13 @@
     "internal/models/chatbot": [
       "chatbot.go",
       "doc.go"
+    ],
+    "internal/models/dashboard": [
+      "chart_annotation.go",
+      "dashboard_layout.go",
+      "doc.go",
+      "pinned.go",
+      "saved_view.go"
     ],
     "internal/models/drive": [
       "doc.go",
@@ -6866,7 +6883,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 23,
+      "flat_parent_go_files": 19,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6876,6 +6893,7 @@
         "backup",
         "charging",
         "chatbot",
+        "dashboard",
         "drive",
         "energy",
         "export",
@@ -6889,7 +6907,6 @@
         "vehicle"
       ],
       "missing_subpkgs": [
-        "dashboard",
         "system"
       ],
       "notes": "19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes."
