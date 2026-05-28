@@ -19,6 +19,7 @@ import (
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -1940,7 +1941,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// from cfg.GitHub; when Repo or Token is empty, NewGitHubIssuesClient
 	// returns nil and the admin endpoint flips github_bridge_enabled to
 	// false in its response so the SPA hides the Forward action.
-	userFeedbackRepo := database.NewUserFeedbackRepo(db)
+	userFeedbackRepo := dbuser.NewUserFeedbackRepo(db)
 	feedbackHandler := NewFeedbackHandler(userFeedbackRepo, cfg)
 	githubIssuesClient := integrations.NewGitHubIssuesClient(integrations.GitHubIssuesConfig{
 		Repo:  cfg.GitHub.Repo,

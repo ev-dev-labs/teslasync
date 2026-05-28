@@ -1,9 +1,11 @@
-package database
+package user
 
 import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -18,11 +20,11 @@ import (
 // in one round-trip per dependency without leaking SQL into the API
 // layer.
 type OnboardingRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewOnboardingRepo wires the repo to the shared pgx pool.
-func NewOnboardingRepo(db *DB) *OnboardingRepo {
+func NewOnboardingRepo(db *database.DB) *OnboardingRepo {
 	return &OnboardingRepo{db: db}
 }
 

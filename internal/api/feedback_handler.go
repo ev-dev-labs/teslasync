@@ -11,7 +11,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
 
 // Phase-46 / Prompt 08 — public in-app feedback ingest handler.
@@ -40,7 +40,7 @@ const (
 // in feedback_handler_test.go so the unit tests don't require a live
 // database.
 type FeedbackStore interface {
-	Insert(ctx context.Context, in database.FeedbackInsert) (database.UserFeedback, error)
+	Insert(ctx context.Context, in dbuser.FeedbackInsert) (dbuser.UserFeedback, error)
 	CountSubmittedSince(ctx context.Context, subject, ip string, since time.Time) (int64, error)
 }
 
@@ -118,7 +118,7 @@ func (h *FeedbackHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	insert := database.FeedbackInsert{
+	insert := dbuser.FeedbackInsert{
 		Category:         req.Category,
 		Title:            req.Title,
 		Body:             req.Body,
@@ -135,11 +135,11 @@ func (h *FeedbackHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	row, err := h.store.Insert(r.Context(), insert)
 	if err != nil {
 		switch {
-		case errors.Is(err, database.ErrFeedbackInvalidCategory):
+		case errors.Is(err, dbuser.ErrFeedbackInvalidCategory):
 			writeError(w, http.StatusBadRequest, "invalid category (expected bug|feature|other)")
-		case errors.Is(err, database.ErrFeedbackTitleTooShort):
+		case errors.Is(err, dbuser.ErrFeedbackTitleTooShort):
 			writeError(w, http.StatusBadRequest, "title too short (minimum 5 characters)")
-		case errors.Is(err, database.ErrFeedbackBodyTooShort):
+		case errors.Is(err, dbuser.ErrFeedbackBodyTooShort):
 			writeError(w, http.StatusBadRequest, "body too short (minimum 20 characters)")
 		default:
 			log.Error().Err(err).Msg("feedback: insert failed")

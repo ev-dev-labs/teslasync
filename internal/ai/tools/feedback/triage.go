@@ -61,7 +61,7 @@
 //     typed DTO validation. The LLM never writes raw SQL and never
 //     bypasses existing handlers." → draft_feedback_triage delegates
 //     the row read to the FeedbackTriageSource port (which wraps
-//     the canonical *database.UserFeedbackRepo.Get). The port has
+//     the canonical *dbuser.UserFeedbackRepo.Get). The port has
 //     NO write surface. The proposal's only write-applicable field
 //     (proposed_status) maps onto the existing FeedbackUpdateInput
 //     shape (status field) without adding a new column.
@@ -320,7 +320,7 @@ type FeedbackTriageEntry struct {
 // FeedbackTriageSource is the narrow port the
 // draft_feedback_triage tool delegates to. In production it is
 // satisfied by *api.AIFeedbackTriageSource (which wraps
-// *database.UserFeedbackRepo.Get verbatim and PII-minimizes the
+// *dbuser.UserFeedbackRepo.Get verbatim and PII-minimizes the
 // result into a FeedbackTriageEntry); in tests we substitute
 // deterministic fakes so the tool unit tests stay hermetic.
 //

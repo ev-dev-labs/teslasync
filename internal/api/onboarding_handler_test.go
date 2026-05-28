@@ -10,7 +10,7 @@ import (
 
 	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
 
 // fakeTokenReader satisfies onboardingTokenReader for unit tests.
@@ -25,11 +25,11 @@ func (f fakeTokenReader) Get(_ context.Context) (*authmodel.Token, error) {
 
 // fakeOnboardingRepo satisfies onboardingStatusReader for unit tests.
 type fakeOnboardingRepo struct {
-	status *database.OnboardingStatus
+	status *dbuser.OnboardingStatus
 	err    error
 }
 
-func (f fakeOnboardingRepo) Get(_ context.Context) (*database.OnboardingStatus, error) {
+func (f fakeOnboardingRepo) Get(_ context.Context) (*dbuser.OnboardingStatus, error) {
 	return f.status, f.err
 }
 
@@ -45,7 +45,7 @@ func decodeStatus(t *testing.T, body []byte) onboardingStatusResponse {
 func TestOnboardingHandler_Status_FreshInstall(t *testing.T) {
 	h := &OnboardingHandler{
 		tokens: fakeTokenReader{token: nil},
-		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
+		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
 	}
 
 	rec := httptest.NewRecorder()
@@ -73,7 +73,7 @@ func TestOnboardingHandler_Status_FreshInstall(t *testing.T) {
 func TestOnboardingHandler_Status_TokenOnly(t *testing.T) {
 	h := &OnboardingHandler{
 		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
-		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
+		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
 	}
 
 	rec := httptest.NewRecorder()
@@ -92,7 +92,7 @@ func TestOnboardingHandler_Status_TokenOnly(t *testing.T) {
 func TestOnboardingHandler_Status_TokenAndVehicleNoData(t *testing.T) {
 	h := &OnboardingHandler{
 		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
-		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 1, DataFlowing: false}},
+		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 1, DataFlowing: false}},
 	}
 
 	rec := httptest.NewRecorder()
@@ -111,7 +111,7 @@ func TestOnboardingHandler_Status_TokenAndVehicleNoData(t *testing.T) {
 func TestOnboardingHandler_Status_AllConditionsMet(t *testing.T) {
 	h := &OnboardingHandler{
 		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
-		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 2, DataFlowing: true}},
+		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 2, DataFlowing: true}},
 	}
 
 	rec := httptest.NewRecorder()
@@ -133,7 +133,7 @@ func TestOnboardingHandler_Status_TokenWithEmptyAccessToken(t *testing.T) {
 	// scenarios where the OAuth callback persisted a stub.
 	h := &OnboardingHandler{
 		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: ""}},
-		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 1, DataFlowing: true}},
+		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 1, DataFlowing: true}},
 	}
 
 	rec := httptest.NewRecorder()
@@ -154,7 +154,7 @@ func TestOnboardingHandler_Status_TokenLookupErrorDoesNotBlockResponse(t *testin
 	// must keep functioning so the user can see an actionable page.
 	h := &OnboardingHandler{
 		tokens: fakeTokenReader{err: errors.New("boom")},
-		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
+		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
 	}
 
 	rec := httptest.NewRecorder()

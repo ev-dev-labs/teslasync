@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
 
 // fakeFeedbackStore is an in-memory FeedbackStore used by these unit
@@ -19,10 +19,10 @@ import (
 // CountSubmittedSince so the rate-limit branches can be exercised
 // without a real database.
 type fakeFeedbackStore struct {
-	insertResult database.UserFeedback
+	insertResult dbuser.UserFeedback
 	insertErr    error
 	insertCalls  int
-	lastInsert   database.FeedbackInsert
+	lastInsert   dbuser.FeedbackInsert
 
 	countResult int64
 	countErr    error
@@ -30,20 +30,20 @@ type fakeFeedbackStore struct {
 	lastIP      string
 }
 
-func (f *fakeFeedbackStore) Insert(_ context.Context, in database.FeedbackInsert) (database.UserFeedback, error) {
+func (f *fakeFeedbackStore) Insert(_ context.Context, in dbuser.FeedbackInsert) (dbuser.UserFeedback, error) {
 	f.insertCalls++
 	f.lastInsert = in
 	if f.insertErr != nil {
-		return database.UserFeedback{}, f.insertErr
+		return dbuser.UserFeedback{}, f.insertErr
 	}
 	if f.insertResult.ID == 0 {
-		return database.UserFeedback{
+		return dbuser.UserFeedback{
 			ID:        1,
 			CreatedAt: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
 			Category:  in.Category,
 			Title:     in.Title,
 			Body:      in.Body,
-			Status:    database.FeedbackStatusNew,
+			Status:    dbuser.FeedbackStatusNew,
 		}, nil
 	}
 	return f.insertResult, nil
@@ -99,11 +99,11 @@ func TestFeedbackSubmitHappyPath(t *testing.T) {
 		t.Fatalf("app_version lost: %q", store.lastInsert.AppVersion)
 	}
 
-	var got database.UserFeedback
+	var got dbuser.UserFeedback
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if got.ID != 1 || got.Status != database.FeedbackStatusNew {
+	if got.ID != 1 || got.Status != dbuser.FeedbackStatusNew {
 		t.Fatalf("unexpected response: %+v", got)
 	}
 }
@@ -149,7 +149,7 @@ func TestFeedbackSubmitRateLimitFailsOpen(t *testing.T) {
 }
 
 func TestFeedbackSubmitInvalidCategory(t *testing.T) {
-	store := &fakeFeedbackStore{insertErr: database.ErrFeedbackInvalidCategory}
+	store := &fakeFeedbackStore{insertErr: dbuser.ErrFeedbackInvalidCategory}
 	h := newTestFeedbackHandler(store)
 
 	body := `{"category":"spam","title":"valid title here","body":"this body is more than twenty characters long for sure"}`
@@ -164,7 +164,7 @@ func TestFeedbackSubmitInvalidCategory(t *testing.T) {
 }
 
 func TestFeedbackSubmitTitleTooShort(t *testing.T) {
-	store := &fakeFeedbackStore{insertErr: database.ErrFeedbackTitleTooShort}
+	store := &fakeFeedbackStore{insertErr: dbuser.ErrFeedbackTitleTooShort}
 	h := newTestFeedbackHandler(store)
 
 	body := `{"category":"bug","title":"hi","body":"this body is more than twenty characters long for sure"}`
@@ -179,7 +179,7 @@ func TestFeedbackSubmitTitleTooShort(t *testing.T) {
 }
 
 func TestFeedbackSubmitBodyTooShort(t *testing.T) {
-	store := &fakeFeedbackStore{insertErr: database.ErrFeedbackBodyTooShort}
+	store := &fakeFeedbackStore{insertErr: dbuser.ErrFeedbackBodyTooShort}
 	h := newTestFeedbackHandler(store)
 
 	body := `{"category":"bug","title":"valid title here","body":"short"}`

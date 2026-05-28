@@ -86,7 +86,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/feedback"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
 
 // aiFeedbackTriageMaxIterations bounds the dispatcher's tool-loop.
@@ -149,7 +149,7 @@ type AIFeedbackQueueTriageHandler struct {
 // strat:      the feedback-queue-triage Strategy (one per process).
 // source:     the production feedback.FeedbackTriageSource (a thin
 //
-//	wrapper around *database.UserFeedbackRepo.Get that
+//	wrapper around *dbuser.UserFeedbackRepo.Get that
 //	PII-minimizes the row into a FeedbackTriageEntry).
 //
 // headerName: forward-auth header name; used to extract subject
@@ -327,7 +327,7 @@ var _ http.Handler = (*AIFeedbackQueueTriageHandler)(nil)
 
 // AIFeedbackTriageSource is the production
 // feedback.FeedbackTriageSource. It wraps the canonical
-// *database.UserFeedbackRepo.Get and PII-minimizes the row into a
+// *dbuser.UserFeedbackRepo.Get and PII-minimizes the row into a
 // FeedbackTriageEntry: only id / created_at / category / title /
 // body[truncated] / page_route / app_version / status /
 // github_issue_url are forwarded to the LLM. user_email,
@@ -335,21 +335,21 @@ var _ http.Handler = (*AIFeedbackQueueTriageHandler)(nil)
 // are NOT forwarded — defence in depth on top of
 // PolicyAlertBuilder's deny-by-default redaction.
 type AIFeedbackTriageSource struct {
-	repo *database.UserFeedbackRepo
+	repo *dbuser.UserFeedbackRepo
 }
 
 // NewAIFeedbackTriageSource constructs the production source
 // adapter. Panics on a nil repo so the wiring bug surfaces at boot,
 // not at first request.
-func NewAIFeedbackTriageSource(repo *database.UserFeedbackRepo) *AIFeedbackTriageSource {
+func NewAIFeedbackTriageSource(repo *dbuser.UserFeedbackRepo) *AIFeedbackTriageSource {
 	if repo == nil {
-		panic("api: NewAIFeedbackTriageSource: nil *database.UserFeedbackRepo")
+		panic("api: NewAIFeedbackTriageSource: nil *dbuser.UserFeedbackRepo")
 	}
 	return &AIFeedbackTriageSource{repo: repo}
 }
 
 // LoadFeedback implements feedback.FeedbackTriageSource. Returns
-// (nil, nil) when the row does not exist (database.ErrFeedbackNotFound) —
+// (nil, nil) when the row does not exist (dbuser.ErrFeedbackNotFound) —
 // the tool surfaces this as a "feedback_not_found" status so the
 // LLM can narrate honestly without crashing the dispatcher. Any
 // other error propagates back to the dispatcher.
@@ -360,7 +360,7 @@ func NewAIFeedbackTriageSource(repo *database.UserFeedbackRepo) *AIFeedbackTriag
 func (a *AIFeedbackTriageSource) LoadFeedback(ctx context.Context, feedbackID int64) (*feedback.FeedbackTriageEntry, error) {
 	row, err := a.repo.Get(ctx, feedbackID)
 	if err != nil {
-		if errors.Is(err, database.ErrFeedbackNotFound) {
+		if errors.Is(err, dbuser.ErrFeedbackNotFound) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("api ai feedback-queue-triage: load feedback %d: %w", feedbackID, err)

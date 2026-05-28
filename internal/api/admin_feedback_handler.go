@@ -15,6 +15,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 )
 
@@ -37,9 +38,9 @@ const adminFeedbackBodyLimit = 8 * 1024
 // FeedbackQueueStore is the narrow read/write interface the admin
 // handler depends on. Mocked in admin_feedback_handler_test.go.
 type FeedbackQueueStore interface {
-	List(ctx context.Context, p database.FeedbackListParams) ([]database.UserFeedback, int64, error)
-	Get(ctx context.Context, id int64) (database.UserFeedback, error)
-	Update(ctx context.Context, id int64, upd database.FeedbackUpdate) (database.UserFeedback, error)
+	List(ctx context.Context, p dbuser.FeedbackListParams) ([]dbuser.UserFeedback, int64, error)
+	Get(ctx context.Context, id int64) (dbuser.UserFeedback, error)
+	Update(ctx context.Context, id int64, upd dbuser.FeedbackUpdate) (dbuser.UserFeedback, error)
 }
 
 // GitHubIssuesPoster is the narrow interface used to mirror a feedback
@@ -82,12 +83,12 @@ func NewAdminFeedbackHandler(store FeedbackQueueStore, cfg *config.Config, db *d
 
 // adminFeedbackListResponse is the JSON shape returned by GET /admin/feedback.
 type adminFeedbackListResponse struct {
-	Items               []database.UserFeedback `json:"items"`
-	Total               int64                   `json:"total"`
-	Limit               int                     `json:"limit"`
-	Offset              int                     `json:"offset"`
-	GitHubBridgeEnabled bool                    `json:"github_bridge_enabled"`
-	GitHubRepo          string                  `json:"github_repo,omitempty"`
+	Items               []dbuser.UserFeedback `json:"items"`
+	Total               int64                 `json:"total"`
+	Limit               int                   `json:"limit"`
+	Offset              int                   `json:"offset"`
+	GitHubBridgeEnabled bool                  `json:"github_bridge_enabled"`
+	GitHubRepo          string                `json:"github_repo,omitempty"`
 }
 
 // adminFeedbackPatchRequest is the partial-update body shape consumed
@@ -109,7 +110,7 @@ func (h *AdminFeedbackHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	params := database.FeedbackListParams{
+	params := dbuser.FeedbackListParams{
 		Status:   strings.TrimSpace(r.URL.Query().Get("status")),
 		Category: strings.TrimSpace(r.URL.Query().Get("category")),
 	}
@@ -120,9 +121,9 @@ func (h *AdminFeedbackHandler) List(w http.ResponseWriter, r *http.Request) {
 	items, total, err := h.store.List(r.Context(), params)
 	if err != nil {
 		switch {
-		case errors.Is(err, database.ErrFeedbackInvalidStatus):
+		case errors.Is(err, dbuser.ErrFeedbackInvalidStatus):
 			writeError(w, http.StatusBadRequest, "invalid status filter (expected new|triaged|closed)")
-		case errors.Is(err, database.ErrFeedbackInvalidCategory):
+		case errors.Is(err, dbuser.ErrFeedbackInvalidCategory):
 			writeError(w, http.StatusBadRequest, "invalid category filter (expected bug|feature|other)")
 		default:
 			log.Error().Err(err).Msg("admin feedback: list failed")
@@ -152,7 +153,7 @@ func (h *AdminFeedbackHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	row, err := h.store.Get(r.Context(), id)
-	if errors.Is(err, database.ErrFeedbackNotFound) {
+	if errors.Is(err, dbuser.ErrFeedbackNotFound) {
 		writeError(w, http.StatusNotFound, "feedback not found")
 		return
 	}
@@ -186,7 +187,7 @@ func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	actor := actorFromRequest(r, h.authHdr)
-	upd := database.FeedbackUpdate{
+	upd := dbuser.FeedbackUpdate{
 		Status:         req.Status,
 		GitHubIssueURL: req.GitHubIssueURL,
 		TriagedBy:      actor,
@@ -202,7 +203,7 @@ func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		row, err := h.store.Get(r.Context(), id)
-		if errors.Is(err, database.ErrFeedbackNotFound) {
+		if errors.Is(err, dbuser.ErrFeedbackNotFound) {
 			writeError(w, http.StatusNotFound, "feedback not found")
 			return
 		}
@@ -221,17 +222,17 @@ func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		}
 		upd.GitHubIssueURL = &issueURL
 		if upd.Status == nil {
-			triaged := database.FeedbackStatusTriaged
+			triaged := dbuser.FeedbackStatusTriaged
 			upd.Status = &triaged
 		}
 	}
 
 	updated, err := h.store.Update(r.Context(), id, upd)
-	if errors.Is(err, database.ErrFeedbackNotFound) {
+	if errors.Is(err, dbuser.ErrFeedbackNotFound) {
 		writeError(w, http.StatusNotFound, "feedback not found")
 		return
 	}
-	if errors.Is(err, database.ErrFeedbackInvalidStatus) {
+	if errors.Is(err, dbuser.ErrFeedbackInvalidStatus) {
 		writeError(w, http.StatusBadRequest, "invalid status (expected new|triaged|closed)")
 		return
 	}
@@ -267,7 +268,7 @@ func (h *AdminFeedbackHandler) parseID(w http.ResponseWriter, r *http.Request) (
 // to GitHub. Pulled out so the unit test can assert formatting without
 // firing real HTTP traffic. Renders snake_case keys so the issue is
 // greppable against the original payload.
-func buildGitHubIssueContent(row database.UserFeedback) (string, string) {
+func buildGitHubIssueContent(row dbuser.UserFeedback) (string, string) {
 	title := fmt.Sprintf("[%s] %s", strings.Title(row.Category), row.Title) //nolint:staticcheck // Title is fine for ASCII category labels
 	var b strings.Builder
 	b.WriteString(row.Body)

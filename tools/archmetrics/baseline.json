@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T15:20:48Z",
+  "generated_at": "2026-05-28T15:25:59Z",
   "go_version": "go1.26.1",
-  "commit_sha": "0f15192659dd988dd59acb4f779418c36a762176",
+  "commit_sha": "db31641148cc1e5882c21f2f5f86ccfbb55420cf",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2497,7 +2497,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126587,
+      "loc": 126590,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2628,6 +2628,7 @@
         "internal/database/notification",
         "internal/database/observability",
         "internal/database/sharing",
+        "internal/database/user",
         "internal/dataquality",
         "internal/enums",
         "internal/events",
@@ -3680,9 +3681,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 72,
-      "test_files": 29,
-      "loc": 19653,
+      "go_files": 70,
+      "test_files": 28,
+      "loc": 18867,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3748,7 +3749,6 @@
         "mileage_repo.go",
         "mileage_repo_test.go",
         "mongodb.go",
-        "onboarding_repo.go",
         "position_repo.go",
         "query_budget_tracer.go",
         "query_budget_tracer_test.go",
@@ -3789,8 +3789,6 @@
         "trip_repo.go",
         "trips_detail_repo.go",
         "trips_detail_repo_test.go",
-        "user_feedback_repo.go",
-        "user_feedback_repo_test.go",
         "vampire_drain_repo.go",
         "vampire_drain_repo_test.go",
         "vehicle_photo_repo.go",
@@ -3976,6 +3974,22 @@
       "files": [
         "doc.go",
         "token_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/user",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 806,
+      "has_doc_go": true,
+      "imports": [
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "feedback_repo.go",
+        "feedback_repo_test.go",
+        "onboarding_repo.go"
       ]
     },
     {
@@ -6956,7 +6970,6 @@
       "migrate.go",
       "mileage_repo.go",
       "mongodb.go",
-      "onboarding_repo.go",
       "position_repo.go",
       "query_budget_tracer.go",
       "quiet_hours_repo.go",
@@ -6987,7 +7000,6 @@
       "tesla_vehicle_driver_repo.go",
       "trip_repo.go",
       "trips_detail_repo.go",
-      "user_feedback_repo.go",
       "vampire_drain_repo.go",
       "vehicle_photo_repo.go",
       "vehicle_repo.go",
@@ -7061,6 +7073,11 @@
     "internal/database/sharing": [
       "doc.go",
       "token_repo.go"
+    ],
+    "internal/database/user": [
+      "doc.go",
+      "feedback_repo.go",
+      "onboarding_repo.go"
     ],
     "internal/dataquality": [
       "doc.go",
@@ -7769,8 +7786,8 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 72,
-      "flat_parent_test_files": 29,
+      "flat_parent_go_files": 70,
+      "flat_parent_test_files": 28,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",

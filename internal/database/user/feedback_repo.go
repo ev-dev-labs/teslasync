@@ -1,4 +1,4 @@
-package database
+package user
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -116,11 +118,11 @@ type FeedbackUpdate struct {
 
 // UserFeedbackRepo persists feedback rows.
 type UserFeedbackRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewUserFeedbackRepo wires a repository against the shared pool.
-func NewUserFeedbackRepo(db *DB) *UserFeedbackRepo {
+func NewUserFeedbackRepo(db *database.DB) *UserFeedbackRepo {
 	return &UserFeedbackRepo{db: db}
 }
 

@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 72,
+      "max_files": 70,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.6 carved 8 subpkgs. R4.7 batch 82-72 (automation — LARGEST single-aggregate carve: 10 src files + 1 test: repo (with bulk/mutation/query split), history_repo, step_repo, step_child_repo (with persistence/query split), variable_repo). Files qualify database.DBTX (transaction interface) from parent. Lesson #27 NEW: pre-flight collision check should grep parent peer files for `<Subpkg>Prefix\\w*` not just exact symbol names; in R4.7 only false-positive was an `Automations` comment in worker_status_queue_repo.go. Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10). Planned: ~20 aggregates total."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.7 carved 9 subpkgs. R4.8 batch 72-70 (user — onboarding + user_feedback). Settings + vehicle_settings deferred per Lesson 26 (vehicle_settings_repo + resolver hold *SettingsRepo fields). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2). Planned: ~20 aggregates total."
     },
     {
       "path": "internal/ai/tools",

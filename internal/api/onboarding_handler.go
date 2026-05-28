@@ -11,6 +11,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
 
 // onboardingTokenReader is the narrow surface OnboardingHandler needs
@@ -21,9 +22,9 @@ type onboardingTokenReader interface {
 }
 
 // onboardingStatusReader mirrors the database-derived portion of the
-// status. The concrete *database.OnboardingRepo satisfies it.
+// status. The concrete *dbuser.OnboardingRepo satisfies it.
 type onboardingStatusReader interface {
-	Get(ctx context.Context) (*database.OnboardingStatus, error)
+	Get(ctx context.Context) (*dbuser.OnboardingStatus, error)
 }
 
 // OnboardingHandler reports whether the install has completed the
@@ -52,7 +53,7 @@ func NewOnboardingHandler(db *database.DB, enc ...*crypto.Encryptor) *Onboarding
 	}
 	return &OnboardingHandler{
 		tokens: dbauth.NewTokenRepo(db, e),
-		repo:   database.NewOnboardingRepo(db),
+		repo:   dbuser.NewOnboardingRepo(db),
 	}
 }
 

@@ -13,43 +13,43 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
 
 // fakeFeedbackQueueStore implements FeedbackQueueStore for unit tests.
 type fakeFeedbackQueueStore struct {
-	listResult []database.UserFeedback
+	listResult []dbuser.UserFeedback
 	listTotal  int64
 	listErr    error
-	listParams database.FeedbackListParams
+	listParams dbuser.FeedbackListParams
 
-	getResult database.UserFeedback
+	getResult dbuser.UserFeedback
 	getErr    error
 	lastGetID int64
 
-	updateResult database.UserFeedback
+	updateResult dbuser.UserFeedback
 	updateErr    error
-	lastUpdate   database.FeedbackUpdate
+	lastUpdate   dbuser.FeedbackUpdate
 	lastUpdateID int64
 	updateCalls  int
 }
 
-func (f *fakeFeedbackQueueStore) List(_ context.Context, p database.FeedbackListParams) ([]database.UserFeedback, int64, error) {
+func (f *fakeFeedbackQueueStore) List(_ context.Context, p dbuser.FeedbackListParams) ([]dbuser.UserFeedback, int64, error) {
 	f.listParams = p
 	return f.listResult, f.listTotal, f.listErr
 }
 
-func (f *fakeFeedbackQueueStore) Get(_ context.Context, id int64) (database.UserFeedback, error) {
+func (f *fakeFeedbackQueueStore) Get(_ context.Context, id int64) (dbuser.UserFeedback, error) {
 	f.lastGetID = id
 	return f.getResult, f.getErr
 }
 
-func (f *fakeFeedbackQueueStore) Update(_ context.Context, id int64, upd database.FeedbackUpdate) (database.UserFeedback, error) {
+func (f *fakeFeedbackQueueStore) Update(_ context.Context, id int64, upd dbuser.FeedbackUpdate) (dbuser.UserFeedback, error) {
 	f.updateCalls++
 	f.lastUpdate = upd
 	f.lastUpdateID = id
 	if f.updateErr != nil {
-		return database.UserFeedback{}, f.updateErr
+		return dbuser.UserFeedback{}, f.updateErr
 	}
 	row := f.updateResult
 	if row.ID == 0 {
@@ -92,7 +92,7 @@ func adminFeedbackTestCfg(repo string) *config.Config {
 
 func TestAdminFeedbackList(t *testing.T) {
 	store := &fakeFeedbackQueueStore{
-		listResult: []database.UserFeedback{
+		listResult: []dbuser.UserFeedback{
 			{ID: 1, Category: "bug", Title: "broken thing", Status: "new", CreatedAt: time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)},
 			{ID: 2, Category: "feature", Title: "want a thing", Status: "triaged"},
 		},
@@ -121,7 +121,7 @@ func TestAdminFeedbackList(t *testing.T) {
 }
 
 func TestAdminFeedbackListBridgeHiddenWhenUnconfigured(t *testing.T) {
-	store := &fakeFeedbackQueueStore{listResult: []database.UserFeedback{}, listTotal: 0}
+	store := &fakeFeedbackQueueStore{listResult: []dbuser.UserFeedback{}, listTotal: 0}
 	h := NewAdminFeedbackHandler(store, adminFeedbackTestCfg(""), nil, nil)
 
 	rec := httptest.NewRecorder()
@@ -138,7 +138,7 @@ func TestAdminFeedbackListBridgeHiddenWhenUnconfigured(t *testing.T) {
 }
 
 func TestAdminFeedbackListInvalidStatus(t *testing.T) {
-	store := &fakeFeedbackQueueStore{listErr: database.ErrFeedbackInvalidStatus}
+	store := &fakeFeedbackQueueStore{listErr: dbuser.ErrFeedbackInvalidStatus}
 	h := NewAdminFeedbackHandler(store, adminFeedbackTestCfg(""), nil, nil)
 
 	rec := httptest.NewRecorder()
@@ -176,7 +176,7 @@ func adminFeedbackRouted(method, target string, body string, h *AdminFeedbackHan
 
 func TestAdminFeedbackGet(t *testing.T) {
 	store := &fakeFeedbackQueueStore{
-		getResult: database.UserFeedback{ID: 7, Category: "bug", Title: "x", Status: "new"},
+		getResult: dbuser.UserFeedback{ID: 7, Category: "bug", Title: "x", Status: "new"},
 	}
 	h := NewAdminFeedbackHandler(store, adminFeedbackTestCfg(""), nil, nil)
 
@@ -190,7 +190,7 @@ func TestAdminFeedbackGet(t *testing.T) {
 }
 
 func TestAdminFeedbackGetNotFound(t *testing.T) {
-	store := &fakeFeedbackQueueStore{getErr: database.ErrFeedbackNotFound}
+	store := &fakeFeedbackQueueStore{getErr: dbuser.ErrFeedbackNotFound}
 	h := NewAdminFeedbackHandler(store, adminFeedbackTestCfg(""), nil, nil)
 
 	rec, _ := adminFeedbackRouted(http.MethodGet, "/admin/feedback/99", "", h, "/admin/feedback/{id}", h.Get)
@@ -201,7 +201,7 @@ func TestAdminFeedbackGetNotFound(t *testing.T) {
 
 func TestAdminFeedbackPatchStatus(t *testing.T) {
 	store := &fakeFeedbackQueueStore{
-		updateResult: database.UserFeedback{ID: 5, Category: "bug", Title: "x", Status: "triaged"},
+		updateResult: dbuser.UserFeedback{ID: 5, Category: "bug", Title: "x", Status: "triaged"},
 	}
 	h := NewAdminFeedbackHandler(store, adminFeedbackTestCfg(""), nil, nil)
 
@@ -223,7 +223,7 @@ func TestAdminFeedbackPatchStatus(t *testing.T) {
 }
 
 func TestAdminFeedbackPatchInvalidStatus(t *testing.T) {
-	store := &fakeFeedbackQueueStore{updateErr: database.ErrFeedbackInvalidStatus}
+	store := &fakeFeedbackQueueStore{updateErr: dbuser.ErrFeedbackInvalidStatus}
 	h := NewAdminFeedbackHandler(store, adminFeedbackTestCfg(""), nil, nil)
 
 	body := `{"status":"weird"}`
@@ -236,7 +236,7 @@ func TestAdminFeedbackPatchInvalidStatus(t *testing.T) {
 
 func TestAdminFeedbackPatchForwardWithoutBridgeReturns400(t *testing.T) {
 	store := &fakeFeedbackQueueStore{
-		getResult: database.UserFeedback{ID: 5, Category: "bug", Title: "x", Body: "y", Status: "new"},
+		getResult: dbuser.UserFeedback{ID: 5, Category: "bug", Title: "x", Body: "y", Status: "new"},
 	}
 	// Bridge intentionally nil — operator left GITHUB_REPO unset.
 	h := NewAdminFeedbackHandler(store, adminFeedbackTestCfg(""), nil, nil)
@@ -254,7 +254,7 @@ func TestAdminFeedbackPatchForwardWithoutBridgeReturns400(t *testing.T) {
 
 func TestAdminFeedbackPatchForwardSuccess(t *testing.T) {
 	store := &fakeFeedbackQueueStore{
-		getResult: database.UserFeedback{
+		getResult: dbuser.UserFeedback{
 			ID:        5,
 			Category:  "bug",
 			Title:     "Battery widget glitch",
@@ -289,14 +289,14 @@ func TestAdminFeedbackPatchForwardSuccess(t *testing.T) {
 		t.Fatalf("github_issue_url not threaded: %+v", store.lastUpdate)
 	}
 	// Default status flip when caller did not specify one.
-	if store.lastUpdate.Status == nil || *store.lastUpdate.Status != database.FeedbackStatusTriaged {
+	if store.lastUpdate.Status == nil || *store.lastUpdate.Status != dbuser.FeedbackStatusTriaged {
 		t.Fatalf("status not auto-set to triaged: %+v", store.lastUpdate)
 	}
 }
 
 func TestAdminFeedbackPatchForwardBridgeFailureReturns502(t *testing.T) {
 	store := &fakeFeedbackQueueStore{
-		getResult: database.UserFeedback{ID: 5, Category: "bug", Title: "x", Body: "y", Status: "new"},
+		getResult: dbuser.UserFeedback{ID: 5, Category: "bug", Title: "x", Body: "y", Status: "new"},
 	}
 	bridge := &fakeGitHubIssuesPoster{err: errors.New("github 401")}
 	h := NewAdminFeedbackHandler(store, adminFeedbackTestCfg("ev-dev-labs/teslasync"), nil, bridge)
@@ -337,7 +337,7 @@ func TestAdminFeedbackPatchInvalidID(t *testing.T) {
 }
 
 func TestBuildGitHubIssueContentIncludesContext(t *testing.T) {
-	row := database.UserFeedback{
+	row := dbuser.UserFeedback{
 		ID:               42,
 		Category:         "bug",
 		Title:            "Sample title",
