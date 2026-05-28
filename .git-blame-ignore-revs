@@ -231,3 +231,4 @@ c7f283d925bb9e155dae797f6914460cd9cf2f1e # refactor(R2d.9): carve internal/api/a
 f9e4498b115230143fe0ef4860eea54a335d548b # refactor(R2d.10): carve internal/api/slo subpackage
 69ebc820f8e08b9cf52373e20db724bd1ce644b0 # refactor(R2d.11): carve internal/api/geocode subpackage
 3b0f64c8776d73fc698ffaa5676a0eca93d41d53 # refactor(R2d.12): carve internal/api/dataquality subpackage
+78adb7edd60f75b8a59ceb86d76451844823e9b7 # refactor(R2d.13): carve internal/api/softwareupdate subpackage
