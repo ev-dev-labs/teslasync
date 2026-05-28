@@ -82,6 +82,8 @@ import (
 	"strings"
 	"time"
 
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -276,7 +278,7 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// effort — a save failure is logged but does not abort
 	// the response (matches the existing /chatbot baseline's
 	// behaviour).
-	userMsg := &models.ChatMessage{
+	userMsg := &chatbotmodel.ChatMessage{
 		SessionID: req.SessionID,
 		Role:      "user",
 		Content:   req.Message,
@@ -380,7 +382,7 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// produced no text.
 	assistantText := strings.TrimSpace(rec.text())
 	if assistantText != "" {
-		assistantMsg := &models.ChatMessage{
+		assistantMsg := &chatbotmodel.ChatMessage{
 			SessionID: req.SessionID,
 			Role:      "assistant",
 			Content:   assistantText,

@@ -11,8 +11,9 @@ import (
 	"strings"
 	"time"
 
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
+
 	"github.com/ev-dev-labs/teslasync/internal/enums"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // Chat processes a user message and returns an AI-generated response.
@@ -34,14 +35,14 @@ func (h *ChatbotHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save user message
-	userMsg := &models.ChatMessage{SessionID: body.SessionID, Role: "user", Content: body.Message}
+	userMsg := &chatbotmodel.ChatMessage{SessionID: body.SessionID, Role: "user", Content: body.Message}
 	_ = h.chat.SaveMessage(r.Context(), userMsg)
 
 	// Generate response by interpreting the query
 	response := h.processQuery(r.Context(), body.Message)
 
 	// Save assistant message
-	assistantMsg := &models.ChatMessage{SessionID: body.SessionID, Role: "assistant", Content: response}
+	assistantMsg := &chatbotmodel.ChatMessage{SessionID: body.SessionID, Role: "assistant", Content: response}
 	_ = h.chat.SaveMessage(r.Context(), assistantMsg)
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{

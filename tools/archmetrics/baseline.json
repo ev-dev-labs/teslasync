@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T03:44:05Z",
+  "generated_at": "2026-05-28T03:46:22Z",
   "go_version": "go1.26.1",
-  "commit_sha": "baa044718f6e226e90cbabfc033acde63657ed34",
+  "commit_sha": "6233628078f23d8e585ba956d07a01d3bb9493f9",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2030,7 +2030,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126469,
+      "loc": 126471,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2147,6 +2147,7 @@
         "internal/models/alert",
         "internal/models/auth",
         "internal/models/backup",
+        "internal/models/chatbot",
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
@@ -3151,7 +3152,7 @@
       "path": "internal/database",
       "go_files": 108,
       "test_files": 35,
-      "loc": 27848,
+      "loc": 27849,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3165,6 +3166,7 @@
         "internal/models/alert",
         "internal/models/auth",
         "internal/models/backup",
+        "internal/models/chatbot",
         "internal/tracing"
       ],
       "files": [
@@ -3945,7 +3947,7 @@
       "path": "internal/models",
       "go_files": 33,
       "test_files": 1,
-      "loc": 2706,
+      "loc": 2686,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4024,6 +4026,19 @@
       "imports": null,
       "files": [
         "backup.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/models/chatbot",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 38,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "chatbot.go",
         "doc.go"
       ]
     },
@@ -6293,6 +6308,10 @@
       "backup.go",
       "doc.go"
     ],
+    "internal/models/chatbot": [
+      "chatbot.go",
+      "doc.go"
+    ],
     "internal/mqtt": [
       "dlq_inspector.go",
       "dlq_production.go",
@@ -6601,12 +6620,12 @@
       "existing_subpkgs": [
         "alert",
         "auth",
-        "backup"
+        "backup",
+        "chatbot"
       ],
       "missing_subpkgs": [
         "automation",
         "charging",
-        "chatbot",
         "dashboard",
         "drive",
         "energy",

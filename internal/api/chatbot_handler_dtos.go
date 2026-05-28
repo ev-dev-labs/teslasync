@@ -5,7 +5,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -24,7 +25,7 @@ func (h *ChatbotHandler) History(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if msgs == nil {
-		msgs = []*models.ChatMessage{}
+		msgs = []*chatbotmodel.ChatMessage{}
 	}
 	writeJSON(w, http.StatusOK, msgs)
 }
@@ -42,7 +43,7 @@ func (h *ChatbotHandler) Sessions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if sessions == nil {
-		sessions = []*models.ChatSessionInfo{}
+		sessions = []*chatbotmodel.ChatSessionInfo{}
 	}
 	writeJSON(w, http.StatusOK, sessions)
 }

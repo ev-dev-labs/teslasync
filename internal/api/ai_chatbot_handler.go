@@ -42,6 +42,8 @@ import (
 	"strings"
 	"time"
 
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -52,7 +54,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiChatbotHistoryLimit is the upper bound on how many prior messages
@@ -161,7 +162,7 @@ func (h *AIChatbotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// they can see what they asked. Best-effort — a save failure is
 	// logged but does not abort the response (matches the existing
 	// /chatbot baseline's behaviour).
-	userMsg := &models.ChatMessage{
+	userMsg := &chatbotmodel.ChatMessage{
 		SessionID: body.SessionID,
 		Role:      "user",
 		Content:   body.Message,
@@ -253,7 +254,7 @@ func (h *AIChatbotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// the conversation hit max-iterations).
 	assistantText := strings.TrimSpace(rec.text())
 	if assistantText != "" {
-		assistantMsg := &models.ChatMessage{
+		assistantMsg := &chatbotmodel.ChatMessage{
 			SessionID: body.SessionID,
 			Role:      "assistant",
 			Content:   assistantText,
@@ -274,7 +275,7 @@ func (h *AIChatbotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Order is preserved (history was loaded ASC; provider.Message slices
 // are NEWEST LAST). Nil/empty input returns nil so the dispatcher
 // sees an explicit empty history.
-func historyToProviderMessages(rows []*models.ChatMessage, currentUserMessage string) []provider.Message {
+func historyToProviderMessages(rows []*chatbotmodel.ChatMessage, currentUserMessage string) []provider.Message {
 	if len(rows) == 0 {
 		return nil
 	}

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/jackc/pgx/v5"
@@ -1263,7 +1265,7 @@ func NewChatRepo(db *DB) *ChatRepo {
 	return &ChatRepo{db: db}
 }
 
-func (r *ChatRepo) SaveMessage(ctx context.Context, m *models.ChatMessage) error {
+func (r *ChatRepo) SaveMessage(ctx context.Context, m *chatbotmodel.ChatMessage) error {
 	return r.db.Pool.QueryRow(ctx,
 		`INSERT INTO chatbot_messages (session_id, role, content, created_at)
 		 VALUES ($1, $2, $3, $4) RETURNING id`,
@@ -1271,7 +1273,7 @@ func (r *ChatRepo) SaveMessage(ctx context.Context, m *models.ChatMessage) error
 	).Scan(&m.ID)
 }
 
-func (r *ChatRepo) GetHistory(ctx context.Context, sessionID string, limit int) ([]*models.ChatMessage, error) {
+func (r *ChatRepo) GetHistory(ctx context.Context, sessionID string, limit int) ([]*chatbotmodel.ChatMessage, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, session_id, role, content, created_at FROM chatbot_messages
 		 WHERE session_id=$1 ORDER BY created_at ASC LIMIT $2`, sessionID, limit,
@@ -1281,9 +1283,9 @@ func (r *ChatRepo) GetHistory(ctx context.Context, sessionID string, limit int) 
 	}
 	defer rows.Close()
 
-	var msgs []*models.ChatMessage
+	var msgs []*chatbotmodel.ChatMessage
 	for rows.Next() {
-		m := &models.ChatMessage{}
+		m := &chatbotmodel.ChatMessage{}
 		if err := rows.Scan(&m.ID, &m.SessionID, &m.Role, &m.Content, &m.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -1323,7 +1325,7 @@ func (r *ChatRepo) GetSessions(ctx context.Context, limit int) ([]string, error)
 // first_message is the earliest *user* message in the session, used as a
 // fallback display title when no explicit title has been set. Limited to
 // the first 120 chars to keep the wire payload small.
-func (r *ChatRepo) ListSessions(ctx context.Context, limit int) ([]*models.ChatSessionInfo, error) {
+func (r *ChatRepo) ListSessions(ctx context.Context, limit int) ([]*chatbotmodel.ChatSessionInfo, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 WITH msg_stats AS (
     SELECT
@@ -1356,9 +1358,9 @@ LIMIT $1`, limit)
 	}
 	defer rows.Close()
 
-	var sessions []*models.ChatSessionInfo
+	var sessions []*chatbotmodel.ChatSessionInfo
 	for rows.Next() {
-		s := &models.ChatSessionInfo{}
+		s := &chatbotmodel.ChatSessionInfo{}
 		if err := rows.Scan(&s.ID, &s.Title, &s.FirstMessage, &s.MessageCount, &s.LastMessageAt, &s.CreatedAt); err != nil {
 			return nil, err
 		}
