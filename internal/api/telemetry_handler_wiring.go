@@ -7,6 +7,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
@@ -34,7 +35,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 	bgCtx, bgCancel := context.WithCancel(context.Background())
 	return &TelemetryHandler{
 		db:             db,
-		posRepo:        database.NewPositionRepo(db),
+		posRepo:        positiondb.NewPositionRepo(db),
 		vehicleRepo:    vehicledb.NewVehicleRepo(db),
 		swUpdateRepo:   systemdb.NewSoftwareUpdateRepo(db),
 		mqttClient:     mc,

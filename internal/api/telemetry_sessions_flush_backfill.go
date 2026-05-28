@@ -7,7 +7,7 @@ import (
 
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	"github.com/rs/zerolog/log"
 )
 
@@ -94,7 +94,7 @@ func nearestLatLng(p telemetrymodel.Position) (float64, float64) {
 	return v.FieldByName(fieldNearestLat).Float(), v.FieldByName(fieldNearestLng).Float()
 }
 
-func findNearestPositionFallback(ctx context.Context, repo *database.PositionRepo, vehicleID int64, targetTime time.Time, window time.Duration) (*nearestPosition, error) {
+func findNearestPositionFallback(ctx context.Context, repo *positiondb.PositionRepo, vehicleID int64, targetTime time.Time, window time.Duration) (*nearestPosition, error) {
 	from := targetTime.Add(-window)
 	to := targetTime.Add(window)
 	positions, err := repo.ListByVehicle(ctx, vehicleID, from, to)

@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -11,7 +12,7 @@ import (
 type DriveHandler struct {
 	db                *database.DB
 	driveRepo         *drivedb.DriveRepo
-	posRepo           *database.PositionRepo
+	posRepo           *positiondb.PositionRepo
 	signalLogReader   *signaldb.SignalLogReader
 	live              signal.LiveStateReader
 	forwardAuthHeader string
@@ -27,7 +28,7 @@ func NewDriveHandler(db *database.DB, live signal.LiveStateReader) *DriveHandler
 	return &DriveHandler{
 		db:              db,
 		driveRepo:       drivedb.NewDriveRepo(db),
-		posRepo:         database.NewPositionRepo(db),
+		posRepo:         positiondb.NewPositionRepo(db),
 		signalLogReader: signaldb.NewSignalLogReader(db),
 		live:            live,
 	}

@@ -14,6 +14,7 @@ import (
 
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -52,7 +53,7 @@ type AnalyticsHandler struct {
 	vehicleRepo  vehicleListFetcher
 	driveRepo    driveByVehicleFetcher
 	chargingRepo chargingByVehicleFetcher
-	positionRepo *database.PositionRepo
+	positionRepo *positiondb.PositionRepo
 	db           *database.DB
 	state        signal.StateReader
 }
@@ -62,7 +63,7 @@ func NewAnalyticsHandler(db *database.DB, state signal.StateReader) *AnalyticsHa
 		vehicleRepo:  vehicledb.NewVehicleRepo(db),
 		driveRepo:    drivedb.NewDriveRepo(db),
 		chargingRepo: chargingdb.NewChargingRepo(db),
-		positionRepo: database.NewPositionRepo(db),
+		positionRepo: positiondb.NewPositionRepo(db),
 		db:           db,
 		state:        state,
 	}

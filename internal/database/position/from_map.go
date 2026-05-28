@@ -1,4 +1,4 @@
-package database
+package position
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // insertRowFromMap performs a parameterized INSERT into `table` using the keys
@@ -14,7 +16,7 @@ import (
 // Caller MUST ensure all map keys are valid SQL identifiers; in this codebase
 // the keys are sourced from telemetry.HotRoute.Column declarations which are
 // authored against the schema.
-func insertRowFromMap(ctx context.Context, db *DB, table string, vehicleID int64, ts time.Time, row map[string]any) error {
+func insertRowFromMap(ctx context.Context, db *database.DB, table string, vehicleID int64, ts time.Time, row map[string]any) error {
 	if len(row) == 0 {
 		return nil
 	}

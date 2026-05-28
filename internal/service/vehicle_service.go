@@ -8,6 +8,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -37,7 +38,7 @@ type SignalStateReader interface {
 type VehicleService struct {
 	db            *database.DB
 	vehicleRepo   *vehicledb.VehicleRepo
-	positionRepo  *database.PositionRepo
+	positionRepo  *positiondb.PositionRepo
 	settingsRepo  *database.SettingsRepo
 	stateProvider *vehicleStateProvider
 	state         SignalStateReader
@@ -55,7 +56,7 @@ func NewVehicleService(db *database.DB) *VehicleService {
 	return &VehicleService{
 		db:            db,
 		vehicleRepo:   vehicledb.NewVehicleRepo(db),
-		positionRepo:  database.NewPositionRepo(db),
+		positionRepo:  positiondb.NewPositionRepo(db),
 		settingsRepo:  database.NewSettingsRepo(db),
 		stateProvider: &vehicleStateProvider{db: db},
 	}
@@ -73,7 +74,7 @@ func (s *VehicleService) WithStateReader(reader SignalStateReader) *VehicleServi
 
 // PositionRepo returns the underlying position repository for simple CRUD
 // operations that don't warrant a service method (e.g. paginated listing).
-func (s *VehicleService) PositionRepo() *database.PositionRepo {
+func (s *VehicleService) PositionRepo() *positiondb.PositionRepo {
 	return s.positionRepo
 }
 

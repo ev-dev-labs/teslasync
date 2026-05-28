@@ -1,4 +1,4 @@
-package database
+package position
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 
 	"github.com/jackc/pgx/v5"
@@ -55,10 +56,10 @@ var (
 // PositionRepo provides typed access to the SI canonical `positions`
 // hypertable (migration 000182_positions_si).
 type PositionRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewPositionRepo(db *DB) *PositionRepo {
+func NewPositionRepo(db *database.DB) *PositionRepo {
 	return &PositionRepo{db: db}
 }
 

@@ -1,53 +1,37 @@
-refactor(R4.22): carve internal/database/signal (telemetry hot-path, 48 callers)
+refactor(R4.23): carve internal/database/position (positions hypertable + from_map)
 
-Move the signal_log + signals_catalog repositories into a bounded-context
-subpkg per ADR-011. This is the telemetry HOT PATH (Tesla Fleet Telemetry
--> normalize.Pipeline -> writer fan-out -> signal_log hypertable) — every
-chart, replay, and analytics endpoint depends on it.
+Move PositionRepo into its own bounded-context subpkg per ADR-011, along
+with the parent-private map-based bulk insert helper that only it uses.
 
-Files (7 src + 1 test moved; 48 caller files swept):
-  signal_log_reader.go              -> signal/reader.go
-  signal_log_reader_aggregations.go -> signal/reader_aggregations.go
-  signal_log_reader_query.go        -> signal/reader_query.go
-  signal_log_repo.go                -> signal/log_repo.go    (Mongo backend)
-  signal_history_writer.go          -> signal/history_writer.go (Postgres writer)
-  signals_catalog_repo.go           -> signal/catalog_repo.go
-  signals_catalog_repo_test.go      -> signal/catalog_repo_test.go
-  signal_catalog.go                 -> signal/catalog.go     (Tesla signal -> column map)
-  signal/doc.go                                              (NEW, // Layer: adapter)
+Files (2 src moved; 9 caller files swept):
+  position_repo.go  -> position/repo.go
+  from_map.go       -> position/from_map.go
+  position/doc.go   (NEW, // Layer: adapter)
 
-Mongo + Postgres backends live side by side under signal/ — both are
-signal_log persistence concerns; the Mongo path is the historical Phase-42
-backup. References to parent types qualified:
-  *DB           -> *database.DB
-  MongoClient   -> database.MongoClient
-  DBTX          -> database.DBTX
+The from_map.go file contained:
+  - insertRowFromMap(db, table, ...)  package-private helper
+  - sortedKeys(m)                     package-private helper
+  - (*PositionRepo).InsertFromMap     the SOLE caller of insertRowFromMap
 
-Symbols promoted (alias signaldb MANDATORY at callsites that also import
-internal/signal runtime pkg or internal/signal/store):
-  SignalLogReader, NewSignalLogReader, SignalTrace, SignalTraceEntry,
-  BrickVoltageHistory, BrickVoltageHistoryEntry, ChargeAggregates,
-  DriveAggregates, IntegrateDriveDistanceMeters, RegenEnergy,
-  LatestTimestamp,
-  SignalLogRepo, NewSignalLogRepo, SignalHistoryEntry, SignalHistoryPoint,
-  SignalHistoryQuery, SignalHistoryRow,
-  SignalHistoryWriter, NewSignalHistoryWriter, AvailableSignals,
-  SignalsCatalogRepo, NewSignalsCatalogRepo, CatalogAggregate,
-  CatalogAggregates, ObservationsParams, ObservationsCount,
-  SignalCatalog, SignalMapping, ColumnType, ColType{Numeric,Varchar,Bool}.
+Per Lesson 32-style consolidation: since insertRowFromMap is only used by
+PositionRepo.InsertFromMap (verified by grep across internal/+cmd/), the
+entire from_map.go moves with the position subpkg. Both helpers stay
+unexported in the new package — they remain implementation detail of the
+positions table bulk-write path.
 
-Position repository (position_repo.go) stays in parent for now — it has
-its own aggregate root (positions table, lat/long snapshot) and depends
-on the parent-private from_map.go helper. It will be carved in R4.23
-together with from_map.go.
+Symbols promoted (alias positiondb per ADR-011):
+  PositionRepo, NewPositionRepo
 
-No new helper deps. No cycles. All gates green.
+References to parent types qualified:
+  *DB -> *database.DB
 
-internal/database allowlist ratchet: 29 -> 22 src files.
+No new helper deps. No cycles.
 
-Carved subpkgs so far (24): achievement, sharing, admin, gdpr,
+internal/database allowlist ratchet: 22 -> 20 src files.
+
+Carved subpkgs so far (25): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
 audit, charging, drive, trip, energy, ai, export, worker, telemetry,
-system, tesla, vehicle, signal.
+system, tesla, vehicle, signal, position.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

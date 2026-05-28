@@ -11,6 +11,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
@@ -46,7 +47,7 @@ var _ mqtt.StreamingHealthRecorder = (*TelemetryHandler)(nil)
 // TelemetryHandler receives and processes Tesla Fleet Telemetry data.
 type TelemetryHandler struct {
 	db                    *database.DB
-	posRepo               *database.PositionRepo
+	posRepo               *positiondb.PositionRepo
 	vehicleRepo           *vehicledb.VehicleRepo
 	swUpdateRepo          *systemdb.SoftwareUpdateRepo
 	mqttClient            *mqtt.Client
