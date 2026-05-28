@@ -16,6 +16,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
+	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -323,7 +324,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient, stateReader)
 	driveHandler := NewDriveDetail(db, stateReader, liveStateReader)
 	chargingHandler := NewChargingHandler(db, stateReader, liveStateReader)
-	geofenceHandler := NewGeofenceHandler(db)
+	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
+		func(r *http.Request, action string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, "", action, "geofence", entityID, detail)
+		},
+	))
 	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
 	// Phase-46 / Prompt 31 — Sudo step-up. Construct the in-memory
 	// token store and the reauth HTTP handler once and share them

@@ -1,4 +1,4 @@
-package api
+package geofence
 
 import (
 	"encoding/json"
@@ -8,11 +8,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
-
-	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	"github.com/rs/zerolog/log"
 )
 
@@ -161,70 +163,115 @@ func validateGeofence(g *systemmodel.Geofence) error {
 	return nil
 }
 
-// GeofenceHandler handles geofence CRUD.
-type GeofenceHandler struct {
+// Handler handles geofence CRUD plus the /geofences/bulk endpoint.
+//
+// Construct with NewHandler. The constructor wires *geofencedb.GeofenceRepo
+// as both the CRUD repo AND (by default) the bulk store; tests can
+// override the bulk store via WithBulkStore.
+//
+// To enable audit-log writes on bulk_delete operations, pass a
+// WithAuditFunc callback at construction. Without one, BulkUpdate still
+// performs the delete but skips the audit row.
+type Handler struct {
 	db           *database.DB
 	geofenceRepo *geofencedb.GeofenceRepo
-	// bulkOverride lets tests substitute the bulk store without standing
-	// up a real *geofencedb.GeofenceRepo. Always nil in production.
-	bulkOverride geofenceBulkStore
+	// bulk is the resolved bulk store. Defaults to geofenceRepo;
+	// WithBulkStore overrides for tests. Never nil after NewHandler
+	// unless both db and WithBulkStore(nil) were passed.
+	bulk BulkStore
+	// audit is the optional per-mutation audit callback. nil → no-op.
+	// Bound to "geofence" entity_type at the call site so the subpackage
+	// does not need to know about the parent's audit categorization.
+	audit AuditFunc
 }
 
-func NewGeofenceHandler(db *database.DB) *GeofenceHandler {
-	return &GeofenceHandler{db: db, geofenceRepo: geofencedb.NewGeofenceRepo(db)}
+// Option mutates a Handler during construction. See WithBulkStore +
+// WithAuditFunc for the supported options.
+type Option func(*Handler)
+
+// AuditFunc is the audit-logging callback shape expected by Handler.
+// It is invoked once per successful mutation that should be audited
+// (currently only bulk_delete). entityID is nil for batch operations
+// because the row count is encoded in `detail` instead.
+type AuditFunc func(r *http.Request, action string, entityID *int64, detail string)
+
+// WithBulkStore overrides the default bulk store (which is the same
+// *geofencedb.GeofenceRepo used by the CRUD methods). Intended for
+// tests; production code should construct via NewHandler(db) and let
+// the constructor wire the repo.
+func WithBulkStore(s BulkStore) Option { return func(h *Handler) { h.bulk = s } }
+
+// WithAuditFunc installs the audit callback invoked after a successful
+// bulk_delete. Without it, BulkUpdate skips the audit row but still
+// performs the delete.
+func WithAuditFunc(f AuditFunc) Option { return func(h *Handler) { h.audit = f } }
+
+// NewHandler constructs a Handler wired to a *geofencedb.GeofenceRepo
+// (when db is non-nil). Tests may pass db=nil + WithBulkStore(fake) to
+// exercise the bulk endpoint without standing up Postgres.
+func NewHandler(db *database.DB, opts ...Option) *Handler {
+	h := &Handler{db: db}
+	if db != nil {
+		h.geofenceRepo = geofencedb.NewGeofenceRepo(db)
+		h.bulk = h.geofenceRepo
+	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
-func (h *GeofenceHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	geofences, err := h.geofenceRepo.GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list geofences")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to list geofences"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to list geofences"))
 		return
 	}
-	writeJSON(w, http.StatusOK, geofences)
+	httpx.WriteJSON(w, http.StatusOK, geofences)
 }
 
-func (h *GeofenceHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	g, _, err := decodeGeofenceWriteBody(r.Body)
 	if err != nil {
-		writeAppError(w, r, ErrInvalidJSON)
+		apperror.Write(w, r, apperror.ErrInvalidJSON)
 		return
 	}
 	if g.Name == "" || g.Radius() <= 0 {
-		writeAppError(w, r, ErrMissingField.WithMessage("name and positive radius required"))
+		apperror.Write(w, r, apperror.ErrMissingField.WithMessage("name and positive radius required"))
 		return
 	}
 	if err := validateGeofence(g); err != nil {
-		writeAppError(w, r, ErrGeofenceInvalidCoords.WithMessage(err.Error()))
+		apperror.Write(w, r, apperror.ErrGeofenceInvalidCoords.WithMessage(err.Error()))
 		return
 	}
 
 	if err := h.geofenceRepo.Create(r.Context(), g); err != nil {
 		log.Error().Err(err).Msg("failed to create geofence")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to create geofence"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to create geofence"))
 		return
 	}
-	writeJSON(w, http.StatusCreated, g)
+	httpx.WriteJSON(w, http.StatusCreated, g)
 }
 
-func (h *GeofenceHandler) Get(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "geofenceID")
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "geofenceID")
 	if err != nil {
-		writeAppError(w, r, ErrInvalidID.WithMessage("invalid geofence ID"))
+		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid geofence ID"))
 		return
 	}
 
 	g, err := h.geofenceRepo.GetByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get geofence")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to get geofence"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to get geofence"))
 		return
 	}
 	if g == nil {
-		writeAppError(w, r, ErrGeofenceNotFound)
+		apperror.Write(w, r, apperror.ErrGeofenceNotFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, g)
+	httpx.WriteJSON(w, http.StatusOK, g)
 }
 
 // Update applies a merge-style PUT: load the row, then overlay the fields
@@ -241,27 +288,27 @@ func (h *GeofenceHandler) Get(w http.ResponseWriter, r *http.Request) {
 //   - Enabled / AlertOnEntry / AlertOnExit (*bool) — nil from the raw
 //     request means "not supplied"; a non-nil pointer (true OR false)
 //     overlays the existing row. This is the whole point of the bug fix.
-func (h *GeofenceHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "geofenceID")
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "geofenceID")
 	if err != nil {
-		writeAppError(w, r, ErrInvalidID.WithMessage("invalid geofence ID"))
+		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid geofence ID"))
 		return
 	}
 
 	patch, raw, err := decodeGeofenceWriteBody(r.Body)
 	if err != nil {
-		writeAppError(w, r, ErrInvalidJSON)
+		apperror.Write(w, r, apperror.ErrInvalidJSON)
 		return
 	}
 
 	existing, err := h.geofenceRepo.GetByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to load geofence for update")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to load geofence"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to load geofence"))
 		return
 	}
 	if existing == nil {
-		writeAppError(w, r, ErrGeofenceNotFound)
+		apperror.Write(w, r, apperror.ErrGeofenceNotFound)
 		return
 	}
 
@@ -287,32 +334,32 @@ func (h *GeofenceHandler) Update(w http.ResponseWriter, r *http.Request) {
 	merged.ID = id
 
 	if merged.Name == "" || merged.Radius() <= 0 {
-		writeAppError(w, r, ErrMissingField.WithMessage("name and positive radius required"))
+		apperror.Write(w, r, apperror.ErrMissingField.WithMessage("name and positive radius required"))
 		return
 	}
 	if err := validateGeofence(&merged); err != nil {
-		writeAppError(w, r, ErrGeofenceInvalidCoords.WithMessage(err.Error()))
+		apperror.Write(w, r, apperror.ErrGeofenceInvalidCoords.WithMessage(err.Error()))
 		return
 	}
 
 	if err := h.geofenceRepo.Update(r.Context(), &merged); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to update geofence")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to update geofence"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to update geofence"))
 		return
 	}
-	writeJSON(w, http.StatusOK, &merged)
+	httpx.WriteJSON(w, http.StatusOK, &merged)
 }
 
-func (h *GeofenceHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "geofenceID")
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "geofenceID")
 	if err != nil {
-		writeAppError(w, r, ErrInvalidID.WithMessage("invalid geofence ID"))
+		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid geofence ID"))
 		return
 	}
 
 	if err := h.geofenceRepo.Delete(r.Context(), id); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to delete geofence")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to delete geofence"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to delete geofence"))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

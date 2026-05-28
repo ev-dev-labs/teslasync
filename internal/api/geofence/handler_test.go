@@ -1,4 +1,4 @@
-package api
+package geofence
 
 import (
 	"bytes"
@@ -12,6 +12,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
 	"github.com/go-chi/chi/v5"
@@ -242,16 +244,16 @@ func runGeofenceUpdateMerge(t *testing.T, repo *fakeGeofenceUpdateRepo, id int64
 	// MIRROR of GeofenceHandler.Update — see DRIFT RISK above.
 	patch, raw, err := decodeGeofenceWriteBody(r.Body)
 	if err != nil {
-		writeAppError(w, r, ErrInvalidJSON)
+		apperror.Write(w, r, apperror.ErrInvalidJSON)
 		return w
 	}
 	existing, err := repo.GetByID(r.Context(), id)
 	if err != nil {
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to load geofence"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to load geofence"))
 		return w
 	}
 	if existing == nil {
-		writeAppError(w, r, ErrGeofenceNotFound)
+		apperror.Write(w, r, apperror.ErrGeofenceNotFound)
 		return w
 	}
 	merged := *existing
@@ -275,18 +277,18 @@ func runGeofenceUpdateMerge(t *testing.T, repo *fakeGeofenceUpdateRepo, id int64
 	}
 	merged.ID = id
 	if merged.Name == "" || merged.Radius() <= 0 {
-		writeAppError(w, r, ErrMissingField.WithMessage("name and positive radius required"))
+		apperror.Write(w, r, apperror.ErrMissingField.WithMessage("name and positive radius required"))
 		return w
 	}
 	if err := validateGeofence(&merged); err != nil {
-		writeAppError(w, r, ErrGeofenceInvalidCoords.WithMessage(err.Error()))
+		apperror.Write(w, r, apperror.ErrGeofenceInvalidCoords.WithMessage(err.Error()))
 		return w
 	}
 	if err := repo.Update(r.Context(), &merged); err != nil {
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to update geofence"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to update geofence"))
 		return w
 	}
-	writeJSON(w, http.StatusOK, &merged)
+	httpx.WriteJSON(w, http.StatusOK, &merged)
 	return w
 }
 

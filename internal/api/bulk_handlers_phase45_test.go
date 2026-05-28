@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 )
 
 // fakeAutomationBulkStore implements automationBulkStore for handler tests.
@@ -184,7 +186,7 @@ func TestAutomationsBulkUpdate_RepoError_Returns500(t *testing.T) {
 	}
 }
 
-// fakeGeofenceBulkStore implements geofenceBulkStore for handler tests.
+// fakeGeofenceBulkStore implements apigeo.BulkStore for handler tests.
 type fakeGeofenceBulkStore struct {
 	existing  map[int64]bool
 	deleteArg []int64
@@ -211,7 +213,7 @@ func (f *fakeGeofenceBulkStore) BulkDelete(_ context.Context, ids []int64) (int6
 
 func TestGeofencesBulkUpdate_Delete_HappyPath(t *testing.T) {
 	store := &fakeGeofenceBulkStore{existing: map[int64]bool{1: true, 2: true}}
-	h := &GeofenceHandler{bulkOverride: store}
+	h := apigeo.NewHandler(nil, apigeo.WithBulkStore(store))
 
 	rec := httptest.NewRecorder()
 	h.BulkUpdate(rec, newBulkRequest(t, http.MethodPost, "/geofences/bulk",
@@ -231,7 +233,7 @@ func TestGeofencesBulkUpdate_Delete_HappyPath(t *testing.T) {
 
 func TestGeofencesBulkUpdate_UnknownOp_Returns400(t *testing.T) {
 	store := &fakeGeofenceBulkStore{existing: map[int64]bool{1: true}}
-	h := &GeofenceHandler{bulkOverride: store}
+	h := apigeo.NewHandler(nil, apigeo.WithBulkStore(store))
 
 	rec := httptest.NewRecorder()
 	h.BulkUpdate(rec, newBulkRequest(t, http.MethodPost, "/geofences/bulk",
@@ -247,7 +249,7 @@ func TestGeofencesBulkUpdate_UnknownOp_Returns400(t *testing.T) {
 
 func TestGeofencesBulkUpdate_EmptyIDs_Returns400(t *testing.T) {
 	store := &fakeGeofenceBulkStore{existing: map[int64]bool{}}
-	h := &GeofenceHandler{bulkOverride: store}
+	h := apigeo.NewHandler(nil, apigeo.WithBulkStore(store))
 
 	rec := httptest.NewRecorder()
 	h.BulkUpdate(rec, newBulkRequest(t, http.MethodPost, "/geofences/bulk",
@@ -259,7 +261,7 @@ func TestGeofencesBulkUpdate_EmptyIDs_Returns400(t *testing.T) {
 }
 
 func TestGeofencesBulkUpdate_NoBulkRepo_Returns503(t *testing.T) {
-	h := &GeofenceHandler{}
+	h := apigeo.NewHandler(nil)
 
 	rec := httptest.NewRecorder()
 	h.BulkUpdate(rec, newBulkRequest(t, http.MethodPost, "/geofences/bulk",
