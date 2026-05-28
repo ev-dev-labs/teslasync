@@ -1,4 +1,4 @@
-package database
+package settings
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
 	"github.com/jackc/pgx/v5"
@@ -27,10 +28,10 @@ import (
 // PollingConfigRepo. The pre-refactor `polling_config` JSONB column on
 // the wide settings row no longer exists (ADR-001, ADR-005, ADR-011).
 type SettingsRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewSettingsRepo(db *DB) *SettingsRepo {
+func NewSettingsRepo(db *database.DB) *SettingsRepo {
 	return &SettingsRepo{db: db}
 }
 

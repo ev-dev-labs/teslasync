@@ -20,7 +20,7 @@
 // settings) will replace this layer with a subject-keyed read; the
 // API contract here is forward-compatible because the source pill
 // names the LAYER, not the principal that produced it.
-package database
+package settings
 
 import (
 	"context"

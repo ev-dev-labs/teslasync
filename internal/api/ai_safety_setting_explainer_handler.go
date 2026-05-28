@@ -78,7 +78,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
 // aiSafetySettingExplainerMaxIterations bounds the dispatcher's
@@ -335,7 +335,7 @@ func buildSafetySettingExplainerUserMessage(question string) string {
 
 // AISafetySettingExplainerSource is the production adapter
 // satisfying safety.SafetySettingsSource. It wraps the canonical
-// *database.SettingsRepo so the AI tool reads from the SAME
+// *settingsdb.SettingsRepo so the AI tool reads from the SAME
 // data source the deterministic Settings UI already does — no
 // new SQL, no duplicate read paths.
 //
@@ -344,15 +344,15 @@ func buildSafetySettingExplainerUserMessage(question string) string {
 // already a single hydrated value the rest of the API surface
 // reuses.
 type AISafetySettingExplainerSource struct {
-	settings *database.SettingsRepo
+	settings *settingsdb.SettingsRepo
 }
 
 // NewAISafetySettingExplainerSource constructs the production
 // adapter. The repo is required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAISafetySettingExplainerSource(s *database.SettingsRepo) *AISafetySettingExplainerSource {
+func NewAISafetySettingExplainerSource(s *settingsdb.SettingsRepo) *AISafetySettingExplainerSource {
 	if s == nil {
-		panic("api: NewAISafetySettingExplainerSource: nil settings *database.SettingsRepo")
+		panic("api: NewAISafetySettingExplainerSource: nil settings *settingsdb.SettingsRepo")
 	}
 	return &AISafetySettingExplainerSource{settings: s}
 }
@@ -364,7 +364,7 @@ func NewAISafetySettingExplainerSource(s *database.SettingsRepo) *AISafetySettin
 // path is the canonical settings reader.
 //
 // The envelope's CurrentValue is read from the live row;
-// DefaultValue is sourced from internal/database.settingsDefaults
+// DefaultValue is sourced from internal/settingsdb.settingsDefaults
 // (we cannot import it directly since it is package-private,
 // so the descriptor table below hard-codes the same default
 // values as a deliberate cross-check — a divergence between

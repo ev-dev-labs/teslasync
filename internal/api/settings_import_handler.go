@@ -33,7 +33,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
 // MaxSettingsImportBodyBytes caps the inbound JSON body. The biggest
@@ -45,14 +45,14 @@ const MaxSettingsImportBodyBytes int64 = 1 << 20
 
 // SettingsImportHandler serves POST /settings/import.
 type SettingsImportHandler struct {
-	serializer *database.SettingsSerializer
+	serializer *settingsdb.SettingsSerializer
 	authHdr    string
 }
 
 // NewSettingsImportHandler wires the handler against the shared
 // serializer. ForwardAuth header drives per-user scoping for the
 // quiet_hours section, mirroring the export handler.
-func NewSettingsImportHandler(serializer *database.SettingsSerializer, forwardAuthHeader string) *SettingsImportHandler {
+func NewSettingsImportHandler(serializer *settingsdb.SettingsSerializer, forwardAuthHeader string) *SettingsImportHandler {
 	return &SettingsImportHandler{serializer: serializer, authHdr: forwardAuthHeader}
 }
 
@@ -60,8 +60,8 @@ func NewSettingsImportHandler(serializer *database.SettingsSerializer, forwardAu
 // `dry_run` defaults to false (apply) when omitted; the SPA always
 // sends it explicitly so the omitted case is purely defensive.
 type settingsImportRequest struct {
-	DryRun bool                     `json:"dry_run"`
-	Bundle *database.SettingsBundle `json:"bundle"`
+	DryRun bool                       `json:"dry_run"`
+	Bundle *settingsdb.SettingsBundle `json:"bundle"`
 }
 
 // Import decodes the request, validates the schema_version, and
@@ -108,11 +108,11 @@ func (h *SettingsImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 	userID := actorFromRequest(r, h.authHdr)
 	result, err := h.serializer.ImportSettings(r.Context(), userID, req.Bundle, req.DryRun)
 	if err != nil {
-		if errors.Is(err, database.ErrSettingsBundleUnsupportedVersion) {
+		if errors.Is(err, settingsdb.ErrSettingsBundleUnsupportedVersion) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		if errors.Is(err, database.ErrSettingsBundleNil) {
+		if errors.Is(err, settingsdb.ErrSettingsBundleNil) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}

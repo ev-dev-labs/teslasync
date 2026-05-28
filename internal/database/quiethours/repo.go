@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -47,7 +48,7 @@ var AllowedQuietHoursSeverities = []string{"info", "warn", "critical"}
 // Insert validates the payload and inserts a new row scoped to the
 // supplied user_id. Defaults: enabled=true, weekdays=127,
 // bypass_severities={"critical"}. Returns the persisted row.
-func (r *QuietHoursRepo) Insert(ctx context.Context, userID string, in database.QuietHoursInput) (*models.QuietHoursWindow, error) {
+func (r *QuietHoursRepo) Insert(ctx context.Context, userID string, in settings.QuietHoursInput) (*models.QuietHoursWindow, error) {
 	row := &models.QuietHoursWindow{
 		UserID:           userID,
 		Enabled:          true,
@@ -153,7 +154,7 @@ func (r *QuietHoursRepo) ListEnabled(ctx context.Context) ([]*models.QuietHoursW
 
 // Update applies a partial PATCH to a single row scoped to user_id.
 // Returns the updated row, or ErrQuietHoursNotFound when no row matches.
-func (r *QuietHoursRepo) Update(ctx context.Context, userID string, id int64, in database.QuietHoursInput) (*models.QuietHoursWindow, error) {
+func (r *QuietHoursRepo) Update(ctx context.Context, userID string, id int64, in settings.QuietHoursInput) (*models.QuietHoursWindow, error) {
 	existing, err := r.Get(ctx, userID, id)
 	if err != nil {
 		return nil, err

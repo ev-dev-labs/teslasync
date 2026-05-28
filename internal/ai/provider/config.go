@@ -132,7 +132,7 @@ type ProviderConfig struct {
 }
 
 // SettingsView is the narrow shape the [Registry] needs from the live
-// settings row. Implemented by *database.SettingsRepo in production
+// settings row. Implemented by *settingsdb.SettingsRepo in production
 // wiring and by an in-memory fake in tests so the registry can be
 // unit-tested without a database.
 type SettingsView struct {

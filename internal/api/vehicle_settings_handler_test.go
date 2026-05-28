@@ -14,7 +14,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
 // ─── Fakes ──────────────────────────────────────────────────────
@@ -59,12 +59,12 @@ func (f *fakeVehicleSettingsStore) Delete(_ context.Context, vehicleID int64, ke
 }
 
 type fakeVehicleSettingsResolver struct {
-	settings []database.EffectiveSetting
+	settings []settingsdb.EffectiveSetting
 	err      error
 	calls    int
 }
 
-func (f *fakeVehicleSettingsResolver) Resolve(_ context.Context, _ int64) ([]database.EffectiveSetting, error) {
+func (f *fakeVehicleSettingsResolver) Resolve(_ context.Context, _ int64) ([]settingsdb.EffectiveSetting, error) {
 	f.calls++
 	if f.err != nil {
 		return nil, f.err
@@ -119,8 +119,8 @@ func newVehicleSettingsTestHandler(
 
 func TestVehicleSettingsHandler_List_Success(t *testing.T) {
 	resolver := &fakeVehicleSettingsResolver{
-		settings: []database.EffectiveSetting{
-			{Key: "nickname", Value: "Snowball", Source: database.EffectiveSourceOverride},
+		settings: []settingsdb.EffectiveSetting{
+			{Key: "nickname", Value: "Snowball", Source: settingsdb.EffectiveSourceOverride},
 		},
 	}
 	h := newVehicleSettingsTestHandler(nil, resolver, nil)
@@ -363,7 +363,7 @@ func TestVehicleSettingsHandler_Put_EnforcesBodyLimit(t *testing.T) {
 }
 
 func TestVehicleSettingsHandler_Put_MapsRepoInvalidValue(t *testing.T) {
-	store := &fakeVehicleSettingsStore{upsertErr: database.ErrVehicleSettingInvalidValue}
+	store := &fakeVehicleSettingsStore{upsertErr: settingsdb.ErrVehicleSettingInvalidValue}
 	h := newVehicleSettingsTestHandler(store, nil, nil)
 	srv := newVehicleSettingsTestServer(t, h)
 	defer srv.Close()
@@ -429,7 +429,7 @@ func TestVehicleSettingsHandler_Delete_Success(t *testing.T) {
 }
 
 func TestVehicleSettingsHandler_Delete_IdempotentNotFound(t *testing.T) {
-	store := &fakeVehicleSettingsStore{deleteErr: database.ErrVehicleSettingNotFound}
+	store := &fakeVehicleSettingsStore{deleteErr: settingsdb.ErrVehicleSettingNotFound}
 	h := newVehicleSettingsTestHandler(store, nil, nil)
 	srv := newVehicleSettingsTestServer(t, h)
 	defer srv.Close()

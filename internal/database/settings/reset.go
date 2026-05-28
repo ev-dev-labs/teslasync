@@ -1,4 +1,4 @@
-package database
+package settings
 
 // Phase-46 / Prompt 50 — Per-section + global settings reset.
 //
@@ -55,6 +55,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -194,7 +195,7 @@ type SettingsResetResult struct {
 }
 
 // SettingsResetTxRunner is the test seam between the orchestrator and
-// pgx. Production wires *DB.Pool which satisfies the interface via
+// pgx. Production wires *database.DB.Pool which satisfies the interface via
 // pgx's BeginTx. Tests substitute a stub that records each section
 // call without touching a database.
 //
@@ -210,10 +211,10 @@ type SettingsResetTxRunner interface {
 }
 
 // pgxPoolTxRunner is the production implementation of
-// SettingsResetTxRunner. Wraps a *DB.Pool directly so the orchestrator
-// doesn't depend on the wider *DB type.
+// SettingsResetTxRunner. Wraps a *database.DB.Pool directly so the orchestrator
+// doesn't depend on the wider *database.DB type.
 type pgxPoolTxRunner struct {
-	db *DB
+	db *database.DB
 }
 
 // RunInTx opens a transaction with the default isolation level, calls
@@ -243,7 +244,7 @@ type SettingsResetRepo struct {
 }
 
 // NewSettingsResetRepo wires the production pgx-backed runner.
-func NewSettingsResetRepo(db *DB) *SettingsResetRepo {
+func NewSettingsResetRepo(db *database.DB) *SettingsResetRepo {
 	return &SettingsResetRepo{runner: &pgxPoolTxRunner{db: db}}
 }
 

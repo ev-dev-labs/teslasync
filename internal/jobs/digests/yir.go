@@ -30,7 +30,7 @@ import (
 )
 
 // YIRSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunYIR] depends on. Defined
+// [settingsdb.SettingsRepo] [RunYIR] depends on. Defined
 // inline so callers can supply a fake without dragging the full
 // settings repo into job tests.
 //

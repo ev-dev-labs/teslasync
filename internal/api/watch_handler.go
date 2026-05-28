@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -45,7 +47,7 @@ type WatchComplication struct {
 type WatchHandler struct {
 	db           *database.DB
 	vehicleRepo  *vehicledb.VehicleRepo
-	settingsRepo *database.SettingsRepo
+	settingsRepo *settingsdb.SettingsRepo
 	teslaClient  *tesla.Client
 	redisCache   *signal.RedisSignalCache
 }
@@ -55,7 +57,7 @@ func NewWatchHandler(db *database.DB, tc *tesla.Client) *WatchHandler {
 	return &WatchHandler{
 		db:           db,
 		vehicleRepo:  vehicledb.NewVehicleRepo(db),
-		settingsRepo: database.NewSettingsRepo(db),
+		settingsRepo: settingsdb.NewSettingsRepo(db),
 		teslaClient:  tc,
 	}
 }

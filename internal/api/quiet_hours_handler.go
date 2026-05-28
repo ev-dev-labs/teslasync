@@ -12,8 +12,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -36,8 +36,8 @@ import (
 type quietHoursStore interface {
 	ListByUser(ctx context.Context, userID string) ([]*models.QuietHoursWindow, error)
 	Get(ctx context.Context, userID string, id int64) (*models.QuietHoursWindow, error)
-	Insert(ctx context.Context, userID string, in database.QuietHoursInput) (*models.QuietHoursWindow, error)
-	Update(ctx context.Context, userID string, id int64, in database.QuietHoursInput) (*models.QuietHoursWindow, error)
+	Insert(ctx context.Context, userID string, in settingsdb.QuietHoursInput) (*models.QuietHoursWindow, error)
+	Update(ctx context.Context, userID string, id int64, in settingsdb.QuietHoursInput) (*models.QuietHoursWindow, error)
 	Delete(ctx context.Context, userID string, id int64) error
 }
 
@@ -70,8 +70,8 @@ type quietHoursPayload struct {
 	BypassSeverities *[]string `json:"bypass_severities,omitempty"`
 }
 
-func (p *quietHoursPayload) toInput() database.QuietHoursInput {
-	return database.QuietHoursInput{
+func (p *quietHoursPayload) toInput() settingsdb.QuietHoursInput {
+	return settingsdb.QuietHoursInput{
 		Enabled:          p.Enabled,
 		StartLocal:       p.StartLocal,
 		EndLocal:         p.EndLocal,

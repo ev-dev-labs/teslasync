@@ -49,7 +49,7 @@ import (
 )
 
 // FeedbackSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunFeedback] depends
+// [settingsdb.SettingsRepo] [RunFeedback] depends
 // on. Defined inline so callers can supply a fake without
 // dragging the full settings repo into job tests.
 //

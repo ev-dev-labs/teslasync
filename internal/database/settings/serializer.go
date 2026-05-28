@@ -1,4 +1,4 @@
-package database
+package settings
 
 // Phase-46 / Prompt 36 — Settings export/import serializer.
 //

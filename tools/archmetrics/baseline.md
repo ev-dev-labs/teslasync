@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T16:50:29Z, Go go1.26.1, commit b110e417208239e9810040bfb998ccd86233cb6d_
+_Generated 2026-05-28T16:59:01Z, Go go1.26.1, commit 0f942c400d65417046bac9903dc587c5f8a2eb33_
 
 ## Summary
 
-- Packages: 288
+- Packages: 289
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374869
+- Total non-blank LOC under cmd/+internal/+tools/: 374938
 
 ## cmd/* main.go LOC
 
@@ -15,7 +15,7 @@ _Generated 2026-05-28T16:50:29Z, Go go1.26.1, commit b110e417208239e9810040bfb99
 |---|---:|
 | cmd/ai-eval/main.go | 151 |
 | cmd/audit-signal-types/main.go | 498 |
-| cmd/automation-worker/main.go | 355 |
+| cmd/automation-worker/main.go | 356 |
 | cmd/backup-verify/main.go | 96 |
 | cmd/chaos-runner/main.go | 144 |
 | cmd/export-worker/main.go | 252 |
@@ -42,7 +42,7 @@ _Generated 2026-05-28T16:50:29Z, Go go1.26.1, commit b110e417208239e9810040bfb99
 |---|---:|---:|---:|:---:|---|
 | cmd/ai-eval | 2 | 0 | 155 | yes | cmd-internal |
 | cmd/audit-signal-types | 2 | 0 | 521 | yes | cmd-internal |
-| cmd/automation-worker | 2 | 0 | 359 | yes | cmd-internal |
+| cmd/automation-worker | 2 | 0 | 360 | yes | cmd-internal |
 | cmd/backup-verify | 2 | 0 | 110 | yes | cmd-internal |
 | cmd/chaos-runner | 2 | 0 | 156 | yes | cmd-internal |
 | cmd/export-worker | 2 | 0 | 256 | yes | cmd-internal |
@@ -170,9 +170,9 @@ _Generated 2026-05-28T16:50:29Z, Go go1.26.1, commit b110e417208239e9810040bfb99
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126680 | yes | handler |
+| internal/api | 271 | 163 | 126686 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
-| internal/app | 6 | 1 | 1847 | yes | app |
+| internal/app | 6 | 1 | 1848 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
 | internal/app/auditviewersvc | 3 | 0 | 77 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
@@ -197,7 +197,7 @@ _Generated 2026-05-28T16:50:29Z, Go go1.26.1, commit b110e417208239e9810040bfb99
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 18 | 12 | 5349 | yes | platform |
+| internal/database | 12 | 9 | 2167 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes | adapter |
 | internal/database/admin | 6 | 0 | 873 | yes | adapter |
 | internal/database/ai | 3 | 2 | 928 | yes | adapter |
@@ -215,7 +215,8 @@ _Generated 2026-05-28T16:50:29Z, Go go1.26.1, commit b110e417208239e9810040bfb99
 | internal/database/notification | 5 | 1 | 1950 | yes | adapter |
 | internal/database/observability | 7 | 0 | 1396 | yes | adapter |
 | internal/database/position | 3 | 0 | 270 | yes | adapter |
-| internal/database/quiethours | 3 | 0 | 312 | yes | adapter |
+| internal/database/quiethours | 3 | 1 | 438 | yes | adapter |
+| internal/database/settings | 7 | 2 | 3115 | yes | adapter |
 | internal/database/sharing | 2 | 0 | 127 | yes | adapter |
 | internal/database/signal | 8 | 1 | 1381 | yes | adapter |
 | internal/database/system | 5 | 3 | 1431 | yes | adapter |
@@ -302,7 +303,7 @@ _Generated 2026-05-28T16:50:29Z, Go go1.26.1, commit b110e417208239e9810040bfb99
 | internal/resilience | 2 | 4 | 721 | yes | platform |
 | internal/rotation | 2 | 1 | 360 | yes | platform |
 | internal/schemacheck | 2 | 1 | 234 | yes | platform |
-| internal/service | 4 | 1 | 1384 | yes | platform |
+| internal/service | 4 | 1 | 1385 | yes | platform |
 | internal/signal | 11 | 11 | 7540 | yes | platform |
 | internal/signal/signaltest | 2 | 0 | 103 | yes | platform |
 | internal/slo | 3 | 1 | 727 | yes | platform |
@@ -322,7 +323,7 @@ _Generated 2026-05-28T16:50:29Z, Go go1.26.1, commit b110e417208239e9810040bfb99
 | internal/units | 2 | 0 | 63 | yes | platform |
 | internal/v2h | 2 | 1 | 554 | yes | platform |
 | internal/webpush | 2 | 1 | 519 | yes | platform |
-| internal/worker | 8 | 3 | 2603 | yes | platform |
+| internal/worker | 8 | 3 | 2604 | yes | platform |
 | tools/aigen | 2 | 1 | 338 | yes | tool |
 | tools/aistream-contract | 2 | 0 | 227 | yes | tool |
 | tools/aivet | 2 | 1 | 792 | yes | tool |
@@ -342,7 +343,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 18 / 12 | 22 | 16 | 6 |
+| `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 
@@ -419,6 +420,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/database/energy`
 - `internal/database/export`
 - `internal/database/notification`
+- `internal/database/settings`
 - `internal/database/signal`
 - `internal/database/system`
 - `internal/database/tesla`
@@ -430,7 +432,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/database/geo`
 - `internal/database/ingest`
 - `internal/database/onboarding`
-- `internal/database/settings`
 
 ### `internal/handler/v1` detail
 

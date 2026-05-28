@@ -16,7 +16,7 @@
 // (internal/database/quiet_hours_input.go) because it is part of the
 // SettingsSerializerQuietHoursRepo interface contract that the settings
 // serializer (also still in parent) consumes. Subpkg repo methods
-// reference *database.QuietHoursInput.
+// reference *settingsdb.QuietHoursInput.
 //
 // Callsites alias this package as `quiethoursdb` per ADR-011.
 package quiethours

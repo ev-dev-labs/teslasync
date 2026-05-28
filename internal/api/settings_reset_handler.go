@@ -38,7 +38,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
 // MaxSettingsResetBodyBytes caps the inbound JSON body. The body is
@@ -47,10 +47,10 @@ import (
 const MaxSettingsResetBodyBytes int64 = 1 << 14 // 16 KiB
 
 // SettingsResetExecutor is the narrow surface SettingsResetHandler
-// depends on. Production: *database.SettingsResetRepo. Tests stub
+// depends on. Production: *settingsdb.SettingsResetRepo. Tests stub
 // this to assert the handler's flow without a live database.
 type SettingsResetExecutor interface {
-	ResetSections(ctx context.Context, userID string, sections []database.SettingsResetSection) (*database.SettingsResetResult, error)
+	ResetSections(ctx context.Context, userID string, sections []settingsdb.SettingsResetSection) (*settingsdb.SettingsResetResult, error)
 }
 
 // SettingsResetHandler serves POST /settings/reset.
@@ -107,16 +107,16 @@ func (h *SettingsResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var sections []database.SettingsResetSection
+	var sections []settingsdb.SettingsResetSection
 	if req.Section == "" {
-		sections = database.AllSettingsResetSections()
+		sections = settingsdb.AllSettingsResetSections()
 	} else {
-		s, reason, err := database.CanonicalResetSection(req.Section)
-		if errors.Is(err, database.ErrSettingsResetDenied) {
+		s, reason, err := settingsdb.CanonicalResetSection(req.Section)
+		if errors.Is(err, settingsdb.ErrSettingsResetDenied) {
 			writeErrorCode(w, http.StatusBadRequest, reason, "SECTION_DENIED")
 			return
 		}
-		if errors.Is(err, database.ErrSettingsResetUnknownSection) {
+		if errors.Is(err, settingsdb.ErrSettingsResetUnknownSection) {
 			writeErrorCode(w, http.StatusBadRequest,
 				fmt.Sprintf("unknown section %q", req.Section), "SECTION_UNKNOWN")
 			return
@@ -126,19 +126,19 @@ func (h *SettingsResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "failed to resolve section")
 			return
 		}
-		sections = []database.SettingsResetSection{s}
+		sections = []settingsdb.SettingsResetSection{s}
 	}
 
 	userID := actorFromRequest(r, h.authHdr)
 	result, err := h.repo.ResetSections(r.Context(), userID, sections)
 	if err != nil {
-		if errors.Is(err, database.ErrSettingsResetQuietHoursRequiresUser) {
+		if errors.Is(err, settingsdb.ErrSettingsResetQuietHoursRequiresUser) {
 			writeErrorCode(w, http.StatusUnauthorized,
 				"quiet_hours can only be reset by an authenticated user",
 				"MISSING_IDENTITY")
 			return
 		}
-		if errors.Is(err, database.ErrSettingsResetUnknownSection) {
+		if errors.Is(err, settingsdb.ErrSettingsResetUnknownSection) {
 			// Pre-flight catches single-section requests above; this
 			// path covers a bad section in the global whitelist
 			// (defensive — should never happen in production).

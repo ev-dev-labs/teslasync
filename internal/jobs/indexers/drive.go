@@ -50,7 +50,7 @@ import (
 )
 
 // DriveSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunDrive] depends on. Defined
+// [settingsdb.SettingsRepo] [RunDrive] depends on. Defined
 // inline so callers can supply a fake without dragging the full
 // settings repo into job tests.
 //

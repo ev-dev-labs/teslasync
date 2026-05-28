@@ -32,7 +32,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
@@ -54,7 +54,7 @@ const (
 
 // VehicleSettingsOverrideStore is the storage seam the handler uses
 // to mutate the override layer. Production wires
-// *database.VehicleSettingsRepo; tests substitute an in-memory fake.
+// *settingsdb.VehicleSettingsRepo; tests substitute an in-memory fake.
 type VehicleSettingsOverrideStore interface {
 	Upsert(ctx context.Context, vehicleID int64, key string, value any) error
 	Delete(ctx context.Context, vehicleID int64, key string) error
@@ -62,9 +62,9 @@ type VehicleSettingsOverrideStore interface {
 
 // VehicleSettingsResolverInterface is the read seam the handler uses
 // to populate the GET response. Production wires
-// *database.VehicleSettingsResolver; tests substitute a stub.
+// *settingsdb.VehicleSettingsResolver; tests substitute a stub.
 type VehicleSettingsResolverInterface interface {
-	Resolve(ctx context.Context, vehicleID int64) ([]database.EffectiveSetting, error)
+	Resolve(ctx context.Context, vehicleID int64) ([]settingsdb.EffectiveSetting, error)
 }
 
 // VehicleExistenceChecker is the seam the handler uses to verify the
@@ -102,7 +102,7 @@ func NewVehicleSettingsHandler(
 // covers the full Phase-1 whitelist in canonical iteration order so
 // the SPA can render rows without checking presence.
 type vehicleSettingsListResponse struct {
-	Settings []database.EffectiveSetting `json:"settings"`
+	Settings []settingsdb.EffectiveSetting `json:"settings"`
 }
 
 // vehicleSettingPutBody is the PUT payload. The value field is
@@ -145,7 +145,7 @@ func (h *VehicleSettingsHandler) Put(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	key := chi.URLParam(r, "key")
-	if !database.IsValidVehicleSettingKey(key) {
+	if !settingsdb.IsValidVehicleSettingKey(key) {
 		writeErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
 		return
 	}
@@ -179,9 +179,9 @@ func (h *VehicleSettingsHandler) Put(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.store.Upsert(r.Context(), vehicleID, key, value); err != nil {
 		switch {
-		case errors.Is(err, database.ErrVehicleSettingInvalidKey):
+		case errors.Is(err, settingsdb.ErrVehicleSettingInvalidKey):
 			writeErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
-		case errors.Is(err, database.ErrVehicleSettingInvalidValue):
+		case errors.Is(err, settingsdb.ErrVehicleSettingInvalidValue):
 			writeErrorCode(w, http.StatusBadRequest, "invalid value", VehicleSettingsCodeInvalidValue)
 		default:
 			writeError(w, http.StatusInternalServerError, "failed to save setting")
@@ -203,7 +203,7 @@ func (h *VehicleSettingsHandler) Delete(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	key := chi.URLParam(r, "key")
-	if !database.IsValidVehicleSettingKey(key) {
+	if !settingsdb.IsValidVehicleSettingKey(key) {
 		writeErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
 		return
 	}
@@ -212,7 +212,7 @@ func (h *VehicleSettingsHandler) Delete(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := h.store.Delete(r.Context(), vehicleID, key); err != nil {
-		if errors.Is(err, database.ErrVehicleSettingNotFound) {
+		if errors.Is(err, settingsdb.ErrVehicleSettingNotFound) {
 			// Idempotent — caller wanted the override gone, and
 			// it already is. The resolver will fall through to
 			// the user-level layer on the next read.
@@ -220,7 +220,7 @@ func (h *VehicleSettingsHandler) Delete(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		switch {
-		case errors.Is(err, database.ErrVehicleSettingInvalidKey):
+		case errors.Is(err, settingsdb.ErrVehicleSettingInvalidKey):
 			writeErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
 		default:
 			writeError(w, http.StatusInternalServerError, "failed to delete setting")
@@ -256,8 +256,8 @@ func (h *VehicleSettingsHandler) requireVehicleExists(ctx context.Context, w htt
 // in the database package — see VehicleSettingDefs() for the canonical
 // list. The handler test asserts the symmetry.
 func decodeValueForKey(key string, raw json.RawMessage) (any, error) {
-	defs := database.VehicleSettingDefs()
-	var def database.VehicleSettingDef
+	defs := settingsdb.VehicleSettingDefs()
+	var def settingsdb.VehicleSettingDef
 	for _, d := range defs {
 		if d.Key == key {
 			def = d
@@ -265,41 +265,41 @@ func decodeValueForKey(key string, raw json.RawMessage) (any, error) {
 		}
 	}
 	if def.Key == "" {
-		return nil, database.ErrVehicleSettingInvalidKey
+		return nil, settingsdb.ErrVehicleSettingInvalidKey
 	}
 	switch def.Kind {
-	case database.VehicleSettingKindText:
+	case settingsdb.VehicleSettingKindText:
 		var s string
 		if err := json.Unmarshal(raw, &s); err != nil {
-			return nil, database.ErrVehicleSettingInvalidValue
+			return nil, settingsdb.ErrVehicleSettingInvalidValue
 		}
 		return s, nil
-	case database.VehicleSettingKindNumber:
+	case settingsdb.VehicleSettingKindNumber:
 		var f float64
 		if err := json.Unmarshal(raw, &f); err != nil {
-			return nil, database.ErrVehicleSettingInvalidValue
+			return nil, settingsdb.ErrVehicleSettingInvalidValue
 		}
 		return f, nil
-	case database.VehicleSettingKindBoolean:
+	case settingsdb.VehicleSettingKindBoolean:
 		var b bool
 		if err := json.Unmarshal(raw, &b); err != nil {
-			return nil, database.ErrVehicleSettingInvalidValue
+			return nil, settingsdb.ErrVehicleSettingInvalidValue
 		}
 		return b, nil
-	case database.VehicleSettingKindTimestamp:
+	case settingsdb.VehicleSettingKindTimestamp:
 		// Accept RFC3339 strings only — anything else (epoch
 		// number, "now") would be ambiguous across timezones.
 		var s string
 		if err := json.Unmarshal(raw, &s); err != nil {
-			return nil, database.ErrVehicleSettingInvalidValue
+			return nil, settingsdb.ErrVehicleSettingInvalidValue
 		}
 		t, err := time.Parse(time.RFC3339, s)
 		if err != nil {
-			return nil, database.ErrVehicleSettingInvalidValue
+			return nil, settingsdb.ErrVehicleSettingInvalidValue
 		}
 		return t, nil
 	default:
-		return nil, database.ErrVehicleSettingInvalidValue
+		return nil, settingsdb.ErrVehicleSettingInvalidValue
 	}
 }
 
@@ -336,6 +336,6 @@ func (a *vehicleExistenceCheckerAdapter) Exists(ctx context.Context, vehicleID i
 // tests + future external callers that want to construct the GET
 // payload manually. Returns the canonical JSON shape so contract
 // tests don't drift.
-func MarshalVehicleSettingPayload(settings []database.EffectiveSetting) ([]byte, error) {
+func MarshalVehicleSettingPayload(settings []settingsdb.EffectiveSetting) ([]byte, error) {
 	return json.Marshal(vehicleSettingsListResponse{Settings: settings})
 }

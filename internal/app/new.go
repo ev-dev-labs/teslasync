@@ -24,6 +24,7 @@ import (
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
@@ -777,7 +778,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 
 			log.Info().Str("database", a.Cfg.MongoDB.Database).Int("ttl_days", a.Cfg.MongoDB.TTLDays).Msg("MongoDB raw telemetry capture + signal log available")
 
-			settingsRepo := database.NewSettingsRepo(a.DB)
+			settingsRepo := settingsdb.NewSettingsRepo(a.DB)
 			if _, err := settingsRepo.GetPollingConfig(ctx); err == nil {
 				log.Debug().Msg("polling config loaded (telemetry capture toggle removed)")
 			}
@@ -1224,7 +1225,7 @@ func (a *App) initUnitDriftValidator(ctx context.Context) {
 //     zero embeddings rows are written or deleted in off-mode, which
 //     is the user-visible contract.
 func (a *App) initAIBackgroundJobs(ctx context.Context) {
-	settingsRepo := database.NewSettingsRepo(a.DB)
+	settingsRepo := settingsdb.NewSettingsRepo(a.DB)
 
 	// Run once at boot so a long-running tick interval doesn't leave
 	// expired rows visible immediately after a restart.
@@ -1247,7 +1248,7 @@ func (a *App) initAIBackgroundJobs(ctx context.Context) {
 	log.Info().Msg("ai background jobs scheduled (embeddings_ttl re-checks ai_mode per ADR-015 §I12)")
 }
 
-func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *database.SettingsRepo, reason string) {
+func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *settingsdb.SettingsRepo, reason string) {
 	tickCtx, span := appBackgroundTracer().Start(ctx, "ai.background_tick",
 		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
 		oteltrace.WithAttributes(

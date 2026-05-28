@@ -28,6 +28,7 @@ import (
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
@@ -399,7 +400,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// place. Settings is the same SettingsRepo the rest of the
 	// app uses; the AIMode/AIFeatureEnabled methods on it are
 	// fail-closed (return "off"/false on any error).
-	aiSettingsRepo := database.NewSettingsRepo(db)
+	aiSettingsRepo := settingsdb.NewSettingsRepo(db)
 	aiGuard := guard.New(aiSettingsRepo)
 
 	// Phase-50 / 0002 — F1 Provider Abstraction.
@@ -411,7 +412,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// save takes effect on the next request without restart.
 	//
 	// SettingsReader is satisfied by aiSettingsReader below — the
-	// existing *database.SettingsRepo already implements
+	// existing *settingsdb.SettingsRepo already implements
 	// AIMode + AIFeatureEnabled but does not yet expose a typed
 	// AIProviderConfig accessor; the inline adapter pulls the
 	// JSONB column out of Get() so F1 does not have to mutate
@@ -456,8 +457,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// the export + import handlers so future repos can be added in a
 	// single place. Apply is sudo-gated by RequireSudo on the import
 	// route below; export is read-only and runs unguarded.
-	settingsSerializer := database.NewSettingsSerializer(
-		database.NewSettingsRepo(db),
+	settingsSerializer := settingsdb.NewSettingsSerializer(
+		settingsdb.NewSettingsRepo(db),
 		dbalert.NewAlertRuleRepo(db),
 		geofencedb.NewGeofenceRepo(db),
 		quiethoursdb.NewQuietHoursRepo(db),
@@ -467,7 +468,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Phase-46 / Prompt 50 — per-section + global "Reset to defaults".
 	// Sudo-gated at the route below so the SPA's <ReauthDialog>
 	// always pops on the danger-zone "Reset ALL settings" button.
-	settingsResetRepo := database.NewSettingsResetRepo(db)
+	settingsResetRepo := settingsdb.NewSettingsResetRepo(db)
 	settingsResetHandler := NewSettingsResetHandler(settingsResetRepo, cfg.Auth.ForwardAuthHeader)
 	// Phase-46 / Prompt 65 — recurring scheduled exports.
 	//
@@ -484,12 +485,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// table. Construct here so the same SettingsRepo + VehicleRepo
 	// instances back both the global settings handler above and
 	// the per-vehicle resolver below.
-	vehicleSettingsRepo := database.NewVehicleSettingsRepo(db)
+	vehicleSettingsRepo := settingsdb.NewVehicleSettingsRepo(db)
 	vehicleSettingsRepoForRouter := vehicledb.NewVehicleRepo(db)
-	vehicleSettingsResolver := database.NewVehicleSettingsResolver(
+	vehicleSettingsResolver := settingsdb.NewVehicleSettingsResolver(
 		vehicleSettingsRepo,
 		vehicledb.NewNameLookup(vehicleSettingsRepoForRouter),
-		database.NewUserSettingsLookup(database.NewSettingsRepo(db)),
+		settingsdb.NewUserSettingsLookup(settingsdb.NewSettingsRepo(db)),
 	)
 	vehicleSettingsHandler := NewVehicleSettingsHandler(
 		vehicleSettingsRepo,
@@ -1826,7 +1827,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		WithCommandExecutor(action.NewCommandExecutor(
 			vehicledb.NewVehicleRepo(db),
 			energydb.NewCommandLogRepo(db),
-			&settingsCheckerAdapter{database.NewSettingsRepo(db)},
+			&settingsCheckerAdapter{settingsdb.NewSettingsRepo(db)},
 			teslaClient,
 		)),
 		WithAutomationEventPublisher(automationPublisher),
@@ -4403,7 +4404,7 @@ func isVehiclePhotoUploadPath(method, path string) bool {
 	return tail == "/photo"
 }
 
-// aiSettingsReader adapts *database.SettingsRepo to the
+// aiSettingsReader adapts *settingsdb.SettingsRepo to the
 // provider.SettingsReader port. The repo natively exposes
 // AIMode + AIFeatureEnabled (cheap single-row PK lookups). The
 // AIProviderConfig accessor is implemented here by calling
@@ -4411,7 +4412,7 @@ func isVehiclePhotoUploadPath(method, path string) bool {
 // JSONB field — keeping the repo single-purpose (R5 mitigation)
 // and avoiding a settings-repo migration in slice F1.
 type aiSettingsReader struct {
-	repo *database.SettingsRepo
+	repo *settingsdb.SettingsRepo
 }
 
 func (a aiSettingsReader) AIMode(ctx context.Context) (string, error) {

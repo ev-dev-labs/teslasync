@@ -1,4 +1,4 @@
-package database
+package settings
 
 // Phase-46 / Prompt 50 — settings_reset orchestrator unit tests.
 //
@@ -253,7 +253,7 @@ func TestResetSections_NonQuietHoursWorksWithEmptyUser(t *testing.T) {
 
 func TestNewSettingsResetRepo_NilDoesNotPanic(t *testing.T) {
 	// Defensive: NewSettingsResetRepo(nil) constructs a repo whose
-	// runner has a nil *DB. Calling ResetSections on it should fail
+	// runner has a nil *database.DB. Calling ResetSections on it should fail
 	// at the runner boundary, not panic, when actually used. We don't
 	// invoke a section here (would need pgx.Tx) — just confirm
 	// construction succeeds and the value is non-nil.

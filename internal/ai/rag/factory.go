@@ -7,7 +7,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// SettingsReader is the narrow view of [database.SettingsRepo] the
+// SettingsReader is the narrow view of [settingsdb.SettingsRepo] the
 // factory depends on. We do not pin to *SettingsRepo so the rag
 // package can be tested with a fake reader (no DB required) and so a
 // future settings backend swap doesn't ripple through every retriever

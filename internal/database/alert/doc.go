@@ -9,7 +9,7 @@
 //
 // Lesson 26 + 30 NEW: the compile-time assertion
 //
-//	_ database.SettingsSerializerAlertRepo = (*AlertRuleRepo)(nil)
+//	_ settingsdb.SettingsSerializerAlertRepo = (*AlertRuleRepo)(nil)
 //
 // originally lived in parent settings_serializer.go and would create
 // a parent -> child cycle after the carve. Solution: relocate the

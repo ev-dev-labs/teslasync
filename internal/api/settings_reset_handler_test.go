@@ -24,22 +24,22 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
 // stubResetExecutor records the inputs and returns canned results.
 type stubResetExecutor struct {
 	gotUser     string
-	gotSections []database.SettingsResetSection
-	result      *database.SettingsResetResult
+	gotSections []settingsdb.SettingsResetSection
+	result      *settingsdb.SettingsResetResult
 	err         error
 	calls       int
 }
 
-func (s *stubResetExecutor) ResetSections(_ context.Context, userID string, sections []database.SettingsResetSection) (*database.SettingsResetResult, error) {
+func (s *stubResetExecutor) ResetSections(_ context.Context, userID string, sections []settingsdb.SettingsResetSection) (*settingsdb.SettingsResetResult, error) {
 	s.calls++
 	s.gotUser = userID
-	s.gotSections = append([]database.SettingsResetSection(nil), sections...)
+	s.gotSections = append([]settingsdb.SettingsResetSection(nil), sections...)
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -47,9 +47,9 @@ func (s *stubResetExecutor) ResetSections(_ context.Context, userID string, sect
 		return s.result, nil
 	}
 	// Synthesize a result that mirrors the request shape.
-	out := &database.SettingsResetResult{}
+	out := &settingsdb.SettingsResetResult{}
 	for _, sec := range sections {
-		out.Sections = append(out.Sections, database.SettingsResetSectionResult{
+		out.Sections = append(out.Sections, settingsdb.SettingsResetSectionResult{
 			Section: string(sec),
 			Reset:   1,
 		})
@@ -74,9 +74,9 @@ func newResetRequest(t *testing.T, body string, header string) *http.Request {
 	return r
 }
 
-func decodeResetResult(t *testing.T, w *httptest.ResponseRecorder) *database.SettingsResetResult {
+func decodeResetResult(t *testing.T, w *httptest.ResponseRecorder) *settingsdb.SettingsResetResult {
 	t.Helper()
-	var out database.SettingsResetResult
+	var out settingsdb.SettingsResetResult
 	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
 		t.Fatalf("decode: %v (body=%q)", err, w.Body.String())
 	}
@@ -102,7 +102,7 @@ func TestSettingsResetHandler_EmptyBodyResetsAll(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, body=%s", w.Code, w.Body.String())
 	}
-	wantAll := database.AllSettingsResetSections()
+	wantAll := settingsdb.AllSettingsResetSections()
 	if len(stub.gotSections) != len(wantAll) {
 		t.Fatalf("sections len = %d, want %d", len(stub.gotSections), len(wantAll))
 	}
@@ -130,7 +130,7 @@ func TestSettingsResetHandler_EmptyJSONObjectResetsAll(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, body=%s", w.Code, w.Body.String())
 	}
-	wantAll := database.AllSettingsResetSections()
+	wantAll := settingsdb.AllSettingsResetSections()
 	if len(stub.gotSections) != len(wantAll) {
 		t.Fatalf("sections len = %d, want %d", len(stub.gotSections), len(wantAll))
 	}
@@ -146,7 +146,7 @@ func TestSettingsResetHandler_SingleSection(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, body=%s", w.Code, w.Body.String())
 	}
-	if len(stub.gotSections) != 1 || stub.gotSections[0] != database.ResetSectionAlertRules {
+	if len(stub.gotSections) != 1 || stub.gotSections[0] != settingsdb.ResetSectionAlertRules {
 		t.Fatalf("sections = %v, want [alert_rules]", stub.gotSections)
 	}
 }
@@ -161,7 +161,7 @@ func TestSettingsResetHandler_NormalisesCaseAndWhitespace(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatalf("status = %d, body=%s", w.Code, w.Body.String())
 	}
-	if len(stub.gotSections) != 1 || stub.gotSections[0] != database.ResetSectionAlertRules {
+	if len(stub.gotSections) != 1 || stub.gotSections[0] != settingsdb.ResetSectionAlertRules {
 		t.Fatalf("sections = %v, want [alert_rules]", stub.gotSections)
 	}
 }
@@ -204,7 +204,7 @@ func TestSettingsResetHandler_UnknownSectionReturns400(t *testing.T) {
 
 func TestSettingsResetHandler_QuietHoursWithoutUserReturns401(t *testing.T) {
 	stub := &stubResetExecutor{
-		err: database.ErrSettingsResetQuietHoursRequiresUser,
+		err: settingsdb.ErrSettingsResetQuietHoursRequiresUser,
 	}
 	h := NewSettingsResetHandler(stub, "X-Test-Subject")
 

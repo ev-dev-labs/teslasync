@@ -49,7 +49,7 @@ import (
 )
 
 // ChargeCurveSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunChargeCurve] depends on.
+// [settingsdb.SettingsRepo] [RunChargeCurve] depends on.
 // Defined inline so callers can supply a fake without dragging
 // the full settings repo into job tests.
 //

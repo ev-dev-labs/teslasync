@@ -22,7 +22,7 @@ import (
 )
 
 // Settings is the narrow view of the user's AI configuration the
-// guard depends on. It is satisfied by *database.SettingsRepo in
+// guard depends on. It is satisfied by *settingsdb.SettingsRepo in
 // production wiring and by an in-memory fake in tests.
 //
 // TeslaSync is single-tenant (one settings row per installation), so

@@ -1,65 +1,103 @@
-refactor(R4.25): carve internal/database/quiethours (repo + assertion; input stays in parent)
+refactor(R4.26): carve internal/database/settings (LARGEST cluster — 5 src + 3 tests, 51+ callers)
 
-Move the QuietHoursRepo into its own bounded-context subpkg per ADR-011.
-The QuietHoursInput type is split out into a new parent file because it
-is part of the parent SettingsSerializerQuietHoursRepo interface contract
-that the settings serializer still consumes — keeping it in parent breaks
-the cycle that would otherwise form (parent imports subpkg for the type,
-subpkg imports parent for *database.DB).
+Move the entire settings aggregate (global + per-vehicle + serializer +
+reset + resolver) into its own bounded-context subpkg per ADR-011. This
+is the largest single cluster of R4 — the settings subdomain is heavily
+cross-cutting via abstract interfaces but internally cohesive.
 
-Files moved (1 src + 1 test; 6 caller files swept):
-  quiet_hours_repo.go              -> quiethours/repo.go
-  quiet_hours_repo_test.go         -> quiethours/repo_test.go
+Files (5 src + 3 tests + 1 type-only moved; 51+ caller files swept
+across 5 sweep passes per Lesson 33):
 
-Files created in parent:
-  quiet_hours_input.go             (NEW — extracted QuietHoursInput struct
-                                    from the former quiet_hours_repo.go;
-                                    must stay in parent because the
-                                    SettingsSerializerQuietHoursRepo
-                                    interface in settings_serializer.go
-                                    references it.)
+  settings_repo.go              -> settings/repo.go
+  settings_reset.go             -> settings/reset.go
+  settings_reset_test.go        -> settings/reset_test.go
+  settings_serializer.go        -> settings/serializer.go
+  vehicle_settings_repo.go      -> settings/vehicle_repo.go
+  vehicle_settings_repo_test.go -> settings/vehicle_repo_test.go
+  vehicle_settings_resolver.go  -> settings/vehicle_resolver.go
+  quiet_hours_input.go          -> settings/quiet_hours_input.go
+                                   (followed its consumer — the
+                                   SettingsSerializerQuietHoursRepo
+                                   interface — out of parent; the
+                                   quiethours subpkg now references
+                                   settings.QuietHoursInput, completing
+                                   Lesson 35 cleanly)
+  settings/doc.go               (NEW, // Layer: adapter)
 
-Files created in subpkg:
-  quiethours/doc.go                (NEW, // Layer: adapter)
-  quiethours/assertion.go          (NEW — '_ database.SettingsSerializerQuietHoursRepo
-                                    = (*QuietHoursRepo)(nil)' moved out of parent
-                                    settings_serializer.go L672)
-
-Subpkg references the input type as *database.QuietHoursInput; the type
-itself has no DB dep so this is a clean parent-owns-contract, subpkg-owns-
-implementation split.
-
-LESSON 35 (new): when a parent INTERFACE contract uses a struct type that
-also belongs naturally to the carved subpkg, the type must STAY in parent
-to avoid a cycle. Split the type into its own parent file
-(<aggregate>_input.go) and have the subpkg reference database.<Type>.
-This is the inverse of Lesson 34 (which moves an adapter wrapping a
-concrete subpkg type INTO the subpkg).
-
-Symbols promoted (alias quiethoursdb per ADR-011):
-  QuietHoursRepo, NewQuietHoursRepo, AllowedQuietHoursSeverities,
-  ErrQuietHoursNotFound, ErrQuietHoursInvalidTime, ErrQuietHoursEqualTime,
-  ErrQuietHoursInvalidTimezone, ErrQuietHoursInvalidWeekdays,
-  ErrQuietHoursInvalidSeverity.
-
-Symbols staying in parent:
-  QuietHoursInput (struct type only)
+Sibling subpkg assertion files updated to point at the new home:
+  internal/database/geofence/assertion.go         (database.SettingsSerializerGeofenceRepo
+                                                    -> settings.SettingsSerializerGeofenceRepo)
+  internal/database/quiethours/assertion.go       (database.SettingsSerializerQuietHoursRepo
+                                                    -> settings.SettingsSerializerQuietHoursRepo)
+  internal/database/quiethours/repo.go            (database.QuietHoursInput
+                                                    -> settings.QuietHoursInput)
+  internal/database/alert/settings_serializer_assertion.go (similar)
+  internal/database/alert/doc.go                  (text reference update)
+  internal/database/vehicle/name_lookup.go        (database.VehicleNameLookup
+                                                    -> settings.VehicleNameLookup;
+                                                    parent interface moved with
+                                                    its only consumer)
+  internal/database/quiethours/doc.go             (text reference update)
 
 References to parent types qualified in subpkg:
-  *DB -> *database.DB
-  QuietHoursInput -> database.QuietHoursInput
+  *DB           -> *database.DB
+  DBTX          -> database.DBTX
+  MongoClient   -> database.MongoClient
 
-Parent settings_serializer.go L669-674 (former GeofenceRepo + QuietHoursRepo
-assertion block) — the QuietHoursRepo assertion was already removed in
-R4.24's restructure of that var() block; this commit completes the
-subpkg-side assertion relocation per Lesson 30/34.
+Symbols promoted (alias settingsdb per ADR-011):
+  - SettingsRepo + helpers: NewSettingsRepo, AIFeatureEnabled, AIMode,
+    settingsDefaults, IsAPISuspended, GetPollingConfig,
+    GetDashboardLayouts, UpsertDashboardLayouts, applySettingsRow,
+    marshalJSONOrEmpty
+  - Reset machinery: SettingsResetRepo, NewSettingsResetRepo,
+    NewSettingsResetRepoWithRunner, SettingsResetTxRunner, RunInTx,
+    SettingsResetResult, SettingsResetSection, SettingsResetSectionResult,
+    SettingsResetDenyListReasons, ResetSections, CanonicalResetSection,
+    IsResetSectionDenied, ResetSection* enum values,
+    AllSettingsResetSections, AppearanceSettingsKeys,
+    GeneralSettingsKeys, ErrSettingsReset*
+  - Serializer: SettingsSerializer, NewSettingsSerializer,
+    SettingsSerializer{Settings,Alert,Geofence,QuietHours}Repo,
+    SettingsBundle, SettingsBundleSchemaVersion, SettingsBundleSections,
+    SectionResult, ExportSettings, ImportSettings, ImportResult,
+    WithNow, ErrSettingsBundle* (incl. Unsupported, Nil, UnsupportedVersion),
+    AlertRulesEquivalent, AlertRuleStableID, GeofencesEquivalent,
+    QuietHoursEquivalent, QuietHoursStableID, settings/equivalence
+    helpers (ptrBool/ptrString/ptrInt/ptrStringSlice/...)
+  - Vehicle settings: VehicleSettingsRepo, NewVehicleSettingsRepo,
+    VehicleSettingDef, VehicleSettingDefs, vehicleSettingDefByKey,
+    VehicleSettingRow, VehicleSettingValueKind,
+    VehicleSettingKind{Text,Number,Boolean,Timestamp},
+    VehicleNicknameMaxLen, ValidateVehicleSettingValue,
+    IsValidVehicleSettingKey, EffectiveSettingSource,
+    EffectiveSource{Override,Default,...}, ErrVehicleSetting*
+  - Resolver: VehicleSettingsResolver, NewVehicleSettingsResolver,
+    EffectiveSetting, VehicleNameLookup, UserSettingsLookup,
+    NewUserSettingsLookup, VehicleSettingsOverridesLister, DefaultsForKey,
+    GetUnitOfLength, GetUnitOfTemp
+  - Input: QuietHoursInput (the struct itself)
 
-internal/database file count: 18 -> 18 (1 file out for repo, 1 file in
-for input; same parent count).
+LESSON 33 (confirmed AGAIN, 5x this cluster): cluster-symbol regex MUST
+be re-fired after each go build pass — Err* sentinels in var() blocks,
+enum-value consts (ResetSection*, VehicleSettingKind*, EffectiveSource*),
+and Equivalent helpers all stayed undefined until the 5th sweep. The
+discipline is now: after EVERY build pass, grep error output for
+'undefined: database\.\w+' and add those exact symbols to the alias-
+rewrite regex.
 
-Carved subpkgs so far (27): achievement, sharing, admin, gdpr,
+PARENT IS NOW AT THE ADR-011 IRREDUCIBLE SHAPE (12 files):
+  cache.go, circuit_breaker.go, database.go, doc.go, helpers.go,
+  maintenance.go, migrate.go, mongodb.go, null_helpers.go,
+  query_budget_tracer.go, retry.go, write_buffer.go
+
+These are all composition / shared helpers / infra. No more aggregate
+repos remain in the parent — every domain has its own subpkg.
+
+internal/database allowlist ratchet: 18 -> 12 src files. R4 COMPLETE.
+
+Carved subpkgs so far (28): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
 audit, charging, drive, trip, energy, ai, export, worker, telemetry,
-system, tesla, vehicle, signal, position, geofence, quiethours.
+system, tesla, vehicle, signal, position, geofence, quiethours, settings.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

@@ -15,8 +15,8 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -33,7 +33,7 @@ func newFakeQuietHoursStore() *fakeQuietHoursStore {
 	return &fakeQuietHoursStore{rows: map[int64]*models.QuietHoursWindow{}, nextID: 1}
 }
 
-func (f *fakeQuietHoursStore) Insert(_ context.Context, userID string, in database.QuietHoursInput) (*models.QuietHoursWindow, error) {
+func (f *fakeQuietHoursStore) Insert(_ context.Context, userID string, in settingsdb.QuietHoursInput) (*models.QuietHoursWindow, error) {
 	row := &models.QuietHoursWindow{
 		UserID:           userID,
 		Enabled:          true,
@@ -93,7 +93,7 @@ func (f *fakeQuietHoursStore) ListByUser(_ context.Context, userID string) ([]*m
 	return out, nil
 }
 
-func (f *fakeQuietHoursStore) Update(_ context.Context, userID string, id int64, in database.QuietHoursInput) (*models.QuietHoursWindow, error) {
+func (f *fakeQuietHoursStore) Update(_ context.Context, userID string, id int64, in settingsdb.QuietHoursInput) (*models.QuietHoursWindow, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	row, ok := f.rows[id]
@@ -321,7 +321,7 @@ func TestQuietHoursHandler_PatchAndDelete(t *testing.T) {
 	srv := httptest.NewServer(quietHoursTestRouter(h))
 	defer srv.Close()
 
-	created, err := store.Insert(context.Background(), "alice", database.QuietHoursInput{
+	created, err := store.Insert(context.Background(), "alice", settingsdb.QuietHoursInput{
 		StartLocal: qhPtrStr("23:00"), EndLocal: qhPtrStr("07:00"), Timezone: qhPtrStr("UTC"),
 	})
 	if err != nil {

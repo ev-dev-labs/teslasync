@@ -11,7 +11,7 @@ import (
 )
 
 // fakeSettings is a hand-rolled SettingsReader for factory tests.
-// We avoid the real *database.SettingsRepo here so the factory test
+// We avoid the real *settingsdb.SettingsRepo here so the factory test
 // can run without a Postgres dependency.
 type fakeSettings struct {
 	mode string

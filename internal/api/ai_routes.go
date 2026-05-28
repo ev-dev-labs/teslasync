@@ -27,7 +27,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -110,7 +110,7 @@ func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
 	registry *provider.Registry,
-	settingsRepo *database.SettingsRepo,
+	settingsRepo *settingsdb.SettingsRepo,
 	sudoMW func(http.Handler) http.Handler,
 	aiChatbot *AIChatbotHandler,
 	aiDigest *AIDigestHandler,
@@ -1815,7 +1815,7 @@ func aiVehiclePaintPreviewStubHandler(w http.ResponseWriter, _ *http.Request) {
 // `settings` key/value table (well under 50 rows) executed once per
 // AI request. The LLM call that follows is the dominant cost by 3-5
 // orders of magnitude, so the Get is not on the critical path.
-func userPrefsMiddleware(settingsRepo *database.SettingsRepo) func(http.Handler) http.Handler {
+func userPrefsMiddleware(settingsRepo *settingsdb.SettingsRepo) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if settingsRepo == nil {

@@ -9,6 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -39,7 +40,7 @@ type VehicleService struct {
 	db            *database.DB
 	vehicleRepo   *vehicledb.VehicleRepo
 	positionRepo  *positiondb.PositionRepo
-	settingsRepo  *database.SettingsRepo
+	settingsRepo  *settingsdb.SettingsRepo
 	stateProvider *vehicleStateProvider
 	state         SignalStateReader
 }
@@ -57,7 +58,7 @@ func NewVehicleService(db *database.DB) *VehicleService {
 		db:            db,
 		vehicleRepo:   vehicledb.NewVehicleRepo(db),
 		positionRepo:  positiondb.NewPositionRepo(db),
-		settingsRepo:  database.NewSettingsRepo(db),
+		settingsRepo:  settingsdb.NewSettingsRepo(db),
 		stateProvider: &vehicleStateProvider{db: db},
 	}
 }
@@ -84,7 +85,7 @@ func (s *VehicleService) VehicleRepo() *vehicledb.VehicleRepo {
 }
 
 // SettingsRepo returns the underlying settings repository for simple lookups.
-func (s *VehicleService) SettingsRepo() *database.SettingsRepo {
+func (s *VehicleService) SettingsRepo() *settingsdb.SettingsRepo {
 	return s.settingsRepo
 }
 

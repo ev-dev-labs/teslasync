@@ -20,11 +20,11 @@ import (
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// fakeSettingsRepo is a minimal in-memory replacement for *database.SettingsRepo.
+// fakeSettingsRepo is a minimal in-memory replacement for *settingsdb.SettingsRepo.
 type fakeSettingsRepo struct {
 	current  *systemmodel.Settings
 	upserted *systemmodel.Settings
@@ -188,7 +188,7 @@ func (f *fakeQuietHoursRepo) ListByUser(_ context.Context, userID string) ([]*mo
 	return out, nil
 }
 
-func (f *fakeQuietHoursRepo) Insert(_ context.Context, userID string, in database.QuietHoursInput) (*models.QuietHoursWindow, error) {
+func (f *fakeQuietHoursRepo) Insert(_ context.Context, userID string, in settingsdb.QuietHoursInput) (*models.QuietHoursWindow, error) {
 	if f.insertErr != nil {
 		return nil, f.insertErr
 	}
@@ -229,7 +229,7 @@ func (f *fakeQuietHoursRepo) Insert(_ context.Context, userID string, in databas
 	return w, nil
 }
 
-func (f *fakeQuietHoursRepo) Update(_ context.Context, userID string, id int64, in database.QuietHoursInput) (*models.QuietHoursWindow, error) {
+func (f *fakeQuietHoursRepo) Update(_ context.Context, userID string, id int64, in settingsdb.QuietHoursInput) (*models.QuietHoursWindow, error) {
 	if f.updateErr != nil {
 		return nil, f.updateErr
 	}
@@ -265,12 +265,12 @@ func (f *fakeQuietHoursRepo) Update(_ context.Context, userID string, id int64, 
 }
 
 // newTestSettingsSerializer builds a serializer wired to fresh fakes.
-func newTestSettingsSerializer() (*database.SettingsSerializer, *fakeSettingsRepo, *fakeAlertRepo, *fakeGeofenceRepo, *fakeQuietHoursRepo) {
+func newTestSettingsSerializer() (*settingsdb.SettingsSerializer, *fakeSettingsRepo, *fakeAlertRepo, *fakeGeofenceRepo, *fakeQuietHoursRepo) {
 	s := &fakeSettingsRepo{}
 	a := &fakeAlertRepo{}
 	g := &fakeGeofenceRepo{}
 	q := &fakeQuietHoursRepo{}
-	return database.NewSettingsSerializer(s, a, g, q), s, a, g, q
+	return settingsdb.NewSettingsSerializer(s, a, g, q), s, a, g, q
 }
 
 // fixedSeverity is a helper to build a *string pointer inline.
@@ -322,11 +322,11 @@ func TestSettingsExportHandler_Export_ReturnsBundleWithAllSections(t *testing.T)
 		t.Fatalf("content-disposition: got %q", cd)
 	}
 
-	var bundle database.SettingsBundle
+	var bundle settingsdb.SettingsBundle
 	if err := json.Unmarshal(rec.Body.Bytes(), &bundle); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if bundle.SchemaVersion != database.SettingsBundleSchemaVersion {
+	if bundle.SchemaVersion != settingsdb.SettingsBundleSchemaVersion {
 		t.Errorf("schema_version: got %d", bundle.SchemaVersion)
 	}
 	if bundle.ExportedAt.IsZero() {
@@ -390,7 +390,7 @@ func TestSettingsExportHandler_Export_ScopesQuietHoursPerUser(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.Export(rec, req)
 
-	var bundle database.SettingsBundle
+	var bundle settingsdb.SettingsBundle
 	if err := json.Unmarshal(rec.Body.Bytes(), &bundle); err != nil {
 		t.Fatalf("decode: %v", err)
 	}

@@ -10,7 +10,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// TTLSettingsReader is the narrow view of [database.SettingsRepo]
+// TTLSettingsReader is the narrow view of [settingsdb.SettingsRepo]
 // [RunTTL] depends on. Defined inline so callers can supply a fake
 // without dragging the full settings repo into job tests.
 type TTLSettingsReader interface {

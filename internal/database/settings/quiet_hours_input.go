@@ -1,4 +1,4 @@
-package database
+package settings
 
 // QuietHoursInput is the patch / create payload accepted by the API
 // handler. Setting any pointer leaves the column unchanged for

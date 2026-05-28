@@ -13,7 +13,7 @@
 //     priority order, and DELETE-of-override falls through.
 //   - DefaultsForKey covers every whitelisted key.
 
-package database
+package settings
 
 import (
 	"context"

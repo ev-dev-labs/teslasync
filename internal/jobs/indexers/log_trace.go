@@ -49,7 +49,7 @@ import (
 )
 
 // LogTraceSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunLogTrace] depends on.
+// [settingsdb.SettingsRepo] [RunLogTrace] depends on.
 // Defined inline so callers can supply a fake without dragging
 // the full settings repo into job tests.
 //

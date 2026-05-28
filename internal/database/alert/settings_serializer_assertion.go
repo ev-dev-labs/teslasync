@@ -6,6 +6,6 @@
 
 package alert
 
-import "github.com/ev-dev-labs/teslasync/internal/database"
+import "github.com/ev-dev-labs/teslasync/internal/database/settings"
 
-var _ database.SettingsSerializerAlertRepo = (*AlertRuleRepo)(nil)
+var _ settings.SettingsSerializerAlertRepo = (*AlertRuleRepo)(nil)

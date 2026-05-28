@@ -29,7 +29,7 @@
 // reading from the existing user-level sources; the override layer is
 // shipped first so a follow-up sprint can switch consumers
 // table-by-table without coordinating a second backend deploy.
-package database
+package settings
 
 import (
 	"context"
@@ -38,6 +38,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -223,12 +224,12 @@ func ValidateVehicleSettingValue(key string, value any) error {
 // Stateless; safe to call concurrently — every method takes a context
 // and forwards to the shared pgx pool.
 type VehicleSettingsRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewVehicleSettingsRepo wires the repo to a database pool. No
 // background work is started; the repo is purely a thin SQL facade.
-func NewVehicleSettingsRepo(db *DB) *VehicleSettingsRepo {
+func NewVehicleSettingsRepo(db *database.DB) *VehicleSettingsRepo {
 	return &VehicleSettingsRepo{db: db}
 }
 

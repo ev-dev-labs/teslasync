@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
 // TestAlertRuleColumnsIncludesMaxFiresCap pins the slice 0003 contract:
@@ -192,9 +192,9 @@ func TestAlertRulesEquivalentMultiVehicle(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			a := tc.a().toModel()
 			b := tc.b().toModel()
-			got := database.AlertRulesEquivalent(a, b)
+			got := settingsdb.AlertRulesEquivalent(a, b)
 			if got != tc.want {
-				t.Fatalf("database.AlertRulesEquivalent(a=%+v, b=%+v) = %v, want %v", a, b, got, tc.want)
+				t.Fatalf("settingsdb.AlertRulesEquivalent(a=%+v, b=%+v) = %v, want %v", a, b, got, tc.want)
 			}
 		})
 	}

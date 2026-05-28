@@ -8,10 +8,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -77,11 +77,11 @@ type RouterOptions struct {
 	SyntheticRunner   *synthetic.Runner
 }
 
-// settingsCheckerAdapter wraps *database.SettingsRepo to satisfy action.SettingsChecker.
+// settingsCheckerAdapter wraps *settingsdb.SettingsRepo to satisfy action.SettingsChecker.
 // GetPollingConfig returns a default PollingConfig since per-vehicle polling tuning
 // now lives in the `polling_config` table (ADR-011), not on the global settings repo.
 type settingsCheckerAdapter struct {
-	*database.SettingsRepo
+	*settingsdb.SettingsRepo
 }
 
 func (a *settingsCheckerAdapter) GetPollingConfig(_ context.Context) (*systemmodel.PollingConfig, error) {

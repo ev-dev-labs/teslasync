@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:50:28Z",
+  "generated_at": "2026-05-28T16:58:59Z",
   "go_version": "go1.26.1",
-  "commit_sha": "b110e417208239e9810040bfb998ccd86233cb6d",
+  "commit_sha": "0f942c400d65417046bac9903dc587c5f8a2eb33",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -39,7 +39,7 @@
       "path": "cmd/automation-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 359,
+      "loc": 360,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -53,6 +53,7 @@
         "internal/database/automation",
         "internal/database/energy",
         "internal/database/notification",
+        "internal/database/settings",
         "internal/database/system",
         "internal/database/vehicle",
         "internal/mqtt",
@@ -2515,7 +2516,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126680,
+      "loc": 126686,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2655,6 +2656,7 @@
         "internal/database/observability",
         "internal/database/position",
         "internal/database/quiethours",
+        "internal/database/settings",
         "internal/database/sharing",
         "internal/database/signal",
         "internal/database/system",
@@ -3189,7 +3191,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1847,
+      "loc": 1848,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3205,6 +3207,7 @@
         "internal/database/gdpr",
         "internal/database/notification",
         "internal/database/observability",
+        "internal/database/settings",
         "internal/database/signal",
         "internal/database/system",
         "internal/database/telemetry",
@@ -3722,17 +3725,14 @@
     },
     {
       "path": "internal/database",
-      "go_files": 18,
-      "test_files": 12,
-      "loc": 5349,
+      "go_files": 12,
+      "test_files": 9,
+      "loc": 2167,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/config",
         "internal/metrics",
-        "internal/models",
-        "internal/models/alert",
-        "internal/models/system",
         "internal/tracing"
       ],
       "files": [
@@ -3752,18 +3752,9 @@
         "null_helpers.go",
         "query_budget_tracer.go",
         "query_budget_tracer_test.go",
-        "quiet_hours_input.go",
-        "quiet_hours_repo_test.go",
         "retry.go",
         "retry_test.go",
         "schema_test.go",
-        "settings_repo.go",
-        "settings_reset.go",
-        "settings_reset_test.go",
-        "settings_serializer.go",
-        "vehicle_settings_repo.go",
-        "vehicle_settings_repo_test.go",
-        "vehicle_settings_resolver.go",
         "write_buffer.go",
         "write_buffer_test.go"
       ]
@@ -3832,6 +3823,7 @@
       "layer": "adapter",
       "imports": [
         "internal/database",
+        "internal/database/settings",
         "internal/models/alert"
       ],
       "files": [
@@ -4043,6 +4035,7 @@
       "layer": "adapter",
       "imports": [
         "internal/database",
+        "internal/database/settings",
         "internal/models/system"
       ],
       "files": [
@@ -4115,18 +4108,45 @@
     {
       "path": "internal/database/quiethours",
       "go_files": 3,
-      "test_files": 0,
-      "loc": 312,
+      "test_files": 1,
+      "loc": 438,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
         "internal/database",
+        "internal/database/settings",
         "internal/models"
       ],
       "files": [
         "assertion.go",
         "doc.go",
-        "repo.go"
+        "repo.go",
+        "repo_test.go"
+      ]
+    },
+    {
+      "path": "internal/database/settings",
+      "go_files": 7,
+      "test_files": 2,
+      "loc": 3115,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/models",
+        "internal/models/alert",
+        "internal/models/system"
+      ],
+      "files": [
+        "doc.go",
+        "quiet_hours_input.go",
+        "repo.go",
+        "reset.go",
+        "reset_test.go",
+        "serializer.go",
+        "vehicle_repo.go",
+        "vehicle_repo_test.go",
+        "vehicle_resolver.go"
       ]
     },
     {
@@ -4274,6 +4294,7 @@
       "layer": "adapter",
       "imports": [
         "internal/database",
+        "internal/database/settings",
         "internal/models/vehicle",
         "internal/tracing"
       ],
@@ -5646,7 +5667,7 @@
       "path": "internal/service",
       "go_files": 4,
       "test_files": 1,
-      "loc": 1384,
+      "loc": 1385,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -5655,6 +5676,7 @@
         "internal/database/drive",
         "internal/database/energy",
         "internal/database/position",
+        "internal/database/settings",
         "internal/database/trip",
         "internal/database/vehicle",
         "internal/enums",
@@ -6092,7 +6114,7 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2603,
+      "loc": 2604,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -6105,6 +6127,7 @@
         "internal/database/drive",
         "internal/database/notification",
         "internal/database/position",
+        "internal/database/settings",
         "internal/database/vehicle",
         "internal/database/worker",
         "internal/enums",
@@ -6212,7 +6235,7 @@
   "cmd_loc": {
     "cmd/ai-eval": 151,
     "cmd/audit-signal-types": 498,
-    "cmd/automation-worker": 355,
+    "cmd/automation-worker": 356,
     "cmd/backup-verify": 96,
     "cmd/chaos-runner": 144,
     "cmd/export-worker": 252,
@@ -7280,13 +7303,7 @@
       "mongodb.go",
       "null_helpers.go",
       "query_budget_tracer.go",
-      "quiet_hours_input.go",
       "retry.go",
-      "settings_repo.go",
-      "settings_reset.go",
-      "settings_serializer.go",
-      "vehicle_settings_repo.go",
-      "vehicle_settings_resolver.go",
       "write_buffer.go"
     ],
     "internal/database/achievement": [
@@ -7407,6 +7424,15 @@
       "assertion.go",
       "doc.go",
       "repo.go"
+    ],
+    "internal/database/settings": [
+      "doc.go",
+      "quiet_hours_input.go",
+      "repo.go",
+      "reset.go",
+      "serializer.go",
+      "vehicle_repo.go",
+      "vehicle_resolver.go"
     ],
     "internal/database/sharing": [
       "doc.go",
@@ -8173,8 +8199,8 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 18,
-      "flat_parent_test_files": 12,
+      "flat_parent_go_files": 12,
+      "flat_parent_test_files": 9,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
@@ -8189,6 +8215,7 @@
         "energy",
         "export",
         "notification",
+        "settings",
         "signal",
         "system",
         "tesla",
@@ -8199,8 +8226,7 @@
         "feedback",
         "geo",
         "ingest",
-        "onboarding",
-        "settings"
+        "onboarding"
       ],
       "notes": "22 subpkgs from R1 audit. Touches many internal/api/* callers — accept R2 double-touch budget (no temp compat layer)."
     },

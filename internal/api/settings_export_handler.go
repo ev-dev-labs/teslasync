@@ -25,19 +25,19 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
 // SettingsExportHandler serves GET /settings/export.
 type SettingsExportHandler struct {
-	serializer *database.SettingsSerializer
+	serializer *settingsdb.SettingsSerializer
 	authHdr    string
 }
 
 // NewSettingsExportHandler wires the handler against the shared
 // serializer. The ForwardAuth header drives per-user scoping for the
 // quiet_hours section; install-global sections are unaffected.
-func NewSettingsExportHandler(serializer *database.SettingsSerializer, forwardAuthHeader string) *SettingsExportHandler {
+func NewSettingsExportHandler(serializer *settingsdb.SettingsSerializer, forwardAuthHeader string) *SettingsExportHandler {
 	return &SettingsExportHandler{serializer: serializer, authHdr: forwardAuthHeader}
 }
 

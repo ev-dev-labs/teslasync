@@ -16,16 +16,16 @@ import (
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // buildBundle is a helper to create a SettingsBundle for tests.
-func buildBundle(version int) *database.SettingsBundle {
-	return &database.SettingsBundle{
+func buildBundle(version int) *settingsdb.SettingsBundle {
+	return &settingsdb.SettingsBundle{
 		SchemaVersion: version,
 		ExportedAt:    time.Now().UTC(),
-		Sections: database.SettingsBundleSections{
+		Sections: settingsdb.SettingsBundleSections{
 			Settings: &systemmodel.Settings{
 				UnitOfLength:   "mi",
 				UnitOfTemp:     "F",
@@ -69,7 +69,7 @@ func postSettingsImport(t *testing.T, h *SettingsImportHandler, body any, user s
 func TestSettingsImportHandler_DryRun_PreviewsAddsWithoutWriting(t *testing.T) {
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
 	settings.current = &systemmodel.Settings{}
-	bundle := buildBundle(database.SettingsBundleSchemaVersion)
+	bundle := buildBundle(settingsdb.SettingsBundleSchemaVersion)
 	h := NewSettingsImportHandler(ser, "X-Forwarded-User")
 
 	rec := postSettingsImport(t, h, map[string]any{"dry_run": true, "bundle": bundle}, "alice@example.com")
@@ -77,7 +77,7 @@ func TestSettingsImportHandler_DryRun_PreviewsAddsWithoutWriting(t *testing.T) {
 		t.Fatalf("status: got %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
 
-	var result database.ImportResult
+	var result settingsdb.ImportResult
 	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestSettingsImportHandler_DryRun_PreviewsAddsWithoutWriting(t *testing.T) {
 func TestSettingsImportHandler_Apply_PersistsAcrossSections(t *testing.T) {
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
 	settings.current = &systemmodel.Settings{}
-	bundle := buildBundle(database.SettingsBundleSchemaVersion)
+	bundle := buildBundle(settingsdb.SettingsBundleSchemaVersion)
 	h := NewSettingsImportHandler(ser, "X-Forwarded-User")
 
 	rec := postSettingsImport(t, h, map[string]any{"dry_run": false, "bundle": bundle}, "alice@example.com")
@@ -171,7 +171,7 @@ func TestSettingsImportHandler_RoundTrip_ExportThenImportYieldsSkip(t *testing.T
 		t.Fatalf("status: got %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
 
-	var result database.ImportResult
+	var result settingsdb.ImportResult
 	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
 		t.Fatalf("decode: %v", err)
 	}

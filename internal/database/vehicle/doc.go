@@ -15,7 +15,7 @@
 //     aggregation. Owns VehicleStateSummaryRow + VehicleStateTransition.
 //   - name_lookup.go  (NEW, refactored out of parent vehicle_settings_resolver.go)
 //     NewNameLookup adapter: wires *VehicleRepo to the
-//     database.VehicleNameLookup seam used by the settings resolver.
+//     settingsdb.VehicleNameLookup seam used by the settings resolver.
 //     Lives in the vehicle subpkg so the parent resolver does not
 //     depend on the concrete VehicleRepo type (resolver depends only
 //     on the interface).

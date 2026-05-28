@@ -10,7 +10,7 @@ import (
 )
 
 // SettingsReader is the narrow view the [Registry] needs from the live
-// settings row. Implemented by *database.SettingsRepo in production
+// settings row. Implemented by *settingsdb.SettingsRepo in production
 // wiring and by an in-memory fake in tests.
 //
 // Methods MUST fail-closed: any error path returns the off-mode default

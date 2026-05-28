@@ -12,18 +12,20 @@ import (
 	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	"github.com/rs/zerolog/log"
 )
 
 // SettingsHandler handles user settings.
 type SettingsHandler struct {
-	settingsRepo     *database.SettingsRepo
+	settingsRepo     *settingsdb.SettingsRepo
 	db               *database.DB
 	telemetryHandler *TelemetryHandler
 }
 
 func NewSettingsHandler(db *database.DB) *SettingsHandler {
-	return &SettingsHandler{settingsRepo: database.NewSettingsRepo(db), db: db}
+	return &SettingsHandler{settingsRepo: settingsdb.NewSettingsRepo(db), db: db}
 }
 
 // SetTelemetryHandler allows the settings handler to sync capture toggle changes.

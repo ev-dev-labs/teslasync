@@ -9,7 +9,9 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
+	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	cmdFSM "github.com/ev-dev-labs/teslasync/internal/fsm/command"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -21,7 +23,7 @@ import (
 type CommandHandler struct {
 	vehicleRepo  *vehicledb.VehicleRepo
 	commandRepo  *energydb.CommandLogRepo
-	settingsRepo *database.SettingsRepo
+	settingsRepo *settingsdb.SettingsRepo
 	teslaClient  *tesla.Client
 	redisCache   *signal.RedisSignalCache
 }
@@ -30,7 +32,7 @@ func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
 	return &CommandHandler{
 		vehicleRepo:  vehicledb.NewVehicleRepo(db),
 		commandRepo:  energydb.NewCommandLogRepo(db),
-		settingsRepo: database.NewSettingsRepo(db),
+		settingsRepo: settingsdb.NewSettingsRepo(db),
 		teslaClient:  tc,
 	}
 }

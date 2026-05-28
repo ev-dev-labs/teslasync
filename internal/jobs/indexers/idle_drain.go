@@ -50,7 +50,7 @@ import (
 )
 
 // IdleDrainSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunIdleDrain] depends on.
+// [settingsdb.SettingsRepo] [RunIdleDrain] depends on.
 // Defined inline so callers can supply a fake without dragging
 // the full settings repo into job tests.
 //

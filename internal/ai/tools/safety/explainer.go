@@ -56,7 +56,7 @@
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → query_safety_settings
 //     delegates to a narrow read-only port `SafetySettingsSource`
-//     that wraps the canonical `*database.SettingsRepo` Get
+//     that wraps the canonical `*settingsdb.SettingsRepo` Get
 //     method. NO new SQL is written. The deterministic
 //     POST /api/v1/settings handler remains the canonical
 //     baseline write path; this Tool NEVER triggers a save.
@@ -153,7 +153,7 @@ type SafetySettingsEnvelope struct {
 // SafetySettingsSource is the narrow port the
 // query_safety_settings Tool delegates to. In production it is
 // satisfied by *api.AISafetySettingExplainerSource (which wraps
-// the canonical *database.SettingsRepo); in tests we substitute
+// the canonical *settingsdb.SettingsRepo); in tests we substitute
 // deterministic fakes so the Tool unit tests stay hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update

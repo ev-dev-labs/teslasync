@@ -49,7 +49,7 @@ import (
 )
 
 // RouteSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunRoute] depends on. Defined
+// [settingsdb.SettingsRepo] [RunRoute] depends on. Defined
 // inline so callers can supply a fake without dragging the full
 // settings repo into job tests.
 //
