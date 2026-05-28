@@ -15,17 +15,18 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
 
-// savedViewsRepo is the slice of *database.SavedViewsRepo the handler
+// savedViewsRepo is the slice of *dbadmin.SavedViewsRepo the handler
 // depends on. Keeping it as an interface lets the unit tests drop in an
 // in-memory fake without standing up a real Postgres pool — same pattern
 // as PinnedHandler (Phase 40 / Prompt 48).
 type savedViewsRepo interface {
-	List(ctx context.Context, f database.SavedViewListFilter) ([]*dashboardmodel.SavedView, error)
+	List(ctx context.Context, f dbadmin.SavedViewListFilter) ([]*dashboardmodel.SavedView, error)
 	GetByID(ctx context.Context, id int64) (*dashboardmodel.SavedView, error)
 	Create(ctx context.Context, v *dashboardmodel.SavedView) error
-	Update(ctx context.Context, id int64, patch database.SavedViewUpdate) (*dashboardmodel.SavedView, error)
+	Update(ctx context.Context, id int64, patch dbadmin.SavedViewUpdate) (*dashboardmodel.SavedView, error)
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -40,13 +41,13 @@ type SavedViewsHandler struct {
 	forwardAuthHeader string
 }
 
-// NewSavedViewsHandler wires the production *database.SavedViewsRepo
+// NewSavedViewsHandler wires the production *dbadmin.SavedViewsRepo
 // with audit-log support. forwardAuthHeader is the request header
 // (e.g. X-Forwarded-User) injected by the reverse-proxy auth provider;
 // when empty, audit rows record an empty actor (dev-mode behaviour).
 func NewSavedViewsHandler(db *database.DB, forwardAuthHeader string) *SavedViewsHandler {
 	return &SavedViewsHandler{
-		repo:              database.NewSavedViewsRepo(db),
+		repo:              dbadmin.NewSavedViewsRepo(db),
 		auditDB:           db,
 		forwardAuthHeader: forwardAuthHeader,
 	}
@@ -106,7 +107,7 @@ func (h *SavedViewsHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.repo.List(r.Context(), database.SavedViewListFilter{Route: route})
+	rows, err := h.repo.List(r.Context(), dbadmin.SavedViewListFilter{Route: route})
 	if err != nil {
 		log.Error().Err(err).Str("route", route).Msg("saved_views list failed")
 		writeError(w, http.StatusInternalServerError, "failed to list saved views")
@@ -162,7 +163,7 @@ func (h *SavedViewsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		SortOrder: req.SortOrder,
 	}
 	if err := h.repo.Create(r.Context(), row); err != nil {
-		if errors.Is(err, database.ErrSavedViewAlreadyExists) {
+		if errors.Is(err, dbadmin.ErrSavedViewAlreadyExists) {
 			writeError(w, http.StatusConflict, "a saved view with that name already exists for this route")
 			return
 		}
@@ -198,7 +199,7 @@ func (h *SavedViewsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	patch := database.SavedViewUpdate{
+	patch := dbadmin.SavedViewUpdate{
 		IsDefault: req.IsDefault,
 		IsPinned:  req.IsPinned,
 		SortOrder: req.SortOrder,
@@ -226,7 +227,7 @@ func (h *SavedViewsHandler) Update(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "saved view not found")
 			return
 		}
-		if errors.Is(updErr, database.ErrSavedViewAlreadyExists) {
+		if errors.Is(updErr, dbadmin.ErrSavedViewAlreadyExists) {
 			writeError(w, http.StatusConflict, "a saved view with that name already exists for this route")
 			return
 		}

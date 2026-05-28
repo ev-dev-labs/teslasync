@@ -1,4 +1,4 @@
-package database
+package admin
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -18,10 +20,10 @@ import (
 // PinnedRepo: a `*int64` user scope (NULL meaning the install-wide
 // bucket) rather than enforcing a non-zero user id.
 type SavedViewsRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewSavedViewsRepo(db *DB) *SavedViewsRepo {
+func NewSavedViewsRepo(db *database.DB) *SavedViewsRepo {
 	return &SavedViewsRepo{db: db}
 }
 

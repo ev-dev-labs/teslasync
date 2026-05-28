@@ -8,7 +8,7 @@ import (
 
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -1382,7 +1382,7 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	name := result.ShortName()
 
 	// Save to cache for future lookups
-	_ = t.placesCache.Upsert(ctx, &database.PlaceCacheEntry{
+	_ = t.placesCache.Upsert(ctx, &dbadmin.PlaceCacheEntry{
 		Latitude:    lat,
 		Longitude:   lon,
 		DisplayName: name,

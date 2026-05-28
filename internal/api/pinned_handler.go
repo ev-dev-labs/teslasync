@@ -14,13 +14,14 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
 
-// pinnedRepo is the slice of *database.PinnedRepo the handler depends on.
+// pinnedRepo is the slice of *dbadmin.PinnedRepo the handler depends on.
 // Keeping it as an interface lets the unit tests drop in an in-memory fake
 // without standing up a real Postgres pool.
 type pinnedRepo interface {
-	List(ctx context.Context, f database.PinnedListFilter) ([]*dashboardmodel.PinnedItem, error)
+	List(ctx context.Context, f dbadmin.PinnedListFilter) ([]*dashboardmodel.PinnedItem, error)
 	GetByID(ctx context.Context, id int64) (*dashboardmodel.PinnedItem, error)
 	Create(ctx context.Context, p *dashboardmodel.PinnedItem) error
 	UpdatePosition(ctx context.Context, id int64, position int) error
@@ -40,7 +41,7 @@ type PinnedHandler struct {
 }
 
 func NewPinnedHandler(db *database.DB) *PinnedHandler {
-	return &PinnedHandler{repo: database.NewPinnedRepo(db)}
+	return &PinnedHandler{repo: dbadmin.NewPinnedRepo(db)}
 }
 
 // maxPinnedBodyBytes caps each request body. Pins are tiny (item_id ≤ 200,
@@ -75,7 +76,7 @@ func (h *PinnedHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filter := database.PinnedListFilter{
+	filter := dbadmin.PinnedListFilter{
 		ItemType: itemType,
 	}
 	if r.URL.Query().Has("context") {
@@ -154,7 +155,7 @@ func (h *PinnedHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Context:  contextVal,
 	}
 	if err := h.repo.Create(r.Context(), row); err != nil {
-		if errors.Is(err, database.ErrPinnedAlreadyExists) {
+		if errors.Is(err, dbadmin.ErrPinnedAlreadyExists) {
 			writeError(w, http.StatusConflict, "item already pinned")
 			return
 		}

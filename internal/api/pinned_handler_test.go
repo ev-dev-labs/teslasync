@@ -16,7 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
 
 // fakePinnedRepo is a goroutine-safe in-memory implementation of pinnedRepo.
@@ -41,7 +41,7 @@ func newFakePinnedRepo() *fakePinnedRepo {
 	}
 }
 
-func (f *fakePinnedRepo) List(_ context.Context, filter database.PinnedListFilter) ([]*dashboardmodel.PinnedItem, error) {
+func (f *fakePinnedRepo) List(_ context.Context, filter dbadmin.PinnedListFilter) ([]*dashboardmodel.PinnedItem, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.listErr != nil {
@@ -96,7 +96,7 @@ func (f *fakePinnedRepo) Create(_ context.Context, p *dashboardmodel.PinnedItem)
 			continue
 		}
 		if row.ItemID == p.ItemID {
-			return database.ErrPinnedAlreadyExists
+			return dbadmin.ErrPinnedAlreadyExists
 		}
 		row.Position++
 	}

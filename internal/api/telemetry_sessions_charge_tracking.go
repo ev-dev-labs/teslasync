@@ -7,7 +7,7 @@ import (
 
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -635,7 +635,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
 
 			// Save to cache
-			_ = t.placesCache.Upsert(gctx, &database.PlaceCacheEntry{
+			_ = t.placesCache.Upsert(gctx, &dbadmin.PlaceCacheEntry{
 				Latitude: lat, Longitude: lon, DisplayName: name, Source: "geocoding",
 				City: ptrStrOrNil(result.City), State: ptrStrOrNil(result.State),
 				Country: ptrStrOrNil(result.Country), Postcode: ptrStrOrNil(result.PostCode),

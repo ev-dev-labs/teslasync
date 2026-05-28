@@ -1,4 +1,4 @@
-package database
+package admin
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // ChartAnnotationRepo is the data-access layer for the `chart_annotations`
@@ -19,10 +21,10 @@ import (
 // keeps queries simple — there's only one user today, all rows are returned in
 // chronological order so the UI can pick the slice it needs client-side.
 type ChartAnnotationRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewChartAnnotationRepo(db *DB) *ChartAnnotationRepo {
+func NewChartAnnotationRepo(db *database.DB) *ChartAnnotationRepo {
 	return &ChartAnnotationRepo{db: db}
 }
 

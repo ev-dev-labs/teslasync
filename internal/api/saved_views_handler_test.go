@@ -16,7 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
 
 // fakeSavedViewsRepo is a goroutine-safe in-memory implementation of
@@ -42,7 +42,7 @@ func newFakeSavedViewsRepo() *fakeSavedViewsRepo {
 	}
 }
 
-func (f *fakeSavedViewsRepo) List(_ context.Context, filter database.SavedViewListFilter) ([]*dashboardmodel.SavedView, error) {
+func (f *fakeSavedViewsRepo) List(_ context.Context, filter dbadmin.SavedViewListFilter) ([]*dashboardmodel.SavedView, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.listErr != nil {
@@ -90,7 +90,7 @@ func (f *fakeSavedViewsRepo) Create(_ context.Context, v *dashboardmodel.SavedVi
 		if row.Route == v.Route &&
 			sameUserScope(row.UserID, v.UserID) &&
 			row.Name == v.Name {
-			return database.ErrSavedViewAlreadyExists
+			return dbadmin.ErrSavedViewAlreadyExists
 		}
 	}
 	if v.IsDefault {
@@ -105,7 +105,7 @@ func (f *fakeSavedViewsRepo) Create(_ context.Context, v *dashboardmodel.SavedVi
 	return nil
 }
 
-func (f *fakeSavedViewsRepo) Update(_ context.Context, id int64, patch database.SavedViewUpdate) (*dashboardmodel.SavedView, error) {
+func (f *fakeSavedViewsRepo) Update(_ context.Context, id int64, patch dbadmin.SavedViewUpdate) (*dashboardmodel.SavedView, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.updateErr != nil {
@@ -123,7 +123,7 @@ func (f *fakeSavedViewsRepo) Update(_ context.Context, id int64, patch database.
 			if other.Route == row.Route &&
 				sameUserScope(other.UserID, row.UserID) &&
 				other.Name == *patch.Name {
-				return nil, database.ErrSavedViewAlreadyExists
+				return nil, dbadmin.ErrSavedViewAlreadyExists
 			}
 		}
 		row.Name = *patch.Name

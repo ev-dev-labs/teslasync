@@ -16,16 +16,17 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
 
-// chartAnnotationRepo is the slice of *database.ChartAnnotationRepo the
+// chartAnnotationRepo is the slice of *dbadmin.ChartAnnotationRepo the
 // handler depends on. The interface lets the unit tests drop in an in-memory
 // fake without standing up a real Postgres pool.
 type chartAnnotationRepo interface {
-	List(ctx context.Context, f database.ChartAnnotationFilter) ([]*dashboardmodel.ChartAnnotation, error)
+	List(ctx context.Context, f dbadmin.ChartAnnotationFilter) ([]*dashboardmodel.ChartAnnotation, error)
 	GetByID(ctx context.Context, id int64) (*dashboardmodel.ChartAnnotation, error)
 	Create(ctx context.Context, a *dashboardmodel.ChartAnnotation) error
-	Update(ctx context.Context, id int64, patch database.ChartAnnotationUpdate) error
+	Update(ctx context.Context, id int64, patch dbadmin.ChartAnnotationUpdate) error
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -38,7 +39,7 @@ type ChartAnnotationHandler struct {
 }
 
 func NewChartAnnotationHandler(db *database.DB) *ChartAnnotationHandler {
-	return &ChartAnnotationHandler{repo: database.NewChartAnnotationRepo(db)}
+	return &ChartAnnotationHandler{repo: dbadmin.NewChartAnnotationRepo(db)}
 }
 
 // maxChartAnnotationBodyBytes caps each request body. Annotations are tiny
@@ -102,7 +103,7 @@ func (h *ChartAnnotationHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.repo.List(r.Context(), database.ChartAnnotationFilter{
+	rows, err := h.repo.List(r.Context(), dbadmin.ChartAnnotationFilter{
 		VehicleID: vehicleID,
 		From:      from,
 		To:        to,
@@ -250,7 +251,7 @@ func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	patch := database.ChartAnnotationUpdate{
+	patch := dbadmin.ChartAnnotationUpdate{
 		ClearDescription: req.ClearDescription,
 		ClearColor:       req.ClearColor,
 	}

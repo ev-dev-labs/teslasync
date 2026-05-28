@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T14:48:40Z",
+  "generated_at": "2026-05-28T14:52:56Z",
   "go_version": "go1.26.1",
-  "commit_sha": "1ebb764325f204a76ee76658a4d85cce8a81e341",
+  "commit_sha": "fd995cc5d679db468b6e8ef42783b49e8406c5f6",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2492,7 +2492,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126557,
+      "loc": 126561,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -3667,9 +3667,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 104,
+      "go_files": 100,
       "test_files": 35,
-      "loc": 27307,
+      "loc": 26604,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3686,7 +3686,6 @@
         "internal/models/backup",
         "internal/models/charging",
         "internal/models/chatbot",
-        "internal/models/dashboard",
         "internal/models/drive",
         "internal/models/energy",
         "internal/models/export",
@@ -3733,7 +3732,6 @@
         "cache_test.go",
         "charge_plan_repo.go",
         "charging_repo.go",
-        "chart_annotation_repo.go",
         "circuit_breaker.go",
         "circuit_breaker_test.go",
         "database.go",
@@ -3769,8 +3767,6 @@
         "notification_repo_test.go",
         "notification_schedule_repo.go",
         "onboarding_repo.go",
-        "pinned_repo.go",
-        "places_cache_repo.go",
         "position_repo.go",
         "push_subscriptions_repo.go",
         "query_budget_tracer.go",
@@ -3782,7 +3778,6 @@
         "retry_test.go",
         "role_permissions_repo.go",
         "role_permissions_repo_test.go",
-        "saved_views_repo.go",
         "scheduled_export_repo.go",
         "scheduled_export_repo_test.go",
         "schema_test.go",
@@ -3856,17 +3851,21 @@
     },
     {
       "path": "internal/database/admin",
-      "go_files": 2,
+      "go_files": 6,
       "test_files": 0,
-      "loc": 166,
+      "loc": 873,
       "has_doc_go": true,
       "imports": [
         "internal/database",
         "internal/models/dashboard"
       ],
       "files": [
+        "chart_annotation_repo.go",
         "dashboard_layout_repo.go",
-        "doc.go"
+        "doc.go",
+        "pinned_repo.go",
+        "places_cache_repo.go",
+        "saved_views_repo.go"
       ]
     },
     {
@@ -6867,7 +6866,6 @@
       "cache.go",
       "charge_plan_repo.go",
       "charging_repo.go",
-      "chart_annotation_repo.go",
       "circuit_breaker.go",
       "database.go",
       "dlq_replay_audit_repo.go",
@@ -6895,8 +6893,6 @@
       "notification_repo.go",
       "notification_schedule_repo.go",
       "onboarding_repo.go",
-      "pinned_repo.go",
-      "places_cache_repo.go",
       "position_repo.go",
       "push_subscriptions_repo.go",
       "query_budget_tracer.go",
@@ -6904,7 +6900,6 @@
       "raw_telemetry_repo.go",
       "retry.go",
       "role_permissions_repo.go",
-      "saved_views_repo.go",
       "scheduled_export_repo.go",
       "settings_repo.go",
       "settings_reset.go",
@@ -6953,8 +6948,12 @@
       "unlock_repo.go"
     ],
     "internal/database/admin": [
+      "chart_annotation_repo.go",
       "dashboard_layout_repo.go",
-      "doc.go"
+      "doc.go",
+      "pinned_repo.go",
+      "places_cache_repo.go",
+      "saved_views_repo.go"
     ],
     "internal/database/gdpr": [
       "artifact_repo.go",
@@ -7671,7 +7670,7 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 104,
+      "flat_parent_go_files": 100,
       "flat_parent_test_files": 35,
       "planned_subpkgs": 22,
       "existing_subpkgs": [

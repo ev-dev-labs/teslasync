@@ -15,7 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
 
 // fakeChartAnnotationRepo is a goroutine-safe in-memory implementation of
@@ -39,7 +39,7 @@ func newFakeChartAnnotationRepo() *fakeChartAnnotationRepo {
 	}
 }
 
-func (f *fakeChartAnnotationRepo) List(_ context.Context, filter database.ChartAnnotationFilter) ([]*dashboardmodel.ChartAnnotation, error) {
+func (f *fakeChartAnnotationRepo) List(_ context.Context, filter dbadmin.ChartAnnotationFilter) ([]*dashboardmodel.ChartAnnotation, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.listErr != nil {
@@ -106,7 +106,7 @@ func (f *fakeChartAnnotationRepo) Create(_ context.Context, a *dashboardmodel.Ch
 	return nil
 }
 
-func (f *fakeChartAnnotationRepo) Update(_ context.Context, id int64, patch database.ChartAnnotationUpdate) error {
+func (f *fakeChartAnnotationRepo) Update(_ context.Context, id int64, patch dbadmin.ChartAnnotationUpdate) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.updateErr != nil {

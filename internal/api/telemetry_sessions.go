@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -20,7 +21,7 @@ type TelemetrySessionTracker struct {
 	chargeRepo          *database.ChargingRepo
 	posRepo             *database.PositionRepo
 	geofenceRepo        *database.GeofenceRepo
-	placesCache         *database.PlacesCacheRepo
+	placesCache         *dbadmin.PlacesCacheRepo
 	tripRepo            *database.TripRepo
 	eventBus            *events.Bus
 	geocoder            geocoding.Geocoder
@@ -41,7 +42,7 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 		chargeRepo:    database.NewChargingRepo(db),
 		posRepo:       database.NewPositionRepo(db),
 		geofenceRepo:  database.NewGeofenceRepo(db),
-		placesCache:   database.NewPlacesCacheRepo(db),
+		placesCache:   dbadmin.NewPlacesCacheRepo(db),
 		tripRepo:      database.NewTripRepo(db),
 		eventBus:      eventBus,
 		geocoder:      geocoder,

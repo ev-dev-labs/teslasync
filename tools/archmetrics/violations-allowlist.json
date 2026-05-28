@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 104,
+      "max_files": 100,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5 canary 108→107 (achievement). R4.1 batch 107→104 (sharing/, admin/, gdpr/). Simpler design adopted: subpackages directly import parent for *DB (no shared/ pkg extraction); cycle-free because parent never imports children. Carved subpkgs: achievement, sharing, admin, gdpr. Planned: ~20 aggregates total (alert, audit, auth, automation, backup, charge, dashboard, drive, energy, notification, telemetry, tesla, trips, user, vehicle, worker_status)."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5 canary 108→107 (achievement). R4.1 batch 107→104 (sharing/, admin/dashboard_layout, gdpr/). R4.2 batch 104→100 (admin/ extended with chart_annotation, pinned, places_cache, saved_views — bulk dbadmin alias rename pattern). Simpler design adopted: subpackages directly import parent for *DB (no shared/ pkg extraction); cycle-free because parent never imports children. Carved subpkgs: achievement, sharing, admin (5 files), gdpr. Planned: ~20 aggregates total."
     },
     {
       "path": "internal/ai/tools",

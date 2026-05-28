@@ -1,4 +1,4 @@
-package database
+package admin
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -19,10 +21,10 @@ import (
 // id. When multi-tenancy lands the handler will start passing a real
 // user id and the same queries keep working.
 type PinnedRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewPinnedRepo(db *DB) *PinnedRepo {
+func NewPinnedRepo(db *database.DB) *PinnedRepo {
 	return &PinnedRepo{db: db}
 }
 

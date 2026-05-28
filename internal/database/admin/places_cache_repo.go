@@ -1,10 +1,12 @@
-package database
+package admin
 
 import (
 	"context"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // PlaceCacheEntry represents a cached geocoding result.
@@ -28,10 +30,10 @@ type PlaceCacheEntry struct {
 
 // PlacesCacheRepo provides place cache data access.
 type PlacesCacheRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewPlacesCacheRepo(db *DB) *PlacesCacheRepo {
+func NewPlacesCacheRepo(db *database.DB) *PlacesCacheRepo {
 	return &PlacesCacheRepo{db: db}
 }
 
