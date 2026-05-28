@@ -1,4 +1,4 @@
-package api
+package dashboardlayout
 
 import (
 	"context"
@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
@@ -71,7 +73,7 @@ func (h *DashboardLayoutHandler) List(w http.ResponseWriter, r *http.Request) {
 	if raw := r.URL.Query().Get("vehicle_id"); raw != "" {
 		v, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil || v <= 0 {
-			writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+			httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 			return
 		}
 		vehicleID = &v
@@ -80,13 +82,13 @@ func (h *DashboardLayoutHandler) List(w http.ResponseWriter, r *http.Request) {
 	layouts, err := h.repo.List(r.Context(), nil, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Msg("dashboard_layouts list failed")
-		writeError(w, http.StatusInternalServerError, "failed to list dashboard layouts")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list dashboard layouts")
 		return
 	}
 	if layouts == nil {
 		layouts = []*dashboardmodel.DashboardLayout{}
 	}
-	writeJSON(w, http.StatusOK, layouts)
+	httpx.WriteJSON(w, http.StatusOK, layouts)
 }
 
 // Create inserts a new named layout.
@@ -96,31 +98,31 @@ func (h *DashboardLayoutHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *DashboardLayoutHandler) Create(w http.ResponseWriter, r *http.Request) {
 	body, err := readDashboardLayoutBody(r)
 	if err != nil {
-		writeError(w, err.status, err.msg)
+		httpx.WriteError(w, err.status, err.msg)
 		return
 	}
 
 	var req dashboardLayoutWriteRequest
 	if jsonErr := json.Unmarshal(body, &req); jsonErr != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
 	name := strings.TrimSpace(stringOrEmpty(req.Name))
 	if name == "" {
-		writeError(w, http.StatusBadRequest, "name is required")
+		httpx.WriteError(w, http.StatusBadRequest, "name is required")
 		return
 	}
 	if len(name) > 120 {
-		writeError(w, http.StatusBadRequest, "name must be 120 characters or fewer")
+		httpx.WriteError(w, http.StatusBadRequest, "name must be 120 characters or fewer")
 		return
 	}
 	if !isJSONObject(req.Layout) {
-		writeError(w, http.StatusBadRequest, "layout must be a JSON object")
+		httpx.WriteError(w, http.StatusBadRequest, "layout must be a JSON object")
 		return
 	}
 	if req.VehicleID != nil && *req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer when provided")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer when provided")
 		return
 	}
 
@@ -135,7 +137,7 @@ func (h *DashboardLayoutHandler) Create(w http.ResponseWriter, r *http.Request) 
 	}
 	if err := h.repo.Create(r.Context(), layout); err != nil {
 		log.Error().Err(err).Msg("dashboard_layouts create failed")
-		writeError(w, http.StatusInternalServerError, "failed to create dashboard layout")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to create dashboard layout")
 		return
 	}
 	if layout.IsDefault {
@@ -146,7 +148,7 @@ func (h *DashboardLayoutHandler) Create(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	writeJSON(w, http.StatusCreated, layout)
+	httpx.WriteJSON(w, http.StatusCreated, layout)
 }
 
 // Update mutates an existing layout. Only name / layout / is_default may be
@@ -154,32 +156,32 @@ func (h *DashboardLayoutHandler) Create(w http.ResponseWriter, r *http.Request) 
 //
 //	PUT /api/v1/dashboard/layouts/{id}
 func (h *DashboardLayoutHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid layout id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid layout id")
 		return
 	}
 
 	body, readErr := readDashboardLayoutBody(r)
 	if readErr != nil {
-		writeError(w, readErr.status, readErr.msg)
+		httpx.WriteError(w, readErr.status, readErr.msg)
 		return
 	}
 
 	var req dashboardLayoutWriteRequest
 	if jsonErr := json.Unmarshal(body, &req); jsonErr != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
 	existing, err := h.repo.GetByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("dashboard_layouts get_by_id failed")
-		writeError(w, http.StatusInternalServerError, "failed to load dashboard layout")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load dashboard layout")
 		return
 	}
 	if existing == nil {
-		writeError(w, http.StatusNotFound, "dashboard layout not found")
+		httpx.WriteError(w, http.StatusNotFound, "dashboard layout not found")
 		return
 	}
 
@@ -187,11 +189,11 @@ func (h *DashboardLayoutHandler) Update(w http.ResponseWriter, r *http.Request) 
 	if req.Name != nil {
 		trimmed := strings.TrimSpace(*req.Name)
 		if trimmed == "" {
-			writeError(w, http.StatusBadRequest, "name must not be empty")
+			httpx.WriteError(w, http.StatusBadRequest, "name must not be empty")
 			return
 		}
 		if len(trimmed) > 120 {
-			writeError(w, http.StatusBadRequest, "name must be 120 characters or fewer")
+			httpx.WriteError(w, http.StatusBadRequest, "name must be 120 characters or fewer")
 			return
 		}
 		name = trimmed
@@ -200,7 +202,7 @@ func (h *DashboardLayoutHandler) Update(w http.ResponseWriter, r *http.Request) 
 	layoutBytes := []byte(existing.Layout)
 	if len(req.Layout) > 0 {
 		if !isJSONObject(req.Layout) {
-			writeError(w, http.StatusBadRequest, "layout must be a JSON object")
+			httpx.WriteError(w, http.StatusBadRequest, "layout must be a JSON object")
 			return
 		}
 		layoutBytes = cloneRawJSON(req.Layout)
@@ -213,11 +215,11 @@ func (h *DashboardLayoutHandler) Update(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.repo.Update(r.Context(), id, name, layoutBytes, isDefault); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "dashboard layout not found")
+			httpx.WriteError(w, http.StatusNotFound, "dashboard layout not found")
 			return
 		}
 		log.Error().Err(err).Int64("id", id).Msg("dashboard_layouts update failed")
-		writeError(w, http.StatusInternalServerError, "failed to update dashboard layout")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to update dashboard layout")
 		return
 	}
 	if isDefault && !existing.IsDefault {
@@ -228,29 +230,29 @@ func (h *DashboardLayoutHandler) Update(w http.ResponseWriter, r *http.Request) 
 
 	updated, err := h.repo.GetByID(r.Context(), id)
 	if err != nil || updated == nil {
-		writeError(w, http.StatusInternalServerError, "failed to reload dashboard layout")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to reload dashboard layout")
 		return
 	}
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 // Delete removes a layout.
 //
 //	DELETE /api/v1/dashboard/layouts/{id}
 func (h *DashboardLayoutHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid layout id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid layout id")
 		return
 	}
 
 	if delErr := h.repo.Delete(r.Context(), id); delErr != nil {
 		if errors.Is(delErr, pgx.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "dashboard layout not found")
+			httpx.WriteError(w, http.StatusNotFound, "dashboard layout not found")
 			return
 		}
 		log.Error().Err(delErr).Int64("id", id).Msg("dashboard_layouts delete failed")
-		writeError(w, http.StatusInternalServerError, "failed to delete dashboard layout")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete dashboard layout")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -262,28 +264,28 @@ func (h *DashboardLayoutHandler) Delete(w http.ResponseWriter, r *http.Request) 
 //
 //	POST /api/v1/dashboard/layouts/{id}/apply
 func (h *DashboardLayoutHandler) Apply(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid layout id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid layout id")
 		return
 	}
 
 	if applyErr := h.repo.SetDefault(r.Context(), id); applyErr != nil {
 		if errors.Is(applyErr, pgx.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "dashboard layout not found")
+			httpx.WriteError(w, http.StatusNotFound, "dashboard layout not found")
 			return
 		}
 		log.Error().Err(applyErr).Int64("id", id).Msg("dashboard_layouts apply failed")
-		writeError(w, http.StatusInternalServerError, "failed to apply dashboard layout")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to apply dashboard layout")
 		return
 	}
 
 	updated, err := h.repo.GetByID(r.Context(), id)
 	if err != nil || updated == nil {
-		writeError(w, http.StatusInternalServerError, "failed to reload dashboard layout")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to reload dashboard layout")
 		return
 	}
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 // ── helpers ─────────────────────────────────────────────────────────────────

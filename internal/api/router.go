@@ -26,6 +26,7 @@ import (
 	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apiannot "github.com/ev-dev-labs/teslasync/internal/api/chartannotation"
+	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
 	apidiag "github.com/ev-dev-labs/teslasync/internal/api/diagnostic"
 	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
@@ -602,7 +603,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
+	dashboardLayoutHandler := apidash.NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := apiannot.NewChartAnnotationHandler(db)
 	pinnedHandler := apipinned.NewHandler(db)
 	savedViewsHandler := apisaved.NewHandler(db, cfg.Auth.ForwardAuthHeader, apisaved.WithAuditFunc(
