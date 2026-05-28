@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	apivitals "github.com/ev-dev-labs/teslasync/internal/api/webvitals"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
@@ -136,7 +137,7 @@ func (h *WebErrorHandler) Ingest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := normalizeWebErrorName(rep.Name)
-	route := normalizeWebVitalsRoute(rep.Route)
+	route := apivitals.NormalizeRoute(rep.Route)
 	message := truncateWebErrorString(rep.Message, maxWebErrorMessageLen)
 	stack := truncateWebErrorString(rep.Stack, maxWebErrorStackLen)
 	ua := truncateWebErrorString(rep.UserAgent, maxWebErrorUserAgentLen)

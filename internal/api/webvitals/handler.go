@@ -1,4 +1,4 @@
-package api
+package webvitals
 
 import (
 	"encoding/json"
@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
@@ -108,17 +109,17 @@ var webVitalsSamplesRejectedTotal = promauto.NewCounterVec(
 	[]string{"reason"},
 )
 
-// WebVitalsHandler ingests browser-side Web Vitals samples.
-type WebVitalsHandler struct{}
+// Handler ingests browser-side Web Vitals samples.
+type Handler struct{}
 
-// NewWebVitalsHandler constructs a stateless ingest handler.
-func NewWebVitalsHandler() *WebVitalsHandler { return &WebVitalsHandler{} }
+// NewHandler constructs a stateless ingest handler.
+func NewHandler() *Handler { return &Handler{} }
 
 // Ingest handles `POST /api/v1/web-vitals`. The endpoint is intentionally
 // public (no auth) — the body carries no PII, requests come from anonymous
 // browser sessions, and rate-limiting at the route layer is the only
 // guard required.
-func (h *WebVitalsHandler) Ingest(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Ingest(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Cap the read so a malicious client can't pin the process on JSON
@@ -129,16 +130,16 @@ func (h *WebVitalsHandler) Ingest(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&batch); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid payload")
 		return
 	}
 
 	if len(batch.Metrics) == 0 {
-		writeError(w, http.StatusBadRequest, "empty batch")
+		httpx.WriteError(w, http.StatusBadRequest, "empty batch")
 		return
 	}
 	if len(batch.Metrics) > maxWebVitalsBatchSize {
-		writeError(w, http.StatusBadRequest, "batch too large")
+		httpx.WriteError(w, http.StatusBadRequest, "batch too large")
 		return
 	}
 
@@ -153,7 +154,7 @@ func (h *WebVitalsHandler) Ingest(w http.ResponseWriter, r *http.Request) {
 			rating = "unknown"
 		}
 		webVitalsHistogram.
-			WithLabelValues(m.Name, rating, normalizeWebVitalsRoute(m.Route)).
+			WithLabelValues(m.Name, rating, NormalizeRoute(m.Route)).
 			Observe(m.Value)
 		accepted++
 	}
@@ -182,7 +183,7 @@ var (
 	hexBlobRE     = regexp.MustCompile(`^[0-9a-fA-F]{20,}$`)
 )
 
-// normalizeWebVitalsRoute strips ID-like path segments so the metric label
+// NormalizeRoute strips ID-like path segments so the metric label
 // cardinality stays bounded. /drives/123 → /drives/:id, /vehicles/abc/state →
 // /vehicles/abc/state (kept — short, alphabetic), /charging/uuid → /charging/:id.
 //
@@ -193,7 +194,7 @@ var (
 // router-known route against an allow-list and returns ok=false on
 // mismatch — this one is more permissive because it labels arbitrary
 // pathnames captured from real browsers.
-func normalizeWebVitalsRoute(p string) string {
+func NormalizeRoute(p string) string {
 	if p == "" {
 		return "/"
 	}

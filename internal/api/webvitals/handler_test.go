@@ -1,4 +1,4 @@
-package api
+package webvitals
 
 import (
 	"net/http"
@@ -17,7 +17,7 @@ func TestWebVitalsIngest_ValidBatch(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	NewWebVitalsHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("want 204, got %d (body=%s)", rr.Code, rr.Body.String())
@@ -28,7 +28,7 @@ func TestWebVitalsIngest_InvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-vitals", strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
 
-	NewWebVitalsHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d", rr.Code)
@@ -42,7 +42,7 @@ func TestWebVitalsIngest_EmptyBatch(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-vitals", strings.NewReader(`{"metrics":[]}`))
 	rr := httptest.NewRecorder()
 
-	NewWebVitalsHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d", rr.Code)
@@ -62,7 +62,7 @@ func TestWebVitalsIngest_BatchTooLarge(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-vitals", strings.NewReader(sb.String()))
 	rr := httptest.NewRecorder()
 
-	NewWebVitalsHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d", rr.Code)
@@ -80,7 +80,7 @@ func TestWebVitalsIngest_UnknownMetricNameDropped(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-vitals", strings.NewReader(body))
 	rr := httptest.NewRecorder()
 
-	NewWebVitalsHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("want 204, got %d", rr.Code)
@@ -93,7 +93,7 @@ func TestWebVitalsIngest_RejectsUnknownFields(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-vitals", strings.NewReader(body))
 	rr := httptest.NewRecorder()
 
-	NewWebVitalsHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d", rr.Code)
@@ -123,9 +123,9 @@ func TestWebVitalsNormalizeRoute(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := normalizeWebVitalsRoute(tt.in)
+			got := NormalizeRoute(tt.in)
 			if got != tt.want {
-				t.Errorf("normalizeWebVitalsRoute(%q) = %q, want %q", tt.in, got, tt.want)
+				t.Errorf("NormalizeRoute(%q) = %q, want %q", tt.in, got, tt.want)
 			}
 		})
 	}
@@ -135,9 +135,9 @@ func TestWebVitalsNormalizeRoute_LengthCap(t *testing.T) {
 	// Long deep-link should be truncated, not allowed to balloon the
 	// histogram label cardinality.
 	long := "/" + strings.Repeat("verylongsegment/", 10)
-	got := normalizeWebVitalsRoute(long)
+	got := NormalizeRoute(long)
 	if len(got) > maxRouteLabelLength {
-		t.Errorf("normalizeWebVitalsRoute returned len=%d, want <= %d (got %q)", len(got), maxRouteLabelLength, got)
+		t.Errorf("NormalizeRoute returned len=%d, want <= %d (got %q)", len(got), maxRouteLabelLength, got)
 	}
 }
 
@@ -148,7 +148,7 @@ func TestWebVitalsIngest_UnknownRatingNormalized(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-vitals", strings.NewReader(body))
 	rr := httptest.NewRecorder()
 
-	NewWebVitalsHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("want 204, got %d", rr.Code)
