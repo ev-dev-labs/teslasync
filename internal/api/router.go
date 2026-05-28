@@ -39,6 +39,7 @@ import (
 	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
 	apivehstates "github.com/ev-dev-labs/teslasync/internal/api/vehiclestates"
 	apivisloc "github.com/ev-dev-labs/teslasync/internal/api/visitedlocation"
+	apiweekly "github.com/ev-dev-labs/teslasync/internal/api/weeklydigest"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
@@ -1061,7 +1062,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	yearReviewHandler := NewYearReviewHandler(db)
 	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
 	energyFlowHandler := NewEnergyFlowHandler(db, stateReader, liveStateReader)
-	weeklyDigestHandler := NewWeeklyDigestHandler(db)
+	weeklyDigestHandler := apiweekly.NewHandler(db)
 	teslaChargingHistoryHandler := NewTeslaChargingHistoryHandler(teslaClient, db)
 	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
 	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)

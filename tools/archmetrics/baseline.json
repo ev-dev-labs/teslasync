@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T21:09:06Z",
+  "generated_at": "2026-05-28T21:11:48Z",
   "go_version": "go1.26.1",
-  "commit_sha": "e9bf2d43bc30dbc7d1fb4bc09613207d3c8e5052",
+  "commit_sha": "67813cddec0f4eaf7bf960f44b45e3e36095d317",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 242,
+      "go_files": 241,
       "test_files": 150,
-      "loc": 113110,
+      "loc": 113036,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2648,6 +2648,7 @@
         "internal/api/vehiclesettings",
         "internal/api/vehiclestates",
         "internal/api/visitedlocation",
+        "internal/api/weeklydigest",
         "internal/apilog",
         "internal/app/adminobssvc",
         "internal/app/auditviewersvc",
@@ -3145,7 +3146,6 @@
         "webhook_handler.go",
         "webhook_receiver_handler.go",
         "webhook_receiver_handler_test.go",
-        "weekly_digest_handler.go",
         "year_review_handler.go"
       ]
     },
@@ -3700,6 +3700,23 @@
         "internal/database",
         "internal/database/trip",
         "internal/models/geo"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/weeklydigest",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 92,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database"
       ],
       "files": [
         "doc.go",
@@ -7652,7 +7669,6 @@
       "web_vitals_handler.go",
       "webhook_handler.go",
       "webhook_receiver_handler.go",
-      "weekly_digest_handler.go",
       "year_review_handler.go"
     ],
     "internal/api/apibulk": [
@@ -7782,6 +7798,10 @@
       "handler.go"
     ],
     "internal/api/visitedlocation": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/weeklydigest": [
       "doc.go",
       "handler.go"
     ],
@@ -8896,7 +8916,7 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 242,
+      "flat_parent_go_files": 241,
       "flat_parent_test_files": 150,
       "planned_subpkgs": 59,
       "existing_subpkgs": [

@@ -1,27 +1,29 @@
-package api
+package weeklydigest
 
 import (
 	"context"
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
 )
 
-// WeeklyDigestHandler returns aggregated stats comparing current vs previous week.
-type WeeklyDigestHandler struct {
+// Handler returns aggregated stats comparing current vs previous week.
+type Handler struct {
 	db *database.DB
 }
 
-func NewWeeklyDigestHandler(db *database.DB) *WeeklyDigestHandler {
-	return &WeeklyDigestHandler{db: db}
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{db: db}
 }
 
-func (h *WeeklyDigestHandler) Get(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
@@ -72,7 +74,7 @@ func (h *WeeklyDigestHandler) Get(w http.ResponseWriter, r *http.Request) {
 	curr := query(weekStart, now)
 	prev := query(prevWeekStart, weekStart)
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"drives":           curr.Drives,
 		"distance_km":      curr.DistanceKm,
 		"energy_kwh":       curr.EnergyKwh,
