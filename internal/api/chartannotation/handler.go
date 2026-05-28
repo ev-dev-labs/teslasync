@@ -1,4 +1,4 @@
-package api
+package chartannotation
 
 import (
 	"context"
@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
@@ -73,7 +75,7 @@ func (h *ChartAnnotationHandler) List(w http.ResponseWriter, r *http.Request) {
 	if raw := strings.TrimSpace(q.Get("vehicle_id")); raw != "" {
 		v, err := strconv.ParseInt(raw, 10, 64)
 		if err != nil || v <= 0 {
-			writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+			httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 			return
 		}
 		vehicleID = &v
@@ -83,7 +85,7 @@ func (h *ChartAnnotationHandler) List(w http.ResponseWriter, r *http.Request) {
 	if raw := strings.TrimSpace(q.Get("from")); raw != "" {
 		t, err := parseAnnotationTime(raw)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid from timestamp (expected RFC3339 or YYYY-MM-DD)")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid from timestamp (expected RFC3339 or YYYY-MM-DD)")
 			return
 		}
 		from = &t
@@ -91,7 +93,7 @@ func (h *ChartAnnotationHandler) List(w http.ResponseWriter, r *http.Request) {
 	if raw := strings.TrimSpace(q.Get("to")); raw != "" {
 		t, err := parseAnnotationTime(raw)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid to timestamp (expected RFC3339 or YYYY-MM-DD)")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid to timestamp (expected RFC3339 or YYYY-MM-DD)")
 			return
 		}
 		to = &t
@@ -99,7 +101,7 @@ func (h *ChartAnnotationHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	scope := strings.TrimSpace(q.Get("scope"))
 	if scope != "" && !isValidScopeBucket(scope) {
-		writeError(w, http.StatusBadRequest, "invalid scope bucket")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid scope bucket")
 		return
 	}
 
@@ -111,13 +113,13 @@ func (h *ChartAnnotationHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Error().Err(err).Msg("chart_annotations list failed")
-		writeError(w, http.StatusInternalServerError, "failed to list annotations")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list annotations")
 		return
 	}
 	if rows == nil {
 		rows = []*dashboardmodel.ChartAnnotation{}
 	}
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
 // Create inserts a new annotation.
@@ -129,52 +131,52 @@ func (h *ChartAnnotationHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *ChartAnnotationHandler) Create(w http.ResponseWriter, r *http.Request) {
 	body, readErr := readChartAnnotationBody(r)
 	if readErr != nil {
-		writeError(w, readErr.status, readErr.msg)
+		httpx.WriteError(w, readErr.status, readErr.msg)
 		return
 	}
 
 	var req chartAnnotationWriteRequest
 	if jsonErr := json.Unmarshal(body, &req); jsonErr != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
 	if req.OccurredAt == nil || strings.TrimSpace(*req.OccurredAt) == "" {
-		writeError(w, http.StatusBadRequest, "occurred_at is required")
+		httpx.WriteError(w, http.StatusBadRequest, "occurred_at is required")
 		return
 	}
 	occurredAt, err := parseAnnotationTime(*req.OccurredAt)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid occurred_at timestamp")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid occurred_at timestamp")
 		return
 	}
 
 	if req.Category == nil {
-		writeError(w, http.StatusBadRequest, "category is required")
+		httpx.WriteError(w, http.StatusBadRequest, "category is required")
 		return
 	}
 	cat := dashboardmodel.AnnotationCategory(*req.Category)
 	if !cat.Valid() {
-		writeError(w, http.StatusBadRequest, "invalid category")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid category")
 		return
 	}
 
 	if req.Title == nil {
-		writeError(w, http.StatusBadRequest, "title is required")
+		httpx.WriteError(w, http.StatusBadRequest, "title is required")
 		return
 	}
 	title := strings.TrimSpace(*req.Title)
 	if title == "" {
-		writeError(w, http.StatusBadRequest, "title is required")
+		httpx.WriteError(w, http.StatusBadRequest, "title is required")
 		return
 	}
 	if len([]rune(title)) > 100 {
-		writeError(w, http.StatusBadRequest, "title must be 100 characters or fewer")
+		httpx.WriteError(w, http.StatusBadRequest, "title must be 100 characters or fewer")
 		return
 	}
 
 	if req.VehicleID != nil && *req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer when provided")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer when provided")
 		return
 	}
 
@@ -186,7 +188,7 @@ func (h *ChartAnnotationHandler) Create(w http.ResponseWriter, r *http.Request) 
 				continue
 			}
 			if !isValidScopeBucket(s) {
-				writeError(w, http.StatusBadRequest, "invalid scope bucket: "+s)
+				httpx.WriteError(w, http.StatusBadRequest, "invalid scope bucket: "+s)
 				return
 			}
 			scope = append(scope, s)
@@ -204,7 +206,7 @@ func (h *ChartAnnotationHandler) Create(w http.ResponseWriter, r *http.Request) 
 		desc := strings.TrimSpace(*req.Description)
 		if desc != "" {
 			if len(desc) > 2000 {
-				writeError(w, http.StatusBadRequest, "description must be 2000 characters or fewer")
+				httpx.WriteError(w, http.StatusBadRequest, "description must be 2000 characters or fewer")
 				return
 			}
 			row.Description = &desc
@@ -214,7 +216,7 @@ func (h *ChartAnnotationHandler) Create(w http.ResponseWriter, r *http.Request) 
 		c := strings.TrimSpace(*req.Color)
 		if c != "" {
 			if !isValidHexColor(c) {
-				writeError(w, http.StatusBadRequest, "color must be a hex string like #RRGGBB")
+				httpx.WriteError(w, http.StatusBadRequest, "color must be a hex string like #RRGGBB")
 				return
 			}
 			row.Color = &c
@@ -223,31 +225,31 @@ func (h *ChartAnnotationHandler) Create(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.repo.Create(r.Context(), row); err != nil {
 		log.Error().Err(err).Msg("chart_annotations create failed")
-		writeError(w, http.StatusInternalServerError, "failed to create annotation")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to create annotation")
 		return
 	}
-	writeJSON(w, http.StatusCreated, row)
+	httpx.WriteJSON(w, http.StatusCreated, row)
 }
 
 // Update mutates an existing annotation. Pass any subset of fields.
 //
 //	PATCH /api/v1/annotations/{id}
 func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid annotation id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid annotation id")
 		return
 	}
 
 	body, readErr := readChartAnnotationBody(r)
 	if readErr != nil {
-		writeError(w, readErr.status, readErr.msg)
+		httpx.WriteError(w, readErr.status, readErr.msg)
 		return
 	}
 
 	var req chartAnnotationWriteRequest
 	if jsonErr := json.Unmarshal(body, &req); jsonErr != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
@@ -259,7 +261,7 @@ func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) 
 	if req.OccurredAt != nil {
 		occurredAt, parseErr := parseAnnotationTime(*req.OccurredAt)
 		if parseErr != nil {
-			writeError(w, http.StatusBadRequest, "invalid occurred_at timestamp")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid occurred_at timestamp")
 			return
 		}
 		patch.OccurredAt = &occurredAt
@@ -267,7 +269,7 @@ func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) 
 	if req.Category != nil {
 		cat := dashboardmodel.AnnotationCategory(*req.Category)
 		if !cat.Valid() {
-			writeError(w, http.StatusBadRequest, "invalid category")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid category")
 			return
 		}
 		patch.Category = &cat
@@ -275,11 +277,11 @@ func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) 
 	if req.Title != nil {
 		title := strings.TrimSpace(*req.Title)
 		if title == "" {
-			writeError(w, http.StatusBadRequest, "title must not be empty")
+			httpx.WriteError(w, http.StatusBadRequest, "title must not be empty")
 			return
 		}
 		if len([]rune(title)) > 100 {
-			writeError(w, http.StatusBadRequest, "title must be 100 characters or fewer")
+			httpx.WriteError(w, http.StatusBadRequest, "title must be 100 characters or fewer")
 			return
 		}
 		patch.Title = &title
@@ -287,7 +289,7 @@ func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) 
 	if req.Description != nil && !req.ClearDescription {
 		desc := strings.TrimSpace(*req.Description)
 		if desc != "" && len(desc) > 2000 {
-			writeError(w, http.StatusBadRequest, "description must be 2000 characters or fewer")
+			httpx.WriteError(w, http.StatusBadRequest, "description must be 2000 characters or fewer")
 			return
 		}
 		patch.Description = &desc
@@ -300,7 +302,7 @@ func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) 
 				continue
 			}
 			if !isValidScopeBucket(s) {
-				writeError(w, http.StatusBadRequest, "invalid scope bucket: "+s)
+				httpx.WriteError(w, http.StatusBadRequest, "invalid scope bucket: "+s)
 				return
 			}
 			scope = append(scope, s)
@@ -310,7 +312,7 @@ func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) 
 	if req.Color != nil && !req.ClearColor {
 		c := strings.TrimSpace(*req.Color)
 		if c != "" && !isValidHexColor(c) {
-			writeError(w, http.StatusBadRequest, "color must be a hex string like #RRGGBB")
+			httpx.WriteError(w, http.StatusBadRequest, "color must be a hex string like #RRGGBB")
 			return
 		}
 		patch.Color = &c
@@ -318,39 +320,39 @@ func (h *ChartAnnotationHandler) Update(w http.ResponseWriter, r *http.Request) 
 
 	if err := h.repo.Update(r.Context(), id, patch); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "annotation not found")
+			httpx.WriteError(w, http.StatusNotFound, "annotation not found")
 			return
 		}
 		log.Error().Err(err).Int64("id", id).Msg("chart_annotations update failed")
-		writeError(w, http.StatusInternalServerError, "failed to update annotation")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to update annotation")
 		return
 	}
 
 	updated, err := h.repo.GetByID(r.Context(), id)
 	if err != nil || updated == nil {
-		writeError(w, http.StatusInternalServerError, "failed to reload annotation")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to reload annotation")
 		return
 	}
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 // Delete removes an annotation by id.
 //
 //	DELETE /api/v1/annotations/{id}
 func (h *ChartAnnotationHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid annotation id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid annotation id")
 		return
 	}
 
 	if delErr := h.repo.Delete(r.Context(), id); delErr != nil {
 		if errors.Is(delErr, pgx.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "annotation not found")
+			httpx.WriteError(w, http.StatusNotFound, "annotation not found")
 			return
 		}
 		log.Error().Err(delErr).Int64("id", id).Msg("chart_annotations delete failed")
-		writeError(w, http.StatusInternalServerError, "failed to delete annotation")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete annotation")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
