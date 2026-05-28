@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T03:50:37Z, Go go1.26.1, commit 65930ca94d677f592fc3ef7ae6fa90e1fe7b3257_
+_Generated 2026-05-28T03:53:25Z, Go go1.26.1, commit 3147de1de6a0cafabd18f15542086f5ada576e0f_
 
 ## Summary
 
-- Packages: 216
+- Packages: 217
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372016
+- Total non-blank LOC under cmd/+internal/+tools/: 372035
 
 ## cmd/* main.go LOC
 
@@ -203,13 +203,14 @@ _Generated 2026-05-28T03:50:37Z, Go go1.26.1, commit 65930ca94d677f592fc3ef7ae6f
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 33 | 1 | 2639 | yes | domain |
+| internal/models | 33 | 1 | 2614 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/models/auth | 2 | 1 | 66 | yes | domain |
 | internal/models/backup | 2 | 0 | 59 | yes | domain |
 | internal/models/chatbot | 2 | 0 | 38 | yes | domain |
 | internal/models/energy | 2 | 0 | 27 | yes | domain |
 | internal/models/export | 2 | 0 | 59 | yes | domain |
+| internal/models/geo | 2 | 0 | 44 | yes | domain |
 | internal/mqtt | 7 | 7 | 4273 | yes | platform |
 | internal/notification | 4 | 2 | 1243 | yes | platform |
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |
@@ -267,7 +268,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 33 / 1 | 19 | 6 | 13 |
+| `internal/models` | R5 | 36 | 33 / 1 | 19 | 7 | 12 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -285,13 +286,13 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/chatbot`
 - `internal/models/energy`
 - `internal/models/export`
+- `internal/models/geo`
 
 **Planned but not yet on disk:**
 - `internal/models/automation`
 - `internal/models/charging`
 - `internal/models/dashboard`
 - `internal/models/drive`
-- `internal/models/geo`
 - `internal/models/notification`
 - `internal/models/security`
 - `internal/models/settings`

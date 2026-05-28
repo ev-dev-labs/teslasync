@@ -54,6 +54,8 @@ import (
 	"time"
 	"unicode"
 
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -66,7 +68,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiAutoNameUnnamedLocationsMaxIterations bounds the dispatcher's
@@ -272,7 +273,7 @@ func NewAILocationNameValidator() *AILocationNameValidator {
 // is shape-only — but kept on the interface so a future per-location
 // rule (e.g. "name must not equal another geofence's name on the
 // same vehicle") can be added without rewiring callers.
-func (v *AILocationNameValidator) ValidateLocationName(_ *models.VisitedLocation, proposed string) error {
+func (v *AILocationNameValidator) ValidateLocationName(_ *geomodel.VisitedLocation, proposed string) error {
 	if proposed == "" {
 		return errors.New("location name must not be empty")
 	}
@@ -309,7 +310,7 @@ func (v *AILocationNameValidator) ValidateLocationName(_ *models.VisitedLocation
 // LocationsPage list rows carry. Because the by-ID lookup is a
 // natural join (id → vehicle, end_place → aggregate), this adapter
 // runs a single grouped SELECT against the drives table
-// (read-only). The shape it returns matches *models.VisitedLocation
+// (read-only). The shape it returns matches *geomodel.VisitedLocation
 // field-for-field so the existing tools.LocationSource +
 // tools.LocationNameValidator interfaces stay vendor-agnostic.
 //
@@ -338,7 +339,7 @@ func NewAILocationSource(db *database.DB) *AILocationSource {
 //
 // The error text is suitable for surfacing to the LLM (it'll be
 // relayed back as a tool error reply).
-func (a *AILocationSource) LoadVisitedLocation(ctx context.Context, locationID int64) (*models.VisitedLocation, error) {
+func (a *AILocationSource) LoadVisitedLocation(ctx context.Context, locationID int64) (*geomodel.VisitedLocation, error) {
 	const q = `WITH anchor AS (
 			SELECT vehicle_id, end_place
 			FROM drives
@@ -362,7 +363,7 @@ func (a *AILocationSource) LoadVisitedLocation(ctx context.Context, locationID i
 		GROUP BY d.vehicle_id, d.end_place`
 
 	row := a.db.Pool.QueryRow(ctx, q, locationID)
-	loc := &models.VisitedLocation{}
+	loc := &geomodel.VisitedLocation{}
 	var firstVisited time.Time
 	if err := row.Scan(
 		&loc.ID,

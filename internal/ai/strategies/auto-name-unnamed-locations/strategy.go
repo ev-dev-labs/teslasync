@@ -10,7 +10,7 @@
 //     location labels without explicit confirmation;
 //   - the two propose-only tools the LLM is allowed to call —
 //     `draft_location_name` and `validate_location_name` — both of
-//     which read the *models.VisitedLocation aggregate and run a
+//     which read the *geomodel.VisitedLocation aggregate and run a
 //     deterministic name-validation pass. The actual persistence
 //     flows through the user's explicit confirmation in the
 //     LocationsPage UI (the slice prompt: "while requiring explicit

@@ -87,7 +87,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
 // GeofenceValidator is the narrow validation interface the
@@ -105,7 +105,7 @@ type GeofenceValidator interface {
 	// would be accepted by the canonical save path for loc.
 	// Returns nil on acceptance; an error whose Error() text is
 	// suitable for surfacing to the LLM on rejection.
-	ValidateGeofence(loc *models.VisitedLocation, proposedName string, radiusM float64) error
+	ValidateGeofence(loc *geomodel.VisitedLocation, proposedName string, radiusM float64) error
 }
 
 // suggestNewGeofencesMaxNameLen is the hard cap on the proposed
@@ -281,11 +281,11 @@ func validateGeofenceShape(proposedName string, radiusM float64) error {
 	return nil
 }
 
-// buildGeofenceEvidence converts a *models.VisitedLocation into the
+// buildGeofenceEvidence converts a *geomodel.VisitedLocation into the
 // read-only evidence envelope returned by both tools. Format choice:
 // ISO-8601 UTC strings so the LLM's follow-up prose can quote the
 // dates back to the user without ambiguity.
-func buildGeofenceEvidence(loc *models.VisitedLocation) geofenceEvidence {
+func buildGeofenceEvidence(loc *geomodel.VisitedLocation) geofenceEvidence {
 	ev := geofenceEvidence{
 		CurrentAddressName: loc.AddressName,
 		VisitCount:         loc.VisitCount,

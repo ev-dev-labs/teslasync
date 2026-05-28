@@ -23,10 +23,11 @@ import (
 	"strings"
 	"testing"
 
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TestAutoNameLocationsAIOffManualNamingWorks is the load-bearing
@@ -232,7 +233,7 @@ func TestAIAutoNameLocationsHandler_AcceptsCanonicalLocationID(t *testing.T) {
 func TestAILocationNameValidator_TableDriven(t *testing.T) {
 	t.Parallel()
 	v := NewAILocationNameValidator()
-	loc := &models.VisitedLocation{ID: 501, VehicleID: 7, AddressName: "47.6062,-122.3321"}
+	loc := &geomodel.VisitedLocation{ID: 501, VehicleID: 7, AddressName: "47.6062,-122.3321"}
 
 	cases := []struct {
 		name    string

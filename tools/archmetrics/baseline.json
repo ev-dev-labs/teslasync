@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T03:50:36Z",
+  "generated_at": "2026-05-28T03:53:24Z",
   "go_version": "go1.26.1",
-  "commit_sha": "65930ca94d677f592fc3ef7ae6fa90e1fe7b3257",
+  "commit_sha": "3147de1de6a0cafabd18f15542086f5ada576e0f",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1894,7 +1894,8 @@
         "internal/ml/chargingcurves",
         "internal/ml/range",
         "internal/models",
-        "internal/models/alert"
+        "internal/models/alert",
+        "internal/models/geo"
       ],
       "files": [
         "alert_builder.go",
@@ -2149,6 +2150,7 @@
         "internal/models/backup",
         "internal/models/chatbot",
         "internal/models/export",
+        "internal/models/geo",
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
@@ -3170,6 +3172,7 @@
         "internal/models/chatbot",
         "internal/models/energy",
         "internal/models/export",
+        "internal/models/geo",
         "internal/tracing"
       ],
       "files": [
@@ -3951,7 +3954,7 @@
       "path": "internal/models",
       "go_files": 33,
       "test_files": 1,
-      "loc": 2639,
+      "loc": 2614,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4070,6 +4073,19 @@
       "files": [
         "doc.go",
         "export.go"
+      ]
+    },
+    {
+      "path": "internal/models/geo",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 44,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "geo.go"
       ]
     },
     {
@@ -6351,6 +6367,10 @@
       "doc.go",
       "export.go"
     ],
+    "internal/models/geo": [
+      "doc.go",
+      "geo.go"
+    ],
     "internal/mqtt": [
       "dlq_inspector.go",
       "dlq_production.go",
@@ -6662,14 +6682,14 @@
         "backup",
         "chatbot",
         "energy",
-        "export"
+        "export",
+        "geo"
       ],
       "missing_subpkgs": [
         "automation",
         "charging",
         "dashboard",
         "drive",
-        "geo",
         "notification",
         "security",
         "settings",

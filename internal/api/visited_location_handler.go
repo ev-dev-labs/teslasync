@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -34,7 +35,7 @@ func (h *VisitedLocationHandler) List(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if locs == nil {
-			locs = make([]*models.VisitedLocation, 0)
+			locs = make([]*geomodel.VisitedLocation, 0)
 		}
 		writeJSON(w, http.StatusOK, locs)
 		return
@@ -47,7 +48,7 @@ func (h *VisitedLocationHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if locs == nil {
-		locs = make([]*models.VisitedLocation, 0)
+		locs = make([]*geomodel.VisitedLocation, 0)
 	}
 	writeJSON(w, http.StatusOK, locs)
 }

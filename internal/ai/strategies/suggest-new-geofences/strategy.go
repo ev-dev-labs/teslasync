@@ -10,7 +10,7 @@
 //     geofences without explicit confirmation;
 //   - the two propose-only tools the LLM is allowed to call —
 //     `draft_geofence` and `validate_geofence` — both of which read
-//     the *models.VisitedLocation aggregate the user already sees in
+//     the *geomodel.VisitedLocation aggregate the user already sees in
 //     /geofences and run a deterministic geofence-shape validation
 //     pass. The actual persistence flows through the user's explicit
 //     confirmation in the GeofencesPage UI (the slice prompt:

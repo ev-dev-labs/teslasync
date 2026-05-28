@@ -16,16 +16,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
 // stubLocationSource is a deterministic fake for LocationSource.
 type stubLocationSource struct {
-	byID map[int64]*models.VisitedLocation
+	byID map[int64]*geomodel.VisitedLocation
 	err  error
 }
 
-func (s *stubLocationSource) LoadVisitedLocation(_ context.Context, locationID int64) (*models.VisitedLocation, error) {
+func (s *stubLocationSource) LoadVisitedLocation(_ context.Context, locationID int64) (*geomodel.VisitedLocation, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -40,14 +40,14 @@ func (s *stubLocationSource) LoadVisitedLocation(_ context.Context, locationID i
 type stubLocationNameValidator struct {
 	failWith error
 	calls    []struct {
-		Loc      *models.VisitedLocation
+		Loc      *geomodel.VisitedLocation
 		Proposed string
 	}
 }
 
-func (s *stubLocationNameValidator) ValidateLocationName(loc *models.VisitedLocation, proposed string) error {
+func (s *stubLocationNameValidator) ValidateLocationName(loc *geomodel.VisitedLocation, proposed string) error {
 	s.calls = append(s.calls, struct {
-		Loc      *models.VisitedLocation
+		Loc      *geomodel.VisitedLocation
 		Proposed string
 	}{loc, proposed})
 	return s.failWith
@@ -59,7 +59,7 @@ func (s *stubLocationNameValidator) ValidateLocationName(loc *models.VisitedLoca
 func newTestLocationFixtures() *stubLocationSource {
 	createdAt := time.Date(2024, 7, 15, 9, 0, 0, 0, time.UTC)
 	lastVisited := time.Date(2024, 10, 14, 18, 30, 0, 0, time.UTC)
-	loc := &models.VisitedLocation{
+	loc := &geomodel.VisitedLocation{
 		ID:             501,
 		VehicleID:      7,
 		AddressName:    "47.6062, -122.3321", // coord-shaped → unnamed
@@ -68,7 +68,7 @@ func newTestLocationFixtures() *stubLocationSource {
 		LastVisited:    &lastVisited,
 		CreatedAt:      createdAt,
 	}
-	return &stubLocationSource{byID: map[int64]*models.VisitedLocation{501: loc}}
+	return &stubLocationSource{byID: map[int64]*geomodel.VisitedLocation{501: loc}}
 }
 
 // TestDraftLocationName_HappyPath_OK proves a valid LLM payload
@@ -177,7 +177,7 @@ func TestDraftLocationName_ValidatorFailureSurfacesAsInvalid(t *testing.T) {
 // status="invalid") so the LLM can retry with a different ID.
 func TestDraftLocationName_MissingLocationIsError(t *testing.T) {
 	t.Parallel()
-	locations := &stubLocationSource{byID: map[int64]*models.VisitedLocation{}}
+	locations := &stubLocationSource{byID: map[int64]*geomodel.VisitedLocation{}}
 	validator := &stubLocationNameValidator{}
 	tool := &draftLocationName{locations: locations, validator: validator}
 

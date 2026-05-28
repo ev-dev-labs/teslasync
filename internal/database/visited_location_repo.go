@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
 // Phase-42 / Prompt 0076 covenant #11: the legacy visited_locations and
@@ -24,18 +24,18 @@ func NewVisitedLocationRepo(db *DB) *VisitedLocationRepo {
 	return &VisitedLocationRepo{db: db}
 }
 
-func (r *VisitedLocationRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.VisitedLocation, error) {
+func (r *VisitedLocationRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*geomodel.VisitedLocation, error) {
 	return r.deriveFromDrives(ctx, &vehicleID, limit)
 }
 
-func (r *VisitedLocationRepo) GetAll(ctx context.Context, limit int) ([]*models.VisitedLocation, error) {
+func (r *VisitedLocationRepo) GetAll(ctx context.Context, limit int) ([]*geomodel.VisitedLocation, error) {
 	return r.deriveFromDrives(ctx, nil, limit)
 }
 
 // deriveFromDrives aggregates visited locations from the SI canonical drives
 // table by grouping on (vehicle_id, end_place). Used as the SOLE path now
 // that the legacy visited_locations table is gone.
-func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *int64, limit int) ([]*models.VisitedLocation, error) {
+func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *int64, limit int) ([]*geomodel.VisitedLocation, error) {
 	query := `SELECT MIN(d.id) AS id,
 			d.vehicle_id,
 			d.end_place,
@@ -66,9 +66,9 @@ func (r *VisitedLocationRepo) deriveFromDrives(ctx context.Context, vehicleID *i
 	}
 	defer rows.Close()
 
-	var locs []*models.VisitedLocation
+	var locs []*geomodel.VisitedLocation
 	for rows.Next() {
-		l := &models.VisitedLocation{}
+		l := &geomodel.VisitedLocation{}
 		var firstVisited time.Time
 		if err := rows.Scan(&l.ID, &l.VehicleID, &l.AddressName, &l.VisitCount,
 			&l.TotalDurationS, &l.LastVisited, &firstVisited); err != nil {

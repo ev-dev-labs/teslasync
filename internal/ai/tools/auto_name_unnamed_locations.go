@@ -28,7 +28,7 @@
 // slice prompt mandates "explicit user confirmation"); the LLM has
 // no tool that writes.
 //
-// "Unnamed" interpretation: a *models.VisitedLocation row is treated as
+// "Unnamed" interpretation: a *geomodel.VisitedLocation row is treated as
 // unnamed when its AddressName is empty, equals the literal "Unknown",
 // or matches a coordinate-shaped string (the geocoder's fallback when
 // reverse-geocoding fails). The strategy's prompt explains this to
@@ -73,7 +73,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
 // LocationSource is the narrow visited-location read interface the
@@ -95,7 +95,7 @@ type LocationSource interface {
 	//
 	// The error text is suitable for surfacing to the LLM (it is
 	// relayed back as a tool error reply).
-	LoadVisitedLocation(ctx context.Context, locationID int64) (*models.VisitedLocation, error)
+	LoadVisitedLocation(ctx context.Context, locationID int64) (*geomodel.VisitedLocation, error)
 }
 
 // LocationNameValidator is the narrow validation interface the
@@ -112,7 +112,7 @@ type LocationNameValidator interface {
 	// accepted by the canonical save path for loc. Returns nil
 	// on acceptance; an error whose Error() text is suitable for
 	// surfacing to the LLM on rejection.
-	ValidateLocationName(loc *models.VisitedLocation, proposed string) error
+	ValidateLocationName(loc *geomodel.VisitedLocation, proposed string) error
 }
 
 // autoNameUnnamedLocationsMaxNameLen is the hard cap on the proposed
@@ -244,11 +244,11 @@ func validateLocationNameShape(proposed string) error {
 	return nil
 }
 
-// buildLocationNameEvidence converts a *models.VisitedLocation into
+// buildLocationNameEvidence converts a *geomodel.VisitedLocation into
 // the read-only evidence envelope returned by both tools. Format
 // choice: ISO-8601 UTC strings so the LLM's follow-up prose can
 // quote the dates back to the user without ambiguity.
-func buildLocationNameEvidence(loc *models.VisitedLocation) locationNameEvidence {
+func buildLocationNameEvidence(loc *geomodel.VisitedLocation) locationNameEvidence {
 	ev := locationNameEvidence{
 		CurrentAddressName: loc.AddressName,
 		VisitCount:         loc.VisitCount,

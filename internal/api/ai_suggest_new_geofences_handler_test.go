@@ -22,10 +22,11 @@ import (
 	"strings"
 	"testing"
 
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TestSuggestGeofencesAIOffManualGeofenceWorks is the load-bearing
@@ -234,7 +235,7 @@ func TestAISuggestNewGeofencesHandler_AcceptsCanonicalBody(t *testing.T) {
 func TestAISuggestGeofenceValidator_TableDriven(t *testing.T) {
 	t.Parallel()
 	v := NewAISuggestGeofenceValidator()
-	loc := &models.VisitedLocation{ID: 501, VehicleID: 7, AddressName: "47.6062,-122.3321"}
+	loc := &geomodel.VisitedLocation{ID: 501, VehicleID: 7, AddressName: "47.6062,-122.3321"}
 
 	cases := []struct {
 		name    string

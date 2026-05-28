@@ -57,6 +57,8 @@ import (
 	"strings"
 	"unicode"
 
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -66,7 +68,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiSuggestNewGeofencesMaxIterations bounds the dispatcher's
@@ -293,7 +294,7 @@ var _ http.Handler = (*AISuggestNewGeofencesHandler)(nil)
 //
 // The LocationSource interface is satisfied by the existing
 // *api.AILocationSource adapter wired by slice 0037 — the same
-// drives-table read produces the same *models.VisitedLocation
+// drives-table read produces the same *geomodel.VisitedLocation
 // aggregate this slice consumes. We do NOT add a duplicate adapter
 // here; router.go reuses the slice-0037 instance for both
 // strategies, which is the correct behaviour because the underlying
@@ -332,7 +333,7 @@ func NewAISuggestGeofenceValidator() *AISuggestGeofenceValidator {
 // is shape-only — but kept on the interface so a future per-location
 // rule (e.g. "name must not equal another geofence's name on the
 // same vehicle") can be added without rewiring callers.
-func (v *AISuggestGeofenceValidator) ValidateGeofence(_ *models.VisitedLocation, proposed string, radiusM float64) error {
+func (v *AISuggestGeofenceValidator) ValidateGeofence(_ *geomodel.VisitedLocation, proposed string, radiusM float64) error {
 	if proposed == "" {
 		return errors.New("geofence name must not be empty")
 	}

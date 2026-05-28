@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
 // stubGeofenceValidator records every call + can be wired to fail
@@ -25,15 +25,15 @@ import (
 type stubGeofenceValidator struct {
 	failWith error
 	calls    []struct {
-		Loc      *models.VisitedLocation
+		Loc      *geomodel.VisitedLocation
 		Proposed string
 		RadiusM  float64
 	}
 }
 
-func (s *stubGeofenceValidator) ValidateGeofence(loc *models.VisitedLocation, proposed string, radiusM float64) error {
+func (s *stubGeofenceValidator) ValidateGeofence(loc *geomodel.VisitedLocation, proposed string, radiusM float64) error {
 	s.calls = append(s.calls, struct {
-		Loc      *models.VisitedLocation
+		Loc      *geomodel.VisitedLocation
 		Proposed string
 		RadiusM  float64
 	}{loc, proposed, radiusM})
@@ -47,7 +47,7 @@ func (s *stubGeofenceValidator) ValidateGeofence(loc *models.VisitedLocation, pr
 func newGeofenceTestFixtures() *stubLocationSource {
 	createdAt := time.Date(2024, 7, 15, 9, 0, 0, 0, time.UTC)
 	lastVisited := time.Date(2024, 10, 14, 18, 30, 0, 0, time.UTC)
-	loc := &models.VisitedLocation{
+	loc := &geomodel.VisitedLocation{
 		ID:             501,
 		VehicleID:      7,
 		AddressName:    "47.6062, -122.3321",
@@ -56,7 +56,7 @@ func newGeofenceTestFixtures() *stubLocationSource {
 		LastVisited:    &lastVisited,
 		CreatedAt:      createdAt,
 	}
-	return &stubLocationSource{byID: map[int64]*models.VisitedLocation{501: loc}}
+	return &stubLocationSource{byID: map[int64]*geomodel.VisitedLocation{501: loc}}
 }
 
 // TestDraftGeofence_HappyPath_OK proves a valid LLM payload yields
@@ -179,7 +179,7 @@ func TestDraftGeofence_ValidatorFailureSurfacesAsInvalid(t *testing.T) {
 // so the LLM can retry with a different ID.
 func TestDraftGeofence_MissingLocationIsError(t *testing.T) {
 	t.Parallel()
-	locations := &stubLocationSource{byID: map[int64]*models.VisitedLocation{}}
+	locations := &stubLocationSource{byID: map[int64]*geomodel.VisitedLocation{}}
 	validator := &stubGeofenceValidator{}
 	tool := &draftGeofence{locations: locations, validator: validator}
 
@@ -217,14 +217,14 @@ func TestDraftGeofence_NilWiringSurfacesAsError(t *testing.T) {
 func TestDraftGeofence_NonCoordAddressLeavesCentroidZero(t *testing.T) {
 	t.Parallel()
 	createdAt := time.Date(2024, 7, 15, 9, 0, 0, 0, time.UTC)
-	loc := &models.VisitedLocation{
+	loc := &geomodel.VisitedLocation{
 		ID:          502,
 		VehicleID:   7,
 		AddressName: "Pike Place Market",
 		VisitCount:  3,
 		CreatedAt:   createdAt,
 	}
-	locations := &stubLocationSource{byID: map[int64]*models.VisitedLocation{502: loc}}
+	locations := &stubLocationSource{byID: map[int64]*geomodel.VisitedLocation{502: loc}}
 	validator := &stubGeofenceValidator{}
 	tool := &draftGeofence{locations: locations, validator: validator}
 

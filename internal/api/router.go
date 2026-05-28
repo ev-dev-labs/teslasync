@@ -1602,7 +1602,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// registry so the dispatcher can resolve the strategy's
 	// allowedTools at boot. We REUSE the slice-0037
 	// *AILocationSource adapter — both strategies grok the same
-	// *models.VisitedLocation aggregate (drives-table grouped on
+	// *geomodel.VisitedLocation aggregate (drives-table grouped on
 	// vehicle_id + end_place), so duplicating the adapter would
 	// be a wiring smell rather than an actual decoupling.
 	// AISuggestGeofenceValidator mirrors the byte-equivalent
