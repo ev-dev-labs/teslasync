@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T21:43:56Z",
+  "generated_at": "2026-05-28T22:00:27Z",
   "go_version": "go1.26.1",
-  "commit_sha": "632b0e3ff6b05393fb9f950b85ed8e919cbac90c",
+  "commit_sha": "d67c8f8654b1d2dd4d45d3cd0545c9681c4613e9",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 235,
-      "test_files": 147,
-      "loc": 111837,
+      "go_files": 230,
+      "test_files": 146,
+      "loc": 111006,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2620,12 +2620,15 @@
         "internal/api",
         "internal/api/apibulk",
         "internal/api/apicalllog",
+        "internal/api/apikey",
         "internal/api/apiparams",
         "internal/api/apitest",
         "internal/api/apperror",
         "internal/api/backup",
         "internal/api/dataquality",
         "internal/api/exportcolumns",
+        "internal/api/feedback",
+        "internal/api/gasprice",
         "internal/api/geocode",
         "internal/api/geofence",
         "internal/api/httpx",
@@ -2642,6 +2645,8 @@
         "internal/api/softwareupdate",
         "internal/api/synthetic",
         "internal/api/tco",
+        "internal/api/teslauserconfig",
+        "internal/api/teslauserorder",
         "internal/api/teslauserprofile",
         "internal/api/trip",
         "internal/api/vehicle",
@@ -2906,7 +2911,6 @@
         "api_call_log_middleware.go",
         "api_call_log_middleware_test.go",
         "api_test.go",
-        "apikey_handler.go",
         "apikey_middleware.go",
         "apperror_bridge_test.go",
         "audit.go",
@@ -2999,8 +3003,6 @@
         "errors.go",
         "export_handler.go",
         "exports_bulk_handler.go",
-        "feedback_handler.go",
-        "feedback_handler_test.go",
         "flags_handler.go",
         "flags_handler_test.go",
         "fleet_telemetry_error_handler.go",
@@ -3010,7 +3012,6 @@
         "fsm_handler.go",
         "fsm_handler_dtos.go",
         "fsm_handler_query.go",
-        "gas_price_handler.go",
         "guard_handler.go",
         "guard_handler_test.go",
         "handlers_test.go",
@@ -3118,8 +3119,6 @@
         "tesla_energy_history_handler_dtos.go",
         "tesla_energy_history_handler_query.go",
         "tesla_energy_live_status_handler.go",
-        "tesla_user_config_handler.go",
-        "tesla_user_order_handler.go",
         "tire_pressure_handler.go",
         "tire_pressure_handler_test.go",
         "totp_handler.go",
@@ -3174,6 +3173,23 @@
         "internal/database",
         "internal/database/system",
         "internal/models/tesla"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/apikey",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 165,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database"
       ],
       "files": [
         "doc.go",
@@ -3282,6 +3298,42 @@
         "doc.go",
         "handler.go",
         "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/feedback",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 392,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/config",
+        "internal/database/user"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/gasprice",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 138,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database",
+        "internal/worker"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
       ]
     },
     {
@@ -3581,6 +3633,43 @@
         "handler.go",
         "summary.go",
         "summary_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/teslauserconfig",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 116,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/tesla",
+        "internal/tesla"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/teslauserorder",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 123,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/tesla",
+        "internal/models/tesla",
+        "internal/tesla"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
       ]
     },
     {
@@ -7593,7 +7682,6 @@
       "analytics_handler_queries.go",
       "anomaly_handler.go",
       "api_call_log_middleware.go",
-      "apikey_handler.go",
       "apikey_middleware.go",
       "audit.go",
       "audit_handler.go",
@@ -7660,7 +7748,6 @@
       "errors.go",
       "export_handler.go",
       "exports_bulk_handler.go",
-      "feedback_handler.go",
       "flags_handler.go",
       "fleet_telemetry_error_handler.go",
       "fleet_telemetry_handler.go",
@@ -7668,7 +7755,6 @@
       "fsm_handler.go",
       "fsm_handler_dtos.go",
       "fsm_handler_query.go",
-      "gas_price_handler.go",
       "guard_handler.go",
       "health.go",
       "helpers.go",
@@ -7737,8 +7823,6 @@
       "tesla_energy_history_handler_dtos.go",
       "tesla_energy_history_handler_query.go",
       "tesla_energy_live_status_handler.go",
-      "tesla_user_config_handler.go",
-      "tesla_user_order_handler.go",
       "tire_pressure_handler.go",
       "totp_handler.go",
       "trip_planner_handler.go",
@@ -7759,6 +7843,10 @@
       "helpers.go"
     ],
     "internal/api/apicalllog": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/apikey": [
       "doc.go",
       "handler.go"
     ],
@@ -7785,6 +7873,14 @@
       "handler.go"
     ],
     "internal/api/exportcolumns": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/feedback": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/gasprice": [
       "doc.go",
       "handler.go"
     ],
@@ -7860,6 +7956,14 @@
       "doc.go",
       "handler.go",
       "summary.go"
+    ],
+    "internal/api/teslauserconfig": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/teslauserorder": [
+      "doc.go",
+      "handler.go"
     ],
     "internal/api/teslauserprofile": [
       "doc.go",
@@ -9020,8 +9124,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 235,
-      "flat_parent_test_files": 147,
+      "flat_parent_go_files": 230,
+      "flat_parent_test_files": 146,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",
@@ -9032,6 +9136,7 @@
         "vehicle",
         "trip",
         "notification",
+        "feedback",
         "onboarding"
       ],
       "missing_subpkgs": [
@@ -9065,7 +9170,6 @@
         "automation",
         "alert",
         "chatbot",
-        "feedback",
         "data_repair",
         "dashboard",
         "saved_views",

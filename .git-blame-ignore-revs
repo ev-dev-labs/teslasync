@@ -239,3 +239,8 @@ cc38438f002ee94e1e5e1f90960cd8cd09648d1c # refactor(R2d.16): carve internal/api/
 c251f65e11e8f03698200cde9ceecf5dd6b51e5d # refactor(R2d.18): carve internal/api/teslauserprofile subpackage
 d73bdf33f86506e98298ff21e92a55a0f3e32430 # refactor(R2d.20): carve internal/api/trip subpackage
 4eceff2d87bfa8775a7598be8d7990804d46ef64 # refactor(R2d.21): carve internal/api/webhookreceiver subpackage
+a54875e5fe1060992d3daae8a62d51548e9e0eee # refactor(R2d.22): carve internal/api/teslauserorder subpackage
+c9a209a98c9e74ce0b4e16b4dde80c1c2293a382 # refactor(R2d.23): carve internal/api/teslauserconfig subpackage
+79e5df690de0f364d22247e84ae3498f066572e7 # refactor(R2d.24): carve internal/api/gasprice subpackage
+e1740a628bb8938fda7c8468b3576323c7382dad # refactor(R2d.25): carve internal/api/apikey subpackage
+f20f638dfe667b20d761efd0b950798ce57899d2 # refactor(R2d.26): carve internal/api/feedback subpackage
