@@ -222,3 +222,4 @@ a048e1b2411b43628a066f872976bf555577b9b8
 02265a87e9cc0b60ab6467d11bb764be10bb4547 # refactor(R2d.1): carve internal/api/search subpackage
 faf6e82597540fa2f91b12d250fce74135d779e1 # refactor(R2d.2): carve internal/api/lifetime subpackage
 e57d08bf1d77d7ebb7f530b08f77b40dee8b1c1d # refactor(R2d.3): carve internal/api/notification subpackage
+c1e998296a6d29b662cbbcc7bd7589d7322a5b99 # refactor(R2d.4): carve internal/api/signalinspect subpackage
