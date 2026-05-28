@@ -21,7 +21,7 @@
 // so the chi URLParam("vehicleID") path is the same as every other
 // handler in this group; the prompt does NOT add subject-level
 // authorisation (that's prompt-57's job — see ARCHITECTURE.md ADR-013).
-package api
+package vehiclesettings
 
 import (
 	"context"
@@ -30,10 +30,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // MaxVehicleSettingsBodyBytes caps the PUT body size so a malicious
@@ -74,24 +76,24 @@ type VehicleExistenceChecker interface {
 	Exists(ctx context.Context, vehicleID int64) (bool, error)
 }
 
-// VehicleSettingsHandler bundles the three per-vehicle settings
+// Handler bundles the three per-vehicle settings
 // endpoints and their dependencies.
-type VehicleSettingsHandler struct {
+type Handler struct {
 	store    VehicleSettingsOverrideStore
 	resolver VehicleSettingsResolverInterface
 	vehicles VehicleExistenceChecker
 }
 
-// NewVehicleSettingsHandler wires the handler. All three deps are
+// NewHandler wires the handler. All three deps are
 // required — passing nil for any of them would surface as a nil
 // pointer panic on the first request, which is preferable to a
 // silent partial-feature flag.
-func NewVehicleSettingsHandler(
+func NewHandler(
 	store VehicleSettingsOverrideStore,
 	resolver VehicleSettingsResolverInterface,
 	vehicles VehicleExistenceChecker,
-) *VehicleSettingsHandler {
-	return &VehicleSettingsHandler{
+) *Handler {
+	return &Handler{
 		store:    store,
 		resolver: resolver,
 		vehicles: vehicles,
@@ -116,10 +118,10 @@ type vehicleSettingPutBody struct {
 //
 // Returns 400 on a malformed vehicleID, 404 when the vehicle does
 // not resolve, and 200 with the resolver's full whitelist otherwise.
-func (h *VehicleSettingsHandler) List(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle id")
 		return
 	}
 	if err := h.requireVehicleExists(r.Context(), w, vehicleID); err != nil {
@@ -127,10 +129,10 @@ func (h *VehicleSettingsHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	out, err := h.resolver.Resolve(r.Context(), vehicleID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to resolve vehicle settings")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to resolve vehicle settings")
 		return
 	}
-	writeJSON(w, http.StatusOK, vehicleSettingsListResponse{Settings: out})
+	httpx.WriteJSON(w, http.StatusOK, vehicleSettingsListResponse{Settings: out})
 }
 
 // Put handles PUT /vehicles/{vehicleID}/settings/{key}.
@@ -138,15 +140,15 @@ func (h *VehicleSettingsHandler) List(w http.ResponseWriter, r *http.Request) {
 // Decodes the body's `value` field against the key's kind, validates
 // it via the repo, and upserts the override row. 204 No Content on
 // success so the SPA can rely on a uniform "no body" response shape.
-func (h *VehicleSettingsHandler) Put(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) Put(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle id")
 		return
 	}
 	key := chi.URLParam(r, "key")
 	if !settingsdb.IsValidVehicleSettingKey(key) {
-		writeErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
 		return
 	}
 	if err := h.requireVehicleExists(r.Context(), w, vehicleID); err != nil {
@@ -159,32 +161,32 @@ func (h *VehicleSettingsHandler) Put(w http.ResponseWriter, r *http.Request) {
 	dec.DisallowUnknownFields()
 	var body vehicleSettingPutBody
 	if err := dec.Decode(&body); err != nil {
-		writeErrorCode(w, http.StatusBadRequest, "invalid request body", VehicleSettingsCodeBadBody)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, "invalid request body", VehicleSettingsCodeBadBody)
 		return
 	}
 	if dec.More() {
-		writeErrorCode(w, http.StatusBadRequest, "trailing junk after json", VehicleSettingsCodeBadBody)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, "trailing junk after json", VehicleSettingsCodeBadBody)
 		return
 	}
 	if len(body.Value) == 0 || string(body.Value) == "null" {
-		writeErrorCode(w, http.StatusBadRequest, "value is required", VehicleSettingsCodeInvalidValue)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, "value is required", VehicleSettingsCodeInvalidValue)
 		return
 	}
 
 	value, err := decodeValueForKey(key, body.Value)
 	if err != nil {
-		writeErrorCode(w, http.StatusBadRequest, "invalid value", VehicleSettingsCodeInvalidValue)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, "invalid value", VehicleSettingsCodeInvalidValue)
 		return
 	}
 
 	if err := h.store.Upsert(r.Context(), vehicleID, key, value); err != nil {
 		switch {
 		case errors.Is(err, settingsdb.ErrVehicleSettingInvalidKey):
-			writeErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
+			httpx.WriteErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
 		case errors.Is(err, settingsdb.ErrVehicleSettingInvalidValue):
-			writeErrorCode(w, http.StatusBadRequest, "invalid value", VehicleSettingsCodeInvalidValue)
+			httpx.WriteErrorCode(w, http.StatusBadRequest, "invalid value", VehicleSettingsCodeInvalidValue)
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to save setting")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to save setting")
 		}
 		return
 	}
@@ -196,15 +198,15 @@ func (h *VehicleSettingsHandler) Put(w http.ResponseWriter, r *http.Request) {
 // Idempotent: 204 even when no override row existed. The SPA's
 // "Reset to user default" button hits this without needing to
 // pre-fetch the row's existence.
-func (h *VehicleSettingsHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle id")
 		return
 	}
 	key := chi.URLParam(r, "key")
 	if !settingsdb.IsValidVehicleSettingKey(key) {
-		writeErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
 		return
 	}
 	if err := h.requireVehicleExists(r.Context(), w, vehicleID); err != nil {
@@ -221,9 +223,9 @@ func (h *VehicleSettingsHandler) Delete(w http.ResponseWriter, r *http.Request) 
 		}
 		switch {
 		case errors.Is(err, settingsdb.ErrVehicleSettingInvalidKey):
-			writeErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
+			httpx.WriteErrorCode(w, http.StatusBadRequest, "unsupported setting key", VehicleSettingsCodeInvalidKey)
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to delete setting")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to delete setting")
 		}
 		return
 	}
@@ -234,14 +236,14 @@ func (h *VehicleSettingsHandler) Delete(w http.ResponseWriter, r *http.Request) 
 // error) and returns a non-nil error when the vehicle id does not
 // resolve. The non-nil error is the caller's signal to STOP — the
 // HTTP response has already been written.
-func (h *VehicleSettingsHandler) requireVehicleExists(ctx context.Context, w http.ResponseWriter, vehicleID int64) error {
+func (h *Handler) requireVehicleExists(ctx context.Context, w http.ResponseWriter, vehicleID int64) error {
 	exists, err := h.vehicles.Exists(ctx, vehicleID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to check vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to check vehicle")
 		return err
 	}
 	if !exists {
-		writeErrorCode(w, http.StatusNotFound, "vehicle not found", VehicleSettingsCodeNotFound)
+		httpx.WriteErrorCode(w, http.StatusNotFound, "vehicle not found", VehicleSettingsCodeNotFound)
 		return errors.New("vehicle not found")
 	}
 	return nil

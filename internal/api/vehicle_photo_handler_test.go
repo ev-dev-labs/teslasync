@@ -6,8 +6,11 @@
 //     round-trips, no Postgres required)
 //   - a real on-disk root under t.TempDir() so the encode / write
 //     / read pipeline actually exercises filesystem code
-//   - the existing fakeVehicleExistenceChecker shared with
-//     vehicle_settings_handler_test.go for the 404-on-unknown-id path
+//   - a locally-declared fakePhotoVehicleExistenceChecker for the
+//     404-on-unknown-id path (formerly shared with vehicle_settings,
+//     duplicated here after R2c.5 carved that sibling into its own
+//     subpackage; this duplicate vanishes at R2c.6 when the photo
+//     handler also moves out)
 //
 // Coverage matrix:
 //
@@ -57,6 +60,24 @@ import (
 )
 
 // ─── Fakes ──────────────────────────────────────────────────────
+
+// fakeVehicleExistenceChecker is a minimal local duplicate of the
+// vehiclesettings test fixture — kept here transitionally so the
+// photo handler compiles without depending on a sibling subpkg's
+// _test.go (Go forbids importing _test packages). Vanishes at R2c.6.
+type fakeVehicleExistenceChecker struct {
+	exists bool
+	err    error
+	calls  int
+}
+
+func (f *fakeVehicleExistenceChecker) Exists(_ context.Context, _ int64) (bool, error) {
+	f.calls++
+	if f.err != nil {
+		return false, f.err
+	}
+	return f.exists, nil
+}
 
 type fakeVehiclePhotoStore struct {
 	mu     sync.Mutex

@@ -59,6 +59,8 @@ import (
 
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/imaging"
+
+	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
 )
 
 // MaxUploadBytes caps the inbound multipart body. 8 MB is plenty
@@ -131,7 +133,7 @@ type VehiclePhotoStore interface {
 // VehiclePhotoHandler bundles the four photo endpoints.
 type VehiclePhotoHandler struct {
 	store    VehiclePhotoStore
-	vehicles VehicleExistenceChecker
+	vehicles apivehsettings.VehicleExistenceChecker
 	rootDir  string
 
 	// uploadLocks serialises uploads / deletes per vehicle so a
@@ -155,7 +157,7 @@ type VehiclePhotoHandler struct {
 // half-disabled feature flag.
 func NewVehiclePhotoHandler(
 	store VehiclePhotoStore,
-	vehicles VehicleExistenceChecker,
+	vehicles apivehsettings.VehicleExistenceChecker,
 	rootDir string,
 ) *VehiclePhotoHandler {
 	return &VehiclePhotoHandler{
@@ -570,7 +572,7 @@ func (h *VehiclePhotoHandler) requireVehicleExists(ctx context.Context, w http.R
 		return err
 	}
 	if !exists {
-		writeErrorCode(w, http.StatusNotFound, "vehicle not found", VehicleSettingsCodeNotFound)
+		writeErrorCode(w, http.StatusNotFound, "vehicle not found", apivehsettings.VehicleSettingsCodeNotFound)
 		return errors.New("vehicle not found")
 	}
 	return nil

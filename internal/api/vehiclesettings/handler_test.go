@@ -1,4 +1,4 @@
-package api
+package vehiclesettings
 
 import (
 	"context"
@@ -89,7 +89,7 @@ func (f *fakeVehicleExistenceChecker) Exists(_ context.Context, _ int64) (bool, 
 // newVehicleSettingsTestServer wires the handler to a chi router so
 // the path-param `{vehicleID}` and `{key}` come through as they do
 // in production.
-func newVehicleSettingsTestServer(t *testing.T, h *VehicleSettingsHandler) *httptest.Server {
+func newVehicleSettingsTestServer(t *testing.T, h *Handler) *httptest.Server {
 	t.Helper()
 	r := chi.NewRouter()
 	r.Get("/vehicles/{vehicleID}/settings", h.List)
@@ -102,7 +102,7 @@ func newVehicleSettingsTestHandler(
 	store *fakeVehicleSettingsStore,
 	resolver *fakeVehicleSettingsResolver,
 	vehicles *fakeVehicleExistenceChecker,
-) *VehicleSettingsHandler {
+) *Handler {
 	if store == nil {
 		store = &fakeVehicleSettingsStore{}
 	}
@@ -112,7 +112,7 @@ func newVehicleSettingsTestHandler(
 	if vehicles == nil {
 		vehicles = &fakeVehicleExistenceChecker{exists: true}
 	}
-	return NewVehicleSettingsHandler(store, resolver, vehicles)
+	return NewHandler(store, resolver, vehicles)
 }
 
 // ─── List ───────────────────────────────────────────────────────

@@ -22,6 +22,7 @@ import (
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
 	apivehinfo "github.com/ev-dev-labs/teslasync/internal/api/vehicleinfo"
+	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
 	apivehstates "github.com/ev-dev-labs/teslasync/internal/api/vehiclestates"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -507,10 +508,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		vehicledb.NewNameLookup(vehicleSettingsRepoForRouter),
 		settingsdb.NewUserSettingsLookup(settingsdb.NewSettingsRepo(db)),
 	)
-	vehicleSettingsHandler := NewVehicleSettingsHandler(
+	vehicleSettingsHandler := apivehsettings.NewHandler(
 		vehicleSettingsRepo,
 		vehicleSettingsResolver,
-		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
+		apivehsettings.NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
 	)
 
 	// Phase-46 / Prompt 54 — vehicle photo upload. The handler
@@ -520,7 +521,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehiclePhotoRepo := vehicledb.NewVehiclePhotoRepo(db)
 	vehiclePhotoHandler := NewVehiclePhotoHandler(
 		vehiclePhotoRepo,
-		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
+		apivehsettings.NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
 		cfg.VehiclePhotoDir,
 	)
 
