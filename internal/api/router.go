@@ -33,6 +33,7 @@ import (
 	apionboard "github.com/ev-dev-labs/teslasync/internal/api/onboarding"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
+	apipinned "github.com/ev-dev-labs/teslasync/internal/api/pinned"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
@@ -584,7 +585,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
-	pinnedHandler := NewPinnedHandler(db)
+	pinnedHandler := apipinned.NewHandler(db)
 	savedViewsHandler := NewSavedViewsHandler(db, cfg.Auth.ForwardAuthHeader)
 	pushHandler := NewPushHandler(db, webpush.Default(), cfg.Auth.ForwardAuthHeader)
 	var pahoForAlerts pahomqtt.Client

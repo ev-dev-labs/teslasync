@@ -1,4 +1,4 @@
-package api
+package pinned
 
 import (
 	"context"
@@ -167,8 +167,8 @@ func clonePinnedForTest(in *dashboardmodel.PinnedItem) *dashboardmodel.PinnedIte
 	return &out
 }
 
-func newPinnedHandlerForTest(repo *fakePinnedRepo) *PinnedHandler {
-	return &PinnedHandler{repo: repo}
+func newHandlerForTest(repo *fakePinnedRepo) *Handler {
+	return &Handler{repo: repo}
 }
 
 func newPinnedRequest(method, target, body string, idParam string) *http.Request {
@@ -185,7 +185,7 @@ func newPinnedRequest(method, target, body string, idParam string) *http.Request
 // ── List ────────────────────────────────────────────────────────────────────
 
 func TestPinned_List_RequiresType(t *testing.T) {
-	handler := newPinnedHandlerForTest(newFakePinnedRepo())
+	handler := newHandlerForTest(newFakePinnedRepo())
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/pinned", nil))
 	if rec.Code != http.StatusBadRequest {
@@ -194,7 +194,7 @@ func TestPinned_List_RequiresType(t *testing.T) {
 }
 
 func TestPinned_List_RejectsBadType(t *testing.T) {
-	handler := newPinnedHandlerForTest(newFakePinnedRepo())
+	handler := newHandlerForTest(newFakePinnedRepo())
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/pinned?type=bogus", nil))
 	if rec.Code != http.StatusBadRequest {
@@ -203,7 +203,7 @@ func TestPinned_List_RejectsBadType(t *testing.T) {
 }
 
 func TestPinned_List_EmptyReturnsArray(t *testing.T) {
-	handler := newPinnedHandlerForTest(newFakePinnedRepo())
+	handler := newHandlerForTest(newFakePinnedRepo())
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/pinned?type=vehicle", nil))
 	if rec.Code != http.StatusOK {
@@ -235,7 +235,7 @@ func TestPinned_List_FiltersByContext(t *testing.T) {
 		ItemType: dashboardmodel.PinnedItemTypeWidget, ItemID: "speed", Context: &hub,
 	}))
 
-	handler := newPinnedHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/pinned?type=widget&context=glance", nil))
 	if rec.Code != http.StatusOK {
@@ -254,7 +254,7 @@ func TestPinned_List_FiltersByContext(t *testing.T) {
 
 func TestPinned_Create_Success(t *testing.T) {
 	repo := newFakePinnedRepo()
-	handler := newPinnedHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newPinnedRequest(http.MethodPost, "/pinned",
@@ -276,7 +276,7 @@ func TestPinned_Create_Success(t *testing.T) {
 }
 
 func TestPinned_Create_RejectsBadType(t *testing.T) {
-	handler := newPinnedHandlerForTest(newFakePinnedRepo())
+	handler := newHandlerForTest(newFakePinnedRepo())
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newPinnedRequest(http.MethodPost, "/pinned",
 		`{"item_type":"bogus","item_id":"1"}`, ""))
@@ -286,7 +286,7 @@ func TestPinned_Create_RejectsBadType(t *testing.T) {
 }
 
 func TestPinned_Create_RejectsEmptyItemID(t *testing.T) {
-	handler := newPinnedHandlerForTest(newFakePinnedRepo())
+	handler := newHandlerForTest(newFakePinnedRepo())
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newPinnedRequest(http.MethodPost, "/pinned",
 		`{"item_type":"vehicle","item_id":""}`, ""))
@@ -297,7 +297,7 @@ func TestPinned_Create_RejectsEmptyItemID(t *testing.T) {
 
 func TestPinned_Create_DuplicateReturns409(t *testing.T) {
 	repo := newFakePinnedRepo()
-	handler := newPinnedHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	first := newPinnedRequest(http.MethodPost, "/pinned",
 		`{"item_type":"vehicle","item_id":"42"}`, "")
 	rec := httptest.NewRecorder()
@@ -316,7 +316,7 @@ func TestPinned_Create_DuplicateReturns409(t *testing.T) {
 
 func TestPinned_Create_ShiftsExistingPinsDown(t *testing.T) {
 	repo := newFakePinnedRepo()
-	handler := newPinnedHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	for _, id := range []string{"1", "2", "3"} {
 		rec := httptest.NewRecorder()
 		handler.Create(rec, newPinnedRequest(http.MethodPost, "/pinned",
@@ -360,7 +360,7 @@ func TestPinned_Update_Success(t *testing.T) {
 	row := &dashboardmodel.PinnedItem{ItemType: dashboardmodel.PinnedItemTypeVehicle, ItemID: "1"}
 	must(repo.Create(context.Background(), row))
 
-	handler := newPinnedHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.Update(rec, newPinnedRequest(http.MethodPatch, "/pinned/1",
 		`{"position":7}`, "1"))
@@ -377,7 +377,7 @@ func TestPinned_Update_Success(t *testing.T) {
 }
 
 func TestPinned_Update_NotFound(t *testing.T) {
-	handler := newPinnedHandlerForTest(newFakePinnedRepo())
+	handler := newHandlerForTest(newFakePinnedRepo())
 	rec := httptest.NewRecorder()
 	handler.Update(rec, newPinnedRequest(http.MethodPatch, "/pinned/99",
 		`{"position":1}`, "99"))
@@ -398,7 +398,7 @@ func TestPinned_Update_RejectsNegativePosition(t *testing.T) {
 		ItemType: dashboardmodel.PinnedItemTypeVehicle, ItemID: "1",
 	}))
 
-	handler := newPinnedHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.Update(rec, newPinnedRequest(http.MethodPatch, "/pinned/1",
 		`{"position":-3}`, "1"))
@@ -419,7 +419,7 @@ func TestPinned_Update_RequiresPosition(t *testing.T) {
 		ItemType: dashboardmodel.PinnedItemTypeVehicle, ItemID: "1",
 	}))
 
-	handler := newPinnedHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.Update(rec, newPinnedRequest(http.MethodPatch, "/pinned/1", `{}`, "1"))
 	if rec.Code != http.StatusBadRequest {
@@ -441,7 +441,7 @@ func TestPinned_Delete_Success(t *testing.T) {
 		ItemType: dashboardmodel.PinnedItemTypeVehicle, ItemID: "1",
 	}))
 
-	handler := newPinnedHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.Delete(rec, newPinnedRequest(http.MethodDelete, "/pinned/1", "", "1"))
 	if rec.Code != http.StatusNoContent {
@@ -453,7 +453,7 @@ func TestPinned_Delete_Success(t *testing.T) {
 }
 
 func TestPinned_Delete_NotFound(t *testing.T) {
-	handler := newPinnedHandlerForTest(newFakePinnedRepo())
+	handler := newHandlerForTest(newFakePinnedRepo())
 	rec := httptest.NewRecorder()
 	handler.Delete(rec, newPinnedRequest(http.MethodDelete, "/pinned/99", "", "99"))
 	if rec.Code != http.StatusNotFound {
@@ -462,7 +462,7 @@ func TestPinned_Delete_NotFound(t *testing.T) {
 }
 
 func TestPinned_Delete_RejectsBadID(t *testing.T) {
-	handler := newPinnedHandlerForTest(newFakePinnedRepo())
+	handler := newHandlerForTest(newFakePinnedRepo())
 	rec := httptest.NewRecorder()
 	handler.Delete(rec, newPinnedRequest(http.MethodDelete, "/pinned/abc", "", "abc"))
 	if rec.Code != http.StatusBadRequest {

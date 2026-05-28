@@ -168,6 +168,18 @@ func (f *fakeSavedViewsRepo) clearDefaultLocked(userID *int64, route string) {
 	}
 }
 
+func sameUserScope(a, b *int64) bool {
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		// Filter UserID == nil acts as "any user" (single-user install
+		// behaviour) so a nil filter matches every row.
+		return b == nil
+	}
+	return *a == *b
+}
+
 func cloneSavedViewForTest(in *dashboardmodel.SavedView) *dashboardmodel.SavedView {
 	out := *in
 	if in.UserID != nil {
