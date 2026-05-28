@@ -125,10 +125,11 @@ import (
 	watchfacenlresponse "github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response"
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools/coaching"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	anomalytool "github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/charge"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/coaching"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnosis"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/digest"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/export"
@@ -777,7 +778,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// other slice tools above: must be registered before the
 	// handler constructor below so the strategy's allowedTools
 	// resolve at boot.
-	tools.RegisterChargingDiagnosisTools(aiToolRegistry, tools.ChargingDiagnosisSources{
+	diagnosis.RegisterChargingDiagnosisTools(aiToolRegistry, diagnosis.ChargingDiagnosisSources{
 		Charges: database.NewChargingRepo(db),
 	})
 	// Per-charging-session diagnosis handler. One per process;

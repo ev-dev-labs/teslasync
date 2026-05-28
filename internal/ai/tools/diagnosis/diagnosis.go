@@ -69,13 +69,14 @@
 // derived from SI inputs; the frontend's useUnits()/useFormatting()
 // at the display boundary handles user-preferred unit conversion.
 
-package tools
+package diagnosis
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
@@ -86,7 +87,7 @@ import (
 // queryChargeSessionInput is the typed input shape for the
 // query_charge_session tool. The dispatcher decodes the LLM's
 // tool-call arguments JSON into this struct via ValidateStruct so a
-// malformed input fails before any ChargeSource method runs.
+// malformed input fails before any tools.ChargeSource method runs.
 //
 // Reuses the same shape as [chargeIDInput] in builtins.go but is
 // declared separately so the per-tool input/output schema cache
@@ -110,7 +111,7 @@ type queryChargeSessionInput struct {
 // changes to query_charge_session (e.g. adding a flag-overlay
 // envelope) will not bleed into the chatbot's tool surface.
 type queryChargeSession struct {
-	src ChargeSource
+	src tools.ChargeSource
 }
 
 // Name implements [Tool].
@@ -125,7 +126,7 @@ func (t *queryChargeSession) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryChargeSession) InputSchema() json.RawMessage {
-	return CachedSchema(queryChargeSessionInput{})
+	return tools.CachedSchema(queryChargeSessionInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -141,7 +142,7 @@ func (t *queryChargeSession) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryChargeSession) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryChargeSessionInput](raw)
+	return tools.ValidateStruct[queryChargeSessionInput](raw)
 }
 
 // Execute implements [Tool]. One repo round-trip; no SQL is
@@ -152,7 +153,7 @@ func (t *queryChargeSession) Validate(raw json.RawMessage) (any, error) {
 func (t *queryChargeSession) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(queryChargeSessionInput)
 	if t.src == nil {
-		return nil, fmt.Errorf("query_charge_session: no ChargeSource wired")
+		return nil, fmt.Errorf("query_charge_session: no tools.ChargeSource wired")
 	}
 	c, err := t.src.GetByID(ctx, input.SessionID)
 	if err != nil {
@@ -200,7 +201,7 @@ type queryChargingAggregationInput struct {
 // web/src/lib/chargingAggregation.ts; a future PR that drifts one
 // without the other will fail CI.
 type queryChargingAggregation struct {
-	src ChargeSource
+	src tools.ChargeSource
 }
 
 // Pinned thresholds. MUST match
@@ -231,7 +232,7 @@ func (t *queryChargingAggregation) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryChargingAggregation) InputSchema() json.RawMessage {
-	return CachedSchema(queryChargingAggregationInput{})
+	return tools.CachedSchema(queryChargingAggregationInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -246,7 +247,7 @@ func (t *queryChargingAggregation) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *queryChargingAggregation) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryChargingAggregationInput](raw)
+	return tools.ValidateStruct[queryChargingAggregationInput](raw)
 }
 
 // Execute implements [Tool]. One repo round-trip then in-memory
@@ -254,7 +255,7 @@ func (t *queryChargingAggregation) Validate(raw json.RawMessage) (any, error) {
 func (t *queryChargingAggregation) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(queryChargingAggregationInput)
 	if t.src == nil {
-		return nil, fmt.Errorf("query_charging_aggregation: no ChargeSource wired")
+		return nil, fmt.Errorf("query_charging_aggregation: no tools.ChargeSource wired")
 	}
 	c, err := t.src.GetByID(ctx, input.SessionID)
 	if err != nil {
@@ -269,7 +270,7 @@ func (t *queryChargingAggregation) Execute(ctx context.Context, in any) (any, er
 // aggregateChargingSession is a pure helper: given a
 // *chargingmodel.ChargingSession, compute the deterministic diagnosis
 // envelope. Extracted so the unit test can call it directly without
-// spinning up a fake ChargeSource and so the body of Execute stays
+// spinning up a fake tools.ChargeSource and so the body of Execute stays
 // focused on IO + error wrapping.
 //
 // All derivations are SAFE — division-by-zero is guarded, and
@@ -445,7 +446,7 @@ func classifyChargerCategory(chargerType string) string {
 	if chargerType == "" {
 		return "home"
 	}
-	t := lower(chargerType)
+	t := tools.Lower(chargerType)
 	switch {
 	case strContains(t, "super"), strContains(t, "tpc"):
 		return "supercharger"
@@ -605,18 +606,6 @@ func strContains(s, sub string) bool {
 	return false
 }
 
-func lower(s string) string {
-	out := make([]byte, len(s))
-	for i := 0; i < len(s); i++ {
-		c := s[i]
-		if c >= 'A' && c <= 'Z' {
-			c += 'a' - 'A'
-		}
-		out[i] = c
-	}
-	return string(out)
-}
-
 // ---------------------------------------------------------------------------
 // Registration
 // ---------------------------------------------------------------------------
@@ -630,7 +619,7 @@ func lower(s string) string {
 // instance the HTTP path is built around (and that Register12Builtins
 // already received); tests substitute deterministic fakes per-source.
 type ChargingDiagnosisSources struct {
-	Charges ChargeSource
+	Charges tools.ChargeSource
 }
 
 // RegisterChargingDiagnosisTools installs the charging-diagnosis
@@ -643,7 +632,7 @@ type ChargingDiagnosisSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterChargingDiagnosisTools(r *Registry, s ChargingDiagnosisSources) {
+func RegisterChargingDiagnosisTools(r *tools.Registry, s ChargingDiagnosisSources) {
 	r.Register(&queryChargeSession{src: s.Charges})
 	r.Register(&queryChargingAggregation{src: s.Charges})
 }

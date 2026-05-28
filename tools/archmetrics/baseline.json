@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:39:20Z",
+  "generated_at": "2026-05-28T07:44:13Z",
   "go_version": "go1.26.1",
-  "commit_sha": "fdbb4b26a38fa0c35552d82c36a3e5a4e2b52db9",
+  "commit_sha": "79478baa16fcab329f67b60279a0d0c275c9946a",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1883,8 +1883,8 @@
     {
       "path": "internal/ai/tools",
       "go_files": 16,
-      "test_files": 13,
-      "loc": 10777,
+      "test_files": 12,
+      "loc": 9731,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1904,8 +1904,6 @@
         "builtins_test.go",
         "charge_curve_clustering.go",
         "charge_curve_clustering_test.go",
-        "charging_diagnosis.go",
-        "charging_diagnosis_test.go",
         "doc.go",
         "fuzz_schema_test.go",
         "help.go",
@@ -1922,6 +1920,7 @@
         "search_test.go",
         "speed_profile.go",
         "speed_profile_test.go",
+        "strhelpers.go",
         "test_helpers_test.go",
         "tool.go",
         "trip_planner_llm_agent.go",
@@ -1997,6 +1996,24 @@
       "files": [
         "coaching.go",
         "coaching_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/diagnosis",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1097,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest",
+        "internal/models/charging"
+      ],
+      "files": [
+        "diagnosis.go",
+        "diagnosis_test.go",
         "doc.go"
       ]
     },
@@ -2396,7 +2413,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126546,
+      "loc": 126547,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2472,6 +2489,7 @@
         "internal/ai/tools/anomaly",
         "internal/ai/tools/charge",
         "internal/ai/tools/coaching",
+        "internal/ai/tools/diagnosis",
         "internal/ai/tools/diagnostic",
         "internal/ai/tools/digest",
         "internal/ai/tools/export",
@@ -6108,7 +6126,6 @@
       "automation_builder.go",
       "builtins.go",
       "charge_curve_clustering.go",
-      "charging_diagnosis.go",
       "doc.go",
       "help.go",
       "ptrhelpers.go",
@@ -6118,6 +6135,7 @@
       "schema.go",
       "search.go",
       "speed_profile.go",
+      "strhelpers.go",
       "tool.go",
       "trip_planner_llm_agent.go",
       "validate.go"
@@ -6137,6 +6155,10 @@
     ],
     "internal/ai/tools/coaching": [
       "coaching.go",
+      "doc.go"
+    ],
+    "internal/ai/tools/diagnosis": [
+      "diagnosis.go",
       "doc.go"
     ],
     "internal/ai/tools/diagnostic": [
@@ -7454,7 +7476,7 @@
       "owner": "R6",
       "file_count_at_r0": 109,
       "flat_parent_go_files": 16,
-      "flat_parent_test_files": 13,
+      "flat_parent_test_files": 12,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

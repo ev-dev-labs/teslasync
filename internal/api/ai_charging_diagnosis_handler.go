@@ -93,7 +93,7 @@ type AIChargingDiagnosisHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_charge_session AND query_charging_aggregation
-//	(both registered by tools.RegisterChargingDiagnosisTools
+//	(both registered by diagnosis.RegisterChargingDiagnosisTools
 //	in router.go).
 //
 // strat:      the charging-diagnosis Strategy (one per process).

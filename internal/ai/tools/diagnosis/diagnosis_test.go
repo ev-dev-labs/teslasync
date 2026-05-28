@@ -4,11 +4,11 @@
 // query_charging_aggregation tools + the
 // RegisterChargingDiagnosisTools wiring. Mirrors the shape of
 // drive_coaching_test.go (slice 0018) and digest_test.go (slice
-// 0012). Reuses the shared fakeCharges source from builtins_test.go
+// 0012). Reuses the shared toolstest.FakeCharges source from builtins_test.go
 // so the query_charge_detail builtin and the new charging-diagnosis
 // tools share the same test substrate.
 
-package tools
+package diagnosis
 
 import (
 	"context"
@@ -17,16 +17,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
 // failingChargesImpl wraps the real ChargeSource signature properly
-// via reuse of the shared fake. Embedding fakeCharges lets us
+// via reuse of the shared fake. Embedding toolstest.FakeCharges lets us
 // inherit its GetByVehicle signature; the override below supplies
 // the IO error on every GetByID call so the tools' error wrapping
 // path is exercised.
 type failingChargesImpl struct {
-	fakeCharges
+	toolstest.FakeCharges
 	getByIDErr error
 }
 
@@ -39,8 +41,8 @@ func (f *failingChargesImpl) GetByID(_ context.Context, _ int64) (*chargingmodel
 // Mirrors the existing RegisterDriveCoachingTools test pattern.
 func TestRegisterChargingDiagnosisTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	RegisterChargingDiagnosisTools(r, ChargingDiagnosisSources{Charges: &fakeCharges{}})
+	r := tools.NewRegistry()
+	RegisterChargingDiagnosisTools(r, ChargingDiagnosisSources{Charges: &toolstest.FakeCharges{}})
 	for _, name := range []string{"query_charge_session", "query_charging_aggregation"} {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("RegisterChargingDiagnosisTools did not register %q", name)
@@ -54,20 +56,20 @@ func TestRegisterChargingDiagnosisTools_RegistersBoth(t *testing.T) {
 // tool reachable. Defends against an accidental same-name collision.
 func TestRegisterChargingDiagnosisTools_DoesNotShadowBuiltins(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{},
-		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{},
-		Charges:       &fakeCharges{},
-		AlertRules:    &fakeRules{},
-		Notifications: &fakeNotif{},
-		Geofences:     &fakeFences{},
-		Efficiency:    &fakeDrives{},
+	r := tools.NewRegistry()
+	tools.Register12Builtins(r, tools.Sources{
+		Vehicles:      &toolstest.FakeVehicles{},
+		VehicleState:  &toolstest.FakeState{},
+		Drives:        &toolstest.FakeDrives{},
+		Charges:       &toolstest.FakeCharges{},
+		AlertRules:    &toolstest.FakeRules{},
+		Notifications: &toolstest.FakeNotif{},
+		Geofences:     &toolstest.FakeFences{},
+		Efficiency:    &toolstest.FakeDrives{},
 	})
-	RegisterChargingDiagnosisTools(r, ChargingDiagnosisSources{Charges: &fakeCharges{}})
+	RegisterChargingDiagnosisTools(r, ChargingDiagnosisSources{Charges: &toolstest.FakeCharges{}})
 
-	for _, name := range BuiltinNames {
+	for _, name := range tools.BuiltinNames {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("builtin %q lost after RegisterChargingDiagnosisTools", name)
 		}
@@ -85,7 +87,7 @@ func TestQueryChargeSession_HappyPath(t *testing.T) {
 	t.Parallel()
 	now := time.Now()
 	want := &chargingmodel.ChargingSession{ID: 501, VehicleID: 1, StartedAt: now}
-	src := &fakeCharges{one: map[int64]*chargingmodel.ChargingSession{501: want}}
+	src := &toolstest.FakeCharges{One: map[int64]*chargingmodel.ChargingSession{501: want}}
 	tool := &queryChargeSession{src: src}
 
 	in, err := tool.Validate(json.RawMessage(`{"session_id": 501}`))
@@ -105,7 +107,7 @@ func TestQueryChargeSession_HappyPath(t *testing.T) {
 // explicit error so the dispatcher emits a tool-error frame.
 func TestQueryChargeSession_NotFound(t *testing.T) {
 	t.Parallel()
-	src := &fakeCharges{one: map[int64]*chargingmodel.ChargingSession{}}
+	src := &toolstest.FakeCharges{One: map[int64]*chargingmodel.ChargingSession{}}
 	tool := &queryChargeSession{src: src}
 
 	in, err := tool.Validate(json.RawMessage(`{"session_id": 999}`))
@@ -121,7 +123,7 @@ func TestQueryChargeSession_NotFound(t *testing.T) {
 // missing / zero / negative session_id.
 func TestQueryChargeSession_RejectsBadInput(t *testing.T) {
 	t.Parallel()
-	tool := &queryChargeSession{src: &fakeCharges{}}
+	tool := &queryChargeSession{src: &toolstest.FakeCharges{}}
 	for _, raw := range []string{`{}`, `{"session_id": 0}`, `{"session_id": -1}`} {
 		if _, err := tool.Validate(json.RawMessage(raw)); err == nil {
 			t.Errorf("Validate(%s) returned nil err", raw)
