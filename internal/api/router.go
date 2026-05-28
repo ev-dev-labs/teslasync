@@ -48,6 +48,7 @@ import (
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
+	apitripsd "github.com/ev-dev-labs/teslasync/internal/api/tripsdetail"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -3432,7 +3433,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// charging_sessions overlap to surface drive_count /
 		// charge_count / total_cost. Same admin-style rate limit
 		// (60/min) as the rest of the Phase-43a admin reads.
-		tripsDetailHandler := NewTripsDetailHandler(tripdb.NewTripsDetailRepo(db.Pool))
+		tripsDetailHandler := apitripsd.NewHandler(tripdb.NewTripsDetailRepo(db.Pool))
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/trips/{trip_id}", tripsDetailHandler.Get)
 
 		// Phase-43a / Prompt 0003: /vehicle-states/{timeline,summary} restored

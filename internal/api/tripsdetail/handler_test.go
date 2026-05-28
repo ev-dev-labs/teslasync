@@ -1,4 +1,4 @@
-package api
+package tripsdetail
 
 import (
 	"context"
@@ -36,7 +36,7 @@ func (f *fakeTripsDetailRepo) GetTrip(_ context.Context, id int64) (*tripdb.Trip
 // chi.URLParam(r, "trip_id") resolves correctly. Mirrors the
 // pattern used in trip_planner_handler_test.go (chi router round-trip,
 // httptest.NewServer not needed because handler is a plain HandlerFunc).
-func newTripsDetailRouter(h *TripsDetailHandler) chi.Router {
+func newTripsDetailRouter(h *Handler) chi.Router {
 	r := chi.NewRouter()
 	r.Get("/trips/{trip_id}", h.Get)
 	return r
@@ -49,7 +49,7 @@ func ptrInt64(i int64) *int64        { return &i }
 
 // ---- handler tests ------------------------------------------------
 
-func TestTripsDetailHandler_Get_HappyPath(t *testing.T) {
+func TestHandler_Get_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	start := time.Date(2026, 3, 1, 8, 0, 0, 0, time.UTC)
@@ -84,7 +84,7 @@ func TestTripsDetailHandler_Get_HappyPath(t *testing.T) {
 			},
 		},
 	}
-	h := NewTripsDetailHandler(fake)
+	h := NewHandler(fake)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/trips/42", nil)
@@ -174,7 +174,7 @@ func TestTripsDetailHandler_Get_HappyPath(t *testing.T) {
 	}
 }
 
-func TestTripsDetailHandler_Get_InProgressTrip_NullEndFields(t *testing.T) {
+func TestHandler_Get_InProgressTrip_NullEndFields(t *testing.T) {
 	t.Parallel()
 
 	start := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
@@ -187,7 +187,7 @@ func TestTripsDetailHandler_Get_InProgressTrip_NullEndFields(t *testing.T) {
 			EndedAt:   nil, // open trip
 		},
 	}
-	h := NewTripsDetailHandler(fake)
+	h := NewHandler(fake)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/trips/7", nil)
@@ -210,7 +210,7 @@ func TestTripsDetailHandler_Get_InProgressTrip_NullEndFields(t *testing.T) {
 	}
 }
 
-func TestTripsDetailHandler_Get_ZeroDrivesEmptyArray(t *testing.T) {
+func TestHandler_Get_ZeroDrivesEmptyArray(t *testing.T) {
 	t.Parallel()
 
 	fake := &fakeTripsDetailRepo{
@@ -221,7 +221,7 @@ func TestTripsDetailHandler_Get_ZeroDrivesEmptyArray(t *testing.T) {
 			Drives:    nil, // explicitly nil
 		},
 	}
-	h := NewTripsDetailHandler(fake)
+	h := NewHandler(fake)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/trips/9", nil)
@@ -236,11 +236,11 @@ func TestTripsDetailHandler_Get_ZeroDrivesEmptyArray(t *testing.T) {
 	}
 }
 
-func TestTripsDetailHandler_Get_NotFound(t *testing.T) {
+func TestHandler_Get_NotFound(t *testing.T) {
 	t.Parallel()
 
 	fake := &fakeTripsDetailRepo{err: tripdb.ErrTripNotFound}
-	h := NewTripsDetailHandler(fake)
+	h := NewHandler(fake)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/trips/999", nil)
@@ -254,11 +254,11 @@ func TestTripsDetailHandler_Get_NotFound(t *testing.T) {
 	}
 }
 
-func TestTripsDetailHandler_Get_RepoError(t *testing.T) {
+func TestHandler_Get_RepoError(t *testing.T) {
 	t.Parallel()
 
 	fake := &fakeTripsDetailRepo{err: errors.New("boom")}
-	h := NewTripsDetailHandler(fake)
+	h := NewHandler(fake)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/trips/5", nil)
@@ -272,7 +272,7 @@ func TestTripsDetailHandler_Get_RepoError(t *testing.T) {
 	}
 }
 
-func TestTripsDetailHandler_Get_BadID(t *testing.T) {
+func TestHandler_Get_BadID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -290,7 +290,7 @@ func TestTripsDetailHandler_Get_BadID(t *testing.T) {
 			t.Parallel()
 
 			fake := &fakeTripsDetailRepo{}
-			h := NewTripsDetailHandler(fake)
+			h := NewHandler(fake)
 
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, tc.path, nil)
@@ -306,15 +306,15 @@ func TestTripsDetailHandler_Get_BadID(t *testing.T) {
 	}
 }
 
-func TestNewTripsDetailHandler_NilRepoPanics(t *testing.T) {
+func TestNewHandler_NilRepoPanics(t *testing.T) {
 	t.Parallel()
 
 	defer func() {
 		if recover() == nil {
-			t.Fatal("expected NewTripsDetailHandler(nil) to panic")
+			t.Fatal("expected NewHandler(nil) to panic")
 		}
 	}()
-	_ = NewTripsDetailHandler(nil)
+	_ = NewHandler(nil)
 }
 
 // ---- conversion-only test (covers null distance/energy preservation) -----

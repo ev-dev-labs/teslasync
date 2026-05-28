@@ -1,4 +1,4 @@
-package api
+package tripsdetail
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 )
 
@@ -19,24 +21,24 @@ type tripsDetailRepository interface {
 	GetTrip(ctx context.Context, tripID int64) (*tripdb.TripDetail, error)
 }
 
-// TripsDetailHandler serves GET /trips/{trip_id}.
+// Handler serves GET /trips/{trip_id}.
 //
 // Decision D9: relies on the router-level authentication middleware
 // (Authentik ForwardAuth + bearer-token fallback) for caller identity;
 // no per-vehicle ownership check is performed at this layer to mirror
 // the existing /drives/{driveID} endpoint behaviour (Decision #5
 // in the prompt).
-type TripsDetailHandler struct {
+type Handler struct {
 	repo tripsDetailRepository
 }
 
-// NewTripsDetailHandler panics on a nil repo (fail-fast at startup,
+// NewHandler panics on a nil repo (fail-fast at startup,
 // mirrors Phase-43a/0007 NewSignalsCatalogHandler precedent).
-func NewTripsDetailHandler(repo tripsDetailRepository) *TripsDetailHandler {
+func NewHandler(repo tripsDetailRepository) *Handler {
 	if repo == nil {
-		panic("api: NewTripsDetailHandler requires non-nil repo")
+		panic("tripsdetail: NewHandler requires non-nil repo")
 	}
-	return &TripsDetailHandler{repo: repo}
+	return &Handler{repo: repo}
 }
 
 // tripDriveSummaryDTO is the per-drive entry returned in the
@@ -92,25 +94,25 @@ type tripDetailResponse struct {
 }
 
 // Get serves GET /trips/{trip_id}.
-func (h *TripsDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
-	tripID, err := urlParamInt64(r, "trip_id")
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	tripID, err := apiparams.URLParamInt64(r, "trip_id")
 	if err != nil || tripID <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid trip id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid trip id")
 		return
 	}
 
 	td, err := h.repo.GetTrip(r.Context(), tripID)
 	if err != nil {
 		if errors.Is(err, tripdb.ErrTripNotFound) {
-			writeError(w, http.StatusNotFound, "trip not found")
+			httpx.WriteError(w, http.StatusNotFound, "trip not found")
 			return
 		}
 		log.Error().Err(err).Int64("trip_id", tripID).Msg("failed to load trip detail")
-		writeError(w, http.StatusInternalServerError, "failed to load trip")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load trip")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, buildTripDetailResponse(td))
+	httpx.WriteJSON(w, http.StatusOK, buildTripDetailResponse(td))
 }
 
 // buildTripDetailResponse converts the repo-level TripDetail to the SI-canonical
