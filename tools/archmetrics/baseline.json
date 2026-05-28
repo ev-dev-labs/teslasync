@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:44:34Z",
+  "generated_at": "2026-05-28T06:50:40Z",
   "go_version": "go1.26.1",
-  "commit_sha": "2f86704a2bfa19381759a2a6ad1127265745268a",
+  "commit_sha": "758432ffaeac28abe5e7c12b3f108bce59c5fc9e",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 31,
-      "test_files": 27,
-      "loc": 23889,
+      "go_files": 28,
+      "test_files": 24,
+      "loc": 19554,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1912,10 +1912,6 @@
         "charge_curve_clusters_test.go",
         "charging_diagnosis.go",
         "charging_diagnosis_test.go",
-        "cross_rule_conflict.go",
-        "cross_rule_conflict_test.go",
-        "data_repair_suggestions.go",
-        "data_repair_suggestions_test.go",
         "digest.go",
         "digest_test.go",
         "doc.go",
@@ -1928,8 +1924,6 @@
         "help_test.go",
         "lifetime_stats_qa.go",
         "lifetime_stats_qa_test.go",
-        "mqtt_sse_inspector_explanations.go",
-        "mqtt_sse_inspector_explanations_test.go",
         "paint_preview.go",
         "paint_preview_test.go",
         "predictive_maintenance.go",
@@ -1976,6 +1970,29 @@
         "doc.go",
         "tuning.go",
         "tuning_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/diagnostic",
+      "go_files": 4,
+      "test_files": 3,
+      "loc": 4366,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/rag",
+        "internal/ai/tools",
+        "internal/models/alert"
+      ],
+      "files": [
+        "cross_rule.go",
+        "cross_rule_test.go",
+        "data_repair.go",
+        "data_repair_test.go",
+        "doc.go",
+        "stream_inspector.go",
+        "stream_inspector_test.go"
       ]
     },
     {
@@ -2200,7 +2217,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126525,
+      "loc": 126529,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2273,6 +2290,7 @@
         "internal/ai/stream",
         "internal/ai/tools",
         "internal/ai/tools/alert",
+        "internal/ai/tools/diagnostic",
         "internal/ai/tools/feedback",
         "internal/ai/tools/forecast",
         "internal/ai/tools/location",
@@ -5904,15 +5922,12 @@
       "charge_curve_clustering.go",
       "charge_curve_clusters.go",
       "charging_diagnosis.go",
-      "cross_rule_conflict.go",
-      "data_repair_suggestions.go",
       "digest.go",
       "doc.go",
       "drive_coaching.go",
       "export_redaction_plan.go",
       "help.go",
       "lifetime_stats_qa.go",
-      "mqtt_sse_inspector_explanations.go",
       "paint_preview.go",
       "predictive_maintenance.go",
       "redact_regex.go",
@@ -5934,6 +5949,12 @@
       "builder.go",
       "doc.go",
       "tuning.go"
+    ],
+    "internal/ai/tools/diagnostic": [
+      "cross_rule.go",
+      "data_repair.go",
+      "doc.go",
+      "stream_inspector.go"
     ],
     "internal/ai/tools/feedback": [
       "doc.go",
@@ -7208,8 +7229,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 31,
-      "flat_parent_test_files": 27,
+      "flat_parent_go_files": 28,
+      "flat_parent_test_files": 24,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

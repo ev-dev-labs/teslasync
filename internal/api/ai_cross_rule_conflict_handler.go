@@ -72,6 +72,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -314,7 +315,7 @@ var _ http.Handler = (*AICrossRuleConflictHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AICrossRuleConflictSource is the production
-// tools.CrossRuleConflictSource. It composes the canonical
+// diagnostic.CrossRuleConflictSource. It composes the canonical
 // AlertRuleRepo (read-only) so the AI projection is grounded
 // in the SAME alert_rules rows the deterministic AlertStudio
 // renders. No write path is invoked.
@@ -335,7 +336,7 @@ func NewAICrossRuleConflictSource(rules *database.AlertRuleRepo) *AICrossRuleCon
 	return &AICrossRuleConflictSource{rules: rules}
 }
 
-// LoadRules implements tools.CrossRuleConflictSource. Reads the
+// LoadRules implements diagnostic.CrossRuleConflictSource. Reads the
 // canonical alert_rules table via AlertRuleRepo.GetAll and
 // applies the in-scope filters in memory.
 //
@@ -347,7 +348,7 @@ func NewAICrossRuleConflictSource(rules *database.AlertRuleRepo) *AICrossRuleCon
 //
 // The Limit field caps the returned slice so a runaway request
 // cannot blow past the canonical 500-row cap.
-func (a *AICrossRuleConflictSource) LoadRules(ctx context.Context, f tools.CrossRuleConflictFilters) ([]*alertmodel.AlertRule, error) {
+func (a *AICrossRuleConflictSource) LoadRules(ctx context.Context, f diagnostic.CrossRuleConflictFilters) ([]*alertmodel.AlertRule, error) {
 	limit := f.Limit
 	if limit <= 0 || limit > aiCrossRuleConflictMaxLimit {
 		limit = aiCrossRuleConflictDefaultLimit

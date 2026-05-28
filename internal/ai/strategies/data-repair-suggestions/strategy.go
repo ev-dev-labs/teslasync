@@ -17,7 +17,7 @@
 //     {target_kind, target_id, action, update_fields} input and
 //     return a normalised + validated RepairPlan draft envelope.
 //     The tool is per-request scope-bound to the snapshot of stale
-//     IDs the handler installed via tools.WithScopedDataRepairIDs;
+//     IDs the handler installed via diagnostic.WithScopedDataRepairIDs;
 //     the LLM CANNOT propose a repair for a row that is not in
 //     scope. Defence-in-depth against prompt injection in stale-
 //     row metadata fields like the parser-shipped session number.

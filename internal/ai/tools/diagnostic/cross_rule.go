@@ -48,7 +48,7 @@
 //     baseline AlertStudio sidebar list — same selection state
 //     the user has always had.
 
-package tools
+package diagnostic
 
 import (
 	"context"
@@ -57,6 +57,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
@@ -355,7 +356,7 @@ func (t *queryAlertRules) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryAlertRules) InputSchema() json.RawMessage {
-	return CachedSchema(alertRulesQueryInput{})
+	return tools.CachedSchema(alertRulesQueryInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -379,23 +380,23 @@ func (t *queryAlertRules) RequiredScope() string { return "" }
 // the alert-tuning-suggestions / inbox-auto-categorization
 // pattern.
 func (t *queryAlertRules) Validate(raw json.RawMessage) (any, error) {
-	parsed, err := ValidateStruct[alertRulesQueryInput](raw)
+	parsed, err := tools.ValidateStruct[alertRulesQueryInput](raw)
 	if err != nil {
 		return nil, err
 	}
 	in := parsed.(alertRulesQueryInput)
 	if in.VehicleID != nil {
 		if *in.VehicleID < 1 {
-			return nil, &ValidationError{Field: "vehicle_id", Rule: "gte=1", Msg: "must be ≥ 1"}
+			return nil, &tools.ValidationError{Field: "vehicle_id", Rule: "gte=1", Msg: "must be ≥ 1"}
 		}
 	}
 	if in.Limit != nil {
 		v := *in.Limit
 		if v < 1 {
-			return nil, &ValidationError{Field: "limit", Rule: "gte=1", Msg: "must be ≥ 1"}
+			return nil, &tools.ValidationError{Field: "limit", Rule: "gte=1", Msg: "must be ≥ 1"}
 		}
 		if v > crossRuleConflictMaxLimit {
-			return nil, &ValidationError{Field: "limit", Rule: "lte=1000", Msg: "must be ≤ 1000"}
+			return nil, &tools.ValidationError{Field: "limit", Rule: "lte=1000", Msg: "must be ≤ 1000"}
 		}
 	}
 	return parsed, nil
@@ -517,7 +518,7 @@ func (t *detectRuleConflicts) Description() string {
 
 // InputSchema implements [Tool].
 func (t *detectRuleConflicts) InputSchema() json.RawMessage {
-	return CachedSchema(detectRuleConflictsInput{})
+	return tools.CachedSchema(detectRuleConflictsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form.
@@ -531,23 +532,23 @@ func (t *detectRuleConflicts) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Same shape as query_alert_rules.
 func (t *detectRuleConflicts) Validate(raw json.RawMessage) (any, error) {
-	parsed, err := ValidateStruct[detectRuleConflictsInput](raw)
+	parsed, err := tools.ValidateStruct[detectRuleConflictsInput](raw)
 	if err != nil {
 		return nil, err
 	}
 	in := parsed.(detectRuleConflictsInput)
 	if in.VehicleID != nil {
 		if *in.VehicleID < 1 {
-			return nil, &ValidationError{Field: "vehicle_id", Rule: "gte=1", Msg: "must be ≥ 1"}
+			return nil, &tools.ValidationError{Field: "vehicle_id", Rule: "gte=1", Msg: "must be ≥ 1"}
 		}
 	}
 	if in.Limit != nil {
 		v := *in.Limit
 		if v < 1 {
-			return nil, &ValidationError{Field: "limit", Rule: "gte=1", Msg: "must be ≥ 1"}
+			return nil, &tools.ValidationError{Field: "limit", Rule: "gte=1", Msg: "must be ≥ 1"}
 		}
 		if v > crossRuleConflictMaxLimit {
-			return nil, &ValidationError{Field: "limit", Rule: "lte=1000", Msg: "must be ≤ 1000"}
+			return nil, &tools.ValidationError{Field: "limit", Rule: "lte=1000", Msg: "must be ≤ 1000"}
 		}
 	}
 	return parsed, nil
@@ -1188,7 +1189,7 @@ type CrossRuleConflictDetectionSources struct {
 // Note: this function registers BOTH new tools
 // (`query_alert_rules` + `detect_rule_conflicts`); both are
 // NEW for this slice.
-func RegisterCrossRuleConflictDetectionTools(r *Registry, s CrossRuleConflictDetectionSources) {
+func RegisterCrossRuleConflictDetectionTools(r *tools.Registry, s CrossRuleConflictDetectionSources) {
 	r.Register(&queryAlertRules{source: s.Source})
 	r.Register(&detectRuleConflicts{source: s.Source})
 }

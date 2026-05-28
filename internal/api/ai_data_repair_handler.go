@@ -8,7 +8,7 @@ package api
 // per-row URL scope the handler loads the CURRENT in-scope stale-
 // session inventory (charging + drives) up-front and installs the
 // snapshot of (charging IDs, drive IDs) into ctx via
-// tools.WithScopedDataRepairIDs:
+// diagnostic.WithScopedDataRepairIDs:
 //
 //	URL  /api/v1/ai/system/data-repair/draft
 //	  ↓
@@ -22,7 +22,7 @@ package api
 //	load current stale charging + stale drives via the source port
 //	  ↓
 //	stash in-scope ID snapshot in ctx via
-//	  tools.WithScopedDataRepairIDs(chargingIDs, driveIDs)
+//	  diagnostic.WithScopedDataRepairIDs(chargingIDs, driveIDs)
 //	  ↓
 //	synthesise the user-message that lists the in-scope inventory
 //	  (id + started_at + hours_open per row) so the LLM has
@@ -37,7 +37,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the (chargingIDs, driveIDs)
-// snapshot in ctx via tools.WithScopedDataRepairIDs BEFORE
+// snapshot in ctx via diagnostic.WithScopedDataRepairIDs BEFORE
 // dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The tools
 // draft_data_repair_plan + validate_data_repair_plan REJECT any
@@ -97,6 +97,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -168,7 +169,7 @@ type AIDataRepairSuggestionsHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_data_repair_plan AND validate_data_repair_plan
-//	(registered by tools.RegisterDataRepairSuggestionsTools
+//	(registered by diagnostic.RegisterDataRepairSuggestionsTools
 //	in router.go).
 //
 // strat:      the data-repair-suggestions Strategy (one per
@@ -299,7 +300,7 @@ func (h *AIDataRepairSuggestionsHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, datarepairsuggestions.FeatureID)
-	ctx = tools.WithScopedDataRepairIDs(ctx, chargingIDs, driveIDs)
+	ctx = diagnostic.WithScopedDataRepairIDs(ctx, chargingIDs, driveIDs)
 
 	// 5) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(datarepairsuggestions.FeatureID))
@@ -472,11 +473,11 @@ func (a *AIDataRepairSourceImpl) StaleSessions(ctx context.Context, cutoff time.
 var _ AIDataRepairSource = (*AIDataRepairSourceImpl)(nil)
 
 // ---------------------------------------------------------------------
-// Production wiring for the tools.DataRepairPlanValidator interface.
+// Production wiring for the diagnostic.DataRepairPlanValidator interface.
 // ---------------------------------------------------------------------
 
 // AIDataRepairPlanValidator is the production
-// tools.DataRepairPlanValidator. It enforces the SAME per-kind
+// diagnostic.DataRepairPlanValidator. It enforces the SAME per-kind
 // allowlist + canonical-handler semantics that
 // chargingRepo.PartialUpdate / driveRepo.PartialUpdate would
 // enforce, so a draft accepted here is byte-equivalent to a draft
@@ -492,7 +493,7 @@ func NewAIDataRepairPlanValidator() *AIDataRepairPlanValidator {
 	return &AIDataRepairPlanValidator{}
 }
 
-// ValidateDataRepairPlan implements tools.DataRepairPlanValidator.
+// ValidateDataRepairPlan implements diagnostic.DataRepairPlanValidator.
 //
 // The shape checks (target_kind / target_id / action / per-kind
 // allowlist) are already enforced by the tool's
@@ -509,7 +510,7 @@ func NewAIDataRepairPlanValidator() *AIDataRepairPlanValidator {
 // is nothing else for the AI surface to enforce — the canonical
 // PartialUpdate path will silently filter any stragglers, and the
 // canonical CloseCharging / DeleteCharging handlers take no body.
-func (v *AIDataRepairPlanValidator) ValidateDataRepairPlan(plan *tools.DataRepairPlan) error {
+func (v *AIDataRepairPlanValidator) ValidateDataRepairPlan(plan *diagnostic.DataRepairPlan) error {
 	if plan == nil {
 		return errors.New("api ai data-repair-suggestions: nil RepairPlan")
 	}
@@ -521,4 +522,4 @@ func (v *AIDataRepairPlanValidator) ValidateDataRepairPlan(plan *tools.DataRepai
 }
 
 // Compile-time assertion.
-var _ tools.DataRepairPlanValidator = (*AIDataRepairPlanValidator)(nil)
+var _ diagnostic.DataRepairPlanValidator = (*AIDataRepairPlanValidator)(nil)

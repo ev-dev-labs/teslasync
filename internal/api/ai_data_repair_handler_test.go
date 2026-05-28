@@ -32,7 +32,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 )
 
 // TestDataRepairSuggestionsAIOffManualRunbookWorks is the load-
@@ -332,7 +332,7 @@ func TestBuildDataRepairSuggestionsUserMessage_EmptyInventory(t *testing.T) {
 func TestAIDataRepairPlanValidator_AcceptsValidPlan(t *testing.T) {
 	t.Parallel()
 	v := NewAIDataRepairPlanValidator()
-	plans := []*tools.DataRepairPlan{
+	plans := []*diagnostic.DataRepairPlan{
 		{TargetKind: "charging", TargetID: 42, Action: "close"},
 		{TargetKind: "drive", TargetID: 99, Action: "discard"},
 		{TargetKind: "drive", TargetID: 99, Action: "update", UpdateFields: map[string]any{"distance_m": 100}},

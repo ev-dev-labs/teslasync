@@ -2298,7 +2298,7 @@ var Registry = map[string]Feature{
 	// Per-request scope binding (defence against prompt-injection
 	// exfiltration): the AI handler installs a snapshot of the
 	// CURRENT in-scope (chargingIDs, driveIDs) into ctx via
-	// tools.WithScopedDataRepairIDs BEFORE invoking the dispatcher.
+	// diagnostic.WithScopedDataRepairIDs BEFORE invoking the dispatcher.
 	// Both tools refuse any LLM-supplied (target_kind, target_id)
 	// pair that is NOT in the snapshot — even if the LLM tries to
 	// propose discarding a different row, the scope check refuses
@@ -2862,7 +2862,7 @@ var Registry = map[string]Feature{
 	//     last_run_unix, last_run_time, last_status,
 	//     last_duration_ms). Per-request scope binding installs the
 	//     body-supplied (from_unix, to_unix) tuple in ctx via
-	//     tools.WithScopedStreamInspectorWindow and refuses any
+	//     diagnostic.WithScopedStreamInspectorWindow and refuses any
 	//     LLM-supplied window outside that tuple to defend against
 	//     prompt-injection exfiltration via operator-readable VINs,
 	//     topic names, or broker hostnames.

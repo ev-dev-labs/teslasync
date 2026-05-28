@@ -126,6 +126,7 @@ import (
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
@@ -1300,7 +1301,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// new SQL is written by this slice — the source port
 	// composes the SAME ChargingRepo.GetStale + DriveRepo.GetStale
 	// paths that back the baseline DataRepairHandler.GetStaleSessions.
-	tools.RegisterDataRepairSuggestionsTools(aiToolRegistry, tools.DataRepairSuggestionsSources{
+	diagnostic.RegisterDataRepairSuggestionsTools(aiToolRegistry, diagnostic.DataRepairSuggestionsSources{
 		Validator: NewAIDataRepairPlanValidator(),
 	})
 	// data-repair-suggestions handler. Constructed after the tool
@@ -1565,7 +1566,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// detector lives in internal/ai/tools/cross_rule_conflict.go
 	// (DetectRuleConflicts) and is exercised in unit tests
 	// without IO.
-	tools.RegisterCrossRuleConflictDetectionTools(aiToolRegistry, tools.CrossRuleConflictDetectionSources{
+	diagnostic.RegisterCrossRuleConflictDetectionTools(aiToolRegistry, diagnostic.CrossRuleConflictDetectionSources{
 		Source: NewAICrossRuleConflictSource(database.NewAlertRuleRepo(db)),
 	})
 	// cross-rule-conflict-detection handler. One per process;
@@ -2018,7 +2019,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// the canonical baseline /api/v1/admin/mqtt/status surface
 	// remains reachable to the operator at all times.
 	aiStreamInspectorSource := NewAIStreamInspectorSource()
-	tools.RegisterMqttSseInspectorExplanationsTools(aiToolRegistry, tools.MqttSseInspectorExplanationsSources{
+	diagnostic.RegisterMqttSseInspectorExplanationsTools(aiToolRegistry, diagnostic.MqttSseInspectorExplanationsSources{
 		Retriever:       aiMqttSseInspectorExplanationsRetriever,
 		StreamInspector: aiStreamInspectorSource,
 	})

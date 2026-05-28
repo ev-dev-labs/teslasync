@@ -6,7 +6,7 @@
 // with a deterministic fake so the tests stay hermetic (no api
 // package import, no DB).
 
-package tools
+package diagnostic
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // stubDataRepairValidator records every call + can be wired to fail
@@ -636,7 +638,7 @@ func TestScopedDataRepairIDs_Missing(t *testing.T) {
 // registration helper installs both tools on the registry.
 func TestRegisterDataRepairSuggestionsTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterDataRepairSuggestionsTools(r, DataRepairSuggestionsSources{
 		Validator: &stubDataRepairValidator{},
 	})

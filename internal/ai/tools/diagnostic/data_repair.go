@@ -58,7 +58,7 @@
 //     / Discard) on the DataRepairPage form, which fires the
 //     existing typed handler.
 
-package tools
+package diagnostic
 
 import (
 	"context"
@@ -67,6 +67,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -540,7 +542,7 @@ func (t *draftDataRepairPlan) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftDataRepairPlan) InputSchema() json.RawMessage {
-	return CachedSchema(dataRepairPlanInput{})
+	return tools.CachedSchema(dataRepairPlanInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -560,7 +562,7 @@ func (t *draftDataRepairPlan) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *draftDataRepairPlan) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[dataRepairPlanInput](raw)
+	return tools.ValidateStruct[dataRepairPlanInput](raw)
 }
 
 // Execute implements [Tool]. Builds the draft, runs the scope +
@@ -633,7 +635,7 @@ func (t *validateDataRepairPlanTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateDataRepairPlanTool) InputSchema() json.RawMessage {
-	return CachedSchema(dataRepairPlanInput{})
+	return tools.CachedSchema(dataRepairPlanInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -648,7 +650,7 @@ func (t *validateDataRepairPlanTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *validateDataRepairPlanTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[dataRepairPlanInput](raw)
+	return tools.ValidateStruct[dataRepairPlanInput](raw)
 }
 
 // Execute implements [Tool]. Same scope + shape checks as
@@ -706,7 +708,7 @@ type DataRepairSuggestionsSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterDataRepairSuggestionsTools(r *Registry, s DataRepairSuggestionsSources) {
+func RegisterDataRepairSuggestionsTools(r *tools.Registry, s DataRepairSuggestionsSources) {
 	r.Register(&draftDataRepairPlan{validator: s.Validator})
 	r.Register(&validateDataRepairPlanTool{validator: s.Validator})
 }

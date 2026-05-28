@@ -20,12 +20,12 @@
 //
 //     1. `query_stream_inspector` — accept a typed
 //     {from_unix, to_unix} input and return the deterministic
-//     [tools.StreamInspectorEnvelope] (window bounds, broker
+//     [diagnostic.StreamInspectorEnvelope] (window bounds, broker
 //     connectivity + uptime + topic patterns, per-vehicle stream
 //     stats with stale flag, SSE hub state, background-job
 //     freshness). The tool is per-request scope-bound to the
 //     (from_unix, to_unix) tuple the handler installed via
-//     tools.WithScopedStreamInspectorWindow; the LLM CANNOT
+//     diagnostic.WithScopedStreamInspectorWindow; the LLM CANNOT
 //     query a window outside that scope. Defence-in-depth
 //     against prompt injection in operator-readable VINs / topic
 //     names / broker hostnames.

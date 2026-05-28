@@ -80,7 +80,7 @@
 // confused LLM that asks the assistant to search e.g. "user_note"
 // cannot accidentally expose a corpus the slice did not enumerate.
 
-package tools
+package diagnostic
 
 import (
 	"context"
@@ -91,6 +91,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // streamSourceMQTTStatus is the source-type string reserved by the
@@ -268,7 +269,7 @@ func (t *retrieveStreamChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveStreamChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveStreamChunksInput{})
+	return tools.CachedSchema(retrieveStreamChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -284,7 +285,7 @@ func (t *retrieveStreamChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveStreamChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveStreamChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveStreamChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -553,7 +554,7 @@ func (t *queryStreamInspector) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryStreamInspector) InputSchema() json.RawMessage {
-	return CachedSchema(queryStreamInspectorInput{})
+	return tools.CachedSchema(queryStreamInspectorInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -569,7 +570,7 @@ func (t *queryStreamInspector) RequiredScope() string { return "" }
 // understand `gtfield`, so the to_unix > from_unix check is
 // enforced explicitly here in addition to the per-field tags.
 func (t *queryStreamInspector) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[queryStreamInspectorInput](raw)
+	v, err := tools.ValidateStruct[queryStreamInspectorInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -578,7 +579,7 @@ func (t *queryStreamInspector) Validate(raw json.RawMessage) (any, error) {
 		return v, fmt.Errorf("query_stream_inspector: validator returned unexpected type %T", v)
 	}
 	if in.ToUnix <= in.FromUnix {
-		return v, &ValidationError{
+		return v, &tools.ValidationError{
 			Field: "to_unix",
 			Rule:  "gtfield=FromUnix",
 			Msg:   fmt.Sprintf("to_unix (%d) must be > from_unix (%d)", in.ToUnix, in.FromUnix),
@@ -656,7 +657,7 @@ type MqttSseInspectorExplanationsSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterMqttSseInspectorExplanationsTools(r *Registry, s MqttSseInspectorExplanationsSources) {
+func RegisterMqttSseInspectorExplanationsTools(r *tools.Registry, s MqttSseInspectorExplanationsSources) {
 	r.Register(&queryStreamInspector{src: s.StreamInspector})
 	r.Register(&retrieveStreamChunks{r: s.Retriever})
 }

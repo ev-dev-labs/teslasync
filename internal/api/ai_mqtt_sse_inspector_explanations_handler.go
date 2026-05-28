@@ -17,7 +17,7 @@ package api
 //	open SSE writer (internal/ai/stream.New) to the HTTP response
 //	  ↓
 //	stash the (from_unix, to_unix) tuple in ctx via
-//	  tools.WithScopedStreamInspectorWindow
+//	  diagnostic.WithScopedStreamInspectorWindow
 //	  ↓
 //	synthesise the user-message that scopes to the in-scope
 //	  window and instructs the tool sequence
@@ -32,7 +32,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the (from_unix, to_unix)
-// tuple in ctx via tools.WithScopedStreamInspectorWindow BEFORE
+// tuple in ctx via diagnostic.WithScopedStreamInspectorWindow BEFORE
 // dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The
 // tools.queryStreamInspector tool's Execute method then REJECTS
@@ -88,6 +88,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -138,7 +139,7 @@ type AIMqttSseInspectorExplanationsHandler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     tools.StreamInspectorSource
+	source     diagnostic.StreamInspectorSource
 	headerName string
 	maxIters   int
 }
@@ -155,14 +156,14 @@ type AIMqttSseInspectorExplanationsHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_stream_inspector AND retrieve_stream_chunks
-//	(registered by tools.RegisterMqttSseInspectorExplanationsTools
+//	(registered by diagnostic.RegisterMqttSseInspectorExplanationsTools
 //	in router.go).
 //
 // strat:      the mqtt-sse-inspector-explanations Strategy (one
 //
 //	per process).
 //
-// source:     the production tools.StreamInspectorSource
+// source:     the production diagnostic.StreamInspectorSource
 //
 //	(currently AIStreamInspectorSource — a
 //	deterministic empty adapter; the canonical
@@ -176,7 +177,7 @@ func NewAIMqttSseInspectorExplanationsHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source tools.StreamInspectorSource,
+	source diagnostic.StreamInspectorSource,
 	headerName string,
 ) *AIMqttSseInspectorExplanationsHandler {
 	switch {
@@ -187,7 +188,7 @@ func NewAIMqttSseInspectorExplanationsHandler(
 	case strat == nil:
 		panic("api: NewAIMqttSseInspectorExplanationsHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAIMqttSseInspectorExplanationsHandler: nil tools.StreamInspectorSource")
+		panic("api: NewAIMqttSseInspectorExplanationsHandler: nil diagnostic.StreamInspectorSource")
 	}
 	return &AIMqttSseInspectorExplanationsHandler{
 		registry:   registry,
@@ -274,7 +275,7 @@ func (h *AIMqttSseInspectorExplanationsHandler) ServeHTTP(w http.ResponseWriter,
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, mqttsseinspectorexplanations.FeatureID)
-	ctx = tools.WithScopedStreamInspectorWindow(ctx, tools.ScopedStreamInspectorWindow{
+	ctx = diagnostic.WithScopedStreamInspectorWindow(ctx, diagnostic.ScopedStreamInspectorWindow{
 		FromUnix: req.FromUnix,
 		ToUnix:   req.ToUnix,
 	})
@@ -364,7 +365,7 @@ var _ http.Handler = (*AIMqttSseInspectorExplanationsHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIStreamInspectorSource is the production
-// tools.StreamInspectorSource. The canonical baseline
+// diagnostic.StreamInspectorSource. The canonical baseline
 // /api/v1/admin/mqtt/status surface remains reachable to the
 // operator at all times — this adapter intentionally returns a
 // deterministic empty envelope describing the bound window. The
@@ -386,21 +387,21 @@ func NewAIStreamInspectorSource() *AIStreamInspectorSource {
 	return &AIStreamInspectorSource{}
 }
 
-// StreamInspector implements tools.StreamInspectorSource.
+// StreamInspector implements diagnostic.StreamInspectorSource.
 // Returns a deterministic empty envelope describing the bound
 // window. No SQL is issued. No state is mutated.
 //
 // The envelope's slices are non-nil (empty-but-allocated) so
 // JSON marshalling renders [] rather than null — keeping the
 // LLM's tool-reply parsing predictable.
-func (a *AIStreamInspectorSource) StreamInspector(_ context.Context, fromUnix, toUnix int64) (*tools.StreamInspectorEnvelope, error) {
+func (a *AIStreamInspectorSource) StreamInspector(_ context.Context, fromUnix, toUnix int64) (*diagnostic.StreamInspectorEnvelope, error) {
 	if fromUnix <= 0 {
 		return nil, fmt.Errorf("api ai mqtt-sse-inspector-explanations: from_unix must be > 0")
 	}
 	if toUnix <= fromUnix {
 		return nil, fmt.Errorf("api ai mqtt-sse-inspector-explanations: to_unix must be > from_unix")
 	}
-	return &tools.StreamInspectorEnvelope{
+	return &diagnostic.StreamInspectorEnvelope{
 		FromUnix:                  fromUnix,
 		ToUnix:                    toUnix,
 		FromTime:                  time.Unix(fromUnix, 0).UTC().Format(time.RFC3339),
@@ -414,13 +415,13 @@ func (a *AIStreamInspectorSource) StreamInspector(_ context.Context, fromUnix, t
 		TotalSignals:              0,
 		TotalBatches:              0,
 		AggregateSignalsPerSecond: 0,
-		Vehicles:                  []tools.StreamVehicleStat{},
+		Vehicles:                  []diagnostic.StreamVehicleStat{},
 		SSEConnectedClients:       0,
 		SSEDroppedFrames:          0,
-		BackgroundJobs:            []tools.StreamJobStat{},
+		BackgroundJobs:            []diagnostic.StreamJobStat{},
 	}, nil
 }
 
 // Compile-time assertion: AIStreamInspectorSource satisfies
-// tools.StreamInspectorSource.
-var _ tools.StreamInspectorSource = (*AIStreamInspectorSource)(nil)
+// diagnostic.StreamInspectorSource.
+var _ diagnostic.StreamInspectorSource = (*AIStreamInspectorSource)(nil)

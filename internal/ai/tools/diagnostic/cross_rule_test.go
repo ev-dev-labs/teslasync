@@ -31,7 +31,7 @@
 //      empty result handling (status=no_rules / status=no_data
 //      / status=no_conflicts), and source attribution.
 
-package tools
+package diagnostic
 
 import (
 	"context"
@@ -40,6 +40,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
@@ -721,7 +722,7 @@ func TestQueryAlertRules_FiltersPropagated(t *testing.T) {
 }
 
 // TestQueryAlertRules_ValidationFailures pins each documented
-// input validation failure produces a *ValidationError with
+// input validation failure produces a *tools.ValidationError with
 // the correct field name.
 func TestQueryAlertRules_ValidationFailures(t *testing.T) {
 	t.Parallel()
@@ -750,9 +751,9 @@ func TestQueryAlertRules_ValidationFailures(t *testing.T) {
 			if tc.wantField == "" {
 				return
 			}
-			var ve *ValidationError
+			var ve *tools.ValidationError
 			if !errors.As(err, &ve) {
-				t.Fatalf("err type = %T; want *ValidationError; err=%v", err, err)
+				t.Fatalf("err type = %T; want *tools.ValidationError; err=%v", err, err)
 			}
 			if ve.Field != tc.wantField {
 				t.Errorf("ValidationError.Field = %q; want %q (full err: %v)", ve.Field, tc.wantField, ve)
@@ -910,7 +911,7 @@ func TestDetectRuleConflictsTool_FiltersPropagated(t *testing.T) {
 // neither mutates state.
 func TestRegisterCrossRuleConflictDetectionTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeCrossRuleConflictSource{}
 	RegisterCrossRuleConflictDetectionTools(r, CrossRuleConflictDetectionSources{Source: src})
 	if got, ok := r.Get("query_alert_rules"); !ok {
@@ -934,7 +935,7 @@ func TestRegisterCrossRuleConflictDetectionTools_DuplicatePanics(t *testing.T) {
 			t.Fatal("expected panic on duplicate registration")
 		}
 	}()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeCrossRuleConflictSource{}
 	RegisterCrossRuleConflictDetectionTools(r, CrossRuleConflictDetectionSources{Source: src})
 	RegisterCrossRuleConflictDetectionTools(r, CrossRuleConflictDetectionSources{Source: src})
