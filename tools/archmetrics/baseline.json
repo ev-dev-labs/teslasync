@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:58:26Z",
+  "generated_at": "2026-05-28T08:02:38Z",
   "go_version": "go1.26.1",
-  "commit_sha": "a829639dc7854f12804a143126982b0119225b7c",
+  "commit_sha": "5e19874d078edbce721a1f456aace9cdcc6c59e2",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 13,
-      "test_files": 9,
-      "loc": 6520,
+      "go_files": 12,
+      "test_files": 8,
+      "loc": 5516,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1898,8 +1898,6 @@
         "internal/models/vehicle"
       ],
       "files": [
-        "automation_builder.go",
-        "automation_builder_test.go",
         "builtins.go",
         "builtins_test.go",
         "doc.go",
@@ -1954,6 +1952,22 @@
       "files": [
         "anomaly.go",
         "anomaly_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/automation",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1061,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest"
+      ],
+      "files": [
+        "automation.go",
+        "automation_test.go",
         "doc.go"
       ]
     },
@@ -2463,7 +2477,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126550,
+      "loc": 126551,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2537,6 +2551,7 @@
         "internal/ai/tools",
         "internal/ai/tools/alert",
         "internal/ai/tools/anomaly",
+        "internal/ai/tools/automation",
         "internal/ai/tools/charge",
         "internal/ai/tools/coaching",
         "internal/ai/tools/curve",
@@ -6176,7 +6191,6 @@
       "writer.go"
     ],
     "internal/ai/tools": [
-      "automation_builder.go",
       "builtins.go",
       "doc.go",
       "help.go",
@@ -6197,6 +6211,10 @@
     ],
     "internal/ai/tools/anomaly": [
       "anomaly.go",
+      "doc.go"
+    ],
+    "internal/ai/tools/automation": [
+      "automation.go",
       "doc.go"
     ],
     "internal/ai/tools/charge": [
@@ -7537,11 +7555,12 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 13,
-      "flat_parent_test_files": 9,
+      "flat_parent_go_files": 12,
+      "flat_parent_test_files": 8,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",
+        "automation",
         "feedback",
         "forecast",
         "location",
@@ -7550,7 +7569,6 @@
         "summary"
       ],
       "missing_subpkgs": [
-        "automation",
         "battery",
         "charging",
         "diagnostics",

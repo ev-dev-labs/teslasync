@@ -5,7 +5,7 @@
 // interface; the tests stub the validator with a deterministic fake
 // so the tests stay hermetic (no api package import, no DB).
 
-package tools
+package automation
 
 import (
 	"context"
@@ -13,20 +13,23 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 )
 
 // stubAutomationValidator records every call + can be wired to fail
 // for the rejection-path tests.
 type stubAutomationValidator struct {
-	failWith error
-	calls    []json.RawMessage
+	FailWith error
+	Calls    []json.RawMessage
 }
 
 func (s *stubAutomationValidator) ValidateAutomationWire(wireJSON json.RawMessage) error {
 	dup := make(json.RawMessage, len(wireJSON))
 	copy(dup, wireJSON)
-	s.calls = append(s.calls, dup)
-	return s.failWith
+	s.Calls = append(s.Calls, dup)
+	return s.FailWith
 }
 
 // TestDraftAutomationGraph_HappyPath_OK proves a valid LLM payload
@@ -102,8 +105,8 @@ func TestDraftAutomationGraph_HappyPath_OK(t *testing.T) {
 	if len(actions) != 1 {
 		t.Fatalf("Draft.actions len = %d, want 1", len(actions))
 	}
-	if len(stub.calls) != 1 {
-		t.Errorf("validator called %d times, want 1", len(stub.calls))
+	if len(stub.Calls) != 1 {
+		t.Errorf("validator called %d times, want 1", len(stub.Calls))
 	}
 }
 
@@ -153,7 +156,7 @@ func TestDraftAutomationGraph_ClampsVehicleScope(t *testing.T) {
 // problem.
 func TestDraftAutomationGraph_ValidatorFailureSurfacesAsInvalid(t *testing.T) {
 	t.Parallel()
-	stub := &stubAutomationValidator{failWith: errors.New("name is required")}
+	stub := &stubAutomationValidator{FailWith: errors.New("name is required")}
 	tool := &draftAutomationGraph{validator: stub}
 
 	in, err := tool.Validate(json.RawMessage(`{
@@ -298,8 +301,8 @@ func TestValidateAutomationGraph_HappyPath_OK(t *testing.T) {
 	if env.ValidationError != "" {
 		t.Errorf("ValidationError = %q, want empty", env.ValidationError)
 	}
-	if len(stub.calls) != 1 {
-		t.Errorf("validator called %d times, want 1", len(stub.calls))
+	if len(stub.Calls) != 1 {
+		t.Errorf("validator called %d times, want 1", len(stub.Calls))
 	}
 }
 
@@ -308,7 +311,7 @@ func TestValidateAutomationGraph_HappyPath_OK(t *testing.T) {
 // status="invalid" with the diagnostic, NOT as a returned error.
 func TestValidateAutomationGraph_FailureSurfacesAsInvalid(t *testing.T) {
 	t.Parallel()
-	stub := &stubAutomationValidator{failWith: errors.New("place_id is required")}
+	stub := &stubAutomationValidator{FailWith: errors.New("place_id is required")}
 	tool := &validateAutomationGraphTool{validator: stub}
 
 	in, err := tool.Validate(json.RawMessage(`{
@@ -381,7 +384,7 @@ func TestValidateAutomationGraph_ToolMetadata(t *testing.T) {
 // are resolvable by name.
 func TestRegisterAutomationBuilderTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterAutomationBuilderTools(r, AutomationBuilderSources{
 		Validator: &stubAutomationValidator{},
 	})
@@ -398,22 +401,22 @@ func TestRegisterAutomationBuilderTools_RegistersBoth(t *testing.T) {
 // 12-builtin starter set or earlier slice registrations.
 func TestRegisterAutomationBuilderTools_DoesNotShadowBuiltins(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{},
-		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{},
-		Charges:       &fakeCharges{},
-		AlertRules:    &fakeRules{},
-		Notifications: &fakeNotif{},
-		Geofences:     &fakeFences{},
-		Efficiency:    &fakeDrives{},
+	r := tools.NewRegistry()
+	tools.Register12Builtins(r, tools.Sources{
+		Vehicles:      &toolstest.FakeVehicles{},
+		VehicleState:  &toolstest.FakeState{},
+		Drives:        &toolstest.FakeDrives{},
+		Charges:       &toolstest.FakeCharges{},
+		AlertRules:    &toolstest.FakeRules{},
+		Notifications: &toolstest.FakeNotif{},
+		Geofences:     &toolstest.FakeFences{},
+		Efficiency:    &toolstest.FakeDrives{},
 	})
 	RegisterAutomationBuilderTools(r, AutomationBuilderSources{
 		Validator: &stubAutomationValidator{},
 	})
 
-	for _, name := range BuiltinNames {
+	for _, name := range tools.BuiltinNames {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("builtin %q is missing after RegisterAutomationBuilderTools — registration shadowed it", name)
 		}

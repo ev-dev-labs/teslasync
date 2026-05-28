@@ -106,7 +106,7 @@ type AIAutomationHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_automation_graph + validate_automation_graph
-//	(registered by tools.RegisterAutomationBuilderTools in router.go).
+//	(registered by automationtool.RegisterAutomationBuilderTools in router.go).
 //
 // strat:      the nl-automation-builder Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
@@ -258,7 +258,7 @@ func (h *AIAutomationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 var _ http.Handler = (*AIAutomationHandler)(nil)
 
 // AIAutomationGraphValidator is the production implementation of
-// tools.AutomationGraphValidator. It is a thin wrapper around the
+// automationtool.AutomationGraphValidator. It is a thin wrapper around the
 // unexported decodeAutomationInputDTO function in
 // automation_handler_decode.go, kept in this file so the AI tool
 // registration path can wire the canonical validator without
@@ -275,7 +275,7 @@ func NewAIAutomationGraphValidator() *AIAutomationGraphValidator {
 	return &AIAutomationGraphValidator{}
 }
 
-// ValidateAutomationWire implements [tools.AutomationGraphValidator].
+// ValidateAutomationWire implements [automationtool.AutomationGraphValidator].
 // Delegates to the canonical decodeAutomationInputDTO function — same
 // code path the POST /api/v1/automations handler runs, so a draft
 // accepted here is byte-equivalent to a draft accepted by the

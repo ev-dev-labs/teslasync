@@ -127,6 +127,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	anomalytool "github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
+	automationtool "github.com/ev-dev-labs/teslasync/internal/ai/tools/automation"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/charge"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/coaching"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/curve"
@@ -704,7 +705,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// canonical POST /api/v1/automations handler uses. Drafts
 	// accepted by the AI tool are byte-equivalent to drafts accepted
 	// by the canonical handler (ADR-015 §I3 baseline-intact).
-	tools.RegisterAutomationBuilderTools(aiToolRegistry, tools.AutomationBuilderSources{
+	automationtool.RegisterAutomationBuilderTools(aiToolRegistry, automationtool.AutomationBuilderSources{
 		Validator: NewAIAutomationGraphValidator(),
 	})
 	aiAutomationHandler := NewAIAutomationHandler(

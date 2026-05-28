@@ -42,7 +42,7 @@
 //     the user clicks Save, which fires the existing
 //     useCreateAutomation* mutation against POST /api/v1/automations.
 
-package tools
+package automation
 
 import (
 	"context"
@@ -51,6 +51,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // AutomationGraphValidator is the narrow validation interface the
@@ -459,7 +461,7 @@ func (t *draftAutomationGraph) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftAutomationGraph) InputSchema() json.RawMessage {
-	return CachedSchema(automationGraphDraftInput{})
+	return tools.CachedSchema(automationGraphDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -479,7 +481,7 @@ func (t *draftAutomationGraph) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *draftAutomationGraph) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[automationGraphDraftInput](raw)
+	return tools.ValidateStruct[automationGraphDraftInput](raw)
 }
 
 // Execute implements [Tool]. Builds the wire payload, runs the
@@ -542,7 +544,7 @@ func (t *validateAutomationGraphTool) Description() string {
 // InputSchema implements [Tool]. Reuses the draft input schema —
 // validate-only consumes the same typed shape as draft.
 func (t *validateAutomationGraphTool) InputSchema() json.RawMessage {
-	return CachedSchema(automationGraphDraftInput{})
+	return tools.CachedSchema(automationGraphDraftInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -557,7 +559,7 @@ func (t *validateAutomationGraphTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *validateAutomationGraphTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[automationGraphDraftInput](raw)
+	return tools.ValidateStruct[automationGraphDraftInput](raw)
 }
 
 // Execute implements [Tool]. Builds the wire payload, runs the
@@ -609,7 +611,7 @@ type AutomationBuilderSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterAutomationBuilderTools(r *Registry, s AutomationBuilderSources) {
+func RegisterAutomationBuilderTools(r *tools.Registry, s AutomationBuilderSources) {
 	r.Register(&draftAutomationGraph{validator: s.Validator})
 	r.Register(&validateAutomationGraphTool{validator: s.Validator})
 }
