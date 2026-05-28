@@ -303,7 +303,7 @@ func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int6
 	// Try capacity from signal_log (EnergyRemaining = current usable kWh).
 	// Phase-39 / ADR-002: this lookup now goes through the canonical
 	// signal.StateReader.SignalAt instead of the legacy
-	// *database.SignalLogReader.SignalAt that this prompt deletes from
+	// *signaldb.SignalLogReader.SignalAt that this prompt deletes from
 	// internal/database/signal_log_reader_query.go. Identical forward-
 	// folded semantics anchored at time.Now().
 	if h.state != nil {

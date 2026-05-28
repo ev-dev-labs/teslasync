@@ -13,7 +13,7 @@ import (
 // ClimateHandler serves climate/HVAC endpoints backed by the signal-log
 // change feed via signal.StateReader (ADR-002 / phase-39).
 //
-// Phase-39 migration: the legacy *database.SignalLogReader (the old pivot +
+// Phase-39 migration: the legacy *signaldb.SignalLogReader (the old pivot +
 // snapshot helpers) has been replaced with the canonical signal.StateReader.
 // Climate fields (cabin temp, HVAC state, seat heaters) change rarely once
 // set — many emissions occur once per day. The legacy raw-pivot

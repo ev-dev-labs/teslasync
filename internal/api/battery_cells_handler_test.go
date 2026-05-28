@@ -26,7 +26,7 @@ func newBatteryCellsRequest(t *testing.T, vehicleID string) *http.Request {
 // NumBrickVoltageMin / PackVoltage / ModuleTempMax / ModuleTempMin via
 // signal.StateReader.SignalAt at time.Now() and that those values flow
 // into the JSON response. Phase-39 migrated this handler off the legacy
-// database.SignalLogReader.SignalAt helper; a future regression that
+// signaldb.SignalLogReader.SignalAt helper; a future regression that
 // re-points the per-signal lookups at signalLogReader (which would
 // reintroduce the deleted helper) or anchors them to a stale "at" would
 // freeze or zero the Battery Cells panel and is caught here. The test
@@ -129,7 +129,7 @@ func TestBatteryCells_LatestVoltage_UsesSignalAt(t *testing.T) {
 
 // TestBatteryCells_PropagatesError verifies that a StateReader.SignalAt
 // transport error (e.g. pgx connection drop) becomes a 500 to the
-// client. The legacy *database.SignalLogReader-backed handler silently
+// client. The legacy *signaldb.SignalLogReader-backed handler silently
 // swallowed SignalAt errors and returned a "no_data" payload, which is
 // indistinguishable on the frontend from "vehicle truly idle / no brick
 // voltage history" and rendered the Battery Cells panel empty even when

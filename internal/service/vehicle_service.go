@@ -7,6 +7,7 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -22,7 +23,7 @@ import (
 // StateReader contract is the only durable read path — no snapshot tables.
 //
 // Phase-39 migration: this interface replaced the legacy SignalSnapshotReader
-// (which exposed *database.SignalLogReader.SnapshotAt). The two methods are
+// (which exposed *signaldb.SignalLogReader.SnapshotAt). The two methods are
 // semantically identical — both forward-fold via DISTINCT ON (signal) at-or-
 // before `at` and apply unpackLocationCompounds — but State carries the
 // canonical signal.State return type and at != zero validation.

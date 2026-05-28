@@ -26,6 +26,7 @@ import (
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
@@ -193,7 +194,7 @@ import (
 // stateReader is the new signal-log-backed cold-path reader (ADR-002 / phase-39).
 // It is threaded through here so that handler migrations in phases 10–36 can
 // take it as a constructor dependency one file at a time. The legacy
-// *database.SignalLogReader (signalLogReader below) is intentionally preserved
+// *signaldb.SignalLogReader (signalLogReader below) is intentionally preserved
 // alongside it during the migration window so the build stays green between
 // prompts; both readers will coexist until the deletion prompts (phases 37–40).
 func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, stateReader signal.StateReader, opts ...RouterOptions) http.Handler {
@@ -547,7 +548,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	commandHandler := NewCommandHandler(db, teslaClient)
 	guardHandler := NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)
-	signalLogReader := database.NewSignalLogReader(db)
+	signalLogReader := signaldb.NewSignalLogReader(db)
 	batteryHandler := NewBatteryHandler(db, stateReader)
 	analyticsHandler := NewAnalyticsHandler(db, stateReader)
 	notificationHandler := NewNotificationHandler(db)
@@ -1840,8 +1841,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Phase-39 / ADR-002: install the cold-path signal.StateReader on the
 	// session tracker so charge-completion and drive-completion enrichment
 	// use the canonical state-read API instead of the legacy
-	// *database.SignalLogReader.SnapshotAt /
-	// *database.SignalHistoryWriter.SnapshotAt code paths that this prompt
+	// *signaldb.SignalLogReader.SnapshotAt /
+	// *signaldb.SignalHistoryWriter.SnapshotAt code paths that this prompt
 	// removed from telemetry_sessions_charge_tracking.go and
 	// telemetry_sessions_drive_tracking.go.
 	if st := telemetryHandler.SessionTracker(); st != nil {
@@ -4021,7 +4022,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// (Phase-43a / Prompt 0003 + Phase-46 / Prompt 41 precedent).
 		// Mounted BEFORE /signals/{vehicleID} so the static paths take
 		// precedence under chi v5's longest-static-prefix matching.
-		signalsCatalogHandler := NewSignalsCatalogHandler(database.NewSignalsCatalogRepo(db.Pool))
+		signalsCatalogHandler := NewSignalsCatalogHandler(signaldb.NewSignalsCatalogRepo(db.Pool))
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/catalog", signalsCatalogHandler.Catalog)
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/observations", signalsCatalogHandler.Observations)
 
@@ -4029,7 +4030,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/signals/{vehicleID}", func(r chi.Router) {
 			// Signal History (Postgres primary, MongoDB optional fallback)
 			if telemetryHandler != nil {
-				var mongoRepo *database.SignalLogRepo
+				var mongoRepo *signaldb.SignalLogRepo
 				if telemetryHandler.signalLogRepo != nil {
 					mongoRepo = telemetryHandler.signalLogRepo
 				}

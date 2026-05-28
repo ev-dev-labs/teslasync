@@ -3,6 +3,7 @@ package api
 import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -11,7 +12,7 @@ type DriveHandler struct {
 	db                *database.DB
 	driveRepo         *drivedb.DriveRepo
 	posRepo           *database.PositionRepo
-	signalLogReader   *database.SignalLogReader
+	signalLogReader   *signaldb.SignalLogReader
 	live              signal.LiveStateReader
 	forwardAuthHeader string
 	// bulkOverride lets tests substitute the bulk store without standing up a
@@ -27,7 +28,7 @@ func NewDriveHandler(db *database.DB, live signal.LiveStateReader) *DriveHandler
 		db:              db,
 		driveRepo:       drivedb.NewDriveRepo(db),
 		posRepo:         database.NewPositionRepo(db),
-		signalLogReader: database.NewSignalLogReader(db),
+		signalLogReader: signaldb.NewSignalLogReader(db),
 		live:            live,
 	}
 }

@@ -5,7 +5,9 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
@@ -151,12 +153,12 @@ func (h *TelemetryHandler) AlertEvaluator() *TelemetryAlertEvaluator {
 }
 
 // SetSignalLogRepo enables per-signal logging to MongoDB.
-func (h *TelemetryHandler) SetSignalLogRepo(repo *database.SignalLogRepo) {
+func (h *TelemetryHandler) SetSignalLogRepo(repo *signaldb.SignalLogRepo) {
 	h.signalLogRepo = repo
 }
 
 // SetSignalHistoryWriter enables per-signal history logging to Postgres.
-func (h *TelemetryHandler) SetSignalHistoryWriter(w *database.SignalHistoryWriter) {
+func (h *TelemetryHandler) SetSignalHistoryWriter(w *signaldb.SignalHistoryWriter) {
 	h.signalHistoryWriter = w
 	if h.sessionTracker != nil {
 		h.sessionTracker.signalHistoryWriter = w

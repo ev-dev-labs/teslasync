@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
 
@@ -39,21 +39,21 @@ import (
 // fakeSignalsCatalogRepo lets handler tests pin every repo response
 // without touching a database.
 type fakeSignalsCatalogRepo struct {
-	aggregates    map[string]database.CatalogAggregate
+	aggregates    map[string]signaldb.CatalogAggregate
 	aggregatesErr error
 
-	observations    []database.SignalObservation
+	observations    []signaldb.SignalObservation
 	observationsErr error
 
 	totalCount    int64
 	totalCountErr error
 
-	gotObservationsParams []database.ObservationsParams
-	gotCountParams        []database.ObservationsParams
+	gotObservationsParams []signaldb.ObservationsParams
+	gotCountParams        []signaldb.ObservationsParams
 	gotAggregatesCalls    int
 }
 
-func (f *fakeSignalsCatalogRepo) CatalogAggregates(ctx context.Context) (map[string]database.CatalogAggregate, error) {
+func (f *fakeSignalsCatalogRepo) CatalogAggregates(ctx context.Context) (map[string]signaldb.CatalogAggregate, error) {
 	f.gotAggregatesCalls++
 	if f.aggregatesErr != nil {
 		return nil, f.aggregatesErr
@@ -61,7 +61,7 @@ func (f *fakeSignalsCatalogRepo) CatalogAggregates(ctx context.Context) (map[str
 	return f.aggregates, nil
 }
 
-func (f *fakeSignalsCatalogRepo) ObservationsCount(ctx context.Context, params database.ObservationsParams) (int64, error) {
+func (f *fakeSignalsCatalogRepo) ObservationsCount(ctx context.Context, params signaldb.ObservationsParams) (int64, error) {
 	f.gotCountParams = append(f.gotCountParams, params)
 	if f.totalCountErr != nil {
 		return 0, f.totalCountErr
@@ -69,7 +69,7 @@ func (f *fakeSignalsCatalogRepo) ObservationsCount(ctx context.Context, params d
 	return f.totalCount, nil
 }
 
-func (f *fakeSignalsCatalogRepo) Observations(ctx context.Context, params database.ObservationsParams) ([]database.SignalObservation, error) {
+func (f *fakeSignalsCatalogRepo) Observations(ctx context.Context, params signaldb.ObservationsParams) ([]signaldb.SignalObservation, error) {
 	f.gotObservationsParams = append(f.gotObservationsParams, params)
 	if f.observationsErr != nil {
 		return nil, f.observationsErr
@@ -121,7 +121,7 @@ func TestSignalsCatalog_IncludesRoutedButUnobserved(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeSignalsCatalogRepo{
 		// aggregates intentionally omits "ZTotallyUnobserved".
-		aggregates: map[string]database.CatalogAggregate{},
+		aggregates: map[string]signaldb.CatalogAggregate{},
 	}
 	h := newSignalsCatalogHandlerForTest(repo, fixedTestEntries(), now)
 
@@ -178,7 +178,7 @@ func TestSignalsCatalog_IncludesObservedWithCounts(t *testing.T) {
 	lastSeen := time.Date(2026, 5, 6, 11, 55, 32, 0, time.UTC)
 
 	repo := &fakeSignalsCatalogRepo{
-		aggregates: map[string]database.CatalogAggregate{
+		aggregates: map[string]signaldb.CatalogAggregate{
 			"BatteryLevel": {
 				LastSeenAt:       &lastSeen,
 				SampleCountTotal: 84231,
@@ -470,18 +470,18 @@ func TestSignalsObservations_ValueKindRendering(t *testing.T) {
 
 	cases := []struct {
 		name          string
-		repoRow       database.SignalObservation
+		repoRow       signaldb.SignalObservation
 		wantKindName  string
 		wantValueJSON string
 	}{
-		{"string", database.SignalObservation{VehicleID: 1, Ts: ts, Field: "Version", ValueKind: 1, Value: "2026.10.5"}, "ValueKindString", `"2026.10.5"`},
-		{"bool", database.SignalObservation{VehicleID: 1, Ts: ts, Field: "BrakePedal", ValueKind: 2, Value: true}, "ValueKindBool", `true`},
-		{"int32", database.SignalObservation{VehicleID: 1, Ts: ts, Field: "ChargeLimitSoc", ValueKind: 3, Value: int64(80)}, "ValueKindInt32", `80`},
-		{"int64", database.SignalObservation{VehicleID: 1, Ts: ts, Field: "Odometer", ValueKind: 4, Value: int64(123456)}, "ValueKindInt64", `123456`},
-		{"float", database.SignalObservation{VehicleID: 1, Ts: ts, Field: "BatteryLevel", ValueKind: 5, Value: 78.5}, "ValueKindFloat", `78.5`},
-		{"double", database.SignalObservation{VehicleID: 1, Ts: ts, Field: "EnergyRemaining", ValueKind: 6, Value: 50.25}, "ValueKindDouble", `50.25`},
-		{"enum", database.SignalObservation{VehicleID: 1, Ts: ts, Field: "Gear", ValueKind: 7, Value: int64(4)}, "ValueKindEnum", `4`},
-		{"time", database.SignalObservation{VehicleID: 1, Ts: ts, Field: "ScheduledChargingStart", ValueKind: 9, Value: ts}, "ValueKindTime", `"2026-05-06T11:00:00Z"`},
+		{"string", signaldb.SignalObservation{VehicleID: 1, Ts: ts, Field: "Version", ValueKind: 1, Value: "2026.10.5"}, "ValueKindString", `"2026.10.5"`},
+		{"bool", signaldb.SignalObservation{VehicleID: 1, Ts: ts, Field: "BrakePedal", ValueKind: 2, Value: true}, "ValueKindBool", `true`},
+		{"int32", signaldb.SignalObservation{VehicleID: 1, Ts: ts, Field: "ChargeLimitSoc", ValueKind: 3, Value: int64(80)}, "ValueKindInt32", `80`},
+		{"int64", signaldb.SignalObservation{VehicleID: 1, Ts: ts, Field: "Odometer", ValueKind: 4, Value: int64(123456)}, "ValueKindInt64", `123456`},
+		{"float", signaldb.SignalObservation{VehicleID: 1, Ts: ts, Field: "BatteryLevel", ValueKind: 5, Value: 78.5}, "ValueKindFloat", `78.5`},
+		{"double", signaldb.SignalObservation{VehicleID: 1, Ts: ts, Field: "EnergyRemaining", ValueKind: 6, Value: 50.25}, "ValueKindDouble", `50.25`},
+		{"enum", signaldb.SignalObservation{VehicleID: 1, Ts: ts, Field: "Gear", ValueKind: 7, Value: int64(4)}, "ValueKindEnum", `4`},
+		{"time", signaldb.SignalObservation{VehicleID: 1, Ts: ts, Field: "ScheduledChargingStart", ValueKind: 9, Value: ts}, "ValueKindTime", `"2026-05-06T11:00:00Z"`},
 	}
 
 	for _, c := range cases {
@@ -489,7 +489,7 @@ func TestSignalsObservations_ValueKindRendering(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			repo := &fakeSignalsCatalogRepo{
-				observations: []database.SignalObservation{c.repoRow},
+				observations: []signaldb.SignalObservation{c.repoRow},
 				totalCount:   1,
 			}
 			h := newSignalsCatalogHandlerForTest(repo, fixedTestEntries(), now)

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:33:34Z",
+  "generated_at": "2026-05-28T16:39:04Z",
   "go_version": "go1.26.1",
-  "commit_sha": "7ecaffeaf042e31205f90799225a820395315c3f",
+  "commit_sha": "da11b2daae13c445ab4f3efd08bb46316429ef0e",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,7 +2514,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126659,
+      "loc": 126668,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2652,6 +2652,7 @@
         "internal/database/notification",
         "internal/database/observability",
         "internal/database/sharing",
+        "internal/database/signal",
         "internal/database/system",
         "internal/database/telemetry",
         "internal/database/tesla",
@@ -3184,7 +3185,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1845,
+      "loc": 1847,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3200,6 +3201,7 @@
         "internal/database/gdpr",
         "internal/database/notification",
         "internal/database/observability",
+        "internal/database/signal",
         "internal/database/system",
         "internal/database/telemetry",
         "internal/database/trip",
@@ -3716,9 +3718,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 29,
-      "test_files": 13,
-      "loc": 7402,
+      "go_files": 22,
+      "test_files": 12,
+      "loc": 6044,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3760,14 +3762,6 @@
         "settings_reset.go",
         "settings_reset_test.go",
         "settings_serializer.go",
-        "signal_catalog.go",
-        "signal_history_writer.go",
-        "signal_log_reader.go",
-        "signal_log_reader_aggregations.go",
-        "signal_log_reader_query.go",
-        "signal_log_repo.go",
-        "signals_catalog_repo.go",
-        "signals_catalog_repo_test.go",
         "vehicle_settings_repo.go",
         "vehicle_settings_repo_test.go",
         "vehicle_settings_resolver.go",
@@ -4098,6 +4092,28 @@
       "files": [
         "doc.go",
         "token_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/signal",
+      "go_files": 8,
+      "test_files": 1,
+      "loc": 1381,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database"
+      ],
+      "files": [
+        "catalog.go",
+        "catalog_repo.go",
+        "catalog_repo_test.go",
+        "doc.go",
+        "history_writer.go",
+        "log_repo.go",
+        "reader.go",
+        "reader_aggregations.go",
+        "reader_query.go"
       ]
     },
     {
@@ -7220,13 +7236,6 @@
       "settings_repo.go",
       "settings_reset.go",
       "settings_serializer.go",
-      "signal_catalog.go",
-      "signal_history_writer.go",
-      "signal_log_reader.go",
-      "signal_log_reader_aggregations.go",
-      "signal_log_reader_query.go",
-      "signal_log_repo.go",
-      "signals_catalog_repo.go",
       "vehicle_settings_repo.go",
       "vehicle_settings_resolver.go",
       "write_buffer.go"
@@ -7337,6 +7346,16 @@
     "internal/database/sharing": [
       "doc.go",
       "token_repo.go"
+    ],
+    "internal/database/signal": [
+      "catalog.go",
+      "catalog_repo.go",
+      "doc.go",
+      "history_writer.go",
+      "log_repo.go",
+      "reader.go",
+      "reader_aggregations.go",
+      "reader_query.go"
     ],
     "internal/database/system": [
       "api_call_log_repo.go",
@@ -8089,8 +8108,8 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 29,
-      "flat_parent_test_files": 13,
+      "flat_parent_go_files": 22,
+      "flat_parent_test_files": 12,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
@@ -8105,6 +8124,7 @@
         "energy",
         "export",
         "notification",
+        "signal",
         "system",
         "tesla",
         "vehicle"
@@ -8115,8 +8135,7 @@
         "geo",
         "ingest",
         "onboarding",
-        "settings",
-        "signal"
+        "settings"
       ],
       "notes": "22 subpkgs from R1 audit. Touches many internal/api/* callers — accept R2 double-touch budget (no temp compat layer)."
     },

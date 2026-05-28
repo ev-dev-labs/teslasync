@@ -28,7 +28,7 @@ func newBatteryDegradationRequest(t *testing.T, vehicleID string) *http.Request 
 // signal.StateReader.SignalAt at time.Now(), and that those carried-
 // forward values flow into the JSON response as current_capacity /
 // current_range. Phase-39 migrated this handler off the legacy
-// database.SignalLogReader.SignalAt helper. The fake returns last-known
+// signaldb.SignalLogReader.SignalAt helper. The fake returns last-known
 // values for every signal name — emulating StateReader's forward-fold
 // semantics where unchanged signals carry their prior emitted value
 // rather than disappearing — and the test asserts every downstream
@@ -174,7 +174,7 @@ func TestBatteryDegradation_DegradationCalc_UsesLatestValues(t *testing.T) {
 // TestBatteryDegradation_PropagatesError verifies that a
 // StateReader.SignalAt transport error (e.g. pgx connection drop) becomes
 // a 500 to the client for the Predict endpoint. The legacy
-// *database.SignalLogReader-backed handler silently swallowed SignalAt
+// *signaldb.SignalLogReader-backed handler silently swallowed SignalAt
 // errors and returned a partial / zero-valued payload, which was
 // indistinguishable on the frontend from "vehicle truly idle / brand-
 // new vehicle with no signal_log history" and rendered the Battery

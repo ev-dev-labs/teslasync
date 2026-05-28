@@ -219,7 +219,7 @@ func TestAIBatteryHealthHandler_AcceptsCanonicalBody(t *testing.T) {
 
 // TestAIBatteryHealthForecaster_PanicsOnNilSignalLogReader asserts
 // the production adapter constructor refuses a nil
-// *database.SignalLogReader — a wiring bug at boot must surface as
+// *signaldb.SignalLogReader — a wiring bug at boot must surface as
 // a panic, not as a nil-deref on first AI request.
 func TestAIBatteryHealthForecaster_PanicsOnNilSignalLogReader(t *testing.T) {
 	t.Parallel()

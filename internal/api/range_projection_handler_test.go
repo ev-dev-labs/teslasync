@@ -281,7 +281,7 @@ func TestRangeProjection_NoSignalSkipped(t *testing.T) {
 
 // TestRangeProjection_PropagatesError verifies that a StateReader.SignalAt
 // transport error (e.g. pgx connection drop) becomes a 500 to the client
-// for BOTH entry points. The legacy *database.SignalLogReader-backed
+// for BOTH entry points. The legacy *signaldb.SignalLogReader-backed
 // handler silently swallowed SignalAt errors and returned a partial
 // payload with zero / default-valued range and degradation, which is
 // indistinguishable on the frontend from "vehicle truly idle / brand-new

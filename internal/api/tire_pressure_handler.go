@@ -13,7 +13,7 @@ import (
 // TirePressureHandler serves TPMS endpoints backed by the signal-log change
 // feed via signal.StateReader (ADR-002 / phase-39).
 //
-// Phase-39 migration: the legacy *database.SignalLogReader (the old pivot +
+// Phase-39 migration: the legacy *signaldb.SignalLogReader (the old pivot +
 // snapshot helpers) has been replaced with the canonical signal.StateReader.
 //
 // Tire pressure (TpmsPressureFl/Fr/Rl/Rr) and the matching

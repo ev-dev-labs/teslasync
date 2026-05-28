@@ -6,7 +6,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 )
 
 func (h *BatteryDegradationHandler) predictDegradation(snapshots []batterySnapshotData) regressionResult {
@@ -248,7 +248,7 @@ func generateRecommendations(factors []riskFactor) []string {
 // batterySnapshotData shape expected by the prediction and display code.
 // Entries are grouped by timestamp; each unique timestamp yields one snapshot.
 // nominalCapacity is the vehicle-specific estimated capacity in Wh.
-func synthesizeBatterySnapshots(entries []database.SignalTraceEntry, nominalCapacity float64) []batterySnapshotData {
+func synthesizeBatterySnapshots(entries []signaldb.SignalTraceEntry, nominalCapacity float64) []batterySnapshotData {
 	if len(entries) == 0 {
 		return nil
 	}

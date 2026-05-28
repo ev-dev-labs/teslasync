@@ -22,7 +22,7 @@
     },
     {
       "path": "internal/database",
-      "max_files": 29,
+      "max_files": 22,
       "owner": "Phase R4",
       "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.20 carved 22 subpkgs. R4.21 batch 32-29 (vehicle — vehicle_repo + vehicle_photo_repo + vehicle_states_repo, 3 src + 1 test; HEART OF SYSTEM with 38 callers). Extracted NewVehicleNameLookup adapter from vehicle_settings_resolver.go into vehicle/name_lookup.go (subpkg-side adapter; parent resolver now depends only on interface). Caller sweep 38 files (api 30+ + service + app + ai/tools). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4), trip (3), energy (4), ai (2), export (4), worker (2), telemetry (2), system (4), tesla (6), vehicle (4 incl name_lookup). Planned: ~25 aggregates total."
     },

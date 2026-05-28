@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -17,7 +18,7 @@ import (
 // derived from the signal-log change feed via signal.StateReader
 // (ADR-002 / phase-39).
 //
-// Phase-39 migration: the legacy *database.SignalLogReader.SnapshotAt
+// Phase-39 migration: the legacy *signaldb.SignalLogReader.SnapshotAt
 // helper has been replaced with the canonical signal.StateReader. The
 // /vehicles/{vehicleID}/energy/flow endpoint is a "current values" view —
 // it always renders forward-folded state at time.Now() — so it maps

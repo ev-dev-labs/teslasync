@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
@@ -84,10 +86,10 @@ type TelemetryHandler struct {
 	captureEnabled   atomic.Bool
 
 	// Per-signal logging to MongoDB (optional)
-	signalLogRepo *database.SignalLogRepo
+	signalLogRepo *signaldb.SignalLogRepo
 
 	// Per-signal history to Postgres (signal_history table)
-	signalHistoryWriter *database.SignalHistoryWriter
+	signalHistoryWriter *signaldb.SignalHistoryWriter
 
 	// Per-vehicle Fleet Telemetry connection FSM
 	connFSMMu sync.Mutex

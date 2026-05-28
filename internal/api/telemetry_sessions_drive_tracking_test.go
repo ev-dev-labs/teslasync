@@ -282,8 +282,8 @@ func TestDriveTracking_EndSnapshot_UsesState(t *testing.T) {
 // TestDriveTracking_NoLegacySnapshotAtCalls is the meta-assertion that
 // guards the migration contract: the production source file
 // telemetry_sessions_drive_tracking.go must contain ZERO call sites for
-// the legacy *database.SignalLogReader.SnapshotAt or
-// *database.SignalHistoryWriter.SnapshotAt methods. A regression that
+// the legacy *signaldb.SignalLogReader.SnapshotAt or
+// *signaldb.SignalHistoryWriter.SnapshotAt methods. A regression that
 // reverts even a single call (e.g. while "fixing" an enrichment field)
 // would re-introduce the dual-source split-brain this prompt resolved
 // and is caught here. Comments referencing SnapshotAt in prose form are
@@ -318,7 +318,7 @@ func TestDriveTracking_NoLegacySnapshotAtCalls(t *testing.T) {
 // signal hasn't been re-emitted since because the value hasn't
 // changed.
 //
-// The legacy *database.SignalLogReader.SnapshotAt path queried only the
+// The legacy *signaldb.SignalLogReader.SnapshotAt path queried only the
 // snapshot tables and so would return an empty / partial map for any
 // signal whose last emission predated the snapshot table's retention
 // window. Drives ended up with NULL gear, missing start/end lat/lon,

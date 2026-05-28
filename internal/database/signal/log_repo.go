@@ -1,9 +1,10 @@
-package database
+package signal
 
 import (
 	"context"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
@@ -28,7 +29,7 @@ type SignalLogRepo struct {
 }
 
 // NewSignalLogRepo creates the repo and ensures indexes.
-func NewSignalLogRepo(mc *MongoClient) *SignalLogRepo {
+func NewSignalLogRepo(mc *database.MongoClient) *SignalLogRepo {
 	coll := mc.Database().Collection(signalLogCollection)
 	repo := &SignalLogRepo{coll: coll}
 	repo.ensureIndexes()

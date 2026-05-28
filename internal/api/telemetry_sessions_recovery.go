@@ -22,7 +22,7 @@ import (
 // the per-session enrichment paths in those files. Keeping the call shape
 // identical (`bundle.state.State(ctx, vehicleID, at)`) lets one anchor regex
 // guard every cold-read call site against accidental re-introduction of the
-// legacy *database.SignalLogReader snapshot path.
+// legacy *signaldb.SignalLogReader snapshot path.
 //
 // Forward-fold semantics matter for crash recovery: Tesla Fleet Telemetry only
 // re-emits a signal when the value changes, so a snapshot reconstructed from
@@ -151,7 +151,7 @@ const staleSessionThreshold = 5 * time.Minute
 //
 // Phase-39 / ADR-002: snapshot reconstruction at the recovery start/end
 // anchors goes through signal.StateReader (driveR.state / chargeR.state)
-// instead of the legacy *database.SignalLogReader snapshot tables. The
+// instead of the legacy *signaldb.SignalLogReader snapshot tables. The
 // StateReader forward-folds signal_log so signals that have not been
 // re-emitted since the start of the recovery gap (the common case under
 // Tesla's delta encoding) still appear in the reconstructed snapshot.

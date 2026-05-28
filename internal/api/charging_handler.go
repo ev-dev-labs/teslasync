@@ -9,6 +9,7 @@ import (
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
@@ -16,7 +17,7 @@ import (
 
 // ChargingHandler handles charging session HTTP requests.
 //
-// Phase-39 migration (ADR-002): the legacy *database.SignalLogReader has been
+// Phase-39 migration (ADR-002): the legacy *signaldb.SignalLogReader has been
 // replaced with the canonical signal.StateReader. Live-charge enrichment now
 // reads start-of-session and current state via StateReader.State, and the
 // telemetry chart is built from StateReader.Timeline (chart mode — empty

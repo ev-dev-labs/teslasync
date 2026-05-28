@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
@@ -17,9 +19,9 @@ import (
 // the Predict and Health fallback branches (EnergyRemaining and
 // EstBatteryRange in each) now resolve through the canonical
 // signal.StateReader (ADR-002 / phase-39) instead of the legacy
-// database.SignalLogReader's per-signal helper. The historical
+// signaldb.SignalLogReader's per-signal helper. The historical
 // signal_log trace aggregation in synthesizeBatterySnapshots
-// (database.SignalLogReader.SignalTrace) is a SignalLogReader-only
+// (signaldb.SignalLogReader.SignalTrace) is a SignalLogReader-only
 // capability with no StateReader equivalent and is intentionally
 // retained side-by-side; only the per-signal at-or-before lookup path
 // is migrated here.
@@ -34,10 +36,10 @@ import (
 type BatteryDegradationHandler struct {
 	db              *database.DB
 	state           signal.StateReader
-	signalLogReader *database.SignalLogReader
+	signalLogReader *signaldb.SignalLogReader
 }
 
-func NewBatteryDegradationHandler(db *database.DB, state signal.StateReader, slr *database.SignalLogReader) *BatteryDegradationHandler {
+func NewBatteryDegradationHandler(db *database.DB, state signal.StateReader, slr *signaldb.SignalLogReader) *BatteryDegradationHandler {
 	return &BatteryDegradationHandler{db: db, state: state, signalLogReader: slr}
 }
 

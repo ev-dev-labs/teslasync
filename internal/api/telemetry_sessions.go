@@ -6,9 +6,11 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
@@ -29,8 +31,8 @@ type TelemetrySessionTracker struct {
 	eventBus            *events.Bus
 	geocoder            geocoding.Geocoder
 	localSignals        *signal.Store
-	signalHistoryWriter *database.SignalHistoryWriter
-	signalLogReader     *database.SignalLogReader
+	signalHistoryWriter *signaldb.SignalHistoryWriter
+	signalLogReader     *signaldb.SignalLogReader
 
 	mu            sync.Mutex
 	activeDrives  map[int64]*streamingDrive  // vehicleID → active drive
@@ -57,7 +59,7 @@ func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder 
 }
 
 // SetSignalLogReader enables signal_log-based drive/charge completion enrichment.
-func (t *TelemetrySessionTracker) SetSignalLogReader(r *database.SignalLogReader) {
+func (t *TelemetrySessionTracker) SetSignalLogReader(r *signaldb.SignalLogReader) {
 	t.signalLogReader = r
 }
 

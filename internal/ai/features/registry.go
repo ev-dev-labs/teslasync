@@ -1038,7 +1038,7 @@ var Registry = map[string]Feature{
 	// count, high-SOC dwell), and the risk-factor severity table the
 	// existing /analytics/battery-degradation handler returns. The
 	// strategy is READ-ONLY: it composes the existing
-	// *database.SignalLogReader.SignalTrace + ChargeSource.GetByVehicle
+	// *signaldb.SignalLogReader.SignalTrace + ChargeSource.GetByVehicle
 	// surfaces through a narrow [BatteryHealthForecaster] port and
 	// reuses the existing package-level helpers (synthesizeBatterySnapshots,
 	// predictDegradation, computeRiskFactors) so the AI narration is

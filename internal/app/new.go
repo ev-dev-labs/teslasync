@@ -24,6 +24,7 @@ import (
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
@@ -706,7 +707,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		log.Info().Int("vehicles", len(vehicles)).Msg("live signal store warmed from Redis")
 	}
 
-	a.SignalHistoryWriter = database.NewSignalHistoryWriter(a.DB)
+	a.SignalHistoryWriter = signaldb.NewSignalHistoryWriter(a.DB)
 	a.TelemetryHandler.SetSignalHistoryWriter(a.SignalHistoryWriter)
 
 	for _, v := range vehicles {
@@ -730,7 +731,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 	log.Info().Msg("signal store initialized")
 
 	sessionTracker := a.TelemetryHandler.SessionTracker()
-	signalLogReader := database.NewSignalLogReader(a.DB)
+	signalLogReader := signaldb.NewSignalLogReader(a.DB)
 	if sessionTracker != nil {
 		sessionTracker.SetSignalLogReader(signalLogReader)
 		sessionTracker.RecoverSessions(ctx)
@@ -771,7 +772,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 			rawRepo := telemetrydb.NewRawTelemetryRepo(mongoClient)
 			a.TelemetryHandler.SetRawTelemetryRepo(rawRepo)
 
-			signalLogRepo := database.NewSignalLogRepo(mongoClient)
+			signalLogRepo := signaldb.NewSignalLogRepo(mongoClient)
 			a.TelemetryHandler.SetSignalLogRepo(signalLogRepo)
 
 			log.Info().Str("database", a.Cfg.MongoDB.Database).Int("ttl_days", a.Cfg.MongoDB.TTLDays).Msg("MongoDB raw telemetry capture + signal log available")

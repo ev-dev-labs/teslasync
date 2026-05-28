@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/go-chi/chi/v5"
@@ -37,8 +39,8 @@ import (
 // here only so the chi route registration in router.go keeps the same
 // shape.
 type SignalHandler struct {
-	signalLogRepo       *database.SignalLogRepo       // legacy MongoDB (optional fallback)
-	signalHistoryWriter *database.SignalHistoryWriter // legacy Postgres writer (snapshot/diff/stats only)
+	signalLogRepo       *signaldb.SignalLogRepo       // legacy MongoDB (optional fallback)
+	signalHistoryWriter *signaldb.SignalHistoryWriter // legacy Postgres writer (snapshot/diff/stats only)
 	db                  *database.DB                  // primary Postgres for typed signal_log queries
 	redisCache          *signal.RedisSignalCache
 	liveSignals         signal.LiveSignalStore
@@ -47,7 +49,7 @@ type SignalHandler struct {
 // NewSignalHandler creates a new SignalHandler. The MongoDB repo is
 // retained as an optional cold-path fallback for /snapshot only; the
 // typed live and history paths do not depend on it.
-func NewSignalHandler(repo *database.SignalLogRepo) *SignalHandler {
+func NewSignalHandler(repo *signaldb.SignalLogRepo) *SignalHandler {
 	return &SignalHandler{signalLogRepo: repo}
 }
 
@@ -61,7 +63,7 @@ func (h *SignalHandler) WithDB(db *database.DB) *SignalHandler {
 // WithSignalHistory adds the legacy SignalHistoryWriter. Used only by
 // the snapshot/diff/stats endpoints (out of Prompt 0069 scope). The
 // typed /history endpoint queries signal_log directly via h.db.Pool.
-func (h *SignalHandler) WithSignalHistory(w *database.SignalHistoryWriter) *SignalHandler {
+func (h *SignalHandler) WithSignalHistory(w *signaldb.SignalHistoryWriter) *SignalHandler {
 	h.signalHistoryWriter = w
 	return h
 }
@@ -602,7 +604,7 @@ func (h *SignalHandler) snapshotFromLog(w http.ResponseWriter, r *http.Request, 
 // or before `at` for one signal. Used only by the out-of-scope
 // /snapshot path. The lookback window is bounded so the page query
 // stays fast even when a vehicle has decades of history.
-func lastSignalAt(ctx context.Context, w *database.SignalHistoryWriter, vehicleID int64, signalName string, at time.Time) (interface{}, time.Time, bool) {
+func lastSignalAt(ctx context.Context, w *signaldb.SignalHistoryWriter, vehicleID int64, signalName string, at time.Time) (interface{}, time.Time, bool) {
 	from := at.Add(-snapshotLookback)
 	rows, err := w.GetHistory(ctx, vehicleID, signalName, from, at, 1)
 	if err != nil || len(rows) == 0 {
@@ -614,7 +616,7 @@ func lastSignalAt(ctx context.Context, w *database.SignalHistoryWriter, vehicleI
 
 const snapshotLookback = 30 * 24 * time.Hour
 
-func signalRowValue(row database.SignalHistoryRow) interface{} {
+func signalRowValue(row signaldb.SignalHistoryRow) interface{} {
 	switch {
 	case row.ValueNum != nil:
 		return *row.ValueNum

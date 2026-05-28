@@ -11,7 +11,7 @@
 //
 //   - the single read-only tool the LLM is allowed to call —
 //     `query_battery_health_forecast` — which composes the existing
-//     *database.SignalLogReader.SignalTrace +
+//     *signaldb.SignalLogReader.SignalTrace +
 //     ChargeSource.GetByVehicle surfaces through a narrow
 //     [BatteryHealthForecaster] port and reuses the package-level
 //     helpers (synthesizeBatterySnapshots, predictDegradation,

@@ -8,12 +8,13 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // DrivetrainHealthHandler serves drivetrain health analytics.
 //
-// Phase-39 migration: the legacy database.SignalLogReader's per-signal
+// Phase-39 migration: the legacy signaldb.SignalLogReader's per-signal
 // helper has been replaced with the canonical signal.StateReader
 // (ADR-002 / phase-39). Both per-signal lookups (ModuleTempMax,
 // ModuleTempMin) resolve "value as of now" — a forward-folded read at

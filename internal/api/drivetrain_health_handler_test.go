@@ -132,7 +132,7 @@ func TestDrivetrainHealth_AllSignalsCarryForward(t *testing.T) {
 // TestDrivetrainHealth_PropagatesError verifies that a
 // StateReader.SignalAt transport error (e.g. pgx connection drop)
 // becomes a 500 to the client. The legacy
-// *database.SignalLogReader-backed handler silently swallowed SignalAt
+// *signaldb.SignalLogReader-backed handler silently swallowed SignalAt
 // errors and returned a partial payload with zero-valued temps, which
 // is indistinguishable on the frontend from "vehicle truly idle /
 // brand-new vehicle with no signal_log history". This phase-39

@@ -19,6 +19,7 @@ import (
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
@@ -85,7 +86,7 @@ type App struct {
 	// Telemetry pipeline (set only when cfg.FleetTelemetry.Enabled)
 	TelemetryHandler    *api.TelemetryHandler
 	SignalStore         *sigsvc.Store
-	SignalHistoryWriter *database.SignalHistoryWriter
+	SignalHistoryWriter *signaldb.SignalHistoryWriter
 	StateReader         *sigsvc.LogStateReader
 	LiveSignalStore     sigsvc.LiveSignalStore
 

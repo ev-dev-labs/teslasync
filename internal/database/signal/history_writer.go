@@ -1,10 +1,11 @@
-package database
+package signal
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
 )
 
@@ -39,13 +40,13 @@ type SignalHistoryRow struct {
 // cutover — see `internal/tesla/router/writers/signal_log_writer.go`
 // for the canonical writer.
 type SignalHistoryWriter struct {
-	db *DB
+	db *database.DB
 }
 
 // NewSignalHistoryWriter constructs a read-only signal_log accessor.
 // The legacy `flushInterval` and `rdb` parameters were dropped — the
 // constructor now takes only the DB pool.
-func NewSignalHistoryWriter(db *DB) *SignalHistoryWriter {
+func NewSignalHistoryWriter(db *database.DB) *SignalHistoryWriter {
 	return &SignalHistoryWriter{db: db}
 }
 

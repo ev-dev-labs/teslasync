@@ -26,7 +26,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
@@ -37,9 +37,9 @@ import (
 // has no pgxmock harness (see repo memories from earlier phase-43a
 // prompts).
 type signalsCatalogRepository interface {
-	CatalogAggregates(ctx context.Context) (map[string]database.CatalogAggregate, error)
-	ObservationsCount(ctx context.Context, params database.ObservationsParams) (int64, error)
-	Observations(ctx context.Context, params database.ObservationsParams) ([]database.SignalObservation, error)
+	CatalogAggregates(ctx context.Context) (map[string]signaldb.CatalogAggregate, error)
+	ObservationsCount(ctx context.Context, params signaldb.ObservationsParams) (int64, error)
+	Observations(ctx context.Context, params signaldb.ObservationsParams) ([]signaldb.SignalObservation, error)
 }
 
 // signalsCatalogClock is injected so handler tests can pin
@@ -63,7 +63,7 @@ type SignalsCatalogHandler struct {
 // because every other consumer of router.Load() does the same — a
 // malformed embedded YAML is a compile-equivalent bug, not a runtime
 // condition.
-func NewSignalsCatalogHandler(repo *database.SignalsCatalogRepo) *SignalsCatalogHandler {
+func NewSignalsCatalogHandler(repo *signaldb.SignalsCatalogRepo) *SignalsCatalogHandler {
 	entries, err := router.Load()
 	if err != nil {
 		panic(fmt.Sprintf("api.NewSignalsCatalogHandler: parse embedded routing.yaml: %v", err))
@@ -104,7 +104,7 @@ type SignalsCatalogResponse struct {
 }
 
 // SignalObservationView is one row in the observations response. The
-// repo's database.SignalObservation carries a ValueKind ordinal; we
+// repo's signaldb.SignalObservation carries a ValueKind ordinal; we
 // re-emit it as the protomodel.ValueKind symbolic string so consumers
 // match against stable names rather than numeric tags.
 type SignalObservationView struct {
@@ -222,16 +222,16 @@ func (h *SignalsCatalogHandler) Observations(w http.ResponseWriter, r *http.Requ
 // parseObservationsParams extracts and validates the optional filter
 // set from the query string. Returns ok=false after writing the
 // appropriate 4xx response so the caller can early-return.
-func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r *http.Request) (database.ObservationsParams, bool) {
+func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r *http.Request) (signaldb.ObservationsParams, bool) {
 	q := r.URL.Query()
-	var params database.ObservationsParams
+	var params signaldb.ObservationsParams
 
 	// vehicle_id (comma-separated bigints).
 	if raw := q.Get("vehicle_id"); raw != "" {
 		ids, err := parseCSVInt64s(raw)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "vehicle_id must be a comma-separated list of positive integers")
-			return database.ObservationsParams{}, false
+			return signaldb.ObservationsParams{}, false
 		}
 		params.VehicleIDs = ids
 	}
@@ -241,7 +241,7 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 		fields := splitCSVTrimmed(raw)
 		if len(fields) == 0 {
 			writeError(w, http.StatusBadRequest, "field must be a comma-separated list of field names")
-			return database.ObservationsParams{}, false
+			return signaldb.ObservationsParams{}, false
 		}
 		params.Fields = fields
 	}
@@ -251,7 +251,7 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 		ts, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "since must be an RFC3339 timestamp")
-			return database.ObservationsParams{}, false
+			return signaldb.ObservationsParams{}, false
 		}
 		params.Since = &ts
 	}
@@ -261,7 +261,7 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 		ts, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "until must be an RFC3339 timestamp")
-			return database.ObservationsParams{}, false
+			return signaldb.ObservationsParams{}, false
 		}
 		params.Until = &ts
 	}
@@ -272,11 +272,11 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 		v, err := strconv.Atoi(raw)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "limit must be an integer")
-			return database.ObservationsParams{}, false
+			return signaldb.ObservationsParams{}, false
 		}
 		if v < 1 {
 			writeError(w, http.StatusBadRequest, "limit must be >= 1")
-			return database.ObservationsParams{}, false
+			return signaldb.ObservationsParams{}, false
 		}
 		if v > signalsCatalogLimitMax {
 			// Decision #4 envelope mirroring vehicle_states / mileage
@@ -287,7 +287,7 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 				"max":   signalsCatalogLimitMax,
 				"code":  httpStatusCode(http.StatusBadRequest),
 			})
-			return database.ObservationsParams{}, false
+			return signaldb.ObservationsParams{}, false
 		}
 		params.Limit = v
 	}
@@ -297,11 +297,11 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 		v, err := strconv.Atoi(raw)
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "offset must be an integer")
-			return database.ObservationsParams{}, false
+			return signaldb.ObservationsParams{}, false
 		}
 		if v < 0 {
 			writeError(w, http.StatusBadRequest, "offset must be >= 0")
-			return database.ObservationsParams{}, false
+			return signaldb.ObservationsParams{}, false
 		}
 		params.Offset = v
 	}

@@ -1,4 +1,4 @@
-package database
+package signal
 
 import (
 	"strings"

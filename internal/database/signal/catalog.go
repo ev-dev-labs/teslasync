@@ -1,4 +1,4 @@
-package database
+package signal
 
 // ColumnType indicates the Postgres type for type-aware encoding.
 type ColumnType int

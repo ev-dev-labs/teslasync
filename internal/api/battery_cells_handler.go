@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
@@ -18,10 +20,10 @@ import (
 // Phase-39 migration: the per-signal "value as of now" lookups in
 // getLatestSignal now resolve through the canonical signal.StateReader
 // (ADR-002 / phase-39) instead of the legacy
-// database.SignalLogReader's per-signal helper. Both readers are
+// signaldb.SignalLogReader's per-signal helper. Both readers are
 // intentionally retained side-by-side because the historical
 // hourly-bucket aggregation in getHistory
-// (database.SignalLogReader.BrickVoltageHistory) is a SignalLogReader-only
+// (signaldb.SignalLogReader.BrickVoltageHistory) is a SignalLogReader-only
 // capability that has no StateReader equivalent; only the per-signal
 // at-or-before lookup path is migrated here.
 //
@@ -35,10 +37,10 @@ type BatteryCellsHandler struct {
 	db              *database.DB
 	liveSignals     signal.LiveSignalStore
 	state           signal.StateReader
-	signalLogReader *database.SignalLogReader
+	signalLogReader *signaldb.SignalLogReader
 }
 
-func NewBatteryCellsHandler(db *database.DB, liveStore signal.LiveSignalStore, state signal.StateReader, slr *database.SignalLogReader) *BatteryCellsHandler {
+func NewBatteryCellsHandler(db *database.DB, liveStore signal.LiveSignalStore, state signal.StateReader, slr *signaldb.SignalLogReader) *BatteryCellsHandler {
 	return &BatteryCellsHandler{db: db, liveSignals: liveStore, state: state, signalLogReader: slr}
 }
 

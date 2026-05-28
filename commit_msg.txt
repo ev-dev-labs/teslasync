@@ -1,53 +1,53 @@
-refactor(R4.21): carve internal/database/vehicle (heart of system, 38 callers)
+refactor(R4.22): carve internal/database/signal (telemetry hot-path, 48 callers)
 
-Move the Vehicle aggregate-root repositories into their own bounded-
-context subpkg per ADR-011. This is the largest single cluster in R4
-(measured by downstream blast radius) — vehicle ID is the foreign key
-into drive, charging, energy, signal, telemetry, notification,
-automation, alert, settings, ...
+Move the signal_log + signals_catalog repositories into a bounded-context
+subpkg per ADR-011. This is the telemetry HOT PATH (Tesla Fleet Telemetry
+-> normalize.Pipeline -> writer fan-out -> signal_log hypertable) — every
+chart, replay, and analytics endpoint depends on it.
 
-Files (3 source + 1 test + 1 NEW adapter; 38 caller files swept):
-  internal/database/vehicle_repo.go            -> internal/database/vehicle/repo.go
-  internal/database/vehicle_photo_repo.go      -> internal/database/vehicle/photo_repo.go
-  internal/database/vehicle_states_repo.go     -> internal/database/vehicle/states_repo.go
-  internal/database/vehicle_states_repo_test.go -> internal/database/vehicle/states_repo_test.go
-  internal/database/vehicle/name_lookup.go     (NEW — extracted from parent
-                                                vehicle_settings_resolver.go)
-  internal/database/vehicle/doc.go             (NEW, // Layer: adapter)
+Files (7 src + 1 test moved; 48 caller files swept):
+  signal_log_reader.go              -> signal/reader.go
+  signal_log_reader_aggregations.go -> signal/reader_aggregations.go
+  signal_log_reader_query.go        -> signal/reader_query.go
+  signal_log_repo.go                -> signal/log_repo.go    (Mongo backend)
+  signal_history_writer.go          -> signal/history_writer.go (Postgres writer)
+  signals_catalog_repo.go           -> signal/catalog_repo.go
+  signals_catalog_repo_test.go      -> signal/catalog_repo_test.go
+  signal_catalog.go                 -> signal/catalog.go     (Tesla signal -> column map)
+  signal/doc.go                                              (NEW, // Layer: adapter)
 
-LESSON 34: when a parent file (vehicle_settings_resolver.go) holds a
-*concrete-type* adapter for a child aggregate (*VehicleRepo wired to
-VehicleNameLookup interface), the adapter must move INTO the child
-subpkg to avoid a parent->child compile cycle. The interface stays in
-the parent (resolver still depends only on the interface seam) and the
-adapter constructor renames from NewVehicleNameLookup to NewNameLookup
-following Go style (package name qualifies — vehicle.NewNameLookup is
-preferred over vehicle.NewVehicleNameLookup stutter).
+Mongo + Postgres backends live side by side under signal/ — both are
+signal_log persistence concerns; the Mongo path is the historical Phase-42
+backup. References to parent types qualified:
+  *DB           -> *database.DB
+  MongoClient   -> database.MongoClient
+  DBTX          -> database.DBTX
 
-Symbols promoted (alias ehicledb per ADR-011):
-  VehicleRepo, NewVehicleRepo,
-  VehiclePhotoRepo, NewVehiclePhotoRepo, VehiclePhotoRow,
-  ErrVehiclePhotoNotFound,
-  VehicleStatesRepo, NewVehicleStatesRepo,
-  VehicleStateSummaryRow, VehicleStateTransition.
-  NewNameLookup (was NewVehicleNameLookup in parent).
+Symbols promoted (alias signaldb MANDATORY at callsites that also import
+internal/signal runtime pkg or internal/signal/store):
+  SignalLogReader, NewSignalLogReader, SignalTrace, SignalTraceEntry,
+  BrickVoltageHistory, BrickVoltageHistoryEntry, ChargeAggregates,
+  DriveAggregates, IntegrateDriveDistanceMeters, RegenEnergy,
+  LatestTimestamp,
+  SignalLogRepo, NewSignalLogRepo, SignalHistoryEntry, SignalHistoryPoint,
+  SignalHistoryQuery, SignalHistoryRow,
+  SignalHistoryWriter, NewSignalHistoryWriter, AvailableSignals,
+  SignalsCatalogRepo, NewSignalsCatalogRepo, CatalogAggregate,
+  CatalogAggregates, ObservationsParams, ObservationsCount,
+  SignalCatalog, SignalMapping, ColumnType, ColType{Numeric,Varchar,Bool}.
 
-Callers updated across 38 files in api/ (30+), service/, app/,
-ai/tools/ — bulk regex sweep, no logic change.
+Position repository (position_repo.go) stays in parent for now — it has
+its own aggregate root (positions table, lat/long snapshot) and depends
+on the parent-private from_map.go helper. It will be carved in R4.23
+together with from_map.go.
 
-Settings repos (settings_repo / settings_reset / settings_serializer /
-vehicle_settings_repo / vehicle_settings_resolver) stay in parent for
-now — they will be carved together in R4.25 once their interlocked
-serializer dependencies are resolved.
+No new helper deps. No cycles. All gates green.
 
-No new helper deps. No cycles after the adapter extraction (verified
-by go build ./...).
+internal/database allowlist ratchet: 29 -> 22 src files.
 
-internal/database allowlist ratchet: 32 -> 29 src files.
-
-Carved subpkgs so far (23): achievement, sharing, admin, gdpr,
+Carved subpkgs so far (24): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
 audit, charging, drive, trip, energy, ai, export, worker, telemetry,
-system, tesla, vehicle.
+system, tesla, vehicle, signal.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

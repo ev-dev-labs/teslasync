@@ -12,12 +12,13 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // RangeProjectionHandler serves projected range analytics.
 //
-// Phase-39 migration: the legacy *database.SignalLogReader has been replaced
+// Phase-39 migration: the legacy *signaldb.SignalLogReader has been replaced
 // with the canonical signal.StateReader (ADR-002 / phase-39). All 9 per-signal
 // reads across Get and GetByVehicle resolve "value as of now" — a forward-
 // folded read at time.Now() — so they map 1:1 onto StateReader.SignalAt with

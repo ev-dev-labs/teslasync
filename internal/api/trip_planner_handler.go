@@ -31,7 +31,7 @@ const (
 // SOC (BatteryLevel) and current Location at the request boundary, plus
 // EnergyRemaining and BatteryLevel inside batteryCapacity — now resolve
 // through the canonical signal.StateReader instead of the legacy
-// *database.SignalLogReader. Each lookup maps 1:1 onto StateReader.SignalAt
+// *signaldb.SignalLogReader. Each lookup maps 1:1 onto StateReader.SignalAt
 // with identical semantics (forward-folded read at time.Now()).
 //
 // As part of this migration, transport errors from state.SignalAt at the

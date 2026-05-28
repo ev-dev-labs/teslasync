@@ -9,12 +9,13 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // BatteryHandler handles battery health HTTP requests.
 //
-// Phase-39 migration: the legacy database.SignalLogReader's per-signal
+// Phase-39 migration: the legacy signaldb.SignalLogReader's per-signal
 // helper has been replaced with the canonical signal.StateReader
 // (ADR-002 / phase-39). The four per-signal lookups (EnergyRemaining,
 // EstBatteryRange, ModuleTempMax, ModuleTempMin) all resolve "value as

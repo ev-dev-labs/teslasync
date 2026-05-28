@@ -24,7 +24,7 @@
 // (an admin's catalog/observations probe never carries a 404 risk
 // because the catalog is fleet-wide and the observations endpoint is
 // optional-filter, not required-filter).
-package database
+package signal
 
 import (
 	"context"

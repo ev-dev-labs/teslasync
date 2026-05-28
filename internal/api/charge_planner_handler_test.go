@@ -33,7 +33,7 @@ func newChargePlannerOptimizeRequest(t *testing.T, body any) *http.Request {
 // signal name "BatteryLevel" anchored at time.Now() — the lookup that
 // determines how much energy the optimizer must schedule. A future
 // regression that re-points the lookup at the deleted
-// database.SignalLogReader.SignalAt helper, drops the "BatteryLevel"
+// signaldb.SignalLogReader.SignalAt helper, drops the "BatteryLevel"
 // signal name, anchors the read to a stale "at", or queries a different
 // vehicle would silently misderive the kWh-needed projection (and
 // therefore the entire schedule + cost comparison) without surfacing any
@@ -115,7 +115,7 @@ func TestChargePlanner_UsesCurrentSOC(t *testing.T) {
 
 // TestChargePlanner_PropagatesError verifies that a StateReader.SignalAt
 // transport error (e.g. pgx connection drop) becomes a 500 to the client
-// for the Optimize endpoint. The legacy database.SignalLogReader-backed
+// for the Optimize endpoint. The legacy signaldb.SignalLogReader-backed
 // handler silently swallowed SignalAt errors and defaulted currentSOC to
 // 0 — which made every optimize request appear to need a full charge
 // from empty, masking real signal-store / pgx outages behind plausible-

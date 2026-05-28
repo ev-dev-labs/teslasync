@@ -38,7 +38,7 @@ var chargePlannerCommandTimeout = 30 * time.Second
 // Phase-39 migration: the current-SOC lookup that seeds the optimizer
 // (BatteryLevel as of now) now resolves through the canonical
 // signal.StateReader (ADR-002 / phase-39) instead of the legacy
-// database.SignalLogReader's per-signal helper. The lookup is a "value
+// signaldb.SignalLogReader's per-signal helper. The lookup is a "value
 // as of now" forward-folded read, which maps 1:1 onto
 // StateReader.SignalAt with identical semantics.
 //

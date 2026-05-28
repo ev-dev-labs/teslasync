@@ -44,8 +44,8 @@ var (
 
 // SetDriveStateReader injects the cold-path signal.StateReader used to
 // reconstruct drive start/end snapshots at session completion. Replaces
-// the legacy *database.SignalLogReader.SnapshotAt /
-// *database.SignalHistoryWriter.SnapshotAt calls that this prompt removed.
+// the legacy *signaldb.SignalLogReader.SnapshotAt /
+// *signaldb.SignalHistoryWriter.SnapshotAt calls that this prompt removed.
 // Passing nil clears any previously installed reader.
 func (t *TelemetrySessionTracker) SetDriveStateReader(s signal.StateReader) {
 	driveStateRegistryMu.Lock()
@@ -891,10 +891,10 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// signal.StateReader (active.state) reconstructs full signal state at a
 	// point in time using last-known values, compensating for Tesla's delta
 	// encoding (signals not sent unless changed). Replaces the legacy
-	// *database.SignalLogReader.SnapshotAt and
-	// *database.SignalHistoryWriter.SnapshotAt code paths (phase-39 / ADR-002).
+	// *signaldb.SignalLogReader.SnapshotAt and
+	// *signaldb.SignalHistoryWriter.SnapshotAt code paths (phase-39 / ADR-002).
 	//
-	// The tracker's signalLogReader *database.SignalLogReader field
+	// The tracker's signalLogReader *signaldb.SignalLogReader field
 	// (declared in telemetry_sessions.go) is INTENTIONALLY retained because
 	// this branch still calls signalLogReader.DriveAggregates and
 	// signalLogReader.RegenEnergy for the avg/max speed-and-power rollup

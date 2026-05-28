@@ -74,7 +74,7 @@ var _ signal.StateReader = (*recoveryFakeState)(nil)
 // TestRecovery_RebuildsStateFromForwardFold pins the core contract of the
 // migration: the snapshot used to enrich a recovered drive/charge session
 // is reconstructed via signal.StateReader.State (forward-fold over
-// signal_log) and NOT via the legacy *database.SignalLogReader.SnapshotAt
+// signal_log) and NOT via the legacy *signaldb.SignalLogReader.SnapshotAt
 // path that this prompt removed.
 //
 // Why this matters: Tesla Fleet Telemetry only re-emits a signal when the
@@ -267,7 +267,7 @@ func TestRecovery_RebuildsStateFromForwardFold(t *testing.T) {
 // TestRecovery_AllFourCallsMigrated is the meta-assertion that guards the
 // migration contract: the production source file
 // telemetry_sessions_recovery.go must contain ZERO call sites for the
-// legacy *database.SignalLogReader.SnapshotAt method AND must contain at
+// legacy *signaldb.SignalLogReader.SnapshotAt method AND must contain at
 // least four `.state.State(` call sites (drive start, drive end, charge
 // start, charge end). A regression that reverts even a single call (e.g.
 // while "fixing" a recovery enrichment field) would re-introduce the

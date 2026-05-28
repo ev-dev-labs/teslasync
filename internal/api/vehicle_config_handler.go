@@ -13,7 +13,7 @@ import (
 // VehicleConfigHandler serves vehicle config endpoints backed by the
 // signal-log change feed via signal.StateReader (ADR-002 / phase-39).
 //
-// Phase-39 migration: the legacy *database.SignalLogReader (raw pivot +
+// Phase-39 migration: the legacy *signaldb.SignalLogReader (raw pivot +
 // snapshot helpers) has been replaced with the canonical
 // signal.StateReader.
 //

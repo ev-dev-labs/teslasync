@@ -11,6 +11,7 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
@@ -40,7 +41,7 @@ type chargingByVehicleFetcher interface {
 
 // AnalyticsHandler handles fleet analytics HTTP requests.
 //
-// Phase-39 migration: the legacy *database.SignalLogReader (raw pivot +
+// Phase-39 migration: the legacy *signaldb.SignalLogReader (raw pivot +
 // snapshot helpers) has been replaced with the canonical
 // signal.StateReader for the per-vehicle current-battery snapshot the
 // Fleet endpoint folds into the fleet battery_trend response. The

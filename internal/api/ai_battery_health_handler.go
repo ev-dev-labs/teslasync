@@ -63,6 +63,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -259,19 +260,19 @@ var _ http.Handler = (*AIBatteryHealthHandler)(nil)
 type AIBatteryHealthForecaster struct {
 	db              *database.DB
 	state           signal.StateReader
-	signalLogReader *database.SignalLogReader
+	signalLogReader *signaldb.SignalLogReader
 }
 
 // NewAIBatteryHealthForecaster constructs the adapter. Panics on a
-// nil signal.StateReader / *database.SignalLogReader so a wiring
+// nil signal.StateReader / *signaldb.SignalLogReader so a wiring
 // mistake surfaces at boot — *database.DB may be nil only in tests
 // that exercise the snapshot-fallback path.
-func NewAIBatteryHealthForecaster(db *database.DB, state signal.StateReader, slr *database.SignalLogReader) *AIBatteryHealthForecaster {
+func NewAIBatteryHealthForecaster(db *database.DB, state signal.StateReader, slr *signaldb.SignalLogReader) *AIBatteryHealthForecaster {
 	switch {
 	case state == nil:
 		panic("api: NewAIBatteryHealthForecaster: nil signal.StateReader")
 	case slr == nil:
-		panic("api: NewAIBatteryHealthForecaster: nil *database.SignalLogReader")
+		panic("api: NewAIBatteryHealthForecaster: nil *signaldb.SignalLogReader")
 	}
 	return &AIBatteryHealthForecaster{db: db, state: state, signalLogReader: slr}
 }
