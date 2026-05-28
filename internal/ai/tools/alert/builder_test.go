@@ -5,7 +5,7 @@
 // tests stub the validator with a deterministic fake so the tests
 // stay hermetic (no api package import, no DB).
 
-package tools
+package alert
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
@@ -339,7 +340,7 @@ func TestValidateAlertRuleTool_ContractMetadata(t *testing.T) {
 // names.
 func TestRegisterAlertBuilderTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	reg := NewRegistry()
+	reg := tools.NewRegistry()
 	RegisterAlertBuilderTools(reg, AlertBuilderSources{Validator: &stubAlertValidator{}})
 
 	for _, name := range []string{"draft_alert_rule", "validate_alert_rule"} {

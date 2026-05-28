@@ -125,6 +125,7 @@ import (
 	watchfacenlresponse "github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response"
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
@@ -665,7 +666,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// uses. Drafts accepted by the AI tool are byte-equivalent to
 	// drafts accepted by the canonical handler (ADR-015 §I3
 	// baseline-intact).
-	tools.RegisterAlertBuilderTools(aiToolRegistry, tools.AlertBuilderSources{
+	alert.RegisterAlertBuilderTools(aiToolRegistry, alert.AlertBuilderSources{
 		Validator: NewAIAlertRuleValidator(),
 	})
 	aiAlertHandler := NewAIAlertHandler(
@@ -1510,7 +1511,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// canonical AlertRuleRepo + NotificationRepo so the LLM
 	// reads the SAME rows the manual AlertStudio path reads —
 	// no parallel write path; the LLM never persists.
-	tools.RegisterAlertTuningSuggestionsTools(aiToolRegistry, tools.AlertTuningSuggestionsSources{
+	alert.RegisterAlertTuningSuggestionsTools(aiToolRegistry, alert.AlertTuningSuggestionsSources{
 		Source: NewAIAlertTuningSource(database.NewAlertRuleRepo(db), database.NewNotificationRepo(db)),
 	})
 	// alert-tuning-suggestions handler. One per process;

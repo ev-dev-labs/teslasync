@@ -45,7 +45,7 @@
 //     the existing useSaveAlertRule mutation against PUT /api/v1/
 //     alerts/rules/{id}.
 
-package tools
+package alert
 
 import (
 	"context"
@@ -53,6 +53,7 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
@@ -280,7 +281,7 @@ func (t *draftAlertRulePatch) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftAlertRulePatch) InputSchema() json.RawMessage {
-	return CachedSchema(alertRulePatchInput{})
+	return tools.CachedSchema(alertRulePatchInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -309,7 +310,7 @@ func (t *draftAlertRulePatch) RequiredScope() string { return "" }
 // Surfaces *ValidationError for symmetry with the framework
 // errors so tests / dispatchers can use AsValidationError.
 func (t *draftAlertRulePatch) Validate(raw json.RawMessage) (any, error) {
-	parsed, err := ValidateStruct[alertRulePatchInput](raw)
+	parsed, err := tools.ValidateStruct[alertRulePatchInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -317,10 +318,10 @@ func (t *draftAlertRulePatch) Validate(raw json.RawMessage) (any, error) {
 	if in.NewCooldownMin != nil {
 		v := *in.NewCooldownMin
 		if v < 1 {
-			return nil, &ValidationError{Field: "new_cooldown_min", Rule: "gte=1", Msg: "must be ≥ 1"}
+			return nil, &tools.ValidationError{Field: "new_cooldown_min", Rule: "gte=1", Msg: "must be ≥ 1"}
 		}
 		if v > 1440 {
-			return nil, &ValidationError{Field: "new_cooldown_min", Rule: "lte=1440", Msg: "must be ≤ 1440"}
+			return nil, &tools.ValidationError{Field: "new_cooldown_min", Rule: "lte=1440", Msg: "must be ≤ 1440"}
 		}
 	}
 	return parsed, nil
@@ -470,6 +471,6 @@ type AlertTuningSuggestionsSources struct {
 // RegisterAlertBuilderTools (slice 0015) and is REUSED here.
 // The dispatcher's per-strategy whitelist gates which strategies
 // can call which tool.
-func RegisterAlertTuningSuggestionsTools(r *Registry, s AlertTuningSuggestionsSources) {
+func RegisterAlertTuningSuggestionsTools(r *tools.Registry, s AlertTuningSuggestionsSources) {
 	r.Register(&draftAlertRulePatch{source: s.Source})
 }

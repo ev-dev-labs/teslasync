@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T05:57:15Z",
+  "generated_at": "2026-05-28T06:09:04Z",
   "go_version": "go1.26.1",
-  "commit_sha": "913c8466b32e704648e79bfcba3fa3261e094831",
+  "commit_sha": "1aa61baf6895552da024dea9b7d1039a9328cfcd",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 54,
-      "test_files": 47,
-      "loc": 43334,
+      "go_files": 52,
+      "test_files": 45,
+      "loc": 41635,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1903,10 +1903,6 @@
         "internal/models/vehicle"
       ],
       "files": [
-        "alert_builder.go",
-        "alert_builder_test.go",
-        "alert_tuning.go",
-        "alert_tuning_test.go",
         "anomaly.go",
         "anomaly_test.go",
         "auto_trip_naming.go",
@@ -2007,6 +2003,24 @@
       ]
     },
     {
+      "path": "internal/ai/tools/alert",
+      "go_files": 3,
+      "test_files": 2,
+      "loc": 1754,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/tools",
+        "internal/models/alert"
+      ],
+      "files": [
+        "builder.go",
+        "builder_test.go",
+        "doc.go",
+        "tuning.go",
+        "tuning_test.go"
+      ]
+    },
+    {
       "path": "internal/ai/tools/feedback",
       "go_files": 2,
       "test_files": 1,
@@ -2078,7 +2092,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126498,
+      "loc": 126500,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2150,6 +2164,7 @@
         "internal/ai/strategy",
         "internal/ai/stream",
         "internal/ai/tools",
+        "internal/ai/tools/alert",
         "internal/ai/tools/feedback",
         "internal/ai/tools/location",
         "internal/ai/tools/safety",
@@ -5768,8 +5783,6 @@
       "writer.go"
     ],
     "internal/ai/tools": [
-      "alert_builder.go",
-      "alert_tuning.go",
       "anomaly.go",
       "auto_trip_naming.go",
       "automation_builder.go",
@@ -5822,6 +5835,11 @@
       "voice_mode.go",
       "watch_face_nl_response.go",
       "year_review.go"
+    ],
+    "internal/ai/tools/alert": [
+      "builder.go",
+      "doc.go",
+      "tuning.go"
     ],
     "internal/ai/tools/feedback": [
       "doc.go",
@@ -7053,16 +7071,16 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 54,
-      "flat_parent_test_files": 47,
+      "flat_parent_go_files": 52,
+      "flat_parent_test_files": 45,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
+        "alert",
         "feedback",
         "location",
         "safety"
       ],
       "missing_subpkgs": [
-        "alert",
         "automation",
         "battery",
         "charging",

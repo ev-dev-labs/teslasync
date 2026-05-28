@@ -108,7 +108,7 @@ type AIAlertHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_alert_rule + validate_alert_rule (registered by
-//	tools.RegisterAlertBuilderTools in router.go).
+//	alert.RegisterAlertBuilderTools in router.go).
 //
 // strat:      the nl-alert-builder Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
@@ -259,7 +259,7 @@ func (h *AIAlertHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 var _ http.Handler = (*AIAlertHandler)(nil)
 
 // AIAlertRuleValidator is the production implementation of
-// tools.AlertRuleValidator. It is a thin wrapper around the
+// alert.AlertRuleValidator. It is a thin wrapper around the
 // unexported validateAlertRule function in alert_handler_rules.go,
 // kept in this file so the AI tool registration path can wire the
 // canonical validator without exposing the unexported function to
@@ -274,7 +274,7 @@ type AIAlertRuleValidator struct{}
 // every call site to update.
 func NewAIAlertRuleValidator() *AIAlertRuleValidator { return &AIAlertRuleValidator{} }
 
-// ValidateAlertRule implements [tools.AlertRuleValidator]. Delegates
+// ValidateAlertRule implements [alert.AlertRuleValidator]. Delegates
 // to the canonical validateAlertRule function — same code path the
 // POST /api/v1/alerts/rules handler runs, so a draft accepted here
 // is byte-equivalent to a draft accepted by the canonical handler.

@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T05:57:16Z, Go go1.26.1, commit 913c8466b32e704648e79bfcba3fa3261e094831_
+_Generated 2026-05-28T06:09:05Z, Go go1.26.1, commit 1aa61baf6895552da024dea9b7d1039a9328cfcd_
 
 ## Summary
 
-- Packages: 235
+- Packages: 236
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372688
+- Total non-blank LOC under cmd/+internal/+tools/: 372745
 
 ## cmd/* main.go LOC
 
@@ -139,12 +139,13 @@ _Generated 2026-05-28T05:57:16Z, Go go1.26.1, commit 913c8466b32e704648e79bfcba3
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 54 | 47 | 43334 | yes | platform |
+| internal/ai/tools | 52 | 45 | 41635 | yes | platform |
+| internal/ai/tools/alert | 3 | 2 | 1754 | yes |  |
 | internal/ai/tools/feedback | 2 | 1 | 1601 | yes |  |
 | internal/ai/tools/location | 3 | 2 | 1724 | yes |  |
 | internal/ai/tools/safety | 2 | 1 | 560 | yes |  |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126498 | yes | handler |
+| internal/api | 271 | 163 | 126500 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -288,7 +289,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
-| `internal/ai/tools` | R6 | 109 | 54 / 47 | 13 | 3 | 10 |
+| `internal/ai/tools` | R6 | 109 | 52 / 45 | 13 | 4 | 9 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
@@ -333,12 +334,12 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 > 13 subpkgs from R1 audit. Per ADR-015 amendment, pure file-move only. Registry/schema/builtins/tool/validate stay at parent.
 
 **Existing subpackages on disk:**
+- `internal/ai/tools/alert`
 - `internal/ai/tools/feedback`
 - `internal/ai/tools/location`
 - `internal/ai/tools/safety`
 
 **Planned but not yet on disk:**
-- `internal/ai/tools/alert`
 - `internal/ai/tools/automation`
 - `internal/ai/tools/battery`
 - `internal/ai/tools/charging`

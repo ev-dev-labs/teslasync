@@ -36,7 +36,7 @@
 //     user clicks Save, which fires the existing
 //     useSaveAlertRule mutation against POST /api/v1/alerts/rules.
 
-package tools
+package alert
 
 import (
 	"context"
@@ -45,6 +45,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
@@ -277,7 +278,7 @@ func (t *draftAlertRule) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftAlertRule) InputSchema() json.RawMessage {
-	return CachedSchema(alertRuleDraftInput{})
+	return tools.CachedSchema(alertRuleDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -297,7 +298,7 @@ func (t *draftAlertRule) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *draftAlertRule) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[alertRuleDraftInput](raw)
+	return tools.ValidateStruct[alertRuleDraftInput](raw)
 }
 
 // Execute implements [Tool]. Builds the draft, runs the canonical
@@ -392,7 +393,7 @@ func (t *validateAlertRuleTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateAlertRuleTool) InputSchema() json.RawMessage {
-	return CachedSchema(alertRuleValidateInput{})
+	return tools.CachedSchema(alertRuleValidateInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -407,7 +408,7 @@ func (t *validateAlertRuleTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *validateAlertRuleTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[alertRuleValidateInput](raw)
+	return tools.ValidateStruct[alertRuleValidateInput](raw)
 }
 
 // Execute implements [Tool]. Builds an AlertRule from the typed
@@ -457,7 +458,7 @@ type AlertBuilderSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterAlertBuilderTools(r *Registry, s AlertBuilderSources) {
+func RegisterAlertBuilderTools(r *tools.Registry, s AlertBuilderSources) {
 	r.Register(&draftAlertRule{validator: s.Validator})
 	r.Register(&validateAlertRuleTool{validator: s.Validator})
 }

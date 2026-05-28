@@ -8,7 +8,7 @@
 // (`validate_alert_rule`) is exercised by alert_builder_test.go
 // and reused here verbatim — we do not re-test its behaviour.
 
-package tools
+package alert
 
 import (
 	"context"
@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
@@ -47,8 +48,12 @@ func (s *stubAlertTuningSource) LoadFiringHistory(_ context.Context, ruleID int6
 	return s.history, s.loadHistoryErr
 }
 
-// helper — ptrFloat64 lives in route_efficiency_test.go
-func ptrInt(v int) *int { return &v }
+// helper — ptrFloat64 was a shared route_efficiency_test.go helper
+// in the flat-parent ai/tools package. Inlined here after R6.7 carve
+// (test helpers don't cross subpkg boundaries; tiny one-liner stays
+// local rather than promoting to internal/ai/tools/toolstest).
+func ptrFloat64(v float64) *float64 { return &v }
+func ptrInt(v int) *int             { return &v }
 
 func sampleRule() *alertmodel.AlertRule {
 	return &alertmodel.AlertRule{
@@ -313,7 +318,7 @@ func TestDraftAlertRulePatch_RejectsMissingRuleID(t *testing.T) {
 	if err == nil {
 		t.Fatal("Validate err = nil, want required-field error")
 	}
-	ve, ok := AsValidationError(err)
+	ve, ok := tools.AsValidationError(err)
 	if !ok {
 		t.Fatalf("Validate err is not *ValidationError: %T %v", err, err)
 	}
@@ -335,7 +340,7 @@ func TestDraftAlertRulePatch_RejectsZeroRuleID(t *testing.T) {
 		t.Fatal("Validate err = nil, want required-field error on rule_id=0")
 	}
 	// rule_id=0 is the zero value — `required` triggers first.
-	ve, ok := AsValidationError(err)
+	ve, ok := tools.AsValidationError(err)
 	if !ok {
 		t.Fatalf("Validate err is not *ValidationError: %T %v", err, err)
 	}
@@ -353,7 +358,7 @@ func TestDraftAlertRulePatch_RejectsBadOperator(t *testing.T) {
 	if err == nil {
 		t.Fatal("Validate err = nil, want oneof violation")
 	}
-	ve, ok := AsValidationError(err)
+	ve, ok := tools.AsValidationError(err)
 	if !ok {
 		t.Fatalf("Validate err is not *ValidationError: %T %v", err, err)
 	}
@@ -374,7 +379,7 @@ func TestDraftAlertRulePatch_RejectsBadSeverity(t *testing.T) {
 	if err == nil {
 		t.Fatal("Validate err = nil, want oneof violation on legacy 'warning'")
 	}
-	ve, ok := AsValidationError(err)
+	ve, ok := tools.AsValidationError(err)
 	if !ok {
 		t.Fatalf("Validate err is not *ValidationError: %T %v", err, err)
 	}
@@ -397,7 +402,7 @@ func TestDraftAlertRulePatch_RejectsCooldownOutOfRange(t *testing.T) {
 			t.Errorf("Validate(%s) err = nil, want range violation", body)
 			continue
 		}
-		ve, ok := AsValidationError(err)
+		ve, ok := tools.AsValidationError(err)
 		if !ok {
 			t.Errorf("Validate(%s) err is not *ValidationError: %T", body, err)
 			continue
@@ -506,7 +511,7 @@ func TestDraftAlertRulePatch_ContractMetadata(t *testing.T) {
 // the dispatcher resolves it from the same shared registry.
 func TestRegisterAlertTuningSuggestionsTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterAlertTuningSuggestionsTools(r, AlertTuningSuggestionsSources{
 		Source: &stubAlertTuningSource{},
 	})

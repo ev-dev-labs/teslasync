@@ -67,6 +67,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -128,9 +129,9 @@ type AIAlertTuningHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_alert_rule_patch (registered by
-//	tools.RegisterAlertTuningSuggestionsTools) AND
+//	alert.RegisterAlertTuningSuggestionsTools) AND
 //	validate_alert_rule (registered by
-//	tools.RegisterAlertBuilderTools — REUSED from N1).
+//	alert.RegisterAlertBuilderTools — REUSED from N1).
 //
 // strat:      the alert-tuning-suggestions Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject
@@ -335,7 +336,7 @@ var _ http.Handler = (*AIAlertTuningHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIAlertTuningSource is the production
-// tools.AlertTuningSource. It composes the canonical
+// alert.AlertTuningSource. It composes the canonical
 // AlertRuleRepo (read) + NotificationRepo (read) so the AI
 // projection is grounded in the SAME alert_rules + notification_logs
 // rows the deterministic AlertStudio + alert analytics dashboard
@@ -361,7 +362,7 @@ func NewAIAlertTuningSource(rules *database.AlertRuleRepo, notifications *databa
 	return &AIAlertTuningSource{rules: rules, notifications: notifications}
 }
 
-// LoadRule implements tools.AlertTuningSource. Returns the rule
+// LoadRule implements alert.AlertTuningSource. Returns the rule
 // as the canonical AlertRuleRepo.GetByID would — same code path
 // the deterministic AlertStudio's PUT handler uses to read the
 // rule before applying the patch. Returns (nil, nil) when the
@@ -381,7 +382,7 @@ func (a *AIAlertTuningSource) LoadRule(ctx context.Context, ruleID int64) (*aler
 	return rule, nil
 }
 
-// LoadFiringHistory implements tools.AlertTuningSource. Returns
+// LoadFiringHistory implements alert.AlertTuningSource. Returns
 // the rolling firing-event summary for ruleID across the recent
 // trailing window. The projection counts notification_logs rows
 // filtered by alert_id (the canonical firing record) and
@@ -396,7 +397,7 @@ func (a *AIAlertTuningSource) LoadRule(ctx context.Context, ruleID int64) (*aler
 // proposed is the merged patched rule (NOT the original) so the
 // would_have_fired_*_after_patch counts reflect the LLM's
 // proposal, not the current state.
-func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int64, proposed *alertmodel.AlertRule) (*tools.AlertRuleFiringHistory, error) {
+func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int64, proposed *alertmodel.AlertRule) (*alert.AlertRuleFiringHistory, error) {
 	if ruleID <= 0 {
 		return nil, errors.New("api ai alert-tuning-suggestions: rule_id must be > 0")
 	}
@@ -454,7 +455,7 @@ func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int6
 		avg30d = float64(total30d) / 30.0
 	}
 
-	return &tools.AlertRuleFiringHistory{
+	return &alert.AlertRuleFiringHistory{
 		WindowDays:                  aiAlertTuningWindowDays,
 		MinRequiredEvents:           aiAlertTuningMinFires,
 		SampleSize:                  total30d,
