@@ -1,9 +1,11 @@
-package database
+package alert
 
 import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,11 +27,11 @@ type AlertRuleState struct {
 // AlertRuleStateRepo persists per-(rule, vehicle) alert latch/fire state
 // in the alert_rule_state table introduced by migration 000193.
 type AlertRuleStateRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewAlertRuleStateRepo constructs a new repo bound to the given pool.
-func NewAlertRuleStateRepo(db *DB) *AlertRuleStateRepo {
+func NewAlertRuleStateRepo(db *database.DB) *AlertRuleStateRepo {
 	return &AlertRuleStateRepo{db: db}
 }
 

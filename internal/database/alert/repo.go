@@ -1,9 +1,11 @@
-package database
+package alert
 
 import (
 	"context"
 	"sort"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
@@ -12,10 +14,10 @@ import (
 
 // AlertRuleRepo provides alert rule data access.
 type AlertRuleRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewAlertRuleRepo(db *DB) *AlertRuleRepo {
+func NewAlertRuleRepo(db *database.DB) *AlertRuleRepo {
 	return &AlertRuleRepo{db: db}
 }
 

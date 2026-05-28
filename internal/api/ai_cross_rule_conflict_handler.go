@@ -74,7 +74,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 )
 
 // aiCrossRuleConflictMaxIterations bounds the dispatcher's
@@ -323,15 +323,15 @@ var _ http.Handler = (*AICrossRuleConflictHandler)(nil)
 // The struct holds one narrow read interface; the constructor
 // panics on a nil so a wiring bug surfaces at boot.
 type AICrossRuleConflictSource struct {
-	rules *database.AlertRuleRepo
+	rules *dbalert.AlertRuleRepo
 }
 
 // NewAICrossRuleConflictSource constructs the adapter. Panics
 // on a nil repo so a wiring mistake surfaces at boot rather
 // than as a nil-deref on first AI request.
-func NewAICrossRuleConflictSource(rules *database.AlertRuleRepo) *AICrossRuleConflictSource {
+func NewAICrossRuleConflictSource(rules *dbalert.AlertRuleRepo) *AICrossRuleConflictSource {
 	if rules == nil {
-		panic("api: NewAICrossRuleConflictSource: nil *database.AlertRuleRepo")
+		panic("api: NewAICrossRuleConflictSource: nil *dbalert.AlertRuleRepo")
 	}
 	return &AICrossRuleConflictSource{rules: rules}
 }

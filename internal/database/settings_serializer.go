@@ -294,7 +294,7 @@ func (s *SettingsSerializer) applyAlertRules(ctx context.Context, incoming []*al
 	}
 	byKey := map[string]*alertmodel.AlertRule{}
 	for _, r := range current {
-		byKey[alertRuleStableID(r.Name)] = r
+		byKey[AlertRuleStableID(r.Name)] = r
 	}
 	var sec SectionResult
 	for _, r := range incoming {
@@ -302,7 +302,7 @@ func (s *SettingsSerializer) applyAlertRules(ctx context.Context, incoming []*al
 			sec.Skipped++
 			continue
 		}
-		key := alertRuleStableID(r.Name)
+		key := AlertRuleStableID(r.Name)
 		if key == "" {
 			sec.Skipped++
 			continue
@@ -321,7 +321,7 @@ func (s *SettingsSerializer) applyAlertRules(ctx context.Context, incoming []*al
 			}
 			continue
 		}
-		if alertRulesEquivalent(existing, r) {
+		if AlertRulesEquivalent(existing, r) {
 			sec.Skipped++
 			continue
 		}
@@ -346,7 +346,7 @@ func (s *SettingsSerializer) applyGeofences(ctx context.Context, incoming []*sys
 	}
 	byKey := map[string]*systemmodel.Geofence{}
 	for _, g := range current {
-		byKey[alertRuleStableID(g.Name)] = g
+		byKey[AlertRuleStableID(g.Name)] = g
 	}
 	var sec SectionResult
 	for _, g := range incoming {
@@ -354,7 +354,7 @@ func (s *SettingsSerializer) applyGeofences(ctx context.Context, incoming []*sys
 			sec.Skipped++
 			continue
 		}
-		key := alertRuleStableID(g.Name)
+		key := AlertRuleStableID(g.Name)
 		if key == "" {
 			sec.Skipped++
 			continue
@@ -454,11 +454,11 @@ func (s *SettingsSerializer) applyQuietHours(ctx context.Context, userID string,
 	return sec, nil
 }
 
-// alertRuleStableID normalises a name into the case-insensitive,
+// AlertRuleStableID normalises a name into the case-insensitive,
 // whitespace-trimmed key used to dedupe rules + geofences across
 // imports. Empty / whitespace-only names are rejected (the import path
 // counts them as skipped).
-func alertRuleStableID(name string) string {
+func AlertRuleStableID(name string) string {
 	return strings.ToLower(strings.TrimSpace(name))
 }
 
@@ -490,7 +490,7 @@ func settingsEquivalent(a, b *systemmodel.Settings) bool {
 	return reflect.DeepEqual(*a, *b)
 }
 
-// alertRulesEquivalent compares the user-authored fields of two rules.
+// AlertRulesEquivalent compares the user-authored fields of two rules.
 // Server-managed columns (ID, CreatedAt, UpdatedAt) are excluded so
 // "skipped" reflects "no behavioural difference" rather than "no
 // timestamp difference".
@@ -505,7 +505,7 @@ func settingsEquivalent(a, b *systemmodel.Settings) bool {
 // Phase-50 / ADR-005: MsgTemplate + IncludeTitle are compared so a
 // reimport that toggles the title or rewords the body is recognised
 // as a behavioural change (and not silently skipped).
-func alertRulesEquivalent(a, b *alertmodel.AlertRule) bool {
+func AlertRulesEquivalent(a, b *alertmodel.AlertRule) bool {
 	if a == nil || b == nil {
 		return a == b
 	}
@@ -668,7 +668,6 @@ func ptrTimeEq(a, b *time.Time) bool {
 // repos exclusively at runtime.
 var (
 	_ SettingsSerializerSettingsRepo   = (*SettingsRepo)(nil)
-	_ SettingsSerializerAlertRepo      = (*AlertRuleRepo)(nil)
 	_ SettingsSerializerGeofenceRepo   = (*GeofenceRepo)(nil)
 	_ SettingsSerializerQuietHoursRepo = (*QuietHoursRepo)(nil)
 )

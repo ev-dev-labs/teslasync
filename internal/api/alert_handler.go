@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -65,7 +66,7 @@ type notificationRepository interface {
 }
 
 func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store signal.LiveSignalStore) *AlertHandler {
-	repo := database.NewAlertRuleRepo(db)
+	repo := dbalert.NewAlertRuleRepo(db)
 	return &AlertHandler{
 		db:            db,
 		alertRuleRepo: repo,

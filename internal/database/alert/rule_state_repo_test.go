@@ -1,4 +1,4 @@
-package database
+package alert
 
 import (
 	"strings"

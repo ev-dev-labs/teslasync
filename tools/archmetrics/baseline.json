@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T15:25:59Z",
+  "generated_at": "2026-05-28T15:32:23Z",
   "go_version": "go1.26.1",
-  "commit_sha": "db31641148cc1e5882c21f2f5f86ccfbb55420cf",
+  "commit_sha": "0316af5b5276243245b607a77a22662bd19ca999",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -152,7 +152,7 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 524,
+      "loc": 525,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -160,6 +160,7 @@
         "internal/apilog",
         "internal/config",
         "internal/database",
+        "internal/database/alert",
         "internal/database/notification",
         "internal/models/alert",
         "internal/models/notification",
@@ -2497,7 +2498,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126590,
+      "loc": 126593,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2621,6 +2622,7 @@
         "internal/database",
         "internal/database/achievement",
         "internal/database/admin",
+        "internal/database/alert",
         "internal/database/auth",
         "internal/database/automation",
         "internal/database/backup",
@@ -3681,9 +3683,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 70,
-      "test_files": 28,
-      "loc": 18867,
+      "go_files": 68,
+      "test_files": 24,
+      "loc": 17764,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3709,12 +3711,6 @@
         "ai_call_log_repo_test.go",
         "ai_chat_continuations_repo.go",
         "ai_chat_continuations_repo_test.go",
-        "alert_repo.go",
-        "alert_repo_test.go",
-        "alert_repo_test_helpers_test.go",
-        "alert_rule_state_repo.go",
-        "alert_rule_state_repo_integration_test.go",
-        "alert_rule_state_repo_test.go",
         "api_call_log_repo.go",
         "audit_log_query_repo.go",
         "audit_repo.go",
@@ -3836,6 +3832,27 @@
         "pinned_repo.go",
         "places_cache_repo.go",
         "saved_views_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/alert",
+      "go_files": 4,
+      "test_files": 4,
+      "loc": 1136,
+      "has_doc_go": true,
+      "imports": [
+        "internal/database",
+        "internal/models/alert"
+      ],
+      "files": [
+        "doc.go",
+        "repo.go",
+        "repo_test.go",
+        "repo_test_helpers_test.go",
+        "rule_state_repo.go",
+        "rule_state_repo_integration_test.go",
+        "rule_state_repo_test.go",
+        "settings_serializer_assertion.go"
       ]
     },
     {
@@ -5768,13 +5785,14 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2597,
+      "loc": 2598,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/config",
         "internal/crypto",
         "internal/database",
+        "internal/database/alert",
         "internal/database/auth",
         "internal/database/notification",
         "internal/enums",
@@ -5888,7 +5906,7 @@
     "cmd/export-worker": 251,
     "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 520,
+    "cmd/notification-worker": 521,
     "cmd/ocpp-server": 91,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 655,
@@ -6942,8 +6960,6 @@
     "internal/database": [
       "ai_call_log_repo.go",
       "ai_chat_continuations_repo.go",
-      "alert_repo.go",
-      "alert_rule_state_repo.go",
       "api_call_log_repo.go",
       "audit_log_query_repo.go",
       "audit_repo.go",
@@ -7022,6 +7038,12 @@
       "pinned_repo.go",
       "places_cache_repo.go",
       "saved_views_repo.go"
+    ],
+    "internal/database/alert": [
+      "doc.go",
+      "repo.go",
+      "rule_state_repo.go",
+      "settings_serializer_assertion.go"
     ],
     "internal/database/auth": [
       "doc.go",
@@ -7786,11 +7808,12 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 70,
-      "flat_parent_test_files": 28,
+      "flat_parent_go_files": 68,
+      "flat_parent_test_files": 24,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
+        "alert",
         "auth",
         "automation",
         "backup",
@@ -7798,7 +7821,6 @@
       ],
       "missing_subpkgs": [
         "ai",
-        "alert",
         "audit",
         "charging",
         "dashboard",

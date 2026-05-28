@@ -133,7 +133,7 @@ type AlertRule struct {
 // vehicles inherit automatically). Multi-select rules
 // (AllVehicles=false) match only vehicles in the hydrated VehicleIDs
 // slice. Callers MUST ensure VehicleIDs is hydrated by the repo before
-// calling — `internal/database.AlertRuleRepo` populates it on every
+// calling — `internal/dbalert.AlertRuleRepo` populates it on every
 // read path. A nil receiver returns false. Phase-49 / Slice 0005.
 func (r *AlertRule) AppliesTo(vehicleID int64) bool {
 	if r == nil {

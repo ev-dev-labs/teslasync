@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T15:26:00Z, Go go1.26.1, commit db31641148cc1e5882c21f2f5f86ccfbb55420cf_
+_Generated 2026-05-28T15:32:24Z, Go go1.26.1, commit 0316af5b5276243245b607a77a22662bd19ca999_
 
 ## Summary
 
-- Packages: 271
+- Packages: 272
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374198
+- Total non-blank LOC under cmd/+internal/+tools/: 374236
 
 ## cmd/* main.go LOC
 
@@ -21,7 +21,7 @@ _Generated 2026-05-28T15:26:00Z, Go go1.26.1, commit db31641148cc1e5882c21f2f5f8
 | cmd/export-worker/main.go | 251 |
 | cmd/fleet-config-validator/main.go | 327 |
 | cmd/metric-coverage-audit/main.go | 126 |
-| cmd/notification-worker/main.go | 520 |
+| cmd/notification-worker/main.go | 521 |
 | cmd/ocpp-server/main.go | 91 |
 | cmd/protogen-tesla/main.go | 73 |
 | cmd/pub-test-signal/main.go | 655 |
@@ -48,7 +48,7 @@ _Generated 2026-05-28T15:26:00Z, Go go1.26.1, commit db31641148cc1e5882c21f2f5f8
 | cmd/export-worker | 2 | 0 | 255 | yes | cmd-internal |
 | cmd/fleet-config-validator | 2 | 1 | 491 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
-| cmd/notification-worker | 2 | 0 | 524 | yes | cmd-internal |
+| cmd/notification-worker | 2 | 0 | 525 | yes | cmd-internal |
 | cmd/ocpp-server | 2 | 0 | 103 | yes | cmd-internal |
 | cmd/protogen-tesla | 4 | 1 | 2297 | yes | cmd-internal |
 | cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
@@ -170,7 +170,7 @@ _Generated 2026-05-28T15:26:00Z, Go go1.26.1, commit db31641148cc1e5882c21f2f5f8
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126590 | yes | handler |
+| internal/api | 271 | 163 | 126593 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1838 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
@@ -197,9 +197,10 @@ _Generated 2026-05-28T15:26:00Z, Go go1.26.1, commit db31641148cc1e5882c21f2f5f8
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 70 | 28 | 18867 | yes | platform |
+| internal/database | 68 | 24 | 17764 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes |  |
 | internal/database/admin | 6 | 0 | 873 | yes |  |
+| internal/database/alert | 4 | 4 | 1136 | yes |  |
 | internal/database/auth | 7 | 4 | 1788 | yes |  |
 | internal/database/automation | 11 | 1 | 1684 | yes |  |
 | internal/database/backup | 3 | 0 | 246 | yes |  |
@@ -305,7 +306,7 @@ _Generated 2026-05-28T15:26:00Z, Go go1.26.1, commit db31641148cc1e5882c21f2f5f8
 | internal/units | 2 | 0 | 63 | yes | platform |
 | internal/v2h | 2 | 1 | 554 | yes | platform |
 | internal/webpush | 2 | 1 | 519 | yes | platform |
-| internal/worker | 8 | 3 | 2597 | yes | platform |
+| internal/worker | 8 | 3 | 2598 | yes | platform |
 | tools/aigen | 2 | 1 | 338 | yes | tool |
 | tools/aistream-contract | 2 | 0 | 227 | yes | tool |
 | tools/aivet | 2 | 1 | 792 | yes | tool |
@@ -325,7 +326,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 70 / 28 | 22 | 5 | 17 |
+| `internal/database` | R4 | 143 | 68 / 24 | 22 | 6 | 16 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 
@@ -391,6 +392,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 **Existing subpackages on disk:**
 - `internal/database/achievement`
+- `internal/database/alert`
 - `internal/database/auth`
 - `internal/database/automation`
 - `internal/database/backup`
@@ -398,7 +400,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 **Planned but not yet on disk:**
 - `internal/database/ai`
-- `internal/database/alert`
 - `internal/database/audit`
 - `internal/database/charging`
 - `internal/database/dashboard`

@@ -66,7 +66,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
@@ -370,18 +370,18 @@ var _ http.Handler = (*AIInboxCategorizationHandler)(nil)
 // panics on a nil so a wiring bug surfaces at boot.
 type AIInboxCategorizationSource struct {
 	notifications *dbnotif.NotificationRepo
-	rules         *database.AlertRuleRepo
+	rules         *dbalert.AlertRuleRepo
 }
 
 // NewAIInboxCategorizationSource constructs the adapter. Panics
 // on a nil repo so a wiring mistake surfaces at boot rather
 // than as a nil-deref on first AI request.
-func NewAIInboxCategorizationSource(notifications *dbnotif.NotificationRepo, rules *database.AlertRuleRepo) *AIInboxCategorizationSource {
+func NewAIInboxCategorizationSource(notifications *dbnotif.NotificationRepo, rules *dbalert.AlertRuleRepo) *AIInboxCategorizationSource {
 	if notifications == nil {
 		panic("api: NewAIInboxCategorizationSource: nil *dbnotif.NotificationRepo")
 	}
 	if rules == nil {
-		panic("api: NewAIInboxCategorizationSource: nil *database.AlertRuleRepo")
+		panic("api: NewAIInboxCategorizationSource: nil *dbalert.AlertRuleRepo")
 	}
 	return &AIInboxCategorizationSource{notifications: notifications, rules: rules}
 }

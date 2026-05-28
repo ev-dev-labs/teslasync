@@ -26,6 +26,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
@@ -290,7 +291,7 @@ func main() {
 	// the same MQTT pipeline as schedule entries). Sequential per tick is
 	// fine — the registry SQL is cheap (uses cagg/per-table indexes) and
 	// the rule count is small.
-	alertRuleRepo := database.NewAlertRuleRepo(db)
+	alertRuleRepo := dbalert.NewAlertRuleRepo(db)
 	notifRepoForCM := dbnotif.NewNotificationRepo(db)
 	vehicleRepo := database.NewVehicleRepo(db)
 	computedEval := computed.New(db)
@@ -395,7 +396,7 @@ func setupLogger(level string) {
 // "fan out across all vehicles in the fleet".
 func runComputedMetricTick(
 	ctx context.Context,
-	alertRuleRepo *database.AlertRuleRepo,
+	alertRuleRepo *dbalert.AlertRuleRepo,
 	vehicleRepo *database.VehicleRepo,
 	notifRepo *dbnotif.NotificationRepo,
 	evaluator *computed.Evaluator,

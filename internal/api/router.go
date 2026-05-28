@@ -16,6 +16,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
@@ -444,7 +445,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// route below; export is read-only and runs unguarded.
 	settingsSerializer := database.NewSettingsSerializer(
 		database.NewSettingsRepo(db),
-		database.NewAlertRuleRepo(db),
+		dbalert.NewAlertRuleRepo(db),
 		database.NewGeofenceRepo(db),
 		database.NewQuietHoursRepo(db),
 	)
@@ -564,7 +565,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		VehicleState:  aiToolsStateAdapter{r: stateReader},
 		Drives:        database.NewDriveRepo(db),
 		Charges:       database.NewChargingRepo(db),
-		AlertRules:    database.NewAlertRuleRepo(db),
+		AlertRules:    dbalert.NewAlertRuleRepo(db),
 		Notifications: dbnotif.NewNotificationRepo(db),
 		Geofences:     database.NewGeofenceRepo(db),
 		Efficiency:    database.NewDriveRepo(db),
@@ -1540,7 +1541,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// reads the SAME rows the manual AlertStudio path reads —
 	// no parallel write path; the LLM never persists.
 	alert.RegisterAlertTuningSuggestionsTools(aiToolRegistry, alert.AlertTuningSuggestionsSources{
-		Source: NewAIAlertTuningSource(database.NewAlertRuleRepo(db), dbnotif.NewNotificationRepo(db)),
+		Source: NewAIAlertTuningSource(dbalert.NewAlertRuleRepo(db), dbnotif.NewNotificationRepo(db)),
 	})
 	// alert-tuning-suggestions handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
@@ -1562,7 +1563,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// reads the SAME rows the manual InboxBody path reads —
 	// no parallel write path; the LLM never persists.
 	nl.RegisterInboxAutoCategorizationTools(aiToolRegistry, nl.InboxAutoCategorizationSources{
-		Source: NewAIInboxCategorizationSource(dbnotif.NewNotificationRepo(db), database.NewAlertRuleRepo(db)),
+		Source: NewAIInboxCategorizationSource(dbnotif.NewNotificationRepo(db), dbalert.NewAlertRuleRepo(db)),
 	})
 	// inbox-auto-categorization handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
@@ -1587,7 +1588,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// (DetectRuleConflicts) and is exercised in unit tests
 	// without IO.
 	diagnostic.RegisterCrossRuleConflictDetectionTools(aiToolRegistry, diagnostic.CrossRuleConflictDetectionSources{
-		Source: NewAICrossRuleConflictSource(database.NewAlertRuleRepo(db)),
+		Source: NewAICrossRuleConflictSource(dbalert.NewAlertRuleRepo(db)),
 	})
 	// cross-rule-conflict-detection handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed

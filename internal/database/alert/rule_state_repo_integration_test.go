@@ -1,4 +1,4 @@
-package database
+package alert
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -185,7 +186,7 @@ CREATE TABLE alert_rule_state (
 			_, _ = pool.Exec(context.Background(), `DROP TABLE IF EXISTS alert_rule_state`)
 		})
 
-		repo := NewAlertRuleStateRepo(&DB{Pool: pool})
+		repo := NewAlertRuleStateRepo(&database.DB{Pool: pool})
 		ok, err := repo.MarkFired(ctx, 99, 7, now, true)
 		if err != nil {
 			t.Fatalf("MarkFired (live SQL): %v (regression: SQLSTATE 42804 if cast is missing from alertRuleStateMarkFiredSQL)", err)

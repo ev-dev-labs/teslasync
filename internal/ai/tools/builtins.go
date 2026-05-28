@@ -77,7 +77,7 @@ type ChargeSource interface {
 }
 
 // AlertRuleSource is the read surface the alert-rule tools need.
-// Implemented by *database.AlertRuleRepo.
+// Implemented by *dbalert.AlertRuleRepo.
 type AlertRuleSource interface {
 	GetAll(ctx context.Context) ([]*alertmodel.AlertRule, error)
 }

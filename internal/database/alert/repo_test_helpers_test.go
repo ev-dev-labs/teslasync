@@ -1,4 +1,4 @@
-package database
+package alert
 
 import (
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"

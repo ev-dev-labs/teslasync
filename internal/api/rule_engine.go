@@ -13,13 +13,13 @@ import (
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/rs/zerolog/log"
 )
 
 // RuleStateStore is the persistence seam for alert latch + fire state. It
-// is satisfied by *database.AlertRuleStateRepo in production and by a
+// is satisfied by *dbalert.AlertRuleStateRepo in production and by a
 // small in-memory fake in unit tests. See migration 000193 and Phase-49
 // Slice 0002 for the design rationale.
 //
@@ -27,7 +27,7 @@ import (
 // implementation uses a race-safe ON CONFLICT upsert (see
 // alertRuleStateMarkFiredSQL) and the tests' fake uses a mutex.
 type RuleStateStore interface {
-	LoadAll(ctx context.Context) ([]*database.AlertRuleState, error)
+	LoadAll(ctx context.Context) ([]*dbalert.AlertRuleState, error)
 	MarkFired(ctx context.Context, ruleID, vehicleID int64, now time.Time, isOnce bool) (bool, error)
 	ClearLatch(ctx context.Context, ruleID, vehicleID int64, now time.Time) error
 }

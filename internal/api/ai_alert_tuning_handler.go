@@ -69,7 +69,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
@@ -346,16 +346,16 @@ var _ http.Handler = (*AIAlertTuningHandler)(nil)
 // The struct holds two narrow read interfaces; the constructor
 // panics on a nil so a wiring bug surfaces at boot.
 type AIAlertTuningSource struct {
-	rules         *database.AlertRuleRepo
+	rules         *dbalert.AlertRuleRepo
 	notifications *dbnotif.NotificationRepo
 }
 
 // NewAIAlertTuningSource constructs the adapter. Panics on a nil
 // repo so a wiring mistake surfaces at boot rather than as a
 // nil-deref on first AI request.
-func NewAIAlertTuningSource(rules *database.AlertRuleRepo, notifications *dbnotif.NotificationRepo) *AIAlertTuningSource {
+func NewAIAlertTuningSource(rules *dbalert.AlertRuleRepo, notifications *dbnotif.NotificationRepo) *AIAlertTuningSource {
 	if rules == nil {
-		panic("api: NewAIAlertTuningSource: nil *database.AlertRuleRepo")
+		panic("api: NewAIAlertTuningSource: nil *dbalert.AlertRuleRepo")
 	}
 	if notifications == nil {
 		panic("api: NewAIAlertTuningSource: nil *dbnotif.NotificationRepo")

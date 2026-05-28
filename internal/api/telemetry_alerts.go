@@ -10,6 +10,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -19,7 +20,7 @@ import (
 
 // TelemetryAlertEvaluator runs alert rules against incoming streaming signals.
 type TelemetryAlertEvaluator struct {
-	alertRuleRepo *database.AlertRuleRepo
+	alertRuleRepo *dbalert.AlertRuleRepo
 	notifRepo     *dbnotif.NotificationRepo
 	settingsRepo  *database.SettingsRepo
 	vehicleRepo   *database.VehicleRepo
@@ -36,9 +37,9 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 	// survive pod restarts. Phase-49 / Slice 0002. The hydration call
 	// itself is invoked from internal/app/new.go after the evaluator is
 	// constructed, before MQTT subscribers start dispatching telemetry.
-	engine.SetStateRepo(database.NewAlertRuleStateRepo(db))
+	engine.SetStateRepo(dbalert.NewAlertRuleStateRepo(db))
 	return &TelemetryAlertEvaluator{
-		alertRuleRepo: database.NewAlertRuleRepo(db),
+		alertRuleRepo: dbalert.NewAlertRuleRepo(db),
 		notifRepo:     dbnotif.NewNotificationRepo(db),
 		settingsRepo:  database.NewSettingsRepo(db),
 		vehicleRepo:   database.NewVehicleRepo(db),

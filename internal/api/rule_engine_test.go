@@ -8,7 +8,7 @@ import (
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 )
 
 func TestAlertRuleTypedComparisonOps(t *testing.T) {
@@ -563,7 +563,7 @@ func TestRuleEngine_Snooze_ExpiredAllowsOnceFire(t *testing.T) {
 // Phase-49 / Slice 0002 — persistent latch + race-safe MarkFired tests.
 //
 // fakeRuleStateStore is an in-memory implementation of RuleStateStore
-// satisfying the same interface that *database.AlertRuleStateRepo
+// satisfying the same interface that *dbalert.AlertRuleStateRepo
 // satisfies in production. The race semantics mirror the SQL in
 // migration 000193 + alert_rule_state_repo.go: MarkFired with isOnce=true
 // against an already-latched pair returns (false, nil); the WHERE clause
@@ -572,21 +572,21 @@ func TestRuleEngine_Snooze_ExpiredAllowsOnceFire(t *testing.T) {
 
 type fakeRuleStateStore struct {
 	mu    sync.Mutex
-	rows  map[ruleKey]*database.AlertRuleState
+	rows  map[ruleKey]*dbalert.AlertRuleState
 	calls struct {
 		loadAll, markFired, clearLatch int
 	}
 }
 
 func newFakeRuleStateStore() *fakeRuleStateStore {
-	return &fakeRuleStateStore{rows: make(map[ruleKey]*database.AlertRuleState)}
+	return &fakeRuleStateStore{rows: make(map[ruleKey]*dbalert.AlertRuleState)}
 }
 
-func (f *fakeRuleStateStore) LoadAll(_ context.Context) ([]*database.AlertRuleState, error) {
+func (f *fakeRuleStateStore) LoadAll(_ context.Context) ([]*dbalert.AlertRuleState, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls.loadAll++
-	out := make([]*database.AlertRuleState, 0, len(f.rows))
+	out := make([]*dbalert.AlertRuleState, 0, len(f.rows))
 	for _, r := range f.rows {
 		copy := *r
 		out = append(out, &copy)
@@ -601,7 +601,7 @@ func (f *fakeRuleStateStore) MarkFired(_ context.Context, ruleID, vehicleID int6
 	key := ruleKey{RuleID: ruleID, VehicleID: vehicleID}
 	row, ok := f.rows[key]
 	if !ok {
-		row = &database.AlertRuleState{RuleID: ruleID, VehicleID: vehicleID}
+		row = &dbalert.AlertRuleState{RuleID: ruleID, VehicleID: vehicleID}
 		f.rows[key] = row
 	}
 	// Race-protection: an already-latched pair refuses the new fire.
