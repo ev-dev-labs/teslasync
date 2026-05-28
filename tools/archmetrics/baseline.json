@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T17:44:54Z",
+  "generated_at": "2026-05-28T18:00:07Z",
   "go_version": "go1.26.1",
-  "commit_sha": "d3a7ae1b7d7169e57af9181b77905cc791d20a4f",
+  "commit_sha": "a59f2cf10057a4be617ed7c949cb8ced378963a6",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2516,7 +2516,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126465,
+      "loc": 126260,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2618,6 +2618,7 @@
         "internal/ai/tools/yir",
         "internal/alertmsg",
         "internal/api",
+        "internal/api/apiparams",
         "internal/api/apitest",
         "internal/api/httpx",
         "internal/apilog",
@@ -3167,6 +3168,22 @@
         "webhook_receiver_handler_test.go",
         "weekly_digest_handler.go",
         "year_review_handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/apiparams",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 358,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams"
+      ],
+      "files": [
+        "doc.go",
+        "params.go",
+        "params_test.go"
       ]
     },
     {
@@ -7175,6 +7192,10 @@
       "webhook_receiver_handler.go",
       "weekly_digest_handler.go",
       "year_review_handler.go"
+    ],
+    "internal/api/apiparams": [
+      "doc.go",
+      "params.go"
     ],
     "internal/api/apitest": [
       "apitest.go",

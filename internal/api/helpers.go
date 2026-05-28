@@ -3,13 +3,12 @@ package api
 import (
 	"context"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -73,79 +72,33 @@ func writeAppError(w http.ResponseWriter, r *http.Request, appErr *AppError) {
 	}
 }
 
-// Pagination helper extracts limit/offset from query params.
+// pagination is a transitional wrapper around apiparams.Pagination
+// kept for the duration of the internal/api -> internal/api/<resource>/
+// subpackage migration (Phase R2). New handlers — and handlers being
+// moved into resource subpackages — MUST call apiparams.Pagination
+// directly. Deletion of this wrapper is gated on internal/api/
+// reaching its irreducible drained shape at end of Phase R2.
 func pagination(r *http.Request) (limit, offset int) {
-	limit = 50
-	offset = 0
-	if v := r.URL.Query().Get("limit"); v != "" {
-		if l, err := strconv.Atoi(v); err == nil && l > 0 && l <= 1000 {
-			limit = l
-		}
-	}
-	if v := r.URL.Query().Get("offset"); v != "" {
-		if o, err := strconv.Atoi(v); err == nil && o >= 0 {
-			offset = o
-		}
-	}
-	return
+	return apiparams.Pagination(r)
 }
 
-// urlParamInt64 extracts an int64 URL parameter.
+// urlParamInt64 is a transitional wrapper around apiparams.URLParamInt64.
+// See pagination for the broader transitional plan.
 func urlParamInt64(r *http.Request, key string) (int64, error) {
-	return strconv.ParseInt(chi.URLParam(r, key), 10, 64)
+	return apiparams.URLParamInt64(r, key)
 }
 
-// parseDateRange extracts optional start/end date query params.
-//
-// Two formats are accepted, in this order of precedence per parameter:
-//
-//  1. RFC 3339 instants (e.g. "2026-05-13T07:00:00Z") — used verbatim
-//     for `start`. For `end`, the FE convention is to send the next
-//     local midnight (i.e. an EXCLUSIVE upper bound) so the window
-//     spans `[start, end)` in calendar-day terms. Existing handlers
-//     filter with `ts BETWEEN $2 AND $3` (inclusive); to keep that
-//     contract working we subtract 1 microsecond from the RFC 3339
-//     end so the boundary instant itself is excluded. Net effect:
-//     callers get correct `[start, next_local_midnight)` semantics
-//     regardless of which SQL operator they use. This is the form
-//     the React `useRangeState` hook produces via its
-//     `startInstant` / `endInstantExclusive` outputs and is the
-//     recommended shape for all new UI surfaces.
-//
-//  2. Date-only "YYYY-MM-DD" — backward-compatible legacy form. Parsed
-//     as UTC midnight (start) / UTC end-of-day (end, inclusive).
-//     Suitable for fixed-window reports and audit endpoints that
-//     don't care about timezone. New UI surfaces should switch to
-//     RFC 3339 instants — the legacy form silently dropped today's
-//     local rows for any user east or west of UTC (e.g. a PST user's
-//     evening drives recorded at next-day UTC).
+// parseDateRange is a transitional wrapper around apiparams.ParseDateRange.
+// See pagination for the broader transitional plan + the detailed
+// timezone bug-fix docstring on the canonical apiparams.ParseDateRange.
 func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
-	if s := r.URL.Query().Get("start"); s != "" {
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			startTime = t
-		} else if t, err := time.Parse("2006-01-02", s); err == nil {
-			startTime = t
-		}
-	}
-	if s := r.URL.Query().Get("end"); s != "" {
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			endTime = t.Add(-time.Microsecond) // exclusive → inclusive for BETWEEN
-		} else if t, err := time.Parse("2006-01-02", s); err == nil {
-			endTime = t.Add(24*time.Hour - time.Second) // end of day (UTC)
-		}
-	}
-	return
+	return apiparams.ParseDateRange(r)
 }
 
-// nullableTime returns t when use is true, otherwise an interface-typed nil
-// suitable for passing to pgx.Query. Combined with `$N::timestamptz IS NULL`
-// SQL guards this lets a single prepared statement express
-// "scope by [start, end] when supplied; full-history when not".
+// nullableTime is a transitional wrapper around apiparams.NullableTime.
+// See pagination for the broader transitional plan.
 func nullableTime(use bool, t time.Time) interface{} {
-	if !use {
-		return nil
-	}
-	return t
+	return apiparams.NullableTime(use, t)
 }
 
 // EstimateBatteryCapacityWh returns the best-effort battery capacity in Wh

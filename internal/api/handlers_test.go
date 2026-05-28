@@ -1,38 +1,12 @@
 package api
 
 import (
-	"net/http/httptest"
 	"testing"
 )
 
-func TestPagination(t *testing.T) {
-	tests := []struct {
-		query     string
-		wantLimit int
-		wantOff   int
-	}{
-		{"", 50, 0},
-		{"?limit=10", 10, 0},
-		{"?limit=10&offset=20", 10, 20},
-		{"?limit=2000", 50, 0}, // exceeds max, uses default
-		{"?limit=-5", 50, 0},   // negative, uses default
-		{"?limit=abc", 50, 0},  // invalid, uses default
-		{"?offset=-1", 50, 0},  // negative offset, uses default
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.query, func(t *testing.T) {
-			r := httptest.NewRequest("GET", "/test"+tt.query, nil)
-			limit, offset := pagination(r)
-			if limit != tt.wantLimit {
-				t.Errorf("limit = %d, want %d", limit, tt.wantLimit)
-			}
-			if offset != tt.wantOff {
-				t.Errorf("offset = %d, want %d", offset, tt.wantOff)
-			}
-		})
-	}
-}
+// Phase R2.0c (2026-05-28): TestPagination relocated to
+// internal/api/apiparams/params_test.go (TestPagination_DefaultsAndBounds)
+// alongside the canonical exported apiparams.Pagination helper.
 
 func TestAllowedCommandsWhitelist(t *testing.T) {
 	// Should allow known commands

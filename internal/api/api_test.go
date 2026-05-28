@@ -160,90 +160,20 @@ func TestRecoveryMiddleware_CatchesPanic(t *testing.T) {
 
 // ---------------------------------------------------------------------------
 // Pagination helper tests
+//
+// Phase R2.0c (2026-05-28): TestPagination_Defaults / CustomValues /
+// InvalidValues / ExceedsMax / ZeroLimit relocated to
+// internal/api/apiparams/params_test.go alongside the canonical
+// exported apiparams.Pagination helper.
 // ---------------------------------------------------------------------------
-
-func TestPagination_Defaults(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test", nil)
-	limit, offset := pagination(req)
-	if limit != 50 {
-		t.Errorf("expected default limit 50, got %d", limit)
-	}
-	if offset != 0 {
-		t.Errorf("expected default offset 0, got %d", offset)
-	}
-}
-
-func TestPagination_CustomValues(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test?limit=25&offset=10", nil)
-	limit, offset := pagination(req)
-	if limit != 25 {
-		t.Errorf("expected limit 25, got %d", limit)
-	}
-	if offset != 10 {
-		t.Errorf("expected offset 10, got %d", offset)
-	}
-}
-
-func TestPagination_InvalidValues(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test?limit=abc&offset=-5", nil)
-	limit, offset := pagination(req)
-	if limit != 50 {
-		t.Errorf("expected default limit 50 for invalid input, got %d", limit)
-	}
-	if offset != 0 {
-		t.Errorf("expected default offset 0 for negative input, got %d", offset)
-	}
-}
-
-func TestPagination_ExceedsMax(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test?limit=5000", nil)
-	limit, _ := pagination(req)
-	if limit != 50 {
-		t.Errorf("expected default limit 50 for over-max input, got %d", limit)
-	}
-}
-
-func TestPagination_ZeroLimit(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test?limit=0", nil)
-	limit, _ := pagination(req)
-	if limit != 50 {
-		t.Errorf("expected default limit 50 for zero, got %d", limit)
-	}
-}
 
 // ---------------------------------------------------------------------------
 // parseDateRange tests
+//
+// Phase R2.0c (2026-05-28): TestParseDateRange_ValidDates / NoDates /
+// InvalidFormat relocated to internal/api/apiparams/params_test.go
+// alongside the canonical exported apiparams.ParseDateRange helper.
 // ---------------------------------------------------------------------------
-
-func TestParseDateRange_ValidDates(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test?start=2024-01-15&end=2024-02-15", nil)
-	start, end := parseDateRange(req)
-	if start.IsZero() {
-		t.Error("expected non-zero start time")
-	}
-	if end.IsZero() {
-		t.Error("expected non-zero end time")
-	}
-	if start.Year() != 2024 || start.Month() != 1 || start.Day() != 15 {
-		t.Errorf("unexpected start date: %v", start)
-	}
-}
-
-func TestParseDateRange_NoDates(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test", nil)
-	start, end := parseDateRange(req)
-	if !start.IsZero() || !end.IsZero() {
-		t.Error("expected zero values when no dates provided")
-	}
-}
-
-func TestParseDateRange_InvalidFormat(t *testing.T) {
-	req := httptest.NewRequest("GET", "/test?start=01-15-2024", nil)
-	start, _ := parseDateRange(req)
-	if !start.IsZero() {
-		t.Error("expected zero start for invalid format")
-	}
-}
 
 // ---------------------------------------------------------------------------
 // EventHub (SSE) tests
