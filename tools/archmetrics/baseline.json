@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:09:04Z",
+  "generated_at": "2026-05-28T06:14:23Z",
   "go_version": "go1.26.1",
-  "commit_sha": "1aa61baf6895552da024dea9b7d1039a9328cfcd",
+  "commit_sha": "554ef6b95c7bbbc987f35f3b38f461b3d4b3ba5b",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 52,
-      "test_files": 45,
-      "loc": 41635,
+      "go_files": 49,
+      "test_files": 42,
+      "loc": 39774,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1919,8 +1919,6 @@
         "charge_curve_clusters_test.go",
         "charging_diagnosis.go",
         "charging_diagnosis_test.go",
-        "cost_forecast.go",
-        "cost_forecast_test.go",
         "cross_rule_conflict.go",
         "cross_rule_conflict_test.go",
         "data_repair_suggestions.go",
@@ -1954,8 +1952,6 @@
         "nl_sql_playground.go",
         "paint_preview.go",
         "paint_preview_test.go",
-        "period_compare.go",
-        "period_compare_test.go",
         "predictive_maintenance.go",
         "predictive_maintenance_test.go",
         "preheat_precool_recommender.go",
@@ -1986,8 +1982,6 @@
         "state_machine_debugger_narrator_test.go",
         "tco_summary.go",
         "tco_summary_test.go",
-        "temperature_impact.go",
-        "temperature_impact_test.go",
         "tire_pressure_trend.go",
         "tool.go",
         "trip_planner_llm_agent.go",
@@ -2035,6 +2029,25 @@
         "doc.go",
         "triage.go",
         "triage_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/forecast",
+      "go_files": 4,
+      "test_files": 3,
+      "loc": 1893,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/tools"
+      ],
+      "files": [
+        "cost.go",
+        "cost_test.go",
+        "doc.go",
+        "period_compare.go",
+        "period_compare_test.go",
+        "temperature_impact.go",
+        "temperature_impact_test.go"
       ]
     },
     {
@@ -2092,7 +2105,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126500,
+      "loc": 126504,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2166,6 +2179,7 @@
         "internal/ai/tools",
         "internal/ai/tools/alert",
         "internal/ai/tools/feedback",
+        "internal/ai/tools/forecast",
         "internal/ai/tools/location",
         "internal/ai/tools/safety",
         "internal/alertmsg",
@@ -5791,7 +5805,6 @@
       "charge_curve_clustering.go",
       "charge_curve_clusters.go",
       "charging_diagnosis.go",
-      "cost_forecast.go",
       "cross_rule_conflict.go",
       "data_repair_suggestions.go",
       "digest.go",
@@ -5810,7 +5823,6 @@
       "nl_grafana_panel.go",
       "nl_sql_playground.go",
       "paint_preview.go",
-      "period_compare.go",
       "predictive_maintenance.go",
       "preheat_precool_recommender.go",
       "quiet_hours_suggestion.go",
@@ -5826,7 +5838,6 @@
       "speed_profile.go",
       "state_machine_debugger_narrator.go",
       "tco_summary.go",
-      "temperature_impact.go",
       "tire_pressure_trend.go",
       "tool.go",
       "trip_planner_llm_agent.go",
@@ -5844,6 +5855,12 @@
     "internal/ai/tools/feedback": [
       "doc.go",
       "triage.go"
+    ],
+    "internal/ai/tools/forecast": [
+      "cost.go",
+      "doc.go",
+      "period_compare.go",
+      "temperature_impact.go"
     ],
     "internal/ai/tools/location": [
       "auto_name.go",
@@ -7071,12 +7088,13 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 52,
-      "flat_parent_test_files": 45,
+      "flat_parent_go_files": 49,
+      "flat_parent_test_files": 42,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",
         "feedback",
+        "forecast",
         "location",
         "safety"
       ],
@@ -7086,7 +7104,6 @@
         "charging",
         "diagnostics",
         "drive",
-        "forecast",
         "nl",
         "share",
         "summary"

@@ -60,12 +60,14 @@
 // every other PII class — VIN, lat/long, addresses — remains
 // tagged via round-trip markers.
 
-package tools
+package forecast
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -194,7 +196,7 @@ func (t *queryTemperatureImpact) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryTemperatureImpact) InputSchema() json.RawMessage {
-	return CachedSchema(queryTemperatureImpactInput{})
+	return tools.CachedSchema(queryTemperatureImpactInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -211,7 +213,7 @@ func (t *queryTemperatureImpact) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryTemperatureImpact) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryTemperatureImpactInput](raw)
+	return tools.ValidateStruct[queryTemperatureImpactInput](raw)
 }
 
 // Execute implements [Tool]. Delegates to the
@@ -257,6 +259,6 @@ type CabinTemperatureImpactNarrativeSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterCabinTemperatureImpactNarrativeTools(r *Registry, s CabinTemperatureImpactNarrativeSources) {
+func RegisterCabinTemperatureImpactNarrativeTools(r *tools.Registry, s CabinTemperatureImpactNarrativeSources) {
 	r.Register(&queryTemperatureImpact{source: s.Source})
 }

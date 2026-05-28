@@ -73,12 +73,14 @@
 // the underlying ComputeCostForecast helper for parity with the
 // chart shape.
 
-package tools
+package forecast
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -256,7 +258,7 @@ func (t *queryCostForecast) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryCostForecast) InputSchema() json.RawMessage {
-	return CachedSchema(queryCostForecastInput{})
+	return tools.CachedSchema(queryCostForecastInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -273,7 +275,7 @@ func (t *queryCostForecast) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryCostForecast) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryCostForecastInput](raw)
+	return tools.ValidateStruct[queryCostForecastInput](raw)
 }
 
 // Execute implements [Tool]. Delegates to the CostForecaster
@@ -326,6 +328,6 @@ type CostForecastNarrationSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterCostForecastNarrationTools(r *Registry, s CostForecastNarrationSources) {
+func RegisterCostForecastNarrationTools(r *tools.Registry, s CostForecastNarrationSources) {
 	r.Register(&queryCostForecast{forecaster: s.Forecaster})
 }

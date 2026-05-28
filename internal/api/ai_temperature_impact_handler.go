@@ -44,7 +44,7 @@ package api
 //     /api/v1/ai/*; no field on the existing baseline JSON shape
 //     is added or modified by this slice. The tool envelope's
 //     extra honest-method fields live in the AI-only typed
-//     [tools.TemperatureImpact] envelope, not on the baseline
+//     [forecast.TemperatureImpact] envelope, not on the baseline
 //     /analytics/temperature-impact response.
 
 import (
@@ -64,6 +64,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -250,7 +251,7 @@ var _ http.Handler = (*AICabinTemperatureImpactHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AITemperatureImpactSource is the production
-// tools.TemperatureImpactSource. It runs the same deterministic
+// forecast.TemperatureImpactSource. It runs the same deterministic
 // SQL aggregation that backs the canonical GET
 // /api/v1/analytics/temperature-impact handler so the AI
 // narration is grounded in the SAME numbers the chart on
@@ -273,7 +274,7 @@ func NewAITemperatureImpactSource(db *database.DB) *AITemperatureImpactSource {
 }
 
 // QueryTemperatureImpact implements
-// tools.TemperatureImpactSource. Composes the SAME bucket /
+// forecast.TemperatureImpactSource. Composes the SAME bucket /
 // seasonal-trend SQL the canonical TempImpactHandler.Get runs so
 // the returned envelope is numerically identical (modulo
 // rounding) to what the chart on /temperature-impact renders —
@@ -282,18 +283,18 @@ func NewAITemperatureImpactSource(db *database.DB) *AITemperatureImpactSource {
 //
 // The function does NOT recompute or override anything the
 // canonical handler computes; it only reshapes the existing
-// output into the typed [tools.TemperatureImpact] envelope the
+// output into the typed [forecast.TemperatureImpact] envelope the
 // LLM can quote. Best/worst bucket selection, sample-size +
 // has_enough_data flagging, and deterministic insight generation
 // are added on top — they are pure pure-functional derivations
 // of the bucket aggregate that the chart's "optimal range" panel
 // also computes (in JS) on the SPA.
-func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, vehicleID int64) (*tools.TemperatureImpact, error) {
+func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, vehicleID int64) (*forecast.TemperatureImpact, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai cabin-temperature-impact-narrative: vehicle_id must be > 0")
 	}
 
-	envelope := &tools.TemperatureImpact{
+	envelope := &forecast.TemperatureImpact{
 		VehicleID:         vehicleID,
 		MinRequiredDrives: aiCabinTemperatureImpactMinDrives,
 		Method:            "Bucket aggregate of recent drives grouped by ambient cabin temperature; rolling 12-month seasonal trend",
@@ -302,8 +303,8 @@ func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, 
 			"Monthly trend is a rolling 12-month average of avg_temp_c paired with avg_efficiency.",
 			fmt.Sprintf("Minimum sample size for a meaningful narrative is %d drives across all buckets; below this threshold has_enough_data is false.", aiCabinTemperatureImpactMinDrives),
 		},
-		Buckets:      []tools.TemperatureImpactBucket{},
-		MonthlyTrend: []tools.TemperatureImpactMonth{},
+		Buckets:      []forecast.TemperatureImpactBucket{},
+		MonthlyTrend: []forecast.TemperatureImpactMonth{},
 		Insights:     []string{},
 	}
 
@@ -337,7 +338,7 @@ func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, 
 
 	totalDrives := 0
 	for bucketRows.Next() {
-		var b tools.TemperatureImpactBucket
+		var b forecast.TemperatureImpactBucket
 		var avgDist, avgDur, avgBat, avgTemp *float64
 		if err := bucketRows.Scan(&b.Label, &b.DriveCount, &avgDist, &avgDur, &avgBat, &avgTemp); err != nil {
 			return nil, fmt.Errorf("api ai cabin-temperature-impact-narrative: bucket scan: %w", err)
@@ -385,7 +386,7 @@ func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, 
 	defer trendRows.Close()
 
 	for trendRows.Next() {
-		var m tools.TemperatureImpactMonth
+		var m forecast.TemperatureImpactMonth
 		var monthTime interface{}
 		var avgTemp, avgEff, totalDist *float64
 		if err := trendRows.Scan(&monthTime, &avgTemp, &avgEff, &m.DriveCount, &totalDist); err != nil {
@@ -427,11 +428,11 @@ func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, 
 // The selection ignores buckets with zero drives or
 // non-positive avg_battery_pct_per_100km — both are degenerate
 // cases that produce a meaningless "best" classification.
-func pickBestWorstBuckets(buckets []tools.TemperatureImpactBucket, hasEnoughData bool) (*tools.TemperatureImpactBucket, *tools.TemperatureImpactBucket) {
+func pickBestWorstBuckets(buckets []forecast.TemperatureImpactBucket, hasEnoughData bool) (*forecast.TemperatureImpactBucket, *forecast.TemperatureImpactBucket) {
 	if !hasEnoughData || len(buckets) == 0 {
 		return nil, nil
 	}
-	candidates := make([]tools.TemperatureImpactBucket, 0, len(buckets))
+	candidates := make([]forecast.TemperatureImpactBucket, 0, len(buckets))
 	for _, b := range buckets {
 		if b.DriveCount > 0 && b.AvgBatteryPer100Km > 0 {
 			candidates = append(candidates, b)
@@ -453,7 +454,7 @@ func pickBestWorstBuckets(buckets []tools.TemperatureImpactBucket, hasEnoughData
 // chart's "optimal range" panel + tips section semantics. The
 // insights are pure derivations of the bucket aggregate; they
 // never invent numbers.
-func buildTemperatureImpactInsights(env *tools.TemperatureImpact) []string {
+func buildTemperatureImpactInsights(env *forecast.TemperatureImpact) []string {
 	if env == nil || !env.HasEnoughData || env.BestBucket == nil || env.WorstBucket == nil {
 		return []string{}
 	}
@@ -476,5 +477,5 @@ func buildTemperatureImpactInsights(env *tools.TemperatureImpact) []string {
 }
 
 // Compile-time assertion: AITemperatureImpactSource satisfies
-// tools.TemperatureImpactSource.
-var _ tools.TemperatureImpactSource = (*AITemperatureImpactSource)(nil)
+// forecast.TemperatureImpactSource.
+var _ forecast.TemperatureImpactSource = (*AITemperatureImpactSource)(nil)

@@ -126,6 +126,7 @@ import (
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
@@ -1145,7 +1146,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// GET /api/v1/analytics/cost-forecast handler — the AI
 	// narrator quotes the SAME deterministic forecast the chart
 	// renders (no duplicated SQL).
-	tools.RegisterCostForecastNarrationTools(aiToolRegistry, tools.CostForecastNarrationSources{
+	forecast.RegisterCostForecastNarrationTools(aiToolRegistry, forecast.CostForecastNarrationSources{
 		Forecaster: NewAICostForecaster(db),
 	})
 	// cost-forecast-narration handler. One per process;
@@ -1171,7 +1172,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// narrator quotes the SAME deterministic per-period
 	// envelope the chart on /period-compare (and its alias
 	// /analytics/compare) renders (no duplicated SQL).
-	tools.RegisterPeriodCompareNarrationTools(aiToolRegistry, tools.PeriodCompareNarrationSources{
+	forecast.RegisterPeriodCompareNarrationTools(aiToolRegistry, forecast.PeriodCompareNarrationSources{
 		Comparator: NewAIPeriodCompareSource(db),
 	})
 	// period-compare-narration handler. One per process;
@@ -1465,7 +1466,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// runs the SAME bucket / monthly-trend SQL the canonical
 	// TempImpactHandler.Get already runs — no parallel write
 	// path; the LLM never persists.
-	tools.RegisterCabinTemperatureImpactNarrativeTools(aiToolRegistry, tools.CabinTemperatureImpactNarrativeSources{
+	forecast.RegisterCabinTemperatureImpactNarrativeTools(aiToolRegistry, forecast.CabinTemperatureImpactNarrativeSources{
 		Source: NewAITemperatureImpactSource(db),
 	})
 	// cabin-temperature-impact-narrative handler. One per

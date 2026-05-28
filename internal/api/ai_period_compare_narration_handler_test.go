@@ -27,7 +27,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 )
 
 // TestPeriodCompareNarrationAIOffShowsCardsOnly is the
@@ -253,14 +253,14 @@ func TestAIPeriodCompareSource_PanicsOnNilDB(t *testing.T) {
 
 // TestAIPeriodCompareSource_SatisfiesInterface is a compile-time +
 // runtime assertion that the production adapter implements
-// tools.PeriodComparator. The compile-time `var _` line in the
+// forecast.PeriodComparator. The compile-time `var _` line in the
 // handler file gives the same guarantee, but this test fails with
 // a clear message if a future refactor accidentally narrows the
 // interface contract.
 func TestAIPeriodCompareSource_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
-	var iface tools.PeriodComparator = (*AIPeriodCompareSource)(nil)
+	var iface forecast.PeriodComparator = (*AIPeriodCompareSource)(nil)
 	if iface == nil {
-		t.Logf("AIPeriodCompareSource satisfies tools.PeriodComparator (nil cast)")
+		t.Logf("AIPeriodCompareSource satisfies forecast.PeriodComparator (nil cast)")
 	}
 }

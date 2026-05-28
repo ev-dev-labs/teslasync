@@ -4,7 +4,7 @@
 // narrow [PeriodComparator] port; tests substitute a deterministic
 // fake so the unit tests stay hermetic.
 
-package tools
+package forecast
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 	"math"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // fakePeriodComparator is a hermetic stand-in for
@@ -417,7 +419,7 @@ func TestComputePeriodCompareDeltas_DirectionFlat(t *testing.T) {
 // registration helper adds the tool to the registry.
 func TestRegisterPeriodCompareNarrationTools_RegistersOne(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterPeriodCompareNarrationTools(r, PeriodCompareNarrationSources{
 		Comparator: &fakePeriodComparator{},
 	})

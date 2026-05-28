@@ -4,7 +4,7 @@
 // wraps a narrow [TemperatureImpactSource] port; tests substitute
 // a deterministic fake so the unit tests stay hermetic.
 
-package tools
+package forecast
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // fakeTemperatureImpactSource is a hermetic stand-in for
@@ -229,7 +231,7 @@ func TestQueryTemperatureImpact_Execute_PropagatesSourceError(t *testing.T) {
 // proves the registration helper adds the tool to the registry.
 func TestRegisterCabinTemperatureImpactNarrativeTools_RegistersOne(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterCabinTemperatureImpactNarrativeTools(r, CabinTemperatureImpactNarrativeSources{
 		Source: &fakeTemperatureImpactSource{},
 	})

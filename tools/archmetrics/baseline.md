@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T06:09:05Z, Go go1.26.1, commit 1aa61baf6895552da024dea9b7d1039a9328cfcd_
+_Generated 2026-05-28T06:14:26Z, Go go1.26.1, commit 554ef6b95c7bbbc987f35f3b38f461b3d4b3ba5b_
 
 ## Summary
 
-- Packages: 236
+- Packages: 237
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372745
+- Total non-blank LOC under cmd/+internal/+tools/: 372781
 
 ## cmd/* main.go LOC
 
@@ -139,13 +139,14 @@ _Generated 2026-05-28T06:09:05Z, Go go1.26.1, commit 1aa61baf6895552da024dea9b7d
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 52 | 45 | 41635 | yes | platform |
+| internal/ai/tools | 49 | 42 | 39774 | yes | platform |
 | internal/ai/tools/alert | 3 | 2 | 1754 | yes |  |
 | internal/ai/tools/feedback | 2 | 1 | 1601 | yes |  |
+| internal/ai/tools/forecast | 4 | 3 | 1893 | yes |  |
 | internal/ai/tools/location | 3 | 2 | 1724 | yes |  |
 | internal/ai/tools/safety | 2 | 1 | 560 | yes |  |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126500 | yes | handler |
+| internal/api | 271 | 163 | 126504 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -289,7 +290,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
-| `internal/ai/tools` | R6 | 109 | 52 / 45 | 13 | 4 | 9 |
+| `internal/ai/tools` | R6 | 109 | 49 / 42 | 13 | 5 | 8 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
@@ -336,6 +337,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 **Existing subpackages on disk:**
 - `internal/ai/tools/alert`
 - `internal/ai/tools/feedback`
+- `internal/ai/tools/forecast`
 - `internal/ai/tools/location`
 - `internal/ai/tools/safety`
 
@@ -345,7 +347,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/ai/tools/charging`
 - `internal/ai/tools/diagnostics`
 - `internal/ai/tools/drive`
-- `internal/ai/tools/forecast`
 - `internal/ai/tools/nl`
 - `internal/ai/tools/share`
 - `internal/ai/tools/summary`

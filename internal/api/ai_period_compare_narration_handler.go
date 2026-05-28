@@ -45,7 +45,7 @@ package api
 //     /api/v1/ai/*; no field on the existing baseline JSON shape
 //     is added or modified by this slice. The tool envelope's
 //     extra per-metric delta block lives in the AI-only typed
-//     [tools.PeriodCompare] envelope, not on the baseline
+//     [forecast.PeriodCompare] envelope, not on the baseline
 //     /analytics/period-stats response.
 
 import (
@@ -63,6 +63,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -124,7 +125,7 @@ type AIPeriodCompareNarrationHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_period_compare (registered by
-//	tools.RegisterPeriodCompareNarrationTools in router.go).
+//	forecast.RegisterPeriodCompareNarrationTools in router.go).
 //
 // strat:      the period-compare-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
@@ -336,7 +337,7 @@ var _ http.Handler = (*AIPeriodCompareNarrationHandler)(nil)
 // pattern.
 // ---------------------------------------------------------------------
 
-// AIPeriodCompareSource is the production tools.PeriodComparator.
+// AIPeriodCompareSource is the production forecast.PeriodComparator.
 // It delegates to the SHARED api.ComputePeriodStats helper that
 // also backs the canonical GET /api/v1/analytics/period-stats
 // handler so the AI narration is grounded in the SAME
@@ -364,7 +365,7 @@ func NewAIPeriodCompareSource(db *database.DB) *AIPeriodCompareSource {
 	return &AIPeriodCompareSource{db: db}
 }
 
-// ComparePeriods implements tools.PeriodComparator. Composes the
+// ComparePeriods implements forecast.PeriodComparator. Composes the
 // SAME api.ComputePeriodStats helper *PeriodStatsHandler.Get uses
 // (called once per period window) so the returned envelope is
 // numerically identical (modulo rounding) to what GET
@@ -373,10 +374,10 @@ func NewAIPeriodCompareSource(db *database.DB) *AIPeriodCompareSource {
 //
 // The function does NOT recompute or override anything the
 // canonical handler computes; it only reshapes the existing
-// output into the typed [tools.PeriodCompare] envelope the LLM
+// output into the typed [forecast.PeriodCompare] envelope the LLM
 // can quote, and computes the per-metric deltas via the shared
-// tools.ComputePeriodCompareDeltas helper.
-func (a *AIPeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID int64, daysA, daysB int) (*tools.PeriodCompare, error) {
+// forecast.ComputePeriodCompareDeltas helper.
+func (a *AIPeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID int64, daysA, daysB int) (*forecast.PeriodCompare, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai period-compare-narration: vehicle_id must be > 0")
 	}
@@ -390,7 +391,7 @@ func (a *AIPeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID in
 		return nil, fmt.Errorf("api ai period-compare-narration: ComputePeriodStats(period_b): %w", err)
 	}
 
-	periodA := tools.PeriodComparePeriod{
+	periodA := forecast.PeriodComparePeriod{
 		Days:                 daysA,
 		TotalDistanceKm:      statsA.TotalDistance,
 		TotalDrives:          statsA.TotalDrives,
@@ -399,7 +400,7 @@ func (a *AIPeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID in
 		TotalCost:            statsA.TotalCost,
 		CO2SavedKg:           statsA.CO2Saved,
 	}
-	periodB := tools.PeriodComparePeriod{
+	periodB := forecast.PeriodComparePeriod{
 		Days:                 daysB,
 		TotalDistanceKm:      statsB.TotalDistance,
 		TotalDrives:          statsB.TotalDrives,
@@ -409,14 +410,14 @@ func (a *AIPeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID in
 		CO2SavedKg:           statsB.CO2Saved,
 	}
 
-	return &tools.PeriodCompare{
+	return &forecast.PeriodCompare{
 		VehicleID: vehicleID,
 		PeriodA:   periodA,
 		PeriodB:   periodB,
-		Deltas:    tools.ComputePeriodCompareDeltas(periodA, periodB),
+		Deltas:    forecast.ComputePeriodCompareDeltas(periodA, periodB),
 	}, nil
 }
 
 // Compile-time assertion: AIPeriodCompareSource satisfies
-// tools.PeriodComparator.
-var _ tools.PeriodComparator = (*AIPeriodCompareSource)(nil)
+// forecast.PeriodComparator.
+var _ forecast.PeriodComparator = (*AIPeriodCompareSource)(nil)

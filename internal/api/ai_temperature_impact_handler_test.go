@@ -27,7 +27,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 )
 
 // TestCabinTemperatureNarrativeAIOffShowsChartsOnly is the
@@ -232,12 +232,12 @@ func TestAITemperatureImpactSource_PanicsOnNilDB(t *testing.T) {
 
 // TestAITemperatureImpactSource_SatisfiesInterface is a
 // compile-time + runtime assertion that the production adapter
-// implements tools.TemperatureImpactSource.
+// implements forecast.TemperatureImpactSource.
 func TestAITemperatureImpactSource_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
-	var iface tools.TemperatureImpactSource = (*AITemperatureImpactSource)(nil)
+	var iface forecast.TemperatureImpactSource = (*AITemperatureImpactSource)(nil)
 	if iface == nil {
-		t.Logf("AITemperatureImpactSource satisfies tools.TemperatureImpactSource (nil cast)")
+		t.Logf("AITemperatureImpactSource satisfies forecast.TemperatureImpactSource (nil cast)")
 	}
 }
 
@@ -247,7 +247,7 @@ func TestAITemperatureImpactSource_SatisfiesInterface(t *testing.T) {
 // cannot quote a noisy best/worst from a 2-drive sample.
 func TestPickBestWorstBuckets_ReturnsNilWhenNotEnoughData(t *testing.T) {
 	t.Parallel()
-	buckets := []tools.TemperatureImpactBucket{
+	buckets := []forecast.TemperatureImpactBucket{
 		{Label: "Below 0°C", DriveCount: 1, AvgBatteryPer100Km: 25.0, AvgTempC: -2},
 		{Label: "10-20°C", DriveCount: 1, AvgBatteryPer100Km: 18.0, AvgTempC: 15},
 	}
@@ -266,7 +266,7 @@ func TestPickBestWorstBuckets_ReturnsNilWhenNotEnoughData(t *testing.T) {
 // least efficient bucket).
 func TestPickBestWorstBuckets_PicksLowestAndHighestPer100Km(t *testing.T) {
 	t.Parallel()
-	buckets := []tools.TemperatureImpactBucket{
+	buckets := []forecast.TemperatureImpactBucket{
 		{Label: "Below 0°C", DriveCount: 5, AvgBatteryPer100Km: 25.0, AvgTempC: -2},
 		{Label: "10-20°C", DriveCount: 10, AvgBatteryPer100Km: 18.0, AvgTempC: 15},
 		{Label: "20-30°C", DriveCount: 8, AvgBatteryPer100Km: 19.5, AvgTempC: 24},
@@ -286,7 +286,7 @@ func TestPickBestWorstBuckets_PicksLowestAndHighestPer100Km(t *testing.T) {
 // best/worst.
 func TestPickBestWorstBuckets_IgnoresZeroDriveBuckets(t *testing.T) {
 	t.Parallel()
-	buckets := []tools.TemperatureImpactBucket{
+	buckets := []forecast.TemperatureImpactBucket{
 		{Label: "Below 0°C", DriveCount: 0, AvgBatteryPer100Km: 25.0, AvgTempC: -2},
 		{Label: "10-20°C", DriveCount: 10, AvgBatteryPer100Km: 18.0, AvgTempC: 15},
 	}
@@ -304,7 +304,7 @@ func TestPickBestWorstBuckets_IgnoresZeroDriveBuckets(t *testing.T) {
 // a noisy sample.
 func TestBuildTemperatureImpactInsights_EmptyWhenNotEnoughData(t *testing.T) {
 	t.Parallel()
-	env := &tools.TemperatureImpact{
+	env := &forecast.TemperatureImpact{
 		HasEnoughData: false,
 		BestBucket:    nil,
 		WorstBucket:   nil,
@@ -320,10 +320,10 @@ func TestBuildTemperatureImpactInsights_EmptyWhenNotEnoughData(t *testing.T) {
 // strings (best, worst, ratio) when the data is sufficient.
 func TestBuildTemperatureImpactInsights_GeneratesThreeInsights(t *testing.T) {
 	t.Parallel()
-	env := &tools.TemperatureImpact{
+	env := &forecast.TemperatureImpact{
 		HasEnoughData: true,
-		BestBucket:    &tools.TemperatureImpactBucket{Label: "10-20°C", DriveCount: 10, AvgBatteryPer100Km: 18.0, AvgTempC: 15},
-		WorstBucket:   &tools.TemperatureImpactBucket{Label: "Below 0°C", DriveCount: 5, AvgBatteryPer100Km: 25.0, AvgTempC: -2},
+		BestBucket:    &forecast.TemperatureImpactBucket{Label: "10-20°C", DriveCount: 10, AvgBatteryPer100Km: 18.0, AvgTempC: 15},
+		WorstBucket:   &forecast.TemperatureImpactBucket{Label: "Below 0°C", DriveCount: 5, AvgBatteryPer100Km: 25.0, AvgTempC: -2},
 	}
 	insights := buildTemperatureImpactInsights(env)
 	if len(insights) != 3 {

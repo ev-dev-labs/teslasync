@@ -44,7 +44,7 @@ package api
 //     /api/v1/ai/*; no field on the existing baseline JSON shape
 //     is added or modified by this slice. The tool envelope's
 //     extra honest-uncertainty fields live in the AI-only typed
-//     [tools.CostForecast] envelope, not on the baseline
+//     [forecast.CostForecast] envelope, not on the baseline
 //     /analytics/cost-forecast response.
 
 import (
@@ -62,6 +62,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -122,7 +123,7 @@ type AICostForecastNarrationHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_cost_forecast (registered by
-//	tools.RegisterCostForecastNarrationTools in router.go).
+//	forecast.RegisterCostForecastNarrationTools in router.go).
 //
 // strat:      the cost-forecast-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
@@ -282,7 +283,7 @@ var _ http.Handler = (*AICostForecastNarrationHandler)(nil)
 // AIBatteryHealthForecaster pattern.
 // ---------------------------------------------------------------------
 
-// AICostForecaster is the production tools.CostForecaster. It
+// AICostForecaster is the production forecast.CostForecaster. It
 // delegates to the SHARED api.ComputeCostForecast helper that
 // also backs the canonical GET /api/v1/analytics/cost-forecast
 // handler so the AI narration is grounded in the SAME
@@ -311,7 +312,7 @@ func NewAICostForecaster(db *database.DB) *AICostForecaster {
 	return &AICostForecaster{db: db}
 }
 
-// ForecastCosts implements tools.CostForecaster. Composes the
+// ForecastCosts implements forecast.CostForecaster. Composes the
 // SAME api.ComputeCostForecast helper *CostForecastHandler.GetForecast
 // uses so the returned envelope is numerically identical (modulo
 // rounding) to what GET /api/v1/analytics/cost-forecast produces
@@ -320,7 +321,7 @@ func NewAICostForecaster(db *database.DB) *AICostForecaster {
 //
 // The function does NOT recompute or override anything the
 // canonical handler computes; it only reshapes the existing
-// output into the typed [tools.CostForecast] envelope the LLM
+// output into the typed [forecast.CostForecast] envelope the LLM
 // can quote.
 //
 // Currency is left empty for now: the existing baseline response
@@ -332,7 +333,7 @@ func NewAICostForecaster(db *database.DB) *AICostForecaster {
 // this slice. The narrator's system prompt does not assume any
 // currency code; it quotes raw dollar figures consistent with
 // the chart.
-func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, months int) (*tools.CostForecast, error) {
+func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, months int) (*forecast.CostForecast, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai cost-forecast-narration: vehicle_id must be > 0")
 	}
@@ -350,9 +351,9 @@ func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, m
 	// envelope decoupled from any future widening of the
 	// internal historicalMonth / forecastMonth structs (the
 	// narrator should remain pinned to a stable shape).
-	historical := make([]tools.CostForecastHistoricalMonth, 0, len(resp.Historical))
+	historical := make([]forecast.CostForecastHistoricalMonth, 0, len(resp.Historical))
 	for _, m := range resp.Historical {
-		historical = append(historical, tools.CostForecastHistoricalMonth{
+		historical = append(historical, forecast.CostForecastHistoricalMonth{
 			Month:      m.Month,
 			Cost:       m.Cost,
 			KWh:        m.KWh,
@@ -360,9 +361,9 @@ func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, m
 			CostPerKWh: m.CostPerKWh,
 		})
 	}
-	forecast := make([]tools.CostForecastFutureMonth, 0, len(resp.Forecast))
+	forecastMonths := make([]forecast.CostForecastFutureMonth, 0, len(resp.Forecast))
 	for _, m := range resp.Forecast {
-		forecast = append(forecast, tools.CostForecastFutureMonth{
+		forecastMonths = append(forecastMonths, forecast.CostForecastFutureMonth{
 			Month:    m.Month,
 			Cost:     m.Cost,
 			CostLow:  m.CostLow,
@@ -374,7 +375,7 @@ func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, m
 	insights := append([]string(nil), resp.Insights...)
 	assumptions := append([]string(nil), meta.Assumptions...)
 
-	return &tools.CostForecast{
+	return &forecast.CostForecast{
 		VehicleID:            vehicleID,
 		Currency:             "", // see method-level doc comment
 		HistoricalMonthCount: meta.HistoricalMonthCount,
@@ -387,20 +388,20 @@ func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, m
 		UncertaintyLevel:     meta.UncertaintyLevel,
 		Assumptions:          assumptions,
 		Historical:           historical,
-		Forecast:             forecast,
-		Breakdown: tools.CostForecastBreakdown{
-			Home: tools.CostForecastChargerCategory{
+		Forecast:             forecastMonths,
+		Breakdown: forecast.CostForecastBreakdown{
+			Home: forecast.CostForecastChargerCategory{
 				Pct:           resp.Breakdown.Home.Pct,
 				AvgCostPerKWh: resp.Breakdown.Home.AvgCostPerKWh,
 				MonthlyAvg:    resp.Breakdown.Home.MonthlyAvg,
 			},
-			Supercharger: tools.CostForecastChargerCategory{
+			Supercharger: forecast.CostForecastChargerCategory{
 				Pct:           resp.Breakdown.Supercharger.Pct,
 				AvgCostPerKWh: resp.Breakdown.Supercharger.AvgCostPerKWh,
 				MonthlyAvg:    resp.Breakdown.Supercharger.MonthlyAvg,
 			},
 		},
-		GasComparison: tools.CostForecastGasComparison{
+		GasComparison: forecast.CostForecastGasComparison{
 			AvgKmPerMonth:   resp.GasComparison.AvgKmPerMonth,
 			GasCostPerMonth: resp.GasComparison.GasCostPerMonth,
 			EvCostPerMonth:  resp.GasComparison.EvCostPerMonth,
@@ -413,5 +414,5 @@ func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, m
 }
 
 // Compile-time assertion: AICostForecaster satisfies
-// tools.CostForecaster.
-var _ tools.CostForecaster = (*AICostForecaster)(nil)
+// forecast.CostForecaster.
+var _ forecast.CostForecaster = (*AICostForecaster)(nil)
