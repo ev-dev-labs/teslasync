@@ -17,6 +17,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
@@ -28,8 +29,8 @@ const tracerName = "internal/notification"
 // Worker subscribes to the internal MQTT notification topic and delivers
 // notifications asynchronously with retry logic and metrics tracking.
 type Worker struct {
-	repo       *database.NotificationRepo
-	metricRepo *database.NotificationMetricRepo
+	repo       *dbnotif.NotificationRepo
+	metricRepo *dbnotif.NotificationMetricRepo
 	decider    QuietHoursDecider
 	wg         sync.WaitGroup
 }
@@ -37,8 +38,8 @@ type Worker struct {
 // NewWorker creates a notification worker.
 func NewWorker(db *database.DB) *Worker {
 	return &Worker{
-		repo:       database.NewNotificationRepo(db),
-		metricRepo: database.NewNotificationMetricRepo(db),
+		repo:       dbnotif.NewNotificationRepo(db),
+		metricRepo: dbnotif.NewNotificationMetricRepo(db),
 	}
 }
 

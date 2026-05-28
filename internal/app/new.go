@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
@@ -608,7 +609,7 @@ func (a *App) initOutboundSinks() {
 }
 
 func (a *App) initWebPush() {
-	pushSubsRepo := database.NewPushSubscriptionsRepo(a.DB)
+	pushSubsRepo := dbnotif.NewPushSubscriptionsRepo(a.DB)
 	webpushSvc := webpush.NewService(pushSubsRepo, a.Cfg.WebPush.PublicKey, a.Cfg.WebPush.PrivateKey, a.Cfg.WebPush.Subject)
 	webpush.SetDefault(webpushSvc)
 	if !webpushSvc.IsEnabled() {
@@ -1262,7 +1263,7 @@ func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *da
 }
 
 func (a *App) initHealthWatchdog(ctx context.Context) {
-	a.notifRepo = database.NewNotificationRepo(a.DB)
+	a.notifRepo = dbnotif.NewNotificationRepo(a.DB)
 	resilience.SafeGo("health-watchdog", func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()

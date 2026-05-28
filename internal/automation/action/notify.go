@@ -29,7 +29,7 @@ var validNotifyChannels = map[string]bool{
 	"pushover": true,
 }
 
-// ChannelRepo is the subset of database.NotificationRepo needed by NotifyExecutor.
+// ChannelRepo is the subset of dbnotif.NotificationRepo needed by NotifyExecutor.
 type ChannelRepo interface {
 	GetAllChannels(ctx context.Context) ([]*notificationmodel.NotificationChannel, error)
 }

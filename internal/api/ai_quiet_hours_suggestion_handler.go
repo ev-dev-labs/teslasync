@@ -93,6 +93,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
 // aiQuietHoursSuggestionMaxIterations bounds the dispatcher's
@@ -403,7 +404,7 @@ func buildQuietHoursSuggestionUserMessage(userID, timezone string, windowDays in
 // ONE query against notification_quiet_hours per request. Both
 // are read-only.
 type AIQuietHoursSuggestionSource struct {
-	notifs      *database.NotificationRepo
+	notifs      *dbnotif.NotificationRepo
 	quietHours  *database.QuietHoursRepo
 	minRequired int
 }
@@ -412,12 +413,12 @@ type AIQuietHoursSuggestionSource struct {
 // adapter. Both repos are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 func NewAIQuietHoursSuggestionSource(
-	notifs *database.NotificationRepo,
+	notifs *dbnotif.NotificationRepo,
 	quietHours *database.QuietHoursRepo,
 ) *AIQuietHoursSuggestionSource {
 	switch {
 	case notifs == nil:
-		panic("api: NewAIQuietHoursSuggestionSource: nil notifs *database.NotificationRepo")
+		panic("api: NewAIQuietHoursSuggestionSource: nil notifs *dbnotif.NotificationRepo")
 	case quietHours == nil:
 		panic("api: NewAIQuietHoursSuggestionSource: nil quietHours *database.QuietHoursRepo")
 	}
@@ -465,7 +466,7 @@ func (a *AIQuietHoursSuggestionSource) LoadHistory(
 	now := time.Now().UTC()
 	from := now.Add(-time.Duration(windowDays) * 24 * time.Hour)
 
-	rows, err := a.notifs.GetLogsFiltered(ctx, database.NotificationLogFilters{
+	rows, err := a.notifs.GetLogsFiltered(ctx, dbnotif.NotificationLogFilters{
 		Severities: []string{"info", "warn"},
 		From:       from,
 		To:         now,

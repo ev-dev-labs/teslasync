@@ -17,6 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
@@ -563,7 +564,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Drives:        database.NewDriveRepo(db),
 		Charges:       database.NewChargingRepo(db),
 		AlertRules:    database.NewAlertRuleRepo(db),
-		Notifications: database.NewNotificationRepo(db),
+		Notifications: dbnotif.NewNotificationRepo(db),
 		Geofences:     database.NewGeofenceRepo(db),
 		Efficiency:    database.NewDriveRepo(db),
 	})
@@ -589,7 +590,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Charges: database.NewChargingRepo(db),
 	})
 	aiChatbotHandler := NewAIChatbotHandler(
-		database.NewChatRepo(db),
+		dbnotif.NewChatRepo(db),
 		aiRegistry,
 		aiToolRegistry,
 		chatbotllm.New(),
@@ -1538,7 +1539,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// reads the SAME rows the manual AlertStudio path reads —
 	// no parallel write path; the LLM never persists.
 	alert.RegisterAlertTuningSuggestionsTools(aiToolRegistry, alert.AlertTuningSuggestionsSources{
-		Source: NewAIAlertTuningSource(database.NewAlertRuleRepo(db), database.NewNotificationRepo(db)),
+		Source: NewAIAlertTuningSource(database.NewAlertRuleRepo(db), dbnotif.NewNotificationRepo(db)),
 	})
 	// alert-tuning-suggestions handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
@@ -1560,7 +1561,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// reads the SAME rows the manual InboxBody path reads —
 	// no parallel write path; the LLM never persists.
 	nl.RegisterInboxAutoCategorizationTools(aiToolRegistry, nl.InboxAutoCategorizationSources{
-		Source: NewAIInboxCategorizationSource(database.NewNotificationRepo(db), database.NewAlertRuleRepo(db)),
+		Source: NewAIInboxCategorizationSource(dbnotif.NewNotificationRepo(db), database.NewAlertRuleRepo(db)),
 	})
 	// inbox-auto-categorization handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
@@ -2285,7 +2286,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Registered AFTER the slice 0052 tools above so the
 	// registry's Names list grows deterministically.
 	aiQuietHoursSuggestionSource := NewAIQuietHoursSuggestionSource(
-		database.NewNotificationRepo(db),
+		dbnotif.NewNotificationRepo(db),
 		database.NewQuietHoursRepo(db),
 	)
 	schedule.RegisterQuietHoursSuggestionTools(aiToolRegistry, schedule.QuietHoursSuggestionSources{
@@ -2338,7 +2339,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// stream_chatbot_response bundles:
 	//
 	//   - the recent chat history for the in-scope session
-	//     (read via the canonical *database.ChatRepo — the
+	//     (read via the canonical *dbnotif.ChatRepo — the
 	//     SAME repo the deterministic /chatbot endpoint uses)
 	//   - the install-wide vehicle snapshot (VIN, display_name,
 	//     soc_percent, charging_state, last_drive_summary —
@@ -2350,7 +2351,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// NO new SQL is written; both adapters wrap existing
 	// readers. Registered AFTER the slice 0054 tools above so
 	// the registry's Names list grows deterministically.
-	aiVoiceModeChatSource := NewAIVoiceModeChatContextSource(database.NewChatRepo(db))
+	aiVoiceModeChatSource := NewAIVoiceModeChatContextSource(dbnotif.NewChatRepo(db))
 	aiVoiceModeVehicleSource := NewAIVoiceModeVehicleSnapshotSource(
 		database.NewVehicleRepo(db),
 		database.NewDriveRepo(db),
@@ -2365,7 +2366,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
 	aiVoiceModeHandler := NewAIVoiceModeHandler(
-		database.NewChatRepo(db),
+		dbnotif.NewChatRepo(db),
 		aiRegistry,
 		aiToolRegistry,
 		voicemode.New(),
@@ -2395,7 +2396,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		redisSignalCache,
 	)
 	aiWatchFaceNLAlertHistorySource := NewAIWatchFaceNLAlertHistorySource(
-		database.NewNotificationRepo(db),
+		dbnotif.NewNotificationRepo(db),
 	)
 	nl.RegisterWatchFaceNLResponseTools(aiToolRegistry, nl.WatchFaceNLResponseSources{
 		Source: aiWatchFaceNLContextSource,

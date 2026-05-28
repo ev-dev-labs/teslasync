@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -69,7 +70,7 @@ func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store s
 		db:            db,
 		alertRuleRepo: repo,
 		bulkRuleRepo:  repo,
-		notifRepo:     database.NewNotificationRepo(db),
+		notifRepo:     dbnotif.NewNotificationRepo(db),
 		eventHub:      hub,
 		mqttClient:    mc,
 		liveSignals:   store,

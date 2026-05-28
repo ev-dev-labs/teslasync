@@ -13,9 +13,9 @@ package api
 //	read JSON body {message: string (<= aiVoiceModeMaxMessageLen),
 //	                session_id: string}
 //	  ↓
-//	persist user turn via *database.ChatRepo (best-effort)
+//	persist user turn via *dbnotif.ChatRepo (best-effort)
 //	  ↓
-//	load recent history via *database.ChatRepo (oldest-first)
+//	load recent history via *dbnotif.ChatRepo (oldest-first)
 //	  ↓
 //	resolve provider via *provider.Registry.For("voice-mode")
 //	  ↓
@@ -29,7 +29,7 @@ package api
 //	  ↓
 //	run dispatch.Dispatcher.Run(ctx, strategy, input, recordingWriter)
 //	  ↓
-//	persist accumulated assistant text via *database.ChatRepo
+//	persist accumulated assistant text via *dbnotif.ChatRepo
 //
 // The recordingWriter wraps the SSE writer so the assistant's
 // full reply text (delta-by-delta) is captured for persistence.
@@ -99,6 +99,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -160,7 +161,7 @@ type aiVoiceModeRequest struct {
 // handler itself is stateless beyond its constructor inputs and
 // is safe for concurrent use across requests.
 type AIVoiceModeHandler struct {
-	chat       *database.ChatRepo
+	chat       *dbnotif.ChatRepo
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -188,7 +189,7 @@ type AIVoiceModeHandler struct {
 //
 //	subject for audit.
 func NewAIVoiceModeHandler(
-	chat *database.ChatRepo,
+	chat *dbnotif.ChatRepo,
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
@@ -403,7 +404,7 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // AIVoiceModeChatContextSource is the production adapter
 // satisfying voice.ChatContextSource. It wraps the canonical
-// *database.ChatRepo so the AI tool reads from the SAME data
+// *dbnotif.ChatRepo so the AI tool reads from the SAME data
 // source the deterministic Settings UI's chat history endpoint
 // already does — no new SQL, no duplicate read paths.
 //
@@ -411,15 +412,15 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // tool invocation. The read is cheap: the canonical table is
 // indexed on (session_id, created_at).
 type AIVoiceModeChatContextSource struct {
-	chat *database.ChatRepo
+	chat *dbnotif.ChatRepo
 }
 
 // NewAIVoiceModeChatContextSource constructs the production
 // adapter. The repo is required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAIVoiceModeChatContextSource(c *database.ChatRepo) *AIVoiceModeChatContextSource {
+func NewAIVoiceModeChatContextSource(c *dbnotif.ChatRepo) *AIVoiceModeChatContextSource {
 	if c == nil {
-		panic("api: NewAIVoiceModeChatContextSource: nil chat *database.ChatRepo")
+		panic("api: NewAIVoiceModeChatContextSource: nil chat *dbnotif.ChatRepo")
 	}
 	return &AIVoiceModeChatContextSource{chat: c}
 }

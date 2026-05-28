@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -30,7 +31,7 @@ import (
 // vehicle always reports its real last-known position. See ADR-002 and
 // the layered live-state contract in .github/ARCHITECTURE.md.
 type ChatbotHandler struct {
-	chat       *database.ChatRepo
+	chat       *dbnotif.ChatRepo
 	db         *database.DB
 	vehicleSvc *service.VehicleService
 	state      signal.StateReader
@@ -39,7 +40,7 @@ type ChatbotHandler struct {
 
 func NewChatbotHandler(db *database.DB, vehicleSvc *service.VehicleService, state signal.StateReader, live signal.LiveStateReader) *ChatbotHandler {
 	return &ChatbotHandler{
-		chat:       database.NewChatRepo(db),
+		chat:       dbnotif.NewChatRepo(db),
 		db:         db,
 		vehicleSvc: vehicleSvc,
 		state:      state,

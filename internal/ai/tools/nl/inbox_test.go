@@ -22,7 +22,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
 // stubInboxCategorizationSource is a deterministic fake
@@ -34,10 +34,10 @@ type stubInboxCategorizationSource struct {
 	totalInWindow int
 	minRequired   int
 	loadErr       error
-	loadFilters   []database.NotificationLogFilters
+	loadFilters   []dbnotif.NotificationLogFilters
 }
 
-func (s *stubInboxCategorizationSource) LoadCategoryCounts(_ context.Context, f database.NotificationLogFilters) ([]CategoryCount, int, int, error) {
+func (s *stubInboxCategorizationSource) LoadCategoryCounts(_ context.Context, f dbnotif.NotificationLogFilters) ([]CategoryCount, int, int, error) {
 	s.loadFilters = append(s.loadFilters, f)
 	return s.counts, s.totalInWindow, s.minRequired, s.loadErr
 }

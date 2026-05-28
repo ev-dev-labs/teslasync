@@ -7,9 +7,9 @@ package api
 //
 //   request JSON {message, session_id}
 //     ↓
-//   persist user message via *database.ChatRepo
+//   persist user message via *dbnotif.ChatRepo
 //     ↓
-//   load recent history via *database.ChatRepo
+//   load recent history via *dbnotif.ChatRepo
 //     ↓
 //   resolve provider via *provider.Registry.For("chatbot-llm")
 //     ↓
@@ -17,7 +17,7 @@ package api
 //     ↓
 //   run dispatch.Dispatcher.Run(ctx, strategy, input, recordingWriter)
 //     ↓
-//   persist accumulated assistant text via *database.ChatRepo
+//   persist accumulated assistant text via *dbnotif.ChatRepo
 //
 // The recordingWriter wraps the SSE writer so the assistant's full
 // response text (delta-by-delta) is captured for persistence. The
@@ -53,7 +53,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
 // aiChatbotHistoryLimit is the upper bound on how many prior messages
@@ -83,7 +83,7 @@ const aiChatbotMaxIterations = 6
 // stateless beyond its constructor inputs and is safe for concurrent
 // use across requests.
 type AIChatbotHandler struct {
-	chat       *database.ChatRepo
+	chat       *dbnotif.ChatRepo
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -102,7 +102,7 @@ type AIChatbotHandler struct {
 // strat:         the chatbot-llm Strategy (one per process).
 // headerName:    forward-auth header name; used to extract subject for audit.
 func NewAIChatbotHandler(
-	chat *database.ChatRepo,
+	chat *dbnotif.ChatRepo,
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,

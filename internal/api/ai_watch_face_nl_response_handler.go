@@ -86,6 +86,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -514,7 +515,7 @@ func projectWatchContextSignals(env *nl.WatchContextEnvelope, signals map[string
 
 // AIWatchFaceNLAlertHistorySource is the production adapter
 // satisfying nl.AlertHistorySource. It wraps the canonical
-// *database.NotificationRepo so the AI tool reads from the
+// *dbnotif.NotificationRepo so the AI tool reads from the
 // SAME data source the deterministic notifications list page
 // already does — no new SQL, no duplicate read paths.
 //
@@ -524,15 +525,15 @@ func projectWatchContextSignals(env *nl.WatchContextEnvelope, signals map[string
 // recent-alert window, cap at `max`, sort most-recent first,
 // project away every PII-bearing free-text field.
 type AIWatchFaceNLAlertHistorySource struct {
-	notifications *database.NotificationRepo
+	notifications *dbnotif.NotificationRepo
 }
 
 // NewAIWatchFaceNLAlertHistorySource constructs the production
 // adapter. The repo is required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAIWatchFaceNLAlertHistorySource(n *database.NotificationRepo) *AIWatchFaceNLAlertHistorySource {
+func NewAIWatchFaceNLAlertHistorySource(n *dbnotif.NotificationRepo) *AIWatchFaceNLAlertHistorySource {
 	if n == nil {
-		panic("api: NewAIWatchFaceNLAlertHistorySource: nil *database.NotificationRepo")
+		panic("api: NewAIWatchFaceNLAlertHistorySource: nil *dbnotif.NotificationRepo")
 	}
 	return &AIWatchFaceNLAlertHistorySource{notifications: n}
 }

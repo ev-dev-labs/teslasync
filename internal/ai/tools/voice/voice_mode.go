@@ -55,7 +55,7 @@
 //     delegates to two narrow read-only ports
 //     (ChatContextSource for chat history, VehicleSnapshotSource
 //     for the snapshot). The history adapter wraps the canonical
-//     *database.ChatRepo.GetHistory; the snapshot adapter wraps
+//     *dbnotif.ChatRepo.GetHistory; the snapshot adapter wraps
 //     the existing vehicles + drives readers. NO new SQL is
 //     written.
 //
@@ -185,7 +185,7 @@ type VoiceModeEnvelope struct {
 // ChatContextSource is the narrow port the
 // stream_chatbot_response tool delegates to for chat history. In
 // production it is satisfied by *api.AIVoiceModeChatContextSource
-// (which wraps the canonical *database.ChatRepo); in tests we
+// (which wraps the canonical *dbnotif.ChatRepo); in tests we
 // substitute deterministic fakes so the tool unit tests stay
 // hermetic.
 //

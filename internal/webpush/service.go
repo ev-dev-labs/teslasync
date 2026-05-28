@@ -4,7 +4,7 @@
 // The package owns a process-wide singleton Service that the API server and
 // notification worker both initialise at startup with the VAPID config
 // (`internal/config.WebPushConfig`) and the push_subscriptions repo
-// (`internal/database.PushSubscriptionsRepo`). The notification fan-out
+// (`internal/dbnotif.PushSubscriptionsRepo`). The notification fan-out
 // then calls webpush.Default().Send(...) for the synthetic "webpush"
 // channel — one fan-out call delivers one OS-level notification to every
 // registered device.
@@ -58,7 +58,7 @@ type Payload struct {
 	Severity string `json:"severity,omitempty"`
 }
 
-// SubscriptionRepo is the slice of database.PushSubscriptionsRepo the
+// SubscriptionRepo is the slice of dbnotif.PushSubscriptionsRepo the
 // Service needs. Defined as an interface so unit tests can plug in an
 // in-memory fake without standing up a Postgres pool.
 type SubscriptionRepo interface {

@@ -70,6 +70,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
 // aiAlertTuningMaxIterations bounds the dispatcher's tool-loop.
@@ -346,18 +347,18 @@ var _ http.Handler = (*AIAlertTuningHandler)(nil)
 // panics on a nil so a wiring bug surfaces at boot.
 type AIAlertTuningSource struct {
 	rules         *database.AlertRuleRepo
-	notifications *database.NotificationRepo
+	notifications *dbnotif.NotificationRepo
 }
 
 // NewAIAlertTuningSource constructs the adapter. Panics on a nil
 // repo so a wiring mistake surfaces at boot rather than as a
 // nil-deref on first AI request.
-func NewAIAlertTuningSource(rules *database.AlertRuleRepo, notifications *database.NotificationRepo) *AIAlertTuningSource {
+func NewAIAlertTuningSource(rules *database.AlertRuleRepo, notifications *dbnotif.NotificationRepo) *AIAlertTuningSource {
 	if rules == nil {
 		panic("api: NewAIAlertTuningSource: nil *database.AlertRuleRepo")
 	}
 	if notifications == nil {
-		panic("api: NewAIAlertTuningSource: nil *database.NotificationRepo")
+		panic("api: NewAIAlertTuningSource: nil *dbnotif.NotificationRepo")
 	}
 	return &AIAlertTuningSource{rules: rules, notifications: notifications}
 }
@@ -404,7 +405,7 @@ func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int6
 	now := time.Now().UTC()
 	from := now.AddDate(0, 0, -aiAlertTuningWindowDays)
 
-	logs, err := a.notifications.GetLogsFiltered(ctx, database.NotificationLogFilters{
+	logs, err := a.notifications.GetLogsFiltered(ctx, dbnotif.NotificationLogFilters{
 		RuleIDs: []int64{ruleID},
 		From:    from,
 		To:      now,

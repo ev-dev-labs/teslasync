@@ -1,18 +1,20 @@
-package database
+package notification
 
 import (
 	"context"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 )
 
 // NotificationScheduleRepo manages notification schedules.
 type NotificationScheduleRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewNotificationScheduleRepo(db *DB) *NotificationScheduleRepo {
+func NewNotificationScheduleRepo(db *database.DB) *NotificationScheduleRepo {
 	return &NotificationScheduleRepo{db: db}
 }
 
@@ -86,10 +88,10 @@ func (r *NotificationScheduleRepo) Delete(ctx context.Context, id int64) error {
 
 // NotificationPreferenceRepo manages per-event notification preferences.
 type NotificationPreferenceRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewNotificationPreferenceRepo(db *DB) *NotificationPreferenceRepo {
+func NewNotificationPreferenceRepo(db *database.DB) *NotificationPreferenceRepo {
 	return &NotificationPreferenceRepo{db: db}
 }
 
@@ -133,10 +135,10 @@ func (r *NotificationPreferenceRepo) IsEnabled(ctx context.Context, channelID in
 
 // NotificationMetricRepo tracks delivery analytics.
 type NotificationMetricRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewNotificationMetricRepo(db *DB) *NotificationMetricRepo {
+func NewNotificationMetricRepo(db *database.DB) *NotificationMetricRepo {
 	return &NotificationMetricRepo{db: db}
 }
 

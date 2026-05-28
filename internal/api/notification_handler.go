@@ -18,6 +18,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
@@ -36,15 +37,15 @@ func notifyOutboundClient(name string) *http.Client {
 
 // NotificationHandler handles notification channel CRUD and test delivery.
 type NotificationHandler struct {
-	repo  *database.NotificationRepo
+	repo  *dbnotif.NotificationRepo
 	inbox notificationInboxStore
 }
 
 // notificationInboxStore is the slice of NotificationRepo used by the inbox
 // handlers (filter, bulk, unread-count). Extracted so tests can stub the DB.
 type notificationInboxStore interface {
-	GetLogsFiltered(ctx context.Context, f database.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error)
-	ListGrouped(ctx context.Context, f database.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error)
+	GetLogsFiltered(ctx context.Context, f dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error)
+	ListGrouped(ctx context.Context, f dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error)
 	GetUnreadCount(ctx context.Context) (int64, error)
 	BulkSetRead(ctx context.Context, ids []int64, read bool) (int64, error)
 	BulkSetReadAll(ctx context.Context) (int64, error)
@@ -54,7 +55,7 @@ type notificationInboxStore interface {
 }
 
 func NewNotificationHandler(db *database.DB) *NotificationHandler {
-	repo := database.NewNotificationRepo(db)
+	repo := dbnotif.NewNotificationRepo(db)
 	return &NotificationHandler{repo: repo, inbox: repo}
 }
 
@@ -349,10 +350,10 @@ func (h *NotificationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 // All params are optional. Multi-value filters (severity, vehicle_id, rule_id)
 // accept either repeated params (?severity=info&severity=warn) or a single
 // CSV (?severity=info,warn). Snake_case per project conventions.
-func parseNotificationLogFilters(r *http.Request) (database.NotificationLogFilters, error) {
+func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilters, error) {
 	q := r.URL.Query()
 	limit, offset := pagination(r)
-	f := database.NotificationLogFilters{Limit: limit, Offset: offset}
+	f := dbnotif.NotificationLogFilters{Limit: limit, Offset: offset}
 
 	if vs := csvOrRepeated(q, "severity"); len(vs) > 0 {
 		allowed := map[string]bool{"info": true, "warn": true, "critical": true}
@@ -417,7 +418,7 @@ func parseNotificationLogFilters(r *http.Request) (database.NotificationLogFilte
 		// in the repo. We validate strictly (length + alphabet) so a
 		// stray garbage value can't trigger an unbounded scan; the
 		// caller just gets a 400.
-		if !database.IsValidNotificationGroupKey(s) {
+		if !dbnotif.IsValidNotificationGroupKey(s) {
 			return f, fmt.Errorf("invalid group_key: must be 64-char lower-hex")
 		}
 		f.GroupKey = s
@@ -534,7 +535,7 @@ func decodeMarkReadBody(r *http.Request) (ids []int64, all bool, groupKey string
 		return nil, false, "", fmt.Errorf("ids must be non-empty (or pass all=true or group_key)")
 	}
 	if gk != "" {
-		if !database.IsValidNotificationGroupKey(gk) {
+		if !dbnotif.IsValidNotificationGroupKey(gk) {
 			return nil, false, "", fmt.Errorf("invalid group_key: must be 64-char lower-hex")
 		}
 		return nil, false, gk, nil

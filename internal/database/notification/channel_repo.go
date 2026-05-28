@@ -1,9 +1,11 @@
-package database
+package notification
 
 import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	"github.com/jackc/pgx/v5"
 
@@ -21,12 +23,12 @@ import (
 // "give me the webhook config for this id, or tell me it's not a
 // webhook channel".
 type NotificationChannelRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewNotificationChannelRepo constructs the focused per-kind channel
-// repo around an existing *DB pool.
-func NewNotificationChannelRepo(db *DB) *NotificationChannelRepo {
+// repo around an existing *database.DB pool.
+func NewNotificationChannelRepo(db *database.DB) *NotificationChannelRepo {
 	return &NotificationChannelRepo{db: db}
 }
 

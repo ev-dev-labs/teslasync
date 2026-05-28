@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
@@ -125,7 +126,7 @@ type App struct {
 	// Health watchdog state — kept on App so the watchdog goroutine
 	// can mutate it without an unbounded closure capture.
 	prevHealthState map[string]resilience.ComponentStatus
-	notifRepo       *database.NotificationRepo
+	notifRepo       *dbnotif.NotificationRepo
 
 	// OpenAPI spec (best-effort; nil if not found at startup)
 	openAPISpec []byte

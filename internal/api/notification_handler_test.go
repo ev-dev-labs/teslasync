@@ -13,19 +13,19 @@ import (
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
 // fakeInboxStore is an in-memory stub of notificationInboxStore so handler
 // tests can exercise filter parsing and bulk endpoints without a live DB.
 type fakeInboxStore struct {
-	lastFilters database.NotificationLogFilters
+	lastFilters dbnotif.NotificationLogFilters
 	rows        []*notificationmodel.NotificationLog
 	listErr     error
 
 	groups        []*notificationmodel.NotificationLogGroup
 	listGroupErr  error
-	groupedFilter database.NotificationLogFilters
+	groupedFilter dbnotif.NotificationLogFilters
 	groupedCalls  int
 
 	unreadCount    int64
@@ -58,7 +58,7 @@ type fakeInboxStore struct {
 	bulkDeleteErr    error
 }
 
-func (f *fakeInboxStore) GetLogsFiltered(_ context.Context, filters database.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error) {
+func (f *fakeInboxStore) GetLogsFiltered(_ context.Context, filters dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error) {
 	f.lastFilters = filters
 	if f.listErr != nil {
 		return nil, f.listErr
@@ -66,7 +66,7 @@ func (f *fakeInboxStore) GetLogsFiltered(_ context.Context, filters database.Not
 	return f.rows, nil
 }
 
-func (f *fakeInboxStore) ListGrouped(_ context.Context, filters database.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error) {
+func (f *fakeInboxStore) ListGrouped(_ context.Context, filters dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error) {
 	f.groupedFilter = filters
 	f.groupedCalls++
 	if f.listGroupErr != nil {
@@ -137,12 +137,12 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		name      string
 		query     string
 		wantErr   bool
-		assertion func(t *testing.T, f database.NotificationLogFilters)
+		assertion func(t *testing.T, f dbnotif.NotificationLogFilters)
 	}{
 		{
 			name:  "empty defaults archived to false",
 			query: "",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.Archived == nil || *f.Archived != false {
 					t.Fatalf("expected archived=false default, got %v", f.Archived)
 				}
@@ -154,7 +154,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "csv severity",
 			query: "severity=info,warn,critical",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				want := []string{"info", "warn", "critical"}
 				if fmt.Sprint(f.Severities) != fmt.Sprint(want) {
 					t.Fatalf("severities = %v, want %v", f.Severities, want)
@@ -164,7 +164,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "repeated severity params",
 			query: "severity=info&severity=warn",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if len(f.Severities) != 2 {
 					t.Fatalf("expected 2 severities, got %d", len(f.Severities))
 				}
@@ -178,7 +178,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "csv vehicle ids",
 			query: "vehicle_id=1,2,3",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				want := []int64{1, 2, 3}
 				if fmt.Sprint(f.VehicleIDs) != fmt.Sprint(want) {
 					t.Fatalf("vehicle_ids = %v, want %v", f.VehicleIDs, want)
@@ -193,7 +193,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "rule ids",
 			query: "rule_id=10&rule_id=20",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if len(f.RuleIDs) != 2 || f.RuleIDs[0] != 10 || f.RuleIDs[1] != 20 {
 					t.Fatalf("rule_ids = %v", f.RuleIDs)
 				}
@@ -202,7 +202,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "from to RFC3339",
 			query: "from=2024-01-01T00:00:00Z&to=2024-12-31T23:59:59Z",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.From.IsZero() || f.To.IsZero() {
 					t.Fatal("expected from/to set")
 				}
@@ -211,7 +211,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "from date-only",
 			query: "from=2024-01-01",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.From.Year() != 2024 {
 					t.Fatalf("from year = %d", f.From.Year())
 				}
@@ -225,7 +225,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "read true",
 			query: "read=true",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.Read == nil || *f.Read != true {
 					t.Fatalf("read = %v", f.Read)
 				}
@@ -234,7 +234,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "read false",
 			query: "read=false",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.Read == nil || *f.Read != false {
 					t.Fatalf("read = %v", f.Read)
 				}
@@ -248,7 +248,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "archived true overrides default",
 			query: "archived=true",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.Archived == nil || *f.Archived != true {
 					t.Fatalf("archived = %v", f.Archived)
 				}
@@ -257,7 +257,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "archived false explicit",
 			query: "archived=false",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.Archived == nil || *f.Archived != false {
 					t.Fatalf("archived = %v", f.Archived)
 				}
@@ -266,7 +266,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "free text query",
 			query: "q=%20%20battery%20low%20%20",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.Query != "battery low" {
 					t.Fatalf("query = %q", f.Query)
 				}
@@ -275,7 +275,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 		{
 			name:  "limit and offset clamped via pagination()",
 			query: "limit=10&offset=5",
-			assertion: func(t *testing.T, f database.NotificationLogFilters) {
+			assertion: func(t *testing.T, f dbnotif.NotificationLogFilters) {
 				if f.Limit != 10 || f.Offset != 5 {
 					t.Fatalf("limit/offset = %d/%d", f.Limit, f.Offset)
 				}

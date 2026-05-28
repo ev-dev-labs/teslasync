@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T15:12:02Z",
+  "generated_at": "2026-05-28T15:16:44Z",
   "go_version": "go1.26.1",
-  "commit_sha": "60835ff494d600511d25d7c9c4282abf8762b113",
+  "commit_sha": "2dabd2acaf832ae35b8ed20f4e99b36cb3d4ca2d",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -39,7 +39,7 @@
       "path": "cmd/automation-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 354,
+      "loc": 355,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -50,6 +50,7 @@
         "internal/automation/trigger",
         "internal/config",
         "internal/database",
+        "internal/database/notification",
         "internal/mqtt",
         "internal/notification",
         "internal/resilience",
@@ -150,7 +151,7 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 523,
+      "loc": 524,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -158,6 +159,7 @@
         "internal/apilog",
         "internal/config",
         "internal/database",
+        "internal/database/notification",
         "internal/models/alert",
         "internal/models/notification",
         "internal/models/vehicle",
@@ -2209,7 +2211,7 @@
       "layer": "domain",
       "imports": [
         "internal/ai/tools",
-        "internal/database",
+        "internal/database/notification",
         "internal/models/notification"
       ],
       "files": [
@@ -2494,7 +2496,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126572,
+      "loc": 126586,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2621,6 +2623,7 @@
         "internal/database/auth",
         "internal/database/backup",
         "internal/database/gdpr",
+        "internal/database/notification",
         "internal/database/observability",
         "internal/database/sharing",
         "internal/dataquality",
@@ -3148,7 +3151,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1836,
+      "loc": 1838,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3161,6 +3164,7 @@
         "internal/crypto",
         "internal/database",
         "internal/database/gdpr",
+        "internal/database/notification",
         "internal/database/observability",
         "internal/dataquality",
         "internal/events",
@@ -3674,9 +3678,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 86,
-      "test_files": 31,
-      "loc": 23240,
+      "go_files": 82,
+      "test_files": 30,
+      "loc": 21314,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3689,12 +3693,10 @@
         "internal/models/alert",
         "internal/models/automation",
         "internal/models/charging",
-        "internal/models/chatbot",
         "internal/models/drive",
         "internal/models/energy",
         "internal/models/export",
         "internal/models/geo",
-        "internal/models/notification",
         "internal/models/system",
         "internal/models/telemetry",
         "internal/models/tesla",
@@ -3757,13 +3759,8 @@
         "mileage_repo.go",
         "mileage_repo_test.go",
         "mongodb.go",
-        "notification_channel_repo.go",
-        "notification_repo.go",
-        "notification_repo_test.go",
-        "notification_schedule_repo.go",
         "onboarding_repo.go",
         "position_repo.go",
-        "push_subscriptions_repo.go",
         "query_budget_tracer.go",
         "query_budget_tracer_test.go",
         "quiet_hours_repo.go",
@@ -3907,6 +3904,28 @@
       "files": [
         "artifact_repo.go",
         "doc.go"
+      ]
+    },
+    {
+      "path": "internal/database/notification",
+      "go_files": 5,
+      "test_files": 1,
+      "loc": 1950,
+      "has_doc_go": true,
+      "imports": [
+        "internal/database",
+        "internal/models",
+        "internal/models/alert",
+        "internal/models/chatbot",
+        "internal/models/notification"
+      ],
+      "files": [
+        "channel_repo.go",
+        "doc.go",
+        "push_subscriptions_repo.go",
+        "repo.go",
+        "repo_test.go",
+        "schedule_repo.go"
       ]
     },
     {
@@ -4935,11 +4954,12 @@
       "path": "internal/notification",
       "go_files": 4,
       "test_files": 2,
-      "loc": 1244,
+      "loc": 1245,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
+        "internal/database/notification",
         "internal/models",
         "internal/models/notification",
         "internal/mqtt",
@@ -5726,6 +5746,7 @@
         "internal/crypto",
         "internal/database",
         "internal/database/auth",
+        "internal/database/notification",
         "internal/enums",
         "internal/events",
         "internal/metrics",
@@ -5831,13 +5852,13 @@
   "cmd_loc": {
     "cmd/ai-eval": 151,
     "cmd/audit-signal-types": 498,
-    "cmd/automation-worker": 350,
+    "cmd/automation-worker": 351,
     "cmd/backup-verify": 96,
     "cmd/chaos-runner": 144,
     "cmd/export-worker": 251,
     "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 519,
+    "cmd/notification-worker": 520,
     "cmd/ocpp-server": 91,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 655,
@@ -6929,12 +6950,8 @@
       "migrate.go",
       "mileage_repo.go",
       "mongodb.go",
-      "notification_channel_repo.go",
-      "notification_repo.go",
-      "notification_schedule_repo.go",
       "onboarding_repo.go",
       "position_repo.go",
-      "push_subscriptions_repo.go",
       "query_budget_tracer.go",
       "quiet_hours_repo.go",
       "raw_telemetry_repo.go",
@@ -7005,6 +7022,13 @@
     "internal/database/gdpr": [
       "artifact_repo.go",
       "doc.go"
+    ],
+    "internal/database/notification": [
+      "channel_repo.go",
+      "doc.go",
+      "push_subscriptions_repo.go",
+      "repo.go",
+      "schedule_repo.go"
     ],
     "internal/database/observability": [
       "doc.go",
@@ -7726,13 +7750,14 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 86,
-      "flat_parent_test_files": 31,
+      "flat_parent_go_files": 82,
+      "flat_parent_test_files": 30,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
         "auth",
-        "backup"
+        "backup",
+        "notification"
       ],
       "missing_subpkgs": [
         "ai",
@@ -7747,7 +7772,6 @@
         "feedback",
         "geo",
         "ingest",
-        "notification",
         "onboarding",
         "settings",
         "signal",

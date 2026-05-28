@@ -12,15 +12,16 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notifier"
 )
 
 // notificationChannelWebhookConfigStore is the slice of
-// [database.NotificationChannelRepo] used by the webhook test/preview
+// [dbnotif.NotificationChannelRepo] used by the webhook test/preview
 // handlers. Defined as an interface so the handler tests can stub the
 // DB without standing up Postgres.
 type notificationChannelWebhookConfigStore interface {
-	GetWebhookConfig(ctx context.Context, channelID int64) (*database.WebhookConfig, error)
+	GetWebhookConfig(ctx context.Context, channelID int64) (*dbnotif.WebhookConfig, error)
 }
 
 // webhookSender is the function signature exposed to the handler so
@@ -56,7 +57,7 @@ type NotificationChannelHandler struct {
 // store and sender.
 func NewNotificationChannelHandler(db *database.DB) *NotificationChannelHandler {
 	return &NotificationChannelHandler{
-		store:  database.NewNotificationChannelRepo(db),
+		store:  dbnotif.NewNotificationChannelRepo(db),
 		sender: notifier.Send,
 	}
 }
@@ -137,7 +138,7 @@ func (h *NotificationChannelHandler) WebhookTest(w http.ResponseWriter, r *http.
 
 	cfg, err := h.store.GetWebhookConfig(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, database.ErrChannelNotFound) {
+		if errors.Is(err, dbnotif.ErrChannelNotFound) {
 			writeError(w, http.StatusNotFound, "webhook channel not found")
 			return
 		}

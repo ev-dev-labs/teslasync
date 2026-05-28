@@ -11,7 +11,7 @@
 // The on-path streaming integration is exercised end-to-end by the
 // F6 eval harness (`make ai-eval-fast`); duplicating that here would
 // require a live database fixture (the AI handler persists turns via
-// *database.ChatRepo, which is not interface-segregated yet).
+// *dbnotif.ChatRepo, which is not interface-segregated yet).
 
 package api
 

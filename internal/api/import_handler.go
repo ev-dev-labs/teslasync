@@ -14,6 +14,7 @@ import (
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/rs/zerolog/log"
 )
 
@@ -210,7 +211,7 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 
 // ExportNotificationLogs exports notification delivery logs as CSV or JSON.
 func ExportNotificationLogs(db *database.DB) http.HandlerFunc {
-	repo := database.NewNotificationRepo(db)
+	repo := dbnotif.NewNotificationRepo(db)
 	return func(w http.ResponseWriter, r *http.Request) {
 		format := r.URL.Query().Get("format")
 		if format == "" {

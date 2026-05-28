@@ -10,7 +10,7 @@ import (
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
@@ -265,7 +265,7 @@ func alertNumericOp(val float64, op string, threshold float64) bool {
 }
 
 func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *vehiclemodel.Vehicle, title, message string) {
-	notifRepo := database.NewNotificationRepo(w.db)
+	notifRepo := dbnotif.NewNotificationRepo(w.db)
 	channels, err := notifRepo.GetAllChannels(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("alert: failed to fetch notification channels")

@@ -1,4 +1,4 @@
-package database
+package notification
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
@@ -70,10 +72,10 @@ func IsValidNotificationGroupKey(s string) bool {
 
 // NotificationRepo provides notification channel and log data access.
 type NotificationRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewNotificationRepo(db *DB) *NotificationRepo {
+func NewNotificationRepo(db *database.DB) *NotificationRepo {
 	return &NotificationRepo{db: db}
 }
 
@@ -1258,10 +1260,10 @@ func (r *NotificationRepo) ListLogEvents(ctx context.Context, logID int64) ([]*a
 // --- Chatbot ---
 
 type ChatRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewChatRepo(db *DB) *ChatRepo {
+func NewChatRepo(db *database.DB) *ChatRepo {
 	return &ChatRepo{db: db}
 }
 

@@ -357,7 +357,7 @@ func TestCoerceVoiceModeIntPercent(t *testing.T) {
 func TestAIVoiceModeChatContextSource_FiltersNonChatRoles(t *testing.T) {
 	t.Parallel()
 	// Build a fake adapter via dependency injection: the
-	// adapter holds *database.ChatRepo, so we cannot
+	// adapter holds *dbnotif.ChatRepo, so we cannot
 	// substitute easily here. The projection logic is
 	// expressed inline in LoadRecentTurns; the smallest
 	// proof is to exercise the projection by hand against

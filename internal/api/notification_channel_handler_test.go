@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notifier"
 )
 
@@ -21,13 +21,13 @@ import (
 // notificationChannelWebhookConfigStore so handler tests can exercise
 // the webhook-test endpoint without standing up Postgres.
 type fakeWebhookConfigStore struct {
-	cfg *database.WebhookConfig
+	cfg *dbnotif.WebhookConfig
 	err error
 
 	calls int
 }
 
-func (f *fakeWebhookConfigStore) GetWebhookConfig(_ context.Context, _ int64) (*database.WebhookConfig, error) {
+func (f *fakeWebhookConfigStore) GetWebhookConfig(_ context.Context, _ int64) (*dbnotif.WebhookConfig, error) {
 	f.calls++
 	if f.err != nil {
 		return nil, f.err
@@ -130,7 +130,7 @@ func TestWebhookSignaturePreviewRejectsTooLargeBody(t *testing.T) {
 
 func TestWebhookTestForwardsConfigToSender(t *testing.T) {
 	store := &fakeWebhookConfigStore{
-		cfg: &database.WebhookConfig{
+		cfg: &dbnotif.WebhookConfig{
 			ChannelID:  42,
 			Name:       "Discord ops",
 			Enabled:    true,
@@ -200,7 +200,7 @@ func TestWebhookTestForwardsConfigToSender(t *testing.T) {
 
 func TestWebhookTestRespectsTitleAndMessageOverrides(t *testing.T) {
 	store := &fakeWebhookConfigStore{
-		cfg: &database.WebhookConfig{
+		cfg: &dbnotif.WebhookConfig{
 			ChannelID: 1, URL: "https://example.com", HTTPMethod: "POST",
 		},
 	}
@@ -229,7 +229,7 @@ func TestWebhookTestRespectsTitleAndMessageOverrides(t *testing.T) {
 }
 
 func TestWebhookTestReturns404WhenNotWebhookKind(t *testing.T) {
-	store := &fakeWebhookConfigStore{err: database.ErrChannelNotFound}
+	store := &fakeWebhookConfigStore{err: dbnotif.ErrChannelNotFound}
 	rec := &recordedSend{}
 	_, srv := newWebhookHandlerForTest(store, rec.hook)
 
@@ -247,7 +247,7 @@ func TestWebhookTestReturns404WhenNotWebhookKind(t *testing.T) {
 
 func TestWebhookTestSurfacesSendError(t *testing.T) {
 	store := &fakeWebhookConfigStore{
-		cfg: &database.WebhookConfig{ChannelID: 1, URL: "https://x", HTTPMethod: "POST"},
+		cfg: &dbnotif.WebhookConfig{ChannelID: 1, URL: "https://x", HTTPMethod: "POST"},
 	}
 	rec := &recordedSend{
 		res: notifier.Result{LatencyMs: 5},
@@ -276,7 +276,7 @@ func TestWebhookTestSurfacesSendError(t *testing.T) {
 
 func TestWebhookTestReportsNon2xxAsFailure(t *testing.T) {
 	store := &fakeWebhookConfigStore{
-		cfg: &database.WebhookConfig{ChannelID: 1, URL: "https://x", HTTPMethod: "POST"},
+		cfg: &dbnotif.WebhookConfig{ChannelID: 1, URL: "https://x", HTTPMethod: "POST"},
 	}
 	rec := &recordedSend{res: notifier.Result{StatusCode: 500, BodyPreview: "boom"}}
 	_, srv := newWebhookHandlerForTest(store, rec.hook)
@@ -328,7 +328,7 @@ func TestWebhookTestRoundTripWithRealNotifier(t *testing.T) {
 	defer srvBackend.Close()
 
 	store := &fakeWebhookConfigStore{
-		cfg: &database.WebhookConfig{
+		cfg: &dbnotif.WebhookConfig{
 			ChannelID: 7, URL: srvBackend.URL, HTTPMethod: "POST", Secret: "topsecret",
 		},
 	}

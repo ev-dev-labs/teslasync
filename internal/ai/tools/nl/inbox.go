@@ -60,7 +60,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
 // ---------------------------------------------------------------------------
@@ -301,7 +301,7 @@ type InboxCategorizationSource interface {
 	// honest-method narration can quote the exact number.
 	LoadCategoryCounts(
 		ctx context.Context,
-		f database.NotificationLogFilters,
+		f dbnotif.NotificationLogFilters,
 	) (counts []CategoryCount, totalInWindow int, minRequiredEvents int, err error)
 }
 
@@ -464,7 +464,7 @@ func (t *draftAlertCategories) Execute(ctx context.Context, in any) (any, error)
 	now := time.Now().UTC()
 	from := now.Add(-time.Duration(windowDays) * 24 * time.Hour)
 
-	filters := database.NotificationLogFilters{
+	filters := dbnotif.NotificationLogFilters{
 		From:       from,
 		To:         now,
 		Severities: append([]string(nil), input.Severities...),

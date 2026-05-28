@@ -1,9 +1,11 @@
-package database
+package notification
 
 import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	"github.com/jackc/pgx/v5"
 
@@ -18,10 +20,10 @@ import (
 // scope (NULL meaning the install-wide bucket) rather than enforcing a
 // non-zero user id, because the install is single-user today.
 type PushSubscriptionsRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewPushSubscriptionsRepo(db *DB) *PushSubscriptionsRepo {
+func NewPushSubscriptionsRepo(db *database.DB) *PushSubscriptionsRepo {
 	return &PushSubscriptionsRepo{db: db}
 }
 

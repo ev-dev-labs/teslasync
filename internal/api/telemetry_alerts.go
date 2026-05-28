@@ -10,6 +10,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -19,7 +20,7 @@ import (
 // TelemetryAlertEvaluator runs alert rules against incoming streaming signals.
 type TelemetryAlertEvaluator struct {
 	alertRuleRepo *database.AlertRuleRepo
-	notifRepo     *database.NotificationRepo
+	notifRepo     *dbnotif.NotificationRepo
 	settingsRepo  *database.SettingsRepo
 	vehicleRepo   *database.VehicleRepo
 	eventBus      *events.Bus
@@ -38,7 +39,7 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 	engine.SetStateRepo(database.NewAlertRuleStateRepo(db))
 	return &TelemetryAlertEvaluator{
 		alertRuleRepo: database.NewAlertRuleRepo(db),
-		notifRepo:     database.NewNotificationRepo(db),
+		notifRepo:     dbnotif.NewNotificationRepo(db),
 		settingsRepo:  database.NewSettingsRepo(db),
 		vehicleRepo:   database.NewVehicleRepo(db),
 		eventBus:      eventBus,

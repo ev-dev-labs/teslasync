@@ -8,22 +8,23 @@ import (
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
 
 // NotificationScheduleHandler manages scheduled notifications.
 type NotificationScheduleHandler struct {
-	schedRepo  *database.NotificationScheduleRepo
-	prefRepo   *database.NotificationPreferenceRepo
-	metricRepo *database.NotificationMetricRepo
+	schedRepo  *dbnotif.NotificationScheduleRepo
+	prefRepo   *dbnotif.NotificationPreferenceRepo
+	metricRepo *dbnotif.NotificationMetricRepo
 }
 
 func NewNotificationScheduleHandler(db *database.DB) *NotificationScheduleHandler {
 	return &NotificationScheduleHandler{
-		schedRepo:  database.NewNotificationScheduleRepo(db),
-		prefRepo:   database.NewNotificationPreferenceRepo(db),
-		metricRepo: database.NewNotificationMetricRepo(db),
+		schedRepo:  dbnotif.NewNotificationScheduleRepo(db),
+		prefRepo:   dbnotif.NewNotificationPreferenceRepo(db),
+		metricRepo: dbnotif.NewNotificationMetricRepo(db),
 	}
 }
 

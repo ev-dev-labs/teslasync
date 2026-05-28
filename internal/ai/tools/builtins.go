@@ -83,7 +83,7 @@ type AlertRuleSource interface {
 }
 
 // NotificationSource is the read surface the recent-alerts tool
-// needs. Implemented by *database.NotificationRepo.GetLogs.
+// needs. Implemented by *dbnotif.NotificationRepo.GetLogs.
 type NotificationSource interface {
 	GetLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error)
 }

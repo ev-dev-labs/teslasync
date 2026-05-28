@@ -15,11 +15,12 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
 )
 
-// pushSubscriptionsRepo is the slice of *database.PushSubscriptionsRepo
+// pushSubscriptionsRepo is the slice of *dbnotif.PushSubscriptionsRepo
 // the handler depends on. Defined as an interface so unit tests can drop
 // in an in-memory fake (mirrors the SavedViewsHandler / PinnedHandler
 // pattern from earlier Phase 40 prompts).
@@ -58,7 +59,7 @@ type PushHandler struct {
 // audit log records an empty actor (dev-mode behaviour).
 func NewPushHandler(db *database.DB, svc *webpush.Service, forwardAuthHeader string) *PushHandler {
 	return &PushHandler{
-		repo:              database.NewPushSubscriptionsRepo(db),
+		repo:              dbnotif.NewPushSubscriptionsRepo(db),
 		svc:               svc,
 		auditDB:           db,
 		forwardAuthHeader: forwardAuthHeader,

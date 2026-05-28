@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -155,7 +156,7 @@ func main() {
 	vehicleRepo := database.NewVehicleRepo(db)
 	commandLogRepo := database.NewCommandLogRepo(db)
 	settingsRepo := database.NewSettingsRepo(db)
-	notifRepo := database.NewNotificationRepo(db)
+	notifRepo := dbnotif.NewNotificationRepo(db)
 	varRepo := database.NewAutomationVariableRepo(db)
 
 	// ── Action Chain Executor ─────────────────────────────────────────

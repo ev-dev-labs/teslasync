@@ -26,6 +26,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -140,7 +141,7 @@ func main() {
 	// The notification worker is the actual MQTT consumer in production
 	// (the API server only publishes), so any "webpush" Request that
 	// reaches Send() resolves through this dispatcher.
-	pushSubsRepo := database.NewPushSubscriptionsRepo(db)
+	pushSubsRepo := dbnotif.NewPushSubscriptionsRepo(db)
 	webpushSvc := webpush.NewService(pushSubsRepo, cfg.WebPush.PublicKey, cfg.WebPush.PrivateKey, cfg.WebPush.Subject)
 	webpush.SetDefault(webpushSvc)
 	if !webpushSvc.IsEnabled() {
@@ -231,7 +232,7 @@ func main() {
 	}()
 
 	// Start schedule processor (checks every 60s for due notifications)
-	schedRepo := database.NewNotificationScheduleRepo(db)
+	schedRepo := dbnotif.NewNotificationScheduleRepo(db)
 	go func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -253,7 +254,7 @@ func main() {
 				span.SetAttributes(attribute.Int("notification.schedule.due_count", len(due)))
 				dispatched := 0
 				for _, s := range due {
-					ch, err := database.NewNotificationRepo(db).GetChannel(tickCtx, s.ChannelID)
+					ch, err := dbnotif.NewNotificationRepo(db).GetChannel(tickCtx, s.ChannelID)
 					if err != nil || ch == nil {
 						log.Warn().Int64("schedule_id", s.ID).Msg("schedule: channel not found, skipping")
 						continue
@@ -290,7 +291,7 @@ func main() {
 	// fine — the registry SQL is cheap (uses cagg/per-table indexes) and
 	// the rule count is small.
 	alertRuleRepo := database.NewAlertRuleRepo(db)
-	notifRepoForCM := database.NewNotificationRepo(db)
+	notifRepoForCM := dbnotif.NewNotificationRepo(db)
 	vehicleRepo := database.NewVehicleRepo(db)
 	computedEval := computed.New(db)
 	const computedMetricInterval = 5 * time.Minute
@@ -396,7 +397,7 @@ func runComputedMetricTick(
 	ctx context.Context,
 	alertRuleRepo *database.AlertRuleRepo,
 	vehicleRepo *database.VehicleRepo,
-	notifRepo *database.NotificationRepo,
+	notifRepo *dbnotif.NotificationRepo,
 	evaluator *computed.Evaluator,
 	mqttClient pahomqtt.Client,
 	span oteltrace.Span,
