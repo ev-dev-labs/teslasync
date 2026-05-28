@@ -1,4 +1,4 @@
-package api
+package user
 
 import (
 	"context"
@@ -12,27 +12,28 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// UserHandler handles user authentication with simple HMAC-based tokens.
+// Handler handles user authentication with simple HMAC-based tokens.
 // When AUTH_ENABLED is false (default for self-hosted), all endpoints are
 // accessible without authentication.
-type UserHandler struct {
+type Handler struct {
 	db        *database.DB
 	jwtSecret []byte
 }
 
-// NewUserHandler creates a UserHandler. If jwtSecret is empty, a random
+// NewHandler creates a Handler. If jwtSecret is empty, a random
 // 32-byte secret is generated (tokens will not survive server restarts).
-func NewUserHandler(db *database.DB, jwtSecret string) *UserHandler {
+func NewHandler(db *database.DB, jwtSecret string) *Handler {
 	secret := []byte(jwtSecret)
 	if len(secret) == 0 {
 		b := make([]byte, 32)
 		_, _ = rand.Read(b)
 		secret = b
 	}
-	return &UserHandler{db: db, jwtSecret: secret}
+	return &Handler{db: db, jwtSecret: secret}
 }
 
 type userClaims struct {
@@ -48,19 +49,19 @@ const userContextKey contextKey = "user"
 
 // Login validates credentials and returns an HMAC-signed token.
 // For the initial release only a single admin account is supported.
-func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	// Simple admin account — in a future release this will query a users table.
 	if body.Username != "admin" {
-		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		httpx.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
 
@@ -72,11 +73,11 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 		Exp:      exp.Unix(),
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate token")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to generate token")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"token":   token,
 		"user":    body.Username,
 		"role":    "admin",
@@ -85,15 +86,15 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 // Me returns the authenticated user's info, or authenticated: false.
-func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Me(w http.ResponseWriter, r *http.Request) {
 	claims, ok := r.Context().Value(userContextKey).(*userClaims)
 	if !ok {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"authenticated": false,
 		})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"authenticated": true,
 		"user_id":       claims.UserID,
 		"username":      claims.Username,
@@ -104,18 +105,18 @@ func (h *UserHandler) Me(w http.ResponseWriter, r *http.Request) {
 // AuthMiddleware extracts and validates the Bearer token, injecting claims
 // into the request context. If the token is missing or invalid the request
 // is rejected with 401.
-func (h *UserHandler) AuthMiddleware(next http.Handler) http.Handler {
+func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		if !strings.HasPrefix(auth, "Bearer ") {
-			writeError(w, http.StatusUnauthorized, "missing or invalid authorization header")
+			httpx.WriteError(w, http.StatusUnauthorized, "missing or invalid authorization header")
 			return
 		}
 		tokenStr := strings.TrimPrefix(auth, "Bearer ")
 
 		claims, err := h.verifyToken(tokenStr)
 		if err != nil {
-			writeError(w, http.StatusUnauthorized, "invalid or expired token")
+			httpx.WriteError(w, http.StatusUnauthorized, "invalid or expired token")
 			return
 		}
 
@@ -126,7 +127,7 @@ func (h *UserHandler) AuthMiddleware(next http.Handler) http.Handler {
 
 // OptionalAuthMiddleware is like AuthMiddleware but does not reject
 // unauthenticated requests — it simply attaches claims when present.
-func (h *UserHandler) OptionalAuthMiddleware(next http.Handler) http.Handler {
+func (h *Handler) OptionalAuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auth := r.Header.Get("Authorization")
 		if strings.HasPrefix(auth, "Bearer ") {
@@ -142,7 +143,7 @@ func (h *UserHandler) OptionalAuthMiddleware(next http.Handler) http.Handler {
 }
 
 // signToken produces a base64-encoded token: payload.signature
-func (h *UserHandler) signToken(c userClaims) (string, error) {
+func (h *Handler) signToken(c userClaims) (string, error) {
 	payload, err := json.Marshal(c)
 	if err != nil {
 		return "", fmt.Errorf("marshal claims: %w", err)
@@ -153,7 +154,7 @@ func (h *UserHandler) signToken(c userClaims) (string, error) {
 }
 
 // verifyToken validates and decodes a token string.
-func (h *UserHandler) verifyToken(token string) (*userClaims, error) {
+func (h *Handler) verifyToken(token string) (*userClaims, error) {
 	parts := strings.SplitN(token, ".", 2)
 	if len(parts) != 2 {
 		return nil, fmt.Errorf("malformed token")
@@ -182,7 +183,7 @@ func (h *UserHandler) verifyToken(token string) (*userClaims, error) {
 	return &c, nil
 }
 
-func (h *UserHandler) hmacSign(data string) string {
+func (h *Handler) hmacSign(data string) string {
 	mac := hmac.New(sha256.New, h.jwtSecret)
 	mac.Write([]byte(data))
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
