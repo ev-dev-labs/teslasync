@@ -73,3 +73,5 @@ aacf69ba268c7ea808c77b3cb18a0b0a614fd4bd
 2b25d1ffc167a7740cdc0f1d68c45a8e1481e0e8
 # R5.18 system carve-out (LARGEST single-file cluster)
 56758be506eb5657462f5b98f50d9bb4d6440605
+# refactor(R6.1): carve internal/jobs/triage subpkg
+c94f18a3e9ceeeb57065fbf9a0323f5b75683c85
