@@ -48,6 +48,7 @@ import (
 	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
 	apipinned "github.com/ev-dev-labs/teslasync/internal/api/pinned"
 	apipush "github.com/ev-dev-labs/teslasync/internal/api/push"
+	apiqueue "github.com/ev-dev-labs/teslasync/internal/api/queuestatus"
 	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
 	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
 	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
@@ -3667,7 +3668,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// are GET-only and per-IP throttled at 60/min — the
 			// SPA polls /system/queues every 30s and lazy-loads
 			// the per-worker drawer on demand.
-			queueStatusHandler := NewQueueStatusHandler(QueueStatusHandlerConfig{
+			queueStatusHandler := apiqueue.NewQueueStatusHandler(apiqueue.QueueStatusHandlerConfig{
 				QueueRepo:      workerdb.NewWorkerQueueRepo(db),
 				HeartbeatStore: queueHeartbeatStore,
 			})

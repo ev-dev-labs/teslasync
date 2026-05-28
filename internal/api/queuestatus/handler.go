@@ -1,30 +1,4 @@
-// Phase-46 / Prompt 41 — Job queue status feed.
-//
-// Two read-only endpoints:
-//
-//   GET /api/v1/system/queues
-//     Returns a list of QueueStat rows, one per known worker
-//     (notification, export, automation). Each row carries the
-//     latest heartbeat (if any) plus pending / in-progress /
-//     succeeded-24h / failed-24h / oldest-pending counts pulled
-//     from the worker's domain table.
-//
-//   GET /api/v1/system/queues/{worker}/jobs?limit=N
-//     Returns up to N recent jobs for the named worker for the
-//     drawer view. limit defaults to 20 and is clamped at 200.
-//
-// Heartbeat staleness ladder mirrors the operator-facing color
-// coding the panel uses:
-//
-//   ok       — last_heartbeat_at within 60 seconds.
-//   warn     — 60s ≤ stale_age ≤ 300s
-//   critical — stale_age > 300s OR no heartbeat at all.
-//
-// Both endpoints are cheap — small SQL aggregates over indexed
-// columns plus one Redis MGET. Polled at the panel's 30-second
-// cadence with no measurable overhead.
-
-package api
+package queuestatus
 
 import (
 	"context"
@@ -35,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 )
 
@@ -168,44 +143,44 @@ func NewQueueStatusHandler(cfg QueueStatusHandlerConfig) *QueueStatusHandler {
 func (h *QueueStatusHandler) ServeStatus(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		httpx.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	resp := h.buildStatus(r.Context())
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // ServeJobs answers GET /system/queues/{worker}/jobs.
 func (h *QueueStatusHandler) ServeJobs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		httpx.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	worker := chi.URLParam(r, "worker")
 	if !h.isKnownWorker(worker) {
-		writeError(w, http.StatusNotFound, "unknown worker")
+		httpx.WriteError(w, http.StatusNotFound, "unknown worker")
 		return
 	}
 	limit := parseQueueLimit(r.URL.Query().Get("limit"))
 	if h.repo == nil {
-		writeJSON(w, http.StatusOK, QueueJobsResponse{Worker: worker, Jobs: []QueueJobView{}})
+		httpx.WriteJSON(w, http.StatusOK, QueueJobsResponse{Worker: worker, Jobs: []QueueJobView{}})
 		return
 	}
 	jobs, err := h.repo.RecentJobs(r.Context(), worker, limit)
 	if err != nil {
 		if errors.Is(err, workerdb.ErrUnknownQueueWorker) {
-			writeError(w, http.StatusNotFound, "unknown worker")
+			httpx.WriteError(w, http.StatusNotFound, "unknown worker")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to load recent jobs")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load recent jobs")
 		return
 	}
 	views := make([]QueueJobView, 0, len(jobs))
 	for _, j := range jobs {
 		views = append(views, queueJobToView(j))
 	}
-	writeJSON(w, http.StatusOK, QueueJobsResponse{Worker: worker, Jobs: views})
+	httpx.WriteJSON(w, http.StatusOK, QueueJobsResponse{Worker: worker, Jobs: views})
 }
 
 // buildStatus is the pure aggregation step — exposed (lower-case but
