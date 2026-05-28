@@ -1,37 +1,33 @@
-refactor(R4.23): carve internal/database/position (positions hypertable + from_map)
+refactor(R4.24): carve internal/database/geofence (2 src + assertion relocation)
 
-Move PositionRepo into its own bounded-context subpkg per ADR-011, along
-with the parent-private map-based bulk insert helper that only it uses.
+Move the GeofenceRepo into its own bounded-context subpkg per ADR-011,
+and relocate the parent's compile-time assertion to the subpkg per
+Lesson 30/34 so the parent never imports a child subpkg.
 
-Files (2 src moved; 9 caller files swept):
-  position_repo.go  -> position/repo.go
-  from_map.go       -> position/from_map.go
-  position/doc.go   (NEW, // Layer: adapter)
+Files (2 src moved + 1 new assertion file; 8 caller files swept):
+  geofence_repo.go       -> geofence/repo.go
+  geofence_repo_bulk.go  -> geofence/repo_bulk.go
+  geofence/assertion.go  (NEW — '_ database.SettingsSerializerGeofenceRepo
+                          = (*GeofenceRepo)(nil)' moved out of parent
+                          settings_serializer.go L671)
+  geofence/doc.go        (NEW, // Layer: adapter)
 
-The from_map.go file contained:
-  - insertRowFromMap(db, table, ...)  package-private helper
-  - sortedKeys(m)                     package-private helper
-  - (*PositionRepo).InsertFromMap     the SOLE caller of insertRowFromMap
+Parent settings_serializer.go L669-673 simplified: now asserts only
+*SettingsRepo (the type still defined in parent). Comment updated to
+explain why GeofenceRepo + QuietHoursRepo assertions live in their
+respective child subpackages.
 
-Per Lesson 32-style consolidation: since insertRowFromMap is only used by
-PositionRepo.InsertFromMap (verified by grep across internal/+cmd/), the
-entire from_map.go moves with the position subpkg. Both helpers stay
-unexported in the new package — they remain implementation detail of the
-positions table bulk-write path.
-
-Symbols promoted (alias positiondb per ADR-011):
-  PositionRepo, NewPositionRepo
+Symbols promoted (alias geofencedb per ADR-011):
+  GeofenceRepo, NewGeofenceRepo
 
 References to parent types qualified:
   *DB -> *database.DB
 
-No new helper deps. No cycles.
+internal/database allowlist ratchet: 20 -> 18 src files.
 
-internal/database allowlist ratchet: 22 -> 20 src files.
-
-Carved subpkgs so far (25): achievement, sharing, admin, gdpr,
+Carved subpkgs so far (26): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
 audit, charging, drive, trip, energy, ai, export, worker, telemetry,
-system, tesla, vehicle, signal, position.
+system, tesla, vehicle, signal, position, geofence.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

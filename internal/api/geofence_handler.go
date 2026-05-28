@@ -11,6 +11,8 @@ import (
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+
+	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	"github.com/rs/zerolog/log"
 )
 
@@ -162,14 +164,14 @@ func validateGeofence(g *systemmodel.Geofence) error {
 // GeofenceHandler handles geofence CRUD.
 type GeofenceHandler struct {
 	db           *database.DB
-	geofenceRepo *database.GeofenceRepo
+	geofenceRepo *geofencedb.GeofenceRepo
 	// bulkOverride lets tests substitute the bulk store without standing
-	// up a real *database.GeofenceRepo. Always nil in production.
+	// up a real *geofencedb.GeofenceRepo. Always nil in production.
 	bulkOverride geofenceBulkStore
 }
 
 func NewGeofenceHandler(db *database.DB) *GeofenceHandler {
-	return &GeofenceHandler{db: db, geofenceRepo: database.NewGeofenceRepo(db)}
+	return &GeofenceHandler{db: db, geofenceRepo: geofencedb.NewGeofenceRepo(db)}
 }
 
 func (h *GeofenceHandler) List(w http.ResponseWriter, r *http.Request) {

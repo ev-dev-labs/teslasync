@@ -89,7 +89,7 @@ type NotificationSource interface {
 }
 
 // GeofenceSource is the read surface the geofences tool needs.
-// Implemented by *database.GeofenceRepo.
+// Implemented by *geofencedb.GeofenceRepo.
 type GeofenceSource interface {
 	GetAll(ctx context.Context) ([]*systemmodel.Geofence, error)
 }

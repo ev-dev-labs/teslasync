@@ -1,10 +1,11 @@
-package database
+package geofence
 
 import (
 	"context"
 	"math"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
 	"github.com/jackc/pgx/v5"
@@ -33,10 +34,10 @@ func scanGeofence(row pgx.Row, g *systemmodel.Geofence) error {
 
 // GeofenceRepo provides geofence data access.
 type GeofenceRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewGeofenceRepo(db *DB) *GeofenceRepo {
+func NewGeofenceRepo(db *database.DB) *GeofenceRepo {
 	return &GeofenceRepo{db: db}
 }
 

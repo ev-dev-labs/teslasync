@@ -24,6 +24,7 @@ import (
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
+	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
@@ -457,7 +458,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	settingsSerializer := database.NewSettingsSerializer(
 		database.NewSettingsRepo(db),
 		dbalert.NewAlertRuleRepo(db),
-		database.NewGeofenceRepo(db),
+		geofencedb.NewGeofenceRepo(db),
 		database.NewQuietHoursRepo(db),
 	)
 	settingsExportHandler := NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
@@ -578,7 +579,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Charges:       chargingdb.NewChargingRepo(db),
 		AlertRules:    dbalert.NewAlertRuleRepo(db),
 		Notifications: dbnotif.NewNotificationRepo(db),
-		Geofences:     database.NewGeofenceRepo(db),
+		Geofences:     geofencedb.NewGeofenceRepo(db),
 		Efficiency:    drivedb.NewDriveRepo(db),
 	})
 	// Phase-50 / U2 (slice 0012) — register the digest-narration
@@ -1683,7 +1684,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		aiRegistry,
 		aiToolRegistry,
 		geofenceawareautomationsuggestions.New(),
-		database.NewGeofenceRepo(db),
+		geofencedb.NewGeofenceRepo(db),
 		cfg.Auth.ForwardAuthHeader,
 	)
 

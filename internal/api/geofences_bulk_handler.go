@@ -9,7 +9,7 @@ import (
 )
 
 // geofenceBulkStore is the narrow surface needed by the geofence bulk
-// endpoint; implemented by *database.GeofenceRepo and substitutable in tests
+// endpoint; implemented by *geofencedb.GeofenceRepo and substitutable in tests
 // via the handler's bulkOverride field.
 type geofenceBulkStore interface {
 	FilterExistingIDs(ctx context.Context, ids []int64) ([]int64, error)

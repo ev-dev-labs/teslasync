@@ -196,7 +196,7 @@ func TestDecodeGeofenceWriteBody_CamelCaseWinsOnConflict(t *testing.T) {
 // ---------------------------------------------------------------------------
 // Update merge-semantics tests
 //
-// GeofenceHandler.geofenceRepo is a concrete *database.GeofenceRepo — we
+// GeofenceHandler.geofenceRepo is a concrete *geofencedb.GeofenceRepo — we
 // can't substitute a fake at the public seam. runGeofenceUpdateMerge
 // inlines the Update body 1:1 against fakeGeofenceUpdateRepo so we get
 // behavior coverage without standing up Postgres.

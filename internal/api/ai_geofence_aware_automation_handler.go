@@ -15,7 +15,7 @@ package api
 //	  ↓
 //	resolve provider via *provider.Registry.For("geofence-aware-automation-suggestions")
 //	  ↓
-//	load geofence catalog via *database.GeofenceRepo.GetAll
+//	load geofence catalog via *geofencedb.GeofenceRepo.GetAll
 //	  (id + name + category — NO lat/lon; PolicyAlertBuilder denies
 //	  every PII class so coordinates are NEVER emitted in prose)
 //	  ↓
@@ -76,7 +76,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 )
 
 // aiGeofenceAwareAutomationMaxIterations bounds the dispatcher's
@@ -120,7 +120,7 @@ type AIGeofenceAwareAutomationHandler struct {
 }
 
 // GeofenceLister is the narrow read seam the handler depends on so
-// tests can substitute a fake. Satisfied by *database.GeofenceRepo.
+// tests can substitute a fake. Satisfied by *geofencedb.GeofenceRepo.
 //
 // Kept narrow on purpose: the handler ONLY needs the existing
 // geofence catalog for the synthesised user message; it never
@@ -136,7 +136,7 @@ func NewAIGeofenceAwareAutomationHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	geofenceRepo *database.GeofenceRepo,
+	geofenceRepo *geofencedb.GeofenceRepo,
 	headerName string,
 ) *AIGeofenceAwareAutomationHandler {
 	switch {
@@ -147,7 +147,7 @@ func NewAIGeofenceAwareAutomationHandler(
 	case strat == nil:
 		panic("api: NewAIGeofenceAwareAutomationHandler: nil strategy.Strategy")
 	case geofenceRepo == nil:
-		panic("api: NewAIGeofenceAwareAutomationHandler: nil *database.GeofenceRepo")
+		panic("api: NewAIGeofenceAwareAutomationHandler: nil *geofencedb.GeofenceRepo")
 	}
 	return &AIGeofenceAwareAutomationHandler{
 		registry:     registry,

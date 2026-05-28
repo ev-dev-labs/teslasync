@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:41:47Z",
+  "generated_at": "2026-05-28T16:45:15Z",
   "go_version": "go1.26.1",
-  "commit_sha": "1cbdc922816a749c5531963694397c3a0f166b42",
+  "commit_sha": "e6f145b638b4467918211c57f0aab1bc16e1c2f3",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,7 +2514,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126674,
+      "loc": 126677,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2649,6 +2649,7 @@
         "internal/database/energy",
         "internal/database/export",
         "internal/database/gdpr",
+        "internal/database/geofence",
         "internal/database/notification",
         "internal/database/observability",
         "internal/database/position",
@@ -3719,9 +3720,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 20,
+      "go_files": 18,
       "test_files": 12,
-      "loc": 5791,
+      "loc": 5619,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3741,8 +3742,6 @@
         "database_test.go",
         "database_tracing_test.go",
         "doc.go",
-        "geofence_repo.go",
-        "geofence_repo_bulk.go",
         "helpers.go",
         "helpers_test.go",
         "maintenance.go",
@@ -4031,6 +4030,24 @@
       "files": [
         "artifact_repo.go",
         "doc.go"
+      ]
+    },
+    {
+      "path": "internal/database/geofence",
+      "go_files": 4,
+      "test_files": 0,
+      "loc": 202,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/models/system"
+      ],
+      "files": [
+        "assertion.go",
+        "doc.go",
+        "repo.go",
+        "repo_bulk.go"
       ]
     },
     {
@@ -7238,8 +7255,6 @@
       "circuit_breaker.go",
       "database.go",
       "doc.go",
-      "geofence_repo.go",
-      "geofence_repo_bulk.go",
       "helpers.go",
       "maintenance.go",
       "migrate.go",
@@ -7341,6 +7356,12 @@
     "internal/database/gdpr": [
       "artifact_repo.go",
       "doc.go"
+    ],
+    "internal/database/geofence": [
+      "assertion.go",
+      "doc.go",
+      "repo.go",
+      "repo_bulk.go"
     ],
     "internal/database/notification": [
       "channel_repo.go",
@@ -8128,7 +8149,7 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 20,
+      "flat_parent_go_files": 18,
       "flat_parent_test_files": 12,
       "planned_subpkgs": 22,
       "existing_subpkgs": [

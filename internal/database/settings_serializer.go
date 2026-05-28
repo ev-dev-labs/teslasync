@@ -666,8 +666,12 @@ func ptrTimeEq(a, b *time.Time) bool {
 // signature drift at build time. SettingsRepo is intentionally NOT
 // asserted because pgx.Tx wrapping is exercised by the WithTx-aware
 // repos exclusively at runtime.
+// Compile-time assertion for *SettingsRepo only — *GeofenceRepo and
+// *QuietHoursRepo are asserted from their respective subpackages
+// (internal/database/geofence/assertion.go, internal/database/quiethours/
+// assertion.go) per Lesson 30/34: the assertion lives with the concrete
+// type and depends on the parent interface (child -> parent), keeping the
+// parent free of child imports.
 var (
-	_ SettingsSerializerSettingsRepo   = (*SettingsRepo)(nil)
-	_ SettingsSerializerGeofenceRepo   = (*GeofenceRepo)(nil)
-	_ SettingsSerializerQuietHoursRepo = (*QuietHoursRepo)(nil)
+	_ SettingsSerializerSettingsRepo = (*SettingsRepo)(nil)
 )

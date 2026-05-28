@@ -2036,7 +2036,7 @@ var Registry = map[string]Feature{
 	// request (ADR-015 §I6). The handler is constructed in
 	// internal/api/router.go from the same provider.Registry +
 	// tools.Registry the rest of the AI surface uses, plus a
-	// *database.GeofenceRepo for the deterministic geofence catalog
+	// *geofencedb.GeofenceRepo for the deterministic geofence catalog
 	// the handler injects into the synthesised user message. The
 	// route has no URL path param — the SPA picks the in-scope
 	// vehicle + free-form prompt at click time and ships them in
