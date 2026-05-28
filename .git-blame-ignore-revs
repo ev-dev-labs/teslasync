@@ -28,3 +28,6 @@
 # alertmodel.* alias per ADR-011 §3. Pure mechanical move + import
 # rewrites; zero behavioural change.
 59ac8f2b432ab68cc61b484befdcf68f5f671a90
+
+# refactor(R5.2): extract internal/models/auth subpackage
+47075d56aec07315ee251af40a03b0a796d2a635
