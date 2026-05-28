@@ -1,4 +1,4 @@
-package api
+package onboarding
 
 import (
 	"context"
@@ -42,8 +42,8 @@ func decodeStatus(t *testing.T, body []byte) onboardingStatusResponse {
 	return resp
 }
 
-func TestOnboardingHandler_Status_FreshInstall(t *testing.T) {
-	h := &OnboardingHandler{
+func TestHandler_Status_FreshInstall(t *testing.T) {
+	h := &Handler{
 		tokens: fakeTokenReader{token: nil},
 		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
 	}
@@ -70,8 +70,8 @@ func TestOnboardingHandler_Status_FreshInstall(t *testing.T) {
 	}
 }
 
-func TestOnboardingHandler_Status_TokenOnly(t *testing.T) {
-	h := &OnboardingHandler{
+func TestHandler_Status_TokenOnly(t *testing.T) {
+	h := &Handler{
 		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
 		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
 	}
@@ -89,8 +89,8 @@ func TestOnboardingHandler_Status_TokenOnly(t *testing.T) {
 	}
 }
 
-func TestOnboardingHandler_Status_TokenAndVehicleNoData(t *testing.T) {
-	h := &OnboardingHandler{
+func TestHandler_Status_TokenAndVehicleNoData(t *testing.T) {
+	h := &Handler{
 		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
 		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 1, DataFlowing: false}},
 	}
@@ -108,8 +108,8 @@ func TestOnboardingHandler_Status_TokenAndVehicleNoData(t *testing.T) {
 	}
 }
 
-func TestOnboardingHandler_Status_AllConditionsMet(t *testing.T) {
-	h := &OnboardingHandler{
+func TestHandler_Status_AllConditionsMet(t *testing.T) {
+	h := &Handler{
 		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
 		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 2, DataFlowing: true}},
 	}
@@ -127,11 +127,11 @@ func TestOnboardingHandler_Status_AllConditionsMet(t *testing.T) {
 	}
 }
 
-func TestOnboardingHandler_Status_TokenWithEmptyAccessToken(t *testing.T) {
+func TestHandler_Status_TokenWithEmptyAccessToken(t *testing.T) {
 	// A row exists but AccessToken is blank — treat as not connected
 	// rather than connected. This guards against partial-write
 	// scenarios where the OAuth callback persisted a stub.
-	h := &OnboardingHandler{
+	h := &Handler{
 		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: ""}},
 		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 1, DataFlowing: true}},
 	}
@@ -149,10 +149,10 @@ func TestOnboardingHandler_Status_TokenWithEmptyAccessToken(t *testing.T) {
 	}
 }
 
-func TestOnboardingHandler_Status_TokenLookupErrorDoesNotBlockResponse(t *testing.T) {
+func TestHandler_Status_TokenLookupErrorDoesNotBlockResponse(t *testing.T) {
 	// A token lookup error should not 500 the endpoint — the gate
 	// must keep functioning so the user can see an actionable page.
-	h := &OnboardingHandler{
+	h := &Handler{
 		tokens: fakeTokenReader{err: errors.New("boom")},
 		repo:   fakeOnboardingRepo{status: &dbuser.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
 	}
@@ -170,11 +170,11 @@ func TestOnboardingHandler_Status_TokenLookupErrorDoesNotBlockResponse(t *testin
 	}
 }
 
-func TestOnboardingHandler_Status_RepoError500(t *testing.T) {
+func TestHandler_Status_RepoError500(t *testing.T) {
 	// A repo error IS a hard failure — the gate cannot make any claim
 	// about vehicle/signal state, so we surface a 500 rather than
 	// fabricating "not complete".
-	h := &OnboardingHandler{
+	h := &Handler{
 		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
 		repo:   fakeOnboardingRepo{err: errors.New("db down")},
 	}

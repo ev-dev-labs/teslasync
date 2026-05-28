@@ -1,4 +1,4 @@
-package api
+package onboarding
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
 
-// onboardingTokenReader is the narrow surface OnboardingHandler needs
+// onboardingTokenReader is the narrow surface Handler needs
 // from a TokenRepo (or test fake). Defined here so unit tests can
 // stub the dependency without spinning up Postgres.
 type onboardingTokenReader interface {
@@ -27,7 +28,7 @@ type onboardingStatusReader interface {
 	Get(ctx context.Context) (*dbuser.OnboardingStatus, error)
 }
 
-// OnboardingHandler reports whether the install has completed the
+// Handler reports whether the install has completed the
 // three first-run setup steps:
 //
 //  1. A Tesla OAuth token is stored locally (account is connected).
@@ -36,22 +37,22 @@ type onboardingStatusReader interface {
 //
 // The frontend "first-run gate" polls this endpoint and routes the
 // user into <OnboardingPage> until is_complete flips to true.
-type OnboardingHandler struct {
+type Handler struct {
 	tokens onboardingTokenReader
 	repo   onboardingStatusReader
 }
 
-// NewOnboardingHandler constructs the handler with the production
+// NewHandler constructs the handler with the production
 // dependencies. The optional encryptor is forwarded to TokenRepo so
 // the stored OAuth token can be decrypted before the existence check
 // — though for "is the account connected" all we actually need is
 // presence, not contents.
-func NewOnboardingHandler(db *database.DB, enc ...*crypto.Encryptor) *OnboardingHandler {
+func NewHandler(db *database.DB, enc ...*crypto.Encryptor) *Handler {
 	var e *crypto.Encryptor
 	if len(enc) > 0 {
 		e = enc[0]
 	}
-	return &OnboardingHandler{
+	return &Handler{
 		tokens: dbauth.NewTokenRepo(db, e),
 		repo:   dbuser.NewOnboardingRepo(db),
 	}
@@ -73,7 +74,7 @@ type onboardingStatusResponse struct {
 // gate keeps working when, for example, the tokens table is missing
 // during a first-boot race. Hard infrastructure errors are still
 // surfaced as 500 so operators see them in the dashboard.
-func (h *OnboardingHandler) Status(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Status(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	teslaConnected := false
@@ -86,7 +87,7 @@ func (h *OnboardingHandler) Status(w http.ResponseWriter, r *http.Request) {
 	dbStatus, err := h.repo.Get(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("onboarding: status query failed")
-		writeError(w, http.StatusInternalServerError, "failed to read onboarding status")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read onboarding status")
 		return
 	}
 
@@ -97,5 +98,5 @@ func (h *OnboardingHandler) Status(w http.ResponseWriter, r *http.Request) {
 	}
 	resp.IsComplete = resp.TeslaConnected && resp.VehicleCount > 0 && resp.DataFlowing
 
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }

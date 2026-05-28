@@ -24,6 +24,7 @@ import (
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
+	apionboard "github.com/ev-dev-labs/teslasync/internal/api/onboarding"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
@@ -1804,7 +1805,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	geocodeHandler := apigeocode.NewHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
-	onboardingHandler := NewOnboardingHandler(db, opt.Encryptor)
+	onboardingHandler := apionboard.NewHandler(db, opt.Encryptor)
 	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
