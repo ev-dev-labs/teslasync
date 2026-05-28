@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -33,7 +34,7 @@ func NewVehicleAccessHandler(tc *tesla.Client, db *database.DB) *VehicleAccessHa
 }
 
 // resolveVehicle looks up the vehicle record from the vehicleID URL param.
-func (h *VehicleAccessHandler) resolveVehicle(r *http.Request) (*models.Vehicle, error) {
+func (h *VehicleAccessHandler) resolveVehicle(r *http.Request) (*vehiclemodel.Vehicle, error) {
 	vehicleID, err := urlParamInt64(r, "vehicleID")
 	if err != nil {
 		return nil, fmt.Errorf("invalid vehicle ID: %w", err)

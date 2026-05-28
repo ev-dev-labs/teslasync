@@ -85,6 +85,8 @@ import (
 	"strings"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -95,7 +97,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiSoftwareUpdateChangelogSummarizerMaxIterations bounds the
@@ -464,12 +465,12 @@ func (a *AIVehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID
 	}, nil
 }
 
-// softwareUpdateModelToEntry converts a *models.SoftwareUpdate
+// softwareUpdateModelToEntry converts a *vehiclemodel.SoftwareUpdate
 // into a tools.SoftwareUpdateEntry, marshalling timestamps as
 // RFC3339 strings (empty string for nil pointers / zero time).
 // Pulled out so unit tests can exercise the conversion without
 // going through the repo.
-func softwareUpdateModelToEntry(u *models.SoftwareUpdate) tools.SoftwareUpdateEntry {
+func softwareUpdateModelToEntry(u *vehiclemodel.SoftwareUpdate) tools.SoftwareUpdateEntry {
 	entry := tools.SoftwareUpdateEntry{
 		ID:        u.ID,
 		Version:   u.Version,

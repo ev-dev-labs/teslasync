@@ -11,10 +11,11 @@ import (
 	"testing"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // Phase-43a / Prompt 0006 — HTTP tests for GuardHandler.
@@ -126,12 +127,12 @@ func (f *fakeGuardRepo) Acknowledge(ctx context.Context, vehicleID, eventID int6
 }
 
 type fakeGuardVehicles struct {
-	byID   map[int64]*models.Vehicle
+	byID   map[int64]*vehiclemodel.Vehicle
 	getErr error
 	gotIDs []int64
 }
 
-func (f *fakeGuardVehicles) GetByID(ctx context.Context, id int64) (*models.Vehicle, error) {
+func (f *fakeGuardVehicles) GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error) {
 	f.gotIDs = append(f.gotIDs, id)
 	if f.getErr != nil {
 		return nil, f.getErr
@@ -564,7 +565,7 @@ func TestGuard_Panic_NotImplementedWhenProxyUnconfigured(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	cmd := &fakeGuardCommandClient{}
 	vehicles := &fakeGuardVehicles{
-		byID: map[int64]*models.Vehicle{42: {ID: 42, VIN: "5YJ3E1EA0KFXXXXXX"}},
+		byID: map[int64]*vehiclemodel.Vehicle{42: {ID: 42, VIN: "5YJ3E1EA0KFXXXXXX"}},
 	}
 	h := newGuardHandlerForTest(&fakeGuardRepo{}, vehicles, cmd, false, now)
 	rec := httptest.NewRecorder()
@@ -590,7 +591,7 @@ func TestGuard_Panic_AllCommandsSucceed(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	cmd := &fakeGuardCommandClient{}
 	vehicles := &fakeGuardVehicles{
-		byID: map[int64]*models.Vehicle{42: {ID: 42, VIN: "5YJ3E1EA0KF000001"}},
+		byID: map[int64]*vehiclemodel.Vehicle{42: {ID: 42, VIN: "5YJ3E1EA0KF000001"}},
 	}
 	h := newGuardHandlerForTest(&fakeGuardRepo{}, vehicles, cmd, true, now)
 	rec := httptest.NewRecorder()
@@ -629,7 +630,7 @@ func TestGuard_Panic_PartialFailureReturns502(t *testing.T) {
 		},
 	}
 	vehicles := &fakeGuardVehicles{
-		byID: map[int64]*models.Vehicle{42: {ID: 42, VIN: "5YJ3E1EA0KF000001"}},
+		byID: map[int64]*vehiclemodel.Vehicle{42: {ID: 42, VIN: "5YJ3E1EA0KF000001"}},
 	}
 	h := newGuardHandlerForTest(&fakeGuardRepo{}, vehicles, cmd, true, now)
 	rec := httptest.NewRecorder()
@@ -663,7 +664,7 @@ func TestGuard_Panic_VehicleNotFound(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	cmd := &fakeGuardCommandClient{}
-	vehicles := &fakeGuardVehicles{byID: map[int64]*models.Vehicle{}}
+	vehicles := &fakeGuardVehicles{byID: map[int64]*vehiclemodel.Vehicle{}}
 	h := newGuardHandlerForTest(&fakeGuardRepo{}, vehicles, cmd, true, now)
 	rec := httptest.NewRecorder()
 	h.Panic(rec, guardRequest(http.MethodPost, "/vehicles/77/guard/panic", "77", ""))

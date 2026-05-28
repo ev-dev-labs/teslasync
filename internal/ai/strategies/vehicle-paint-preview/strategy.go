@@ -10,7 +10,7 @@
 //     cross-vehicle requests, refuse to mutate anything;
 //
 //   - the single propose-only tool the LLM is allowed to call —
-//     `draft_paint_preview_prompt` — which reads *models.Vehicle
+//     `draft_paint_preview_prompt` — which reads *vehiclemodel.Vehicle
 //     via VehicleSource (the same read surface the existing
 //     /api/v1/vehicles/{id} handler uses) and runs a deterministic
 //     validator pass. The actual paint-color persistence flows

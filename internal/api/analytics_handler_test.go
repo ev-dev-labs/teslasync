@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -16,12 +18,12 @@ import (
 // analytics handler tests so the migrated Fleet endpoint can be exercised
 // end-to-end without a real *database.VehicleRepo / pgx pool.
 type fakeVehicleListFetcher struct {
-	vehicles []*models.Vehicle
+	vehicles []*vehiclemodel.Vehicle
 	err      error
 	calls    int
 }
 
-func (f *fakeVehicleListFetcher) GetAll(_ context.Context) ([]*models.Vehicle, error) {
+func (f *fakeVehicleListFetcher) GetAll(_ context.Context) ([]*vehiclemodel.Vehicle, error) {
 	f.calls++
 	return f.vehicles, f.err
 }
@@ -63,7 +65,7 @@ func TestAnalyticsHandler_FleetSummary_UsesNowSnapshot(t *testing.T) {
 		},
 	}
 	h := &AnalyticsHandler{
-		vehicleRepo:  &fakeVehicleListFetcher{vehicles: []*models.Vehicle{{ID: vid, DisplayName: "Test"}}},
+		vehicleRepo:  &fakeVehicleListFetcher{vehicles: []*vehiclemodel.Vehicle{{ID: vid, DisplayName: "Test"}}},
 		driveRepo:    fakeDriveByVehicleFetcher{},
 		chargingRepo: fakeChargingByVehicleFetcher{},
 		state:        fake,

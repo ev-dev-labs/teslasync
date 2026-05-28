@@ -13,16 +13,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
-// newPaintPreviewTestVehicle builds a deterministic *models.Vehicle
+// newPaintPreviewTestVehicle builds a deterministic *vehiclemodel.Vehicle
 // for id=7 used by the happy-path tests.
-func newPaintPreviewTestVehicle() *models.Vehicle {
+func newPaintPreviewTestVehicle() *vehiclemodel.Vehicle {
 	model := "Model Y"
 	trim := "Long Range AWD"
 	color := "Pearl White"
-	return &models.Vehicle{
+	return &vehiclemodel.Vehicle{
 		ID:          7,
 		TeslaID:     7001,
 		VIN:         "5YJ3E1EA0NF000007",
@@ -39,7 +39,7 @@ func newPaintPreviewTestVehicle() *models.Vehicle {
 // the vehicle's actual model / trim / current color.
 func TestDraftPaintPreviewPrompt_HappyPath(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*models.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, err := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Midnight Blue", "style_hint": "studio"}`))
@@ -92,7 +92,7 @@ func TestDraftPaintPreviewPrompt_HappyPath(t *testing.T) {
 // policy failing for any reason.
 func TestDraftPaintPreviewPrompt_OmitsDisplayName(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*models.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Arctic Silver"}`))
@@ -116,7 +116,7 @@ func TestDraftPaintPreviewPrompt_OmitsDisplayName(t *testing.T) {
 // style_hint argument.
 func TestDraftPaintPreviewPrompt_NoStyleHint(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*models.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Solid Black"}`))
@@ -135,7 +135,7 @@ func TestDraftPaintPreviewPrompt_NoStyleHint(t *testing.T) {
 // the correct vehicle_id) rather than a silent envelope.
 func TestDraftPaintPreviewPrompt_VehicleNotFound(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*models.Vehicle{}}
+	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 999, "proposed_color": "Red"}`))
@@ -166,7 +166,7 @@ func TestDraftPaintPreviewPrompt_SourceError(t *testing.T) {
 // validator refuses control characters in the proposed color.
 func TestDraftPaintPreviewPrompt_RejectsControlChars(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*models.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Red\u0007Blue"}`))
@@ -189,7 +189,7 @@ func TestDraftPaintPreviewPrompt_RejectsControlChars(t *testing.T) {
 // color field).
 func TestDraftPaintPreviewPrompt_RejectsLatLong(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*models.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "37.7749, -122.4194 Blue"}`))
@@ -211,7 +211,7 @@ func TestDraftPaintPreviewPrompt_RejectsLatLong(t *testing.T) {
 // patterns in the style hint.
 func TestDraftPaintPreviewPrompt_RejectsStreetAddress(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*models.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Red", "style_hint": "123 Main St"}`))

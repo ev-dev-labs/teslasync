@@ -4,9 +4,10 @@ import (
 	"context"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
@@ -131,8 +132,8 @@ func (p *vehicleStateProvider) GetCurrentStateSince(ctx context.Context, vehicle
 // SignalStore, with comprehensive DB fallbacks for every field.
 // NEVER returns nil — always builds a complete state from whatever data
 // is available (SignalStore → snapshot tables → zero defaults).
-func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle *models.Vehicle) *models.VehicleState {
-	state := &models.VehicleState{
+func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle *vehiclemodel.Vehicle) *vehiclemodel.VehicleState {
+	state := &vehiclemodel.VehicleState{
 		VehicleID: vehicle.ID,
 	}
 
@@ -326,7 +327,7 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 // always preferred — boolean fields are only filled when the live store had
 // no entry for the corresponding signal name (avoiding false-vs-unset
 // ambiguity).
-func fillStateFromSnapshot(state *models.VehicleState, live map[string]*signal.Value, snap signal.State) {
+func fillStateFromSnapshot(state *vehiclemodel.VehicleState, live map[string]*signal.Value, snap signal.State) {
 	if state.Odometer == 0 {
 		if f, ok := snapFloat(snap, "Odometer"); ok {
 			state.Odometer = f
@@ -454,13 +455,13 @@ func snapBool(snap signal.State, key string) (bool, bool) {
 
 // SyncFromTesla discovers vehicles via the Tesla API and upserts them
 // into the database. Returns the list of synced vehicles (existing + new).
-func (s *VehicleService) SyncFromTesla(ctx context.Context, teslaClient *tesla.Client) ([]*models.Vehicle, error) {
+func (s *VehicleService) SyncFromTesla(ctx context.Context, teslaClient *tesla.Client) ([]*vehiclemodel.Vehicle, error) {
 	vehicles, err := teslaClient.ListVehicles(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	var synced []*models.Vehicle
+	var synced []*vehiclemodel.Vehicle
 	for _, tv := range vehicles {
 		existing, _ := s.vehicleRepo.GetByID(ctx, tv.VehicleID)
 		if existing != nil {
@@ -468,7 +469,7 @@ func (s *VehicleService) SyncFromTesla(ctx context.Context, teslaClient *tesla.C
 			continue
 		}
 
-		v := &models.Vehicle{
+		v := &vehiclemodel.Vehicle{
 			TeslaID:     tv.VehicleID,
 			VIN:         tv.VIN,
 			DisplayName: tv.DisplayName,

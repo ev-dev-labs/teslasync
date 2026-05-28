@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 
 	"github.com/rs/zerolog"
@@ -43,7 +45,7 @@ type HistoryStore interface {
 // Implementations may read from Redis signal cache, the in-memory signal
 // store, or any other real-time source.
 type StateProvider interface {
-	GetVehicleState(ctx context.Context, vehicleID int64) (*models.VehicleState, error)
+	GetVehicleState(ctx context.Context, vehicleID int64) (*vehiclemodel.VehicleState, error)
 }
 
 // PlaceProvider retrieves typed place data for geofence condition evaluation.
@@ -322,7 +324,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	}
 
 	// Execute the action chain.
-	var vehicle *models.Vehicle
+	var vehicle *vehiclemodel.Vehicle
 	// vehicle lookup deferred to ChainExecutor.Execute which handles nil vehicle
 	// StopOnFailure removed in typed migration (000142); default true (safe).
 	results := e.chainExecutor.Execute(ctx, actions, vehicle, true)

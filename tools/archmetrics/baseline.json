@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:08:07Z",
+  "generated_at": "2026-05-28T04:11:38Z",
   "go_version": "go1.26.1",
-  "commit_sha": "f3d57741569e940a56960be4798284c0dcd647c9",
+  "commit_sha": "ea1d011a13d10698bec13c7de09e2e64c1bd8d64",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -156,9 +156,9 @@
         "internal/apilog",
         "internal/config",
         "internal/database",
-        "internal/models",
         "internal/models/alert",
         "internal/models/notification",
+        "internal/models/vehicle",
         "internal/notification",
         "internal/notification/computed",
         "internal/resilience",
@@ -241,7 +241,7 @@
       "imports": [
         "internal/config",
         "internal/database",
-        "internal/models",
+        "internal/models/vehicle",
         "internal/resilience",
         "internal/tesla",
         "internal/tesla/config",
@@ -1884,7 +1884,7 @@
       "path": "internal/ai/tools",
       "go_files": 58,
       "test_files": 51,
-      "loc": 47078,
+      "loc": 47081,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1897,7 +1897,8 @@
         "internal/models",
         "internal/models/alert",
         "internal/models/geo",
-        "internal/models/notification"
+        "internal/models/notification",
+        "internal/models/vehicle"
       ],
       "files": [
         "alert_builder.go",
@@ -2033,7 +2034,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126478,
+      "loc": 126481,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2157,6 +2158,7 @@
         "internal/models/notification",
         "internal/models/settings",
         "internal/models/tesla",
+        "internal/models/vehicle",
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
@@ -2916,7 +2918,7 @@
       "path": "internal/automation",
       "go_files": 6,
       "test_files": 2,
-      "loc": 1607,
+      "loc": 1610,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2927,6 +2929,7 @@
         "internal/enums",
         "internal/models",
         "internal/models/automation",
+        "internal/models/vehicle",
         "internal/signal"
       ],
       "files": [
@@ -2944,12 +2947,13 @@
       "path": "internal/automation/action",
       "go_files": 6,
       "test_files": 5,
-      "loc": 3824,
+      "loc": 3826,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/models",
         "internal/models/notification",
+        "internal/models/vehicle",
         "internal/notification",
         "internal/tesla"
       ],
@@ -2971,11 +2975,12 @@
       "path": "internal/automation/condition",
       "go_files": 9,
       "test_files": 8,
-      "loc": 3651,
+      "loc": 3653,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
-        "internal/models"
+        "internal/models",
+        "internal/models/vehicle"
       ],
       "files": [
         "conflict.go",
@@ -3185,6 +3190,7 @@
         "internal/models/geo",
         "internal/models/notification",
         "internal/models/tesla",
+        "internal/models/vehicle",
         "internal/tracing"
       ],
       "files": [
@@ -3964,9 +3970,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 31,
+      "go_files": 30,
       "test_files": 1,
-      "loc": 2099,
+      "loc": 1851,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4001,8 +4007,7 @@
         "signal.go",
         "system.go",
         "telemetry.go",
-        "trip.go",
-        "vehicle.go"
+        "trip.go"
       ]
     },
     {
@@ -4150,6 +4155,20 @@
         "core.go",
         "doc.go",
         "tesla.go"
+      ]
+    },
+    {
+      "path": "internal/models/vehicle",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 273,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "vehicle.go",
+        "vehicle_test.go"
       ]
     },
     {
@@ -4529,7 +4548,7 @@
       "path": "internal/service",
       "go_files": 4,
       "test_files": 1,
-      "loc": 1376,
+      "loc": 1377,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4538,6 +4557,7 @@
         "internal/events",
         "internal/models",
         "internal/models/energy",
+        "internal/models/vehicle",
         "internal/signal",
         "internal/tesla"
       ],
@@ -4967,7 +4987,7 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2595,
+      "loc": 2596,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4980,6 +5000,7 @@
         "internal/models",
         "internal/models/auth",
         "internal/models/settings",
+        "internal/models/vehicle",
         "internal/mqtt",
         "internal/notification",
         "internal/polling",
@@ -6404,8 +6425,7 @@
       "signal.go",
       "system.go",
       "telemetry.go",
-      "trip.go",
-      "vehicle.go"
+      "trip.go"
     ],
     "internal/models/alert": [
       "alert.go",
@@ -6452,6 +6472,10 @@
       "core.go",
       "doc.go",
       "tesla.go"
+    ],
+    "internal/models/vehicle": [
+      "doc.go",
+      "vehicle.go"
     ],
     "internal/mqtt": [
       "dlq_inspector.go",
@@ -6755,7 +6779,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 31,
+      "flat_parent_go_files": 30,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6769,7 +6793,8 @@
         "geo",
         "notification",
         "settings",
-        "tesla"
+        "tesla",
+        "vehicle"
       ],
       "missing_subpkgs": [
         "charging",
@@ -6778,8 +6803,7 @@
         "security",
         "signal",
         "system",
-        "telemetry",
-        "vehicle"
+        "telemetry"
       ],
       "notes": "19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes."
     },

@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/jackc/pgx/v5"
 )
@@ -18,7 +19,7 @@ func NewVehicleRepo(db *DB) *VehicleRepo {
 	return &VehicleRepo{db: db}
 }
 
-func (r *VehicleRepo) Create(ctx context.Context, v *models.Vehicle) error {
+func (r *VehicleRepo) Create(ctx context.Context, v *vehiclemodel.Vehicle) error {
 	ctx, span := tracing.DBSpan(ctx, "insert", "vehicles", tracing.VehicleVIN(v.VIN))
 	defer span.End()
 	tz := v.Timezone
@@ -40,12 +41,12 @@ func (r *VehicleRepo) Create(ctx context.Context, v *models.Vehicle) error {
 	return err
 }
 
-func (r *VehicleRepo) GetByID(ctx context.Context, id int64) (*models.Vehicle, error) {
+func (r *VehicleRepo) GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error) {
 	ctx, span := tracing.DBSpan(ctx, "select", "vehicles", tracing.VehicleID(id))
 	defer span.End()
 	query := `SELECT id, tesla_id, vin, display_name, model, trim_level, color, timezone, created_at, updated_at
 		FROM vehicles WHERE id = $1`
-	v := &models.Vehicle{}
+	v := &vehiclemodel.Vehicle{}
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&v.ID, &v.TeslaID, &v.VIN, &v.DisplayName, &v.Model, &v.TrimLevel, &v.Color, &v.Timezone, &v.CreatedAt, &v.UpdatedAt,
 	)
@@ -56,12 +57,12 @@ func (r *VehicleRepo) GetByID(ctx context.Context, id int64) (*models.Vehicle, e
 	return v, err
 }
 
-func (r *VehicleRepo) GetByVIN(ctx context.Context, vin string) (*models.Vehicle, error) {
+func (r *VehicleRepo) GetByVIN(ctx context.Context, vin string) (*vehiclemodel.Vehicle, error) {
 	ctx, span := tracing.DBSpan(ctx, "select", "vehicles", tracing.VehicleVIN(vin))
 	defer span.End()
 	query := `SELECT id, tesla_id, vin, display_name, model, trim_level, color, timezone, created_at, updated_at
 		FROM vehicles WHERE vin = $1`
-	v := &models.Vehicle{}
+	v := &vehiclemodel.Vehicle{}
 	err := r.db.Pool.QueryRow(ctx, query, vin).Scan(
 		&v.ID, &v.TeslaID, &v.VIN, &v.DisplayName, &v.Model, &v.TrimLevel, &v.Color, &v.Timezone, &v.CreatedAt, &v.UpdatedAt,
 	)
@@ -72,7 +73,7 @@ func (r *VehicleRepo) GetByVIN(ctx context.Context, vin string) (*models.Vehicle
 	return v, err
 }
 
-func (r *VehicleRepo) GetAll(ctx context.Context) ([]*models.Vehicle, error) {
+func (r *VehicleRepo) GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error) {
 	ctx, span := tracing.DBSpan(ctx, "select_all", "vehicles")
 	defer span.End()
 	query := `SELECT id, tesla_id, vin, display_name, model, trim_level, color, timezone, created_at, updated_at
@@ -83,9 +84,9 @@ func (r *VehicleRepo) GetAll(ctx context.Context) ([]*models.Vehicle, error) {
 	}
 	defer rows.Close()
 
-	var vehicles []*models.Vehicle
+	var vehicles []*vehiclemodel.Vehicle
 	for rows.Next() {
-		v := &models.Vehicle{}
+		v := &vehiclemodel.Vehicle{}
 		if err := rows.Scan(
 			&v.ID, &v.TeslaID, &v.VIN, &v.DisplayName, &v.Model, &v.TrimLevel, &v.Color, &v.Timezone, &v.CreatedAt, &v.UpdatedAt,
 		); err != nil {

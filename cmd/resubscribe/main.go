@@ -40,6 +40,8 @@ import (
 	"syscall"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -49,7 +51,6 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	teslaconfig "github.com/ev-dev-labs/teslasync/internal/tesla/config"
@@ -92,7 +93,7 @@ type pusher interface {
 // needs. Same rationale as pusher: lets main_test.go inject a fixed
 // vehicle list without a real database connection.
 type vehicleLister interface {
-	GetAll(ctx context.Context) ([]*models.Vehicle, error)
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
 }
 
 func main() {
@@ -302,7 +303,7 @@ func runWithDeps(ctx context.Context, rc runConfig, vehicles vehicleLister, push
 		skipped   atomic.Int64
 	)
 
-	jobs := make(chan *models.Vehicle, rc.workers)
+	jobs := make(chan *vehiclemodel.Vehicle, rc.workers)
 	wg := &sync.WaitGroup{}
 	for i := 0; i < rc.workers; i++ {
 		wg.Add(1)
@@ -373,7 +374,7 @@ const (
 // SubscribeFleetTelemetry through the command proxy. A non-2xx HTTP
 // status is treated as failure (logged WARN, counted as failed) so the
 // summary distinguishes "Tesla rejected" from "we never tried".
-func pushOne(ctx context.Context, rc runConfig, v *models.Vehicle, fields map[string]tesla.FleetTelemetryField, push pusher) pushResult {
+func pushOne(ctx context.Context, rc runConfig, v *vehiclemodel.Vehicle, fields map[string]tesla.FleetTelemetryField, push pusher) pushResult {
 	ctx, span := cmdTracer().Start(ctx, "resubscribe.push_vehicle",
 		oteltrace.WithSpanKind(oteltrace.SpanKindClient),
 		oteltrace.WithAttributes(
@@ -447,9 +448,9 @@ func pushOne(ctx context.Context, rc runConfig, v *models.Vehicle, fields map[st
 // vehicleFilter == 0 returns all vehicles sorted by ID for stable
 // concurrency-independent log ordering. When vehicleFilter != 0
 // returns either the matching single vehicle or an empty slice.
-func filterVehicles(all []*models.Vehicle, vehicleFilter int64) []*models.Vehicle {
+func filterVehicles(all []*vehiclemodel.Vehicle, vehicleFilter int64) []*vehiclemodel.Vehicle {
 	if vehicleFilter == 0 {
-		out := make([]*models.Vehicle, 0, len(all))
+		out := make([]*vehiclemodel.Vehicle, 0, len(all))
 		for _, v := range all {
 			if v != nil {
 				out = append(out, v)
@@ -460,7 +461,7 @@ func filterVehicles(all []*models.Vehicle, vehicleFilter int64) []*models.Vehicl
 	}
 	for _, v := range all {
 		if v != nil && v.ID == vehicleFilter {
-			return []*models.Vehicle{v}
+			return []*vehiclemodel.Vehicle{v}
 		}
 	}
 	return nil

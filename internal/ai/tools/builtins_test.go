@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
@@ -17,15 +19,15 @@ import (
 // fake repos --------------------------------------------------------------
 
 type fakeVehicles struct {
-	all []*models.Vehicle
-	one map[int64]*models.Vehicle
+	all []*vehiclemodel.Vehicle
+	one map[int64]*vehiclemodel.Vehicle
 	err error
 }
 
-func (f *fakeVehicles) GetAll(ctx context.Context) ([]*models.Vehicle, error) {
+func (f *fakeVehicles) GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error) {
 	return f.all, f.err
 }
-func (f *fakeVehicles) GetByID(ctx context.Context, id int64) (*models.Vehicle, error) {
+func (f *fakeVehicles) GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -120,7 +122,7 @@ func TestRegister12Builtins_RegistersAllByName(t *testing.T) {
 func TestQueryVehicleCount(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
-	src := &fakeVehicles{all: []*models.Vehicle{{ID: 1}, {ID: 2}, {ID: 3}}}
+	src := &fakeVehicles{all: []*vehiclemodel.Vehicle{{ID: 1}, {ID: 2}, {ID: 3}}}
 	Register12Builtins(r, Sources{
 		Vehicles:      src,
 		VehicleState:  &fakeState{},
@@ -168,9 +170,9 @@ func TestQueryVehicleState_RejectsMissingID(t *testing.T) {
 func TestQueryVehicleState_ReturnsKnownVehicle(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
-	v := &models.Vehicle{ID: 7, DisplayName: "Modelina", VIN: "5YJSA1E10HF000007", Timezone: "UTC"}
+	v := &vehiclemodel.Vehicle{ID: 7, DisplayName: "Modelina", VIN: "5YJSA1E10HF000007", Timezone: "UTC"}
 	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{one: map[int64]*models.Vehicle{7: v}},
+		Vehicles:      &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: v}},
 		VehicleState:  &fakeState{values: map[string]any{"VehicleState": "park"}},
 		Drives:        &fakeDrives{},
 		Charges:       &fakeCharges{},

@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -18,8 +20,8 @@ import (
 
 // VehicleRepo is the subset of database.VehicleRepo needed by CommandExecutor.
 type VehicleRepo interface {
-	GetByID(ctx context.Context, id int64) (*models.Vehicle, error)
-	GetAll(ctx context.Context) ([]*models.Vehicle, error)
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
 }
 
 type VehicleStateProvider interface {
@@ -28,7 +30,7 @@ type VehicleStateProvider interface {
 
 // CommandLogRepo is the subset of database.CommandLogRepo needed by CommandExecutor.
 type CommandLogRepo interface {
-	Create(ctx context.Context, cl *models.CommandLog) error
+	Create(ctx context.Context, cl *vehiclemodel.CommandLog) error
 }
 
 // SettingsChecker provides safety-gate checks before command execution.
@@ -195,7 +197,7 @@ func (e *CommandExecutor) executeCommandConfig(ctx context.Context, vehicleID *i
 		return nil, fmt.Errorf("get polling config: %w", err)
 	}
 
-	var vehicles []*models.Vehicle
+	var vehicles []*vehiclemodel.Vehicle
 	if vehicleID != nil {
 		v, err := e.vehicleRepo.GetByID(ctx, *vehicleID)
 		if err != nil {
@@ -207,7 +209,7 @@ func (e *CommandExecutor) executeCommandConfig(ctx context.Context, vehicleID *i
 			}
 			return nil, fmt.Errorf("vehicle %d not found", *vehicleID)
 		}
-		vehicles = []*models.Vehicle{v}
+		vehicles = []*vehiclemodel.Vehicle{v}
 	} else {
 		all, err := e.vehicleRepo.GetAll(ctx)
 		if err != nil {
@@ -248,7 +250,7 @@ func (e *CommandExecutor) executeCommandConfig(ctx context.Context, vehicleID *i
 
 // sendToVehicle sends a single command to one vehicle, logs it, and returns the result.
 // If the vehicle is asleep or offline it automatically attempts to wake it first.
-func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, cfg *CommandConfig) CommandResult {
+func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *vehiclemodel.Vehicle, cfg *CommandConfig) CommandResult {
 	start := time.Now()
 
 	result := CommandResult{
@@ -298,7 +300,7 @@ func (e *CommandExecutor) sendToVehicle(ctx context.Context, v *models.Vehicle, 
 }
 
 // wakeIfNeeded sends an auto-wake command before dispatching a vehicle command.
-func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *WakeResult {
+func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *vehiclemodel.Vehicle) *WakeResult {
 	state, err := e.currentVehicleState(ctx, v)
 	if err != nil {
 		return &WakeResult{
@@ -373,7 +375,7 @@ func (e *CommandExecutor) wakeIfNeeded(ctx context.Context, v *models.Vehicle) *
 	}
 }
 
-func (e *CommandExecutor) currentVehicleState(ctx context.Context, v *models.Vehicle) (string, error) {
+func (e *CommandExecutor) currentVehicleState(ctx context.Context, v *vehiclemodel.Vehicle) (string, error) {
 	if v == nil {
 		return "", nil
 	}
@@ -389,9 +391,9 @@ func (e *CommandExecutor) currentVehicleState(ctx context.Context, v *models.Veh
 }
 
 // logCommand writes a command_logs row for audit. Errors are logged but not propagated.
-func (e *CommandExecutor) logCommand(ctx context.Context, v *models.Vehicle, cfg *CommandConfig, status, errMsg string) {
+func (e *CommandExecutor) logCommand(ctx context.Context, v *vehiclemodel.Vehicle, cfg *CommandConfig, status, errMsg string) {
 	paramsJSON, _ := json.Marshal(cfg.Params)
-	cl := &models.CommandLog{
+	cl := &vehiclemodel.CommandLog{
 		VehicleID: v.ID,
 		Command:   cfg.Command,
 		Params:    string(paramsJSON),

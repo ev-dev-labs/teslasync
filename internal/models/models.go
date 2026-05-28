@@ -4,7 +4,7 @@ package models
 
 // AuditLog has moved to system.go (regenerated for post-migration schema).
 
-// Vehicle has moved to vehicle.go (regenerated for post-migration schema).
+// Vehicle has moved to internal/models/vehicle in phase-R5.12.
 
 // Position has moved to position.go (regenerated for post-migration schema).
 
@@ -133,8 +133,8 @@ func DerefBool(p *bool) bool {
 //
 // TeslaFleetTelemetryError + TeslaFleetTelemetryErrorVIN remain in telemetry.go.
 
-// GuardConfig has moved to vehicle.go.
+// GuardConfig has moved to internal/models/vehicle in phase-R5.12.
 
 // ShareToken has moved to drive.go.
 
-// GuardEvent has moved to vehicle.go.
+// GuardEvent has moved to internal/models/vehicle in phase-R5.12.

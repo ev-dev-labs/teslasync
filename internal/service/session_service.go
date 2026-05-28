@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
@@ -92,7 +94,7 @@ func NewSessionService(db *database.DB, eventBus *events.Bus) *SessionService {
 
 // TrackDriveFromAPI evaluates a polled VehicleDataResponse and starts,
 // updates, or ends a drive session. This is the worker (API-polling) path.
-func (s *SessionService) TrackDriveFromAPI(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (s *SessionService) TrackDriveFromAPI(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	isDriving := data.DriveState.Speed != nil && *data.DriveState.Speed > 0
 
 	s.mu.Lock()
@@ -112,7 +114,7 @@ func (s *SessionService) TrackDriveFromAPI(ctx context.Context, vehicle *models.
 	}
 }
 
-func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (s *SessionService) startDrive(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	now := time.Now().UTC()
 	odometer := data.VehicleState.Odometer
 	lat := data.DriveState.Latitude
@@ -204,7 +206,7 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *models.Vehicle
 	}
 }
 
-func (s *SessionService) updateActiveDrive(vehicle *models.Vehicle, data *tesla.VehicleDataResponse, state *apiDriveState) {
+func (s *SessionService) updateActiveDrive(vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse, state *apiDriveState) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -284,7 +286,7 @@ func (s *SessionService) updateActiveDrive(vehicle *models.Vehicle, data *tesla.
 	state.LastLongitude = &lon
 }
 
-func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehicle, driveID int64, state *apiDriveState, data *tesla.VehicleDataResponse) {
+func (s *SessionService) completeDrive(ctx context.Context, vehicle *vehiclemodel.Vehicle, driveID int64, state *apiDriveState, data *tesla.VehicleDataResponse) {
 	now := time.Now().UTC()
 	endBattery := data.ChargeState.BatteryLevel
 
@@ -412,7 +414,7 @@ func (s *SessionService) completeDrive(ctx context.Context, vehicle *models.Vehi
 
 // TrackChargeFromAPI evaluates a polled VehicleDataResponse and starts or
 // ends a charging session as appropriate. This is the worker (API-polling) path.
-func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	isCharging := data.ChargeState.ChargingState == enums.ChargeStateCharging
 
 	s.mu.Lock()

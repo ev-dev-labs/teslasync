@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
 // --- Mock ActionExecutor ---
@@ -617,7 +617,7 @@ func TestExecute_FailedActionHasOutput(t *testing.T) {
 func TestExecuteFleet_TwoVehiclesTwoActions(t *testing.T) {
 	v1 := testVehicle(1, "VIN001", "Model 3")
 	v2 := testVehicle(2, "VIN002", "Model Y")
-	vRepo := &mockVehicleRepo{vehicles: []*models.Vehicle{v1, v2}}
+	vRepo := &mockVehicleRepo{vehicles: []*vehiclemodel.Vehicle{v1, v2}}
 
 	ce := NewChainExecutor(vRepo)
 	exec := &perCallExecutor{
@@ -667,7 +667,7 @@ func TestExecuteFleet_TwoVehiclesTwoActions(t *testing.T) {
 func TestExecuteFleet_StopOnFailurePerVehicle(t *testing.T) {
 	v1 := testVehicle(1, "VIN001", "Model 3")
 	v2 := testVehicle(2, "VIN002", "Model Y")
-	vRepo := &mockVehicleRepo{vehicles: []*models.Vehicle{v1, v2}}
+	vRepo := &mockVehicleRepo{vehicles: []*vehiclemodel.Vehicle{v1, v2}}
 
 	ce := NewChainExecutor(vRepo)
 
@@ -712,7 +712,7 @@ func TestExecuteFleet_StopOnFailurePerVehicle(t *testing.T) {
 }
 
 func TestExecuteFleet_NoVehicles(t *testing.T) {
-	vRepo := &mockVehicleRepo{vehicles: []*models.Vehicle{}}
+	vRepo := &mockVehicleRepo{vehicles: []*vehiclemodel.Vehicle{}}
 	ce := NewChainExecutor(vRepo)
 
 	actions := []ActionConfig{
@@ -742,7 +742,7 @@ func TestExecuteFleet_RepoError(t *testing.T) {
 func TestExecuteFleet_ContextCancelled(t *testing.T) {
 	v1 := testVehicle(1, "VIN001", "Model 3")
 	v2 := testVehicle(2, "VIN002", "Model Y")
-	vRepo := &mockVehicleRepo{vehicles: []*models.Vehicle{v1, v2}}
+	vRepo := &mockVehicleRepo{vehicles: []*vehiclemodel.Vehicle{v1, v2}}
 
 	ce := NewChainExecutor(vRepo)
 	ce.Register("action", &mockActionExecutor{output: json.RawMessage(`{}`)})

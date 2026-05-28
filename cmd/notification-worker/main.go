@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
@@ -24,7 +26,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -469,7 +470,7 @@ func runComputedMetricTick(
 	span.SetAttributes(attribute.Int("notification.computed_metric.triggered", triggered))
 }
 
-func vehiclesForRule(rule *alertmodel.AlertRule, all []*models.Vehicle) []int64 {
+func vehiclesForRule(rule *alertmodel.AlertRule, all []*vehiclemodel.Vehicle) []int64 {
 	// Phase-49 / Slice 0005: multi-vehicle picker. Honour the new
 	// sticky-all flag + explicit subset hydrated by the repo.
 	if rule.AllVehicles {

@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 type SoftwareUpdateRepo struct {
@@ -18,7 +18,7 @@ func NewSoftwareUpdateRepo(db *DB) *SoftwareUpdateRepo {
 	return &SoftwareUpdateRepo{db: db}
 }
 
-func (r *SoftwareUpdateRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int, start, end time.Time) ([]*models.SoftwareUpdate, error) {
+func (r *SoftwareUpdateRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit int, start, end time.Time) ([]*vehiclemodel.SoftwareUpdate, error) {
 	hasRange := !start.IsZero() && !end.IsZero()
 	var startArg, endArg interface{}
 	if hasRange {
@@ -36,9 +36,9 @@ func (r *SoftwareUpdateRepo) GetByVehicle(ctx context.Context, vehicleID int64, 
 	}
 	defer rows.Close()
 
-	var updates []*models.SoftwareUpdate
+	var updates []*vehiclemodel.SoftwareUpdate
 	for rows.Next() {
-		u := &models.SoftwareUpdate{}
+		u := &vehiclemodel.SoftwareUpdate{}
 		if err := rows.Scan(&u.ID, &u.VehicleID, &u.Version, &u.Status, &u.ScheduledAt, &u.InstalledAt, &u.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -47,7 +47,7 @@ func (r *SoftwareUpdateRepo) GetByVehicle(ctx context.Context, vehicleID int64, 
 	return updates, rows.Err()
 }
 
-func (r *SoftwareUpdateRepo) GetAll(ctx context.Context, limit int, start, end time.Time) ([]*models.SoftwareUpdate, error) {
+func (r *SoftwareUpdateRepo) GetAll(ctx context.Context, limit int, start, end time.Time) ([]*vehiclemodel.SoftwareUpdate, error) {
 	hasRange := !start.IsZero() && !end.IsZero()
 	var startArg, endArg interface{}
 	if hasRange {
@@ -64,9 +64,9 @@ func (r *SoftwareUpdateRepo) GetAll(ctx context.Context, limit int, start, end t
 	}
 	defer rows.Close()
 
-	var updates []*models.SoftwareUpdate
+	var updates []*vehiclemodel.SoftwareUpdate
 	for rows.Next() {
-		u := &models.SoftwareUpdate{}
+		u := &vehiclemodel.SoftwareUpdate{}
 		if err := rows.Scan(&u.ID, &u.VehicleID, &u.Version, &u.Status, &u.ScheduledAt, &u.InstalledAt, &u.CreatedAt); err != nil {
 			return nil, err
 		}

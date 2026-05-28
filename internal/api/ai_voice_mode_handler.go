@@ -82,6 +82,8 @@ import (
 	"strings"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 
 	"github.com/rs/zerolog/log"
@@ -535,7 +537,7 @@ func (a *AIVoiceModeVehicleSnapshotSource) LoadVehicleSnapshot(ctx context.Conte
 		log.Warn().Err(err).Msg("ai voice-mode: load vehicles failed; snapshot will be empty")
 		return out, nil
 	}
-	var primary *models.Vehicle
+	var primary *vehiclemodel.Vehicle
 	for _, v := range vehicles {
 		if v == nil || !v.IsActive() {
 			continue

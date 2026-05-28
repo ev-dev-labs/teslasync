@@ -35,12 +35,13 @@ import (
 	"strconv"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -60,7 +61,7 @@ type guardRepository interface {
 // The production wiring satisfies this with *database.VehicleRepo; tests
 // supply a fake.
 type guardVehicleResolver interface {
-	GetByID(ctx context.Context, id int64) (*models.Vehicle, error)
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
 }
 
 // guardCommandClient is the narrow tesla.Client surface Panic uses. The

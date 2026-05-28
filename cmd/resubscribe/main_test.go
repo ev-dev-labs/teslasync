@@ -7,7 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -15,11 +16,11 @@ import (
 // Returning a sentinel error covers the "list-vehicles failure" branch
 // without needing a real database connection.
 type stubLister struct {
-	vehicles []*models.Vehicle
+	vehicles []*vehiclemodel.Vehicle
 	err      error
 }
 
-func (s *stubLister) GetAll(_ context.Context) ([]*models.Vehicle, error) {
+func (s *stubLister) GetAll(_ context.Context) ([]*vehiclemodel.Vehicle, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -48,8 +49,8 @@ func (s *stubPusher) SubscribeFleetTelemetry(_ context.Context, sub tesla.FleetT
 	return []byte(`{"ok":true}`), 200, nil
 }
 
-func sampleVehicles() []*models.Vehicle {
-	return []*models.Vehicle{
+func sampleVehicles() []*vehiclemodel.Vehicle {
+	return []*vehiclemodel.Vehicle{
 		{ID: 1, VIN: "5YJ3E1EA0001"},
 		{ID: 2, VIN: "5YJ3E1EA0002"},
 		{ID: 3, VIN: "5YJ3E1EA0003"},
@@ -184,7 +185,7 @@ func TestRunWithDeps_ListErrorNonZero(t *testing.T) {
 // missing-ID/nil-element cases without panicking.
 func TestFilterVehicles(t *testing.T) {
 	t.Parallel()
-	all := []*models.Vehicle{
+	all := []*vehiclemodel.Vehicle{
 		{ID: 3, VIN: "C"},
 		nil,
 		{ID: 1, VIN: "A"},

@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -201,7 +203,7 @@ func TestRoundTripExecuteOnMinimalPayloads(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
 	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{one: map[int64]*models.Vehicle{1: {ID: 1, DisplayName: "x", VIN: "v", Timezone: "UTC"}}},
+		Vehicles:      &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{1: {ID: 1, DisplayName: "x", VIN: "v", Timezone: "UTC"}}},
 		VehicleState:  &fakeState{},
 		Drives:        &fakeDrives{one: map[int64]*models.Drive{1: {ID: 1}}},
 		Charges:       &fakeCharges{one: map[int64]*models.ChargingSession{1: {ID: 1}}},

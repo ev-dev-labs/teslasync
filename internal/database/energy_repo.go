@@ -5,9 +5,9 @@ import (
 	"strings"
 	"time"
 
-	energymodel "github.com/ev-dev-labs/teslasync/internal/models/energy"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	energymodel "github.com/ev-dev-labs/teslasync/internal/models/energy"
 )
 
 // CommandLogRepo provides command log data access.
@@ -19,7 +19,7 @@ func NewCommandLogRepo(db *DB) *CommandLogRepo {
 	return &CommandLogRepo{db: db}
 }
 
-func (r *CommandLogRepo) Create(ctx context.Context, cl *models.CommandLog) error {
+func (r *CommandLogRepo) Create(ctx context.Context, cl *vehiclemodel.CommandLog) error {
 	query := `INSERT INTO command_logs (vehicle_id, command, params, status, error, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`
 	now := time.Now().UTC()
@@ -28,7 +28,7 @@ func (r *CommandLogRepo) Create(ctx context.Context, cl *models.CommandLog) erro
 
 // GetLatestByVehicle returns the most recent command log entry per command name
 // for a given vehicle, ordered by most recent first.
-func (r *CommandLogRepo) GetLatestByVehicle(ctx context.Context, vehicleID int64) ([]*models.CommandLog, error) {
+func (r *CommandLogRepo) GetLatestByVehicle(ctx context.Context, vehicleID int64) ([]*vehiclemodel.CommandLog, error) {
 	query := `SELECT DISTINCT ON (command) id, vehicle_id, command, params, status, error, created_at
 		FROM command_logs
 		WHERE vehicle_id = $1
@@ -38,9 +38,9 @@ func (r *CommandLogRepo) GetLatestByVehicle(ctx context.Context, vehicleID int64
 		return nil, err
 	}
 	defer rows.Close()
-	var results []*models.CommandLog
+	var results []*vehiclemodel.CommandLog
 	for rows.Next() {
-		cl := &models.CommandLog{}
+		cl := &vehiclemodel.CommandLog{}
 		if err := rows.Scan(&cl.ID, &cl.VehicleID, &cl.Command, &cl.Params, &cl.Status, &cl.Error, &cl.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -50,7 +50,7 @@ func (r *CommandLogRepo) GetLatestByVehicle(ctx context.Context, vehicleID int64
 }
 
 // GetHistoryByVehicle returns the N most recent command logs for a vehicle.
-func (r *CommandLogRepo) GetHistoryByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*models.CommandLog, error) {
+func (r *CommandLogRepo) GetHistoryByVehicle(ctx context.Context, vehicleID int64, limit int) ([]*vehiclemodel.CommandLog, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -64,9 +64,9 @@ func (r *CommandLogRepo) GetHistoryByVehicle(ctx context.Context, vehicleID int6
 		return nil, err
 	}
 	defer rows.Close()
-	var results []*models.CommandLog
+	var results []*vehiclemodel.CommandLog
 	for rows.Next() {
-		cl := &models.CommandLog{}
+		cl := &vehiclemodel.CommandLog{}
 		if err := rows.Scan(&cl.ID, &cl.VehicleID, &cl.Command, &cl.Params, &cl.Status, &cl.Error, &cl.CreatedAt); err != nil {
 			return nil, err
 		}

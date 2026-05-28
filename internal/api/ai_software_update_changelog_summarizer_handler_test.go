@@ -24,10 +24,11 @@ import (
 	"testing"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly is the
@@ -282,7 +283,7 @@ func TestSoftwareUpdateModelToEntry(t *testing.T) {
 
 	cases := []struct {
 		name string
-		in   *models.SoftwareUpdate
+		in   *vehiclemodel.SoftwareUpdate
 		want struct {
 			id          int64
 			version     string
@@ -294,7 +295,7 @@ func TestSoftwareUpdateModelToEntry(t *testing.T) {
 	}{
 		{
 			name: "all_fields_populated",
-			in: &models.SoftwareUpdate{
+			in: &vehiclemodel.SoftwareUpdate{
 				ID:          7,
 				VehicleID:   42,
 				Version:     "2024.32.10",
@@ -321,7 +322,7 @@ func TestSoftwareUpdateModelToEntry(t *testing.T) {
 		},
 		{
 			name: "nil_timestamps_render_empty_string",
-			in: &models.SoftwareUpdate{
+			in: &vehiclemodel.SoftwareUpdate{
 				ID:          8,
 				Version:     "2024.40.0",
 				Status:      "available",
@@ -347,7 +348,7 @@ func TestSoftwareUpdateModelToEntry(t *testing.T) {
 		},
 		{
 			name: "zero_time_pointer_renders_empty_string",
-			in: &models.SoftwareUpdate{
+			in: &vehiclemodel.SoftwareUpdate{
 				ID:          9,
 				Version:     "2024.40.1",
 				Status:      "downloading",

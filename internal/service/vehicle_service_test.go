@@ -10,10 +10,11 @@ import (
 	"testing"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -90,7 +91,7 @@ func TestBuildStateFromSignalStore_LiveValuesAlwaysWin(t *testing.T) {
 	}}
 	svc := newSvc(fake)
 
-	state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
+	state := svc.BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: vehicleID})
 
 	if state.Odometer != 99999.9 {
 		t.Errorf("Odometer: live should win, got %v", state.Odometer)
@@ -137,7 +138,7 @@ func TestBuildStateFromSignalStore_FillsZeroFieldsFromSignalLog(t *testing.T) {
 	svc := newSvc(fake)
 
 	before := time.Now().UTC()
-	state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
+	state := svc.BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: vehicleID})
 	after := time.Now().UTC()
 
 	if state.Odometer != 12345.6 {
@@ -192,7 +193,7 @@ func TestBuildStateFromSignalStore_MissingSignalsStayAtGoZero(t *testing.T) {
 	}}
 	svc := newSvc(fake)
 
-	state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
+	state := svc.BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: vehicleID})
 
 	if state.Odometer != 42.0 {
 		t.Errorf("Odometer: want 42.0, got %v", state.Odometer)
@@ -238,7 +239,7 @@ func TestBuildStateFromSignalStore_SignalLogReadErrorIsTolerated(t *testing.T) {
 	log.Logger = zerolog.New(&buf).Level(zerolog.DebugLevel)
 	t.Cleanup(func() { log.Logger = prev })
 
-	state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
+	state := svc.BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: vehicleID})
 
 	if state == nil {
 		t.Fatal("BuildStateFromSignalStore must never return nil — handler must still 200")
@@ -264,7 +265,7 @@ func TestBuildStateFromSignalStore_NoSignalLogReaderConfigured(t *testing.T) {
 	})
 	svc := newSvc(nil) // no SignalLogReader
 
-	state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
+	state := svc.BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: vehicleID})
 
 	if state.BatteryLevel != 42 {
 		t.Errorf("BatteryLevel: want 42 from live, got %v", state.BatteryLevel)
@@ -285,85 +286,85 @@ func TestBuildStateFromSignalStore_FieldToSignalNameMapping(t *testing.T) {
 	type tc struct {
 		name    string
 		signals signal.State
-		check   func(*testing.T, *models.VehicleState)
+		check   func(*testing.T, *vehiclemodel.VehicleState)
 	}
 	cases := []tc{
 		{"Odometer", signal.State{"Odometer": 12345.6},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.Odometer != 12345.6 {
 					t.Errorf("Odometer: got %v", s.Odometer)
 				}
 			}},
 		{"InsideTemp", signal.State{"InsideTemp": 22.7},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.InsideTemp != 22.7 {
 					t.Errorf("InsideTemp: got %v", s.InsideTemp)
 				}
 			}},
 		{"OutsideTemp", signal.State{"OutsideTemp": 18.0},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.OutsideTemp != 18.0 {
 					t.Errorf("OutsideTemp: got %v", s.OutsideTemp)
 				}
 			}},
 		{"SoftwareVersion (Version)", signal.State{"Version": "2026.8.6"},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.SoftwareVersion != "2026.8.6" {
 					t.Errorf("SoftwareVersion: got %q", s.SoftwareVersion)
 				}
 			}},
 		{"SoftwareVersion (SoftwareUpdateVersion fallback)",
 			signal.State{"SoftwareUpdateVersion": "2026.9.0"},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.SoftwareVersion != "2026.9.0" {
 					t.Errorf("SoftwareVersion: secondary fallback failed, got %q", s.SoftwareVersion)
 				}
 			}},
 		{"IdealRange", signal.State{"IdealBatteryRange": 310.0},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.IdealRange != 310.0 {
 					t.Errorf("IdealRange: got %v", s.IdealRange)
 				}
 			}},
 		{"RatedRange (RatedRange)", signal.State{"RatedRange": 305.0},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.RatedRange != 305.0 {
 					t.Errorf("RatedRange: got %v", s.RatedRange)
 				}
 			}},
 		{"RatedRange (EstBatteryRange fallback)",
 			signal.State{"EstBatteryRange": 290.0},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.RatedRange != 290.0 {
 					t.Errorf("RatedRange: secondary fallback failed, got %v", s.RatedRange)
 				}
 			}},
 		{"Latitude", signal.State{"Latitude": 37.4419},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.Latitude != 37.4419 {
 					t.Errorf("Latitude: got %v", s.Latitude)
 				}
 			}},
 		{"Longitude", signal.State{"Longitude": -122.143},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.Longitude != -122.143 {
 					t.Errorf("Longitude: got %v", s.Longitude)
 				}
 			}},
 		{"BatteryLevel (BatteryLevel)", signal.State{"BatteryLevel": 80.0},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.BatteryLevel != 80 {
 					t.Errorf("BatteryLevel: got %v", s.BatteryLevel)
 				}
 			}},
 		{"BatteryLevel (Soc fallback)", signal.State{"Soc": 65.0},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.BatteryLevel != 65 {
 					t.Errorf("BatteryLevel: Soc fallback failed, got %v", s.BatteryLevel)
 				}
 			}},
 		{"Speed", signal.State{"VehicleSpeed": 42.0},
-			func(t *testing.T, s *models.VehicleState) {
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.Speed != 42.0 {
 					t.Errorf("Speed: got %v", s.Speed)
 				}
@@ -376,7 +377,7 @@ func TestBuildStateFromSignalStore_FieldToSignalNameMapping(t *testing.T) {
 			store := newStore(t, vehicleID, nil)
 			fake := &fakeStateReader{snapshot: c.signals}
 			svc := newSvc(fake)
-			state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
+			state := svc.BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: vehicleID})
 			c.check(t, state)
 		})
 	}
@@ -409,7 +410,7 @@ func TestBuildStateFromSignalStore_DoesNotReadSnapshotTables(t *testing.T) {
 		}
 	}()
 
-	state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
+	state := svc.BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: vehicleID})
 
 	if state.Odometer != 12345.6 {
 		t.Errorf("Odometer: signal_log fallback failed, got %v", state.Odometer)
@@ -452,7 +453,7 @@ func TestBuildStateFromSignalStore_AcceptsPhase42CodecNumericTypes(t *testing.T)
 		"GpsHeading":   int32(180),
 	})
 	svc := newSvc(nil)
-	state := svc.BuildStateFromSignalStore(store, &models.Vehicle{ID: vehicleID})
+	state := svc.BuildStateFromSignalStore(store, &vehiclemodel.Vehicle{ID: vehicleID})
 
 	tol := func(name string, got, want float64) {
 		t.Helper()

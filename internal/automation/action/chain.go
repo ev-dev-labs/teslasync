@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ActionExecutor is the interface that individual action types (command, wait,
@@ -146,7 +146,7 @@ func ParseActions(raw json.RawMessage) ([]ActionConfig, error) {
 func (c *ChainExecutor) Execute(
 	ctx context.Context,
 	actions []ActionConfig,
-	vehicle *models.Vehicle,
+	vehicle *vehiclemodel.Vehicle,
 	stopOnFailure bool,
 ) []ActionResult {
 	results := make([]ActionResult, 0, len(actions))

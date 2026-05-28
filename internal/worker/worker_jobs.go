@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
@@ -16,7 +18,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func (w *Worker) pollVehicle(ctx context.Context, vehicle *models.Vehicle) {
+func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle) {
 	logger := log.With().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Logger()
 	pollStart := time.Now()
 
@@ -135,11 +137,11 @@ func (w *Worker) buildPosition(vehicleID int64, data *tesla.VehicleDataResponse)
 	return p
 }
 
-func (w *Worker) trackDriving(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (w *Worker) trackDriving(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	w.sessionSvc.TrackDriveFromAPI(ctx, vehicle, data)
 }
 
-func (w *Worker) trackCharging(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (w *Worker) trackCharging(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	w.sessionSvc.TrackChargeFromAPI(ctx, vehicle, data)
 }
 
@@ -150,7 +152,7 @@ func (w *Worker) trackCharging(ctx context.Context, vehicle *models.Vehicle, dat
 // Bounded with a 5s context so a slow DB write can't extend the poll
 // path beyond its budget; failures are logged but never propagated
 // (timezone is metadata, not in the critical path).
-func (w *Worker) maybeUpdateVehicleTimezone(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (w *Worker) maybeUpdateVehicleTimezone(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	tz := data.VehicleState.Timezone
 	if tz == "" || tz == vehicle.Timezone {
 		return
@@ -169,7 +171,7 @@ func (w *Worker) maybeUpdateVehicleTimezone(ctx context.Context, vehicle *models
 	vehicle.Timezone = tz
 }
 
-func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (w *Worker) evaluateAlerts(ctx context.Context, vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	rules, err := w.alertRuleRepo.GetAll(ctx)
 	if err != nil {
 		return
@@ -261,7 +263,7 @@ func alertNumericOp(val float64, op string, threshold float64) bool {
 	return false
 }
 
-func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *models.Vehicle, title, message string) {
+func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *vehiclemodel.Vehicle, title, message string) {
 	notifRepo := database.NewNotificationRepo(w.db)
 	channels, err := notifRepo.GetAllChannels(ctx)
 	if err != nil {
@@ -288,14 +290,14 @@ func (w *Worker) sendAlertNotifications(ctx context.Context, vehicle *models.Veh
 	}
 }
 
-func (w *Worker) publishMQTT(vehicle *models.Vehicle, topic, payload string) {
+func (w *Worker) publishMQTT(vehicle *vehiclemodel.Vehicle, topic, payload string) {
 	if w.mqttClient == nil {
 		return
 	}
 	w.mqttClient.Publish(vehicle.VIN+"/"+topic, payload)
 }
 
-func (w *Worker) publishVehicleData(vehicle *models.Vehicle, data *tesla.VehicleDataResponse) {
+func (w *Worker) publishVehicleData(vehicle *vehiclemodel.Vehicle, data *tesla.VehicleDataResponse) {
 	if w.mqttClient == nil {
 		return
 	}

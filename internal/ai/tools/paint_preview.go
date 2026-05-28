@@ -52,7 +52,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
 // Hard caps on the typed paint-preview draft fields. Kept here so
@@ -156,12 +156,12 @@ func validatePaintPreviewString(label, value string, maxLen int) error {
 	return nil
 }
 
-// buildPaintPreviewEvidence projects a *models.Vehicle into the
+// buildPaintPreviewEvidence projects a *vehiclemodel.Vehicle into the
 // read-only evidence envelope returned by the tool. Intentionally
 // omits DisplayName and VIN — those are PII the LLM must never
 // quote, and the redaction policy already strips them; this is
 // defence-in-depth at the data plane.
-func buildPaintPreviewEvidence(v *models.Vehicle) paintPreviewEvidence {
+func buildPaintPreviewEvidence(v *vehiclemodel.Vehicle) paintPreviewEvidence {
 	return paintPreviewEvidence{
 		Model:        v.Model,
 		TrimLevel:    v.TrimLevel,
@@ -173,7 +173,7 @@ func buildPaintPreviewEvidence(v *models.Vehicle) paintPreviewEvidence {
 // prompt from the vehicle's model / trim / current color + the
 // proposed color + the optional style hint. Used so an LLM that
 // fails to produce any narrative still surfaces a usable proposal.
-func buildPaintPreviewSuggestion(v *models.Vehicle, proposedColor, styleHint string) *paintPreviewSuggestion {
+func buildPaintPreviewSuggestion(v *vehiclemodel.Vehicle, proposedColor, styleHint string) *paintPreviewSuggestion {
 	style := strings.TrimSpace(styleHint)
 	if style == "" {
 		style = "studio"
@@ -208,7 +208,7 @@ func buildPaintPreviewSuggestion(v *models.Vehicle, proposedColor, styleHint str
 // is allowed to call (per the strategy's allowedTools whitelist).
 //
 // Execution is pure: input → typed envelope. No DB write; no SQL;
-// no side effects beyond the read of *models.Vehicle used to
+// no side effects beyond the read of *vehiclemodel.Vehicle used to
 // populate the evidence + seed.
 type draftPaintPreviewPrompt struct {
 	vehicles VehicleSource

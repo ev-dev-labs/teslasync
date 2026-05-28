@@ -4,8 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/enums"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -24,7 +25,7 @@ func NewRedisStateProvider(cache *signal.RedisSignalCache) *RedisStateProvider {
 // GetVehicleState reads all cached signals for a vehicle from Redis and maps
 // them to a VehicleState suitable for state_check condition evaluation.
 // Returns (nil, nil) if no signals are cached for the vehicle.
-func (p *RedisStateProvider) GetVehicleState(ctx context.Context, vehicleID int64) (*models.VehicleState, error) {
+func (p *RedisStateProvider) GetVehicleState(ctx context.Context, vehicleID int64) (*vehiclemodel.VehicleState, error) {
 	signals, err := p.cache.GetAll(ctx, vehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("redis state provider: get signals for vehicle %d: %w", vehicleID, err)
@@ -33,7 +34,7 @@ func (p *RedisStateProvider) GetVehicleState(ctx context.Context, vehicleID int6
 		return nil, nil
 	}
 
-	state := &models.VehicleState{VehicleID: vehicleID}
+	state := &vehiclemodel.VehicleState{VehicleID: vehicleID}
 
 	if v, ok := signals["VehicleSpeed"]; ok {
 		if f, ok := v.(float64); ok {

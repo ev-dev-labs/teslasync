@@ -34,6 +34,8 @@ import (
 	"sync"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus"
@@ -45,7 +47,6 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // unitDriftTracerName scopes spans for the periodic unit-drift validator.
@@ -54,13 +55,13 @@ const unitDriftTracerName = "internal/worker/unit_drift"
 func unitDriftTracer() oteltrace.Tracer { return otel.Tracer(unitDriftTracerName) }
 
 // vehicleRepoAdapter wraps *database.VehicleRepo so its GetAll method
-// (which returns []*models.Vehicle) satisfies vehicleLister (which
+// (which returns []*vehiclemodel.Vehicle) satisfies vehicleLister (which
 // returns []int64). The validator never needs the rest of the
 // Vehicle struct — just the ID — so flattening here keeps the
 // interface minimal and the test seam tight.
 type vehicleRepoAdapter struct {
 	repo interface {
-		GetAll(ctx context.Context) ([]*models.Vehicle, error)
+		GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
 	}
 }
 

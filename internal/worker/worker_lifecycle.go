@@ -7,12 +7,13 @@ import (
 	"runtime/debug"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
 
 	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -245,7 +246,7 @@ func (w *Worker) discoverVehicles(ctx context.Context) {
 		}
 
 		// New vehicle discovered — create it
-		v := &models.Vehicle{
+		v := &vehiclemodel.Vehicle{
 			TeslaID:     tv.VehicleID,
 			VIN:         tv.VIN,
 			DisplayName: tv.DisplayName,
@@ -259,7 +260,7 @@ func (w *Worker) discoverVehicles(ctx context.Context) {
 }
 
 // pollVehicleSafe wraps pollVehicle with per-vehicle panic recovery.
-func (w *Worker) pollVehicleSafe(ctx context.Context, vehicle *models.Vehicle) {
+func (w *Worker) pollVehicleSafe(ctx context.Context, vehicle *vehiclemodel.Vehicle) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Error().Int64("vehicle_id", vehicle.ID).Str("vin", vehicle.VIN).Str("panic", fmt.Sprintf("%v", r)).Msg("panic polling vehicle — applying backoff")

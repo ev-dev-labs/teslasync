@@ -22,7 +22,7 @@ type MediaHandler struct {
 
 // Signal → JSON field mappings for media projection.
 // Signal names must match signal_types.go; field names must match
-// models.MediaSnapshot JSON tags.
+// vehiclemodel.MediaSnapshot JSON tags.
 var mediaMappings = []signal.FieldMapping{
 	{Signal: "MediaPlaybackStatus", Field: "playback_status"},
 	{Signal: "MediaNowPlayingTitle", Field: "now_playing_title"},

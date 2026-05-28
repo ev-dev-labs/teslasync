@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
@@ -43,8 +45,8 @@ import (
 // VehicleSource is the read surface the vehicle-domain tools need.
 // Implemented by *database.VehicleRepo (GetAll, GetByID).
 type VehicleSource interface {
-	GetAll(ctx context.Context) ([]*models.Vehicle, error)
-	GetByID(ctx context.Context, id int64) (*models.Vehicle, error)
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
 }
 
 // VehicleStateSource exposes the latest known state for a vehicle.

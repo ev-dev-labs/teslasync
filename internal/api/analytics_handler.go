@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -15,7 +17,7 @@ import (
 // compute per-vehicle drive / charge / battery rollups, so this is the
 // single most important seam for unit-testing it.
 type vehicleListFetcher interface {
-	GetAll(ctx context.Context) ([]*models.Vehicle, error)
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
 }
 
 // driveByVehicleFetcher abstracts *database.DriveRepo.GetByVehicle so

@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"strconv"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	cmdFSM "github.com/ev-dev-labs/teslasync/internal/fsm/command"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
@@ -205,7 +206,7 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 			Message:    cmdErr.Error(),
 			Category:   "auth",
 		})
-		cl := &models.CommandLog{
+		cl := &vehiclemodel.CommandLog{
 			VehicleID: vehicleID,
 			Command:   body.Command,
 			Params:    string(paramsJSON),
@@ -244,7 +245,7 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		Msg("command executed via FSM")
 
 	// Log the command
-	cl := &models.CommandLog{
+	cl := &vehiclemodel.CommandLog{
 		VehicleID: vehicleID,
 		Command:   body.Command,
 		Params:    string(paramsJSON),
@@ -285,7 +286,7 @@ func (h *CommandHandler) LatestCommands(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if items == nil {
-		items = []*models.CommandLog{}
+		items = []*vehiclemodel.CommandLog{}
 	}
 	writeJSON(w, http.StatusOK, items)
 }
@@ -312,7 +313,7 @@ func (h *CommandHandler) CommandHistory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if items == nil {
-		items = []*models.CommandLog{}
+		items = []*vehiclemodel.CommandLog{}
 	}
 	writeJSON(w, http.StatusOK, items)
 }

@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strconv"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -35,7 +36,7 @@ func (h *SoftwareUpdateHandler) List(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if updates == nil {
-			updates = make([]*models.SoftwareUpdate, 0)
+			updates = make([]*vehiclemodel.SoftwareUpdate, 0)
 		}
 		writeJSON(w, http.StatusOK, updates)
 		return
@@ -48,7 +49,7 @@ func (h *SoftwareUpdateHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if updates == nil {
-		updates = make([]*models.SoftwareUpdate, 0)
+		updates = make([]*vehiclemodel.SoftwareUpdate, 0)
 	}
 	writeJSON(w, http.StatusOK, updates)
 }

@@ -60,7 +60,7 @@ func (a *liveSignalStoreAdapter) GetAll(ctx context.Context, vehicleID int64) (m
 }
 
 // vinByIDResolver bridges *database.VehicleRepo (whose lookup returns
-// the full *models.Vehicle) to the teslapipeline.VINResolver
+// the full *vehiclemodel.Vehicle) to the teslapipeline.VINResolver
 // interface (which only needs the VIN string). Returns a wrapped
 // "vehicle not registered" error when the row is nil so the
 // SideEffectsObserver's WARN log includes enough context for triage
