@@ -19,6 +19,7 @@ import (
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
+	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
@@ -3106,7 +3107,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Gas Price Auto-Poll
 		if opt.GasPriceWorker != nil {
-			gasPriceHandler := NewGasPriceHandler(db, opt.GasPriceWorker)
+			gasPriceHandler := apigas.NewHandler(db, opt.GasPriceWorker)
 			r.Route("/gas-price", func(r chi.Router) {
 				r.Get("/status", gasPriceHandler.Status)
 				r.Post("/poll", gasPriceHandler.Poll)

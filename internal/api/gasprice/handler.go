@@ -1,24 +1,26 @@
-package api
+package gasprice
 
 import (
 	"encoding/json"
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/worker"
 	"github.com/rs/zerolog/log"
 )
 
-// GasPriceHandler handles gas price auto-poll management endpoints.
-type GasPriceHandler struct {
+// Handler handles gas price auto-poll management endpoints.
+type Handler struct {
 	db     *database.DB
 	worker *worker.GasPriceWorker
 }
 
-// NewGasPriceHandler creates a new GasPriceHandler.
-func NewGasPriceHandler(db *database.DB, w *worker.GasPriceWorker) *GasPriceHandler {
-	return &GasPriceHandler{db: db, worker: w}
+// NewHandler creates a new Handler.
+func NewHandler(db *database.DB, w *worker.GasPriceWorker) *Handler {
+	return &Handler{db: db, worker: w}
 }
 
 // gasPriceHistoryRow represents a row from gas_price_history.
@@ -34,27 +36,27 @@ type gasPriceHistoryRow struct {
 
 // Status returns the current gas price poll status.
 // GET /api/v1/gas-price/status
-func (h *GasPriceHandler) Status(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Status(w http.ResponseWriter, r *http.Request) {
 	status := h.worker.Status()
-	writeJSON(w, http.StatusOK, status)
+	httpx.WriteJSON(w, http.StatusOK, status)
 }
 
 // Poll triggers an immediate gas price poll.
 // POST /api/v1/gas-price/poll
-func (h *GasPriceHandler) Poll(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Poll(w http.ResponseWriter, r *http.Request) {
 	go h.worker.Poll(r.Context())
 	log.Info().Msg("gas price manual poll triggered")
-	writeJSON(w, http.StatusOK, map[string]string{"status": "poll_triggered"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "poll_triggered"})
 }
 
 // Toggle starts or stops auto-polling at runtime.
 // POST /api/v1/gas-price/toggle
-func (h *GasPriceHandler) Toggle(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Toggle(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Enabled bool `json:"enabled"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -68,23 +70,23 @@ func (h *GasPriceHandler) Toggle(w http.ResponseWriter, r *http.Request) {
 	h.persistToggle(r, body.Enabled)
 
 	log.Info().Bool("enabled", body.Enabled).Msg("gas price auto-poll toggled")
-	writeJSON(w, http.StatusOK, map[string]bool{"enabled": body.Enabled})
+	httpx.WriteJSON(w, http.StatusOK, map[string]bool{"enabled": body.Enabled})
 }
 
 // UpdateConfig updates the poll interval.
 // PUT /api/v1/gas-price/config
-func (h *GasPriceHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		PollInterval string `json:"poll_interval"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	valid := map[string]bool{"daily": true, "7d": true, "15d": true, "30d": true}
 	if !valid[body.PollInterval] {
-		writeError(w, http.StatusBadRequest, "poll_interval must be one of: daily, 7d, 15d, 30d")
+		httpx.WriteError(w, http.StatusBadRequest, "poll_interval must be one of: daily, 7d, 15d, 30d")
 		return
 	}
 
@@ -101,13 +103,13 @@ func (h *GasPriceHandler) UpdateConfig(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Str("poll_interval", body.PollInterval).Msg("gas price poll interval updated")
-	writeJSON(w, http.StatusOK, map[string]string{"poll_interval": body.PollInterval})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"poll_interval": body.PollInterval})
 }
 
 // History returns gas_price_history records.
 // GET /api/v1/gas-price/history
-func (h *GasPriceHandler) History(w http.ResponseWriter, r *http.Request) {
-	limit, offset := pagination(r)
+func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
+	limit, offset := apiparams.Pagination(r)
 
 	rows, err := h.db.Pool.Query(r.Context(),
 		`SELECT id, price_per_unit, unit, efficiency_mpg, effective_from, effective_to, created_at
@@ -116,7 +118,7 @@ func (h *GasPriceHandler) History(w http.ResponseWriter, r *http.Request) {
 		 LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to query gas price history")
-		writeError(w, http.StatusInternalServerError, "failed to query gas price history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query gas price history")
 		return
 	}
 	defer rows.Close()
@@ -127,7 +129,7 @@ func (h *GasPriceHandler) History(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&row.ID, &row.PricePerUnit, &row.Unit, &row.EfficiencyMPG,
 			&row.EffectiveFrom, &row.EffectiveTo, &row.CreatedAt); err != nil {
 			log.Error().Err(err).Msg("failed to scan gas price history row")
-			writeError(w, http.StatusInternalServerError, "failed to read gas price history")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read gas price history")
 			return
 		}
 		history = append(history, row)
@@ -137,11 +139,11 @@ func (h *GasPriceHandler) History(w http.ResponseWriter, r *http.Request) {
 		history = []gasPriceHistoryRow{}
 	}
 
-	writeJSON(w, http.StatusOK, history)
+	httpx.WriteJSON(w, http.StatusOK, history)
 }
 
 // persistToggle saves the enabled state to the database.
-func (h *GasPriceHandler) persistToggle(r *http.Request, enabled bool) {
+func (h *Handler) persistToggle(r *http.Request, enabled bool) {
 	_, err := h.db.Pool.Exec(r.Context(), `
 		INSERT INTO gas_price_poll_state (id, enabled)
 		VALUES (1, $1)
