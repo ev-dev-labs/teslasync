@@ -190,3 +190,6 @@ c03b89a1365760c5624a8a18dc12b40057e86f86
 
 # refactor(R2.0c): carve internal/api/apiparams (shared request-decoding helpers)
 3785eedc6af02e0dd013614339e5422426d6c9fc
+
+# refactor(R2.0d): carve internal/api/middleware (cross-cutting HTTP middleware)
+3bb29fac10f5de9b2e434b098d02e12e78fd6da3
