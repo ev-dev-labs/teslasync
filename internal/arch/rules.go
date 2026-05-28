@@ -11,25 +11,37 @@ type ForbiddenEdge struct {
 	Reason string // human-readable; printed on test failure
 }
 
-// ForbiddenEdges is the canonical list. Phase-47 seeds it with the 5
-// edges established by the Principal Architect critique. Subsequent
-// prompts (06, 09, 10) append new rules.
+// ForbiddenEdges is the canonical list. Phase-47 seeded it with the 5
+// edges established by the Principal Architect critique; phase-47 prompts
+// 06, 09, and 10 appended additional rules. Phase-A3.1 (chore/repo-
+// reorganization) broadens handler/v1-scoped rules to handler/... and
+// adds the missing Clean Architecture edges (app→handler, app→api,
+// handler→infra-direct, models→outward, adapter→app, cmd→api).
+//
+// The DAG mirrored here MUST match tools/archmetrics/main.go forbiddenEdges
+// — the two systems are deliberately redundant (arch_test enforces against
+// HEAD with explicit reasons, archmetrics ratchets against baseline.json).
 var ForbiddenEdges = []ForbiddenEdge{
+	// ----------------------------------------------------------------------
+	// Phase-A3.1: generalised cmd/* rule (subsumes phase-47/05 worker-
+	// specific entries). The composition root for the HTTP API lives in
+	// internal/app since phase-47/56de7194; cmd binaries must not bypass
+	// it. Workers depend on internal/apilog and internal/notification/
+	// computed for their cross-cutting needs.
+	// ----------------------------------------------------------------------
 	{
-		Source: "cmd/notification-worker",
+		Source: "cmd/...",
 		Target: "internal/api",
-		Reason: "workers must depend on internal/notify (extracted in phase-47/05), not the HTTP handler package",
+		Reason: "cmd binaries must not import internal/api; the composition root in internal/app is the only legitimate wiring layer for HTTP transport (phase-A3.1)",
 	},
-	{
-		Source: "cmd/automation-worker",
-		Target: "internal/api",
-		Reason: "workers must depend on internal/notify (extracted in phase-47/05), not the HTTP handler package",
-	},
-	// Phase-47/09 promoted these two to FAIL-level. Domain purity is
-	// also enforced (more strictly) by TestDomainPurity (ADR-006), which
-	// rejects ANY non-stdlib non-domain import; these edges remain in
-	// ForbiddenEdges so that violations surface with the layering reason
-	// in TestForbiddenEdges output as well.
+
+	// ----------------------------------------------------------------------
+	// Phase-47/09: domain layer is pure. Also enforced (more strictly) by
+	// TestDomainPurity (ADR-006), which rejects ANY non-stdlib non-domain
+	// import; these edges stay in ForbiddenEdges so violations surface with
+	// the layering reason in TestForbiddenEdges output as well.
+	// Phase-A3.1 adds the missing outward edges (models/port/handler/api/app).
+	// ----------------------------------------------------------------------
 	{
 		Source: "internal/domain/...",
 		Target: "internal/adapter/...",
@@ -40,14 +52,36 @@ var ForbiddenEdges = []ForbiddenEdge{
 		Target: "internal/database",
 		Reason: "domain must not depend on the database package (hexagonal inversion; ADR-006)",
 	},
-	// Still advisory until phase-47/10 promotes to fail-level.
 	{
-		Source: "internal/handler/v1",
-		Target: "internal/database",
-		Reason: "handlers must call internal/app/* services, not the database directly (advisory until prompt 10)",
+		Source: "internal/domain/...",
+		Target: "internal/models",
+		Reason: "domain entities must not depend on persistence/transport DTOs (ADR-006; phase-A3.1)",
 	},
-	// Phase-47/09: hexagonal layering rules promoted to FAIL.
-	// Ports never depend on adapters, persistence, transport, app, or platform.
+	{
+		Source: "internal/domain/...",
+		Target: "internal/port/...",
+		Reason: "domain must not know about its ports; ports live at the consumer (svc) boundary (ADR-007; phase-A3.1)",
+	},
+	{
+		Source: "internal/domain/...",
+		Target: "internal/handler/...",
+		Reason: "domain must not depend on HTTP handlers (wrong direction; phase-A3.1)",
+	},
+	{
+		Source: "internal/domain/...",
+		Target: "internal/api",
+		Reason: "domain must not depend on the HTTP router (wrong direction; phase-A3.1)",
+	},
+	{
+		Source: "internal/domain/...",
+		Target: "internal/app/...",
+		Reason: "domain must not depend on use cases (wrong direction; phase-A3.1)",
+	},
+
+	// ----------------------------------------------------------------------
+	// Phase-47/09: ports never depend on adapters, persistence, transport,
+	// app, or platform. Ports are interface contracts in pure-domain terms.
+	// ----------------------------------------------------------------------
 	{
 		Source: "internal/port/...",
 		Target: "internal/adapter/...",
@@ -73,7 +107,11 @@ var ForbiddenEdges = []ForbiddenEdge{
 		Target: "internal/app/...",
 		Reason: "ports must not depend on app services (phase-47/09)",
 	},
+
+	// ----------------------------------------------------------------------
 	// Phase-47/09: adapters never depend on transport or use cases.
+	// Phase-A3.1 adds the missing adapter → app rule.
+	// ----------------------------------------------------------------------
 	{
 		Source: "internal/adapter/...",
 		Target: "internal/api",
@@ -84,25 +122,52 @@ var ForbiddenEdges = []ForbiddenEdge{
 		Target: "internal/handler/...",
 		Reason: "adapters must not depend on HTTP handlers (phase-47/09)",
 	},
-	// Phase-47/10: handler thinness rule. Handlers in handler/v1 must
-	// stay thin: no direct database/adapter/models access, no import of
-	// the FROZEN internal/api. internal/api itself is exempt (it IS
-	// frozen; existing handlers query the DB freely until their per-
-	// handler migration to handler/v1 lands).
 	{
-		Source: "internal/handler/v1",
+		Source: "internal/adapter/...",
+		Target: "internal/app/...",
+		Reason: "adapters must not depend on use cases (wrong direction; phase-A3.1)",
+	},
+
+	// ----------------------------------------------------------------------
+	// Phase-A3.1: use cases (internal/app/*svc) must not depend on HTTP
+	// transport or the legacy router. The composition root (internal/app
+	// top-level — see internal/app/{app,new,run,lifecycle,adapters}.go)
+	// is the explicit carve-out and is exempted via AllowedExceptions.
+	// ----------------------------------------------------------------------
+	{
+		Source: "internal/app/...",
+		Target: "internal/handler/...",
+		Reason: "use cases (internal/app/*svc) must not depend on HTTP transport; the composition root internal/app is the carve-out (phase-A3.1)",
+	},
+	{
+		Source: "internal/app/...",
+		Target: "internal/api",
+		Reason: "use cases (internal/app/*svc) must not depend on the legacy HTTP router; the composition root internal/app is the carve-out (phase-A3.1)",
+	},
+
+	// ----------------------------------------------------------------------
+	// Phase-47/10 (handler thinness) BROADENED to handler/... in phase-A3.1.
+	// Handlers in any handler subdir must stay thin: no direct database/
+	// adapter/models/api access, no infra-SDK reach-through. internal/api
+	// itself is exempt from these rules — it IS the legacy frozen package;
+	// its existing handlers freely query the DB until per-handler migration
+	// to handler/v1 lands. TestHandlerV1Thinness continues to enforce the
+	// stricter handler/v1-specific subset (no internal/models, etc).
+	// ----------------------------------------------------------------------
+	{
+		Source: "internal/handler/...",
 		Target: "internal/database",
-		Reason: "handlers must call internal/app/<name>svc, not the database directly (phase-47/10)",
+		Reason: "handlers must call internal/app/<name>svc, not the database directly (phase-47/10; broadened to handler/... in phase-A3.1)",
 	},
 	{
-		Source: "internal/handler/v1",
+		Source: "internal/handler/...",
 		Target: "internal/platform/database",
-		Reason: "handlers must call internal/app/<name>svc, not platform DB helpers (phase-47/10)",
+		Reason: "handlers must call internal/app/<name>svc, not platform DB helpers (phase-47/10; broadened to handler/... in phase-A3.1)",
 	},
 	{
-		Source: "internal/handler/v1",
+		Source: "internal/handler/...",
 		Target: "internal/adapter/...",
-		Reason: "handlers must depend on ports, not adapter implementations (phase-47/10)",
+		Reason: "handlers must depend on ports, not adapter implementations (phase-47/10; broadened to handler/... in phase-A3.1)",
 	},
 	{
 		Source: "internal/handler/v1",
@@ -110,9 +175,62 @@ var ForbiddenEdges = []ForbiddenEdge{
 		Reason: "handlers use internal/handler/dto for transport DTOs (ADR-006; phase-47/10)",
 	},
 	{
-		Source: "internal/handler/v1",
+		Source: "internal/handler/...",
 		Target: "internal/api",
-		Reason: "internal/api is FROZEN per ADR-009; handlers must not import it (phase-47/10)",
+		Reason: "internal/api is FROZEN per ADR-009; handlers must not import it (phase-47/10; broadened to handler/... in phase-A3.1)",
+	},
+	// Phase-A3.1: handlers must not reach into infra/vendor SDKs.
+	// Everything routes through internal/app/*svc + ports.
+	{
+		Source: "internal/handler/...",
+		Target: "internal/tesla/...",
+		Reason: "handlers must not call the Tesla pipeline directly; route through internal/app/<name>svc + ports (phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/...",
+		Target: "internal/mqtt/...",
+		Reason: "handlers must not call MQTT directly; route through internal/app/<name>svc + ports (phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/...",
+		Target: "internal/redis/...",
+		Reason: "handlers must not call Redis directly; route through internal/app/<name>svc + ports (phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/...",
+		Target: "internal/geocoding/...",
+		Reason: "handlers must not call the geocoding adapter directly; route through internal/app/<name>svc + ports (phase-A3.1)",
+	},
+
+	// ----------------------------------------------------------------------
+	// Phase-A3.1: models (DTOs) are leaves. Per ADR-006 they MUST NOT depend
+	// on any other layer. Independently enforced (more strictly) by
+	// TestModelsImportsRestricted; mirrored here for layering reason output.
+	// ----------------------------------------------------------------------
+	{
+		Source: "internal/models",
+		Target: "internal/database",
+		Reason: "models (DTOs) must not depend on persistence implementation (ADR-006; phase-A3.1)",
+	},
+	{
+		Source: "internal/models",
+		Target: "internal/adapter/...",
+		Reason: "models (DTOs) must not depend on adapters (ADR-006; phase-A3.1)",
+	},
+	{
+		Source: "internal/models",
+		Target: "internal/handler/...",
+		Reason: "models (DTOs) must not depend on handlers (ADR-006; phase-A3.1)",
+	},
+	{
+		Source: "internal/models",
+		Target: "internal/app/...",
+		Reason: "models (DTOs) must not depend on use cases (ADR-006; phase-A3.1)",
+	},
+	{
+		Source: "internal/models",
+		Target: "internal/api",
+		Reason: "models (DTOs) must not depend on the HTTP router (ADR-006; phase-A3.1)",
 	},
 }
 
@@ -131,7 +249,28 @@ type Exception struct {
 // Phase-47/05 cleared the worker→internal/api exceptions: the workers now
 // depend on internal/apilog and internal/notification/computed (extracted
 // in that prompt) instead of the HTTP handler package.
-var AllowedExceptions = []Exception{}
+//
+// Phase-A3.1 adds three carve-outs that mirror the composition-root
+// exception in tools/archmetrics/main.go forbiddenEdges (ExceptFrom):
+//   - internal/app top-level is the ONLY legitimate wiring layer for
+//     internal/api (HTTP transport) — it owns the router lifecycle.
+//   - internal/handler/middleware exposes a per-request pgx query counter
+//     that must be attached to context. The counter primitive lives in
+//     internal/database/query_budget.go (an observability cross-cut). The
+//     proper fix is to extract that primitive to internal/platform/
+//     dbobserver/ in Phase A5 (audit) or a dedicated platform reshape.
+var AllowedExceptions = []Exception{
+	{
+		Source: "internal/app",
+		Target: "internal/api",
+		Until:  "permanent — internal/app top-level is THE composition root for HTTP transport (phase-A3.1)",
+	},
+	{
+		Source: "internal/handler/middleware",
+		Target: "internal/database",
+		Until:  "phase-A5 or later — extract query-budget counter primitive to internal/platform/dbobserver/ (phase-A3.1)",
+	},
+}
 
 // AdvisorySources marks rules whose violations log a WARNING but DO NOT
 // fail the test. Prompts that promote a rule to fail-level remove the

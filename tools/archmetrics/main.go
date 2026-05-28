@@ -42,12 +42,96 @@ var frozenPackages = []string{
 // forbiddenEdges enumerates layering violations the tool flags. Each entry
 // is "<from-glob> -> <to-glob>" where globs are evaluated as path prefixes
 // (trailing /* means "or any subpackage").
+//
+// Phase-A3.1 (chore/repo-reorganization) extends this from the original 5
+// phase-47 rules to a full Clean Architecture DAG. Pre-existing violations
+// are captured in baseline.json at the moment the rules were added; only
+// NEW (post-baseline) violations fail the gate. A future Phase-A3.3 layer
+// adds per-package file-count ratcheting on top (violations-allowlist.json)
+// so legacy packages can only shrink, never grow.
 var forbiddenEdges = []forbiddenEdge{
-	{From: "cmd/notification-worker", To: "internal/api"},
-	{From: "cmd/automation-worker", To: "internal/api"},
+	// ----------------------------------------------------------------------
+	// Phase-47 baseline rules — broadened in Phase-A3.1
+	// ----------------------------------------------------------------------
+
+	// cmd binaries are entry points. The composition root for the HTTP API
+	// lives in internal/app (since phase-47/56de7194), so NO cmd should
+	// import internal/api directly. Generalises the original two
+	// notification-worker + automation-worker rules.
+	{From: "cmd", FromAny: true, To: "internal/api"},
+
+	// ----------------------------------------------------------------------
+	// Clean Architecture DAG — domain layer (entities)
+	// Domain knows nothing about adapters, persistence, transport, or even
+	// its own ports. Ports live at the consumer (svc) boundary per ADR-007.
+	// ----------------------------------------------------------------------
+
 	{From: "internal/domain", FromAny: true, To: "internal/adapter", ToAny: true},
 	{From: "internal/domain", FromAny: true, To: "internal/database"},
-	{From: "internal/handler/v1", To: "internal/database"},
+	{From: "internal/domain", FromAny: true, To: "internal/models"},
+	{From: "internal/domain", FromAny: true, To: "internal/port", ToAny: true},
+	{From: "internal/domain", FromAny: true, To: "internal/handler", ToAny: true},
+	{From: "internal/domain", FromAny: true, To: "internal/api"},
+	{From: "internal/domain", FromAny: true, To: "internal/app", ToAny: true},
+
+	// ----------------------------------------------------------------------
+	// Clean Architecture DAG — port layer (interface contracts only)
+	// Ports must depend only on domain types. No implementations.
+	// ----------------------------------------------------------------------
+
+	{From: "internal/port", FromAny: true, To: "internal/adapter", ToAny: true},
+	{From: "internal/port", FromAny: true, To: "internal/database"},
+	{From: "internal/port", FromAny: true, To: "internal/handler", ToAny: true},
+	{From: "internal/port", FromAny: true, To: "internal/app", ToAny: true},
+	{From: "internal/port", FromAny: true, To: "internal/api"},
+
+	// ----------------------------------------------------------------------
+	// Clean Architecture DAG — adapter layer (never reaches up)
+	// Adapters implement ports. They depend on domain + infra SDKs only.
+	// ----------------------------------------------------------------------
+
+	{From: "internal/adapter", FromAny: true, To: "internal/handler", ToAny: true},
+	{From: "internal/adapter", FromAny: true, To: "internal/app", ToAny: true},
+	{From: "internal/adapter", FromAny: true, To: "internal/api"},
+
+	// ----------------------------------------------------------------------
+	// Clean Architecture DAG — app/*svc layer (use cases ≠ transport)
+	// Use cases orchestrate domain + ports. They must not depend on HTTP
+	// handlers or the legacy internal/api router. The composition root
+	// (internal/app top-level) is the explicit carve-out — it is THE place
+	// where transport, adapters, and svcs are wired together.
+	// ----------------------------------------------------------------------
+
+	{From: "internal/app", FromAny: true, To: "internal/handler", ToAny: true,
+		ExceptFrom: []string{"internal/app"}},
+	{From: "internal/app", FromAny: true, To: "internal/api",
+		ExceptFrom: []string{"internal/app"}},
+
+	// ----------------------------------------------------------------------
+	// Clean Architecture DAG — handler layer (thin transport adapters)
+	// Handlers parse HTTP, call svc, write response. They must not reach
+	// into persistence, adapters, vendor SDKs, or infrastructure clients.
+	// Everything goes through internal/app/*svc + ports.
+	// ----------------------------------------------------------------------
+
+	{From: "internal/handler", FromAny: true, To: "internal/database"},
+	{From: "internal/handler", FromAny: true, To: "internal/adapter", ToAny: true},
+	{From: "internal/handler", FromAny: true, To: "internal/tesla", ToAny: true},
+	{From: "internal/handler", FromAny: true, To: "internal/mqtt", ToAny: true},
+	{From: "internal/handler", FromAny: true, To: "internal/redis", ToAny: true},
+	{From: "internal/handler", FromAny: true, To: "internal/geocoding", ToAny: true},
+
+	// ----------------------------------------------------------------------
+	// Clean Architecture DAG — models (persistence + transport DTOs)
+	// Per ADR-006, internal/models is retained as a DTO leaf — it MUST NOT
+	// depend on any other layer. Handlers/adapters/svcs map to/from models.
+	// ----------------------------------------------------------------------
+
+	{From: "internal/models", To: "internal/database"},
+	{From: "internal/models", To: "internal/adapter", ToAny: true},
+	{From: "internal/models", To: "internal/handler", ToAny: true},
+	{From: "internal/models", To: "internal/app", ToAny: true},
+	{From: "internal/models", To: "internal/api"},
 }
 
 type forbiddenEdge struct {
@@ -55,6 +139,11 @@ type forbiddenEdge struct {
 	FromAny bool // true means From or any subpackage
 	To      string
 	ToAny   bool // true means To or any subpackage
+	// ExceptFrom lists exact package paths exempted from the rule. Used
+	// for legitimate composition-root carve-outs (e.g. internal/app top-
+	// level wires internal/api, but internal/app/*svc subpackages must
+	// not). Empty for the common case.
+	ExceptFrom []string
 }
 
 func (e forbiddenEdge) Label() string {
@@ -65,10 +154,19 @@ func (e forbiddenEdge) Label() string {
 	if e.ToAny {
 		to += "/*"
 	}
-	return from + " -> " + to
+	s := from + " -> " + to
+	if len(e.ExceptFrom) > 0 {
+		s += " (except: " + strings.Join(e.ExceptFrom, ",") + ")"
+	}
+	return s
 }
 
 func (e forbiddenEdge) matchesFrom(pkg string) bool {
+	for _, x := range e.ExceptFrom {
+		if pkg == x {
+			return false
+		}
+	}
 	if pkg == e.From {
 		return true
 	}

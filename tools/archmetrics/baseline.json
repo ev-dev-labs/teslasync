@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-27T20:29:49Z",
+  "generated_at": "2026-05-28T00:09:47Z",
   "go_version": "go1.26.1",
-  "commit_sha": "e155065542704b7daf060e7a5b881fbfa419f1f9",
+  "commit_sha": "85fcfc82da38c47b72627b6f009b77c62700ae45",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -13,6 +13,22 @@
       "imports": [
         "internal/ai/eval",
         "internal/ai/provider"
+      ],
+      "files": [
+        "doc.go",
+        "main.go"
+      ]
+    },
+    {
+      "path": "cmd/audit-signal-types",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 521,
+      "has_doc_go": true,
+      "layer": "cmd-internal",
+      "imports": [
+        "internal/tesla/protomodel",
+        "internal/tesla/router"
       ],
       "files": [
         "doc.go",
@@ -47,10 +63,11 @@
     },
     {
       "path": "cmd/backup-verify",
-      "go_files": 1,
+      "go_files": 2,
       "test_files": 0,
-      "loc": 95,
-      "has_doc_go": false,
+      "loc": 109,
+      "has_doc_go": true,
+      "layer": "cmd-internal",
       "imports": [
         "internal/backup",
         "internal/backupverify",
@@ -58,19 +75,22 @@
         "internal/database"
       ],
       "files": [
+        "doc.go",
         "main.go"
       ]
     },
     {
       "path": "cmd/chaos-runner",
-      "go_files": 1,
+      "go_files": 2,
       "test_files": 0,
-      "loc": 144,
-      "has_doc_go": false,
+      "loc": 156,
+      "has_doc_go": true,
+      "layer": "cmd-internal",
       "imports": [
         "internal/chaos"
       ],
       "files": [
+        "doc.go",
         "main.go"
       ]
     },
@@ -97,14 +117,16 @@
     },
     {
       "path": "cmd/fleet-config-validator",
-      "go_files": 1,
+      "go_files": 2,
       "test_files": 1,
-      "loc": 476,
-      "has_doc_go": false,
+      "loc": 491,
+      "has_doc_go": true,
+      "layer": "cmd-internal",
       "imports": [
         "internal/tesla/router"
       ],
       "files": [
+        "doc.go",
         "main.go",
         "main_test.go"
       ]
@@ -148,14 +170,16 @@
     },
     {
       "path": "cmd/ocpp-server",
-      "go_files": 1,
+      "go_files": 2,
       "test_files": 0,
-      "loc": 91,
-      "has_doc_go": false,
+      "loc": 103,
+      "has_doc_go": true,
+      "layer": "cmd-internal",
       "imports": [
         "internal/ocpp"
       ],
       "files": [
+        "doc.go",
         "main.go"
       ]
     },
@@ -163,7 +187,7 @@
       "path": "cmd/protogen-tesla",
       "go_files": 4,
       "test_files": 1,
-      "loc": 2295,
+      "loc": 2297,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": null,
@@ -500,7 +524,7 @@
       "path": "internal/ai/eval",
       "go_files": 8,
       "test_files": 6,
-      "loc": 1916,
+      "loc": 1918,
       "has_doc_go": true,
       "layer": "tool",
       "imports": [
@@ -601,7 +625,7 @@
       "path": "internal/ai/provider",
       "go_files": 12,
       "test_files": 10,
-      "loc": 4003,
+      "loc": 4011,
       "has_doc_go": true,
       "layer": "port",
       "imports": [
@@ -726,7 +750,7 @@
       "path": "internal/ai/rag",
       "go_files": 9,
       "test_files": 7,
-      "loc": 2163,
+      "loc": 2164,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1369,7 +1393,7 @@
       "path": "internal/ai/strategies/pii-redaction-shared-exports",
       "go_files": 2,
       "test_files": 1,
-      "loc": 433,
+      "loc": 435,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -1426,7 +1450,7 @@
       "path": "internal/ai/strategies/quiet-hours-suggestion",
       "go_files": 2,
       "test_files": 1,
-      "loc": 456,
+      "loc": 458,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -1502,7 +1526,7 @@
       "path": "internal/ai/strategies/safety-setting-explainer",
       "go_files": 2,
       "test_files": 1,
-      "loc": 403,
+      "loc": 405,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -1559,7 +1583,7 @@
       "path": "internal/ai/strategies/software-update-changelog-summarizer",
       "go_files": 2,
       "test_files": 1,
-      "loc": 427,
+      "loc": 429,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -1749,7 +1773,7 @@
       "path": "internal/ai/strategies/voice-mode",
       "go_files": 2,
       "test_files": 1,
-      "loc": 405,
+      "loc": 406,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -1768,7 +1792,7 @@
       "path": "internal/ai/strategies/watch-face-nl-response",
       "go_files": 2,
       "test_files": 1,
-      "loc": 421,
+      "loc": 422,
       "has_doc_go": true,
       "layer": "adapter",
       "imports": [
@@ -1840,7 +1864,7 @@
       "path": "internal/ai/stream",
       "go_files": 2,
       "test_files": 1,
-      "loc": 1185,
+      "loc": 1188,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1858,7 +1882,7 @@
       "path": "internal/ai/tools",
       "go_files": 58,
       "test_files": 51,
-      "loc": 47036,
+      "loc": 47072,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2004,7 +2028,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126337,
+      "loc": 126461,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2661,7 +2685,7 @@
       "path": "internal/app/adminobssvc",
       "go_files": 3,
       "test_files": 0,
-      "loc": 168,
+      "loc": 167,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3040,15 +3064,17 @@
     },
     {
       "path": "internal/backupverify",
-      "go_files": 1,
+      "go_files": 2,
       "test_files": 1,
-      "loc": 294,
-      "has_doc_go": false,
+      "loc": 314,
+      "has_doc_go": true,
+      "layer": "platform",
       "imports": [
         "internal/backup",
         "internal/models"
       ],
       "files": [
+        "doc.go",
         "verifier.go",
         "verifier_test.go"
       ]
@@ -3072,13 +3098,15 @@
     },
     {
       "path": "internal/chaos",
-      "go_files": 2,
+      "go_files": 3,
       "test_files": 1,
-      "loc": 405,
-      "has_doc_go": false,
+      "loc": 423,
+      "has_doc_go": true,
+      "layer": "tool",
       "imports": null,
       "files": [
         "client.go",
+        "doc.go",
         "scenarios.go",
         "scenarios_test.go"
       ]
@@ -3087,7 +3115,7 @@
       "path": "internal/config",
       "go_files": 3,
       "test_files": 1,
-      "loc": 723,
+      "loc": 722,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
@@ -3118,7 +3146,7 @@
       "path": "internal/database",
       "go_files": 108,
       "test_files": 35,
-      "loc": 27854,
+      "loc": 27844,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3279,14 +3307,16 @@
     },
     {
       "path": "internal/dataquality",
-      "go_files": 3,
+      "go_files": 4,
       "test_files": 0,
-      "loc": 323,
-      "has_doc_go": false,
+      "loc": 347,
+      "has_doc_go": true,
+      "layer": "platform",
       "imports": [
         "internal/tesla/router"
       ],
       "files": [
+        "doc.go",
         "lineage.go",
         "pgxpool_adapter.go",
         "scorer.go"
@@ -3470,7 +3500,7 @@
       "path": "internal/export",
       "go_files": 9,
       "test_files": 3,
-      "loc": 3057,
+      "loc": 3058,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3771,15 +3801,17 @@
     },
     {
       "path": "internal/integrations/homeassistant",
-      "go_files": 2,
+      "go_files": 3,
       "test_files": 1,
-      "loc": 495,
-      "has_doc_go": false,
+      "loc": 515,
+      "has_doc_go": true,
+      "layer": "adapter",
       "imports": null,
       "files": [
         "catalog.go",
         "discovery.go",
-        "discovery_test.go"
+        "discovery_test.go",
+        "doc.go"
       ]
     },
     {
@@ -3890,7 +3922,7 @@
       "path": "internal/models",
       "go_files": 34,
       "test_files": 2,
-      "loc": 3026,
+      "loc": 3027,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -3937,7 +3969,7 @@
       "path": "internal/mqtt",
       "go_files": 7,
       "test_files": 7,
-      "loc": 4272,
+      "loc": 4273,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4021,14 +4053,16 @@
     },
     {
       "path": "internal/ocpp",
-      "go_files": 4,
+      "go_files": 5,
       "test_files": 1,
-      "loc": 945,
-      "has_doc_go": false,
+      "loc": 972,
+      "has_doc_go": true,
+      "layer": "adapter",
       "imports": null,
       "files": [
         "dispatcher.go",
         "dispatcher_test.go",
+        "doc.go",
         "messages.go",
         "protocol.go",
         "server.go"
@@ -4038,7 +4072,7 @@
       "path": "internal/outbox",
       "go_files": 4,
       "test_files": 1,
-      "loc": 845,
+      "loc": 846,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
@@ -4262,7 +4296,7 @@
       "path": "internal/resilience",
       "go_files": 2,
       "test_files": 4,
-      "loc": 722,
+      "loc": 721,
       "has_doc_go": true,
       "layer": "platform",
       "imports": null,
@@ -4307,7 +4341,7 @@
       "path": "internal/service",
       "go_files": 4,
       "test_files": 1,
-      "loc": 1377,
+      "loc": 1376,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4330,7 +4364,7 @@
       "path": "internal/signal",
       "go_files": 11,
       "test_files": 11,
-      "loc": 7539,
+      "loc": 7540,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4380,25 +4414,29 @@
     },
     {
       "path": "internal/slo",
-      "go_files": 2,
+      "go_files": 3,
       "test_files": 1,
-      "loc": 699,
-      "has_doc_go": false,
+      "loc": 727,
+      "has_doc_go": true,
+      "layer": "platform",
       "imports": null,
       "files": [
         "catalog.go",
+        "doc.go",
         "tracker.go",
         "tracker_test.go"
       ]
     },
     {
       "path": "internal/synthetic",
-      "go_files": 2,
+      "go_files": 3,
       "test_files": 1,
-      "loc": 375,
-      "has_doc_go": false,
+      "loc": 393,
+      "has_doc_go": true,
+      "layer": "platform",
       "imports": null,
       "files": [
+        "doc.go",
         "probe_http.go",
         "runner.go",
         "runner_test.go"
@@ -4408,7 +4446,7 @@
       "path": "internal/tesla",
       "go_files": 11,
       "test_files": 3,
-      "loc": 2267,
+      "loc": 2266,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4568,7 +4606,7 @@
       "path": "internal/tesla/router/writers",
       "go_files": 15,
       "test_files": 13,
-      "loc": 6856,
+      "loc": 6855,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4708,21 +4746,23 @@
     },
     {
       "path": "internal/v2h",
-      "go_files": 1,
+      "go_files": 2,
       "test_files": 1,
-      "loc": 528,
-      "has_doc_go": false,
+      "loc": 554,
+      "has_doc_go": true,
+      "layer": "platform",
       "imports": null,
       "files": [
         "decider.go",
-        "decider_test.go"
+        "decider_test.go",
+        "doc.go"
       ]
     },
     {
       "path": "internal/webpush",
       "go_files": 2,
       "test_files": 1,
-      "loc": 517,
+      "loc": 519,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4738,7 +4778,7 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2594,
+      "loc": 2593,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4819,7 +4859,7 @@
       "path": "tools/archmetrics",
       "go_files": 2,
       "test_files": 0,
-      "loc": 484,
+      "loc": 569,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -4846,11 +4886,12 @@
   ],
   "cmd_loc": {
     "cmd/ai-eval": 151,
+    "cmd/audit-signal-types": 498,
     "cmd/automation-worker": 350,
     "cmd/backup-verify": 95,
     "cmd/chaos-runner": 144,
     "cmd/export-worker": 250,
-    "cmd/fleet-config-validator": 326,
+    "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
     "cmd/notification-worker": 517,
     "cmd/ocpp-server": 91,
@@ -4863,10 +4904,16 @@
     "cmd/trace-coverage-audit": 381,
     "cmd/unit-drift-validator": 154
   },
-  "forbidden_edges": null,
-  "doc_go_coverage": 0.9423076923076923,
+  "forbidden_edges": [
+    "internal/handler/middleware -\u003e internal/database (rule: internal/handler/* -\u003e internal/database)"
+  ],
+  "doc_go_coverage": 1,
   "files_by_package": {
     "cmd/ai-eval": [
+      "doc.go",
+      "main.go"
+    ],
+    "cmd/audit-signal-types": [
       "doc.go",
       "main.go"
     ],
@@ -4875,9 +4922,11 @@
       "main.go"
     ],
     "cmd/backup-verify": [
+      "doc.go",
       "main.go"
     ],
     "cmd/chaos-runner": [
+      "doc.go",
       "main.go"
     ],
     "cmd/export-worker": [
@@ -4885,6 +4934,7 @@
       "main.go"
     ],
     "cmd/fleet-config-validator": [
+      "doc.go",
       "main.go"
     ],
     "cmd/metric-coverage-audit": [
@@ -4896,6 +4946,7 @@
       "main.go"
     ],
     "cmd/ocpp-server": [
+      "doc.go",
       "main.go"
     ],
     "cmd/protogen-tesla": [
@@ -5779,6 +5830,7 @@
       "storage.go"
     ],
     "internal/backupverify": [
+      "doc.go",
       "verifier.go"
     ],
     "internal/cache": [
@@ -5788,6 +5840,7 @@
     ],
     "internal/chaos": [
       "client.go",
+      "doc.go",
       "scenarios.go"
     ],
     "internal/config": [
@@ -5911,6 +5964,7 @@
       "write_buffer.go"
     ],
     "internal/dataquality": [
+      "doc.go",
       "lineage.go",
       "pgxpool_adapter.go",
       "scorer.go"
@@ -6086,7 +6140,8 @@
     ],
     "internal/integrations/homeassistant": [
       "catalog.go",
-      "discovery.go"
+      "discovery.go",
+      "doc.go"
     ],
     "internal/jobs": [
       "ai_alert_inbox_categorizer.go",
@@ -6188,6 +6243,7 @@
     ],
     "internal/ocpp": [
       "dispatcher.go",
+      "doc.go",
       "messages.go",
       "protocol.go",
       "server.go"
@@ -6309,9 +6365,11 @@
     ],
     "internal/slo": [
       "catalog.go",
+      "doc.go",
       "tracker.go"
     ],
     "internal/synthetic": [
+      "doc.go",
       "probe_http.go",
       "runner.go"
     ],
@@ -6417,7 +6475,8 @@
       "doc.go"
     ],
     "internal/v2h": [
-      "decider.go"
+      "decider.go",
+      "doc.go"
     ],
     "internal/webpush": [
       "doc.go",
