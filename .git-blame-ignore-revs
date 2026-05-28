@@ -226,3 +226,4 @@ c1e998296a6d29b662cbbcc7bd7589d7322a5b99 # refactor(R2d.4): carve internal/api/s
 44f6e0edb63ff780ac00e2c2dff3ccc3ba6b9933 # refactor(R2d.5): carve internal/api/signalscatalog subpackage
 f6813cacbaea30121f71c1ef0091a75c599707f4 # refactor(R2d.6): carve internal/api/openapi subpackage
 75e1a26fb75e260b46d781392a9b9f09b32a441e # refactor(R2d.7): carve internal/api/synthetic subpackage
+15605b3c86a53ad96b2ec2fea50eaa4eaf3c0d1d # refactor(R2d.8): carve internal/api/visitedlocation subpackage
