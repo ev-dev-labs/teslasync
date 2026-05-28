@@ -40,6 +40,7 @@ import (
 	apipinned "github.com/ev-dev-labs/teslasync/internal/api/pinned"
 	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
 	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
+	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
@@ -594,7 +595,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	dashboardLayoutHandler := NewDashboardLayoutHandler(db)
 	chartAnnotationHandler := NewChartAnnotationHandler(db)
 	pinnedHandler := apipinned.NewHandler(db)
-	savedViewsHandler := NewSavedViewsHandler(db, cfg.Auth.ForwardAuthHeader)
+	savedViewsHandler := apisaved.NewHandler(db, cfg.Auth.ForwardAuthHeader, apisaved.WithAuditFunc(
+		func(r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
+		},
+	))
 	pushHandler := NewPushHandler(db, webpush.Default(), cfg.Auth.ForwardAuthHeader)
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil {

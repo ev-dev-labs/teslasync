@@ -1,4 +1,4 @@
-package api
+package savedviews
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
@@ -30,27 +32,39 @@ type savedViewsRepo interface {
 	Delete(ctx context.Context, id int64) error
 }
 
-// SavedViewsHandler exposes per-user CRUD over named URL querystrings
+// Handler exposes per-user CRUD over named URL querystrings
 // for list pages (Phase 40 / Prompt 50). The handler is intentionally
 // agnostic about WHAT the querystring means — the owning surface
 // (frontend) re-applies it verbatim to the URL via useSearchParams,
 // which automatically rehydrates every URL-bound filter on the page.
-type SavedViewsHandler struct {
+type Handler struct {
 	repo              savedViewsRepo
-	auditDB           *database.DB
 	forwardAuthHeader string
+	auditFunc         AuditFunc
 }
 
-// NewSavedViewsHandler wires the production *dbadmin.SavedViewsRepo
+// AuditFunc is the audit-logging callback shape expected by Handler.
+type AuditFunc func(r *http.Request, headerName, action, resource string, entityID *int64, detail string)
+
+// Option mutates a Handler during construction.
+type Option func(*Handler)
+
+// WithAuditFunc installs the audit callback invoked after successful mutations.
+func WithAuditFunc(f AuditFunc) Option { return func(h *Handler) { h.auditFunc = f } }
+
+// NewHandler wires the production *dbadmin.SavedViewsRepo
 // with audit-log support. forwardAuthHeader is the request header
 // (e.g. X-Forwarded-User) injected by the reverse-proxy auth provider;
 // when empty, audit rows record an empty actor (dev-mode behaviour).
-func NewSavedViewsHandler(db *database.DB, forwardAuthHeader string) *SavedViewsHandler {
-	return &SavedViewsHandler{
+func NewHandler(db *database.DB, forwardAuthHeader string, opts ...Option) *Handler {
+	h := &Handler{
 		repo:              dbadmin.NewSavedViewsRepo(db),
-		auditDB:           db,
 		forwardAuthHeader: forwardAuthHeader,
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // maxSavedViewBodyBytes caps each request body. A view's query column is
@@ -100,23 +114,23 @@ type savedViewUpdateRequest struct {
 // given route (taken from the `route` query param).
 //
 //	GET /api/v1/saved-views?route=/drives
-func (h *SavedViewsHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	route, ok := normalizeRoute(r.URL.Query().Get("route"))
 	if !ok {
-		writeError(w, http.StatusBadRequest, "route is required and must be a valid SPA path")
+		httpx.WriteError(w, http.StatusBadRequest, "route is required and must be a valid SPA path")
 		return
 	}
 
 	rows, err := h.repo.List(r.Context(), dbadmin.SavedViewListFilter{Route: route})
 	if err != nil {
 		log.Error().Err(err).Str("route", route).Msg("saved_views list failed")
-		writeError(w, http.StatusInternalServerError, "failed to list saved views")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list saved views")
 		return
 	}
 	if rows == nil {
 		rows = []*dashboardmodel.SavedView{}
 	}
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
 // Create inserts a new saved view. When the request marks the view as
@@ -125,32 +139,32 @@ func (h *SavedViewsHandler) List(w http.ResponseWriter, r *http.Request) {
 //
 //	POST /api/v1/saved-views
 //	body: {"name":"Last week SC","route":"/drives","query":"from=2025-04-24&sort=distance"}
-func (h *SavedViewsHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	body, readErr := readSavedViewBody(r)
 	if readErr != nil {
-		writeError(w, readErr.status, readErr.msg)
+		httpx.WriteError(w, readErr.status, readErr.msg)
 		return
 	}
 
 	var req savedViewCreateRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
 	name, validateErr := validateSavedViewName(req.Name)
 	if validateErr != nil {
-		writeError(w, http.StatusBadRequest, validateErr.Error())
+		httpx.WriteError(w, http.StatusBadRequest, validateErr.Error())
 		return
 	}
 	route, ok := normalizeRoute(req.Route)
 	if !ok {
-		writeError(w, http.StatusBadRequest, "route is required and must be a valid SPA path")
+		httpx.WriteError(w, http.StatusBadRequest, "route is required and must be a valid SPA path")
 		return
 	}
 	query, qErr := validateSavedViewQuery(req.Query)
 	if qErr != nil {
-		writeError(w, http.StatusBadRequest, qErr.Error())
+		httpx.WriteError(w, http.StatusBadRequest, qErr.Error())
 		return
 	}
 
@@ -164,38 +178,38 @@ func (h *SavedViewsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.repo.Create(r.Context(), row); err != nil {
 		if errors.Is(err, dbadmin.ErrSavedViewAlreadyExists) {
-			writeError(w, http.StatusConflict, "a saved view with that name already exists for this route")
+			httpx.WriteError(w, http.StatusConflict, "a saved view with that name already exists for this route")
 			return
 		}
 		log.Error().Err(err).Msg("saved_views create failed")
-		writeError(w, http.StatusInternalServerError, "failed to create saved view")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to create saved view")
 		return
 	}
 
 	h.audit(r, "saved_view.create", &row.ID, savedViewAuditDetail(row))
-	writeJSON(w, http.StatusCreated, row)
+	httpx.WriteJSON(w, http.StatusCreated, row)
 }
 
 // Update applies a partial patch to an existing saved view.
 //
 //	PUT /api/v1/saved-views/{id}
 //	body: {"is_default": true}
-func (h *SavedViewsHandler) Update(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid saved view id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid saved view id")
 		return
 	}
 
 	body, readErr := readSavedViewBody(r)
 	if readErr != nil {
-		writeError(w, readErr.status, readErr.msg)
+		httpx.WriteError(w, readErr.status, readErr.msg)
 		return
 	}
 
 	var req savedViewUpdateRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
@@ -207,7 +221,7 @@ func (h *SavedViewsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.Name != nil {
 		name, validateErr := validateSavedViewName(*req.Name)
 		if validateErr != nil {
-			writeError(w, http.StatusBadRequest, validateErr.Error())
+			httpx.WriteError(w, http.StatusBadRequest, validateErr.Error())
 			return
 		}
 		patch.Name = &name
@@ -215,7 +229,7 @@ func (h *SavedViewsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if req.Query != nil {
 		query, qErr := validateSavedViewQuery(*req.Query)
 		if qErr != nil {
-			writeError(w, http.StatusBadRequest, qErr.Error())
+			httpx.WriteError(w, http.StatusBadRequest, qErr.Error())
 			return
 		}
 		patch.Query = &query
@@ -224,15 +238,15 @@ func (h *SavedViewsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	updated, updErr := h.repo.Update(r.Context(), id, patch)
 	if updErr != nil {
 		if errors.Is(updErr, pgx.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "saved view not found")
+			httpx.WriteError(w, http.StatusNotFound, "saved view not found")
 			return
 		}
 		if errors.Is(updErr, dbadmin.ErrSavedViewAlreadyExists) {
-			writeError(w, http.StatusConflict, "a saved view with that name already exists for this route")
+			httpx.WriteError(w, http.StatusConflict, "a saved view with that name already exists for this route")
 			return
 		}
 		log.Error().Err(updErr).Int64("id", id).Msg("saved_views update failed")
-		writeError(w, http.StatusInternalServerError, "failed to update saved view")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to update saved view")
 		return
 	}
 
@@ -241,26 +255,26 @@ func (h *SavedViewsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		action = "saved_view.set_default"
 	}
 	h.audit(r, action, &updated.ID, savedViewAuditDetail(updated))
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 // Delete removes a saved view by id.
 //
 //	DELETE /api/v1/saved-views/{id}
-func (h *SavedViewsHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid saved view id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid saved view id")
 		return
 	}
 
 	if delErr := h.repo.Delete(r.Context(), id); delErr != nil {
 		if errors.Is(delErr, pgx.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "saved view not found")
+			httpx.WriteError(w, http.StatusNotFound, "saved view not found")
 			return
 		}
 		log.Error().Err(delErr).Int64("id", id).Msg("saved_views delete failed")
-		writeError(w, http.StatusInternalServerError, "failed to delete saved view")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete saved view")
 		return
 	}
 
@@ -268,15 +282,15 @@ func (h *SavedViewsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// audit is a thin wrapper that swallows nil-DB cases (used by the unit
-// tests, which exercise validation paths without standing up a real
-// pool). When the production DB is wired, every mutation flows through
+// audit is a thin wrapper that swallows nil callback cases (used by the
+// unit tests, which exercise validation paths without standing up a real
+// pool). When production wires the callback, every mutation flows through
 // logAuditFromRequest so /users/me/activity surfaces it.
-func (h *SavedViewsHandler) audit(r *http.Request, action string, entityID *int64, detail string) {
-	if h.auditDB == nil {
+func (h *Handler) audit(r *http.Request, action string, entityID *int64, detail string) {
+	if h.auditFunc == nil {
 		return
 	}
-	logAuditFromRequest(h.auditDB, r, h.forwardAuthHeader, action, "saved_view", entityID, detail)
+	h.auditFunc(r, h.forwardAuthHeader, action, "saved_view", entityID, detail)
 }
 
 func savedViewAuditDetail(v *dashboardmodel.SavedView) string {

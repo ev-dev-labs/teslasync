@@ -1,4 +1,4 @@
-package api
+package savedviews
 
 import (
 	"context"
@@ -189,10 +189,10 @@ func cloneSavedViewForTest(in *dashboardmodel.SavedView) *dashboardmodel.SavedVi
 	return &out
 }
 
-func newSavedViewsHandlerForTest(repo *fakeSavedViewsRepo) *SavedViewsHandler {
-	// auditDB is left nil so the handler skips the audit insert — there's
-	// no real DB pool in unit tests.
-	return &SavedViewsHandler{repo: repo}
+func newHandlerForTest(repo *fakeSavedViewsRepo) *Handler {
+	// audit callback is left nil so the handler skips the audit insert —
+	// there's no real DB pool in unit tests.
+	return &Handler{repo: repo}
 }
 
 func newSavedViewRequest(method, target, body, idParam string) *http.Request {
@@ -209,7 +209,7 @@ func newSavedViewRequest(method, target, body, idParam string) *http.Request {
 // ── List ────────────────────────────────────────────────────────────────────
 
 func TestSavedViews_List_RequiresRoute(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/saved-views", nil))
 	if rec.Code != http.StatusBadRequest {
@@ -221,7 +221,7 @@ func TestSavedViews_List_RejectsBadRoute(t *testing.T) {
 	cases := []string{"drives", "javascript:alert(1)", "/" + strings.Repeat("x", 200), "/foo//bar"}
 	for _, route := range cases {
 		t.Run(route, func(t *testing.T) {
-			handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+			handler := newHandlerForTest(newFakeSavedViewsRepo())
 			rec := httptest.NewRecorder()
 			handler.List(rec, httptest.NewRequest(http.MethodGet, "/saved-views?route="+route, nil))
 			if rec.Code != http.StatusBadRequest {
@@ -232,7 +232,7 @@ func TestSavedViews_List_RejectsBadRoute(t *testing.T) {
 }
 
 func TestSavedViews_List_EmptyReturnsArray(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/saved-views?route=/drives", nil))
 	if rec.Code != http.StatusOK {
@@ -262,7 +262,7 @@ func TestSavedViews_List_ScopedByRoute(t *testing.T) {
 		Name: "B", Route: "/charging", Query: "type=supercharger",
 	}))
 
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/saved-views?route=/drives", nil))
 	if rec.Code != http.StatusOK {
@@ -292,7 +292,7 @@ func TestSavedViews_List_PinnedFirst(t *testing.T) {
 		Name: "Pinned", Route: "/drives", Query: "a=2", SortOrder: 5, IsPinned: true,
 	}))
 
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/saved-views?route=/drives", nil))
 	var out []*dashboardmodel.SavedView
@@ -308,7 +308,7 @@ func TestSavedViews_List_PinnedFirst(t *testing.T) {
 
 func TestSavedViews_Create_Success(t *testing.T) {
 	repo := newFakeSavedViewsRepo()
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newSavedViewRequest(http.MethodPost, "/saved-views",
@@ -331,7 +331,7 @@ func TestSavedViews_Create_Success(t *testing.T) {
 
 func TestSavedViews_Create_StripsLeadingQuestion(t *testing.T) {
 	repo := newFakeSavedViewsRepo()
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newSavedViewRequest(http.MethodPost, "/saved-views",
@@ -348,7 +348,7 @@ func TestSavedViews_Create_StripsLeadingQuestion(t *testing.T) {
 }
 
 func TestSavedViews_Create_RejectsEmptyName(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newSavedViewRequest(http.MethodPost, "/saved-views",
 		`{"name":"   ","route":"/drives","query":"a=1"}`, ""))
@@ -358,7 +358,7 @@ func TestSavedViews_Create_RejectsEmptyName(t *testing.T) {
 }
 
 func TestSavedViews_Create_RejectsLongName(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	long := strings.Repeat("x", maxSavedViewNameLen+1)
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newSavedViewRequest(http.MethodPost, "/saved-views",
@@ -369,7 +369,7 @@ func TestSavedViews_Create_RejectsLongName(t *testing.T) {
 }
 
 func TestSavedViews_Create_RejectsBadRoute(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newSavedViewRequest(http.MethodPost, "/saved-views",
 		`{"name":"x","route":"drives","query":"a=1"}`, ""))
@@ -379,7 +379,7 @@ func TestSavedViews_Create_RejectsBadRoute(t *testing.T) {
 }
 
 func TestSavedViews_Create_RejectsLongQuery(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	long := strings.Repeat("a", maxSavedViewQueryLen+1)
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newSavedViewRequest(http.MethodPost, "/saved-views",
@@ -390,7 +390,7 @@ func TestSavedViews_Create_RejectsLongQuery(t *testing.T) {
 }
 
 func TestSavedViews_Create_RejectsFragmentInQuery(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newSavedViewRequest(http.MethodPost, "/saved-views",
 		`{"name":"x","route":"/drives","query":"a=1#frag"}`, ""))
@@ -401,7 +401,7 @@ func TestSavedViews_Create_RejectsFragmentInQuery(t *testing.T) {
 
 func TestSavedViews_Create_DuplicateNameReturns409(t *testing.T) {
 	repo := newFakeSavedViewsRepo()
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	first := newSavedViewRequest(http.MethodPost, "/saved-views",
 		`{"name":"Recent","route":"/drives","query":"a=1"}`, "")
 	rec := httptest.NewRecorder()
@@ -420,7 +420,7 @@ func TestSavedViews_Create_DuplicateNameReturns409(t *testing.T) {
 
 func TestSavedViews_Create_DefaultClearsPrior(t *testing.T) {
 	repo := newFakeSavedViewsRepo()
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 
 	rec := httptest.NewRecorder()
 	handler.Create(rec, newSavedViewRequest(http.MethodPost, "/saved-views",
@@ -468,7 +468,7 @@ func TestSavedViews_Update_Success(t *testing.T) {
 	row := &dashboardmodel.SavedView{Name: "A", Route: "/drives", Query: "a=1"}
 	must(repo.Create(context.Background(), row))
 
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.Update(rec, newSavedViewRequest(http.MethodPut, "/saved-views/1",
 		`{"name":"Renamed","is_pinned":true}`, "1"))
@@ -485,7 +485,7 @@ func TestSavedViews_Update_Success(t *testing.T) {
 }
 
 func TestSavedViews_Update_NotFound(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	rec := httptest.NewRecorder()
 	handler.Update(rec, newSavedViewRequest(http.MethodPut, "/saved-views/99",
 		`{"name":"x"}`, "99"))
@@ -495,7 +495,7 @@ func TestSavedViews_Update_NotFound(t *testing.T) {
 }
 
 func TestSavedViews_Update_RejectsBadID(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	rec := httptest.NewRecorder()
 	handler.Update(rec, newSavedViewRequest(http.MethodPut, "/saved-views/abc",
 		`{"name":"x"}`, "abc"))
@@ -518,7 +518,7 @@ func TestSavedViews_Update_SetDefaultClearsPrior(t *testing.T) {
 	b := &dashboardmodel.SavedView{Name: "B", Route: "/drives", Query: "a=2"}
 	must(repo.Create(context.Background(), b))
 
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.Update(rec, newSavedViewRequest(http.MethodPut, "/saved-views/2",
 		`{"is_default":true}`, "2"))
@@ -552,7 +552,7 @@ func TestSavedViews_Update_RejectsLongName(t *testing.T) {
 		Name: "A", Route: "/drives", Query: "a=1",
 	}))
 
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	long := strings.Repeat("x", maxSavedViewNameLen+1)
 	rec := httptest.NewRecorder()
 	handler.Update(rec, newSavedViewRequest(http.MethodPut, "/saved-views/1",
@@ -576,7 +576,7 @@ func TestSavedViews_Delete_Success(t *testing.T) {
 		Name: "A", Route: "/drives", Query: "a=1",
 	}))
 
-	handler := newSavedViewsHandlerForTest(repo)
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.Delete(rec, newSavedViewRequest(http.MethodDelete, "/saved-views/1", "", "1"))
 	if rec.Code != http.StatusNoContent {
@@ -588,7 +588,7 @@ func TestSavedViews_Delete_Success(t *testing.T) {
 }
 
 func TestSavedViews_Delete_NotFound(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	rec := httptest.NewRecorder()
 	handler.Delete(rec, newSavedViewRequest(http.MethodDelete, "/saved-views/99", "", "99"))
 	if rec.Code != http.StatusNotFound {
@@ -597,7 +597,7 @@ func TestSavedViews_Delete_NotFound(t *testing.T) {
 }
 
 func TestSavedViews_Delete_RejectsBadID(t *testing.T) {
-	handler := newSavedViewsHandlerForTest(newFakeSavedViewsRepo())
+	handler := newHandlerForTest(newFakeSavedViewsRepo())
 	rec := httptest.NewRecorder()
 	handler.Delete(rec, newSavedViewRequest(http.MethodDelete, "/saved-views/abc", "", "abc"))
 	if rec.Code != http.StatusBadRequest {
