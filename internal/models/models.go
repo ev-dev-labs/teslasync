@@ -6,7 +6,7 @@ package models
 
 // Vehicle has moved to internal/models/vehicle in phase-R5.12.
 
-// Position has moved to position.go (regenerated for post-migration schema).
+// Position moved to internal/models/telemetry in phase-R5.19.
 
 // Drive has moved to internal/models/drive in phase-R5.14.
 
@@ -84,7 +84,7 @@ package models
 
 // BackupConfig + BackupRun moved to internal/models/backup in phase-R5.3.
 
-// RawTelemetrySignal has moved to telemetry.go.
+// RawTelemetrySignal moved to internal/models/telemetry in phase-R5.19.
 
 // Automation has been moved to automation.go to match the post-migration
 // schema (ADR-001 typed-by-default, ADR-004 class-table-inheritance root).
@@ -111,7 +111,7 @@ package models
 // TeslaToken + APICallLog (previously in internal/models/tesla.go) also
 // moved to internal/models/tesla via `git mv` to tesla/core.go.
 //
-// TeslaFleetTelemetryError + TeslaFleetTelemetryErrorVIN remain in telemetry.go.
+// TeslaFleetTelemetryError + TeslaFleetTelemetryErrorVIN moved to internal/models/telemetry in phase-R5.19.
 
 // GuardConfig has moved to internal/models/vehicle in phase-R5.12.
 

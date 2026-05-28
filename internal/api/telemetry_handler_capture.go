@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 )
 
 // ╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç Raw Telemetry Capture API ╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç╬ô├╢├ç
@@ -33,7 +33,7 @@ func (h *TelemetryHandler) CaptureList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var (
-		results []*models.RawTelemetrySignal
+		results []*telemetrymodel.RawTelemetrySignal
 		err     error
 	)
 	if vin != "" {
@@ -106,7 +106,7 @@ func (h *TelemetryHandler) CaptureExport(w http.ResponseWriter, r *http.Request)
 
 	enc := json.NewEncoder(w)
 	for cursor.Next(r.Context()) {
-		var doc models.RawTelemetrySignal
+		var doc telemetrymodel.RawTelemetrySignal
 		if err := cursor.Decode(&doc); err != nil {
 			continue
 		}

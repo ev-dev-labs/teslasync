@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:22:20Z",
+  "generated_at": "2026-05-28T04:24:46Z",
   "go_version": "go1.26.1",
-  "commit_sha": "8b4734fb5723f2f5aff3e2ad5b37da032c8f18f4",
+  "commit_sha": "c8425d1a56d533ca0e20a9c2ebe31d6dcef50fa6",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2161,6 +2161,7 @@
         "internal/models/geo",
         "internal/models/notification",
         "internal/models/settings",
+        "internal/models/telemetry",
         "internal/models/tesla",
         "internal/models/vehicle",
         "internal/mqtt",
@@ -3195,6 +3196,7 @@
         "internal/models/export",
         "internal/models/geo",
         "internal/models/notification",
+        "internal/models/telemetry",
         "internal/models/tesla",
         "internal/models/vehicle",
         "internal/tracing"
@@ -3977,9 +3979,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 27,
+      "go_files": 25,
       "test_files": 1,
-      "loc": 1607,
+      "loc": 1552,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4004,13 +4006,11 @@
         "notification_channel_ntfy_pushover.go",
         "notification_channel_slack_telegram.go",
         "pinned.go",
-        "position.go",
         "push_subscription.go",
         "quiet_hours.go",
         "saved_view.go",
         "signal.go",
         "system.go",
-        "telemetry.go",
         "trip.go"
       ]
     },
@@ -4186,6 +4186,20 @@
       "files": [
         "doc.go",
         "settings.go"
+      ]
+    },
+    {
+      "path": "internal/models/telemetry",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 77,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "position.go",
+        "telemetry.go"
       ]
     },
     {
@@ -5043,9 +5057,9 @@
         "internal/enums",
         "internal/events",
         "internal/metrics",
-        "internal/models",
         "internal/models/auth",
         "internal/models/settings",
+        "internal/models/telemetry",
         "internal/models/vehicle",
         "internal/mqtt",
         "internal/notification",
@@ -6461,13 +6475,11 @@
       "notification_channel_ntfy_pushover.go",
       "notification_channel_slack_telegram.go",
       "pinned.go",
-      "position.go",
       "push_subscription.go",
       "quiet_hours.go",
       "saved_view.go",
       "signal.go",
       "system.go",
-      "telemetry.go",
       "trip.go"
     ],
     "internal/models/alert": [
@@ -6522,6 +6534,11 @@
     "internal/models/settings": [
       "doc.go",
       "settings.go"
+    ],
+    "internal/models/telemetry": [
+      "doc.go",
+      "position.go",
+      "telemetry.go"
     ],
     "internal/models/tesla": [
       "core.go",
@@ -6834,7 +6851,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 27,
+      "flat_parent_go_files": 25,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6851,14 +6868,14 @@
         "notification",
         "security",
         "settings",
+        "telemetry",
         "tesla",
         "vehicle"
       ],
       "missing_subpkgs": [
         "dashboard",
         "signal",
-        "system",
-        "telemetry"
+        "system"
       ],
       "notes": "19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes."
     },

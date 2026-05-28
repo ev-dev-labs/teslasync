@@ -7,11 +7,12 @@ import (
 	"strconv"
 	"time"
 
+	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 
 	// Side-effect import: registers the
@@ -51,7 +52,7 @@ func (h *FleetTelemetryErrorHandler) ErrorVINs(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if vins == nil {
-		vins = []*models.TeslaFleetTelemetryErrorVIN{}
+		vins = []*telemetrymodel.TeslaFleetTelemetryErrorVIN{}
 	}
 	writeJSON(w, http.StatusOK, vins)
 }
@@ -110,7 +111,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrorVINs(w http.ResponseWriter, r *
 		return
 	}
 	if stored == nil {
-		stored = []*models.TeslaFleetTelemetryErrorVIN{}
+		stored = []*telemetrymodel.TeslaFleetTelemetryErrorVIN{}
 	}
 
 	log.Info().Int("count", len(stored)).Msg("fleet telemetry error VINs refresh complete")
@@ -131,7 +132,7 @@ func (h *FleetTelemetryErrorHandler) Errors(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if errors == nil {
-		errors = []*models.TeslaFleetTelemetryError{}
+		errors = []*telemetrymodel.TeslaFleetTelemetryError{}
 	}
 	writeJSON(w, http.StatusOK, errors)
 }
@@ -188,9 +189,9 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 	}
 
 	// Convert parsed errors to model structs
-	var modelErrors []*models.TeslaFleetTelemetryError
+	var modelErrors []*telemetrymodel.TeslaFleetTelemetryError
 	for _, e := range envelope.Response.Errors {
-		m := &models.TeslaFleetTelemetryError{
+		m := &telemetrymodel.TeslaFleetTelemetryError{
 			VIN:            e.VIN,
 			TeslaUpdatedAt: teslaUpdatedAt,
 			FetchedAt:      now,
@@ -226,7 +227,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 		return
 	}
 	if stored == nil {
-		stored = []*models.TeslaFleetTelemetryError{}
+		stored = []*telemetrymodel.TeslaFleetTelemetryError{}
 	}
 
 	log.Info().Int("upserted", inserted).Int("total", len(stored)).Msg("fleet telemetry errors refresh complete")

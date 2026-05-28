@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
+	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
+
 	"github.com/rs/zerolog/log"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 const rawSignalsCollection = "raw_signals"
@@ -47,14 +47,14 @@ func (r *RawTelemetryRepo) ensureIndexes(ttlDays int) {
 }
 
 // Insert stores a raw signal batch.
-func (r *RawTelemetryRepo) Insert(ctx context.Context, rec *models.RawTelemetrySignal) error {
+func (r *RawTelemetryRepo) Insert(ctx context.Context, rec *telemetrymodel.RawTelemetrySignal) error {
 	rec.CreatedAt = time.Now().UTC()
 	_, err := r.coll.InsertOne(ctx, rec)
 	return err
 }
 
 // GetByVIN returns captured signals for a specific VIN, newest first.
-func (r *RawTelemetryRepo) GetByVIN(ctx context.Context, vin string, limit, offset int64) ([]*models.RawTelemetrySignal, error) {
+func (r *RawTelemetryRepo) GetByVIN(ctx context.Context, vin string, limit, offset int64) ([]*telemetrymodel.RawTelemetrySignal, error) {
 	filter := bson.M{"vin": vin}
 	opts := options.Find().
 		SetSort(bson.D{{Key: "created_at", Value: -1}}).
@@ -67,7 +67,7 @@ func (r *RawTelemetryRepo) GetByVIN(ctx context.Context, vin string, limit, offs
 	}
 	defer cursor.Close(ctx)
 
-	var results []*models.RawTelemetrySignal
+	var results []*telemetrymodel.RawTelemetrySignal
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (r *RawTelemetryRepo) GetByVIN(ctx context.Context, vin string, limit, offs
 }
 
 // GetAll returns all captured signals, newest first.
-func (r *RawTelemetryRepo) GetAll(ctx context.Context, limit, offset int64) ([]*models.RawTelemetrySignal, error) {
+func (r *RawTelemetryRepo) GetAll(ctx context.Context, limit, offset int64) ([]*telemetrymodel.RawTelemetrySignal, error) {
 	opts := options.Find().
 		SetSort(bson.D{{Key: "created_at", Value: -1}}).
 		SetLimit(limit).
@@ -87,7 +87,7 @@ func (r *RawTelemetryRepo) GetAll(ctx context.Context, limit, offset int64) ([]*
 	}
 	defer cursor.Close(ctx)
 
-	var results []*models.RawTelemetrySignal
+	var results []*telemetrymodel.RawTelemetrySignal
 	if err := cursor.All(ctx, &results); err != nil {
 		return nil, err
 	}

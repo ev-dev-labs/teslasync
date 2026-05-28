@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"time"
 
+	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
+
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
@@ -81,7 +82,7 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 
 	// Store position
 	pos := w.buildPosition(vehicle.ID, data)
-	if err := w.posRepo.BulkInsert(ctx, []models.Position{*pos}); err != nil {
+	if err := w.posRepo.BulkInsert(ctx, []telemetrymodel.Position{*pos}); err != nil {
 		logger.Error().Err(err).Msg("failed to insert position")
 	}
 
@@ -118,8 +119,8 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 	}
 }
 
-func (w *Worker) buildPosition(vehicleID int64, data *tesla.VehicleDataResponse) *models.Position {
-	p := &models.Position{
+func (w *Worker) buildPosition(vehicleID int64, data *tesla.VehicleDataResponse) *telemetrymodel.Position {
+	p := &telemetrymodel.Position{
 		VehicleID: vehicleID,
 		Ts:        time.Now(),
 		Latitude:  data.DriveState.Latitude,

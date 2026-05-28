@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 )
 
 // TeslaFleetTelemetryErrorRepo provides data access for fleet telemetry error records.
@@ -19,7 +19,7 @@ func NewTeslaFleetTelemetryErrorRepo(db *DB) *TeslaFleetTelemetryErrorRepo {
 }
 
 // GetActiveErrorVINs returns all VINs with currently active telemetry errors.
-func (r *TeslaFleetTelemetryErrorRepo) GetActiveErrorVINs(ctx context.Context) ([]*models.TeslaFleetTelemetryErrorVIN, error) {
+func (r *TeslaFleetTelemetryErrorRepo) GetActiveErrorVINs(ctx context.Context) ([]*telemetrymodel.TeslaFleetTelemetryErrorVIN, error) {
 	query := `SELECT id, vin, active, first_seen_at, last_seen_at, resolved_at
 		FROM tesla_fleet_telemetry_error_vins
 		WHERE active = TRUE
@@ -31,9 +31,9 @@ func (r *TeslaFleetTelemetryErrorRepo) GetActiveErrorVINs(ctx context.Context) (
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaFleetTelemetryErrorVIN
+	var results []*telemetrymodel.TeslaFleetTelemetryErrorVIN
 	for rows.Next() {
-		v := &models.TeslaFleetTelemetryErrorVIN{}
+		v := &telemetrymodel.TeslaFleetTelemetryErrorVIN{}
 		if err := rows.Scan(&v.ID, &v.VIN, &v.Active, &v.FirstSeenAt, &v.LastSeenAt, &v.ResolvedAt); err != nil {
 			return nil, fmt.Errorf("scan error vin: %w", err)
 		}
@@ -91,7 +91,7 @@ func (r *TeslaFleetTelemetryErrorRepo) ReplaceErrorVINs(ctx context.Context, vin
 }
 
 // GetErrors returns error logs optionally filtered by VIN, ordered by fetched_at descending.
-func (r *TeslaFleetTelemetryErrorRepo) GetErrors(ctx context.Context, vin string, limit, offset int) ([]*models.TeslaFleetTelemetryError, error) {
+func (r *TeslaFleetTelemetryErrorRepo) GetErrors(ctx context.Context, vin string, limit, offset int) ([]*telemetrymodel.TeslaFleetTelemetryError, error) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
@@ -123,9 +123,9 @@ func (r *TeslaFleetTelemetryErrorRepo) GetErrors(ctx context.Context, vin string
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaFleetTelemetryError
+	var results []*telemetrymodel.TeslaFleetTelemetryError
 	for rows.Next() {
-		e := &models.TeslaFleetTelemetryError{}
+		e := &telemetrymodel.TeslaFleetTelemetryError{}
 		if err := rows.Scan(&e.ID, &e.VIN, &e.ErrorCode, &e.ErrorMessage, &e.ReportedAt, &e.TeslaUpdatedAt, &e.FetchedAt); err != nil {
 			return nil, fmt.Errorf("scan fleet telemetry error: %w", err)
 		}
@@ -135,7 +135,7 @@ func (r *TeslaFleetTelemetryErrorRepo) GetErrors(ctx context.Context, vin string
 }
 
 // UpsertErrors inserts error entries, skipping duplicates on (vin, error_code, reported_at).
-func (r *TeslaFleetTelemetryErrorRepo) UpsertErrors(ctx context.Context, errors []*models.TeslaFleetTelemetryError) (int, error) {
+func (r *TeslaFleetTelemetryErrorRepo) UpsertErrors(ctx context.Context, errors []*telemetrymodel.TeslaFleetTelemetryError) (int, error) {
 	if len(errors) == 0 {
 		return 0, nil
 	}

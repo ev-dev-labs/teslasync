@@ -5,8 +5,9 @@ import (
 	"reflect"
 	"time"
 
+	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -88,7 +89,7 @@ var (
 	fieldNearestLng = "Long" + "itude"
 )
 
-func nearestLatLng(p models.Position) (float64, float64) {
+func nearestLatLng(p telemetrymodel.Position) (float64, float64) {
 	v := reflect.ValueOf(p)
 	return v.FieldByName(fieldNearestLat).Float(), v.FieldByName(fieldNearestLng).Float()
 }

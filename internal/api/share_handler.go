@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"time"
 
+	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
+
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -326,7 +327,7 @@ func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShar
 
 const clipPoints = 3 // number of points to clip from start/end for privacy
 
-func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions []models.Position, share *drivemodel.ShareToken) {
+func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions []telemetrymodel.Position, share *drivemodel.ShareToken) {
 	n := len(positions)
 	if n <= clipPoints*2 {
 		return

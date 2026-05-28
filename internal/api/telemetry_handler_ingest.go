@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
+
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"go.opentelemetry.io/otel"
@@ -18,7 +20,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
 	"github.com/rs/zerolog/log"
@@ -182,7 +183,7 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 
 	// (a) Raw telemetry capture — async Mongo insert when enabled.
 	if h.captureEnabled.Load() && h.rawTelemetryRepo != nil {
-		rec := &models.RawTelemetrySignal{
+		rec := &telemetrymodel.RawTelemetrySignal{
 			VIN:         payload.VIN,
 			Source:      "http_ingest",
 			SignalCount: len(signals),
