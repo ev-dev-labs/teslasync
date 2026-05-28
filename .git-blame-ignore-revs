@@ -103,3 +103,4 @@ c3be2d605395a2bcecfab7ba745aa6b1f58973c2
 # R6.13 — carve internal/ai/tools/nlq/ (dashboard + grafana + sql)
 41d91d85a60bf183eda2a7f44013176103aee0f026bd3bd206ddfab8c950671c68ef0e43342c0188 # R6.14 trip cluster carve
 74f85118f555bbd935e54899b2b710376e6f086f # R6.15 diagnostic cluster carve
+1cfe8c3786d6ffb7d6c423fcd45ec19b59555ab7 # R6.16 lifetime cluster carve
