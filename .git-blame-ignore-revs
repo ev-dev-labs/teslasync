@@ -43,3 +43,6 @@ a78b3c5fa64c1b8e9911d1a20ddd8310f8489123
 
 # refactor(R5.6): extract internal/models/export subpackage
 ef3423f9a77a0d166ac9349b5ea6c8bce520e003
+
+# refactor(R5.7): extract internal/models/geo subpackage
+08192acfcc8a69209f0ed1e5523ed524c46f051f
