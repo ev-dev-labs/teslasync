@@ -33,6 +33,7 @@ import (
 	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
+	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -1080,7 +1081,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	fleetTelemetryHandler := NewFleetTelemetryHandler(cfg)
 	teslaUserConfigHandler := NewTeslaUserConfigHandler(teslaClient, db)
 	teslaUserOrderHandler := NewTeslaUserOrderHandler(teslaClient, db)
-	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
+	teslaUserProfileHandler := apitup.NewHandler(teslaClient, db)
 	vehicleAccessHandler := apivehaccess.NewHandler(teslaClient, db)
 	vehicleInfoHandler := apivehinfo.NewHandler(teslaClient, db)
 	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader)

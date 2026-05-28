@@ -1,28 +1,28 @@
-package api
+package teslauserprofile
 
 import (
 	"encoding/json"
 	"net/http"
 	"time"
 
-	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
-
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+
+	"github.com/rs/zerolog/log"
 )
 
-// TeslaUserProfileHandler serves the Tesla account owner's profile data.
-type TeslaUserProfileHandler struct {
+// Handler serves the Tesla account owner's profile data.
+type Handler struct {
 	teslaClient *tesla.Client
 	profileRepo *tesladb.TeslaUserProfileRepo
 }
 
-// NewTeslaUserProfileHandler creates a new handler.
-func NewTeslaUserProfileHandler(tc *tesla.Client, db *database.DB) *TeslaUserProfileHandler {
-	return &TeslaUserProfileHandler{
+// NewHandler creates a new handler.
+func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
+	return &Handler{
 		teslaClient: tc,
 		profileRepo: tesladb.NewTeslaUserProfileRepo(db),
 	}
@@ -36,11 +36,11 @@ type profileEnvelope struct {
 
 // Profile returns the stored Tesla user profile from DB.
 // GET /api/v1/tesla/user/profile
-func (h *TeslaUserProfileHandler) Profile(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {
 	profile, err := h.profileRepo.Get(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to fetch tesla user profile")
-		writeError(w, http.StatusInternalServerError, "failed to fetch profile")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch profile")
 		return
 	}
 
@@ -49,14 +49,14 @@ func (h *TeslaUserProfileHandler) Profile(w http.ResponseWriter, r *http.Request
 		ts := profile.FetchedAt.UTC().Format(time.RFC3339)
 		env.FetchedAt = &ts
 	}
-	writeJSON(w, http.StatusOK, env)
+	httpx.WriteJSON(w, http.StatusOK, env)
 }
 
 // RefreshProfile fetches from Tesla API and saves to DB.
 // POST /api/v1/tesla/user/profile/refresh
-func (h *TeslaUserProfileHandler) RefreshProfile(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshProfile(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -65,12 +65,12 @@ func (h *TeslaUserProfileHandler) RefreshProfile(w http.ResponseWriter, r *http.
 	body, status, err := h.teslaClient.GetUserProfile(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("tesla user profile API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Msg("tesla user profile non-2xx")
-		writeError(w, http.StatusBadGateway, "Tesla API returned non-success status")
+		httpx.WriteError(w, http.StatusBadGateway, "Tesla API returned non-success status")
 		return
 	}
 
@@ -83,7 +83,7 @@ func (h *TeslaUserProfileHandler) RefreshProfile(w http.ResponseWriter, r *http.
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		log.Error().Err(err).Msg("failed to parse tesla user profile response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
@@ -94,7 +94,7 @@ func (h *TeslaUserProfileHandler) RefreshProfile(w http.ResponseWriter, r *http.
 	}
 	if err := h.profileRepo.Upsert(r.Context(), profile); err != nil {
 		log.Error().Err(err).Msg("failed to save tesla user profile")
-		writeError(w, http.StatusInternalServerError, "failed to save profile")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save profile")
 		return
 	}
 
