@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T18:42:11Z",
+  "generated_at": "2026-05-28T18:59:00Z",
   "go_version": "go1.26.1",
-  "commit_sha": "d86ff6e7a20b35de6daad27beecf8a0d43937b63",
+  "commit_sha": "3103a9d74db2de4ebe7970da84f9d52119b1d6dc",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2515,8 +2515,8 @@
     {
       "path": "internal/api",
       "go_files": 268,
-      "test_files": 162,
-      "loc": 125188,
+      "test_files": 163,
+      "loc": 125218,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2618,6 +2618,7 @@
         "internal/ai/tools/yir",
         "internal/alertmsg",
         "internal/api",
+        "internal/api/apibulk",
         "internal/api/apiparams",
         "internal/api/apitest",
         "internal/api/apperror",
@@ -2912,6 +2913,7 @@
         "bulk_handlers_phase45_test.go",
         "bulk_handlers_test.go",
         "bulk_helpers.go",
+        "bulk_helpers_bridge_test.go",
         "charge_planner_handler.go",
         "charge_planner_handler_compute.go",
         "charge_planner_handler_dtos.go",
@@ -3164,6 +3166,23 @@
         "webhook_receiver_handler_test.go",
         "weekly_digest_handler.go",
         "year_review_handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/apibulk",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 460,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apibulk",
+        "internal/api/httpx"
+      ],
+      "files": [
+        "doc.go",
+        "helpers.go",
+        "helpers_test.go"
       ]
     },
     {
@@ -7249,6 +7268,10 @@
       "weekly_digest_handler.go",
       "year_review_handler.go"
     ],
+    "internal/api/apibulk": [
+      "doc.go",
+      "helpers.go"
+    ],
     "internal/api/apiparams": [
       "doc.go",
       "params.go"
@@ -8390,7 +8413,7 @@
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
       "flat_parent_go_files": 268,
-      "flat_parent_test_files": 162,
+      "flat_parent_test_files": 163,
       "planned_subpkgs": 59,
       "existing_subpkgs": null,
       "missing_subpkgs": [

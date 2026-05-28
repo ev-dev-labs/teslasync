@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -28,17 +27,10 @@ func (h *AutomationHandler) automationBulkRepo() automationBulkStore {
 	return h.bulkRepo
 }
 
-// automationBulkBody is the request shape for /automations/bulk.
-//   - `ids`  must be a non-empty array of automation ids (capped at MaxBulkIDs).
-//   - `op`   is one of the allowlisted values: enable | disable | delete.
-//
-// Any other op string returns 400 — strict allowlisting prevents accidental
-// privileged operations being added in the future without an explicit code
-// change here. Phase-45 / Prompt 32 — bulk-actions framework.
-type automationBulkBody struct {
-	IDs []int64 `json:"ids"`
-	Op  string  `json:"op"`
-}
+// automationBulkBody (the request shape for /automations/bulk) and
+// decodeAutomationBulkBody (its parser) now live in
+// internal/api/bulk_helpers.go as a bridge to apibulk.OpBody /
+// apibulk.DecodeOpBody (Phase R2.0f).
 
 // BulkUpdate runs an allowlisted bulk operation across multiple automations
 // inside a single transaction.
@@ -116,22 +108,5 @@ func (h *AutomationHandler) BulkUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// decodeAutomationBulkBody parses + validates the request body for the
-// /automations/bulk endpoint. Reuses the same MaxBulkIDs cap and dedupe
-// behaviour as decodeBulkIDsRequest so the contract is consistent.
-func decodeAutomationBulkBody(r *http.Request) (automationBulkBody, error) {
-	var body automationBulkBody
-	dec := json.NewDecoder(r.Body)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&body); err != nil {
-		return automationBulkBody{}, errBulkBodyInvalid
-	}
-	if len(body.IDs) == 0 {
-		return automationBulkBody{}, errBulkIDsEmpty
-	}
-	if len(body.IDs) > MaxBulkIDs {
-		return automationBulkBody{}, errBulkIDsTooMany
-	}
-	body.IDs = dedupeInt64s(body.IDs)
-	return body, nil
-}
+// decodeAutomationBulkBody now lives in internal/api/bulk_helpers.go as
+// a bridge to apibulk.DecodeOpBody (Phase R2.0f).
