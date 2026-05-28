@@ -16,9 +16,10 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 )
 
-// dashboardLayoutRepo is the small slice of *database.DashboardLayoutRepo the
+// dashboardLayoutRepo is the small slice of *dbadmin.DashboardLayoutRepo the
 // handler depends on. Keeping it as an interface means the unit tests can
 // drop in an in-memory fake without standing up a real Postgres pool.
 type dashboardLayoutRepo interface {
@@ -41,7 +42,7 @@ type DashboardLayoutHandler struct {
 }
 
 func NewDashboardLayoutHandler(db *database.DB) *DashboardLayoutHandler {
-	return &DashboardLayoutHandler{repo: database.NewDashboardLayoutRepo(db)}
+	return &DashboardLayoutHandler{repo: dbadmin.NewDashboardLayoutRepo(db)}
 }
 
 // maxDashboardLayoutBodyBytes caps each request body. The whole layout

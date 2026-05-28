@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T14:41:00Z",
+  "generated_at": "2026-05-28T14:48:40Z",
   "go_version": "go1.26.1",
-  "commit_sha": "360d0b1dc8d9e68219ca23fd2b0303b2c398134e",
+  "commit_sha": "1ebb764325f204a76ee76658a4d85cce8a81e341",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2492,7 +2492,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126554,
+      "loc": 126557,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2615,6 +2615,9 @@
         "internal/crypto",
         "internal/database",
         "internal/database/achievement",
+        "internal/database/admin",
+        "internal/database/gdpr",
+        "internal/database/sharing",
         "internal/dataquality",
         "internal/enums",
         "internal/events",
@@ -3140,7 +3143,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1832,
+      "loc": 1834,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3152,6 +3155,7 @@
         "internal/config",
         "internal/crypto",
         "internal/database",
+        "internal/database/gdpr",
         "internal/dataquality",
         "internal/events",
         "internal/flags",
@@ -3290,7 +3294,7 @@
       "has_doc_go": true,
       "layer": "app",
       "imports": [
-        "internal/database"
+        "internal/database/gdpr"
       ],
       "files": [
         "doc.go",
@@ -3663,9 +3667,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 107,
+      "go_files": 104,
       "test_files": 35,
-      "loc": 27774,
+      "loc": 27307,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3732,7 +3736,6 @@
         "chart_annotation_repo.go",
         "circuit_breaker.go",
         "circuit_breaker_test.go",
-        "dashboard_layout_repo.go",
         "database.go",
         "database_test.go",
         "database_tracing_test.go",
@@ -3748,7 +3751,6 @@
         "feature_flag_changes_repo.go",
         "from_map.go",
         "fsm_transition_repo.go",
-        "gdpr_artifact_repo.go",
         "geofence_repo.go",
         "geofence_repo_bulk.go",
         "guard_repo.go",
@@ -3788,7 +3790,6 @@
         "settings_reset.go",
         "settings_reset_test.go",
         "settings_serializer.go",
-        "share_token_repo.go",
         "signal_catalog.go",
         "signal_history_writer.go",
         "signal_log_reader.go",
@@ -3851,6 +3852,50 @@
       "files": [
         "doc.go",
         "unlock_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/admin",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 166,
+      "has_doc_go": true,
+      "imports": [
+        "internal/database",
+        "internal/models/dashboard"
+      ],
+      "files": [
+        "dashboard_layout_repo.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/database/gdpr",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 206,
+      "has_doc_go": true,
+      "imports": [
+        "internal/database"
+      ],
+      "files": [
+        "artifact_repo.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/database/sharing",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 127,
+      "has_doc_go": true,
+      "imports": [
+        "internal/database",
+        "internal/models/drive"
+      ],
+      "files": [
+        "doc.go",
+        "token_repo.go"
       ]
     },
     {
@@ -6824,7 +6869,6 @@
       "charging_repo.go",
       "chart_annotation_repo.go",
       "circuit_breaker.go",
-      "dashboard_layout_repo.go",
       "database.go",
       "dlq_replay_audit_repo.go",
       "doc.go",
@@ -6837,7 +6881,6 @@
       "feature_flag_changes_repo.go",
       "from_map.go",
       "fsm_transition_repo.go",
-      "gdpr_artifact_repo.go",
       "geofence_repo.go",
       "geofence_repo_bulk.go",
       "guard_repo.go",
@@ -6866,7 +6909,6 @@
       "settings_repo.go",
       "settings_reset.go",
       "settings_serializer.go",
-      "share_token_repo.go",
       "signal_catalog.go",
       "signal_history_writer.go",
       "signal_log_reader.go",
@@ -6909,6 +6951,18 @@
     "internal/database/achievement": [
       "doc.go",
       "unlock_repo.go"
+    ],
+    "internal/database/admin": [
+      "dashboard_layout_repo.go",
+      "doc.go"
+    ],
+    "internal/database/gdpr": [
+      "artifact_repo.go",
+      "doc.go"
+    ],
+    "internal/database/sharing": [
+      "doc.go",
+      "token_repo.go"
     ],
     "internal/dataquality": [
       "doc.go",
@@ -7617,7 +7671,7 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 107,
+      "flat_parent_go_files": 104,
       "flat_parent_test_files": 35,
       "planned_subpkgs": 22,
       "existing_subpkgs": [

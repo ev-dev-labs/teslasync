@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
@@ -105,7 +106,7 @@ type App struct {
 	SlowQueriesRepo       *database.SlowQueriesRepo
 	HypertableMetricsRepo *database.HypertableMetricsRepo
 	IngestXRayRepo        *database.IngestXRayRepo
-	GDPRArtifactRepo      *database.GDPRArtifactRepo
+	GDPRArtifactRepo      *dbgdpr.ArtifactRepo
 	RotationTracker       *rotation.Tracker
 	SchemaSeed            schemacheck.Fingerprint
 

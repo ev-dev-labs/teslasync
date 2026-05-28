@@ -11,13 +11,14 @@ import (
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/database/sharing"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
 
 // ShareHandler handles share link creation and public access.
 type ShareHandler struct {
-	shareRepo   *database.ShareTokenRepo
+	shareRepo   *sharing.TokenRepo
 	driveRepo   *database.DriveRepo
 	posRepo     *database.PositionRepo
 	vehicleRepo *database.VehicleRepo
@@ -25,7 +26,7 @@ type ShareHandler struct {
 
 func NewShareHandler(db *database.DB) *ShareHandler {
 	return &ShareHandler{
-		shareRepo:   database.NewShareTokenRepo(db),
+		shareRepo:   sharing.NewTokenRepo(db),
 		driveRepo:   database.NewDriveRepo(db),
 		posRepo:     database.NewPositionRepo(db),
 		vehicleRepo: database.NewVehicleRepo(db),

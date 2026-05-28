@@ -1,8 +1,8 @@
-package database
+package gdpr
 
 // Phase-45 / Prompt 8 — GDPR data-subject export artifacts.
 //
-// GDPRArtifactRepo is the manifest store for external-storage exports.
+// ArtifactRepo is the manifest store for external-storage exports.
 // NEVER stores bytes — only a path/checksum/size. The export-worker
 // streams JSONL/gzip directly to disk or S3 and inserts a row here
 // when done.
@@ -13,6 +13,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // StorageKind enumerates the supported backends. Used as a DB CHECK.
@@ -23,8 +25,8 @@ const (
 	StorageKindS3      StorageKind = "s3"
 )
 
-// GDPRArtifact is the persisted manifest for a single export bundle.
-type GDPRArtifact struct {
+// Artifact is the persisted manifest for a single export bundle.
+type Artifact struct {
 	ID            string      `json:"id"`
 	ExportJobID   string      `json:"export_job_id"`
 	VehicleID     int64       `json:"vehicle_id"`
@@ -38,22 +40,22 @@ type GDPRArtifact struct {
 	DownloadCount int         `json:"download_count"`
 }
 
-// GDPRArtifactRepo is the manifest CRUD.
-type GDPRArtifactRepo struct {
-	db *DB
+// ArtifactRepo is the manifest CRUD.
+type ArtifactRepo struct {
+	db *database.DB
 }
 
-// NewGDPRArtifactRepo constructs the repo.
-func NewGDPRArtifactRepo(db *DB) *GDPRArtifactRepo {
+// NewArtifactRepo constructs the repo.
+func NewArtifactRepo(db *database.DB) *ArtifactRepo {
 	if db == nil || db.Pool == nil {
 		return nil
 	}
-	return &GDPRArtifactRepo{db: db}
+	return &ArtifactRepo{db: db}
 }
 
 // Insert persists a new manifest row. Returns ErrConflict if the id
 // already exists.
-func (r *GDPRArtifactRepo) Insert(ctx context.Context, a GDPRArtifact) error {
+func (r *ArtifactRepo) Insert(ctx context.Context, a Artifact) error {
 	if r == nil {
 		return nil
 	}
@@ -72,7 +74,7 @@ VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 }
 
 // GetByID returns the manifest for `id` or (nil, nil) when not found.
-func (r *GDPRArtifactRepo) GetByID(ctx context.Context, id string) (*GDPRArtifact, error) {
+func (r *ArtifactRepo) GetByID(ctx context.Context, id string) (*Artifact, error) {
 	if r == nil {
 		return nil, nil
 	}
@@ -82,7 +84,7 @@ SELECT id, export_job_id, vehicle_id, storage_kind, storage_path,
        downloaded_at, download_count
   FROM gdpr_export_artifact
  WHERE id = $1`
-	var a GDPRArtifact
+	var a Artifact
 	var kind string
 	err := r.db.Pool.QueryRow(ctx, sql, id).Scan(
 		&a.ID, &a.ExportJobID, &a.VehicleID, &kind, &a.StoragePath,
@@ -99,7 +101,7 @@ SELECT id, export_job_id, vehicle_id, storage_kind, storage_path,
 }
 
 // ListByVehicle returns recent artifacts for a vehicle, newest first.
-func (r *GDPRArtifactRepo) ListByVehicle(ctx context.Context, vehicleID int64, limit int) ([]GDPRArtifact, error) {
+func (r *ArtifactRepo) ListByVehicle(ctx context.Context, vehicleID int64, limit int) ([]Artifact, error) {
 	if r == nil {
 		return nil, nil
 	}
@@ -119,9 +121,9 @@ SELECT id, export_job_id, vehicle_id, storage_kind, storage_path,
 		return nil, fmt.Errorf("gdpr_artifact: list: %w", err)
 	}
 	defer rows.Close()
-	var out []GDPRArtifact
+	var out []Artifact
 	for rows.Next() {
-		var a GDPRArtifact
+		var a Artifact
 		var kind string
 		if err := rows.Scan(&a.ID, &a.ExportJobID, &a.VehicleID, &kind, &a.StoragePath,
 			&a.SHA256, &a.ByteCount, &a.CreatedAt, &a.ExpiresAt,
@@ -132,14 +134,14 @@ SELECT id, export_job_id, vehicle_id, storage_kind, storage_path,
 		out = append(out, a)
 	}
 	if out == nil {
-		out = []GDPRArtifact{}
+		out = []Artifact{}
 	}
 	return out, rows.Err()
 }
 
 // RecordDownload increments the download counter and stamps
 // downloaded_at. Safe to call concurrently — the UPDATE is atomic.
-func (r *GDPRArtifactRepo) RecordDownload(ctx context.Context, id string) error {
+func (r *ArtifactRepo) RecordDownload(ctx context.Context, id string) error {
 	if r == nil {
 		return nil
 	}
@@ -157,7 +159,7 @@ UPDATE gdpr_export_artifact
 
 // Expired returns artifacts whose expires_at < now(). The retention
 // worker deletes the underlying files + the row.
-func (r *GDPRArtifactRepo) Expired(ctx context.Context, limit int) ([]GDPRArtifact, error) {
+func (r *ArtifactRepo) Expired(ctx context.Context, limit int) ([]Artifact, error) {
 	if r == nil {
 		return nil, nil
 	}
@@ -177,9 +179,9 @@ SELECT id, export_job_id, vehicle_id, storage_kind, storage_path,
 		return nil, fmt.Errorf("gdpr_artifact: expired: %w", err)
 	}
 	defer rows.Close()
-	var out []GDPRArtifact
+	var out []Artifact
 	for rows.Next() {
-		var a GDPRArtifact
+		var a Artifact
 		var kind string
 		if err := rows.Scan(&a.ID, &a.ExportJobID, &a.VehicleID, &kind, &a.StoragePath,
 			&a.SHA256, &a.ByteCount, &a.CreatedAt, &a.ExpiresAt,
@@ -190,14 +192,14 @@ SELECT id, export_job_id, vehicle_id, storage_kind, storage_path,
 		out = append(out, a)
 	}
 	if out == nil {
-		out = []GDPRArtifact{}
+		out = []Artifact{}
 	}
 	return out, rows.Err()
 }
 
 // Delete removes a manifest row. The underlying file removal is the
 // caller's responsibility.
-func (r *GDPRArtifactRepo) Delete(ctx context.Context, id string) error {
+func (r *ArtifactRepo) Delete(ctx context.Context, id string) error {
 	if r == nil {
 		return nil
 	}

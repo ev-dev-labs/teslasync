@@ -12,7 +12,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 )
 
 // ErrNotConfigured is returned when the backing repo is nil
@@ -23,26 +23,26 @@ var ErrNotConfigured = errors.New("gdpr export subsystem not configured on this 
 var ErrNotFound = errors.New("export not found")
 
 // Artifact is the wire shape returned by Get + recorded by Insert.
-type Artifact = database.GDPRArtifact
+type Artifact = dbgdpr.Artifact
 
 // StorageKind enumerates the supported backends.
-type StorageKind = database.StorageKind
+type StorageKind = dbgdpr.StorageKind
 
 // StorageKind constants re-exported for the handler.
 const (
-	StorageKindLocalFS = database.StorageKindLocalFS
-	StorageKindS3      = database.StorageKindS3
+	StorageKindLocalFS = dbgdpr.StorageKindLocalFS
+	StorageKindS3      = dbgdpr.StorageKindS3
 )
 
 // Service is the orchestrator. Holds a pointer so the App can wire
 // once and pass nil for any subsystem not configured.
 type Service struct {
-	repo *database.GDPRArtifactRepo
+	repo *dbgdpr.ArtifactRepo
 }
 
 // New constructs the service. repo MAY be nil; methods then return
 // ErrNotConfigured.
-func New(repo *database.GDPRArtifactRepo) *Service {
+func New(repo *dbgdpr.ArtifactRepo) *Service {
 	return &Service{repo: repo}
 }
 

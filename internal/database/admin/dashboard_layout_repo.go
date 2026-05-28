@@ -1,4 +1,4 @@
-package database
+package admin
 
 import (
 	"context"
@@ -9,6 +9,8 @@ import (
 	dashboardmodel "github.com/ev-dev-labs/teslasync/internal/models/dashboard"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // DashboardLayoutRepo is the data-access layer for the `dashboard_layouts`
@@ -19,10 +21,10 @@ import (
 // currently selected vehicle. NULL on either side means "any" — see model
 // docs for the global-vs-pinned semantics.
 type DashboardLayoutRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewDashboardLayoutRepo(db *DB) *DashboardLayoutRepo {
+func NewDashboardLayoutRepo(db *database.DB) *DashboardLayoutRepo {
 	return &DashboardLayoutRepo{db: db}
 }
 
