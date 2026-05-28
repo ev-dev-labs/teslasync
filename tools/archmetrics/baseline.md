@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T21:16:38Z, Go go1.26.1, commit 5f04688f9d15aeca99f63e9579d101e50fd832e0_
+_Generated 2026-05-28T21:33:05Z, Go go1.26.1, commit 86f5b3d61fe98d9b7ea43a7f5e0b43adcd272fe4_
 
 ## Summary
 
-- Packages: 321
+- Packages: 323
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 377700
+- Total non-blank LOC under cmd/+internal/+tools/: 377716
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-28T21:16:38Z, Go go1.26.1, commit 5f04688f9d15aeca99f63e9579d
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 239 | 149 | 112553 | yes | handler |
+| internal/api | 237 | 148 | 112220 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
 | internal/api/apicalllog | 2 | 0 | 69 | yes | handler |
 | internal/api/apiparams | 2 | 1 | 358 | yes | handler |
@@ -185,6 +185,7 @@ _Generated 2026-05-28T21:16:38Z, Go go1.26.1, commit 5f04688f9d15aeca99f63e9579d
 | internal/api/lifetime | 2 | 1 | 878 | yes | handler |
 | internal/api/middleware | 4 | 2 | 763 | yes | handler |
 | internal/api/notification | 5 | 2 | 2380 | yes | handler |
+| internal/api/onboarding | 2 | 1 | 253 | yes | handler |
 | internal/api/openapi | 2 | 0 | 38 | yes | handler |
 | internal/api/search | 2 | 1 | 1157 | yes | handler |
 | internal/api/search/searchtest | 2 | 0 | 132 | yes | platform |
@@ -194,6 +195,7 @@ _Generated 2026-05-28T21:16:38Z, Go go1.26.1, commit 5f04688f9d15aeca99f63e9579d
 | internal/api/softwareupdate | 2 | 0 | 63 | yes | handler |
 | internal/api/synthetic | 2 | 0 | 40 | yes | handler |
 | internal/api/tco | 3 | 1 | 506 | yes | handler |
+| internal/api/teslauserprofile | 2 | 0 | 96 | yes | handler |
 | internal/api/vehicle | 2 | 1 | 616 | yes | handler |
 | internal/api/vehicleaccess | 2 | 0 | 448 | yes | handler |
 | internal/api/vehicleconfig | 2 | 1 | 527 | yes | handler |
@@ -377,7 +379,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 239 / 149 | 59 | 7 | 52 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 237 / 148 | 59 | 8 | 51 |
 
 ### `internal/models` detail
 
@@ -492,6 +494,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/search`
 - `internal/api/vehicle`
 - `internal/api/notification`
+- `internal/api/onboarding`
 
 **Planned but not yet on disk:**
 - `internal/api/system`
@@ -530,7 +533,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/dashboard`
 - `internal/api/saved_views`
 - `internal/api/auth`
-- `internal/api/onboarding`
 - `internal/api/user`
 - `internal/api/settings`
 - `internal/api/share`
