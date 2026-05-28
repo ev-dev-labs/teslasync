@@ -210,3 +210,6 @@ d5bab8b3
 
 # R2c.1: carve internal/api/vehicleaccess (drivers + invitations)
 2a0ae4ccc73d924921a807fc0570a8bce284f04b
+
+# R2c.2: carve internal/api/vehicleinfo (Tesla account metadata)
+ab372b9926cf41f5bf7a7fac6eb4957d46e3ec43
