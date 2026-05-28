@@ -412,7 +412,7 @@ func TestSnapshotToCSV_ColumnAllowlist(t *testing.T) {
 }
 
 func TestJobRequest_JSONRoundTrip(t *testing.T) {
-	// JobRequest embeds models.ExportJobRequest; encoding/json must
+	// JobRequest embeds exportmodel.ExportJobRequest; encoding/json must
 	// promote the embedded fields and emit `columns` flat at the top
 	// level so MQTT publishers / consumers stay wire-compatible.
 	tests := []struct {

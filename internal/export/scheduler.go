@@ -49,10 +49,11 @@ import (
 	"sync"
 	"time"
 
+	exportmodel "github.com/ev-dev-labs/teslasync/internal/models/export"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // DefaultSchedulerInterval is the production tick cadence. Tests
@@ -278,7 +279,7 @@ func buildJobRequest(row database.ScheduledExportRow, now time.Time) (*JobReques
 	end := now
 	start := now.Add(-window)
 	req := &JobRequest{
-		ExportJobRequest: models.ExportJobRequest{
+		ExportJobRequest: exportmodel.ExportJobRequest{
 			// Synthesise a stable job-id so log lines can correlate
 			// per-tick output with the parent schedule.
 			JobID:     fmt.Sprintf("scheduled-%d-%d", row.ID, now.Unix()),

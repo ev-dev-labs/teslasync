@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	exportmodel "github.com/ev-dev-labs/teslasync/internal/models/export"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
@@ -16,7 +18,6 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/export"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ExportHandler provides endpoints for data export and async export job management.
@@ -118,7 +119,7 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	jobID := fmt.Sprintf("exp-%d", time.Now().UnixNano())
 
 	now := time.Now().UTC()
-	job := &models.ExportJob{
+	job := &exportmodel.ExportJob{
 		ID:        jobID,
 		Type:      req.Type,
 		Format:    req.Format,
@@ -138,7 +139,7 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 
 	// Publish to MQTT for worker processing
 	mqttReq := &export.JobRequest{
-		ExportJobRequest: models.ExportJobRequest{
+		ExportJobRequest: exportmodel.ExportJobRequest{
 			JobID:     jobID,
 			Type:      req.Type,
 			Format:    req.Format,
@@ -188,7 +189,7 @@ func (h *ExportHandler) GetJob(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "export job not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, models.ExportJobSummary{
+	writeJSON(w, http.StatusOK, exportmodel.ExportJobSummary{
 		ID:           job.ID,
 		Type:         job.Type,
 		Format:       job.Format,
@@ -261,7 +262,7 @@ func (h *ExportHandler) SubmitImportJob(w http.ResponseWriter, r *http.Request) 
 	now := time.Now().UTC()
 
 	// Create job with the file data stored directly
-	job := &models.ExportJob{
+	job := &exportmodel.ExportJob{
 		ID:        jobID,
 		Type:      importType,
 		Format:    "csv",
@@ -281,7 +282,7 @@ func (h *ExportHandler) SubmitImportJob(w http.ResponseWriter, r *http.Request) 
 	}
 
 	mqttReq := &export.JobRequest{
-		ExportJobRequest: models.ExportJobRequest{
+		ExportJobRequest: exportmodel.ExportJobRequest{
 			JobID:  jobID,
 			Type:   importType,
 			Format: "csv",
@@ -339,7 +340,7 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 
 	jobID := fmt.Sprintf("acc-%d", time.Now().UnixNano())
 	now := time.Now().UTC()
-	job := &models.ExportJob{
+	job := &exportmodel.ExportJob{
 		ID:        jobID,
 		Type:      string(export.TypeAccount),
 		Format:    "zip",
@@ -357,7 +358,7 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 	}
 
 	mqttReq := &export.JobRequest{
-		ExportJobRequest: models.ExportJobRequest{
+		ExportJobRequest: exportmodel.ExportJobRequest{
 			JobID:     jobID,
 			Type:      string(export.TypeAccount),
 			Format:    "zip",

@@ -6,7 +6,7 @@
 package export
 
 import (
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	exportmodel "github.com/ev-dev-labs/teslasync/internal/models/export"
 )
 
 // MQTT topic for internal export job dispatch.
@@ -51,10 +51,10 @@ const AccountSchemaVersion = "2.0.0"
 // JobRequest is the in-process representation of an export job request.
 // It is the single shape the worker decodes from MQTT, the processor
 // receives, and api handlers publish — extending the durable
-// models.ExportJobRequest with the Phase-46/62 column allowlist that
+// exportmodel.ExportJobRequest with the Phase-46/62 column allowlist that
 // lives entirely inside the export package's contract.
 //
-// The embedded models.ExportJobRequest carries all wire-stable fields
+// The embedded exportmodel.ExportJobRequest carries all wire-stable fields
 // (job_id, type, format, vehicle_id, start_date, end_date). Columns is
 // an optional caller-supplied allowlist of output column names. When
 // nil/empty the writer emits its full canonical column set, preserving
@@ -69,14 +69,14 @@ const AccountSchemaVersion = "2.0.0"
 // exactly `{"job_id":...,"type":...,...,"columns":[...]}`. Backwards
 // compatible with existing publishers that omit the columns key.
 type JobRequest struct {
-	models.ExportJobRequest
+	exportmodel.ExportJobRequest
 	Columns []string `json:"columns,omitempty"`
 }
 
-// FromModel adapts a stable models.ExportJobRequest into the in-process
+// FromModel adapts a stable exportmodel.ExportJobRequest into the in-process
 // JobRequest type. The returned request carries no column allowlist; use
 // when bridging code that hasn't been migrated to set Columns directly.
-func FromModel(m *models.ExportJobRequest) *JobRequest {
+func FromModel(m *exportmodel.ExportJobRequest) *JobRequest {
 	if m == nil {
 		return nil
 	}

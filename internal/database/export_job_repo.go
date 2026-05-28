@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	exportmodel "github.com/ev-dev-labs/teslasync/internal/models/export"
 )
 
 // ExportJobRepo provides data access for the export_jobs table.
@@ -18,7 +18,7 @@ func NewExportJobRepo(db *DB) *ExportJobRepo {
 }
 
 // Create inserts a new export job.
-func (r *ExportJobRepo) Create(ctx context.Context, job *models.ExportJob) error {
+func (r *ExportJobRepo) Create(ctx context.Context, job *exportmodel.ExportJob) error {
 	_, err := r.db.Pool.Exec(ctx, `
 		INSERT INTO export_jobs (id, type, format, status, vehicle_id, start_date, end_date, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
@@ -27,8 +27,8 @@ func (r *ExportJobRepo) Create(ctx context.Context, job *models.ExportJob) error
 }
 
 // GetByID retrieves a job by ID (without file data).
-func (r *ExportJobRepo) GetByID(ctx context.Context, id string) (*models.ExportJob, error) {
-	var job models.ExportJob
+func (r *ExportJobRepo) GetByID(ctx context.Context, id string) (*exportmodel.ExportJob, error) {
+	var job exportmodel.ExportJob
 	err := r.db.Pool.QueryRow(ctx, `
 		SELECT id, type, format, status, vehicle_id, start_date, end_date,
 		       file_name, file_size, record_count, error_message,
@@ -55,7 +55,7 @@ func (r *ExportJobRepo) GetFileData(ctx context.Context, id string) ([]byte, str
 }
 
 // List returns recent export jobs ordered by creation date (without file data).
-func (r *ExportJobRepo) List(ctx context.Context, limit, offset int) ([]models.ExportJobSummary, error) {
+func (r *ExportJobRepo) List(ctx context.Context, limit, offset int) ([]exportmodel.ExportJobSummary, error) {
 	rows, err := r.db.Pool.Query(ctx, `
 		SELECT id, type, format, status, vehicle_id, file_name, file_size, record_count,
 		       error_message,
@@ -71,9 +71,9 @@ func (r *ExportJobRepo) List(ctx context.Context, limit, offset int) ([]models.E
 	}
 	defer rows.Close()
 
-	var jobs []models.ExportJobSummary
+	var jobs []exportmodel.ExportJobSummary
 	for rows.Next() {
-		var j models.ExportJobSummary
+		var j exportmodel.ExportJobSummary
 		if err := rows.Scan(&j.ID, &j.Type, &j.Format, &j.Status, &j.VehicleID,
 			&j.FileName, &j.FileSize, &j.RecordCount, &j.ErrorMessage,
 			&j.DurationMs, &j.CreatedAt, &j.CompletedAt); err != nil {
@@ -82,7 +82,7 @@ func (r *ExportJobRepo) List(ctx context.Context, limit, offset int) ([]models.E
 		jobs = append(jobs, j)
 	}
 	if jobs == nil {
-		jobs = []models.ExportJobSummary{}
+		jobs = []exportmodel.ExportJobSummary{}
 	}
 	return jobs, nil
 }

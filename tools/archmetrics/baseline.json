@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T03:48:25Z",
+  "generated_at": "2026-05-28T03:50:36Z",
   "go_version": "go1.26.1",
-  "commit_sha": "9e2c28eb2284eee2c939baf7d9358d802cfc5908",
+  "commit_sha": "65930ca94d677f592fc3ef7ae6fa90e1fe7b3257",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2148,6 +2148,7 @@
         "internal/models/auth",
         "internal/models/backup",
         "internal/models/chatbot",
+        "internal/models/export",
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
@@ -3168,6 +3169,7 @@
         "internal/models/backup",
         "internal/models/chatbot",
         "internal/models/energy",
+        "internal/models/export",
         "internal/tracing"
       ],
       "files": [
@@ -3517,6 +3519,7 @@
       "imports": [
         "internal/database",
         "internal/models",
+        "internal/models/export",
         "internal/mqtt"
       ],
       "files": [
@@ -3948,7 +3951,7 @@
       "path": "internal/models",
       "go_files": 33,
       "test_files": 1,
-      "loc": 2679,
+      "loc": 2639,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4054,6 +4057,19 @@
       "files": [
         "doc.go",
         "energy.go"
+      ]
+    },
+    {
+      "path": "internal/models/export",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 59,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "export.go"
       ]
     },
     {
@@ -6331,6 +6347,10 @@
       "doc.go",
       "energy.go"
     ],
+    "internal/models/export": [
+      "doc.go",
+      "export.go"
+    ],
     "internal/mqtt": [
       "dlq_inspector.go",
       "dlq_production.go",
@@ -6641,14 +6661,14 @@
         "auth",
         "backup",
         "chatbot",
-        "energy"
+        "energy",
+        "export"
       ],
       "missing_subpkgs": [
         "automation",
         "charging",
         "dashboard",
         "drive",
-        "export",
         "geo",
         "notification",
         "security",
