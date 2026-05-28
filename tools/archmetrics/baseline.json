@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T19:36:42Z",
+  "generated_at": "2026-05-28T19:42:23Z",
   "go_version": "go1.26.1",
-  "commit_sha": "653239ea723687a6bdb4cf26177e0a72fd1d3c92",
+  "commit_sha": "fa16a53bb99a6711a13934ed16d23f56daf7ca31",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 263,
-      "test_files": 161,
-      "loc": 123298,
+      "go_files": 262,
+      "test_files": 160,
+      "loc": 122868,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2628,6 +2628,7 @@
         "internal/api/middleware",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
+        "internal/api/vehicleconfig",
         "internal/api/vehicleinfo",
         "internal/apilog",
         "internal/app/adminobssvc",
@@ -3144,8 +3145,6 @@
         "user_preference_handler_test.go",
         "vampire_drain_handler.go",
         "vampire_drain_handler_test.go",
-        "vehicle_config_handler.go",
-        "vehicle_config_handler_test.go",
         "vehicle_photo_handler.go",
         "vehicle_photo_handler_test.go",
         "vehicle_settings_handler.go",
@@ -3356,6 +3355,24 @@
       "files": [
         "doc.go",
         "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/vehicleconfig",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 527,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/signal"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -7334,7 +7351,6 @@
       "user_handler.go",
       "user_preference_handler.go",
       "vampire_drain_handler.go",
-      "vehicle_config_handler.go",
       "vehicle_photo_handler.go",
       "vehicle_settings_handler.go",
       "vehicle_states_handler.go",
@@ -7390,6 +7406,10 @@
       "handler.go"
     ],
     "internal/api/vehicleaccess": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/vehicleconfig": [
       "doc.go",
       "handler.go"
     ],
@@ -8508,8 +8528,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 263,
-      "flat_parent_test_files": 161,
+      "flat_parent_go_files": 262,
+      "flat_parent_test_files": 160,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "vehicle"

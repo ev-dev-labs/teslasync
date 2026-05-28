@@ -1,16 +1,18 @@
-package api
+package vehicleconfig
 
 import (
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+
+	"github.com/rs/zerolog/log"
 )
 
-// VehicleConfigHandler serves vehicle config endpoints backed by the
+// Handler serves vehicle config endpoints backed by the
 // signal-log change feed via signal.StateReader (ADR-002 / phase-39).
 //
 // Phase-39 migration: the legacy *signaldb.SignalLogReader (raw pivot +
@@ -38,7 +40,7 @@ import (
 // in the dashboard (battery capacity, EPA range, motor topology, tire
 // size). An empty config here would cause every per-model calculation
 // downstream to fall back to defaults or display "Unknown".
-type VehicleConfigHandler struct {
+type Handler struct {
 	state signal.StateReader
 	live  signal.LiveStateReader
 }
@@ -52,8 +54,8 @@ var vehicleConfigMappings = []signal.FieldMapping{
 	{Signal: "VehicleConfig", Field: "config"},
 }
 
-func NewVehicleConfigHandler(state signal.StateReader, live signal.LiveStateReader) *VehicleConfigHandler {
-	return &VehicleConfigHandler{state: state, live: live}
+func NewHandler(state signal.StateReader, live signal.LiveStateReader) *Handler {
+	return &Handler{state: state, live: live}
 }
 
 // List returns vehicle config history from the signal-log change feed
@@ -68,16 +70,16 @@ func NewVehicleConfigHandler(state signal.StateReader, live signal.LiveStateRead
 // the existing frontend (which reads car_type / trim_badging /
 // exterior_color / wheel_type directly) keeps working unchanged. The
 // intermediate "config" projection key never appears in the response.
-func (h *VehicleConfigHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	from := time.Now().AddDate(0, 0, -7)
 	to := time.Now()
-	if start, end := parseDateRange(r); !start.IsZero() {
+	if start, end := apiparams.ParseDateRange(r); !start.IsZero() {
 		from = start
 		if !end.IsZero() {
 			to = end
@@ -88,7 +90,7 @@ func (h *VehicleConfigHandler) List(w http.ResponseWriter, r *http.Request) {
 		vehicleID, vehicleConfigMappings, from, to, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get vehicle config data from signal_log")
-		writeError(w, http.StatusInternalServerError, "failed to get vehicle config data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get vehicle config data")
 		return
 	}
 	rows := timelineRowsToFlat(timelineRows)
@@ -108,7 +110,7 @@ func (h *VehicleConfigHandler) List(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
 // Latest returns the most recent vehicle configuration, derived from
@@ -124,17 +126,17 @@ func (h *VehicleConfigHandler) List(w http.ResponseWriter, r *http.Request) {
 // response so the existing frontend keeps working unchanged. If
 // VehicleConfig is somehow present but NOT a JSON object, the raw
 // value is projected under the "config" key as a defensive fallback.
-func (h *VehicleConfigHandler) Latest(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest vehicle config")
-		writeError(w, http.StatusInternalServerError, "failed to get latest vehicle config")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get latest vehicle config")
 		return
 	}
 
@@ -151,5 +153,23 @@ func (h *VehicleConfigHandler) Latest(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+// timelineRowsToFlat converts the canonical signal.StateReader timeline
+// shape into the flat map[string]interface{} JSON-row shape the vehicle
+// config endpoints emit. Duplicated from
+// internal/api/drive_handler_detail.go until that handler is also
+// carved into a subpackage.
+func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rows))
+	for _, tr := range rows {
+		row := make(map[string]interface{}, len(tr.Fields)+1)
+		for k, v := range tr.Fields {
+			row[k] = v
+		}
+		row["ts"] = tr.Timestamp
+		out = append(out, row)
+	}
+	return out
 }

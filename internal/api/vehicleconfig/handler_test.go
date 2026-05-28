@@ -1,4 +1,4 @@
-package api
+package vehicleconfig
 
 import (
 	"context"
@@ -90,7 +90,7 @@ func TestVehicleConfig_History_CarriesForwardModel(t *testing.T) {
 			return folded, nil
 		},
 	}
-	h := NewVehicleConfigHandler(fake, newTestLiveStateReader(fake))
+	h := NewHandler(fake, newTestLiveStateReader(fake))
 
 	rec := httptest.NewRecorder()
 	h.List(rec, newVehicleConfigRequest("42", ""))
@@ -203,7 +203,7 @@ func TestVehicleConfig_Latest_UsesNow(t *testing.T) {
 			}, nil
 		},
 	}
-	h := NewVehicleConfigHandler(fake, newTestLiveStateReader(fake))
+	h := NewHandler(fake, newTestLiveStateReader(fake))
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -276,7 +276,7 @@ func TestVehicleConfig_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewVehicleConfigHandler(fake, newTestLiveStateReader(fake))
+		h := NewHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.List(rec, newVehicleConfigRequest("42", ""))
@@ -293,7 +293,7 @@ func TestVehicleConfig_PropagatesError(t *testing.T) {
 				return nil, wantErr
 			},
 		}
-		h := NewVehicleConfigHandler(fake, newTestLiveStateReader(fake))
+		h := NewHandler(fake, newTestLiveStateReader(fake))
 
 		rec := httptest.NewRecorder()
 		h.Latest(rec, newVehicleConfigRequest("42", "/vehicle-config/latest?vehicle_id=42"))
@@ -302,4 +302,53 @@ func TestVehicleConfig_PropagatesError(t *testing.T) {
 			t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
 		}
 	})
+}
+
+// fakeStateReader / newTestLiveStateReader are duplicated from
+// internal/api/media_handler_test.go for the duration of Phase R2;
+// subpackage tests can't import parent test fixtures. The full version
+// (captured Timeline opts + fields) is required by the chart-mode
+// assertions below.
+type fakeStateReader struct {
+	stateFn    func(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error)
+	signalAtFn func(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error)
+	timelineFn func(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error)
+
+	gotTimelineOpts   signal.TimelineOptions
+	gotTimelineFields []signal.FieldMapping
+	gotTimelineCalls  int
+}
+
+func (f *fakeStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error) {
+	if f.stateFn == nil {
+		return signal.State{}, nil
+	}
+	return f.stateFn(ctx, vehicleID, at)
+}
+
+func (f *fakeStateReader) SignalAt(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error) {
+	if f.signalAtFn == nil {
+		return nil, nil
+	}
+	return f.signalAtFn(ctx, vehicleID, name, at)
+}
+
+func (f *fakeStateReader) Timeline(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error) {
+	f.gotTimelineCalls++
+	f.gotTimelineOpts = opts
+	f.gotTimelineFields = fields
+	if f.timelineFn == nil {
+		return nil, nil
+	}
+	return f.timelineFn(ctx, vehicleID, fields, from, to, opts)
+}
+
+var _ signal.StateReader = (*fakeStateReader)(nil)
+
+// newTestLiveStateReader wraps a fakeStateReader as a signal.LiveStateReader
+// suitable for /latest handler tests. The L1+L2 layer is a no-op, so the
+// handler's LiveState() call falls through to the wrapped StateReader's
+// State() — letting tests continue to drive responses via fake.stateFn.
+func newTestLiveStateReader(state signal.StateReader) signal.LiveStateReader {
+	return signal.MustNewLiveStateReader(signal.NewNoopLiveSignalStore(), state)
 }

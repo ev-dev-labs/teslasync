@@ -20,6 +20,7 @@ import (
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
+	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
 	apivehinfo "github.com/ev-dev-labs/teslasync/internal/api/vehicleinfo"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -648,7 +649,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
 	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader, liveStateReader)
 	mediaHandler := NewMediaHandler(stateReader, liveStateReader)
-	vehicleConfigHandler := NewVehicleConfigHandler(stateReader, liveStateReader)
+	vehicleConfigHandler := apivehconfig.NewHandler(stateReader, liveStateReader)
 	locationSnapshotHandler := NewLocationSnapshotHandler(stateReader, liveStateReader)
 	safetyHandler := NewSafetyHandler(stateReader, liveStateReader)
 	userPreferenceHandler := NewUserPreferenceHandler(stateReader, liveStateReader)
