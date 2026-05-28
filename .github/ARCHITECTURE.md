@@ -1605,3 +1605,172 @@ OUT OF SCOPE (explicit, see plan §9):
   features/ folder rename.
 ```
 
+
+## ADR-011: Bounded-Context Subpackages for Flat-Folder Hot-Spots
+
+```
+STATUS: PROPOSED (commit pending; R0 deliverable)
+DATE: 2026-05-28
+DECIDERS: User mandate (maximalist scope, 2026-05-28) + Copilot CLI
+RELATED: ADR-006 (Models vs Domain), ADR-007 (platform/ charter),
+         ADR-009 (handler/v1 canonical; LIFTED for Phase R, then
+         RE-APPLIED to NEW subpkgs after R2e), ADR-015 (amendment
+         in 015-amendment-ai-scope.md narrows scope for Phase R).
+FULL TEXT (canonical): docs/architecture/adr/011-bounded-context-subpackages.md
+PLAN: docs/architecture/repo-reorganization-plan.md §16 (Phase R)
+
+CONTEXT:
+  6 backend folders + 7 frontend folders exceed 30 source files in a
+  single flat package/namespace. Largest: internal/api/ (434 files,
+  one package), web/src/features/dashboard/widgets/ (121 files, one
+  dir). Flat namespaces make navigation, code review, archmetrics
+  per-subpkg rules, and parallel work all harder.
+
+DECISION:
+  Every backend folder ≥30 .go files is split into bounded-context
+  SUBPACKAGES with short idiomatic Go names (Option A — `package
+  charging`, not Option B `package chargingapi`).
+  Every frontend folder ≥30 .ts/.tsx files is split into bounded-
+  context SUBDIRS with category names. Patterns rooted at `src/...`
+  in ESLint configs (ESLint cwd is `web/`, not the repo root).
+
+  Subpackage names match across layers:
+    internal/api/charging/, internal/handler/v1/charging/,
+    internal/database/charging/, internal/app/chargingsvc/,
+    internal/domain/charging/, internal/models/charging/.
+
+ALIAS CONVENTION (MANDATORY at multi-layer-import callsites):
+  | Layer                       | Alias suffix       | Example                              |
+  |-----------------------------|--------------------|--------------------------------------|
+  | internal/api/<x>            | <x>api             | chargingapi "internal/api/charging"  |
+  | internal/handler/v1/<x>     | <x>handler         | charginghandler "..."                |
+  | internal/database/<x>       | <x>db              | chargingdb "..."                     |
+  | internal/models/<x>         | <x>model           | chargingmodel "..."                  |
+  | internal/domain/<x>         | <x>domain          | chargingdomain "..."                 |
+  | internal/app/<x>svc         | <x>svc (existing)  | chargingsvc "..." (grandfathered)    |
+  | internal/jobs/<x>           | <x>jobs            | chargingjobs "..."                   |
+  | internal/ai/tools/<x>       | <x>aitools         | chargingaitools "..."                |
+  At single-import callsites, no alias is required.
+
+PARENT-DIR MECHANICAL RULE:
+  Parent dirs (internal/api/, internal/database/, etc.) contain
+  ONLY: doc.go + composition file (router.go, registry.go) +
+  middleware/shared-helper subpackages (e.g. internal/api/httpx,
+  internal/api/apiparams, internal/api/apitest) + the resource
+  subpackages. NO handler/repo/model files at the parent level.
+  Enforced by archmetrics: parent glob (*.go excluding subdirs)
+  MUST match only doc.go|router.go|<composition>.go.
+
+RESOURCE-PACKAGE PUBLIC API:
+  Each resource pkg exposes a narrow constructor + Mount(r
+  chi.Router, deps Deps) (or RegisterRoutes). Parent router.go
+  imports resource pkgs and calls Mount — it does NOT reach into
+  handler internals. Same Registry pattern for database.
+
+OPTION B GRANDFATHERED:
+  Existing suffixed packages (chargingsvc, tripsvc, etc.) are NOT
+  renamed. Greenfield → Option A.
+
+REPORT-MODE (TODAY):
+  tools/archmetrics/main.go has a `plannedSubpackages` table; the
+  generated baseline.md ends with a "Phase R progress" section
+  showing flat-parent file counts + existing vs missing planned
+  subpkgs. Never fails the gate — Phase R13 flips to enforced.
+  web/eslint.config.js has matching report-mode boundaries
+  descriptors with capture groups (domain, purpose, feature,
+  kind). Rules permissive (default: 'allow') until R13.
+
+BARREL-ONLY SCOPE (per rubber-duck #14):
+  Strict barrel rule (no-private at error) applies to
+  components/* categories ONLY. lib/ and hooks/ permit direct
+  subpath imports like `@/lib/format/date` to preserve
+  tree-shaking.
+
+CONSEQUENCES:
+  (+) Smaller packages → better godoc, faster IDE indexing,
+      clearer ownership; archmetrics expresses per-subpkg rules.
+  (+) ESLint boundaries enforces no-cross-subpkg-without-barrel
+      for components/*.
+  (-) Mass `git mv` commits make `git blame` noisy → mitigated
+      via `.git-blame-ignore-revs` (every R-phase move commit
+      added).
+  (-) Some subpkg names collide with stdlib (api, admin) →
+      alias at import site per table above.
+  (-) Phase R adds 4-8 weeks (user accepted).
+  Trade-off accepted: short names across api/database/models/
+  domain layers are more collision-prone than the Kubernetes-
+  style precedent. Idiomatic at DEFINITION site + deterministic
+  aliases at BOUNDARY/composition sites.
+
+ROLLBACK:
+  Pure file-moves + import-path updates. Single `git revert
+  <SHA-range>` per cluster commit. No schema, route, or contract
+  change. Phase R0 publishes coordination note
+  (docs/architecture/migration/phase-r-coordination-note.md)
+  with rebase guidance for any concurrent main work.
+```
+
+## ADR-015 AMENDMENT: AI Subsystem In-Scope for Repo Reorganization (Phase R)
+
+```
+STATUS: AMENDMENT to ADR-015 (AI-Off Contract)
+DATE: 2026-05-28
+DECIDERS: User mandate ("we need to cover whole app", maximalist
+          scope selection 2026-05-28) + Copilot CLI
+FULL TEXT (canonical): docs/architecture/adr/015-amendment-ai-scope.md
+PLAN: docs/architecture/repo-reorganization-plan.md §16 (Phase R)
+RELATED: ADR-011 (Bounded-Context Subpackages), ADR-009.
+
+DECISION:
+  The ADR-015 carve-out that excluded the AI subsystem from
+  reorg-scope work is LIFTED FOR PHASE R ONLY.
+    - internal/ai/tools/ (109 files) restructures into bounded-
+      context subpkgs per ADR-011 (R6).
+    - web/src/components/ai/ (61 files) restructures into per-
+      AI-feature subdirs per ADR-011 (R12).
+  Scope is FILE-MOVE-ONLY: no AI logic, no prompts, no
+  contracts, no providers, no runtime behavior changes.
+
+IN SCOPE OF THIS AMENDMENT:
+  - Move existing .go files under internal/ai/tools/ into
+    bounded-context subpkgs (nl/, alert/, charge/, drive/,
+    auto/, voice/, route/, safety/, ...).
+  - Move existing .tsx files under web/src/components/ai/
+    into per-AI-feature subdirs.
+  - Update package declarations + import paths only.
+  - Add doc.go to each new subpkg with `// Layer:` line.
+
+NOT IN SCOPE (still ADR-015 owned, UNCHANGED):
+  - AI feature-flag enforcement (`withAiFeature` HOC + ESLint
+    rule `teslasync/ai-component-must-be-wrapped`).
+  - AI-off-by-default contract.
+  - ANY change to AI runtime behavior, prompts, providers, or
+    contracts.
+  - The `internal/ai/` PROVIDER subsystem (only internal/ai/
+    tools/ is in scope).
+  - The AI eval workflow (.github/workflows/ai-eval.yml).
+
+MANDATORY PHASE R GATES FOR AI FILES (R2d + R12):
+  1. AI guard preservation: grep verify EVERY /api/v1/ai/*
+     route still wraps through sanctioned AI guard; mount
+     chain unchanged.
+  2. `make ai-vet` PASS at every commit touching internal/ai/
+     tools/ OR web/src/components/ai/.
+  3. ai-eval workflow PASS on the cluster commit and on the
+     subsequent verify-full gate.
+  4. The `teslasync/ai-component-must-be-wrapped` ESLint rule
+     remains at ERROR for every AI surface file regardless of
+     subdir.
+
+ROLLBACK:
+  Pure file-moves + import-path updates. Single `git revert
+  <SHA-range>` per cluster commit. If ANY of the four gates
+  fail, REVERT the offending commit immediately — never patch
+  forward.
+
+SUNSET:
+  This amendment expires when Phase R completes (R14 baseline
+  committed). After Phase R, the ADR-015 contract resumes its
+  original wording: AI subsystem changes require explicit
+  ADR-015 amendment.
+```
