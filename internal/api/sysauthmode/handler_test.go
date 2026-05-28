@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 57 — SystemAuthModeHandler unit tests.
+// Phase-46 / Prompt 57 — Handler unit tests.
 //
 // Covers:
 //
@@ -16,7 +16,7 @@
 //   - The endpoint always 200s — there is no auth-failure path here,
 //     because the contract endpoint MUST stay reachable even when
 //     downstream auth is broken.
-package api
+package sysauthmode
 
 import (
 	"encoding/json"
@@ -26,7 +26,7 @@ import (
 )
 
 func TestSystemAuthMode_OpenMode(t *testing.T) {
-	h := NewSystemAuthModeHandler("", "")
+	h := NewHandler("", "")
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/auth-mode", nil)
@@ -64,7 +64,7 @@ func TestSystemAuthMode_OpenMode(t *testing.T) {
 }
 
 func TestSystemAuthMode_ForwardAuthMissingHeader(t *testing.T) {
-	h := NewSystemAuthModeHandler("X-Forwarded-User", "")
+	h := NewHandler("X-Forwarded-User", "")
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/auth-mode", nil)
@@ -93,7 +93,7 @@ func TestSystemAuthMode_ForwardAuthMissingHeader(t *testing.T) {
 }
 
 func TestSystemAuthMode_ForwardAuthHeaderPresent(t *testing.T) {
-	h := NewSystemAuthModeHandler("X-Forwarded-User", "authentik")
+	h := NewHandler("X-Forwarded-User", "authentik")
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/auth-mode", nil)
@@ -125,7 +125,7 @@ func TestSystemAuthMode_ForwardAuthHeaderPresent(t *testing.T) {
 }
 
 func TestSystemAuthMode_TrimsConstructorInputs(t *testing.T) {
-	h := NewSystemAuthModeHandler("  X-Forwarded-User\n", "  authentik\t")
+	h := NewHandler("  X-Forwarded-User\n", "  authentik\t")
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/auth-mode", nil)
@@ -159,7 +159,7 @@ func TestSystemAuthMode_AlwaysReturns200(t *testing.T) {
 		{"forward-auth + header", "X-Forwarded-User", true},
 	} {
 		t.Run(mode.name, func(t *testing.T) {
-			h := NewSystemAuthModeHandler(mode.hdr, "")
+			h := NewHandler(mode.hdr, "")
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/system/auth-mode", nil)
 			if mode.setOn {

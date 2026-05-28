@@ -45,6 +45,7 @@ import (
 	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
 	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
+	apiauthmode "github.com/ev-dev-labs/teslasync/internal/api/sysauthmode"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
 	apitels "github.com/ev-dev-labs/teslasync/internal/api/teslaenergylivestatus"
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
@@ -433,8 +434,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// open mode AND when the upstream proxy strips the header on a
 	// specific request.
 	authSubjectsRepo := dbauth.NewAuthSubjectsRepo(db)
-	subjectRecorder := tsauth.NewSubjectRecorder(authSubjectsStoreAdapter{repo: authSubjectsRepo}, tsauth.SubjectRecorderOptions{})
-	systemAuthModeHandler := NewSystemAuthModeHandler(cfg.Auth.ForwardAuthHeader, cfg.Auth.ProviderHint)
+	subjectRecorder := tsauth.NewSubjectRecorder(apiauthmode.NewAuthSubjectsStore(authSubjectsRepo), tsauth.SubjectRecorderOptions{})
+	systemAuthModeHandler := apiauthmode.NewHandler(cfg.Auth.ForwardAuthHeader, cfg.Auth.ProviderHint)
 	_ = authSubjectsRepo // referenced via subjectRecorder; held for future per-user tables.
 
 	// Phase-46 / Prompt 34 — Live log tail. Build a process-wide

@@ -25,7 +25,7 @@
 //
 // Provider-agnostic: TeslaSync never speaks to the upstream IdP's
 // admin API. The provider hint is operator-supplied free text.
-package api
+package sysauthmode
 
 import (
 	"context"
@@ -33,6 +33,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
@@ -73,7 +74,7 @@ type AuthModeCapabilities struct {
 	RBAC           bool `json:"rbac"`
 }
 
-// SystemAuthModeHandler answers GET /api/v1/system/auth-mode. Stateless;
+// Handler answers GET /api/v1/system/auth-mode. Stateless;
 // a single handler instance is shared by the router.
 //
 // headerName is the trimmed FORWARD_AUTH_HEADER value (typically
@@ -82,17 +83,16 @@ type AuthModeCapabilities struct {
 // TESLASYNC_AUTH_PROVIDER_HINT) — empty omits the field from the
 // response so the SPA falls back to a generic "your auth provider"
 // copy.
-type SystemAuthModeHandler struct {
+type Handler struct {
 	headerName   string
 	providerHint string
 }
 
-// NewSystemAuthModeHandler builds the handler with the supplied
-// configuration snapshot. Both values are trimmed of surrounding
-// whitespace so a value pasted with a stray newline still produces
-// the correct semantics.
-func NewSystemAuthModeHandler(headerName, providerHint string) *SystemAuthModeHandler {
-	return &SystemAuthModeHandler{
+// NewHandler builds the handler with the supplied configuration snapshot.
+// Both values are trimmed of surrounding whitespace so a value pasted with a
+// stray newline still produces the correct semantics.
+func NewHandler(headerName, providerHint string) *Handler {
+	return &Handler{
 		headerName:   strings.TrimSpace(headerName),
 		providerHint: strings.TrimSpace(providerHint),
 	}
@@ -101,7 +101,7 @@ func NewSystemAuthModeHandler(headerName, providerHint string) *SystemAuthModeHa
 // ServeHTTP implements http.Handler. Always 200 — the endpoint is the
 // SPA's source of truth for "what mode am I in" and a non-200 here
 // would force every consumer to invent its own fallback.
-func (h *SystemAuthModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp := AuthModeResponse{
 		ProviderHint: h.providerHint,
 		Capabilities: AuthModeCapabilities{},
@@ -114,7 +114,7 @@ func (h *SystemAuthModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 		// rather than spelling each field out so a future addition
 		// (capability X added to the interface) defaults to off in
 		// open mode without a code change.
-		writeJSON(w, http.StatusOK, resp)
+		httpx.WriteJSON(w, http.StatusOK, resp)
 		return
 	}
 
@@ -132,7 +132,7 @@ func (h *SystemAuthModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 
 	resp.Capabilities = forwardAuthCapabilities()
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // forwardAuthCapabilities returns the canonical capability matrix
@@ -161,13 +161,18 @@ func forwardAuthCapabilities() AuthModeCapabilities {
 // edited display_name back; the recorder only needs the side-effect
 // + error so we drop the row here.
 //
-// Lives in this file (rather than router.go) because (a) the
-// SystemAuthModeHandler is the canonical Phase-46/57 module the rest
-// of the auth-mode contract hangs off and (b) keeping the adapter
-// next to the handler makes the contract's complete server surface
-// reviewable in one file.
+// Lives in this package (rather than router.go) because (a) the
+// auth-mode handler is the canonical Phase-46/57 module the rest of
+// the auth-mode contract hangs off and (b) keeping the adapter next
+// to the handler makes the contract's complete server surface
+// reviewable in one package.
 type authSubjectsStoreAdapter struct {
 	repo *dbauth.AuthSubjectsRepo
+}
+
+// NewAuthSubjectsStore adapts AuthSubjectsRepo to the auth subject recorder store interface.
+func NewAuthSubjectsStore(repo *dbauth.AuthSubjectsRepo) tsauth.SubjectStore {
+	return authSubjectsStoreAdapter{repo: repo}
 }
 
 // Upsert satisfies tsauth.SubjectStore. Errors propagate to the
