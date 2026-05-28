@@ -49,3 +49,6 @@ ef3423f9a77a0d166ac9349b5ea6c8bce520e003
 
 # refactor(R5.8): extract internal/models/settings subpackage
 4b7fb8fb81a7c44a3cf8b41e7af8c86e59026a8c
+
+# refactor(R5.9): extract internal/models/notification subpackage
+a63a7ae3bc0fe8567a0efd8e1cca0a3ee6d481a9
