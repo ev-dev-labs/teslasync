@@ -122,3 +122,6 @@ ceb0b71952bd2147f50451f78de61f9eb8e292db  # R6.25: carve ai/tools/coaching (less
 
 # R6.29: carve speed_profile into internal/ai/tools/speed/ (mass rename, no behaviour change)
 dbf849e8fd951e8bfdea276d07a4ac8ca37474bd
+
+# R6.30: carve automation_builder into internal/ai/tools/automation/ (mass rename, no behaviour change)
+d523ce244a91efd56f2576a55f512cf6a3581687
