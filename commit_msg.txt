@@ -1,36 +1,58 @@
-refactor(R4.15): carve internal/database/ai (call_log + chat_continuations)
+refactor(R4.16): carve internal/database/export (jobs + scheduled + snapshots)
 
-Move AI-subsystem persistence into its own bounded-context subpkg per
-ADR-011, continuing the internal/database aggregate-root restructure.
+Move export-aggregate persistence into its own bounded-context subpkg
+per ADR-011.
 
-Files (4 source + 0 helpers; 5 caller files swept):
-  internal/database/ai_call_log_repo.go            -> internal/database/ai/call_log_repo.go
-  internal/database/ai_call_log_repo_test.go       -> internal/database/ai/call_log_repo_test.go
-  internal/database/ai_chat_continuations_repo.go  -> internal/database/ai/chat_continuations_repo.go
-  internal/database/ai_chat_continuations_repo_test.go -> internal/database/ai/chat_continuations_repo_test.go
-  internal/database/ai/doc.go                      (NEW, // Layer: adapter)
+Files (4 source + 1 test; 15 caller files swept):
+  internal/database/export_repo.go              -> internal/database/export/repo.go
+  internal/database/export_job_repo.go          -> internal/database/export/job_repo.go
+  internal/database/export_job_repo_bulk.go     -> internal/database/export/job_repo_bulk.go
+  internal/database/scheduled_export_repo.go    -> internal/database/export/scheduled_repo.go
+  internal/database/scheduled_export_repo_test.go -> internal/database/export/scheduled_repo_test.go
+  internal/database/export/doc.go               (NEW, // Layer: adapter)
 
-Symbols promoted to subpkg (alias idb per ADR-011):
-  AICallLogRepo, NewAICallLogRepo, AICallFeatureRow, AICallRecentRow,
-  AICallTodayAggregate, AICallRecentMax, AIRedactionBypassRow,
-  ErrAICallLogInvalidLimit, AIChatContinuationsRepo,
-  NewAIChatContinuationsRepo, NewAIChatContinuationsRepoFor,
-  ContinuationRow, DefaultContinuationTTL, ErrContinuationNotFound.
+Symbols promoted (alias xportdb per ADR-011 — mandatory because
+internal/export runtime package + cmd/export-worker also import the
+database layer):
+  ExportJobRepo, NewExportJobRepo, ExportTableRow, ExportTableSnapshot,
+  FetchTableSnapshot, FetchTableSnapshotForVehicle, CountTableRows,
+  AllowedAccountTables, BulkDeleteByIDs, FilterExistingStringIDs,
+  ScheduledExportRepo, NewScheduledExportRepo, ScheduledExportRow,
+  ScheduledExportInput, ScheduledExportRunOutcome,
+  ScheduledExportDelivery, ScheduledExportDeliveryKind,
+  CanonicalRangeWindow, ComputeNextRun, NormalizeScheduledExportInput,
+  ParseRangeWindow, ValidateScheduledExportCron,
+  ValidateScheduledExportDelivery, ValidateScheduledExportFormat,
+  ValidateScheduledExportType,
+  ErrScheduledExportNotFound, ErrScheduledExportInvalidType,
+  ErrScheduledExportInvalidFormat, ErrScheduledExportInvalidCron,
+  ErrScheduledExportInvalidDeliv, ErrScheduledExportInvalidWindow,
+  ErrScheduledExportEmptyOwner, ErrScheduledExportEmptyName,
+  ErrScheduledExportNotConfigured,
+  DeliveryKindDownload, DeliveryKindEmail, DeliveryKinds,
+  DeliveryKindWebhook.
 
-Callers updated (database.X -> idb.X + import alias):
-  internal/ai/limit/cost.go
-  internal/api/{ai_admin_handler,ai_usage_handler,ai_usage_handler_test,router}.go
+Callers updated (database.X -> xportdb.X + import alias):
+  cmd/export-worker/main.go
+  internal/api/{export_handler,exports_bulk_handler,router,
+                scheduled_exports_handler,scheduled_exports_handler_test}.go
+  internal/automation/action/<file>.go
+  internal/export/{account,account_test,scheduler,scheduler_test,types,worker}.go
 
 No helper deps (no buildPartialUpdate / NullIfEmpty / ptr helpers).
-No cycles (verified via grep against parent peers).
-ADR-015 contract unaffected (file-move-only; adapter-layer persistence,
-not runtime AI execution).
+No cycles verified via grep.
 
-internal/database allowlist ratchet: 52 -> 50 src files.
+LESSON 33 (this cluster): symbol discovery via top-level type/func/var
+regex misses Err* sentinels and untyped consts defined inside
+ar ( ... ) / const ( ... ) blocks. After the first build pass,
+grep the error messages for database\.\w+ to find the leftover refs.
+For export: Err* and DeliveryKind* required a second sweep.
+
+internal/database allowlist ratchet: 50 -> 46 src files.
 archmetrics + baseline regenerated.
 
-Carved subpkgs so far (17): achievement, sharing, admin, gdpr,
+Carved subpkgs so far (18): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
-audit, charging, drive, trip, energy, ai.
+audit, charging, drive, trip, energy, ai, export.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T16:09:40Z, Go go1.26.1, commit e2cfb390edfe6bcbb7f80b78689143244da7adb0_
+_Generated 2026-05-28T16:14:45Z, Go go1.26.1, commit 7e91af7b20b9dce62bf6c881df0168dae6298558_
 
 ## Summary
 
-- Packages: 278
+- Packages: 279
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374471
+- Total non-blank LOC under cmd/+internal/+tools/: 374511
 
 ## cmd/* main.go LOC
 
@@ -18,7 +18,7 @@ _Generated 2026-05-28T16:09:40Z, Go go1.26.1, commit e2cfb390edfe6bcbb7f80b78689
 | cmd/automation-worker/main.go | 353 |
 | cmd/backup-verify/main.go | 96 |
 | cmd/chaos-runner/main.go | 144 |
-| cmd/export-worker/main.go | 251 |
+| cmd/export-worker/main.go | 252 |
 | cmd/fleet-config-validator/main.go | 327 |
 | cmd/metric-coverage-audit/main.go | 126 |
 | cmd/notification-worker/main.go | 521 |
@@ -45,7 +45,7 @@ _Generated 2026-05-28T16:09:40Z, Go go1.26.1, commit e2cfb390edfe6bcbb7f80b78689
 | cmd/automation-worker | 2 | 0 | 357 | yes | cmd-internal |
 | cmd/backup-verify | 2 | 0 | 110 | yes | cmd-internal |
 | cmd/chaos-runner | 2 | 0 | 156 | yes | cmd-internal |
-| cmd/export-worker | 2 | 0 | 255 | yes | cmd-internal |
+| cmd/export-worker | 2 | 0 | 256 | yes | cmd-internal |
 | cmd/fleet-config-validator | 2 | 1 | 491 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
 | cmd/notification-worker | 2 | 0 | 525 | yes | cmd-internal |
@@ -170,7 +170,7 @@ _Generated 2026-05-28T16:09:40Z, Go go1.26.1, commit e2cfb390edfe6bcbb7f80b78689
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126624 | yes | handler |
+| internal/api | 271 | 163 | 126626 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1841 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
@@ -197,7 +197,7 @@ _Generated 2026-05-28T16:09:40Z, Go go1.26.1, commit e2cfb390edfe6bcbb7f80b78689
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 50 | 18 | 12315 | yes | platform |
+| internal/database | 46 | 17 | 10948 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes | adapter |
 | internal/database/admin | 6 | 0 | 873 | yes | adapter |
 | internal/database/ai | 3 | 2 | 928 | yes | adapter |
@@ -209,6 +209,7 @@ _Generated 2026-05-28T16:09:40Z, Go go1.26.1, commit e2cfb390edfe6bcbb7f80b78689
 | internal/database/charging | 3 | 1 | 401 | yes | adapter |
 | internal/database/drive | 5 | 4 | 2022 | yes | adapter |
 | internal/database/energy | 5 | 0 | 623 | yes | adapter |
+| internal/database/export | 5 | 1 | 1403 | yes | adapter |
 | internal/database/gdpr | 2 | 0 | 206 | yes | adapter |
 | internal/database/notification | 5 | 1 | 1950 | yes | adapter |
 | internal/database/observability | 7 | 0 | 1396 | yes | adapter |
@@ -226,7 +227,7 @@ _Generated 2026-05-28T16:09:40Z, Go go1.26.1, commit e2cfb390edfe6bcbb7f80b78689
 | internal/domain/vehicle | 5 | 1 | 350 | yes | domain |
 | internal/enums | 5 | 1 | 304 | yes | platform |
 | internal/events | 2 | 1 | 145 | yes | platform |
-| internal/export | 9 | 3 | 3063 | yes | platform |
+| internal/export | 9 | 3 | 3064 | yes | platform |
 | internal/export/gdpr | 2 | 0 | 254 | yes | platform |
 | internal/flags | 2 | 1 | 556 | yes | platform |
 | internal/fsm | 11 | 3 | 2507 | yes | platform |
@@ -332,7 +333,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 50 / 18 | 22 | 11 | 11 |
+| `internal/database` | R4 | 143 | 46 / 17 | 22 | 12 | 10 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 
@@ -407,11 +408,11 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/database/charging`
 - `internal/database/drive`
 - `internal/database/energy`
+- `internal/database/export`
 - `internal/database/notification`
 
 **Planned but not yet on disk:**
 - `internal/database/dashboard`
-- `internal/database/export`
 - `internal/database/feedback`
 - `internal/database/geo`
 - `internal/database/ingest`

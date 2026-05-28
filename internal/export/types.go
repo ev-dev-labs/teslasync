@@ -34,7 +34,7 @@ const (
 	TypeImportDrives   JobType = "import_drives"
 	TypeImportCharging JobType = "import_charging"
 	// TypeAccount is a GDPR-style "Download my data" export — produces a ZIP
-	// containing one CSV per table in database.AllowedAccountTables plus a
+	// containing one CSV per table in exportdb.AllowedAccountTables plus a
 	// manifest.json. Phase 40 / Prompt 31.
 	TypeAccount JobType = "account"
 )

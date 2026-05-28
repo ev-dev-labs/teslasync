@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:09:39Z",
+  "generated_at": "2026-05-28T16:14:43Z",
   "go_version": "go1.26.1",
-  "commit_sha": "e2cfb390edfe6bcbb7f80b78689143244da7adb0",
+  "commit_sha": "7e91af7b20b9dce62bf6c881df0168dae6298558",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -102,7 +102,7 @@
       "path": "cmd/export-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 255,
+      "loc": 256,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -110,6 +110,7 @@
         "internal/config",
         "internal/database",
         "internal/database/backup",
+        "internal/database/export",
         "internal/export",
         "internal/models/backup",
         "internal/resilience",
@@ -2507,7 +2508,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126624,
+      "loc": 126626,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2640,6 +2641,7 @@
         "internal/database/charging",
         "internal/database/drive",
         "internal/database/energy",
+        "internal/database/export",
         "internal/database/gdpr",
         "internal/database/notification",
         "internal/database/observability",
@@ -3700,9 +3702,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 50,
-      "test_files": 18,
-      "loc": 12315,
+      "go_files": 46,
+      "test_files": 17,
+      "loc": 10948,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3710,7 +3712,6 @@
         "internal/metrics",
         "internal/models",
         "internal/models/alert",
-        "internal/models/export",
         "internal/models/system",
         "internal/models/telemetry",
         "internal/models/tesla",
@@ -3727,9 +3728,6 @@
         "database_test.go",
         "database_tracing_test.go",
         "doc.go",
-        "export_job_repo.go",
-        "export_job_repo_bulk.go",
-        "export_repo.go",
         "from_map.go",
         "geofence_repo.go",
         "geofence_repo_bulk.go",
@@ -3749,8 +3747,6 @@
         "raw_telemetry_repo.go",
         "retry.go",
         "retry_test.go",
-        "scheduled_export_repo.go",
-        "scheduled_export_repo_test.go",
         "schema_test.go",
         "settings_repo.go",
         "settings_reset.go",
@@ -4017,6 +4013,26 @@
         "tesla_history_repo.go",
         "tesla_live_status_repo.go",
         "tesla_site_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/export",
+      "go_files": 5,
+      "test_files": 1,
+      "loc": 1403,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/models/export"
+      ],
+      "files": [
+        "doc.go",
+        "job_repo.go",
+        "job_repo_bulk.go",
+        "repo.go",
+        "scheduled_repo.go",
+        "scheduled_repo_test.go"
       ]
     },
     {
@@ -4325,13 +4341,14 @@
       "path": "internal/export",
       "go_files": 9,
       "test_files": 3,
-      "loc": 3063,
+      "loc": 3064,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
         "internal/database/charging",
         "internal/database/drive",
+        "internal/database/export",
         "internal/database/trip",
         "internal/models/charging",
         "internal/models/drive",
@@ -6036,7 +6053,7 @@
     "cmd/automation-worker": 353,
     "cmd/backup-verify": 96,
     "cmd/chaos-runner": 144,
-    "cmd/export-worker": 251,
+    "cmd/export-worker": 252,
     "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
     "cmd/notification-worker": 521,
@@ -7096,9 +7113,6 @@
       "circuit_breaker.go",
       "database.go",
       "doc.go",
-      "export_job_repo.go",
-      "export_job_repo_bulk.go",
-      "export_repo.go",
       "from_map.go",
       "geofence_repo.go",
       "geofence_repo_bulk.go",
@@ -7113,7 +7127,6 @@
       "quiet_hours_repo.go",
       "raw_telemetry_repo.go",
       "retry.go",
-      "scheduled_export_repo.go",
       "settings_repo.go",
       "settings_reset.go",
       "settings_serializer.go",
@@ -7217,6 +7230,13 @@
       "tesla_history_repo.go",
       "tesla_live_status_repo.go",
       "tesla_site_repo.go"
+    ],
+    "internal/database/export": [
+      "doc.go",
+      "job_repo.go",
+      "job_repo_bulk.go",
+      "repo.go",
+      "scheduled_repo.go"
     ],
     "internal/database/gdpr": [
       "artifact_repo.go",
@@ -7960,8 +7980,8 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 50,
-      "flat_parent_test_files": 18,
+      "flat_parent_go_files": 46,
+      "flat_parent_test_files": 17,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
@@ -7974,11 +7994,11 @@
         "charging",
         "drive",
         "energy",
+        "export",
         "notification"
       ],
       "missing_subpkgs": [
         "dashboard",
-        "export",
         "feedback",
         "geo",
         "ingest",

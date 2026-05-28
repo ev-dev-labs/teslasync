@@ -13,7 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
 
 // processAccount produces a GDPR-style ZIP export with one CSV per allowed
@@ -68,20 +68,20 @@ func (p *Processor) processAccount(ctx context.Context, req *JobRequest) (*Proce
 	zw := zip.NewWriter(&buf)
 
 	totalRecords := 0
-	for _, table := range database.AllowedAccountTables {
+	for _, table := range exportdb.AllowedAccountTables {
 		if err := ctx.Err(); err != nil {
 			_ = zw.Close()
 			return nil, err
 		}
 
 		var (
-			snap *database.ExportTableSnapshot
+			snap *exportdb.ExportTableSnapshot
 			err  error
 		)
 		if req.VehicleID != nil {
-			snap, err = database.FetchTableSnapshotForVehicle(ctx, p.db, table, *req.VehicleID, MaxAccountRowsPerTable)
+			snap, err = exportdb.FetchTableSnapshotForVehicle(ctx, p.db, table, *req.VehicleID, MaxAccountRowsPerTable)
 		} else {
-			snap, err = database.FetchTableSnapshot(ctx, p.db, table, MaxAccountRowsPerTable)
+			snap, err = exportdb.FetchTableSnapshot(ctx, p.db, table, MaxAccountRowsPerTable)
 		}
 		if err != nil {
 			// Don't abort the whole archive — log and skip this table. The
@@ -161,7 +161,7 @@ func (p *Processor) processAccount(ctx context.Context, req *JobRequest) (*Proce
 // allowedColumns nil/empty preserves byte-for-byte parity with the
 // pre-Phase-46/62 caller — sorted alphabetic column order, every column
 // emitted.
-func snapshotToCSV(snap *database.ExportTableSnapshot, startDate, endDate *time.Time, allowedColumns []string) ([]byte, error) {
+func snapshotToCSV(snap *exportdb.ExportTableSnapshot, startDate, endDate *time.Time, allowedColumns []string) ([]byte, error) {
 	if snap == nil {
 		return nil, fmt.Errorf("snapshotToCSV: nil snapshot")
 	}

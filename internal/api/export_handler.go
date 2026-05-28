@@ -19,6 +19,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 	"github.com/ev-dev-labs/teslasync/internal/export"
 )
 
@@ -26,9 +27,9 @@ import (
 type ExportHandler struct {
 	db         *database.DB
 	mqttClient pahomqtt.Client
-	jobRepo    *database.ExportJobRepo
+	jobRepo    *exportdb.ExportJobRepo
 	// bulkOverride lets tests substitute the bulk store without standing
-	// up a real *database.ExportJobRepo. Always nil in production.
+	// up a real *exportdb.ExportJobRepo. Always nil in production.
 	bulkOverride exportBulkStore
 }
 
@@ -37,7 +38,7 @@ func NewExportJobHandler(db *database.DB, mqttClient pahomqtt.Client) *ExportHan
 	return &ExportHandler{
 		db:         db,
 		mqttClient: mqttClient,
-		jobRepo:    database.NewExportJobRepo(db),
+		jobRepo:    exportdb.NewExportJobRepo(db),
 	}
 }
 

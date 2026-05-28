@@ -17,7 +17,7 @@ import (
 const MaxBulkExportIDs = 200
 
 // exportBulkStore is the narrow surface needed by the export bulk endpoint;
-// implemented by *database.ExportJobRepo and substitutable in tests.
+// implemented by *exportdb.ExportJobRepo and substitutable in tests.
 type exportBulkStore interface {
 	FilterExistingStringIDs(ctx context.Context, ids []string) ([]string, error)
 	BulkDeleteByIDs(ctx context.Context, ids []string) (int64, error)

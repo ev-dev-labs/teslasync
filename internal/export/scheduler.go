@@ -53,18 +53,18 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
 
 // DefaultSchedulerInterval is the production tick cadence. Tests
 // pass shorter intervals through SchedulerOptions.
 const DefaultSchedulerInterval = 60 * time.Second
 
-// SchedulerStore is the slice of *database.ScheduledExportRepo the
+// SchedulerStore is the slice of *exportdb.ScheduledExportRepo the
 // scheduler needs. Production wires the concrete repo; tests stub.
 type SchedulerStore interface {
-	DueBefore(ctx context.Context, cutoff time.Time, limit int) ([]database.ScheduledExportRow, error)
-	MarkRunResult(ctx context.Context, id int64, outcome database.ScheduledExportRunOutcome) error
+	DueBefore(ctx context.Context, cutoff time.Time, limit int) ([]exportdb.ScheduledExportRow, error)
+	MarkRunResult(ctx context.Context, id int64, outcome exportdb.ScheduledExportRunOutcome) error
 }
 
 // SchedulerProcessor is the slice of *Processor the scheduler uses.
@@ -80,7 +80,7 @@ type SchedulerProcessor interface {
 // they should NOT block the scheduler tick. Use the ctx for
 // cancellation.
 type SchedulerDelivery interface {
-	Deliver(ctx context.Context, row database.ScheduledExportRow, result *ProcessResult) error
+	Deliver(ctx context.Context, row exportdb.ScheduledExportRow, result *ProcessResult) error
 }
 
 // SchedulerOptions tunes the scheduler. Zero-valued fields fall
@@ -198,7 +198,7 @@ func (s *Scheduler) Tick(ctx context.Context) int {
 // last_status='failed' + last_error; a panic is recovered and
 // converted to a failure so a poison-pill row can never crash the
 // scheduler.
-func (s *Scheduler) processOne(ctx context.Context, row database.ScheduledExportRow) {
+func (s *Scheduler) processOne(ctx context.Context, row exportdb.ScheduledExportRow) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			log.Error().
@@ -245,10 +245,10 @@ const (
 	scheduledStatusFailed = "failed"
 )
 
-func (s *Scheduler) recordOutcome(ctx context.Context, row database.ScheduledExportRow, status, errMsg string) {
+func (s *Scheduler) recordOutcome(ctx context.Context, row exportdb.ScheduledExportRow, status, errMsg string) {
 	now := s.opts.Now()
 	var nextPtr *time.Time
-	if next, nextErr := database.ComputeNextRun(row.ScheduleCron, now); nextErr == nil {
+	if next, nextErr := exportdb.ComputeNextRun(row.ScheduleCron, now); nextErr == nil {
 		n := next
 		nextPtr = &n
 	} else {
@@ -257,7 +257,7 @@ func (s *Scheduler) recordOutcome(ctx context.Context, row database.ScheduledExp
 		// next_run_at will simply stay unchanged.
 		log.Warn().Err(nextErr).Int64("schedule_id", row.ID).Msg("export scheduler: ComputeNextRun failed")
 	}
-	outcome := database.ScheduledExportRunOutcome{
+	outcome := exportdb.ScheduledExportRunOutcome{
 		RanAt:     now,
 		Status:    status,
 		Err:       errMsg,
@@ -271,8 +271,8 @@ func (s *Scheduler) recordOutcome(ctx context.Context, row database.ScheduledExp
 // buildJobRequest assembles a one-shot export job description from
 // a schedule row. The relative range_window is anchored at now so
 // every run produces a fresh window (e.g. "last 7d").
-func buildJobRequest(row database.ScheduledExportRow, now time.Time) (*JobRequest, error) {
-	window, err := database.ParseRangeWindow(row.RangeWindow)
+func buildJobRequest(row exportdb.ScheduledExportRow, now time.Time) (*JobRequest, error) {
+	window, err := exportdb.ParseRangeWindow(row.RangeWindow)
 	if err != nil {
 		return nil, fmt.Errorf("range_window: %w", err)
 	}
@@ -298,7 +298,7 @@ func buildJobRequest(row database.ScheduledExportRow, now time.Time) (*JobReques
 // wired (download-only mode).
 type noopDelivery struct{}
 
-func (noopDelivery) Deliver(_ context.Context, _ database.ScheduledExportRow, _ *ProcessResult) error {
+func (noopDelivery) Deliver(_ context.Context, _ exportdb.ScheduledExportRow, _ *ProcessResult) error {
 	return nil
 }
 
@@ -309,7 +309,7 @@ type LogDelivery struct{}
 
 // Deliver records the schedule + size and returns nil. Production
 // integrations should replace this with real transports.
-func (LogDelivery) Deliver(_ context.Context, row database.ScheduledExportRow, result *ProcessResult) error {
+func (LogDelivery) Deliver(_ context.Context, row exportdb.ScheduledExportRow, result *ProcessResult) error {
 	size := 0
 	records := 0
 	if result != nil {

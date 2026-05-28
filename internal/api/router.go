@@ -23,6 +23,7 @@ import (
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
@@ -468,7 +469,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// every read/write — the handler NEVER trusts owner_subject in the
 	// request body. The repo's per-row UPDATE/DELETE statements scope
 	// by (id, owner_subject) so cross-user mutations collapse to 404.
-	scheduledExportRepo := database.NewScheduledExportRepo(db)
+	scheduledExportRepo := exportdb.NewScheduledExportRepo(db)
 	scheduledExportsHandler := NewScheduledExportsHandler(scheduledExportRepo, cfg.Auth.ForwardAuthHeader, nil)
 	// Phase-46 / Prompt 43 — per-vehicle settings layer.
 	//

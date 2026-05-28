@@ -1,19 +1,20 @@
-package database
+package export
 
 import (
 	"context"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	exportmodel "github.com/ev-dev-labs/teslasync/internal/models/export"
 )
 
 // ExportJobRepo provides data access for the export_jobs table.
 type ExportJobRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewExportJobRepo creates a new ExportJobRepo.
-func NewExportJobRepo(db *DB) *ExportJobRepo {
+func NewExportJobRepo(db *database.DB) *ExportJobRepo {
 	return &ExportJobRepo{db: db}
 }
 

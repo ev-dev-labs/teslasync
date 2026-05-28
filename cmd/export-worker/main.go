@@ -22,6 +22,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbbackup "github.com/ev-dev-labs/teslasync/internal/database/backup"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 	"github.com/ev-dev-labs/teslasync/internal/export"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -123,7 +124,7 @@ func main() {
 	}()
 
 	// Periodic cleanup of old export jobs (every 6 hours, remove jobs older than 7 days)
-	exportJobRepo := database.NewExportJobRepo(db)
+	exportJobRepo := exportdb.NewExportJobRepo(db)
 	go func() {
 		ticker := time.NewTicker(6 * time.Hour)
 		defer ticker.Stop()

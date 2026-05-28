@@ -1,9 +1,11 @@
-package database
+package export
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // ExportTableRow is one row of a table represented as a flat JSON object.
@@ -51,7 +53,7 @@ var AllowedAccountTables = []string{
 // The table name is checked against AllowedAccountTables to prevent SQL
 // injection from caller-supplied identifiers; pgx parameters cannot be
 // used for table names.
-func FetchTableSnapshot(ctx context.Context, db *DB, table string, maxRows int) (*ExportTableSnapshot, error) {
+func FetchTableSnapshot(ctx context.Context, db *database.DB, table string, maxRows int) (*ExportTableSnapshot, error) {
 	if !isAllowedAccountTable(table) {
 		return nil, fmt.Errorf("table %q is not allowed for account export", table)
 	}
@@ -98,7 +100,7 @@ func FetchTableSnapshot(ctx context.Context, db *DB, table string, maxRows int) 
 // FetchTableSnapshotForVehicle is the same as FetchTableSnapshot but filters
 // by vehicle_id when the table has that column. Tables without a vehicle_id
 // column (e.g. settings, geofences, addresses) return all rows.
-func FetchTableSnapshotForVehicle(ctx context.Context, db *DB, table string, vehicleID int64, maxRows int) (*ExportTableSnapshot, error) {
+func FetchTableSnapshotForVehicle(ctx context.Context, db *database.DB, table string, vehicleID int64, maxRows int) (*ExportTableSnapshot, error) {
 	if !isAllowedAccountTable(table) {
 		return nil, fmt.Errorf("table %q is not allowed for account export", table)
 	}
@@ -148,7 +150,7 @@ func FetchTableSnapshotForVehicle(ctx context.Context, db *DB, table string, veh
 
 // CountTableRows returns an approximate row count for the table. Used by the
 // frontend to surface a size estimate before the user confirms a large export.
-func CountTableRows(ctx context.Context, db *DB, table string) (int64, error) {
+func CountTableRows(ctx context.Context, db *database.DB, table string) (int64, error) {
 	if !isAllowedAccountTable(table) {
 		return 0, fmt.Errorf("table %q is not allowed for account export", table)
 	}
@@ -169,7 +171,7 @@ func isAllowedAccountTable(table string) bool {
 	return false
 }
 
-func tableHasColumn(ctx context.Context, db *DB, table, column string) (bool, error) {
+func tableHasColumn(ctx context.Context, db *database.DB, table, column string) (bool, error) {
 	var exists bool
 	err := db.Pool.QueryRow(ctx, `
 		SELECT EXISTS (

@@ -25,7 +25,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
 
 // ---------------------------------------------------------------
@@ -34,7 +34,7 @@ import (
 
 type fakeScheduledExportStore struct {
 	mu     sync.Mutex
-	rows   map[int64]*database.ScheduledExportRow
+	rows   map[int64]*exportdb.ScheduledExportRow
 	nextID int64
 
 	// errOn[op] — when set, the store returns this error from op.
@@ -43,25 +43,25 @@ type fakeScheduledExportStore struct {
 
 func newFakeScheduledExportStore() *fakeScheduledExportStore {
 	return &fakeScheduledExportStore{
-		rows:   make(map[int64]*database.ScheduledExportRow),
+		rows:   make(map[int64]*exportdb.ScheduledExportRow),
 		nextID: 1,
 		errOn:  make(map[string]error),
 	}
 }
 
-func (s *fakeScheduledExportStore) Create(_ context.Context, owner string, in database.ScheduledExportInput, now time.Time) (*database.ScheduledExportRow, error) {
+func (s *fakeScheduledExportStore) Create(_ context.Context, owner string, in exportdb.ScheduledExportInput, now time.Time) (*exportdb.ScheduledExportRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.errOn["create"]; err != nil {
 		return nil, err
 	}
-	canon, err := database.NormalizeScheduledExportInput(in)
+	canon, err := exportdb.NormalizeScheduledExportInput(in)
 	if err != nil {
 		return nil, err
 	}
 	id := s.nextID
 	s.nextID++
-	row := &database.ScheduledExportRow{
+	row := &exportdb.ScheduledExportRow{
 		ID:           id,
 		OwnerSubject: owner,
 		Name:         canon.Name,
@@ -80,7 +80,7 @@ func (s *fakeScheduledExportStore) Create(_ context.Context, owner string, in da
 	return row, nil
 }
 
-func (s *fakeScheduledExportStore) Get(_ context.Context, id int64) (*database.ScheduledExportRow, error) {
+func (s *fakeScheduledExportStore) Get(_ context.Context, id int64) (*exportdb.ScheduledExportRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.errOn["get"]; err != nil {
@@ -88,19 +88,19 @@ func (s *fakeScheduledExportStore) Get(_ context.Context, id int64) (*database.S
 	}
 	row, ok := s.rows[id]
 	if !ok {
-		return nil, database.ErrScheduledExportNotFound
+		return nil, exportdb.ErrScheduledExportNotFound
 	}
 	clone := *row
 	return &clone, nil
 }
 
-func (s *fakeScheduledExportStore) ListByOwner(_ context.Context, owner string) ([]database.ScheduledExportRow, error) {
+func (s *fakeScheduledExportStore) ListByOwner(_ context.Context, owner string) ([]exportdb.ScheduledExportRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.errOn["list"]; err != nil {
 		return nil, err
 	}
-	out := make([]database.ScheduledExportRow, 0)
+	out := make([]exportdb.ScheduledExportRow, 0)
 	for _, row := range s.rows {
 		if row.OwnerSubject == owner {
 			out = append(out, *row)
@@ -109,7 +109,7 @@ func (s *fakeScheduledExportStore) ListByOwner(_ context.Context, owner string) 
 	return out, nil
 }
 
-func (s *fakeScheduledExportStore) Update(_ context.Context, id int64, owner string, in database.ScheduledExportInput, now time.Time) (*database.ScheduledExportRow, error) {
+func (s *fakeScheduledExportStore) Update(_ context.Context, id int64, owner string, in exportdb.ScheduledExportInput, now time.Time) (*exportdb.ScheduledExportRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if err := s.errOn["update"]; err != nil {
@@ -117,9 +117,9 @@ func (s *fakeScheduledExportStore) Update(_ context.Context, id int64, owner str
 	}
 	row, ok := s.rows[id]
 	if !ok || row.OwnerSubject != owner {
-		return nil, database.ErrScheduledExportNotFound
+		return nil, exportdb.ErrScheduledExportNotFound
 	}
-	canon, err := database.NormalizeScheduledExportInput(in)
+	canon, err := exportdb.NormalizeScheduledExportInput(in)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ func (s *fakeScheduledExportStore) Delete(_ context.Context, id int64, owner str
 	}
 	row, ok := s.rows[id]
 	if !ok || row.OwnerSubject != owner {
-		return database.ErrScheduledExportNotFound
+		return exportdb.ErrScheduledExportNotFound
 	}
 	delete(s.rows, id)
 	return nil
@@ -159,7 +159,7 @@ func (s *fakeScheduledExportStore) SetNextRunAt(_ context.Context, id int64, own
 	}
 	row, ok := s.rows[id]
 	if !ok || row.OwnerSubject != owner {
-		return database.ErrScheduledExportNotFound
+		return exportdb.ErrScheduledExportNotFound
 	}
 	row.NextRunAt = &when
 	return nil
@@ -292,7 +292,7 @@ func TestScheduledExports_CrossUserIsolation(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("alice create: status %d body=%s", rec.Code, rec.Body.String())
 	}
-	created := decodeSchedJSON[database.ScheduledExportRow](t, rec.Body)
+	created := decodeSchedJSON[exportdb.ScheduledExportRow](t, rec.Body)
 	if created.OwnerSubject != "alice" {
 		t.Fatalf("owner_subject = %q, want alice", created.OwnerSubject)
 	}
@@ -303,7 +303,7 @@ func TestScheduledExports_CrossUserIsolation(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("bob list: status %d", rec.Code)
 	}
-	bobList := decodeSchedJSON[[]database.ScheduledExportRow](t, rec.Body)
+	bobList := decodeSchedJSON[[]exportdb.ScheduledExportRow](t, rec.Body)
 	if len(bobList) != 0 {
 		t.Fatalf("bob saw %d rows; want 0", len(bobList))
 	}
@@ -332,7 +332,7 @@ func TestScheduledExports_CrossUserIsolation(t *testing.T) {
 	// Alice still sees her row intact.
 	rec = httptest.NewRecorder()
 	r.ServeHTTP(rec, newSchedReq(t, http.MethodGet, "/scheduled-exports", "alice", nil))
-	aliceList := decodeSchedJSON[[]database.ScheduledExportRow](t, rec.Body)
+	aliceList := decodeSchedJSON[[]exportdb.ScheduledExportRow](t, rec.Body)
 	if len(aliceList) != 1 || aliceList[0].ID != created.ID {
 		t.Fatalf("alice view tampered: %+v", aliceList)
 	}
@@ -401,7 +401,7 @@ func TestScheduledExports_UpdatePersists(t *testing.T) {
 
 	rec := httptest.NewRecorder()
 	r.ServeHTTP(rec, newSchedReq(t, http.MethodPost, "/scheduled-exports", "alice", validCreateBody()))
-	created := decodeSchedJSON[database.ScheduledExportRow](t, rec.Body)
+	created := decodeSchedJSON[exportdb.ScheduledExportRow](t, rec.Body)
 
 	updated := validCreateBody()
 	updated["name"] = "Drives nightly"
@@ -411,7 +411,7 @@ func TestScheduledExports_UpdatePersists(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("update status %d; body=%s", rec.Code, rec.Body.String())
 	}
-	post := decodeSchedJSON[database.ScheduledExportRow](t, rec.Body)
+	post := decodeSchedJSON[exportdb.ScheduledExportRow](t, rec.Body)
 	if post.Name != "Drives nightly" || post.ScheduleCron != "0 2 * * *" {
 		t.Fatalf("update not applied: %+v", post)
 	}
@@ -436,7 +436,7 @@ func TestScheduledExports_RunNowAdvancesNextRun(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("run-now status %d; body=%s", rec.Code, rec.Body.String())
 	}
-	row := decodeSchedJSON[database.ScheduledExportRow](t, rec.Body)
+	row := decodeSchedJSON[exportdb.ScheduledExportRow](t, rec.Body)
 	if row.NextRunAt == nil || !row.NextRunAt.Equal(now) {
 		t.Fatalf("next_run_at = %v, want %v", row.NextRunAt, now)
 	}

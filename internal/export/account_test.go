@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
 
 // jsonUnmarshal is a tiny adapter so the JSON round-trip test reads
@@ -78,10 +78,10 @@ func TestRowInDateRange(t *testing.T) {
 }
 
 func TestSnapshotToCSV(t *testing.T) {
-	snap := &database.ExportTableSnapshot{
+	snap := &exportdb.ExportTableSnapshot{
 		Table:   "vehicles",
 		Columns: []string{"id", "name", "battery"},
-		Rows: []database.ExportTableRow{
+		Rows: []exportdb.ExportTableRow{
 			{"id": 1.0, "name": "Model 3", "battery": 75.5},
 			{"id": 2.0, "name": "Model Y", "battery": nil},
 		},
@@ -112,7 +112,7 @@ func TestAllowedAccountTablesIncludesCoreEntities(t *testing.T) {
 	required := []string{"vehicles", "drives", "charging_sessions", "settings"}
 	for _, table := range required {
 		found := false
-		for _, allowed := range database.AllowedAccountTables {
+		for _, allowed := range exportdb.AllowedAccountTables {
 			if allowed == table {
 				found = true
 				break
@@ -166,10 +166,10 @@ func TestExport_NoColumns_BackwardsCompat(t *testing.T) {
 	})
 
 	t.Run("snapshotToCSV nil columns matches legacy sorted order", func(t *testing.T) {
-		snap := &database.ExportTableSnapshot{
+		snap := &exportdb.ExportTableSnapshot{
 			Table:   "vehicles",
 			Columns: []string{"id", "name", "battery"},
-			Rows: []database.ExportTableRow{
+			Rows: []exportdb.ExportTableRow{
 				{"id": 1.0, "name": "Model 3", "battery": 75.5},
 			},
 		}
@@ -333,10 +333,10 @@ func TestValidateColumns(t *testing.T) {
 }
 
 func TestSnapshotToCSV_ColumnAllowlist(t *testing.T) {
-	snap := &database.ExportTableSnapshot{
+	snap := &exportdb.ExportTableSnapshot{
 		Table:   "vehicles",
 		Columns: []string{"id", "name", "battery", "weather"},
-		Rows: []database.ExportTableRow{
+		Rows: []exportdb.ExportTableRow{
 			{"id": 1.0, "name": "Model 3", "battery": 75.5, "weather": "sunny"},
 			{"id": 2.0, "name": "Model Y", "battery": 80.0, "weather": "cloudy"},
 		},

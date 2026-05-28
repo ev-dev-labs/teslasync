@@ -47,7 +47,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
 
 // MaxScheduledExportBodyBytes caps the inbound JSON body. The
@@ -57,13 +57,13 @@ import (
 const MaxScheduledExportBodyBytes int64 = 1 << 15 // 32 KiB
 
 // ScheduledExportStore is the narrow surface ScheduledExportsHandler
-// depends on. Production wires *database.ScheduledExportRepo;
+// depends on. Production wires *exportdb.ScheduledExportRepo;
 // handler tests stub this without touching pgx.
 type ScheduledExportStore interface {
-	Create(ctx context.Context, owner string, in database.ScheduledExportInput, now time.Time) (*database.ScheduledExportRow, error)
-	Get(ctx context.Context, id int64) (*database.ScheduledExportRow, error)
-	ListByOwner(ctx context.Context, owner string) ([]database.ScheduledExportRow, error)
-	Update(ctx context.Context, id int64, owner string, in database.ScheduledExportInput, now time.Time) (*database.ScheduledExportRow, error)
+	Create(ctx context.Context, owner string, in exportdb.ScheduledExportInput, now time.Time) (*exportdb.ScheduledExportRow, error)
+	Get(ctx context.Context, id int64) (*exportdb.ScheduledExportRow, error)
+	ListByOwner(ctx context.Context, owner string) ([]exportdb.ScheduledExportRow, error)
+	Update(ctx context.Context, id int64, owner string, in exportdb.ScheduledExportInput, now time.Time) (*exportdb.ScheduledExportRow, error)
 	Delete(ctx context.Context, id int64, owner string) error
 	SetNextRunAt(ctx context.Context, id int64, owner string, when time.Time) error
 }
@@ -99,7 +99,7 @@ type scheduledExportRequest struct {
 	VehicleID    *int64                           `json:"vehicle_id,omitempty"`
 	Columns      []string                         `json:"columns,omitempty"`
 	ScheduleCron string                           `json:"schedule_cron"`
-	Delivery     database.ScheduledExportDelivery `json:"delivery"`
+	Delivery     exportdb.ScheduledExportDelivery `json:"delivery"`
 	RangeWindow  string                           `json:"range_window,omitempty"`
 	Enabled      *bool                            `json:"enabled,omitempty"`
 }
@@ -107,12 +107,12 @@ type scheduledExportRequest struct {
 // toInput converts the wire payload into the validated input the
 // repo expects. Defaults are applied here so the repo sees the
 // caller's intent verbatim.
-func (req scheduledExportRequest) toInput() database.ScheduledExportInput {
+func (req scheduledExportRequest) toInput() exportdb.ScheduledExportInput {
 	enabled := true
 	if req.Enabled != nil {
 		enabled = *req.Enabled
 	}
-	return database.ScheduledExportInput{
+	return exportdb.ScheduledExportInput{
 		Name:         req.Name,
 		ExportType:   req.ExportType,
 		Format:       req.Format,
@@ -167,16 +167,16 @@ func (h *ScheduledExportsHandler) mapRepoErr(w http.ResponseWriter, err error, w
 		return false
 	}
 	switch {
-	case errors.Is(err, database.ErrScheduledExportNotFound):
+	case errors.Is(err, exportdb.ErrScheduledExportNotFound):
 		writeError(w, http.StatusNotFound, "scheduled export not found")
-	case errors.Is(err, database.ErrScheduledExportInvalidType),
-		errors.Is(err, database.ErrScheduledExportInvalidFormat),
-		errors.Is(err, database.ErrScheduledExportInvalidCron),
-		errors.Is(err, database.ErrScheduledExportInvalidDeliv),
-		errors.Is(err, database.ErrScheduledExportInvalidWindow),
-		errors.Is(err, database.ErrScheduledExportEmptyName):
+	case errors.Is(err, exportdb.ErrScheduledExportInvalidType),
+		errors.Is(err, exportdb.ErrScheduledExportInvalidFormat),
+		errors.Is(err, exportdb.ErrScheduledExportInvalidCron),
+		errors.Is(err, exportdb.ErrScheduledExportInvalidDeliv),
+		errors.Is(err, exportdb.ErrScheduledExportInvalidWindow),
+		errors.Is(err, exportdb.ErrScheduledExportEmptyName):
 		writeError(w, http.StatusBadRequest, err.Error())
-	case errors.Is(err, database.ErrScheduledExportEmptyOwner):
+	case errors.Is(err, exportdb.ErrScheduledExportEmptyOwner):
 		writeErrorCode(w, http.StatusUnauthorized,
 			"scheduled exports require an authenticated user",
 			"MISSING_IDENTITY")
@@ -202,7 +202,7 @@ func (h *ScheduledExportsHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rows == nil {
-		rows = []database.ScheduledExportRow{}
+		rows = []exportdb.ScheduledExportRow{}
 	}
 	writeJSON(w, http.StatusOK, rows)
 }

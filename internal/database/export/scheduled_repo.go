@@ -23,7 +23,7 @@
 //   - range_window parses via ParseRangeWindow (default '7d') so the
 //     worker has a concrete (start, end) to slot into the export
 //     request without re-validating per tick.
-package database
+package export
 
 import (
 	"context"
@@ -34,6 +34,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/robfig/cron/v3"
 )
@@ -341,13 +342,13 @@ func ComputeNextRun(expr string, now time.Time) (time.Time, error) {
 
 // ScheduledExportRepo is the data-access layer for scheduled_exports.
 type ScheduledExportRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewScheduledExportRepo wires the repo to a database pool. db may
 // be nil for tests that exercise only the helpers exported from this
 // file; pool-touching methods then return ErrScheduledExportNotConfigured.
-func NewScheduledExportRepo(db *DB) *ScheduledExportRepo {
+func NewScheduledExportRepo(db *database.DB) *ScheduledExportRepo {
 	return &ScheduledExportRepo{db: db}
 }
 

@@ -6,7 +6,7 @@
 // internal/database test suite). The pure-Go validators are exercised
 // without a pool here so a CI environment without DB access still
 // proves the input boundary contracts hold.
-package database
+package export
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -236,7 +237,7 @@ func TestScheduledExportRepo_NilPoolGuards(t *testing.T) {
 }
 
 func TestScheduledExportRepo_RejectsEmptyOwner(t *testing.T) {
-	repo := NewScheduledExportRepo(&DB{})
+	repo := NewScheduledExportRepo(&database.DB{})
 	ctx := context.Background()
 	now := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
 
