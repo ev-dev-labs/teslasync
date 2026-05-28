@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -108,10 +110,10 @@ func (s *runtimeAutomationStore) IncrementExecution(context.Context, int64, bool
 }
 
 type runtimeHistoryStore struct {
-	created *models.AutomationHistory
+	created *automationmodel.AutomationHistory
 }
 
-func (s *runtimeHistoryStore) Create(_ context.Context, h *models.AutomationHistory) error {
+func (s *runtimeHistoryStore) Create(_ context.Context, h *automationmodel.AutomationHistory) error {
 	copy := *h
 	copy.ID = 99
 	s.created = &copy

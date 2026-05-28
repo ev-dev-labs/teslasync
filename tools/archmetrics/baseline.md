@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T04:00:50Z, Go go1.26.1, commit 8a72c96423050fb3942b65964f58067cda7a9ef8_
+_Generated 2026-05-28T04:03:30Z, Go go1.26.1, commit 71222fc405d761aacfff907e34334af81bf68ac1_
 
 ## Summary
 
-- Packages: 219
+- Packages: 220
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372099
+- Total non-blank LOC under cmd/+internal/+tools/: 372131
 
 ## cmd/* main.go LOC
 
@@ -141,7 +141,7 @@ _Generated 2026-05-28T04:00:50Z, Go go1.26.1, commit 8a72c96423050fb3942b65964f5
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
 | internal/ai/tools | 58 | 51 | 47078 | yes | platform |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126473 | yes | handler |
+| internal/api | 271 | 163 | 126476 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -156,7 +156,7 @@ _Generated 2026-05-28T04:00:50Z, Go go1.26.1, commit 8a72c96423050fb3942b65964f5
 | internal/arch | 2 | 1 | 1117 | yes | tool |
 | internal/audit | 2 | 1 | 375 | yes | platform |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
-| internal/automation | 6 | 2 | 1604 | yes | platform |
+| internal/automation | 6 | 2 | 1607 | yes | platform |
 | internal/automation/action | 6 | 5 | 3824 | yes | platform |
 | internal/automation/condition | 9 | 8 | 3651 | yes | platform |
 | internal/automation/presets | 3 | 1 | 595 | yes | platform |
@@ -203,9 +203,10 @@ _Generated 2026-05-28T04:00:50Z, Go go1.26.1, commit 8a72c96423050fb3942b65964f5
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 32 | 1 | 2363 | yes | domain |
+| internal/models | 32 | 1 | 2334 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/models/auth | 2 | 1 | 66 | yes | domain |
+| internal/models/automation | 2 | 0 | 55 | yes | domain |
 | internal/models/backup | 2 | 0 | 59 | yes | domain |
 | internal/models/chatbot | 2 | 0 | 38 | yes | domain |
 | internal/models/energy | 2 | 0 | 27 | yes | domain |
@@ -270,7 +271,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 32 / 1 | 19 | 9 | 10 |
+| `internal/models` | R5 | 36 | 32 / 1 | 19 | 10 | 9 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -284,6 +285,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 **Existing subpackages on disk:**
 - `internal/models/alert`
 - `internal/models/auth`
+- `internal/models/automation`
 - `internal/models/backup`
 - `internal/models/chatbot`
 - `internal/models/energy`
@@ -293,7 +295,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/settings`
 
 **Planned but not yet on disk:**
-- `internal/models/automation`
 - `internal/models/charging`
 - `internal/models/dashboard`
 - `internal/models/drive`

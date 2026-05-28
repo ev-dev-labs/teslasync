@@ -4,7 +4,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -17,8 +18,8 @@ func NewAutomationVariableRepo(db *DB) *AutomationVariableRepo {
 	return &AutomationVariableRepo{db: db}
 }
 
-func (r *AutomationVariableRepo) Get(ctx context.Context, key string) (*models.AutomationVariable, error) {
-	v := &models.AutomationVariable{}
+func (r *AutomationVariableRepo) Get(ctx context.Context, key string) (*automationmodel.AutomationVariable, error) {
+	v := &automationmodel.AutomationVariable{}
 	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, key, value, vehicle_id, updated_at FROM automation_variables WHERE key = $1`, key,
 	).Scan(&v.ID, &v.Key, &v.Value, &v.VehicleID, &v.UpdatedAt)

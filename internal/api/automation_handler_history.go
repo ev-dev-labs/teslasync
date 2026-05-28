@@ -4,10 +4,11 @@ import (
 	"net/http"
 	"time"
 
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ── History ─────────────────────────────────────────────────────────────
@@ -26,7 +27,7 @@ func (h *AutomationHandler) ListHistory(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if items == nil {
-		items = []*models.AutomationHistory{}
+		items = []*automationmodel.AutomationHistory{}
 	}
 
 	stats, err := h.historyRepo.GetStats(r.Context(), f)
@@ -77,7 +78,7 @@ func (h *AutomationHandler) ListAutomationHistory(w http.ResponseWriter, r *http
 		return
 	}
 	if items == nil {
-		items = []*models.AutomationHistory{}
+		items = []*automationmodel.AutomationHistory{}
 	}
 
 	stats, err := h.historyRepo.GetStats(r.Context(), f)

@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 
@@ -71,7 +73,7 @@ func (h *AutomationHandler) TestRun(w http.ResponseWriter, r *http.Request) {
 
 	durationMs := int(time.Since(now).Milliseconds())
 	completedAt := time.Now().UTC()
-	hist := &models.AutomationHistory{
+	hist := &automationmodel.AutomationHistory{
 		AutomationID:       a.ID,
 		AutomationName:     a.Name,
 		VehicleID:          a.VehicleID,

@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -25,8 +26,8 @@ const automationHistoryColumns = `id, automation_id, automation_name, vehicle_id
 	actions_executed, actions_total, actions_succeeded, actions_failed,
 	status, error, fsm_state, created_at`
 
-func scanAutomationHistory(row pgx.Row) (*models.AutomationHistory, error) {
-	h := &models.AutomationHistory{}
+func scanAutomationHistory(row pgx.Row) (*automationmodel.AutomationHistory, error) {
+	h := &automationmodel.AutomationHistory{}
 	err := row.Scan(
 		&h.ID, &h.AutomationID, &h.AutomationName, &h.VehicleID,
 		&h.TriggeredAt, &h.CompletedAt, &h.DurationMs,
@@ -38,7 +39,7 @@ func scanAutomationHistory(row pgx.Row) (*models.AutomationHistory, error) {
 	return h, err
 }
 
-func (r *AutomationHistoryRepo) Create(ctx context.Context, h *models.AutomationHistory) error {
+func (r *AutomationHistoryRepo) Create(ctx context.Context, h *automationmodel.AutomationHistory) error {
 	query := `INSERT INTO automation_history (
 		automation_id, automation_name, vehicle_id,
 		triggered_at, trigger_type, trigger_snapshot,
@@ -68,7 +69,7 @@ func (r *AutomationHistoryRepo) Complete(ctx context.Context, id int64, status s
 	return nil
 }
 
-func (r *AutomationHistoryRepo) GetByAutomation(ctx context.Context, automationID int64, limit, offset int) ([]*models.AutomationHistory, error) {
+func (r *AutomationHistoryRepo) GetByAutomation(ctx context.Context, automationID int64, limit, offset int) ([]*automationmodel.AutomationHistory, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -82,9 +83,9 @@ func (r *AutomationHistoryRepo) GetByAutomation(ctx context.Context, automationI
 	}
 	defer rows.Close()
 
-	var results []*models.AutomationHistory
+	var results []*automationmodel.AutomationHistory
 	for rows.Next() {
-		h := &models.AutomationHistory{}
+		h := &automationmodel.AutomationHistory{}
 		if err := rows.Scan(
 			&h.ID, &h.AutomationID, &h.AutomationName, &h.VehicleID,
 			&h.TriggeredAt, &h.CompletedAt, &h.DurationMs,
@@ -117,7 +118,7 @@ func (r *AutomationHistoryRepo) CountSinceByAutomation(ctx context.Context, auto
 	return count, nil
 }
 
-func (r *AutomationHistoryRepo) GetRecent(ctx context.Context, limit int) ([]*models.AutomationHistory, error) {
+func (r *AutomationHistoryRepo) GetRecent(ctx context.Context, limit int) ([]*automationmodel.AutomationHistory, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -128,9 +129,9 @@ func (r *AutomationHistoryRepo) GetRecent(ctx context.Context, limit int) ([]*mo
 	}
 	defer rows.Close()
 
-	var results []*models.AutomationHistory
+	var results []*automationmodel.AutomationHistory
 	for rows.Next() {
-		h := &models.AutomationHistory{}
+		h := &automationmodel.AutomationHistory{}
 		if err := rows.Scan(
 			&h.ID, &h.AutomationID, &h.AutomationName, &h.VehicleID,
 			&h.TriggeredAt, &h.CompletedAt, &h.DurationMs,
@@ -148,7 +149,7 @@ func (r *AutomationHistoryRepo) GetRecent(ctx context.Context, limit int) ([]*mo
 
 // GetByID returns a single execution history record by primary key.
 // Returns (nil, nil) when the record does not exist.
-func (r *AutomationHistoryRepo) GetByID(ctx context.Context, id int64) (*models.AutomationHistory, error) {
+func (r *AutomationHistoryRepo) GetByID(ctx context.Context, id int64) (*automationmodel.AutomationHistory, error) {
 	query := fmt.Sprintf(`SELECT %s FROM automation_history WHERE id = $1`, automationHistoryColumns)
 	h, err := scanAutomationHistory(r.db.Pool.QueryRow(ctx, query, id))
 	if err == pgx.ErrNoRows {
@@ -162,7 +163,7 @@ func (r *AutomationHistoryRepo) GetByID(ctx context.Context, id int64) (*models.
 
 // GetLatestSuccessful returns the most recent successful or partial execution
 // for the given automation. Returns (nil, nil) when no qualifying row exists.
-func (r *AutomationHistoryRepo) GetLatestSuccessful(ctx context.Context, automationID int64) (*models.AutomationHistory, error) {
+func (r *AutomationHistoryRepo) GetLatestSuccessful(ctx context.Context, automationID int64) (*automationmodel.AutomationHistory, error) {
 	query := fmt.Sprintf(
 		`SELECT %s FROM automation_history WHERE automation_id = $1 AND status IN ('success','partial') ORDER BY triggered_at DESC LIMIT 1`,
 		automationHistoryColumns,
@@ -186,7 +187,7 @@ type HistoryFilter struct {
 
 // ListAll returns execution history matching the filter with pagination.
 // Returns (items, totalCount, error).
-func (r *AutomationHistoryRepo) ListAll(ctx context.Context, f HistoryFilter, limit, offset int) ([]*models.AutomationHistory, int, error) {
+func (r *AutomationHistoryRepo) ListAll(ctx context.Context, f HistoryFilter, limit, offset int) ([]*automationmodel.AutomationHistory, int, error) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
@@ -214,9 +215,9 @@ func (r *AutomationHistoryRepo) ListAll(ctx context.Context, f HistoryFilter, li
 	}
 	defer rows.Close()
 
-	var results []*models.AutomationHistory
+	var results []*automationmodel.AutomationHistory
 	for rows.Next() {
-		h := &models.AutomationHistory{}
+		h := &automationmodel.AutomationHistory{}
 		if err := rows.Scan(
 			&h.ID, &h.AutomationID, &h.AutomationName, &h.VehicleID,
 			&h.TriggeredAt, &h.CompletedAt, &h.DurationMs,

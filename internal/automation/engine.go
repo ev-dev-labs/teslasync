@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -32,7 +34,7 @@ type AutomationStore interface {
 
 // HistoryStore provides execution history persistence.
 type HistoryStore interface {
-	Create(ctx context.Context, h *models.AutomationHistory) error
+	Create(ctx context.Context, h *automationmodel.AutomationHistory) error
 	Complete(ctx context.Context, id int64, status string, errMsg *string, durationMs int) error
 	CountSinceByAutomation(ctx context.Context, automationID int64, since time.Time) (int, error)
 }
@@ -288,7 +290,7 @@ func (e *Engine) Evaluate(ctx context.Context, automationID int64, triggerSnapsh
 	}
 
 	// Create the initial history record (status=running).
-	hist := &models.AutomationHistory{
+	hist := &automationmodel.AutomationHistory{
 		AutomationID:       a.ID,
 		AutomationName:     a.Name,
 		VehicleID:          a.VehicleID,

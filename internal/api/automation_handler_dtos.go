@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"time"
 
+	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/automation/presets"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -151,16 +153,16 @@ type automationActionCallAutomationDTO struct {
 
 // historyListResponse wraps paginated history items with summary statistics.
 type historyListResponse struct {
-	Items   []*models.AutomationHistory `json:"items"`
-	Total   int                         `json:"total"`
-	Limit   int                         `json:"limit"`
-	Offset  int                         `json:"offset"`
-	Summary *database.HistoryStats      `json:"summary"`
+	Items   []*automationmodel.AutomationHistory `json:"items"`
+	Total   int                                  `json:"total"`
+	Limit   int                                  `json:"limit"`
+	Offset  int                                  `json:"offset"`
+	Summary *database.HistoryStats               `json:"summary"`
 }
 
 // historyDetailResponse wraps a single execution record with FSM transitions.
 type historyDetailResponse struct {
-	*models.AutomationHistory
+	*automationmodel.AutomationHistory
 	SuccessRate    float64                        `json:"success_rate"`
 	FSMTransitions []database.FSMTransitionRecord `json:"fsm_transitions"`
 }

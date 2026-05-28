@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:00:49Z",
+  "generated_at": "2026-05-28T04:03:29Z",
   "go_version": "go1.26.1",
-  "commit_sha": "8a72c96423050fb3942b65964f58067cda7a9ef8",
+  "commit_sha": "71222fc405d761aacfff907e34334af81bf68ac1",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2033,7 +2033,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126473,
+      "loc": 126476,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2149,6 +2149,7 @@
         "internal/models",
         "internal/models/alert",
         "internal/models/auth",
+        "internal/models/automation",
         "internal/models/backup",
         "internal/models/chatbot",
         "internal/models/export",
@@ -2914,7 +2915,7 @@
       "path": "internal/automation",
       "go_files": 6,
       "test_files": 2,
-      "loc": 1604,
+      "loc": 1607,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2924,6 +2925,7 @@
         "internal/automation/trigger",
         "internal/enums",
         "internal/models",
+        "internal/models/automation",
         "internal/signal"
       ],
       "files": [
@@ -3174,6 +3176,7 @@
         "internal/models",
         "internal/models/alert",
         "internal/models/auth",
+        "internal/models/automation",
         "internal/models/backup",
         "internal/models/chatbot",
         "internal/models/energy",
@@ -3961,7 +3964,7 @@
       "path": "internal/models",
       "go_files": 32,
       "test_files": 1,
-      "loc": 2363,
+      "loc": 2334,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4026,6 +4029,19 @@
       "files": [
         "auth.go",
         "auth_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/models/automation",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 55,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "automation.go",
         "doc.go"
       ]
     },
@@ -6385,6 +6401,10 @@
       "auth.go",
       "doc.go"
     ],
+    "internal/models/automation": [
+      "automation.go",
+      "doc.go"
+    ],
     "internal/models/backup": [
       "backup.go",
       "doc.go"
@@ -6722,6 +6742,7 @@
       "existing_subpkgs": [
         "alert",
         "auth",
+        "automation",
         "backup",
         "chatbot",
         "energy",
@@ -6731,7 +6752,6 @@
         "settings"
       ],
       "missing_subpkgs": [
-        "automation",
         "charging",
         "dashboard",
         "drive",

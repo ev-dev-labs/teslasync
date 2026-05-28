@@ -26,7 +26,7 @@ type VariableRepo interface {
 }
 
 // VariableEntry represents a stored automation variable.
-// Mirrors models.AutomationVariable but avoids a models import in the action package.
+// Mirrors automationmodel.AutomationVariable but avoids a models import in the action package.
 type VariableEntry struct {
 	Key   string
 	Value string
