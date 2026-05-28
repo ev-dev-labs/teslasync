@@ -1,7 +1,7 @@
 // Phase-50 / 0054 — P3 Helix safety setting explainer.
 //
 // safety_setting_explainer.go ships ONE new read-only typed
-// tool used by the safety-setting-explainer strategy:
+// Tool used by the safety-setting-explainer strategy:
 //
 //   - `query_safety_settings` — typed deterministic envelope
 //     describing every safety-related TeslaSync setting
@@ -14,12 +14,12 @@
 //     a closed enum), a one-line short_description, and a
 //     docs_anchor pointing the user at the canonical
 //     documentation chunk. NO database write is performed by
-//     this tool.
+//     this Tool.
 //
 //     Privacy: the safety-related settings are scalar global
 //     toggles only (booleans, enum strings, HH:MM strings); no
 //     PII (vehicle names, addresses, GPS, VINs, emails)
-//     crosses the tool boundary. The per-feature redaction
+//     crosses the Tool boundary. The per-feature redaction
 //     policy `PolicyChatbot` allows ZERO PII classes — every
 //     PII class is tagged round-trip BEFORE the message
 //     reaches the provider, so a leaked transcript reveals
@@ -39,9 +39,9 @@
 //     handler still runs the per-feature guard
 //     (`ai.GuardedHandler` with `safety-setting-explainer`)
 //     so a user with `ai_mode='off'` or the per-feature toggle
-//     off NEVER reaches this tool.
+//     off NEVER reaches this Tool.
 //
-//   - The tool's input schema is intentionally empty: the LLM
+//   - The Tool's input schema is intentionally empty: the LLM
 //     calls `query_safety_settings` with no arguments and
 //     receives the full safety-setting envelope. There is no
 //     per-setting-key filter because (a) the envelope is small
@@ -59,22 +59,24 @@
 //     that wraps the canonical `*database.SettingsRepo` Get
 //     method. NO new SQL is written. The deterministic
 //     POST /api/v1/settings handler remains the canonical
-//     baseline write path; this tool NEVER triggers a save.
+//     baseline write path; this Tool NEVER triggers a save.
 //
-//   - "the LLM never writes raw SQL" → tool has no DB handle.
+//   - "the LLM never writes raw SQL" → Tool has no DB handle.
 //     The port hands a pre-aggregated envelope in.
 //
 //   - "no duplicate write paths" → no save_* / create_* /
-//     apply_* / submit_* tool exists in this slice; the only
-//     tool is a pure read.
+//     apply_* / submit_* Tool exists in this slice; the only
+//     Tool is a pure read.
 
-package tools
+package safety
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -114,7 +116,7 @@ import (
 //     from user-provided docs at runtime).
 //   - DocsAnchor: a relative link the LLM may surface so the
 //     user can read the canonical docs chunk. The
-//     retrieve_docs tool returns the same anchor when its
+//     retrieve_docs Tool returns the same anchor when its
 //     query matches; this field is the deterministic fallback
 //     when the LLM does not call retrieve_docs.
 type SafetySettingDescriptor struct {
@@ -149,10 +151,10 @@ type SafetySettingsEnvelope struct {
 // ---------------------------------------------------------------------------
 
 // SafetySettingsSource is the narrow port the
-// query_safety_settings tool delegates to. In production it is
+// query_safety_settings Tool delegates to. In production it is
 // satisfied by *api.AISafetySettingExplainerSource (which wraps
 // the canonical *database.SettingsRepo); in tests we substitute
-// deterministic fakes so the tool unit tests stay hermetic.
+// deterministic fakes so the Tool unit tests stay hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update
 // method here would defeat the read-only contract that
@@ -173,7 +175,7 @@ type SafetySettingsSource interface {
 // ---------------------------------------------------------------------------
 
 // querySafetySettingsInput is the typed input shape the
-// dispatcher decodes the LLM's tool-call arguments JSON into.
+// dispatcher decodes the LLM's Tool-call arguments JSON into.
 // Intentionally empty: the LLM passes no arguments because the
 // envelope is small and complete (returning every safety-related
 // setting in one call). A future edit MAY add a `key` filter
@@ -183,10 +185,10 @@ type SafetySettingsSource interface {
 // envelope — that proof requires it to see the full list.
 type querySafetySettingsInput struct{}
 
-// querySafetySettings is the read-only tool that returns the
+// querySafetySettings is the read-only Tool that returns the
 // safety-related settings envelope. Construct via
 // RegisterSafetySettingExplainerTools so the source is wired
-// before the tool reaches the registry.
+// before the Tool reaches the tools.Registry.
 type querySafetySettings struct {
 	source SafetySettingsSource
 }
@@ -194,12 +196,12 @@ type querySafetySettings struct {
 // Name implements [Tool].
 func (t *querySafetySettings) Name() string { return "query_safety_settings" }
 
-// Description implements [Tool]. Used by the LLM during tool
+// Description implements [Tool]. Used by the LLM during Tool
 // selection — kept short and intent-focused.
 func (t *querySafetySettings) Description() string {
 	return "Return the deterministic typed envelope describing every safety-related TeslaSync setting currently stored. " +
 		"Reports a map keyed by the setting's canonical JSON-tag key (e.g. quiet_hours_enabled, alert_digest_mode) where each entry carries {key, current_value, default_value, allowed_values (when enum), short_description, docs_anchor}. " +
-		"NO PII (vehicle names, addresses, GPS, VINs, emails) crosses the tool boundary — the envelope contains scalar setting values only (booleans, enum strings, HH:MM strings). " +
+		"NO PII (vehicle names, addresses, GPS, VINs, emails) crosses the tools.Tool boundary — the envelope contains scalar setting values only (booleans, enum strings, HH:MM strings). " +
 		"READ-only — no record is created, mutated, or deleted; NO database write. " +
 		"Call this FIRST; the envelope is the ground truth for the explanation you produce — DO NOT recompute, contradict, or invent settings beyond the envelope. " +
 		"If the user asks about a setting not in the envelope's `settings` map, refuse politely and direct them to the relevant Settings page."
@@ -207,21 +209,21 @@ func (t *querySafetySettings) Description() string {
 
 // InputSchema implements [Tool].
 func (t *querySafetySettings) InputSchema() json.RawMessage {
-	return CachedSchema(querySafetySettingsInput{})
+	return tools.CachedSchema(querySafetySettingsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
 func (t *querySafetySettings) OutputSchema() json.RawMessage { return nil }
 
 // Mutates implements [Tool]. PROPOSE-only — never returns true.
-// The tool reads the canonical settings store but does NOT
+// The Tool reads the canonical settings store but does NOT
 // touch the database. The actual save flows through the
 // existing POST /api/v1/settings handler AFTER the user clicks
 // Save in the Settings UI.
 func (t *querySafetySettings) Mutates() bool { return false }
 
 // RequiredScope implements [Tool]. Empty — the AI guard already
-// gates on ai_mode + per-feature toggle upstream, and the tool
+// gates on ai_mode + per-feature toggle upstream, and the Tool
 // produces no state mutation that needs an additional RBAC
 // scope.
 func (t *querySafetySettings) RequiredScope() string { return "" }
@@ -232,7 +234,7 @@ func (t *querySafetySettings) RequiredScope() string { return "" }
 // JSON object (including {}, which is the dispatcher's default
 // when the LLM emits no arguments).
 func (t *querySafetySettings) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[querySafetySettingsInput](raw)
+	v, err := tools.ValidateStruct[querySafetySettingsInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -249,8 +251,8 @@ func (t *querySafetySettings) Validate(raw json.RawMessage) (any, error) {
 //
 // Missing-source is a hard failure: if the dispatcher is
 // invoked from an unintended path (no source wired at
-// registration), the tool refuses. The AI handler is the only
-// path that should be loading this tool, and
+// registration), the Tool refuses. The AI handler is the only
+// path that should be loading this Tool, and
 // RegisterSafetySettingExplainerTools ALWAYS wires a non-nil
 // source.
 func (t *querySafetySettings) Execute(ctx context.Context, in any) (any, error) {
@@ -294,13 +296,13 @@ type SafetySettingExplainerSources struct {
 // RegisterSafetySettingExplainerTools installs the
 // safety-setting-explainer slice's tools on r. Called from
 // router.go AFTER RegisterQuietHoursSuggestionTools so the
-// registry's Names list continues to grow deterministically
+// tools.Registry's Names list continues to grow deterministically
 // without disturbing earlier registrations or any builtin-names
 // pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterSafetySettingExplainerTools(r *Registry, s SafetySettingExplainerSources) {
+func RegisterSafetySettingExplainerTools(r *tools.Registry, s SafetySettingExplainerSources) {
 	r.Register(&querySafetySettings{source: s.Source})
 }

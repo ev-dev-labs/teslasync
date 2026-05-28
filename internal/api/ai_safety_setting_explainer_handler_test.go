@@ -30,7 +30,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 )
 
 // TestSafetySettingExplainerAIOffShowsStaticHelpOnly is the
@@ -375,4 +375,4 @@ func TestProjectSafetySettingsEnvelope_NilSettings(t *testing.T) {
 // satisfies the tool's narrow port. Mirrors the same assertion
 // in the production handler file so the test build also pins
 // the contract.
-var _ tools.SafetySettingsSource = (*AISafetySettingExplainerSource)(nil)
+var _ safety.SafetySettingsSource = (*AISafetySettingExplainerSource)(nil)

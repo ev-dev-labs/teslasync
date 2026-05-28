@@ -28,9 +28,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "max_files": 57,
+      "max_files": 56,
       "owner": "Phase R6 (in progress)",
-      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/ — 1 source file + 1 test carved; ratchet counts source files only). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 also exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites) so sibling subpackages can reuse the memoized JSON-Schema cache through the canonical tools.CachedSchema entrypoint."
+      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites) so sibling subpackages can reuse the memoized JSON-Schema cache through the canonical tools.CachedSchema entrypoint."
     },
     {
       "path": "internal/jobs",

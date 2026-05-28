@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T05:41:32Z",
+  "generated_at": "2026-05-28T05:50:05Z",
   "go_version": "go1.26.1",
-  "commit_sha": "97769774426a1aac7425028445cf315708d29b73",
+  "commit_sha": "4f968a563a67a9af956ab39eab28c2a548ae4805",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 57,
-      "test_files": 50,
-      "loc": 45544,
+      "go_files": 56,
+      "test_files": 49,
+      "loc": 45015,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1975,8 +1975,6 @@
         "registry_test.go",
         "route_efficiency.go",
         "route_efficiency_test.go",
-        "safety_setting_explainer.go",
-        "safety_setting_explainer_test.go",
         "schema.go",
         "schema_test.go",
         "search.go",
@@ -2031,6 +2029,21 @@
       ]
     },
     {
+      "path": "internal/ai/tools/safety",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 560,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/tools"
+      ],
+      "files": [
+        "doc.go",
+        "explainer.go",
+        "explainer_test.go"
+      ]
+    },
+    {
       "path": "internal/alertmsg",
       "go_files": 3,
       "test_files": 1,
@@ -2052,7 +2065,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126493,
+      "loc": 126495,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2125,6 +2138,7 @@
         "internal/ai/stream",
         "internal/ai/tools",
         "internal/ai/tools/feedback",
+        "internal/ai/tools/safety",
         "internal/alertmsg",
         "internal/api",
         "internal/apilog",
@@ -5777,7 +5791,6 @@
       "range_predictor.go",
       "registry.go",
       "route_efficiency.go",
-      "safety_setting_explainer.go",
       "schema.go",
       "search.go",
       "share_card_image.go",
@@ -5801,6 +5814,10 @@
     "internal/ai/tools/feedback": [
       "doc.go",
       "triage.go"
+    ],
+    "internal/ai/tools/safety": [
+      "doc.go",
+      "explainer.go"
     ],
     "internal/alertmsg": [
       "doc.go",
@@ -7019,11 +7036,12 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 57,
-      "flat_parent_test_files": 50,
+      "flat_parent_go_files": 56,
+      "flat_parent_test_files": 49,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
-        "feedback"
+        "feedback",
+        "safety"
       ],
       "missing_subpkgs": [
         "alert",
@@ -7035,7 +7053,6 @@
         "forecast",
         "location",
         "nl",
-        "safety",
         "share",
         "summary"
       ],

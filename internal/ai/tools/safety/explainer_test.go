@@ -1,17 +1,17 @@
 // Phase-50 / 0054 — P3 Helix safety setting explainer.
 //
-// Unit tests for the query_safety_settings tool. The tool wraps
+// Unit tests for the query_safety_settings Tool. The tools.Tool wraps
 // a SafetySettingsSource port (production adapter wraps the
 // canonical SettingsRepo); the test substitutes a hermetic fake
-// so the tool unit tests stay free of database IO.
+// so the Tool unit tests stay free of database IO.
 //
-// The tool has no per-request scope binding (settings are
+// The Tool has no per-request scope binding (settings are
 // global) so the test surface is small: pin the read-only
 // contract, the empty-input shape, the missing-source refusal,
 // the nil-envelope refusal, the nil-map defensive promotion,
 // and the happy-path delegation.
 
-package tools
+package safety
 
 import (
 	"context"
@@ -19,6 +19,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -27,7 +29,7 @@ import (
 
 // fakeSafetySettingsSource is a hermetic stand-in for the
 // production adapter (*api.AISafetySettingExplainerSource). The
-// per-test cases install canned responses; the tool never sees
+// per-test cases install canned responses; the Tool never sees
 // a database.
 type fakeSafetySettingsSource struct {
 	loadFn func(ctx context.Context) (*SafetySettingsEnvelope, error)
@@ -240,7 +242,7 @@ func TestQuerySafetySettings_ExecuteHappyPathDelegates(t *testing.T) {
 
 func TestRegisterSafetySettingExplainerTools_RegistersOneTool(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeSafetySettingsSource{}
 	RegisterSafetySettingExplainerTools(r, SafetySettingExplainerSources{Source: src})
 	want := "query_safety_settings"
@@ -251,7 +253,7 @@ func TestRegisterSafetySettingExplainerTools_RegistersOneTool(t *testing.T) {
 
 func TestRegisterSafetySettingExplainerTools_PanicsOnDuplicate(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeSafetySettingsSource{}
 	RegisterSafetySettingExplainerTools(r, SafetySettingExplainerSources{Source: src})
 	defer func() {

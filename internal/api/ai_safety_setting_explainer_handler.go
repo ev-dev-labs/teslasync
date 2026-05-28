@@ -76,6 +76,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -139,7 +140,7 @@ type AISafetySettingExplainerHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_safety_settings (registered by
-//	tools.RegisterSafetySettingExplainerTools in
+//	safety.RegisterSafetySettingExplainerTools in
 //	router.go) and retrieve_docs (registered globally
 //	by tools.RegisterHelpTools).
 //
@@ -333,7 +334,7 @@ func buildSafetySettingExplainerUserMessage(question string) string {
 // ---------------------------------------------------------------------------
 
 // AISafetySettingExplainerSource is the production adapter
-// satisfying tools.SafetySettingsSource. It wraps the canonical
+// satisfying safety.SafetySettingsSource. It wraps the canonical
 // *database.SettingsRepo so the AI tool reads from the SAME
 // data source the deterministic Settings UI already does — no
 // new SQL, no duplicate read paths.
@@ -356,7 +357,7 @@ func NewAISafetySettingExplainerSource(s *database.SettingsRepo) *AISafetySettin
 	return &AISafetySettingExplainerSource{settings: s}
 }
 
-// LoadSafetySettings implements tools.SafetySettingsSource.
+// LoadSafetySettings implements safety.SafetySettingsSource.
 // Reads the canonical Settings row via SettingsRepo.Get and
 // projects the safety-related fields into the typed envelope
 // the LLM consumes. NO new SQL is written — the existing Get
@@ -368,7 +369,7 @@ func NewAISafetySettingExplainerSource(s *database.SettingsRepo) *AISafetySettin
 // so the descriptor table below hard-codes the same default
 // values as a deliberate cross-check — a divergence between
 // the two surfaces in code review).
-func (a *AISafetySettingExplainerSource) LoadSafetySettings(ctx context.Context) (*tools.SafetySettingsEnvelope, error) {
+func (a *AISafetySettingExplainerSource) LoadSafetySettings(ctx context.Context) (*safety.SafetySettingsEnvelope, error) {
 	cur, err := a.settings.Get(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("ai safety-setting-explainer: load settings: %w", err)
@@ -390,17 +391,17 @@ func (a *AISafetySettingExplainerSource) LoadSafetySettings(ctx context.Context)
 // A divergence is a load-bearing change reviewers should
 // catch — the registry-coverage harness does not enforce this
 // invariant, so the cross-check is human.
-func projectSafetySettingsEnvelope(cur *systemmodel.Settings) *tools.SafetySettingsEnvelope {
+func projectSafetySettingsEnvelope(cur *systemmodel.Settings) *safety.SafetySettingsEnvelope {
 	if cur == nil {
 		// Defensive: render an empty envelope rather than
 		// panic. The LLM's "refuse out-of-scope" directive
 		// then flips every requested key to absent.
-		return &tools.SafetySettingsEnvelope{
-			Settings: map[string]tools.SafetySettingDescriptor{},
+		return &safety.SafetySettingsEnvelope{
+			Settings: map[string]safety.SafetySettingDescriptor{},
 		}
 	}
-	out := &tools.SafetySettingsEnvelope{
-		Settings: map[string]tools.SafetySettingDescriptor{
+	out := &safety.SafetySettingsEnvelope{
+		Settings: map[string]safety.SafetySettingDescriptor{
 			"quiet_hours_enabled": {
 				Key:              "quiet_hours_enabled",
 				CurrentValue:     cur.QuietHoursEnabled,
@@ -458,8 +459,8 @@ func projectSafetySettingsEnvelope(cur *systemmodel.Settings) *tools.SafetySetti
 
 // Compile-time assertions: AISafetySettingExplainerHandler
 // satisfies http.Handler and AISafetySettingExplainerSource
-// satisfies tools.SafetySettingsSource.
+// satisfies safety.SafetySettingsSource.
 var (
-	_ http.Handler               = (*AISafetySettingExplainerHandler)(nil)
-	_ tools.SafetySettingsSource = (*AISafetySettingExplainerSource)(nil)
+	_ http.Handler                = (*AISafetySettingExplainerHandler)(nil)
+	_ safety.SafetySettingsSource = (*AISafetySettingExplainerSource)(nil)
 )

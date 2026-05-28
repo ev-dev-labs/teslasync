@@ -125,6 +125,7 @@ import (
 	watchfacenlresponse "github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response"
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
@@ -2287,7 +2288,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// the slice 0053 tools above so the registry's Names
 	// list grows deterministically.
 	aiSafetySettingExplainerSource := NewAISafetySettingExplainerSource(aiSettingsRepo)
-	tools.RegisterSafetySettingExplainerTools(aiToolRegistry, tools.SafetySettingExplainerSources{
+	safety.RegisterSafetySettingExplainerTools(aiToolRegistry, safety.SafetySettingExplainerSources{
 		Source: aiSafetySettingExplainerSource,
 	})
 	// safety-setting-explainer handler. One per process;
