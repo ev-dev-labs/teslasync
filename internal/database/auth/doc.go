@@ -6,5 +6,5 @@
 // subpackages). Callers import as `dbauth` to disambiguate from the parent
 // internal/database package and from internal/auth (the runtime auth service).
 //
-// Layer: adapter (database)
+// Layer: adapter
 package auth

@@ -12,5 +12,5 @@
 // interface) which lives in the parent package. The carved files qualify
 // every reference as `database.DBTX`.
 //
-// Layer: adapter (database)
+// Layer: adapter
 package automation

@@ -1,9 +1,7 @@
 // Package speed hosts the speed-profile + drive-context AI tools cluster
 // carved from internal/ai/tools/ in Phase R6.29.
 //
-// Layer: domain (per ADR-007 — AI tools sit at the domain layer because
-// they expose pure capability surfaces to the AI orchestrator without
-// reaching into HTTP/transport concerns).
+// Layer: domain
 //
 // # Contents
 //

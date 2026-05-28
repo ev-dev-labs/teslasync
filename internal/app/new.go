@@ -20,6 +20,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
@@ -245,7 +246,7 @@ func (a *App) initFlagStore(ctx context.Context) {
 		return nil
 	})
 	if a.DB != nil {
-		a.FeatureFlagChangesRepo = database.NewFeatureFlagChangesRepo(a.DB)
+		a.FeatureFlagChangesRepo = auditdb.NewFeatureFlagChangesRepo(a.DB)
 	}
 	log.Info().
 		Bool("redis_backed", rdb != nil).
@@ -282,7 +283,7 @@ func (a *App) initObservabilityPhase45(ctx context.Context) {
 		log.Warn().Msg("phase-45: database not initialised — observability surface unavailable")
 		return
 	}
-	a.AuditLogQueryRepo = database.NewAuditLogQueryRepo(a.DB)
+	a.AuditLogQueryRepo = auditdb.NewAuditLogQueryRepo(a.DB)
 	a.SlowQueriesRepo = dbobs.NewSlowQueriesRepo(a.DB)
 	a.HypertableMetricsRepo = dbobs.NewHypertableMetricsRepo(a.DB)
 	a.IngestXRayRepo = dbobs.NewIngestXRayRepo(a.DB.Pool)
@@ -1013,7 +1014,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.
 			Msg("phase-44: DLQInspector subscribe failed; /system/dlq endpoints will be 503")
 	} else {
 		a.DLQInspector = dlqInspector
-		a.DLQReplayAuditRepo = database.NewDLQReplayAuditRepo(a.DB)
+		a.DLQReplayAuditRepo = auditdb.NewDLQReplayAuditRepo(a.DB)
 		a.addCloser("dlq-inspector", func(_ context.Context) error {
 			dlqInspector.Stop()
 			return nil

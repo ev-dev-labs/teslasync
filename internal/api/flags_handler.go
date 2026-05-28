@@ -32,19 +32,19 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 )
 
 // FlagsHandler serves the dynamic feature-flag admin surface.
 type FlagsHandler struct {
 	store           *flags.Store
-	audit           *database.FeatureFlagChangesRepo
+	audit           *auditdb.FeatureFlagChangesRepo
 	principalHeader string
 }
 
 // NewFlagsHandler constructs a handler bound to store + audit.
-func NewFlagsHandler(store *flags.Store, audit *database.FeatureFlagChangesRepo, principalHeader string) *FlagsHandler {
+func NewFlagsHandler(store *flags.Store, audit *auditdb.FeatureFlagChangesRepo, principalHeader string) *FlagsHandler {
 	return &FlagsHandler{
 		store:           store,
 		audit:           audit,
@@ -149,11 +149,11 @@ func (h *FlagsHandler) Set(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditID := h.tryAudit(r, database.FeatureFlagChangeInsert{
+	auditID := h.tryAudit(r, auditdb.FeatureFlagChangeInsert{
 		Actor:     principalFrom(r, h.principalHeader),
 		ActorIP:   remoteAddrParsed(r),
 		FlagKey:   key,
-		Operation: database.FeatureFlagOpSet,
+		Operation: auditdb.FeatureFlagOpSet,
 		OldValue:  prev,
 		NewValue:  body.Value,
 		Reason:    body.Reason,
@@ -186,11 +186,11 @@ func (h *FlagsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	auditID := h.tryAudit(r, database.FeatureFlagChangeInsert{
+	auditID := h.tryAudit(r, auditdb.FeatureFlagChangeInsert{
 		Actor:     principalFrom(r, h.principalHeader),
 		ActorIP:   remoteAddrParsed(r),
 		FlagKey:   key,
-		Operation: database.FeatureFlagOpDelete,
+		Operation: auditdb.FeatureFlagOpDelete,
 		OldValue:  prev,
 		Reason:    reason,
 		TraceID:   traceIDFromContext(r.Context()),
@@ -234,7 +234,7 @@ func (h *FlagsHandler) Changes(w http.ResponseWriter, r *http.Request) {
 
 // --- helpers ---
 
-func (h *FlagsHandler) tryAudit(r *http.Request, in database.FeatureFlagChangeInsert) int64 {
+func (h *FlagsHandler) tryAudit(r *http.Request, in auditdb.FeatureFlagChangeInsert) int64 {
 	if h == nil || h.audit == nil {
 		return 0
 	}

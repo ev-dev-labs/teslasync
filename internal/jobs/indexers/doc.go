@@ -5,7 +5,7 @@
 // #3 — a degraded settings table must NOT silently leak embeddings
 // to off-mode users.
 //
-// Layer: domain-adjacent (use case scheduled by a worker). Each
+// Layer: app
 // indexer follows the canonical RAG indexer shape:
 //
 //	type <Topic>SettingsReader interface {

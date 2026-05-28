@@ -36,8 +36,9 @@ import (
 	"strings"
 	"time"
 
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
+
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // MaxImpersonationStartBodyBytes caps the JSON body of POST
@@ -60,7 +61,7 @@ const (
 )
 
 // ImpersonationCandidatesStore is the storage seam used by the
-// candidates endpoint. Production wires *database.AuditRepo (which
+// candidates endpoint. Production wires *auditdb.AuditRepo (which
 // owns the auth_sessions DISTINCT query for this prompt — see the
 // comment in audit_repo.go for why a temporary lodge there is
 // preferable to a new repo file outside the allowed-files set).
@@ -69,11 +70,11 @@ type ImpersonationCandidatesStore interface {
 }
 
 // ImpersonationAuditWriter is the storage seam for the impersonation
-// audit-row writers. Production wires *database.AuditRepo; tests
+// audit-row writers. Production wires *auditdb.AuditRepo; tests
 // substitute an in-memory fake.
 type ImpersonationAuditWriter interface {
-	WriteImpersonationStart(ctx context.Context, evt database.AuditImpersonationEvent) error
-	WriteImpersonationEnd(ctx context.Context, evt database.AuditImpersonationEvent) error
+	WriteImpersonationStart(ctx context.Context, evt auditdb.AuditImpersonationEvent) error
+	WriteImpersonationEnd(ctx context.Context, evt auditdb.AuditImpersonationEvent) error
 }
 
 // ImpersonationHandler bundles the four impersonation endpoints.
@@ -276,7 +277,7 @@ func (h *ImpersonationHandler) Start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.audit != nil {
-		if writeErr := h.audit.WriteImpersonationStart(r.Context(), database.AuditImpersonationEvent{
+		if writeErr := h.audit.WriteImpersonationStart(r.Context(), auditdb.AuditImpersonationEvent{
 			Actor:     actor,
 			Target:    target,
 			IP:        impersonationClientIP(r),
@@ -320,7 +321,7 @@ func (h *ImpersonationHandler) End(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.audit != nil {
-		if writeErr := h.audit.WriteImpersonationEnd(r.Context(), database.AuditImpersonationEvent{
+		if writeErr := h.audit.WriteImpersonationEnd(r.Context(), auditdb.AuditImpersonationEvent{
 			Actor:     claim.OriginalAdmin,
 			Target:    claim.Target,
 			IP:        impersonationClientIP(r),

@@ -16,5 +16,5 @@
 // subpackage symbol, choose: (a) leave the symbol in parent, (b) carve
 // the parent peer file too. We chose (a) here for cohesion.
 //
-// Layer: adapter (database)
+// Layer: adapter
 package notification

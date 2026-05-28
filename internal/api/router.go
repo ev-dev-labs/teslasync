@@ -17,6 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
@@ -510,7 +511,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// target as the request principal. The audit repo doubles as the
 	// candidates store via its ListDistinctActiveSubjects helper —
 	// see audit_repo.go for the rationale on co-locating that query.
-	auditRepo := database.NewAuditRepoWithDB(db)
+	auditRepo := auditdb.NewAuditRepoWithDB(db)
 	impersonationStore := tsauth.MustNewImpersonationStore()
 	impersonationHandler := NewImpersonationHandler(
 		impersonationStore,

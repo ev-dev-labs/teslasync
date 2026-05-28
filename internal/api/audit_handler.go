@@ -27,9 +27,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/rs/zerolog/log"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // MaxRevealAuditBodyBytes caps the POST body. The expected payload
@@ -72,14 +72,14 @@ type revealAuditRequest struct {
 // MaskedRevealHandler is the HTTP handler for POST /audit/reveal.
 //
 // It depends on:
-//   - a `*database.AuditRepo` for the actual write,
+//   - a `*auditdb.AuditRepo` for the actual write,
 //   - the configured ForwardAuth header so the actor identity can be
 //     resolved (when AUTH is enabled).
 //
 // The handler is constructed once during router setup and shared
 // across all requests; it holds no per-request state.
 type MaskedRevealHandler struct {
-	repo              *database.AuditRepo
+	repo              *auditdb.AuditRepo
 	forwardAuthHeader string
 }
 
@@ -87,7 +87,7 @@ type MaskedRevealHandler struct {
 // non-nil; passing nil yields a handler that 500s every request,
 // which is intentionally loud — there is no graceful degradation
 // path for a misconfigured audit pipeline.
-func NewMaskedRevealHandler(repo *database.AuditRepo, forwardAuthHeader string) *MaskedRevealHandler {
+func NewMaskedRevealHandler(repo *auditdb.AuditRepo, forwardAuthHeader string) *MaskedRevealHandler {
 	return &MaskedRevealHandler{
 		repo:              repo,
 		forwardAuthHeader: forwardAuthHeader,
@@ -125,7 +125,7 @@ func (h *MaskedRevealHandler) Reveal(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	evt := database.AuditRevealEvent{
+	evt := auditdb.AuditRevealEvent{
 		Actor:     actorFromRequest(r, h.forwardAuthHeader),
 		Variant:   body.Variant,
 		Kind:      body.Kind,
@@ -136,7 +136,7 @@ func (h *MaskedRevealHandler) Reveal(w http.ResponseWriter, r *http.Request) {
 	if err := h.repo.WriteRevealEvent(r.Context(), evt); err != nil {
 		// Log at warn (not error) — audit failures should be visible
 		// to operators but never page on-call.
-		if errors.Is(err, database.ErrAuditRevealVariantRequired) {
+		if errors.Is(err, auditdb.ErrAuditRevealVariantRequired) {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}

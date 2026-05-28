@@ -11,7 +11,7 @@
 //     source-type allowlist
 //     {feedback_item, audit_log}.
 //
-// Layer: domain (LLM tool implementations). The package depends
+// Layer: domain
 // on:
 //
 //   - the parent registry: internal/ai/tools (for Registry,

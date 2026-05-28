@@ -1,9 +1,7 @@
 // Package route hosts the route-efficiency AI tool cluster carved from
 // internal/ai/tools/ in Phase R6.28.
 //
-// Layer: domain (per ADR-007 — AI tools sit at the domain layer because
-// they expose pure capability surfaces to the AI orchestrator without
-// reaching into HTTP/transport concerns).
+// Layer: domain
 //
 // # Contents
 //

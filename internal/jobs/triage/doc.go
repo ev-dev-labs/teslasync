@@ -6,7 +6,7 @@
 // settings table must NOT silently leak push notifications or
 // LLM embeddings to off-mode users.
 //
-// Layer: domain-adjacent (use case scheduled by a worker). The
+// Layer: app
 // package depends only on internal/ai/rag (for AIModeOff) and
 // internal/database (for the SettingsRepo type its inputs
 // satisfy structurally via the narrow SettingsReader interfaces).

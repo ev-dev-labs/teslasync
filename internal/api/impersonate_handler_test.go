@@ -28,8 +28,9 @@ import (
 	"testing"
 	"time"
 
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
+
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // fakeImpersonationStore implements both ImpersonationCandidatesStore
@@ -39,8 +40,8 @@ type fakeImpersonationStore struct {
 	mu             sync.Mutex
 	subjects       []string
 	subjectsErr    error
-	startEvents    []database.AuditImpersonationEvent
-	endEvents      []database.AuditImpersonationEvent
+	startEvents    []auditdb.AuditImpersonationEvent
+	endEvents      []auditdb.AuditImpersonationEvent
 	startErr       error
 	endErr         error
 	startCalled    int32
@@ -58,7 +59,7 @@ func (s *fakeImpersonationStore) ListDistinctActiveSubjects(_ context.Context) (
 	return out, nil
 }
 
-func (s *fakeImpersonationStore) WriteImpersonationStart(_ context.Context, evt database.AuditImpersonationEvent) error {
+func (s *fakeImpersonationStore) WriteImpersonationStart(_ context.Context, evt auditdb.AuditImpersonationEvent) error {
 	atomic.AddInt32(&s.startCalled, 1)
 	if s.startErr != nil {
 		return s.startErr
@@ -69,7 +70,7 @@ func (s *fakeImpersonationStore) WriteImpersonationStart(_ context.Context, evt 
 	return nil
 }
 
-func (s *fakeImpersonationStore) WriteImpersonationEnd(_ context.Context, evt database.AuditImpersonationEvent) error {
+func (s *fakeImpersonationStore) WriteImpersonationEnd(_ context.Context, evt auditdb.AuditImpersonationEvent) error {
 	atomic.AddInt32(&s.endCalled, 1)
 	if s.endErr != nil {
 		return s.endErr

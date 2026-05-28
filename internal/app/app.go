@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
@@ -93,18 +94,18 @@ type App struct {
 	// Phase-44 / observability-batch / Prompt F4 — DLQ Inspector
 	// (subscribes to {TopicBase}/dlq/#; serves /system/dlq/*).
 	DLQInspector       *mqtt.DLQInspector
-	DLQReplayAuditRepo *database.DLQReplayAuditRepo
+	DLQReplayAuditRepo *auditdb.DLQReplayAuditRepo
 
 	// Phase-44 / observability-batch / Prompt F8 — Dynamic
 	// feature-flag store (Redis-backed) + change audit repo.
 	FlagStore              *flags.Store
-	FeatureFlagChangesRepo *database.FeatureFlagChangesRepo
+	FeatureFlagChangesRepo *auditdb.FeatureFlagChangesRepo
 
 	// Phase-45 — Operator confidence. Constructed in
 	// initObservabilityPhase45 once DB is up; passed through
 	// RouterOptions to the handler/v1 admin observability surface.
 	AuditRecorder         *audit.Recorder
-	AuditLogQueryRepo     *database.AuditLogQueryRepo
+	AuditLogQueryRepo     *auditdb.AuditLogQueryRepo
 	SlowQueriesRepo       *dbobs.SlowQueriesRepo
 	HypertableMetricsRepo *dbobs.HypertableMetricsRepo
 	IngestXRayRepo        *dbobs.IngestXRayRepo

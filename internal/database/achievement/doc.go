@@ -1,7 +1,7 @@
 // Package achievement holds the persistence layer for first-unlock timestamps
 // of lifetime achievements (Phase-40 prompt 63).
 //
-// Layer: adapter (database) — per Clean Architecture (ADR-009).
+// Layer: adapter
 //
 // Exports a single aggregate root [Unlock] + its repository [UnlockRepo].
 //

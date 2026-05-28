@@ -1,4 +1,4 @@
-package database
+package audit
 
 // Phase-45 / Prompt 1 — Audit log read path.
 //
@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // AuditLogQuery is the parameterised filter for List.
@@ -50,11 +52,11 @@ type AuditLogRow struct {
 
 // AuditLogQueryRepo is the read-side repo.
 type AuditLogQueryRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewAuditLogQueryRepo constructs the repo. Returns nil when db is nil.
-func NewAuditLogQueryRepo(db *DB) *AuditLogQueryRepo {
+func NewAuditLogQueryRepo(db *database.DB) *AuditLogQueryRepo {
 	if db == nil || db.Pool == nil {
 		return nil
 	}

@@ -21,9 +21,7 @@
 // keep their verbatim names for git bisectability — only the import
 // path moved.
 //
-// Layer: adapter (per ADR-007 — the ai-tools layer is the adapter
-// implementation of internal/port/ai for the strategy dispatcher;
-// it is consumed by the AI guard chain in internal/api).
+// Layer: adapter
 //
 // ADR-011 §3 alias convention: callers importing this package
 // alongside the parent ai/tools should use the alias

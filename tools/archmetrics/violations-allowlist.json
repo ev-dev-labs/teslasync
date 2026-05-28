@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 68,
+      "max_files": 65,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.8 carved 10 subpkgs. R4.9 batch 70-68 (alert — repo + rule_state_repo). Lesson 30 NEW: parent settings_serializer.go compile-time assertions `var _ SettingsSerializerAlertRepo = (*AlertRuleRepo)(nil)` would create parent->child cycle. Solution: relocate assertion to alert/settings_serializer_assertion.go which imports parent for the interface type. Same fix needed for future geofence + quiet_hours carves. Exported alertRulesEquivalent + alertRuleStableID from settings_serializer for alert subpkg test access. Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2). Planned: ~20 aggregates total."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.9 carved 11 subpkgs. R4.10 batch 68-65 (audit — repo + log_query_repo + dlq_replay_repo + feature_flag_changes_repo, 4 src files; +1 new null_helpers.go promotes parent-only NullIfEmpty so audit can be carved while auth subpkg still uses database.NullIfEmpty). Lesson 31 NEW: arch_test TestEveryInternalPackageHasDocGoWithLayer regex requires single-token closed-set Layer (domain|port|adapter|app|handler|platform|cmd-internal|tool). Prior R4.4-R4.9 + R5/R6 carves used `// Layer: adapter (database)` which silently failed this test; fixed across 23 doc.go files this batch. Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4). Planned: ~20 aggregates total."
     },
     {
       "path": "internal/ai/tools",

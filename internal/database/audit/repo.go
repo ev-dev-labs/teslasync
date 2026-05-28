@@ -18,7 +18,7 @@
 //     the constants the only source of truth.
 //   - Tests can swap the writer behind an interface without having
 //     to fake the entire audit.go pile.
-package database
+package audit
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -121,9 +122,9 @@ func NewAuditRepo(pool *pgxpool.Pool, now func() time.Time) *AuditRepo {
 }
 
 // NewAuditRepoWithDB is the convenience constructor for production
-// wiring. It reaches into the *DB struct that the rest of the
+// wiring. It reaches into the *database.DB struct that the rest of the
 // package uses so callers do not have to know about pgxpool details.
-func NewAuditRepoWithDB(db *DB) *AuditRepo {
+func NewAuditRepoWithDB(db *database.DB) *AuditRepo {
 	if db == nil {
 		return nil
 	}
@@ -169,35 +170,14 @@ func (r *AuditRepo) WriteRevealEvent(ctx context.Context, evt AuditRevealEvent) 
 		evt.Actor,
 		AuditRevealAction,
 		variant,
-		nullIfEmpty(kind),
-		nullIfEmpty(evt.IP),
-		nullIfEmpty(evt.UserAgent),
+		database.NullIfEmpty(kind),
+		database.NullIfEmpty(evt.IP),
+		database.NullIfEmpty(evt.UserAgent),
 	)
 	if err != nil {
 		return fmt.Errorf("audit_logs insert: %w", err)
 	}
 	return nil
-}
-
-// nullIfEmpty mirrors the `nullableStr` helper in audit.go but lives
-// in this file so the repo has zero cross-file dependencies. The
-// returned `any` is what pgx expects for a NULL-able TEXT bind.
-// NullIfEmpty returns nil for empty strings, otherwise the string. Useful
-// for INSERT/UPDATE parameters where empty values should map to SQL NULL
-// rather than the empty string. Exported (Phase R4) so sibling subpackages
-// (e.g. internal/database/auth) can reuse it without duplicating the helper.
-func NullIfEmpty(s string) any {
-	if s == "" {
-		return nil
-	}
-	return s
-}
-
-// nullIfEmpty is a local convenience alias retained for the legacy
-// in-package call sites still in this file. New callers should use
-// [NullIfEmpty] (exported).
-func nullIfEmpty(s string) any {
-	return NullIfEmpty(s)
 }
 
 // AuditImpersonationEvent is the shared write-shape for both the
@@ -280,8 +260,8 @@ func (r *AuditRepo) writeImpersonationEvent(ctx context.Context, action string, 
 		actor,
 		action,
 		target,
-		nullIfEmpty(evt.IP),
-		nullIfEmpty(evt.UserAgent),
+		database.NullIfEmpty(evt.IP),
+		database.NullIfEmpty(evt.UserAgent),
 	)
 	if err != nil {
 		return fmt.Errorf("audit_logs impersonation insert: %w", err)

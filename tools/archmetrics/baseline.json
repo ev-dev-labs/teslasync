@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T15:32:23Z",
+  "generated_at": "2026-05-28T15:43:37Z",
   "go_version": "go1.26.1",
-  "commit_sha": "0316af5b5276243245b607a77a22662bd19ca999",
+  "commit_sha": "d9a94d3671f1f1bcb65ab9f91b664c03bf9fb8d0",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1928,8 +1928,9 @@
       "path": "internal/ai/tools/alert",
       "go_files": 3,
       "test_files": 2,
-      "loc": 1754,
+      "loc": 1752,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/ai/tools",
         "internal/models/alert"
@@ -1963,8 +1964,9 @@
       "path": "internal/ai/tools/automation",
       "go_files": 2,
       "test_files": 1,
-      "loc": 1061,
+      "loc": 1059,
       "has_doc_go": true,
+      "layer": "domain",
       "imports": [
         "internal/ai/tools",
         "internal/ai/tools/toolstest"
@@ -2114,6 +2116,7 @@
       "test_files": 1,
       "loc": 1601,
       "has_doc_go": true,
+      "layer": "domain",
       "imports": [
         "internal/ai/provider",
         "internal/ai/rag",
@@ -2171,8 +2174,9 @@
       "path": "internal/ai/tools/location",
       "go_files": 3,
       "test_files": 2,
-      "loc": 1724,
+      "loc": 1722,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/ai/tools",
         "internal/models/geo"
@@ -2287,8 +2291,9 @@
       "path": "internal/ai/tools/route",
       "go_files": 2,
       "test_files": 1,
-      "loc": 1168,
+      "loc": 1166,
       "has_doc_go": true,
+      "layer": "domain",
       "imports": [
         "internal/ai/provider",
         "internal/ai/rag",
@@ -2306,8 +2311,9 @@
       "path": "internal/ai/tools/safety",
       "go_files": 2,
       "test_files": 1,
-      "loc": 560,
+      "loc": 558,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/ai/tools"
       ],
@@ -2342,8 +2348,9 @@
       "path": "internal/ai/tools/speed",
       "go_files": 2,
       "test_files": 1,
-      "loc": 997,
+      "loc": 995,
       "has_doc_go": true,
+      "layer": "domain",
       "imports": [
         "internal/ai/tools",
         "internal/ai/tools/toolstest",
@@ -2429,8 +2436,9 @@
       "path": "internal/ai/tools/tripplan",
       "go_files": 2,
       "test_files": 1,
-      "loc": 1356,
+      "loc": 1354,
       "has_doc_go": true,
+      "layer": "domain",
       "imports": [
         "internal/ai/tools",
         "internal/ai/tools/toolstest",
@@ -2498,7 +2506,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126593,
+      "loc": 126595,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2623,6 +2631,7 @@
         "internal/database/achievement",
         "internal/database/admin",
         "internal/database/alert",
+        "internal/database/audit",
         "internal/database/auth",
         "internal/database/automation",
         "internal/database/backup",
@@ -3156,7 +3165,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1838,
+      "loc": 1840,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3168,6 +3177,7 @@
         "internal/config",
         "internal/crypto",
         "internal/database",
+        "internal/database/audit",
         "internal/database/gdpr",
         "internal/database/notification",
         "internal/database/observability",
@@ -3237,7 +3247,7 @@
       "layer": "app",
       "imports": [
         "internal/audit",
-        "internal/database"
+        "internal/database/audit"
       ],
       "files": [
         "doc.go",
@@ -3683,9 +3693,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 68,
+      "go_files": 65,
       "test_files": 24,
-      "loc": 17764,
+      "loc": 16889,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3712,8 +3722,6 @@
         "ai_chat_continuations_repo.go",
         "ai_chat_continuations_repo_test.go",
         "api_call_log_repo.go",
-        "audit_log_query_repo.go",
-        "audit_repo.go",
         "cache.go",
         "cache_test.go",
         "charge_plan_repo.go",
@@ -3723,7 +3731,6 @@
         "database.go",
         "database_test.go",
         "database_tracing_test.go",
-        "dlq_replay_audit_repo.go",
         "doc.go",
         "drive_diagnostic_repo.go",
         "drive_repo.go",
@@ -3732,7 +3739,6 @@
         "export_job_repo.go",
         "export_job_repo_bulk.go",
         "export_repo.go",
-        "feature_flag_changes_repo.go",
         "from_map.go",
         "geofence_repo.go",
         "geofence_repo_bulk.go",
@@ -3745,6 +3751,7 @@
         "mileage_repo.go",
         "mileage_repo_test.go",
         "mongodb.go",
+        "null_helpers.go",
         "position_repo.go",
         "query_budget_tracer.go",
         "query_budget_tracer_test.go",
@@ -3807,6 +3814,7 @@
       "test_files": 0,
       "loc": 93,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/database"
       ],
@@ -3821,6 +3829,7 @@
       "test_files": 0,
       "loc": 873,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/database",
         "internal/models/dashboard"
@@ -3840,6 +3849,7 @@
       "test_files": 4,
       "loc": 1136,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/database",
         "internal/models/alert"
@@ -3856,11 +3866,30 @@
       ]
     },
     {
+      "path": "internal/database/audit",
+      "go_files": 5,
+      "test_files": 0,
+      "loc": 905,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database"
+      ],
+      "files": [
+        "dlq_replay_repo.go",
+        "doc.go",
+        "feature_flag_changes_repo.go",
+        "log_query_repo.go",
+        "repo.go"
+      ]
+    },
+    {
       "path": "internal/database/auth",
       "go_files": 7,
       "test_files": 4,
       "loc": 1788,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/crypto",
         "internal/database",
@@ -3886,6 +3915,7 @@
       "test_files": 1,
       "loc": 1684,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/automation/trigger",
         "internal/database",
@@ -3913,6 +3943,7 @@
       "test_files": 0,
       "loc": 246,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/database",
         "internal/models/backup"
@@ -3929,6 +3960,7 @@
       "test_files": 0,
       "loc": 206,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/database"
       ],
@@ -3943,6 +3975,7 @@
       "test_files": 1,
       "loc": 1950,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/database",
         "internal/models",
@@ -3965,6 +3998,7 @@
       "test_files": 0,
       "loc": 1396,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/database"
       ],
@@ -3984,6 +4018,7 @@
       "test_files": 0,
       "loc": 127,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/database",
         "internal/models/drive"
@@ -3999,6 +4034,7 @@
       "test_files": 1,
       "loc": 806,
       "has_doc_go": true,
+      "layer": "adapter",
       "imports": [
         "internal/database"
       ],
@@ -4538,6 +4574,7 @@
       "test_files": 2,
       "loc": 579,
       "has_doc_go": true,
+      "layer": "app",
       "imports": [
         "internal/ai/rag",
         "internal/database"
@@ -4573,6 +4610,7 @@
       "test_files": 7,
       "loc": 2108,
       "has_doc_go": true,
+      "layer": "app",
       "imports": [
         "internal/ai/rag",
         "internal/database"
@@ -4601,6 +4639,7 @@
       "test_files": 2,
       "loc": 621,
       "has_doc_go": true,
+      "layer": "app",
       "imports": [
         "internal/ai/rag",
         "internal/database"
@@ -6961,14 +7000,11 @@
       "ai_call_log_repo.go",
       "ai_chat_continuations_repo.go",
       "api_call_log_repo.go",
-      "audit_log_query_repo.go",
-      "audit_repo.go",
       "cache.go",
       "charge_plan_repo.go",
       "charging_repo.go",
       "circuit_breaker.go",
       "database.go",
-      "dlq_replay_audit_repo.go",
       "doc.go",
       "drive_diagnostic_repo.go",
       "drive_repo.go",
@@ -6976,7 +7012,6 @@
       "export_job_repo.go",
       "export_job_repo_bulk.go",
       "export_repo.go",
-      "feature_flag_changes_repo.go",
       "from_map.go",
       "geofence_repo.go",
       "geofence_repo_bulk.go",
@@ -6986,6 +7021,7 @@
       "migrate.go",
       "mileage_repo.go",
       "mongodb.go",
+      "null_helpers.go",
       "position_repo.go",
       "query_budget_tracer.go",
       "quiet_hours_repo.go",
@@ -7044,6 +7080,13 @@
       "repo.go",
       "rule_state_repo.go",
       "settings_serializer_assertion.go"
+    ],
+    "internal/database/audit": [
+      "dlq_replay_repo.go",
+      "doc.go",
+      "feature_flag_changes_repo.go",
+      "log_query_repo.go",
+      "repo.go"
     ],
     "internal/database/auth": [
       "doc.go",
@@ -7808,12 +7851,13 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 68,
+      "flat_parent_go_files": 65,
       "flat_parent_test_files": 24,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
         "alert",
+        "audit",
         "auth",
         "automation",
         "backup",
@@ -7821,7 +7865,6 @@
       ],
       "missing_subpkgs": [
         "ai",
-        "audit",
         "charging",
         "dashboard",
         "drive",

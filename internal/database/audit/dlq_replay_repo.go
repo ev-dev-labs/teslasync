@@ -29,7 +29,7 @@
 // Update / Delete / Aggregate API — audit rows are immutable + read by
 // operators via the inspector UI's "audit log" tab.
 
-package database
+package audit
 
 import (
 	"context"
@@ -39,6 +39,7 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -90,14 +91,14 @@ type DLQReplayAuditInsert struct {
 
 // DLQReplayAuditRepo persists + queries audit rows for the DLQ inspector.
 type DLQReplayAuditRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewDLQReplayAuditRepo constructs a repo bound to db. Panics on nil
 // to surface wiring mistakes at startup rather than at first write
 // (audit writes happen on the request path; a silent nil would mean
 // audit rows vanish without the operator noticing).
-func NewDLQReplayAuditRepo(db *DB) *DLQReplayAuditRepo {
+func NewDLQReplayAuditRepo(db *database.DB) *DLQReplayAuditRepo {
 	if db == nil {
 		panic("database: NewDLQReplayAuditRepo: db is nil")
 	}

@@ -13,7 +13,7 @@
 // SELECT. Generic request-audit middleware only captures the HTTP
 // envelope — without before/after values it can't answer that question.
 
-package database
+package audit
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"net/netip"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -65,12 +66,12 @@ type FeatureFlagChangeInsert struct {
 // FeatureFlagChangesRepo persists + queries audit rows for the flag
 // store admin endpoints.
 type FeatureFlagChangesRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewFeatureFlagChangesRepo constructs a repo bound to db. Panics on
 // nil to surface wiring mistakes at startup.
-func NewFeatureFlagChangesRepo(db *DB) *FeatureFlagChangesRepo {
+func NewFeatureFlagChangesRepo(db *database.DB) *FeatureFlagChangesRepo {
 	if db == nil {
 		panic("database: NewFeatureFlagChangesRepo: db is nil")
 	}

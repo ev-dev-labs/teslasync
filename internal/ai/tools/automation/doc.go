@@ -1,9 +1,7 @@
 // Package automation hosts the AI automation-builder tool cluster carved
 // from internal/ai/tools/ in Phase R6.30.
 //
-// Layer: domain (per ADR-007 — AI tools sit at the domain layer because
-// they expose pure capability surfaces to the AI orchestrator without
-// reaching into HTTP/transport concerns).
+// Layer: domain
 //
 // # Contents
 //

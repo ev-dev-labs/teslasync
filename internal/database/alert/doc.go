@@ -18,5 +18,5 @@
 // This keeps signature drift detection at build time AND avoids the
 // cycle. Apply the same pattern to geofence/quiet_hours carves later.
 //
-// Layer: adapter (database)
+// Layer: adapter
 package alert

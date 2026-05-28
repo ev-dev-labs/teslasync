@@ -9,6 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
@@ -39,19 +40,19 @@ type RouterOptions struct {
 	// Constructed by internal/app once the production paho client is
 	// connected (see internal/app/new.go::initFleetTelemetryPipeline).
 	DLQInspector       *mqtt.DLQInspector
-	DLQReplayAuditRepo *database.DLQReplayAuditRepo
+	DLQReplayAuditRepo *auditdb.DLQReplayAuditRepo
 
 	// Phase-44 / observability-batch / Prompt F8. FlagStore +
 	// changes-audit repo enable /system/flags{,/{key},/changes} when set.
 	FlagStore              *flags.Store
-	FeatureFlagChangesRepo *database.FeatureFlagChangesRepo
+	FeatureFlagChangesRepo *auditdb.FeatureFlagChangesRepo
 
 	// Phase-45 — Operator confidence subsystems. Each pointer is
 	// optional; when nil the corresponding admin handler returns 503
 	// with the SUBSYSTEM_NOT_CONFIGURED code so the SPA can render
 	// a clean "not available on this deployment" panel.
 	AuditRecorder         *audit.Recorder
-	AuditLogQueryRepo     *database.AuditLogQueryRepo
+	AuditLogQueryRepo     *auditdb.AuditLogQueryRepo
 	SlowQueriesRepo       *dbobs.SlowQueriesRepo
 	HypertableMetricsRepo *dbobs.HypertableMetricsRepo
 	IngestXRayRepo        *dbobs.IngestXRayRepo

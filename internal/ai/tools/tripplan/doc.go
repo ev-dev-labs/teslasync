@@ -1,9 +1,7 @@
 // Package tripplan hosts the AI trip-planner LLM-agent tool cluster
 // carved from internal/ai/tools/ in Phase R6.31.
 //
-// Layer: domain (per ADR-007 — AI tools sit at the domain layer because
-// they expose pure capability surfaces to the AI orchestrator without
-// reaching into HTTP/transport concerns).
+// Layer: domain
 //
 // # Contents
 //

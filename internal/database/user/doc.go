@@ -14,5 +14,5 @@
 // Per Lesson 26, settings stays in parent until vehicle_settings is
 // also carved into the same subpackage in a future R4.x batch.
 //
-// Layer: adapter (database)
+// Layer: adapter
 package user

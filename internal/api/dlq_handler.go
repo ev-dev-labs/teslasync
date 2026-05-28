@@ -39,7 +39,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
 
@@ -48,13 +48,13 @@ import (
 // code so a misconfigured deployment surfaces cleanly instead of 500.
 type DLQHandler struct {
 	inspector         *mqtt.DLQInspector
-	audit             *database.DLQReplayAuditRepo
+	audit             *auditdb.DLQReplayAuditRepo
 	principalHeader   string
 	replayEnabledFlag bool
 }
 
 // NewDLQHandler constructs a handler bound to inspector + auditRepo.
-func NewDLQHandler(inspector *mqtt.DLQInspector, audit *database.DLQReplayAuditRepo, principalHeader string, replayEnabled bool) *DLQHandler {
+func NewDLQHandler(inspector *mqtt.DLQInspector, audit *auditdb.DLQReplayAuditRepo, principalHeader string, replayEnabled bool) *DLQHandler {
 	return &DLQHandler{
 		inspector:         inspector,
 		audit:             audit,
@@ -173,7 +173,7 @@ func (h *DLQHandler) Replay(w http.ResponseWriter, r *http.Request) {
 
 	entry, err := h.inspector.Replay(r.Context(), id)
 
-	auditIn := database.DLQReplayAuditInsert{
+	auditIn := auditdb.DLQReplayAuditInsert{
 		Actor:    actor,
 		ActorIP:  actorIP,
 		DLQID:    id,
@@ -186,42 +186,42 @@ func (h *DLQHandler) Replay(w http.ResponseWriter, r *http.Request) {
 
 	switch {
 	case errors.Is(err, mqtt.ErrDLQReplayDisabled):
-		auditIn.Result = database.DLQReplayResultDisabled
+		auditIn.Result = auditdb.DLQReplayResultDisabled
 		auditIn.Error = err.Error()
 		auditIn.DstTopic = ""
 		if auditIn.SrcTopic == "" {
 			auditIn.SrcTopic = "unknown"
 		}
 		aid := tryAudit(r.Context(), h.audit, auditIn)
-		writeJSON(w, http.StatusForbidden, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(database.DLQReplayResultDisabled), Error: err.Error(), AuditID: aid})
+		writeJSON(w, http.StatusForbidden, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultDisabled), Error: err.Error(), AuditID: aid})
 		return
 	case errors.Is(err, mqtt.ErrDLQEntryNotFound):
-		auditIn.Result = database.DLQReplayResultNotFound
+		auditIn.Result = auditdb.DLQReplayResultNotFound
 		auditIn.Error = err.Error()
 		auditIn.DstTopic = ""
 		auditIn.SrcTopic = "unknown"
 		auditIn.Payload = nil
 		aid := tryAudit(r.Context(), h.audit, auditIn)
-		writeJSON(w, http.StatusNotFound, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(database.DLQReplayResultNotFound), Error: err.Error(), AuditID: aid})
+		writeJSON(w, http.StatusNotFound, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultNotFound), Error: err.Error(), AuditID: aid})
 		return
 	case errors.Is(err, mqtt.ErrDLQEntryUnparseable):
-		auditIn.Result = database.DLQReplayResultUnparseable
+		auditIn.Result = auditdb.DLQReplayResultUnparseable
 		auditIn.Error = err.Error()
 		auditIn.DstTopic = ""
 		aid := tryAudit(r.Context(), h.audit, auditIn)
-		writeJSON(w, http.StatusConflict, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(database.DLQReplayResultUnparseable), Error: err.Error(), AuditID: aid})
+		writeJSON(w, http.StatusConflict, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultUnparseable), Error: err.Error(), AuditID: aid})
 		return
 	case err != nil:
-		auditIn.Result = database.DLQReplayResultPublishFailed
+		auditIn.Result = auditdb.DLQReplayResultPublishFailed
 		auditIn.Error = err.Error()
 		aid := tryAudit(r.Context(), h.audit, auditIn)
-		writeJSON(w, http.StatusBadGateway, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(database.DLQReplayResultPublishFailed), Error: err.Error(), DstTopic: entry.ParsedSourceTopic, AuditID: aid})
+		writeJSON(w, http.StatusBadGateway, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultPublishFailed), Error: err.Error(), DstTopic: entry.ParsedSourceTopic, AuditID: aid})
 		return
 	}
 
-	auditIn.Result = database.DLQReplayResultOK
+	auditIn.Result = auditdb.DLQReplayResultOK
 	aid := tryAudit(r.Context(), h.audit, auditIn)
-	writeJSON(w, http.StatusOK, DLQReplayResponse{OK: true, ReplayedID: id, Result: string(database.DLQReplayResultOK), DstTopic: entry.ParsedSourceTopic, AuditID: aid})
+	writeJSON(w, http.StatusOK, DLQReplayResponse{OK: true, ReplayedID: id, Result: string(auditdb.DLQReplayResultOK), DstTopic: entry.ParsedSourceTopic, AuditID: aid})
 }
 
 // Audit serves GET /system/dlq/audit + GET /system/dlq/{id}/audit.
@@ -268,7 +268,7 @@ func toEntrySummary(e mqtt.DLQInspectorEntry) DLQEntrySummary {
 	return s
 }
 
-func tryAudit(ctx context.Context, repo *database.DLQReplayAuditRepo, in database.DLQReplayAuditInsert) int64 {
+func tryAudit(ctx context.Context, repo *auditdb.DLQReplayAuditRepo, in auditdb.DLQReplayAuditInsert) int64 {
 	if repo == nil {
 		return 0
 	}

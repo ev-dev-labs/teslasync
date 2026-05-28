@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T15:32:24Z, Go go1.26.1, commit 0316af5b5276243245b607a77a22662bd19ca999_
+_Generated 2026-05-28T15:43:38Z, Go go1.26.1, commit d9a94d3671f1f1bcb65ab9f91b664c03bf9fb8d0_
 
 ## Summary
 
-- Packages: 272
+- Packages: 273
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374236
+- Total non-blank LOC under cmd/+internal/+tools/: 374256
 
 ## cmd/* main.go LOC
 
@@ -140,9 +140,9 @@ _Generated 2026-05-28T15:32:24Z, Go go1.26.1, commit 0316af5b5276243245b607a77a2
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
 | internal/ai/tools | 11 | 7 | 4231 | yes | platform |
-| internal/ai/tools/alert | 3 | 2 | 1754 | yes |  |
+| internal/ai/tools/alert | 3 | 2 | 1752 | yes | adapter |
 | internal/ai/tools/anomaly | 2 | 1 | 571 | yes | domain |
-| internal/ai/tools/automation | 2 | 1 | 1061 | yes |  |
+| internal/ai/tools/automation | 2 | 1 | 1059 | yes | domain |
 | internal/ai/tools/charge | 2 | 1 | 611 | yes | domain |
 | internal/ai/tools/coaching | 2 | 1 | 677 | yes | domain |
 | internal/ai/tools/curve | 2 | 1 | 1194 | yes | domain |
@@ -150,29 +150,29 @@ _Generated 2026-05-28T15:32:24Z, Go go1.26.1, commit 0316af5b5276243245b607a77a2
 | internal/ai/tools/diagnostic | 4 | 3 | 4366 | yes | domain |
 | internal/ai/tools/digest | 2 | 1 | 565 | yes | domain |
 | internal/ai/tools/export | 2 | 1 | 1268 | yes | domain |
-| internal/ai/tools/feedback | 2 | 1 | 1601 | yes |  |
+| internal/ai/tools/feedback | 2 | 1 | 1601 | yes | domain |
 | internal/ai/tools/forecast | 4 | 3 | 1893 | yes |  |
 | internal/ai/tools/lifetime | 4 | 3 | 2384 | yes | domain |
-| internal/ai/tools/location | 3 | 2 | 1724 | yes |  |
+| internal/ai/tools/location | 3 | 2 | 1722 | yes | adapter |
 | internal/ai/tools/maintenance | 3 | 1 | 1401 | yes | domain |
 | internal/ai/tools/nl | 4 | 3 | 3176 | yes | domain |
 | internal/ai/tools/nlq | 4 | 0 | 1921 | yes | domain |
 | internal/ai/tools/paint | 2 | 1 | 558 | yes | domain |
 | internal/ai/tools/predict | 4 | 3 | 1531 | yes | domain |
-| internal/ai/tools/route | 2 | 1 | 1168 | yes |  |
-| internal/ai/tools/safety | 2 | 1 | 560 | yes |  |
+| internal/ai/tools/route | 2 | 1 | 1166 | yes | domain |
+| internal/ai/tools/safety | 2 | 1 | 558 | yes | adapter |
 | internal/ai/tools/schedule | 4 | 3 | 2821 | yes | domain |
-| internal/ai/tools/speed | 2 | 1 | 997 | yes |  |
+| internal/ai/tools/speed | 2 | 1 | 995 | yes | domain |
 | internal/ai/tools/summary | 5 | 4 | 4219 | yes | domain |
 | internal/ai/tools/toolstest | 2 | 0 | 176 | yes | domain |
 | internal/ai/tools/trip | 4 | 4 | 2511 | yes | domain |
-| internal/ai/tools/tripplan | 2 | 1 | 1356 | yes |  |
+| internal/ai/tools/tripplan | 2 | 1 | 1354 | yes | domain |
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126593 | yes | handler |
+| internal/api | 271 | 163 | 126595 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
-| internal/app | 6 | 1 | 1838 | yes | app |
+| internal/app | 6 | 1 | 1840 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
 | internal/app/auditviewersvc | 3 | 0 | 77 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
@@ -197,18 +197,19 @@ _Generated 2026-05-28T15:32:24Z, Go go1.26.1, commit 0316af5b5276243245b607a77a2
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 68 | 24 | 17764 | yes | platform |
-| internal/database/achievement | 2 | 0 | 93 | yes |  |
-| internal/database/admin | 6 | 0 | 873 | yes |  |
-| internal/database/alert | 4 | 4 | 1136 | yes |  |
-| internal/database/auth | 7 | 4 | 1788 | yes |  |
-| internal/database/automation | 11 | 1 | 1684 | yes |  |
-| internal/database/backup | 3 | 0 | 246 | yes |  |
-| internal/database/gdpr | 2 | 0 | 206 | yes |  |
-| internal/database/notification | 5 | 1 | 1950 | yes |  |
-| internal/database/observability | 7 | 0 | 1396 | yes |  |
-| internal/database/sharing | 2 | 0 | 127 | yes |  |
-| internal/database/user | 3 | 1 | 806 | yes |  |
+| internal/database | 65 | 24 | 16889 | yes | platform |
+| internal/database/achievement | 2 | 0 | 93 | yes | adapter |
+| internal/database/admin | 6 | 0 | 873 | yes | adapter |
+| internal/database/alert | 4 | 4 | 1136 | yes | adapter |
+| internal/database/audit | 5 | 0 | 905 | yes | adapter |
+| internal/database/auth | 7 | 4 | 1788 | yes | adapter |
+| internal/database/automation | 11 | 1 | 1684 | yes | adapter |
+| internal/database/backup | 3 | 0 | 246 | yes | adapter |
+| internal/database/gdpr | 2 | 0 | 206 | yes | adapter |
+| internal/database/notification | 5 | 1 | 1950 | yes | adapter |
+| internal/database/observability | 7 | 0 | 1396 | yes | adapter |
+| internal/database/sharing | 2 | 0 | 127 | yes | adapter |
+| internal/database/user | 3 | 1 | 806 | yes | adapter |
 | internal/dataquality | 4 | 0 | 347 | yes | platform |
 | internal/domain | 2 | 1 | 114 | yes | domain |
 | internal/domain/charging | 6 | 1 | 357 | yes | domain |
@@ -238,10 +239,10 @@ _Generated 2026-05-28T15:32:24Z, Go go1.26.1, commit 0316af5b5276243245b607a77a2
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/integrations/homeassistant | 3 | 1 | 515 | yes | adapter |
 | internal/jobs | 1 | 0 | 21 | yes | platform |
-| internal/jobs/digests | 3 | 2 | 579 | yes |  |
+| internal/jobs/digests | 3 | 2 | 579 | yes | app |
 | internal/jobs/embeddings | 2 | 1 | 262 | yes | platform |
-| internal/jobs/indexers | 8 | 7 | 2108 | yes |  |
-| internal/jobs/triage | 3 | 2 | 621 | yes |  |
+| internal/jobs/indexers | 8 | 7 | 2108 | yes | app |
+| internal/jobs/triage | 3 | 2 | 621 | yes | app |
 | internal/metrics | 6 | 2 | 1073 | yes | platform |
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
@@ -326,7 +327,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 68 / 24 | 22 | 6 | 16 |
+| `internal/database` | R4 | 143 | 65 / 24 | 22 | 7 | 15 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 
@@ -393,6 +394,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 **Existing subpackages on disk:**
 - `internal/database/achievement`
 - `internal/database/alert`
+- `internal/database/audit`
 - `internal/database/auth`
 - `internal/database/automation`
 - `internal/database/backup`
@@ -400,7 +402,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 **Planned but not yet on disk:**
 - `internal/database/ai`
-- `internal/database/audit`
 - `internal/database/charging`
 - `internal/database/dashboard`
 - `internal/database/drive`

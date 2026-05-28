@@ -6,5 +6,5 @@
 // Carved from internal/database in Phase R4.5 per ADR-011. Callers import
 // as `dbbackup` to disambiguate from the runtime internal/backup package.
 //
-// Layer: adapter (database)
+// Layer: adapter
 package backup
