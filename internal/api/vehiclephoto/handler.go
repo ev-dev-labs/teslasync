@@ -37,7 +37,7 @@
 //	first — router.go is therefore patched to bypass the cap on the
 //	POST /vehicles/{id}/photo path. See the bypassPaths block in
 //	router.go.
-package api
+package vehiclephoto
 
 import (
 	"bytes"
@@ -54,13 +54,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/imaging"
 
-	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // MaxUploadBytes caps the inbound multipart body. 8 MB is plenty
@@ -130,8 +131,8 @@ type VehiclePhotoStore interface {
 	Delete(ctx context.Context, vehicleID int64) (*vehicledb.VehiclePhotoRow, error)
 }
 
-// VehiclePhotoHandler bundles the four photo endpoints.
-type VehiclePhotoHandler struct {
+// Handler bundles the four photo endpoints.
+type Handler struct {
 	store    VehiclePhotoStore
 	vehicles apivehsettings.VehicleExistenceChecker
 	rootDir  string
@@ -149,18 +150,18 @@ type VehiclePhotoHandler struct {
 	nowFn func() time.Time
 }
 
-// NewVehiclePhotoHandler wires the handler. rootDir MUST be an
+// NewHandler wires the handler. rootDir MUST be an
 // absolute directory that the API process owns; the constructor
 // MkdirAll's the path so an empty install bootstraps cleanly. A nil
 // store, nil vehicle checker, or empty rootDir would surface as a
 // nil-pointer panic on the first request — preferable to a silent
 // half-disabled feature flag.
-func NewVehiclePhotoHandler(
+func NewHandler(
 	store VehiclePhotoStore,
 	vehicles apivehsettings.VehicleExistenceChecker,
 	rootDir string,
-) *VehiclePhotoHandler {
-	return &VehiclePhotoHandler{
+) *Handler {
+	return &Handler{
 		store:       store,
 		vehicles:    vehicles,
 		rootDir:     rootDir,
@@ -172,7 +173,7 @@ func NewVehiclePhotoHandler(
 // lockForVehicle returns the singleton per-vehicle mutex used to
 // serialise concurrent uploads / deletes. Internal map access is
 // guarded by h.mu so the get-or-create pattern stays race-free.
-func (h *VehiclePhotoHandler) lockForVehicle(vehicleID int64) *sync.Mutex {
+func (h *Handler) lockForVehicle(vehicleID int64) *sync.Mutex {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if mu, ok := h.uploadLocks[vehicleID]; ok {
@@ -204,10 +205,10 @@ type vehiclePhotoSizesResponse struct {
 // whether to render the hero photo or fall back to the stock model
 // silhouette. NEVER returns 404 — an absent photo is reported as
 // has_photo:false so the SPA's TanStack Query cache is happy.
-func (h *VehiclePhotoHandler) GetMeta(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) GetMeta(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle id")
 		return
 	}
 	if err := h.requireVehicleExists(r.Context(), w, vehicleID); err != nil {
@@ -216,14 +217,14 @@ func (h *VehiclePhotoHandler) GetMeta(w http.ResponseWriter, r *http.Request) {
 	row, err := h.store.Get(r.Context(), vehicleID)
 	if err != nil {
 		if errors.Is(err, vehicledb.ErrVehiclePhotoNotFound) {
-			writeJSON(w, http.StatusOK, vehiclePhotoMetaResponse{HasPhoto: false})
+			httpx.WriteJSON(w, http.StatusOK, vehiclePhotoMetaResponse{HasPhoto: false})
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to read photo metadata")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read photo metadata")
 		return
 	}
 	uploaded := row.UploadedAt
-	writeJSON(w, http.StatusOK, vehiclePhotoMetaResponse{
+	httpx.WriteJSON(w, http.StatusOK, vehiclePhotoMetaResponse{
 		HasPhoto:   true,
 		UploadedAt: &uploaded,
 		Sizes: &vehiclePhotoSizesResponse{
@@ -240,31 +241,31 @@ func (h *VehiclePhotoHandler) GetMeta(w http.ResponseWriter, r *http.Request) {
 // size segment is validated against PhotoMaxDimByName so a
 // path-traversal attempt on the size param can't escape into
 // arbitrary file reads.
-func (h *VehiclePhotoHandler) GetFile(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) GetFile(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle id")
 		return
 	}
 	size := chi.URLParam(r, "size")
 	if _, ok := PhotoMaxDimByName[size]; !ok {
-		writeErrorCode(w, http.StatusBadRequest, "unsupported size", PhotoCodeBadSize)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, "unsupported size", PhotoCodeBadSize)
 		return
 	}
 	row, err := h.store.Get(r.Context(), vehicleID)
 	if err != nil {
 		if errors.Is(err, vehicledb.ErrVehiclePhotoNotFound) {
-			writeErrorCode(w, http.StatusNotFound, "photo not found", PhotoCodeNotFound)
+			httpx.WriteErrorCode(w, http.StatusNotFound, "photo not found", PhotoCodeNotFound)
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to read photo")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read photo")
 		return
 	}
 	rel := relPathFromRow(row, size)
 	abs, err := h.resolveSafePath(rel)
 	if err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Str("size", size).Msg("photo path escapes root")
-		writeError(w, http.StatusInternalServerError, "failed to resolve photo path")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to resolve photo path")
 		return
 	}
 	f, err := os.Open(abs)
@@ -273,16 +274,16 @@ func (h *VehiclePhotoHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 		// failure mode — treat it as "not found" so the SPA can
 		// re-prompt the user to upload.
 		if errors.Is(err, os.ErrNotExist) {
-			writeErrorCode(w, http.StatusNotFound, "photo file missing", PhotoCodeNotFound)
+			httpx.WriteErrorCode(w, http.StatusNotFound, "photo file missing", PhotoCodeNotFound)
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to open photo file")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to open photo file")
 		return
 	}
 	defer f.Close()
 	stat, err := f.Stat()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to stat photo file")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to stat photo file")
 		return
 	}
 	w.Header().Set("Content-Type", "image/jpeg")
@@ -295,10 +296,10 @@ func (h *VehiclePhotoHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 // Multipart upload of one image part named "photo". On success
 // returns 200 with the same envelope as GetMeta — the SPA uses
 // uploaded_at as the ?v= cache-buster on the hero <img>.
-func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle id")
 		return
 	}
 	if err := h.requireVehicleExists(r.Context(), w, vehicleID); err != nil {
@@ -311,10 +312,10 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, MaxUploadBytes)
 	if err := r.ParseMultipartForm(MaxUploadBytes); err != nil {
 		if isMaxBytesError(err) {
-			writeErrorCode(w, http.StatusRequestEntityTooLarge, "upload exceeds 8 MB limit", PhotoCodeBodyTooLarge)
+			httpx.WriteErrorCode(w, http.StatusRequestEntityTooLarge, "upload exceeds 8 MB limit", PhotoCodeBodyTooLarge)
 			return
 		}
-		writeErrorCode(w, http.StatusBadRequest, "invalid multipart payload", PhotoCodeInvalidImage)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, "invalid multipart payload", PhotoCodeInvalidImage)
 		return
 	}
 	defer func() {
@@ -325,7 +326,7 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 
 	file, header, err := r.FormFile(VehiclePhotoUploadFormField)
 	if err != nil {
-		writeErrorCode(w, http.StatusBadRequest, "missing photo file", PhotoCodeMissingFile)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, "missing photo file", PhotoCodeMissingFile)
 		return
 	}
 	defer file.Close()
@@ -336,7 +337,7 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	declared := strings.ToLower(strings.TrimSpace(header.Header.Get("Content-Type")))
 	if declared != "" {
 		if _, ok := AllowedPhotoMimeTypes[declared]; !ok {
-			writeErrorCode(w, http.StatusUnsupportedMediaType, "unsupported mime type", PhotoCodeUnsupportedMime)
+			httpx.WriteErrorCode(w, http.StatusUnsupportedMediaType, "unsupported mime type", PhotoCodeUnsupportedMime)
 			return
 		}
 	}
@@ -347,10 +348,10 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	raw, err := io.ReadAll(file)
 	if err != nil {
 		if isMaxBytesError(err) {
-			writeErrorCode(w, http.StatusRequestEntityTooLarge, "upload exceeds 8 MB limit", PhotoCodeBodyTooLarge)
+			httpx.WriteErrorCode(w, http.StatusRequestEntityTooLarge, "upload exceeds 8 MB limit", PhotoCodeBodyTooLarge)
 			return
 		}
-		writeError(w, http.StatusBadRequest, "failed to read upload")
+		httpx.WriteError(w, http.StatusBadRequest, "failed to read upload")
 		return
 	}
 
@@ -358,14 +359,14 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, imaging.ErrUnsupportedFormat):
-			writeErrorCode(w, http.StatusUnsupportedMediaType, "unsupported image format", PhotoCodeUnsupportedImage)
+			httpx.WriteErrorCode(w, http.StatusUnsupportedMediaType, "unsupported image format", PhotoCodeUnsupportedImage)
 		case errors.Is(err, imaging.ErrTooLarge):
-			writeErrorCode(w, http.StatusRequestEntityTooLarge, "image dimensions exceed limit", PhotoCodeImageTooLarge)
+			httpx.WriteErrorCode(w, http.StatusRequestEntityTooLarge, "image dimensions exceed limit", PhotoCodeImageTooLarge)
 		case errors.Is(err, imaging.ErrInvalidImage):
-			writeErrorCode(w, http.StatusBadRequest, "invalid image data", PhotoCodeInvalidImage)
+			httpx.WriteErrorCode(w, http.StatusBadRequest, "invalid image data", PhotoCodeInvalidImage)
 		default:
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("photo decode failed")
-			writeError(w, http.StatusInternalServerError, "failed to decode image")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to decode image")
 		}
 		return
 	}
@@ -392,12 +393,12 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	relDir := filepath.ToSlash(filepath.Join(strconv.FormatInt(vehicleID, 10), uploadID))
 	absDir, err := h.resolveSafePath(relDir)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to resolve upload dir")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to resolve upload dir")
 		return
 	}
 	if err := os.MkdirAll(absDir, 0o755); err != nil {
 		log.Error().Err(err).Str("dir", absDir).Msg("photo mkdir failed")
-		writeError(w, http.StatusInternalServerError, "failed to create upload dir")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to create upload dir")
 		return
 	}
 
@@ -411,13 +412,13 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 		absPath, err := h.resolveSafePath(relPath)
 		if err != nil {
 			h.cleanupStaged(staged)
-			writeError(w, http.StatusInternalServerError, "failed to resolve write path")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to resolve write path")
 			return
 		}
 		if err := writeAtomicJPEG(absPath, resized); err != nil {
 			log.Error().Err(err).Str("path", absPath).Msg("photo encode failed")
 			h.cleanupStaged(staged)
-			writeError(w, http.StatusInternalServerError, "failed to write photo")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to write photo")
 			return
 		}
 		staged = append(staged, relPath)
@@ -433,7 +434,7 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		h.cleanupStaged(staged)
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("photo upsert failed")
-		writeError(w, http.StatusInternalServerError, "failed to record photo")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to record photo")
 		return
 	}
 
@@ -446,7 +447,7 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	uploaded := row.UploadedAt
-	writeJSON(w, http.StatusOK, vehiclePhotoMetaResponse{
+	httpx.WriteJSON(w, http.StatusOK, vehiclePhotoMetaResponse{
 		HasPhoto:   true,
 		UploadedAt: &uploaded,
 		Sizes: &vehiclePhotoSizesResponse{
@@ -461,10 +462,10 @@ func (h *VehiclePhotoHandler) Upload(w http.ResponseWriter, r *http.Request) {
 // 204 even when no row existed. Removes the DB row first so the
 // "row points at files on disk" invariant holds even when the
 // subsequent unlink fails.
-func (h *VehiclePhotoHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle id")
 		return
 	}
 	if err := h.requireVehicleExists(r.Context(), w, vehicleID); err != nil {
@@ -481,7 +482,7 @@ func (h *VehiclePhotoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to delete photo")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete photo")
 		return
 	}
 	h.cleanupStaged([]string{row.ThumbPath, row.MediumPath, row.FullPath})
@@ -495,7 +496,7 @@ func (h *VehiclePhotoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 // silently ignored (the file the row pointed at is already gone —
 // the desired state); other errors are logged but never surfaced
 // to the caller.
-func (h *VehiclePhotoHandler) cleanupStaged(rels []string) {
+func (h *Handler) cleanupStaged(rels []string) {
 	for _, rel := range rels {
 		if rel == "" {
 			continue
@@ -516,7 +517,7 @@ func (h *VehiclePhotoHandler) cleanupStaged(rels []string) {
 // after we've removed the prior set's files. Failures are logged at
 // debug level — a non-empty dir is the expected case when the row
 // has only been partially cleaned (e.g. ENOENT on an inner file).
-func (h *VehiclePhotoHandler) removeEmptyParent(rel string) {
+func (h *Handler) removeEmptyParent(rel string) {
 	if rel == "" {
 		return
 	}
@@ -537,7 +538,7 @@ func (h *VehiclePhotoHandler) removeEmptyParent(rel string) {
 // the absolute path, but only after verifying the result stays
 // inside the root. A bad DB row containing "../etc/passwd" would
 // otherwise turn a GET / DELETE into arbitrary file IO.
-func (h *VehiclePhotoHandler) resolveSafePath(rel string) (string, error) {
+func (h *Handler) resolveSafePath(rel string) (string, error) {
 	if h.rootDir == "" {
 		return "", errors.New("photo root not configured")
 	}
@@ -565,14 +566,14 @@ func (h *VehiclePhotoHandler) resolveSafePath(rel string) (string, error) {
 // error) and returns a non-nil error when the vehicle id does not
 // resolve. The non-nil error is the caller's signal to STOP — the
 // HTTP response has already been written.
-func (h *VehiclePhotoHandler) requireVehicleExists(ctx context.Context, w http.ResponseWriter, vehicleID int64) error {
+func (h *Handler) requireVehicleExists(ctx context.Context, w http.ResponseWriter, vehicleID int64) error {
 	exists, err := h.vehicles.Exists(ctx, vehicleID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to check vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to check vehicle")
 		return err
 	}
 	if !exists {
-		writeErrorCode(w, http.StatusNotFound, "vehicle not found", apivehsettings.VehicleSettingsCodeNotFound)
+		httpx.WriteErrorCode(w, http.StatusNotFound, "vehicle not found", apivehsettings.VehicleSettingsCodeNotFound)
 		return errors.New("vehicle not found")
 	}
 	return nil
@@ -627,4 +628,39 @@ func writeAtomicJPEG(path string, img image.Image) error {
 		return fmt.Errorf("photo: rename: %w", err)
 	}
 	return nil
+}
+
+// IsUploadPath returns true when the request is the vehicle photo
+// upload endpoint (POST /api/v1/vehicles/{id}/photo). Used by the
+// router's global body-limit middleware to bypass the 1 MB cap for
+// photo uploads — a wrapped http.MaxBytesReader can't be loosened
+// later, so the bypass MUST happen at the global layer.
+func IsUploadPath(method, path string) bool {
+	if method != http.MethodPost {
+		return false
+	}
+	const prefix = "/api/v1/vehicles/"
+	if !strings.HasPrefix(path, prefix) {
+		return false
+	}
+	rest := path[len(prefix):]
+	idx := strings.Index(rest, "/")
+	if idx <= 0 {
+		return false
+	}
+	tail := rest[idx:]
+	// Accept exactly /photo (no trailing slash, no sub-path) so
+	// future endpoints under /vehicles/{id}/photo/X don't inherit
+	// the 12 MB limit.
+	return tail == "/photo"
+}
+
+// isMaxBytesError detects errors returned by http.MaxBytesReader so
+// the upload handler can map them to 413 instead of 400. Duplicated
+// from internal/api/webhook_receiver_handler.go (still consumed by
+// notification + webhook handlers there) to keep this subpackage
+// dependency-free from its parent.
+func isMaxBytesError(err error) bool {
+	var maxErr *http.MaxBytesError
+	return errors.As(err, &maxErr)
 }

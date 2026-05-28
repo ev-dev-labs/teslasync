@@ -31,7 +31,7 @@
 //	DELETE absent (idempotent)      → 204
 //	unknown vehicle on POST/DELETE  → 404 VEHICLE_NOT_FOUND
 //	re-upload replaces old files    → second uploaded_at > first
-package api
+package vehiclephoto
 
 import (
 	"bytes"
@@ -154,7 +154,7 @@ type photoTestHarness struct {
 	root     string
 	store    *fakeVehiclePhotoStore
 	vehicles *fakeVehicleExistenceChecker
-	handler  *VehiclePhotoHandler
+	handler  *Handler
 }
 
 func newPhotoTestHarness(t *testing.T) *photoTestHarness {
@@ -162,7 +162,7 @@ func newPhotoTestHarness(t *testing.T) *photoTestHarness {
 	root := t.TempDir()
 	store := newFakeVehiclePhotoStore()
 	vehicles := &fakeVehicleExistenceChecker{exists: true}
-	h := NewVehiclePhotoHandler(store, vehicles, root)
+	h := NewHandler(store, vehicles, root)
 	r := chi.NewRouter()
 	r.Route("/vehicles/{vehicleID}", func(r chi.Router) {
 		r.Get("/photo", h.GetMeta)
@@ -738,7 +738,7 @@ func TestVehiclePhotoHandler_Delete_VehicleMissing_404(t *testing.T) {
 // ─── Path safety ────────────────────────────────────────────────
 
 func TestVehiclePhotoHandler_ResolveSafePath_RejectsTraversal(t *testing.T) {
-	h := NewVehiclePhotoHandler(newFakeVehiclePhotoStore(),
+	h := NewHandler(newFakeVehiclePhotoStore(),
 		&fakeVehicleExistenceChecker{exists: true}, t.TempDir())
 	// "../etc/passwd" must NOT resolve to anywhere under the
 	// configured root. The implementation collapses the path
@@ -786,9 +786,9 @@ func TestIsVehiclePhotoUploadPath(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := isVehiclePhotoUploadPath(tc.method, tc.path)
+			got := IsUploadPath(tc.method, tc.path)
 			if got != tc.want {
-				t.Errorf("isVehiclePhotoUploadPath(%q,%q) = %v, want %v",
+				t.Errorf("IsUploadPath(%q,%q) = %v, want %v",
 					tc.method, tc.path, got, tc.want)
 			}
 		})
