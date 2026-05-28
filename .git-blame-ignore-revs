@@ -65,3 +65,5 @@ c9009e01d0cdf23e668949c9f2618dbbbc75b0ed # R5.14 carve internal/models/drive sub
 
 # R5.16 security (refactor: move security.go into bounded-context subpkg)
 5950d663
+# R5.19 telemetry+position move
+aacf69ba268c7ea808c77b3cb18a0b0a614fd4bd
