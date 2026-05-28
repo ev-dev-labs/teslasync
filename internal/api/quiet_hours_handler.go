@@ -13,6 +13,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -30,7 +31,7 @@ import (
 // install-wide DND policy.
 
 // quietHoursStore is the narrow read/write surface the handler depends
-// on. Production = *database.QuietHoursRepo; tests provide an in-memory
+// on. Production = *quiethoursdb.QuietHoursRepo; tests provide an in-memory
 // fake that exercises the same validation rules.
 type quietHoursStore interface {
 	ListByUser(ctx context.Context, userID string) ([]*models.QuietHoursWindow, error)
@@ -181,17 +182,17 @@ func (h *QuietHoursHandler) parseID(w http.ResponseWriter, r *http.Request) (int
 // writeQuietHoursError maps repo sentinel errors onto HTTP statuses.
 func writeQuietHoursError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, database.ErrQuietHoursNotFound):
+	case errors.Is(err, quiethoursdb.ErrQuietHoursNotFound):
 		writeError(w, http.StatusNotFound, "quiet-hours window not found")
-	case errors.Is(err, database.ErrQuietHoursInvalidTime):
+	case errors.Is(err, quiethoursdb.ErrQuietHoursInvalidTime):
 		writeError(w, http.StatusBadRequest, "start_local/end_local must be HH:MM (24h)")
-	case errors.Is(err, database.ErrQuietHoursEqualTime):
+	case errors.Is(err, quiethoursdb.ErrQuietHoursEqualTime):
 		writeError(w, http.StatusBadRequest, "start_local must differ from end_local")
-	case errors.Is(err, database.ErrQuietHoursInvalidTimezone):
+	case errors.Is(err, quiethoursdb.ErrQuietHoursInvalidTimezone):
 		writeError(w, http.StatusBadRequest, "timezone must be a valid IANA name")
-	case errors.Is(err, database.ErrQuietHoursInvalidWeekdays):
+	case errors.Is(err, quiethoursdb.ErrQuietHoursInvalidWeekdays):
 		writeError(w, http.StatusBadRequest, "weekdays must be 0..127")
-	case errors.Is(err, database.ErrQuietHoursInvalidSeverity):
+	case errors.Is(err, quiethoursdb.ErrQuietHoursInvalidSeverity):
 		writeError(w, http.StatusBadRequest, "bypass_severities allowed values are info|warn|critical")
 	default:
 		log.Error().Err(err).Msg("quiet_hours: handler error")

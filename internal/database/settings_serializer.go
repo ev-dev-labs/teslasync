@@ -113,6 +113,10 @@ type SettingsSerializerGeofenceRepo interface {
 // SettingsSerializerQuietHoursRepo is the per-user surface used by
 // the quiet_hours section. UserID is threaded through so a multi-user
 // install never accidentally clobbers a different user's windows.
+//
+// The input parameter type lives in the quiethours subpkg with the
+// concrete repo; the parent imports it here only to spell the
+// interface signature.
 type SettingsSerializerQuietHoursRepo interface {
 	ListByUser(ctx context.Context, userID string) ([]*models.QuietHoursWindow, error)
 	Insert(ctx context.Context, userID string, in QuietHoursInput) (*models.QuietHoursWindow, error)

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:45:15Z",
+  "generated_at": "2026-05-28T16:50:28Z",
   "go_version": "go1.26.1",
-  "commit_sha": "e6f145b638b4467918211c57f0aab1bc16e1c2f3",
+  "commit_sha": "b110e417208239e9810040bfb998ccd86233cb6d",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -156,7 +156,7 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 527,
+      "loc": 528,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -166,6 +166,7 @@
         "internal/database",
         "internal/database/alert",
         "internal/database/notification",
+        "internal/database/quiethours",
         "internal/database/system",
         "internal/database/vehicle",
         "internal/models/alert",
@@ -2514,7 +2515,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126677,
+      "loc": 126680,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2653,6 +2654,7 @@
         "internal/database/notification",
         "internal/database/observability",
         "internal/database/position",
+        "internal/database/quiethours",
         "internal/database/sharing",
         "internal/database/signal",
         "internal/database/system",
@@ -3722,7 +3724,7 @@
       "path": "internal/database",
       "go_files": 18,
       "test_files": 12,
-      "loc": 5619,
+      "loc": 5349,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3750,7 +3752,7 @@
         "null_helpers.go",
         "query_budget_tracer.go",
         "query_budget_tracer_test.go",
-        "quiet_hours_repo.go",
+        "quiet_hours_input.go",
         "quiet_hours_repo_test.go",
         "retry.go",
         "retry_test.go",
@@ -4107,6 +4109,23 @@
       "files": [
         "doc.go",
         "from_map.go",
+        "repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/quiethours",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 312,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/models"
+      ],
+      "files": [
+        "assertion.go",
+        "doc.go",
         "repo.go"
       ]
     },
@@ -6199,7 +6218,7 @@
     "cmd/export-worker": 252,
     "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 523,
+    "cmd/notification-worker": 524,
     "cmd/ocpp-server": 91,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 655,
@@ -7261,7 +7280,7 @@
       "mongodb.go",
       "null_helpers.go",
       "query_budget_tracer.go",
-      "quiet_hours_repo.go",
+      "quiet_hours_input.go",
       "retry.go",
       "settings_repo.go",
       "settings_reset.go",
@@ -7382,6 +7401,11 @@
     "internal/database/position": [
       "doc.go",
       "from_map.go",
+      "repo.go"
+    ],
+    "internal/database/quiethours": [
+      "assertion.go",
+      "doc.go",
       "repo.go"
     ],
     "internal/database/sharing": [

@@ -16,6 +16,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -75,7 +76,7 @@ func (f *fakeQuietHoursStore) Get(_ context.Context, userID string, id int64) (*
 	defer f.mu.Unlock()
 	row, ok := f.rows[id]
 	if !ok || row.UserID != userID {
-		return nil, database.ErrQuietHoursNotFound
+		return nil, quiethoursdb.ErrQuietHoursNotFound
 	}
 	return cloneQuietHoursForTest(row), nil
 }
@@ -97,7 +98,7 @@ func (f *fakeQuietHoursStore) Update(_ context.Context, userID string, id int64,
 	defer f.mu.Unlock()
 	row, ok := f.rows[id]
 	if !ok || row.UserID != userID {
-		return nil, database.ErrQuietHoursNotFound
+		return nil, quiethoursdb.ErrQuietHoursNotFound
 	}
 	upd := *row
 	if in.Enabled != nil {
@@ -131,7 +132,7 @@ func (f *fakeQuietHoursStore) Delete(_ context.Context, userID string, id int64)
 	defer f.mu.Unlock()
 	row, ok := f.rows[id]
 	if !ok || row.UserID != userID {
-		return database.ErrQuietHoursNotFound
+		return quiethoursdb.ErrQuietHoursNotFound
 	}
 	delete(f.rows, id)
 	return nil
@@ -141,25 +142,25 @@ func (f *fakeQuietHoursStore) Delete(_ context.Context, userID string, id int64)
 // tests exercise the same 400 mapping production does.
 func validateForTest(w *models.QuietHoursWindow) error {
 	if !validHHMMTest(w.StartLocal) || !validHHMMTest(w.EndLocal) {
-		return database.ErrQuietHoursInvalidTime
+		return quiethoursdb.ErrQuietHoursInvalidTime
 	}
 	if w.StartLocal == w.EndLocal {
-		return database.ErrQuietHoursEqualTime
+		return quiethoursdb.ErrQuietHoursEqualTime
 	}
 	if strings.TrimSpace(w.Timezone) == "" {
-		return database.ErrQuietHoursInvalidTimezone
+		return quiethoursdb.ErrQuietHoursInvalidTimezone
 	}
 	if _, err := time.LoadLocation(w.Timezone); err != nil {
-		return database.ErrQuietHoursInvalidTimezone
+		return quiethoursdb.ErrQuietHoursInvalidTimezone
 	}
 	if w.Weekdays < 0 || w.Weekdays > 127 {
-		return database.ErrQuietHoursInvalidWeekdays
+		return quiethoursdb.ErrQuietHoursInvalidWeekdays
 	}
 	allowed := map[string]struct{}{"info": {}, "warn": {}, "critical": {}}
 	for i, sev := range w.BypassSeverities {
 		w.BypassSeverities[i] = strings.ToLower(strings.TrimSpace(sev))
 		if _, ok := allowed[w.BypassSeverities[i]]; !ok {
-			return database.ErrQuietHoursInvalidSeverity
+			return quiethoursdb.ErrQuietHoursInvalidSeverity
 		}
 	}
 	return nil

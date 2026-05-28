@@ -35,7 +35,7 @@ type QuietHoursDecider interface {
 }
 
 // QuietHoursLister is the narrow read surface the decider needs. The
-// production implementation is *database.QuietHoursRepo (its
+// production implementation is *quiethoursdb.QuietHoursRepo (its
 // ListEnabled method).
 type QuietHoursLister interface {
 	ListEnabled(ctx context.Context) ([]*models.QuietHoursWindow, error)

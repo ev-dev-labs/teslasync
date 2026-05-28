@@ -28,6 +28,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -192,7 +193,7 @@ func main() {
 	// Phase-46 / Prompt 19 — register the quiet-hours decider so the
 	// dispatcher can defer notifications during DND windows. Replay
 	// loop below promotes deferred rows once the window ends.
-	quietHoursRepo := database.NewQuietHoursRepo(db)
+	quietHoursRepo := quiethoursdb.NewQuietHoursRepo(db)
 	quietHoursDecider := notification.NewRepoDecider(quietHoursRepo)
 	worker := notification.NewWorker(db).WithQuietHoursDecider(quietHoursDecider)
 	go func() {

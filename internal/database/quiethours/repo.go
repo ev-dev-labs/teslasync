@@ -1,4 +1,4 @@
-package database
+package quiethours
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -19,11 +20,11 @@ import (
 
 // QuietHoursRepo provides per-user CRUD for notification_quiet_hours.
 type QuietHoursRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewQuietHoursRepo returns a repo bound to the supplied DB.
-func NewQuietHoursRepo(db *DB) *QuietHoursRepo {
+func NewQuietHoursRepo(db *database.DB) *QuietHoursRepo {
 	return &QuietHoursRepo{db: db}
 }
 
@@ -43,22 +44,10 @@ var (
 // the same strings to compare the inbound notification severity.
 var AllowedQuietHoursSeverities = []string{"info", "warn", "critical"}
 
-// QuietHoursInput is the patch / create payload accepted by the API
-// handler. Setting any pointer leaves the column unchanged for
-// PATCH; for Insert the validation defaults are applied.
-type QuietHoursInput struct {
-	Enabled          *bool
-	StartLocal       *string
-	EndLocal         *string
-	Timezone         *string
-	Weekdays         *int
-	BypassSeverities *[]string
-}
-
 // Insert validates the payload and inserts a new row scoped to the
 // supplied user_id. Defaults: enabled=true, weekdays=127,
 // bypass_severities={"critical"}. Returns the persisted row.
-func (r *QuietHoursRepo) Insert(ctx context.Context, userID string, in QuietHoursInput) (*models.QuietHoursWindow, error) {
+func (r *QuietHoursRepo) Insert(ctx context.Context, userID string, in database.QuietHoursInput) (*models.QuietHoursWindow, error) {
 	row := &models.QuietHoursWindow{
 		UserID:           userID,
 		Enabled:          true,
@@ -164,7 +153,7 @@ func (r *QuietHoursRepo) ListEnabled(ctx context.Context) ([]*models.QuietHoursW
 
 // Update applies a partial PATCH to a single row scoped to user_id.
 // Returns the updated row, or ErrQuietHoursNotFound when no row matches.
-func (r *QuietHoursRepo) Update(ctx context.Context, userID string, id int64, in QuietHoursInput) (*models.QuietHoursWindow, error) {
+func (r *QuietHoursRepo) Update(ctx context.Context, userID string, id int64, in database.QuietHoursInput) (*models.QuietHoursWindow, error) {
 	existing, err := r.Get(ctx, userID, id)
 	if err != nil {
 		return nil, err

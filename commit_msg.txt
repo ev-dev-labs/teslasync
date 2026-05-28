@@ -1,33 +1,65 @@
-refactor(R4.24): carve internal/database/geofence (2 src + assertion relocation)
+refactor(R4.25): carve internal/database/quiethours (repo + assertion; input stays in parent)
 
-Move the GeofenceRepo into its own bounded-context subpkg per ADR-011,
-and relocate the parent's compile-time assertion to the subpkg per
-Lesson 30/34 so the parent never imports a child subpkg.
+Move the QuietHoursRepo into its own bounded-context subpkg per ADR-011.
+The QuietHoursInput type is split out into a new parent file because it
+is part of the parent SettingsSerializerQuietHoursRepo interface contract
+that the settings serializer still consumes — keeping it in parent breaks
+the cycle that would otherwise form (parent imports subpkg for the type,
+subpkg imports parent for *database.DB).
 
-Files (2 src moved + 1 new assertion file; 8 caller files swept):
-  geofence_repo.go       -> geofence/repo.go
-  geofence_repo_bulk.go  -> geofence/repo_bulk.go
-  geofence/assertion.go  (NEW — '_ database.SettingsSerializerGeofenceRepo
-                          = (*GeofenceRepo)(nil)' moved out of parent
-                          settings_serializer.go L671)
-  geofence/doc.go        (NEW, // Layer: adapter)
+Files moved (1 src + 1 test; 6 caller files swept):
+  quiet_hours_repo.go              -> quiethours/repo.go
+  quiet_hours_repo_test.go         -> quiethours/repo_test.go
 
-Parent settings_serializer.go L669-673 simplified: now asserts only
-*SettingsRepo (the type still defined in parent). Comment updated to
-explain why GeofenceRepo + QuietHoursRepo assertions live in their
-respective child subpackages.
+Files created in parent:
+  quiet_hours_input.go             (NEW — extracted QuietHoursInput struct
+                                    from the former quiet_hours_repo.go;
+                                    must stay in parent because the
+                                    SettingsSerializerQuietHoursRepo
+                                    interface in settings_serializer.go
+                                    references it.)
 
-Symbols promoted (alias geofencedb per ADR-011):
-  GeofenceRepo, NewGeofenceRepo
+Files created in subpkg:
+  quiethours/doc.go                (NEW, // Layer: adapter)
+  quiethours/assertion.go          (NEW — '_ database.SettingsSerializerQuietHoursRepo
+                                    = (*QuietHoursRepo)(nil)' moved out of parent
+                                    settings_serializer.go L672)
 
-References to parent types qualified:
+Subpkg references the input type as *database.QuietHoursInput; the type
+itself has no DB dep so this is a clean parent-owns-contract, subpkg-owns-
+implementation split.
+
+LESSON 35 (new): when a parent INTERFACE contract uses a struct type that
+also belongs naturally to the carved subpkg, the type must STAY in parent
+to avoid a cycle. Split the type into its own parent file
+(<aggregate>_input.go) and have the subpkg reference database.<Type>.
+This is the inverse of Lesson 34 (which moves an adapter wrapping a
+concrete subpkg type INTO the subpkg).
+
+Symbols promoted (alias quiethoursdb per ADR-011):
+  QuietHoursRepo, NewQuietHoursRepo, AllowedQuietHoursSeverities,
+  ErrQuietHoursNotFound, ErrQuietHoursInvalidTime, ErrQuietHoursEqualTime,
+  ErrQuietHoursInvalidTimezone, ErrQuietHoursInvalidWeekdays,
+  ErrQuietHoursInvalidSeverity.
+
+Symbols staying in parent:
+  QuietHoursInput (struct type only)
+
+References to parent types qualified in subpkg:
   *DB -> *database.DB
+  QuietHoursInput -> database.QuietHoursInput
 
-internal/database allowlist ratchet: 20 -> 18 src files.
+Parent settings_serializer.go L669-674 (former GeofenceRepo + QuietHoursRepo
+assertion block) — the QuietHoursRepo assertion was already removed in
+R4.24's restructure of that var() block; this commit completes the
+subpkg-side assertion relocation per Lesson 30/34.
 
-Carved subpkgs so far (26): achievement, sharing, admin, gdpr,
+internal/database file count: 18 -> 18 (1 file out for repo, 1 file in
+for input; same parent count).
+
+Carved subpkgs so far (27): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
 audit, charging, drive, trip, energy, ai, export, worker, telemetry,
-system, tesla, vehicle, signal, position, geofence.
+system, tesla, vehicle, signal, position, geofence, quiethours.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

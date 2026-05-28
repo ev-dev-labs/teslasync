@@ -92,8 +92,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 )
 
 // aiQuietHoursSuggestionMaxIterations bounds the dispatcher's
@@ -405,7 +405,7 @@ func buildQuietHoursSuggestionUserMessage(userID, timezone string, windowDays in
 // are read-only.
 type AIQuietHoursSuggestionSource struct {
 	notifs      *dbnotif.NotificationRepo
-	quietHours  *database.QuietHoursRepo
+	quietHours  *quiethoursdb.QuietHoursRepo
 	minRequired int
 }
 
@@ -414,13 +414,13 @@ type AIQuietHoursSuggestionSource struct {
 // nil so the wiring bug surfaces at boot, not at first request.
 func NewAIQuietHoursSuggestionSource(
 	notifs *dbnotif.NotificationRepo,
-	quietHours *database.QuietHoursRepo,
+	quietHours *quiethoursdb.QuietHoursRepo,
 ) *AIQuietHoursSuggestionSource {
 	switch {
 	case notifs == nil:
 		panic("api: NewAIQuietHoursSuggestionSource: nil notifs *dbnotif.NotificationRepo")
 	case quietHours == nil:
-		panic("api: NewAIQuietHoursSuggestionSource: nil quietHours *database.QuietHoursRepo")
+		panic("api: NewAIQuietHoursSuggestionSource: nil quietHours *quiethoursdb.QuietHoursRepo")
 	}
 	return &AIQuietHoursSuggestionSource{
 		notifs:      notifs,

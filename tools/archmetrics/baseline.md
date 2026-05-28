@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T16:45:16Z, Go go1.26.1, commit e6f145b638b4467918211c57f0aab1bc16e1c2f3_
+_Generated 2026-05-28T16:50:29Z, Go go1.26.1, commit b110e417208239e9810040bfb998ccd86233cb6d_
 
 ## Summary
 
-- Packages: 287
+- Packages: 288
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374823
+- Total non-blank LOC under cmd/+internal/+tools/: 374869
 
 ## cmd/* main.go LOC
 
@@ -21,7 +21,7 @@ _Generated 2026-05-28T16:45:16Z, Go go1.26.1, commit e6f145b638b4467918211c57f0a
 | cmd/export-worker/main.go | 252 |
 | cmd/fleet-config-validator/main.go | 327 |
 | cmd/metric-coverage-audit/main.go | 126 |
-| cmd/notification-worker/main.go | 523 |
+| cmd/notification-worker/main.go | 524 |
 | cmd/ocpp-server/main.go | 91 |
 | cmd/protogen-tesla/main.go | 73 |
 | cmd/pub-test-signal/main.go | 655 |
@@ -48,7 +48,7 @@ _Generated 2026-05-28T16:45:16Z, Go go1.26.1, commit e6f145b638b4467918211c57f0a
 | cmd/export-worker | 2 | 0 | 256 | yes | cmd-internal |
 | cmd/fleet-config-validator | 2 | 1 | 491 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
-| cmd/notification-worker | 2 | 0 | 527 | yes | cmd-internal |
+| cmd/notification-worker | 2 | 0 | 528 | yes | cmd-internal |
 | cmd/ocpp-server | 2 | 0 | 103 | yes | cmd-internal |
 | cmd/protogen-tesla | 4 | 1 | 2297 | yes | cmd-internal |
 | cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
@@ -170,7 +170,7 @@ _Generated 2026-05-28T16:45:16Z, Go go1.26.1, commit e6f145b638b4467918211c57f0a
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126677 | yes | handler |
+| internal/api | 271 | 163 | 126680 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1847 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
@@ -197,7 +197,7 @@ _Generated 2026-05-28T16:45:16Z, Go go1.26.1, commit e6f145b638b4467918211c57f0a
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 18 | 12 | 5619 | yes | platform |
+| internal/database | 18 | 12 | 5349 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes | adapter |
 | internal/database/admin | 6 | 0 | 873 | yes | adapter |
 | internal/database/ai | 3 | 2 | 928 | yes | adapter |
@@ -215,6 +215,7 @@ _Generated 2026-05-28T16:45:16Z, Go go1.26.1, commit e6f145b638b4467918211c57f0a
 | internal/database/notification | 5 | 1 | 1950 | yes | adapter |
 | internal/database/observability | 7 | 0 | 1396 | yes | adapter |
 | internal/database/position | 3 | 0 | 270 | yes | adapter |
+| internal/database/quiethours | 3 | 0 | 312 | yes | adapter |
 | internal/database/sharing | 2 | 0 | 127 | yes | adapter |
 | internal/database/signal | 8 | 1 | 1381 | yes | adapter |
 | internal/database/system | 5 | 3 | 1431 | yes | adapter |

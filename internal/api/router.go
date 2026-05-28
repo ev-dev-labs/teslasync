@@ -27,6 +27,7 @@ import (
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
@@ -459,7 +460,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		database.NewSettingsRepo(db),
 		dbalert.NewAlertRuleRepo(db),
 		geofencedb.NewGeofenceRepo(db),
-		database.NewQuietHoursRepo(db),
+		quiethoursdb.NewQuietHoursRepo(db),
 	)
 	settingsExportHandler := NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
 	settingsImportHandler := NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
@@ -555,7 +556,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	notificationHandler := NewNotificationHandler(db)
 	notificationChannelHandler := NewNotificationChannelHandler(db)
 	notifScheduleHandler := NewNotificationScheduleHandler(db)
-	quietHoursHandler := NewQuietHoursHandler(database.NewQuietHoursRepo(db), cfg)
+	quietHoursHandler := NewQuietHoursHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 
 	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. Construct the
@@ -2301,7 +2302,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// registry's Names list grows deterministically.
 	aiQuietHoursSuggestionSource := NewAIQuietHoursSuggestionSource(
 		dbnotif.NewNotificationRepo(db),
-		database.NewQuietHoursRepo(db),
+		quiethoursdb.NewQuietHoursRepo(db),
 	)
 	schedule.RegisterQuietHoursSuggestionTools(aiToolRegistry, schedule.QuietHoursSuggestionSources{
 		Source: aiQuietHoursSuggestionSource,
