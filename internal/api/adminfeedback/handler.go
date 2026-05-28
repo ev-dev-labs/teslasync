@@ -1,18 +1,20 @@
-package api
+package adminfeedback
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
@@ -36,7 +38,7 @@ import (
 const adminFeedbackBodyLimit = 8 * 1024
 
 // FeedbackQueueStore is the narrow read/write interface the admin
-// handler depends on. Mocked in admin_feedback_handler_test.go.
+// handler depends on. Mocked in handler_test.go.
 type FeedbackQueueStore interface {
 	List(ctx context.Context, p dbuser.FeedbackListParams) ([]dbuser.UserFeedback, int64, error)
 	Get(ctx context.Context, id int64) (dbuser.UserFeedback, error)
@@ -106,7 +108,7 @@ type adminFeedbackPatchRequest struct {
 // List handles GET /api/v1/admin/feedback.
 func (h *AdminFeedbackHandler) List(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "feedback store unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "feedback store unavailable")
 		return
 	}
 
@@ -114,7 +116,7 @@ func (h *AdminFeedbackHandler) List(w http.ResponseWriter, r *http.Request) {
 		Status:   strings.TrimSpace(r.URL.Query().Get("status")),
 		Category: strings.TrimSpace(r.URL.Query().Get("category")),
 	}
-	limit, offset := pagination(r)
+	limit, offset := apiparams.Pagination(r)
 	params.Limit = limit
 	params.Offset = offset
 
@@ -122,17 +124,17 @@ func (h *AdminFeedbackHandler) List(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, dbuser.ErrFeedbackInvalidStatus):
-			writeError(w, http.StatusBadRequest, "invalid status filter (expected new|triaged|closed)")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid status filter (expected new|triaged|closed)")
 		case errors.Is(err, dbuser.ErrFeedbackInvalidCategory):
-			writeError(w, http.StatusBadRequest, "invalid category filter (expected bug|feature|other)")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid category filter (expected bug|feature|other)")
 		default:
 			log.Error().Err(err).Msg("admin feedback: list failed")
-			writeError(w, http.StatusInternalServerError, "failed to list feedback")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to list feedback")
 		}
 		return
 	}
 
-	writeJSON(w, http.StatusOK, adminFeedbackListResponse{
+	httpx.WriteJSON(w, http.StatusOK, adminFeedbackListResponse{
 		Items:               items,
 		Total:               total,
 		Limit:               params.Limit,
@@ -145,7 +147,7 @@ func (h *AdminFeedbackHandler) List(w http.ResponseWriter, r *http.Request) {
 // Get handles GET /api/v1/admin/feedback/{id}.
 func (h *AdminFeedbackHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "feedback store unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "feedback store unavailable")
 		return
 	}
 	id, ok := h.parseID(w, r)
@@ -154,21 +156,21 @@ func (h *AdminFeedbackHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	row, err := h.store.Get(r.Context(), id)
 	if errors.Is(err, dbuser.ErrFeedbackNotFound) {
-		writeError(w, http.StatusNotFound, "feedback not found")
+		httpx.WriteError(w, http.StatusNotFound, "feedback not found")
 		return
 	}
 	if err != nil {
 		log.Error().Err(err).Int64("feedback_id", id).Msg("admin feedback: get failed")
-		writeError(w, http.StatusInternalServerError, "failed to load feedback")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load feedback")
 		return
 	}
-	writeJSON(w, http.StatusOK, row)
+	httpx.WriteJSON(w, http.StatusOK, row)
 }
 
 // Patch handles PATCH /api/v1/admin/feedback/{id}.
 func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "feedback store unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "feedback store unavailable")
 		return
 	}
 	id, ok := h.parseID(w, r)
@@ -182,7 +184,7 @@ func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid payload")
 		return
 	}
 
@@ -199,17 +201,17 @@ func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	// the operator can paste the URL manually.
 	if req.ForwardToGitHub {
 		if h.github == nil {
-			writeError(w, http.StatusBadRequest, "github bridge is not configured on this server")
+			httpx.WriteError(w, http.StatusBadRequest, "github bridge is not configured on this server")
 			return
 		}
 		row, err := h.store.Get(r.Context(), id)
 		if errors.Is(err, dbuser.ErrFeedbackNotFound) {
-			writeError(w, http.StatusNotFound, "feedback not found")
+			httpx.WriteError(w, http.StatusNotFound, "feedback not found")
 			return
 		}
 		if err != nil {
 			log.Error().Err(err).Int64("feedback_id", id).Msg("admin feedback: pre-forward get failed")
-			writeError(w, http.StatusInternalServerError, "failed to load feedback")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load feedback")
 			return
 		}
 		issueTitle, issueBody := buildGitHubIssueContent(row)
@@ -217,7 +219,7 @@ func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		issueURL, err := h.github.CreateIssue(r.Context(), issueTitle, issueBody, labels)
 		if err != nil {
 			log.Warn().Err(err).Int64("feedback_id", id).Msg("admin feedback: GitHub issue create failed")
-			writeError(w, http.StatusBadGateway, "failed to create GitHub issue: "+err.Error())
+			httpx.WriteError(w, http.StatusBadGateway, "failed to create GitHub issue: "+err.Error())
 			return
 		}
 		upd.GitHubIssueURL = &issueURL
@@ -229,16 +231,16 @@ func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := h.store.Update(r.Context(), id, upd)
 	if errors.Is(err, dbuser.ErrFeedbackNotFound) {
-		writeError(w, http.StatusNotFound, "feedback not found")
+		httpx.WriteError(w, http.StatusNotFound, "feedback not found")
 		return
 	}
 	if errors.Is(err, dbuser.ErrFeedbackInvalidStatus) {
-		writeError(w, http.StatusBadRequest, "invalid status (expected new|triaged|closed)")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid status (expected new|triaged|closed)")
 		return
 	}
 	if err != nil {
 		log.Error().Err(err).Int64("feedback_id", id).Msg("admin feedback: update failed")
-		writeError(w, http.StatusInternalServerError, "failed to update feedback")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to update feedback")
 		return
 	}
 
@@ -251,17 +253,73 @@ func (h *AdminFeedbackHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		logAuditFromRequest(h.db, r, h.authHdr, "feedback.update", "user_feedback", &idCopy, detail)
 	}
 
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 func (h *AdminFeedbackHandler) parseID(w http.ResponseWriter, r *http.Request) (int64, bool) {
-	raw := chi.URLParam(r, "id")
-	id, err := strconv.ParseInt(raw, 10, 64)
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid feedback id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid feedback id")
 		return 0, false
 	}
 	return id, true
+}
+
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
+}
+
+func logAuditFromRequest(db *database.DB, r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+	if db == nil || r == nil {
+		return
+	}
+	const query = `
+		INSERT INTO audit_logs (ts, actor, action, entity_type, entity_id, detail, ip, user_agent)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	_, err := db.Pool.Exec(r.Context(), query,
+		time.Now().UTC(),
+		actorFromRequest(r, headerName),
+		action,
+		resource,
+		entityID,
+		detail,
+		nullableStr(clientIP(r)),
+		nullableStr(r.UserAgent()),
+	)
+	if err != nil {
+		log.Warn().Err(err).Str("action", action).Str("entity_type", resource).Msg("failed to write audit log")
+	}
+}
+
+func nullableStr(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+func clientIP(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.IndexByte(xff, ','); i >= 0 {
+			xff = xff[:i]
+		}
+		if ip := strings.TrimSpace(xff); ip != "" {
+			return ip
+		}
+	}
+	if r.RemoteAddr == "" {
+		return ""
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
 
 // buildGitHubIssueContent renders the title + body the bridge submits

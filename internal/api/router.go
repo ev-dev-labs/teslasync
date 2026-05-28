@@ -14,6 +14,7 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
 	apianomaly "github.com/ev-dev-labs/teslasync/internal/api/anomaly"
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	apiflagsh "github.com/ev-dev-labs/teslasync/internal/api/apiflagsh"
@@ -2039,11 +2040,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Repo:  cfg.GitHub.Repo,
 		Token: cfg.GitHub.Token,
 	})
-	var githubBridge GitHubIssuesPoster
+	var githubBridge apiadminfb.GitHubIssuesPoster
 	if githubIssuesClient != nil {
 		githubBridge = githubIssuesClient
 	}
-	adminFeedbackHandler := NewAdminFeedbackHandler(userFeedbackRepo, cfg, db, githubBridge)
+	adminFeedbackHandler := apiadminfb.NewAdminFeedbackHandler(userFeedbackRepo, cfg, db, githubBridge)
 
 	// feedback-queue-triage (Phase-50 / S5, slice 0046).
 	// The shared rag.Retriever is constructed per-feature so the
