@@ -8,7 +8,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 )
 
@@ -34,7 +34,7 @@ func (h *AutomationHandler) ListHistory(w http.ResponseWriter, r *http.Request) 
 	stats, err := h.historyRepo.GetStats(r.Context(), f)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to compute history stats")
-		stats = &database.HistoryStats{}
+		stats = &dbauto.HistoryStats{}
 	}
 
 	writeJSON(w, http.StatusOK, historyListResponse{
@@ -85,7 +85,7 @@ func (h *AutomationHandler) ListAutomationHistory(w http.ResponseWriter, r *http
 	stats, err := h.historyRepo.GetStats(r.Context(), f)
 	if err != nil {
 		log.Warn().Err(err).Int64("automation_id", id).Msg("failed to compute history stats")
-		stats = &database.HistoryStats{}
+		stats = &dbauto.HistoryStats{}
 	}
 
 	writeJSON(w, http.StatusOK, historyListResponse{
@@ -121,7 +121,7 @@ func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Requ
 
 	// Compute success rate for this automation (unfiltered).
 	var successRate float64
-	stats, err := h.historyRepo.GetStats(r.Context(), database.HistoryFilter{AutomationID: record.AutomationID})
+	stats, err := h.historyRepo.GetStats(r.Context(), dbauto.HistoryFilter{AutomationID: record.AutomationID})
 	if err == nil && stats.TotalExecutions > 0 {
 		successRate = stats.SuccessRate
 	}
@@ -153,8 +153,8 @@ func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Requ
 }
 
 // parseHistoryFilter extracts status and since query params into a HistoryFilter.
-func (h *AutomationHandler) parseHistoryFilter(r *http.Request) database.HistoryFilter {
-	f := database.HistoryFilter{
+func (h *AutomationHandler) parseHistoryFilter(r *http.Request) dbauto.HistoryFilter {
+	f := dbauto.HistoryFilter{
 		Status: r.URL.Query().Get("status"),
 	}
 	if s := r.URL.Query().Get("since"); s != "" {

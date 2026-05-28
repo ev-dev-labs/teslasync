@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -955,9 +955,9 @@ type automationPersistenceFakeRepo struct {
 	failKind        string
 	createCalled    bool
 	stagedParent    *models.Automation
-	stagedSteps     []database.AutomationStepWrite
+	stagedSteps     []dbauto.AutomationStepWrite
 	committedParent *models.Automation
-	committedSteps  []database.AutomationStepWrite
+	committedSteps  []dbauto.AutomationStepWrite
 }
 
 func (r *automationPersistenceFakeRepo) ListFull(context.Context) ([]models.AutomationFull, error) {
@@ -973,7 +973,7 @@ func (r *automationPersistenceFakeRepo) Create(context.Context, *models.Automati
 	return fmt.Errorf("unexpected non-transactional create")
 }
 
-func (r *automationPersistenceFakeRepo) CreateWithSteps(_ context.Context, a *models.Automation, steps []database.AutomationStepWrite) error {
+func (r *automationPersistenceFakeRepo) CreateWithSteps(_ context.Context, a *models.Automation, steps []dbauto.AutomationStepWrite) error {
 	stagedParent := *a
 	stagedParent.ID = 101
 	r.stagedParent = &stagedParent
@@ -989,7 +989,7 @@ func (r *automationPersistenceFakeRepo) CreateWithSteps(_ context.Context, a *mo
 	a.ID = stagedParent.ID
 	committedParent := stagedParent
 	r.committedParent = &committedParent
-	r.committedSteps = append([]database.AutomationStepWrite(nil), r.stagedSteps...)
+	r.committedSteps = append([]dbauto.AutomationStepWrite(nil), r.stagedSteps...)
 	return nil
 }
 
@@ -997,7 +997,7 @@ func (r *automationPersistenceFakeRepo) Update(context.Context, *models.Automati
 	return nil
 }
 
-func (r *automationPersistenceFakeRepo) UpdateWithSteps(context.Context, *models.Automation, []database.AutomationStepWrite) error {
+func (r *automationPersistenceFakeRepo) UpdateWithSteps(context.Context, *models.Automation, []dbauto.AutomationStepWrite) error {
 	return nil
 }
 

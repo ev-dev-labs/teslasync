@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T15:16:45Z, Go go1.26.1, commit 2dabd2acaf832ae35b8ed20f4e99b36cb3d4ca2d_
+_Generated 2026-05-28T15:20:49Z, Go go1.26.1, commit 0f15192659dd988dd59acb4f779418c36a762176_
 
 ## Summary
 
-- Packages: 269
+- Packages: 270
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374150
+- Total non-blank LOC under cmd/+internal/+tools/: 374175
 
 ## cmd/* main.go LOC
 
@@ -15,7 +15,7 @@ _Generated 2026-05-28T15:16:45Z, Go go1.26.1, commit 2dabd2acaf832ae35b8ed20f4e9
 |---|---:|
 | cmd/ai-eval/main.go | 151 |
 | cmd/audit-signal-types/main.go | 498 |
-| cmd/automation-worker/main.go | 351 |
+| cmd/automation-worker/main.go | 352 |
 | cmd/backup-verify/main.go | 96 |
 | cmd/chaos-runner/main.go | 144 |
 | cmd/export-worker/main.go | 251 |
@@ -42,7 +42,7 @@ _Generated 2026-05-28T15:16:45Z, Go go1.26.1, commit 2dabd2acaf832ae35b8ed20f4e9
 |---|---:|---:|---:|:---:|---|
 | cmd/ai-eval | 2 | 0 | 155 | yes | cmd-internal |
 | cmd/audit-signal-types | 2 | 0 | 521 | yes | cmd-internal |
-| cmd/automation-worker | 2 | 0 | 355 | yes | cmd-internal |
+| cmd/automation-worker | 2 | 0 | 356 | yes | cmd-internal |
 | cmd/backup-verify | 2 | 0 | 110 | yes | cmd-internal |
 | cmd/chaos-runner | 2 | 0 | 156 | yes | cmd-internal |
 | cmd/export-worker | 2 | 0 | 255 | yes | cmd-internal |
@@ -170,7 +170,7 @@ _Generated 2026-05-28T15:16:45Z, Go go1.26.1, commit 2dabd2acaf832ae35b8ed20f4e9
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126586 | yes | handler |
+| internal/api | 271 | 163 | 126587 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1838 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
@@ -197,10 +197,11 @@ _Generated 2026-05-28T15:16:45Z, Go go1.26.1, commit 2dabd2acaf832ae35b8ed20f4e9
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 82 | 30 | 21314 | yes | platform |
+| internal/database | 72 | 29 | 19653 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes |  |
 | internal/database/admin | 6 | 0 | 873 | yes |  |
 | internal/database/auth | 7 | 4 | 1788 | yes |  |
+| internal/database/automation | 11 | 1 | 1684 | yes |  |
 | internal/database/backup | 3 | 0 | 246 | yes |  |
 | internal/database/gdpr | 2 | 0 | 206 | yes |  |
 | internal/database/notification | 5 | 1 | 1950 | yes |  |
@@ -323,7 +324,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 82 / 30 | 22 | 4 | 18 |
+| `internal/database` | R4 | 143 | 72 / 29 | 22 | 5 | 17 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 
@@ -390,6 +391,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 **Existing subpackages on disk:**
 - `internal/database/achievement`
 - `internal/database/auth`
+- `internal/database/automation`
 - `internal/database/backup`
 - `internal/database/notification`
 
@@ -397,7 +399,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/database/ai`
 - `internal/database/alert`
 - `internal/database/audit`
-- `internal/database/automation`
 - `internal/database/charging`
 - `internal/database/dashboard`
 - `internal/database/drive`

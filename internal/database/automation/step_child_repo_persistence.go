@@ -1,10 +1,11 @@
-package database
+package automation
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -42,7 +43,7 @@ func (r *AutomationStepChildRepo) Upsert(ctx context.Context, step models.Automa
 // using the supplied transaction/executor. Callers that persist automation
 // aggregates pass pgx.Tx here so parent, discriminator, and child writes commit
 // or roll back atomically.
-func (r *AutomationStepChildRepo) UpsertTx(ctx context.Context, exec DBTX, step models.AutomationStep, payload any) error {
+func (r *AutomationStepChildRepo) UpsertTx(ctx context.Context, exec database.DBTX, step models.AutomationStep, payload any) error {
 	switch step.Kind {
 	// ---- triggers ----
 	case string(models.AutomationTriggerSignal):
@@ -129,7 +130,7 @@ func (r *AutomationStepChildRepo) UpsertTx(ctx context.Context, exec DBTX, step 
 
 // ---------------- trigger upserts ----------------
 
-func (r *AutomationStepChildRepo) upsertTriggerSignal(ctx context.Context, exec DBTX, stepID int64, t *models.AutomationStepTriggerSignal) error {
+func (r *AutomationStepChildRepo) upsertTriggerSignal(ctx context.Context, exec database.DBTX, stepID int64, t *models.AutomationStepTriggerSignal) error {
 	const q = `
 		INSERT INTO automation_step_trigger_signal
 			(step_id, signal, op, value_text, value_num, value_bool)
@@ -146,7 +147,7 @@ func (r *AutomationStepChildRepo) upsertTriggerSignal(ctx context.Context, exec 
 	return nil
 }
 
-func (r *AutomationStepChildRepo) upsertTriggerGeofence(ctx context.Context, exec DBTX, stepID int64, t *models.AutomationStepTriggerGeofence) error {
+func (r *AutomationStepChildRepo) upsertTriggerGeofence(ctx context.Context, exec database.DBTX, stepID int64, t *models.AutomationStepTriggerGeofence) error {
 	const q = `
 		INSERT INTO automation_step_trigger_geofence (step_id, place_id, event)
 		VALUES ($1, $2, $3)
@@ -159,7 +160,7 @@ func (r *AutomationStepChildRepo) upsertTriggerGeofence(ctx context.Context, exe
 	return nil
 }
 
-func (r *AutomationStepChildRepo) upsertTriggerSchedule(ctx context.Context, exec DBTX, stepID int64, t *models.AutomationStepTriggerSchedule) error {
+func (r *AutomationStepChildRepo) upsertTriggerSchedule(ctx context.Context, exec database.DBTX, stepID int64, t *models.AutomationStepTriggerSchedule) error {
 	const q = `
 		INSERT INTO automation_step_trigger_schedule (step_id, cron_expr, timezone)
 		VALUES ($1, $2, $3)
@@ -176,7 +177,7 @@ func (r *AutomationStepChildRepo) upsertTriggerSchedule(ctx context.Context, exe
 	return nil
 }
 
-func (r *AutomationStepChildRepo) upsertTriggerEvent(ctx context.Context, exec DBTX, stepID int64, t *models.AutomationStepTriggerEvent) error {
+func (r *AutomationStepChildRepo) upsertTriggerEvent(ctx context.Context, exec database.DBTX, stepID int64, t *models.AutomationStepTriggerEvent) error {
 	const q = `
 		INSERT INTO automation_step_trigger_event (step_id, event_type)
 		VALUES ($1, $2)
@@ -190,7 +191,7 @@ func (r *AutomationStepChildRepo) upsertTriggerEvent(ctx context.Context, exec D
 
 // ---------------- condition upserts ----------------
 
-func (r *AutomationStepChildRepo) upsertConditionSignal(ctx context.Context, exec DBTX, stepID int64, c *models.AutomationStepConditionSignal) error {
+func (r *AutomationStepChildRepo) upsertConditionSignal(ctx context.Context, exec database.DBTX, stepID int64, c *models.AutomationStepConditionSignal) error {
 	const q = `
 		INSERT INTO automation_step_condition_signal
 			(step_id, signal, op, value_text, value_num, value_bool, value_min, value_max)
@@ -209,7 +210,7 @@ func (r *AutomationStepChildRepo) upsertConditionSignal(ctx context.Context, exe
 	return nil
 }
 
-func (r *AutomationStepChildRepo) upsertConditionTimeWindow(ctx context.Context, exec DBTX, stepID int64, c *models.AutomationStepConditionTimeWindow) error {
+func (r *AutomationStepChildRepo) upsertConditionTimeWindow(ctx context.Context, exec database.DBTX, stepID int64, c *models.AutomationStepConditionTimeWindow) error {
 	const q = `
 		INSERT INTO automation_step_condition_time_window
 			(step_id, start_time, end_time, timezone, days_of_week)
@@ -233,7 +234,7 @@ func (r *AutomationStepChildRepo) upsertConditionTimeWindow(ctx context.Context,
 	return nil
 }
 
-func (r *AutomationStepChildRepo) upsertConditionGeofence(ctx context.Context, exec DBTX, stepID int64, c *models.AutomationStepConditionGeofence) error {
+func (r *AutomationStepChildRepo) upsertConditionGeofence(ctx context.Context, exec database.DBTX, stepID int64, c *models.AutomationStepConditionGeofence) error {
 	const q = `
 		INSERT INTO automation_step_condition_geofence (step_id, place_id, state)
 		VALUES ($1, $2, $3)
@@ -246,7 +247,7 @@ func (r *AutomationStepChildRepo) upsertConditionGeofence(ctx context.Context, e
 	return nil
 }
 
-func (r *AutomationStepChildRepo) upsertConditionOtherAutomation(ctx context.Context, exec DBTX, stepID int64, c *models.AutomationStepConditionOtherAutomation) error {
+func (r *AutomationStepChildRepo) upsertConditionOtherAutomation(ctx context.Context, exec database.DBTX, stepID int64, c *models.AutomationStepConditionOtherAutomation) error {
 	const q = `
 		INSERT INTO automation_step_condition_other_automation
 			(step_id, other_automation_id, state)
@@ -266,7 +267,7 @@ func (r *AutomationStepChildRepo) upsertConditionOtherAutomation(ctx context.Con
 // (not `step_id`), so an ON CONFLICT (step_id) clause cannot be used. Instead
 // we DELETE any pre-existing rows for the step and INSERT the new payload using
 // the caller's transaction/executor so the ADR-004 invariant holds atomically.
-func (r *AutomationStepChildRepo) upsertActionCommand(ctx context.Context, exec DBTX, stepID int64, a *models.AutomationAction) error {
+func (r *AutomationStepChildRepo) upsertActionCommand(ctx context.Context, exec database.DBTX, stepID int64, a *models.AutomationAction) error {
 	if _, err := exec.Exec(ctx, `DELETE FROM automation_actions WHERE step_id = $1`, stepID); err != nil {
 		return fmt.Errorf("automation-step-children-upsert-action-command: delete: %w", err)
 	}
@@ -284,7 +285,7 @@ func (r *AutomationStepChildRepo) upsertActionCommand(ctx context.Context, exec 
 	return nil
 }
 
-func (r *AutomationStepChildRepo) upsertActionNotification(ctx context.Context, exec DBTX, stepID int64, a *models.AutomationStepActionNotify) error {
+func (r *AutomationStepChildRepo) upsertActionNotification(ctx context.Context, exec database.DBTX, stepID int64, a *models.AutomationStepActionNotify) error {
 	const q = `
 		INSERT INTO automation_step_action_notify (step_id, channel_id, template)
 		VALUES ($1, $2, $3)
@@ -297,7 +298,7 @@ func (r *AutomationStepChildRepo) upsertActionNotification(ctx context.Context, 
 	return nil
 }
 
-func (r *AutomationStepChildRepo) upsertActionSetSetting(ctx context.Context, exec DBTX, stepID int64, a *models.AutomationStepActionSetSetting) error {
+func (r *AutomationStepChildRepo) upsertActionSetSetting(ctx context.Context, exec database.DBTX, stepID int64, a *models.AutomationStepActionSetSetting) error {
 	const q = `
 		INSERT INTO automation_step_action_set_setting
 			(step_id, setting_key, value_text, value_num, value_bool)
@@ -313,7 +314,7 @@ func (r *AutomationStepChildRepo) upsertActionSetSetting(ctx context.Context, ex
 	return nil
 }
 
-func (r *AutomationStepChildRepo) upsertActionCallAutomation(ctx context.Context, exec DBTX, stepID int64, a *models.AutomationStepActionCallAutomation) error {
+func (r *AutomationStepChildRepo) upsertActionCallAutomation(ctx context.Context, exec database.DBTX, stepID int64, a *models.AutomationStepActionCallAutomation) error {
 	const q = `
 		INSERT INTO automation_step_action_call_automation (step_id, target_automation_id)
 		VALUES ($1, $2)

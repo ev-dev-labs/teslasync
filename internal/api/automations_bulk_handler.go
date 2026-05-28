@@ -10,7 +10,7 @@ import (
 )
 
 // automationBulkStore is the narrow surface needed by the automation bulk
-// endpoint; implemented by *database.AutomationRepo and substitutable in
+// endpoint; implemented by *dbauto.AutomationRepo and substitutable in
 // tests via the handler's bulkOverride field.
 type automationBulkStore interface {
 	FilterExistingIDs(ctx context.Context, ids []int64) ([]int64, error)

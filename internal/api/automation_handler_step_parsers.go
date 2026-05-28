@@ -5,23 +5,23 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-func automationStepWrites(req *createAutomationRequest) ([]database.AutomationStepWrite, error) {
+func automationStepWrites(req *createAutomationRequest) ([]dbauto.AutomationStepWrite, error) {
 	steps := automationTypedStepsInPersistenceOrder(req)
 	orders, err := automationStepOrderValues(steps)
 	if err != nil {
 		return nil, err
 	}
-	writes := make([]database.AutomationStepWrite, 0, len(steps))
+	writes := make([]dbauto.AutomationStepWrite, 0, len(steps))
 	for i, step := range steps {
 		payload, err := automationStepPayloadModel(step)
 		if err != nil {
 			return nil, fmt.Errorf("step %d: %w", i, err)
 		}
-		writes = append(writes, database.AutomationStepWrite{
+		writes = append(writes, dbauto.AutomationStepWrite{
 			StepOrder: orders[i],
 			Kind:      step.Kind,
 			Payload:   payload,

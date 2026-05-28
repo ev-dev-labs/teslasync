@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -151,13 +152,13 @@ func main() {
 	log.Info().Msg("Tesla client initialised")
 
 	// ── Repositories ──────────────────────────────────────────────────
-	automationRepo := database.NewAutomationRepo(db)
-	historyRepo := database.NewAutomationHistoryRepo(db)
+	automationRepo := dbauto.NewAutomationRepo(db)
+	historyRepo := dbauto.NewAutomationHistoryRepo(db)
 	vehicleRepo := database.NewVehicleRepo(db)
 	commandLogRepo := database.NewCommandLogRepo(db)
 	settingsRepo := database.NewSettingsRepo(db)
 	notifRepo := dbnotif.NewNotificationRepo(db)
-	varRepo := database.NewAutomationVariableRepo(db)
+	varRepo := dbauto.NewAutomationVariableRepo(db)
 
 	// ── Action Chain Executor ─────────────────────────────────────────
 	chainExecutor := action.NewChainExecutor(vehicleRepo)
@@ -356,9 +357,9 @@ func safePrefix(token string) string {
 	return token[:8] + "***"
 }
 
-// variableRepoAdapter wraps database.AutomationVariableRepo to satisfy action.VariableRepo.
+// variableRepoAdapter wraps dbauto.AutomationVariableRepo to satisfy action.VariableRepo.
 type variableRepoAdapter struct {
-	repo *database.AutomationVariableRepo
+	repo *dbauto.AutomationVariableRepo
 }
 
 func (a *variableRepoAdapter) Get(ctx context.Context, key string) (*action.VariableEntry, error) {

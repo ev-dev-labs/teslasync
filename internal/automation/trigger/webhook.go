@@ -10,7 +10,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// WebhookRepo is the subset of database.AutomationRepo needed by WebhookTrigger.
+// WebhookRepo is the subset of dbauto.AutomationRepo needed by WebhookTrigger.
 type WebhookRepo interface {
 	GetByWebhookToken(ctx context.Context, token string) (*models.AutomationFull, error)
 	SetAutoDisabled(ctx context.Context, id int64, reason string) error

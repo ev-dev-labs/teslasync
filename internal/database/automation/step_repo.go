@@ -1,8 +1,10 @@
-package database
+package automation
 
 import (
 	"context"
 	"fmt"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -12,10 +14,10 @@ import (
 // kind-specific CTI child row (condition, action, delay); those children are
 // persisted by their own repos in separate calls.
 type AutomationStepRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewAutomationStepRepo(db *DB) *AutomationStepRepo {
+func NewAutomationStepRepo(db *database.DB) *AutomationStepRepo {
 	return &AutomationStepRepo{db: db}
 }
 
@@ -28,7 +30,7 @@ func (r *AutomationStepRepo) Insert(ctx context.Context, s *models.AutomationSte
 
 // InsertTx adds a new step row using the supplied executor. Passing pgx.Tx keeps
 // parent automation, discriminator step, and CTI child writes in one transaction.
-func (r *AutomationStepRepo) InsertTx(ctx context.Context, exec DBTX, s *models.AutomationStep) error {
+func (r *AutomationStepRepo) InsertTx(ctx context.Context, exec database.DBTX, s *models.AutomationStep) error {
 	const query = `
 		INSERT INTO automation_steps (automation_id, step_order, kind)
 		VALUES ($1, $2, $3)
@@ -108,7 +110,7 @@ func (r *AutomationStepRepo) Delete(ctx context.Context, stepID int64) error {
 // DeleteByAutomationTx removes all step discriminator rows for an automation
 // using the supplied transaction/executor. CTI child rows are removed by FK
 // cascade from automation_steps.
-func (r *AutomationStepRepo) DeleteByAutomationTx(ctx context.Context, exec DBTX, automationID int64) error {
+func (r *AutomationStepRepo) DeleteByAutomationTx(ctx context.Context, exec database.DBTX, automationID int64) error {
 	const query = `DELETE FROM automation_steps WHERE automation_id = $1`
 	if _, err := exec.Exec(ctx, query, automationID); err != nil {
 		return fmt.Errorf("automation-steps-repo-delete-by-automation: %w", err)

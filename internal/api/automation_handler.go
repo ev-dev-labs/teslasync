@@ -18,6 +18,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/automation/presets"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -26,7 +27,7 @@ import (
 type AutomationHandler struct {
 	db             *database.DB
 	repo           automationRepository
-	historyRepo    *database.AutomationHistoryRepo
+	historyRepo    *dbauto.AutomationHistoryRepo
 	fsmTransRepo   *dbobs.FSMTransitionRepo
 	cmdExecutor    *action.CommandExecutor   // optional, enables undo
 	eventPublisher *AutomationEventPublisher // optional, enables SSE events
@@ -39,7 +40,7 @@ type AutomationHandler struct {
 	// production wiring.
 	bulkRepo automationBulkStore
 	// bulkOverride lets tests substitute the bulk store without standing
-	// up a real *database.AutomationRepo. Always nil in production.
+	// up a real *dbauto.AutomationRepo. Always nil in production.
 	bulkOverride automationBulkStore
 }
 
@@ -47,9 +48,9 @@ type automationRepository interface {
 	ListFull(ctx context.Context) ([]models.AutomationFull, error)
 	GetByID(ctx context.Context, id int64) (*models.AutomationFull, error)
 	Create(ctx context.Context, a *models.Automation) error
-	CreateWithSteps(ctx context.Context, a *models.Automation, steps []database.AutomationStepWrite) error
+	CreateWithSteps(ctx context.Context, a *models.Automation, steps []dbauto.AutomationStepWrite) error
 	Update(ctx context.Context, a *models.Automation) error
-	UpdateWithSteps(ctx context.Context, a *models.Automation, steps []database.AutomationStepWrite) error
+	UpdateWithSteps(ctx context.Context, a *models.Automation, steps []dbauto.AutomationStepWrite) error
 	Delete(ctx context.Context, id int64) error
 }
 
@@ -88,11 +89,11 @@ func WithAutomationMQTTPublisher(p AutomationMQTTPublisher) AutomationHandlerOpt
 
 // NewAutomationHandler creates an AutomationHandler backed by the given database.
 func NewAutomationHandler(db *database.DB, opts ...AutomationHandlerOption) *AutomationHandler {
-	repo := database.NewAutomationRepo(db)
+	repo := dbauto.NewAutomationRepo(db)
 	h := &AutomationHandler{
 		db:             db,
 		repo:           repo,
-		historyRepo:    database.NewAutomationHistoryRepo(db),
+		historyRepo:    dbauto.NewAutomationHistoryRepo(db),
 		fsmTransRepo:   dbobs.NewFSMTransitionRepo(db),
 		presetRegistry: presets.NewRegistry(),
 		bulkRepo:       repo,

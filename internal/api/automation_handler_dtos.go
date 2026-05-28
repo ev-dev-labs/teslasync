@@ -8,7 +8,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/automation/presets"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -158,7 +158,7 @@ type historyListResponse struct {
 	Total   int                                  `json:"total"`
 	Limit   int                                  `json:"limit"`
 	Offset  int                                  `json:"offset"`
-	Summary *database.HistoryStats               `json:"summary"`
+	Summary *dbauto.HistoryStats                 `json:"summary"`
 }
 
 // historyDetailResponse wraps a single execution record with FSM transitions.

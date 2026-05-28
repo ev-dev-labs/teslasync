@@ -1,8 +1,10 @@
-package database
+package automation
 
 import (
 	"context"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 
@@ -11,10 +13,10 @@ import (
 
 // AutomationVariableRepo provides key-value storage for cross-automation state.
 type AutomationVariableRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewAutomationVariableRepo(db *DB) *AutomationVariableRepo {
+func NewAutomationVariableRepo(db *database.DB) *AutomationVariableRepo {
 	return &AutomationVariableRepo{db: db}
 }
 

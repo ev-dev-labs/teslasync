@@ -1,9 +1,11 @@
-package database
+package automation
 
 import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 
@@ -12,10 +14,10 @@ import (
 
 // AutomationHistoryRepo provides automation execution history data access.
 type AutomationHistoryRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewAutomationHistoryRepo(db *DB) *AutomationHistoryRepo {
+func NewAutomationHistoryRepo(db *database.DB) *AutomationHistoryRepo {
 	return &AutomationHistoryRepo{db: db}
 }
 

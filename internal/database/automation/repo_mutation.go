@@ -1,4 +1,4 @@
-package database
+package automation
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -17,7 +18,7 @@ func (r *AutomationRepo) Create(ctx context.Context, a *models.Automation) error
 	return r.createTx(ctx, r.db.Pool, a)
 }
 
-func (r *AutomationRepo) createTx(ctx context.Context, exec DBTX, a *models.Automation) error {
+func (r *AutomationRepo) createTx(ctx context.Context, exec database.DBTX, a *models.Automation) error {
 	const query = `
 		INSERT INTO automations (name, description, enabled, vehicle_id)
 		VALUES ($1, $2, $3, $4)
