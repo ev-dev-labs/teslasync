@@ -170,3 +170,5 @@ eca9c378b29e9a4762fab660485f53a3831a6891
 c4ab69e3aedd63b475c410f3039f78a6e17ecf82
 # R4.20 tesla cluster carve
 68c1bff88b8d6eb2777e4e8b67df6aa070857adc
+# R4.21 vehicle cluster carve (heart of system, 38 callers)
+7957ede2441fc9a5477532dd91f61b889bb9eedc
