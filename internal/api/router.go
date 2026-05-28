@@ -25,6 +25,7 @@ import (
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
+	apivisloc "github.com/ev-dev-labs/teslasync/internal/api/visitedlocation"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -671,7 +672,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	tcoHandler := NewTCOHandler(db)
 	sleepHandler := NewSleepHandler(db)
 	// Phase-42 (prompt 0077): VampireDrainHandler deleted (vampire_drain_events).
-	visitedLocationHandler := NewVisitedLocationHandler(db)
+	visitedLocationHandler := apivisloc.NewHandler(db)
 	// Phase-42 (prompt 0077): MileageHandler deleted (daily_mileage); TCO derives
 	// distance via SUM(distance_m) FROM drives.
 	tripHandler := NewTripHandler(db)
