@@ -60,6 +60,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -148,7 +149,7 @@ type AIClimateScheduleHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_climate_schedule AND validate_climate_schedule (both
-//	registered by tools.RegisterPreheatPrecoolRecommenderTools
+//	registered by schedule.RegisterPreheatPrecoolRecommenderTools
 //	in router.go).
 //
 // strat:      the preheat-precool-recommender Strategy (one per process).
@@ -328,7 +329,7 @@ var _ http.Handler = (*AIClimateScheduleHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIClimateScheduleAdvisor is the production
-// tools.ClimateScheduleAdvisor. It runs a pure-Go deterministic
+// schedule.ClimateScheduleAdvisor. It runs a pure-Go deterministic
 // departure heuristic over the typed inputs and returns a
 // proposed window.
 //
@@ -349,7 +350,7 @@ func NewAIClimateScheduleAdvisor() *AIClimateScheduleAdvisor {
 	return &AIClimateScheduleAdvisor{}
 }
 
-// DraftClimateSchedule implements tools.ClimateScheduleAdvisor.
+// DraftClimateSchedule implements schedule.ClimateScheduleAdvisor.
 //
 // The deterministic heuristic:
 //
@@ -364,7 +365,7 @@ func NewAIClimateScheduleAdvisor() *AIClimateScheduleAdvisor {
 //
 // Errors are returned as Go errors; the tool wraps them into the
 // {status: "invalid"} envelope.
-func (a *AIClimateScheduleAdvisor) DraftClimateSchedule(_ context.Context, req tools.ClimateScheduleDraftRequest) (*tools.ClimateScheduleDraftResult, error) {
+func (a *AIClimateScheduleAdvisor) DraftClimateSchedule(_ context.Context, req schedule.ClimateScheduleDraftRequest) (*schedule.ClimateScheduleDraftResult, error) {
 	depart, err := time.Parse(time.RFC3339, req.DepartBy)
 	if err != nil {
 		return nil, fmt.Errorf("ai preheat-precool-recommender: depart_by parse: %w", err)
@@ -417,7 +418,7 @@ func (a *AIClimateScheduleAdvisor) DraftClimateSchedule(_ context.Context, req t
 		return nil, fmt.Errorf("depart_by (%s) is too soon — the proposed %d-minute %s window would start in the past",
 			depart.UTC().Format(time.RFC3339), intMinutes, mode)
 	}
-	return &tools.ClimateScheduleDraftResult{
+	return &schedule.ClimateScheduleDraftResult{
 		VehicleID:         req.VehicleID,
 		StartTime:         start.UTC(),
 		EndTime:           end.UTC(),
@@ -438,5 +439,5 @@ func (a *AIClimateScheduleAdvisor) now() time.Time {
 	return time.Now().UTC()
 }
 
-// Compile-time assertion: AIClimateScheduleAdvisor satisfies tools.ClimateScheduleAdvisor.
-var _ tools.ClimateScheduleAdvisor = (*AIClimateScheduleAdvisor)(nil)
+// Compile-time assertion: AIClimateScheduleAdvisor satisfies schedule.ClimateScheduleAdvisor.
+var _ schedule.ClimateScheduleAdvisor = (*AIClimateScheduleAdvisor)(nil)

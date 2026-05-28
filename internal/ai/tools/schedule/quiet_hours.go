@@ -77,7 +77,7 @@
 //     beyond the public per-hour counts. This is
 //     defence-in-depth.
 
-package tools
+package schedule
 
 import (
 	"context"
@@ -88,6 +88,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -362,7 +363,7 @@ func (t *draftQuietHoursWindow) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftQuietHoursWindow) InputSchema() json.RawMessage {
-	return CachedSchema(draftQuietHoursWindowInput{})
+	return tools.CachedSchema(draftQuietHoursWindowInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -386,7 +387,7 @@ func (t *draftQuietHoursWindow) RequiredScope() string { return "" }
 // user) happens in Execute so the missing-scope case can be
 // distinguished from the cross-user case.
 func (t *draftQuietHoursWindow) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[draftQuietHoursWindowInput](raw)
+	v, err := tools.ValidateStruct[draftQuietHoursWindowInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -571,7 +572,7 @@ func (t *validateQuietHoursWindow) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateQuietHoursWindow) InputSchema() json.RawMessage {
-	return CachedSchema(validateQuietHoursWindowInput{})
+	return tools.CachedSchema(validateQuietHoursWindowInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -589,7 +590,7 @@ func (t *validateQuietHoursWindow) RequiredScope() string { return "" }
 // happens in Execute so the narrator can surface the full list
 // of issues at once.
 func (t *validateQuietHoursWindow) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[validateQuietHoursWindowInput](raw)
+	v, err := tools.ValidateStruct[validateQuietHoursWindowInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -738,7 +739,7 @@ type QuietHoursSuggestionSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterQuietHoursSuggestionTools(r *Registry, s QuietHoursSuggestionSources) {
+func RegisterQuietHoursSuggestionTools(r *tools.Registry, s QuietHoursSuggestionSources) {
 	r.Register(&draftQuietHoursWindow{source: s.Source})
 	r.Register(&validateQuietHoursWindow{})
 }

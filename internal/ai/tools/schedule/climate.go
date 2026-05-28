@@ -54,7 +54,7 @@
 //     propose-only and draft_climate_schedule reuses the canonical
 //     deterministic heuristic.
 
-package tools
+package schedule
 
 import (
 	"context"
@@ -62,6 +62,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -174,7 +176,7 @@ func (t *draftClimateSchedule) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftClimateSchedule) InputSchema() json.RawMessage {
-	return CachedSchema(draftClimateScheduleInput{})
+	return tools.CachedSchema(draftClimateScheduleInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -188,7 +190,7 @@ func (t *draftClimateSchedule) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *draftClimateSchedule) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[draftClimateScheduleInput](raw)
+	return tools.ValidateStruct[draftClimateScheduleInput](raw)
 }
 
 // Execute implements [Tool]. Delegates to the
@@ -275,7 +277,7 @@ func (t *validateClimateSchedule) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateClimateSchedule) InputSchema() json.RawMessage {
-	return CachedSchema(validateClimateScheduleInput{})
+	return tools.CachedSchema(validateClimateScheduleInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -289,7 +291,7 @@ func (t *validateClimateSchedule) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *validateClimateSchedule) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[validateClimateScheduleInput](raw)
+	return tools.ValidateStruct[validateClimateScheduleInput](raw)
 }
 
 // Execute implements [Tool]. Pure-Go sanity check.
@@ -387,7 +389,7 @@ type PreheatPrecoolRecommenderSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterPreheatPrecoolRecommenderTools(r *Registry, s PreheatPrecoolRecommenderSources) {
+func RegisterPreheatPrecoolRecommenderTools(r *tools.Registry, s PreheatPrecoolRecommenderSources) {
 	r.Register(&draftClimateSchedule{advisor: s.Advisor})
 	r.Register(&validateClimateSchedule{})
 }

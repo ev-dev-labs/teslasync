@@ -6,7 +6,7 @@
 // the validator with pure-Go arithmetic. No DB / network / clock
 // dependency.
 
-package tools
+package schedule
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -410,7 +412,7 @@ func TestValidateChargeSchedule_PropOnlyContract(t *testing.T) {
 // the public registration entry point installs both tools by name.
 func TestRegisterSmartChargeScheduleSuggestionTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterSmartChargeScheduleSuggestionTools(r, SmartChargeScheduleSuggestionSources{
 		Planner: &fakeChargeScheduleComputer{},
 	})

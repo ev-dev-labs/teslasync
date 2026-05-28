@@ -131,6 +131,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
@@ -1045,7 +1046,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// schedule persistence flows through the existing canonical
 	// Schedule button in the SmartChargePage UI (unchanged
 	// baseline).
-	tools.RegisterSmartChargeScheduleSuggestionTools(aiToolRegistry, tools.SmartChargeScheduleSuggestionSources{
+	schedule.RegisterSmartChargeScheduleSuggestionTools(aiToolRegistry, schedule.SmartChargeScheduleSuggestionSources{
 		Planner: NewAIChargeScheduleComputer(chargePlannerHandler),
 	})
 	// smart-charge-schedule-suggestion handler. One per process;
@@ -1446,7 +1447,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deterministic departure heuristic the SPA's manual
 	// climate-controls baseline runs — no parallel SQL path,
 	// no parallel write path; the LLM never persists.
-	tools.RegisterPreheatPrecoolRecommenderTools(aiToolRegistry, tools.PreheatPrecoolRecommenderSources{
+	schedule.RegisterPreheatPrecoolRecommenderTools(aiToolRegistry, schedule.PreheatPrecoolRecommenderSources{
 		Advisor: NewAIClimateScheduleAdvisor(),
 	})
 	// preheat-precool-recommender handler. One per process;
@@ -2265,7 +2266,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		database.NewNotificationRepo(db),
 		database.NewQuietHoursRepo(db),
 	)
-	tools.RegisterQuietHoursSuggestionTools(aiToolRegistry, tools.QuietHoursSuggestionSources{
+	schedule.RegisterQuietHoursSuggestionTools(aiToolRegistry, schedule.QuietHoursSuggestionSources{
 		Source: aiQuietHoursSuggestionSource,
 	})
 	// quiet-hours-suggestion handler. One per process;

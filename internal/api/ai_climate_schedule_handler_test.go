@@ -27,7 +27,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 )
 
 // TestPreheatPrecoolAIOffManualClimateWorks is the load-bearing
@@ -230,7 +230,7 @@ func TestAIClimateScheduleAdvisor_PreheatHappyPath(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 1, 2, 6, 0, 0, 0, time.UTC) // 06:00 UTC; depart_by 07:30 UTC ⇒ 90 minutes ahead
 	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
-	req := tools.ClimateScheduleDraftRequest{
+	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-01-02T07:30:00Z",
 		CurrentCabinTempC: 4.0,  // cold
@@ -264,7 +264,7 @@ func TestAIClimateScheduleAdvisor_PrecoolHappyPath(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 7, 15, 12, 0, 0, 0, time.UTC) // 12:00 UTC; depart_by 14:00 UTC ⇒ 120 minutes ahead
 	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
-	req := tools.ClimateScheduleDraftRequest{
+	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-07-15T14:00:00Z",
 		CurrentCabinTempC: 38.0, // hot
@@ -292,7 +292,7 @@ func TestAIClimateScheduleAdvisor_RejectsCabinAtTarget(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 1, 2, 6, 0, 0, 0, time.UTC)
 	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
-	req := tools.ClimateScheduleDraftRequest{
+	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-01-02T07:30:00Z",
 		CurrentCabinTempC: 21.2,
@@ -310,7 +310,7 @@ func TestAIClimateScheduleAdvisor_RejectsDepartInPast(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 1, 2, 8, 0, 0, 0, time.UTC) // after depart_by 07:30
 	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
-	req := tools.ClimateScheduleDraftRequest{
+	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-01-02T07:30:00Z",
 		CurrentCabinTempC: 4.0,
@@ -329,7 +329,7 @@ func TestAIClimateScheduleAdvisor_RejectsTooSoonDepart(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 1, 2, 7, 25, 0, 0, time.UTC) // 5 minutes before depart_by
 	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
-	req := tools.ClimateScheduleDraftRequest{
+	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-01-02T07:30:00Z",
 		CurrentCabinTempC: 4.0, // 17°C delta needs 34 minutes
@@ -343,17 +343,17 @@ func TestAIClimateScheduleAdvisor_RejectsTooSoonDepart(t *testing.T) {
 
 // TestAIClimateScheduleAdvisor_SatisfiesInterface is a compile-time
 // + runtime assertion that the production adapter implements
-// tools.ClimateScheduleAdvisor. The compile-time `var _` line in
+// schedule.ClimateScheduleAdvisor. The compile-time `var _` line in
 // the handler file gives the same guarantee, but this test fails
 // with a clear message if a future refactor accidentally narrows
 // the interface contract.
 func TestAIClimateScheduleAdvisor_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
-	var iface tools.ClimateScheduleAdvisor = (*AIClimateScheduleAdvisor)(nil)
+	var iface schedule.ClimateScheduleAdvisor = (*AIClimateScheduleAdvisor)(nil)
 	if iface == nil {
 		// The (*AIClimateScheduleAdvisor)(nil) cast above already
 		// proves interface satisfaction; the nil-check is defence
 		// in depth against a future generics quirk.
-		t.Logf("AIClimateScheduleAdvisor satisfies tools.ClimateScheduleAdvisor (nil cast)")
+		t.Logf("AIClimateScheduleAdvisor satisfies schedule.ClimateScheduleAdvisor (nil cast)")
 	}
 }

@@ -18,7 +18,7 @@ package api
 //	open SSE writer (internal/ai/stream.New) to the HTTP response
 //	  ↓
 //	stash the {user_id, timezone, window_days} tuple in ctx via
-//	  tools.WithScopedQuietHoursWindow
+//	  schedule.WithScopedQuietHoursWindow
 //	  ↓
 //	synthesise the user-message that scopes to the in-scope user
 //	  and instructs the tool sequence (draft → validate → narrate)
@@ -32,7 +32,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the {user_id, timezone,
-// window_days} tuple in ctx via tools.WithScopedQuietHoursWindow
+// window_days} tuple in ctx via schedule.WithScopedQuietHoursWindow
 // BEFORE dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The
 // tools.draftQuietHoursWindow + tools.validateQuietHoursWindow
@@ -90,6 +90,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -184,7 +185,7 @@ type AIQuietHoursSuggestionHandler struct {
 //
 //	draft_quiet_hours_window AND
 //	validate_quiet_hours_window (registered by
-//	tools.RegisterQuietHoursSuggestionTools in
+//	schedule.RegisterQuietHoursSuggestionTools in
 //	router.go).
 //
 // strat:      the quiet-hours-suggestion Strategy (one per
@@ -313,7 +314,7 @@ func (h *AIQuietHoursSuggestionHandler) ServeHTTP(w http.ResponseWriter, r *http
 	// against prompt-injection exfiltration).
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, quiethourssuggestion.FeatureID)
-	ctx = tools.WithScopedQuietHoursWindow(ctx, tools.ScopedQuietHoursWindow{
+	ctx = schedule.WithScopedQuietHoursWindow(ctx, schedule.ScopedQuietHoursWindow{
 		UserID:     subject,
 		Timezone:   tz,
 		WindowDays: windowDays,
@@ -392,7 +393,7 @@ func buildQuietHoursSuggestionUserMessage(userID, timezone string, windowDays in
 // ---------------------------------------------------------------------------
 
 // AIQuietHoursSuggestionSource is the production adapter
-// satisfying tools.QuietHoursSuggestionSource. It composes the
+// satisfying schedule.QuietHoursSuggestionSource. It composes the
 // canonical NotificationRepo + QuietHoursRepo aggregations so
 // the AI tool reads from the SAME data source the deterministic
 // inbox + quiet-hours UI already does — no new SQL, no
@@ -427,7 +428,7 @@ func NewAIQuietHoursSuggestionSource(
 	}
 }
 
-// LoadHistory implements tools.QuietHoursSuggestionSource. Reads
+// LoadHistory implements schedule.QuietHoursSuggestionSource. Reads
 // the trailing windowDays of notification_logs for userID
 // (filtered to non-critical severities) via the canonical
 // NotificationRepo.GetLogsFiltered, then bucketizes the
@@ -456,7 +457,7 @@ func (a *AIQuietHoursSuggestionSource) LoadHistory(
 	userID string,
 	timezone string,
 	windowDays int,
-) (*tools.QuietHoursHistorySummary, error) {
+) (*schedule.QuietHoursHistorySummary, error) {
 	loc, err := time.LoadLocation(timezone)
 	if err != nil {
 		return nil, fmt.Errorf("ai quiet-hours-suggestion: load timezone %q: %w", timezone, err)
@@ -485,7 +486,7 @@ func (a *AIQuietHoursSuggestionSource) LoadHistory(
 		}
 	}
 
-	summary := &tools.QuietHoursHistorySummary{
+	summary := &schedule.QuietHoursHistorySummary{
 		WindowDays:        windowDays,
 		MinRequiredEvents: a.minRequired,
 		SampleSize:        len(rows),
@@ -503,7 +504,7 @@ func (a *AIQuietHoursSuggestionSource) LoadHistory(
 }
 
 // CountExistingWindows implements
-// tools.QuietHoursSuggestionSource. Reads the user's existing
+// schedule.QuietHoursSuggestionSource. Reads the user's existing
 // quiet-hours windows via the canonical
 // QuietHoursRepo.ListByUser and returns the count. The
 // individual windows are NOT surfaced to the LLM — only the
@@ -522,8 +523,8 @@ func (a *AIQuietHoursSuggestionSource) CountExistingWindows(ctx context.Context,
 
 // Compile-time assertions: AIQuietHoursSuggestionHandler
 // satisfies http.Handler and AIQuietHoursSuggestionSource
-// satisfies tools.QuietHoursSuggestionSource.
+// satisfies schedule.QuietHoursSuggestionSource.
 var (
-	_ http.Handler                     = (*AIQuietHoursSuggestionHandler)(nil)
-	_ tools.QuietHoursSuggestionSource = (*AIQuietHoursSuggestionSource)(nil)
+	_ http.Handler                        = (*AIQuietHoursSuggestionHandler)(nil)
+	_ schedule.QuietHoursSuggestionSource = (*AIQuietHoursSuggestionSource)(nil)
 )

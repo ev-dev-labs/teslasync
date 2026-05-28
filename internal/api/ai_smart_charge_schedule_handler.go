@@ -58,6 +58,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -109,7 +110,7 @@ type AISmartChargeScheduleHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_charge_schedule AND validate_charge_schedule (both
-//	registered by tools.RegisterSmartChargeScheduleSuggestionTools
+//	registered by schedule.RegisterSmartChargeScheduleSuggestionTools
 //	in router.go).
 //
 // strat:      the smart-charge-schedule-suggestion Strategy (one per process).
@@ -289,7 +290,7 @@ var _ http.Handler = (*AISmartChargeScheduleHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIChargeScheduleComputer is the production
-// tools.ChargeScheduleComputer. It delegates to the canonical
+// schedule.ChargeScheduleComputer. It delegates to the canonical
 // *ChargePlannerHandler.computeSchedule path so a schedule
 // proposed by the AI tool is byte-equivalent to the schedule
 // returned by POST /api/v1/charge-planner/optimize (modulo the
@@ -310,19 +311,19 @@ func NewAIChargeScheduleComputer(planner *ChargePlannerHandler) *AIChargeSchedul
 	return &AIChargeScheduleComputer{planner: planner}
 }
 
-// ComputeChargeSchedule implements tools.ChargeScheduleComputer.
-// Translates the typed [tools.ChargeScheduleComputeRequest] into a
+// ComputeChargeSchedule implements schedule.ChargeScheduleComputer.
+// Translates the typed [schedule.ChargeScheduleComputeRequest] into a
 // canonical optimizeRequest, delegates to the same in-process
 // computeSchedule method the deterministic POST
 // /api/v1/charge-planner/optimize handler uses, and translates the
 // *optimizeResponse back into a typed
-// [tools.ChargeScheduleComputeResult]. PlanID stays 0 because this
+// [schedule.ChargeScheduleComputeResult]. PlanID stays 0 because this
 // path never persists.
 //
 // The compute call is bounded by ctx; a context-cancel from the
 // SPA closing the SSE connection terminates the computation
 // cleanly.
-func (a *AIChargeScheduleComputer) ComputeChargeSchedule(ctx context.Context, req tools.ChargeScheduleComputeRequest) (*tools.ChargeScheduleComputeResult, error) {
+func (a *AIChargeScheduleComputer) ComputeChargeSchedule(ctx context.Context, req schedule.ChargeScheduleComputeRequest) (*schedule.ChargeScheduleComputeResult, error) {
 	departBy, err := time.Parse(time.RFC3339, req.DepartBy)
 	if err != nil {
 		return nil, fmt.Errorf("ai smart-charge-schedule-suggestion: depart_by parse: %w", err)
@@ -345,30 +346,30 @@ func (a *AIChargeScheduleComputer) ComputeChargeSchedule(ctx context.Context, re
 	if resp == nil {
 		return nil, errors.New("ai smart-charge-schedule-suggestion: computeSchedule returned nil response")
 	}
-	out := &tools.ChargeScheduleComputeResult{
+	out := &schedule.ChargeScheduleComputeResult{
 		PlanID:           resp.PlanID, // always 0 — computeSchedule does not persist
 		CurrentSOC:       resp.CurrentSOC,
 		TargetSOC:        resp.TargetSOC,
 		KWhNeeded:        resp.KWhNeeded,
 		EstDurationHours: resp.EstDurationHours,
-		Schedule: tools.ChargeWindow{
+		Schedule: schedule.ChargeWindow{
 			StartTime:    resp.Schedule.StartTime,
 			EndTime:      resp.Schedule.EndTime,
 			RateCentsKWh: resp.Schedule.RateCentsKWh,
 			EstCost:      resp.Schedule.EstCost,
 			RateTier:     resp.Schedule.RateTier,
 		},
-		Comparison: tools.CostComparison{
+		Comparison: schedule.CostComparison{
 			ChargeNowCost: resp.Comparison.ChargeNowCost,
 			OptimizedCost: resp.Comparison.OptimizedCost,
 			Savings:       resp.Comparison.Savings,
 			SavingsPct:    resp.Comparison.SavingsPct,
 		},
-		Alternatives: make([]tools.ChargeWindow, 0, len(resp.Alternatives)),
-		HourlyRates:  make([]tools.HourlyRate, 0, len(resp.HourlyRates)),
+		Alternatives: make([]schedule.ChargeWindow, 0, len(resp.Alternatives)),
+		HourlyRates:  make([]schedule.HourlyRate, 0, len(resp.HourlyRates)),
 	}
 	for _, alt := range resp.Alternatives {
-		out.Alternatives = append(out.Alternatives, tools.ChargeWindow{
+		out.Alternatives = append(out.Alternatives, schedule.ChargeWindow{
 			StartTime:    alt.StartTime,
 			EndTime:      alt.EndTime,
 			RateCentsKWh: alt.RateCentsKWh,
@@ -377,7 +378,7 @@ func (a *AIChargeScheduleComputer) ComputeChargeSchedule(ctx context.Context, re
 		})
 	}
 	for _, hr := range resp.HourlyRates {
-		out.HourlyRates = append(out.HourlyRates, tools.HourlyRate{
+		out.HourlyRates = append(out.HourlyRates, schedule.HourlyRate{
 			Hour:      hr.Hour,
 			RateCents: hr.RateCents,
 			Tier:      hr.Tier,
@@ -386,5 +387,5 @@ func (a *AIChargeScheduleComputer) ComputeChargeSchedule(ctx context.Context, re
 	return out, nil
 }
 
-// Compile-time assertion: AIChargeScheduleComputer satisfies tools.ChargeScheduleComputer.
-var _ tools.ChargeScheduleComputer = (*AIChargeScheduleComputer)(nil)
+// Compile-time assertion: AIChargeScheduleComputer satisfies schedule.ChargeScheduleComputer.
+var _ schedule.ChargeScheduleComputer = (*AIChargeScheduleComputer)(nil)

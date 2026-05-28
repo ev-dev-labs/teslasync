@@ -29,7 +29,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 )
 
 // TestSmartChargeScheduleAIOffManualScheduleWorks is the
@@ -247,7 +247,7 @@ func TestAIChargeScheduleComputer_PanicsOnNilPlanner(t *testing.T) {
 
 // TestAIChargeScheduleComputer_SatisfiesInterface is a compile-time
 // + runtime assertion that the production adapter implements
-// tools.ChargeScheduleComputer. The compile-time `var _` line in
+// schedule.ChargeScheduleComputer. The compile-time `var _` line in
 // the handler file gives the same guarantee, but this test fails
 // with a clear message if a future refactor accidentally narrows
 // the interface contract.
@@ -256,12 +256,12 @@ func TestAIChargeScheduleComputer_SatisfiesInterface(t *testing.T) {
 	// We only inspect the type — no need to construct a real
 	// *ChargePlannerHandler; the interface satisfaction is
 	// static.
-	var iface tools.ChargeScheduleComputer = (*AIChargeScheduleComputer)(nil)
+	var iface schedule.ChargeScheduleComputer = (*AIChargeScheduleComputer)(nil)
 	if iface == nil {
 		// The (*AIChargeScheduleComputer)(nil) cast above
 		// already proves interface satisfaction; the nil-check
 		// is defence in depth against a future generics quirk.
-		t.Logf("AIChargeScheduleComputer satisfies tools.ChargeScheduleComputer (nil cast)")
+		t.Logf("AIChargeScheduleComputer satisfies schedule.ChargeScheduleComputer (nil cast)")
 	}
 }
 

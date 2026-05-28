@@ -18,7 +18,7 @@
 // scope ⇒ delegate. A future edit that bypasses any of these
 // gates would surface here.
 
-package tools
+package schedule
 
 import (
 	"context"
@@ -26,6 +26,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -598,7 +600,7 @@ func TestScopedQuietHoursWindow_NoScopeInBareContext(t *testing.T) {
 
 func TestRegisterQuietHoursSuggestionTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterQuietHoursSuggestionTools(r, QuietHoursSuggestionSources{Source: &fakeQuietHoursSource{}})
 	for _, name := range []string{"draft_quiet_hours_window", "validate_quiet_hours_window"} {
 		if _, ok := r.Get(name); !ok {

@@ -6,7 +6,7 @@
 // the validator with pure-Go arithmetic. No DB / network / clock
 // dependency.
 
-package tools
+package schedule
 
 import (
 	"context"
@@ -15,6 +15,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -381,7 +383,7 @@ func TestValidateClimateSchedule_PropOnlyContract(t *testing.T) {
 // installs both tools onto the registry under their canonical names.
 func TestRegisterPreheatPrecoolRecommenderTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	advisor := &fakeClimateScheduleAdvisor{out: &ClimateScheduleDraftResult{}}
 	RegisterPreheatPrecoolRecommenderTools(r, PreheatPrecoolRecommenderSources{Advisor: advisor})
 	for _, want := range []string{"draft_climate_schedule", "validate_climate_schedule"} {

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:22:11Z",
+  "generated_at": "2026-05-28T06:25:24Z",
   "go_version": "go1.26.1",
-  "commit_sha": "7d14e690df88b5caa14e8fcc61c647609cfbb1ea",
+  "commit_sha": "4fdcaf42a90ed149962d11db5e69c1e79ca798dc",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 43,
-      "test_files": 36,
-      "loc": 35140,
+      "go_files": 40,
+      "test_files": 33,
+      "loc": 32359,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1946,10 +1946,6 @@
         "paint_preview_test.go",
         "predictive_maintenance.go",
         "predictive_maintenance_test.go",
-        "preheat_precool_recommender.go",
-        "preheat_precool_recommender_test.go",
-        "quiet_hours_suggestion.go",
-        "quiet_hours_suggestion_test.go",
         "registry.go",
         "registry_test.go",
         "route_efficiency.go",
@@ -1960,8 +1956,6 @@
         "search_test.go",
         "share_card_image.go",
         "share_card_image_test.go",
-        "smart_charge_schedule_suggestion.go",
-        "smart_charge_schedule_suggestion_test.go",
         "software_update_summary.go",
         "software_update_summary_test.go",
         "speed_profile.go",
@@ -2114,6 +2108,27 @@
       ]
     },
     {
+      "path": "internal/ai/tools/schedule",
+      "go_files": 4,
+      "test_files": 3,
+      "loc": 2821,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/models"
+      ],
+      "files": [
+        "charge.go",
+        "charge_test.go",
+        "climate.go",
+        "climate_test.go",
+        "doc.go",
+        "quiet_hours.go",
+        "quiet_hours_test.go"
+      ]
+    },
+    {
       "path": "internal/alertmsg",
       "go_files": 3,
       "test_files": 1,
@@ -2135,7 +2150,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126510,
+      "loc": 126514,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2214,6 +2229,7 @@
         "internal/ai/tools/nl",
         "internal/ai/tools/predict",
         "internal/ai/tools/safety",
+        "internal/ai/tools/schedule",
         "internal/alertmsg",
         "internal/api",
         "internal/apilog",
@@ -5853,14 +5869,11 @@
       "nl_sql_playground.go",
       "paint_preview.go",
       "predictive_maintenance.go",
-      "preheat_precool_recommender.go",
-      "quiet_hours_suggestion.go",
       "registry.go",
       "route_efficiency.go",
       "schema.go",
       "search.go",
       "share_card_image.go",
-      "smart_charge_schedule_suggestion.go",
       "software_update_summary.go",
       "speed_profile.go",
       "state_machine_debugger_narrator.go",
@@ -5908,6 +5921,12 @@
     "internal/ai/tools/safety": [
       "doc.go",
       "explainer.go"
+    ],
+    "internal/ai/tools/schedule": [
+      "charge.go",
+      "climate.go",
+      "doc.go",
+      "quiet_hours.go"
     ],
     "internal/alertmsg": [
       "doc.go",
@@ -7126,8 +7145,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 43,
-      "flat_parent_test_files": 36,
+      "flat_parent_go_files": 40,
+      "flat_parent_test_files": 33,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

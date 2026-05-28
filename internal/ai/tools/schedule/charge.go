@@ -51,7 +51,7 @@
 //     propose-only and draft_charge_schedule reuses the canonical
 //     compute path.
 
-package tools
+package schedule
 
 import (
 	"context"
@@ -59,6 +59,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -215,7 +217,7 @@ func (t *draftChargeSchedule) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftChargeSchedule) InputSchema() json.RawMessage {
-	return CachedSchema(draftChargeScheduleInput{})
+	return tools.CachedSchema(draftChargeScheduleInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -229,7 +231,7 @@ func (t *draftChargeSchedule) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *draftChargeSchedule) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[draftChargeScheduleInput](raw)
+	return tools.ValidateStruct[draftChargeScheduleInput](raw)
 }
 
 // Execute implements [Tool]. Delegates to the
@@ -337,7 +339,7 @@ func (t *validateChargeSchedule) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateChargeSchedule) InputSchema() json.RawMessage {
-	return CachedSchema(validateChargeScheduleInput{})
+	return tools.CachedSchema(validateChargeScheduleInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -351,7 +353,7 @@ func (t *validateChargeSchedule) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *validateChargeSchedule) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[validateChargeScheduleInput](raw)
+	return tools.ValidateStruct[validateChargeScheduleInput](raw)
 }
 
 // Execute implements [Tool]. Pure-Go sanity check.
@@ -424,7 +426,7 @@ type SmartChargeScheduleSuggestionSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterSmartChargeScheduleSuggestionTools(r *Registry, s SmartChargeScheduleSuggestionSources) {
+func RegisterSmartChargeScheduleSuggestionTools(r *tools.Registry, s SmartChargeScheduleSuggestionSources) {
 	r.Register(&draftChargeSchedule{planner: s.Planner})
 	r.Register(&validateChargeSchedule{})
 }
