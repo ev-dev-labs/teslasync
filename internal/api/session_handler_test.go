@@ -102,8 +102,8 @@ func TestSessionHandler_OpenMode(t *testing.T) {
 			if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 				t.Fatalf("decode: %v", err)
 			}
-			if body["code"] != AuthModeOpenCode {
-				t.Fatalf("code: got %v, want %s", body["code"], AuthModeOpenCode)
+			if body["code"] != tsauth.AuthModeOpenCode {
+				t.Fatalf("code: got %v, want %s", body["code"], tsauth.AuthModeOpenCode)
 			}
 		})
 	}

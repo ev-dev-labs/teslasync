@@ -106,7 +106,7 @@ func (h *SessionHandler) resolveSubject(r *http.Request) (subject string, openMo
 // exact code without snake-vs-camel drift.
 func writeOpenModeNotImplementedSession(w http.ResponseWriter) {
 	writeErrorCode(w, http.StatusNotImplemented,
-		"active sessions list requires forward-auth mode", AuthModeOpenCode)
+		"active sessions list requires forward-auth mode", tsauth.AuthModeOpenCode)
 }
 
 // List implements GET /auth/sessions.

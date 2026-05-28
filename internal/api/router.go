@@ -56,6 +56,7 @@ import (
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
+	apitotp "github.com/ev-dev-labs/teslasync/internal/api/totp"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
 	apitripsd "github.com/ev-dev-labs/teslasync/internal/api/tripsdetail"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
@@ -409,7 +410,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// from prompt 31 so a successful per-user TOTP step-up is
 	// indistinguishable downstream from a successful password step-up.
 	totpRepo := dbauth.NewTOTPRepo(db)
-	totpHandler := NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
+	totpHandler := apitotp.NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
 
 	// Phase-46 / Prompt 42 — active sessions / device management.
 	// TeslaSync mints its OWN per-device cookie on the first

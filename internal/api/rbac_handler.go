@@ -147,7 +147,7 @@ func (h *RBACHandler) resolveSubject(r *http.Request) (subject string, openMode 
 // the exact code without snake-vs-camel drift.
 func writeOpenModeNotImplementedRBAC(w http.ResponseWriter) {
 	writeErrorCode(w, http.StatusNotImplemented,
-		"RBAC matrix requires forward-auth mode", AuthModeOpenCode)
+		"RBAC matrix requires forward-auth mode", tsauth.AuthModeOpenCode)
 }
 
 // GetMatrix implements GET /api/v1/admin/rbac/matrix.

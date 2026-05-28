@@ -12,7 +12,7 @@
 // TeslaSync. This handler implements TeslaSync's own RFC 6238 layer so
 // the sudo step-up dialog (prompt 31) can require a second factor for
 // destructive operations regardless of the upstream provider.
-package api
+package totp
 
 import (
 	"context"
@@ -31,6 +31,7 @@ import (
 	"github.com/pquerna/otp/totp"
 	qrcode "github.com/skip2/go-qrcode"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
@@ -49,6 +50,8 @@ const totpRateLimitCode = "TOTP_RATE_LIMITED"
 // totpInvalidCode is returned for any verify miss. Distinct from
 // SUDO_REQUIRED so the SPA's sudo interceptor does not retry.
 const totpInvalidCode = "TOTP_INVALID"
+
+const reauthNotConfiguredCode = "REAUTH_NOT_CONFIGURED"
 
 // totpRateLimitMaxFailures + totpRateLimitWindow define the in-memory
 // per-subject rate limit. The chosen 5-failures-per-15-minutes window
@@ -226,7 +229,7 @@ func (h *TOTPHandler) resolveSubject(r *http.Request) (subject string, errCode s
 // useTOTPStatus hook expects in open mode. Centralised so every
 // endpoint hits the exact same code + message.
 func writeOpenModeNotImplemented(w http.ResponseWriter) {
-	writeErrorCode(w, http.StatusNotImplemented,
+	httpx.WriteErrorCode(w, http.StatusNotImplemented,
 		"per-user TOTP requires forward-auth mode", AuthModeOpenCode)
 }
 
@@ -247,20 +250,20 @@ func (h *TOTPHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", errCode)
 		return
 	}
 
 	cred, err := h.store.GetCredential(r.Context(), subject)
 	if errors.Is(err, dbauth.ErrTOTPNotFound) {
-		writeJSON(w, http.StatusOK, totpStatusResponse{
+		httpx.WriteJSON(w, http.StatusOK, totpStatusResponse{
 			Mode: "session",
 		})
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load TOTP status")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load TOTP status")
 		return
 	}
 
@@ -273,7 +276,7 @@ func (h *TOTPHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 		s := cred.LastUsedAt.UTC().Format(time.RFC3339)
 		resp.LastUsedAt = &s
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // Enroll implements POST /auth/totp/enroll.
@@ -292,24 +295,24 @@ func (h *TOTPHandler) Enroll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", errCode)
 		return
 	}
 
 	rawSecret, base32Secret, err := crypto.GenerateTOTPSecret()
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate TOTP secret")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to generate TOTP secret")
 		return
 	}
 	encSecret, err := crypto.EncryptTOTPSecret(h.enc, rawSecret)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to encrypt TOTP secret")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to encrypt TOTP secret")
 		return
 	}
 	plainCodes, err := crypto.GenerateBackupCodes(totpBackupCodeCount)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate backup codes")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to generate backup codes")
 		return
 	}
 	hashedCodes := make([]string, len(plainCodes))
@@ -318,7 +321,7 @@ func (h *TOTPHandler) Enroll(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.BeginEnrollment(r.Context(), subject, encSecret, hashedCodes); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to persist TOTP enrollment")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to persist TOTP enrollment")
 		return
 	}
 
@@ -331,7 +334,7 @@ func (h *TOTPHandler) Enroll(w http.ResponseWriter, r *http.Request) {
 		qrDataURI = ""
 	}
 
-	writeJSON(w, http.StatusOK, totpEnrollResponse{
+	httpx.WriteJSON(w, http.StatusOK, totpEnrollResponse{
 		Secret:      base32Secret,
 		OtpauthURI:  otpauthURI,
 		QRDataURI:   qrDataURI,
@@ -357,58 +360,58 @@ func (h *TOTPHandler) Verify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", errCode)
 		return
 	}
 
 	body, err := decodeTOTPBody(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if body.Code == "" {
-		writeError(w, http.StatusBadRequest, "code is required")
+		httpx.WriteError(w, http.StatusBadRequest, "code is required")
 		return
 	}
 
 	enrollment, err := h.store.GetEnrollment(r.Context(), subject)
 	if errors.Is(err, dbauth.ErrTOTPNotFound) {
-		writeError(w, http.StatusNotFound, "no pending enrollment")
+		httpx.WriteError(w, http.StatusNotFound, "no pending enrollment")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load enrollment")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load enrollment")
 		return
 	}
 	if !enrollment.ExpiresAt.After(time.Now().UTC()) {
-		writeErrorCode(w, http.StatusGone,
+		httpx.WriteErrorCode(w, http.StatusGone,
 			"enrollment expired; please re-enroll", "TOTP_ENROLLMENT_EXPIRED")
 		return
 	}
 
 	rawSecret, err := crypto.DecryptTOTPSecret(h.enc, enrollment.SecretEncrypted)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to decrypt enrollment secret")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to decrypt enrollment secret")
 		return
 	}
 	base32Secret, err := crypto.EncodeTOTPSecret(rawSecret)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to encode enrollment secret")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to encode enrollment secret")
 		return
 	}
 
 	if !totp.Validate(body.Code, base32Secret) {
-		writeErrorCode(w, http.StatusUnauthorized, "invalid code", totpInvalidCode)
+		httpx.WriteErrorCode(w, http.StatusUnauthorized, "invalid code", totpInvalidCode)
 		return
 	}
 
 	if _, err := h.store.ActivateEnrollment(r.Context(), subject); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to activate enrollment")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to activate enrollment")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"activated": true,
 	})
 }
@@ -430,63 +433,63 @@ func (h *TOTPHandler) VerifySudo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", errCode)
 		return
 	}
 
 	if h.sudoMinter == nil {
-		writeErrorCode(w, http.StatusServiceUnavailable,
+		httpx.WriteErrorCode(w, http.StatusServiceUnavailable,
 			"step-up not configured", reauthNotConfiguredCode)
 		return
 	}
 
 	if h.isRateLimited(subject) {
-		writeErrorCode(w, http.StatusTooManyRequests,
+		httpx.WriteErrorCode(w, http.StatusTooManyRequests,
 			"too many failed attempts; try again later", totpRateLimitCode)
 		return
 	}
 
 	body, err := decodeTOTPBody(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	if body.Code == "" && body.BackupCode == "" {
-		writeError(w, http.StatusBadRequest, "code or backup_code is required")
+		httpx.WriteError(w, http.StatusBadRequest, "code or backup_code is required")
 		return
 	}
 	if body.Code != "" && body.BackupCode != "" {
-		writeError(w, http.StatusBadRequest, "supply exactly one of code or backup_code")
+		httpx.WriteError(w, http.StatusBadRequest, "supply exactly one of code or backup_code")
 		return
 	}
 
 	cred, err := h.store.GetCredential(r.Context(), subject)
 	if errors.Is(err, dbauth.ErrTOTPNotFound) {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"no TOTP credential enrolled", totpInvalidCode)
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load credential")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load credential")
 		return
 	}
 
 	if body.Code != "" {
 		rawSecret, err := crypto.DecryptTOTPSecret(h.enc, cred.SecretEncrypted)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to decrypt credential")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to decrypt credential")
 			return
 		}
 		base32Secret, err := crypto.EncodeTOTPSecret(rawSecret)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to encode credential")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to encode credential")
 			return
 		}
 		if !totp.Validate(body.Code, base32Secret) {
 			h.recordFailure(subject)
 			_, _ = h.store.MarkFailure(r.Context(), subject)
-			writeErrorCode(w, http.StatusUnauthorized, "invalid code", totpInvalidCode)
+			httpx.WriteErrorCode(w, http.StatusUnauthorized, "invalid code", totpInvalidCode)
 			return
 		}
 		_ = h.store.MarkUsed(r.Context(), subject)
@@ -496,13 +499,13 @@ func (h *TOTPHandler) VerifySudo(w http.ResponseWriter, r *http.Request) {
 		hashed := crypto.HashBackupCode(body.BackupCode)
 		consumed, err := h.store.ConsumeBackupCode(r.Context(), subject, hashed)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to consume backup code")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to consume backup code")
 			return
 		}
 		if !consumed {
 			h.recordFailure(subject)
 			_, _ = h.store.MarkFailure(r.Context(), subject)
-			writeErrorCode(w, http.StatusUnauthorized, "invalid backup code", totpInvalidCode)
+			httpx.WriteErrorCode(w, http.StatusUnauthorized, "invalid backup code", totpInvalidCode)
 			return
 		}
 	}
@@ -511,11 +514,11 @@ func (h *TOTPHandler) VerifySudo(w http.ResponseWriter, r *http.Request) {
 
 	token, expiresAt, err := h.sudoMinter.Mint(subject)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to mint sudo token")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to mint sudo token")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, totpSudoResponse{
+	httpx.WriteJSON(w, http.StatusOK, totpSudoResponse{
 		Mode:      "session",
 		SudoToken: token,
 		ExpiresAt: expiresAt.UTC().Format(time.RFC3339),
@@ -533,12 +536,12 @@ func (h *TOTPHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", errCode)
 		return
 	}
 	if err := h.store.Revoke(r.Context(), subject); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to revoke TOTP credential")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to revoke TOTP credential")
 		return
 	}
 	h.clearFailures(subject)
@@ -555,14 +558,14 @@ func (h *TOTPHandler) RegenerateBackupCodes(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", errCode)
 		return
 	}
 
 	plain, err := crypto.GenerateBackupCodes(totpBackupCodeCount)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate backup codes")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to generate backup codes")
 		return
 	}
 	hashes := make([]string, len(plain))
@@ -571,13 +574,13 @@ func (h *TOTPHandler) RegenerateBackupCodes(w http.ResponseWriter, r *http.Reque
 	}
 	if err := h.store.RotateBackupCodes(r.Context(), subject, hashes); err != nil {
 		if errors.Is(err, dbauth.ErrTOTPNotFound) {
-			writeError(w, http.StatusNotFound, "no active TOTP credential")
+			httpx.WriteError(w, http.StatusNotFound, "no active TOTP credential")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to rotate backup codes")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to rotate backup codes")
 		return
 	}
-	writeJSON(w, http.StatusOK, totpRegenerateResponse{BackupCodes: plain})
+	httpx.WriteJSON(w, http.StatusOK, totpRegenerateResponse{BackupCodes: plain})
 }
 
 // buildOtpauthURI assembles the otpauth:// URI per the Google
