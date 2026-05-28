@@ -42,13 +42,15 @@
 // All queries hit indexes that already exist in migration 000005,
 // 000013, and 000109; no new indexes are required.
 
-package database
+package worker
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // ErrUnknownQueueWorker is returned when callers ask for counters or
@@ -85,12 +87,12 @@ type QueueJob struct {
 // WorkerQueueRepo is the read-side aggregator. Constructed once at
 // router init time and shared across requests.
 type WorkerQueueRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewWorkerQueueRepo constructs the aggregator. The caller is
 // responsible for keeping db non-nil.
-func NewWorkerQueueRepo(db *DB) *WorkerQueueRepo {
+func NewWorkerQueueRepo(db *database.DB) *WorkerQueueRepo {
 	return &WorkerQueueRepo{db: db}
 }
 

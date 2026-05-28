@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:14:43Z",
+  "generated_at": "2026-05-28T16:18:23Z",
   "go_version": "go1.26.1",
-  "commit_sha": "7e91af7b20b9dce62bf6c881df0168dae6298558",
+  "commit_sha": "dabfda26fe3cb49f8b9f081b40b75f2804582565",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2508,7 +2508,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126626,
+      "loc": 126627,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2648,6 +2648,7 @@
         "internal/database/sharing",
         "internal/database/trip",
         "internal/database/user",
+        "internal/database/worker",
         "internal/dataquality",
         "internal/enums",
         "internal/events",
@@ -3702,9 +3703,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 46,
+      "go_files": 44,
       "test_files": 17,
-      "loc": 10948,
+      "loc": 10450,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3778,8 +3779,6 @@
         "vehicle_settings_resolver.go",
         "vehicle_states_repo.go",
         "vehicle_states_repo_test.go",
-        "worker_status_queue_repo.go",
-        "worker_status_repo.go",
         "write_buffer.go",
         "write_buffer_test.go"
       ]
@@ -4144,6 +4143,22 @@
         "feedback_repo.go",
         "feedback_repo_test.go",
         "onboarding_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/worker",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 523,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "status_queue_repo.go",
+        "status_repo.go"
       ]
     },
     {
@@ -5945,6 +5960,7 @@
         "internal/database/charging",
         "internal/database/drive",
         "internal/database/notification",
+        "internal/database/worker",
         "internal/enums",
         "internal/events",
         "internal/metrics",
@@ -7151,8 +7167,6 @@
       "vehicle_settings_repo.go",
       "vehicle_settings_resolver.go",
       "vehicle_states_repo.go",
-      "worker_status_queue_repo.go",
-      "worker_status_repo.go",
       "write_buffer.go"
     ],
     "internal/database/achievement": [
@@ -7272,6 +7286,11 @@
       "doc.go",
       "feedback_repo.go",
       "onboarding_repo.go"
+    ],
+    "internal/database/worker": [
+      "doc.go",
+      "status_queue_repo.go",
+      "status_repo.go"
     ],
     "internal/dataquality": [
       "doc.go",
@@ -7980,7 +7999,7 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 46,
+      "flat_parent_go_files": 44,
       "flat_parent_test_files": 17,
       "planned_subpkgs": 22,
       "existing_subpkgs": [

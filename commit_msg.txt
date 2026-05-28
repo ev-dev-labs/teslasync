@@ -1,58 +1,35 @@
-refactor(R4.16): carve internal/database/export (jobs + scheduled + snapshots)
+refactor(R4.17): carve internal/database/worker (status + queue obs)
 
-Move export-aggregate persistence into its own bounded-context subpkg
-per ADR-011.
+Move background-worker observability persistence into its own
+bounded-context subpkg per ADR-011.
 
-Files (4 source + 1 test; 15 caller files swept):
-  internal/database/export_repo.go              -> internal/database/export/repo.go
-  internal/database/export_job_repo.go          -> internal/database/export/job_repo.go
-  internal/database/export_job_repo_bulk.go     -> internal/database/export/job_repo_bulk.go
-  internal/database/scheduled_export_repo.go    -> internal/database/export/scheduled_repo.go
-  internal/database/scheduled_export_repo_test.go -> internal/database/export/scheduled_repo_test.go
-  internal/database/export/doc.go               (NEW, // Layer: adapter)
+Files (2 source; 8 caller files swept):
+  internal/database/worker_status_repo.go       -> internal/database/worker/status_repo.go
+  internal/database/worker_status_queue_repo.go -> internal/database/worker/status_queue_repo.go
+  internal/database/worker/doc.go               (NEW, // Layer: adapter)
 
-Symbols promoted (alias xportdb per ADR-011 — mandatory because
-internal/export runtime package + cmd/export-worker also import the
-database layer):
-  ExportJobRepo, NewExportJobRepo, ExportTableRow, ExportTableSnapshot,
-  FetchTableSnapshot, FetchTableSnapshotForVehicle, CountTableRows,
-  AllowedAccountTables, BulkDeleteByIDs, FilterExistingStringIDs,
-  ScheduledExportRepo, NewScheduledExportRepo, ScheduledExportRow,
-  ScheduledExportInput, ScheduledExportRunOutcome,
-  ScheduledExportDelivery, ScheduledExportDeliveryKind,
-  CanonicalRangeWindow, ComputeNextRun, NormalizeScheduledExportInput,
-  ParseRangeWindow, ValidateScheduledExportCron,
-  ValidateScheduledExportDelivery, ValidateScheduledExportFormat,
-  ValidateScheduledExportType,
-  ErrScheduledExportNotFound, ErrScheduledExportInvalidType,
-  ErrScheduledExportInvalidFormat, ErrScheduledExportInvalidCron,
-  ErrScheduledExportInvalidDeliv, ErrScheduledExportInvalidWindow,
-  ErrScheduledExportEmptyOwner, ErrScheduledExportEmptyName,
-  ErrScheduledExportNotConfigured,
-  DeliveryKindDownload, DeliveryKindEmail, DeliveryKinds,
-  DeliveryKindWebhook.
+Symbols promoted (alias workerdb per ADR-011 — mandatory because
+internal/worker runtime package also imports the database layer):
+  WorkerStatusStore, MemoryWorkerStatusStore, NewMemoryWorkerStatusStore,
+  RedisWorkerStatusStore, NewRedisWorkerStatusStore, RecordHeartbeat,
+  GetMany, KnownWorkerNames, WorkerHeartbeat, ErrWorkerNameRequired,
+  WorkerQueueRepo, NewWorkerQueueRepo, QueueCounters, QueueJob,
+  RecentJobs, Counters, ErrUnknownQueueWorker,
+  WorkerNameNotification, WorkerNameExport, WorkerNameAutomation,
+  WorkerNames.
 
-Callers updated (database.X -> xportdb.X + import alias):
-  cmd/export-worker/main.go
-  internal/api/{export_handler,exports_bulk_handler,router,
-                scheduled_exports_handler,scheduled_exports_handler_test}.go
-  internal/automation/action/<file>.go
-  internal/export/{account,account_test,scheduler,scheduler_test,types,worker}.go
+Callers updated (database.X -> workerdb.X + import alias):
+  internal/api/{queue_status_handler,queue_status_handler_test,router}.go
+  internal/worker/{heartbeat,heartbeat_test}.go
 
-No helper deps (no buildPartialUpdate / NullIfEmpty / ptr helpers).
-No cycles verified via grep.
+No helper deps. No cycles (parent peers had comment-only false-positives).
+LESSON 33 reconfirmed: WorkerName* untyped consts needed second sweep
+after first build pass surfaced them.
 
-LESSON 33 (this cluster): symbol discovery via top-level type/func/var
-regex misses Err* sentinels and untyped consts defined inside
-ar ( ... ) / const ( ... ) blocks. After the first build pass,
-grep the error messages for database\.\w+ to find the leftover refs.
-For export: Err* and DeliveryKind* required a second sweep.
+internal/database allowlist ratchet: 46 -> 44 src files.
 
-internal/database allowlist ratchet: 50 -> 46 src files.
-archmetrics + baseline regenerated.
-
-Carved subpkgs so far (18): achievement, sharing, admin, gdpr,
+Carved subpkgs so far (19): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
-audit, charging, drive, trip, energy, ai, export.
+audit, charging, drive, trip, energy, ai, export, worker.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

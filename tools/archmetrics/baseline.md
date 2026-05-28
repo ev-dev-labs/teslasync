@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T16:14:45Z, Go go1.26.1, commit 7e91af7b20b9dce62bf6c881df0168dae6298558_
+_Generated 2026-05-28T16:18:24Z, Go go1.26.1, commit dabfda26fe3cb49f8b9f081b40b75f2804582565_
 
 ## Summary
 
-- Packages: 279
+- Packages: 280
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374511
+- Total non-blank LOC under cmd/+internal/+tools/: 374537
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-28T16:14:45Z, Go go1.26.1, commit 7e91af7b20b9dce62bf6c881df0
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126626 | yes | handler |
+| internal/api | 271 | 163 | 126627 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1841 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
@@ -197,7 +197,7 @@ _Generated 2026-05-28T16:14:45Z, Go go1.26.1, commit 7e91af7b20b9dce62bf6c881df0
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 46 | 17 | 10948 | yes | platform |
+| internal/database | 44 | 17 | 10450 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes | adapter |
 | internal/database/admin | 6 | 0 | 873 | yes | adapter |
 | internal/database/ai | 3 | 2 | 928 | yes | adapter |
@@ -216,6 +216,7 @@ _Generated 2026-05-28T16:14:45Z, Go go1.26.1, commit 7e91af7b20b9dce62bf6c881df0
 | internal/database/sharing | 2 | 0 | 127 | yes | adapter |
 | internal/database/trip | 4 | 1 | 775 | yes | adapter |
 | internal/database/user | 3 | 1 | 806 | yes | adapter |
+| internal/database/worker | 3 | 0 | 523 | yes | adapter |
 | internal/dataquality | 4 | 0 | 347 | yes | platform |
 | internal/domain | 2 | 1 | 114 | yes | domain |
 | internal/domain/charging | 6 | 1 | 357 | yes | domain |
@@ -333,7 +334,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 46 / 17 | 22 | 12 | 10 |
+| `internal/database` | R4 | 143 | 44 / 17 | 22 | 12 | 10 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 

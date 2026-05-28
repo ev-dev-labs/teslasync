@@ -28,6 +28,7 @@ import (
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
+	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -2584,14 +2585,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// every worker as "down (no heartbeat)" which honestly
 	// reflects the deployment state rather than fabricating an
 	// "ok" reading.
-	var queueHeartbeatStore database.WorkerStatusStore
+	var queueHeartbeatStore workerdb.WorkerStatusStore
 	if opt.CacheStore != nil {
 		if rdb := opt.CacheStore.Underlying(); rdb != nil {
-			queueHeartbeatStore = database.NewRedisWorkerStatusStore(rdb)
+			queueHeartbeatStore = workerdb.NewRedisWorkerStatusStore(rdb)
 		}
 	}
 	if queueHeartbeatStore == nil {
-		queueHeartbeatStore = database.NewMemoryWorkerStatusStore()
+		queueHeartbeatStore = workerdb.NewMemoryWorkerStatusStore()
 	}
 
 	// API v1 routes
@@ -3564,7 +3565,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// SPA polls /system/queues every 30s and lazy-loads
 			// the per-worker drawer on demand.
 			queueStatusHandler := NewQueueStatusHandler(QueueStatusHandlerConfig{
-				QueueRepo:      database.NewWorkerQueueRepo(db),
+				QueueRepo:      workerdb.NewWorkerQueueRepo(db),
 				HeartbeatStore: queueHeartbeatStore,
 			})
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).

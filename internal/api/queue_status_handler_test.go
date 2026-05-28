@@ -12,49 +12,49 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 )
 
 // fakeQueueRepo implements queueStatusRepo for the handler tests.
 type fakeQueueRepo struct {
-	counters map[string]database.QueueCounters
-	jobs     map[string][]database.QueueJob
+	counters map[string]workerdb.QueueCounters
+	jobs     map[string][]workerdb.QueueJob
 	err      error
 }
 
-func (f *fakeQueueRepo) Counters(_ context.Context, worker string) (database.QueueCounters, error) {
+func (f *fakeQueueRepo) Counters(_ context.Context, worker string) (workerdb.QueueCounters, error) {
 	if f.err != nil {
-		return database.QueueCounters{}, f.err
+		return workerdb.QueueCounters{}, f.err
 	}
 	c, ok := f.counters[worker]
 	if !ok {
-		return database.QueueCounters{}, database.ErrUnknownQueueWorker
+		return workerdb.QueueCounters{}, workerdb.ErrUnknownQueueWorker
 	}
 	return c, nil
 }
 
-func (f *fakeQueueRepo) RecentJobs(_ context.Context, worker string, _ int) ([]database.QueueJob, error) {
+func (f *fakeQueueRepo) RecentJobs(_ context.Context, worker string, _ int) ([]workerdb.QueueJob, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
 	js, ok := f.jobs[worker]
 	if !ok {
-		return nil, database.ErrUnknownQueueWorker
+		return nil, workerdb.ErrUnknownQueueWorker
 	}
 	return js, nil
 }
 
 // fakeHeartbeatStore implements queueStatusHeartbeatStore.
 type fakeHeartbeatStore struct {
-	beats map[string]*database.WorkerHeartbeat
+	beats map[string]*workerdb.WorkerHeartbeat
 	err   error
 }
 
-func (f *fakeHeartbeatStore) GetMany(_ context.Context, workers []string) (map[string]*database.WorkerHeartbeat, error) {
+func (f *fakeHeartbeatStore) GetMany(_ context.Context, workers []string) (map[string]*workerdb.WorkerHeartbeat, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
-	out := make(map[string]*database.WorkerHeartbeat, len(workers))
+	out := make(map[string]*workerdb.WorkerHeartbeat, len(workers))
 	for _, w := range workers {
 		if hb, ok := f.beats[w]; ok {
 			out[w] = hb
@@ -67,7 +67,7 @@ func newTestQueueHandler(repo queueStatusRepo, hb queueStatusHeartbeatStore, now
 	return NewQueueStatusHandler(QueueStatusHandlerConfig{
 		QueueRepo:        repo,
 		HeartbeatStore:   hb,
-		KnownWorkerNames: database.KnownWorkerNames,
+		KnownWorkerNames: workerdb.KnownWorkerNames,
 		NowFunc:          func() time.Time { return now },
 	})
 }
@@ -77,16 +77,16 @@ func TestQueueStatusHandler_BuildStatus_AllWorkers(t *testing.T) {
 	notif := now.Add(-15 * time.Second)
 	exportHB := now.Add(-2 * time.Minute) // 120s → warn
 	repo := &fakeQueueRepo{
-		counters: map[string]database.QueueCounters{
-			database.WorkerNameNotification: {Pending: 5, InProgress: 2, Succeeded24h: 100, Failed24h: 1, OldestPendingAgeSecond: 30},
-			database.WorkerNameExport:       {Pending: 0, InProgress: 1, Succeeded24h: 17, Failed24h: 3, OldestPendingAgeSecond: 0},
-			database.WorkerNameAutomation:   {Pending: 0, InProgress: 0, Succeeded24h: 42, Failed24h: 0, OldestPendingAgeSecond: 0},
+		counters: map[string]workerdb.QueueCounters{
+			workerdb.WorkerNameNotification: {Pending: 5, InProgress: 2, Succeeded24h: 100, Failed24h: 1, OldestPendingAgeSecond: 30},
+			workerdb.WorkerNameExport:       {Pending: 0, InProgress: 1, Succeeded24h: 17, Failed24h: 3, OldestPendingAgeSecond: 0},
+			workerdb.WorkerNameAutomation:   {Pending: 0, InProgress: 0, Succeeded24h: 42, Failed24h: 0, OldestPendingAgeSecond: 0},
 		},
 	}
 	hb := &fakeHeartbeatStore{
-		beats: map[string]*database.WorkerHeartbeat{
-			database.WorkerNameNotification: {Worker: database.WorkerNameNotification, LastHeartbeatAt: notif, StartedAt: notif.Add(-time.Hour), Host: "n1", Version: "1.2.3"},
-			database.WorkerNameExport:       {Worker: database.WorkerNameExport, LastHeartbeatAt: exportHB, StartedAt: exportHB.Add(-time.Hour)},
+		beats: map[string]*workerdb.WorkerHeartbeat{
+			workerdb.WorkerNameNotification: {Worker: workerdb.WorkerNameNotification, LastHeartbeatAt: notif, StartedAt: notif.Add(-time.Hour), Host: "n1", Version: "1.2.3"},
+			workerdb.WorkerNameExport:       {Worker: workerdb.WorkerNameExport, LastHeartbeatAt: exportHB, StartedAt: exportHB.Add(-time.Hour)},
 			// automation: no heartbeat → down
 		},
 	}
@@ -101,7 +101,7 @@ func TestQueueStatusHandler_BuildStatus_AllWorkers(t *testing.T) {
 		byName[w.Worker] = w
 	}
 
-	gotNotif := byName[database.WorkerNameNotification]
+	gotNotif := byName[workerdb.WorkerNameNotification]
 	if gotNotif.HeartbeatSeverity != QueueHeartbeatSeverityOK {
 		t.Errorf("notification severity = %q, want ok", gotNotif.HeartbeatSeverity)
 	}
@@ -112,7 +112,7 @@ func TestQueueStatusHandler_BuildStatus_AllWorkers(t *testing.T) {
 		t.Errorf("notification provenance = %s/%s, want n1/1.2.3", gotNotif.Host, gotNotif.Version)
 	}
 
-	gotExport := byName[database.WorkerNameExport]
+	gotExport := byName[workerdb.WorkerNameExport]
 	if gotExport.HeartbeatSeverity != QueueHeartbeatSeverityWarn {
 		t.Errorf("export severity = %q, want warn", gotExport.HeartbeatSeverity)
 	}
@@ -120,7 +120,7 @@ func TestQueueStatusHandler_BuildStatus_AllWorkers(t *testing.T) {
 		t.Errorf("export warn must carry a detail string")
 	}
 
-	gotAutomation := byName[database.WorkerNameAutomation]
+	gotAutomation := byName[workerdb.WorkerNameAutomation]
 	if gotAutomation.HeartbeatSeverity != QueueHeartbeatSeverityDown {
 		t.Errorf("automation severity = %q, want down", gotAutomation.HeartbeatSeverity)
 	}
@@ -136,22 +136,22 @@ func TestQueueStatusHandler_BuildStatus_StaleHeartbeat(t *testing.T) {
 	now := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
 	stale := now.Add(-10 * time.Minute) // 600s → critical
 	repo := &fakeQueueRepo{
-		counters: map[string]database.QueueCounters{
-			database.WorkerNameNotification: {},
-			database.WorkerNameExport:       {},
-			database.WorkerNameAutomation:   {},
+		counters: map[string]workerdb.QueueCounters{
+			workerdb.WorkerNameNotification: {},
+			workerdb.WorkerNameExport:       {},
+			workerdb.WorkerNameAutomation:   {},
 		},
 	}
 	hb := &fakeHeartbeatStore{
-		beats: map[string]*database.WorkerHeartbeat{
-			database.WorkerNameExport: {Worker: database.WorkerNameExport, LastHeartbeatAt: stale},
+		beats: map[string]*workerdb.WorkerHeartbeat{
+			workerdb.WorkerNameExport: {Worker: workerdb.WorkerNameExport, LastHeartbeatAt: stale},
 		},
 	}
 	h := newTestQueueHandler(repo, hb, now)
 	resp := h.buildStatus(context.Background())
 
 	for _, w := range resp.Workers {
-		if w.Worker != database.WorkerNameExport {
+		if w.Worker != workerdb.WorkerNameExport {
 			continue
 		}
 		if w.HeartbeatSeverity != QueueHeartbeatSeverityCritical {
@@ -165,10 +165,10 @@ func TestQueueStatusHandler_BuildStatus_StaleHeartbeat(t *testing.T) {
 func TestQueueStatusHandler_BuildStatus_NoHeartbeatStore(t *testing.T) {
 	now := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
 	repo := &fakeQueueRepo{
-		counters: map[string]database.QueueCounters{
-			database.WorkerNameNotification: {},
-			database.WorkerNameExport:       {},
-			database.WorkerNameAutomation:   {},
+		counters: map[string]workerdb.QueueCounters{
+			workerdb.WorkerNameNotification: {},
+			workerdb.WorkerNameExport:       {},
+			workerdb.WorkerNameAutomation:   {},
 		},
 	}
 	h := newTestQueueHandler(repo, nil, now)
@@ -186,10 +186,10 @@ func TestQueueStatusHandler_BuildStatus_NoHeartbeatStore(t *testing.T) {
 func TestQueueStatusHandler_ServeStatus_HTTP(t *testing.T) {
 	now := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
 	repo := &fakeQueueRepo{
-		counters: map[string]database.QueueCounters{
-			database.WorkerNameNotification: {Pending: 1},
-			database.WorkerNameExport:       {Pending: 2},
-			database.WorkerNameAutomation:   {Pending: 0},
+		counters: map[string]workerdb.QueueCounters{
+			workerdb.WorkerNameNotification: {Pending: 1},
+			workerdb.WorkerNameExport:       {Pending: 2},
+			workerdb.WorkerNameAutomation:   {Pending: 0},
 		},
 	}
 	h := newTestQueueHandler(repo, nil, now)
@@ -230,10 +230,10 @@ func TestQueueStatusHandler_ServeJobs_OK(t *testing.T) {
 	finished := now.Add(-30 * time.Second)
 	dur := int64(1500)
 	repo := &fakeQueueRepo{
-		jobs: map[string][]database.QueueJob{
-			database.WorkerNameExport: {
+		jobs: map[string][]workerdb.QueueJob{
+			workerdb.WorkerNameExport: {
 				{
-					ID: "job-1", Worker: database.WorkerNameExport, Status: "ready",
+					ID: "job-1", Worker: workerdb.WorkerNameExport, Status: "ready",
 					Title: "drives-csv", StartedAt: now.Add(-2 * time.Minute),
 					FinishedAt: &finished, DurationMs: &dur,
 				},
@@ -244,7 +244,7 @@ func TestQueueStatusHandler_ServeJobs_OK(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/system/queues/export/jobs?limit=10", nil)
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("worker", database.WorkerNameExport)
+	rctx.URLParams.Add("worker", workerdb.WorkerNameExport)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	rr := httptest.NewRecorder()
@@ -257,8 +257,8 @@ func TestQueueStatusHandler_ServeJobs_OK(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&got); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if got.Worker != database.WorkerNameExport {
-		t.Errorf("worker = %q, want %q", got.Worker, database.WorkerNameExport)
+	if got.Worker != workerdb.WorkerNameExport {
+		t.Errorf("worker = %q, want %q", got.Worker, workerdb.WorkerNameExport)
 	}
 	if len(got.Jobs) != 1 {
 		t.Fatalf("jobs = %d, want 1", len(got.Jobs))
@@ -272,7 +272,7 @@ func TestQueueStatusHandler_ServeJobs_OK(t *testing.T) {
 }
 
 func TestQueueStatusHandler_ServeJobs_UnknownWorker(t *testing.T) {
-	h := newTestQueueHandler(&fakeQueueRepo{jobs: map[string][]database.QueueJob{}}, nil, time.Now())
+	h := newTestQueueHandler(&fakeQueueRepo{jobs: map[string][]workerdb.QueueJob{}}, nil, time.Now())
 
 	req := httptest.NewRequest(http.MethodGet, "/system/queues/wat/jobs", nil)
 	rctx := chi.NewRouteContext()
@@ -292,13 +292,13 @@ func TestQueueStatusHandler_ServeJobs_RepoUnknownWorker(t *testing.T) {
 	// doesn't know it (e.g. due to a future mismatch). Handler
 	// must surface a 404 rather than a generic 500.
 	repo := &fakeQueueRepo{
-		jobs: map[string][]database.QueueJob{},
+		jobs: map[string][]workerdb.QueueJob{},
 	}
 	h := newTestQueueHandler(repo, nil, time.Now())
 
 	req := httptest.NewRequest(http.MethodGet, "/system/queues/notification/jobs", nil)
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("worker", database.WorkerNameNotification)
+	rctx.URLParams.Add("worker", workerdb.WorkerNameNotification)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	rr := httptest.NewRecorder()
@@ -310,12 +310,12 @@ func TestQueueStatusHandler_ServeJobs_RepoUnknownWorker(t *testing.T) {
 }
 
 func TestQueueStatusHandler_ServeJobs_RepoErrorBecomes500(t *testing.T) {
-	repo := &fakeQueueRepo{err: errors.New("db down"), jobs: map[string][]database.QueueJob{database.WorkerNameExport: nil}}
+	repo := &fakeQueueRepo{err: errors.New("db down"), jobs: map[string][]workerdb.QueueJob{workerdb.WorkerNameExport: nil}}
 	h := newTestQueueHandler(repo, nil, time.Now())
 
 	req := httptest.NewRequest(http.MethodGet, "/system/queues/export/jobs", nil)
 	rctx := chi.NewRouteContext()
-	rctx.URLParams.Add("worker", database.WorkerNameExport)
+	rctx.URLParams.Add("worker", workerdb.WorkerNameExport)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
 	rr := httptest.NewRecorder()
@@ -351,14 +351,14 @@ func TestQueueStatusHandler_ServeJobs_LimitInUrl(t *testing.T) {
 	// Simply verifies the limit query param plumbs through without
 	// exploding — the actual clamping logic is unit-tested above.
 	repo := &fakeQueueRepo{
-		jobs: map[string][]database.QueueJob{database.WorkerNameExport: nil},
+		jobs: map[string][]workerdb.QueueJob{workerdb.WorkerNameExport: nil},
 	}
 	h := newTestQueueHandler(repo, nil, time.Now())
 
 	for _, raw := range []string{"", "1", "999", "garbage"} {
 		req := httptest.NewRequest(http.MethodGet, "/system/queues/export/jobs?limit="+raw, nil)
 		rctx := chi.NewRouteContext()
-		rctx.URLParams.Add("worker", database.WorkerNameExport)
+		rctx.URLParams.Add("worker", workerdb.WorkerNameExport)
 		req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 		rr := httptest.NewRecorder()
 		h.ServeJobs(rr, req)
@@ -373,7 +373,7 @@ func TestQueueStatusHandler_ServeJobs_LimitInUrl(t *testing.T) {
 
 func TestNewQueueStatusHandler_DefaultsToKnownWorkers(t *testing.T) {
 	h := NewQueueStatusHandler(QueueStatusHandlerConfig{})
-	if len(h.workers) != len(database.KnownWorkerNames) {
-		t.Errorf("expected default worker list to match database.KnownWorkerNames")
+	if len(h.workers) != len(workerdb.KnownWorkerNames) {
+		t.Errorf("expected default worker list to match workerdb.KnownWorkerNames")
 	}
 }

@@ -35,7 +35,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 )
 
 // Heartbeat staleness thresholds (seconds). Exposed as package vars
@@ -90,7 +90,7 @@ type QueueJobsResponse struct {
 }
 
 // QueueJobView is the row shape rendered inside the drawer. Mirrors
-// database.QueueJob 1:1 but the view layer chooses the JSON
+// workerdb.QueueJob 1:1 but the view layer chooses the JSON
 // presentation (e.g. the empty error → empty string vs. null).
 type QueueJobView struct {
 	ID         string     `json:"id"`
@@ -107,9 +107,9 @@ type QueueJobView struct {
 // SPA also has its own i18n strings — this fallback keeps the API
 // useful from curl / Postman without needing a translation layer.
 var queueDisplayNames = map[string]string{
-	database.WorkerNameNotification: "Notification worker",
-	database.WorkerNameExport:       "Export worker",
-	database.WorkerNameAutomation:   "Automation worker",
+	workerdb.WorkerNameNotification: "Notification worker",
+	workerdb.WorkerNameExport:       "Export worker",
+	workerdb.WorkerNameAutomation:   "Automation worker",
 }
 
 // QueueStatusHandlerConfig groups the constructor dependencies.
@@ -126,16 +126,16 @@ type QueueStatusHandlerConfig struct {
 
 // queueStatusRepo is the narrow read interface the handler uses.
 // Defined locally so tests can inject a fake without dragging in a
-// full *database.WorkerQueueRepo.
+// full *workerdb.WorkerQueueRepo.
 type queueStatusRepo interface {
-	Counters(ctx context.Context, worker string) (database.QueueCounters, error)
-	RecentJobs(ctx context.Context, worker string, limit int) ([]database.QueueJob, error)
+	Counters(ctx context.Context, worker string) (workerdb.QueueCounters, error)
+	RecentJobs(ctx context.Context, worker string, limit int) ([]workerdb.QueueJob, error)
 }
 
 // queueStatusHeartbeatStore mirrors the relevant subset of
-// database.WorkerStatusStore. Same rationale as queueStatusRepo.
+// workerdb.WorkerStatusStore. Same rationale as queueStatusRepo.
 type queueStatusHeartbeatStore interface {
-	GetMany(ctx context.Context, workers []string) (map[string]*database.WorkerHeartbeat, error)
+	GetMany(ctx context.Context, workers []string) (map[string]*workerdb.WorkerHeartbeat, error)
 }
 
 // QueueStatusHandler serves /system/queues and /system/queues/{worker}/jobs.
@@ -150,7 +150,7 @@ type QueueStatusHandler struct {
 func NewQueueStatusHandler(cfg QueueStatusHandlerConfig) *QueueStatusHandler {
 	workers := cfg.KnownWorkerNames
 	if len(workers) == 0 {
-		workers = database.KnownWorkerNames
+		workers = workerdb.KnownWorkerNames
 	}
 	nowFn := cfg.NowFunc
 	if nowFn == nil {
@@ -194,7 +194,7 @@ func (h *QueueStatusHandler) ServeJobs(w http.ResponseWriter, r *http.Request) {
 	}
 	jobs, err := h.repo.RecentJobs(r.Context(), worker, limit)
 	if err != nil {
-		if errors.Is(err, database.ErrUnknownQueueWorker) {
+		if errors.Is(err, workerdb.ErrUnknownQueueWorker) {
 			writeError(w, http.StatusNotFound, "unknown worker")
 			return
 		}
@@ -212,7 +212,7 @@ func (h *QueueStatusHandler) ServeJobs(w http.ResponseWriter, r *http.Request) {
 // reachable from tests) so the round-trip-free unit tests can assert
 // shape without an httptest call.
 func (h *QueueStatusHandler) buildStatus(ctx context.Context) QueueStatusResponse {
-	beats := map[string]*database.WorkerHeartbeat{}
+	beats := map[string]*workerdb.WorkerHeartbeat{}
 	if h.heartbeat != nil {
 		got, err := h.heartbeat.GetMany(ctx, h.workers)
 		if err == nil {
@@ -245,7 +245,7 @@ func (h *QueueStatusHandler) buildStatus(ctx context.Context) QueueStatusRespons
 // applyHeartbeatStatus sets the severity / detail / timestamp fields
 // on stat based on hb. hb may be nil — treated as "no heartbeat,
 // down".
-func applyHeartbeatStatus(stat *QueueStat, hb *database.WorkerHeartbeat, now time.Time) {
+func applyHeartbeatStatus(stat *QueueStat, hb *workerdb.WorkerHeartbeat, now time.Time) {
 	if hb == nil {
 		stat.HeartbeatSeverity = QueueHeartbeatSeverityDown
 		stat.HeartbeatDetail = "no heartbeat received"
@@ -310,7 +310,7 @@ func parseQueueLimit(raw string) int {
 
 // queueJobToView is the per-row presentation transform. Kept as a
 // free function so tests can pin the mapping in isolation.
-func queueJobToView(j database.QueueJob) QueueJobView {
+func queueJobToView(j workerdb.QueueJob) QueueJobView {
 	return QueueJobView{
 		ID:         j.ID,
 		Worker:     j.Worker,

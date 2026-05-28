@@ -37,7 +37,7 @@
 // see a clear "haven't received any heartbeat" UI rather than a
 // fake "ok" reading.
 
-package database
+package worker
 
 import (
 	"context"

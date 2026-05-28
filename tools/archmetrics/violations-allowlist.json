@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 46,
+      "max_files": 44,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.15 carved 17 subpkgs. R4.16 batch 50-46 (export — export_repo + export_job_repo + export_job_repo_bulk + scheduled_export_repo, 4 src + 1 test). No helper deps. Owns ErrScheduledExport* sentinels + DeliveryKind* consts. Caller sweep 14 files (cmd/export-worker + api 5 + export pkg 6 + automation/action). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4), trip (3), energy (4), ai (2), export (4). Planned: ~20 aggregates total."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.16 carved 18 subpkgs. R4.17 batch 46-44 (worker — worker_status_repo + worker_status_queue_repo, 2 src files). No helper deps. Caller sweep 8 files (api queue_status + router + worker heartbeat). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4), trip (3), energy (4), ai (2), export (4), worker (2). Planned: ~20 aggregates total."
     },
     {
       "path": "internal/ai/tools",
