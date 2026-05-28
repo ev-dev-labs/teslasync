@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T19:11:29Z",
+  "generated_at": "2026-05-28T19:25:41Z",
   "go_version": "go1.26.1",
-  "commit_sha": "ef3c0bdbda75bfeade5b46e774b26dd243cd8cbb",
+  "commit_sha": "b6ac95ad768aa1e2e44a1f51e089bb2b1ff712f5",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 266,
-      "test_files": 162,
-      "loc": 124475,
+      "go_files": 265,
+      "test_files": 161,
+      "loc": 123963,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2626,6 +2626,7 @@
         "internal/api/geofence",
         "internal/api/httpx",
         "internal/api/middleware",
+        "internal/api/vehicle",
         "internal/apilog",
         "internal/app/adminobssvc",
         "internal/app/auditviewersvc",
@@ -3144,8 +3145,6 @@
         "vehicle_access_handler.go",
         "vehicle_config_handler.go",
         "vehicle_config_handler_test.go",
-        "vehicle_handler.go",
-        "vehicle_handler_test.go",
         "vehicle_info_handler.go",
         "vehicle_photo_handler.go",
         "vehicle_photo_handler_test.go",
@@ -3313,6 +3312,28 @@
         "observability_extra_test.go",
         "prometheus.go",
         "security.go"
+      ]
+    },
+    {
+      "path": "internal/api/vehicle",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 616,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/apperror",
+        "internal/api/httpx",
+        "internal/service",
+        "internal/signal",
+        "internal/tesla",
+        "internal/tracing"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -7273,7 +7294,6 @@
       "vampire_drain_handler.go",
       "vehicle_access_handler.go",
       "vehicle_config_handler.go",
-      "vehicle_handler.go",
       "vehicle_info_handler.go",
       "vehicle_photo_handler.go",
       "vehicle_settings_handler.go",
@@ -7324,6 +7344,10 @@
       "observability.go",
       "prometheus.go",
       "security.go"
+    ],
+    "internal/api/vehicle": [
+      "doc.go",
+      "handler.go"
     ],
     "internal/apilog": [
       "async.go",
@@ -8436,10 +8460,12 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 266,
-      "flat_parent_test_files": 162,
+      "flat_parent_go_files": 265,
+      "flat_parent_test_files": 161,
       "planned_subpkgs": 59,
-      "existing_subpkgs": null,
+      "existing_subpkgs": [
+        "vehicle"
+      ],
       "missing_subpkgs": [
         "system",
         "health",
@@ -8464,7 +8490,6 @@
         "search",
         "diagnostic",
         "cost",
-        "vehicle",
         "vehiclesys",
         "charging",
         "drive",

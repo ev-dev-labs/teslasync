@@ -1,4 +1,4 @@
-package api
+package vehicle
 
 import (
 	"fmt"
@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -14,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// VehicleHandler handles vehicle-related HTTP requests.
+// Handler handles vehicle-related HTTP requests.
 // Business logic (state assembly, Tesla sync) is delegated to
 // VehicleService; the handler focuses on HTTP concerns.
 //
@@ -22,11 +25,11 @@ import (
 // used by Positions to derive a chart-mode timeline of GPS samples by
 // forward-folding the change feed; every emission becomes a row, even
 // when the projected fields are unchanged from the previous emission.
-type VehicleHandler struct {
-	vehicleSvc       *service.VehicleService
-	teslaClient      *tesla.Client
-	telemetryHandler *TelemetryHandler
-	state            signal.StateReader
+type Handler struct {
+	vehicleSvc  *service.VehicleService
+	teslaClient *tesla.Client
+	telemetry   TelemetrySource
+	state       signal.StateReader
 }
 
 // vehiclePositionMappings projects the signal_log change feed into the
@@ -43,74 +46,74 @@ var vehiclePositionMappings = []signal.FieldMapping{
 	{Signal: "VehicleSpeed", Field: "speed_mph"},
 }
 
-func NewVehicleHandler(vehicleSvc *service.VehicleService, tc *tesla.Client, state signal.StateReader) *VehicleHandler {
-	return &VehicleHandler{
+func NewHandler(vehicleSvc *service.VehicleService, tc *tesla.Client, state signal.StateReader) *Handler {
+	return &Handler{
 		vehicleSvc:  vehicleSvc,
 		teslaClient: tc,
 		state:       state,
 	}
 }
 
-// SetTelemetryHandler wires the telemetry handler for streaming-aware state resolution.
-func (h *VehicleHandler) SetTelemetryHandler(th *TelemetryHandler) {
-	h.telemetryHandler = th
+// SetTelemetrySource wires the telemetry source for streaming-aware state resolution.
+func (h *Handler) SetTelemetrySource(ts TelemetrySource) {
+	h.telemetry = ts
 }
 
-func (h *VehicleHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	vehicles, err := h.vehicleSvc.VehicleRepo().GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list vehicles")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to list vehicles"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to list vehicles"))
 		return
 	}
-	writeJSON(w, http.StatusOK, vehicles)
+	httpx.WriteJSON(w, http.StatusOK, vehicles)
 }
 
-func (h *VehicleHandler) Get(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
+		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
 
 	vehicle, err := h.vehicleSvc.VehicleRepo().GetByID(r.Context(), id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get vehicle")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to get vehicle"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to get vehicle"))
 		return
 	}
 	if vehicle == nil {
-		writeAppError(w, r, ErrVehicleNotFound)
+		apperror.Write(w, r, apperror.ErrVehicleNotFound)
 		return
 	}
-	writeJSON(w, http.StatusOK, vehicle)
+	httpx.WriteJSON(w, http.StatusOK, vehicle)
 }
 
-func (h *VehicleHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
+		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
 
 	if err := h.vehicleSvc.VehicleRepo().Delete(r.Context(), id); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to delete vehicle")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to delete vehicle"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to delete vehicle"))
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracing.HandlerSpan(r.Context(), "vehicle.sync_from_tesla")
 	defer span.End()
 
 	if suspended, _ := h.vehicleSvc.SettingsRepo().IsAPISuspended(ctx); suspended {
-		writeAppError(w, r, ErrTeslaAPISuspended)
+		apperror.Write(w, r, apperror.ErrTeslaAPISuspended)
 		return
 	}
 	if !h.teslaClient.HasValidToken() {
-		writeAppError(w, r, ErrTeslaNotConnected)
+		apperror.Write(w, r, apperror.ErrTeslaNotConnected)
 		return
 	}
 
@@ -118,25 +121,25 @@ func (h *VehicleHandler) SyncFromTesla(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error().Err(err).Msg("failed to sync vehicles from Tesla")
 		tracing.EndSpan(span, err)
-		writeAppError(w, r, ErrTeslaAPIUnavailable.WithMessage("failed to list vehicles from Tesla API"))
+		apperror.Write(w, r, apperror.ErrTeslaAPIUnavailable.WithMessage("failed to list vehicles from Tesla API"))
 		return
 	}
 	span.SetAttributes(attribute.Int("tesla.vehicles_synced", len(synced)))
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"synced":   len(synced),
 		"vehicles": synced,
 	})
 }
 
-func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) Positions(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
+		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
 
-	limit, _ := pagination(r)
+	limit, _ := apiparams.Pagination(r)
 	// Default to last 30 days so the Live Map shows the latest known location
 	// even when the vehicle has been offline for a while. The page already
 	// surfaces freshness via the `Xs ago` indicator and `LiveStaleDataBanner`,
@@ -159,7 +162,7 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 		id, vehiclePositionMappings, from, to, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to get positions from signal_log")
-		writeAppError(w, r, ErrDBQuery.WithMessage("failed to get positions"))
+		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to get positions"))
 		return
 	}
 
@@ -191,23 +194,23 @@ func (h *VehicleHandler) Positions(w http.ResponseWriter, r *http.Request) {
 			row["speed"] = v
 		}
 	}
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
-func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	ctx, span := tracing.HandlerSpan(r.Context(), "vehicle.current_state")
 	defer span.End()
 
-	id, err := urlParamInt64(r, "vehicleID")
+	id, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
+		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
 	span.SetAttributes(attribute.Int64("vehicle.id", id))
 
 	vehicle, err := h.vehicleSvc.VehicleRepo().GetByID(ctx, id)
 	if err != nil || vehicle == nil {
-		writeAppError(w, r, ErrVehicleNotFound)
+		apperror.Write(w, r, apperror.ErrVehicleNotFound)
 		return
 	}
 	span.SetAttributes(attribute.String("vehicle.vin", vehicle.VIN))
@@ -221,14 +224,14 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	// one place across every handler that gains the same parameter.
 	asOf, hasAsOf, asOfErr := signal.ParseAsOf(r.URL.Query(), time.Now())
 	if asOfErr != nil {
-		writeError(w, http.StatusBadRequest, asOfErr.Error())
+		httpx.WriteError(w, http.StatusBadRequest, asOfErr.Error())
 		return
 	}
 	if hasAsOf && h.state != nil {
 		snapshot, snapErr := signal.SnapshotAt(ctx, h.state, vehicle.ID, asOf)
 		if snapErr != nil {
 			log.Error().Err(snapErr).Int64("vehicle_id", vehicle.ID).Time("as_of", asOf).Msg("vehicle current state: snapshot read failed")
-			writeError(w, http.StatusInternalServerError, "failed to read snapshot")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read snapshot")
 			return
 		}
 		// signal.State is map[string]SignalValue (named alias of any) and
@@ -242,7 +245,7 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 		store := signal.New()
 		store.Hydrate(vehicle.ID, raw)
 		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"state":       state,
 			"live":        false,
 			"data_source": "as_of",
@@ -252,10 +255,10 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// PRIMARY: Build state from the live signal boundary + DB fallbacks.
-	if h.telemetryHandler != nil {
+	if h.telemetry != nil {
 		store := signal.New()
 		var hasLiveSignals bool
-		if liveStore := h.telemetryHandler.GetLiveSignalStore(); liveStore != nil {
+		if liveStore := h.telemetry.GetLiveSignalStore(); liveStore != nil {
 			values, err := liveStore.GetAll(ctx, vehicle.ID, signal.LiveSignalReadDistributed)
 			if err != nil {
 				log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("vehicle current state: live signal read failed")
@@ -273,7 +276,7 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 		if !hasLiveSignals {
 			dataSource = "db_fallback"
 		}
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"state":       state,
 			"live":        hasLiveSignals,
 			"data_source": dataSource,
@@ -287,36 +290,58 @@ func (h *VehicleHandler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
 		state.Since = since
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"state":       state,
 		"live":        false,
 		"data_source": "db_fallback",
 	})
 }
 
-func (h *VehicleHandler) Wake(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Wake(w http.ResponseWriter, r *http.Request) {
 	if suspended, _ := h.vehicleSvc.SettingsRepo().IsAPISuspended(r.Context()); suspended {
-		writeAppError(w, r, ErrTeslaAPISuspended)
+		apperror.Write(w, r, apperror.ErrTeslaAPISuspended)
 		return
 	}
 
-	id, err := urlParamInt64(r, "vehicleID")
+	id, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeAppError(w, r, ErrInvalidID.WithMessage("invalid vehicle ID"))
+		apperror.Write(w, r, apperror.ErrInvalidID.WithMessage("invalid vehicle ID"))
 		return
 	}
 
 	vehicle, err := h.vehicleSvc.VehicleRepo().GetByID(r.Context(), id)
 	if err != nil || vehicle == nil {
-		writeAppError(w, r, ErrVehicleNotFound)
+		apperror.Write(w, r, apperror.ErrVehicleNotFound)
 		return
 	}
 
 	if err := h.teslaClient.WakeUp(r.Context(), vehicle.VIN); err != nil {
 		log.Error().Err(err).Int64("vehicleID", id).Msg("failed to wake vehicle")
-		writeAppError(w, r, ErrTeslaAPIUnavailable.WithMessage("failed to wake vehicle"))
+		apperror.Write(w, r, apperror.ErrTeslaAPIUnavailable.WithMessage("failed to wake vehicle"))
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"status": "waking"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "waking"})
+}
+
+// TelemetrySource is the narrow surface Handler needs from the parent's
+// *api.TelemetryHandler. Declared as an interface so vehicle subpkg can
+// stay independent of the parent. The parent's *TelemetryHandler
+// satisfies this via duck-typing.
+type TelemetrySource interface {
+	GetLiveSignalStore() signal.LiveSignalStore
+}
+
+// liveSignalValuesToRaw projects a live-store snapshot into the raw
+// map[string]interface{} shape signal.Store.Hydrate expects. Duplicated
+// from internal/api/signal_handler.go for the duration of Phase R2; the
+// parent copy will be deleted when its callers are also carved.
+func liveSignalValuesToRaw(values map[string]*signal.Value) map[string]interface{} {
+	raw := make(map[string]interface{}, len(values))
+	for name, value := range values {
+		if value != nil {
+			raw[name] = value.Raw
+		}
+	}
+	return raw
 }

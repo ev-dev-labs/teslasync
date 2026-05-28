@@ -18,6 +18,7 @@ import (
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
+	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
@@ -321,7 +322,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
 
 	// Handlers
-	vehicleHandler := NewVehicleHandler(vehicleSvc, teslaClient, stateReader)
+	vehicleHandler := apiveh.NewHandler(vehicleSvc, teslaClient, stateReader)
 	driveHandler := NewDriveDetail(db, stateReader, liveStateReader)
 	chargingHandler := NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
@@ -1870,7 +1871,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 
 	// Wire telemetry handler into vehicle handler for streaming-aware state
-	vehicleHandler.SetTelemetryHandler(telemetryHandler)
+	vehicleHandler.SetTelemetrySource(telemetryHandler)
 
 	// Wire signal.StateReader into vehicle service for the durable
 	// last-value backstop used by BuildStateFromSignalStore (ADR-002).

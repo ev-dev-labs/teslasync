@@ -1,4 +1,4 @@
-package api
+package vehicle
 
 import (
 	"context"
@@ -44,7 +44,7 @@ func TestVehicleHandler_Positions_ReturnsRowsNewestFirst(t *testing.T) {
 			return asc, nil
 		},
 	}
-	h := &VehicleHandler{state: fake}
+	h := &Handler{state: fake}
 
 	rec := httptest.NewRecorder()
 	h.Positions(rec, newPositionsRequest(t, "42", ""))
@@ -99,7 +99,7 @@ func TestVehicleHandler_Positions_RespectsLimit(t *testing.T) {
 			return rows, nil
 		},
 	}
-	h := &VehicleHandler{state: fake}
+	h := &Handler{state: fake}
 
 	rec := httptest.NewRecorder()
 	h.Positions(rec, newPositionsRequest(t, "42", "/positions?limit=10"))
@@ -150,7 +150,7 @@ func TestVehicleHandler_Positions_AliasesSpeedAndTs(t *testing.T) {
 			}, nil
 		},
 	}
-	h := &VehicleHandler{state: fake}
+	h := &Handler{state: fake}
 
 	rec := httptest.NewRecorder()
 	h.Positions(rec, newPositionsRequest(t, "42", ""))
@@ -209,7 +209,7 @@ func TestVehicleHandler_Positions_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	h := &VehicleHandler{state: fake}
+	h := &Handler{state: fake}
 
 	rec := httptest.NewRecorder()
 	h.Positions(rec, newPositionsRequest(t, "42", ""))
@@ -224,7 +224,7 @@ func TestVehicleHandler_Positions_PropagatesError(t *testing.T) {
 // reader is NEVER called (proven by gotTimelineCalls == 0).
 func TestVehicleHandler_Positions_InvalidVehicleID(t *testing.T) {
 	fake := &fakeStateReader{}
-	h := &VehicleHandler{state: fake}
+	h := &Handler{state: fake}
 
 	rec := httptest.NewRecorder()
 	h.Positions(rec, newPositionsRequest(t, "not-a-number", ""))
@@ -236,3 +236,40 @@ func TestVehicleHandler_Positions_InvalidVehicleID(t *testing.T) {
 		t.Fatalf("Timeline call count = %d, want 0 (handler must reject before calling reader)", fake.gotTimelineCalls)
 	}
 }
+
+// fakeStateReader is a hand-rolled signal.StateReader for handler tests.
+// Duplicated from internal/api/media_handler_test.go for the duration of
+// Phase R2; tests inside the carved subpackage can't import the parent's
+// test-only fixture (would close the cycle), so a local copy lives here
+// until apitest.FakeStateReader is promoted.
+type fakeStateReader struct {
+	stateFn    func(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error)
+	signalAtFn func(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error)
+	timelineFn func(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error)
+
+	gotTimelineCalls int
+}
+
+func (f *fakeStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error) {
+	if f.stateFn == nil {
+		return signal.State{}, nil
+	}
+	return f.stateFn(ctx, vehicleID, at)
+}
+
+func (f *fakeStateReader) SignalAt(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error) {
+	if f.signalAtFn == nil {
+		return nil, nil
+	}
+	return f.signalAtFn(ctx, vehicleID, name, at)
+}
+
+func (f *fakeStateReader) Timeline(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error) {
+	f.gotTimelineCalls++
+	if f.timelineFn == nil {
+		return nil, nil
+	}
+	return f.timelineFn(ctx, vehicleID, fields, from, to, opts)
+}
+
+var _ signal.StateReader = (*fakeStateReader)(nil)

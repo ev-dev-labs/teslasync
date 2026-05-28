@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
-	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -48,18 +47,11 @@ func writeTeslaTokenExpired(w http.ResponseWriter) {
 	httpx.WriteTeslaTokenExpired(w)
 }
 
-// writeAppError is a transitional wrapper around apperror.Write kept
-// for the duration of the internal/api -> internal/api/<resource>/
-// subpackage migration (Phase R2). New handlers — and handlers being
-// moved into resource subpackages — MUST call apperror.Write directly.
-// Deletion of this wrapper is gated on internal/api/ reaching its
-// irreducible drained shape at end of Phase R2.
-//
-// The active *ErrorTracker is installed once in NewRouter via
-// apperror.SetTracker; nothing in this wrapper has to know about it.
-func writeAppError(w http.ResponseWriter, r *http.Request, appErr *AppError) {
-	apperror.Write(w, r, appErr)
-}
+// writeAppError was the transitional wrapper around apperror.Write.
+// Drained to zero callers by R2c (vehicle subpkg carve) — the last
+// users moved to `apperror.Write` directly. Wrapper deleted; handlers
+// being moved into resource subpackages MUST call apperror.Write
+// directly per the carve playbook.
 
 // pagination is a transitional wrapper around apiparams.Pagination
 // kept for the duration of the internal/api -> internal/api/<resource>/
