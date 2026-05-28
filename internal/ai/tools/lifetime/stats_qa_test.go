@@ -5,7 +5,7 @@
 // LifetimeStatsSource); tests substitute deterministic fakes so the
 // unit tests stay hermetic.
 
-package tools
+package lifetime
 
 import (
 	"context"
@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -362,7 +363,7 @@ func TestQueryLifetimeStats_Execute_NilEnvelopeIsError(t *testing.T) {
 
 func TestRegisterLifetimeStatsQATools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeLifetimeStatsSource{}
 	ret := &fakeAnalyticsRetriever{}
 	RegisterLifetimeStatsQATools(r, LifetimeStatsQASources{

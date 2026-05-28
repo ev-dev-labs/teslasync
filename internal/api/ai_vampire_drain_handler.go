@@ -61,6 +61,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -120,7 +121,7 @@ type AIVampireDrainHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_vampire_drain_windows + retrieve_idle_drain_chunks
-//	(registered by tools.RegisterVampireDrainExplanationTools
+//	(registered by lifetime.RegisterVampireDrainExplanationTools
 //	in router.go).
 //
 // strat:      the vampire-drain-explanation Strategy (one per process).
@@ -285,7 +286,7 @@ var _ http.Handler = (*AIVampireDrainHandler)(nil)
 // pattern.
 // ---------------------------------------------------------------------
 
-// AIVampireDrainSource is the production tools.VampireDrainSource.
+// AIVampireDrainSource is the production lifetime.VampireDrainSource.
 // It delegates to the SHARED *database.VampireDrainRepo that also
 // backs the canonical baseline GET /vampire-drain + GET
 // /vampire-drain/stats handlers so the AI narration is grounded in
@@ -308,7 +309,7 @@ func NewAIVampireDrainSource(repo *database.VampireDrainRepo) *AIVampireDrainSou
 	return &AIVampireDrainSource{repo: repo}
 }
 
-// Events implements tools.VampireDrainSource. Composes the SAME
+// Events implements lifetime.VampireDrainSource. Composes the SAME
 // *database.VampireDrainRepo.Events the canonical
 // VampireDrainHandler.Events handler uses so the returned event
 // slice is numerically identical to what GET /vampire-drain
@@ -331,7 +332,7 @@ func (a *AIVampireDrainSource) Events(ctx context.Context, vehicleID int64, wind
 	return out, nil
 }
 
-// Stats implements tools.VampireDrainSource. Composes the SAME
+// Stats implements lifetime.VampireDrainSource. Composes the SAME
 // *database.VampireDrainRepo.Stats the canonical
 // VampireDrainHandler.Stats handler uses so the returned rollup is
 // numerically identical to what GET /vampire-drain/stats produces.
@@ -350,5 +351,5 @@ func (a *AIVampireDrainSource) Stats(ctx context.Context, vehicleID int64, windo
 }
 
 // Compile-time assertion: AIVampireDrainSource satisfies
-// tools.VampireDrainSource.
-var _ tools.VampireDrainSource = (*AIVampireDrainSource)(nil)
+// lifetime.VampireDrainSource.
+var _ lifetime.VampireDrainSource = (*AIVampireDrainSource)(nil)

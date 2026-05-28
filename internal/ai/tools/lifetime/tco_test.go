@@ -4,7 +4,7 @@
 // narrow [TCOSummarizer] port; tests substitute a deterministic
 // fake so the unit tests stay hermetic.
 
-package tools
+package lifetime
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // fakeTCOSummarizer is a hermetic stand-in for
@@ -262,7 +264,7 @@ func TestQueryTCOSummary_Execute_PropagatesSummarizerError(t *testing.T) {
 // registration helper adds the tool to the registry.
 func TestRegisterTCONarrationTools_RegistersOne(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterTCONarrationTools(r, TCONarrationSources{
 		Summarizer: &fakeTCOSummarizer{},
 	})

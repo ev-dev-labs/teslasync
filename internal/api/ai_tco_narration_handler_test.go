@@ -27,7 +27,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 )
 
 // TestTCONarrationAIOffShowsChartsOnly is the load-bearing
@@ -236,14 +236,14 @@ func TestAITCOSummarizer_PanicsOnNilDB(t *testing.T) {
 
 // TestAITCOSummarizer_SatisfiesInterface is a compile-time +
 // runtime assertion that the production adapter implements
-// tools.TCOSummarizer. The compile-time `var _` line in the
+// lifetime.TCOSummarizer. The compile-time `var _` line in the
 // handler file gives the same guarantee, but this test fails
 // with a clear message if a future refactor accidentally narrows
 // the interface contract.
 func TestAITCOSummarizer_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
-	var iface tools.TCOSummarizer = (*AITCOSummarizer)(nil)
+	var iface lifetime.TCOSummarizer = (*AITCOSummarizer)(nil)
 	if iface == nil {
-		t.Logf("AITCOSummarizer satisfies tools.TCOSummarizer (nil cast)")
+		t.Logf("AITCOSummarizer satisfies lifetime.TCOSummarizer (nil cast)")
 	}
 }

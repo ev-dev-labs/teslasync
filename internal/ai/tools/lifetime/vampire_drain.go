@@ -69,7 +69,7 @@
 // asks the assistant to search e.g. "user_note" cannot accidentally
 // expose a corpus the slice did not enumerate.
 
-package tools
+package lifetime
 
 import (
 	"context"
@@ -83,6 +83,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
@@ -199,7 +200,7 @@ func (t *retrieveIdleDrainChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveIdleDrainChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveIdleDrainChunksInput{})
+	return tools.CachedSchema(retrieveIdleDrainChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -215,7 +216,7 @@ func (t *retrieveIdleDrainChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveIdleDrainChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveIdleDrainChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveIdleDrainChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +365,7 @@ func (t *queryVampireDrainWindows) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryVampireDrainWindows) InputSchema() json.RawMessage {
-	return CachedSchema(queryVampireDrainWindowsInput{})
+	return tools.CachedSchema(queryVampireDrainWindowsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -378,7 +379,7 @@ func (t *queryVampireDrainWindows) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *queryVampireDrainWindows) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryVampireDrainWindowsInput](raw)
+	return tools.ValidateStruct[queryVampireDrainWindowsInput](raw)
 }
 
 // Execute implements [Tool]. Two repo round-trips (Events + Stats)
@@ -568,7 +569,7 @@ type VampireDrainExplanationSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterVampireDrainExplanationTools(r *Registry, s VampireDrainExplanationSources) {
+func RegisterVampireDrainExplanationTools(r *tools.Registry, s VampireDrainExplanationSources) {
 	r.Register(&retrieveIdleDrainChunks{r: s.Retriever})
 	r.Register(&queryVampireDrainWindows{src: s.Drains, now: time.Now})
 }

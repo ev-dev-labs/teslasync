@@ -61,7 +61,7 @@
 // asks the assistant to search e.g. "user_note" cannot accidentally
 // expose a corpus the slice did not enumerate.
 
-package tools
+package lifetime
 
 import (
 	"context"
@@ -73,6 +73,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // lifetimeStatsSourceAnalyticsLifetime is the source-type string
@@ -185,7 +186,7 @@ func (t *retrieveAnalyticsChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveAnalyticsChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveAnalyticsChunksInput{})
+	return tools.CachedSchema(retrieveAnalyticsChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -201,7 +202,7 @@ func (t *retrieveAnalyticsChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveAnalyticsChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveAnalyticsChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveAnalyticsChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -381,7 +382,7 @@ func (t *queryLifetimeStats) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryLifetimeStats) InputSchema() json.RawMessage {
-	return CachedSchema(queryLifetimeStatsInput{})
+	return tools.CachedSchema(queryLifetimeStatsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -395,7 +396,7 @@ func (t *queryLifetimeStats) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *queryLifetimeStats) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryLifetimeStatsInput](raw)
+	return tools.ValidateStruct[queryLifetimeStatsInput](raw)
 }
 
 // Execute implements [Tool]. Single helper round-trip; no SQL is
@@ -438,7 +439,7 @@ type LifetimeStatsQASources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterLifetimeStatsQATools(r *Registry, s LifetimeStatsQASources) {
+func RegisterLifetimeStatsQATools(r *tools.Registry, s LifetimeStatsQASources) {
 	r.Register(&retrieveAnalyticsChunks{r: s.Retriever})
 	r.Register(&queryLifetimeStats{src: s.LifetimeStats})
 }

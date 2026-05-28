@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:50:40Z",
+  "generated_at": "2026-05-28T06:54:50Z",
   "go_version": "go1.26.1",
-  "commit_sha": "758432ffaeac28abe5e7c12b3f108bce59c5fc9e",
+  "commit_sha": "44072abd41cb94734a026bcf3b08bc97f3f1664b",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,15 +1882,14 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 28,
-      "test_files": 24,
-      "loc": 19554,
+      "go_files": 25,
+      "test_files": 21,
+      "loc": 17201,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/ai/provider",
         "internal/ai/rag",
-        "internal/database",
         "internal/ml/chargingcurves",
         "internal/models/alert",
         "internal/models/charging",
@@ -1922,8 +1921,6 @@
         "fuzz_schema_test.go",
         "help.go",
         "help_test.go",
-        "lifetime_stats_qa.go",
-        "lifetime_stats_qa_test.go",
         "paint_preview.go",
         "paint_preview_test.go",
         "predictive_maintenance.go",
@@ -1939,16 +1936,12 @@
         "search_test.go",
         "speed_profile.go",
         "speed_profile_test.go",
-        "tco_summary.go",
-        "tco_summary_test.go",
         "test_helpers_test.go",
         "tire_pressure_trend.go",
         "tool.go",
         "trip_planner_llm_agent.go",
         "trip_planner_llm_agent_test.go",
         "validate.go",
-        "vampire_drain_explanation.go",
-        "vampire_drain_explanation_test.go",
         "voice_mode.go",
         "year_review.go",
         "year_review_test.go"
@@ -2029,6 +2022,29 @@
         "period_compare_test.go",
         "temperature_impact.go",
         "temperature_impact_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/lifetime",
+      "go_files": 4,
+      "test_files": 3,
+      "loc": 2384,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/rag",
+        "internal/ai/tools",
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "stats_qa.go",
+        "stats_qa_test.go",
+        "tco.go",
+        "tco_test.go",
+        "vampire_drain.go",
+        "vampire_drain_test.go"
       ]
     },
     {
@@ -2217,7 +2233,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126529,
+      "loc": 126533,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2293,6 +2309,7 @@
         "internal/ai/tools/diagnostic",
         "internal/ai/tools/feedback",
         "internal/ai/tools/forecast",
+        "internal/ai/tools/lifetime",
         "internal/ai/tools/location",
         "internal/ai/tools/nl",
         "internal/ai/tools/nlq",
@@ -5927,7 +5944,6 @@
       "drive_coaching.go",
       "export_redaction_plan.go",
       "help.go",
-      "lifetime_stats_qa.go",
       "paint_preview.go",
       "predictive_maintenance.go",
       "redact_regex.go",
@@ -5936,12 +5952,10 @@
       "schema.go",
       "search.go",
       "speed_profile.go",
-      "tco_summary.go",
       "tire_pressure_trend.go",
       "tool.go",
       "trip_planner_llm_agent.go",
       "validate.go",
-      "vampire_drain_explanation.go",
       "voice_mode.go",
       "year_review.go"
     ],
@@ -5965,6 +5979,12 @@
       "doc.go",
       "period_compare.go",
       "temperature_impact.go"
+    ],
+    "internal/ai/tools/lifetime": [
+      "doc.go",
+      "stats_qa.go",
+      "tco.go",
+      "vampire_drain.go"
     ],
     "internal/ai/tools/location": [
       "auto_name.go",
@@ -7229,8 +7249,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 28,
-      "flat_parent_test_files": 24,
+      "flat_parent_go_files": 25,
+      "flat_parent_test_files": 21,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

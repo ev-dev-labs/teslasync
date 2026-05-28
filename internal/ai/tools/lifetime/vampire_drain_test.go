@@ -5,7 +5,7 @@
 // (rag.Retriever / VampireDrainSource); tests substitute
 // deterministic fakes so the unit tests stay hermetic.
 
-package tools
+package lifetime
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
@@ -522,7 +523,7 @@ func TestBuildVampireDrainEnvelope_WorstEventIsHighestRate(t *testing.T) {
 
 func TestRegisterVampireDrainExplanationTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterVampireDrainExplanationTools(r, VampireDrainExplanationSources{
 		Retriever: &fakeIdleDrainRetriever{},
 		Drains:    &fakeVampireDrainSource{},

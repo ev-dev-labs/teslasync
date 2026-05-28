@@ -47,12 +47,14 @@
 // envelope here keeps the snake_case keys the chart already
 // consumes so the narrator and the chart cite the same numbers.
 
-package tools
+package lifetime
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -189,7 +191,7 @@ func (t *queryTCOSummary) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryTCOSummary) InputSchema() json.RawMessage {
-	return CachedSchema(queryTCOSummaryInput{})
+	return tools.CachedSchema(queryTCOSummaryInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -206,7 +208,7 @@ func (t *queryTCOSummary) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryTCOSummary) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryTCOSummaryInput](raw)
+	return tools.ValidateStruct[queryTCOSummaryInput](raw)
 }
 
 // Execute implements [Tool]. Delegates to the TCOSummarizer
@@ -251,6 +253,6 @@ type TCONarrationSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterTCONarrationTools(r *Registry, s TCONarrationSources) {
+func RegisterTCONarrationTools(r *tools.Registry, s TCONarrationSources) {
 	r.Register(&queryTCOSummary{summarizer: s.Summarizer})
 }

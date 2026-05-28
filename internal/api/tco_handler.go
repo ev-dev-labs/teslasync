@@ -6,7 +6,7 @@ package api
 // inside (*TCOHandler).GetTCO has been extracted to the package-level
 // pure helper [ComputeTCOSummary] in tco_summary.go so the new AI
 // surface (POST /api/v1/ai/analytics/tco/narrate via the
-// [tools.TCOSummarizer] adapter) shares the SAME numbers the chart
+// [lifetime.TCOSummarizer] adapter) shares the SAME numbers the chart
 // renders. This file therefore parses + validates the request and
 // writes the response; all SQL and arithmetic live in the helper.
 //

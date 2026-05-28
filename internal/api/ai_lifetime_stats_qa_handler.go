@@ -60,6 +60,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -112,7 +113,7 @@ type AILifetimeStatsQAHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_lifetime_stats AND retrieve_analytics_chunks
-//	(registered by tools.RegisterLifetimeStatsQATools in
+//	(registered by lifetime.RegisterLifetimeStatsQATools in
 //	router.go).
 //
 // strat:      the lifetime-stats-qa Strategy (one per process).
@@ -279,7 +280,7 @@ var _ http.Handler = (*AILifetimeStatsQAHandler)(nil)
 // pattern.
 // ---------------------------------------------------------------------
 
-// AILifetimeStatsSource is the production tools.LifetimeStatsSource.
+// AILifetimeStatsSource is the production lifetime.LifetimeStatsSource.
 // It delegates to the SHARED api.ComputeLifetimeStats helper that
 // also backs the canonical baseline GET /api/v1/analytics/lifetime
 // handler so the AI Q&A is grounded in the SAME deterministic
@@ -307,7 +308,7 @@ func NewAILifetimeStatsSource(db *database.DB) *AILifetimeStatsSource {
 	return &AILifetimeStatsSource{db: db}
 }
 
-// LifetimeStats implements tools.LifetimeStatsSource. Composes the
+// LifetimeStats implements lifetime.LifetimeStatsSource. Composes the
 // SAME api.ComputeLifetimeStats helper LifetimeHandler.GetLifetimeStats
 // uses so the returned envelope is numerically identical to what
 // GET /api/v1/analytics/lifetime produces — the AI surface is
@@ -315,12 +316,12 @@ func NewAILifetimeStatsSource(db *database.DB) *AILifetimeStatsSource {
 //
 // The function does NOT recompute or override anything the canonical
 // handler computes; it only reshapes the existing typed
-// LifetimeStatsResult into the typed [tools.LifetimeStatsEnvelope]
+// LifetimeStatsResult into the typed [lifetime.LifetimeStatsEnvelope]
 // the LLM can quote. The achievements list returned here NEVER
 // carries an UnlockedAt timestamp because the canonical handler is
 // the only path that records unlocks and emits SSE celebration
 // events (the read-only AI tool path must not have side effects).
-func (a *AILifetimeStatsSource) LifetimeStats(ctx context.Context, vehicleID int64) (*tools.LifetimeStatsEnvelope, error) {
+func (a *AILifetimeStatsSource) LifetimeStats(ctx context.Context, vehicleID int64) (*lifetime.LifetimeStatsEnvelope, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai lifetime-stats-qa: vehicle_id must be > 0")
 	}
@@ -333,9 +334,9 @@ func (a *AILifetimeStatsSource) LifetimeStats(ctx context.Context, vehicleID int
 		return nil, errors.New("api ai lifetime-stats-qa: ComputeLifetimeStats returned nil envelope")
 	}
 
-	achievements := make([]tools.LifetimeStatsAchievement, 0, len(stats.Achievements))
+	achievements := make([]lifetime.LifetimeStatsAchievement, 0, len(stats.Achievements))
 	for _, a := range stats.Achievements {
-		achievements = append(achievements, tools.LifetimeStatsAchievement{
+		achievements = append(achievements, lifetime.LifetimeStatsAchievement{
 			ID:          a.ID,
 			Name:        a.Name,
 			Description: a.Description,
@@ -348,7 +349,7 @@ func (a *AILifetimeStatsSource) LifetimeStats(ctx context.Context, vehicleID int
 		})
 	}
 
-	return &tools.LifetimeStatsEnvelope{
+	return &lifetime.LifetimeStatsEnvelope{
 		TotalDrives:       stats.TotalDrives,
 		TotalDistanceKm:   stats.TotalDistanceKm,
 		TotalDrivingHours: stats.TotalDrivingHours,
@@ -376,14 +377,14 @@ func (a *AILifetimeStatsSource) LifetimeStats(ctx context.Context, vehicleID int
 		MostActiveDayOfWeek: stats.MostActiveDayOfWeek,
 		MostActiveHour:      stats.MostActiveHour,
 
-		LongestDriveRecord: tools.LifetimeStatsRecord{Value: stats.LongestDriveRecord.Value, Date: stats.LongestDriveRecord.Date},
-		HighestSpeedRecord: tools.LifetimeStatsRecord{Value: stats.HighestSpeedRecord.Value, Date: stats.HighestSpeedRecord.Date},
-		MaxChargeRecord:    tools.LifetimeStatsRecord{Value: stats.MaxChargeRecord.Value, Date: stats.MaxChargeRecord.Date},
+		LongestDriveRecord: lifetime.LifetimeStatsRecord{Value: stats.LongestDriveRecord.Value, Date: stats.LongestDriveRecord.Date},
+		HighestSpeedRecord: lifetime.LifetimeStatsRecord{Value: stats.HighestSpeedRecord.Value, Date: stats.HighestSpeedRecord.Date},
+		MaxChargeRecord:    lifetime.LifetimeStatsRecord{Value: stats.MaxChargeRecord.Value, Date: stats.MaxChargeRecord.Date},
 
 		Achievements: achievements,
 	}, nil
 }
 
 // Compile-time assertion: AILifetimeStatsSource satisfies
-// tools.LifetimeStatsSource.
-var _ tools.LifetimeStatsSource = (*AILifetimeStatsSource)(nil)
+// lifetime.LifetimeStatsSource.
+var _ lifetime.LifetimeStatsSource = (*AILifetimeStatsSource)(nil)

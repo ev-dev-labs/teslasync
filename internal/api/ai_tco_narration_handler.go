@@ -43,7 +43,7 @@ package api
 //     /api/v1/ai/*; no field on the existing baseline JSON
 //     shape is added or modified by this slice. The tool
 //     envelope's extra honest-scope `assumptions` array lives
-//     in the AI-only typed [tools.TCOSummary] envelope, not on
+//     in the AI-only typed [lifetime.TCOSummary] envelope, not on
 //     the baseline /analytics/tco response.
 
 import (
@@ -61,6 +61,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -105,7 +106,7 @@ type AITCONarrationHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_tco_summary (registered by
-//	tools.RegisterTCONarrationTools in router.go).
+//	lifetime.RegisterTCONarrationTools in router.go).
 //
 // strat:      the tco-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
@@ -250,7 +251,7 @@ var _ http.Handler = (*AITCONarrationHandler)(nil)
 // the cost-forecast-narration slice's AICostForecaster pattern.
 // ---------------------------------------------------------------------
 
-// AITCOSummarizer is the production tools.TCOSummarizer. It
+// AITCOSummarizer is the production lifetime.TCOSummarizer. It
 // delegates to the SHARED api.ComputeTCOSummary helper that
 // also backs the canonical GET /api/v1/analytics/tco handler so
 // the AI narration is grounded in the SAME deterministic
@@ -280,7 +281,7 @@ func NewAITCOSummarizer(db *database.DB) *AITCOSummarizer {
 	return &AITCOSummarizer{db: db}
 }
 
-// SummarizeTCO implements tools.TCOSummarizer. Composes the SAME
+// SummarizeTCO implements lifetime.TCOSummarizer. Composes the SAME
 // api.ComputeTCOSummary helper *TCOHandler.GetTCO uses so the
 // returned envelope is numerically identical (modulo rounding)
 // to what GET /api/v1/analytics/tco produces — the AI surface
@@ -289,7 +290,7 @@ func NewAITCOSummarizer(db *database.DB) *AITCOSummarizer {
 //
 // The function does NOT recompute or override anything the
 // canonical handler computes; it only reshapes the existing
-// output into the typed [tools.TCOSummary] envelope the LLM can
+// output into the typed [lifetime.TCOSummary] envelope the LLM can
 // quote, then attaches the four limiting-assumption strings the
 // system prompt also names (defence in depth — the tool reply
 // itself disclaims, so a future drift in the prompt does not
@@ -302,7 +303,7 @@ func NewAITCOSummarizer(db *database.DB) *AITCOSummarizer {
 // the row level. Surfacing a single currency for the aggregate
 // would require a separate query + assumption layer that lives
 // outside this slice.
-func (a *AITCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*tools.TCOSummary, error) {
+func (a *AITCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*lifetime.TCOSummary, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai tco-narration: vehicle_id must be > 0")
 	}
@@ -312,9 +313,9 @@ func (a *AITCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*t
 		return nil, fmt.Errorf("api ai tco-narration: ComputeTCOSummary: %w", err)
 	}
 
-	monthly := make([]tools.TCOMonthlyEntry, 0, len(summary.MonthlyBreakdown))
+	monthly := make([]lifetime.TCOMonthlyEntry, 0, len(summary.MonthlyBreakdown))
 	for _, m := range summary.MonthlyBreakdown {
-		monthly = append(monthly, tools.TCOMonthlyEntry{
+		monthly = append(monthly, lifetime.TCOMonthlyEntry{
 			Month:        m.Month,
 			EVCost:       m.EVCost,
 			EquivGasCost: m.EquivGasCost,
@@ -324,7 +325,7 @@ func (a *AITCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*t
 		})
 	}
 
-	return &tools.TCOSummary{
+	return &lifetime.TCOSummary{
 		VehicleID:                  summary.VehicleID,
 		Currency:                   "", // see method-level doc comment
 		TotalChargingCost:          summary.TotalChargingCost,
@@ -354,5 +355,5 @@ func (a *AITCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*t
 }
 
 // Compile-time assertion: AITCOSummarizer satisfies
-// tools.TCOSummarizer.
-var _ tools.TCOSummarizer = (*AITCOSummarizer)(nil)
+// lifetime.TCOSummarizer.
+var _ lifetime.TCOSummarizer = (*AITCOSummarizer)(nil)

@@ -128,6 +128,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
@@ -1225,7 +1226,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// api.ComputeLifetimeStats helper that backs the canonical
 	// baseline GET /api/v1/analytics/lifetime handler — no new
 	// SQL is written by this slice.
-	tools.RegisterLifetimeStatsQATools(aiToolRegistry, tools.LifetimeStatsQASources{
+	lifetime.RegisterLifetimeStatsQATools(aiToolRegistry, lifetime.LifetimeStatsQASources{
 		Retriever:     aiAnalyticsRetriever,
 		LifetimeStats: NewAILifetimeStatsSource(db),
 	})
@@ -1426,7 +1427,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// back the canonical baseline GET /vampire-drain + GET
 	// /vampire-drain/stats handlers — no new SQL is written by
 	// this slice.
-	tools.RegisterVampireDrainExplanationTools(aiToolRegistry, tools.VampireDrainExplanationSources{
+	lifetime.RegisterVampireDrainExplanationTools(aiToolRegistry, lifetime.VampireDrainExplanationSources{
 		Retriever: aiIdleDrainRetriever,
 		Drains:    NewAIVampireDrainSource(database.NewVampireDrainRepo(db.Pool)),
 	})
@@ -2159,7 +2160,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// backs the canonical GET /api/v1/analytics/tco handler —
 	// the AI narrator quotes the SAME deterministic envelope
 	// the chart renders (no duplicated SQL).
-	tools.RegisterTCONarrationTools(aiToolRegistry, tools.TCONarrationSources{
+	lifetime.RegisterTCONarrationTools(aiToolRegistry, lifetime.TCONarrationSources{
 		Summarizer: NewAITCOSummarizer(db),
 	})
 	// tco-narration handler. One per process; stateless beyond
