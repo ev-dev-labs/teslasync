@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
@@ -1371,7 +1372,7 @@ func (a *App) loadOpenAPISpec() {
 	for _, p := range specPaths {
 		if specBytes, err := os.ReadFile(p); err == nil {
 			a.openAPISpec = specBytes
-			api.SetOpenAPISpec(specBytes)
+			apiopenapi.SetOpenAPISpec(specBytes)
 			break
 		}
 	}

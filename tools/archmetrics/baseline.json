@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T20:42:31Z",
+  "generated_at": "2026-05-28T20:46:19Z",
   "go_version": "go1.26.1",
-  "commit_sha": "641e97657e29891c831bc39f7a4a7bec65fa8c8e",
+  "commit_sha": "c62f0d43a56e9f56b81b5b2d3b8c74507a5915a6",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 251,
+      "go_files": 250,
       "test_files": 151,
-      "loc": 113624,
+      "loc": 113600,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2628,6 +2628,7 @@
         "internal/api/lifetime",
         "internal/api/middleware",
         "internal/api/notification",
+        "internal/api/openapi",
         "internal/api/search",
         "internal/api/search/searchtest",
         "internal/api/signalinspect",
@@ -3028,7 +3029,6 @@
         "motor_handler_test.go",
         "onboarding_handler.go",
         "onboarding_handler_test.go",
-        "openapi_handler.go",
         "period_stats_handler.go",
         "pinned_handler.go",
         "pinned_handler_test.go",
@@ -3345,6 +3345,21 @@
       ]
     },
     {
+      "path": "internal/api/openapi",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 38,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
       "path": "internal/api/search",
       "go_files": 2,
       "test_files": 1,
@@ -3578,12 +3593,13 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1848,
+      "loc": 1849,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
         "internal/adapter/gasprices",
         "internal/api",
+        "internal/api/openapi",
         "internal/apilog",
         "internal/audit",
         "internal/cache",
@@ -7428,7 +7444,6 @@
       "mileage_handler.go",
       "motor_handler.go",
       "onboarding_handler.go",
-      "openapi_handler.go",
       "period_stats_handler.go",
       "pinned_handler.go",
       "polling_handler.go",
@@ -7559,6 +7574,10 @@
       "handler.go",
       "helpers.go",
       "schedule.go"
+    ],
+    "internal/api/openapi": [
+      "doc.go",
+      "handler.go"
     ],
     "internal/api/search": [
       "doc.go",
@@ -8716,10 +8735,11 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 251,
+      "flat_parent_go_files": 250,
       "flat_parent_test_files": 151,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
+        "openapi",
         "lifetime",
         "search",
         "vehicle",
@@ -8729,7 +8749,6 @@
         "system",
         "health",
         "sse",
-        "openapi",
         "devtools",
         "observability",
         "analytics",

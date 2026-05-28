@@ -22,6 +22,7 @@ import (
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
+	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
@@ -3569,7 +3570,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/update-check", UpdateCheckHandler())
 			r.Get("/workers", WorkersHealthHandler())
 			r.Get("/metrics-catalog", MetricsCatalogHandler())
-			r.Get("/openapi", OpenAPIHandler())
+			r.Get("/openapi", apiopenapi.Handler())
 
 			// Phase-46 / Prompt 33 — Aggregated self-test endpoint.
 			// Single click runs ~10 checks (DB, MQTT, Redis, Tesla

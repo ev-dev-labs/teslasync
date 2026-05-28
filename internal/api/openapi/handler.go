@@ -1,7 +1,9 @@
-package api
+package openapi
 
 import (
 	"net/http"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
 // openAPISpec holds the raw YAML bytes of the OpenAPI spec.
@@ -13,12 +15,12 @@ func SetOpenAPISpec(yamlBytes []byte) {
 	openAPISpec = yamlBytes
 }
 
-// OpenAPIHandler serves the embedded OpenAPI spec as YAML.
+// Handler serves the embedded OpenAPI spec as YAML.
 // Frontend parses with js-yaml to avoid adding a Go YAML dependency.
-func OpenAPIHandler() http.HandlerFunc {
+func Handler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if len(openAPISpec) == 0 {
-			writeError(w, http.StatusNotFound, "OpenAPI spec not available")
+			httpx.WriteError(w, http.StatusNotFound, "OpenAPI spec not available")
 			return
 		}
 		w.Header().Set("Content-Type", "text/yaml; charset=utf-8")
