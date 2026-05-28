@@ -42,12 +42,14 @@
 //	  "anomalies_last_24h":  int,
 //	}
 
-package tools
+package anomaly
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // AnomalyContextEntry is the shared DTO for one detected anomaly. It
@@ -148,7 +150,7 @@ func (t *queryAnomalyContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryAnomalyContext) InputSchema() json.RawMessage {
-	return CachedSchema(queryAnomalyContextInput{})
+	return tools.CachedSchema(queryAnomalyContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -165,7 +167,7 @@ func (t *queryAnomalyContext) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryAnomalyContext) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryAnomalyContextInput](raw)
+	return tools.ValidateStruct[queryAnomalyContextInput](raw)
 }
 
 // defaultAnomalyDays mirrors the HTTP handler's default lookback
@@ -232,6 +234,6 @@ type AnomalySources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterAnomalyTools(r *Registry, s AnomalySources) {
+func RegisterAnomalyTools(r *tools.Registry, s AnomalySources) {
 	r.Register(&queryAnomalyContext{src: s.Anomaly})
 }

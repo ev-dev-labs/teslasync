@@ -11,7 +11,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	aitools "github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
@@ -39,7 +39,7 @@ func NewAnomalyHandler(db *database.DB) *AnomalyHandler {
 // interface from internal/ai/tools/anomaly.go. A future edit that drops
 // DetectAnomalies or changes its signature breaks this build, surfacing
 // the wiring bug at compile time instead of at first AI request.
-var _ aitools.AnomalySource = (*AnomalyHandler)(nil)
+var _ anomaly.AnomalySource = (*AnomalyHandler)(nil)
 
 // ── Response types ───────────────────────────────────────────
 
@@ -176,7 +176,7 @@ func (h *AnomalyHandler) GetAnomalies(w http.ResponseWriter, r *http.Request) {
 //
 // Field-by-field mapping is intentional (no struct embedding) so a
 // future change to either side is loud rather than silent.
-func anomalyContextResultToResponse(r *aitools.AnomalyContextResult) anomalyResponse {
+func anomalyContextResultToResponse(r *anomaly.AnomalyContextResult) anomalyResponse {
 	if r == nil {
 		// Defensive: should not happen — DetectAnomalies always
 		// returns a non-nil pointer. But if a future edit ever
@@ -238,7 +238,7 @@ func anomalyContextResultToResponse(r *aitools.AnomalyContextResult) anomalyResp
 //   - HealthSummary always includes the five canonical category keys
 //     (battery, tires, motors, hvac, charging) seeded to "normal" so
 //     the frontend can render the health grid without nil checks.
-func (h *AnomalyHandler) DetectAnomalies(ctx context.Context, vehicleID int64, days int) (*aitools.AnomalyContextResult, error) {
+func (h *AnomalyHandler) DetectAnomalies(ctx context.Context, vehicleID int64, days int) (*anomaly.AnomalyContextResult, error) {
 	since := time.Now().AddDate(0, 0, -days)
 
 	var allAnomalies []anomalyEntry
@@ -300,15 +300,15 @@ func (h *AnomalyHandler) DetectAnomalies(ctx context.Context, vehicleID int64, d
 	// Convert to the AI-shared shape. Pre-allocating the slice with
 	// len/cap=len(allAnomalies) preserves the "empty slice, not nil"
 	// invariant that the legacy wire shape relied on.
-	out := &aitools.AnomalyContextResult{
-		Anomalies:        make([]aitools.AnomalyContextEntry, 0, len(allAnomalies)),
+	out := &anomaly.AnomalyContextResult{
+		Anomalies:        make([]anomaly.AnomalyContextEntry, 0, len(allAnomalies)),
 		HealthSummary:    healthSummary,
 		SignalsMonitored: signalsChecked,
 		AnomaliesLast7d:  len(allAnomalies),
 		AnomaliesLast24h: last24h,
 	}
 	for _, a := range allAnomalies {
-		out.Anomalies = append(out.Anomalies, aitools.AnomalyContextEntry{
+		out.Anomalies = append(out.Anomalies, anomaly.AnomalyContextEntry{
 			Signal:     a.Signal,
 			Type:       a.Type,
 			Severity:   a.Severity,

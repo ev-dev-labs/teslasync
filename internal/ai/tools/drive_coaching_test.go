@@ -62,7 +62,6 @@ func TestRegisterDriveCoachingTools_DoesNotShadowBuiltins(t *testing.T) {
 		Geofences:     &fakeFences{},
 		Efficiency:    &fakeDrives{},
 	})
-	RegisterAnomalyTools(r, AnomalySources{Anomaly: &fakeAnomalySource{}})
 	RegisterDriveCoachingTools(r, DriveCoachingSources{Drives: &fakeDrives{}})
 
 	for _, name := range BuiltinNames {
@@ -71,7 +70,6 @@ func TestRegisterDriveCoachingTools_DoesNotShadowBuiltins(t *testing.T) {
 		}
 	}
 	for _, name := range []string{
-		"query_anomaly_context",
 		"query_drive_telemetry_summary",
 	} {
 		if _, ok := r.Get(name); !ok {

@@ -126,6 +126,7 @@ import (
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
+	anomalytool "github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/charge"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/digest"
@@ -655,7 +656,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// builtins; this call extends the registry beyond the pinned set.
 	// AnomalyHandler implements aitools.AnomalySource via
 	// (*AnomalyHandler).DetectAnomalies — see anomaly_handler.go.
-	tools.RegisterAnomalyTools(aiToolRegistry, tools.AnomalySources{
+	anomalytool.RegisterAnomalyTools(aiToolRegistry, anomalytool.AnomalySources{
 		Anomaly: anomalyHandler,
 	})
 	// Phase-50 / U4 (slice 0014) — Anomaly explanation handler.

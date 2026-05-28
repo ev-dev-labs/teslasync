@@ -23,7 +23,7 @@ import (
 	"strings"
 	"testing"
 
-	aitools "github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
 )
 
 // TestGetAnomalies_WireShapeUnchanged is the load-bearing wire-shape
@@ -50,8 +50,8 @@ func TestGetAnomalies_WireShapeUnchanged(t *testing.T) {
 	// frontend's `data.anomalies.map(...)` calls.
 	t.Run("empty_result_emits_anomalies_array_not_null", func(t *testing.T) {
 		t.Parallel()
-		empty := &aitools.AnomalyContextResult{
-			Anomalies: []aitools.AnomalyContextEntry{},
+		empty := &anomaly.AnomalyContextResult{
+			Anomalies: []anomaly.AnomalyContextEntry{},
 			HealthSummary: map[string]string{
 				"battery": "normal", "tires": "normal", "motors": "normal",
 				"hvac": "normal", "charging": "normal",
@@ -102,8 +102,8 @@ func TestGetAnomalies_WireShapeUnchanged(t *testing.T) {
 	// preserve every one of them at the JSON boundary.
 	t.Run("realistic_result_preserves_every_legacy_field", func(t *testing.T) {
 		t.Parallel()
-		full := &aitools.AnomalyContextResult{
-			Anomalies: []aitools.AnomalyContextEntry{
+		full := &anomaly.AnomalyContextResult{
+			Anomalies: []anomaly.AnomalyContextEntry{
 				{
 					Signal:     "TpmsPressureFl",
 					Type:       "range",
@@ -207,8 +207,8 @@ func TestGetAnomalies_WireShapeUnchanged(t *testing.T) {
 func TestAnomalyContextResultToResponse_HealthSummaryAliased(t *testing.T) {
 	t.Parallel()
 	src := map[string]string{"battery": "normal"}
-	in := &aitools.AnomalyContextResult{
-		Anomalies:     []aitools.AnomalyContextEntry{},
+	in := &anomaly.AnomalyContextResult{
+		Anomalies:     []anomaly.AnomalyContextEntry{},
 		HealthSummary: src,
 	}
 	out := anomalyContextResultToResponse(in)

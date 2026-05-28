@@ -6,13 +6,16 @@
 // is tiny; defined locally because no other tool in this package needs
 // AnomalySource.
 
-package tools
+package anomaly
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 )
 
 // fakeAnomalySource is a deterministic in-memory AnomalySource. The
@@ -53,7 +56,7 @@ func (f *fakeAnomalySource) DetectAnomalies(_ context.Context, vehicleID int64, 
 // RegisterYearReviewTools test pattern.
 func TestRegisterAnomalyTools_RegistersTool(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterAnomalyTools(r, AnomalySources{Anomaly: &fakeAnomalySource{}})
 	if _, ok := r.Get("query_anomaly_context"); !ok {
 		t.Fatal("RegisterAnomalyTools did not register query_anomaly_context")
@@ -66,20 +69,20 @@ func TestRegisterAnomalyTools_RegistersTool(t *testing.T) {
 // tool reachable. Defends against an accidental same-name collision.
 func TestRegisterAnomalyTools_DoesNotShadowBuiltins(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{},
-		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{},
-		Charges:       &fakeCharges{},
-		AlertRules:    &fakeRules{},
-		Notifications: &fakeNotif{},
-		Geofences:     &fakeFences{},
-		Efficiency:    &fakeDrives{},
+	r := tools.NewRegistry()
+	tools.Register12Builtins(r, tools.Sources{
+		Vehicles:      &toolstest.FakeVehicles{},
+		VehicleState:  &toolstest.FakeState{},
+		Drives:        &toolstest.FakeDrives{},
+		Charges:       &toolstest.FakeCharges{},
+		AlertRules:    &toolstest.FakeRules{},
+		Notifications: &toolstest.FakeNotif{},
+		Geofences:     &toolstest.FakeFences{},
+		Efficiency:    &toolstest.FakeDrives{},
 	})
 	RegisterAnomalyTools(r, AnomalySources{Anomaly: &fakeAnomalySource{}})
 
-	for _, name := range BuiltinNames {
+	for _, name := range tools.BuiltinNames {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("builtin %q lost after RegisterAnomalyTools", name)
 		}

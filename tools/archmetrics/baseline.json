@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:28:21Z",
+  "generated_at": "2026-05-28T07:33:35Z",
   "go_version": "go1.26.1",
-  "commit_sha": "58bb7853be5d5328f48afb869c7edc070691d9c0",
+  "commit_sha": "65cf2acaa831139bf3350d85e2da529d9b9ef47b",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 17,
-      "test_files": 15,
-      "loc": 11916,
+      "go_files": 16,
+      "test_files": 14,
+      "loc": 11380,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1898,8 +1898,6 @@
         "internal/models/vehicle"
       ],
       "files": [
-        "anomaly.go",
-        "anomaly_test.go",
         "automation_builder.go",
         "automation_builder_test.go",
         "builtins.go",
@@ -1948,6 +1946,23 @@
         "doc.go",
         "tuning.go",
         "tuning_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/anomaly",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 571,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest"
+      ],
+      "files": [
+        "anomaly.go",
+        "anomaly_test.go",
+        "doc.go"
       ]
     },
     {
@@ -2364,7 +2379,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126544,
+      "loc": 126545,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2437,6 +2452,7 @@
         "internal/ai/stream",
         "internal/ai/tools",
         "internal/ai/tools/alert",
+        "internal/ai/tools/anomaly",
         "internal/ai/tools/charge",
         "internal/ai/tools/diagnostic",
         "internal/ai/tools/digest",
@@ -6071,7 +6087,6 @@
       "writer.go"
     ],
     "internal/ai/tools": [
-      "anomaly.go",
       "automation_builder.go",
       "builtins.go",
       "charge_curve_clustering.go",
@@ -6093,6 +6108,10 @@
       "builder.go",
       "doc.go",
       "tuning.go"
+    ],
+    "internal/ai/tools/anomaly": [
+      "anomaly.go",
+      "doc.go"
     ],
     "internal/ai/tools/charge": [
       "curve_clusters.go",
@@ -7412,8 +7431,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 17,
-      "flat_parent_test_files": 15,
+      "flat_parent_go_files": 16,
+      "flat_parent_test_files": 14,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

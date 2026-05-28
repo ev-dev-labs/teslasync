@@ -52,7 +52,6 @@ func TestRegisterSpeedProfileInsightsTools_DoesNotShadowBuiltins(t *testing.T) {
 		Geofences:     &fakeFences{},
 		Efficiency:    &fakeDrives{},
 	})
-	RegisterAnomalyTools(r, AnomalySources{Anomaly: &fakeAnomalySource{}})
 	RegisterDriveCoachingTools(r, DriveCoachingSources{Drives: &fakeDrives{}})
 	RegisterSpeedProfileInsightsTools(r, SpeedProfileInsightsSources{Drives: &fakeDrives{}})
 
@@ -62,7 +61,6 @@ func TestRegisterSpeedProfileInsightsTools_DoesNotShadowBuiltins(t *testing.T) {
 		}
 	}
 	for _, name := range []string{
-		"query_anomaly_context",
 		"query_drive_telemetry_summary",
 		"query_speed_profile",
 		"query_drive_context",
