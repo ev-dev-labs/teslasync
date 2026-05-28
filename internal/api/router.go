@@ -15,6 +15,7 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
+	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -653,8 +654,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	tripHandler := NewTripHandler(db)
 	// Phase-42 (prompt 0077): VehicleStateHandler deleted (vehicle_states);
 	// current state is sourced from fsm_transitions / signal.StateReader.
-	backupHandler := NewBackupHandler(db)
-	backupRestoreHandler := NewBackupRestoreHandler(db)
+	backupHandler := apibackup.NewHandler(db)
+	backupRestoreHandler := apibackup.NewRestoreHandler(db)
 	regenHandler := NewRegenHandler(db)
 	batteryDegradationHandler := NewBatteryDegradationHandler(db, stateReader, signalLogReader)
 	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)

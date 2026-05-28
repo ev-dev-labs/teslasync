@@ -40,23 +40,9 @@ func TestAllowedCommandsWhitelist(t *testing.T) {
 	}
 }
 
-func TestAllowedBackupTables(t *testing.T) {
-	// Should contain expected tables
-	expected := []string{"vehicles", "drives", "charging_sessions", "positions", "alerts"}
-	for _, table := range expected {
-		if !allowedBackupTables[table] {
-			t.Errorf("table %q should be in allowedBackupTables", table)
-		}
-	}
-
-	// Should reject dangerous tables
-	rejected := []string{"pg_shadow", "pg_authid", "tokens", "api_keys"}
-	for _, table := range rejected {
-		if allowedBackupTables[table] {
-			t.Errorf("table %q should NOT be in allowedBackupTables", table)
-		}
-	}
-}
+// Phase R2a (2026-05-28): TestAllowedBackupTables relocated to
+// internal/api/backup/handler_test.go::TestAllowedTables_RequiredAndForbiddenEntries
+// alongside the canonical apibackup.AllowedTables symbol.
 
 // Phase R2.0a (2026-05-28): TestHTTPStatusCode,
 // TestTeslaTokenExpired_PropagatesCode, and

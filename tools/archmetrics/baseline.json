@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T18:33:21Z",
+  "generated_at": "2026-05-28T18:42:11Z",
   "go_version": "go1.26.1",
-  "commit_sha": "4c51a0d74b0274a9bb8004aa72832d6269393efd",
+  "commit_sha": "d86ff6e7a20b35de6daad27beecf8a0d43937b63",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 270,
+      "go_files": 268,
       "test_files": 162,
-      "loc": 125624,
+      "loc": 125188,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2621,6 +2621,7 @@
         "internal/api/apiparams",
         "internal/api/apitest",
         "internal/api/apperror",
+        "internal/api/backup",
         "internal/api/httpx",
         "internal/api/middleware",
         "internal/apilog",
@@ -2638,7 +2639,6 @@
         "internal/automation/condition",
         "internal/automation/presets",
         "internal/automation/trigger",
-        "internal/backup",
         "internal/cache",
         "internal/config",
         "internal/crypto",
@@ -2650,7 +2650,6 @@
         "internal/database/audit",
         "internal/database/auth",
         "internal/database/automation",
-        "internal/database/backup",
         "internal/database/charging",
         "internal/database/drive",
         "internal/database/energy",
@@ -2694,7 +2693,6 @@
         "internal/models/alert",
         "internal/models/auth",
         "internal/models/automation",
-        "internal/models/backup",
         "internal/models/charging",
         "internal/models/chatbot",
         "internal/models/dashboard",
@@ -2903,8 +2901,6 @@
         "automation_handler_test_run.go",
         "automation_mqtt_reloader.go",
         "automations_bulk_handler.go",
-        "backup_handler.go",
-        "backup_restore_handler.go",
         "battery_cells_handler.go",
         "battery_cells_handler_test.go",
         "battery_degradation_handler.go",
@@ -3216,6 +3212,29 @@
         "doc.go",
         "write.go",
         "write_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/backup",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 530,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apperror",
+        "internal/api/backup",
+        "internal/api/httpx",
+        "internal/backup",
+        "internal/database",
+        "internal/database/backup",
+        "internal/models/backup"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go",
+        "restore_handler.go"
       ]
     },
     {
@@ -7053,8 +7072,6 @@
       "automation_handler_test_run.go",
       "automation_mqtt_reloader.go",
       "automations_bulk_handler.go",
-      "backup_handler.go",
-      "backup_restore_handler.go",
       "battery_cells_handler.go",
       "battery_degradation_handler.go",
       "battery_degradation_handler_calculations.go",
@@ -7244,6 +7261,11 @@
       "apperror.go",
       "doc.go",
       "write.go"
+    ],
+    "internal/api/backup": [
+      "doc.go",
+      "handler.go",
+      "restore_handler.go"
     ],
     "internal/api/httpx": [
       "doc.go",
@@ -8367,7 +8389,7 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 270,
+      "flat_parent_go_files": 268,
       "flat_parent_test_files": 162,
       "planned_subpkgs": 59,
       "existing_subpkgs": null,
