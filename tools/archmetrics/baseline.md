@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T20:54:19Z, Go go1.26.1, commit 86eefa68ed24fa2638f3f439c88a72ec30201d45_
+_Generated 2026-05-28T20:56:46Z, Go go1.26.1, commit 803568d81f2632d404918419c7245bf56588f47c_
 
 ## Summary
 
-- Packages: 313
+- Packages: 314
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 377582
+- Total non-blank LOC under cmd/+internal/+tools/: 377602
 
 ## cmd/* main.go LOC
 
@@ -170,8 +170,9 @@ _Generated 2026-05-28T20:54:19Z, Go go1.26.1, commit 86eefa68ed24fa2638f3f439c88
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 248 | 151 | 113520 | yes | handler |
+| internal/api | 247 | 151 | 113471 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
+| internal/api/apicalllog | 2 | 0 | 69 | yes | handler |
 | internal/api/apiparams | 2 | 1 | 358 | yes | handler |
 | internal/api/apitest | 2 | 0 | 137 | yes | handler |
 | internal/api/apperror | 3 | 1 | 508 | yes | handler |
@@ -369,7 +370,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 248 / 151 | 59 | 5 | 54 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 247 / 151 | 59 | 5 | 54 |
 
 ### `internal/models` detail
 

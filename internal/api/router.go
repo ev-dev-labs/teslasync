@@ -14,18 +14,18 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
-	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
-	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
+	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
-	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
+	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
+	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
-	apivisloc "github.com/ev-dev-labs/teslasync/internal/api/visitedlocation"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -33,6 +33,7 @@ import (
 	apivehphoto "github.com/ev-dev-labs/teslasync/internal/api/vehiclephoto"
 	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
 	apivehstates "github.com/ev-dev-labs/teslasync/internal/api/vehiclestates"
+	apivisloc "github.com/ev-dev-labs/teslasync/internal/api/visitedlocation"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
@@ -683,7 +684,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	regenHandler := NewRegenHandler(db)
 	batteryDegradationHandler := NewBatteryDegradationHandler(db, stateReader, signalLogReader)
 	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
-	apiCallLogHandler := NewAPICallLogHandler(db)
+	apiCallLogHandler := apicalllog.NewHandler(db)
 	apiKeyHandler := NewAPIKeyHandler(db, cfg.Auth.ForwardAuthHeader)
 	// Phase-42 (prompt 0077): SignalCatalogHandler deleted (signal_catalog +
 	// signal_observations); the typed signal_log pipeline (000167+) is the

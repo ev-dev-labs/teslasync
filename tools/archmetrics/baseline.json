@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T20:54:18Z",
+  "generated_at": "2026-05-28T20:56:45Z",
   "go_version": "go1.26.1",
-  "commit_sha": "86eefa68ed24fa2638f3f439c88a72ec30201d45",
+  "commit_sha": "803568d81f2632d404918419c7245bf56588f47c",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 248,
+      "go_files": 247,
       "test_files": 151,
-      "loc": 113520,
+      "loc": 113471,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2619,6 +2619,7 @@
         "internal/alertmsg",
         "internal/api",
         "internal/api/apibulk",
+        "internal/api/apicalllog",
         "internal/api/apiparams",
         "internal/api/apitest",
         "internal/api/apperror",
@@ -2892,7 +2893,6 @@
         "analytics_handler_test.go",
         "anomaly_handler.go",
         "anomaly_handler_test.go",
-        "api_call_log_handler.go",
         "api_call_log_middleware.go",
         "api_call_log_middleware_test.go",
         "api_test.go",
@@ -3165,6 +3165,25 @@
         "doc.go",
         "helpers.go",
         "helpers_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/apicalllog",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 69,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/system",
+        "internal/models/tesla"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
       ]
     },
     {
@@ -7384,7 +7403,6 @@
       "analytics_handler_dtos.go",
       "analytics_handler_queries.go",
       "anomaly_handler.go",
-      "api_call_log_handler.go",
       "api_call_log_middleware.go",
       "apikey_handler.go",
       "apikey_middleware.go",
@@ -7562,6 +7580,10 @@
     "internal/api/apibulk": [
       "doc.go",
       "helpers.go"
+    ],
+    "internal/api/apicalllog": [
+      "doc.go",
+      "handler.go"
     ],
     "internal/api/apiparams": [
       "doc.go",
@@ -8776,7 +8798,7 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 248,
+      "flat_parent_go_files": 247,
       "flat_parent_test_files": 151,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
