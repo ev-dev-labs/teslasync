@@ -54,3 +54,5 @@ ef3423f9a77a0d166ac9349b5ea6c8bce520e003
 a63a7ae3bc0fe8567a0efd8e1cca0a3ee6d481a9
 
 ad2eb301b5828f307c92dfb041cde45e9bb9c0db # R5.10 carve internal/models/automation subpkg
+
+42e4c61dad89af29c455a52807f61eeec8678675 # R5.11 carve internal/models/tesla subpkg (16 types, 29 callers)
