@@ -8,7 +8,7 @@
 //
 // The store stub is intentionally hand-rolled instead of leaning on
 // gomock so the tests document the protocol in plain Go.
-package api
+package scheduledexports
 
 import (
 	"bytes"

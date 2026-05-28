@@ -52,6 +52,7 @@ import (
 	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
 	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
 	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
+	apischedexp "github.com/ev-dev-labs/teslasync/internal/api/scheduledexports"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
@@ -549,7 +550,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// request body. The repo's per-row UPDATE/DELETE statements scope
 	// by (id, owner_subject) so cross-user mutations collapse to 404.
 	scheduledExportRepo := exportdb.NewScheduledExportRepo(db)
-	scheduledExportsHandler := NewScheduledExportsHandler(scheduledExportRepo, cfg.Auth.ForwardAuthHeader, nil)
+	scheduledExportsHandler := apischedexp.NewScheduledExportsHandler(scheduledExportRepo, cfg.Auth.ForwardAuthHeader, nil)
 	// Phase-46 / Prompt 43 — per-vehicle settings layer.
 	//
 	// The resolver layers vehicle-scoped overrides on top of the

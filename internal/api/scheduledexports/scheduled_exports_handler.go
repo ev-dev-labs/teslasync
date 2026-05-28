@@ -1,38 +1,4 @@
-// Phase-46 / Prompt 65 — Scheduled / recurring exports HTTP handler.
-//
-// Routes (all mounted under /api/v1/scheduled-exports inside the
-// authenticated /api/v1 group):
-//
-//	GET    /scheduled-exports          — list current user's schedules
-//	POST   /scheduled-exports          — create a new schedule
-//	PUT    /scheduled-exports/{id}     — update an existing schedule
-//	DELETE /scheduled-exports/{id}     — delete a schedule
-//	POST   /scheduled-exports/{id}/run — manual "Run now" trigger
-//
-// Authentication contract
-// -----------------------
-// Owner identity ALWAYS comes from actorFromRequest (the configured
-// FORWARD_AUTH_HEADER). The handler NEVER reads owner_subject from
-// the request body — accepting it would let any authenticated user
-// create / read / mutate / delete another user's schedules. The
-// gate's auth-guard regex enforces this at lint time.
-//
-// Open mode
-// ---------
-// In open mode (no FORWARD_AUTH_HEADER configured, or proxy stripped
-// the header for this request) actorFromRequest returns "" and the
-// handler 401s with code MISSING_IDENTITY. The SPA wraps the entire
-// /scheduled-exports panel in <RequiresAuth> so end-users never see
-// raw 401s; the explicit error response stays useful for curl users.
-//
-// Per-row ownership
-// -----------------
-// The repo's Update / Delete / SetNextRunAt scope by (id, owner) at
-// the SQL layer. A handler call that targets a row owned by another
-// user collapses to ErrScheduledExportNotFound — the row simply
-// "does not exist" for this caller, which keeps the surface uniform
-// and avoids leaking ownership information through 403 vs 404.
-package api
+package scheduledexports
 
 import (
 	"context"
@@ -42,11 +8,13 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
 
@@ -125,10 +93,17 @@ func (req scheduledExportRequest) toInput() exportdb.ScheduledExportInput {
 	}
 }
 
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
+}
+
 func (h *ScheduledExportsHandler) requireOwner(w http.ResponseWriter, r *http.Request) (string, bool) {
 	owner := actorFromRequest(r, h.authHdr)
 	if owner == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"scheduled exports require an authenticated user",
 			"MISSING_IDENTITY")
 		return "", false
@@ -144,16 +119,16 @@ func (h *ScheduledExportsHandler) decodeBody(w http.ResponseWriter, r *http.Requ
 	var req scheduledExportRequest
 	if err := dec.Decode(&req); err != nil {
 		if errors.Is(err, io.EOF) {
-			writeError(w, http.StatusBadRequest, "request body is required")
+			httpx.WriteError(w, http.StatusBadRequest, "request body is required")
 			return nil, false
 		}
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			writeError(w, http.StatusBadRequest,
+			httpx.WriteError(w, http.StatusBadRequest,
 				fmt.Sprintf("request body exceeds %d bytes", MaxScheduledExportBodyBytes))
 			return nil, false
 		}
-		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return nil, false
 	}
 	return &req, true
@@ -168,21 +143,21 @@ func (h *ScheduledExportsHandler) mapRepoErr(w http.ResponseWriter, err error, w
 	}
 	switch {
 	case errors.Is(err, exportdb.ErrScheduledExportNotFound):
-		writeError(w, http.StatusNotFound, "scheduled export not found")
+		httpx.WriteError(w, http.StatusNotFound, "scheduled export not found")
 	case errors.Is(err, exportdb.ErrScheduledExportInvalidType),
 		errors.Is(err, exportdb.ErrScheduledExportInvalidFormat),
 		errors.Is(err, exportdb.ErrScheduledExportInvalidCron),
 		errors.Is(err, exportdb.ErrScheduledExportInvalidDeliv),
 		errors.Is(err, exportdb.ErrScheduledExportInvalidWindow),
 		errors.Is(err, exportdb.ErrScheduledExportEmptyName):
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, exportdb.ErrScheduledExportEmptyOwner):
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"scheduled exports require an authenticated user",
 			"MISSING_IDENTITY")
 	default:
 		log.Error().Err(err).Str("op", what).Msg("scheduled exports: repo failure")
-		writeError(w, http.StatusInternalServerError, "scheduled exports: internal error")
+		httpx.WriteError(w, http.StatusInternalServerError, "scheduled exports: internal error")
 	}
 	return true
 }
@@ -190,7 +165,7 @@ func (h *ScheduledExportsHandler) mapRepoErr(w http.ResponseWriter, err error, w
 // List returns every schedule belonging to the authenticated user.
 func (h *ScheduledExportsHandler) List(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		writeError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
+		httpx.WriteError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
 		return
 	}
 	owner, ok := h.requireOwner(w, r)
@@ -204,13 +179,13 @@ func (h *ScheduledExportsHandler) List(w http.ResponseWriter, r *http.Request) {
 	if rows == nil {
 		rows = []exportdb.ScheduledExportRow{}
 	}
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
 // Create inserts a new schedule for the authenticated user.
 func (h *ScheduledExportsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		writeError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
+		httpx.WriteError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
 		return
 	}
 	owner, ok := h.requireOwner(w, r)
@@ -225,14 +200,14 @@ func (h *ScheduledExportsHandler) Create(w http.ResponseWriter, r *http.Request)
 	if h.mapRepoErr(w, err, "create") {
 		return
 	}
-	writeJSON(w, http.StatusCreated, row)
+	httpx.WriteJSON(w, http.StatusCreated, row)
 }
 
 // Update mutates an existing schedule. Cross-user updates collapse
 // to 404 because the SQL filter scopes by (id, owner_subject).
 func (h *ScheduledExportsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		writeError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
+		httpx.WriteError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
 		return
 	}
 	owner, ok := h.requireOwner(w, r)
@@ -251,13 +226,13 @@ func (h *ScheduledExportsHandler) Update(w http.ResponseWriter, r *http.Request)
 	if h.mapRepoErr(w, err, "update") {
 		return
 	}
-	writeJSON(w, http.StatusOK, row)
+	httpx.WriteJSON(w, http.StatusOK, row)
 }
 
 // Delete removes a schedule, scoped to the authenticated user.
 func (h *ScheduledExportsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		writeError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
+		httpx.WriteError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
 		return
 	}
 	owner, ok := h.requireOwner(w, r)
@@ -280,7 +255,7 @@ func (h *ScheduledExportsHandler) Delete(w http.ResponseWriter, r *http.Request)
 // shape so the SPA can refresh the table without a follow-up GET.
 func (h *ScheduledExportsHandler) RunNow(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
-		writeError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
+		httpx.WriteError(w, http.StatusInternalServerError, "scheduled exports: store not configured")
 		return
 	}
 	owner, ok := h.requireOwner(w, r)
@@ -302,17 +277,17 @@ func (h *ScheduledExportsHandler) RunNow(w http.ResponseWriter, r *http.Request)
 	// follow-up Get does not. Cross-check to ensure we never echo a
 	// row belonging to another user.
 	if row == nil || row.OwnerSubject != owner {
-		writeError(w, http.StatusNotFound, "scheduled export not found")
+		httpx.WriteError(w, http.StatusNotFound, "scheduled export not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, row)
+	httpx.WriteJSON(w, http.StatusOK, row)
 }
 
 func parseScheduledExportID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid schedule id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid schedule id")
 		return 0, false
 	}
 	return id, true
