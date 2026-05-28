@@ -21,6 +21,7 @@ import (
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
@@ -1816,7 +1817,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	automationHandler := NewAutomationHandler(db,
 		WithCommandExecutor(action.NewCommandExecutor(
 			database.NewVehicleRepo(db),
-			database.NewCommandLogRepo(db),
+			energydb.NewCommandLogRepo(db),
 			&settingsCheckerAdapter{database.NewSettingsRepo(db)},
 			teslaClient,
 		)),

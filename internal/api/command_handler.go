@@ -9,6 +9,7 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	cmdFSM "github.com/ev-dev-labs/teslasync/internal/fsm/command"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -18,7 +19,7 @@ import (
 // CommandHandler handles vehicle command HTTP requests.
 type CommandHandler struct {
 	vehicleRepo  *database.VehicleRepo
-	commandRepo  *database.CommandLogRepo
+	commandRepo  *energydb.CommandLogRepo
 	settingsRepo *database.SettingsRepo
 	teslaClient  *tesla.Client
 	redisCache   *signal.RedisSignalCache
@@ -27,7 +28,7 @@ type CommandHandler struct {
 func NewCommandHandler(db *database.DB, tc *tesla.Client) *CommandHandler {
 	return &CommandHandler{
 		vehicleRepo:  database.NewVehicleRepo(db),
-		commandRepo:  database.NewCommandLogRepo(db),
+		commandRepo:  energydb.NewCommandLogRepo(db),
 		settingsRepo: database.NewSettingsRepo(db),
 		teslaClient:  tc,
 	}

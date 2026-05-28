@@ -9,6 +9,7 @@ import (
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -16,14 +17,14 @@ import (
 // TeslaEnergyLiveStatusHandler serves Tesla energy site live status (power flow) data.
 type TeslaEnergyLiveStatusHandler struct {
 	teslaClient *tesla.Client
-	repo        *database.TeslaEnergyLiveStatusRepo
+	repo        *energydb.TeslaEnergyLiveStatusRepo
 }
 
 // NewTeslaEnergyLiveStatusHandler creates a new handler.
 func NewTeslaEnergyLiveStatusHandler(tc *tesla.Client, db *database.DB) *TeslaEnergyLiveStatusHandler {
 	return &TeslaEnergyLiveStatusHandler{
 		teslaClient: tc,
-		repo:        database.NewTeslaEnergyLiveStatusRepo(db),
+		repo:        energydb.NewTeslaEnergyLiveStatusRepo(db),
 	}
 }
 

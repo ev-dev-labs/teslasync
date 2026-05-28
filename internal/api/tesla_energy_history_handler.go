@@ -9,6 +9,7 @@ import (
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -22,18 +23,18 @@ var validEnergyPeriods = map[string]bool{
 // TeslaEnergyHistoryHandler serves Tesla energy site history (energy, backup, WC charging).
 type TeslaEnergyHistoryHandler struct {
 	teslaClient *tesla.Client
-	energyRepo  *database.TeslaEnergyHistoryRepo
-	backupRepo  *database.TeslaEnergyBackupEventRepo
-	wcRepo      *database.TeslaEnergyWCChargingRepo
+	energyRepo  *energydb.TeslaEnergyHistoryRepo
+	backupRepo  *energydb.TeslaEnergyBackupEventRepo
+	wcRepo      *energydb.TeslaEnergyWCChargingRepo
 }
 
 // NewTeslaEnergyHistoryHandler creates a new handler.
 func NewTeslaEnergyHistoryHandler(tc *tesla.Client, db *database.DB) *TeslaEnergyHistoryHandler {
 	return &TeslaEnergyHistoryHandler{
 		teslaClient: tc,
-		energyRepo:  database.NewTeslaEnergyHistoryRepo(db),
-		backupRepo:  database.NewTeslaEnergyBackupEventRepo(db),
-		wcRepo:      database.NewTeslaEnergyWCChargingRepo(db),
+		energyRepo:  energydb.NewTeslaEnergyHistoryRepo(db),
+		backupRepo:  energydb.NewTeslaEnergyBackupEventRepo(db),
+		wcRepo:      energydb.NewTeslaEnergyWCChargingRepo(db),
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	energymodel "github.com/ev-dev-labs/teslasync/internal/models/energy"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 )
 
 // CO2PerKWh is the estimated CO₂ savings in kg per kWh when driving
@@ -26,12 +27,12 @@ type EnergyStats struct {
 
 // EnergyService encapsulates energy calculation business logic.
 type EnergyService struct {
-	energyRepo *database.EnergyStatsRepo
+	energyRepo *energydb.EnergyStatsRepo
 }
 
 // NewEnergyService creates an EnergyService.
 func NewEnergyService(db *database.DB) *EnergyService {
-	return &EnergyService{energyRepo: database.NewEnergyStatsRepo(db)}
+	return &EnergyService{energyRepo: energydb.NewEnergyStatsRepo(db)}
 }
 
 // CalculateStats computes energy statistics for a vehicle over the given

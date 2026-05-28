@@ -1,10 +1,11 @@
-package database
+package energy
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/jackc/pgx/v5"
@@ -12,11 +13,11 @@ import (
 
 // TeslaEnergySiteRepo provides data access for Tesla energy site records.
 type TeslaEnergySiteRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewTeslaEnergySiteRepo creates a new repository.
-func NewTeslaEnergySiteRepo(db *DB) *TeslaEnergySiteRepo {
+func NewTeslaEnergySiteRepo(db *database.DB) *TeslaEnergySiteRepo {
 	return &TeslaEnergySiteRepo{db: db}
 }
 

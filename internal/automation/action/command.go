@@ -30,7 +30,7 @@ type VehicleStateProvider interface {
 	GetLiveState(ctx context.Context, id int64) (string, error)
 }
 
-// CommandLogRepo is the subset of database.CommandLogRepo needed by CommandExecutor.
+// CommandLogRepo is the subset of energydb.CommandLogRepo needed by CommandExecutor.
 type CommandLogRepo interface {
 	Create(ctx context.Context, cl *vehiclemodel.CommandLog) error
 }

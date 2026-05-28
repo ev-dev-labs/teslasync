@@ -1,20 +1,21 @@
-package database
+package energy
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
 // TeslaEnergyLiveStatusRepo provides data access for Tesla energy site live status snapshots.
 type TeslaEnergyLiveStatusRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewTeslaEnergyLiveStatusRepo creates a new repository.
-func NewTeslaEnergyLiveStatusRepo(db *DB) *TeslaEnergyLiveStatusRepo {
+func NewTeslaEnergyLiveStatusRepo(db *database.DB) *TeslaEnergyLiveStatusRepo {
 	return &TeslaEnergyLiveStatusRepo{db: db}
 }
 

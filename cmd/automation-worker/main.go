@@ -22,6 +22,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
+	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -155,7 +156,7 @@ func main() {
 	automationRepo := dbauto.NewAutomationRepo(db)
 	historyRepo := dbauto.NewAutomationHistoryRepo(db)
 	vehicleRepo := database.NewVehicleRepo(db)
-	commandLogRepo := database.NewCommandLogRepo(db)
+	commandLogRepo := energydb.NewCommandLogRepo(db)
 	settingsRepo := database.NewSettingsRepo(db)
 	notifRepo := dbnotif.NewNotificationRepo(db)
 	varRepo := dbauto.NewAutomationVariableRepo(db)

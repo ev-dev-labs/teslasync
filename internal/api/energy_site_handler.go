@@ -8,6 +8,7 @@ import (
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -15,14 +16,14 @@ import (
 // EnergySiteHandler serves Tesla energy product (Powerwall, Solar) data.
 type EnergySiteHandler struct {
 	teslaClient *tesla.Client
-	repo        *database.TeslaEnergySiteRepo
+	repo        *energydb.TeslaEnergySiteRepo
 }
 
 // NewEnergySiteHandler creates a new handler.
 func NewEnergySiteHandler(tc *tesla.Client, db *database.DB) *EnergySiteHandler {
 	return &EnergySiteHandler{
 		teslaClient: tc,
-		repo:        database.NewTeslaEnergySiteRepo(db),
+		repo:        energydb.NewTeslaEnergySiteRepo(db),
 	}
 }
 

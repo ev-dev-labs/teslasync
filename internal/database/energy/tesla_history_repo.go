@@ -1,10 +1,11 @@
-package database
+package energy
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
@@ -14,10 +15,10 @@ import (
 
 // TeslaEnergyHistoryRepo provides data access for Tesla energy calendar history.
 type TeslaEnergyHistoryRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewTeslaEnergyHistoryRepo(db *DB) *TeslaEnergyHistoryRepo {
+func NewTeslaEnergyHistoryRepo(db *database.DB) *TeslaEnergyHistoryRepo {
 	return &TeslaEnergyHistoryRepo{db: db}
 }
 
@@ -101,10 +102,10 @@ func (r *TeslaEnergyHistoryRepo) UpsertBatch(ctx context.Context, entries []*tes
 
 // TeslaEnergyBackupEventRepo provides data access for Tesla energy backup events.
 type TeslaEnergyBackupEventRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewTeslaEnergyBackupEventRepo(db *DB) *TeslaEnergyBackupEventRepo {
+func NewTeslaEnergyBackupEventRepo(db *database.DB) *TeslaEnergyBackupEventRepo {
 	return &TeslaEnergyBackupEventRepo{db: db}
 }
 
@@ -173,10 +174,10 @@ func (r *TeslaEnergyBackupEventRepo) UpsertBatch(ctx context.Context, entries []
 
 // TeslaEnergyWCChargingRepo provides data access for Tesla wall connector charging history.
 type TeslaEnergyWCChargingRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewTeslaEnergyWCChargingRepo(db *DB) *TeslaEnergyWCChargingRepo {
+func NewTeslaEnergyWCChargingRepo(db *database.DB) *TeslaEnergyWCChargingRepo {
 	return &TeslaEnergyWCChargingRepo{db: db}
 }
 

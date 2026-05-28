@@ -1,10 +1,11 @@
-package database
+package energy
 
 import (
 	"context"
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	energymodel "github.com/ev-dev-labs/teslasync/internal/models/energy"
@@ -12,10 +13,10 @@ import (
 
 // CommandLogRepo provides command log data access.
 type CommandLogRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewCommandLogRepo(db *DB) *CommandLogRepo {
+func NewCommandLogRepo(db *database.DB) *CommandLogRepo {
 	return &CommandLogRepo{db: db}
 }
 
@@ -77,10 +78,10 @@ func (r *CommandLogRepo) GetHistoryByVehicle(ctx context.Context, vehicleID int6
 
 // EnergyStatsRepo computes energy statistics from charging sessions.
 type EnergyStatsRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewEnergyStatsRepo(db *DB) *EnergyStatsRepo {
+func NewEnergyStatsRepo(db *database.DB) *EnergyStatsRepo {
 	return &EnergyStatsRepo{db: db}
 }
 
