@@ -196,3 +196,6 @@ c03b89a1365760c5624a8a18dc12b40057e86f86
 
 # R2.0e: carve internal/api/apperror (AppError catalog + Write helper) — wrapper-retained bridge
 673da4e1
+
+# R2a: carve internal/api/backup (first resource handler subpkg) — mass-rewrite pattern
+11ccd511
