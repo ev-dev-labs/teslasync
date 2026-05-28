@@ -145,3 +145,6 @@ b09ed32e57f83f41d88d47701718bdabb1582af2
 ce93f6e5b507f5b7b97ca48a424e554dba27a668 # R4.6 carve notification subpackage
 1eb6113cbadf83ef083e4f349c9a4837b532e23d # R4.7 carve automation subpackage
 d0b0e61a4f88c159111336945150d0fcc584a71d # R4.8 carve user subpackage
+
+# R4.9 alert cluster carve (internal/database/alert/) — bounded-context subpkg restructure
+6619b52dcd2c9e641990bbbc233fcd442e914bd6
