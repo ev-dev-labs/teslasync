@@ -1,15 +1,17 @@
-package api
+package feedback
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
@@ -37,15 +39,14 @@ const (
 )
 
 // FeedbackStore is the narrow interface the handler depends on. Mocked
-// in feedback_handler_test.go so the unit tests don't require a live
-// database.
+// in handler_test.go so the unit tests don't require a live database.
 type FeedbackStore interface {
 	Insert(ctx context.Context, in dbuser.FeedbackInsert) (dbuser.UserFeedback, error)
 	CountSubmittedSince(ctx context.Context, subject, ip string, since time.Time) (int64, error)
 }
 
-// FeedbackHandler serves the public POST /api/v1/feedback endpoint.
-type FeedbackHandler struct {
+// Handler serves the public POST /api/v1/feedback endpoint.
+type Handler struct {
 	store   FeedbackStore
 	authHdr string
 	now     func() time.Time
@@ -53,9 +54,9 @@ type FeedbackHandler struct {
 	window  time.Duration
 }
 
-// NewFeedbackHandler constructs the public ingest handler.
-func NewFeedbackHandler(store FeedbackStore, cfg *config.Config) *FeedbackHandler {
-	h := &FeedbackHandler{
+// NewHandler constructs the public ingest handler.
+func NewHandler(store FeedbackStore, cfg *config.Config) *Handler {
+	h := &Handler{
 		store:  store,
 		now:    time.Now,
 		maxPer: feedbackPerSubmitterMax,
@@ -85,9 +86,9 @@ type feedbackRequest struct {
 // Submit handles POST /api/v1/feedback. Parses the body, enforces the
 // per-submitter row throttle, persists the row, and returns the new
 // UserFeedback (id + created_at populated).
-func (h *FeedbackHandler) Submit(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "feedback store unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "feedback store unavailable")
 		return
 	}
 	defer r.Body.Close()
@@ -97,7 +98,7 @@ func (h *FeedbackHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid payload")
 		return
 	}
 
@@ -114,7 +115,7 @@ func (h *FeedbackHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		// reports — log loud so operators can spot the pattern.
 		log.Warn().Err(err).Msg("feedback: rate-limit lookup failed; allowing submit")
 	} else if count >= int64(h.maxPer) {
-		writeError(w, http.StatusTooManyRequests, "too many feedback submissions; please try again later")
+		httpx.WriteError(w, http.StatusTooManyRequests, "too many feedback submissions; please try again later")
 		return
 	}
 
@@ -136,14 +137,14 @@ func (h *FeedbackHandler) Submit(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, dbuser.ErrFeedbackInvalidCategory):
-			writeError(w, http.StatusBadRequest, "invalid category (expected bug|feature|other)")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid category (expected bug|feature|other)")
 		case errors.Is(err, dbuser.ErrFeedbackTitleTooShort):
-			writeError(w, http.StatusBadRequest, "title too short (minimum 5 characters)")
+			httpx.WriteError(w, http.StatusBadRequest, "title too short (minimum 5 characters)")
 		case errors.Is(err, dbuser.ErrFeedbackBodyTooShort):
-			writeError(w, http.StatusBadRequest, "body too short (minimum 20 characters)")
+			httpx.WriteError(w, http.StatusBadRequest, "body too short (minimum 20 characters)")
 		default:
 			log.Error().Err(err).Msg("feedback: insert failed")
-			writeError(w, http.StatusInternalServerError, "failed to record feedback")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to record feedback")
 		}
 		return
 	}
@@ -157,14 +158,42 @@ func (h *FeedbackHandler) Submit(w http.ResponseWriter, r *http.Request) {
 		Bool("has_console_tail", row.ConsoleTail != "").
 		Msg("feedback received")
 
-	writeJSON(w, http.StatusCreated, row)
+	httpx.WriteJSON(w, http.StatusCreated, row)
 }
 
-func (h *FeedbackHandler) callNow() time.Time {
+func (h *Handler) callNow() time.Time {
 	if h.now != nil {
 		return h.now()
 	}
 	return time.Now()
+}
+
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
+}
+
+func clientIP(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.IndexByte(xff, ','); i >= 0 {
+			xff = xff[:i]
+		}
+		if ip := strings.TrimSpace(xff); ip != "" {
+			return ip
+		}
+	}
+	if r.RemoteAddr == "" {
+		return ""
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
 
 func firstNonEmpty(values ...string) string {

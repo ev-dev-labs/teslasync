@@ -82,6 +82,15 @@ func nullableTime(use bool, t time.Time) interface{} {
 	return apiparams.NullableTime(use, t)
 }
 
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
 // EstimateBatteryCapacityWh returns the best-effort battery capacity in Wh
 // and a source string indicating how the estimate was derived.
 // Uses VIN position 8 decode first, falls back to model name, then 75000 Wh default.

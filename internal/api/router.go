@@ -20,6 +20,7 @@ import (
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
+	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
@@ -2006,7 +2007,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// returns nil and the admin endpoint flips github_bridge_enabled to
 	// false in its response so the SPA hides the Forward action.
 	userFeedbackRepo := dbuser.NewUserFeedbackRepo(db)
-	feedbackHandler := NewFeedbackHandler(userFeedbackRepo, cfg)
+	feedbackHandler := apifb.NewHandler(userFeedbackRepo, cfg)
 	githubIssuesClient := integrations.NewGitHubIssuesClient(integrations.GitHubIssuesConfig{
 		Repo:  cfg.GitHub.Repo,
 		Token: cfg.GitHub.Token,

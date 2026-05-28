@@ -1,4 +1,4 @@
-package api
+package feedback
 
 import (
 	"context"
@@ -59,15 +59,15 @@ func feedbackTestCfg() *config.Config {
 	return &config.Config{Auth: config.AuthConfig{ForwardAuthHeader: "X-User"}}
 }
 
-func newTestFeedbackHandler(store FeedbackStore) *FeedbackHandler {
-	h := NewFeedbackHandler(store, feedbackTestCfg())
+func newTestHandler(store FeedbackStore) *Handler {
+	h := NewHandler(store, feedbackTestCfg())
 	h.now = func() time.Time { return time.Date(2025, 6, 1, 12, 0, 0, 0, time.UTC) }
 	return h
 }
 
 func TestFeedbackSubmitHappyPath(t *testing.T) {
 	store := &fakeFeedbackStore{}
-	h := newTestFeedbackHandler(store)
+	h := newTestHandler(store)
 
 	body := `{
 		"category":"bug",
@@ -110,7 +110,7 @@ func TestFeedbackSubmitHappyPath(t *testing.T) {
 
 func TestFeedbackSubmitRateLimited(t *testing.T) {
 	store := &fakeFeedbackStore{countResult: 3}
-	h := newTestFeedbackHandler(store)
+	h := newTestHandler(store)
 
 	body := `{"category":"bug","title":"valid title here","body":"this body is more than twenty characters long for sure"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", strings.NewReader(body))
@@ -131,7 +131,7 @@ func TestFeedbackSubmitRateLimitFailsOpen(t *testing.T) {
 	// Repo lookup error must NOT block legitimate submissions — fail open
 	// per the handler contract (logged but allowed).
 	store := &fakeFeedbackStore{countErr: errors.New("db down")}
-	h := newTestFeedbackHandler(store)
+	h := newTestHandler(store)
 
 	body := `{"category":"bug","title":"valid title here","body":"this body is more than twenty characters long for sure"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", strings.NewReader(body))
@@ -150,7 +150,7 @@ func TestFeedbackSubmitRateLimitFailsOpen(t *testing.T) {
 
 func TestFeedbackSubmitInvalidCategory(t *testing.T) {
 	store := &fakeFeedbackStore{insertErr: dbuser.ErrFeedbackInvalidCategory}
-	h := newTestFeedbackHandler(store)
+	h := newTestHandler(store)
 
 	body := `{"category":"spam","title":"valid title here","body":"this body is more than twenty characters long for sure"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", strings.NewReader(body))
@@ -165,7 +165,7 @@ func TestFeedbackSubmitInvalidCategory(t *testing.T) {
 
 func TestFeedbackSubmitTitleTooShort(t *testing.T) {
 	store := &fakeFeedbackStore{insertErr: dbuser.ErrFeedbackTitleTooShort}
-	h := newTestFeedbackHandler(store)
+	h := newTestHandler(store)
 
 	body := `{"category":"bug","title":"hi","body":"this body is more than twenty characters long for sure"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", strings.NewReader(body))
@@ -180,7 +180,7 @@ func TestFeedbackSubmitTitleTooShort(t *testing.T) {
 
 func TestFeedbackSubmitBodyTooShort(t *testing.T) {
 	store := &fakeFeedbackStore{insertErr: dbuser.ErrFeedbackBodyTooShort}
-	h := newTestFeedbackHandler(store)
+	h := newTestHandler(store)
 
 	body := `{"category":"bug","title":"valid title here","body":"short"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", strings.NewReader(body))
@@ -195,7 +195,7 @@ func TestFeedbackSubmitBodyTooShort(t *testing.T) {
 
 func TestFeedbackSubmitRejectsUnknownFields(t *testing.T) {
 	store := &fakeFeedbackStore{}
-	h := newTestFeedbackHandler(store)
+	h := newTestHandler(store)
 
 	body := `{"category":"bug","title":"valid title here","body":"this body is more than twenty characters long for sure","x_extra":"lol"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", strings.NewReader(body))
@@ -210,7 +210,7 @@ func TestFeedbackSubmitRejectsUnknownFields(t *testing.T) {
 
 func TestFeedbackSubmitFallsBackToHTTPUserAgent(t *testing.T) {
 	store := &fakeFeedbackStore{}
-	h := newTestFeedbackHandler(store)
+	h := newTestHandler(store)
 
 	body := `{"category":"bug","title":"valid title here","body":"this body is more than twenty characters long for sure"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", strings.NewReader(body))
@@ -229,7 +229,7 @@ func TestFeedbackSubmitFallsBackToHTTPUserAgent(t *testing.T) {
 
 func TestFeedbackSubmitInvalidJSON(t *testing.T) {
 	store := &fakeFeedbackStore{}
-	h := newTestFeedbackHandler(store)
+	h := newTestHandler(store)
 
 	body := `{this is not json`
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", strings.NewReader(body))
