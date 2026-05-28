@@ -128,6 +128,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
@@ -1323,7 +1324,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// port composes the SAME proto-derived AvailableSignals
 	// catalog that backs the baseline
 	// GET /api/v1/signals/{vehicleID}/available endpoint.
-	tools.RegisterSignalExplorerNlFilterTools(aiToolRegistry, tools.SignalExplorerNlFilterSources{
+	nl.RegisterSignalExplorerNlFilterTools(aiToolRegistry, nl.SignalExplorerNlFilterSources{
 		Validator: NewAISignalFilterValidator(),
 	})
 	// signal-explorer-nl-filter handler. Constructed after the
@@ -1535,7 +1536,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// canonical NotificationRepo + AlertRuleRepo so the LLM
 	// reads the SAME rows the manual InboxBody path reads —
 	// no parallel write path; the LLM never persists.
-	tools.RegisterInboxAutoCategorizationTools(aiToolRegistry, tools.InboxAutoCategorizationSources{
+	nl.RegisterInboxAutoCategorizationTools(aiToolRegistry, nl.InboxAutoCategorizationSources{
 		Source: NewAIInboxCategorizationSource(database.NewNotificationRepo(db), database.NewAlertRuleRepo(db)),
 	})
 	// inbox-auto-categorization handler. One per process;
@@ -2373,7 +2374,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	aiWatchFaceNLAlertHistorySource := NewAIWatchFaceNLAlertHistorySource(
 		database.NewNotificationRepo(db),
 	)
-	tools.RegisterWatchFaceNLResponseTools(aiToolRegistry, tools.WatchFaceNLResponseSources{
+	nl.RegisterWatchFaceNLResponseTools(aiToolRegistry, nl.WatchFaceNLResponseSources{
 		Source: aiWatchFaceNLContextSource,
 		Alerts: aiWatchFaceNLAlertHistorySource,
 	})

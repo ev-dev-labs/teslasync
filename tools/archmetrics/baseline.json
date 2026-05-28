@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:18:11Z",
+  "generated_at": "2026-05-28T06:22:11Z",
   "go_version": "go1.26.1",
-  "commit_sha": "7b680a2f6fc8015b5a67ec2c912580beebb7e98e",
+  "commit_sha": "7d14e690df88b5caa14e8fcc61c647609cfbb1ea",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 46,
-      "test_files": 39,
-      "loc": 38277,
+      "go_files": 43,
+      "test_files": 36,
+      "loc": 35140,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1931,8 +1931,6 @@
         "fuzz_schema_test.go",
         "help.go",
         "help_test.go",
-        "inbox_auto_categorization.go",
-        "inbox_auto_categorization_test.go",
         "incident_timeline_summarizer.go",
         "incident_timeline_summarizer_test.go",
         "lifetime_stats_qa.go",
@@ -1962,8 +1960,6 @@
         "search_test.go",
         "share_card_image.go",
         "share_card_image_test.go",
-        "signal_explorer_nl_filter.go",
-        "signal_explorer_nl_filter_test.go",
         "smart_charge_schedule_suggestion.go",
         "smart_charge_schedule_suggestion_test.go",
         "software_update_summary.go",
@@ -1982,8 +1978,6 @@
         "vampire_drain_explanation.go",
         "vampire_drain_explanation_test.go",
         "voice_mode.go",
-        "watch_face_nl_response.go",
-        "watch_face_nl_response_test.go",
         "year_review.go",
         "year_review_test.go"
       ]
@@ -2061,6 +2055,28 @@
       ]
     },
     {
+      "path": "internal/ai/tools/nl",
+      "go_files": 4,
+      "test_files": 3,
+      "loc": 3176,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/database",
+        "internal/models/notification"
+      ],
+      "files": [
+        "doc.go",
+        "inbox.go",
+        "inbox_test.go",
+        "signal_filter.go",
+        "signal_filter_test.go",
+        "watch_face.go",
+        "watch_face_test.go"
+      ]
+    },
+    {
       "path": "internal/ai/tools/predict",
       "go_files": 4,
       "test_files": 3,
@@ -2119,7 +2135,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126506,
+      "loc": 126510,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2195,6 +2211,7 @@
         "internal/ai/tools/feedback",
         "internal/ai/tools/forecast",
         "internal/ai/tools/location",
+        "internal/ai/tools/nl",
         "internal/ai/tools/predict",
         "internal/ai/tools/safety",
         "internal/alertmsg",
@@ -5827,7 +5844,6 @@
       "drive_search.go",
       "export_redaction_plan.go",
       "help.go",
-      "inbox_auto_categorization.go",
       "incident_timeline_summarizer.go",
       "lifetime_stats_qa.go",
       "log_trace_summarizer.go",
@@ -5844,7 +5860,6 @@
       "schema.go",
       "search.go",
       "share_card_image.go",
-      "signal_explorer_nl_filter.go",
       "smart_charge_schedule_suggestion.go",
       "software_update_summary.go",
       "speed_profile.go",
@@ -5856,7 +5871,6 @@
       "validate.go",
       "vampire_drain_explanation.go",
       "voice_mode.go",
-      "watch_face_nl_response.go",
       "year_review.go"
     ],
     "internal/ai/tools/alert": [
@@ -5878,6 +5892,12 @@
       "auto_name.go",
       "doc.go",
       "geofences.go"
+    ],
+    "internal/ai/tools/nl": [
+      "doc.go",
+      "inbox.go",
+      "signal_filter.go",
+      "watch_face.go"
     ],
     "internal/ai/tools/predict": [
       "anomaly_baseline.go",
@@ -7106,14 +7126,15 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 46,
-      "flat_parent_test_files": 39,
+      "flat_parent_go_files": 43,
+      "flat_parent_test_files": 36,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",
         "feedback",
         "forecast",
         "location",
+        "nl",
         "safety"
       ],
       "missing_subpkgs": [
@@ -7122,7 +7143,6 @@
         "charging",
         "diagnostics",
         "drive",
-        "nl",
         "share",
         "summary"
       ],

@@ -7,7 +7,7 @@
 // substitutes hermetic fakes so the tool unit tests stay free
 // of database / Redis IO.
 
-package tools
+package nl
 
 import (
 	"context"
@@ -15,6 +15,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -353,7 +355,7 @@ func TestQueryWatchContext_ExecutePassesMaxToAlertSource(t *testing.T) {
 
 func TestRegisterWatchFaceNLResponseTools_RegistersOneTool(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeWatchContextSource{}
 	alerts := &fakeAlertHistorySource{}
 	RegisterWatchFaceNLResponseTools(r, WatchFaceNLResponseSources{Source: src, Alerts: alerts})
@@ -365,7 +367,7 @@ func TestRegisterWatchFaceNLResponseTools_RegistersOneTool(t *testing.T) {
 
 func TestRegisterWatchFaceNLResponseTools_PanicsOnDuplicate(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeWatchContextSource{}
 	alerts := &fakeAlertHistorySource{}
 	RegisterWatchFaceNLResponseTools(r, WatchFaceNLResponseSources{Source: src, Alerts: alerts})

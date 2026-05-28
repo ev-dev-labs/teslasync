@@ -6,7 +6,7 @@
 // with a deterministic fake so the tests stay hermetic (no api
 // package import, no DB).
 
-package tools
+package nl
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // stubSignalFilterValidator records every call + can be wired to
@@ -552,7 +554,7 @@ func TestScopedSignalCatalog_Missing(t *testing.T) {
 // sequence.
 func TestRegisterSignalExplorerNlFilterTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	stub := &stubSignalFilterValidator{}
 	RegisterSignalExplorerNlFilterTools(r, SignalExplorerNlFilterSources{Validator: stub})
 

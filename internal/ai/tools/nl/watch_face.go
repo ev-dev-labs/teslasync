@@ -81,13 +81,15 @@
 //     apply_* / submit_* tool exists in this slice; the only
 //     tool is a pure read.
 
-package tools
+package nl
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -295,7 +297,7 @@ func (t *queryWatchContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryWatchContext) InputSchema() json.RawMessage {
-	return CachedSchema(queryWatchContextInput{})
+	return tools.CachedSchema(queryWatchContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -318,7 +320,7 @@ func (t *queryWatchContext) RequiredScope() string { return "" }
 // JSON object (including {}, which is the dispatcher's default
 // when the LLM emits no arguments).
 func (t *queryWatchContext) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[queryWatchContextInput](raw)
+	v, err := tools.ValidateStruct[queryWatchContextInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -402,6 +404,6 @@ type WatchFaceNLResponseSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterWatchFaceNLResponseTools(r *Registry, s WatchFaceNLResponseSources) {
+func RegisterWatchFaceNLResponseTools(r *tools.Registry, s WatchFaceNLResponseSources) {
 	r.Register(&queryWatchContext{source: s.Source, alerts: s.Alerts})
 }

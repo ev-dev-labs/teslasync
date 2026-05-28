@@ -8,7 +8,7 @@ package api
 // handler loads the per-vehicle signal catalog (the SAME catalog the
 // SPA's GET /api/v1/signals/{vehicleID}/available endpoint returns)
 // up-front and installs the snapshot of (vehicleID, signal-name set)
-// into ctx via tools.WithScopedSignalCatalog:
+// into ctx via nl.WithScopedSignalCatalog:
 //
 //	URL  /api/v1/ai/signals/filter/draft
 //	  ↓
@@ -21,7 +21,7 @@ package api
 //	load per-vehicle signal catalog via the source port
 //	  ↓
 //	stash in-scope (vehicleID, catalog) snapshot in ctx via
-//	  tools.WithScopedSignalCatalog(vehicleID, signals)
+//	  nl.WithScopedSignalCatalog(vehicleID, signals)
 //	  ↓
 //	synthesise the user-message that lists the in-scope catalog
 //	  (signal name + value_kind per row) so the LLM has
@@ -36,7 +36,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the (vehicleID, signal-set)
-// snapshot in ctx via tools.WithScopedSignalCatalog BEFORE
+// snapshot in ctx via nl.WithScopedSignalCatalog BEFORE
 // dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The tools
 // draft_signal_filter + validate_signal_filter REJECT any
@@ -93,6 +93,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -186,7 +187,7 @@ type AISignalExplorerNlFilterHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_signal_filter AND validate_signal_filter
-//	(registered by tools.RegisterSignalExplorerNlFilterTools
+//	(registered by nl.RegisterSignalExplorerNlFilterTools
 //	in router.go).
 //
 // strat:      the signal-explorer-nl-filter Strategy (one per
@@ -336,7 +337,7 @@ func (h *AISignalExplorerNlFilterHandler) ServeHTTP(w http.ResponseWriter, r *ht
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, signalexplorernlfilter.FeatureID)
-	ctx = tools.WithScopedSignalCatalog(ctx, req.VehicleID, signalNames)
+	ctx = nl.WithScopedSignalCatalog(ctx, req.VehicleID, signalNames)
 
 	// 5) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(signalexplorernlfilter.FeatureID))
@@ -479,11 +480,11 @@ func (a *AISignalCatalogSourceImpl) SignalCatalog(_ context.Context, _ int64) ([
 var _ AISignalCatalogSource = (*AISignalCatalogSourceImpl)(nil)
 
 // ---------------------------------------------------------------------
-// Production wiring for the tools.SignalFilterValidator interface.
+// Production wiring for the nl.SignalFilterValidator interface.
 // ---------------------------------------------------------------------
 
 // AISignalFilterValidator is the production
-// tools.SignalFilterValidator. It enforces the SAME canonical
+// nl.SignalFilterValidator. It enforces the SAME canonical
 // SignalExplorerPage range/limit enumeration that the SPA's
 // SignalSelector + RangePicker + per-page select would enforce, so
 // a draft accepted here is byte-equivalent to a draft that would
@@ -500,7 +501,7 @@ func NewAISignalFilterValidator() *AISignalFilterValidator {
 	return &AISignalFilterValidator{}
 }
 
-// ValidateSignalFilter implements tools.SignalFilterValidator.
+// ValidateSignalFilter implements nl.SignalFilterValidator.
 //
 // The shape checks (vehicle_id / signals length / range_preset /
 // per_page) are already enforced by the tool's
@@ -518,7 +519,7 @@ func NewAISignalFilterValidator() *AISignalFilterValidator {
 // page sizes. There is nothing else for the AI surface to enforce
 // — the canonical baseline GET /api/v1/signals/{vehicleID}/{signalName}/history
 // path will silently filter any stragglers.
-func (v *AISignalFilterValidator) ValidateSignalFilter(filter *tools.SignalFilter) error {
+func (v *AISignalFilterValidator) ValidateSignalFilter(filter *nl.SignalFilter) error {
 	if filter == nil {
 		return errors.New("api ai signal-explorer-nl-filter: nil SignalFilter")
 	}
@@ -530,4 +531,4 @@ func (v *AISignalFilterValidator) ValidateSignalFilter(filter *tools.SignalFilte
 }
 
 // Compile-time assertion.
-var _ tools.SignalFilterValidator = (*AISignalFilterValidator)(nil)
+var _ nl.SignalFilterValidator = (*AISignalFilterValidator)(nil)

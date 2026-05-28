@@ -17,7 +17,7 @@
 //     return a normalised + validated SignalFilter draft envelope.
 //     The tool is per-request scope-bound to the per-vehicle
 //     signal catalog the handler installed via
-//     tools.WithScopedSignalCatalog; the LLM CANNOT propose a
+//     nl.WithScopedSignalCatalog; the LLM CANNOT propose a
 //     signal name that is not in the catalog. Defence-in-depth
 //     against prompt injection in operator-authored prompts.
 //

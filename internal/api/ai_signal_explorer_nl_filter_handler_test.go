@@ -28,7 +28,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 )
 
 // TestSignalExplorerNLAIOffManualFiltersWork is the load-bearing
@@ -289,7 +289,7 @@ func TestBuildSignalExplorerNlFilterUserMessage_EmptyCatalog(t *testing.T) {
 func TestAISignalFilterValidator_AcceptsValidFilter(t *testing.T) {
 	t.Parallel()
 	v := NewAISignalFilterValidator()
-	filters := []*tools.SignalFilter{
+	filters := []*nl.SignalFilter{
 		{VehicleID: 7, Signals: []string{"VehicleSpeed"}, RangePreset: "today", PerPage: 25},
 		{VehicleID: 7, Signals: []string{"BatteryLevel"}, RangePreset: "yesterday", PerPage: 50},
 		{VehicleID: 42, Signals: []string{"VehicleSpeed", "BatteryLevel"}, RangePreset: "7d", PerPage: 100},

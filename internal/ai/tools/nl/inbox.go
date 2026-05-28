@@ -47,7 +47,7 @@
 //     NotificationFilterBar URL state — same baseline write/state
 //     path the user has always had.
 
-package tools
+package nl
 
 import (
 	"context"
@@ -57,6 +57,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -386,7 +387,7 @@ func (t *draftAlertCategories) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftAlertCategories) InputSchema() json.RawMessage {
-	return CachedSchema(alertCategoriesDraftInput{})
+	return tools.CachedSchema(alertCategoriesDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -415,7 +416,7 @@ func (t *draftAlertCategories) RequiredScope() string { return "" }
 // check here. Mirrors the alert-tuning-suggestions slice's
 // pattern.
 func (t *draftAlertCategories) Validate(raw json.RawMessage) (any, error) {
-	parsed, err := ValidateStruct[alertCategoriesDraftInput](raw)
+	parsed, err := tools.ValidateStruct[alertCategoriesDraftInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -423,16 +424,16 @@ func (t *draftAlertCategories) Validate(raw json.RawMessage) (any, error) {
 	if in.VehicleID != nil {
 		v := *in.VehicleID
 		if v < 1 {
-			return nil, &ValidationError{Field: "vehicle_id", Rule: "gte=1", Msg: "must be ≥ 1"}
+			return nil, &tools.ValidationError{Field: "vehicle_id", Rule: "gte=1", Msg: "must be ≥ 1"}
 		}
 	}
 	if in.WindowDays != nil {
 		v := *in.WindowDays
 		if v < 1 {
-			return nil, &ValidationError{Field: "window_days", Rule: "gte=1", Msg: "must be ≥ 1"}
+			return nil, &tools.ValidationError{Field: "window_days", Rule: "gte=1", Msg: "must be ≥ 1"}
 		}
 		if v > inboxCategorizationMaxWindowDays {
-			return nil, &ValidationError{Field: "window_days", Rule: "lte=90", Msg: "must be ≤ 90"}
+			return nil, &tools.ValidationError{Field: "window_days", Rule: "lte=90", Msg: "must be ≤ 90"}
 		}
 	}
 	return parsed, nil
@@ -561,7 +562,7 @@ func (t *validateAlertCategory) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateAlertCategory) InputSchema() json.RawMessage {
-	return CachedSchema(alertCategoryValidateInput{})
+	return tools.CachedSchema(alertCategoryValidateInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form.
@@ -577,13 +578,13 @@ func (t *validateAlertCategory) RequiredScope() string { return "" }
 // then enforces the "at least one of label/labels" cross-field
 // constraint that the per-field tags can't express.
 func (t *validateAlertCategory) Validate(raw json.RawMessage) (any, error) {
-	parsed, err := ValidateStruct[alertCategoryValidateInput](raw)
+	parsed, err := tools.ValidateStruct[alertCategoryValidateInput](raw)
 	if err != nil {
 		return nil, err
 	}
 	in := parsed.(alertCategoryValidateInput)
 	if strings.TrimSpace(in.Label) == "" && len(in.Labels) == 0 {
-		return nil, &ValidationError{Field: "label", Rule: "required_without=Labels", Msg: "either `label` or `labels` must be non-empty"}
+		return nil, &tools.ValidationError{Field: "label", Rule: "required_without=Labels", Msg: "either `label` or `labels` must be non-empty"}
 	}
 	return parsed, nil
 }
@@ -744,7 +745,7 @@ type InboxAutoCategorizationSources struct {
 // (`draft_alert_categories` + `validate_alert_category`); both
 // are NEW for this slice. Future inbox-related slices may
 // REUSE `validate_alert_category` from this registration.
-func RegisterInboxAutoCategorizationTools(r *Registry, s InboxAutoCategorizationSources) {
+func RegisterInboxAutoCategorizationTools(r *tools.Registry, s InboxAutoCategorizationSources) {
 	r.Register(&draftAlertCategories{source: s.Source})
 	r.Register(&validateAlertCategory{})
 }

@@ -62,7 +62,7 @@
 //     GET /api/v1/signals/{vehicleID}/{signalName}/history
 //     handler.
 
-package tools
+package nl
 
 import (
 	"context"
@@ -71,6 +71,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -497,7 +499,7 @@ func (t *draftSignalFilter) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftSignalFilter) InputSchema() json.RawMessage {
-	return CachedSchema(signalFilterInput{})
+	return tools.CachedSchema(signalFilterInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -518,7 +520,7 @@ func (t *draftSignalFilter) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *draftSignalFilter) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[signalFilterInput](raw)
+	return tools.ValidateStruct[signalFilterInput](raw)
 }
 
 // Execute implements [Tool]. Builds the draft, runs the scope +
@@ -592,7 +594,7 @@ func (t *validateSignalFilterTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateSignalFilterTool) InputSchema() json.RawMessage {
-	return CachedSchema(signalFilterInput{})
+	return tools.CachedSchema(signalFilterInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -607,7 +609,7 @@ func (t *validateSignalFilterTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *validateSignalFilterTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[signalFilterInput](raw)
+	return tools.ValidateStruct[signalFilterInput](raw)
 }
 
 // Execute implements [Tool]. Same scope + shape checks as
@@ -664,7 +666,7 @@ type SignalExplorerNlFilterSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterSignalExplorerNlFilterTools(r *Registry, s SignalExplorerNlFilterSources) {
+func RegisterSignalExplorerNlFilterTools(r *tools.Registry, s SignalExplorerNlFilterSources) {
 	r.Register(&draftSignalFilter{validator: s.Validator})
 	r.Register(&validateSignalFilterTool{validator: s.Validator})
 }

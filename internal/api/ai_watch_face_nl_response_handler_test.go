@@ -34,7 +34,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 )
 
 // TestWatchFaceNLAIOffUsesFixedCardsOnly is the load-bearing
@@ -306,7 +306,7 @@ func TestProjectWatchContextSignals_DualUnitProjection(t *testing.T) {
 		"SentryMode":       "true",
 		"HvacPower":        "On",
 	}
-	env := &tools.WatchContextEnvelope{}
+	env := &nl.WatchContextEnvelope{}
 	projectWatchContextSignals(env, signals)
 
 	if v, ok := env.SOCPercent.(int); !ok || v != 82 {
@@ -356,7 +356,7 @@ func TestProjectWatchContextSignals_DualUnitProjection(t *testing.T) {
 // SOC to 0 would silently lie to the user.
 func TestProjectWatchContextSignals_AbsentFieldsStayNil(t *testing.T) {
 	t.Parallel()
-	env := &tools.WatchContextEnvelope{VehicleName: "TestCar"}
+	env := &nl.WatchContextEnvelope{VehicleName: "TestCar"}
 	projectWatchContextSignals(env, map[string]interface{}{})
 
 	if env.SOCPercent != nil {
@@ -403,7 +403,7 @@ func TestProjectWatchContextSignals_NilInputs(t *testing.T) {
 	}()
 	projectWatchContextSignals(nil, nil)
 	projectWatchContextSignals(nil, map[string]interface{}{"BatteryLevel": float64(50)})
-	projectWatchContextSignals(&tools.WatchContextEnvelope{}, nil)
+	projectWatchContextSignals(&nl.WatchContextEnvelope{}, nil)
 }
 
 // TestProjectWatchAlertEntries_InvariantsHold asserts the alert
@@ -474,7 +474,7 @@ func TestProjectWatchAlertEntries_InvariantsHold(t *testing.T) {
 // silently leak PII.
 func TestProjectWatchAlertEntries_NoPIIFieldsExist(t *testing.T) {
 	t.Parallel()
-	e := tools.WatchAlertEntry{}
+	e := nl.WatchAlertEntry{}
 	// Read all fields by reflection — if a new free-text field
 	// is ever added the test loop below will hit an unknown
 	// field name and the projection contract must be re-

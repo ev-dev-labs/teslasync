@@ -9,7 +9,7 @@
 // directly so the production adapter (api.AIInboxCategorizationSource)
 // can compose it without re-testing the bucketing semantics.
 
-package tools
+package nl
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -597,7 +598,7 @@ func TestValidateAlertCategory_ContractMetadata(t *testing.T) {
 // registrar installs both NEW tools on the registry.
 func TestRegisterInboxAutoCategorizationTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterInboxAutoCategorizationTools(r, InboxAutoCategorizationSources{
 		Source: &stubInboxCategorizationSource{},
 	})

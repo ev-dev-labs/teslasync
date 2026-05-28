@@ -64,6 +64,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -147,7 +148,7 @@ type AIInboxCategorizationHandler struct {
 //
 //	draft_alert_categories AND validate_alert_category
 //	(both registered by
-//	tools.RegisterInboxAutoCategorizationTools).
+//	nl.RegisterInboxAutoCategorizationTools).
 //
 // strat:      the inbox-auto-categorization Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject
@@ -358,7 +359,7 @@ var _ http.Handler = (*AIInboxCategorizationHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIInboxCategorizationSource is the production
-// tools.InboxCategorizationSource. It composes the canonical
+// nl.InboxCategorizationSource. It composes the canonical
 // NotificationRepo (read) + AlertRuleRepo (read) so the AI
 // projection is grounded in the SAME notification_logs +
 // alert_rules rows the deterministic InboxBody renders. No
@@ -385,11 +386,11 @@ func NewAIInboxCategorizationSource(notifications *database.NotificationRepo, ru
 }
 
 // LoadCategoryCounts implements
-// tools.InboxCategorizationSource. Reads the
+// nl.InboxCategorizationSource. Reads the
 // notification_logs window via the canonical
 // NotificationRepo.GetLogsFiltered, looks up each unique
 // alert_id's signal_name via AlertRuleRepo.GetByID, buckets the
-// rows via tools.BucketByCategory, and returns the sorted
+// rows via nl.BucketByCategory, and returns the sorted
 // per-category tally.
 //
 // The returned counts slice is sorted by Count DESC then Label
@@ -398,7 +399,7 @@ func NewAIInboxCategorizationSource(notifications *database.NotificationRepo, ru
 // CategoryCount.Count across the returned slice (NOT the raw
 // notification_logs row count — rows whose alert_id is missing
 // from the rules lookup bucket into "other").
-func (a *AIInboxCategorizationSource) LoadCategoryCounts(ctx context.Context, f database.NotificationLogFilters) ([]tools.CategoryCount, int, int, error) {
+func (a *AIInboxCategorizationSource) LoadCategoryCounts(ctx context.Context, f database.NotificationLogFilters) ([]nl.CategoryCount, int, int, error) {
 	// Defence in depth: clamp the limit so a runaway caller
 	// cannot blow past the canonical 1000-row cap. The tool
 	// already sets Limit=1000; this is belt-and-suspenders.
@@ -449,7 +450,7 @@ func (a *AIInboxCategorizationSource) LoadCategoryCounts(ctx context.Context, f 
 		}
 	}
 
-	counts := tools.BucketByCategory(logs, signalLookup)
+	counts := nl.BucketByCategory(logs, signalLookup)
 
 	// totalInWindow is the sum of the bucketed counts so the
 	// envelope's HasEnoughHistory threshold compares

@@ -83,6 +83,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
@@ -165,7 +166,7 @@ type AIWatchFaceNLResponseHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_watch_context (registered by
-//	tools.RegisterWatchFaceNLResponseTools in
+//	nl.RegisterWatchFaceNLResponseTools in
 //	router.go).
 //
 // strat:      the watch-face-nl-response Strategy (one per
@@ -353,7 +354,7 @@ func buildWatchFaceNLResponseUserMessage(message string) string {
 // ---------------------------------------------------------------------------
 
 // AIWatchFaceNLContextSource is the production adapter
-// satisfying tools.WatchContextSource. It wraps the canonical
+// satisfying nl.WatchContextSource. It wraps the canonical
 // *database.VehicleRepo + *signal.RedisSignalCache so the AI
 // tool reads from the SAME data sources the deterministic
 // /watch/summary handler already does — no new SQL, no
@@ -383,7 +384,7 @@ func NewAIWatchFaceNLContextSource(v *database.VehicleRepo, cache *signal.RedisS
 	return &AIWatchFaceNLContextSource{vehicles: v, redisCache: cache}
 }
 
-// LoadWatchContext implements tools.WatchContextSource. Reads
+// LoadWatchContext implements nl.WatchContextSource. Reads
 // the canonical vehicle list + the live signal snapshot for
 // the install's primary (first) vehicle. NO new SQL is
 // written — the existing GetAll + redis GetAll calls are the
@@ -392,7 +393,7 @@ func NewAIWatchFaceNLContextSource(v *database.VehicleRepo, cache *signal.RedisS
 // Every absent reading serializes as JSON null (typed-nil
 // `any`) so the LLM's system prompt can honestly hedge on
 // missing data rather than fabricating a value.
-func (a *AIWatchFaceNLContextSource) LoadWatchContext(ctx context.Context) (*tools.WatchContextEnvelope, error) {
+func (a *AIWatchFaceNLContextSource) LoadWatchContext(ctx context.Context) (*nl.WatchContextEnvelope, error) {
 	vehicles, err := a.vehicles.GetAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("ai watch-face-nl-response: list vehicles: %w", err)
@@ -402,13 +403,13 @@ func (a *AIWatchFaceNLContextSource) LoadWatchContext(ctx context.Context) (*too
 		// null so the LLM can honestly say "no vehicle
 		// configured". RecentAlerts is left nil; the tool
 		// promotes it to an empty slice before returning.
-		return &tools.WatchContextEnvelope{
+		return &nl.WatchContextEnvelope{
 			LastUpdated: time.Now().UTC().Format(time.RFC3339),
 			Source:      "reader: internal/database/vehicle_repo.go VehicleRepo.GetAll (empty install)",
 		}, nil
 	}
 	primary := vehicles[0]
-	env := &tools.WatchContextEnvelope{
+	env := &nl.WatchContextEnvelope{
 		VehicleName: primary.DisplayName,
 		LastUpdated: time.Now().UTC().Format(time.RFC3339),
 		Source:      "reader: internal/database/vehicle_repo.go VehicleRepo.GetAll + internal/signal/redis_signal_cache.go RedisSignalCache.GetAll (canonical /watch/summary read path)",
@@ -454,7 +455,7 @@ func (a *AIWatchFaceNLContextSource) LoadWatchContext(ctx context.Context) (*too
 //   - Locked       → IsLocked (bool/string/float fallback)
 //   - SentryMode   → SentryMode (bool/string/float fallback)
 //   - HvacPower    → IsClimateOn (bool/string/float fallback)
-func projectWatchContextSignals(env *tools.WatchContextEnvelope, signals map[string]interface{}) {
+func projectWatchContextSignals(env *nl.WatchContextEnvelope, signals map[string]interface{}) {
 	if env == nil || signals == nil {
 		return
 	}
@@ -512,7 +513,7 @@ func projectWatchContextSignals(env *tools.WatchContextEnvelope, signals map[str
 }
 
 // AIWatchFaceNLAlertHistorySource is the production adapter
-// satisfying tools.AlertHistorySource. It wraps the canonical
+// satisfying nl.AlertHistorySource. It wraps the canonical
 // *database.NotificationRepo so the AI tool reads from the
 // SAME data source the deterministic notifications list page
 // already does — no new SQL, no duplicate read paths.
@@ -536,7 +537,7 @@ func NewAIWatchFaceNLAlertHistorySource(n *database.NotificationRepo) *AIWatchFa
 	return &AIWatchFaceNLAlertHistorySource{notifications: n}
 }
 
-// LoadRecentAlerts implements tools.AlertHistorySource. Reads
+// LoadRecentAlerts implements nl.AlertHistorySource. Reads
 // the canonical NotificationLog rows ordered by created_at
 // DESC and projects {severity, age_seconds} only. The
 // projection invariants enforce the privacy + UX contract:
@@ -553,9 +554,9 @@ func NewAIWatchFaceNLAlertHistorySource(n *database.NotificationRepo) *AIWatchFa
 //     (Title and Message bodies may contain custom rule names
 //     / vehicle names / place names; AlertID, ChannelID,
 //     LatencyMs are irrelevant operational data).
-func (a *AIWatchFaceNLAlertHistorySource) LoadRecentAlerts(ctx context.Context, max int) ([]tools.WatchAlertEntry, error) {
+func (a *AIWatchFaceNLAlertHistorySource) LoadRecentAlerts(ctx context.Context, max int) ([]nl.WatchAlertEntry, error) {
 	if max <= 0 {
-		return []tools.WatchAlertEntry{}, nil
+		return []nl.WatchAlertEntry{}, nil
 	}
 	rows, err := a.notifications.GetLogs(ctx, aiWatchFaceNLResponseAlertLookbackRows, 0)
 	if err != nil {
@@ -566,7 +567,7 @@ func (a *AIWatchFaceNLAlertHistorySource) LoadRecentAlerts(ctx context.Context, 
 
 // projectWatchAlertEntries projects the canonical
 // *notificationmodel.NotificationLog rows into the narrow
-// tools.WatchAlertEntry slice. Pulled out for hermetic unit
+// nl.WatchAlertEntry slice. Pulled out for hermetic unit
 // testing — the test feeds a known row list and asserts the
 // projection invariants (critical exclusion, window
 // exclusion, cap, severity preservation, age_seconds
@@ -575,15 +576,15 @@ func (a *AIWatchFaceNLAlertHistorySource) LoadRecentAlerts(ctx context.Context, 
 // `now` is injected so the tests can pin the computed
 // age_seconds to a deterministic value rather than calling
 // time.Now() inside the projection.
-func projectWatchAlertEntries(rows []*notificationmodel.NotificationLog, max int, now time.Time) []tools.WatchAlertEntry {
+func projectWatchAlertEntries(rows []*notificationmodel.NotificationLog, max int, now time.Time) []nl.WatchAlertEntry {
 	if max <= 0 {
 		// Defensive early-return BEFORE the make below: a
 		// negative cap on make([]…, 0, max) panics, and a
 		// max=0 cap means the slice cannot hold any entries
 		// anyway.
-		return []tools.WatchAlertEntry{}
+		return []nl.WatchAlertEntry{}
 	}
-	out := make([]tools.WatchAlertEntry, 0, max)
+	out := make([]nl.WatchAlertEntry, 0, max)
 	for _, row := range rows {
 		if row == nil {
 			continue
@@ -602,7 +603,7 @@ func projectWatchAlertEntries(rows []*notificationmodel.NotificationLog, max int
 		if age < 0 || age > aiWatchFaceNLResponseRecentAlertWindow {
 			continue
 		}
-		out = append(out, tools.WatchAlertEntry{
+		out = append(out, nl.WatchAlertEntry{
 			Severity:   sev,
 			AgeSeconds: int64(age.Seconds()),
 		})
@@ -617,7 +618,7 @@ func projectWatchAlertEntries(rows []*notificationmodel.NotificationLog, max int
 // satisfies http.Handler and the production source adapters
 // satisfy their respective tool ports.
 var (
-	_ http.Handler             = (*AIWatchFaceNLResponseHandler)(nil)
-	_ tools.WatchContextSource = (*AIWatchFaceNLContextSource)(nil)
-	_ tools.AlertHistorySource = (*AIWatchFaceNLAlertHistorySource)(nil)
+	_ http.Handler          = (*AIWatchFaceNLResponseHandler)(nil)
+	_ nl.WatchContextSource = (*AIWatchFaceNLContextSource)(nil)
+	_ nl.AlertHistorySource = (*AIWatchFaceNLAlertHistorySource)(nil)
 )
