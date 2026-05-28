@@ -154,3 +154,5 @@ e42dfd8d02d9152d1a1449e555804624eeb530f1
 d397160f446c249f2e2b57e517f561aa12172efe
 # R4.12 drive cluster carve (internal/database/drive/) — 4 src + 3 tests
 bd5812ba58cbd3e441ac77e1855aaf152bbf4db6
+# R4.13 trip cluster carve (internal/database/trip/) — 3 src + 1 test
+cb3900b6b2c77353e7de0f3c0866e6c823a1bdb1
