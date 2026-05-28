@@ -10,20 +10,21 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // TeslaUserProfileHandler serves the Tesla account owner's profile data.
 type TeslaUserProfileHandler struct {
 	teslaClient *tesla.Client
-	profileRepo *database.TeslaUserProfileRepo
+	profileRepo *tesladb.TeslaUserProfileRepo
 }
 
 // NewTeslaUserProfileHandler creates a new handler.
 func NewTeslaUserProfileHandler(tc *tesla.Client, db *database.DB) *TeslaUserProfileHandler {
 	return &TeslaUserProfileHandler{
 		teslaClient: tc,
-		profileRepo: database.NewTeslaUserProfileRepo(db),
+		profileRepo: tesladb.NewTeslaUserProfileRepo(db),
 	}
 }
 

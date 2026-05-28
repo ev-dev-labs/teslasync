@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:26:01Z",
+  "generated_at": "2026-05-28T16:29:23Z",
   "go_version": "go1.26.1",
-  "commit_sha": "891a81906b14767cc1cd6958da6cb9eb47eb7d2a",
+  "commit_sha": "cf7e09bed5f5ec547a065228cf1157b8deb523d0",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2510,7 +2510,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126638,
+      "loc": 126645,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2650,6 +2650,7 @@
         "internal/database/sharing",
         "internal/database/system",
         "internal/database/telemetry",
+        "internal/database/tesla",
         "internal/database/trip",
         "internal/database/user",
         "internal/database/worker",
@@ -3709,9 +3710,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 38,
+      "go_files": 32,
       "test_files": 14,
-      "loc": 8797,
+      "loc": 8214,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3721,7 +3722,6 @@
         "internal/models/alert",
         "internal/models/system",
         "internal/models/telemetry",
-        "internal/models/tesla",
         "internal/models/vehicle",
         "internal/tracing"
       ],
@@ -3763,12 +3763,6 @@
         "signal_log_repo.go",
         "signals_catalog_repo.go",
         "signals_catalog_repo_test.go",
-        "tesla_charging_history_repo.go",
-        "tesla_charging_session_repo.go",
-        "tesla_user_config_repo.go",
-        "tesla_user_order_repo.go",
-        "tesla_user_profile_repo.go",
-        "tesla_vehicle_driver_repo.go",
         "vehicle_photo_repo.go",
         "vehicle_repo.go",
         "vehicle_settings_repo.go",
@@ -4143,6 +4137,27 @@
         "doc.go",
         "fleet_error_repo.go",
         "raw_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/tesla",
+      "go_files": 7,
+      "test_files": 0,
+      "loc": 625,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/models/tesla"
+      ],
+      "files": [
+        "charging_history_repo.go",
+        "charging_session_repo.go",
+        "doc.go",
+        "user_config_repo.go",
+        "user_order_repo.go",
+        "user_profile_repo.go",
+        "vehicle_driver_repo.go"
       ]
     },
     {
@@ -7187,12 +7202,6 @@
       "signal_log_reader_query.go",
       "signal_log_repo.go",
       "signals_catalog_repo.go",
-      "tesla_charging_history_repo.go",
-      "tesla_charging_session_repo.go",
-      "tesla_user_config_repo.go",
-      "tesla_user_order_repo.go",
-      "tesla_user_profile_repo.go",
-      "tesla_vehicle_driver_repo.go",
       "vehicle_photo_repo.go",
       "vehicle_repo.go",
       "vehicle_settings_repo.go",
@@ -7318,6 +7327,15 @@
       "doc.go",
       "fleet_error_repo.go",
       "raw_repo.go"
+    ],
+    "internal/database/tesla": [
+      "charging_history_repo.go",
+      "charging_session_repo.go",
+      "doc.go",
+      "user_config_repo.go",
+      "user_order_repo.go",
+      "user_profile_repo.go",
+      "vehicle_driver_repo.go"
     ],
     "internal/database/trip": [
       "detail_repo.go",
@@ -8042,7 +8060,7 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 38,
+      "flat_parent_go_files": 32,
       "flat_parent_test_files": 14,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
@@ -8058,7 +8076,8 @@
         "energy",
         "export",
         "notification",
-        "system"
+        "system",
+        "tesla"
       ],
       "missing_subpkgs": [
         "dashboard",
@@ -8068,7 +8087,6 @@
         "onboarding",
         "settings",
         "signal",
-        "tesla",
         "vehicle"
       ],
       "notes": "22 subpkgs from R1 audit. Touches many internal/api/* callers — accept R2 double-touch budget (no temp compat layer)."

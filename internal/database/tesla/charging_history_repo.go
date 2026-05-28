@@ -1,10 +1,11 @@
-package database
+package tesla
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/jackc/pgx/v5"
@@ -12,10 +13,10 @@ import (
 
 // TeslaChargingHistoryRepo provides data access for Tesla Supercharger/DC charging history.
 type TeslaChargingHistoryRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewTeslaChargingHistoryRepo(db *DB) *TeslaChargingHistoryRepo {
+func NewTeslaChargingHistoryRepo(db *database.DB) *TeslaChargingHistoryRepo {
 	return &TeslaChargingHistoryRepo{db: db}
 }
 

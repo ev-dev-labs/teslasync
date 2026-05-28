@@ -9,6 +9,7 @@ import (
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -17,14 +18,14 @@ import (
 // TeslaChargingHistoryHandler serves Tesla Supercharger/DC charging history.
 type TeslaChargingHistoryHandler struct {
 	teslaClient *tesla.Client
-	repo        *database.TeslaChargingHistoryRepo
+	repo        *tesladb.TeslaChargingHistoryRepo
 }
 
 // NewTeslaChargingHistoryHandler creates a new handler with the given Tesla client and DB.
 func NewTeslaChargingHistoryHandler(tc *tesla.Client, db *database.DB) *TeslaChargingHistoryHandler {
 	return &TeslaChargingHistoryHandler{
 		teslaClient: tc,
-		repo:        database.NewTeslaChargingHistoryRepo(db),
+		repo:        tesladb.NewTeslaChargingHistoryRepo(db),
 	}
 }
 

@@ -1,20 +1,21 @@
-package database
+package tesla
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
 // TeslaVehicleDriverRepo provides data access for vehicle drivers and share invitations.
 type TeslaVehicleDriverRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewTeslaVehicleDriverRepo creates a new repository.
-func NewTeslaVehicleDriverRepo(db *DB) *TeslaVehicleDriverRepo {
+func NewTeslaVehicleDriverRepo(db *database.DB) *TeslaVehicleDriverRepo {
 	return &TeslaVehicleDriverRepo{db: db}
 }
 

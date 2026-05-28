@@ -10,20 +10,21 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // TeslaUserOrderHandler serves Tesla user order data.
 type TeslaUserOrderHandler struct {
 	teslaClient *tesla.Client
-	orderRepo   *database.TeslaUserOrderRepo
+	orderRepo   *tesladb.TeslaUserOrderRepo
 }
 
 // NewTeslaUserOrderHandler creates a new handler.
 func NewTeslaUserOrderHandler(tc *tesla.Client, db *database.DB) *TeslaUserOrderHandler {
 	return &TeslaUserOrderHandler{
 		teslaClient: tc,
-		orderRepo:   database.NewTeslaUserOrderRepo(db),
+		orderRepo:   tesladb.NewTeslaUserOrderRepo(db),
 	}
 }
 

@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -16,7 +17,7 @@ import (
 // mobile_enabled, option codes, and vehicle specs.
 type VehicleInfoHandler struct {
 	teslaClient *tesla.Client
-	configRepo  *database.TeslaUserConfigRepo
+	configRepo  *tesladb.TeslaUserConfigRepo
 	vehicleRepo *database.VehicleRepo
 }
 
@@ -24,7 +25,7 @@ type VehicleInfoHandler struct {
 func NewVehicleInfoHandler(tc *tesla.Client, db *database.DB) *VehicleInfoHandler {
 	return &VehicleInfoHandler{
 		teslaClient: tc,
-		configRepo:  database.NewTeslaUserConfigRepo(db),
+		configRepo:  tesladb.NewTeslaUserConfigRepo(db),
 		vehicleRepo: database.NewVehicleRepo(db),
 	}
 }

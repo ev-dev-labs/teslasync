@@ -14,13 +14,14 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // VehicleAccessHandler serves vehicle driver and share invitation data.
 type VehicleAccessHandler struct {
 	teslaClient *tesla.Client
-	repo        *database.TeslaVehicleDriverRepo
+	repo        *tesladb.TeslaVehicleDriverRepo
 	vehicleRepo *database.VehicleRepo
 }
 
@@ -28,7 +29,7 @@ type VehicleAccessHandler struct {
 func NewVehicleAccessHandler(tc *tesla.Client, db *database.DB) *VehicleAccessHandler {
 	return &VehicleAccessHandler{
 		teslaClient: tc,
-		repo:        database.NewTeslaVehicleDriverRepo(db),
+		repo:        tesladb.NewTeslaVehicleDriverRepo(db),
 		vehicleRepo: database.NewVehicleRepo(db),
 	}
 }

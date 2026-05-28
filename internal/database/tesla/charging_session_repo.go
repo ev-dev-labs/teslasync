@@ -1,10 +1,11 @@
-package database
+package tesla
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/jackc/pgx/v5"
@@ -12,10 +13,10 @@ import (
 
 // TeslaChargingSessionRepo provides data access for Tesla fleet charging sessions (business accounts).
 type TeslaChargingSessionRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewTeslaChargingSessionRepo(db *DB) *TeslaChargingSessionRepo {
+func NewTeslaChargingSessionRepo(db *database.DB) *TeslaChargingSessionRepo {
 	return &TeslaChargingSessionRepo{db: db}
 }
 

@@ -1,10 +1,11 @@
-package database
+package tesla
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/jackc/pgx/v5"
@@ -12,11 +13,11 @@ import (
 
 // TeslaUserProfileRepo provides data access for the Tesla account owner's profile.
 type TeslaUserProfileRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewTeslaUserProfileRepo creates a new repository.
-func NewTeslaUserProfileRepo(db *DB) *TeslaUserProfileRepo {
+func NewTeslaUserProfileRepo(db *database.DB) *TeslaUserProfileRepo {
 	return &TeslaUserProfileRepo{db: db}
 }
 

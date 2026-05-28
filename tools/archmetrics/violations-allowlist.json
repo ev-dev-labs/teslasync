@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 38,
+      "max_files": 32,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.18 carved 20 subpkgs. R4.19 batch 42-38 (system — software_update_repo + system_state_repo + api_call_log_repo + guard_repo, 4 src + 3 tests). Skipped maintenance.go (*DB receivers) + query_budget_tracer.go (DB constructor plumbing) — kept as parent infra. Caller sweep 21 files (api 12 + apilog + app x2 + automation-worker + notification-worker + ai/tools/summary/software_update + tesla_pipeline/software_update_observer). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4), trip (3), energy (4), ai (2), export (4), worker (2), telemetry (2), system (4). Planned: ~25 aggregates total."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.19 carved 21 subpkgs. R4.20 batch 38-32 (tesla — tesla_charging_history + tesla_charging_session + tesla_user_config + tesla_user_order + tesla_user_profile + tesla_vehicle_driver, 6 src). Tesla-account / Fleet-API mirror tables (distinct from SI canonical signal aggregates in charging/drive/energy/signal). Caller sweep 7 files (api tesla_* handlers + vehicle_access + vehicle_info). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4), trip (3), energy (4), ai (2), export (4), worker (2), telemetry (2), system (4), tesla (6). Planned: ~25 aggregates total."
     },
     {
       "path": "internal/ai/tools",

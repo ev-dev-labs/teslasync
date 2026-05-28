@@ -9,6 +9,7 @@ import (
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -16,14 +17,14 @@ import (
 // TeslaChargingSessionHandler serves Tesla fleet charging sessions (business accounts only).
 type TeslaChargingSessionHandler struct {
 	teslaClient *tesla.Client
-	repo        *database.TeslaChargingSessionRepo
+	repo        *tesladb.TeslaChargingSessionRepo
 }
 
 // NewTeslaChargingSessionHandler creates a new handler with the given Tesla client and DB.
 func NewTeslaChargingSessionHandler(tc *tesla.Client, db *database.DB) *TeslaChargingSessionHandler {
 	return &TeslaChargingSessionHandler{
 		teslaClient: tc,
-		repo:        database.NewTeslaChargingSessionRepo(db),
+		repo:        tesladb.NewTeslaChargingSessionRepo(db),
 	}
 }
 

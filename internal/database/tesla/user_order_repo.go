@@ -1,20 +1,21 @@
-package database
+package tesla
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
 // TeslaUserOrderRepo provides data access for Tesla user order records.
 type TeslaUserOrderRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewTeslaUserOrderRepo creates a new repository.
-func NewTeslaUserOrderRepo(db *DB) *TeslaUserOrderRepo {
+func NewTeslaUserOrderRepo(db *database.DB) *TeslaUserOrderRepo {
 	return &TeslaUserOrderRepo{db: db}
 }
 

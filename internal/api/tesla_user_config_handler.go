@@ -7,20 +7,21 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // TeslaUserConfigHandler serves Tesla user-level configuration data (feature flags, region).
 type TeslaUserConfigHandler struct {
 	teslaClient *tesla.Client
-	configRepo  *database.TeslaUserConfigRepo
+	configRepo  *tesladb.TeslaUserConfigRepo
 }
 
 // NewTeslaUserConfigHandler creates a new handler.
 func NewTeslaUserConfigHandler(tc *tesla.Client, db *database.DB) *TeslaUserConfigHandler {
 	return &TeslaUserConfigHandler{
 		teslaClient: tc,
-		configRepo:  database.NewTeslaUserConfigRepo(db),
+		configRepo:  tesladb.NewTeslaUserConfigRepo(db),
 	}
 }
 
