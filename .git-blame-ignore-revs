@@ -176,3 +176,5 @@ c4ab69e3aedd63b475c410f3039f78a6e17ecf82
 7495654f58f5edf25206877cb39d0c4df5a7168e
 # R4.23 position cluster carve (positions table + from_map helper, 9 callers)
 1578a6f31bfd709812a19999f6dd2e59fc1a9c85
+# R4.24 geofence cluster carve (2 src + assertion relocation Lesson 30/34)
+88171082c9adc2d6db30e69008e80b8918fc852f
