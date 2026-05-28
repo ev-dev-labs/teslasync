@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -39,11 +39,11 @@ func (s *stubTripSource) GetTripByID(_ context.Context, tripID int64) (*models.T
 
 // stubTripDetailSource is a deterministic fake for TripDetailSource.
 type stubTripDetailSource struct {
-	byID map[int64]*database.TripDetail
+	byID map[int64]*tripdb.TripDetail
 	err  error
 }
 
-func (s *stubTripDetailSource) GetTrip(_ context.Context, tripID int64) (*database.TripDetail, error) {
+func (s *stubTripDetailSource) GetTrip(_ context.Context, tripID int64) (*tripdb.TripDetail, error) {
 	if s.err != nil {
 		return nil, s.err
 	}
@@ -86,7 +86,7 @@ func newTestTripFixtures() (*stubTripSource, *stubTripDetailSource) {
 		StartedAt: startedAt,
 		EndedAt:   &endedAt,
 	}
-	detail := &database.TripDetail{
+	detail := &tripdb.TripDetail{
 		ID:           101,
 		VehicleID:    7,
 		Name:         &currentName,
@@ -98,13 +98,13 @@ func newTestTripFixtures() (*stubTripSource, *stubTripDetailSource) {
 		DriveCount:   2,
 		ChargeCount:  1,
 		TotalCost:    14.32,
-		Drives: []database.TripDriveSummary{
+		Drives: []tripdb.TripDriveSummary{
 			{ID: 5001, StartedAt: startedAt, StartPlace: &startPlace, EndPlace: ptrString("Olympia, WA")},
 			{ID: 5002, StartedAt: startedAt.Add(2 * time.Hour), StartPlace: ptrString("Olympia, WA"), EndPlace: &endPlace},
 		},
 	}
 	return &stubTripSource{byID: map[int64]*models.Trip{101: trip}},
-		&stubTripDetailSource{byID: map[int64]*database.TripDetail{101: detail}}
+		&stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: detail}}
 }
 
 func ptrString(s string) *string { return &s }
@@ -221,7 +221,7 @@ func TestDraftTripName_ValidatorFailureSurfacesAsInvalid(t *testing.T) {
 func TestDraftTripName_MissingTripIsError(t *testing.T) {
 	t.Parallel()
 	trips := &stubTripSource{byID: map[int64]*models.Trip{}}
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{}}
 	validator := &stubTripNameValidator{}
 	tool := &draftTripName{trips: trips, details: details, validator: validator}
 

@@ -23,6 +23,7 @@ import (
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
@@ -987,7 +988,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// canonical handler still builds its own repo inline at the
 	// mount point; the duplicate is intentional and short-lived —
 	// a future cleanup slice can consolidate.
-	aiAutoTripNamingDetailRepo := database.NewTripsDetailRepo(db.Pool)
+	aiAutoTripNamingDetailRepo := tripdb.NewTripsDetailRepo(db.Pool)
 	// auto-trip-naming tools (Phase-50 / D4, slice 0024).
 	// Adds `draft_trip_name` + `validate_trip_name` to the shared
 	// tool registry. Both tools are PROPOSE-only — they construct
@@ -2519,7 +2520,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// GEN1 slice). Registers the propose-only draft_image_prompt
 	// + render_share_card_preview tools on the shared registry so
 	// the dispatcher can resolve them when the strategy runs;
-	// production wiring reuses the existing *database.TripsDetailRepo
+	// production wiring reuses the existing *tripdb.TripsDetailRepo
 	// (same read path the GET /api/v1/trips/{id} baseline handler
 	// uses). Registered AFTER nl-dashboard-composer above so the
 	// registry's Names list grows deterministically.
@@ -3361,7 +3362,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// charging_sessions overlap to surface drive_count /
 		// charge_count / total_cost. Same admin-style rate limit
 		// (60/min) as the rest of the Phase-43a admin reads.
-		tripsDetailHandler := NewTripsDetailHandler(database.NewTripsDetailRepo(db.Pool))
+		tripsDetailHandler := NewTripsDetailHandler(tripdb.NewTripsDetailRepo(db.Pool))
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/trips/{trip_id}", tripsDetailHandler.Get)
 
 		// Phase-43a / Prompt 0003: /vehicle-states/{timeline,summary} restored

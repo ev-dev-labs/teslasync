@@ -14,18 +14,18 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 )
 
-// newShareCardTestDetail builds a deterministic *database.TripDetail
+// newShareCardTestDetail builds a deterministic *tripdb.TripDetail
 // for id=101 used by the happy-path tests.
-func newShareCardTestDetail() *database.TripDetail {
+func newShareCardTestDetail() *tripdb.TripDetail {
 	startedAt := time.Date(2024, 10, 12, 8, 30, 0, 0, time.UTC)
 	endedAt := time.Date(2024, 10, 13, 18, 45, 0, 0, time.UTC)
 	startPlace := "Seattle, WA"
 	endPlace := "Portland, OR"
 	currentName := "Weekend Road Trip"
-	return &database.TripDetail{
+	return &tripdb.TripDetail{
 		ID:           101,
 		VehicleID:    7,
 		Name:         &currentName,
@@ -37,7 +37,7 @@ func newShareCardTestDetail() *database.TripDetail {
 		DriveCount:   2,
 		ChargeCount:  1,
 		TotalCost:    14.32,
-		Drives: []database.TripDriveSummary{
+		Drives: []tripdb.TripDriveSummary{
 			{ID: 5001, StartedAt: startedAt, StartPlace: &startPlace, EndPlace: ptrString("Olympia, WA")},
 			{ID: 5002, StartedAt: startedAt.Add(2 * time.Hour), StartPlace: ptrString("Olympia, WA"), EndPlace: &endPlace},
 		},
@@ -49,7 +49,7 @@ func newShareCardTestDetail() *database.TripDetail {
 // trip's actual route context.
 func TestDraftImagePrompt_HappyPath(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{101: newShareCardTestDetail()}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: newShareCardTestDetail()}}
 	tool := &draftImagePrompt{details: details}
 
 	in, err := tool.Validate(json.RawMessage(`{"trip_id": 101, "style_hint": "vintage"}`))
@@ -101,7 +101,7 @@ func TestDraftImagePrompt_HappyPath(t *testing.T) {
 // style_hint argument.
 func TestDraftImagePrompt_NoStyleHint(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{101: newShareCardTestDetail()}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: newShareCardTestDetail()}}
 	tool := &draftImagePrompt{details: details}
 
 	in, err := tool.Validate(json.RawMessage(`{"trip_id": 101}`))
@@ -122,7 +122,7 @@ func TestDraftImagePrompt_NoStyleHint(t *testing.T) {
 // as a returned error (the LLM retries).
 func TestDraftImagePrompt_TripNotFound(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{}}
 	tool := &draftImagePrompt{details: details}
 
 	in, _ := tool.Validate(json.RawMessage(`{"trip_id": 9999}`))
@@ -135,7 +135,7 @@ func TestDraftImagePrompt_TripNotFound(t *testing.T) {
 // validator rejects malformed input before any Execute work runs.
 func TestDraftImagePrompt_RejectsInvalidInput(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{101: newShareCardTestDetail()}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: newShareCardTestDetail()}}
 	tool := &draftImagePrompt{details: details}
 
 	cases := []struct {
@@ -161,7 +161,7 @@ func TestDraftImagePrompt_RejectsInvalidInput(t *testing.T) {
 // yields status="ok" with a populated Preview envelope.
 func TestRenderShareCardPreview_HappyPath(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{101: newShareCardTestDetail()}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: newShareCardTestDetail()}}
 	tool := &renderShareCardPreview{details: details}
 
 	in, err := tool.Validate(json.RawMessage(`{
@@ -201,7 +201,7 @@ func TestRenderShareCardPreview_HappyPath(t *testing.T) {
 // strips them upstream).
 func TestRenderShareCardPreview_RejectsLatLong(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{101: newShareCardTestDetail()}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: newShareCardTestDetail()}}
 	tool := &renderShareCardPreview{details: details}
 
 	in, err := tool.Validate(json.RawMessage(`{
@@ -229,7 +229,7 @@ func TestRenderShareCardPreview_RejectsLatLong(t *testing.T) {
 // refuses obvious street-address-shaped strings.
 func TestRenderShareCardPreview_RejectsStreetAddr(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{101: newShareCardTestDetail()}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: newShareCardTestDetail()}}
 	tool := &renderShareCardPreview{details: details}
 
 	in, err := tool.Validate(json.RawMessage(`{
@@ -258,7 +258,7 @@ func TestRenderShareCardPreview_RejectsStreetAddr(t *testing.T) {
 // title or image prompt.
 func TestRenderShareCardPreview_RejectsControlChars(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{101: newShareCardTestDetail()}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: newShareCardTestDetail()}}
 	tool := &renderShareCardPreview{details: details}
 
 	in, err := tool.Validate(json.RawMessage(`{
@@ -281,7 +281,7 @@ func TestRenderShareCardPreview_RejectsControlChars(t *testing.T) {
 // cap).
 func TestRenderShareCardPreview_RejectsLongTitle(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{101: newShareCardTestDetail()}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: newShareCardTestDetail()}}
 	tool := &renderShareCardPreview{details: details}
 
 	tooLong := strings.Repeat("X", 101)
@@ -306,7 +306,7 @@ func TestRenderShareCardPreview_RejectsLongTitle(t *testing.T) {
 // surfaces as a returned error.
 func TestRenderShareCardPreview_TripNotFound(t *testing.T) {
 	t.Parallel()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{}}
 	tool := &renderShareCardPreview{details: details}
 
 	in, _ := tool.Validate(json.RawMessage(`{
@@ -325,7 +325,7 @@ func TestRenderShareCardPreview_TripNotFound(t *testing.T) {
 func TestRegisterTripPostcardShareCardImageGenerationTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
 	r := tools.NewRegistry()
-	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{}}
+	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{}}
 	RegisterTripPostcardShareCardImageGenerationTools(r, TripPostcardShareCardImageGenerationSources{Details: details})
 
 	for _, name := range []string{"draft_image_prompt", "render_share_card_preview"} {

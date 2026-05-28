@@ -1,10 +1,11 @@
-package database
+package trip
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
@@ -17,10 +18,10 @@ import (
 // through the locations URL stay anchored to a stable underlying drive.
 
 type VisitedLocationRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewVisitedLocationRepo(db *DB) *VisitedLocationRepo {
+func NewVisitedLocationRepo(db *database.DB) *VisitedLocationRepo {
 	return &VisitedLocationRepo{db: db}
 }
 

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T15:57:58Z",
+  "generated_at": "2026-05-28T16:02:04Z",
   "go_version": "go1.26.1",
-  "commit_sha": "1115e4978f61577eeeaa582de5e735d95b96153b",
+  "commit_sha": "0d06074ad18aeff8135d084b171a688d88e0e36d",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2418,7 +2418,7 @@
         "internal/ai/provider",
         "internal/ai/rag",
         "internal/ai/tools",
-        "internal/database",
+        "internal/database/trip",
         "internal/models"
       ],
       "files": [
@@ -2506,7 +2506,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126614,
+      "loc": 126618,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2641,6 +2641,7 @@
         "internal/database/notification",
         "internal/database/observability",
         "internal/database/sharing",
+        "internal/database/trip",
         "internal/database/user",
         "internal/dataquality",
         "internal/enums",
@@ -3167,7 +3168,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1840,
+      "loc": 1841,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3183,6 +3184,7 @@
         "internal/database/gdpr",
         "internal/database/notification",
         "internal/database/observability",
+        "internal/database/trip",
         "internal/dataquality",
         "internal/events",
         "internal/flags",
@@ -3695,9 +3697,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 59,
-      "test_files": 21,
-      "loc": 14554,
+      "go_files": 56,
+      "test_files": 20,
+      "loc": 13804,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3709,7 +3711,6 @@
         "internal/models/alert",
         "internal/models/energy",
         "internal/models/export",
-        "internal/models/geo",
         "internal/models/system",
         "internal/models/telemetry",
         "internal/models/tesla",
@@ -3782,9 +3783,6 @@
         "tesla_user_order_repo.go",
         "tesla_user_profile_repo.go",
         "tesla_vehicle_driver_repo.go",
-        "trip_repo.go",
-        "trips_detail_repo.go",
-        "trips_detail_repo_test.go",
         "vehicle_photo_repo.go",
         "vehicle_repo.go",
         "vehicle_settings_repo.go",
@@ -3792,7 +3790,6 @@
         "vehicle_settings_resolver.go",
         "vehicle_states_repo.go",
         "vehicle_states_repo_test.go",
-        "visited_location_repo.go",
         "worker_status_queue_repo.go",
         "worker_status_repo.go",
         "write_buffer.go",
@@ -4064,6 +4061,26 @@
       ]
     },
     {
+      "path": "internal/database/trip",
+      "go_files": 4,
+      "test_files": 1,
+      "loc": 775,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/models",
+        "internal/models/geo"
+      ],
+      "files": [
+        "detail_repo.go",
+        "detail_repo_test.go",
+        "doc.go",
+        "repo.go",
+        "visited_location_repo.go"
+      ]
+    },
+    {
       "path": "internal/database/user",
       "go_files": 3,
       "test_files": 1,
@@ -4275,13 +4292,14 @@
       "path": "internal/export",
       "go_files": 9,
       "test_files": 3,
-      "loc": 3062,
+      "loc": 3063,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
         "internal/database/charging",
         "internal/database/drive",
+        "internal/database/trip",
         "internal/models/charging",
         "internal/models/drive",
         "internal/models/export",
@@ -5421,13 +5439,14 @@
       "path": "internal/service",
       "go_files": 4,
       "test_files": 1,
-      "loc": 1380,
+      "loc": 1381,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
         "internal/database/charging",
         "internal/database/drive",
+        "internal/database/trip",
         "internal/enums",
         "internal/events",
         "internal/models/charging",
@@ -7086,14 +7105,11 @@
       "tesla_user_order_repo.go",
       "tesla_user_profile_repo.go",
       "tesla_vehicle_driver_repo.go",
-      "trip_repo.go",
-      "trips_detail_repo.go",
       "vehicle_photo_repo.go",
       "vehicle_repo.go",
       "vehicle_settings_repo.go",
       "vehicle_settings_resolver.go",
       "vehicle_states_repo.go",
-      "visited_location_repo.go",
       "worker_status_queue_repo.go",
       "worker_status_repo.go",
       "write_buffer.go"
@@ -7185,6 +7201,12 @@
     "internal/database/sharing": [
       "doc.go",
       "token_repo.go"
+    ],
+    "internal/database/trip": [
+      "detail_repo.go",
+      "doc.go",
+      "repo.go",
+      "visited_location_repo.go"
     ],
     "internal/database/user": [
       "doc.go",
@@ -7898,8 +7920,8 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 59,
-      "flat_parent_test_files": 21,
+      "flat_parent_go_files": 56,
+      "flat_parent_test_files": 20,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",

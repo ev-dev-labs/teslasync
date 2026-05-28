@@ -41,7 +41,7 @@
 //   - "The LLM never writes raw SQL and never bypasses existing
 //     handlers." → both tools delegate read of the trip detail to a
 //     narrow TripDetailSource interface (production:
-//     *database.TripsDetailRepo, the same read path the GET
+//     *tripdb.TripsDetailRepo, the same read path the GET
 //     /api/v1/trips/{id} baseline handler already uses).
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
 //     tool exists in this slice; the evidence is a pure read.
@@ -63,7 +63,7 @@ import (
 	"unicode"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 )
 
 // Hard caps on the typed share-card draft fields. The values mirror
@@ -224,11 +224,11 @@ func validateShareCardImageString(label, value string, maxLen int) error {
 	return nil
 }
 
-// buildShareCardImageEvidence converts the *database.TripDetail
+// buildShareCardImageEvidence converts the *tripdb.TripDetail
 // header into the read-only evidence envelope returned by both
 // tools. ISO-8601 UTC strings so the LLM's follow-up prose can
 // quote the dates back to the user without ambiguity.
-func buildShareCardImageEvidence(detail *database.TripDetail) shareCardImageEvidence {
+func buildShareCardImageEvidence(detail *tripdb.TripDetail) shareCardImageEvidence {
 	ev := shareCardImageEvidence{
 		DriveCount: detail.DriveCount,
 		DistanceM:  detail.DistanceM,
@@ -257,7 +257,7 @@ func buildShareCardImageEvidence(detail *database.TripDetail) shareCardImageEvid
 // title + image prompt from the evidence + style hint. Used by
 // draft_image_prompt to give the LLM a concrete starting point and
 // to provide a usable proposal in the no-tool-output failure mode.
-func buildShareCardImageSuggestion(trip *database.TripDetail, styleHint string) *shareCardImageSuggestion {
+func buildShareCardImageSuggestion(trip *tripdb.TripDetail, styleHint string) *shareCardImageSuggestion {
 	style := strings.TrimSpace(styleHint)
 	if style == "" {
 		style = "illustrated postcard"
@@ -477,7 +477,7 @@ func (t *renderShareCardPreview) Execute(ctx context.Context, in any) (any, erro
 // needs. Mirrors [AutoTripNamingSources].
 //
 // Production wiring (router.go) instantiates the production adapter
-// (*database.TripsDetailRepo); tests substitute deterministic fakes.
+// (*tripdb.TripsDetailRepo); tests substitute deterministic fakes.
 type TripPostcardShareCardImageGenerationSources struct {
 	Details TripDetailSource
 }

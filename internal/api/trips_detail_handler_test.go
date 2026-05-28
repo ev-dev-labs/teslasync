@@ -12,7 +12,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 )
 
 // fakeTripsDetailRepo records the trip id passed to GetTrip and
@@ -22,11 +22,11 @@ import (
 type fakeTripsDetailRepo struct {
 	gotID  int64
 	called int
-	out    *database.TripDetail
+	out    *tripdb.TripDetail
 	err    error
 }
 
-func (f *fakeTripsDetailRepo) GetTrip(_ context.Context, id int64) (*database.TripDetail, error) {
+func (f *fakeTripsDetailRepo) GetTrip(_ context.Context, id int64) (*tripdb.TripDetail, error) {
 	f.called++
 	f.gotID = id
 	return f.out, f.err
@@ -58,7 +58,7 @@ func TestTripsDetailHandler_Get_HappyPath(t *testing.T) {
 	driveEnd := time.Date(2026, 3, 1, 10, 0, 0, 0, time.UTC)
 
 	fake := &fakeTripsDetailRepo{
-		out: &database.TripDetail{
+		out: &tripdb.TripDetail{
 			ID:           42,
 			VehicleID:    7,
 			Name:         ptrString("Vacation 2026"),
@@ -70,7 +70,7 @@ func TestTripsDetailHandler_Get_HappyPath(t *testing.T) {
 			DriveCount:   12,
 			ChargeCount:  5,
 			TotalCost:    75.50,
-			Drives: []database.TripDriveSummary{
+			Drives: []tripdb.TripDriveSummary{
 				{
 					ID:           101,
 					StartedAt:    driveStart,
@@ -180,7 +180,7 @@ func TestTripsDetailHandler_Get_InProgressTrip_NullEndFields(t *testing.T) {
 	start := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
 
 	fake := &fakeTripsDetailRepo{
-		out: &database.TripDetail{
+		out: &tripdb.TripDetail{
 			ID:        7,
 			VehicleID: 1,
 			StartedAt: start,
@@ -214,7 +214,7 @@ func TestTripsDetailHandler_Get_ZeroDrivesEmptyArray(t *testing.T) {
 	t.Parallel()
 
 	fake := &fakeTripsDetailRepo{
-		out: &database.TripDetail{
+		out: &tripdb.TripDetail{
 			ID:        9,
 			VehicleID: 2,
 			StartedAt: time.Now().UTC(),
@@ -239,7 +239,7 @@ func TestTripsDetailHandler_Get_ZeroDrivesEmptyArray(t *testing.T) {
 func TestTripsDetailHandler_Get_NotFound(t *testing.T) {
 	t.Parallel()
 
-	fake := &fakeTripsDetailRepo{err: database.ErrTripNotFound}
+	fake := &fakeTripsDetailRepo{err: tripdb.ErrTripNotFound}
 	h := NewTripsDetailHandler(fake)
 
 	rec := httptest.NewRecorder()
@@ -322,11 +322,11 @@ func TestNewTripsDetailHandler_NilRepoPanics(t *testing.T) {
 func TestBuildTripDetailResponse_PreservesNullDriveFields(t *testing.T) {
 	t.Parallel()
 
-	td := &database.TripDetail{
+	td := &tripdb.TripDetail{
 		ID:        1,
 		VehicleID: 1,
 		StartedAt: time.Now().UTC(),
-		Drives: []database.TripDriveSummary{
+		Drives: []tripdb.TripDriveSummary{
 			{ID: 1, StartedAt: time.Now().UTC()}, // all optional fields nil
 		},
 	}

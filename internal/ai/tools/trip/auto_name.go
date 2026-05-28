@@ -38,7 +38,7 @@
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle. The
 //     evidence envelope is built from a narrow TripDetailSource
-//     interface (production: *database.TripsDetailRepo) — the same
+//     interface (production: *tripdb.TripsDetailRepo) — the same
 //     read path the GET /api/v1/trips/{id} baseline handler already
 //     uses.
 //
@@ -62,12 +62,12 @@ import (
 	"unicode"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TripSource is the narrow trip-header interface the auto-trip-naming
-// tools need. In production it is satisfied by *database.TripRepo
+// tools need. In production it is satisfied by *tripdb.TripRepo
 // wrapped through an adapter that exposes GetByID; tests substitute
 // deterministic fakes.
 //
@@ -84,7 +84,7 @@ type TripSource interface {
 
 // TripDetailSource is the narrow trip-detail interface the
 // auto-trip-naming tools need. In production it is satisfied by
-// *database.TripsDetailRepo (the same read path the GET
+// *tripdb.TripsDetailRepo (the same read path the GET
 // /api/v1/trips/{id} baseline handler already uses); tests
 // substitute deterministic fakes.
 type TripDetailSource interface {
@@ -92,7 +92,7 @@ type TripDetailSource interface {
 	// constituent drives) for tripID. The detail carries the
 	// per-drive StartPlace / EndPlace pair that grounds the
 	// LLM's name proposal.
-	GetTrip(ctx context.Context, tripID int64) (*database.TripDetail, error)
+	GetTrip(ctx context.Context, tripID int64) (*tripdb.TripDetail, error)
 }
 
 // TripNameValidator is the narrow validation interface the
@@ -222,11 +222,11 @@ func validateTripNameShape(proposed string) error {
 	return nil
 }
 
-// buildTripNameEvidence converts the *database.TripDetail header
+// buildTripNameEvidence converts the *tripdb.TripDetail header
 // into the read-only evidence envelope returned by both tools.
 // Format choice: ISO-8601 UTC strings so the LLM's follow-up prose
 // can quote the dates back to the user without ambiguity.
-func buildTripNameEvidence(detail *database.TripDetail) tripNameEvidence {
+func buildTripNameEvidence(detail *tripdb.TripDetail) tripNameEvidence {
 	ev := tripNameEvidence{
 		DriveCount: detail.DriveCount,
 		DistanceM:  detail.DistanceM,
@@ -444,8 +444,8 @@ func (t *validateTripNameTool) Execute(ctx context.Context, in any) (any, error)
 // [AlertBuilderSources] / [RouteEfficiencySuggestionsSources].
 //
 // Production wiring (router.go) instantiates the three production
-// adapters (*database.TripRepo via TripGetByIDAdapter,
-// *database.TripsDetailRepo, *api.AITripNameValidator); tests
+// adapters (*tripdb.TripRepo via TripGetByIDAdapter,
+// *tripdb.TripsDetailRepo, *api.AITripNameValidator); tests
 // substitute deterministic fakes.
 type AutoTripNamingSources struct {
 	Trips     TripSource

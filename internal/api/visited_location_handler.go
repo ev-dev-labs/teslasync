@@ -7,15 +7,16 @@ import (
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/rs/zerolog/log"
 )
 
 type VisitedLocationHandler struct {
-	repo *database.VisitedLocationRepo
+	repo *tripdb.VisitedLocationRepo
 }
 
 func NewVisitedLocationHandler(db *database.DB) *VisitedLocationHandler {
-	return &VisitedLocationHandler{repo: database.NewVisitedLocationRepo(db)}
+	return &VisitedLocationHandler{repo: tripdb.NewVisitedLocationRepo(db)}
 }
 
 func (h *VisitedLocationHandler) List(w http.ResponseWriter, r *http.Request) {

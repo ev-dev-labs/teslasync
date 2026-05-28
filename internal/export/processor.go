@@ -14,6 +14,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 )
 
 // Processor generates export files from database data.
@@ -21,7 +22,7 @@ type Processor struct {
 	vehicleRepo  *database.VehicleRepo
 	driveRepo    *drivedb.DriveRepo
 	chargingRepo *chargingdb.ChargingRepo
-	tripRepo     *database.TripRepo
+	tripRepo     *tripdb.TripRepo
 	db           *database.DB
 }
 
@@ -31,7 +32,7 @@ func NewProcessor(db *database.DB) *Processor {
 		vehicleRepo:  database.NewVehicleRepo(db),
 		driveRepo:    drivedb.NewDriveRepo(db),
 		chargingRepo: chargingdb.NewChargingRepo(db),
-		tripRepo:     database.NewTripRepo(db),
+		tripRepo:     tripdb.NewTripRepo(db),
 		db:           db,
 	}
 }
@@ -273,7 +274,7 @@ func (p *Processor) processTrips(ctx context.Context, req *JobRequest) (*Process
 		endTime = *req.EndDate
 	}
 
-	var summaries []*database.TripSummary
+	var summaries []*tripdb.TripSummary
 	if req.VehicleID != nil {
 		summaries, err = p.tripRepo.GetByVehicle(ctx, *req.VehicleID, 10000, 0, startTime, endTime)
 	} else {

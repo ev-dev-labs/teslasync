@@ -1,4 +1,4 @@
-package database
+package trip
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/jackc/pgx/v5"
 )
@@ -20,10 +21,10 @@ import (
 // recompute SI-canonical totals from constituent drives.
 
 type TripRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewTripRepo(db *DB) *TripRepo {
+func NewTripRepo(db *database.DB) *TripRepo {
 	return &TripRepo{db: db}
 }
 

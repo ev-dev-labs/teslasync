@@ -14,6 +14,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -75,7 +76,7 @@ type apiDriveState struct {
 type SessionService struct {
 	driveRepo  *drivedb.DriveRepo
 	chargeRepo *chargingdb.ChargingRepo
-	tripRepo   *database.TripRepo
+	tripRepo   *tripdb.TripRepo
 	eventBus   *events.Bus
 
 	mu               sync.Mutex
@@ -89,7 +90,7 @@ func NewSessionService(db *database.DB, eventBus *events.Bus) *SessionService {
 	return &SessionService{
 		driveRepo:        drivedb.NewDriveRepo(db),
 		chargeRepo:       chargingdb.NewChargingRepo(db),
-		tripRepo:         database.NewTripRepo(db),
+		tripRepo:         tripdb.NewTripRepo(db),
 		eventBus:         eventBus,
 		activeDrives:     make(map[int64]int64),
 		activeDriveState: make(map[int64]*apiDriveState),

@@ -8,14 +8,15 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 )
 
 type TripHandler struct {
-	repo *database.TripRepo
+	repo *tripdb.TripRepo
 }
 
 func NewTripHandler(db *database.DB) *TripHandler {
-	return &TripHandler{repo: database.NewTripRepo(db)}
+	return &TripHandler{repo: tripdb.NewTripRepo(db)}
 }
 
 type tripSummaryResponse struct {
@@ -38,7 +39,7 @@ type tripSummaryResponse struct {
 	CreatedAt      time.Time  `json:"created_at"`
 }
 
-func tripSummaryDTO(in *database.TripSummary) tripSummaryResponse {
+func tripSummaryDTO(in *tripdb.TripSummary) tripSummaryResponse {
 	var name *string
 	if in.Trip.Name != "" {
 		v := in.Trip.Name
@@ -65,7 +66,7 @@ func tripSummaryDTO(in *database.TripSummary) tripSummaryResponse {
 	}
 }
 
-func tripSummaryDTOs(in []*database.TripSummary) []tripSummaryResponse {
+func tripSummaryDTOs(in []*tripdb.TripSummary) []tripSummaryResponse {
 	out := make([]tripSummaryResponse, 0, len(in))
 	for _, t := range in {
 		out = append(out, tripSummaryDTO(t))
@@ -91,7 +92,7 @@ func (h *TripHandler) List(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if trips == nil {
-			trips = make([]*database.TripSummary, 0)
+			trips = make([]*tripdb.TripSummary, 0)
 		}
 		writeJSON(w, http.StatusOK, tripSummaryDTOs(trips))
 		return
@@ -104,7 +105,7 @@ func (h *TripHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if trips == nil {
-		trips = make([]*database.TripSummary, 0)
+		trips = make([]*tripdb.TripSummary, 0)
 	}
 	writeJSON(w, http.StatusOK, tripSummaryDTOs(trips))
 }

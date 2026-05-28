@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T15:57:59Z, Go go1.26.1, commit 1115e4978f61577eeeaa582de5e735d95b96153b_
+_Generated 2026-05-28T16:02:05Z, Go go1.26.1, commit 0d06074ad18aeff8135d084b171a688d88e0e36d_
 
 ## Summary
 
-- Packages: 275
+- Packages: 276
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374369
+- Total non-blank LOC under cmd/+internal/+tools/: 374401
 
 ## cmd/* main.go LOC
 
@@ -170,9 +170,9 @@ _Generated 2026-05-28T15:57:59Z, Go go1.26.1, commit 1115e4978f61577eeeaa582de5e
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126614 | yes | handler |
+| internal/api | 271 | 163 | 126618 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
-| internal/app | 6 | 1 | 1840 | yes | app |
+| internal/app | 6 | 1 | 1841 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
 | internal/app/auditviewersvc | 3 | 0 | 77 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
@@ -197,7 +197,7 @@ _Generated 2026-05-28T15:57:59Z, Go go1.26.1, commit 1115e4978f61577eeeaa582de5e
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 59 | 21 | 14554 | yes | platform |
+| internal/database | 56 | 20 | 13804 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes | adapter |
 | internal/database/admin | 6 | 0 | 873 | yes | adapter |
 | internal/database/alert | 4 | 4 | 1136 | yes | adapter |
@@ -211,6 +211,7 @@ _Generated 2026-05-28T15:57:59Z, Go go1.26.1, commit 1115e4978f61577eeeaa582de5e
 | internal/database/notification | 5 | 1 | 1950 | yes | adapter |
 | internal/database/observability | 7 | 0 | 1396 | yes | adapter |
 | internal/database/sharing | 2 | 0 | 127 | yes | adapter |
+| internal/database/trip | 4 | 1 | 775 | yes | adapter |
 | internal/database/user | 3 | 1 | 806 | yes | adapter |
 | internal/dataquality | 4 | 0 | 347 | yes | platform |
 | internal/domain | 2 | 1 | 114 | yes | domain |
@@ -223,7 +224,7 @@ _Generated 2026-05-28T15:57:59Z, Go go1.26.1, commit 1115e4978f61577eeeaa582de5e
 | internal/domain/vehicle | 5 | 1 | 350 | yes | domain |
 | internal/enums | 5 | 1 | 304 | yes | platform |
 | internal/events | 2 | 1 | 145 | yes | platform |
-| internal/export | 9 | 3 | 3062 | yes | platform |
+| internal/export | 9 | 3 | 3063 | yes | platform |
 | internal/export/gdpr | 2 | 0 | 254 | yes | platform |
 | internal/flags | 2 | 1 | 556 | yes | platform |
 | internal/fsm | 11 | 3 | 2507 | yes | platform |
@@ -289,7 +290,7 @@ _Generated 2026-05-28T15:57:59Z, Go go1.26.1, commit 1115e4978f61577eeeaa582de5e
 | internal/resilience | 2 | 4 | 721 | yes | platform |
 | internal/rotation | 2 | 1 | 360 | yes | platform |
 | internal/schemacheck | 2 | 1 | 234 | yes | platform |
-| internal/service | 4 | 1 | 1380 | yes | platform |
+| internal/service | 4 | 1 | 1381 | yes | platform |
 | internal/signal | 11 | 11 | 7540 | yes | platform |
 | internal/signal/signaltest | 2 | 0 | 103 | yes | platform |
 | internal/slo | 3 | 1 | 727 | yes | platform |
@@ -329,7 +330,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 59 / 21 | 22 | 9 | 13 |
+| `internal/database` | R4 | 143 | 56 / 20 | 22 | 9 | 13 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 

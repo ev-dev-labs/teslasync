@@ -64,7 +64,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -290,25 +290,25 @@ func (v *AITripNameValidator) ValidateTripName(_ *models.Trip, proposed string) 
 	return nil
 }
 
-// AITripSourceAdapter wires *database.TripRepo into the
+// AITripSourceAdapter wires *tripdb.TripRepo into the
 // trip.TripSource interface. Since TripRepo does not have a
 // GetByID method (the existing baseline reads trip header via the
 // detail repo's GetTrip), the adapter delegates to the detail repo
-// and projects the *database.TripDetail header onto a *models.Trip.
+// and projects the *tripdb.TripDetail header onto a *models.Trip.
 //
 // Kept as a thin adapter rather than adding a method to TripRepo
 // because Phase-48's SI canonical guidance steers new reads through
 // existing repos; mirroring the detail repo here keeps the AI
 // surface dependency on a single trip read path.
 type AITripSourceAdapter struct {
-	details *database.TripsDetailRepo
+	details *tripdb.TripsDetailRepo
 }
 
 // NewAITripSourceAdapter constructs the adapter. Panics on nil so a
 // wiring mistake surfaces at boot.
-func NewAITripSourceAdapter(details *database.TripsDetailRepo) *AITripSourceAdapter {
+func NewAITripSourceAdapter(details *tripdb.TripsDetailRepo) *AITripSourceAdapter {
 	if details == nil {
-		panic("api: NewAITripSourceAdapter: nil *database.TripsDetailRepo")
+		panic("api: NewAITripSourceAdapter: nil *tripdb.TripsDetailRepo")
 	}
 	return &AITripSourceAdapter{details: details}
 }
@@ -321,7 +321,7 @@ func NewAITripSourceAdapter(details *database.TripsDetailRepo) *AITripSourceAdap
 func (a *AITripSourceAdapter) GetTripByID(ctx context.Context, tripID int64) (*models.Trip, error) {
 	detail, err := a.details.GetTrip(ctx, tripID)
 	if err != nil {
-		if errors.Is(err, database.ErrTripNotFound) {
+		if errors.Is(err, tripdb.ErrTripNotFound) {
 			return nil, nil
 		}
 		return nil, err

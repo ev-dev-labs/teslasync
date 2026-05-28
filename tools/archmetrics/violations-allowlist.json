@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 59,
+      "max_files": 56,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.11 carved 13 subpkgs. R4.12 batch 63-59 (drive — drive_repo + drive_diagnostic_repo + mileage_repo + vampire_drain_repo, 4 src files). Helper promotion: drivePartialAllowed exported as DrivePartialAllowed; companion test extracted to drive/partial_allowed_test.go (external test pkg). Caller sweep 32 files across ai (8), api (20), export, service, worker. Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4). Planned: ~20 aggregates total."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.12 carved 14 subpkgs. R4.13 batch 59-56 (trip — trip_repo + trips_detail_repo + visited_location_repo, 3 src files; 1 test follows). No helper promotion needed (no buildPartialUpdate/null_helpers callers in this cluster). Caller sweep 15 files. Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4), trip (3). Planned: ~20 aggregates total."
     },
     {
       "path": "internal/ai/tools",

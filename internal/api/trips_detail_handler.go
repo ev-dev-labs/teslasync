@@ -8,15 +8,15 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 )
 
 // tripsDetailRepository is the narrow interface the handler depends
 // on. Declared at the call site so handler tests can inject an
 // in-memory fake without reaching into the database package.
-// *database.TripsDetailRepo satisfies this interface.
+// *tripdb.TripsDetailRepo satisfies this interface.
 type tripsDetailRepository interface {
-	GetTrip(ctx context.Context, tripID int64) (*database.TripDetail, error)
+	GetTrip(ctx context.Context, tripID int64) (*tripdb.TripDetail, error)
 }
 
 // TripsDetailHandler serves GET /trips/{trip_id}.
@@ -101,7 +101,7 @@ func (h *TripsDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	td, err := h.repo.GetTrip(r.Context(), tripID)
 	if err != nil {
-		if errors.Is(err, database.ErrTripNotFound) {
+		if errors.Is(err, tripdb.ErrTripNotFound) {
 			writeError(w, http.StatusNotFound, "trip not found")
 			return
 		}
@@ -116,7 +116,7 @@ func (h *TripsDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 // buildTripDetailResponse converts the repo-level TripDetail to the SI-canonical
 // wire DTO. Pulled out as a free function so handler tests can pin the response
 // shape without spinning up a full http test server.
-func buildTripDetailResponse(td *database.TripDetail) tripDetailResponse {
+func buildTripDetailResponse(td *tripdb.TripDetail) tripDetailResponse {
 	resp := tripDetailResponse{
 		ID:             td.ID,
 		VehicleID:      td.VehicleID,

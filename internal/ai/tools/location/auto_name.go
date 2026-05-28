@@ -50,7 +50,7 @@
 //   - "the LLM never writes raw SQL" → tools have no DB handle. The
 //     evidence envelope is built from a narrow LocationSource
 //     interface (production: *api.AILocationSource which composes
-//     *database.VisitedLocationRepo + a small drives-table read for
+//     *tripdb.VisitedLocationRepo + a small drives-table read for
 //     the by-ID lookup) — the same read surface the GET
 //     /api/v1/locations baseline handler already exposes.
 //
@@ -80,7 +80,7 @@ import (
 // LocationSource is the narrow visited-location read interface the
 // auto-name-unnamed-locations tools need. In production it is
 // satisfied by *api.AILocationSource which composes
-// *database.VisitedLocationRepo with a by-ID drive lookup; tests
+// *tripdb.VisitedLocationRepo with a by-ID drive lookup; tests
 // substitute deterministic fakes.
 //
 // The interface MUST stay read-only — adding a Save / Update method

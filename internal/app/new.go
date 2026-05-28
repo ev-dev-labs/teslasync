@@ -24,6 +24,7 @@ import (
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
@@ -1125,7 +1126,7 @@ func runSignalHistoryCleanupTick(ctx context.Context, writer signalHistoryCleane
 }
 
 func (a *App) initTripGenerator(ctx context.Context) {
-	tripRepo := database.NewTripRepo(a.DB)
+	tripRepo := tripdb.NewTripRepo(a.DB)
 	go func() {
 		runTripGeneratorTick(ctx, tripRepo, "backfill")
 
