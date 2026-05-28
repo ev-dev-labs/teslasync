@@ -78,3 +78,6 @@ c94f18a3e9ceeeb57065fbf9a0323f5b75683c85
 
 # refactor(R6.2): carve internal/jobs/digests subpkg
 8ae2e9bcc11604aa86aaf03ae4a413d3b4394eeb
+
+# refactor(R6.3): carve internal/jobs/indexers subpkg
+29cabf90680afb7bac57bcb630c03accf9e98b3a
