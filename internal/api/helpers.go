@@ -6,15 +6,11 @@ import (
 	"strings"
 	"time"
 
-	chimw "github.com/go-chi/chi/v5/middleware"
-
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
-
-// globalErrorTracker is set during router initialization.
-var globalErrorTracker *ErrorTracker
 
 // writeJSON is a transitional wrapper around httpx.WriteJSON kept for
 // the duration of the internal/api -> internal/api/<resource>/
@@ -52,24 +48,17 @@ func writeTeslaTokenExpired(w http.ResponseWriter) {
 	httpx.WriteTeslaTokenExpired(w)
 }
 
-// writeAppError writes a structured error response using the centralized error catalog
-// and automatically records the error in the global error tracker and Prometheus.
+// writeAppError is a transitional wrapper around apperror.Write kept
+// for the duration of the internal/api -> internal/api/<resource>/
+// subpackage migration (Phase R2). New handlers — and handlers being
+// moved into resource subpackages — MUST call apperror.Write directly.
+// Deletion of this wrapper is gated on internal/api/ reaching its
+// irreducible drained shape at end of Phase R2.
 //
-// Stays in the parent internal/api package for R2.0a because AppError,
-// APIErrors (Prometheus metric), and the ErrorTracker are all
-// parent-bound. A dedicated future carve is expected to land the
-// AppError catalog at internal/api/apierr.
+// The active *ErrorTracker is installed once in NewRouter via
+// apperror.SetTracker; nothing in this wrapper has to know about it.
 func writeAppError(w http.ResponseWriter, r *http.Request, appErr *AppError) {
-	httpx.WriteJSON(w, appErr.Status, map[string]string{
-		"error":    appErr.Message,
-		"code":     appErr.Code,
-		"category": appErr.Category,
-	})
-	APIErrors.WithLabelValues(appErr.Code, appErr.Category).Inc()
-	if globalErrorTracker != nil {
-		reqID := chimw.GetReqID(r.Context())
-		globalErrorTracker.Track(appErr.Code, appErr.Category, appErr.Message, r.URL.Path, r.Method, reqID, appErr.Status)
-	}
+	apperror.Write(w, r, appErr)
 }
 
 // pagination is a transitional wrapper around apiparams.Pagination

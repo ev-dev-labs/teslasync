@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T18:13:50Z",
+  "generated_at": "2026-05-28T18:33:21Z",
   "go_version": "go1.26.1",
-  "commit_sha": "d6421cb68364b1a34636ba8c161926b798ea275b",
+  "commit_sha": "4c51a0d74b0274a9bb8004aa72832d6269393efd",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2515,8 +2515,8 @@
     {
       "path": "internal/api",
       "go_files": 270,
-      "test_files": 161,
-      "loc": 125584,
+      "test_files": 162,
+      "loc": 125624,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2620,6 +2620,7 @@
         "internal/api",
         "internal/api/apiparams",
         "internal/api/apitest",
+        "internal/api/apperror",
         "internal/api/httpx",
         "internal/api/middleware",
         "internal/apilog",
@@ -2884,6 +2885,7 @@
         "api_test.go",
         "apikey_handler.go",
         "apikey_middleware.go",
+        "apperror_bridge_test.go",
         "audit.go",
         "audit_handler.go",
         "audit_test.go",
@@ -3195,6 +3197,25 @@
       "files": [
         "apitest.go",
         "doc.go"
+      ]
+    },
+    {
+      "path": "internal/api/apperror",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 508,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apperror",
+        "internal/api/httpx",
+        "internal/metrics"
+      ],
+      "files": [
+        "apperror.go",
+        "doc.go",
+        "write.go",
+        "write_test.go"
       ]
     },
     {
@@ -7219,6 +7240,11 @@
       "apitest.go",
       "doc.go"
     ],
+    "internal/api/apperror": [
+      "apperror.go",
+      "doc.go",
+      "write.go"
+    ],
     "internal/api/httpx": [
       "doc.go",
       "json.go",
@@ -8342,7 +8368,7 @@
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
       "flat_parent_go_files": 270,
-      "flat_parent_test_files": 161,
+      "flat_parent_test_files": 162,
       "planned_subpkgs": 59,
       "existing_subpkgs": null,
       "missing_subpkgs": [

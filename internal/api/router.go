@@ -14,6 +14,7 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -217,9 +218,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// SSE event hub for real-time updates
 	eventHub := NewEventHub()
 
-	// Error tracker for centralized error aggregation
+	// Error tracker for centralized error aggregation. apperror.Write
+	// (and the writeAppError parent wrapper) routes structured errors
+	// into this tracker via apperror.SetTracker; see internal/api/apperror.
 	errorTracker := NewErrorTracker(200)
-	globalErrorTracker = errorTracker
+	apperror.SetTracker(errorTracker)
 
 	// Global middleware
 	r.Use(chimw.RequestID)
