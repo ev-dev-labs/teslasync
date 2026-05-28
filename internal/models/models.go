@@ -68,7 +68,7 @@ package models
 
 // ClimateSnapshot moved to climate.go (regenerated for post-migration schema).
 
-// SecurityEvent moved to security.go (regenerated for post-migration schema).
+// SecurityEvent moved to internal/models/security in phase-R5.16.
 
 // ChargingTelemetry moved to charging_telemetry.go (regenerated for post-migration schema).
 

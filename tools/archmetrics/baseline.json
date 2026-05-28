@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:16:50Z",
+  "generated_at": "2026-05-28T04:22:20Z",
   "go_version": "go1.26.1",
-  "commit_sha": "13d0d72fa7ffb04afa80837fc925b78eb8601bb7",
+  "commit_sha": "8b4734fb5723f2f5aff3e2ad5b37da032c8f18f4",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -3977,9 +3977,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 28,
+      "go_files": 27,
       "test_files": 1,
-      "loc": 1648,
+      "loc": 1607,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4008,7 +4008,6 @@
         "push_subscription.go",
         "quiet_hours.go",
         "saved_view.go",
-        "security.go",
         "signal.go",
         "system.go",
         "telemetry.go",
@@ -4161,6 +4160,19 @@
         "doc.go",
         "log_group.go",
         "notification.go"
+      ]
+    },
+    {
+      "path": "internal/models/security",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 41,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "security.go"
       ]
     },
     {
@@ -6453,7 +6465,6 @@
       "push_subscription.go",
       "quiet_hours.go",
       "saved_view.go",
-      "security.go",
       "signal.go",
       "system.go",
       "telemetry.go",
@@ -6503,6 +6514,10 @@
       "doc.go",
       "log_group.go",
       "notification.go"
+    ],
+    "internal/models/security": [
+      "doc.go",
+      "security.go"
     ],
     "internal/models/settings": [
       "doc.go",
@@ -6819,7 +6834,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 28,
+      "flat_parent_go_files": 27,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6834,13 +6849,13 @@
         "export",
         "geo",
         "notification",
+        "security",
         "settings",
         "tesla",
         "vehicle"
       ],
       "missing_subpkgs": [
         "dashboard",
-        "security",
         "signal",
         "system",
         "telemetry"

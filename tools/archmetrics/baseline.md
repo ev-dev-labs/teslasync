@@ -1,10 +1,10 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T04:16:51Z, Go go1.26.1, commit 13d0d72fa7ffb04afa80837fc925b78eb8601bb7_
+_Generated 2026-05-28T04:22:21Z, Go go1.26.1, commit 8b4734fb5723f2f5aff3e2ad5b37da032c8f18f4_
 
 ## Summary
 
-- Packages: 224
+- Packages: 225
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
 - Total non-blank LOC under cmd/+internal/+tools/: 372274
@@ -203,7 +203,7 @@ _Generated 2026-05-28T04:16:51Z, Go go1.26.1, commit 13d0d72fa7ffb04afa80837fc92
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 28 | 1 | 1648 | yes | domain |
+| internal/models | 27 | 1 | 1607 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/models/auth | 2 | 1 | 66 | yes | domain |
 | internal/models/automation | 2 | 0 | 55 | yes | domain |
@@ -215,6 +215,7 @@ _Generated 2026-05-28T04:16:51Z, Go go1.26.1, commit 13d0d72fa7ffb04afa80837fc92
 | internal/models/export | 2 | 0 | 59 | yes | domain |
 | internal/models/geo | 2 | 0 | 44 | yes | domain |
 | internal/models/notification | 3 | 0 | 129 | yes | domain |
+| internal/models/security | 2 | 0 | 41 | yes | domain |
 | internal/models/settings | 2 | 0 | 177 | yes | domain |
 | internal/models/tesla | 3 | 0 | 268 | yes | domain |
 | internal/models/vehicle | 2 | 1 | 273 | yes | domain |
@@ -275,7 +276,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 28 / 1 | 19 | 14 | 5 |
+| `internal/models` | R5 | 36 | 27 / 1 | 19 | 15 | 4 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -298,13 +299,13 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/export`
 - `internal/models/geo`
 - `internal/models/notification`
+- `internal/models/security`
 - `internal/models/settings`
 - `internal/models/tesla`
 - `internal/models/vehicle`
 
 **Planned but not yet on disk:**
 - `internal/models/dashboard`
-- `internal/models/security`
 - `internal/models/signal`
 - `internal/models/system`
 - `internal/models/telemetry`
