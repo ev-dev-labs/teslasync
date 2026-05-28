@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:08:31Z",
+  "generated_at": "2026-05-28T07:15:01Z",
   "go_version": "go1.26.1",
-  "commit_sha": "8597dec026ffcc54c1843ffedf6eadc4cb8c079b",
+  "commit_sha": "3325ba1d4c37d76171a329acc6de9c8fc8a33b16",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2229,6 +2229,27 @@
         "log_trace_test.go",
         "software_update.go",
         "software_update_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/toolstest",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 176,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/rag",
+        "internal/models/alert",
+        "internal/models/charging",
+        "internal/models/drive",
+        "internal/models/notification",
+        "internal/models/system",
+        "internal/models/vehicle"
+      ],
+      "files": [
+        "doc.go",
+        "fixtures.go"
       ]
     },
     {
@@ -6097,6 +6118,10 @@
       "incident_timeline.go",
       "log_trace.go",
       "software_update.go"
+    ],
+    "internal/ai/tools/toolstest": [
+      "doc.go",
+      "fixtures.go"
     ],
     "internal/ai/tools/trip": [
       "auto_name.go",
