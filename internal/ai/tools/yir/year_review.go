@@ -9,8 +9,8 @@
 // Design constraints (from the slice prompt):
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL written.**"
-//     We compose the existing DriveSource.GetByVehicle and
-//     ChargeSource.GetByVehicle methods (already used by the 12
+//     We compose the existing tools.DriveSource.GetByVehicle and
+//     tools.ChargeSource.GetByVehicle methods (already used by the 12
 //     builtins) and aggregate in-process — no new SQL columns,
 //     joins, or migrations.
 //
@@ -44,7 +44,7 @@
 // useUnits() / useFormatting() at the display boundary converts to
 // the user's preferred units before rendering.
 
-package tools
+package yir
 
 import (
 	"context"
@@ -52,6 +52,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
@@ -83,8 +84,8 @@ type queryYearInReviewContextInput struct {
 // Other strategies that want the same aggregate must add the name
 // to their own Tools() list.
 type queryYearInReviewContext struct {
-	drives  DriveSource
-	charges ChargeSource
+	drives  tools.DriveSource
+	charges tools.ChargeSource
 }
 
 // Name implements [Tool].
@@ -100,7 +101,7 @@ func (t *queryYearInReviewContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryYearInReviewContext) InputSchema() json.RawMessage {
-	return CachedSchema(queryYearInReviewContextInput{})
+	return tools.CachedSchema(queryYearInReviewContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -117,7 +118,7 @@ func (t *queryYearInReviewContext) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryYearInReviewContext) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryYearInReviewContextInput](raw)
+	return tools.ValidateStruct[queryYearInReviewContextInput](raw)
 }
 
 // Execute implements [Tool]. Two repo round-trips (drives + charges)
@@ -128,10 +129,10 @@ func (t *queryYearInReviewContext) Validate(raw json.RawMessage) (any, error) {
 func (t *queryYearInReviewContext) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(queryYearInReviewContextInput)
 	if t.drives == nil {
-		return nil, fmt.Errorf("query_year_in_review_context: no DriveSource wired")
+		return nil, fmt.Errorf("query_year_in_review_context: no tools.DriveSource wired")
 	}
 	if t.charges == nil {
-		return nil, fmt.Errorf("query_year_in_review_context: no ChargeSource wired")
+		return nil, fmt.Errorf("query_year_in_review_context: no tools.ChargeSource wired")
 	}
 
 	yearStart, yearEnd := calendarYearWindowUTC(input.Year)
@@ -165,7 +166,7 @@ func (t *queryYearInReviewContext) Execute(ctx context.Context, in any) (any, er
 // aggregateYearInReview is a pure helper: given the slices the
 // repos returned, compute the deterministic aggregate envelope.
 // Extracted so the unit test can call it directly without spinning
-// up a fake DriveSource / ChargeSource and so the body of Execute
+// up a fake tools.DriveSource / tools.ChargeSource and so the body of Execute
 // stays focused on IO + error wrapping.
 //
 // Mirrors aggregateWeeklyDigest's shape so a future shared aggregator
@@ -236,8 +237,8 @@ func calendarYearWindowUTC(year int) (start, end time.Time) {
 // [RegisterDigestTools]; tests substitute deterministic fakes
 // per-source.
 type YearReviewSources struct {
-	Drives  DriveSource
-	Charges ChargeSource
+	Drives  tools.DriveSource
+	Charges tools.ChargeSource
 }
 
 // RegisterYearReviewTools installs the yir-narration slice's tools
@@ -248,6 +249,6 @@ type YearReviewSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterYearReviewTools(r *Registry, s YearReviewSources) {
+func RegisterYearReviewTools(r *tools.Registry, s YearReviewSources) {
 	r.Register(&queryYearInReviewContext{drives: s.Drives, charges: s.Charges})
 }

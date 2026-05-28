@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:24:51Z",
+  "generated_at": "2026-05-28T07:28:21Z",
   "go_version": "go1.26.1",
-  "commit_sha": "bf1b762401f96b81daf25f9243135a03edfd6d2c",
+  "commit_sha": "58bb7853be5d5328f48afb869c7edc070691d9c0",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 18,
-      "test_files": 16,
-      "loc": 12469,
+      "go_files": 17,
+      "test_files": 15,
+      "loc": 11916,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1929,9 +1929,7 @@
         "tool.go",
         "trip_planner_llm_agent.go",
         "trip_planner_llm_agent_test.go",
-        "validate.go",
-        "year_review.go",
-        "year_review_test.go"
+        "validate.go"
       ]
     },
     {
@@ -2326,6 +2324,25 @@
       ]
     },
     {
+      "path": "internal/ai/tools/yir",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 568,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest",
+        "internal/models/charging",
+        "internal/models/drive"
+      ],
+      "files": [
+        "doc.go",
+        "year_review.go",
+        "year_review_test.go"
+      ]
+    },
+    {
       "path": "internal/alertmsg",
       "go_files": 3,
       "test_files": 1,
@@ -2347,7 +2364,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126543,
+      "loc": 126544,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2438,6 +2455,7 @@
         "internal/ai/tools/summary",
         "internal/ai/tools/trip",
         "internal/ai/tools/voice",
+        "internal/ai/tools/yir",
         "internal/alertmsg",
         "internal/api",
         "internal/apilog",
@@ -6069,8 +6087,7 @@
       "speed_profile.go",
       "tool.go",
       "trip_planner_llm_agent.go",
-      "validate.go",
-      "year_review.go"
+      "validate.go"
     ],
     "internal/ai/tools/alert": [
       "builder.go",
@@ -6173,6 +6190,10 @@
     "internal/ai/tools/voice": [
       "doc.go",
       "voice_mode.go"
+    ],
+    "internal/ai/tools/yir": [
+      "doc.go",
+      "year_review.go"
     ],
     "internal/alertmsg": [
       "doc.go",
@@ -7391,8 +7412,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 18,
-      "flat_parent_test_files": 16,
+      "flat_parent_go_files": 17,
+      "flat_parent_test_files": 15,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

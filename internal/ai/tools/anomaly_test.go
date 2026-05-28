@@ -77,10 +77,6 @@ func TestRegisterAnomalyTools_DoesNotShadowBuiltins(t *testing.T) {
 		Geofences:     &fakeFences{},
 		Efficiency:    &fakeDrives{},
 	})
-	RegisterYearReviewTools(r, YearReviewSources{
-		Drives:  &fakeDrives{},
-		Charges: &fakeCharges{},
-	})
 	RegisterAnomalyTools(r, AnomalySources{Anomaly: &fakeAnomalySource{}})
 
 	for _, name := range BuiltinNames {
@@ -89,7 +85,6 @@ func TestRegisterAnomalyTools_DoesNotShadowBuiltins(t *testing.T) {
 		}
 	}
 	for _, name := range []string{
-		"query_year_in_review_context",
 		"query_anomaly_context",
 	} {
 		if _, ok := r.Get(name); !ok {

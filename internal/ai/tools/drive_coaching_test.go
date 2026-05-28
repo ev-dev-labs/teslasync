@@ -62,10 +62,6 @@ func TestRegisterDriveCoachingTools_DoesNotShadowBuiltins(t *testing.T) {
 		Geofences:     &fakeFences{},
 		Efficiency:    &fakeDrives{},
 	})
-	RegisterYearReviewTools(r, YearReviewSources{
-		Drives:  &fakeDrives{},
-		Charges: &fakeCharges{},
-	})
 	RegisterAnomalyTools(r, AnomalySources{Anomaly: &fakeAnomalySource{}})
 	RegisterDriveCoachingTools(r, DriveCoachingSources{Drives: &fakeDrives{}})
 
@@ -75,7 +71,6 @@ func TestRegisterDriveCoachingTools_DoesNotShadowBuiltins(t *testing.T) {
 		}
 	}
 	for _, name := range []string{
-		"query_year_in_review_context",
 		"query_anomaly_context",
 		"query_drive_telemetry_summary",
 	} {

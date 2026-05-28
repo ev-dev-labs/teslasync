@@ -143,6 +143,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/yir"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
@@ -573,7 +574,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// for the yir-narration strategy. Same ordering rule: the
 	// builtins + digest tools above must register first so the
 	// pin tests continue to see the canonical sets unchanged.
-	tools.RegisterYearReviewTools(aiToolRegistry, tools.YearReviewSources{
+	yir.RegisterYearReviewTools(aiToolRegistry, yir.YearReviewSources{
 		Drives:  database.NewDriveRepo(db),
 		Charges: database.NewChargingRepo(db),
 	})

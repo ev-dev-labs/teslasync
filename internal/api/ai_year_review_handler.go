@@ -81,7 +81,7 @@ type AIYearReviewHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_year_in_review_context (registered by
-//	tools.RegisterYearReviewTools in router.go).
+//	yir.RegisterYearReviewTools in router.go).
 //
 // strat:      the yir-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.

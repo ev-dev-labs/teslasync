@@ -1,11 +1,11 @@
 // Phase-50 / 0013 — U3 Year-in-review narration.
 //
 // year_review_test.go covers the new query_year_in_review_context
-// tool + the RegisterYearReviewTools wiring. The fakes (fakeDrives,
-// fakeCharges) live in builtins_test.go; this file is in the same
+// tool + the RegisterYearReviewTools wiring. The fakes (toolstest.FakeDrives,
+// toolstest.FakeCharges) live in builtins_test.go; this file is in the same
 // package so it reuses them directly.
 
-package tools
+package yir
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
@@ -23,10 +25,10 @@ import (
 // digest.RegisterDigestTools test pattern.
 func TestRegisterYearReviewTools_RegistersTool(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterYearReviewTools(r, YearReviewSources{
-		Drives:  &fakeDrives{},
-		Charges: &fakeCharges{},
+		Drives:  &toolstest.FakeDrives{},
+		Charges: &toolstest.FakeCharges{},
 	})
 	if _, ok := r.Get("query_year_in_review_context"); !ok {
 		t.Fatal("RegisterYearReviewTools did not register query_year_in_review_context")
@@ -41,22 +43,22 @@ func TestRegisterYearReviewTools_RegistersTool(t *testing.T) {
 // against accidentally renaming a builtin to a YIR-tool name).
 func TestRegisterYearReviewTools_DoesNotShadowBuiltins(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{},
-		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{},
-		Charges:       &fakeCharges{},
-		AlertRules:    &fakeRules{},
-		Notifications: &fakeNotif{},
-		Geofences:     &fakeFences{},
-		Efficiency:    &fakeDrives{},
+	r := tools.NewRegistry()
+	tools.Register12Builtins(r, tools.Sources{
+		Vehicles:      &toolstest.FakeVehicles{},
+		VehicleState:  &toolstest.FakeState{},
+		Drives:        &toolstest.FakeDrives{},
+		Charges:       &toolstest.FakeCharges{},
+		AlertRules:    &toolstest.FakeRules{},
+		Notifications: &toolstest.FakeNotif{},
+		Geofences:     &toolstest.FakeFences{},
+		Efficiency:    &toolstest.FakeDrives{},
 	})
 	RegisterYearReviewTools(r, YearReviewSources{
-		Drives:  &fakeDrives{},
-		Charges: &fakeCharges{},
+		Drives:  &toolstest.FakeDrives{},
+		Charges: &toolstest.FakeCharges{},
 	})
-	for _, name := range BuiltinNames {
+	for _, name := range tools.BuiltinNames {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("builtin %q lost after RegisterYearReviewTools", name)
 		}
@@ -72,7 +74,7 @@ func TestRegisterYearReviewTools_DoesNotShadowBuiltins(t *testing.T) {
 // here.
 func TestQueryYearInReviewContext_NameDescriptionMutates(t *testing.T) {
 	t.Parallel()
-	tool := &queryYearInReviewContext{drives: &fakeDrives{}, charges: &fakeCharges{}}
+	tool := &queryYearInReviewContext{drives: &toolstest.FakeDrives{}, charges: &toolstest.FakeCharges{}}
 	if got := tool.Name(); got != "query_year_in_review_context" {
 		t.Errorf("Name() = %q, want %q", got, "query_year_in_review_context")
 	}
@@ -93,7 +95,7 @@ func TestQueryYearInReviewContext_NameDescriptionMutates(t *testing.T) {
 // catch a typed-input error — that's the validator's job.
 func TestQueryYearInReviewContext_ValidateRejectsBadInput(t *testing.T) {
 	t.Parallel()
-	tool := &queryYearInReviewContext{drives: &fakeDrives{}, charges: &fakeCharges{}}
+	tool := &queryYearInReviewContext{drives: &toolstest.FakeDrives{}, charges: &toolstest.FakeCharges{}}
 
 	cases := []struct {
 		name string
@@ -119,7 +121,7 @@ func TestQueryYearInReviewContext_ValidateRejectsBadInput(t *testing.T) {
 // happy-path input shape decodes for the supported year range.
 func TestQueryYearInReviewContext_ValidateAcceptsCanonical(t *testing.T) {
 	t.Parallel()
-	tool := &queryYearInReviewContext{drives: &fakeDrives{}, charges: &fakeCharges{}}
+	tool := &queryYearInReviewContext{drives: &toolstest.FakeDrives{}, charges: &toolstest.FakeCharges{}}
 
 	cases := []string{
 		`{"vehicle_id": 1, "year": 2010}`,
@@ -170,8 +172,8 @@ func TestQueryYearInReviewContext_ExecuteAggregates(t *testing.T) {
 		nil, // tolerated
 	}
 	tool := &queryYearInReviewContext{
-		drives:  &fakeDrives{rows: drives},
-		charges: &fakeCharges{rows: charges},
+		drives:  &toolstest.FakeDrives{Rows: drives},
+		charges: &toolstest.FakeCharges{Rows: charges},
 	}
 
 	in := queryYearInReviewContextInput{VehicleID: 1, Year: 2025}
@@ -236,8 +238,8 @@ func TestQueryYearInReviewContext_ExecuteAggregates(t *testing.T) {
 func TestQueryYearInReviewContext_ExecuteEmptyYear(t *testing.T) {
 	t.Parallel()
 	tool := &queryYearInReviewContext{
-		drives:  &fakeDrives{rows: nil},
-		charges: &fakeCharges{rows: nil},
+		drives:  &toolstest.FakeDrives{Rows: nil},
+		charges: &toolstest.FakeCharges{Rows: nil},
 	}
 	out, err := tool.Execute(context.Background(), queryYearInReviewContextInput{VehicleID: 1, Year: 2024})
 	if err != nil {
@@ -268,14 +270,14 @@ func TestQueryYearInReviewContext_ExecuteEmptyYear(t *testing.T) {
 func TestQueryYearInReviewContext_ExecuteRequiresSources(t *testing.T) {
 	t.Parallel()
 	t.Run("nil drives", func(t *testing.T) {
-		tool := &queryYearInReviewContext{drives: nil, charges: &fakeCharges{}}
+		tool := &queryYearInReviewContext{drives: nil, charges: &toolstest.FakeCharges{}}
 		_, err := tool.Execute(context.Background(), queryYearInReviewContextInput{VehicleID: 1, Year: 2025})
 		if err == nil {
 			t.Fatal("Execute err = nil, want DriveSource error")
 		}
 	})
 	t.Run("nil charges", func(t *testing.T) {
-		tool := &queryYearInReviewContext{drives: &fakeDrives{}, charges: nil}
+		tool := &queryYearInReviewContext{drives: &toolstest.FakeDrives{}, charges: nil}
 		_, err := tool.Execute(context.Background(), queryYearInReviewContextInput{VehicleID: 1, Year: 2025})
 		if err == nil {
 			t.Fatal("Execute err = nil, want ChargeSource error")

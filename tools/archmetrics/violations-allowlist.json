@@ -28,9 +28,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "max_files": 18,
+      "max_files": 17,
       "owner": "Phase R6 (in progress)",
-      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/); 52 after R6.7 (alert/); 49 after R6.8 (forecast/); 46 after R6.9 (predict/); 43 after R6.10 (nl/); 40 after R6.11 (schedule/); 36 after R6.12 (summary/); 33 after R6.13 (nlq/); 31 after R6.14 (trip/); 28 after R6.15 (diagnostic/); 25 after R6.16 (lifetime/); 23 after R6.17 (maintenance/); 22 after R6.18 (charge/); 21 after R6.19 (voice/); 20 after R6.20 (export/); R6.7.5 added toolstest/ subpackage of exported fake fixtures; 19 after R6.21 (paint/ — FIRST toolstest consumer); 18 after R6.22 (digest/ — second consumer, hit cycle on parent cross-tool tests, resolved by removing cross-tool registration noise per ADR-011 §3 bounded context contract). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites). Detailed cluster notes: see commit messages R6.4-R6.22."
+      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/); 52 after R6.7 (alert/); 49 after R6.8 (forecast/); 46 after R6.9 (predict/); 43 after R6.10 (nl/); 40 after R6.11 (schedule/); 36 after R6.12 (summary/); 33 after R6.13 (nlq/); 31 after R6.14 (trip/); 28 after R6.15 (diagnostic/); 25 after R6.16 (lifetime/); 23 after R6.17 (maintenance/); 22 after R6.18 (charge/); 21 after R6.19 (voice/); 20 after R6.20 (export/); R6.7.5 added toolstest/ subpackage of exported fake fixtures; 19 after R6.21 (paint/ — FIRST toolstest consumer); 18 after R6.22 (digest/ — second consumer, Lesson 10 cycle on parent cross-tool tests resolved); 17 after R6.23 (yir/ year-in-review, third consumer, Lesson 10 reapplied to 4 parent tests). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites). Detailed cluster notes: see commit messages R6.4-R6.23."
     },
     {
       "path": "internal/jobs",
