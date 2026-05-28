@@ -4,7 +4,7 @@
 // function over input + VehicleSource so the tests stay hermetic
 // (no api or database package, no DB).
 
-package tools
+package paint
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
@@ -39,7 +41,7 @@ func newPaintPreviewTestVehicle() *vehiclemodel.Vehicle {
 // the vehicle's actual model / trim / current color.
 func TestDraftPaintPreviewPrompt_HappyPath(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &toolstest.FakeVehicles{One: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, err := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Midnight Blue", "style_hint": "studio"}`))
@@ -92,7 +94,7 @@ func TestDraftPaintPreviewPrompt_HappyPath(t *testing.T) {
 // policy failing for any reason.
 func TestDraftPaintPreviewPrompt_OmitsDisplayName(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &toolstest.FakeVehicles{One: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Arctic Silver"}`))
@@ -116,7 +118,7 @@ func TestDraftPaintPreviewPrompt_OmitsDisplayName(t *testing.T) {
 // style_hint argument.
 func TestDraftPaintPreviewPrompt_NoStyleHint(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &toolstest.FakeVehicles{One: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Solid Black"}`))
@@ -135,7 +137,7 @@ func TestDraftPaintPreviewPrompt_NoStyleHint(t *testing.T) {
 // the correct vehicle_id) rather than a silent envelope.
 func TestDraftPaintPreviewPrompt_VehicleNotFound(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{}}
+	vehicles := &toolstest.FakeVehicles{One: map[int64]*vehiclemodel.Vehicle{}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 999, "proposed_color": "Red"}`))
@@ -152,7 +154,7 @@ func TestDraftPaintPreviewPrompt_VehicleNotFound(t *testing.T) {
 // is propagated to the dispatcher (not silently swallowed).
 func TestDraftPaintPreviewPrompt_SourceError(t *testing.T) {
 	t.Parallel()
-	src := &fakeVehicles{err: errors.New("db down")}
+	src := &toolstest.FakeVehicles{Err: errors.New("db down")}
 	tool := &draftPaintPreviewPrompt{vehicles: src}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Red"}`))
@@ -166,7 +168,7 @@ func TestDraftPaintPreviewPrompt_SourceError(t *testing.T) {
 // validator refuses control characters in the proposed color.
 func TestDraftPaintPreviewPrompt_RejectsControlChars(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &toolstest.FakeVehicles{One: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Red\u0007Blue"}`))
@@ -189,7 +191,7 @@ func TestDraftPaintPreviewPrompt_RejectsControlChars(t *testing.T) {
 // color field).
 func TestDraftPaintPreviewPrompt_RejectsLatLong(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &toolstest.FakeVehicles{One: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "37.7749, -122.4194 Blue"}`))
@@ -211,7 +213,7 @@ func TestDraftPaintPreviewPrompt_RejectsLatLong(t *testing.T) {
 // patterns in the style hint.
 func TestDraftPaintPreviewPrompt_RejectsStreetAddress(t *testing.T) {
 	t.Parallel()
-	vehicles := &fakeVehicles{one: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
+	vehicles := &toolstest.FakeVehicles{One: map[int64]*vehiclemodel.Vehicle{7: newPaintPreviewTestVehicle()}}
 	tool := &draftPaintPreviewPrompt{vehicles: vehicles}
 
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 7, "proposed_color": "Red", "style_hint": "123 Main St"}`))
@@ -233,7 +235,7 @@ func TestDraftPaintPreviewPrompt_RejectsStreetAddress(t *testing.T) {
 // tool.
 func TestDraftPaintPreviewPrompt_NeverMutates(t *testing.T) {
 	t.Parallel()
-	tool := &draftPaintPreviewPrompt{vehicles: &fakeVehicles{}}
+	tool := &draftPaintPreviewPrompt{vehicles: &toolstest.FakeVehicles{}}
 	if tool.Mutates() {
 		t.Fatal("Mutates() = true; vehicle-paint-preview must be propose-only")
 	}
@@ -244,7 +246,7 @@ func TestDraftPaintPreviewPrompt_NeverMutates(t *testing.T) {
 // goldens.yaml, and aivet's coverage tests).
 func TestDraftPaintPreviewPrompt_Name(t *testing.T) {
 	t.Parallel()
-	tool := &draftPaintPreviewPrompt{vehicles: &fakeVehicles{}}
+	tool := &draftPaintPreviewPrompt{vehicles: &toolstest.FakeVehicles{}}
 	if got := tool.Name(); got != "draft_paint_preview_prompt" {
 		t.Fatalf("Name() = %q, want draft_paint_preview_prompt", got)
 	}
@@ -255,8 +257,8 @@ func TestDraftPaintPreviewPrompt_Name(t *testing.T) {
 // second call panics (duplicate-registration guard).
 func TestRegisterVehiclePaintPreviewTools_RegistersTool(t *testing.T) {
 	t.Parallel()
-	reg := NewRegistry()
-	vehicles := &fakeVehicles{}
+	reg := tools.NewRegistry()
+	vehicles := &toolstest.FakeVehicles{}
 
 	RegisterVehiclePaintPreviewTools(reg, VehiclePaintPreviewSources{Vehicles: vehicles})
 

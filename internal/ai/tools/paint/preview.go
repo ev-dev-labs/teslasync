@@ -23,7 +23,7 @@
 //     propose-only DTO through the same per-feature toggle.
 //   - "The LLM never writes raw SQL and never bypasses existing
 //     handlers." → the tool delegates the vehicle read to the
-//     narrow VehicleSource interface (production:
+//     narrow tools.VehicleSource interface (production:
 //     *database.VehicleRepo, the same read path the GET
 //     /api/v1/vehicles handlers already use). No new SQL.
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
@@ -42,7 +42,7 @@
 //     never the display name. Defence-in-depth: the tool simply
 //     never hands the display name over.
 
-package tools
+package paint
 
 import (
 	"context"
@@ -52,6 +52,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
@@ -124,7 +125,7 @@ type paintPreviewSuggestion struct {
 //     pattern.
 //
 // The lat/long + street-address detectors are shared with the
-// share-card validator (ReLatLong, ReStreetAddr in
+// share-card validator (tools.ReLatLong, tools.ReStreetAddr in
 // share_card_image.go) — defence-in-depth against an LLM that
 // received cleartext for any reason.
 func validatePaintPreviewString(label, value string, maxLen int) error {
@@ -147,10 +148,10 @@ func validatePaintPreviewString(label, value string, maxLen int) error {
 			return fmt.Errorf("paint preview %s must not contain control characters", label)
 		}
 	}
-	if ReLatLong.MatchString(value) {
+	if tools.ReLatLong.MatchString(value) {
 		return fmt.Errorf("paint preview %s must not contain precise lat/long coordinates", label)
 	}
-	if ReStreetAddr.MatchString(value) {
+	if tools.ReStreetAddr.MatchString(value) {
 		return fmt.Errorf("paint preview %s must not contain precise street addresses", label)
 	}
 	return nil
@@ -211,7 +212,7 @@ func buildPaintPreviewSuggestion(v *vehiclemodel.Vehicle, proposedColor, styleHi
 // no side effects beyond the read of *vehiclemodel.Vehicle used to
 // populate the evidence + seed.
 type draftPaintPreviewPrompt struct {
-	vehicles VehicleSource
+	vehicles tools.VehicleSource
 }
 
 // Name implements [Tool].
@@ -228,7 +229,7 @@ func (t *draftPaintPreviewPrompt) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftPaintPreviewPrompt) InputSchema() json.RawMessage {
-	return CachedSchema(paintPreviewDraftInput{})
+	return tools.CachedSchema(paintPreviewDraftInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -242,7 +243,7 @@ func (t *draftPaintPreviewPrompt) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *draftPaintPreviewPrompt) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[paintPreviewDraftInput](raw)
+	return tools.ValidateStruct[paintPreviewDraftInput](raw)
 }
 
 // Execute implements [Tool]. Validation failures (proposed color or
@@ -252,7 +253,7 @@ func (t *draftPaintPreviewPrompt) Validate(raw json.RawMessage) (any, error) {
 func (t *draftPaintPreviewPrompt) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(paintPreviewDraftInput)
 	if t.vehicles == nil {
-		return nil, errors.New("draft_paint_preview_prompt: no VehicleSource wired")
+		return nil, errors.New("draft_paint_preview_prompt: no tools.VehicleSource wired")
 	}
 
 	vehicle, err := t.vehicles.GetByID(ctx, input.VehicleID)
@@ -296,7 +297,7 @@ func (t *draftPaintPreviewPrompt) Execute(ctx context.Context, in any) (any, err
 // Production wiring (router.go) instantiates the production adapter
 // (*database.VehicleRepo); tests substitute deterministic fakes.
 type VehiclePaintPreviewSources struct {
-	Vehicles VehicleSource
+	Vehicles tools.VehicleSource
 }
 
 // RegisterVehiclePaintPreviewTools installs the vehicle-paint-preview
@@ -306,6 +307,6 @@ type VehiclePaintPreviewSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterVehiclePaintPreviewTools(r *Registry, s VehiclePaintPreviewSources) {
+func RegisterVehiclePaintPreviewTools(r *tools.Registry, s VehiclePaintPreviewSources) {
 	r.Register(&draftPaintPreviewPrompt{vehicles: s.Vehicles})
 }

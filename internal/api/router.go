@@ -135,6 +135,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/paint"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
@@ -2525,7 +2526,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// read path the GET /api/v1/vehicles handlers already use, so
 	// no new SQL is added). Registered AFTER trip-postcard above so
 	// the registry's Names list grows deterministically.
-	tools.RegisterVehiclePaintPreviewTools(aiToolRegistry, tools.VehiclePaintPreviewSources{
+	paint.RegisterVehiclePaintPreviewTools(aiToolRegistry, paint.VehiclePaintPreviewSources{
 		Vehicles: database.NewVehicleRepo(db),
 	})
 	// vehicle-paint-preview handler. One per process; stateless

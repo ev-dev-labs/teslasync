@@ -113,7 +113,7 @@ type AIVehiclePaintPreviewHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_paint_preview_prompt (registered by
-//	tools.RegisterVehiclePaintPreviewTools in router.go).
+//	paint.RegisterVehiclePaintPreviewTools in router.go).
 //
 // strat:      the vehicle-paint-preview Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.

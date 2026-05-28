@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:15:01Z",
+  "generated_at": "2026-05-28T07:18:09Z",
   "go_version": "go1.26.1",
-  "commit_sha": "3325ba1d4c37d76171a329acc6de9c8fc8a33b16",
+  "commit_sha": "c0df955d20c3239ee8bc173411b5b012e31e244a",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 20,
-      "test_files": 18,
-      "loc": 13553,
+      "go_files": 19,
+      "test_files": 17,
+      "loc": 13021,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1916,8 +1916,6 @@
         "fuzz_schema_test.go",
         "help.go",
         "help_test.go",
-        "paint_preview.go",
-        "paint_preview_test.go",
         "redact_regex.go",
         "registry.go",
         "registry_test.go",
@@ -2150,6 +2148,24 @@
       ]
     },
     {
+      "path": "internal/ai/tools/paint",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 558,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest",
+        "internal/models/vehicle"
+      ],
+      "files": [
+        "doc.go",
+        "preview.go",
+        "preview_test.go"
+      ]
+    },
+    {
       "path": "internal/ai/tools/predict",
       "go_files": 4,
       "test_files": 3,
@@ -2314,7 +2330,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126541,
+      "loc": 126542,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2397,6 +2413,7 @@
         "internal/ai/tools/maintenance",
         "internal/ai/tools/nl",
         "internal/ai/tools/nlq",
+        "internal/ai/tools/paint",
         "internal/ai/tools/predict",
         "internal/ai/tools/safety",
         "internal/ai/tools/schedule",
@@ -6027,7 +6044,6 @@
       "doc.go",
       "drive_coaching.go",
       "help.go",
-      "paint_preview.go",
       "redact_regex.go",
       "registry.go",
       "route_efficiency.go",
@@ -6095,6 +6111,10 @@
       "doc.go",
       "grafana.go",
       "sql.go"
+    ],
+    "internal/ai/tools/paint": [
+      "doc.go",
+      "preview.go"
     ],
     "internal/ai/tools/predict": [
       "anomaly_baseline.go",
@@ -7350,8 +7370,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 20,
-      "flat_parent_test_files": 18,
+      "flat_parent_go_files": 19,
+      "flat_parent_test_files": 17,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",
