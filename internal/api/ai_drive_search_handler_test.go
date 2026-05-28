@@ -23,6 +23,9 @@ import (
 	"testing"
 	"time"
 
+	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
+	"github.com/ev-dev-labs/teslasync/internal/api/search/searchtest"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
@@ -164,14 +167,14 @@ func TestAIDriveSearchHandler_AcceptsCanonicalInput(t *testing.T) {
 // production hydrator translates a (sourceType, sourceID) tuple
 // into a SearchDrives call against the canonical Searcher and
 // returns a HydratedDriveReplay shaped from the matching
-// SearchHit. The ReplayURL is derived by appending "/replay" to
-// the SearchHit URL so the SPA path stays in one source of truth.
+// apisearch.SearchHit. The ReplayURL is derived by appending "/replay" to
+// the apisearch.SearchHit URL so the SPA path stays in one source of truth.
 func TestAIDriveSearchHydrator_DelegatesToSearcher(t *testing.T) {
 	t.Parallel()
 	when := time.Date(2025, 1, 4, 14, 32, 0, 0, time.UTC)
-	fake := newFakeSearcher()
-	fake.hits[SearchTypeDrive] = []SearchHit{{
-		Type: SearchTypeDrive, ID: 101,
+	fake := searchtest.NewFakeSearcher()
+	fake.Hits[apisearch.SearchTypeDrive] = []apisearch.SearchHit{{
+		Type: apisearch.SearchTypeDrive, ID: 101,
 		Title: "Drive #101", Subtitle: "12.4 km, 18 min",
 		URL: "/drives/101", Score: 5, When: &when,
 	}}
@@ -207,9 +210,9 @@ func TestAIDriveSearchHydrator_DelegatesToSearcher(t *testing.T) {
 // string when the underlying URL is empty.
 func TestAIDriveSearchHydrator_ReplayURLFromEmptyURLIsEmpty(t *testing.T) {
 	t.Parallel()
-	fake := newFakeSearcher()
-	fake.hits[SearchTypeDrive] = []SearchHit{{
-		Type: SearchTypeDrive, ID: 7,
+	fake := searchtest.NewFakeSearcher()
+	fake.Hits[apisearch.SearchTypeDrive] = []apisearch.SearchHit{{
+		Type: apisearch.SearchTypeDrive, ID: 7,
 		Title: "Drive #7",
 		URL:   "", // empty URL — search renderer left it blank
 	}}
@@ -230,7 +233,7 @@ func TestAIDriveSearchHydrator_ReplayURLFromEmptyURLIsEmpty(t *testing.T) {
 // retrying.
 func TestAIDriveSearchHydrator_NotFoundOnNonNumericID(t *testing.T) {
 	t.Parallel()
-	h := newAIDriveSearchHydrator(newFakeSearcher())
+	h := newAIDriveSearchHydrator(searchtest.NewFakeSearcher())
 	_, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "drive-101")
 	if err == nil {
 		t.Fatalf("HydrateOne err = nil, want ErrDriveReplayHydratorNotFound")
@@ -246,8 +249,8 @@ func TestAIDriveSearchHydrator_NotFoundOnNonNumericID(t *testing.T) {
 // HydratedDriveReplay.
 func TestAIDriveSearchHydrator_NotFoundOnNoMatch(t *testing.T) {
 	t.Parallel()
-	fake := newFakeSearcher()
-	fake.hits[SearchTypeDrive] = nil // empty result
+	fake := searchtest.NewFakeSearcher()
+	fake.Hits[apisearch.SearchTypeDrive] = nil // empty result
 	h := newAIDriveSearchHydrator(fake)
 	_, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "999")
 	if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
@@ -262,7 +265,7 @@ func TestAIDriveSearchHydrator_NotFoundOnNoMatch(t *testing.T) {
 // should add per-type cases to the hydrator.
 func TestAIDriveSearchHydrator_NotFoundOnForwardCompatSourceTypes(t *testing.T) {
 	t.Parallel()
-	h := newAIDriveSearchHydrator(newFakeSearcher())
+	h := newAIDriveSearchHydrator(searchtest.NewFakeSearcher())
 	for _, st := range []string{"route_segment", "location_summary"} {
 		_, err := h.HydrateOne(context.Background(), "alice", st, "1")
 		if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
@@ -277,7 +280,7 @@ func TestAIDriveSearchHydrator_NotFoundOnForwardCompatSourceTypes(t *testing.T) 
 // source types upstream).
 func TestAIDriveSearchHydrator_NotFoundOnUnknownSourceType(t *testing.T) {
 	t.Parallel()
-	h := newAIDriveSearchHydrator(newFakeSearcher())
+	h := newAIDriveSearchHydrator(searchtest.NewFakeSearcher())
 	_, err := h.HydrateOne(context.Background(), "alice", "unknown_corpus", "1")
 	if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
 		t.Errorf("HydrateOne err = %v, want ErrDriveReplayHydratorNotFound", err)

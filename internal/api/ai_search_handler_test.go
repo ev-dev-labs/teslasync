@@ -25,6 +25,9 @@ import (
 	"testing"
 	"time"
 
+	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
+	"github.com/ev-dev-labs/teslasync/internal/api/search/searchtest"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
@@ -74,12 +77,12 @@ func TestNLSearchAIOffFallsBackToTypedFilters(t *testing.T) {
 		// route's 404. We mock the baseline here so the test stays
 		// hermetic (no DB); the real route in router.go wires
 		// SearchHandler.Search at the same path.
-		baselineFake := newFakeSearcher()
-		baselineFake.hits[SearchTypeDrive] = []SearchHit{{
-			Type: SearchTypeDrive, ID: 1, Title: "Drive #1",
+		baselineFake := searchtest.NewFakeSearcher()
+		baselineFake.Hits[apisearch.SearchTypeDrive] = []apisearch.SearchHit{{
+			Type: apisearch.SearchTypeDrive, ID: 1, Title: "Drive #1",
 			URL: "/drives/1", Score: 1.0,
 		}}
-		baselineHandler := NewSearchHandlerWithSearcher(baselineFake)
+		baselineHandler := apisearch.NewHandlerWithSearcher(baselineFake)
 		r.Get("/search", baselineHandler.Search)
 	})
 
@@ -207,15 +210,15 @@ func TestAISearchHandler_AcceptsCanonicalInput(t *testing.T) {
 // TestAISearchHydrator_DelegatesToSearcher proves the production
 // hydrator translates a (sourceType, sourceID) tuple into a Search
 // call against the canonical Searcher and returns a HydratedResult
-// shaped from the matching SearchHit. Same code path the typed
+// shaped from the matching apisearch.SearchHit. Same code path the typed
 // /api/v1/search baseline uses, so a hydrated AI citation is
 // byte-equivalent to a typed search hit.
 func TestAISearchHydrator_DelegatesToSearcher(t *testing.T) {
 	t.Parallel()
 	when := time.Date(2025, 1, 4, 14, 32, 0, 0, time.UTC)
-	fake := newFakeSearcher()
-	fake.hits[SearchTypeDrive] = []SearchHit{{
-		Type: SearchTypeDrive, ID: 101,
+	fake := searchtest.NewFakeSearcher()
+	fake.Hits[apisearch.SearchTypeDrive] = []apisearch.SearchHit{{
+		Type: apisearch.SearchTypeDrive, ID: 101,
 		Title: "Drive #101", Subtitle: "12.4 km, 18 min",
 		URL: "/drives/101", Score: 5, When: &when,
 	}}
@@ -249,7 +252,7 @@ func TestAISearchHydrator_DelegatesToSearcher(t *testing.T) {
 // envelope so the LLM can adapt without retrying.
 func TestAISearchHydrator_NotFoundOnNonNumericID(t *testing.T) {
 	t.Parallel()
-	h := newAISearchHydrator(newFakeSearcher())
+	h := newAISearchHydrator(searchtest.NewFakeSearcher())
 	_, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "drive-101")
 	if err == nil {
 		t.Fatalf("HydrateOne err = nil, want ErrHydratorNotFound")
@@ -264,8 +267,8 @@ func TestAISearchHydrator_NotFoundOnNonNumericID(t *testing.T) {
 // than fabricating a HydratedResult.
 func TestAISearchHydrator_NotFoundOnNoMatch(t *testing.T) {
 	t.Parallel()
-	fake := newFakeSearcher()
-	fake.hits[SearchTypeDrive] = nil // empty result
+	fake := searchtest.NewFakeSearcher()
+	fake.Hits[apisearch.SearchTypeDrive] = nil // empty result
 	h := newAISearchHydrator(fake)
 	_, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "999")
 	if !errorIsNotFound(err) {
@@ -279,7 +282,7 @@ func TestAISearchHydrator_NotFoundOnNoMatch(t *testing.T) {
 // source types upstream).
 func TestAISearchHydrator_NotFoundOnUnknownSourceType(t *testing.T) {
 	t.Parallel()
-	h := newAISearchHydrator(newFakeSearcher())
+	h := newAISearchHydrator(searchtest.NewFakeSearcher())
 	_, err := h.HydrateOne(context.Background(), "alice", "unknown_corpus", "1")
 	if !errorIsNotFound(err) {
 		t.Errorf("HydrateOne err = %v, want ErrHydratorNotFound", err)

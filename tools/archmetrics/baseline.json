@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T20:00:02Z",
+  "generated_at": "2026-05-28T20:13:21Z",
   "go_version": "go1.26.1",
-  "commit_sha": "1a634e940e72c45f9958d44074953bd3fd0cfb7c",
+  "commit_sha": "2b2276d50e609f828d588b74870607c70939d36c",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 259,
-      "test_files": 157,
-      "loc": 120016,
+      "go_files": 258,
+      "test_files": 156,
+      "loc": 118914,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2626,6 +2626,8 @@
         "internal/api/geofence",
         "internal/api/httpx",
         "internal/api/middleware",
+        "internal/api/search",
+        "internal/api/search/searchtest",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
         "internal/api/vehicleconfig",
@@ -3065,8 +3067,6 @@
         "saved_views_handler_test.go",
         "scheduled_exports_handler.go",
         "scheduled_exports_handler_test.go",
-        "search_handler.go",
-        "search_handler_test.go",
         "security_handler.go",
         "security_handler_test.go",
         "security_validation_test.go",
@@ -3307,6 +3307,38 @@
         "observability_extra_test.go",
         "prometheus.go",
         "security.go"
+      ]
+    },
+    {
+      "path": "internal/api/search",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1157,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/search/searchtest",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 132,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/api/search"
+      ],
+      "files": [
+        "doc.go",
+        "fake.go"
       ]
     },
     {
@@ -7348,7 +7380,6 @@
       "safety_handler.go",
       "saved_views_handler.go",
       "scheduled_exports_handler.go",
-      "search_handler.go",
       "security_handler.go",
       "session_handler.go",
       "settings_export_handler.go",
@@ -7449,6 +7480,14 @@
       "observability.go",
       "prometheus.go",
       "security.go"
+    ],
+    "internal/api/search": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/search/searchtest": [
+      "doc.go",
+      "fake.go"
     ],
     "internal/api/vehicle": [
       "doc.go",
@@ -8589,10 +8628,11 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 259,
-      "flat_parent_test_files": 157,
+      "flat_parent_go_files": 258,
+      "flat_parent_test_files": 156,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
+        "search",
         "vehicle"
       ],
       "missing_subpkgs": [
@@ -8616,7 +8656,6 @@
         "signal",
         "dataquality",
         "fsm",
-        "search",
         "diagnostic",
         "cost",
         "vehiclesys",

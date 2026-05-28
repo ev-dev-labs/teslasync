@@ -18,6 +18,7 @@ import (
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
+	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -781,7 +782,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	tools.RegisterSearchTools(aiToolRegistry, tools.SearchSources{
 		Retriever: aiSearchRetriever,
-		Hydrator:  newAISearchHydrator(newPGSearcher(db)),
+		Hydrator:  newAISearchHydrator(apisearch.NewPGSearcher(db)),
 	})
 	aiSearchHandler := NewAISearchHandler(
 		aiRegistry,
@@ -923,7 +924,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// this slice).
 	trip.RegisterDriveSearchTools(aiToolRegistry, trip.DriveSearchSources{
 		Retriever: aiDriveSearchRetriever,
-		Hydrator:  newAIDriveSearchHydrator(newPGSearcher(db)),
+		Hydrator:  newAIDriveSearchHydrator(apisearch.NewPGSearcher(db)),
 	})
 	// Natural-language drive search and replay handler. One per
 	// process; stateless beyond constructor inputs. Must be
@@ -1785,7 +1786,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
 	onboardingHandler := NewOnboardingHandler(db, opt.Encryptor)
-	searchHandler := NewSearchHandler(db)
+	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
 	// driveHandler + chargingHandler now read live state via the

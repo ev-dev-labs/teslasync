@@ -1,4 +1,4 @@
-package api
+package search
 
 import (
 	"context"
@@ -10,10 +10,11 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
-
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // SearchHit is one entity result returned by the global /search endpoint.
@@ -63,8 +64,8 @@ var allSearchTypes = []string{
 	SearchTypeTrip,
 }
 
-// Searcher is the port that SearchHandler depends on. The production wiring
-// uses pgSearcher (backed by *database.DB); tests substitute a fake to
+// Searcher is the port that Handler depends on. The production wiring
+// uses PGSearcher (backed by *database.DB); tests substitute a fake to
 // exercise handler logic without a real Postgres pool.
 //
 // Each method takes the trimmed query string, an optional numeric ID parsed
@@ -82,23 +83,23 @@ type Searcher interface {
 	SearchTrips(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error)
 }
 
-// SearchHandler exposes the unified entity-search endpoint
+// Handler exposes the unified entity-search endpoint
 // (GET /api/v1/search). See router.go for rate limiting and mount path.
-type SearchHandler struct {
+type Handler struct {
 	s Searcher
 }
 
-// NewSearchHandler constructs a SearchHandler backed by the production
-// Postgres-backed Searcher (pgSearcher).
-func NewSearchHandler(db *database.DB) *SearchHandler {
-	return &SearchHandler{s: newPGSearcher(db)}
+// NewHandler constructs a Handler backed by the production
+// Postgres-backed Searcher (PGSearcher).
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{s: NewPGSearcher(db)}
 }
 
 // NewSearchHandlerWithSearcher is the test seam: handler tests inject a
 // stubbed Searcher to exercise the fan-out, ranking, and capping logic
 // without requiring a Postgres pool.
-func NewSearchHandlerWithSearcher(s Searcher) *SearchHandler {
-	return &SearchHandler{s: s}
+func NewHandlerWithSearcher(s Searcher) *Handler {
+	return &Handler{s: s}
 }
 
 // per-type and global limits used to bound result sets.
@@ -116,13 +117,13 @@ const (
 // shorter than minQueryRunes — the frontend treats this as an empty
 // state, not an error, so the palette can issue requests speculatively
 // without surfacing 4xx flickers in DevTools.
-func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 
 	// Empty / too-short queries: return empty hits with a 200 so the
 	// palette can poll without churning error states.
 	if utf8.RuneCountInString(q) < minQueryRunes {
-		writeJSON(w, http.StatusOK, map[string]any{"hits": []SearchHit{}, "query": q})
+		httpx.WriteJSON(w, http.StatusOK, map[string]any{"hits": []SearchHit{}, "query": q})
 		return
 	}
 
@@ -145,14 +146,14 @@ func (h *SearchHandler) Search(w http.ResponseWriter, r *http.Request) {
 		hits = hits[:maxTotalHits]
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{"hits": hits, "query": q})
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{"hits": hits, "query": q})
 }
 
 // runSubSearches fans out one goroutine per requested entity type and
 // collects partial successes. A failed sub-search is logged and skipped
 // — never propagated to the response — so a single broken table never
 // blanks out the entire palette.
-func (h *SearchHandler) runSubSearches(ctx context.Context, q string, idHint int64, limit int, types map[string]struct{}) []SearchHit {
+func (h *Handler) runSubSearches(ctx context.Context, q string, idHint int64, limit int, types map[string]struct{}) []SearchHit {
 	var (
 		wg      sync.WaitGroup
 		mu      sync.Mutex
@@ -302,21 +303,21 @@ func scoreText(title, q string, idMatch bool, ts time.Time, now time.Time) float
 	return score
 }
 
-// pgSearcher is the production Searcher implementation. Each sub-query is
+// PGSearcher is the production Searcher implementation. Each sub-query is
 // a small ILIKE scan capped per type; new tables can be added by writing
 // one method here and wiring it into runSubSearches.
-type pgSearcher struct {
+type PGSearcher struct {
 	db *database.DB
 }
 
-func newPGSearcher(db *database.DB) *pgSearcher {
-	return &pgSearcher{db: db}
+func NewPGSearcher(db *database.DB) *PGSearcher {
+	return &PGSearcher{db: db}
 }
 
 // scanQueryRows is a tiny helper that runs the supplied query and lets the
 // caller decode each pgx.Row into a SearchHit. Errors during a single row
 // scan log + skip; only outer query / iteration errors propagate.
-func (p *pgSearcher) scanQueryRows(ctx context.Context, sql string, args []any, fn func(pgx.Rows) (SearchHit, bool, error)) ([]SearchHit, error) {
+func (p *PGSearcher) scanQueryRows(ctx context.Context, sql string, args []any, fn func(pgx.Rows) (SearchHit, bool, error)) ([]SearchHit, error) {
 	rows, err := p.db.Pool.Query(ctx, sql, args...)
 	if err != nil {
 		return nil, err
@@ -344,7 +345,7 @@ func likePattern(q string) string { return "%" + q + "%" }
 // prefixPattern is used to give first-character matches a higher rank.
 func prefixPattern(q string) string { return q + "%" }
 
-func (p *pgSearcher) SearchVehicles(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+func (p *PGSearcher) SearchVehicles(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	const sql = `
 		SELECT id, display_name, COALESCE(model, ''), COALESCE(vin, ''),
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
@@ -383,7 +384,7 @@ func (p *pgSearcher) SearchVehicles(ctx context.Context, q string, idHint int64,
 	})
 }
 
-func (p *pgSearcher) SearchDrives(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+func (p *PGSearcher) SearchDrives(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	// Phase-42 (Prompt 0076): SI canonical drives schema (migration 000185).
 	// start_address/end_address → start_place/end_place. start_ts → started_at.
 	// distance_mi → distance_m / 1609.344 (display still in miles).
@@ -430,7 +431,7 @@ func (p *pgSearcher) SearchDrives(ctx context.Context, q string, idHint int64, l
 	})
 }
 
-func (p *pgSearcher) SearchCharging(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+func (p *PGSearcher) SearchCharging(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	// Phase-42 (Prompt 0076): SI canonical charging_sessions schema
 	// (migration 000184). charger_location → start_place. start_ts → started_at.
 	const sql = `
@@ -472,7 +473,7 @@ func (p *pgSearcher) SearchCharging(ctx context.Context, q string, idHint int64,
 	})
 }
 
-func (p *pgSearcher) SearchAlerts(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+func (p *PGSearcher) SearchAlerts(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	const sql = `
 		SELECT id, name, COALESCE(description, ''), signal_name, severity, created_at,
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
@@ -517,7 +518,7 @@ func (p *pgSearcher) SearchAlerts(ctx context.Context, q string, idHint int64, l
 	})
 }
 
-func (p *pgSearcher) SearchNotifications(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+func (p *PGSearcher) SearchNotifications(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	const sql = `
 		SELECT id, ts, title, body, severity,
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
@@ -554,7 +555,7 @@ func (p *pgSearcher) SearchNotifications(ctx context.Context, q string, idHint i
 	})
 }
 
-func (p *pgSearcher) SearchGeofences(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+func (p *PGSearcher) SearchGeofences(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	const sql = `
 		SELECT id, name, COALESCE(category, ''), updated_at,
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
@@ -587,7 +588,7 @@ func (p *pgSearcher) SearchGeofences(ctx context.Context, q string, idHint int64
 	})
 }
 
-func (p *pgSearcher) SearchAutomations(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+func (p *PGSearcher) SearchAutomations(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	const sql = `
 		SELECT id, name, COALESCE(description, ''), enabled, updated_at,
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
@@ -625,7 +626,7 @@ func (p *pgSearcher) SearchAutomations(ctx context.Context, q string, idHint int
 	})
 }
 
-func (p *pgSearcher) SearchLocations(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+func (p *PGSearcher) SearchLocations(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	// Phase-42 (Prompt 0076 covenant #11): the visited_locations and addresses
 	// tables are dropped without a recreate. Locations are now derived from
 	// drives by grouping on end_place. Synthetic IDs come from MIN(id) so a
@@ -680,7 +681,7 @@ func (p *pgSearcher) SearchLocations(ctx context.Context, q string, idHint int64
 	})
 }
 
-func (p *pgSearcher) SearchTrips(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
+func (p *PGSearcher) SearchTrips(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
 	// Phase-42 (Prompt 0076): trips description column was renamed to notes
 	// (migration 000185). start_ts → started_at.
 	const sql = `

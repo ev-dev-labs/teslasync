@@ -22,11 +22,11 @@ package api
 //     as an int64, the underlying SQL adds an exact-ID match bonus
 //     and ranks the matching row first. Calling SearchDrives with
 //     the source_id as both q and idHint, limit=1, returns the
-//     SearchHit for that drive in O(1) — no new SQL, no new repo.
+//     apisearch.SearchHit for that drive in O(1) — no new SQL, no new repo.
 //
 // Replay URL derivation:
 //
-//   - SearchHit.URL is the SPA detail route ("/drives/{id}"). The
+//   - apisearch.SearchHit.URL is the SPA detail route ("/drives/{id}"). The
 //     canonical replay route on the SPA side is
 //     "/drives/{id}/replay" (see web/src/router/routeRegistry.ts —
 //     TripReplayPage is mounted at "/drives/:id/replay"). We
@@ -42,10 +42,10 @@ package api
 //     back to a generic "no replay anchor for this source type"
 //     phrasing.
 //
-// Constraint: the Searcher interface does not currently scope by
+// Constraint: the apisearch.Searcher interface does not currently scope by
 // user_subject (per-install single-tenant assumption). The
 // hydrator accepts a userSubject parameter for future-compat —
-// when per-user scoping is added to the existing Searcher, the
+// when per-user scoping is added to the existing apisearch.Searcher, the
 // hydrator's signature already matches and no caller has to
 // change. Same pattern as aiSearchHydrator from slice 0017.
 
@@ -54,24 +54,26 @@ import (
 	"errors"
 	"strconv"
 
+	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
+
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 )
 
 // aiDriveSearchHydrator is the production
 // trip.DriveReplayHydrator implementation. One per process;
-// stateless beyond the searcher port. Safe for concurrent use
+// stateless beyond the apisearch.Searcher port. Safe for concurrent use
 // across requests.
 type aiDriveSearchHydrator struct {
-	s Searcher
+	s apisearch.Searcher
 }
 
 // newAIDriveSearchHydrator constructs the production hydrator. The
-// constructor panics on a nil searcher so a wiring bug surfaces at
+// constructor panics on a nil apisearch.Searcher so a wiring bug surfaces at
 // boot, not at the first AI drive-search request.
-func newAIDriveSearchHydrator(s Searcher) *aiDriveSearchHydrator {
+func newAIDriveSearchHydrator(s apisearch.Searcher) *aiDriveSearchHydrator {
 	if s == nil {
-		panic("api: newAIDriveSearchHydrator: nil Searcher")
+		panic("api: newAIDriveSearchHydrator: nil apisearch.Searcher")
 	}
 	return &aiDriveSearchHydrator{s: s}
 }

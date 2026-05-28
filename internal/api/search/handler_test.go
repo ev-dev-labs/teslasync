@@ -1,4 +1,4 @@
-package api
+package search
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// fakeSearcher lets us drive the SearchHandler without touching pgx.
+// fakeSearcher lets us drive the Handler without touching pgx.
 //
 // Each Search* method returns whatever was preloaded into the matching
 // hits/err map keyed by the lowercased query string. The empty-string key
@@ -131,7 +131,7 @@ func TestSearchHandler_ShortQueryReturnsEmptyHits(t *testing.T) {
 		t.Run(fmt.Sprintf("q=%q", q), func(t *testing.T) {
 			fake := newFakeSearcher()
 			fake.hits["vehicle"] = []SearchHit{{Type: "vehicle", ID: 1, Title: "test"}}
-			h := NewSearchHandlerWithSearcher(fake)
+			h := NewHandlerWithSearcher(fake)
 
 			rec := httptest.NewRecorder()
 			h.Search(rec, newSearchTestRequest(q, ""))
@@ -156,7 +156,7 @@ func TestSearchHandler_TypesFilterRunsOnlyRequested(t *testing.T) {
 	fake.hits["vehicle"] = []SearchHit{{Type: "vehicle", ID: 1, Title: "Model 3"}}
 	fake.hits["drive"] = []SearchHit{{Type: "drive", ID: 99, Title: "Home → Work"}}
 	fake.hits["charging"] = []SearchHit{{Type: "charging", ID: 5, Title: "Supercharger"}}
-	h := NewSearchHandlerWithSearcher(fake)
+	h := NewHandlerWithSearcher(fake)
 
 	rec := httptest.NewRecorder()
 	h.Search(rec, newSearchTestRequest("test", "vehicle,drive"))
@@ -181,7 +181,7 @@ func TestSearchHandler_TypesFilterRunsOnlyRequested(t *testing.T) {
 
 func TestSearchHandler_NoTypesFilterRunsAll(t *testing.T) {
 	fake := newFakeSearcher()
-	h := NewSearchHandlerWithSearcher(fake)
+	h := NewHandlerWithSearcher(fake)
 
 	rec := httptest.NewRecorder()
 	h.Search(rec, newSearchTestRequest("test", ""))
@@ -201,7 +201,7 @@ func TestSearchHandler_HitsSortedByScoreDesc(t *testing.T) {
 		{Type: "vehicle", ID: 2, Title: "high", Score: 0.9},
 		{Type: "vehicle", ID: 3, Title: "mid", Score: 0.5},
 	}
-	h := NewSearchHandlerWithSearcher(fake)
+	h := NewHandlerWithSearcher(fake)
 
 	rec := httptest.NewRecorder()
 	h.Search(rec, newSearchTestRequest("test", "vehicle"))
@@ -223,7 +223,7 @@ func TestSearchHandler_PartialFailureStillReturnsResults(t *testing.T) {
 	fake.errs["drive"] = errors.New("simulated db failure")
 	fake.hits["vehicle"] = []SearchHit{{Type: "vehicle", ID: 1, Title: "Model 3", Score: 0.5}}
 	fake.hits["charging"] = []SearchHit{{Type: "charging", ID: 7, Title: "SC", Score: 0.3}}
-	h := NewSearchHandlerWithSearcher(fake)
+	h := NewHandlerWithSearcher(fake)
 
 	rec := httptest.NewRecorder()
 	h.Search(rec, newSearchTestRequest("test", ""))
@@ -239,7 +239,7 @@ func TestSearchHandler_PartialFailureStillReturnsResults(t *testing.T) {
 
 func TestSearchHandler_ResponseQueryEchoed(t *testing.T) {
 	fake := newFakeSearcher()
-	h := NewSearchHandlerWithSearcher(fake)
+	h := NewHandlerWithSearcher(fake)
 
 	rec := httptest.NewRecorder()
 	h.Search(rec, newSearchTestRequest("supercharger", ""))

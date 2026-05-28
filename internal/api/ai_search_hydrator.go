@@ -22,12 +22,12 @@ package api
 //     as an int64, the underlying SQL adds an exact-ID match bonus
 //     and ranks the matching row first. Calling SearchDrives with
 //     the source_id as both q and idHint, limit=1, returns the
-//     SearchHit for that drive in O(1) — no new SQL, no new repo.
+//     apisearch.SearchHit for that drive in O(1) — no new SQL, no new repo.
 //
-// Constraint: the Searcher interface does not currently scope by
+// Constraint: the apisearch.Searcher interface does not currently scope by
 // user_subject (per-install single-tenant assumption). The hydrator
 // accepts a userSubject parameter for future-compatibility — when
-// per-user scoping is added to the existing Searcher, the hydrator's
+// per-user scoping is added to the existing apisearch.Searcher, the hydrator's
 // signature already matches and no caller has to change.
 
 import (
@@ -35,23 +35,25 @@ import (
 	"errors"
 	"strconv"
 
+	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
+
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // aiSearchHydrator is the production tools.Hydrator implementation.
-// One per process; stateless beyond the searcher port. Safe for
+// One per process; stateless beyond the apisearch.Searcher port. Safe for
 // concurrent use across requests.
 type aiSearchHydrator struct {
-	s Searcher
+	s apisearch.Searcher
 }
 
 // newAISearchHydrator constructs the production hydrator. The
-// constructor panics on a nil searcher so a wiring bug surfaces at
+// constructor panics on a nil apisearch.Searcher so a wiring bug surfaces at
 // boot, not at the first AI search request.
-func newAISearchHydrator(s Searcher) *aiSearchHydrator {
+func newAISearchHydrator(s apisearch.Searcher) *aiSearchHydrator {
 	if s == nil {
-		panic("api: newAISearchHydrator: nil Searcher")
+		panic("api: newAISearchHydrator: nil apisearch.Searcher")
 	}
 	return &aiSearchHydrator{s: s}
 }
@@ -76,8 +78,8 @@ func (h *aiSearchHydrator) HydrateOne(ctx context.Context, _userSubject, sourceT
 	}
 
 	var (
-		hits  []SearchHit
-		fetch func(context.Context, string, int64, int) ([]SearchHit, error)
+		hits  []apisearch.SearchHit
+		fetch func(context.Context, string, int64, int) ([]apisearch.SearchHit, error)
 	)
 	switch sourceType {
 	case rag.SourceDriveSummary:
@@ -112,7 +114,7 @@ func (h *aiSearchHydrator) HydrateOne(ctx context.Context, _userSubject, sourceT
 				// Match the search-handler convention (RFC3339Nano
 				// implicit via *time.Time JSON marshal) — explicit
 				// formatting here keeps the wire shape stable
-				// regardless of the searcher's marshalling choice.
+				// regardless of the apisearch.Searcher's marshalling choice.
 				out.When = h.When.UTC().Format("2006-01-02T15:04:05Z07:00")
 			}
 			return out, nil
