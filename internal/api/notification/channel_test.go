@@ -1,4 +1,4 @@
-package api
+package notification
 
 import (
 	"bytes"
@@ -50,12 +50,12 @@ func (r *recordedSend) hook(_ context.Context, opts notifier.Options) (notifier.
 	return r.res, r.err
 }
 
-// newWebhookHandlerForTest builds a NotificationChannelHandler around
+// newWebhookHandlerForTest builds a ChannelHandler around
 // the supplied stub store and recorded sender, returning the handler
 // plus a chi.Router pre-mounted at the same paths the production
 // router uses (so tests exercise the URL parameter extraction too).
-func newWebhookHandlerForTest(store notificationChannelWebhookConfigStore, send webhookSender) (*NotificationChannelHandler, http.Handler) {
-	h := &NotificationChannelHandler{store: store, sender: send}
+func newWebhookHandlerForTest(store notificationChannelWebhookConfigStore, send webhookSender) (*ChannelHandler, http.Handler) {
+	h := &ChannelHandler{store: store, sender: send}
 	r := chi.NewRouter()
 	r.Route("/api/v1/notifications", func(r chi.Router) {
 		r.Post("/webhooks/preview-signature", h.WebhookSignaturePreview)

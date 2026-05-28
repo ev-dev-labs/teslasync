@@ -42,6 +42,10 @@ var (
 // notification_handler.go, devtools_handler.go). main.go calls this once
 // after constructing the inbound async writer's adapter; passing nil
 // reverts to the no-sink default (zerolog only).
+//
+// Also installs the same lookup into the apinotif subpackage's SinkProvider
+// so notification adapter clients (Discord/Slack/Telegram/Webhook/Ntfy/
+// Pushover) keep reading the most-recent sink across hot-reloads.
 func SetOutboundSink(sink httputil.APICallSink) {
 	apiOutboundSinkMu.Lock()
 	apiOutboundSink = sink

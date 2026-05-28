@@ -1,4 +1,4 @@
-package api
+package notification
 
 import (
 	"bytes"
@@ -128,8 +128,8 @@ func (f *fakeInboxStore) BulkDelete(_ context.Context, ids []int64) (int64, erro
 	return f.bulkDeleteResult, nil
 }
 
-func newTestHandler(store *fakeInboxStore) *NotificationHandler {
-	return &NotificationHandler{inbox: store}
+func newTestHandler(store *fakeInboxStore) *Handler {
+	return &Handler{inbox: store}
 }
 
 func TestParseNotificationLogFilters(t *testing.T) {
@@ -452,13 +452,13 @@ func TestBulkDelete(t *testing.T) {
 func TestBulkEndpointsRejectEmptyIDs(t *testing.T) {
 	for _, tc := range []struct {
 		name string
-		fn   func(*NotificationHandler, http.ResponseWriter, *http.Request)
+		fn   func(*Handler, http.ResponseWriter, *http.Request)
 	}{
-		{"mark-read", func(h *NotificationHandler, w http.ResponseWriter, r *http.Request) { h.MarkRead(w, r) }},
-		{"mark-unread", func(h *NotificationHandler, w http.ResponseWriter, r *http.Request) { h.MarkUnread(w, r) }},
-		{"archive", func(h *NotificationHandler, w http.ResponseWriter, r *http.Request) { h.Archive(w, r) }},
-		{"unarchive", func(h *NotificationHandler, w http.ResponseWriter, r *http.Request) { h.Unarchive(w, r) }},
-		{"delete", func(h *NotificationHandler, w http.ResponseWriter, r *http.Request) { h.DeleteBulk(w, r) }},
+		{"mark-read", func(h *Handler, w http.ResponseWriter, r *http.Request) { h.MarkRead(w, r) }},
+		{"mark-unread", func(h *Handler, w http.ResponseWriter, r *http.Request) { h.MarkUnread(w, r) }},
+		{"archive", func(h *Handler, w http.ResponseWriter, r *http.Request) { h.Archive(w, r) }},
+		{"unarchive", func(h *Handler, w http.ResponseWriter, r *http.Request) { h.Unarchive(w, r) }},
+		{"delete", func(h *Handler, w http.ResponseWriter, r *http.Request) { h.DeleteBulk(w, r) }},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			h := newTestHandler(&fakeInboxStore{})

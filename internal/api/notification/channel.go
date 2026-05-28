@@ -1,6 +1,8 @@
-package api
+package notification
 
 import (
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"context"
 	"encoding/json"
 	"errors"
@@ -29,7 +31,7 @@ type notificationChannelWebhookConfigStore interface {
 // production this is bound to [notifier.Send].
 type webhookSender func(ctx context.Context, opts notifier.Options) (notifier.Result, error)
 
-// NotificationChannelHandler hosts the webhook-channel-specific
+// ChannelHandler hosts the webhook-channel-specific
 // endpoints introduced by Phase-46 / Prompt 37.
 //
 // It deliberately does NOT cover generic channel CRUD — that path is
@@ -47,16 +49,16 @@ type webhookSender func(ctx context.Context, opts notifier.Options) (notifier.Re
 //     Settings UI uses it to render a copy-paste-ready signature
 //     preview before the user has even saved the channel, so they can
 //     verify the receiver-side validator works.
-type NotificationChannelHandler struct {
+type ChannelHandler struct {
 	store  notificationChannelWebhookConfigStore
 	sender webhookSender
 }
 
-// NewNotificationChannelHandler wires the handler against a real
+// NewChannelHandler wires the handler against a real
 // *database.DB. Tests build the handler directly so they can swap the
 // store and sender.
-func NewNotificationChannelHandler(db *database.DB) *NotificationChannelHandler {
-	return &NotificationChannelHandler{
+func NewChannelHandler(db *database.DB) *ChannelHandler {
+	return &ChannelHandler{
 		store:  dbnotif.NewNotificationChannelRepo(db),
 		sender: notifier.Send,
 	}
@@ -104,10 +106,10 @@ type webhookTestResponse struct {
 // signed with HMAC SHA-256 and the digest is echoed back in the
 // response so the user can confirm the receiver validated against the
 // same input.
-func (h *NotificationChannelHandler) WebhookTest(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "channelID")
+func (h *ChannelHandler) WebhookTest(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "channelID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid channel ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid channel ID")
 		return
 	}
 
@@ -127,10 +129,10 @@ func (h *NotificationChannelHandler) WebhookTest(w http.ResponseWriter, r *http.
 			case errors.Is(err, io.EOF):
 				// keep defaults
 			case isMaxBytesError(err):
-				writeError(w, http.StatusBadRequest, "request body too large")
+				httpx.WriteError(w, http.StatusBadRequest, "request body too large")
 				return
 			default:
-				writeError(w, http.StatusBadRequest, "invalid request body")
+				httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 				return
 			}
 		}
@@ -139,11 +141,11 @@ func (h *NotificationChannelHandler) WebhookTest(w http.ResponseWriter, r *http.
 	cfg, err := h.store.GetWebhookConfig(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, dbnotif.ErrChannelNotFound) {
-			writeError(w, http.StatusNotFound, "webhook channel not found")
+			httpx.WriteError(w, http.StatusNotFound, "webhook channel not found")
 			return
 		}
 		log.Error().Err(err).Int64("channel_id", id).Msg("load webhook config")
-		writeError(w, http.StatusInternalServerError, "failed to load channel")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load channel")
 		return
 	}
 
@@ -171,7 +173,7 @@ func (h *NotificationChannelHandler) WebhookTest(w http.ResponseWriter, r *http.
 		// in practice; surface as 500 if it ever did so we don't lie
 		// to the client about success.
 		log.Error().Err(err).Msg("marshal webhook test body")
-		writeError(w, http.StatusInternalServerError, "failed to build test payload")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to build test payload")
 		return
 	}
 
@@ -195,7 +197,7 @@ func (h *NotificationChannelHandler) WebhookTest(w http.ResponseWriter, r *http.
 	} else if !resp.Success {
 		resp.Error = "receiver returned a non-2xx/3xx status"
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // webhookSignaturePreviewRequest is the JSON body the preview endpoint
@@ -217,9 +219,9 @@ type webhookSignaturePreviewResponse struct {
 // endpoint is pure: it never touches the database and never makes an
 // outbound call. It is rate-limited at the route level so a malicious
 // client can't grind through HMAC inputs.
-func (h *NotificationChannelHandler) WebhookSignaturePreview(w http.ResponseWriter, r *http.Request) {
+func (h *ChannelHandler) WebhookSignaturePreview(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "request body required")
+		httpx.WriteError(w, http.StatusBadRequest, "request body required")
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, MaxWebhookSignaturePreviewBodyBytes)
@@ -228,17 +230,17 @@ func (h *NotificationChannelHandler) WebhookSignaturePreview(w http.ResponseWrit
 	var req webhookSignaturePreviewRequest
 	if err := dec.Decode(&req); err != nil {
 		if isMaxBytesError(err) {
-			writeError(w, http.StatusBadRequest, "request body too large")
+			httpx.WriteError(w, http.StatusBadRequest, "request body too large")
 			return
 		}
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if strings.TrimSpace(req.Secret) == "" {
-		writeError(w, http.StatusBadRequest, "secret is required")
+		httpx.WriteError(w, http.StatusBadRequest, "secret is required")
 		return
 	}
-	writeJSON(w, http.StatusOK, webhookSignaturePreviewResponse{
+	httpx.WriteJSON(w, http.StatusOK, webhookSignaturePreviewResponse{
 		Signature: notifier.Sign(req.Secret, []byte(req.Body)),
 	})
 }

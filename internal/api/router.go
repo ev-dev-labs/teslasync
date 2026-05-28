@@ -20,6 +20,7 @@ import (
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
+	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -573,9 +574,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	signalLogReader := signaldb.NewSignalLogReader(db)
 	batteryHandler := NewBatteryHandler(db, stateReader)
 	analyticsHandler := NewAnalyticsHandler(db, stateReader)
-	notificationHandler := NewNotificationHandler(db)
-	notificationChannelHandler := NewNotificationChannelHandler(db)
-	notifScheduleHandler := NewNotificationScheduleHandler(db)
+	notificationHandler := apinotif.NewHandler(db)
+	notificationChannelHandler := apinotif.NewChannelHandler(db)
+	notifScheduleHandler := apinotif.NewScheduleHandler(db)
+	// Wire the dynamic outbound-sink lookup into the carved notification
+	// subpackage so Discord/Slack/Telegram/Webhook/Ntfy/Pushover adapters
+	// keep recording to api_call_logs through SetOutboundSink hot-reloads.
+	apinotif.SinkProvider = currentOutboundSink
 	quietHoursHandler := NewQuietHoursHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T20:19:53Z",
+  "generated_at": "2026-05-28T20:26:42Z",
   "go_version": "go1.26.1",
-  "commit_sha": "d35875f89b1dfcbbd0a910c9ef49354d0bc20e37",
+  "commit_sha": "e5761405eb2135eef79b73bd65672c8bcedb51c2",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 257,
-      "test_files": 155,
-      "loc": 118073,
+      "go_files": 254,
+      "test_files": 153,
+      "loc": 115770,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2627,6 +2627,7 @@
         "internal/api/httpx",
         "internal/api/lifetime",
         "internal/api/middleware",
+        "internal/api/notification",
         "internal/api/search",
         "internal/api/search/searchtest",
         "internal/api/vehicle",
@@ -2718,7 +2719,6 @@
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
-        "internal/notifier",
         "internal/platform",
         "internal/platform/database",
         "internal/platform/httputil",
@@ -3024,11 +3024,6 @@
         "mileage_handler_test.go",
         "motor_handler.go",
         "motor_handler_test.go",
-        "notification_channel_handler.go",
-        "notification_channel_handler_test.go",
-        "notification_handler.go",
-        "notification_handler_test.go",
-        "notification_schedule_handler.go",
         "onboarding_handler.go",
         "onboarding_handler_test.go",
         "openapi_handler.go",
@@ -3323,6 +3318,33 @@
         "observability_extra_test.go",
         "prometheus.go",
         "security.go"
+      ]
+    },
+    {
+      "path": "internal/api/notification",
+      "go_files": 5,
+      "test_files": 2,
+      "loc": 2380,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/config",
+        "internal/database",
+        "internal/database/notification",
+        "internal/models/notification",
+        "internal/notifier",
+        "internal/platform/httputil"
+      ],
+      "files": [
+        "channel.go",
+        "channel_test.go",
+        "doc.go",
+        "handler.go",
+        "handler_test.go",
+        "helpers.go",
+        "schedule.go"
       ]
     },
     {
@@ -7368,9 +7390,6 @@
       "middleware.go",
       "mileage_handler.go",
       "motor_handler.go",
-      "notification_channel_handler.go",
-      "notification_handler.go",
-      "notification_schedule_handler.go",
       "onboarding_handler.go",
       "openapi_handler.go",
       "period_stats_handler.go",
@@ -7499,6 +7518,13 @@
       "observability.go",
       "prometheus.go",
       "security.go"
+    ],
+    "internal/api/notification": [
+      "channel.go",
+      "doc.go",
+      "handler.go",
+      "helpers.go",
+      "schedule.go"
     ],
     "internal/api/search": [
       "doc.go",
@@ -8647,13 +8673,14 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 257,
-      "flat_parent_test_files": 155,
+      "flat_parent_go_files": 254,
+      "flat_parent_test_files": 153,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "lifetime",
         "search",
-        "vehicle"
+        "vehicle",
+        "notification"
       ],
       "missing_subpkgs": [
         "system",
@@ -8689,7 +8716,6 @@
         "admin",
         "automation",
         "alert",
-        "notification",
         "chatbot",
         "feedback",
         "data_repair",

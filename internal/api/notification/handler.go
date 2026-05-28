@@ -1,4 +1,4 @@
-package api
+package notification
 
 import (
 	"bytes"
@@ -16,11 +16,30 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
+
+// SinkProvider is the function the outbound notification adapters use to
+// look up the most-recent httputil.APICallSink. The composition root sets
+// this at boot (typically to the parent api package's currentOutboundSink
+// lookup) so api_call_logs continues to track every Discord/Slack/Telegram/
+// Webhook/Ntfy/Pushover request. Default is nil — adapters fall back to
+// httputil's no-op sink, which is what unit tests expect.
+var SinkProvider func() httputil.APICallSink
+
+// currentSink returns the active outbound sink via SinkProvider, or nil
+// when no provider is wired (unit tests, early boot).
+func currentSink() httputil.APICallSink {
+	if SinkProvider == nil {
+		return nil
+	}
+	return SinkProvider()
+}
 
 // notifyOutboundClient builds a fresh *http.Client for the named
 // notification adapter (notify-discord/notify-slack/notify-webhook). The
@@ -30,13 +49,13 @@ func notifyOutboundClient(name string) *http.Client {
 	return httputil.NewClient(httputil.ClientConfig{
 		Name:          name,
 		Timeout:       config.HTTPClientTimeout,
-		Sink:          currentOutboundSink(),
+		Sink:          currentSink(),
 		EnableLogging: true,
 	})
 }
 
-// NotificationHandler handles notification channel CRUD and test delivery.
-type NotificationHandler struct {
+// Handler handles notification channel CRUD and test delivery.
+type Handler struct {
 	repo  *dbnotif.NotificationRepo
 	inbox notificationInboxStore
 }
@@ -54,85 +73,85 @@ type notificationInboxStore interface {
 	BulkDelete(ctx context.Context, ids []int64) (int64, error)
 }
 
-func NewNotificationHandler(db *database.DB) *NotificationHandler {
+func NewHandler(db *database.DB) *Handler {
 	repo := dbnotif.NewNotificationRepo(db)
-	return &NotificationHandler{repo: repo, inbox: repo}
+	return &Handler{repo: repo, inbox: repo}
 }
 
-func (h *NotificationHandler) ListChannels(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListChannels(w http.ResponseWriter, r *http.Request) {
 	channels, err := h.repo.GetAllChannels(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list notification channels")
-		writeError(w, http.StatusInternalServerError, "failed to list channels")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list channels")
 		return
 	}
 	resp := make([]map[string]interface{}, 0, len(channels))
 	for _, ch := range channels {
 		resp = append(resp, normalizeChannelResponse(ch))
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
-func (h *NotificationHandler) GetChannel(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "channelID")
+func (h *Handler) GetChannel(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "channelID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid channel ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid channel ID")
 		return
 	}
 	ch, err := h.repo.GetChannel(r.Context(), id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "channel not found")
+		httpx.WriteError(w, http.StatusNotFound, "channel not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, normalizeChannelResponse(ch))
+	httpx.WriteJSON(w, http.StatusOK, normalizeChannelResponse(ch))
 }
 
-func (h *NotificationHandler) CreateChannel(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateChannel(w http.ResponseWriter, r *http.Request) {
 	ch, errMsg := decodeChannelBody(r)
 	if errMsg != "" {
-		writeError(w, http.StatusBadRequest, errMsg)
+		httpx.WriteError(w, http.StatusBadRequest, errMsg)
 		return
 	}
 
 	validTypes := map[string]bool{"discord": true, "email": true, "slack": true, "telegram": true, "webhook": true, "ntfy": true, "pushover": true}
 	if !validTypes[ch.Type] {
-		writeError(w, http.StatusBadRequest, "invalid channel type")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid channel type")
 		return
 	}
 	if strings.TrimSpace(ch.Name) == "" {
-		writeError(w, http.StatusBadRequest, "name is required")
+		httpx.WriteError(w, http.StatusBadRequest, "name is required")
 		return
 	}
 	ch.Name = strings.TrimSpace(ch.Name)
 
 	if err := h.repo.CreateChannel(r.Context(), ch); err != nil {
 		log.Error().Err(err).Msg("failed to create notification channel")
-		writeError(w, http.StatusInternalServerError, "failed to create channel")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to create channel")
 		return
 	}
-	writeJSON(w, http.StatusCreated, normalizeChannelResponse(ch))
+	httpx.WriteJSON(w, http.StatusCreated, normalizeChannelResponse(ch))
 }
 
-func (h *NotificationHandler) UpdateChannel(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "channelID")
+func (h *Handler) UpdateChannel(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "channelID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid channel ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid channel ID")
 		return
 	}
 
 	ch, errMsg := decodeChannelBody(r)
 	if errMsg != "" {
-		writeError(w, http.StatusBadRequest, errMsg)
+		httpx.WriteError(w, http.StatusBadRequest, errMsg)
 		return
 	}
 	ch.ID = id
 
 	if err := h.repo.UpdateChannel(r.Context(), ch); err != nil {
 		log.Error().Err(err).Msg("failed to update notification channel")
-		writeError(w, http.StatusInternalServerError, "failed to update channel")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to update channel")
 		return
 	}
-	writeJSON(w, http.StatusOK, normalizeChannelResponse(ch))
+	httpx.WriteJSON(w, http.StatusOK, normalizeChannelResponse(ch))
 }
 
 // decodeChannelBody decodes a channel create/update request, accepting both
@@ -223,24 +242,24 @@ func normalizeChannelResponse(ch *notificationmodel.NotificationChannel) map[str
 	return resp
 }
 
-func (h *NotificationHandler) DeleteChannel(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "channelID")
+func (h *Handler) DeleteChannel(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "channelID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid channel ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid channel ID")
 		return
 	}
 	if err := h.repo.DeleteChannel(r.Context(), id); err != nil {
 		log.Error().Err(err).Msg("failed to delete notification channel")
-		writeError(w, http.StatusInternalServerError, "failed to delete channel")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete channel")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
-func (h *NotificationHandler) ToggleChannel(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "channelID")
+func (h *Handler) ToggleChannel(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "channelID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid channel ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid channel ID")
 		return
 	}
 
@@ -248,29 +267,29 @@ func (h *NotificationHandler) ToggleChannel(w http.ResponseWriter, r *http.Reque
 		Enabled bool `json:"enabled"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if err := h.repo.ToggleChannel(r.Context(), id, body.Enabled); err != nil {
 		log.Error().Err(err).Msg("failed to toggle channel")
-		writeError(w, http.StatusInternalServerError, "failed to toggle channel")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to toggle channel")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"id": id, "enabled": body.Enabled})
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"id": id, "enabled": body.Enabled})
 }
 
 // TestChannel sends a test notification through the specified channel.
-func (h *NotificationHandler) TestChannel(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "channelID")
+func (h *Handler) TestChannel(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "channelID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid channel ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid channel ID")
 		return
 	}
 
 	ch, err := h.repo.GetChannel(r.Context(), id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "channel not found")
+		httpx.WriteError(w, http.StatusNotFound, "channel not found")
 		return
 	}
 
@@ -298,16 +317,16 @@ func (h *NotificationHandler) TestChannel(w http.ResponseWriter, r *http.Request
 	_ = h.repo.CreateLog(r.Context(), logEntry)
 
 	if sendErr != nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{"success": false, "error": sendErr.Error()})
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"success": false, "error": sendErr.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Test notification sent"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"success": true, "message": "Test notification sent"})
 }
 
-func (h *NotificationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 	filters, err := parseNotificationLogFilters(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	// Phase-46 / Prompt 27 — ?grouped=true switches the response shape
@@ -318,32 +337,32 @@ func (h *NotificationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 	// return at most one bucket on success).
 	groupedRequested := strings.EqualFold(strings.TrimSpace(r.URL.Query().Get("grouped")), "true")
 	if groupedRequested && filters.GroupKey != "" {
-		writeError(w, http.StatusBadRequest, "grouped=true and group_key are mutually exclusive")
+		httpx.WriteError(w, http.StatusBadRequest, "grouped=true and group_key are mutually exclusive")
 		return
 	}
 	if groupedRequested {
 		groups, gErr := h.inbox.ListGrouped(r.Context(), filters)
 		if gErr != nil {
 			log.Error().Err(gErr).Msg("failed to list notification log groups")
-			writeError(w, http.StatusInternalServerError, "failed to get logs")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to get logs")
 			return
 		}
 		if groups == nil {
 			groups = []*notificationmodel.NotificationLogGroup{}
 		}
-		writeJSON(w, http.StatusOK, groups)
+		httpx.WriteJSON(w, http.StatusOK, groups)
 		return
 	}
 	logs, err := h.inbox.GetLogsFiltered(r.Context(), filters)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get notification logs")
-		writeError(w, http.StatusInternalServerError, "failed to get logs")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get logs")
 		return
 	}
 	if logs == nil {
 		logs = []*notificationmodel.NotificationLog{}
 	}
-	writeJSON(w, http.StatusOK, logs)
+	httpx.WriteJSON(w, http.StatusOK, logs)
 }
 
 // parseNotificationLogFilters turns query params into a NotificationLogFilters.
@@ -352,7 +371,7 @@ func (h *NotificationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 // CSV (?severity=info,warn). Snake_case per project conventions.
 func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilters, error) {
 	q := r.URL.Query()
-	limit, offset := pagination(r)
+	limit, offset := apiparams.Pagination(r)
 	f := dbnotif.NotificationLogFilters{Limit: limit, Offset: offset}
 
 	if vs := csvOrRepeated(q, "severity"); len(vs) > 0 {
@@ -562,10 +581,10 @@ func decodeMarkReadBody(r *http.Request) (ids []int64, all bool, groupKey string
 // could exceed the 1000-id cap on busy inboxes). Phase-46 / 27 added the
 // group_key path so the threaded inbox's "Mark group read" action can
 // flip an entire thread without expanding it client-side.
-func (h *NotificationHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	ids, all, groupKey, err := decodeMarkReadBody(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	var (
@@ -585,98 +604,98 @@ func (h *NotificationHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
 			Bool("all", all).
 			Bool("by_group", groupKey != "").
 			Msg("bulk mark read")
-		writeError(w, http.StatusInternalServerError, "failed to mark notifications read")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to mark notifications read")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int64{"updated": updated})
+	httpx.WriteJSON(w, http.StatusOK, map[string]int64{"updated": updated})
 }
 
 // MarkUnread clears read_at for each id in the request body.
-func (h *NotificationHandler) MarkUnread(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) MarkUnread(w http.ResponseWriter, r *http.Request) {
 	ids, err := decodeBulkIDs(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	updated, err := h.inbox.BulkSetRead(r.Context(), ids, false)
 	if err != nil {
 		log.Error().Err(err).Msg("bulk mark unread")
-		writeError(w, http.StatusInternalServerError, "failed to mark notifications unread")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to mark notifications unread")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int64{"updated": updated})
+	httpx.WriteJSON(w, http.StatusOK, map[string]int64{"updated": updated})
 }
 
 // Archive flips archived_at to NOW() for each id, also marking the row read
 // so it stops counting toward the unread badge.
-func (h *NotificationHandler) Archive(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Archive(w http.ResponseWriter, r *http.Request) {
 	ids, err := decodeBulkIDs(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	updated, err := h.inbox.BulkSetArchived(r.Context(), ids, true)
 	if err != nil {
 		log.Error().Err(err).Msg("bulk archive")
-		writeError(w, http.StatusInternalServerError, "failed to archive notifications")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to archive notifications")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int64{"updated": updated})
+	httpx.WriteJSON(w, http.StatusOK, map[string]int64{"updated": updated})
 }
 
 // Unarchive clears archived_at for each id.
-func (h *NotificationHandler) Unarchive(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Unarchive(w http.ResponseWriter, r *http.Request) {
 	ids, err := decodeBulkIDs(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	updated, err := h.inbox.BulkSetArchived(r.Context(), ids, false)
 	if err != nil {
 		log.Error().Err(err).Msg("bulk unarchive")
-		writeError(w, http.StatusInternalServerError, "failed to unarchive notifications")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to unarchive notifications")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int64{"updated": updated})
+	httpx.WriteJSON(w, http.StatusOK, map[string]int64{"updated": updated})
 }
 
 // DeleteBulk hard-deletes notification log rows. Kept rare/admin-only —
 // archive is preferred for the inbox UX.
-func (h *NotificationHandler) DeleteBulk(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) DeleteBulk(w http.ResponseWriter, r *http.Request) {
 	ids, err := decodeBulkIDs(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	deleted, err := h.inbox.BulkDelete(r.Context(), ids)
 	if err != nil {
 		log.Error().Err(err).Msg("bulk delete logs")
-		writeError(w, http.StatusInternalServerError, "failed to delete notifications")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete notifications")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int64{"deleted": deleted})
+	httpx.WriteJSON(w, http.StatusOK, map[string]int64{"deleted": deleted})
 }
 
 // UnreadCount returns the number of non-archived, non-read notification rows.
 // Powers the header bell badge and the favicon badge (Prompt 32 hand-off).
-func (h *NotificationHandler) UnreadCount(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 	n, err := h.inbox.GetUnreadCount(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("unread count")
-		writeError(w, http.StatusInternalServerError, "failed to count unread notifications")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to count unread notifications")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]int64{"count": n})
+	httpx.WriteJSON(w, http.StatusOK, map[string]int64{"count": n})
 }
 
-func (h *NotificationHandler) GetStats(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.repo.GetStats(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get notification stats")
-		writeError(w, http.StatusInternalServerError, "failed to get stats")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get stats")
 		return
 	}
-	writeJSON(w, http.StatusOK, stats)
+	httpx.WriteJSON(w, http.StatusOK, stats)
 }
 
 // sendNotification dispatches a message to the configured channel.
