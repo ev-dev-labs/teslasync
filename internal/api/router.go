@@ -125,6 +125,7 @@ import (
 	watchfacenlresponse "github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response"
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
@@ -1583,7 +1584,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// mirrors the byte-equivalent shape rules the canonical
 	// save handler will enforce (1-200 chars, no control chars,
 	// no leading/trailing whitespace).
-	tools.RegisterAutoNameUnnamedLocationsTools(aiToolRegistry, tools.AutoNameUnnamedLocationsSources{
+	location.RegisterAutoNameUnnamedLocationsTools(aiToolRegistry, location.AutoNameUnnamedLocationsSources{
 		Locations: NewAILocationSource(db),
 		Validator: NewAILocationNameValidator(),
 	})
@@ -1611,7 +1612,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// shape rules the canonical geofence_handler.go's
 	// validateGeofence enforces (1-200 chars, no control chars,
 	// no leading/trailing whitespace, radius 50-1000 meters).
-	tools.RegisterSuggestNewGeofencesTools(aiToolRegistry, tools.SuggestNewGeofencesSources{
+	location.RegisterSuggestNewGeofencesTools(aiToolRegistry, location.SuggestNewGeofencesSources{
 		Locations: NewAILocationSource(db),
 		Validator: NewAISuggestGeofenceValidator(),
 	})

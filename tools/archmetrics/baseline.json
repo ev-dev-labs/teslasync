@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T05:50:05Z",
+  "generated_at": "2026-05-28T05:57:15Z",
   "go_version": "go1.26.1",
-  "commit_sha": "4f968a563a67a9af956ab39eab28c2a548ae4805",
+  "commit_sha": "913c8466b32e704648e79bfcba3fa3261e094831",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 56,
-      "test_files": 49,
-      "loc": 45015,
+      "go_files": 54,
+      "test_files": 47,
+      "loc": 43334,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1898,7 +1898,6 @@
         "internal/models/alert",
         "internal/models/charging",
         "internal/models/drive",
-        "internal/models/geo",
         "internal/models/notification",
         "internal/models/system",
         "internal/models/vehicle"
@@ -1910,8 +1909,6 @@
         "alert_tuning_test.go",
         "anomaly.go",
         "anomaly_test.go",
-        "auto_name_unnamed_locations.go",
-        "auto_name_unnamed_locations_test.go",
         "auto_trip_naming.go",
         "auto_trip_naming_test.go",
         "automation_builder.go",
@@ -1991,8 +1988,6 @@
         "speed_profile_test.go",
         "state_machine_debugger_narrator.go",
         "state_machine_debugger_narrator_test.go",
-        "suggest_new_geofences.go",
-        "suggest_new_geofences_test.go",
         "tco_summary.go",
         "tco_summary_test.go",
         "temperature_impact.go",
@@ -2026,6 +2021,24 @@
         "doc.go",
         "triage.go",
         "triage_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/location",
+      "go_files": 3,
+      "test_files": 2,
+      "loc": 1724,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/tools",
+        "internal/models/geo"
+      ],
+      "files": [
+        "auto_name.go",
+        "auto_name_test.go",
+        "doc.go",
+        "geofences.go",
+        "geofences_test.go"
       ]
     },
     {
@@ -2065,7 +2078,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126495,
+      "loc": 126498,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2138,6 +2151,7 @@
         "internal/ai/stream",
         "internal/ai/tools",
         "internal/ai/tools/feedback",
+        "internal/ai/tools/location",
         "internal/ai/tools/safety",
         "internal/alertmsg",
         "internal/api",
@@ -5757,7 +5771,6 @@
       "alert_builder.go",
       "alert_tuning.go",
       "anomaly.go",
-      "auto_name_unnamed_locations.go",
       "auto_trip_naming.go",
       "automation_builder.go",
       "battery_health_forecast.go",
@@ -5799,7 +5812,6 @@
       "software_update_summary.go",
       "speed_profile.go",
       "state_machine_debugger_narrator.go",
-      "suggest_new_geofences.go",
       "tco_summary.go",
       "temperature_impact.go",
       "tire_pressure_trend.go",
@@ -5814,6 +5826,11 @@
     "internal/ai/tools/feedback": [
       "doc.go",
       "triage.go"
+    ],
+    "internal/ai/tools/location": [
+      "auto_name.go",
+      "doc.go",
+      "geofences.go"
     ],
     "internal/ai/tools/safety": [
       "doc.go",
@@ -7036,11 +7053,12 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 56,
-      "flat_parent_test_files": 49,
+      "flat_parent_go_files": 54,
+      "flat_parent_test_files": 47,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "feedback",
+        "location",
         "safety"
       ],
       "missing_subpkgs": [
@@ -7051,7 +7069,6 @@
         "diagnostics",
         "drive",
         "forecast",
-        "location",
         "nl",
         "share",
         "summary"

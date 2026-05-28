@@ -67,6 +67,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -302,7 +303,7 @@ var _ http.Handler = (*AISuggestNewGeofencesHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AISuggestGeofenceValidator is the production
-// tools.GeofenceValidator. It enforces the same trimming + length +
+// location.GeofenceValidator. It enforces the same trimming + length +
 // control-character + radius rules that the canonical baseline
 // geofence_handler.go's validateGeofence enforces, so a draft
 // accepted by the AI tool is byte-equivalent to a draft that would
@@ -311,7 +312,7 @@ var _ http.Handler = (*AISuggestNewGeofencesHandler)(nil)
 // The struct is intentionally empty — the validator is a pure
 // function. The receiver is kept so the production wiring is a noun
 // ("the validator") in router.go and tests can substitute a fake by
-// satisfying the tools.GeofenceValidator interface.
+// satisfying the location.GeofenceValidator interface.
 type AISuggestGeofenceValidator struct{}
 
 // NewAISuggestGeofenceValidator constructs the validator.
@@ -319,7 +320,7 @@ func NewAISuggestGeofenceValidator() *AISuggestGeofenceValidator {
 	return &AISuggestGeofenceValidator{}
 }
 
-// ValidateGeofence implements tools.GeofenceValidator.
+// ValidateGeofence implements location.GeofenceValidator.
 //
 // Rules (pinned by tests on both sides — production wrapper +
 // in-tool helper):
@@ -366,4 +367,4 @@ func (v *AISuggestGeofenceValidator) ValidateGeofence(_ *geomodel.VisitedLocatio
 }
 
 // Compile-time assertion: the validator satisfies the tool port.
-var _ tools.GeofenceValidator = (*AISuggestGeofenceValidator)(nil)
+var _ location.GeofenceValidator = (*AISuggestGeofenceValidator)(nil)

@@ -76,7 +76,7 @@
 //     the user confirms the values inside the existing Add
 //     Geofence form before clicking Save.
 
-package tools
+package location
 
 import (
 	"context"
@@ -87,6 +87,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
@@ -394,7 +395,7 @@ func (t *draftGeofence) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftGeofence) InputSchema() json.RawMessage {
-	return CachedSchema(geofenceDraftInput{})
+	return tools.CachedSchema(geofenceDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -409,7 +410,7 @@ func (t *draftGeofence) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *draftGeofence) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[geofenceDraftInput](raw)
+	return tools.ValidateStruct[geofenceDraftInput](raw)
 }
 
 // Execute implements [Tool]. Reads the visited-location aggregate to
@@ -499,7 +500,7 @@ func (t *validateGeofenceTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateGeofenceTool) InputSchema() json.RawMessage {
-	return CachedSchema(geofenceValidateInput{})
+	return tools.CachedSchema(geofenceValidateInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -513,7 +514,7 @@ func (t *validateGeofenceTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *validateGeofenceTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[geofenceValidateInput](raw)
+	return tools.ValidateStruct[geofenceValidateInput](raw)
 }
 
 // Execute implements [Tool]. Same error semantics as draft_geofence:
@@ -570,7 +571,7 @@ type SuggestNewGeofencesSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterSuggestNewGeofencesTools(r *Registry, s SuggestNewGeofencesSources) {
+func RegisterSuggestNewGeofencesTools(r *tools.Registry, s SuggestNewGeofencesSources) {
 	r.Register(&draftGeofence{locations: s.Locations, validator: s.Validator})
 	r.Register(&validateGeofenceTool{locations: s.Locations, validator: s.Validator})
 }

@@ -64,7 +64,7 @@
 //     ClassLatLong); the round-trip tags are restored only in the
 //     final SSE frame returned to the same authenticated user.
 
-package tools
+package location
 
 import (
 	"context"
@@ -73,6 +73,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
@@ -289,7 +290,7 @@ func (t *draftLocationName) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftLocationName) InputSchema() json.RawMessage {
-	return CachedSchema(locationNameDraftInput{})
+	return tools.CachedSchema(locationNameDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -304,7 +305,7 @@ func (t *draftLocationName) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *draftLocationName) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[locationNameDraftInput](raw)
+	return tools.ValidateStruct[locationNameDraftInput](raw)
 }
 
 // Execute implements [Tool]. Reads the visited-location aggregate
@@ -391,7 +392,7 @@ func (t *validateLocationNameTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateLocationNameTool) InputSchema() json.RawMessage {
-	return CachedSchema(locationNameValidateInput{})
+	return tools.CachedSchema(locationNameValidateInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -405,7 +406,7 @@ func (t *validateLocationNameTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *validateLocationNameTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[locationNameValidateInput](raw)
+	return tools.ValidateStruct[locationNameValidateInput](raw)
 }
 
 // Execute implements [Tool]. Same error semantics as
@@ -461,7 +462,7 @@ type AutoNameUnnamedLocationsSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterAutoNameUnnamedLocationsTools(r *Registry, s AutoNameUnnamedLocationsSources) {
+func RegisterAutoNameUnnamedLocationsTools(r *tools.Registry, s AutoNameUnnamedLocationsSources) {
 	r.Register(&draftLocationName{locations: s.Locations, validator: s.Validator})
 	r.Register(&validateLocationNameTool{locations: s.Locations, validator: s.Validator})
 }

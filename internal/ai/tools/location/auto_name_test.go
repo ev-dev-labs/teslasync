@@ -6,7 +6,7 @@
 // deterministic fakes so the tests stay hermetic (no api or
 // database package, no DB).
 
-package tools
+package location
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
@@ -324,7 +325,7 @@ func TestValidateLocationNameShape_TableDriven(t *testing.T) {
 // through the registry's Lookup.
 func TestRegisterAutoNameUnnamedLocationsTools_RegistersBothTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	locations := newTestLocationFixtures()
 	validator := &stubLocationNameValidator{}
 	RegisterAutoNameUnnamedLocationsTools(r, AutoNameUnnamedLocationsSources{

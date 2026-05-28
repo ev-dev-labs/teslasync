@@ -66,6 +66,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -98,7 +99,7 @@ type AIAutoNameUnnamedLocationsHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_location_name AND validate_location_name (both
-//	registered by tools.RegisterAutoNameUnnamedLocationsTools
+//	registered by location.RegisterAutoNameUnnamedLocationsTools
 //	in router.go).
 //
 // strat:      the auto-name-unnamed-locations Strategy (one per process).
@@ -246,7 +247,7 @@ var _ http.Handler = (*AIAutoNameUnnamedLocationsHandler)(nil)
 const autoNameUnnamedLocationsMaxNameLen = 200
 
 // AILocationNameValidator is the production
-// tools.LocationNameValidator. It enforces the same trimming +
+// location.LocationNameValidator. It enforces the same trimming +
 // length + control-character rules that a future canonical save
 // handler will enforce, so a draft accepted by the AI tool is
 // byte-equivalent to a draft accepted by the canonical save handler.
@@ -254,7 +255,7 @@ const autoNameUnnamedLocationsMaxNameLen = 200
 // The struct is intentionally empty — the validator is a pure
 // function. The receiver is kept so the production wiring is a
 // noun ("the validator") in router.go and tests can substitute a
-// fake by satisfying the tools.LocationNameValidator interface.
+// fake by satisfying the location.LocationNameValidator interface.
 type AILocationNameValidator struct{}
 
 // NewAILocationNameValidator constructs the validator.
@@ -262,7 +263,7 @@ func NewAILocationNameValidator() *AILocationNameValidator {
 	return &AILocationNameValidator{}
 }
 
-// ValidateLocationName implements tools.LocationNameValidator.
+// ValidateLocationName implements location.LocationNameValidator.
 // Rules:
 //
 //   - rune-trimmed name must be 1-200 chars;
@@ -296,7 +297,7 @@ func (v *AILocationNameValidator) ValidateLocationName(_ *geomodel.VisitedLocati
 	return nil
 }
 
-// AILocationSource is the production tools.LocationSource. It
+// AILocationSource is the production location.LocationSource. It
 // composes the canonical drives table read path so the AI projection
 // is grounded in the SAME aggregate the deterministic
 // /api/v1/locations baseline serves. No write path is invoked.
@@ -311,8 +312,8 @@ func (v *AILocationNameValidator) ValidateLocationName(_ *geomodel.VisitedLocati
 // natural join (id → vehicle, end_place → aggregate), this adapter
 // runs a single grouped SELECT against the drives table
 // (read-only). The shape it returns matches *geomodel.VisitedLocation
-// field-for-field so the existing tools.LocationSource +
-// tools.LocationNameValidator interfaces stay vendor-agnostic.
+// field-for-field so the existing location.LocationSource +
+// location.LocationNameValidator interfaces stay vendor-agnostic.
 //
 // The struct holds a *database.DB for the parameterised query; the
 // constructor panics on a nil so a wiring bug surfaces at boot.
@@ -330,7 +331,7 @@ func NewAILocationSource(db *database.DB) *AILocationSource {
 	return &AILocationSource{db: db}
 }
 
-// LoadVisitedLocation implements tools.LocationSource. Returns
+// LoadVisitedLocation implements location.LocationSource. Returns
 // (nil, nil) when no aggregate matches the synthetic locationID;
 // any other error is propagated. The query mirrors
 // VisitedLocationRepo.deriveFromDrives's GROUP BY + aggregate
@@ -385,6 +386,6 @@ func (a *AILocationSource) LoadVisitedLocation(ctx context.Context, locationID i
 
 // Compile-time assertions: the adapters satisfy the tool ports.
 var (
-	_ tools.LocationSource        = (*AILocationSource)(nil)
-	_ tools.LocationNameValidator = (*AILocationNameValidator)(nil)
+	_ location.LocationSource        = (*AILocationSource)(nil)
+	_ location.LocationNameValidator = (*AILocationNameValidator)(nil)
 )

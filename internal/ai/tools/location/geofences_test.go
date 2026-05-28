@@ -5,7 +5,7 @@
 // interfaces; the tests stub both with deterministic fakes so the
 // tests stay hermetic (no api or database package, no DB).
 
-package tools
+package location
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	geomodel "github.com/ev-dev-labs/teslasync/internal/models/geo"
 )
 
@@ -418,7 +419,7 @@ func TestParseCentroidFromAddress_TableDriven(t *testing.T) {
 // registry's Get.
 func TestRegisterSuggestNewGeofencesTools_RegistersBothTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	locations := newGeofenceTestFixtures()
 	validator := &stubGeofenceValidator{}
 	RegisterSuggestNewGeofencesTools(r, SuggestNewGeofencesSources{
