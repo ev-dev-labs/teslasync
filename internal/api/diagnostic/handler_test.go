@@ -1,4 +1,4 @@
-package api
+package diagnostic
 
 // Phase-46 / Prompt 33 — Aggregated self-test endpoint tests.
 //
@@ -116,7 +116,7 @@ func TestDiagnosticRunner_AggregatesOverallStatus(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			h := NewDiagnosticHandlerWithChecks(tc.checks, time.Second)
+			h := NewHandlerWithChecks(tc.checks, time.Second)
 			report := h.Run(context.Background())
 			if report.OverallStatus != tc.wantOverall {
 				t.Errorf("OverallStatus = %q, want %q", report.OverallStatus, tc.wantOverall)
@@ -141,7 +141,7 @@ func TestDiagnosticRunner_PreservesCheckOrder(t *testing.T) {
 		stubCheck("third", DiagnosticStatusOK, 0),
 		stubCheck("fourth", DiagnosticStatusOK, 0),
 	}
-	h := NewDiagnosticHandlerWithChecks(checks, time.Second)
+	h := NewHandlerWithChecks(checks, time.Second)
 	report := h.Run(context.Background())
 
 	wantIDs := []string{"first", "second", "third", "fourth"}
@@ -163,7 +163,7 @@ func TestDiagnosticRunner_PerCheckTimeout(t *testing.T) {
 		stubCheck("fast", DiagnosticStatusOK, 0),
 		stubCheck("slow", DiagnosticStatusOK, 100*time.Millisecond),
 	}
-	h := NewDiagnosticHandlerWithChecks(checks, 10*time.Millisecond)
+	h := NewHandlerWithChecks(checks, 10*time.Millisecond)
 
 	start := time.Now()
 	report := h.Run(context.Background())
@@ -189,7 +189,7 @@ func TestDiagnosticRunner_RecoversFromPanic(t *testing.T) {
 	panicCheck := DiagnosticCheckFn(func(_ context.Context) DiagnosticCheck {
 		panic("boom")
 	})
-	h := NewDiagnosticHandlerWithChecks([]DiagnosticCheckFn{
+	h := NewHandlerWithChecks([]DiagnosticCheckFn{
 		stubCheck("ok", DiagnosticStatusOK, 0),
 		panicCheck,
 	}, time.Second)
@@ -219,15 +219,15 @@ func TestDiagnosticRunner_MeasuresDuration(t *testing.T) {
 			return DiagnosticCheck{ID: "timed", Name: "timed", Status: DiagnosticStatusOK}
 		},
 	}
-	h := NewDiagnosticHandlerWithChecks(checks, time.Second)
+	h := NewHandlerWithChecks(checks, time.Second)
 	report := h.Run(context.Background())
 	if got := report.Checks[0].DurationMs; got < int64(sleep/time.Millisecond) {
 		t.Errorf("DurationMs = %d, want >= %d", got, int64(sleep/time.Millisecond))
 	}
 }
 
-func TestDiagnosticHandler_ServeHTTP_Post(t *testing.T) {
-	h := NewDiagnosticHandlerWithChecks([]DiagnosticCheckFn{
+func TestHandler_ServeHTTP_Post(t *testing.T) {
+	h := NewHandlerWithChecks([]DiagnosticCheckFn{
 		stubCheck("a", DiagnosticStatusOK, 0),
 		stubCheck("b", DiagnosticStatusWarn, 0),
 	}, time.Second)
@@ -251,8 +251,8 @@ func TestDiagnosticHandler_ServeHTTP_Post(t *testing.T) {
 	}
 }
 
-func TestDiagnosticHandler_ServeHTTP_RejectsGet(t *testing.T) {
-	h := NewDiagnosticHandlerWithChecks([]DiagnosticCheckFn{
+func TestHandler_ServeHTTP_RejectsGet(t *testing.T) {
+	h := NewHandlerWithChecks([]DiagnosticCheckFn{
 		stubCheck("a", DiagnosticStatusOK, 0),
 	}, time.Second)
 
@@ -268,9 +268,9 @@ func TestDiagnosticHandler_ServeHTTP_RejectsGet(t *testing.T) {
 	}
 }
 
-func TestDiagnosticHandler_NilHandler_RunReturnsDown(t *testing.T) {
+func TestHandler_NilHandler_RunReturnsDown(t *testing.T) {
 	// Defensive: Run on a nil receiver must not panic.
-	var h *DiagnosticHandler
+	var h *Handler
 	report := h.Run(context.Background())
 	if report.OverallStatus != DiagnosticOverallDown {
 		t.Errorf("nil handler OverallStatus = %q, want %q", report.OverallStatus, DiagnosticOverallDown)
@@ -447,11 +447,11 @@ func TestUptimeCheck_AlwaysOK(t *testing.T) {
 	}
 }
 
-func TestNewDiagnosticHandler_WiresAllChecks(t *testing.T) {
+func TestNewHandler_WiresAllChecks(t *testing.T) {
 	// Smoke: nil deps for everything except cfg is tolerated; the
 	// handler should still register the full check set so the report
 	// shape is stable across deployments.
-	h := NewDiagnosticHandler(nil, nil, nil, nil, nil, nil)
+	h := NewHandler(nil, nil, nil, nil, nil, nil)
 	if got := len(h.checks); got != 10 {
 		t.Errorf("len(checks) = %d, want 10", got)
 	}

@@ -22,6 +22,7 @@ import (
 	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
+	apidiag "github.com/ev-dev-labs/teslasync/internal/api/diagnostic"
 	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
 	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
@@ -3623,7 +3624,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// DiagnosticReport. Per-IP rate-limited because each
 			// call fans out concurrent probes against every shared
 			// dependency.
-			diagnosticHandler := NewDiagnosticHandler(db, teslaClient, mqttClient, opt.CacheStore, health, cfg)
+			diagnosticHandler := apidiag.NewHandler(db, teslaClient, mqttClient, opt.CacheStore, health, cfg)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).
 				Post("/diagnostic", diagnosticHandler.ServeHTTP)
 

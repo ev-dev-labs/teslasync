@@ -1,4 +1,4 @@
-package api
+package diagnostic
 
 // Phase-46 / Prompt 33 — Aggregated self-test / diagnostic endpoint.
 //
@@ -26,6 +26,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"github.com/sony/gobreaker"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -55,6 +56,8 @@ const (
 // page budget even if one stalls — wg.Wait() returns the moment all
 // checks finish OR all per-check timeouts fire.
 const defaultDiagnosticPerCheckTimeout = 4 * time.Second
+
+var processStartTime = time.Now()
 
 // DiagnosticCheck is one row in a DiagnosticReport. Status is an enum
 // (ok|warn|fail). Detail is human-readable; Remediation is optional and
@@ -92,31 +95,31 @@ type diagnosticPinger interface {
 	Ping(ctx context.Context) *redis.StatusCmd
 }
 
-// DiagnosticHandler runs a fixed, ordered list of DiagnosticCheckFn and
+// Handler runs a fixed, ordered list of DiagnosticCheckFn and
 // aggregates them into a DiagnosticReport. Construct it once at router
 // wire-up; the closure captures the production dependencies.
-type DiagnosticHandler struct {
+type Handler struct {
 	checks          []DiagnosticCheckFn
 	perCheckTimeout time.Duration
 	now             func() time.Time
 }
 
-// NewDiagnosticHandler wires the production check set against live
+// NewHandler wires the production check set against live
 // dependencies. Any nil dependency is tolerated — the affected check
 // degrades to a "warn" or "fail" with a clear remediation message
 // rather than crashing the report.
 //
 // cfg is currently unused beyond informational labels; reserved for
 // future per-deployment thresholds (e.g. signal_log staleness budget).
-func NewDiagnosticHandler(
+func NewHandler(
 	db *database.DB,
 	tc *tesla.Client,
 	mqttClient *mqtt.Client,
 	cacheStore *cache.Store,
 	health *resilience.HealthMonitor,
 	cfg *config.Config,
-) *DiagnosticHandler {
-	h := &DiagnosticHandler{
+) *Handler {
+	h := &Handler{
 		perCheckTimeout: defaultDiagnosticPerCheckTimeout,
 		now:             func() time.Time { return time.Now().UTC() },
 	}
@@ -146,13 +149,13 @@ func NewDiagnosticHandler(
 	return h
 }
 
-// NewDiagnosticHandlerWithChecks is the test-only constructor that
+// NewHandlerWithChecks is the test-only constructor that
 // accepts a pre-built check list. The default constructor wires the
 // production set; tests pass deterministic stubs to exercise the
 // runner's aggregation, timeout, and ordering semantics in isolation
 // from the live dependencies.
-func NewDiagnosticHandlerWithChecks(checks []DiagnosticCheckFn, perCheckTimeout time.Duration) *DiagnosticHandler {
-	h := &DiagnosticHandler{
+func NewHandlerWithChecks(checks []DiagnosticCheckFn, perCheckTimeout time.Duration) *Handler {
+	h := &Handler{
 		checks:          checks,
 		perCheckTimeout: perCheckTimeout,
 		now:             func() time.Time { return time.Now().UTC() },
@@ -167,7 +170,7 @@ func NewDiagnosticHandlerWithChecks(checks []DiagnosticCheckFn, perCheckTimeout 
 // timeout, preserves the original check order in the output, and
 // derives OverallStatus from the worst individual status. Safe to call
 // repeatedly; each call gets a fresh GeneratedAt timestamp.
-func (h *DiagnosticHandler) Run(ctx context.Context) DiagnosticReport {
+func (h *Handler) Run(ctx context.Context) DiagnosticReport {
 	if h == nil {
 		return DiagnosticReport{
 			GeneratedAt:   time.Now().UTC(),
@@ -228,10 +231,10 @@ func (h *DiagnosticHandler) Run(ctx context.Context) DiagnosticReport {
 // ServeHTTP fulfils POST /system/diagnostic. The handler is method-
 // strict — anything other than POST returns 405 — so the SPA can't
 // accidentally trigger a long-running diagnostic from a GET preview.
-func (h *DiagnosticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		httpx.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	report := h.Run(r.Context())
@@ -240,7 +243,7 @@ func (h *DiagnosticHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Body != nil {
 		_ = json.NewDecoder(r.Body).Decode(&struct{}{})
 	}
-	writeJSON(w, http.StatusOK, report)
+	httpx.WriteJSON(w, http.StatusOK, report)
 }
 
 // ── Production check implementations ────────────────────────────────
@@ -513,7 +516,7 @@ func runtimeGoroutineCheck() DiagnosticCheckFn {
 // separate /version round trip.
 func uptimeCheck() DiagnosticCheckFn {
 	return func(_ context.Context) DiagnosticCheck {
-		uptime := time.Since(startTime).Round(time.Second)
+		uptime := time.Since(processStartTime).Round(time.Second)
 		return DiagnosticCheck{
 			ID:         "runtime.uptime",
 			Name:       "Process uptime",
