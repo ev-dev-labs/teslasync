@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T21:01:32Z",
+  "generated_at": "2026-05-28T21:03:52Z",
   "go_version": "go1.26.1",
-  "commit_sha": "8f6384cfc962b6435bb601643816ec38cd0352a0",
+  "commit_sha": "1f8eb99b63ecf2f039afaccb77c1ec43b22366f8",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 245,
+      "go_files": 244,
       "test_files": 151,
-      "loc": 113365,
+      "loc": 113302,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2624,6 +2624,7 @@
         "internal/api/apitest",
         "internal/api/apperror",
         "internal/api/backup",
+        "internal/api/dataquality",
         "internal/api/geocode",
         "internal/api/geofence",
         "internal/api/httpx",
@@ -2960,7 +2961,6 @@
         "dashboard_layout_handler.go",
         "dashboard_layout_handler_test.go",
         "data_repair_handler.go",
-        "dataquality_handler.go",
         "devtools_handler.go",
         "devtools_handler_database.go",
         "devtools_handler_dtos.go",
@@ -3255,6 +3255,22 @@
         "handler.go",
         "handler_test.go",
         "restore_handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/dataquality",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 65,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/dataquality"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
       ]
     },
     {
@@ -7481,7 +7497,6 @@
       "cost_forecast_handler.go",
       "dashboard_layout_handler.go",
       "data_repair_handler.go",
-      "dataquality_handler.go",
       "devtools_handler.go",
       "devtools_handler_database.go",
       "devtools_handler_dtos.go",
@@ -7632,6 +7647,10 @@
       "doc.go",
       "handler.go",
       "restore_handler.go"
+    ],
+    "internal/api/dataquality": [
+      "doc.go",
+      "handler.go"
     ],
     "internal/api/geocode": [
       "doc.go",
@@ -8836,12 +8855,13 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 245,
+      "flat_parent_go_files": 244,
       "flat_parent_test_files": 151,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",
         "lifetime",
+        "dataquality",
         "search",
         "vehicle",
         "notification"
@@ -8863,7 +8883,6 @@
         "speed",
         "routeeff",
         "signal",
-        "dataquality",
         "fsm",
         "diagnostic",
         "cost",

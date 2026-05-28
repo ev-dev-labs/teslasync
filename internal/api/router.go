@@ -17,6 +17,7 @@ import (
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
+	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
@@ -3773,7 +3774,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			sloHandler := apislo.NewHandler(opt.SLOCatalog, opt.SLOTracker)
 			r.Get("/admin/observability/slo", sloHandler.Snapshot)
 
-			dqHandler := NewDataQualityHandler(opt.DataQualityScorer)
+			dqHandler := apidq.NewHandler(opt.DataQualityScorer)
 			r.Get("/admin/observability/data-quality", dqHandler.Score)
 			r.Get("/admin/observability/lineage", dqHandler.Lineage)
 
