@@ -75,3 +75,6 @@ aacf69ba268c7ea808c77b3cb18a0b0a614fd4bd
 56758be506eb5657462f5b98f50d9bb4d6440605
 # refactor(R6.1): carve internal/jobs/triage subpkg
 c94f18a3e9ceeeb57065fbf9a0323f5b75683c85
+
+# refactor(R6.2): carve internal/jobs/digests subpkg
+8ae2e9bcc11604aa86aaf03ae4a413d3b4394eeb
