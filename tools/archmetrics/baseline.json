@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T19:33:05Z",
+  "generated_at": "2026-05-28T19:36:42Z",
   "go_version": "go1.26.1",
-  "commit_sha": "390120b0aaccc7dbf126040c95d7da1507d9d96b",
+  "commit_sha": "653239ea723687a6bdb4cf26177e0a72fd1d3c92",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 264,
+      "go_files": 263,
       "test_files": 161,
-      "loc": 123570,
+      "loc": 123298,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2628,6 +2628,7 @@
         "internal/api/middleware",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
+        "internal/api/vehicleinfo",
         "internal/apilog",
         "internal/app/adminobssvc",
         "internal/app/auditviewersvc",
@@ -3145,7 +3146,6 @@
         "vampire_drain_handler_test.go",
         "vehicle_config_handler.go",
         "vehicle_config_handler_test.go",
-        "vehicle_info_handler.go",
         "vehicle_photo_handler.go",
         "vehicle_photo_handler_test.go",
         "vehicle_settings_handler.go",
@@ -3351,6 +3351,26 @@
         "internal/database/vehicle",
         "internal/models/tesla",
         "internal/models/vehicle",
+        "internal/tesla"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/vehicleinfo",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 318,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/tesla",
+        "internal/database/vehicle",
         "internal/tesla"
       ],
       "files": [
@@ -7315,7 +7335,6 @@
       "user_preference_handler.go",
       "vampire_drain_handler.go",
       "vehicle_config_handler.go",
-      "vehicle_info_handler.go",
       "vehicle_photo_handler.go",
       "vehicle_settings_handler.go",
       "vehicle_states_handler.go",
@@ -7371,6 +7390,10 @@
       "handler.go"
     ],
     "internal/api/vehicleaccess": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/vehicleinfo": [
       "doc.go",
       "handler.go"
     ],
@@ -8485,7 +8508,7 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 264,
+      "flat_parent_go_files": 263,
       "flat_parent_test_files": 161,
       "planned_subpkgs": 59,
       "existing_subpkgs": [

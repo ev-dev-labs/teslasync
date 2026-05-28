@@ -20,6 +20,7 @@ import (
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
+	apivehinfo "github.com/ev-dev-labs/teslasync/internal/api/vehicleinfo"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
@@ -1056,7 +1057,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaUserOrderHandler := NewTeslaUserOrderHandler(teslaClient, db)
 	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
 	vehicleAccessHandler := apivehaccess.NewHandler(teslaClient, db)
-	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
+	vehicleInfoHandler := apivehinfo.NewHandler(teslaClient, db)
 	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader)
 
 	// trip-planner-llm-agent tools (Phase-50 / D5, slice 0025).

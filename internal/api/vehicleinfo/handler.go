@@ -1,4 +1,4 @@
-package api
+package vehicleinfo
 
 import (
 	"encoding/json"
@@ -6,25 +6,27 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+
+	"github.com/rs/zerolog/log"
 )
 
-// VehicleInfoHandler serves per-vehicle info stored in tesla_user_config:
+// Handler serves per-vehicle info stored in tesla_user_config:
 // mobile_enabled, option codes, and vehicle specs.
-type VehicleInfoHandler struct {
+type Handler struct {
 	teslaClient *tesla.Client
 	configRepo  *tesladb.TeslaUserConfigRepo
 	vehicleRepo *vehicledb.VehicleRepo
 }
 
-// NewVehicleInfoHandler creates a new handler.
-func NewVehicleInfoHandler(tc *tesla.Client, db *database.DB) *VehicleInfoHandler {
-	return &VehicleInfoHandler{
+// NewHandler creates a new handler.
+func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
+	return &Handler{
 		teslaClient: tc,
 		configRepo:  tesladb.NewTeslaUserConfigRepo(db),
 		vehicleRepo: vehicledb.NewVehicleRepo(db),
@@ -38,8 +40,8 @@ type vehicleInfoEnvelope struct {
 }
 
 // resolveVIN looks up the vehicle VIN from the vehicleID URL param.
-func (h *VehicleInfoHandler) resolveVIN(r *http.Request) (string, error) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) resolveVIN(r *http.Request) (string, error) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
 		return "", fmt.Errorf("invalid vehicle ID: %w", err)
 	}
@@ -57,10 +59,10 @@ func (h *VehicleInfoHandler) resolveVIN(r *http.Request) (string, error) {
 
 // MobileEnabled returns stored mobile_enabled status from DB.
 // GET /api/v1/vehicles/{vehicleID}/mobile-enabled
-func (h *VehicleInfoHandler) MobileEnabled(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) MobileEnabled(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.getVehicleConfig(w, r, "mobile_enabled:"+vin)
@@ -68,10 +70,10 @@ func (h *VehicleInfoHandler) MobileEnabled(w http.ResponseWriter, r *http.Reques
 
 // RefreshMobileEnabled fetches mobile_enabled from Tesla and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/mobile-enabled/refresh
-func (h *VehicleInfoHandler) RefreshMobileEnabled(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshMobileEnabled(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	configKey := "mobile_enabled:" + vin
@@ -84,10 +86,10 @@ func (h *VehicleInfoHandler) RefreshMobileEnabled(w http.ResponseWriter, r *http
 
 // VehicleOptions returns stored option codes from DB.
 // GET /api/v1/vehicles/{vehicleID}/options
-func (h *VehicleInfoHandler) VehicleOptions(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) VehicleOptions(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.getVehicleConfig(w, r, "vehicle_options:"+vin)
@@ -95,10 +97,10 @@ func (h *VehicleInfoHandler) VehicleOptions(w http.ResponseWriter, r *http.Reque
 
 // RefreshVehicleOptions fetches options from Tesla and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/options/refresh
-func (h *VehicleInfoHandler) RefreshVehicleOptions(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshVehicleOptions(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	configKey := "vehicle_options:" + vin
@@ -111,10 +113,10 @@ func (h *VehicleInfoHandler) RefreshVehicleOptions(w http.ResponseWriter, r *htt
 
 // VehicleSpecs returns stored specs from DB.
 // GET /api/v1/vehicles/{vehicleID}/specs
-func (h *VehicleInfoHandler) VehicleSpecs(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) VehicleSpecs(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.getVehicleConfig(w, r, "vehicle_specs:"+vin)
@@ -124,10 +126,10 @@ func (h *VehicleInfoHandler) VehicleSpecs(w http.ResponseWriter, r *http.Request
 // This endpoint costs $0.10 per successful call — a freshness guard prevents
 // redundant calls if specs were already fetched within the last 24 hours.
 // POST /api/v1/vehicles/{vehicleID}/specs/refresh
-func (h *VehicleInfoHandler) RefreshVehicleSpecs(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshVehicleSpecs(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	configKey := "vehicle_specs:" + vin
@@ -136,7 +138,7 @@ func (h *VehicleInfoHandler) RefreshVehicleSpecs(w http.ResponseWriter, r *http.
 	existing, err := h.configRepo.GetByType(r.Context(), configKey)
 	if err != nil {
 		log.Error().Err(err).Str("config_key", configKey).Msg("failed to check specs freshness")
-		writeError(w, http.StatusInternalServerError, "failed to check specs freshness")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to check specs freshness")
 		return
 	}
 	if existing != nil && time.Since(existing.FetchedAt) < 24*time.Hour {
@@ -144,7 +146,7 @@ func (h *VehicleInfoHandler) RefreshVehicleSpecs(w http.ResponseWriter, r *http.
 			Str("vin", vin).
 			Time("fetched_at", existing.FetchedAt).
 			Msg("vehicle specs refresh rejected — already fetched within 24 hours (costs $0.10/call)")
-		writeError(w, http.StatusTooManyRequests, "specs were already fetched within the last 24 hours — this endpoint costs $0.10 per call")
+		httpx.WriteError(w, http.StatusTooManyRequests, "specs were already fetched within the last 24 hours — this endpoint costs $0.10 per call")
 		return
 	}
 
@@ -159,10 +161,10 @@ func (h *VehicleInfoHandler) RefreshVehicleSpecs(w http.ResponseWriter, r *http.
 
 // SubscriptionEligibility returns stored subscription eligibility from DB.
 // GET /api/v1/vehicles/{vehicleID}/subscriptions
-func (h *VehicleInfoHandler) SubscriptionEligibility(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) SubscriptionEligibility(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.getVehicleConfig(w, r, "subscriptions:"+vin)
@@ -170,10 +172,10 @@ func (h *VehicleInfoHandler) SubscriptionEligibility(w http.ResponseWriter, r *h
 
 // RefreshSubscriptionEligibility fetches subscription eligibility from Tesla and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/subscriptions/refresh
-func (h *VehicleInfoHandler) RefreshSubscriptionEligibility(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshSubscriptionEligibility(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	configKey := "subscriptions:" + vin
@@ -186,10 +188,10 @@ func (h *VehicleInfoHandler) RefreshSubscriptionEligibility(w http.ResponseWrite
 
 // UpgradeEligibility returns stored upgrade eligibility from DB.
 // GET /api/v1/vehicles/{vehicleID}/upgrades
-func (h *VehicleInfoHandler) UpgradeEligibility(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) UpgradeEligibility(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	h.getVehicleConfig(w, r, "upgrades:"+vin)
@@ -197,10 +199,10 @@ func (h *VehicleInfoHandler) UpgradeEligibility(w http.ResponseWriter, r *http.R
 
 // RefreshUpgradeEligibility fetches upgrade eligibility from Tesla and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/upgrades/refresh
-func (h *VehicleInfoHandler) RefreshUpgradeEligibility(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshUpgradeEligibility(w http.ResponseWriter, r *http.Request) {
 	vin, err := h.resolveVIN(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	configKey := "upgrades:" + vin
@@ -213,13 +215,13 @@ func (h *VehicleInfoHandler) RefreshUpgradeEligibility(w http.ResponseWriter, r 
 
 // WarrantyDetails returns stored warranty details from DB.
 // GET /api/v1/tesla/warranty
-func (h *VehicleInfoHandler) WarrantyDetails(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) WarrantyDetails(w http.ResponseWriter, r *http.Request) {
 	h.getVehicleConfig(w, r, "warranty")
 }
 
 // RefreshWarrantyDetails fetches warranty details from Tesla and saves to DB.
 // POST /api/v1/tesla/warranty/refresh
-func (h *VehicleInfoHandler) RefreshWarrantyDetails(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshWarrantyDetails(w http.ResponseWriter, r *http.Request) {
 	configKey := "warranty"
 	h.refreshVehicleConfig(w, r, configKey, "warranty", "", func() ([]byte, int, error) {
 		return h.teslaClient.GetWarrantyDetails(r.Context())
@@ -229,22 +231,22 @@ func (h *VehicleInfoHandler) RefreshWarrantyDetails(w http.ResponseWriter, r *ht
 // ---------- Shared helpers ----------
 
 // getVehicleConfig returns stored per-vehicle config data with fetched_at metadata.
-func (h *VehicleInfoHandler) getVehicleConfig(w http.ResponseWriter, r *http.Request, configKey string) {
+func (h *Handler) getVehicleConfig(w http.ResponseWriter, r *http.Request, configKey string) {
 	cfg, err := h.configRepo.GetByType(r.Context(), configKey)
 	if err != nil {
 		log.Error().Err(err).Str("config_key", configKey).Msg("failed to fetch vehicle config")
-		writeError(w, http.StatusInternalServerError, "failed to fetch vehicle info")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch vehicle info")
 		return
 	}
 	if cfg == nil {
-		writeJSON(w, http.StatusOK, vehicleInfoEnvelope{
+		httpx.WriteJSON(w, http.StatusOK, vehicleInfoEnvelope{
 			Data:      json.RawMessage("null"),
 			FetchedAt: nil,
 		})
 		return
 	}
 	ts := cfg.FetchedAt.UTC().Format("2006-01-02T15:04:05Z")
-	writeJSON(w, http.StatusOK, vehicleInfoEnvelope{
+	httpx.WriteJSON(w, http.StatusOK, vehicleInfoEnvelope{
 		Data:      json.RawMessage(cfg.Data),
 		FetchedAt: &ts,
 	})
@@ -253,14 +255,14 @@ func (h *VehicleInfoHandler) getVehicleConfig(w http.ResponseWriter, r *http.Req
 // refreshVehicleConfig fetches from Tesla, processes the response, persists, and returns.
 // For mobile_enabled, the Tesla response envelope contains a bare boolean, which is
 // wrapped as {"enabled": <bool>} before persisting.
-func (h *VehicleInfoHandler) refreshVehicleConfig(
+func (h *Handler) refreshVehicleConfig(
 	w http.ResponseWriter, r *http.Request,
 	configKey, configType, vin string,
 	fetch func() ([]byte, int, error),
 	isPaidEndpoint bool,
 ) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -269,12 +271,12 @@ func (h *VehicleInfoHandler) refreshVehicleConfig(
 	body, status, err := fetch()
 	if err != nil {
 		log.Error().Err(err).Str("config_type", configType).Str("vin", vin).Msg("tesla vehicle info API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("config_type", configType).Str("vin", vin).Msg("tesla vehicle info non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
@@ -284,7 +286,7 @@ func (h *VehicleInfoHandler) refreshVehicleConfig(
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		log.Error().Err(err).Str("config_type", configType).Msg("failed to parse tesla response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
@@ -301,7 +303,7 @@ func (h *VehicleInfoHandler) refreshVehicleConfig(
 
 	if err := h.configRepo.Upsert(r.Context(), configKey, data); err != nil {
 		log.Error().Err(err).Str("config_key", configKey).Msg("failed to save vehicle info")
-		writeError(w, http.StatusInternalServerError, "failed to save vehicle info")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save vehicle info")
 		return
 	}
 
