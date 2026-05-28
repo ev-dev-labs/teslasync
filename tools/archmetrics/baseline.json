@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T03:10:21Z",
+  "generated_at": "2026-05-28T03:26:03Z",
   "go_version": "go1.26.1",
-  "commit_sha": "86e8e49f7d68cc9bfca039b0f324a396b8507a62",
+  "commit_sha": "8a86689293fa48474df923051eb081c0c9c1c610",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2850,7 +2850,7 @@
       "path": "internal/arch",
       "go_files": 2,
       "test_files": 1,
-      "loc": 1109,
+      "loc": 1117,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -4874,7 +4874,7 @@
       "path": "tools/archmetrics",
       "go_files": 2,
       "test_files": 0,
-      "loc": 796,
+      "loc": 801,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -6538,23 +6538,30 @@
       "file_count_at_r0": 36,
       "flat_parent_go_files": 34,
       "flat_parent_test_files": 2,
-      "planned_subpkgs": 12,
+      "planned_subpkgs": 19,
       "existing_subpkgs": null,
       "missing_subpkgs": [
         "alert",
+        "auth",
         "automation",
+        "backup",
         "charging",
+        "chatbot",
         "dashboard",
         "drive",
+        "energy",
+        "export",
+        "geo",
         "notification",
         "security",
+        "settings",
         "signal",
         "system",
         "telemetry",
         "tesla",
         "vehicle"
       ],
-      "notes": "12 subpkgs from R1 audit. Smallest-first execution; parent retains doc.go + models.go + models_test.go only."
+      "notes": "19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes."
     },
     {
       "parent": "internal/jobs",

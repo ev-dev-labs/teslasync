@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T03:10:22Z, Go go1.26.1, commit 86e8e49f7d68cc9bfca039b0f324a396b8507a62_
+_Generated 2026-05-28T03:26:04Z, Go go1.26.1, commit 8a86689293fa48474df923051eb081c0c9c1c610_
 
 ## Summary
 
 - Packages: 210
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 371861
+- Total non-blank LOC under cmd/+internal/+tools/: 371874
 
 ## cmd/* main.go LOC
 
@@ -153,7 +153,7 @@ _Generated 2026-05-28T03:10:22Z, Go go1.26.1, commit 86e8e49f7d68cc9bfca039b0f32
 | internal/app/notificationsvc | 2 | 1 | 311 | yes | app |
 | internal/app/tripsvc | 2 | 1 | 314 | yes | app |
 | internal/app/vehiclesvc | 3 | 1 | 350 | yes | app |
-| internal/arch | 2 | 1 | 1109 | yes | tool |
+| internal/arch | 2 | 1 | 1117 | yes | tool |
 | internal/audit | 2 | 1 | 375 | yes | platform |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1604 | yes | platform |
@@ -248,7 +248,7 @@ _Generated 2026-05-28T03:10:22Z, Go go1.26.1, commit 86e8e49f7d68cc9bfca039b0f32
 | tools/aigen | 2 | 1 | 338 | yes | tool |
 | tools/aistream-contract | 2 | 0 | 227 | yes | tool |
 | tools/aivet | 2 | 1 | 792 | yes | tool |
-| tools/archmetrics | 2 | 0 | 796 | yes | tool |
+| tools/archmetrics | 2 | 0 | 801 | yes | tool |
 | tools/eval-schema-check | 2 | 0 | 57 | yes | tool |
 
 ## doc.go adoption
@@ -261,7 +261,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 34 / 2 | 12 | 0 | 12 |
+| `internal/models` | R5 | 36 | 34 / 2 | 19 | 0 | 19 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -270,16 +270,23 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 ### `internal/models` detail
 
-> 12 subpkgs from R1 audit. Smallest-first execution; parent retains doc.go + models.go + models_test.go only.
+> 19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes.
 
 **Planned but not yet on disk:**
 - `internal/models/alert`
+- `internal/models/auth`
 - `internal/models/automation`
+- `internal/models/backup`
 - `internal/models/charging`
+- `internal/models/chatbot`
 - `internal/models/dashboard`
 - `internal/models/drive`
+- `internal/models/energy`
+- `internal/models/export`
+- `internal/models/geo`
 - `internal/models/notification`
 - `internal/models/security`
+- `internal/models/settings`
 - `internal/models/signal`
 - `internal/models/system`
 - `internal/models/telemetry`

@@ -54,8 +54,8 @@ var ForbiddenEdges = []ForbiddenEdge{
 	},
 	{
 		Source: "internal/domain/...",
-		Target: "internal/models",
-		Reason: "domain entities must not depend on persistence/transport DTOs (ADR-006; phase-A3.1)",
+		Target: "internal/models/...",
+		Reason: "domain entities must not depend on persistence/transport DTOs (ADR-006; phase-A3.1; broadened to models/... in phase-R5.0)",
 	},
 	{
 		Source: "internal/domain/...",
@@ -171,8 +171,8 @@ var ForbiddenEdges = []ForbiddenEdge{
 	},
 	{
 		Source: "internal/handler/v1",
-		Target: "internal/models",
-		Reason: "handlers use internal/handler/dto for transport DTOs (ADR-006; phase-47/10)",
+		Target: "internal/models/...",
+		Reason: "handlers use internal/handler/dto for transport DTOs (ADR-006; phase-47/10; broadened to models/... in phase-R5.0)",
 	},
 	{
 		Source: "internal/handler/...",
@@ -207,30 +207,33 @@ var ForbiddenEdges = []ForbiddenEdge{
 	// on any other layer. Independently enforced (more strictly) by
 	// TestModelsImportsRestricted; mirrored here for layering reason output.
 	// ----------------------------------------------------------------------
+	// Phase-R5.0 (2026-05-28): Source widened from "internal/models" to
+	// "internal/models/..." so each new bounded-context subpackage
+	// (models/alert, models/charging, etc) inherits the DTO-leaf contract.
 	{
-		Source: "internal/models",
+		Source: "internal/models/...",
 		Target: "internal/database",
-		Reason: "models (DTOs) must not depend on persistence implementation (ADR-006; phase-A3.1)",
+		Reason: "models (DTOs) must not depend on persistence implementation (ADR-006; phase-A3.1; broadened in phase-R5.0)",
 	},
 	{
-		Source: "internal/models",
+		Source: "internal/models/...",
 		Target: "internal/adapter/...",
-		Reason: "models (DTOs) must not depend on adapters (ADR-006; phase-A3.1)",
+		Reason: "models (DTOs) must not depend on adapters (ADR-006; phase-A3.1; broadened in phase-R5.0)",
 	},
 	{
-		Source: "internal/models",
+		Source: "internal/models/...",
 		Target: "internal/handler/...",
-		Reason: "models (DTOs) must not depend on handlers (ADR-006; phase-A3.1)",
+		Reason: "models (DTOs) must not depend on handlers (ADR-006; phase-A3.1; broadened in phase-R5.0)",
 	},
 	{
-		Source: "internal/models",
+		Source: "internal/models/...",
 		Target: "internal/app/...",
-		Reason: "models (DTOs) must not depend on use cases (ADR-006; phase-A3.1)",
+		Reason: "models (DTOs) must not depend on use cases (ADR-006; phase-A3.1; broadened in phase-R5.0)",
 	},
 	{
-		Source: "internal/models",
+		Source: "internal/models/...",
 		Target: "internal/api",
-		Reason: "models (DTOs) must not depend on the HTTP router (ADR-006; phase-A3.1)",
+		Reason: "models (DTOs) must not depend on the HTTP router (ADR-006; phase-A3.1; broadened in phase-R5.0)",
 	},
 }
 

@@ -508,21 +508,26 @@ func TestModelsHaveStructTags(t *testing.T) {
 }
 
 // TestModelsImportsRestricted enforces ADR-006 (phase-47/07): packages
-// under internal/models may NOT import internal/database,
+// under internal/models AND all bounded-context subpackages
+// internal/models/<sub> may NOT import internal/database,
 // internal/adapter/*, internal/api, internal/handler/*,
 // internal/app/*, or internal/port/*. Imports of stdlib and
 // internal/domain/* (for ToDomain helpers) are explicitly allowed.
+//
+// Phase-R5.0 (2026-05-28): widened load path from "./internal/models"
+// to "./internal/models/..." so newly-created bounded-context
+// subpackages inherit the DTO-leaf contract automatically.
 func TestModelsImportsRestricted(t *testing.T) {
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedImports,
 		Dir:  filepath.Join("..", ".."),
 	}
-	pkgs, err := packages.Load(cfg, "./internal/models")
+	pkgs, err := packages.Load(cfg, "./internal/models/...")
 	if err != nil {
 		t.Fatalf("packages.Load: %v", err)
 	}
 	if len(pkgs) == 0 {
-		t.Fatal("packages.Load returned no packages for ./internal/models")
+		t.Fatal("packages.Load returned no packages for ./internal/models/...")
 	}
 
 	type violation struct {

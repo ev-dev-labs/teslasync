@@ -68,7 +68,7 @@ var forbiddenEdges = []forbiddenEdge{
 
 	{From: "internal/domain", FromAny: true, To: "internal/adapter", ToAny: true},
 	{From: "internal/domain", FromAny: true, To: "internal/database"},
-	{From: "internal/domain", FromAny: true, To: "internal/models"},
+	{From: "internal/domain", FromAny: true, To: "internal/models", ToAny: true},
 	{From: "internal/domain", FromAny: true, To: "internal/port", ToAny: true},
 	{From: "internal/domain", FromAny: true, To: "internal/handler", ToAny: true},
 	{From: "internal/domain", FromAny: true, To: "internal/api"},
@@ -127,11 +127,15 @@ var forbiddenEdges = []forbiddenEdge{
 	// depend on any other layer. Handlers/adapters/svcs map to/from models.
 	// ----------------------------------------------------------------------
 
-	{From: "internal/models", To: "internal/database"},
-	{From: "internal/models", To: "internal/adapter", ToAny: true},
-	{From: "internal/models", To: "internal/handler", ToAny: true},
-	{From: "internal/models", To: "internal/app", ToAny: true},
-	{From: "internal/models", To: "internal/api"},
+	// Phase-R5 (2026-05-28): FromAny:true added so each new
+	// internal/models/<sub> subpackage inherits the DTO-leaf contract.
+	// Mirrors arch_test TestModelsImportsRestricted (now loads
+	// ./internal/models/...) and rules.go (Source: "internal/models/...").
+	{From: "internal/models", FromAny: true, To: "internal/database"},
+	{From: "internal/models", FromAny: true, To: "internal/adapter", ToAny: true},
+	{From: "internal/models", FromAny: true, To: "internal/handler", ToAny: true},
+	{From: "internal/models", FromAny: true, To: "internal/app", ToAny: true},
+	{From: "internal/models", FromAny: true, To: "internal/api"},
 }
 
 type forbiddenEdge struct {
@@ -226,11 +230,12 @@ var plannedSubpackages = []hotspotPlan{
 		Owner:         "R5",
 		FileCountAtR0: 36,
 		Targets: []string{
-			"alert", "automation", "charging", "dashboard", "drive",
-			"notification", "security", "signal", "system", "telemetry",
-			"tesla", "vehicle",
+			"alert", "auth", "automation", "backup", "charging", "chatbot",
+			"dashboard", "drive", "energy", "export", "geo", "notification",
+			"security", "settings", "signal", "system", "telemetry", "tesla",
+			"vehicle",
 		},
-		Notes: "12 subpkgs from R1 audit. Smallest-first execution; parent retains doc.go + models.go + models_test.go only.",
+		Notes: "19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes.",
 	},
 	{
 		Parent:        "internal/jobs",

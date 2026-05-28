@@ -44,41 +44,75 @@ Each subpackage row lists:
 
 ### `internal/models/` (36 files, 2 tests) — owner: **R5**
 
-- **Files moving out of parent:** 33
-- **Files staying in parent:** 3 — `doc.go`, `models.go`, `models_test.go`
-- **Target subpackages: 12**
-- **Composition file:** none — pure types, no registry. Parent
-  `models.go` retains any cross-cluster type aliases needed for
-  backwards-compatible imports during R5 ramp-up.
+> **R5.0 expansion (2026-05-28):** initial R1 audit only classified the
+> 35 single-purpose files. `models.go` (679 lines) is NOT a thin glue
+> file — it hosts 35 concrete domain types + 7 helper funcs/methods
+> that span **7 NEW bounded contexts** not covered by R1 (`auth`,
+> `backup`, `chatbot`, `energy`, `export`, `geo`, `settings`). The
+> target list below grows from 12 → **19 subpkgs**, and the parent
+> retains ONLY `doc.go` after R5 completes. The 3 unused
+> `DerefFloat64/DerefString/DerefBool` helpers (zero callers across
+> the entire repo) are **deleted** as part of R5 per the no-tech-debt
+> mandate.
+
+- **Files moving out of parent:** 35 (was 33; +`models.go` itself
+  split across destinations, +`models_test.go` tests split alongside
+  their tested types into each destination's `_test.go`).
+- **Files staying in parent:** 1 — `doc.go` only.
+- **Target subpackages: 19**
+- **Composition file:** none — pure types, no registry. After R5, the
+  parent `internal/models/` package is effectively empty (just
+  `doc.go` declaring `// Layer: domain (DTO leaf per ADR-006)`).
 
 | Subpkg | Files | Source files |
 | --- | --- | --- |
 | `models/alert` | 2 | `alert.go`, `alert_test.go` |
-| `models/automation` | 6 | `automation.go`, `automation_step_action.go`, `automation_step_condition.go`, `automation_step_trigger.go`, `enum_automation_steps.go`, `enum_automation_triggers.go` |
-| `models/charging` | 1 | `charging.go` |
+| `models/auth` *(NEW R5.0)* | 1 | `auth.go` carved from models.go (`APIKey`, `Token`); test for `Token` carved from `models_test.go` (`TestToken_NotExpired`, `TestToken_Expired`) |
+| `models/automation` | 8 | `automation.go`, `automation_step_action.go`, `automation_step_condition.go`, `automation_step_trigger.go`, `enum_automation_steps.go`, `enum_automation_triggers.go`, **+ `automation_history.go`** carved from models.go (`AutomationHistory`, `AutomationVariable`) |
+| `models/backup` *(NEW R5.0)* | 1 | `backup.go` carved from models.go (`BackupConfig`, `BackupRun`) |
+| `models/charging` | 1 | `charging.go`; test for `ChargingSession` carved from `models_test.go` (`TestChargingSession_Fields`) |
+| `models/chatbot` *(NEW R5.0)* | 1 | `chat.go` carved from models.go (`ChatMessage`, `ChatSessionInfo`) |
 | `models/dashboard` | 4 | `dashboard_layout.go`, `chart_annotation.go`, `saved_view.go`, `pinned.go` |
-| `models/drive` | 2 | `drive.go`, `trip.go` |
-| `models/notification` | 9 | `notification.go`, `notification_log.go`, `notification_channel_discord.go`, `notification_channel_email_webhook.go`, `notification_channel_ntfy_pushover.go`, `notification_channel_slack_telegram.go`, `enum_notification_channels.go`, `push_subscription.go`, `quiet_hours.go` |
+| `models/drive` | 2 | `drive.go`, `trip.go`; test for `Drive` carved from `models_test.go` (`TestDrive_Fields`) |
+| `models/energy` *(NEW R5.0)* | 1 | `energy_stats.go` carved from models.go (`EnergyStatsRow`) |
+| `models/export` *(NEW R5.0)* | 1 | `export.go` carved from models.go (`ExportJob`, `ExportJobSummary`, `ExportJobRequest`) |
+| `models/geo` *(NEW R5.0)* | 1 | `geo.go` carved from models.go (`Address`, `VisitedLocation`) |
+| `models/notification` | 14 | `notification.go`, `notification_log.go`, `notification_channel_discord.go`, `notification_channel_email_webhook.go`, `notification_channel_ntfy_pushover.go`, `notification_channel_slack_telegram.go`, `enum_notification_channels.go`, `push_subscription.go`, `quiet_hours.go`, **+ `extras.go`** carved from models.go (`NotificationChannel`, `NotificationLog`, `NotificationSchedule`, `NotificationPreference`, `NotificationMetric`) |
 | `models/security` | 1 | `security.go` |
+| `models/settings` *(NEW R5.0)* | 1 | `settings.go` carved from models.go (`LegacySettings`, `LegacyPollingConfig` + 5 funcs/methods: `DefaultPollingConfig`, `EnabledVehicleDataEndpoints`, `VehicleDataEndpointsString`, `HasAnyVehicleDataEndpoint`, `EnabledOnDemandVehicleDataEndpoints`) |
 | `models/signal` | 2 | `signal.go`, `enum_signal_types.go` |
 | `models/system` | 1 | `system.go` |
 | `models/telemetry` | 2 | `telemetry.go`, `position.go` |
-| `models/tesla` | 1 | `tesla.go` |
-| `models/vehicle` | 2 | `vehicle.go`, `enum_vehicle_states.go` |
+| `models/tesla` | 15 | `tesla.go` (existing), **+ 14 types** carved from models.go: `TeslaEnergySite`, `TeslaEnergyLiveStatus`, `TeslaChargingHistoryEntry`, `TeslaChargingHistorySummary`, `TeslaChargingSession`, `TeslaChargingSessionSummary`, `TeslaEnergyHistory`, `TeslaEnergyBackupEvent`, `TeslaEnergyWCCharging`, `TeslaUserConfig`, `TeslaUserOrder`, `TeslaUserProfile`, `TeslaVehicleDriver`, `TeslaVehicleInvitation` (one file each or grouped sensibly; final shape decided during R5.N execution) |
+| `models/vehicle` | 2 | `vehicle.go`, `enum_vehicle_states.go`; test for `Vehicle` carved from `models_test.go` (`TestVehicle_Fields`, `TestVehicle_Archived`) |
+
+**Deleted as part of R5 (zero callers, per no-tech-debt mandate):**
+`DerefFloat64`, `DerefString`, `DerefBool` from models.go.
 
 - **Aliases when callers need ≥2 model packages**
   (per ADR-011 §3): `vehiclemodel`, `drivemodel`, `chargingmodel`,
   `alertmodel`, `automationmodel`, `notificationmodel`,
   `telemetrymodel`, `signalmodel`, `securitymodel`, `systemmodel`,
-  `dashboardmodel`, `teslamodel`.
+  `dashboardmodel`, `teslamodel`, `authmodel`, `backupmodel`,
+  `chatbotmodel`, `energymodel`, `exportmodel`, `geomodel`,
+  `settingsmodel`.
 - **Risk:** Models are imported by ~140 files across the repo. High
   blast radius. Mitigation: smallest-first execution (alert →
-  charging → security → system → tesla → vehicle/drive/signal/
+  auth → backup → chatbot → energy → export → geo → settings →
+  charging → security → system → tesla → vehicle → drive → signal →
   telemetry → automation → notification → dashboard). Each cluster
   is its own commit so `git bisect` works.
-- **Single-file subpkgs (`charging`, `security`, `system`, `tesla`):**
+- **Single-file subpkgs (`charging`, `security`, `system`, `auth`,
+  `backup`, `chatbot`, `energy`, `export`, `geo`, `settings`):**
   kept separate not folded — these are distinct bounded contexts.
   Folding would re-create the very flat-folder problem ADR-011 solves.
+- **No type registries / no reflective lookups** depend on the
+  models package path (verified 2026-05-28 by repo-wide grep for
+  `reflect.TypeOf|gob.Register|RegisterType|RegisterName` against
+  model types — zero hits). Mass move is safe.
+- **No cross-cluster imports inside `internal/models/`** today
+  (verified 2026-05-28: every `internal/models/*.go` imports stdlib
+  only). No cycle risk at split time.
 
 ### `internal/jobs/` (23 files, 11 tests + 1 done in R0.5) — owner: **R6**
 
