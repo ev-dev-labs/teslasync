@@ -1,4 +1,4 @@
-package jobs
+package triage
 
 // Phase-50 / 0046 — S5 Feedback queue triage.
 //
@@ -48,8 +48,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// AIFeedbackTriageSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunAIFeedbackTriageIndexer] depends
+// FeedbackSettingsReader is the narrow view of
+// [database.SettingsRepo] [RunFeedback] depends
 // on. Defined inline so callers can supply a fake without
 // dragging the full settings repo into job tests.
 //
@@ -57,17 +57,17 @@ import (
 // feature ID. The job re-checks this on every tick so an admin
 // who disables feedback-queue-triage mid-day sees the next run
 // no-op immediately (no waiting for the worker pool to recycle).
-type AIFeedbackTriageSettingsReader interface {
+type FeedbackSettingsReader interface {
 	AIMode(ctx context.Context) (string, error)
 	AIFeatureEnabled(ctx context.Context, featureID string) (bool, error)
 }
 
-// AIFeedbackTriageResult reports the outcome of one tick. The
+// FeedbackResult reports the outcome of one tick. The
 // fields are all int because the real fan-out implementation will
 // tally per-source re-embed counts here; today the values stay
 // zero (the stub is a no-op when off, and a no-op-with-log when
 // on — the actual indexing lands in a future slice).
-type AIFeedbackTriageResult struct {
+type FeedbackResult struct {
 	// Skipped is 1 when the tick early-returned because ai_mode
 	// was off OR the per-feature toggle was off. Reported
 	// separately from "no work to do" so the ops dashboard can
@@ -90,7 +90,7 @@ type AIFeedbackTriageResult struct {
 	Failed int
 }
 
-// RunAIFeedbackTriageIndexer is the once-per-day cron entry for
+// RunFeedback is the once-per-day cron entry for
 // the feedback-queue-triage slice's background fan-out.
 //
 // Re-checks ai_mode + the per-feature toggle at execution time
@@ -98,7 +98,7 @@ type AIFeedbackTriageResult struct {
 // while AI was on, but the admin can flip ai_mode='off' OR
 // disable the toggle at any moment and we MUST honour it
 // immediately. If either gate is off the function returns
-// ([AIFeedbackTriageResult{Skipped: 1}], nil) without touching
+// ([FeedbackResult{Skipped: 1}], nil) without touching
 // the LLM, the embedder, or the vector DB.
 //
 // Settings read failures are LOGGED WARN and treated as off (no
@@ -113,16 +113,16 @@ type AIFeedbackTriageResult struct {
 //   - off mode (any kind) → Skipped=1, no embed calls, no DB writes;
 //   - on mode             → Skipped=0, no embed calls (yet), no DB writes;
 //   - errors              → only on nil-arg programming bugs.
-func RunAIFeedbackTriageIndexer(
+func RunFeedback(
 	ctx context.Context,
 	db *database.DB,
-	settings AIFeedbackTriageSettingsReader,
-) (AIFeedbackTriageResult, error) {
+	settings FeedbackSettingsReader,
+) (FeedbackResult, error) {
 	if db == nil {
-		return AIFeedbackTriageResult{}, fmt.Errorf("jobs: RunAIFeedbackTriageIndexer requires non-nil db")
+		return FeedbackResult{}, fmt.Errorf("jobs: RunFeedback requires non-nil db")
 	}
 	if settings == nil {
-		return AIFeedbackTriageResult{}, fmt.Errorf("jobs: RunAIFeedbackTriageIndexer requires non-nil settings")
+		return FeedbackResult{}, fmt.Errorf("jobs: RunFeedback requires non-nil settings")
 	}
 
 	mode, err := settings.AIMode(ctx)
@@ -130,13 +130,13 @@ func RunAIFeedbackTriageIndexer(
 		log.Warn().Err(err).
 			Str("job", "ai_feedback_triage").
 			Msg("settings read failed, treating as ai_mode=off (no fan-out)")
-		return AIFeedbackTriageResult{Skipped: 1}, nil
+		return FeedbackResult{Skipped: 1}, nil
 	}
 	if mode == rag.AIModeOff {
 		log.Debug().
 			Str("job", "ai_feedback_triage").
 			Msg("ai_mode=off, skipping (per ADR-015 §I12 #3)")
-		return AIFeedbackTriageResult{Skipped: 1}, nil
+		return FeedbackResult{Skipped: 1}, nil
 	}
 
 	enabled, err := settings.AIFeatureEnabled(ctx, "feedback-queue-triage")
@@ -145,14 +145,14 @@ func RunAIFeedbackTriageIndexer(
 			Str("job", "ai_feedback_triage").
 			Str("feature_id", "feedback-queue-triage").
 			Msg("per-feature toggle read failed, treating as off (no fan-out)")
-		return AIFeedbackTriageResult{Skipped: 1}, nil
+		return FeedbackResult{Skipped: 1}, nil
 	}
 	if !enabled {
 		log.Debug().
 			Str("job", "ai_feedback_triage").
 			Str("feature_id", "feedback-queue-triage").
 			Msg("feedback-queue-triage toggle off, skipping (per ADR-015 §I7)")
-		return AIFeedbackTriageResult{Skipped: 1}, nil
+		return FeedbackResult{Skipped: 1}, nil
 	}
 
 	// On-mode path. The fan-out implementation (per-source
@@ -164,5 +164,5 @@ func RunAIFeedbackTriageIndexer(
 	log.Debug().
 		Str("job", "ai_feedback_triage").
 		Msg("ai_mode + feature on; fan-out implementation pending future slice")
-	return AIFeedbackTriageResult{}, nil
+	return FeedbackResult{}, nil
 }

@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T04:32:15Z, Go go1.26.1, commit 3d54e125dc58dd0d15c93a03f57a0c76f6018d9a_
+_Generated 2026-05-28T05:27:01Z, Go go1.26.1, commit 662587853eb72a388e49b819321fa7beaeb67acc_
 
 ## Summary
 
-- Packages: 229
+- Packages: 230
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372381
+- Total non-blank LOC under cmd/+internal/+tools/: 372481
 
 ## cmd/* main.go LOC
 
@@ -192,13 +192,14 @@ _Generated 2026-05-28T04:32:15Z, Go go1.26.1, commit 3d54e125dc58dd0d15c93a03f57
 | internal/fsm/telemetry | 3 | 1 | 734 | yes | platform |
 | internal/geocoding | 6 | 1 | 532 | yes | platform |
 | internal/handler/dto | 6 | 0 | 94 | yes | handler |
-| internal/handler/middleware | 11 | 1 | 821 | yes | handler |
+| internal/handler/middleware | 11 | 1 | 829 | yes | handler |
 | internal/handler/v1 | 11 | 1 | 828 | yes | handler |
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/integrations/homeassistant | 3 | 1 | 515 | yes | adapter |
-| internal/jobs | 12 | 11 | 3223 | yes | platform |
+| internal/jobs | 10 | 9 | 2635 | yes | platform |
 | internal/jobs/embeddings | 2 | 1 | 262 | yes | platform |
+| internal/jobs/triage | 3 | 2 | 621 | yes |  |
 | internal/metrics | 6 | 2 | 1073 | yes | platform |
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
@@ -267,7 +268,7 @@ _Generated 2026-05-28T04:32:15Z, Go go1.26.1, commit 3d54e125dc58dd0d15c93a03f57
 | tools/aigen | 2 | 1 | 338 | yes | tool |
 | tools/aistream-contract | 2 | 0 | 227 | yes | tool |
 | tools/aivet | 2 | 1 | 792 | yes | tool |
-| tools/archmetrics | 2 | 0 | 801 | yes | tool |
+| tools/archmetrics | 2 | 0 | 860 | yes | tool |
 | tools/eval-schema-check | 2 | 0 | 57 | yes | tool |
 
 ## doc.go adoption
@@ -281,7 +282,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
-| `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
+| `internal/jobs` | R6 | 23 | 10 / 9 | 4 | 2 | 2 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
@@ -318,10 +319,10 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 **Existing subpackages on disk:**
 - `internal/jobs/embeddings`
+- `internal/jobs/triage`
 
 **Planned but not yet on disk:**
 - `internal/jobs/indexers`
-- `internal/jobs/triage`
 - `internal/jobs/digests`
 
 ### `internal/ai/tools` detail

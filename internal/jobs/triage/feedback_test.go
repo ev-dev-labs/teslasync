@@ -1,11 +1,11 @@
 // Phase-50 / 0046 — S5 Feedback queue triage.
 //
-// Tests for RunAIFeedbackTriageIndexer. The off-mode + per-feature
+// Tests for RunFeedback. The off-mode + per-feature
 // gate tests are the slice's load-bearing ADR-015 §I12 evidence —
 // they prove the cron is fail-closed even when the scheduler keeps
 // ticking after an admin disables AI mid-day.
 
-package jobs
+package triage
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 )
 
 // fakeFeedbackTriageSettings is a tiny in-memory implementation
-// of AIFeedbackTriageSettingsReader for the unit tests. The zero
+// of FeedbackSettingsReader for the unit tests. The zero
 // value returns ai_mode=” (which is NOT 'off' but ALSO not
 // 'cloud'/'local' — the function treats anything other than 'off'
 // as on, then re-checks the per-feature toggle).
@@ -48,7 +48,7 @@ func TestRunAIFeedbackTriageIndexer_OffMode_NoFanout(t *testing.T) {
 		mode:    rag.AIModeOff,
 		enabled: map[string]bool{"feedback-queue-triage": true},
 	}
-	res, err := RunAIFeedbackTriageIndexer(context.Background(), &database.DB{}, settings)
+	res, err := RunFeedback(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("off mode: unexpected err %v", err)
 	}
@@ -68,7 +68,7 @@ func TestRunAIFeedbackTriageIndexer_FeatureToggleOff_NoFanout(t *testing.T) {
 		mode:    "cloud",
 		enabled: map[string]bool{"feedback-queue-triage": false},
 	}
-	res, err := RunAIFeedbackTriageIndexer(context.Background(), &database.DB{}, settings)
+	res, err := RunFeedback(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("toggle off: unexpected err %v", err)
 	}
@@ -86,7 +86,7 @@ func TestRunAIFeedbackTriageIndexer_OnMode_NoOp(t *testing.T) {
 		mode:    "cloud",
 		enabled: map[string]bool{"feedback-queue-triage": true},
 	}
-	res, err := RunAIFeedbackTriageIndexer(context.Background(), &database.DB{}, settings)
+	res, err := RunFeedback(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("on mode: unexpected err %v", err)
 	}
@@ -104,7 +104,7 @@ func TestRunAIFeedbackTriageIndexer_SettingsErrorIsFailClosed(t *testing.T) {
 	t.Parallel()
 	t.Run("ai_mode read error", func(t *testing.T) {
 		settings := fakeFeedbackTriageSettings{modeErr: errors.New("db unreachable")}
-		res, err := RunAIFeedbackTriageIndexer(context.Background(), &database.DB{}, settings)
+		res, err := RunFeedback(context.Background(), &database.DB{}, settings)
 		if err != nil {
 			t.Fatalf("settings ai_mode error: want nil err (fail-closed), got %v", err)
 		}
@@ -117,7 +117,7 @@ func TestRunAIFeedbackTriageIndexer_SettingsErrorIsFailClosed(t *testing.T) {
 			mode:       "cloud",
 			enabledErr: errors.New("settings table degraded"),
 		}
-		res, err := RunAIFeedbackTriageIndexer(context.Background(), &database.DB{}, settings)
+		res, err := RunFeedback(context.Background(), &database.DB{}, settings)
 		if err != nil {
 			t.Fatalf("toggle read error: want nil err (fail-closed), got %v", err)
 		}
@@ -131,10 +131,10 @@ func TestRunAIFeedbackTriageIndexer_SettingsErrorIsFailClosed(t *testing.T) {
 // refuses programming-bug nil arguments.
 func TestRunAIFeedbackTriageIndexer_NilDeps(t *testing.T) {
 	t.Parallel()
-	if _, err := RunAIFeedbackTriageIndexer(context.Background(), nil, fakeFeedbackTriageSettings{}); err == nil {
+	if _, err := RunFeedback(context.Background(), nil, fakeFeedbackTriageSettings{}); err == nil {
 		t.Error("nil db: want error")
 	}
-	if _, err := RunAIFeedbackTriageIndexer(context.Background(), &database.DB{}, nil); err == nil {
+	if _, err := RunFeedback(context.Background(), &database.DB{}, nil); err == nil {
 		t.Error("nil settings: want error")
 	}
 }

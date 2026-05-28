@@ -34,9 +34,9 @@
     },
     {
       "path": "internal/jobs",
-      "max_files": 12,
+      "max_files": 10,
       "owner": "Phase R6",
-      "notes": "Was 23 at R0. R0.5 canary already extracted embeddings/. Remaining files split by job category."
+      "notes": "Was 23 at R0; 12 after R0.5 (embeddings/ canary). R6.1 (triage/ subpkg — alert_inbox + feedback) reduced parent to 10. Remaining files split into indexers/ + digests/ subpackages."
     },
     {
       "path": "internal/models",

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:32:14Z",
+  "generated_at": "2026-05-28T05:27:00Z",
   "go_version": "go1.26.1",
-  "commit_sha": "3d54e125dc58dd0d15c93a03f57a0c76f6018d9a",
+  "commit_sha": "662587853eb72a388e49b819321fa7beaeb67acc",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -3766,7 +3766,7 @@
       "path": "internal/handler/middleware",
       "go_files": 11,
       "test_files": 1,
-      "loc": 821,
+      "loc": 829,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -3869,9 +3869,9 @@
     },
     {
       "path": "internal/jobs",
-      "go_files": 12,
-      "test_files": 11,
-      "loc": 3223,
+      "go_files": 10,
+      "test_files": 9,
+      "loc": 2635,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3879,8 +3879,6 @@
         "internal/database"
       ],
       "files": [
-        "ai_alert_inbox_categorizer.go",
-        "ai_alert_inbox_categorizer_test.go",
         "ai_charge_curve_indexer.go",
         "ai_charge_curve_indexer_test.go",
         "ai_digest_weekly.go",
@@ -3889,8 +3887,6 @@
         "ai_docs_indexer_test.go",
         "ai_drive_indexer.go",
         "ai_drive_indexer_test.go",
-        "ai_feedback_triage.go",
-        "ai_feedback_triage_test.go",
         "ai_idle_drain_indexer.go",
         "ai_idle_drain_indexer_test.go",
         "ai_log_trace_indexer.go",
@@ -3919,6 +3915,24 @@
         "doc.go",
         "ttl.go",
         "ttl_test.go"
+      ]
+    },
+    {
+      "path": "internal/jobs/triage",
+      "go_files": 3,
+      "test_files": 2,
+      "loc": 621,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/rag",
+        "internal/database"
+      ],
+      "files": [
+        "alert_inbox.go",
+        "alert_inbox_test.go",
+        "doc.go",
+        "feedback.go",
+        "feedback_test.go"
       ]
     },
     {
@@ -5176,7 +5190,7 @@
       "path": "tools/archmetrics",
       "go_files": 2,
       "test_files": 0,
-      "loc": 801,
+      "loc": 860,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -6461,12 +6475,10 @@
       "doc.go"
     ],
     "internal/jobs": [
-      "ai_alert_inbox_categorizer.go",
       "ai_charge_curve_indexer.go",
       "ai_digest_weekly.go",
       "ai_docs_indexer.go",
       "ai_drive_indexer.go",
-      "ai_feedback_triage.go",
       "ai_idle_drain_indexer.go",
       "ai_log_trace_indexer.go",
       "ai_route_indexer.go",
@@ -6477,6 +6489,11 @@
     "internal/jobs/embeddings": [
       "doc.go",
       "ttl.go"
+    ],
+    "internal/jobs/triage": [
+      "alert_inbox.go",
+      "doc.go",
+      "feedback.go"
     ],
     "internal/metrics": [
       "business.go",
@@ -6936,15 +6953,15 @@
       "parent": "internal/jobs",
       "owner": "R6",
       "file_count_at_r0": 23,
-      "flat_parent_go_files": 12,
-      "flat_parent_test_files": 11,
+      "flat_parent_go_files": 10,
+      "flat_parent_test_files": 9,
       "planned_subpkgs": 4,
       "existing_subpkgs": [
-        "embeddings"
+        "embeddings",
+        "triage"
       ],
       "missing_subpkgs": [
         "indexers",
-        "triage",
         "digests"
       ],
       "notes": "4 subpkgs: embeddings (done R0.5), indexers (7 ai_*_indexer + tests), triage (alert+feedback), digests (weekly+yir)."

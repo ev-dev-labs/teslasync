@@ -1,4 +1,4 @@
-package jobs
+package triage
 
 // Phase-50 / 0035 — A2 Inbox auto-categorization.
 //
@@ -52,8 +52,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// AIAlertInboxCategorizerSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunAIAlertInboxCategorizer] depends
+// AlertInboxSettingsReader is the narrow view of
+// [database.SettingsRepo] [RunAlertInbox] depends
 // on. Defined inline so callers can supply a fake without
 // dragging the full settings repo into job tests.
 //
@@ -62,18 +62,18 @@ import (
 // who disables inbox-auto-categorization mid-day sees the next
 // run no-op immediately (no waiting for the worker pool to
 // recycle).
-type AIAlertInboxCategorizerSettingsReader interface {
+type AlertInboxSettingsReader interface {
 	AIMode(ctx context.Context) (string, error)
 	AIFeatureEnabled(ctx context.Context, featureID string) (bool, error)
 }
 
-// AIAlertInboxCategorizerResult reports the outcome of one tick.
+// AlertInboxResult reports the outcome of one tick.
 // The fields are all int because the real fan-out implementation
 // will tally per-user category-suggestion counts here; today the
 // values stay zero (the stub is a no-op when off, and a
 // no-op-with-log when on — the actual fan-out lands in a future
 // slice).
-type AIAlertInboxCategorizerResult struct {
+type AlertInboxResult struct {
 	// Skipped is 1 when the tick early-returned because ai_mode
 	// was off OR the per-feature toggle was off. Reported
 	// separately from "no work to do" so the ops dashboard can
@@ -97,7 +97,7 @@ type AIAlertInboxCategorizerResult struct {
 	Failed int
 }
 
-// RunAIAlertInboxCategorizer is the once-per-hour cron entry for
+// RunAlertInbox is the once-per-hour cron entry for
 // the inbox-auto-categorization slice's background fan-out.
 //
 // Re-checks ai_mode + the per-feature toggle at execution time
@@ -105,7 +105,7 @@ type AIAlertInboxCategorizerResult struct {
 // while AI was on, but the admin can flip ai_mode='off' OR
 // disable the toggle at any moment and we MUST honour it
 // immediately. If either gate is off the function returns
-// ([AIAlertInboxCategorizerResult{Skipped: 1}], nil) without
+// ([AlertInboxResult{Skipped: 1}], nil) without
 // touching the LLM, the bucketer, or the push queue.
 //
 // Settings read failures are LOGGED WARN and treated as off (no
@@ -120,16 +120,16 @@ type AIAlertInboxCategorizerResult struct {
 //   - off mode (any kind) → Skipped=1, no DB writes, no pushes;
 //   - on mode             → Skipped=0, no DB writes (yet), no pushes;
 //   - errors              → only on nil-arg programming bugs.
-func RunAIAlertInboxCategorizer(
+func RunAlertInbox(
 	ctx context.Context,
 	db *database.DB,
-	settings AIAlertInboxCategorizerSettingsReader,
-) (AIAlertInboxCategorizerResult, error) {
+	settings AlertInboxSettingsReader,
+) (AlertInboxResult, error) {
 	if db == nil {
-		return AIAlertInboxCategorizerResult{}, fmt.Errorf("jobs: RunAIAlertInboxCategorizer requires non-nil db")
+		return AlertInboxResult{}, fmt.Errorf("jobs: RunAlertInbox requires non-nil db")
 	}
 	if settings == nil {
-		return AIAlertInboxCategorizerResult{}, fmt.Errorf("jobs: RunAIAlertInboxCategorizer requires non-nil settings")
+		return AlertInboxResult{}, fmt.Errorf("jobs: RunAlertInbox requires non-nil settings")
 	}
 
 	mode, err := settings.AIMode(ctx)
@@ -137,13 +137,13 @@ func RunAIAlertInboxCategorizer(
 		log.Warn().Err(err).
 			Str("job", "ai_alert_inbox_categorizer").
 			Msg("settings read failed, treating as ai_mode=off (no fan-out)")
-		return AIAlertInboxCategorizerResult{Skipped: 1}, nil
+		return AlertInboxResult{Skipped: 1}, nil
 	}
 	if mode == rag.AIModeOff {
 		log.Debug().
 			Str("job", "ai_alert_inbox_categorizer").
 			Msg("ai_mode=off, skipping (per ADR-015 §I12 #3)")
-		return AIAlertInboxCategorizerResult{Skipped: 1}, nil
+		return AlertInboxResult{Skipped: 1}, nil
 	}
 
 	enabled, err := settings.AIFeatureEnabled(ctx, "inbox-auto-categorization")
@@ -152,14 +152,14 @@ func RunAIAlertInboxCategorizer(
 			Str("job", "ai_alert_inbox_categorizer").
 			Str("feature_id", "inbox-auto-categorization").
 			Msg("per-feature toggle read failed, treating as off (no fan-out)")
-		return AIAlertInboxCategorizerResult{Skipped: 1}, nil
+		return AlertInboxResult{Skipped: 1}, nil
 	}
 	if !enabled {
 		log.Debug().
 			Str("job", "ai_alert_inbox_categorizer").
 			Str("feature_id", "inbox-auto-categorization").
 			Msg("inbox-auto-categorization toggle off, skipping (per ADR-015 §I7)")
-		return AIAlertInboxCategorizerResult{Skipped: 1}, nil
+		return AlertInboxResult{Skipped: 1}, nil
 	}
 
 	// On-mode path. The fan-out implementation (per-user
@@ -171,5 +171,5 @@ func RunAIAlertInboxCategorizer(
 	log.Debug().
 		Str("job", "ai_alert_inbox_categorizer").
 		Msg("ai_mode + feature on; fan-out implementation pending future slice")
-	return AIAlertInboxCategorizerResult{}, nil
+	return AlertInboxResult{}, nil
 }
