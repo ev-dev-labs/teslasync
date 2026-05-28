@@ -60,3 +60,5 @@ ad2eb301b5828f307c92dfb041cde45e9bb9c0db # R5.10 carve internal/models/automatio
 b6ac595742eb9deb1d6242dbb0a8007041a7517b # R5.12 carve internal/models/vehicle subpkg (13 types, 43 callers)
 
 03daee8d30a1f0c74d40fef31f54606d187bc716 # R5.13 carve internal/models/charging subpkg (2 types, 34 callers)
+
+c9009e01d0cdf23e668949c9f2618dbbbc75b0ed # R5.14 carve internal/models/drive subpkg (3 types, 39 callers)
