@@ -18,6 +18,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 	"github.com/ev-dev-labs/teslasync/internal/automation/presets"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -26,7 +27,7 @@ type AutomationHandler struct {
 	db             *database.DB
 	repo           automationRepository
 	historyRepo    *database.AutomationHistoryRepo
-	fsmTransRepo   *database.FSMTransitionRepo
+	fsmTransRepo   *dbobs.FSMTransitionRepo
 	cmdExecutor    *action.CommandExecutor   // optional, enables undo
 	eventPublisher *AutomationEventPublisher // optional, enables SSE events
 	auditor        *automation.Auditor       // optional, enables audit trail
@@ -92,7 +93,7 @@ func NewAutomationHandler(db *database.DB, opts ...AutomationHandlerOption) *Aut
 		db:             db,
 		repo:           repo,
 		historyRepo:    database.NewAutomationHistoryRepo(db),
-		fsmTransRepo:   database.NewFSMTransitionRepo(db),
+		fsmTransRepo:   dbobs.NewFSMTransitionRepo(db),
 		presetRegistry: presets.NewRegistry(),
 		bulkRepo:       repo,
 	}

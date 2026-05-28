@@ -8,23 +8,25 @@ package adminobssvc
 // sites in the service implementation continue to use the original
 // database.* identifiers without churn.
 
-import "github.com/ev-dev-labs/teslasync/internal/database"
+import (
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+)
 
 // OrderBy is the slow-query ordering parameter exposed to the handler.
-type OrderBy = database.SlowQueryOrderBy
+type OrderBy = dbobs.SlowQueryOrderBy
 
 // Slow-query order-by constants exposed to the handler.
 const (
-	OrderByMeanTime  = database.OrderByMeanTime
-	OrderByCallCount = database.OrderByCalls
-	OrderByTotalTime = database.OrderByTotalTime
+	OrderByMeanTime  = dbobs.OrderByMeanTime
+	OrderByCallCount = dbobs.OrderByCalls
+	OrderByTotalTime = dbobs.OrderByTotalTime
 )
 
 // SlowQuery is the row shape returned by SlowQueries.
-type SlowQuery = database.SlowQuery
+type SlowQuery = dbobs.SlowQuery
 
 // VehicleCostReport is the response shape returned by VehicleCost.
-type VehicleCostReport = database.VehicleCostReport
+type VehicleCostReport = dbobs.VehicleCostReport
 
 // HypertableSize is the row shape returned by DiskForecast.
-type HypertableSize = database.HypertableSize
+type HypertableSize = dbobs.HypertableSize

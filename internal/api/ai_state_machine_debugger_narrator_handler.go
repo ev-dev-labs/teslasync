@@ -389,7 +389,7 @@ var _ http.Handler = (*AIStateMachineDebuggerNarratorHandler)(nil)
 // prompt instructs the LLM to say so plainly.
 //
 // A future slice that wires a per-window FSM-transition reader
-// (likely via *database.FSMTransitionRepo + a window+vehicle
+// (likely via *dbobs.FSMTransitionRepo + a window+vehicle
 // query) can replace this adapter without changing the tool /
 // handler / strategy contract. The adapter keeps the VehicleID /
 // FromUnix / ToUnix values the handler installed and stringifies

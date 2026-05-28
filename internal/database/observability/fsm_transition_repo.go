@@ -1,9 +1,12 @@
-package database
+package observability
 
 import (
 	"context"
 	"encoding/json"
+	"strconv"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // FSMTransitionRepo handles persistence of FSM transition logs.
@@ -19,11 +22,11 @@ import (
 // `fsm_name`. There is NO compatibility layer — callers pass the
 // canonical name directly.
 type FSMTransitionRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewFSMTransitionRepo creates a new repo.
-func NewFSMTransitionRepo(db *DB) *FSMTransitionRepo {
+func NewFSMTransitionRepo(db *database.DB) *FSMTransitionRepo {
 	return &FSMTransitionRepo{db: db}
 }
 
@@ -100,7 +103,7 @@ func (r *FSMTransitionRepo) Query(ctx context.Context, vehicleID int64, fsmName 
 	offsetIdx := len(args) + 2
 	fetchSQL := `SELECT id, vehicle_id, ts, fsm_name, COALESCE(from_state, ''), to_state, COALESCE(trigger, ''), details
 		 FROM fsm_transitions WHERE vehicle_id = $1 AND ts BETWEEN $2 AND $3` + whereName +
-		` ORDER BY ts DESC LIMIT $` + itoa(limitIdx) + ` OFFSET $` + itoa(offsetIdx)
+		` ORDER BY ts DESC LIMIT $` + strconv.Itoa(limitIdx) + ` OFFSET $` + strconv.Itoa(offsetIdx)
 	fetchArgs := append(args, limit, offset)
 
 	rows, err := r.db.Pool.Query(ctx, fetchSQL, fetchArgs...)

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/charge"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/drive"
@@ -22,7 +23,7 @@ type FSMHandler struct {
 	drives      map[int64]*drive.SessionFSM  // active drive sub-FSMs per vehicle
 	charges     map[int64]*charge.SessionFSM // active charge sub-FSMs per vehicle
 	vehicleRepo *database.VehicleRepo
-	transRepo   *database.FSMTransitionRepo
+	transRepo   *dbobs.FSMTransitionRepo
 
 	// Reconciliation
 	localSignals  *signal.Store // set by SetSignalStore() — prompt 02b
@@ -38,7 +39,7 @@ type FSMHandler struct {
 // transitions are durably logged via transRepo.Insert into fsm_transitions
 // (000187 schema). Cold-start initial state defaults to fsm.Online and
 // converges to the correct state within seconds of incoming telemetry.
-func NewFSMHandler(vehicleRepo *database.VehicleRepo, transRepo *database.FSMTransitionRepo) *FSMHandler {
+func NewFSMHandler(vehicleRepo *database.VehicleRepo, transRepo *dbobs.FSMTransitionRepo) *FSMHandler {
 	return &FSMHandler{
 		machines:      make(map[int64]*fsm.VehicleFSM),
 		drives:        make(map[int64]*drive.SessionFSM),
@@ -66,7 +67,7 @@ func (h *FSMHandler) SetSignalStore(store *signal.Store) {
 type fsmAction struct {
 	handler     *FSMHandler
 	vehicleRepo *database.VehicleRepo
-	transRepo   *database.FSMTransitionRepo
+	transRepo   *dbobs.FSMTransitionRepo
 }
 
 func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.State, sctx *fsm.SignalContext) error {

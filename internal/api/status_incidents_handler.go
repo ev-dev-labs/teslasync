@@ -19,17 +19,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/go-chi/chi/v5"
 )
 
 // IncidentsHandler wires the incidents repo to HTTP.
 type IncidentsHandler struct {
-	repo *database.IncidentRepo
+	repo *dbobs.IncidentRepo
 }
 
 // NewIncidentsHandler builds a handler bound to the shared pool.
-func NewIncidentsHandler(repo *database.IncidentRepo) *IncidentsHandler {
+func NewIncidentsHandler(repo *dbobs.IncidentRepo) *IncidentsHandler {
 	return &IncidentsHandler{repo: repo}
 }
 
@@ -40,7 +40,7 @@ func (h *IncidentsHandler) ListActive(ctx context.Context) ([]StatusIncident, er
 	if h == nil || h.repo == nil {
 		return []StatusIncident{}, nil
 	}
-	rows, err := h.repo.List(ctx, database.IncidentListParams{ActiveOnly: true, Limit: 50})
+	rows, err := h.repo.List(ctx, dbobs.IncidentListParams{ActiveOnly: true, Limit: 50})
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (h *IncidentsHandler) List(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	activeOnly := q.Get("active") == "1" || strings.EqualFold(q.Get("active"), "true")
 	limit, _ := strconv.Atoi(q.Get("limit"))
-	rows, err := h.repo.List(r.Context(), database.IncidentListParams{
+	rows, err := h.repo.List(r.Context(), dbobs.IncidentListParams{
 		ActiveOnly: activeOnly, Limit: limit,
 	})
 	if err != nil {
@@ -79,7 +79,7 @@ func (h *IncidentsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	row, err := h.repo.Get(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, database.ErrIncidentNotFound) {
+		if errors.Is(err, dbobs.ErrIncidentNotFound) {
 			writeError(w, http.StatusNotFound, "incident not found")
 			return
 		}
@@ -106,12 +106,12 @@ func (h *IncidentsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-	created, err := h.repo.Insert(r.Context(), database.IncidentInsert{
+	created, err := h.repo.Insert(r.Context(), dbobs.IncidentInsert{
 		Title:              p.Title,
 		Description:        p.Description,
 		Severity:           p.Severity,
 		Status:             p.Status,
-		Source:             database.IncidentSourceManual,
+		Source:             dbobs.IncidentSourceManual,
 		AffectedComponents: p.AffectedComponents,
 		CreatedBy:          callerSubject(r),
 		InitialMessage:     p.InitialMessage,
@@ -145,7 +145,7 @@ func (h *IncidentsHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-	updated, err := h.repo.Patch(r.Context(), id, database.IncidentPatch{
+	updated, err := h.repo.Patch(r.Context(), id, dbobs.IncidentPatch{
 		Title:              p.Title,
 		Description:        p.Description,
 		Severity:           p.Severity,
@@ -194,7 +194,7 @@ func (h *IncidentsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := h.repo.Delete(r.Context(), id); err != nil {
-		if errors.Is(err, database.ErrIncidentNotFound) {
+		if errors.Is(err, dbobs.ErrIncidentNotFound) {
 			writeError(w, http.StatusNotFound, "incident not found")
 			return
 		}
@@ -205,7 +205,7 @@ func (h *IncidentsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 }
 
 // incidentToSnapshot maps a database row to the StatusIncident contract.
-func incidentToSnapshot(r database.Incident) StatusIncident {
+func incidentToSnapshot(r dbobs.Incident) StatusIncident {
 	return StatusIncident{
 		ID:         strconv.FormatInt(r.ID, 10),
 		Title:      r.Title,
@@ -221,13 +221,13 @@ func incidentToSnapshot(r database.Incident) StatusIncident {
 // mapIncidentErr converts repo sentinels to HTTP statuses.
 func mapIncidentErr(err error) int {
 	switch {
-	case errors.Is(err, database.ErrIncidentNotFound):
+	case errors.Is(err, dbobs.ErrIncidentNotFound):
 		return http.StatusNotFound
-	case errors.Is(err, database.ErrIncidentInvalidSeverity),
-		errors.Is(err, database.ErrIncidentInvalidStatus),
-		errors.Is(err, database.ErrIncidentInvalidSource),
-		errors.Is(err, database.ErrIncidentTitleLength),
-		errors.Is(err, database.ErrIncidentMessageLength):
+	case errors.Is(err, dbobs.ErrIncidentInvalidSeverity),
+		errors.Is(err, dbobs.ErrIncidentInvalidStatus),
+		errors.Is(err, dbobs.ErrIncidentInvalidSource),
+		errors.Is(err, dbobs.ErrIncidentTitleLength),
+		errors.Is(err, dbobs.ErrIncidentMessageLength):
 		return http.StatusBadRequest
 	default:
 		return http.StatusInternalServerError

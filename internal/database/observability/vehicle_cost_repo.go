@@ -1,4 +1,4 @@
-package database
+package observability
 
 // Phase-45 / Prompt 4 — Per-vehicle cost telemetry.
 //

@@ -21,14 +21,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 )
 
 // ----- fake repo --------------------------------------------------
 
 type fakeIngestXRayRepo struct {
-	fields      []database.IngestXRayFieldStat
-	buckets     []database.IngestXRayBucket
+	fields      []dbobs.IngestXRayFieldStat
+	buckets     []dbobs.IngestXRayBucket
 	lastSeen    time.Time
 	errFields   error
 	errBuckets  error
@@ -41,13 +41,13 @@ type fakeIngestXRayRepo struct {
 	gotLimit             int
 }
 
-func (f *fakeIngestXRayRepo) FieldStats(_ context.Context, vid int64, _ time.Time, limit int) ([]database.IngestXRayFieldStat, error) {
+func (f *fakeIngestXRayRepo) FieldStats(_ context.Context, vid int64, _ time.Time, limit int) ([]dbobs.IngestXRayFieldStat, error) {
 	f.gotFieldsVehicleID = vid
 	f.gotLimit = limit
 	return f.fields, f.errFields
 }
 
-func (f *fakeIngestXRayRepo) SampleCountByBucket(_ context.Context, vid int64, _ time.Time, w time.Duration) ([]database.IngestXRayBucket, error) {
+func (f *fakeIngestXRayRepo) SampleCountByBucket(_ context.Context, vid int64, _ time.Time, w time.Duration) ([]dbobs.IngestXRayBucket, error) {
 	f.gotBucketsVehicleID = vid
 	f.gotBucketWidth = w
 	return f.buckets, f.errBuckets
@@ -168,11 +168,11 @@ func TestIngestXRayHandler_HappyPath_200WithFreshness(t *testing.T) {
 	t.Parallel()
 	lastSeen := time.Now().UTC().Add(-30 * time.Second)
 	fake := &fakeIngestXRayRepo{
-		fields: []database.IngestXRayFieldStat{
+		fields: []dbobs.IngestXRayFieldStat{
 			{Field: "VehicleSpeed", SampleCount: 100, LastSeenAt: lastSeen, ValueKind: 5},
 			{Field: "Gear", SampleCount: 5, LastSeenAt: lastSeen, ValueKind: 7},
 		},
-		buckets: []database.IngestXRayBucket{
+		buckets: []dbobs.IngestXRayBucket{
 			{BucketStart: time.Now().UTC().Add(-2 * time.Minute), Count: 50},
 			{BucketStart: time.Now().UTC().Add(-1 * time.Minute), Count: 55},
 		},
@@ -222,8 +222,8 @@ func TestIngestXRayHandler_HappyPath_200WithFreshness(t *testing.T) {
 func TestIngestXRayHandler_HappyPath_NoLastSeenOmitsFreshness(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIngestXRayRepo{
-		fields:  []database.IngestXRayFieldStat{},
-		buckets: []database.IngestXRayBucket{},
+		fields:  []dbobs.IngestXRayFieldStat{},
+		buckets: []dbobs.IngestXRayBucket{},
 		// lastSeen left as zero time
 	}
 	h := newIngestXRayHandlerForTest(fake)

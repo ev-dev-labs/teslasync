@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
@@ -281,9 +282,9 @@ func (a *App) initObservabilityPhase45(ctx context.Context) {
 		return
 	}
 	a.AuditLogQueryRepo = database.NewAuditLogQueryRepo(a.DB)
-	a.SlowQueriesRepo = database.NewSlowQueriesRepo(a.DB)
-	a.HypertableMetricsRepo = database.NewHypertableMetricsRepo(a.DB)
-	a.IngestXRayRepo = database.NewIngestXRayRepo(a.DB.Pool)
+	a.SlowQueriesRepo = dbobs.NewSlowQueriesRepo(a.DB)
+	a.HypertableMetricsRepo = dbobs.NewHypertableMetricsRepo(a.DB)
+	a.IngestXRayRepo = dbobs.NewIngestXRayRepo(a.DB.Pool)
 	a.GDPRArtifactRepo = dbgdpr.NewArtifactRepo(a.DB)
 
 	// Audit recorder is the unified hash-chained writer. Falls back

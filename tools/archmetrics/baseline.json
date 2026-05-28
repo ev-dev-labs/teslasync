@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T14:52:56Z",
+  "generated_at": "2026-05-28T15:00:25Z",
   "go_version": "go1.26.1",
-  "commit_sha": "fd995cc5d679db468b6e8ef42783b49e8406c5f6",
+  "commit_sha": "cc4304ebf5e2d0e8d7bde75b5da961f57cc3d9b8",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2492,7 +2492,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126561,
+      "loc": 126568,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2617,6 +2617,7 @@
         "internal/database/achievement",
         "internal/database/admin",
         "internal/database/gdpr",
+        "internal/database/observability",
         "internal/database/sharing",
         "internal/dataquality",
         "internal/enums",
@@ -3143,7 +3144,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1834,
+      "loc": 1836,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3156,6 +3157,7 @@
         "internal/crypto",
         "internal/database",
         "internal/database/gdpr",
+        "internal/database/observability",
         "internal/dataquality",
         "internal/events",
         "internal/flags",
@@ -3198,12 +3200,12 @@
       "path": "internal/app/adminobssvc",
       "go_files": 3,
       "test_files": 0,
-      "loc": 167,
+      "loc": 169,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
         "internal/audit",
-        "internal/database",
+        "internal/database/observability",
         "internal/rotation",
         "internal/schemacheck"
       ],
@@ -3667,9 +3669,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 100,
+      "go_files": 94,
       "test_files": 35,
-      "loc": 26604,
+      "loc": 25236,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3748,15 +3750,12 @@
         "export_repo.go",
         "feature_flag_changes_repo.go",
         "from_map.go",
-        "fsm_transition_repo.go",
         "geofence_repo.go",
         "geofence_repo_bulk.go",
         "guard_repo.go",
         "guard_repo_test.go",
         "helpers.go",
         "helpers_test.go",
-        "hypertable_metrics_repo.go",
-        "ingest_xray_repo.go",
         "maintenance.go",
         "migrate.go",
         "mileage_repo.go",
@@ -3793,10 +3792,8 @@
         "signal_log_repo.go",
         "signals_catalog_repo.go",
         "signals_catalog_repo_test.go",
-        "slow_queries_repo.go",
         "software_update_repo.go",
         "software_update_repo_test.go",
-        "status_incidents_repo.go",
         "sudo_token_repo.go",
         "system_state_repo.go",
         "system_state_repo_test.go",
@@ -3820,7 +3817,6 @@
         "user_feedback_repo_test.go",
         "vampire_drain_repo.go",
         "vampire_drain_repo_test.go",
-        "vehicle_cost_repo.go",
         "vehicle_photo_repo.go",
         "vehicle_repo.go",
         "vehicle_settings_repo.go",
@@ -3880,6 +3876,25 @@
       "files": [
         "artifact_repo.go",
         "doc.go"
+      ]
+    },
+    {
+      "path": "internal/database/observability",
+      "go_files": 7,
+      "test_files": 0,
+      "loc": 1396,
+      "has_doc_go": true,
+      "imports": [
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "fsm_transition_repo.go",
+        "hypertable_metrics_repo.go",
+        "ingest_xray_repo.go",
+        "slow_queries_repo.go",
+        "status_incidents_repo.go",
+        "vehicle_cost_repo.go"
       ]
     },
     {
@@ -4254,7 +4269,7 @@
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
-        "internal/database",
+        "internal/database/observability",
         "internal/events",
         "internal/mqtt"
       ],
@@ -6878,13 +6893,10 @@
       "export_repo.go",
       "feature_flag_changes_repo.go",
       "from_map.go",
-      "fsm_transition_repo.go",
       "geofence_repo.go",
       "geofence_repo_bulk.go",
       "guard_repo.go",
       "helpers.go",
-      "hypertable_metrics_repo.go",
-      "ingest_xray_repo.go",
       "maintenance.go",
       "migrate.go",
       "mileage_repo.go",
@@ -6911,9 +6923,7 @@
       "signal_log_reader_query.go",
       "signal_log_repo.go",
       "signals_catalog_repo.go",
-      "slow_queries_repo.go",
       "software_update_repo.go",
-      "status_incidents_repo.go",
       "sudo_token_repo.go",
       "system_state_repo.go",
       "tesla_charging_history_repo.go",
@@ -6932,7 +6942,6 @@
       "trips_detail_repo.go",
       "user_feedback_repo.go",
       "vampire_drain_repo.go",
-      "vehicle_cost_repo.go",
       "vehicle_photo_repo.go",
       "vehicle_repo.go",
       "vehicle_settings_repo.go",
@@ -6958,6 +6967,15 @@
     "internal/database/gdpr": [
       "artifact_repo.go",
       "doc.go"
+    ],
+    "internal/database/observability": [
+      "doc.go",
+      "fsm_transition_repo.go",
+      "hypertable_metrics_repo.go",
+      "ingest_xray_repo.go",
+      "slow_queries_repo.go",
+      "status_incidents_repo.go",
+      "vehicle_cost_repo.go"
     ],
     "internal/database/sharing": [
       "doc.go",
@@ -7670,7 +7688,7 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 100,
+      "flat_parent_go_files": 94,
       "flat_parent_test_files": 35,
       "planned_subpkgs": 22,
       "existing_subpkgs": [

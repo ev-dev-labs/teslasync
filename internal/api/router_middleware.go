@@ -10,6 +10,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -51,9 +52,9 @@ type RouterOptions struct {
 	// a clean "not available on this deployment" panel.
 	AuditRecorder         *audit.Recorder
 	AuditLogQueryRepo     *database.AuditLogQueryRepo
-	SlowQueriesRepo       *database.SlowQueriesRepo
-	HypertableMetricsRepo *database.HypertableMetricsRepo
-	IngestXRayRepo        *database.IngestXRayRepo
+	SlowQueriesRepo       *dbobs.SlowQueriesRepo
+	HypertableMetricsRepo *dbobs.HypertableMetricsRepo
+	IngestXRayRepo        *dbobs.IngestXRayRepo
 	GDPRArtifactRepo      *dbgdpr.ArtifactRepo
 	RotationTracker       *rotation.Tracker
 	SchemaSeed            schemacheck.Fingerprint

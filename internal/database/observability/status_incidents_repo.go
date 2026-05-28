@@ -10,7 +10,7 @@
 // few updates each and the only access pattern is "render the whole
 // timeline" — the join would be pure overhead on every list call.
 
-package database
+package observability
 
 import (
 	"context"
@@ -22,6 +22,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // Incident severity values. Match the CHECK constraint in 000198.
@@ -120,11 +122,11 @@ type IncidentPatch struct {
 
 // IncidentRepo wires the queries to the shared pool.
 type IncidentRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewIncidentRepo wires a repository against the shared pool.
-func NewIncidentRepo(db *DB) *IncidentRepo {
+func NewIncidentRepo(db *database.DB) *IncidentRepo {
 	return &IncidentRepo{db: db}
 }
 

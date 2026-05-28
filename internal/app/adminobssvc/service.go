@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/audit"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/rotation"
 	"github.com/ev-dev-labs/teslasync/internal/schemacheck"
 )
@@ -28,9 +28,9 @@ type Service struct {
 	rotation      *rotation.Tracker
 	schemaRepo    schemacheck.Querier
 	schemaSeed    schemacheck.Fingerprint
-	slowQueries   *database.SlowQueriesRepo
-	hypertable    *database.HypertableMetricsRepo
-	ingestXRay    *database.IngestXRayRepo
+	slowQueries   *dbobs.SlowQueriesRepo
+	hypertable    *dbobs.HypertableMetricsRepo
+	ingestXRay    *dbobs.IngestXRayRepo
 	auditRecorder *audit.Recorder
 	excludeTables []string
 	quotaBytes    int64
@@ -42,9 +42,9 @@ type Options struct {
 	Rotation      *rotation.Tracker
 	SchemaPool    schemacheck.Querier
 	SchemaSeed    schemacheck.Fingerprint
-	SlowQueries   *database.SlowQueriesRepo
-	Hypertable    *database.HypertableMetricsRepo
-	IngestXRay    *database.IngestXRayRepo
+	SlowQueries   *dbobs.SlowQueriesRepo
+	Hypertable    *dbobs.HypertableMetricsRepo
+	IngestXRay    *dbobs.IngestXRayRepo
 	AuditRecorder *audit.Recorder
 	ExcludeTables []string
 	QuotaBytes    int64
@@ -104,19 +104,19 @@ func (s *Service) SchemaDrift(ctx context.Context) (*SchemaDriftResult, error) {
 
 // SlowQueries returns the top N by mean execution time. Maps the
 // pg_stat_statements absence to ErrNotConfigured.
-func (s *Service) SlowQueries(ctx context.Context, orderBy database.SlowQueryOrderBy, limit int) ([]database.SlowQuery, error) {
+func (s *Service) SlowQueries(ctx context.Context, orderBy dbobs.SlowQueryOrderBy, limit int) ([]dbobs.SlowQuery, error) {
 	if s == nil || s.slowQueries == nil {
 		return nil, ErrNotConfigured
 	}
 	out, err := s.slowQueries.TopLive(ctx, orderBy, limit)
-	if errors.Is(err, database.ErrPgStatStatementsUnavailable) {
+	if errors.Is(err, dbobs.ErrPgStatStatementsUnavailable) {
 		return nil, ErrNotConfigured
 	}
 	return out, err
 }
 
 // VehicleCost returns the per-vehicle cost report.
-func (s *Service) VehicleCost(ctx context.Context, since time.Time, limit int) (*database.VehicleCostReport, error) {
+func (s *Service) VehicleCost(ctx context.Context, since time.Time, limit int) (*dbobs.VehicleCostReport, error) {
 	if s == nil || s.ingestXRay == nil {
 		return nil, ErrNotConfigured
 	}
@@ -127,12 +127,12 @@ func (s *Service) VehicleCost(ctx context.Context, since time.Time, limit int) (
 }
 
 // DiskForecast returns per-hypertable size + days-to-quota.
-func (s *Service) DiskForecast(ctx context.Context) ([]database.HypertableSize, error) {
+func (s *Service) DiskForecast(ctx context.Context) ([]dbobs.HypertableSize, error) {
 	if s == nil || s.hypertable == nil {
 		return nil, ErrNotConfigured
 	}
 	out, err := s.hypertable.Forecast(ctx, s.quotaBytes)
-	if errors.Is(err, database.ErrTimescaleUnavailable) {
+	if errors.Is(err, dbobs.ErrTimescaleUnavailable) {
 		return nil, ErrNotConfigured
 	}
 	return out, err

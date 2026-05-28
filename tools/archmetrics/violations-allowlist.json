@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 100,
+      "max_files": 94,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5 canary 108→107 (achievement). R4.1 batch 107→104 (sharing/, admin/dashboard_layout, gdpr/). R4.2 batch 104→100 (admin/ extended with chart_annotation, pinned, places_cache, saved_views — bulk dbadmin alias rename pattern). Simpler design adopted: subpackages directly import parent for *DB (no shared/ pkg extraction); cycle-free because parent never imports children. Carved subpkgs: achievement, sharing, admin (5 files), gdpr. Planned: ~20 aggregates total."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5 canary 108→107 (achievement). R4.1 batch 107→104 (sharing/, admin/dashboard_layout, gdpr/). R4.2 batch 104→100 (admin/ extended with chart_annotation, pinned, places_cache, saved_views). R4.3 batch 100→94 (observability/ — slow_queries, status_incidents, hypertable_metrics, fsm_transition, ingest_xray, vehicle_cost; replaced parent itoa with strconv.Itoa in carved fsm_transition_repo). Simpler design adopted: subpackages directly import parent for *DB; cycle-free because parent never imports children. Carved subpkgs: achievement, sharing, admin (5 files), gdpr, observability (6 files). Planned: ~20 aggregates total."
     },
     {
       "path": "internal/ai/tools",

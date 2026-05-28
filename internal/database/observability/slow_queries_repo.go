@@ -1,4 +1,4 @@
-package database
+package observability
 
 // Phase-45 / Prompt 3 — Slow query collector.
 //
@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
@@ -43,11 +45,11 @@ type SlowQuery struct {
 
 // SlowQueriesRepo is the read+snapshot path for slow query analytics.
 type SlowQueriesRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewSlowQueriesRepo constructs the repo. Returns nil when db is nil.
-func NewSlowQueriesRepo(db *DB) *SlowQueriesRepo {
+func NewSlowQueriesRepo(db *database.DB) *SlowQueriesRepo {
 	if db == nil || db.Pool == nil {
 		return nil
 	}

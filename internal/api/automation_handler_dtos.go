@@ -9,6 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation/condition"
 	"github.com/ev-dev-labs/teslasync/internal/automation/presets"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -163,8 +164,8 @@ type historyListResponse struct {
 // historyDetailResponse wraps a single execution record with FSM transitions.
 type historyDetailResponse struct {
 	*automationmodel.AutomationHistory
-	SuccessRate    float64                        `json:"success_rate"`
-	FSMTransitions []database.FSMTransitionRecord `json:"fsm_transitions"`
+	SuccessRate    float64                     `json:"success_rate"`
+	FSMTransitions []dbobs.FSMTransitionRecord `json:"fsm_transitions"`
 }
 
 // testRunResponse is the top-level response for a dry-run test.

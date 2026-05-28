@@ -39,7 +39,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 )
 
 // IngestXRayHandler bundles the per-vehicle X-Ray endpoint.
@@ -49,16 +49,16 @@ type IngestXRayHandler struct {
 
 // ingestXRayRepo is the narrow read surface used by the handler so
 // tests can inject fakes without touching the database. The concrete
-// *database.IngestXRayRepo satisfies this interface.
+// *dbobs.IngestXRayRepo satisfies this interface.
 type ingestXRayRepo interface {
-	FieldStats(ctx context.Context, vehicleID int64, since time.Time, limit int) ([]database.IngestXRayFieldStat, error)
-	SampleCountByBucket(ctx context.Context, vehicleID int64, since time.Time, bucketWidth time.Duration) ([]database.IngestXRayBucket, error)
+	FieldStats(ctx context.Context, vehicleID int64, since time.Time, limit int) ([]dbobs.IngestXRayFieldStat, error)
+	SampleCountByBucket(ctx context.Context, vehicleID int64, since time.Time, bucketWidth time.Duration) ([]dbobs.IngestXRayBucket, error)
 	LastSeen(ctx context.Context, vehicleID int64) (time.Time, error)
 }
 
 // NewIngestXRayHandler constructs a handler bound to repo. repo may be
 // nil — the endpoint degrades to 503 in that branch.
-func NewIngestXRayHandler(repo *database.IngestXRayRepo) *IngestXRayHandler {
+func NewIngestXRayHandler(repo *dbobs.IngestXRayRepo) *IngestXRayHandler {
 	if repo == nil {
 		return &IngestXRayHandler{repo: nil}
 	}
@@ -73,16 +73,16 @@ func newIngestXRayHandlerForTest(repo ingestXRayRepo) *IngestXRayHandler {
 
 // IngestXRayResponse is the JSON shape returned by Get.
 type IngestXRayResponse struct {
-	VehicleID        int64                          `json:"vehicle_id"`
-	Now              string                         `json:"now"`
-	WindowStart      string                         `json:"window_start"`
-	Window           string                         `json:"window"`
-	Bucket           string                         `json:"bucket"`
-	LastSeenAt       *string                        `json:"last_seen_at,omitempty"`
-	FreshnessSeconds *int64                         `json:"freshness_seconds,omitempty"`
-	TotalSamples     int64                          `json:"total_samples"`
-	Fields           []database.IngestXRayFieldStat `json:"fields"`
-	Buckets          []database.IngestXRayBucket    `json:"buckets"`
+	VehicleID        int64                       `json:"vehicle_id"`
+	Now              string                      `json:"now"`
+	WindowStart      string                      `json:"window_start"`
+	Window           string                      `json:"window"`
+	Bucket           string                      `json:"bucket"`
+	LastSeenAt       *string                     `json:"last_seen_at,omitempty"`
+	FreshnessSeconds *int64                      `json:"freshness_seconds,omitempty"`
+	TotalSamples     int64                       `json:"total_samples"`
+	Fields           []dbobs.IngestXRayFieldStat `json:"fields"`
+	Buckets          []dbobs.IngestXRayBucket    `json:"buckets"`
 }
 
 // Allowed window/bucket durations. Anything outside the set falls back

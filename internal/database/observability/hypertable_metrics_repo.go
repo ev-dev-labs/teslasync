@@ -1,4 +1,4 @@
-package database
+package observability
 
 // Phase-45 / Prompt 6 — Disk-usage forecaster.
 //
@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"math"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	"github.com/jackc/pgx/v5/pgconn"
 )
@@ -33,12 +35,12 @@ type HypertableSize struct {
 
 // HypertableMetricsRepo is the disk-usage read path.
 type HypertableMetricsRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewHypertableMetricsRepo constructs the repo. Returns nil when db
 // is nil so the handler can degrade to a 503 cleanly.
-func NewHypertableMetricsRepo(db *DB) *HypertableMetricsRepo {
+func NewHypertableMetricsRepo(db *database.DB) *HypertableMetricsRepo {
 	if db == nil || db.Pool == nil {
 		return nil
 	}

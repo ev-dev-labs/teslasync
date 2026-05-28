@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 )
 
 // ── History ─────────────────────────────────────────────────────────────
@@ -126,7 +127,7 @@ func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Requ
 	}
 
 	// Fetch FSM transitions that occurred during the execution window.
-	var transitions []database.FSMTransitionRecord
+	var transitions []dbobs.FSMTransitionRecord
 	if record.VehicleID != nil {
 		from := record.TriggeredAt
 		to := time.Now().UTC()
@@ -137,11 +138,11 @@ func (h *AutomationHandler) GetHistoryDetail(w http.ResponseWriter, r *http.Requ
 		transitions, _, err = h.fsmTransRepo.Query(r.Context(), *record.VehicleID, "", from, to, 100, 0)
 		if err != nil {
 			log.Warn().Err(err).Int64("history_id", historyID).Msg("failed to fetch FSM transitions for execution")
-			transitions = []database.FSMTransitionRecord{}
+			transitions = []dbobs.FSMTransitionRecord{}
 		}
 	}
 	if transitions == nil {
-		transitions = []database.FSMTransitionRecord{}
+		transitions = []dbobs.FSMTransitionRecord{}
 	}
 
 	writeJSON(w, http.StatusOK, historyDetailResponse{

@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -428,7 +428,7 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 		cfsm, ok := h.connFSMs[vehicleID]
 		if !ok {
 			cfsm = telemetryfsm.New(vehicleID, vin,
-				telemetryfsm.WithTransitionRepo(database.NewFSMTransitionRepo(h.db)),
+				telemetryfsm.WithTransitionRepo(dbobs.NewFSMTransitionRepo(h.db)),
 				telemetryfsm.WithMQTTClient(h.mqttClient),
 				telemetryfsm.WithEventBus(h.eventBus),
 			)

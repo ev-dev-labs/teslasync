@@ -19,7 +19,7 @@
 // not surface. Reusing the catalog repo would force every per-vehicle
 // X-Ray call to fetch fleet-wide aggregates and discard 99% of them.
 
-package database
+package observability
 
 import (
 	"context"

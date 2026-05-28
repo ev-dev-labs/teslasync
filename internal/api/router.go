@@ -16,6 +16,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -1284,12 +1285,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// rule as the other slice tools above: must be registered
 	// before the handler constructor below so the strategy's
 	// allowedTools resolve at boot. query_incident_timeline composes
-	// the SAME database.IncidentRepo.Get path that backs the
+	// the SAME dbobs.IncidentRepo.Get path that backs the
 	// canonical baseline GET /api/v1/status/incidents/{id} handler
 	// — no new SQL is written by this slice.
 	summary.RegisterIncidentTimelineSummarizerTools(aiToolRegistry, summary.IncidentTimelineSummarizerSources{
 		Retriever:        aiSystemRetriever,
-		IncidentTimeline: NewAIIncidentTimelineSource(database.NewIncidentRepo(db)),
+		IncidentTimeline: NewAIIncidentTimelineSource(dbobs.NewIncidentRepo(db)),
 	})
 	// incident-timeline-summarizer handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
@@ -3410,7 +3411,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				writeJSON(w, http.StatusOK, result)
 			})
 			r.Get("/transitions", func(w http.ResponseWriter, req *http.Request) {
-				fsmTransRepo := database.NewFSMTransitionRepo(db)
+				fsmTransRepo := dbobs.NewFSMTransitionRepo(db)
 				vehicleID, _ := strconv.ParseInt(req.URL.Query().Get("vehicle_id"), 10, 64)
 				if vehicleID == 0 {
 					writeError(w, http.StatusBadRequest, "vehicle_id required")
@@ -3626,7 +3627,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// vehicleID is in the URL because the cost of an
 			// unbounded fleet-wide query is too high for the
 			// signal_log hypertable.
-			ingestXRayHandler := NewIngestXRayHandler(database.NewIngestXRayRepo(db.Pool))
+			ingestXRayHandler := NewIngestXRayHandler(dbobs.NewIngestXRayRepo(db.Pool))
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/ingest-xray/{vehicleID}", ingestXRayHandler.Get)
 		})
@@ -3640,7 +3641,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		if ver == "" {
 			ver = "dev"
 		}
-		incidentsRepo := database.NewIncidentRepo(db)
+		incidentsRepo := dbobs.NewIncidentRepo(db)
 		incidentsHandler := NewIncidentsHandler(incidentsRepo)
 		statusV1 := NewStatusV1Handler(StatusV1Config{
 			Health:           health,

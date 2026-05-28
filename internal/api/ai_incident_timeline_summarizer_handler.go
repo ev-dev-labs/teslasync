@@ -81,7 +81,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 )
 
 // aiIncidentTimelineSummarizerMaxIterations bounds the dispatcher's
@@ -295,30 +295,30 @@ var _ http.Handler = (*AIIncidentTimelineSummarizerHandler)(nil)
 
 // AIIncidentTimelineSource is the production
 // summary.IncidentTimelineSource. It delegates to the SHARED
-// database.IncidentRepo.Get path that also backs the canonical
+// dbobs.IncidentRepo.Get path that also backs the canonical
 // baseline GET /api/v1/status/incidents/{id} handler so the AI
 // summary is grounded in the SAME deterministic envelope the
 // /system-status/incidents/:id page renders. No new SQL is added by
 // this slice.
 //
-// The struct holds a *database.IncidentRepo; the constructor panics
+// The struct holds a *dbobs.IncidentRepo; the constructor panics
 // on a nil so a wiring bug surfaces at boot.
 type AIIncidentTimelineSource struct {
-	repo *database.IncidentRepo
+	repo *dbobs.IncidentRepo
 }
 
 // NewAIIncidentTimelineSource constructs the adapter. Panics on a
-// nil *database.IncidentRepo so a wiring mistake surfaces at boot
+// nil *dbobs.IncidentRepo so a wiring mistake surfaces at boot
 // rather than as a nil-deref on first AI request.
-func NewAIIncidentTimelineSource(repo *database.IncidentRepo) *AIIncidentTimelineSource {
+func NewAIIncidentTimelineSource(repo *dbobs.IncidentRepo) *AIIncidentTimelineSource {
 	if repo == nil {
-		panic("api: NewAIIncidentTimelineSource: nil *database.IncidentRepo")
+		panic("api: NewAIIncidentTimelineSource: nil *dbobs.IncidentRepo")
 	}
 	return &AIIncidentTimelineSource{repo: repo}
 }
 
 // IncidentTimeline implements summary.IncidentTimelineSource. Composes
-// the SAME database.IncidentRepo.Get path
+// the SAME dbobs.IncidentRepo.Get path
 // IncidentsHandler.GetIncident uses so the returned envelope is
 // identical to what GET /api/v1/status/incidents/{id} produces — the
 // AI surface is grounded in the SAME deterministic model the
@@ -326,7 +326,7 @@ func NewAIIncidentTimelineSource(repo *database.IncidentRepo) *AIIncidentTimelin
 //
 // The function does NOT recompute or override anything the canonical
 // repo computes; it only reshapes the existing typed
-// database.Incident into the typed [summary.IncidentTimelineEnvelope]
+// dbobs.Incident into the typed [summary.IncidentTimelineEnvelope]
 // the LLM can quote. Timestamps are stringified to RFC3339 UTC for
 // determinism; the operator-installed wall-clock is preserved without
 // timezone-conversion guesswork.

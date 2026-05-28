@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
@@ -52,7 +53,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		lastWriteAt:           make(map[string]time.Time),
 		accumulatedSignals:    make(map[string]map[string]interface{}),
 		connFSMs:              make(map[int64]*telemetryfsm.ConnectionFSM),
-		fsmHandler:            NewFSMHandler(database.NewVehicleRepo(db), database.NewFSMTransitionRepo(db)),
+		fsmHandler:            NewFSMHandler(database.NewVehicleRepo(db), dbobs.NewFSMTransitionRepo(db)),
 	}
 }
 
