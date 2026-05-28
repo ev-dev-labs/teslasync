@@ -7,7 +7,7 @@
 // handler accepts a nil audit repo and degrades the audit endpoints
 // to 503 — the replay/list path itself remains tested.
 
-package api
+package dlq
 
 import (
 	"context"
@@ -23,15 +23,15 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
 
-func newDLQHandlerWithoutAudit(t *testing.T, replayEnabled bool) *DLQHandler {
+func newHandlerWithoutAudit(t *testing.T, replayEnabled bool) *Handler {
 	t.Helper()
 	// inspector is intentionally nil — exercised in degraded paths
-	return NewDLQHandler(nil, nil, "X-Forwarded-User", replayEnabled)
+	return NewHandler(nil, nil, "X-Forwarded-User", replayEnabled)
 }
 
-func TestDLQHandler_List_NoInspector_Returns503(t *testing.T) {
+func TestHandler_List_NoInspector_Returns503(t *testing.T) {
 	t.Parallel()
-	h := newDLQHandlerWithoutAudit(t, false)
+	h := newHandlerWithoutAudit(t, false)
 	req := httptest.NewRequest("GET", "/system/dlq", nil)
 	rec := httptest.NewRecorder()
 	h.List(rec, req)
@@ -40,7 +40,7 @@ func TestDLQHandler_List_NoInspector_Returns503(t *testing.T) {
 	}
 }
 
-func TestDLQHandler_Get_MissingID_Returns400(t *testing.T) {
+func TestHandler_Get_MissingID_Returns400(t *testing.T) {
 	t.Parallel()
 	// We can't easily construct a real *mqtt.DLQInspector without a
 	// paho client, so we exercise the empty-id branch directly with a
@@ -49,7 +49,7 @@ func TestDLQHandler_Get_MissingID_Returns400(t *testing.T) {
 	// inspector field is unexported, the test instead trips the 503
 	// path to prove ordering; the BadRequest path is covered by the
 	// _ServiceUnavailableBranchOrdering test below.
-	h := newDLQHandlerWithoutAudit(t, false)
+	h := newHandlerWithoutAudit(t, false)
 	r := chi.NewRouter()
 	r.Get("/system/dlq/{id}", h.Get)
 	req := httptest.NewRequest("GET", "/system/dlq/some-id", nil)
@@ -60,9 +60,9 @@ func TestDLQHandler_Get_MissingID_Returns400(t *testing.T) {
 	}
 }
 
-func TestDLQHandler_Audit_NoRepo_Returns503(t *testing.T) {
+func TestHandler_Audit_NoRepo_Returns503(t *testing.T) {
 	t.Parallel()
-	h := newDLQHandlerWithoutAudit(t, false)
+	h := newHandlerWithoutAudit(t, false)
 	r := chi.NewRouter()
 	r.Get("/system/dlq/audit", h.Audit)
 	req := httptest.NewRequest("GET", "/system/dlq/audit", nil)

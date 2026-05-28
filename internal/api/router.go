@@ -20,6 +20,7 @@ import (
 	apiauth "github.com/ev-dev-labs/teslasync/internal/api/auth"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
+	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
 	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
@@ -3646,7 +3647,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// opt.DLQInspector or opt.DLQReplayAuditRepo is nil,
 			// so a deployment without MQTT still serves the rest
 			// of /system unchanged.
-			dlqHandler := NewDLQHandler(
+			dlqHandler := apidlq.NewHandler(
 				opt.DLQInspector,
 				opt.DLQReplayAuditRepo,
 				cfg.Auth.ForwardAuthHeader,

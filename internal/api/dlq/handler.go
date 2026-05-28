@@ -25,7 +25,7 @@
 // and the API server restart. Audit failures are swallowed (logged at
 // the repo) — they MUST NOT replace the actual replay outcome.
 
-package api
+package dlq
 
 import (
 	"context"
@@ -39,23 +39,24 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 )
 
-// DLQHandler bundles list / get / replay / audit endpoints for the DLQ
+// Handler bundles list / get / replay / audit endpoints for the DLQ
 // inspector. ANY field nil → endpoints respond 503 with a structured
 // code so a misconfigured deployment surfaces cleanly instead of 500.
-type DLQHandler struct {
+type Handler struct {
 	inspector         *mqtt.DLQInspector
 	audit             *auditdb.DLQReplayAuditRepo
 	principalHeader   string
 	replayEnabledFlag bool
 }
 
-// NewDLQHandler constructs a handler bound to inspector + auditRepo.
-func NewDLQHandler(inspector *mqtt.DLQInspector, audit *auditdb.DLQReplayAuditRepo, principalHeader string, replayEnabled bool) *DLQHandler {
-	return &DLQHandler{
+// NewHandler constructs a handler bound to inspector + auditRepo.
+func NewHandler(inspector *mqtt.DLQInspector, audit *auditdb.DLQReplayAuditRepo, principalHeader string, replayEnabled bool) *Handler {
+	return &Handler{
 		inspector:         inspector,
 		audit:             audit,
 		principalHeader:   principalHeader,
@@ -107,9 +108,9 @@ type DLQReplayResponse struct {
 }
 
 // List serves GET /system/dlq.
-func (h *DLQHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.inspector == nil {
-		writeError(w, http.StatusServiceUnavailable, "dlq inspector not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "dlq inspector not configured")
 		return
 	}
 	entries := h.inspector.Snapshot()
@@ -121,27 +122,27 @@ func (h *DLQHandler) List(w http.ResponseWriter, r *http.Request) {
 	for _, e := range entries {
 		out.Entries = append(out.Entries, toEntrySummary(e))
 	}
-	writeJSON(w, http.StatusOK, out)
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // Get serves GET /system/dlq/{id}.
-func (h *DLQHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.inspector == nil {
-		writeError(w, http.StatusServiceUnavailable, "dlq inspector not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "dlq inspector not configured")
 		return
 	}
 	id := chi.URLParam(r, "id")
 	if strings.TrimSpace(id) == "" {
-		writeError(w, http.StatusBadRequest, "id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "id is required")
 		return
 	}
 	entry, err := h.inspector.Get(id)
 	if errors.Is(err, mqtt.ErrDLQEntryNotFound) {
-		writeError(w, http.StatusNotFound, "entry not in ring (may have rotated out)")
+		httpx.WriteError(w, http.StatusNotFound, "entry not in ring (may have rotated out)")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	full := DLQEntryFull{
@@ -151,19 +152,19 @@ func (h *DLQHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if len(entry.ParsedInnerPayload) > 0 {
 		full.InnerPayloadB64 = encodeB64(entry.ParsedInnerPayload)
 	}
-	writeJSON(w, http.StatusOK, full)
+	httpx.WriteJSON(w, http.StatusOK, full)
 }
 
 // Replay serves POST /system/dlq/{id}/replay. Writes an audit row in
 // every code path (success, failure, disabled, unparseable, missing).
-func (h *DLQHandler) Replay(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Replay(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.inspector == nil {
-		writeError(w, http.StatusServiceUnavailable, "dlq inspector not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "dlq inspector not configured")
 		return
 	}
 	id := chi.URLParam(r, "id")
 	if strings.TrimSpace(id) == "" {
-		writeError(w, http.StatusBadRequest, "id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "id is required")
 		return
 	}
 
@@ -193,7 +194,7 @@ func (h *DLQHandler) Replay(w http.ResponseWriter, r *http.Request) {
 			auditIn.SrcTopic = "unknown"
 		}
 		aid := tryAudit(r.Context(), h.audit, auditIn)
-		writeJSON(w, http.StatusForbidden, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultDisabled), Error: err.Error(), AuditID: aid})
+		httpx.WriteJSON(w, http.StatusForbidden, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultDisabled), Error: err.Error(), AuditID: aid})
 		return
 	case errors.Is(err, mqtt.ErrDLQEntryNotFound):
 		auditIn.Result = auditdb.DLQReplayResultNotFound
@@ -202,42 +203,42 @@ func (h *DLQHandler) Replay(w http.ResponseWriter, r *http.Request) {
 		auditIn.SrcTopic = "unknown"
 		auditIn.Payload = nil
 		aid := tryAudit(r.Context(), h.audit, auditIn)
-		writeJSON(w, http.StatusNotFound, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultNotFound), Error: err.Error(), AuditID: aid})
+		httpx.WriteJSON(w, http.StatusNotFound, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultNotFound), Error: err.Error(), AuditID: aid})
 		return
 	case errors.Is(err, mqtt.ErrDLQEntryUnparseable):
 		auditIn.Result = auditdb.DLQReplayResultUnparseable
 		auditIn.Error = err.Error()
 		auditIn.DstTopic = ""
 		aid := tryAudit(r.Context(), h.audit, auditIn)
-		writeJSON(w, http.StatusConflict, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultUnparseable), Error: err.Error(), AuditID: aid})
+		httpx.WriteJSON(w, http.StatusConflict, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultUnparseable), Error: err.Error(), AuditID: aid})
 		return
 	case err != nil:
 		auditIn.Result = auditdb.DLQReplayResultPublishFailed
 		auditIn.Error = err.Error()
 		aid := tryAudit(r.Context(), h.audit, auditIn)
-		writeJSON(w, http.StatusBadGateway, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultPublishFailed), Error: err.Error(), DstTopic: entry.ParsedSourceTopic, AuditID: aid})
+		httpx.WriteJSON(w, http.StatusBadGateway, DLQReplayResponse{OK: false, ReplayedID: id, Result: string(auditdb.DLQReplayResultPublishFailed), Error: err.Error(), DstTopic: entry.ParsedSourceTopic, AuditID: aid})
 		return
 	}
 
 	auditIn.Result = auditdb.DLQReplayResultOK
 	aid := tryAudit(r.Context(), h.audit, auditIn)
-	writeJSON(w, http.StatusOK, DLQReplayResponse{OK: true, ReplayedID: id, Result: string(auditdb.DLQReplayResultOK), DstTopic: entry.ParsedSourceTopic, AuditID: aid})
+	httpx.WriteJSON(w, http.StatusOK, DLQReplayResponse{OK: true, ReplayedID: id, Result: string(auditdb.DLQReplayResultOK), DstTopic: entry.ParsedSourceTopic, AuditID: aid})
 }
 
 // Audit serves GET /system/dlq/audit + GET /system/dlq/{id}/audit.
-func (h *DLQHandler) Audit(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Audit(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.audit == nil {
-		writeError(w, http.StatusServiceUnavailable, "dlq audit repo not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "dlq audit repo not configured")
 		return
 	}
 	id := chi.URLParam(r, "id") // may be empty for the global endpoint
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	rows, err := h.audit.Recent(r.Context(), id, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"count":  len(rows),
 		"limit":  limit,
 		"dlq_id": id,

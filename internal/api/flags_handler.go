@@ -24,13 +24,16 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"go.opentelemetry.io/otel/trace"
 
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
@@ -244,4 +247,41 @@ func (h *FlagsHandler) tryAudit(r *http.Request, in auditdb.FeatureFlagChangeIns
 		return 0
 	}
 	return id
+}
+
+func principalFrom(r *http.Request, headerName string) string {
+	if headerName == "" {
+		return "system"
+	}
+	if v := strings.TrimSpace(r.Header.Get(headerName)); v != "" {
+		return v
+	}
+	return "anonymous"
+}
+
+func remoteAddrParsed(r *http.Request) *netip.Addr {
+	raw := r.RemoteAddr
+	if raw == "" {
+		return nil
+	}
+	if strings.HasPrefix(raw, "[") {
+		if end := strings.Index(raw, "]"); end > 0 {
+			raw = raw[1:end]
+		}
+	} else if i := strings.LastIndex(raw, ":"); i > 0 {
+		raw = raw[:i]
+	}
+	addr, err := netip.ParseAddr(raw)
+	if err != nil {
+		return nil
+	}
+	return &addr
+}
+
+func traceIDFromContext(ctx context.Context) string {
+	sc := trace.SpanContextFromContext(ctx)
+	if !sc.IsValid() {
+		return ""
+	}
+	return sc.TraceID().String()
 }
