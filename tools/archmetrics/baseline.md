@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T20:59:02Z, Go go1.26.1, commit 63d099749914af1ac921d41765b052b2ec95529b_
+_Generated 2026-05-28T21:01:33Z, Go go1.26.1, commit 8f6384cfc962b6435bb601643816ec38cd0352a0_
 
 ## Summary
 
-- Packages: 315
+- Packages: 316
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 377599
+- Total non-blank LOC under cmd/+internal/+tools/: 377619
 
 ## cmd/* main.go LOC
 
@@ -170,13 +170,14 @@ _Generated 2026-05-28T20:59:02Z, Go go1.26.1, commit 63d099749914af1ac921d41765b
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 246 | 151 | 113422 | yes | handler |
+| internal/api | 245 | 151 | 113365 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
 | internal/api/apicalllog | 2 | 0 | 69 | yes | handler |
 | internal/api/apiparams | 2 | 1 | 358 | yes | handler |
 | internal/api/apitest | 2 | 0 | 137 | yes | handler |
 | internal/api/apperror | 3 | 1 | 508 | yes | handler |
 | internal/api/backup | 3 | 1 | 530 | yes | handler |
+| internal/api/geocode | 2 | 0 | 77 | yes | handler |
 | internal/api/geofence | 3 | 1 | 846 | yes | handler |
 | internal/api/httpx | 3 | 2 | 360 | yes | handler |
 | internal/api/lifetime | 2 | 1 | 878 | yes | handler |
@@ -371,7 +372,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 246 / 151 | 59 | 5 | 54 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 245 / 151 | 59 | 5 | 54 |
 
 ### `internal/models` detail
 

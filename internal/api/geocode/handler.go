@@ -1,28 +1,29 @@
-package api
+package geocode
 
 import (
 	"net/http"
 	"strconv"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 )
 
-// GeocodeHandler provides forward and reverse geocoding.
-type GeocodeHandler struct {
+// Handler provides forward and reverse geocoding.
+type Handler struct {
 	searcher geocoding.Searcher
 	geocoder geocoding.Geocoder
 }
 
-// NewGeocodeHandler creates a GeocodeHandler with forward search and optional reverse geocoder.
-func NewGeocodeHandler(searcher geocoding.Searcher, geocoder geocoding.Geocoder) *GeocodeHandler {
-	return &GeocodeHandler{searcher: searcher, geocoder: geocoder}
+// NewHandler creates a Handler with forward search and optional reverse geocoder.
+func NewHandler(searcher geocoding.Searcher, geocoder geocoding.Geocoder) *Handler {
+	return &Handler{searcher: searcher, geocoder: geocoder}
 }
 
 // Search handles GET /geocode/search?q=...&limit=5
-func (h *GeocodeHandler) Search(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Search(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	if q == "" {
-		writeJSON(w, http.StatusOK, []geocoding.SearchResult{})
+		httpx.WriteJSON(w, http.StatusOK, []geocoding.SearchResult{})
 		return
 	}
 
@@ -33,32 +34,32 @@ func (h *GeocodeHandler) Search(w http.ResponseWriter, r *http.Request) {
 
 	results, err := h.searcher.Search(r.Context(), q, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "geocode search failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "geocode search failed")
 		return
 	}
 	if results == nil {
 		results = []geocoding.SearchResult{}
 	}
 
-	writeJSON(w, http.StatusOK, results)
+	httpx.WriteJSON(w, http.StatusOK, results)
 }
 
 // Reverse handles GET /geocode/reverse?lat=X&lon=Y
-func (h *GeocodeHandler) Reverse(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Reverse(w http.ResponseWriter, r *http.Request) {
 	lat, err := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
 	lon, err2 := strconv.ParseFloat(r.URL.Query().Get("lon"), 64)
 	if err != nil || err2 != nil {
-		writeError(w, http.StatusBadRequest, "lat and lon query parameters are required")
+		httpx.WriteError(w, http.StatusBadRequest, "lat and lon query parameters are required")
 		return
 	}
 
 	result, err := h.geocoder.ReverseGeocode(r.Context(), lat, lon)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "reverse geocode failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "reverse geocode failed")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"display_name": result.ShortName(),
 		"road":         result.Road,
 		"city":         result.City,

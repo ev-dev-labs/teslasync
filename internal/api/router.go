@@ -17,6 +17,7 @@ import (
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
+	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
@@ -1795,7 +1796,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		mlchargingcurveclustering.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	geocodeHandler := NewGeocodeHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
+	geocodeHandler := apigeocode.NewHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	shareHandler := NewShareHandler(db)
 	watchHandler := NewWatchHandler(db, teslaClient)
 	onboardingHandler := NewOnboardingHandler(db, opt.Encryptor)
