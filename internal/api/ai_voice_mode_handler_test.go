@@ -37,7 +37,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
 )
 
 // TestVoiceModeAIOffNoVoiceControlsOrStorage is the
@@ -373,7 +373,7 @@ func TestAIVoiceModeChatContextSource_FiltersNonChatRoles(t *testing.T) {
 		nil, // defensive
 		{SessionID: "s1", Role: "tool", Content: "{...}"},
 	}
-	out := make([]tools.VoiceModeChatTurn, 0, len(rows))
+	out := make([]voice.VoiceModeChatTurn, 0, len(rows))
 	for _, m := range rows {
 		if m == nil {
 			continue
@@ -381,7 +381,7 @@ func TestAIVoiceModeChatContextSource_FiltersNonChatRoles(t *testing.T) {
 		if m.Role != "user" && m.Role != "assistant" {
 			continue
 		}
-		out = append(out, tools.VoiceModeChatTurn{Role: m.Role, Content: m.Content})
+		out = append(out, voice.VoiceModeChatTurn{Role: m.Role, Content: m.Content})
 	}
 	if len(out) != 3 {
 		t.Fatalf("filtered slice length = %d, want 3 (out=%+v)", len(out), out)

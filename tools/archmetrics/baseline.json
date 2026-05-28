@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:02:00Z",
+  "generated_at": "2026-05-28T07:05:08Z",
   "go_version": "go1.26.1",
-  "commit_sha": "0bc48b30eb7f45920576b1f7b79ac14a4be0026a",
+  "commit_sha": "cf0424815f02fead7f92d7e5a10b436e652985dc",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 22,
+      "go_files": 21,
       "test_files": 19,
-      "loc": 15248,
+      "loc": 14795,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1936,7 +1936,6 @@
         "trip_planner_llm_agent.go",
         "trip_planner_llm_agent_test.go",
         "validate.go",
-        "voice_mode.go",
         "year_review.go",
         "year_review_test.go"
       ]
@@ -2243,6 +2242,21 @@
       ]
     },
     {
+      "path": "internal/ai/tools/voice",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 476,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools"
+      ],
+      "files": [
+        "doc.go",
+        "voice_mode.go"
+      ]
+    },
+    {
       "path": "internal/alertmsg",
       "go_files": 3,
       "test_files": 1,
@@ -2264,7 +2278,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126537,
+      "loc": 126539,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2351,6 +2365,7 @@
         "internal/ai/tools/schedule",
         "internal/ai/tools/summary",
         "internal/ai/tools/trip",
+        "internal/ai/tools/voice",
         "internal/alertmsg",
         "internal/api",
         "internal/apilog",
@@ -5986,7 +6001,6 @@
       "tool.go",
       "trip_planner_llm_agent.go",
       "validate.go",
-      "voice_mode.go",
       "year_review.go"
     ],
     "internal/ai/tools/alert": [
@@ -6070,6 +6084,10 @@
       "doc.go",
       "drive_search.go",
       "share_card.go"
+    ],
+    "internal/ai/tools/voice": [
+      "doc.go",
+      "voice_mode.go"
     ],
     "internal/alertmsg": [
       "doc.go",
@@ -7288,7 +7306,7 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 22,
+      "flat_parent_go_files": 21,
       "flat_parent_test_files": 19,
       "planned_subpkgs": 13,
       "existing_subpkgs": [

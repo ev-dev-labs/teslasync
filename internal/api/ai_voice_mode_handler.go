@@ -45,7 +45,7 @@ package api
 //
 // Per-request scope binding (defence in depth vs prompt
 // injection): the handler installs the body's session_id into
-// ctx via tools.WithScopedVoiceModeSession. The strategy's only
+// ctx via voice.WithScopedVoiceModeSession. The strategy's only
 // allowed tool (stream_chatbot_response) refuses any call whose
 // `session_id` argument differs from the bound value — so an
 // attacker who tries to coax the LLM into "fetch history for
@@ -96,6 +96,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -180,7 +181,7 @@ type AIVoiceModeHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	stream_chatbot_response (registered by
-//	tools.RegisterVoiceModeTools in router.go).
+//	voice.RegisterVoiceModeTools in router.go).
 //
 // strat:      the voice-mode Strategy (one per process).
 // headerName: forward-auth header name; used to extract
@@ -326,7 +327,7 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// stream_chatbot_response tool refuses any call whose
 	// `session_id` argument differs from the bound value —
 	// defence in depth vs prompt injection.
-	ctx = tools.WithScopedVoiceModeSession(ctx, tools.ScopedVoiceModeSession{
+	ctx = voice.WithScopedVoiceModeSession(ctx, voice.ScopedVoiceModeSession{
 		SessionID:    req.SessionID,
 		HistoryLimit: h.historyN / 2,
 	})
@@ -401,7 +402,7 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // ---------------------------------------------------------------------------
 
 // AIVoiceModeChatContextSource is the production adapter
-// satisfying tools.ChatContextSource. It wraps the canonical
+// satisfying voice.ChatContextSource. It wraps the canonical
 // *database.ChatRepo so the AI tool reads from the SAME data
 // source the deterministic Settings UI's chat history endpoint
 // already does — no new SQL, no duplicate read paths.
@@ -423,7 +424,7 @@ func NewAIVoiceModeChatContextSource(c *database.ChatRepo) *AIVoiceModeChatConte
 	return &AIVoiceModeChatContextSource{chat: c}
 }
 
-// LoadRecentTurns implements tools.ChatContextSource. Reads the
+// LoadRecentTurns implements voice.ChatContextSource. Reads the
 // canonical chatbot_messages rows via ChatRepo.GetHistory and
 // projects them into the typed VoiceModeChatTurn shape the LLM
 // consumes. NO new SQL is written — GetHistory is the canonical
@@ -435,12 +436,12 @@ func NewAIVoiceModeChatContextSource(c *database.ChatRepo) *AIVoiceModeChatConte
 // should NOT leak into the LLM's context (the strategy's
 // deterministic SystemPrompt is the only system message the
 // dispatcher injects).
-func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sessionID string, limit int) ([]tools.VoiceModeChatTurn, error) {
+func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sessionID string, limit int) ([]voice.VoiceModeChatTurn, error) {
 	rows, err := a.chat.GetHistory(ctx, sessionID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("ai voice-mode: load chat history: %w", err)
 	}
-	out := make([]tools.VoiceModeChatTurn, 0, len(rows))
+	out := make([]voice.VoiceModeChatTurn, 0, len(rows))
 	for _, m := range rows {
 		if m == nil {
 			continue
@@ -448,7 +449,7 @@ func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sess
 		if m.Role != "user" && m.Role != "assistant" {
 			continue
 		}
-		out = append(out, tools.VoiceModeChatTurn{
+		out = append(out, voice.VoiceModeChatTurn{
 			Role:    m.Role,
 			Content: m.Content,
 		})
@@ -461,7 +462,7 @@ func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sess
 // ---------------------------------------------------------------------------
 
 // AIVoiceModeVehicleSnapshotSource is the production adapter
-// satisfying tools.VehicleSnapshotSource. It wraps the canonical
+// satisfying voice.VehicleSnapshotSource. It wraps the canonical
 // *database.VehicleRepo + *database.DriveRepo +
 // signal.LiveStateReader so the AI tool reads from the SAME
 // data sources the rest of the API surface already does — no
@@ -511,7 +512,7 @@ func NewAIVoiceModeVehicleSnapshotSource(
 	}
 }
 
-// LoadVehicleSnapshot implements tools.VehicleSnapshotSource.
+// LoadVehicleSnapshot implements voice.VehicleSnapshotSource.
 // Performs THREE narrow read-only fetches:
 //
 //  1. VehicleRepo.GetAll → pick the first non-archived row
@@ -530,8 +531,8 @@ func NewAIVoiceModeVehicleSnapshotSource(
 // the partial snapshot so the LLM can still answer with what
 // IS available. The strategy's system prompt explicitly handles
 // the "I don't have that data" case.
-func (a *AIVoiceModeVehicleSnapshotSource) LoadVehicleSnapshot(ctx context.Context) (tools.VoiceModeVehicleSnapshot, error) {
-	out := tools.VoiceModeVehicleSnapshot{}
+func (a *AIVoiceModeVehicleSnapshotSource) LoadVehicleSnapshot(ctx context.Context) (voice.VoiceModeVehicleSnapshot, error) {
+	out := voice.VoiceModeVehicleSnapshot{}
 
 	vehicles, err := a.vehicles.GetAll(ctx)
 	if err != nil {

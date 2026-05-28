@@ -139,6 +139,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
@@ -2341,7 +2342,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		database.NewDriveRepo(db),
 		liveStateReader,
 	)
-	tools.RegisterVoiceModeTools(aiToolRegistry, tools.VoiceModeSources{
+	voice.RegisterVoiceModeTools(aiToolRegistry, voice.VoiceModeSources{
 		Chat:    aiVoiceModeChatSource,
 		Vehicle: aiVoiceModeVehicleSource,
 	})

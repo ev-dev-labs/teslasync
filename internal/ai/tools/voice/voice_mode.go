@@ -68,13 +68,15 @@
 //     is performed by the AI handler (matching the chatbot
 //     handler's pattern), NOT by any tool.
 
-package tools
+package voice
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -335,7 +337,7 @@ func (t *streamChatbotResponse) Description() string {
 
 // InputSchema implements [Tool].
 func (t *streamChatbotResponse) InputSchema() json.RawMessage {
-	return CachedSchema(streamChatbotResponseInput{})
+	return tools.CachedSchema(streamChatbotResponseInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -358,7 +360,7 @@ func (t *streamChatbotResponse) RequiredScope() string { return "" }
 // [1, voiceModeMaxHistoryLimit] bound on HistoryLimit so a
 // runaway LLM request cannot blow the token budget.
 func (t *streamChatbotResponse) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[streamChatbotResponseInput](raw)
+	v, err := tools.ValidateStruct[streamChatbotResponseInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -487,7 +489,7 @@ type VoiceModeSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterVoiceModeTools(r *Registry, s VoiceModeSources) {
+func RegisterVoiceModeTools(r *tools.Registry, s VoiceModeSources) {
 	r.Register(&streamChatbotResponse{
 		chat:    s.Chat,
 		vehicle: s.Vehicle,
