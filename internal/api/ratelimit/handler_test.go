@@ -9,7 +9,7 @@
 // MQTT RPS once that is unblocked) can land without rewriting the
 // existing assertions.
 
-package api
+package ratelimit
 
 import (
 	"encoding/json"
@@ -23,8 +23,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
-func TestRateLimitHandler_OmitsScopesWithNilDeps(t *testing.T) {
-	h := NewRateLimitHandler(RateLimitHandlerConfig{})
+func TestHandler_OmitsScopesWithNilDeps(t *testing.T) {
+	h := NewHandler(RateLimitHandlerConfig{})
 	resp := h.Build()
 	if len(resp.Scopes) != 0 {
 		t.Fatalf("nil deps: want 0 scopes, got %d", len(resp.Scopes))
@@ -34,7 +34,7 @@ func TestRateLimitHandler_OmitsScopesWithNilDeps(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_AllScopesPresent(t *testing.T) {
+func TestHandler_AllScopesPresent(t *testing.T) {
 	tc := tesla.NewClient(config.TeslaConfig{
 		BaseURL: "https://example.invalid",
 		Timeout: 5 * time.Second,
@@ -48,7 +48,7 @@ func TestRateLimitHandler_AllScopesPresent(t *testing.T) {
 		write.Increment()
 	}
 
-	h := NewRateLimitHandler(RateLimitHandlerConfig{
+	h := NewHandler(RateLimitHandlerConfig{
 		TeslaClient:  tc,
 		APICounter:   api,
 		WriteCounter: write,
@@ -85,12 +85,12 @@ func TestRateLimitHandler_AllScopesPresent(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_TeslaScopeBurstMath(t *testing.T) {
+func TestHandler_TeslaScopeBurstMath(t *testing.T) {
 	tc := tesla.NewClient(config.TeslaConfig{
 		BaseURL: "https://example.invalid",
 		Timeout: 5 * time.Second,
 	})
-	h := NewRateLimitHandler(RateLimitHandlerConfig{TeslaClient: tc})
+	h := NewHandler(RateLimitHandlerConfig{TeslaClient: tc})
 	resp := h.Build()
 	if len(resp.Scopes) != 1 {
 		t.Fatalf("want 1 scope (tesla), got %d", len(resp.Scopes))
@@ -109,7 +109,7 @@ func TestRateLimitHandler_TeslaScopeBurstMath(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_SeverityLadder(t *testing.T) {
+func TestHandler_SeverityLadder(t *testing.T) {
 	cases := []struct {
 		pct  float64
 		want string
@@ -129,7 +129,7 @@ func TestRateLimitHandler_SeverityLadder(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_PercentOfDivideByZero(t *testing.T) {
+func TestHandler_PercentOfDivideByZero(t *testing.T) {
 	if got := percentOf(10, 0); got != 0 {
 		t.Fatalf("percentOf(10,0) want 0, got %v", got)
 	}
@@ -138,10 +138,10 @@ func TestRateLimitHandler_PercentOfDivideByZero(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_APIScopeWindowSeconds(t *testing.T) {
+func TestHandler_APIScopeWindowSeconds(t *testing.T) {
 	api := platform.NewWindowCounterWithBuckets(60*time.Second, 60)
 	write := platform.NewWindowCounterWithBuckets(60*time.Second, 60)
-	h := NewRateLimitHandler(RateLimitHandlerConfig{
+	h := NewHandler(RateLimitHandlerConfig{
 		APICounter:   api,
 		WriteCounter: write,
 	})
@@ -155,8 +155,8 @@ func TestRateLimitHandler_APIScopeWindowSeconds(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_DefaultLimitsApplied(t *testing.T) {
-	h := NewRateLimitHandler(RateLimitHandlerConfig{
+func TestHandler_DefaultLimitsApplied(t *testing.T) {
+	h := NewHandler(RateLimitHandlerConfig{
 		APICounter:   platform.NewWindowCounter(),
 		WriteCounter: platform.NewWindowCounter(),
 	})
@@ -175,10 +175,10 @@ func TestRateLimitHandler_DefaultLimitsApplied(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_ServeHTTPGetReturnsJSON(t *testing.T) {
+func TestHandler_ServeHTTPGetReturnsJSON(t *testing.T) {
 	api := platform.NewWindowCounter()
 	api.Increment()
-	h := NewRateLimitHandler(RateLimitHandlerConfig{
+	h := NewHandler(RateLimitHandlerConfig{
 		APICounter:   api,
 		WriteCounter: platform.NewWindowCounter(),
 	})
@@ -202,8 +202,8 @@ func TestRateLimitHandler_ServeHTTPGetReturnsJSON(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_ServeHTTPRejectsNonGet(t *testing.T) {
-	h := NewRateLimitHandler(RateLimitHandlerConfig{})
+func TestHandler_ServeHTTPRejectsNonGet(t *testing.T) {
+	h := NewHandler(RateLimitHandlerConfig{})
 	for _, m := range []string{http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodPatch} {
 		req := httptest.NewRequest(m, "/api/v1/system/rate-limits", nil)
 		w := httptest.NewRecorder()
@@ -217,7 +217,7 @@ func TestRateLimitHandler_ServeHTTPRejectsNonGet(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_TeslaResetAtAdvancesAfterUse(t *testing.T) {
+func TestHandler_TeslaResetAtAdvancesAfterUse(t *testing.T) {
 	tc := tesla.NewClient(config.TeslaConfig{
 		BaseURL: "https://example.invalid",
 		Timeout: 5 * time.Second,
@@ -230,7 +230,7 @@ func TestRateLimitHandler_TeslaResetAtAdvancesAfterUse(t *testing.T) {
 	// `Reserve()` is unavailable here, so we sleep zero and trust the
 	// initial state. As a weaker assertion: ResetAt is either nil or
 	// in the (near) future.
-	h := NewRateLimitHandler(RateLimitHandlerConfig{TeslaClient: tc})
+	h := NewHandler(RateLimitHandlerConfig{TeslaClient: tc})
 	resp := h.Build()
 	if len(resp.Scopes) != 1 {
 		t.Fatalf("want 1 scope, got %d", len(resp.Scopes))
@@ -241,8 +241,8 @@ func TestRateLimitHandler_TeslaResetAtAdvancesAfterUse(t *testing.T) {
 	}
 }
 
-func TestRateLimitHandler_TeslaScopeNilClientOmitted(t *testing.T) {
-	h := NewRateLimitHandler(RateLimitHandlerConfig{
+func TestHandler_TeslaScopeNilClientOmitted(t *testing.T) {
+	h := NewHandler(RateLimitHandlerConfig{
 		APICounter: platform.NewWindowCounter(),
 	})
 	resp := h.Build()

@@ -37,12 +37,13 @@
 // Frontend renders the colour band based on Severity directly, so
 // future calibration changes only need a backend ship.
 
-package api
+package ratelimit
 
 import (
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/platform"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -110,12 +111,12 @@ type RateLimitStatusResponse struct {
 	Scopes      []ScopeBudget `json:"scopes"`
 }
 
-// RateLimitHandler closes over the data sources every scope row needs.
+// Handler closes over the data sources every scope row needs.
 // All dependencies are optional — when a dependency is nil the
 // corresponding scope is omitted from the response rather than
 // fabricating placeholder data, so callers can never confuse "we
 // haven't wired Tesla yet" with "Tesla is healthy".
-type RateLimitHandler struct {
+type Handler struct {
 	teslaClient  *tesla.Client
 	apiCounter   *platform.WindowCounter
 	writeCounter *platform.WindowCounter
@@ -149,11 +150,11 @@ const (
 	DefaultWriteLimitPerMinute = 120
 )
 
-// NewRateLimitHandler wires the production handler. Pass nil for any
+// NewHandler wires the production handler. Pass nil for any
 // dependency that isn't available at startup; the handler will skip
 // the matching row in the response. APILimit / WriteLimit fall back
 // to the documented defaults when zero.
-func NewRateLimitHandler(cfg RateLimitHandlerConfig) *RateLimitHandler {
+func NewHandler(cfg RateLimitHandlerConfig) *Handler {
 	apiLimit := cfg.APILimit
 	if apiLimit <= 0 {
 		apiLimit = DefaultAPILimitPerMinute
@@ -162,7 +163,7 @@ func NewRateLimitHandler(cfg RateLimitHandlerConfig) *RateLimitHandler {
 	if writeLimit <= 0 {
 		writeLimit = DefaultWriteLimitPerMinute
 	}
-	return &RateLimitHandler{
+	return &Handler{
 		teslaClient:  cfg.TeslaClient,
 		apiCounter:   cfg.APICounter,
 		writeCounter: cfg.WriteCounter,
@@ -174,20 +175,20 @@ func NewRateLimitHandler(cfg RateLimitHandlerConfig) *RateLimitHandler {
 
 // ServeHTTP fulfils GET /api/v1/system/rate-limits. Method-strict so
 // the SPA can't accidentally mutate state by misrouting a POST.
-func (h *RateLimitHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		httpx.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	resp := h.Build()
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // Build composes the response. Exposed (unexported but reachable from
 // tests) so tests can assert the scope shape without going through an
 // httptest round-trip.
-func (h *RateLimitHandler) Build() RateLimitStatusResponse {
+func (h *Handler) Build() RateLimitStatusResponse {
 	now := h.now()
 	scopes := make([]ScopeBudget, 0, 3)
 	if s, ok := h.teslaScope(now); ok {
@@ -210,7 +211,7 @@ func (h *RateLimitHandler) Build() RateLimitStatusResponse {
 // orientation matches the other scopes (current usage rises, limit is
 // the ceiling) so the SPA bar renderer doesn't need a per-scope
 // branch.
-func (h *RateLimitHandler) teslaScope(now time.Time) (ScopeBudget, bool) {
+func (h *Handler) teslaScope(now time.Time) (ScopeBudget, bool) {
 	if h.teslaClient == nil {
 		return ScopeBudget{}, false
 	}
@@ -250,7 +251,7 @@ func (h *RateLimitHandler) teslaScope(now time.Time) (ScopeBudget, bool) {
 
 // apiInternalScope renders the rolling 60-second count of every
 // /api/v1 request the process has served.
-func (h *RateLimitHandler) apiInternalScope() (ScopeBudget, bool) {
+func (h *Handler) apiInternalScope() (ScopeBudget, bool) {
 	if h.apiCounter == nil {
 		return ScopeBudget{}, false
 	}
@@ -269,7 +270,7 @@ func (h *RateLimitHandler) apiInternalScope() (ScopeBudget, bool) {
 
 // apiWriteScope is the same shape as apiInternalScope but limited to
 // mutating HTTP methods (POST/PUT/PATCH/DELETE).
-func (h *RateLimitHandler) apiWriteScope() (ScopeBudget, bool) {
+func (h *Handler) apiWriteScope() (ScopeBudget, bool) {
 	if h.writeCounter == nil {
 		return ScopeBudget{}, false
 	}

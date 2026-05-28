@@ -39,6 +39,7 @@ import (
 	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
 	apipinned "github.com/ev-dev-labs/teslasync/internal/api/pinned"
 	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
+	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
@@ -2642,7 +2643,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// from them on demand.
 	apiRequestCounter := platform.NewWindowCounter()
 	apiWriteCounter := platform.NewWindowCounter()
-	rateLimitHandler := NewRateLimitHandler(RateLimitHandlerConfig{
+	rateLimitHandler := apiratelim.NewHandler(apiratelim.RateLimitHandlerConfig{
 		TeslaClient:  teslaClient,
 		APICounter:   apiRequestCounter,
 		WriteCounter: apiWriteCounter,
