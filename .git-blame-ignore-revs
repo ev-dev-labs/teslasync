@@ -184,3 +184,6 @@ a827ebb9513ac9ee9642adc83f041c557271c898
 0ece1726e0cbb8b72009e6016c0c176aab3d7cfb
 # refactor(R2.0a): carve internal/api/httpx (flat-shape HTTP response helpers)
 40947ac54c4db214fc7e71c091d8b4b585492d74
+
+# refactor(R2.0b): carve internal/api/apitest (shared HTTP test helpers)
+c03b89a1365760c5624a8a18dc12b40057e86f86
