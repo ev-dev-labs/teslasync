@@ -37,6 +37,7 @@ import (
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
 	apipinned "github.com/ev-dev-labs/teslasync/internal/api/pinned"
+	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
@@ -615,7 +616,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// subpackage so Discord/Slack/Telegram/Webhook/Ntfy/Pushover adapters
 	// keep recording to api_call_logs through SetOutboundSink hot-reloads.
 	apinotif.SinkProvider = currentOutboundSink
-	quietHoursHandler := NewQuietHoursHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
+	quietHoursHandler := apiquiet.NewHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 
 	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. Construct the

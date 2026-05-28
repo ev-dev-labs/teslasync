@@ -1,16 +1,16 @@
-package api
+package quiethours
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
@@ -41,17 +41,17 @@ type quietHoursStore interface {
 	Delete(ctx context.Context, userID string, id int64) error
 }
 
-// QuietHoursHandler serves /notifications/quiet-hours endpoints.
-type QuietHoursHandler struct {
+// Handler serves /notifications/quiet-hours endpoints.
+type Handler struct {
 	store    quietHoursStore
 	authHdr  string
 	bodyMaxB int64
 }
 
-// NewQuietHoursHandler wires the handler against the shared repo. The
-// ForwardAuth header drives per-user scoping.
-func NewQuietHoursHandler(store quietHoursStore, cfg *config.Config) *QuietHoursHandler {
-	h := &QuietHoursHandler{store: store, bodyMaxB: 4 * 1024}
+// NewHandler wires the handler against the shared repo. The ForwardAuth
+// header drives per-user scoping.
+func NewHandler(store quietHoursStore, cfg *config.Config) *Handler {
+	h := &Handler{store: store, bodyMaxB: 4 * 1024}
 	if cfg != nil {
 		h.authHdr = cfg.Auth.ForwardAuthHeader
 	}
@@ -82,27 +82,27 @@ func (p *quietHoursPayload) toInput() settingsdb.QuietHoursInput {
 }
 
 // List handles GET /quiet-hours.
-func (h *QuietHoursHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "quiet-hours store unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "quiet-hours store unavailable")
 		return
 	}
 	user := actorFromRequest(r, h.authHdr)
 	rows, err := h.store.ListByUser(r.Context(), user)
 	if err != nil {
 		log.Error().Err(err).Msg("quiet_hours: list failed")
-		writeError(w, http.StatusInternalServerError, "failed to list quiet hours")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list quiet hours")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"windows": rows,
 	})
 }
 
 // Create handles POST /quiet-hours.
-func (h *QuietHoursHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "quiet-hours store unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "quiet-hours store unavailable")
 		return
 	}
 	defer r.Body.Close()
@@ -111,7 +111,7 @@ func (h *QuietHoursHandler) Create(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&p); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid payload")
 		return
 	}
 	user := actorFromRequest(r, h.authHdr)
@@ -120,13 +120,13 @@ func (h *QuietHoursHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeQuietHoursError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, row)
+	httpx.WriteJSON(w, http.StatusCreated, row)
 }
 
 // Patch handles PATCH /quiet-hours/{id}.
-func (h *QuietHoursHandler) Patch(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Patch(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "quiet-hours store unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "quiet-hours store unavailable")
 		return
 	}
 	id, ok := h.parseID(w, r)
@@ -139,7 +139,7 @@ func (h *QuietHoursHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&p); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid payload")
 		return
 	}
 	user := actorFromRequest(r, h.authHdr)
@@ -148,13 +148,13 @@ func (h *QuietHoursHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		writeQuietHoursError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, row)
+	httpx.WriteJSON(w, http.StatusOK, row)
 }
 
 // Delete handles DELETE /quiet-hours/{id}.
-func (h *QuietHoursHandler) Delete(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "quiet-hours store unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "quiet-hours store unavailable")
 		return
 	}
 	id, ok := h.parseID(w, r)
@@ -169,33 +169,39 @@ func (h *QuietHoursHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (h *QuietHoursHandler) parseID(w http.ResponseWriter, r *http.Request) (int64, bool) {
-	raw := strings.TrimSpace(chi.URLParam(r, "id"))
-	id, err := strconv.ParseInt(raw, 10, 64)
+func (h *Handler) parseID(w http.ResponseWriter, r *http.Request) (int64, bool) {
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil || id <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid quiet-hours id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid quiet-hours id")
 		return 0, false
 	}
 	return id, true
+}
+
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
 }
 
 // writeQuietHoursError maps repo sentinel errors onto HTTP statuses.
 func writeQuietHoursError(w http.ResponseWriter, err error) {
 	switch {
 	case errors.Is(err, quiethoursdb.ErrQuietHoursNotFound):
-		writeError(w, http.StatusNotFound, "quiet-hours window not found")
+		httpx.WriteError(w, http.StatusNotFound, "quiet-hours window not found")
 	case errors.Is(err, quiethoursdb.ErrQuietHoursInvalidTime):
-		writeError(w, http.StatusBadRequest, "start_local/end_local must be HH:MM (24h)")
+		httpx.WriteError(w, http.StatusBadRequest, "start_local/end_local must be HH:MM (24h)")
 	case errors.Is(err, quiethoursdb.ErrQuietHoursEqualTime):
-		writeError(w, http.StatusBadRequest, "start_local must differ from end_local")
+		httpx.WriteError(w, http.StatusBadRequest, "start_local must differ from end_local")
 	case errors.Is(err, quiethoursdb.ErrQuietHoursInvalidTimezone):
-		writeError(w, http.StatusBadRequest, "timezone must be a valid IANA name")
+		httpx.WriteError(w, http.StatusBadRequest, "timezone must be a valid IANA name")
 	case errors.Is(err, quiethoursdb.ErrQuietHoursInvalidWeekdays):
-		writeError(w, http.StatusBadRequest, "weekdays must be 0..127")
+		httpx.WriteError(w, http.StatusBadRequest, "weekdays must be 0..127")
 	case errors.Is(err, quiethoursdb.ErrQuietHoursInvalidSeverity):
-		writeError(w, http.StatusBadRequest, "bypass_severities allowed values are info|warn|critical")
+		httpx.WriteError(w, http.StatusBadRequest, "bypass_severities allowed values are info|warn|critical")
 	default:
 		log.Error().Err(err).Msg("quiet_hours: handler error")
-		writeError(w, http.StatusInternalServerError, "quiet-hours operation failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "quiet-hours operation failed")
 	}
 }

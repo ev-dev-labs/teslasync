@@ -1,4 +1,4 @@
-package api
+package quiethours
 
 import (
 	"bytes"
@@ -188,7 +188,7 @@ func cloneQuietHoursForTest(in *models.QuietHoursWindow) *models.QuietHoursWindo
 	return &out
 }
 
-func quietHoursTestRouter(h *QuietHoursHandler) http.Handler {
+func quietHoursTestRouter(h *Handler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/quiet-hours", h.List)
 	r.Post("/quiet-hours", h.Create)
@@ -201,9 +201,9 @@ func quietHoursTestCfg() *config.Config {
 	return &config.Config{Auth: config.AuthConfig{ForwardAuthHeader: "X-User"}}
 }
 
-func TestQuietHoursHandler_CreateAndList(t *testing.T) {
+func TestHandler_CreateAndList(t *testing.T) {
 	store := newFakeQuietHoursStore()
-	h := NewQuietHoursHandler(store, quietHoursTestCfg())
+	h := NewHandler(store, quietHoursTestCfg())
 	srv := httptest.NewServer(quietHoursTestRouter(h))
 	defer srv.Close()
 
@@ -276,9 +276,9 @@ func TestQuietHoursHandler_CreateAndList(t *testing.T) {
 	}
 }
 
-func TestQuietHoursHandler_CreateValidationErrors(t *testing.T) {
+func TestHandler_CreateValidationErrors(t *testing.T) {
 	store := newFakeQuietHoursStore()
-	h := NewQuietHoursHandler(store, quietHoursTestCfg())
+	h := NewHandler(store, quietHoursTestCfg())
 	srv := httptest.NewServer(quietHoursTestRouter(h))
 	defer srv.Close()
 
@@ -315,9 +315,9 @@ func TestQuietHoursHandler_CreateValidationErrors(t *testing.T) {
 	}
 }
 
-func TestQuietHoursHandler_PatchAndDelete(t *testing.T) {
+func TestHandler_PatchAndDelete(t *testing.T) {
 	store := newFakeQuietHoursStore()
-	h := NewQuietHoursHandler(store, quietHoursTestCfg())
+	h := NewHandler(store, quietHoursTestCfg())
 	srv := httptest.NewServer(quietHoursTestRouter(h))
 	defer srv.Close()
 
@@ -387,8 +387,8 @@ func TestQuietHoursHandler_PatchAndDelete(t *testing.T) {
 	}
 }
 
-func TestQuietHoursHandler_NoStore(t *testing.T) {
-	h := NewQuietHoursHandler(nil, quietHoursTestCfg())
+func TestHandler_NoStore(t *testing.T) {
+	h := NewHandler(nil, quietHoursTestCfg())
 	srv := httptest.NewServer(quietHoursTestRouter(h))
 	defer srv.Close()
 
@@ -403,9 +403,9 @@ func TestQuietHoursHandler_NoStore(t *testing.T) {
 	}
 }
 
-func TestQuietHoursHandler_BadID(t *testing.T) {
+func TestHandler_BadID(t *testing.T) {
 	store := newFakeQuietHoursStore()
-	h := NewQuietHoursHandler(store, quietHoursTestCfg())
+	h := NewHandler(store, quietHoursTestCfg())
 	srv := httptest.NewServer(quietHoursTestRouter(h))
 	defer srv.Close()
 
