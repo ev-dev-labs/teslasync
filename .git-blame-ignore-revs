@@ -110,3 +110,4 @@ c83da7c51f955e23c18776c621f8cb93fbc4bb66 # R6.19 voice cluster carve
 870a4707a3c188d6310d3e1f22a29f9feaae6457  # R6.20: carve ai/tools/export
 d67d2dc1e1a96abfe5d6b6271541bc0f618ca765  # R6.7.5: toolstest exported fixtures prep
 21a351bfb2e2885391dfd989e985782ca531e866  # R6.21: carve ai/tools/paint (1st toolstest consumer)
+dcb84b30b1c90805766613a48f335f5e476013e5  # R6.22: carve ai/tools/digest (lesson 10: cross-tool DoesNotShadow cycle)
