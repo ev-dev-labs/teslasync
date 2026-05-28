@@ -152,3 +152,5 @@ d0b0e61a4f88c159111336945150d0fcc584a71d # R4.8 carve user subpackage
 e42dfd8d02d9152d1a1449e555804624eeb530f1
 # R4.11 charging cluster carve (internal/database/charging/)
 d397160f446c249f2e2b57e517f561aa12172efe
+# R4.12 drive cluster carve (internal/database/drive/) — 4 src + 3 tests
+bd5812ba58cbd3e441ac77e1855aaf152bbf4db6
