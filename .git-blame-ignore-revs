@@ -119,3 +119,6 @@ ceb0b71952bd2147f50451f78de61f9eb8e292db  # R6.25: carve ai/tools/coaching (less
 
 # R6.28: carve route_efficiency into internal/ai/tools/route/ (mass rename, no behaviour change)
 068408e14c8e0db23d69c43b0e7ec07842f016e4
+
+# R6.29: carve speed_profile into internal/ai/tools/speed/ (mass rename, no behaviour change)
+dbf849e8fd951e8bfdea276d07a4ac8ca37474bd
