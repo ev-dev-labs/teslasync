@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T04:24:47Z, Go go1.26.1, commit c8425d1a56d533ca0e20a9c2ebe31d6dcef50fa6_
+_Generated 2026-05-28T04:26:40Z, Go go1.26.1, commit ed25e115c0bf2b7810e6cae0f6770091640e9a26_
 
 ## Summary
 
-- Packages: 226
+- Packages: 227
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372296
+- Total non-blank LOC under cmd/+internal/+tools/: 372317
 
 ## cmd/* main.go LOC
 
@@ -203,7 +203,7 @@ _Generated 2026-05-28T04:24:47Z, Go go1.26.1, commit c8425d1a56d533ca0e20a9c2ebe
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 25 | 1 | 1552 | yes | domain |
+| internal/models | 23 | 1 | 1462 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/models/auth | 2 | 1 | 66 | yes | domain |
 | internal/models/automation | 2 | 0 | 55 | yes | domain |
@@ -217,6 +217,7 @@ _Generated 2026-05-28T04:24:47Z, Go go1.26.1, commit c8425d1a56d533ca0e20a9c2ebe
 | internal/models/notification | 3 | 0 | 129 | yes | domain |
 | internal/models/security | 2 | 0 | 41 | yes | domain |
 | internal/models/settings | 2 | 0 | 177 | yes | domain |
+| internal/models/signal | 3 | 0 | 111 | yes | domain |
 | internal/models/telemetry | 3 | 0 | 77 | yes | domain |
 | internal/models/tesla | 3 | 0 | 268 | yes | domain |
 | internal/models/vehicle | 2 | 1 | 273 | yes | domain |
@@ -277,7 +278,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 25 / 1 | 19 | 16 | 3 |
+| `internal/models` | R5 | 36 | 23 / 1 | 19 | 17 | 2 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -302,13 +303,13 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/notification`
 - `internal/models/security`
 - `internal/models/settings`
+- `internal/models/signal`
 - `internal/models/telemetry`
 - `internal/models/tesla`
 - `internal/models/vehicle`
 
 **Planned but not yet on disk:**
 - `internal/models/dashboard`
-- `internal/models/signal`
 - `internal/models/system`
 
 ### `internal/jobs` detail

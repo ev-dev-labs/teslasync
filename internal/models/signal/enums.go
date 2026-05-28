@@ -1,4 +1,4 @@
-package models
+package signal
 
 // This file defines typed string enums for signal_catalog columns so callers
 // cannot pass arbitrary strings. Values mirror the Postgres CHECK constraints

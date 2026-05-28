@@ -1,4 +1,4 @@
-package models
+package signal
 
 import "time"
 

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:24:46Z",
+  "generated_at": "2026-05-28T04:26:39Z",
   "go_version": "go1.26.1",
-  "commit_sha": "c8425d1a56d533ca0e20a9c2ebe31d6dcef50fa6",
+  "commit_sha": "ed25e115c0bf2b7810e6cae0f6770091640e9a26",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -3979,9 +3979,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 25,
+      "go_files": 23,
       "test_files": 1,
-      "loc": 1552,
+      "loc": 1462,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -3996,7 +3996,6 @@
         "enum_automation_steps.go",
         "enum_automation_triggers.go",
         "enum_notification_channels.go",
-        "enum_signal_types.go",
         "enum_vehicle_states.go",
         "models.go",
         "models_test.go",
@@ -4009,7 +4008,6 @@
         "push_subscription.go",
         "quiet_hours.go",
         "saved_view.go",
-        "signal.go",
         "system.go",
         "trip.go"
       ]
@@ -4186,6 +4184,20 @@
       "files": [
         "doc.go",
         "settings.go"
+      ]
+    },
+    {
+      "path": "internal/models/signal",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 111,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "enums.go",
+        "signal.go"
       ]
     },
     {
@@ -6466,7 +6478,6 @@
       "enum_automation_steps.go",
       "enum_automation_triggers.go",
       "enum_notification_channels.go",
-      "enum_signal_types.go",
       "enum_vehicle_states.go",
       "models.go",
       "notification.go",
@@ -6478,7 +6489,6 @@
       "push_subscription.go",
       "quiet_hours.go",
       "saved_view.go",
-      "signal.go",
       "system.go",
       "trip.go"
     ],
@@ -6534,6 +6544,11 @@
     "internal/models/settings": [
       "doc.go",
       "settings.go"
+    ],
+    "internal/models/signal": [
+      "doc.go",
+      "enums.go",
+      "signal.go"
     ],
     "internal/models/telemetry": [
       "doc.go",
@@ -6851,7 +6866,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 25,
+      "flat_parent_go_files": 23,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6868,13 +6883,13 @@
         "notification",
         "security",
         "settings",
+        "signal",
         "telemetry",
         "tesla",
         "vehicle"
       ],
       "missing_subpkgs": [
         "dashboard",
-        "signal",
         "system"
       ],
       "notes": "19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes."
