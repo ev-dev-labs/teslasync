@@ -1,4 +1,4 @@
-package jobs
+package embeddings
 
 import (
 	"context"
@@ -10,32 +10,31 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// EmbeddingsTTLSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunEmbeddingsTTL] depends on. Defined
-// inline so callers can supply a fake without dragging the full
-// settings repo into job tests.
-type EmbeddingsTTLSettingsReader interface {
+// TTLSettingsReader is the narrow view of [database.SettingsRepo]
+// [RunTTL] depends on. Defined inline so callers can supply a fake
+// without dragging the full settings repo into job tests.
+type TTLSettingsReader interface {
 	AIMode(ctx context.Context) (string, error)
 }
 
-// EmbeddingsTTLResult reports the per-table delete counts so the
-// scheduler can log a single tidy line per tick.
-type EmbeddingsTTLResult struct {
+// TTLResult reports the per-table delete counts so the scheduler
+// can log a single tidy line per tick.
+type TTLResult struct {
 	Deleted768  int64
 	Deleted1536 int64
 }
 
 // Total returns the sum of deletes across both physical embeddings
 // tables (a metric the AI ops dashboard surfaces).
-func (r EmbeddingsTTLResult) Total() int64 { return r.Deleted768 + r.Deleted1536 }
+func (r TTLResult) Total() int64 { return r.Deleted768 + r.Deleted1536 }
 
-// RunEmbeddingsTTL deletes expired rows from both embeddings tables.
+// RunTTL deletes expired rows from both embeddings tables.
 //
 // Re-checks ai_mode at execution time per ADR-015 §I12 — the
 // scheduler may have started this loop while AI was on, but the
 // admin can flip ai_mode='off' at any moment and we MUST honour it
 // immediately. If the mode is off the function returns
-// ([EmbeddingsTTLResult{}], nil) without touching the DB.
+// ([TTLResult{}], nil) without touching the DB.
 //
 // Even with mode=off the function NEVER errors on a missing settings
 // row — fail-closed semantics: a degraded settings table must not
@@ -50,16 +49,16 @@ func (r EmbeddingsTTLResult) Total() int64 { return r.Deleted768 + r.Deleted1536
 //     the HNSW index keeps the planner honest. If a future deploy
 //     accumulates 100K+ expired rows the cron should grow batching
 //     before this becomes a hot-path concern.
-func RunEmbeddingsTTL(
+func RunTTL(
 	ctx context.Context,
 	db *database.DB,
-	settings EmbeddingsTTLSettingsReader,
-) (EmbeddingsTTLResult, error) {
+	settings TTLSettingsReader,
+) (TTLResult, error) {
 	if db == nil {
-		return EmbeddingsTTLResult{}, fmt.Errorf("jobs: RunEmbeddingsTTL requires non-nil db")
+		return TTLResult{}, fmt.Errorf("jobs: RunTTL requires non-nil db")
 	}
 	if settings == nil {
-		return EmbeddingsTTLResult{}, fmt.Errorf("jobs: RunEmbeddingsTTL requires non-nil settings")
+		return TTLResult{}, fmt.Errorf("jobs: RunTTL requires non-nil settings")
 	}
 
 	mode, err := settings.AIMode(ctx)
@@ -67,16 +66,16 @@ func RunEmbeddingsTTL(
 		log.Warn().Err(err).
 			Str("job", "embeddings_ttl").
 			Msg("settings read failed, treating as ai_mode=off (no deletes)")
-		return EmbeddingsTTLResult{}, nil
+		return TTLResult{}, nil
 	}
 	if mode == rag.AIModeOff {
 		log.Debug().
 			Str("job", "embeddings_ttl").
 			Msg("ai_mode=off, skipping (per ADR-015 §I12)")
-		return EmbeddingsTTLResult{}, nil
+		return TTLResult{}, nil
 	}
 
-	res := EmbeddingsTTLResult{}
+	res := TTLResult{}
 
 	for _, table := range []struct {
 		name   string

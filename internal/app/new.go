@@ -23,7 +23,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	hadiscovery "github.com/ev-dev-labs/teslasync/internal/integrations/homeassistant"
-	"github.com/ev-dev-labs/teslasync/internal/jobs"
+	embeddingsjobs "github.com/ev-dev-labs/teslasync/internal/jobs/embeddings"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -1196,10 +1196,10 @@ func (a *App) initUnitDriftValidator(ctx context.Context) {
 // initAIBackgroundJobs schedules cross-cutting AI maintenance jobs.
 // Currently only embeddings TTL — re-runs every hour to delete
 // expired rows from both embeddings tables (see internal/jobs/
-// embeddings_ttl.go).
+// embeddings/ttl.go).
 //
 // ADR-015 §I12 contract: the cron is started UNCONDITIONALLY. Each
-// tick re-checks ai_mode via [jobs.RunEmbeddingsTTL]; when mode='off'
+// tick re-checks ai_mode via [embeddingsjobs.RunTTL]; when mode='off'
 // the function returns immediately without touching the DB. The
 // rationale for unconditional start (vs gating here on AIMode):
 //
@@ -1246,7 +1246,7 @@ func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *da
 		),
 	)
 	defer span.End()
-	result, err := jobs.RunEmbeddingsTTL(tickCtx, db, settingsRepo)
+	result, err := embeddingsjobs.RunTTL(tickCtx, db, settingsRepo)
 	span.SetAttributes(
 		attribute.Int64("ai.embeddings_ttl.deleted_768", result.Deleted768),
 		attribute.Int64("ai.embeddings_ttl.deleted_1536", result.Deleted1536),

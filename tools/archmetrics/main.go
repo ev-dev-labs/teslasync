@@ -232,7 +232,11 @@ var plannedSubpackages = []hotspotPlan{
 		Parent:        "internal/jobs",
 		Owner:         "R6",
 		FileCountAtR0: 25,
-		Targets:       []string{"_TBD per R1 audit_"},
+		Targets: []string{
+			"embeddings",
+			"_more TBD per R1 audit_",
+		},
+		Notes: "R0.5 canary extracted `embeddings` (2 files) as proof-of-recipe; R1 populates the remaining ai_*_indexer categories.",
 	},
 	{
 		Parent:        "internal/ai/tools",

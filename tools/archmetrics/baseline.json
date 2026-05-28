@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T00:51:18Z",
+  "generated_at": "2026-05-28T02:00:14Z",
   "go_version": "go1.26.1",
-  "commit_sha": "aa3b44eb5fd99614ba02fa56141c3df03fb559c3",
+  "commit_sha": "ac4e4e8871d5a81c98792fffaa56eb9bbf356bf3",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2648,7 +2648,7 @@
         "internal/flags",
         "internal/geocoding",
         "internal/integrations/homeassistant",
-        "internal/jobs",
+        "internal/jobs/embeddings",
         "internal/metrics",
         "internal/models",
         "internal/mqtt",
@@ -3816,9 +3816,9 @@
     },
     {
       "path": "internal/jobs",
-      "go_files": 13,
-      "test_files": 12,
-      "loc": 3463,
+      "go_files": 12,
+      "test_files": 11,
+      "loc": 3223,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3848,9 +3848,24 @@
         "ai_update_notes_indexer_test.go",
         "ai_yir_pregen.go",
         "ai_yir_pregen_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/jobs/embeddings",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 262,
+      "has_doc_go": true,
+      "layer": "platform",
+      "imports": [
+        "internal/ai/rag",
+        "internal/database"
+      ],
+      "files": [
         "doc.go",
-        "embeddings_ttl.go",
-        "embeddings_ttl_test.go"
+        "ttl.go",
+        "ttl_test.go"
       ]
     },
     {
@@ -4859,7 +4874,7 @@
       "path": "tools/archmetrics",
       "go_files": 2,
       "test_files": 0,
-      "loc": 774,
+      "loc": 778,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -6155,8 +6170,11 @@
       "ai_route_indexer.go",
       "ai_update_notes_indexer.go",
       "ai_yir_pregen.go",
+      "doc.go"
+    ],
+    "internal/jobs/embeddings": [
       "doc.go",
-      "embeddings_ttl.go"
+      "ttl.go"
     ],
     "internal/metrics": [
       "business.go",
@@ -6529,11 +6547,14 @@
       "parent": "internal/jobs",
       "owner": "R6",
       "file_count_at_r0": 25,
-      "flat_parent_go_files": 13,
-      "flat_parent_test_files": 12,
-      "planned_subpkgs": 1,
-      "existing_subpkgs": null,
-      "missing_subpkgs": null
+      "flat_parent_go_files": 12,
+      "flat_parent_test_files": 11,
+      "planned_subpkgs": 2,
+      "existing_subpkgs": [
+        "embeddings"
+      ],
+      "missing_subpkgs": null,
+      "notes": "R0.5 canary extracted `embeddings` (2 files) as proof-of-recipe; R1 populates the remaining ai_*_indexer categories."
     },
     {
       "parent": "internal/ai/tools",

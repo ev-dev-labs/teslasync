@@ -1,4 +1,4 @@
-package jobs
+package embeddings
 
 import (
 	"context"
@@ -22,16 +22,16 @@ func (f fakeSettings) AIMode(_ context.Context) (string, error) {
 	return f.mode, f.err
 }
 
-// TestRunEmbeddingsTTL_OffMode_NoDeletes is the §I12 evidence test:
+// TestRunTTL_OffMode_NoDeletes is the §I12 evidence test:
 // when ai_mode='off' the cron MUST NOT touch the embeddings tables.
 // Pure Go — no DB required because the off-mode branch returns
 // before any SQL is issued.
-func TestRunEmbeddingsTTL_OffMode_NoDeletes(t *testing.T) {
+func TestRunTTL_OffMode_NoDeletes(t *testing.T) {
 	t.Parallel()
 	settings := fakeSettings{mode: rag.AIModeOff}
 	// Pass a sentinel *database.DB whose nil Pool will panic on use.
 	// Off-mode short-circuit MUST happen before db.Pool is touched.
-	res, err := RunEmbeddingsTTL(context.Background(), &database.DB{}, settings)
+	res, err := RunTTL(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("off mode: unexpected error %v", err)
 	}
@@ -40,13 +40,13 @@ func TestRunEmbeddingsTTL_OffMode_NoDeletes(t *testing.T) {
 	}
 }
 
-// TestRunEmbeddingsTTL_SettingsErrorIsFailClosed proves that a
+// TestRunTTL_SettingsErrorIsFailClosed proves that a
 // settings-read failure does NOT cascade into deletes against a
 // degraded DB.
-func TestRunEmbeddingsTTL_SettingsErrorIsFailClosed(t *testing.T) {
+func TestRunTTL_SettingsErrorIsFailClosed(t *testing.T) {
 	t.Parallel()
 	settings := fakeSettings{err: errors.New("db unreachable")}
-	res, err := RunEmbeddingsTTL(context.Background(), &database.DB{}, settings)
+	res, err := RunTTL(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("settings error: want nil err (fail-closed), got %v", err)
 	}
@@ -55,12 +55,12 @@ func TestRunEmbeddingsTTL_SettingsErrorIsFailClosed(t *testing.T) {
 	}
 }
 
-func TestRunEmbeddingsTTL_NilDeps(t *testing.T) {
+func TestRunTTL_NilDeps(t *testing.T) {
 	t.Parallel()
-	if _, err := RunEmbeddingsTTL(context.Background(), nil, fakeSettings{mode: "off"}); err == nil {
+	if _, err := RunTTL(context.Background(), nil, fakeSettings{mode: "off"}); err == nil {
 		t.Fatal("nil db: want error")
 	}
-	if _, err := RunEmbeddingsTTL(context.Background(), &database.DB{}, nil); err == nil {
+	if _, err := RunTTL(context.Background(), &database.DB{}, nil); err == nil {
 		t.Fatal("nil settings: want error")
 	}
 }
@@ -77,10 +77,10 @@ func ttlDSNOrSkip(t *testing.T) string {
 	return dsn
 }
 
-// TestRunEmbeddingsTTL_DeletesExpired exercises the live DB path.
+// TestRunTTL_DeletesExpired exercises the live DB path.
 // Inserts two rows — one expired and one in the future — and proves
 // the cron deletes only the expired one.
-func TestRunEmbeddingsTTL_DeletesExpired(t *testing.T) {
+func TestRunTTL_DeletesExpired(t *testing.T) {
 	dsn := ttlDSNOrSkip(t)
 	ctx := context.Background()
 
@@ -129,9 +129,9 @@ func TestRunEmbeddingsTTL_DeletesExpired(t *testing.T) {
 		t.Fatalf("insert fresh: %v", err)
 	}
 
-	res, err := RunEmbeddingsTTL(ctx, &database.DB{Pool: pool}, fakeSettings{mode: "local"})
+	res, err := RunTTL(ctx, &database.DB{Pool: pool}, fakeSettings{mode: "local"})
 	if err != nil {
-		t.Fatalf("RunEmbeddingsTTL: %v", err)
+		t.Fatalf("RunTTL: %v", err)
 	}
 	if res.Deleted768 < 1 {
 		t.Fatalf("want >=1 delete, got %d", res.Deleted768)

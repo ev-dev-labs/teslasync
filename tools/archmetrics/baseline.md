@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T00:51:20Z, Go go1.26.1, commit aa3b44eb5fd99614ba02fa56141c3df03fb559c3_
+_Generated 2026-05-28T02:00:17Z, Go go1.26.1, commit ac4e4e8871d5a81c98792fffaa56eb9bbf356bf3_
 
 ## Summary
 
-- Packages: 209
+- Packages: 210
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 371817
+- Total non-blank LOC under cmd/+internal/+tools/: 371843
 
 ## cmd/* main.go LOC
 
@@ -197,7 +197,8 @@ _Generated 2026-05-28T00:51:20Z, Go go1.26.1, commit aa3b44eb5fd99614ba02fa56141
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/integrations/homeassistant | 3 | 1 | 515 | yes | adapter |
-| internal/jobs | 13 | 12 | 3463 | yes | platform |
+| internal/jobs | 12 | 11 | 3223 | yes | platform |
+| internal/jobs/embeddings | 2 | 1 | 262 | yes | platform |
 | internal/metrics | 6 | 2 | 1073 | yes | platform |
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
@@ -247,7 +248,7 @@ _Generated 2026-05-28T00:51:20Z, Go go1.26.1, commit aa3b44eb5fd99614ba02fa56141
 | tools/aigen | 2 | 1 | 338 | yes | tool |
 | tools/aistream-contract | 2 | 0 | 227 | yes | tool |
 | tools/aivet | 2 | 1 | 792 | yes | tool |
-| tools/archmetrics | 2 | 0 | 774 | yes | tool |
+| tools/archmetrics | 2 | 0 | 778 | yes | tool |
 | tools/eval-schema-check | 2 | 0 | 57 | yes | tool |
 
 ## doc.go adoption
@@ -261,11 +262,18 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 34 / 2 | 1 | 0 | 0 |
-| `internal/jobs` | R6 | 25 | 13 / 12 | 1 | 0 | 0 |
+| `internal/jobs` | R6 | 25 | 12 / 11 | 2 | 1 | 0 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 9 | 0 | 8 |
 | `internal/database` | R4 | 143 | 108 / 35 | 16 | 0 | 16 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 1 | 0 | 0 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 26 | 0 | 26 |
+
+### `internal/jobs` detail
+
+> R0.5 canary extracted `embeddings` (2 files) as proof-of-recipe; R1 populates the remaining ai_*_indexer categories.
+
+**Existing subpackages on disk:**
+- `internal/jobs/embeddings`
 
 ### `internal/ai/tools` detail
 
