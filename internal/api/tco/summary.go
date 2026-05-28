@@ -1,9 +1,9 @@
-package api
+package tco
 
 // Phase-50 / 0050 — M2 TCO narration.
 //
 // tco_summary.go extracts the deterministic Total-Cost-of-Ownership
-// computation that *TCOHandler.GetTCO previously performed inline,
+// computation that *Handler.GetTCO previously performed inline,
 // into a package-level pure-functional helper [ComputeTCOSummary].
 // The HTTP handler now parses + validates + writes; the math lives
 // here and is shared by:
@@ -60,7 +60,7 @@ type TCOMonthlyEntry struct {
 
 // TCOSummary is the typed envelope ComputeTCOSummary returns. The
 // JSON tags MUST stay byte-identical with the pre-refactor inline
-// `map[string]interface{}` literal in [TCOHandler.GetTCO] — the
+// `map[string]interface{}` literal in [Handler.GetTCO] — the
 // deterministic TrueCostPage chart consumes every field listed
 // here by snake_case key. A future field addition to the canonical
 // wire shape MUST land here AND in the chart's TS interface.
@@ -104,7 +104,7 @@ type TCOSummary struct {
 // the HTTP handler writes verbatim AND the AI tool envelope wraps.
 //
 // Behaviour MUST stay byte-identical with the pre-refactor inline
-// computation in [TCOHandler.GetTCO]:
+// computation in [Handler.GetTCO]:
 //
 //   - The same three pgx queries (charging-totals, mileage-range,
 //     settings-defaults) run in the same order against the same

@@ -31,6 +31,7 @@ import (
 	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
 	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
+	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -676,7 +677,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	safetyHandler := NewSafetyHandler(stateReader, liveStateReader)
 	userPreferenceHandler := NewUserPreferenceHandler(stateReader, liveStateReader)
 	softwareUpdateHandler := apisoftupd.NewHandler(db)
-	tcoHandler := NewTCOHandler(db)
+	tcoHandler := apitco.NewHandler(db)
 	sleepHandler := NewSleepHandler(db)
 	// Phase-42 (prompt 0077): VampireDrainHandler deleted (vampire_drain_events).
 	visitedLocationHandler := apivisloc.NewHandler(db)

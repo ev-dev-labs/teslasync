@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T21:11:48Z",
+  "generated_at": "2026-05-28T21:16:37Z",
   "go_version": "go1.26.1",
-  "commit_sha": "67813cddec0f4eaf7bf960f44b45e3e36095d317",
+  "commit_sha": "5f04688f9d15aeca99f63e9579d101e50fd832e0",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 241,
-      "test_files": 150,
-      "loc": 113036,
+      "go_files": 239,
+      "test_files": 149,
+      "loc": 112553,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2640,6 +2640,7 @@
         "internal/api/slo",
         "internal/api/softwareupdate",
         "internal/api/synthetic",
+        "internal/api/tco",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
         "internal/api/vehicleconfig",
@@ -3092,9 +3093,6 @@
         "system_auth_mode_handler_test.go",
         "system_handler.go",
         "system_handler_test.go",
-        "tco_handler.go",
-        "tco_summary.go",
-        "tco_summary_test.go",
         "telemetry_alerts.go",
         "telemetry_handler.go",
         "telemetry_handler_capture.go",
@@ -3547,6 +3545,24 @@
       "files": [
         "doc.go",
         "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/tco",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 506,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "summary.go",
+        "summary_test.go"
       ]
     },
     {
@@ -7631,8 +7647,6 @@
       "sudo_middleware.go",
       "system_auth_mode_handler.go",
       "system_handler.go",
-      "tco_handler.go",
-      "tco_summary.go",
       "telemetry_alerts.go",
       "telemetry_handler.go",
       "telemetry_handler_capture.go",
@@ -7768,6 +7782,11 @@
     "internal/api/synthetic": [
       "doc.go",
       "handler.go"
+    ],
+    "internal/api/tco": [
+      "doc.go",
+      "handler.go",
+      "summary.go"
     ],
     "internal/api/vehicle": [
       "doc.go",
@@ -8916,12 +8935,13 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 241,
-      "flat_parent_test_files": 150,
+      "flat_parent_go_files": 239,
+      "flat_parent_test_files": 149,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",
         "lifetime",
+        "tco",
         "dataquality",
         "search",
         "vehicle",
@@ -8939,7 +8959,6 @@
         "sleep",
         "regen",
         "vampiredrain",
-        "tco",
         "tempimpact",
         "speed",
         "routeeff",

@@ -62,6 +62,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
+	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -308,7 +309,7 @@ func (a *AITCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*l
 		return nil, errors.New("api ai tco-narration: vehicle_id must be > 0")
 	}
 
-	summary, err := ComputeTCOSummary(ctx, a.db, vehicleID)
+	summary, err := apitco.ComputeTCOSummary(ctx, a.db, vehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("api ai tco-narration: ComputeTCOSummary: %w", err)
 	}

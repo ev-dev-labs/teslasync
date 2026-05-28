@@ -3,7 +3,7 @@
 // Wire-shape contract test for the canonical
 // /api/v1/analytics/tco endpoint. Locks the JSON field list +
 // types so a future refactor of [ComputeTCOSummary] /
-// [TCOHandler.GetTCO] cannot silently drop or rename a field
+// [Handler.GetTCO] cannot silently drop or rename a field
 // the SPA's TrueCostPage chart consumes.
 //
 // The deterministic TCO chart on /tco (and its alias
@@ -20,7 +20,7 @@
 // shape — the AI envelope is allowed to grow, but the legacy
 // chart contract is not allowed to shrink.
 
-package api
+package tco
 
 import (
 	"reflect"

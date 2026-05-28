@@ -1,10 +1,10 @@
-package api
+package tco
 
 // Phase-50 / 0050 — M2 TCO narration.
 //
 // The deterministic Total-Cost-of-Ownership math previously inlined
-// inside (*TCOHandler).GetTCO has been extracted to the package-level
-// pure helper [ComputeTCOSummary] in tco_summary.go so the new AI
+// inside (*Handler).GetTCO has been extracted to the package-level
+// pure helper [ComputeTCOSummary] in summary.go so the new AI
 // surface (POST /api/v1/ai/analytics/tco/narrate via the
 // [lifetime.TCOSummarizer] adapter) shares the SAME numbers the chart
 // renders. This file therefore parses + validates the request and
@@ -15,45 +15,46 @@ package api
 // The mapping below uses the SAME snake_case keys, the SAME field
 // order, the SAME safeF/math.Round guards (now inside the helper),
 // and the SAME empty-not-null guard for monthly_breakdown. A
-// contract test (tco_handler_shape_test.go) pins the JSON field
+// contract test (summary_test.go) pins the JSON field
 // list so a future drift breaks loudly.
 
 import (
 	"net/http"
 	"strconv"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
 )
 
-// TCOHandler handles True Cost of Ownership analytics requests.
-type TCOHandler struct {
+// Handler handles True Cost of Ownership analytics requests.
+type Handler struct {
 	db *database.DB
 }
 
-func NewTCOHandler(db *database.DB) *TCOHandler {
-	return &TCOHandler{db: db}
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{db: db}
 }
 
-func (h *TCOHandler) GetTCO(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetTCO(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	summary, err := ComputeTCOSummary(r.Context(), h.db, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("tco: ComputeTCOSummary failed")
-		writeError(w, http.StatusInternalServerError, "failed to get TCO data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get TCO data")
 		return
 	}
 
 	// Wire shape MUST stay byte-identical with the pre-refactor
 	// inline literal — the deterministic TrueCostPage chart
 	// consumes every field by snake_case key. The contract test
-	// in tco_handler_shape_test.go pins this field list.
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	// in summary_test.go pins this field list.
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":                   summary.VehicleID,
 		"total_charging_cost":          summary.TotalChargingCost,
 		"total_wh":                     summary.TotalWh,

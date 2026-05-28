@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T21:11:49Z, Go go1.26.1, commit 67813cddec0f4eaf7bf960f44b45e3e36095d317_
+_Generated 2026-05-28T21:16:38Z, Go go1.26.1, commit 5f04688f9d15aeca99f63e9579d101e50fd832e0_
 
 ## Summary
 
-- Packages: 320
+- Packages: 321
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 377677
+- Total non-blank LOC under cmd/+internal/+tools/: 377700
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-28T21:11:49Z, Go go1.26.1, commit 67813cddec0f4eaf7bf960f44b4
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 241 | 150 | 113036 | yes | handler |
+| internal/api | 239 | 149 | 112553 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
 | internal/api/apicalllog | 2 | 0 | 69 | yes | handler |
 | internal/api/apiparams | 2 | 1 | 358 | yes | handler |
@@ -193,6 +193,7 @@ _Generated 2026-05-28T21:11:49Z, Go go1.26.1, commit 67813cddec0f4eaf7bf960f44b4
 | internal/api/slo | 2 | 0 | 46 | yes | handler |
 | internal/api/softwareupdate | 2 | 0 | 63 | yes | handler |
 | internal/api/synthetic | 2 | 0 | 40 | yes | handler |
+| internal/api/tco | 3 | 1 | 506 | yes | handler |
 | internal/api/vehicle | 2 | 1 | 616 | yes | handler |
 | internal/api/vehicleaccess | 2 | 0 | 448 | yes | handler |
 | internal/api/vehicleconfig | 2 | 1 | 527 | yes | handler |
@@ -376,7 +377,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 241 / 150 | 59 | 6 | 53 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 239 / 149 | 59 | 7 | 52 |
 
 ### `internal/models` detail
 
@@ -486,6 +487,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 **Existing subpackages on disk:**
 - `internal/api/openapi`
 - `internal/api/lifetime`
+- `internal/api/tco`
 - `internal/api/dataquality`
 - `internal/api/search`
 - `internal/api/vehicle`
@@ -503,7 +505,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/sleep`
 - `internal/api/regen`
 - `internal/api/vampiredrain`
-- `internal/api/tco`
 - `internal/api/tempimpact`
 - `internal/api/speed`
 - `internal/api/routeeff`
