@@ -17,6 +17,7 @@ import (
 	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
+	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apianomaly "github.com/ev-dev-labs/teslasync/internal/api/anomaly"
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	apiflagsh "github.com/ev-dev-labs/teslasync/internal/api/apiflagsh"
@@ -634,7 +635,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// at the AlertHandler call site, which has its own narrow contract.
 	alertLiveSignalStore := liveSignalStore
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
-	alertMessageHandler := NewAlertMessageHandler()
+	alertMessageHandler := apialertmsg.NewAlertMessageHandler()
 	commandHandler := apicommand.NewCommandHandler(db, teslaClient)
 	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)

@@ -1,14 +1,16 @@
-package api
+package alertmsg
 
 import (
 	"encoding/json"
 	"io"
 	"net/http"
 
+	alertmsgcore "github.com/ev-dev-labs/teslasync/internal/alertmsg"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
-
-	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 )
+
+const maxAlertRequestBodyBytes = 1 << 20
 
 // AlertMessageHandler serves the three read-only helper endpoints the
 // Alert Studio editor uses to render the message-template picker:
@@ -84,8 +86,8 @@ func (h *AlertMessageHandler) MessagePresets(w http.ResponseWriter, r *http.Requ
 	if kind != "" {
 		rule = &alertmodel.AlertRule{Kind: kind}
 	}
-	out := alertmsg.Presets(rule)
-	writeJSON(w, http.StatusOK, out)
+	out := alertmsgcore.Presets(rule)
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // MessagePlaceholders returns the autocomplete catalog for the given
@@ -101,8 +103,8 @@ func (h *AlertMessageHandler) MessagePlaceholders(w http.ResponseWriter, r *http
 	if mid := q.Get("metric_id"); mid != "" {
 		rule.MetricID = &mid
 	}
-	out := alertmsg.Placeholders(rule)
-	writeJSON(w, http.StatusOK, out)
+	out := alertmsgcore.Placeholders(rule)
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // MessagePreview renders the title/body the dispatch layer would emit
@@ -116,7 +118,7 @@ func (h *AlertMessageHandler) MessagePlaceholders(w http.ResponseWriter, r *http
 func (h *AlertMessageHandler) MessagePreview(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxAlertRequestBodyBytes))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "failed to read request body")
+		httpx.WriteError(w, http.StatusBadRequest, "failed to read request body")
 		return
 	}
 	defer r.Body.Close()
@@ -124,7 +126,7 @@ func (h *AlertMessageHandler) MessagePreview(w http.ResponseWriter, r *http.Requ
 	var req alertMessagePreviewRequest
 	if len(body) > 0 {
 		if err := json.Unmarshal(body, &req); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
+			httpx.WriteError(w, http.StatusBadRequest, "invalid JSON: "+err.Error())
 			return
 		}
 	}
@@ -158,13 +160,13 @@ func (h *AlertMessageHandler) MessagePreview(w http.ResponseWriter, r *http.Requ
 		}
 	}
 
-	ctx := alertmsg.BuildContext(rule, req.VehicleName, signals, builtins)
-	title := alertmsg.RenderTitle(rule, ctx)
-	bodyOut := alertmsg.RenderBody(rule, ctx)
+	ctx := alertmsgcore.BuildContext(rule, req.VehicleName, signals, builtins)
+	title := alertmsgcore.RenderTitle(rule, ctx)
+	bodyOut := alertmsgcore.RenderBody(rule, ctx)
 	if !rule.IncludeTitle && bodyOut == "" {
 		bodyOut = rule.Name
 	}
-	writeJSON(w, http.StatusOK, alertMessagePreviewResponse{Title: title, Body: bodyOut})
+	httpx.WriteJSON(w, http.StatusOK, alertMessagePreviewResponse{Title: title, Body: bodyOut})
 }
 
 // previewRuleFromRequest builds a transient *alertmodel.AlertRule from the
