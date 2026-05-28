@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T03:35:43Z",
+  "generated_at": "2026-05-28T03:40:31Z",
   "go_version": "go1.26.1",
-  "commit_sha": "6a156af00f8c373858364f30e7814d3001a9f3ab",
+  "commit_sha": "f136ed5b83fa20d60110652c25e6c5753d37e8f3",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2145,6 +2145,7 @@
         "internal/ml/range",
         "internal/models",
         "internal/models/alert",
+        "internal/models/auth",
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
@@ -3161,6 +3162,7 @@
         "internal/metrics",
         "internal/models",
         "internal/models/alert",
+        "internal/models/auth",
         "internal/tracing"
       ],
       "files": [
@@ -3941,7 +3943,7 @@
       "path": "internal/models",
       "go_files": 33,
       "test_files": 1,
-      "loc": 2784,
+      "loc": 2744,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -3993,6 +3995,20 @@
       "files": [
         "alert.go",
         "alert_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/models/auth",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 66,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "auth.go",
+        "auth_test.go",
         "doc.go"
       ]
     },
@@ -4809,7 +4825,7 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2593,
+      "loc": 2594,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4820,6 +4836,7 @@
         "internal/events",
         "internal/metrics",
         "internal/models",
+        "internal/models/auth",
         "internal/mqtt",
         "internal/notification",
         "internal/polling",
@@ -6253,6 +6270,10 @@
       "alert.go",
       "doc.go"
     ],
+    "internal/models/auth": [
+      "auth.go",
+      "doc.go"
+    ],
     "internal/mqtt": [
       "dlq_inspector.go",
       "dlq_production.go",
@@ -6559,10 +6580,10 @@
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
-        "alert"
+        "alert",
+        "auth"
       ],
       "missing_subpkgs": [
-        "auth",
         "automation",
         "backup",
         "charging",

@@ -6,9 +6,10 @@ import (
 	"net/http"
 	"time"
 
+	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
+
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -61,7 +62,7 @@ func (h *AuthHandler) Callback(w http.ResponseWriter, r *http.Request) {
 	AuthAttempts.WithLabelValues("success").Inc()
 
 	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
-	token := &models.Token{
+	token := &authmodel.Token{
 		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
 		ExpiresAt:    expiresAt,
@@ -107,7 +108,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	TokenRefreshes.WithLabelValues("success").Inc()
 
 	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
-	token := &models.Token{
+	token := &authmodel.Token{
 		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
 		ExpiresAt:    expiresAt,

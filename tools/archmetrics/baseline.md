@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T03:35:44Z, Go go1.26.1, commit 6a156af00f8c373858364f30e7814d3001a9f3ab_
+_Generated 2026-05-28T03:40:32Z, Go go1.26.1, commit f136ed5b83fa20d60110652c25e6c5753d37e8f3_
 
 ## Summary
 
-- Packages: 211
+- Packages: 212
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 371907
+- Total non-blank LOC under cmd/+internal/+tools/: 371934
 
 ## cmd/* main.go LOC
 
@@ -203,8 +203,9 @@ _Generated 2026-05-28T03:35:44Z, Go go1.26.1, commit 6a156af00f8c373858364f30e78
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 33 | 1 | 2784 | yes | domain |
+| internal/models | 33 | 1 | 2744 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
+| internal/models/auth | 2 | 1 | 66 | yes | domain |
 | internal/mqtt | 7 | 7 | 4273 | yes | platform |
 | internal/notification | 4 | 2 | 1243 | yes | platform |
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |
@@ -245,7 +246,7 @@ _Generated 2026-05-28T03:35:44Z, Go go1.26.1, commit 6a156af00f8c373858364f30e78
 | internal/units | 2 | 0 | 63 | yes | platform |
 | internal/v2h | 2 | 1 | 554 | yes | platform |
 | internal/webpush | 2 | 1 | 519 | yes | platform |
-| internal/worker | 8 | 3 | 2593 | yes | platform |
+| internal/worker | 8 | 3 | 2594 | yes | platform |
 | tools/aigen | 2 | 1 | 338 | yes | tool |
 | tools/aistream-contract | 2 | 0 | 227 | yes | tool |
 | tools/aivet | 2 | 1 | 792 | yes | tool |
@@ -262,7 +263,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 33 / 1 | 19 | 1 | 18 |
+| `internal/models` | R5 | 36 | 33 / 1 | 19 | 2 | 17 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -275,9 +276,9 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 **Existing subpackages on disk:**
 - `internal/models/alert`
+- `internal/models/auth`
 
 **Planned but not yet on disk:**
-- `internal/models/auth`
 - `internal/models/automation`
 - `internal/models/backup`
 - `internal/models/charging`

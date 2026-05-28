@@ -8,17 +8,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fakeTokenReader satisfies onboardingTokenReader for unit tests.
 type fakeTokenReader struct {
-	token *models.Token
+	token *authmodel.Token
 	err   error
 }
 
-func (f fakeTokenReader) Get(_ context.Context) (*models.Token, error) {
+func (f fakeTokenReader) Get(_ context.Context) (*authmodel.Token, error) {
 	return f.token, f.err
 }
 
@@ -71,7 +72,7 @@ func TestOnboardingHandler_Status_FreshInstall(t *testing.T) {
 
 func TestOnboardingHandler_Status_TokenOnly(t *testing.T) {
 	h := &OnboardingHandler{
-		tokens: fakeTokenReader{token: &models.Token{AccessToken: "abc"}},
+		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
 		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 0, DataFlowing: false}},
 	}
 
@@ -90,7 +91,7 @@ func TestOnboardingHandler_Status_TokenOnly(t *testing.T) {
 
 func TestOnboardingHandler_Status_TokenAndVehicleNoData(t *testing.T) {
 	h := &OnboardingHandler{
-		tokens: fakeTokenReader{token: &models.Token{AccessToken: "abc"}},
+		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
 		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 1, DataFlowing: false}},
 	}
 
@@ -109,7 +110,7 @@ func TestOnboardingHandler_Status_TokenAndVehicleNoData(t *testing.T) {
 
 func TestOnboardingHandler_Status_AllConditionsMet(t *testing.T) {
 	h := &OnboardingHandler{
-		tokens: fakeTokenReader{token: &models.Token{AccessToken: "abc"}},
+		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
 		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 2, DataFlowing: true}},
 	}
 
@@ -131,7 +132,7 @@ func TestOnboardingHandler_Status_TokenWithEmptyAccessToken(t *testing.T) {
 	// rather than connected. This guards against partial-write
 	// scenarios where the OAuth callback persisted a stub.
 	h := &OnboardingHandler{
-		tokens: fakeTokenReader{token: &models.Token{AccessToken: ""}},
+		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: ""}},
 		repo:   fakeOnboardingRepo{status: &database.OnboardingStatus{VehicleCount: 1, DataFlowing: true}},
 	}
 
@@ -174,7 +175,7 @@ func TestOnboardingHandler_Status_RepoError500(t *testing.T) {
 	// about vehicle/signal state, so we surface a 500 rather than
 	// fabricating "not complete".
 	h := &OnboardingHandler{
-		tokens: fakeTokenReader{token: &models.Token{AccessToken: "abc"}},
+		tokens: fakeTokenReader{token: &authmodel.Token{AccessToken: "abc"}},
 		repo:   fakeOnboardingRepo{err: errors.New("db down")},
 	}
 

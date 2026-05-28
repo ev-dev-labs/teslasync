@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"time"
 
+	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 type apiKeyPermCtxKey struct{}
@@ -75,8 +76,8 @@ func APIKeyAuthRequired(db *database.DB) func(next http.Handler) http.Handler {
 	}
 }
 
-func findAPIKeyByHash(db *database.DB, ctx context.Context, hash string) (*models.APIKey, error) {
-	var k models.APIKey
+func findAPIKeyByHash(db *database.DB, ctx context.Context, hash string) (*authmodel.APIKey, error) {
+	var k authmodel.APIKey
 	err := db.Pool.QueryRow(ctx,
 		`SELECT id, name, key_hash, key_prefix, permissions, last_used_at, created_at, expires_at
 		 FROM api_keys WHERE key_hash = $1`, hash).Scan(

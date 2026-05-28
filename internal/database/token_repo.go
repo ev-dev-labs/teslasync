@@ -4,8 +4,9 @@ import (
 	"context"
 	"time"
 
+	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
+
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -23,7 +24,7 @@ func NewTokenRepo(db *DB, enc ...*crypto.Encryptor) *TokenRepo {
 	return &TokenRepo{db: db, enc: e}
 }
 
-func (r *TokenRepo) Upsert(ctx context.Context, t *models.Token) error {
+func (r *TokenRepo) Upsert(ctx context.Context, t *authmodel.Token) error {
 	query := `
 		INSERT INTO tokens (id, access_token, refresh_token, expires_at, created_at, updated_at)
 		VALUES (1, $1, $2, $3, $4, $4)
@@ -39,9 +40,9 @@ func (r *TokenRepo) Upsert(ctx context.Context, t *models.Token) error {
 	return err
 }
 
-func (r *TokenRepo) Get(ctx context.Context) (*models.Token, error) {
+func (r *TokenRepo) Get(ctx context.Context) (*authmodel.Token, error) {
 	query := `SELECT id, access_token, refresh_token, expires_at, created_at, updated_at FROM tokens WHERE id = 1`
-	t := &models.Token{}
+	t := &authmodel.Token{}
 	err := r.db.Pool.QueryRow(ctx, query).Scan(&t.ID, &t.AccessToken, &t.RefreshToken, &t.ExpiresAt, &t.CreatedAt, &t.UpdatedAt)
 	if err == pgx.ErrNoRows {
 		return nil, nil

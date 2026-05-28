@@ -7,6 +7,8 @@ import (
 	"runtime/debug"
 	"time"
 
+	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
+
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
@@ -107,7 +109,7 @@ func (w *Worker) doRefreshToken(ctx context.Context) bool {
 	}
 
 	expiresAt := time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
-	token := &models.Token{
+	token := &authmodel.Token{
 		AccessToken:  tokenResp.AccessToken,
 		RefreshToken: tokenResp.RefreshToken,
 		ExpiresAt:    expiresAt,

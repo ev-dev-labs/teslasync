@@ -4,18 +4,19 @@ import (
 	"context"
 	"net/http"
 
+	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // onboardingTokenReader is the narrow surface OnboardingHandler needs
 // from a TokenRepo (or test fake). Defined here so unit tests can
 // stub the dependency without spinning up Postgres.
 type onboardingTokenReader interface {
-	Get(ctx context.Context) (*models.Token, error)
+	Get(ctx context.Context) (*authmodel.Token, error)
 }
 
 // onboardingStatusReader mirrors the database-derived portion of the
