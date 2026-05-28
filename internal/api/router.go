@@ -46,6 +46,7 @@ import (
 	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
 	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
+	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
 	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
@@ -423,7 +424,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// semantics for a "local session" primitive; operators wanting
 	// cross-restart persistence already get it from the upstream IdP.
 	authSessionsRepo := dbauth.NewAuthSessionsRepo(db)
-	sessionHandler := NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
+	sessionHandler := apisess.NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
 
 	// Phase-46 / Prompt 57 — Auth-mode contract.
 	//

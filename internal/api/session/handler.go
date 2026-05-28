@@ -18,7 +18,7 @@
 // RequireSudo upstream — that middleware is itself a passthrough in
 // open mode, so the open-mode check below intentionally fires before
 // any database work and never depends on the sudo middleware running.
-package api
+package session
 
 import (
 	"context"
@@ -30,6 +30,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
@@ -105,7 +106,7 @@ func (h *SessionHandler) resolveSubject(r *http.Request) (subject string, openMo
 // open mode. Centralised so the SPA's useSessions hook can match the
 // exact code without snake-vs-camel drift.
 func writeOpenModeNotImplementedSession(w http.ResponseWriter) {
-	writeErrorCode(w, http.StatusNotImplemented,
+	httpx.WriteErrorCode(w, http.StatusNotImplemented,
 		"active sessions list requires forward-auth mode", tsauth.AuthModeOpenCode)
 }
 
@@ -127,14 +128,14 @@ func (h *SessionHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", "MISSING_IDENTITY")
 		return
 	}
 
 	rows, err := h.store.ListActiveBySubject(r.Context(), subject)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to load sessions")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load sessions")
 		return
 	}
 	currentID, hasCurrent := tsauth.CurrentSessionID(r.Context())
@@ -155,7 +156,7 @@ func (h *SessionHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		out = append(out, info)
 	}
-	writeJSON(w, http.StatusOK, sessionListResponse{Mode: "session", Sessions: out})
+	httpx.WriteJSON(w, http.StatusOK, sessionListResponse{Mode: "session", Sessions: out})
 }
 
 // Revoke implements DELETE /auth/sessions/{id}.
@@ -177,7 +178,7 @@ func (h *SessionHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", "MISSING_IDENTITY")
 		return
 	}
@@ -185,7 +186,7 @@ func (h *SessionHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	idParam := strings.TrimSpace(chi.URLParam(r, "id"))
 	id, err := uuid.Parse(idParam)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid session id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid session id")
 		return
 	}
 
@@ -197,7 +198,7 @@ func (h *SessionHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
-		writeError(w, http.StatusInternalServerError, "failed to revoke session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to revoke session")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -222,7 +223,7 @@ func (h *SessionHandler) RevokeAllOthers(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", "MISSING_IDENTITY")
 		return
 	}
@@ -230,8 +231,8 @@ func (h *SessionHandler) RevokeAllOthers(w http.ResponseWriter, r *http.Request)
 	currentID, _ := tsauth.CurrentSessionID(r.Context())
 	revoked, err := h.store.RevokeAllOthers(r.Context(), subject, currentID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to revoke other sessions")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to revoke other sessions")
 		return
 	}
-	writeJSON(w, http.StatusOK, revokeAllOthersResponse{Mode: "session", Revoked: revoked})
+	httpx.WriteJSON(w, http.StatusOK, revokeAllOthersResponse{Mode: "session", Revoked: revoked})
 }

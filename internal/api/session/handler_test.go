@@ -12,7 +12,7 @@
 //   - No call to any provider-specific URL appears anywhere — the
 //     handler talks only to its injected SessionListStore.
 
-package api
+package session
 
 import (
 	"context"
