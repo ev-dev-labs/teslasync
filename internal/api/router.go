@@ -15,6 +15,7 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
+	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apianomaly "github.com/ev-dev-labs/teslasync/internal/api/anomaly"
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	apiflagsh "github.com/ev-dev-labs/teslasync/internal/api/apiflagsh"
@@ -455,7 +456,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// than once in the same process (e.g. parallel router tests).
 	logTap := platform.NewLogSubscriberRegistry()
 	installAdminLogStreamTap(logTap)
-	logStreamHandler := NewAdminLogStreamHandler(logTap)
+	logStreamHandler := apiadminls.NewAdminLogStreamHandler(logTap)
 	settingsHandler := NewSettingsHandler(db)
 
 	// Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
@@ -2697,7 +2698,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// live log stream (phase-46/34) is also excluded so the
 		// SSE viewer doesn't recursively log itself.
 		r.Use(APICallLogMiddleware(GetAPICallLogger(), cfg.APILogs.CaptureBodies, func(p string) bool {
-			if p == AdminLogStreamPath {
+			if p == apiadminls.AdminLogStreamPath {
 				return true
 			}
 			return DefaultAPILogSkip(p)

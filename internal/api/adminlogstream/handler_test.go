@@ -1,4 +1,4 @@
-package api
+package adminlogstream
 
 import (
 	"bufio"

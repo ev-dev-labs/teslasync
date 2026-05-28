@@ -1,4 +1,4 @@
-// Package api — admin_log_stream_handler.go
+// Package adminlogstream — handler.go
 //
 // Phase-46 / Prompt 34 — Live log tail viewer.
 //
@@ -39,7 +39,7 @@
 // • Request context cancellation tears down the subscriber so the
 //   registry never leaks slots.
 
-package api
+package adminlogstream
 
 import (
 	"encoding/json"
@@ -51,6 +51,7 @@ import (
 
 	"github.com/rs/zerolog"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/platform"
 )
 
@@ -112,17 +113,17 @@ func NewAdminLogStreamHandler(registry *platform.LogSubscriberRegistry) *AdminLo
 // the current write path) would dwarf the bandwidth saving.
 func (h *AdminLogStreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.registry == nil {
-		writeError(w, http.StatusServiceUnavailable, "log stream not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "log stream not configured")
 		return
 	}
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
-		writeError(w, http.StatusMethodNotAllowed, "method not allowed")
+		httpx.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -130,12 +131,12 @@ func (h *AdminLogStreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	// a 400 carries a normal JSON error body the SPA can decode.
 	level, levelStr, err := parseLogStreamLevel(r.URL.Query().Get("level"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 	grepRaw := strings.TrimSpace(r.URL.Query().Get("grep"))
 	if len(grepRaw) > adminLogStreamMaxGrepLen {
-		writeError(w, http.StatusBadRequest,
+		httpx.WriteError(w, http.StatusBadRequest,
 			fmt.Sprintf("grep pattern exceeds %d bytes", adminLogStreamMaxGrepLen))
 		return
 	}
@@ -143,7 +144,7 @@ func (h *AdminLogStreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	if grepRaw != "" {
 		grepRe, err = regexp.Compile(grepRaw)
 		if err != nil {
-			writeError(w, http.StatusBadRequest,
+			httpx.WriteError(w, http.StatusBadRequest,
 				fmt.Sprintf("invalid grep pattern: %v", err))
 			return
 		}
