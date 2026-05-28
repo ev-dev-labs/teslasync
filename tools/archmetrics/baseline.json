@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:33:35Z",
+  "generated_at": "2026-05-28T07:39:20Z",
   "go_version": "go1.26.1",
-  "commit_sha": "65cf2acaa831139bf3350d85e2da529d9b9ef47b",
+  "commit_sha": "fdbb4b26a38fa0c35552d82c36a3e5a4e2b52db9",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1883,8 +1883,8 @@
     {
       "path": "internal/ai/tools",
       "go_files": 16,
-      "test_files": 14,
-      "loc": 11380,
+      "test_files": 13,
+      "loc": 10777,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1907,11 +1907,10 @@
         "charging_diagnosis.go",
         "charging_diagnosis_test.go",
         "doc.go",
-        "drive_coaching.go",
-        "drive_coaching_test.go",
         "fuzz_schema_test.go",
         "help.go",
         "help_test.go",
+        "ptrhelpers.go",
         "redact_regex.go",
         "registry.go",
         "registry_test.go",
@@ -1980,6 +1979,24 @@
       "files": [
         "curve_clusters.go",
         "curve_clusters_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/coaching",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 677,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest",
+        "internal/models/drive"
+      ],
+      "files": [
+        "coaching.go",
+        "coaching_test.go",
         "doc.go"
       ]
     },
@@ -2379,7 +2396,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126545,
+      "loc": 126546,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2454,6 +2471,7 @@
         "internal/ai/tools/alert",
         "internal/ai/tools/anomaly",
         "internal/ai/tools/charge",
+        "internal/ai/tools/coaching",
         "internal/ai/tools/diagnostic",
         "internal/ai/tools/digest",
         "internal/ai/tools/export",
@@ -6092,8 +6110,8 @@
       "charge_curve_clustering.go",
       "charging_diagnosis.go",
       "doc.go",
-      "drive_coaching.go",
       "help.go",
+      "ptrhelpers.go",
       "redact_regex.go",
       "registry.go",
       "route_efficiency.go",
@@ -6115,6 +6133,10 @@
     ],
     "internal/ai/tools/charge": [
       "curve_clusters.go",
+      "doc.go"
+    ],
+    "internal/ai/tools/coaching": [
+      "coaching.go",
       "doc.go"
     ],
     "internal/ai/tools/diagnostic": [
@@ -7432,7 +7454,7 @@
       "owner": "R6",
       "file_count_at_r0": 109,
       "flat_parent_go_files": 16,
-      "flat_parent_test_files": 14,
+      "flat_parent_test_files": 13,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

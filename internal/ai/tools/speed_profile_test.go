@@ -20,6 +20,20 @@ import (
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
+// failingDrivesImpl is a local test-only DriveSource that returns
+// getByIDErr on every GetByID call. Originally lived in
+// drive_coaching_test.go; duplicated here after the R6.25 carve of
+// drive_coaching → coaching/ (this parent test cannot import the
+// subpkg without inducing a parent→child→parent test cycle).
+type failingDrivesImpl struct {
+	fakeDrives
+	getByIDErr error
+}
+
+func (f *failingDrivesImpl) GetByID(_ context.Context, _ int64) (*drivemodel.Drive, error) {
+	return nil, f.getByIDErr
+}
+
 // TestRegisterSpeedProfileInsightsTools_RegistersBothTools proves
 // the wiring helper installs the two new tools on a fresh registry.
 // Mirrors the existing RegisterDriveCoachingTools test pattern.
@@ -52,7 +66,6 @@ func TestRegisterSpeedProfileInsightsTools_DoesNotShadowBuiltins(t *testing.T) {
 		Geofences:     &fakeFences{},
 		Efficiency:    &fakeDrives{},
 	})
-	RegisterDriveCoachingTools(r, DriveCoachingSources{Drives: &fakeDrives{}})
 	RegisterSpeedProfileInsightsTools(r, SpeedProfileInsightsSources{Drives: &fakeDrives{}})
 
 	for _, name := range BuiltinNames {
@@ -61,7 +74,6 @@ func TestRegisterSpeedProfileInsightsTools_DoesNotShadowBuiltins(t *testing.T) {
 		}
 	}
 	for _, name := range []string{
-		"query_drive_telemetry_summary",
 		"query_speed_profile",
 		"query_drive_context",
 	} {

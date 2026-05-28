@@ -236,10 +236,10 @@ func summariseSpeedProfile(d *drivemodel.Drive) map[string]any {
 
 	// SI speed aggregates pass-through — nil-aware so JSON null is
 	// preserved when the column was NULL on the drive row.
-	out["avg_speed_mps"] = derefFloat64Ptr(d.AvgSpeedMps)
-	out["max_speed_mps"] = derefFloat64Ptr(d.MaxSpeedMps)
-	out["avg_power_w"] = derefFloat64Ptr(d.AvgPowerW)
-	out["energy_used_wh"] = derefFloat64Ptr(d.EnergyUsedWh)
+	out["avg_speed_mps"] = DerefFloat64Ptr(d.AvgSpeedMps)
+	out["max_speed_mps"] = DerefFloat64Ptr(d.MaxSpeedMps)
+	out["avg_power_w"] = DerefFloat64Ptr(d.AvgPowerW)
+	out["energy_used_wh"] = DerefFloat64Ptr(d.EnergyUsedWh)
 
 	// Derived km/h and mph — emitted alongside the SI values so the
 	// narration can quote a familiar unit without doing arithmetic
@@ -424,8 +424,8 @@ func buildDriveContext(d *drivemodel.Drive) map[string]any {
 	// Battery — start, end, derived consumed delta. A regen-only
 	// drive can have a negative battery_consumed_pct (battery went
 	// UP), which is a valid observation, so we don't clamp.
-	out["start_battery_pct"] = derefInt16Ptr(d.StartBatteryPct)
-	out["end_battery_pct"] = derefInt16Ptr(d.EndBatteryPct)
+	out["start_battery_pct"] = DerefInt16Ptr(d.StartBatteryPct)
+	out["end_battery_pct"] = DerefInt16Ptr(d.EndBatteryPct)
 	if d.StartBatteryPct != nil && d.EndBatteryPct != nil {
 		consumed := int16(*d.StartBatteryPct) - int16(*d.EndBatteryPct)
 		out["battery_consumed_pct"] = consumed
@@ -437,9 +437,9 @@ func buildDriveContext(d *drivemodel.Drive) map[string]any {
 	// InsideTempAvgC is intentionally excluded: it's nil on every
 	// row by ADR-001 / Phase-42 (column dropped) and surfacing it
 	// would mislead the LLM about its availability.
-	out["outside_temp_avg_c"] = derefFloat64Ptr(d.OutsideTempAvgC)
-	out["outside_temp_avg_f"] = cToFPtr(d.OutsideTempAvgC)
-	out["ended_status"] = derefStringPtr(d.EndedStatus)
+	out["outside_temp_avg_c"] = DerefFloat64Ptr(d.OutsideTempAvgC)
+	out["outside_temp_avg_f"] = CToFPtr(d.OutsideTempAvgC)
+	out["ended_status"] = DerefStringPtr(d.EndedStatus)
 
 	// Privacy: presence-only flags. The actual strings + lat/lon
 	// are NEVER returned by this tool. The slice's redaction

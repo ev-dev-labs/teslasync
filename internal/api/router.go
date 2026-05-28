@@ -125,6 +125,7 @@ import (
 	watchfacenlresponse "github.com/ev-dev-labs/teslasync/internal/ai/strategies/watch-face-nl-response"
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/coaching"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	anomalytool "github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/charge"
@@ -756,7 +757,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deterministically (the new tool sorts AFTER
 	// `query_drive_detail` / `query_drives_recent` /
 	// `query_anomaly_context` / `query_year_in_review_context`).
-	tools.RegisterDriveCoachingTools(aiToolRegistry, tools.DriveCoachingSources{
+	coaching.RegisterDriveCoachingTools(aiToolRegistry, coaching.DriveCoachingSources{
 		Drives: database.NewDriveRepo(db),
 	})
 	// Per-drive coaching handler. One per process; stateless beyond

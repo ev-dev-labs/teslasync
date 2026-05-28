@@ -3,11 +3,11 @@
 // drive_coaching_test.go covers the new query_drive_telemetry_summary
 // tool + the RegisterDriveCoachingTools wiring. Mirrors the shape of
 // digest_test.go (slice 0012) and anomaly_test.go (slice 0014). Reuses
-// the shared fakeDrives source from builtins_test.go so the
+// the shared toolstest.FakeDrives source from builtins_test.go so the
 // query_drive_detail builtin and this new tool share the same test
 // substrate.
 
-package tools
+package coaching
 
 import (
 	"context"
@@ -15,16 +15,18 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
 // failingDrivesImpl wraps the real DriveSource signature properly via
-// reuse of the shared fake. Embedding fakeDrives lets us inherit its
+// reuse of the shared fake. Embedding toolstest.FakeDrives lets us inherit its
 // GetByVehicle signature; the override below supplies the IO error
 // on every GetByID call so the tool's error wrapping path is
 // exercised.
 type failingDrivesImpl struct {
-	fakeDrives
+	toolstest.FakeDrives
 	getByIDErr error
 }
 
@@ -37,8 +39,8 @@ func (f *failingDrivesImpl) GetByID(_ context.Context, _ int64) (*drivemodel.Dri
 // existing RegisterAnomalyTools / digest.RegisterDigestTools test pattern.
 func TestRegisterDriveCoachingTools_RegistersTool(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	RegisterDriveCoachingTools(r, DriveCoachingSources{Drives: &fakeDrives{}})
+	r := tools.NewRegistry()
+	RegisterDriveCoachingTools(r, DriveCoachingSources{Drives: &toolstest.FakeDrives{}})
 	if _, ok := r.Get("query_drive_telemetry_summary"); !ok {
 		t.Fatal("RegisterDriveCoachingTools did not register query_drive_telemetry_summary")
 	}
@@ -51,20 +53,20 @@ func TestRegisterDriveCoachingTools_RegistersTool(t *testing.T) {
 // collision.
 func TestRegisterDriveCoachingTools_DoesNotShadowBuiltins(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{},
-		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{},
-		Charges:       &fakeCharges{},
-		AlertRules:    &fakeRules{},
-		Notifications: &fakeNotif{},
-		Geofences:     &fakeFences{},
-		Efficiency:    &fakeDrives{},
+	r := tools.NewRegistry()
+	tools.Register12Builtins(r, tools.Sources{
+		Vehicles:      &toolstest.FakeVehicles{},
+		VehicleState:  &toolstest.FakeState{},
+		Drives:        &toolstest.FakeDrives{},
+		Charges:       &toolstest.FakeCharges{},
+		AlertRules:    &toolstest.FakeRules{},
+		Notifications: &toolstest.FakeNotif{},
+		Geofences:     &toolstest.FakeFences{},
+		Efficiency:    &toolstest.FakeDrives{},
 	})
-	RegisterDriveCoachingTools(r, DriveCoachingSources{Drives: &fakeDrives{}})
+	RegisterDriveCoachingTools(r, DriveCoachingSources{Drives: &toolstest.FakeDrives{}})
 
-	for _, name := range BuiltinNames {
+	for _, name := range tools.BuiltinNames {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("builtin %q lost after RegisterDriveCoachingTools", name)
 		}
@@ -84,7 +86,7 @@ func TestRegisterDriveCoachingTools_DoesNotShadowBuiltins(t *testing.T) {
 // here.
 func TestQueryDriveTelemetrySummary_NameDescriptionMutates(t *testing.T) {
 	t.Parallel()
-	tool := &queryDriveTelemetrySummary{src: &fakeDrives{}}
+	tool := &queryDriveTelemetrySummary{src: &toolstest.FakeDrives{}}
 	if got := tool.Name(); got != "query_drive_telemetry_summary" {
 		t.Errorf("Name() = %q, want %q", got, "query_drive_telemetry_summary")
 	}
@@ -105,7 +107,7 @@ func TestQueryDriveTelemetrySummary_NameDescriptionMutates(t *testing.T) {
 // input error — that's the validator's job.
 func TestQueryDriveTelemetrySummary_ValidateRejectsBadInput(t *testing.T) {
 	t.Parallel()
-	tool := &queryDriveTelemetrySummary{src: &fakeDrives{}}
+	tool := &queryDriveTelemetrySummary{src: &toolstest.FakeDrives{}}
 
 	cases := []struct {
 		name string
@@ -129,7 +131,7 @@ func TestQueryDriveTelemetrySummary_ValidateRejectsBadInput(t *testing.T) {
 // happy-path input shapes decode correctly.
 func TestQueryDriveTelemetrySummary_ValidateAcceptsCanonical(t *testing.T) {
 	t.Parallel()
-	tool := &queryDriveTelemetrySummary{src: &fakeDrives{}}
+	tool := &queryDriveTelemetrySummary{src: &toolstest.FakeDrives{}}
 
 	cases := []string{
 		`{"drive_id": 1}`,
@@ -163,8 +165,8 @@ func TestQueryDriveTelemetrySummary_ExecuteHappyPath(t *testing.T) {
 	outsideTemp := 18.5
 	endedStatus := "completed"
 
-	src := &fakeDrives{
-		one: map[int64]*drivemodel.Drive{
+	src := &toolstest.FakeDrives{
+		One: map[int64]*drivemodel.Drive{
 			101: {
 				ID:              101,
 				VehicleID:       1,
@@ -261,8 +263,8 @@ func TestQueryDriveTelemetrySummary_ExecuteHappyPath(t *testing.T) {
 func TestQueryDriveTelemetrySummary_NilAggregatesPropagateAsNull(t *testing.T) {
 	t.Parallel()
 
-	src := &fakeDrives{
-		one: map[int64]*drivemodel.Drive{
+	src := &toolstest.FakeDrives{
+		One: map[int64]*drivemodel.Drive{
 			202: {
 				ID:        202,
 				VehicleID: 1,
@@ -308,8 +310,8 @@ func TestQueryDriveTelemetrySummary_RegenShareNilOnZeroEnvelope(t *testing.T) {
 	t.Parallel()
 
 	zero := 0.0
-	src := &fakeDrives{
-		one: map[int64]*drivemodel.Drive{
+	src := &toolstest.FakeDrives{
+		One: map[int64]*drivemodel.Drive{
 			303: {
 				ID:            303,
 				VehicleID:     1,
@@ -339,8 +341,8 @@ func TestQueryDriveTelemetrySummary_KwhPer100KmNilOnZeroDistance(t *testing.T) {
 	t.Parallel()
 
 	used := 100.0
-	src := &fakeDrives{
-		one: map[int64]*drivemodel.Drive{
+	src := &toolstest.FakeDrives{
+		One: map[int64]*drivemodel.Drive{
 			404: {
 				ID:           404,
 				VehicleID:    1,
@@ -381,7 +383,7 @@ func TestQueryDriveTelemetrySummary_NoSourceWired(t *testing.T) {
 // covered 0 m, used 0 Wh" which is silently wrong.
 func TestQueryDriveTelemetrySummary_DriveNotFound(t *testing.T) {
 	t.Parallel()
-	src := &fakeDrives{one: map[int64]*drivemodel.Drive{}} // empty
+	src := &toolstest.FakeDrives{One: map[int64]*drivemodel.Drive{}} // empty
 	tool := &queryDriveTelemetrySummary{src: src}
 	in, _ := tool.Validate(json.RawMessage(`{"drive_id": 99}`))
 	_, err := tool.Execute(context.Background(), in)

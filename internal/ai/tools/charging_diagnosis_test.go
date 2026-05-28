@@ -65,7 +65,6 @@ func TestRegisterChargingDiagnosisTools_DoesNotShadowBuiltins(t *testing.T) {
 		Geofences:     &fakeFences{},
 		Efficiency:    &fakeDrives{},
 	})
-	RegisterDriveCoachingTools(r, DriveCoachingSources{Drives: &fakeDrives{}})
 	RegisterChargingDiagnosisTools(r, ChargingDiagnosisSources{Charges: &fakeCharges{}})
 
 	for _, name := range BuiltinNames {

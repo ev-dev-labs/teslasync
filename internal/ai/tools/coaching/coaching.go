@@ -11,7 +11,7 @@
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL written.**"
 //     The tool reads ONE *drivemodel.Drive row via the existing
-//     [DriveSource.GetByID] method (the same surface
+//     [tools.DriveSource.GetByID] method (the same surface
 //     query_drive_detail uses) and computes coaching-friendly
 //     derived fields (regen_share_pct, kwh_per_100km,
 //     battery_consumed_pct) from the aggregates already persisted
@@ -62,20 +62,21 @@
 // the frontend's useUnits()/useFormatting() at the display boundary
 // converts to the user's preferred units before rendering.
 
-package tools
+package coaching
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
 // queryDriveTelemetrySummaryInput is the typed input shape for the
 // tool. The dispatcher decodes the LLM's tool-call arguments JSON
 // into this struct via ValidateStruct so a malformed input fails
-// before any DriveSource method runs.
+// before any tools.DriveSource method runs.
 //
 // Reuses the same shape as [driveIDInput] in builtins.go but is
 // declared separately so the per-tool input/output schema cache
@@ -94,7 +95,7 @@ type queryDriveTelemetrySummaryInput struct {
 // It is one of the TWO tools the drive-coaching strategy is allowed
 // to call (the other being the existing query_drive_detail builtin).
 type queryDriveTelemetrySummary struct {
-	src DriveSource
+	src tools.DriveSource
 }
 
 // Name implements [Tool].
@@ -113,7 +114,7 @@ func (t *queryDriveTelemetrySummary) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryDriveTelemetrySummary) InputSchema() json.RawMessage {
-	return CachedSchema(queryDriveTelemetrySummaryInput{})
+	return tools.CachedSchema(queryDriveTelemetrySummaryInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -130,7 +131,7 @@ func (t *queryDriveTelemetrySummary) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryDriveTelemetrySummary) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryDriveTelemetrySummaryInput](raw)
+	return tools.ValidateStruct[queryDriveTelemetrySummaryInput](raw)
 }
 
 // Execute implements [Tool]. One repo round-trip then in-memory
@@ -143,7 +144,7 @@ func (t *queryDriveTelemetrySummary) Validate(raw json.RawMessage) (any, error) 
 func (t *queryDriveTelemetrySummary) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(queryDriveTelemetrySummaryInput)
 	if t.src == nil {
-		return nil, fmt.Errorf("query_drive_telemetry_summary: no DriveSource wired")
+		return nil, fmt.Errorf("query_drive_telemetry_summary: no tools.DriveSource wired")
 	}
 	d, err := t.src.GetByID(ctx, input.DriveID)
 	if err != nil {
@@ -158,7 +159,7 @@ func (t *queryDriveTelemetrySummary) Execute(ctx context.Context, in any) (any, 
 // summariseDriveForCoaching is a pure helper: given a *drivemodel.Drive,
 // compute the deterministic coaching envelope. Extracted so the
 // unit test can call it directly without spinning up a fake
-// DriveSource and so the body of Execute stays focused on IO +
+// tools.DriveSource and so the body of Execute stays focused on IO +
 // error wrapping.
 //
 // All derivations are SAFE — division-by-zero is guarded, and
@@ -177,11 +178,11 @@ func summariseDriveForCoaching(d *drivemodel.Drive) map[string]any {
 	// when the column is NULL on the drive row. JSON null is
 	// distinguishable from JSON 0 by the LLM and keeps the
 	// nil-aware comments above honest.
-	out["avg_speed_mps"] = derefFloat64Ptr(d.AvgSpeedMps)
-	out["max_speed_mps"] = derefFloat64Ptr(d.MaxSpeedMps)
-	out["avg_power_w"] = derefFloat64Ptr(d.AvgPowerW)
-	out["energy_used_wh"] = derefFloat64Ptr(d.EnergyUsedWh)
-	out["regen_energy_wh"] = derefFloat64Ptr(d.RegenEnergyWh)
+	out["avg_speed_mps"] = tools.DerefFloat64Ptr(d.AvgSpeedMps)
+	out["max_speed_mps"] = tools.DerefFloat64Ptr(d.MaxSpeedMps)
+	out["avg_power_w"] = tools.DerefFloat64Ptr(d.AvgPowerW)
+	out["energy_used_wh"] = tools.DerefFloat64Ptr(d.EnergyUsedWh)
+	out["regen_energy_wh"] = tools.DerefFloat64Ptr(d.RegenEnergyWh)
 
 	// regen_share_pct = regen / (energy_used + regen) * 100 — the
 	// fraction of total round-trip energy the driver recovered
@@ -217,8 +218,8 @@ func summariseDriveForCoaching(d *drivemodel.Drive) map[string]any {
 	// known, otherwise nil. Note: a regen-only drive can have a
 	// negative battery_consumed_pct (battery went UP), which is a
 	// valid coaching observation, so we don't clamp the result.
-	out["start_battery_pct"] = derefInt16Ptr(d.StartBatteryPct)
-	out["end_battery_pct"] = derefInt16Ptr(d.EndBatteryPct)
+	out["start_battery_pct"] = tools.DerefInt16Ptr(d.StartBatteryPct)
+	out["end_battery_pct"] = tools.DerefInt16Ptr(d.EndBatteryPct)
 	if d.StartBatteryPct != nil && d.EndBatteryPct != nil {
 		consumed := int16(*d.StartBatteryPct) - int16(*d.EndBatteryPct)
 		out["battery_consumed_pct"] = consumed
@@ -230,9 +231,9 @@ func summariseDriveForCoaching(d *drivemodel.Drive) map[string]any {
 	// InsideTempAvgC is intentionally excluded: it's nil on every
 	// row by ADR-001 / Phase-42 (column dropped) and surfacing it
 	// would mislead the LLM about its availability.
-	out["outside_temp_avg_c"] = derefFloat64Ptr(d.OutsideTempAvgC)
-	out["outside_temp_avg_f"] = cToFPtr(d.OutsideTempAvgC)
-	out["ended_status"] = derefStringPtr(d.EndedStatus)
+	out["outside_temp_avg_c"] = tools.DerefFloat64Ptr(d.OutsideTempAvgC)
+	out["outside_temp_avg_f"] = tools.CToFPtr(d.OutsideTempAvgC)
+	out["ended_status"] = tools.DerefStringPtr(d.EndedStatus)
 
 	return out
 }
@@ -241,43 +242,6 @@ func summariseDriveForCoaching(d *drivemodel.Drive) map[string]any {
 // when p is nil. Provided alongside derefFloat64Ptr so every tool
 // that surfaces a Celsius reading can ALSO emit a pre-computed
 // Fahrenheit field — letting the LLM lift whichever the user prefers
-// without doing arithmetic (a known weak point on small local models,
-// especially with negative temperatures).
-func cToFPtr(p *float64) any {
-	if p == nil {
-		return nil
-	}
-	return (*p)*9.0/5.0 + 32.0
-}
-
-// derefFloat64Ptr returns the deref'd value or the typed nil any so
-// the JSON encoder emits `null` for nil aggregates instead of `0`.
-func derefFloat64Ptr(p *float64) any {
-	if p == nil {
-		return nil
-	}
-	return *p
-}
-
-// derefInt16Ptr mirrors derefFloat64Ptr for *int16 (battery pct).
-func derefInt16Ptr(p *int16) any {
-	if p == nil {
-		return nil
-	}
-	return *p
-}
-
-// derefStringPtr mirrors derefFloat64Ptr for *string (ended_status).
-// Empty strings stay empty (not collapsed to nil) so a future
-// migration that allows empty-string sentinels keeps round-trip
-// integrity.
-func derefStringPtr(p *string) any {
-	if p == nil {
-		return nil
-	}
-	return *p
-}
-
 // DriveCoachingSources bundles the narrow read interfaces
 // RegisterDriveCoachingTools needs. Mirrors [DigestSources] /
 // [AnomalySources] but exposes only the surface the
@@ -288,7 +252,7 @@ func derefStringPtr(p *string) any {
 // Register12Builtins already received); tests substitute
 // deterministic fakes per-source.
 type DriveCoachingSources struct {
-	Drives DriveSource
+	Drives tools.DriveSource
 }
 
 // RegisterDriveCoachingTools installs the drive-coaching slice's
@@ -301,6 +265,6 @@ type DriveCoachingSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterDriveCoachingTools(r *Registry, s DriveCoachingSources) {
+func RegisterDriveCoachingTools(r *tools.Registry, s DriveCoachingSources) {
 	r.Register(&queryDriveTelemetrySummary{src: s.Drives})
 }
