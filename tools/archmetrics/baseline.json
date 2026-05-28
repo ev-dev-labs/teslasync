@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:48:13Z",
+  "generated_at": "2026-05-28T07:54:23Z",
   "go_version": "go1.26.1",
-  "commit_sha": "07780280b99f6ea95db70aec0bd136a2a38ceb9d",
+  "commit_sha": "a23c2cab1091fcd1920917692708e928f344a7d3",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 15,
-      "test_files": 11,
-      "loc": 8583,
+      "go_files": 14,
+      "test_files": 10,
+      "loc": 7468,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1910,8 +1910,6 @@
         "redact_regex.go",
         "registry.go",
         "registry_test.go",
-        "route_efficiency.go",
-        "route_efficiency_test.go",
         "schema.go",
         "schema_test.go",
         "search.go",
@@ -2270,6 +2268,25 @@
       ]
     },
     {
+      "path": "internal/ai/tools/route",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1168,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/rag",
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest",
+        "internal/models/drive"
+      ],
+      "files": [
+        "doc.go",
+        "route.go",
+        "route_test.go"
+      ]
+    },
+    {
       "path": "internal/ai/tools/safety",
       "go_files": 2,
       "test_files": 1,
@@ -2431,7 +2448,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126548,
+      "loc": 126549,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2521,6 +2538,7 @@
         "internal/ai/tools/nlq",
         "internal/ai/tools/paint",
         "internal/ai/tools/predict",
+        "internal/ai/tools/route",
         "internal/ai/tools/safety",
         "internal/ai/tools/schedule",
         "internal/ai/tools/summary",
@@ -6149,7 +6167,6 @@
       "ptrhelpers.go",
       "redact_regex.go",
       "registry.go",
-      "route_efficiency.go",
       "schema.go",
       "search.go",
       "speed_profile.go",
@@ -6244,6 +6261,10 @@
       "battery_health.go",
       "doc.go",
       "range.go"
+    ],
+    "internal/ai/tools/route": [
+      "doc.go",
+      "route.go"
     ],
     "internal/ai/tools/safety": [
       "doc.go",
@@ -7497,8 +7518,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 15,
-      "flat_parent_test_files": 11,
+      "flat_parent_go_files": 14,
+      "flat_parent_test_files": 10,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

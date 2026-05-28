@@ -38,6 +38,12 @@ func fixedNowFn() func() time.Time {
 // *chargingmodel.ChargingSession.
 func ptrTime(t time.Time) *time.Time { return &t }
 
+// Local ptr helpers — originally defined in route_efficiency_test.go,
+// duplicated here after the R6.28 carve of route_efficiency → route/
+// (parent test cannot import the subpkg without inducing a cycle).
+func ptrStr(s string) *string       { return &s }
+func ptrFloat64(v float64) *float64 { return &v }
+
 // ---------------------------------------------------------------------------
 // query_chargers_along_route
 // ---------------------------------------------------------------------------

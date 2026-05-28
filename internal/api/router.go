@@ -142,6 +142,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/paint"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
+	routetool "github.com/ev-dev-labs/teslasync/internal/ai/tools/route"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
@@ -952,7 +953,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// in-memory mirroring the deterministic
 	// /api/v1/analytics/route-efficiency baseline shape — no new
 	// SQL is written by this slice.
-	tools.RegisterRouteEfficiencySuggestionsTools(aiToolRegistry, tools.RouteEfficiencySuggestionsSources{
+	routetool.RegisterRouteEfficiencySuggestionsTools(aiToolRegistry, routetool.RouteEfficiencySuggestionsSources{
 		Retriever: aiRouteEfficiencyRetriever,
 		Drives:    database.NewDriveRepo(db),
 	})

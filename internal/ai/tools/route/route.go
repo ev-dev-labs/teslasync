@@ -26,7 +26,7 @@
 //     start_place, end_place, trip_count, avg_distance_m,
 //     avg_duration_s, avg/best/worst kwh_per_100km, avg_speed_mps,
 //     ambient_temp_c_avg. Computed in-memory from
-//     DriveSource.GetByVehicle — no new SQL is written by this tool.
+//     tools.DriveSource.GetByVehicle — no new SQL is written by this tool.
 //     The aggregation matches the SQL in route_efficiency_handler.go
 //     bit-for-bit so the LLM sees the same per-route metrics the
 //     deterministic baseline UI already shows.
@@ -46,7 +46,7 @@
 //     duplicate write paths." → retrieve_route_chunks delegates to
 //     the F7 rag.Retriever (the single canonical retrieval entry
 //     point); query_route_efficiency delegates to a narrow
-//     DriveSource read interface satisfied at boot by an adapter
+//     tools.DriveSource read interface satisfied at boot by an adapter
 //     wrapping the existing *database.DriveRepo (no new SQL).
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle. The
@@ -78,7 +78,7 @@
 // weather_context are reserved by string so a future indexer slice
 // can register them without re-touching the tool boundary.
 
-package tools
+package route
 
 import (
 	"context"
@@ -94,6 +94,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // routeEffSourceRouteEfficiency / routeEffSourceWeatherContext are
@@ -222,7 +223,7 @@ func (t *retrieveRouteChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveRouteChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveRouteChunksInput{})
+	return tools.CachedSchema(retrieveRouteChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -242,7 +243,7 @@ func (t *retrieveRouteChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveRouteChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveRouteChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveRouteChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -326,14 +327,14 @@ const queryRouteEfficiencyMinDistanceMeters = 1609.344
 
 // queryRouteEfficiencyFetchLimit caps how many drives we pull from
 // the repo before grouping. Generous (1000) for a 30-day window;
-// the underlying DriveSource paginates so we never load the whole
+// the underlying tools.DriveSource paginates so we never load the whole
 // table.
 const queryRouteEfficiencyFetchLimit = 1000
 
 // queryRouteEfficiencyInput is the typed input shape for
 // query_route_efficiency. The dispatcher decodes the LLM's tool-call
 // arguments JSON into this struct via ValidateStruct so a malformed
-// input fails before any DriveSource method runs.
+// input fails before any tools.DriveSource method runs.
 type queryRouteEfficiencyInput struct {
 	// VehicleID identifies the vehicle to summarise. Required +
 	// positive — the AI handler ALWAYS scopes to a vehicle the
@@ -378,7 +379,7 @@ type routeAgg struct {
 // envelope when the weather_context corpus is wired) will not
 // bleed into other tools' surfaces.
 type queryRouteEfficiency struct {
-	src DriveSource
+	src tools.DriveSource
 	// now returns the reference timestamp for the lookback
 	// window. Injectable so tests can pin a deterministic
 	// reference instant. Defaults to time.Now in [New].
@@ -401,7 +402,7 @@ func (t *queryRouteEfficiency) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryRouteEfficiency) InputSchema() json.RawMessage {
-	return CachedSchema(queryRouteEfficiencyInput{})
+	return tools.CachedSchema(queryRouteEfficiencyInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -415,7 +416,7 @@ func (t *queryRouteEfficiency) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryRouteEfficiency) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryRouteEfficiencyInput](raw)
+	return tools.ValidateStruct[queryRouteEfficiencyInput](raw)
 }
 
 // Execute implements [Tool]. One repo round-trip then in-memory
@@ -423,7 +424,7 @@ func (t *queryRouteEfficiency) Validate(raw json.RawMessage) (any, error) {
 func (t *queryRouteEfficiency) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(queryRouteEfficiencyInput)
 	if t.src == nil {
-		return nil, fmt.Errorf("query_route_efficiency: no DriveSource wired")
+		return nil, fmt.Errorf("query_route_efficiency: no tools.DriveSource wired")
 	}
 
 	lookback := input.LookbackDays
@@ -451,7 +452,7 @@ func (t *queryRouteEfficiency) Execute(ctx context.Context, in any) (any, error)
 // aggregateRouteEfficiency is a pure helper: given a slice of
 // *drivemodel.Drive rows, compute the deterministic route-efficiency
 // envelope. Extracted so the unit tests can call it directly
-// without spinning up a fake DriveSource and so Execute stays
+// without spinning up a fake tools.DriveSource and so Execute stays
 // focused on IO + error wrapping.
 //
 // The aggregation matches RouteEfficiencyHandler.List's SQL
@@ -622,7 +623,7 @@ func roundN(v float64, n int) float64 {
 // built around; tests substitute deterministic fakes per-source.
 type RouteEfficiencySuggestionsSources struct {
 	Retriever rag.Retriever
-	Drives    DriveSource
+	Drives    tools.DriveSource
 }
 
 // RegisterRouteEfficiencySuggestionsTools installs the
@@ -635,7 +636,7 @@ type RouteEfficiencySuggestionsSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterRouteEfficiencySuggestionsTools(r *Registry, s RouteEfficiencySuggestionsSources) {
+func RegisterRouteEfficiencySuggestionsTools(r *tools.Registry, s RouteEfficiencySuggestionsSources) {
 	r.Register(&retrieveRouteChunks{r: s.Retriever})
 	r.Register(&queryRouteEfficiency{src: s.Drives, now: time.Now})
 }

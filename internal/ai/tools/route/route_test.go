@@ -6,12 +6,12 @@
 // with a deterministic fake so the tests stay hermetic (no DB, no
 // embedding API).
 //
-// Reuses the shared fakeDrives source from builtins_test.go and
-// the fakeRetriever from search_test.go so the existing
+// Reuses the shared toolstest.FakeDrives source from builtins_test.go and
+// the toolstest.FakeRetriever from search_test.go so the existing
 // drive-domain tools and these new tools share the same test
 // substrate.
 
-package tools
+package route
 
 import (
 	"context"
@@ -25,12 +25,9 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 )
-
-// ptrStr is a helper for *string fields on drivemodel.Drive.
-func ptrStr(s string) *string       { return &s }
-func ptrInt16(v int16) *int16       { return &v }
-func ptrFloat64(v float64) *float64 { return &v }
 
 // ---------------------------------------------------------------------------
 // retrieve_route_chunks
@@ -42,8 +39,8 @@ func ptrFloat64(v float64) *float64 { return &v }
 // deterministic envelope.
 func TestRetrieveRouteChunks_HappyPath_ScopesBySubjectAndDelegates(t *testing.T) {
 	t.Parallel()
-	ret := &fakeRetriever{
-		out: []rag.Chunk{
+	ret := &toolstest.FakeRetriever{
+		Out: []rag.Chunk{
 			{SourceType: rag.SourceDriveSummary, SourceID: "drive-101", ChunkIdx: 0, Text: "Home → Work", Score: 0.9},
 		},
 	}
@@ -66,8 +63,8 @@ func TestRetrieveRouteChunks_HappyPath_ScopesBySubjectAndDelegates(t *testing.T)
 	if k := env["k"].(int); k != 4 {
 		t.Errorf("k = %d, want 4", k)
 	}
-	if len(ret.subjects) != 1 || ret.subjects[0] != "user-42" {
-		t.Errorf("subjects = %v, want [user-42]", ret.subjects)
+	if len(ret.Subjects) != 1 || ret.Subjects[0] != "user-42" {
+		t.Errorf("subjects = %v, want [user-42]", ret.Subjects)
 	}
 }
 
@@ -79,7 +76,7 @@ func TestRetrieveRouteChunks_DefaultK_When_ZeroOrMissing(t *testing.T) {
 		`{"query": "x", "source_types": ["drive_summary"]}`,
 		`{"query": "x", "source_types": ["drive_summary"], "k": 0}`,
 	} {
-		ret := &fakeRetriever{out: nil}
+		ret := &toolstest.FakeRetriever{Out: nil}
 		tool := &retrieveRouteChunks{r: ret}
 		in, err := tool.Validate(json.RawMessage(raw))
 		if err != nil {
@@ -93,7 +90,7 @@ func TestRetrieveRouteChunks_DefaultK_When_ZeroOrMissing(t *testing.T) {
 		if k := env["k"].(int); k != routeEffDefaultK {
 			t.Errorf("k = %d, want %d", k, routeEffDefaultK)
 		}
-		if got := ret.ks[0]; got != routeEffDefaultK {
+		if got := ret.Ks[0]; got != routeEffDefaultK {
 			t.Errorf("retriever saw k = %d, want %d", got, routeEffDefaultK)
 		}
 	}
@@ -104,7 +101,7 @@ func TestRetrieveRouteChunks_DefaultK_When_ZeroOrMissing(t *testing.T) {
 // struct validator.
 func TestRetrieveRouteChunks_Validate_RejectsUnknownSourceType(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveRouteChunks{r: &fakeRetriever{}}
+	tool := &retrieveRouteChunks{r: &toolstest.FakeRetriever{}}
 	_, err := tool.Validate(json.RawMessage(`{"query": "x", "source_types": ["user_note"]}`))
 	if err == nil {
 		t.Fatal("expected error for disallowed source_type")
@@ -119,7 +116,7 @@ func TestRetrieveRouteChunks_Validate_RejectsUnknownSourceType(t *testing.T) {
 // signalled confusion and should retry.
 func TestRetrieveRouteChunks_Validate_RejectsDuplicateSourceTypes(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveRouteChunks{r: &fakeRetriever{}}
+	tool := &retrieveRouteChunks{r: &toolstest.FakeRetriever{}}
 	_, err := tool.Validate(json.RawMessage(`{"query": "x", "source_types": ["drive_summary", "drive_summary"]}`))
 	if err == nil {
 		t.Fatal("expected error for duplicate source_type")
@@ -131,7 +128,7 @@ func TestRetrieveRouteChunks_Validate_RejectsDuplicateSourceTypes(t *testing.T) 
 // and produces no signal.
 func TestRetrieveRouteChunks_Validate_RejectsEmptyQuery(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveRouteChunks{r: &fakeRetriever{}}
+	tool := &retrieveRouteChunks{r: &toolstest.FakeRetriever{}}
 	_, err := tool.Validate(json.RawMessage(`{"query": "", "source_types": ["drive_summary"]}`))
 	if err == nil {
 		t.Fatal("expected error for empty query")
@@ -142,7 +139,7 @@ func TestRetrieveRouteChunks_Validate_RejectsEmptyQuery(t *testing.T) {
 // query length cap.
 func TestRetrieveRouteChunks_Validate_RejectsTooLargeQuery(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveRouteChunks{r: &fakeRetriever{}}
+	tool := &retrieveRouteChunks{r: &toolstest.FakeRetriever{}}
 	huge := strings.Repeat("a", routeEffMaxQueryChars+1)
 	raw := []byte(`{"query":"` + huge + `","source_types":["drive_summary"]}`)
 	_, err := tool.Validate(json.RawMessage(raw))
@@ -155,7 +152,7 @@ func TestRetrieveRouteChunks_Validate_RejectsTooLargeQuery(t *testing.T) {
 // rejected at validation time.
 func TestRetrieveRouteChunks_Validate_RejectsKOverCap(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveRouteChunks{r: &fakeRetriever{}}
+	tool := &retrieveRouteChunks{r: &toolstest.FakeRetriever{}}
 	_, err := tool.Validate(json.RawMessage(`{"query":"x","source_types":["drive_summary"],"k":99}`))
 	if err == nil {
 		t.Fatal("expected error for k > cap")
@@ -167,7 +164,7 @@ func TestRetrieveRouteChunks_Validate_RejectsKOverCap(t *testing.T) {
 func TestRetrieveRouteChunks_Execute_RetrieverError(t *testing.T) {
 	t.Parallel()
 	boom := errors.New("rag down")
-	tool := &retrieveRouteChunks{r: &fakeRetriever{err: boom}}
+	tool := &retrieveRouteChunks{r: &toolstest.FakeRetriever{Err: boom}}
 	in, _ := tool.Validate(json.RawMessage(`{"query":"x","source_types":["drive_summary"]}`))
 	_, err := tool.Execute(context.Background(), in)
 	if !errors.Is(err, boom) {
@@ -199,7 +196,7 @@ func TestRetrieveRouteChunks_Execute_NilRetriever(t *testing.T) {
 // allowlist.
 func TestRetrieveRouteChunks_Validate_AcceptsForwardCompatTypes(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveRouteChunks{r: &fakeRetriever{}}
+	tool := &retrieveRouteChunks{r: &toolstest.FakeRetriever{}}
 	for _, raw := range []string{
 		`{"query":"x","source_types":["route_efficiency"]}`,
 		`{"query":"x","source_types":["weather_context"]}`,
@@ -216,7 +213,7 @@ func TestRetrieveRouteChunks_Validate_AcceptsForwardCompatTypes(t *testing.T) {
 // confirm gate.
 func TestRetrieveRouteChunks_NoMutation(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveRouteChunks{r: &fakeRetriever{}}
+	tool := &retrieveRouteChunks{r: &toolstest.FakeRetriever{}}
 	if tool.Mutates() {
 		t.Fatal("retrieve_route_chunks must be read-only")
 	}
@@ -264,14 +261,14 @@ func fixedNow() time.Time {
 func makeRouteDrive(start, end string, distM, durS, avgMps, tempC float64, startSoc, endSoc int16) *drivemodel.Drive {
 	return &drivemodel.Drive{
 		StartTs:         fixedNow().Add(-24 * time.Hour),
-		StartAddress:    ptrStr(start),
-		EndAddress:      ptrStr(end),
+		StartAddress:    toolstest.PtrString(start),
+		EndAddress:      toolstest.PtrString(end),
 		DistanceM:       distM,
 		DurationS:       int64(durS),
-		AvgSpeedMps:     ptrFloat64(avgMps),
-		OutsideTempAvgC: ptrFloat64(tempC),
-		StartBatteryPct: ptrInt16(startSoc),
-		EndBatteryPct:   ptrInt16(endSoc),
+		AvgSpeedMps:     toolstest.PtrFloat64(avgMps),
+		OutsideTempAvgC: toolstest.PtrFloat64(tempC),
+		StartBatteryPct: toolstest.PtrInt16(startSoc),
+		EndBatteryPct:   toolstest.PtrInt16(endSoc),
 	}
 }
 
@@ -281,8 +278,8 @@ func makeRouteDrive(start, end string, distM, durS, avgMps, tempC float64, start
 // + kwh_per_100mi best/worst/avg, sort by trip_count desc.
 func TestQueryRouteEfficiency_HappyPath_GroupsRoutesAndComputesMetrics(t *testing.T) {
 	t.Parallel()
-	src := &fakeDrives{
-		rows: []*drivemodel.Drive{
+	src := &toolstest.FakeDrives{
+		Rows: []*drivemodel.Drive{
 			// Home → Work: 3 drives
 			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 80, 70), // 16.09 kWh/100mi
 			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 80, 68), // 19.31 kWh/100mi
@@ -293,7 +290,7 @@ func TestQueryRouteEfficiency_HappyPath_GroupsRoutesAndComputesMetrics(t *testin
 			// Short trip — excluded by the distance floor
 			makeRouteDrive("Garage", "Driveway", 100, 60, 1, 18, 90, 89),
 			// Null start address — excluded
-			{StartAddress: nil, EndAddress: ptrStr("Anywhere"), DistanceM: 50000, DurationS: 2400},
+			{StartAddress: nil, EndAddress: toolstest.PtrString("Anywhere"), DistanceM: 50000, DurationS: 2400},
 		},
 	}
 	tool := &queryRouteEfficiency{src: src, now: fixedNow}
@@ -332,7 +329,7 @@ func TestQueryRouteEfficiency_HappyPath_GroupsRoutesAndComputesMetrics(t *testin
 // missing or zero lookback_days substitutes the 30-day default.
 func TestQueryRouteEfficiency_DefaultLookback_When_Zero(t *testing.T) {
 	t.Parallel()
-	src := &fakeDrives{rows: nil}
+	src := &toolstest.FakeDrives{Rows: nil}
 	tool := &queryRouteEfficiency{src: src, now: fixedNow}
 	for _, raw := range []string{
 		`{"vehicle_id": 1}`,
@@ -357,7 +354,7 @@ func TestQueryRouteEfficiency_DefaultLookback_When_Zero(t *testing.T) {
 // lookback_days is honoured up to the cap.
 func TestQueryRouteEfficiency_CustomLookback(t *testing.T) {
 	t.Parallel()
-	src := &fakeDrives{}
+	src := &toolstest.FakeDrives{}
 	tool := &queryRouteEfficiency{src: src, now: fixedNow}
 	in, err := tool.Validate(json.RawMessage(`{"vehicle_id": 1, "lookback_days": 90}`))
 	if err != nil {
@@ -377,7 +374,7 @@ func TestQueryRouteEfficiency_CustomLookback(t *testing.T) {
 // validation rules without DB IO.
 func TestQueryRouteEfficiency_Validate_RejectsBadInputs(t *testing.T) {
 	t.Parallel()
-	tool := &queryRouteEfficiency{src: &fakeDrives{}, now: fixedNow}
+	tool := &queryRouteEfficiency{src: &toolstest.FakeDrives{}, now: fixedNow}
 	for _, raw := range []string{
 		`{}`,                 // missing vehicle_id
 		`{"vehicle_id": 0}`,  // zero
@@ -409,12 +406,12 @@ func TestQueryRouteEfficiency_Execute_NoDriveSourceError(t *testing.T) {
 // so it does not collide with the GetByID-only failingDrivesImpl in
 // drive_coaching_test.go.
 type failingByVehicleDrives struct {
-	fakeDrives
-	err error
+	toolstest.FakeDrives
+	Err error
 }
 
 func (f *failingByVehicleDrives) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*drivemodel.Drive, error) {
-	return nil, f.err
+	return nil, f.Err
 }
 
 // TestQueryRouteEfficiency_Execute_RepoErrorWrapped proves a
@@ -422,7 +419,7 @@ func (f *failingByVehicleDrives) GetByVehicle(_ context.Context, _ int64, _, _ i
 func TestQueryRouteEfficiency_Execute_RepoErrorWrapped(t *testing.T) {
 	t.Parallel()
 	boom := errors.New("db down")
-	tool := &queryRouteEfficiency{src: &failingByVehicleDrives{err: boom}, now: fixedNow}
+	tool := &queryRouteEfficiency{src: &failingByVehicleDrives{Err: boom}, now: fixedNow}
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 1}`))
 	_, err := tool.Execute(context.Background(), in)
 	if !errors.Is(err, boom) {
@@ -458,8 +455,8 @@ func TestAggregateRouteEfficiency_TruncatesToMaxRoutes(t *testing.T) {
 func TestAggregateRouteEfficiency_NilMetricsWhenMissingSource(t *testing.T) {
 	t.Parallel()
 	d := &drivemodel.Drive{
-		StartAddress: ptrStr("A"),
-		EndAddress:   ptrStr("B"),
+		StartAddress: toolstest.PtrString("A"),
+		EndAddress:   toolstest.PtrString("B"),
 		DistanceM:    10000,
 		DurationS:    1200,
 		// no AvgSpeedMps, no OutsideTempAvgC, no SoC
@@ -487,7 +484,7 @@ func TestAggregateRouteEfficiency_NilMetricsWhenMissingSource(t *testing.T) {
 // false.
 func TestQueryRouteEfficiency_NoMutation(t *testing.T) {
 	t.Parallel()
-	tool := &queryRouteEfficiency{src: &fakeDrives{}, now: fixedNow}
+	tool := &queryRouteEfficiency{src: &toolstest.FakeDrives{}, now: fixedNow}
 	if tool.Mutates() {
 		t.Fatal("query_route_efficiency must be read-only")
 	}
@@ -506,10 +503,10 @@ func TestQueryRouteEfficiency_NoMutation(t *testing.T) {
 // pattern.
 func TestRegisterRouteEfficiencySuggestionsTools_RegistersBothTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterRouteEfficiencySuggestionsTools(r, RouteEfficiencySuggestionsSources{
-		Retriever: &fakeRetriever{},
-		Drives:    &fakeDrives{},
+		Retriever: &toolstest.FakeRetriever{},
+		Drives:    &toolstest.FakeDrives{},
 	})
 	for _, name := range []string{"retrieve_route_chunks", "query_route_efficiency"} {
 		if _, ok := r.Get(name); !ok {
@@ -524,10 +521,10 @@ func TestRegisterRouteEfficiencySuggestionsTools_RegistersBothTools(t *testing.T
 // request.
 func TestRegisterRouteEfficiencySuggestionsTools_PanicsOnDuplicate(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterRouteEfficiencySuggestionsTools(r, RouteEfficiencySuggestionsSources{
-		Retriever: &fakeRetriever{},
-		Drives:    &fakeDrives{},
+		Retriever: &toolstest.FakeRetriever{},
+		Drives:    &toolstest.FakeDrives{},
 	})
 	defer func() {
 		if rec := recover(); rec == nil {
@@ -535,7 +532,7 @@ func TestRegisterRouteEfficiencySuggestionsTools_PanicsOnDuplicate(t *testing.T)
 		}
 	}()
 	RegisterRouteEfficiencySuggestionsTools(r, RouteEfficiencySuggestionsSources{
-		Retriever: &fakeRetriever{},
-		Drives:    &fakeDrives{},
+		Retriever: &toolstest.FakeRetriever{},
+		Drives:    &toolstest.FakeDrives{},
 	})
 }
