@@ -69,3 +69,5 @@ c9009e01d0cdf23e668949c9f2618dbbbc75b0ed # R5.14 carve internal/models/drive sub
 aacf69ba268c7ea808c77b3cb18a0b0a614fd4bd
 # R5.17 signal carve-out
 06f0a8b272314eb3c3ad12cfd0aa6ad4aa80f899
+# R5.15 dashboard carve-out
+2b25d1ffc167a7740cdc0f1d68c45a8e1481e0e8
