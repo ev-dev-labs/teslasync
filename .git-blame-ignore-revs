@@ -233,3 +233,4 @@ f9e4498b115230143fe0ef4860eea54a335d548b # refactor(R2d.10): carve internal/api/
 3b0f64c8776d73fc698ffaa5676a0eca93d41d53 # refactor(R2d.12): carve internal/api/dataquality subpackage
 78adb7edd60f75b8a59ceb86d76451844823e9b7 # refactor(R2d.13): carve internal/api/softwareupdate subpackage
 6d0362ca22bd6c317eae4793a754278606fd008a # refactor(R2d.14): carve internal/api/exportcolumns subpackage
+aae77fbea4d38cefa5c4d9b90accf93584375589 # refactor(R2d.15): carve internal/api/weeklydigest subpackage
