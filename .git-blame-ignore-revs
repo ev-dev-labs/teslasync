@@ -172,3 +172,5 @@ c4ab69e3aedd63b475c410f3039f78a6e17ecf82
 68c1bff88b8d6eb2777e4e8b67df6aa070857adc
 # R4.21 vehicle cluster carve (heart of system, 38 callers)
 7957ede2441fc9a5477532dd91f61b889bb9eedc
+# R4.22 signal cluster carve (telemetry hot-path, 48 callers)
+7495654f58f5edf25206877cb39d0c4df5a7168e
