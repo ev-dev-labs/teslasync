@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T06:25:26Z, Go go1.26.1, commit 4fdcaf42a90ed149962d11db5e69c1e79ca798dc_
+_Generated 2026-05-28T06:30:54Z, Go go1.26.1, commit 6ce26856b46dda8b0c3e0e9efe27b78f21806827_
 
 ## Summary
 
-- Packages: 240
+- Packages: 241
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372904
+- Total non-blank LOC under cmd/+internal/+tools/: 372957
 
 ## cmd/* main.go LOC
 
@@ -139,7 +139,7 @@ _Generated 2026-05-28T06:25:26Z, Go go1.26.1, commit 4fdcaf42a90ed149962d11db5e6
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 40 | 33 | 32359 | yes | platform |
+| internal/ai/tools | 36 | 29 | 28188 | yes | platform |
 | internal/ai/tools/alert | 3 | 2 | 1754 | yes |  |
 | internal/ai/tools/feedback | 2 | 1 | 1601 | yes |  |
 | internal/ai/tools/forecast | 4 | 3 | 1893 | yes |  |
@@ -148,8 +148,9 @@ _Generated 2026-05-28T06:25:26Z, Go go1.26.1, commit 4fdcaf42a90ed149962d11db5e6
 | internal/ai/tools/predict | 4 | 3 | 1531 | yes | domain |
 | internal/ai/tools/safety | 2 | 1 | 560 | yes |  |
 | internal/ai/tools/schedule | 4 | 3 | 2821 | yes | domain |
+| internal/ai/tools/summary | 5 | 4 | 4219 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126514 | yes | handler |
+| internal/api | 271 | 163 | 126519 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -293,7 +294,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
-| `internal/ai/tools` | R6 | 109 | 40 / 33 | 13 | 6 | 7 |
+| `internal/ai/tools` | R6 | 109 | 36 / 29 | 13 | 7 | 6 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
@@ -344,6 +345,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/ai/tools/location`
 - `internal/ai/tools/nl`
 - `internal/ai/tools/safety`
+- `internal/ai/tools/summary`
 
 **Planned but not yet on disk:**
 - `internal/ai/tools/automation`
@@ -352,7 +354,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/ai/tools/diagnostics`
 - `internal/ai/tools/drive`
 - `internal/ai/tools/share`
-- `internal/ai/tools/summary`
 
 ### `internal/database` detail
 

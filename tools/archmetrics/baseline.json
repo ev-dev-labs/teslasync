@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:25:24Z",
+  "generated_at": "2026-05-28T06:30:53Z",
   "go_version": "go1.26.1",
-  "commit_sha": "4fdcaf42a90ed149962d11db5e69c1e79ca798dc",
+  "commit_sha": "6ce26856b46dda8b0c3e0e9efe27b78f21806827",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 40,
-      "test_files": 33,
-      "loc": 32359,
+      "go_files": 36,
+      "test_files": 29,
+      "loc": 28188,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1931,12 +1931,8 @@
         "fuzz_schema_test.go",
         "help.go",
         "help_test.go",
-        "incident_timeline_summarizer.go",
-        "incident_timeline_summarizer_test.go",
         "lifetime_stats_qa.go",
         "lifetime_stats_qa_test.go",
-        "log_trace_summarizer.go",
-        "log_trace_summarizer_test.go",
         "mqtt_sse_inspector_explanations.go",
         "mqtt_sse_inspector_explanations_test.go",
         "nl_dashboard_composer.go",
@@ -1956,12 +1952,8 @@
         "search_test.go",
         "share_card_image.go",
         "share_card_image_test.go",
-        "software_update_summary.go",
-        "software_update_summary_test.go",
         "speed_profile.go",
         "speed_profile_test.go",
-        "state_machine_debugger_narrator.go",
-        "state_machine_debugger_narrator_test.go",
         "tco_summary.go",
         "tco_summary_test.go",
         "tire_pressure_trend.go",
@@ -2129,6 +2121,30 @@
       ]
     },
     {
+      "path": "internal/ai/tools/summary",
+      "go_files": 5,
+      "test_files": 4,
+      "loc": 4219,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/rag",
+        "internal/ai/tools"
+      ],
+      "files": [
+        "doc.go",
+        "fsm_trace.go",
+        "fsm_trace_test.go",
+        "incident_timeline.go",
+        "incident_timeline_test.go",
+        "log_trace.go",
+        "log_trace_test.go",
+        "software_update.go",
+        "software_update_test.go"
+      ]
+    },
+    {
       "path": "internal/alertmsg",
       "go_files": 3,
       "test_files": 1,
@@ -2150,7 +2166,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126514,
+      "loc": 126519,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2230,6 +2246,7 @@
         "internal/ai/tools/predict",
         "internal/ai/tools/safety",
         "internal/ai/tools/schedule",
+        "internal/ai/tools/summary",
         "internal/alertmsg",
         "internal/api",
         "internal/apilog",
@@ -5860,9 +5877,7 @@
       "drive_search.go",
       "export_redaction_plan.go",
       "help.go",
-      "incident_timeline_summarizer.go",
       "lifetime_stats_qa.go",
-      "log_trace_summarizer.go",
       "mqtt_sse_inspector_explanations.go",
       "nl_dashboard_composer.go",
       "nl_grafana_panel.go",
@@ -5874,9 +5889,7 @@
       "schema.go",
       "search.go",
       "share_card_image.go",
-      "software_update_summary.go",
       "speed_profile.go",
-      "state_machine_debugger_narrator.go",
       "tco_summary.go",
       "tire_pressure_trend.go",
       "tool.go",
@@ -5927,6 +5940,13 @@
       "climate.go",
       "doc.go",
       "quiet_hours.go"
+    ],
+    "internal/ai/tools/summary": [
+      "doc.go",
+      "fsm_trace.go",
+      "incident_timeline.go",
+      "log_trace.go",
+      "software_update.go"
     ],
     "internal/alertmsg": [
       "doc.go",
@@ -7145,8 +7165,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 40,
-      "flat_parent_test_files": 33,
+      "flat_parent_go_files": 36,
+      "flat_parent_test_files": 29,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",
@@ -7154,7 +7174,8 @@
         "forecast",
         "location",
         "nl",
-        "safety"
+        "safety",
+        "summary"
       ],
       "missing_subpkgs": [
         "automation",
@@ -7162,8 +7183,7 @@
         "charging",
         "diagnostics",
         "drive",
-        "share",
-        "summary"
+        "share"
       ],
       "notes": "13 subpkgs from R1 audit. Per ADR-015 amendment, pure file-move only. Registry/schema/builtins/tool/validate stay at parent."
     },

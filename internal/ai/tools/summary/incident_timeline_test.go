@@ -12,7 +12,7 @@
 // ⇒ refuse; matched scope ⇒ delegate. A future edit that bypasses
 // any of these gates would surface here.
 
-package tools
+package summary
 
 import (
 	"context"
@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -454,7 +455,7 @@ func TestScopedIncidentIDRoundTrip(t *testing.T) {
 
 func TestRegisterIncidentTimelineSummarizerTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeIncidentTimelineSource{}
 	ret := &fakeSystemRetriever{}
 	RegisterIncidentTimelineSummarizerTools(r, IncidentTimelineSummarizerSources{

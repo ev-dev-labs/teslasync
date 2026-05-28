@@ -92,7 +92,7 @@
 // e.g. "user_note" cannot accidentally expose a corpus the
 // slice did not enumerate.
 
-package tools
+package summary
 
 import (
 	"context"
@@ -103,6 +103,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // softwareUpdateSourceUpdate is the source-type string reserved
@@ -309,7 +310,7 @@ func (t *retrieveUpdateNotes) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveUpdateNotes) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveUpdateNotesInput{})
+	return tools.CachedSchema(retrieveUpdateNotesInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -326,7 +327,7 @@ func (t *retrieveUpdateNotes) RequiredScope() string { return "" }
 // allowlist that the validator's `oneof` tag cannot express
 // for slice fields.
 func (t *retrieveUpdateNotes) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveUpdateNotesInput](raw)
+	v, err := tools.ValidateStruct[retrieveUpdateNotesInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -513,7 +514,7 @@ func (t *queryVehicleSoftware) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryVehicleSoftware) InputSchema() json.RawMessage {
-	return CachedSchema(queryVehicleSoftwareInput{})
+	return tools.CachedSchema(queryVehicleSoftwareInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -527,7 +528,7 @@ func (t *queryVehicleSoftware) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryVehicleSoftware) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[queryVehicleSoftwareInput](raw)
+	v, err := tools.ValidateStruct[queryVehicleSoftwareInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -625,7 +626,7 @@ type SoftwareUpdateChangelogSummarizerSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterSoftwareUpdateChangelogSummarizerTools(r *Registry, s SoftwareUpdateChangelogSummarizerSources) {
+func RegisterSoftwareUpdateChangelogSummarizerTools(r *tools.Registry, s SoftwareUpdateChangelogSummarizerSources) {
 	r.Register(&queryVehicleSoftware{src: s.VehicleSoftware})
 	r.Register(&retrieveUpdateNotes{r: s.Retriever})
 }

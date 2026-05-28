@@ -27,7 +27,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 )
 
 // TestLogTraceSummarizationAIOffShowsRawLogsOnly is the
@@ -263,5 +263,5 @@ func TestNewAILogTraceWindowSource_ContractCheck(t *testing.T) {
 	// Compile-time assertion already proves it implements the
 	// interface; assert it here too as a runtime guard against
 	// accidental refactor breakage.
-	var _ tools.TraceWindowSource = src
+	var _ summary.TraceWindowSource = src
 }

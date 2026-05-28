@@ -74,7 +74,7 @@
 // confused LLM that asks the assistant to search e.g. "user_note"
 // cannot accidentally expose a corpus the slice did not enumerate.
 
-package tools
+package summary
 
 import (
 	"context"
@@ -85,6 +85,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // logTraceSourceLogEvent is the source-type string reserved by the
@@ -258,7 +259,7 @@ func (t *retrieveLogChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveLogChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveLogChunksInput{})
+	return tools.CachedSchema(retrieveLogChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -274,7 +275,7 @@ func (t *retrieveLogChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveLogChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveLogChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveLogChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -469,7 +470,7 @@ func (t *queryTraceWindow) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryTraceWindow) InputSchema() json.RawMessage {
-	return CachedSchema(queryTraceWindowInput{})
+	return tools.CachedSchema(queryTraceWindowInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -485,7 +486,7 @@ func (t *queryTraceWindow) RequiredScope() string { return "" }
 // understand `gtfield`, so the to_unix > from_unix check is
 // enforced explicitly here in addition to the per-field tags.
 func (t *queryTraceWindow) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[queryTraceWindowInput](raw)
+	v, err := tools.ValidateStruct[queryTraceWindowInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -494,7 +495,7 @@ func (t *queryTraceWindow) Validate(raw json.RawMessage) (any, error) {
 		return v, fmt.Errorf("query_trace_window: validator returned unexpected type %T", v)
 	}
 	if in.ToUnix <= in.FromUnix {
-		return v, &ValidationError{
+		return v, &tools.ValidationError{
 			Field: "to_unix",
 			Rule:  "gtfield=FromUnix",
 			Msg:   fmt.Sprintf("to_unix (%d) must be > from_unix (%d)", in.ToUnix, in.FromUnix),
@@ -575,7 +576,7 @@ type LogTraceSummarizerSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterLogTraceSummarizerTools(r *Registry, s LogTraceSummarizerSources) {
+func RegisterLogTraceSummarizerTools(r *tools.Registry, s LogTraceSummarizerSources) {
 	r.Register(&retrieveLogChunks{r: s.Retriever})
 	r.Register(&queryTraceWindow{src: s.TraceWindow})
 }

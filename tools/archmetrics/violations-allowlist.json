@@ -28,9 +28,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "max_files": 40,
+      "max_files": 36,
       "owner": "Phase R6 (in progress)",
-      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/); 52 after R6.7 (alert/); 49 after R6.8 (forecast/); 46 after R6.9 (predict/); 43 after R6.10 (nl/); 40 after R6.11 (schedule/ — smart_charge_schedule + preheat_precool + quiet_hours time-window draft/validate tools). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites) so sibling subpackages can reuse the memoized JSON-Schema cache through the canonical tools.CachedSchema entrypoint. Detailed cluster notes: see commit messages R6.4-R6.11."
+      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/); 52 after R6.7 (alert/); 49 after R6.8 (forecast/); 46 after R6.9 (predict/); 43 after R6.10 (nl/); 40 after R6.11 (schedule/); 36 after R6.12 (summary/ — incident_timeline + log_trace + software_update + state_machine_debugger 'Scoped*Window + envelope' summarizer tools). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites) so sibling subpackages can reuse the memoized JSON-Schema cache through the canonical tools.CachedSchema entrypoint. Detailed cluster notes: see commit messages R6.4-R6.12."
     },
     {
       "path": "internal/jobs",

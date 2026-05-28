@@ -21,13 +21,13 @@
 //
 //     1. `query_fsm_trace` — accept a typed
 //     {vehicle_id, from_unix, to_unix} input and return the
-//     deterministic [tools.FSMTraceEnvelope] (window bounds,
+//     deterministic [summary.FSMTraceEnvelope] (window bounds,
 //     vehicle id, total transitions, per-FSM-name counts,
 //     per-(from→to) edge counts, flap count, transition stream
 //     with from_state/to_state/trigger/ts). The tool is
 //     per-request scope-bound to the (vehicle_id, from_unix,
 //     to_unix) tuple the handler installed via
-//     tools.WithScopedFSMTraceWindow; the LLM CANNOT query a
+//     summary.WithScopedFSMTraceWindow; the LLM CANNOT query a
 //     different vehicle or window. Defence-in-depth against
 //     prompt injection in operator-readable trigger strings
 //     and detail blobs.

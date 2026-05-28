@@ -14,7 +14,7 @@
 // A future edit that bypasses any of these gates would surface
 // here.
 
-package tools
+package summary
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -527,7 +528,7 @@ func TestQueryVehicleSoftware_Execute_RefusesMissingScope(t *testing.T) {
 
 func TestRegisterSoftwareUpdateChangelogSummarizerTools_AddsBothTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeVehicleSoftwareSource{}
 	ret := &fakeUpdateNotesRetriever{}
 	RegisterSoftwareUpdateChangelogSummarizerTools(r, SoftwareUpdateChangelogSummarizerSources{

@@ -18,12 +18,12 @@
 //
 //     1. `query_trace_window` — accept a typed
 //     {from_unix, to_unix, vehicle_id?} input and return the
-//     deterministic [tools.TraceWindowEnvelope] (window bounds,
+//     deterministic [summary.TraceWindowEnvelope] (window bounds,
 //     log-event counts by level, top recurring log-event templates
 //     with counts, trace-span count, top trace-span operations
 //     with mean duration). The tool is per-request scope-bound to
 //     the (from_unix, to_unix, vehicle_id?) tuple the handler
-//     installed via tools.WithScopedLogTraceWindow; the LLM CANNOT
+//     installed via summary.WithScopedLogTraceWindow; the LLM CANNOT
 //     query a window outside that scope. Defence-in-depth against
 //     prompt injection in operator-authored log messages.
 //

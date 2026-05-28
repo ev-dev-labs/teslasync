@@ -71,7 +71,7 @@
 // confused LLM that asks the assistant to search e.g. "user_note"
 // cannot accidentally expose a corpus the slice did not enumerate.
 
-package tools
+package summary
 
 import (
 	"context"
@@ -83,6 +83,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // incidentTimelineSourceSystemEvent is the source-type string
@@ -236,7 +237,7 @@ func (t *retrieveSystemChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveSystemChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveSystemChunksInput{})
+	return tools.CachedSchema(retrieveSystemChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -252,7 +253,7 @@ func (t *retrieveSystemChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveSystemChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveSystemChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveSystemChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -402,7 +403,7 @@ func (t *queryIncidentTimeline) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryIncidentTimeline) InputSchema() json.RawMessage {
-	return CachedSchema(queryIncidentTimelineInput{})
+	return tools.CachedSchema(queryIncidentTimelineInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -416,7 +417,7 @@ func (t *queryIncidentTimeline) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *queryIncidentTimeline) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryIncidentTimelineInput](raw)
+	return tools.ValidateStruct[queryIncidentTimelineInput](raw)
 }
 
 // Execute implements [Tool]. Single repo round-trip; no SQL is
@@ -483,7 +484,7 @@ type IncidentTimelineSummarizerSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterIncidentTimelineSummarizerTools(r *Registry, s IncidentTimelineSummarizerSources) {
+func RegisterIncidentTimelineSummarizerTools(r *tools.Registry, s IncidentTimelineSummarizerSources) {
 	r.Register(&retrieveSystemChunks{r: s.Retriever})
 	r.Register(&queryIncidentTimeline{src: s.IncidentTimeline})
 }

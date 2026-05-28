@@ -16,7 +16,7 @@ package api
 //	  ↓
 //	open SSE writer (internal/ai/stream.New) to the HTTP response
 //	  ↓
-//	stash URL incidentID in ctx via tools.WithScopedIncidentID
+//	stash URL incidentID in ctx via summary.WithScopedIncidentID
 //	  ↓
 //	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
 //
@@ -27,7 +27,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the URL-supplied incidentID
-// in ctx via tools.WithScopedIncidentID BEFORE dispatcher.Run is
+// in ctx via summary.WithScopedIncidentID BEFORE dispatcher.Run is
 // invoked. The dispatcher propagates ctx unchanged through every
 // Tool.Execute call. The tools.queryIncidentTimeline tool's Execute
 // method then REJECTS any LLM-supplied incident_id that does not
@@ -79,6 +79,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -112,7 +113,7 @@ type AIIncidentTimelineSummarizerHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_incident_timeline AND retrieve_system_chunks
-//	(registered by tools.RegisterIncidentTimelineSummarizerTools
+//	(registered by summary.RegisterIncidentTimelineSummarizerTools
 //	in router.go).
 //
 // strat:      the incident-timeline-summarizer Strategy (one per
@@ -218,7 +219,7 @@ func (h *AIIncidentTimelineSummarizerHandler) ServeHTTP(w http.ResponseWriter, r
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, incidenttimelinesummarizer.FeatureID)
-	ctx = tools.WithScopedIncidentID(ctx, incidentID)
+	ctx = summary.WithScopedIncidentID(ctx, incidentID)
 
 	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(incidenttimelinesummarizer.FeatureID))
@@ -293,7 +294,7 @@ var _ http.Handler = (*AIIncidentTimelineSummarizerHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIIncidentTimelineSource is the production
-// tools.IncidentTimelineSource. It delegates to the SHARED
+// summary.IncidentTimelineSource. It delegates to the SHARED
 // database.IncidentRepo.Get path that also backs the canonical
 // baseline GET /api/v1/status/incidents/{id} handler so the AI
 // summary is grounded in the SAME deterministic envelope the
@@ -316,7 +317,7 @@ func NewAIIncidentTimelineSource(repo *database.IncidentRepo) *AIIncidentTimelin
 	return &AIIncidentTimelineSource{repo: repo}
 }
 
-// IncidentTimeline implements tools.IncidentTimelineSource. Composes
+// IncidentTimeline implements summary.IncidentTimelineSource. Composes
 // the SAME database.IncidentRepo.Get path
 // IncidentsHandler.GetIncident uses so the returned envelope is
 // identical to what GET /api/v1/status/incidents/{id} produces — the
@@ -325,11 +326,11 @@ func NewAIIncidentTimelineSource(repo *database.IncidentRepo) *AIIncidentTimelin
 //
 // The function does NOT recompute or override anything the canonical
 // repo computes; it only reshapes the existing typed
-// database.Incident into the typed [tools.IncidentTimelineEnvelope]
+// database.Incident into the typed [summary.IncidentTimelineEnvelope]
 // the LLM can quote. Timestamps are stringified to RFC3339 UTC for
 // determinism; the operator-installed wall-clock is preserved without
 // timezone-conversion guesswork.
-func (a *AIIncidentTimelineSource) IncidentTimeline(ctx context.Context, incidentID int64) (*tools.IncidentTimelineEnvelope, error) {
+func (a *AIIncidentTimelineSource) IncidentTimeline(ctx context.Context, incidentID int64) (*summary.IncidentTimelineEnvelope, error) {
 	if incidentID <= 0 {
 		return nil, errors.New("api ai incident-timeline-summarizer: incident_id must be > 0")
 	}
@@ -339,10 +340,10 @@ func (a *AIIncidentTimelineSource) IncidentTimeline(ctx context.Context, inciden
 		return nil, fmt.Errorf("api ai incident-timeline-summarizer: IncidentRepo.Get: %w", err)
 	}
 
-	updates := make([]tools.IncidentTimelineUpdate, 0, len(inc.Updates))
+	updates := make([]summary.IncidentTimelineUpdate, 0, len(inc.Updates))
 	for _, u := range inc.Updates {
-		updates = append(updates, tools.IncidentTimelineUpdate{
-			At:      tools.FormatIncidentTimestamp(u.At),
+		updates = append(updates, summary.IncidentTimelineUpdate{
+			At:      summary.FormatIncidentTimestamp(u.At),
 			Status:  u.Status,
 			Message: u.Message,
 			Author:  u.Author,
@@ -351,7 +352,7 @@ func (a *AIIncidentTimelineSource) IncidentTimeline(ctx context.Context, inciden
 
 	var resolvedAt *string
 	if inc.ResolvedAt != nil {
-		s := tools.FormatIncidentTimestamp(*inc.ResolvedAt)
+		s := summary.FormatIncidentTimestamp(*inc.ResolvedAt)
 		resolvedAt = &s
 	}
 
@@ -364,7 +365,7 @@ func (a *AIIncidentTimelineSource) IncidentTimeline(ctx context.Context, inciden
 		components = []string{}
 	}
 
-	return &tools.IncidentTimelineEnvelope{
+	return &summary.IncidentTimelineEnvelope{
 		ID:                 inc.ID,
 		Title:              inc.Title,
 		Description:        inc.Description,
@@ -372,7 +373,7 @@ func (a *AIIncidentTimelineSource) IncidentTimeline(ctx context.Context, inciden
 		Status:             inc.Status,
 		Source:             inc.Source,
 		AffectedComponents: components,
-		StartedAt:          tools.FormatIncidentTimestamp(inc.StartedAt),
+		StartedAt:          summary.FormatIncidentTimestamp(inc.StartedAt),
 		ResolvedAt:         resolvedAt,
 		TotalUpdates:       len(inc.Updates),
 		Updates:            updates,
@@ -380,5 +381,5 @@ func (a *AIIncidentTimelineSource) IncidentTimeline(ctx context.Context, inciden
 }
 
 // Compile-time assertion: AIIncidentTimelineSource satisfies
-// tools.IncidentTimelineSource.
-var _ tools.IncidentTimelineSource = (*AIIncidentTimelineSource)(nil)
+// summary.IncidentTimelineSource.
+var _ summary.IncidentTimelineSource = (*AIIncidentTimelineSource)(nil)

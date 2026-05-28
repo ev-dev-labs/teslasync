@@ -17,7 +17,7 @@ package api
 //	open SSE writer (internal/ai/stream.New) to the HTTP response
 //	  ↓
 //	stash the (vehicle_id, from_unix, to_unix) tuple in ctx via
-//	  tools.WithScopedFSMTraceWindow
+//	  summary.WithScopedFSMTraceWindow
 //	  ↓
 //	synthesise the user-message that scopes to the in-scope
 //	  window and instructs the tool sequence
@@ -32,7 +32,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the (vehicle_id, from_unix,
-// to_unix) tuple in ctx via tools.WithScopedFSMTraceWindow BEFORE
+// to_unix) tuple in ctx via summary.WithScopedFSMTraceWindow BEFORE
 // dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The
 // tools.queryFSMTrace tool's Execute method then REJECTS any
@@ -89,6 +89,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -148,7 +149,7 @@ type AIStateMachineDebuggerNarratorHandler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     tools.FSMTraceSource
+	source     summary.FSMTraceSource
 	headerName string
 	maxIters   int
 }
@@ -165,14 +166,14 @@ type AIStateMachineDebuggerNarratorHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_fsm_trace AND retrieve_fsm_chunks
-//	(registered by tools.RegisterStateMachineDebuggerNarratorTools
+//	(registered by summary.RegisterStateMachineDebuggerNarratorTools
 //	in router.go).
 //
 // strat:      the state-machine-debugger-narrator Strategy (one
 //
 //	per process).
 //
-// source:     the production tools.FSMTraceSource (currently
+// source:     the production summary.FSMTraceSource (currently
 //
 //	AIFSMTraceSource — a deterministic empty adapter;
 //	the canonical baseline /api/v1/fsm/transitions
@@ -186,7 +187,7 @@ func NewAIStateMachineDebuggerNarratorHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source tools.FSMTraceSource,
+	source summary.FSMTraceSource,
 	headerName string,
 ) *AIStateMachineDebuggerNarratorHandler {
 	switch {
@@ -197,7 +198,7 @@ func NewAIStateMachineDebuggerNarratorHandler(
 	case strat == nil:
 		panic("api: NewAIStateMachineDebuggerNarratorHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAIStateMachineDebuggerNarratorHandler: nil tools.FSMTraceSource")
+		panic("api: NewAIStateMachineDebuggerNarratorHandler: nil summary.FSMTraceSource")
 	}
 	return &AIStateMachineDebuggerNarratorHandler{
 		registry:   registry,
@@ -288,7 +289,7 @@ func (h *AIStateMachineDebuggerNarratorHandler) ServeHTTP(w http.ResponseWriter,
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, statemachinedebuggernarrator.FeatureID)
-	ctx = tools.WithScopedFSMTraceWindow(ctx, tools.ScopedFSMTraceWindow{
+	ctx = summary.WithScopedFSMTraceWindow(ctx, summary.ScopedFSMTraceWindow{
 		VehicleID: req.VehicleID,
 		FromUnix:  req.FromUnix,
 		ToUnix:    req.ToUnix,
@@ -379,7 +380,7 @@ var _ http.Handler = (*AIStateMachineDebuggerNarratorHandler)(nil)
 // AIStreamInspectorSource pattern.
 // ---------------------------------------------------------------------
 
-// AIFSMTraceSource is the production tools.FSMTraceSource. The
+// AIFSMTraceSource is the production summary.FSMTraceSource. The
 // canonical baseline /api/v1/fsm/transitions surface remains
 // reachable to the operator at all times — this adapter
 // intentionally returns a deterministic empty envelope describing
@@ -403,14 +404,14 @@ func NewAIFSMTraceSource() *AIFSMTraceSource {
 	return &AIFSMTraceSource{}
 }
 
-// FSMTrace implements tools.FSMTraceSource. Returns a
+// FSMTrace implements summary.FSMTraceSource. Returns a
 // deterministic empty envelope describing the bound tuple. No
 // SQL is issued. No state is mutated.
 //
 // The envelope's slices are non-nil (empty-but-allocated) so
 // JSON marshalling renders [] rather than null — keeping the
 // LLM's tool-reply parsing predictable.
-func (a *AIFSMTraceSource) FSMTrace(_ context.Context, vehicleID, fromUnix, toUnix int64) (*tools.FSMTraceEnvelope, error) {
+func (a *AIFSMTraceSource) FSMTrace(_ context.Context, vehicleID, fromUnix, toUnix int64) (*summary.FSMTraceEnvelope, error) {
 	if vehicleID <= 0 {
 		return nil, fmt.Errorf("api ai state-machine-debugger-narrator: vehicle_id must be > 0")
 	}
@@ -420,20 +421,20 @@ func (a *AIFSMTraceSource) FSMTrace(_ context.Context, vehicleID, fromUnix, toUn
 	if toUnix <= fromUnix {
 		return nil, fmt.Errorf("api ai state-machine-debugger-narrator: to_unix must be > from_unix")
 	}
-	return &tools.FSMTraceEnvelope{
+	return &summary.FSMTraceEnvelope{
 		VehicleID:        vehicleID,
 		FromUnix:         fromUnix,
 		ToUnix:           toUnix,
 		FromTime:         time.Unix(fromUnix, 0).UTC().Format(time.RFC3339),
 		ToTime:           time.Unix(toUnix, 0).UTC().Format(time.RFC3339),
 		TotalTransitions: 0,
-		PerFSM:           []tools.FSMTraceFSMCount{},
-		PerEdge:          []tools.FSMTraceEdgeCount{},
+		PerFSM:           []summary.FSMTraceFSMCount{},
+		PerEdge:          []summary.FSMTraceEdgeCount{},
 		FlapCount:        0,
-		Transitions:      []tools.FSMTraceTransition{},
+		Transitions:      []summary.FSMTraceTransition{},
 	}, nil
 }
 
 // Compile-time assertion: AIFSMTraceSource satisfies
-// tools.FSMTraceSource.
-var _ tools.FSMTraceSource = (*AIFSMTraceSource)(nil)
+// summary.FSMTraceSource.
+var _ summary.FSMTraceSource = (*AIFSMTraceSource)(nil)

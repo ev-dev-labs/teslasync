@@ -17,7 +17,7 @@ package api
 //	open SSE writer (internal/ai/stream.New) to the HTTP response
 //	  ↓
 //	stash the vehicle_id + limit in ctx via
-//	  tools.WithScopedSoftwareUpdateChangelogWindow
+//	  summary.WithScopedSoftwareUpdateChangelogWindow
 //	  ↓
 //	synthesise the user-message that scopes to the in-scope
 //	  vehicle and instructs the tool sequence
@@ -32,7 +32,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the vehicle_id + limit in
-// ctx via tools.WithScopedSoftwareUpdateChangelogWindow BEFORE
+// ctx via summary.WithScopedSoftwareUpdateChangelogWindow BEFORE
 // dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The
 // tools.queryVehicleSoftware tool's Execute method then REJECTS
@@ -95,6 +95,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -149,7 +150,7 @@ type AISoftwareUpdateChangelogSummarizerHandler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     tools.VehicleSoftwareSource
+	source     summary.VehicleSoftwareSource
 	headerName string
 	maxIters   int
 }
@@ -167,14 +168,14 @@ type AISoftwareUpdateChangelogSummarizerHandler struct {
 //
 //	query_vehicle_software AND retrieve_update_notes
 //	(registered by
-//	tools.RegisterSoftwareUpdateChangelogSummarizerTools
+//	summary.RegisterSoftwareUpdateChangelogSummarizerTools
 //	in router.go).
 //
 // strat:      the software-update-changelog-summarizer Strategy
 //
 //	(one per process).
 //
-// source:     the production tools.VehicleSoftwareSource
+// source:     the production summary.VehicleSoftwareSource
 //
 //	(currently AIVehicleSoftwareSource — wraps the
 //	SAME database.SoftwareUpdateRepo.GetByVehicle the
@@ -190,7 +191,7 @@ func NewAISoftwareUpdateChangelogSummarizerHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source tools.VehicleSoftwareSource,
+	source summary.VehicleSoftwareSource,
 	headerName string,
 ) *AISoftwareUpdateChangelogSummarizerHandler {
 	switch {
@@ -201,7 +202,7 @@ func NewAISoftwareUpdateChangelogSummarizerHandler(
 	case strat == nil:
 		panic("api: NewAISoftwareUpdateChangelogSummarizerHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAISoftwareUpdateChangelogSummarizerHandler: nil tools.VehicleSoftwareSource")
+		panic("api: NewAISoftwareUpdateChangelogSummarizerHandler: nil summary.VehicleSoftwareSource")
 	}
 	return &AISoftwareUpdateChangelogSummarizerHandler{
 		registry:   registry,
@@ -295,7 +296,7 @@ func (h *AISoftwareUpdateChangelogSummarizerHandler) ServeHTTP(w http.ResponseWr
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, softwareupdatechangelogsummarizer.FeatureID)
-	ctx = tools.WithScopedSoftwareUpdateChangelogWindow(ctx, tools.ScopedSoftwareUpdateChangelogWindow{
+	ctx = summary.WithScopedSoftwareUpdateChangelogWindow(ctx, summary.ScopedSoftwareUpdateChangelogWindow{
 		VehicleID: req.VehicleID,
 		Limit:     limit,
 	})
@@ -381,7 +382,7 @@ var _ http.Handler = (*AISoftwareUpdateChangelogSummarizerHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIVehicleSoftwareSource is the production
-// tools.VehicleSoftwareSource. The canonical baseline
+// summary.VehicleSoftwareSource. The canonical baseline
 // /api/v1/vehicles/{id}/software-updates surface remains
 // reachable to the operator at all times — this adapter wraps
 // the SAME database.SoftwareUpdateRepo.GetByVehicle the
@@ -406,7 +407,7 @@ func NewAIVehicleSoftwareSource(repo *database.SoftwareUpdateRepo) *AIVehicleSof
 	return &AIVehicleSoftwareSource{repo: repo}
 }
 
-// VehicleSoftware implements tools.VehicleSoftwareSource.
+// VehicleSoftware implements summary.VehicleSoftwareSource.
 // Returns a typed envelope for the in-scope vehicleID. No
 // state is mutated. The only IO is the existing
 // SoftwareUpdateRepo.GetByVehicle SELECT, which is the SAME
@@ -422,7 +423,7 @@ func NewAIVehicleSoftwareSource(repo *database.SoftwareUpdateRepo) *AIVehicleSof
 // fewer than two installed rows are present, distinguishing
 // "not enough data to compute" from "back-to-back installs on
 // the same day".
-func (a *AIVehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID int64, limit int) (*tools.VehicleSoftwareEnvelope, error) {
+func (a *AIVehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID int64, limit int) (*summary.VehicleSoftwareEnvelope, error) {
 	if vehicleID <= 0 {
 		return nil, fmt.Errorf("api ai software-update-changelog-summarizer: vehicle_id must be > 0")
 	}
@@ -435,7 +436,7 @@ func (a *AIVehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID
 		return nil, fmt.Errorf("api ai software-update-changelog-summarizer: GetByVehicle: %w", err)
 	}
 
-	entries := make([]tools.SoftwareUpdateEntry, 0, len(rows))
+	entries := make([]summary.SoftwareUpdateEntry, 0, len(rows))
 	currentVersion := ""
 	var installedTimes []time.Time
 	for _, u := range rows {
@@ -456,7 +457,7 @@ func (a *AIVehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID
 
 	cadence := computeInstallCadenceDays(installedTimes)
 
-	return &tools.VehicleSoftwareEnvelope{
+	return &summary.VehicleSoftwareEnvelope{
 		VehicleID:          vehicleID,
 		CurrentVersion:     currentVersion,
 		TotalUpdates:       len(entries),
@@ -466,12 +467,12 @@ func (a *AIVehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID
 }
 
 // softwareUpdateModelToEntry converts a *vehiclemodel.SoftwareUpdate
-// into a tools.SoftwareUpdateEntry, marshalling timestamps as
+// into a summary.SoftwareUpdateEntry, marshalling timestamps as
 // RFC3339 strings (empty string for nil pointers / zero time).
 // Pulled out so unit tests can exercise the conversion without
 // going through the repo.
-func softwareUpdateModelToEntry(u *vehiclemodel.SoftwareUpdate) tools.SoftwareUpdateEntry {
-	entry := tools.SoftwareUpdateEntry{
+func softwareUpdateModelToEntry(u *vehiclemodel.SoftwareUpdate) summary.SoftwareUpdateEntry {
+	entry := summary.SoftwareUpdateEntry{
 		ID:        u.ID,
 		Version:   u.Version,
 		Status:    u.Status,
@@ -528,5 +529,5 @@ func computeInstallCadenceDays(installedTimes []time.Time) *float64 {
 }
 
 // Compile-time assertion: AIVehicleSoftwareSource satisfies
-// tools.VehicleSoftwareSource.
-var _ tools.VehicleSoftwareSource = (*AIVehicleSoftwareSource)(nil)
+// summary.VehicleSoftwareSource.
+var _ summary.VehicleSoftwareSource = (*AIVehicleSoftwareSource)(nil)

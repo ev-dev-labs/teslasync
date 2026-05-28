@@ -132,6 +132,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
@@ -1267,7 +1268,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// the SAME database.IncidentRepo.Get path that backs the
 	// canonical baseline GET /api/v1/status/incidents/{id} handler
 	// — no new SQL is written by this slice.
-	tools.RegisterIncidentTimelineSummarizerTools(aiToolRegistry, tools.IncidentTimelineSummarizerSources{
+	summary.RegisterIncidentTimelineSummarizerTools(aiToolRegistry, summary.IncidentTimelineSummarizerSources{
 		Retriever:        aiSystemRetriever,
 		IncidentTimeline: NewAIIncidentTimelineSource(database.NewIncidentRepo(db)),
 	})
@@ -1371,7 +1372,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// EMPTY adapter — the operator-facing log surface is
 	// stream-only and has no historical reader yet; the strategy's
 	// goldens cover the zero-data path.
-	tools.RegisterLogTraceSummarizerTools(aiToolRegistry, tools.LogTraceSummarizerSources{
+	summary.RegisterLogTraceSummarizerTools(aiToolRegistry, summary.LogTraceSummarizerSources{
 		Retriever:   aiLogTraceRetriever,
 		TraceWindow: NewAILogTraceWindowSource(),
 	})
@@ -2066,7 +2067,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// the canonical baseline /api/v1/fsm/transitions surface
 	// remains reachable to the operator at all times.
 	aiFSMTraceSource := NewAIFSMTraceSource()
-	tools.RegisterStateMachineDebuggerNarratorTools(aiToolRegistry, tools.StateMachineDebuggerNarratorSources{
+	summary.RegisterStateMachineDebuggerNarratorTools(aiToolRegistry, summary.StateMachineDebuggerNarratorSources{
 		Retriever: aiStateMachineDebuggerNarratorRetriever,
 		FSMTrace:  aiFSMTraceSource,
 	})
@@ -2206,7 +2207,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// handler already serves; the canonical baseline surface
 	// remains reachable to the operator at all times.
 	aiVehicleSoftwareSource := NewAIVehicleSoftwareSource(database.NewSoftwareUpdateRepo(db))
-	tools.RegisterSoftwareUpdateChangelogSummarizerTools(aiToolRegistry, tools.SoftwareUpdateChangelogSummarizerSources{
+	summary.RegisterSoftwareUpdateChangelogSummarizerTools(aiToolRegistry, summary.SoftwareUpdateChangelogSummarizerSources{
 		Retriever:       aiSoftwareUpdateChangelogSummarizerRetriever,
 		VehicleSoftware: aiVehicleSoftwareSource,
 	})

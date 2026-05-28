@@ -79,7 +79,7 @@
 // confused LLM that asks the assistant to search e.g. "user_note"
 // cannot accidentally expose a corpus the slice did not enumerate.
 
-package tools
+package summary
 
 import (
 	"context"
@@ -90,6 +90,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // fsmSourceTransition is the source-type string reserved by the
@@ -268,7 +269,7 @@ func (t *retrieveFSMChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveFSMChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveFSMChunksInput{})
+	return tools.CachedSchema(retrieveFSMChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -284,7 +285,7 @@ func (t *retrieveFSMChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveFSMChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveFSMChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveFSMChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -505,7 +506,7 @@ func (t *queryFSMTrace) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryFSMTrace) InputSchema() json.RawMessage {
-	return CachedSchema(queryFSMTraceInput{})
+	return tools.CachedSchema(queryFSMTraceInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -521,7 +522,7 @@ func (t *queryFSMTrace) RequiredScope() string { return "" }
 // understand `gtfield`, so the to_unix > from_unix check is
 // enforced explicitly here in addition to the per-field tags.
 func (t *queryFSMTrace) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[queryFSMTraceInput](raw)
+	v, err := tools.ValidateStruct[queryFSMTraceInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -530,7 +531,7 @@ func (t *queryFSMTrace) Validate(raw json.RawMessage) (any, error) {
 		return v, fmt.Errorf("query_fsm_trace: validator returned unexpected type %T", v)
 	}
 	if in.ToUnix <= in.FromUnix {
-		return v, &ValidationError{
+		return v, &tools.ValidationError{
 			Field: "to_unix",
 			Rule:  "gtfield=FromUnix",
 			Msg:   fmt.Sprintf("to_unix (%d) must be > from_unix (%d)", in.ToUnix, in.FromUnix),
@@ -612,7 +613,7 @@ type StateMachineDebuggerNarratorSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterStateMachineDebuggerNarratorTools(r *Registry, s StateMachineDebuggerNarratorSources) {
+func RegisterStateMachineDebuggerNarratorTools(r *tools.Registry, s StateMachineDebuggerNarratorSources) {
 	r.Register(&queryFSMTrace{src: s.FSMTrace})
 	r.Register(&retrieveFSMChunks{r: s.Retriever})
 }

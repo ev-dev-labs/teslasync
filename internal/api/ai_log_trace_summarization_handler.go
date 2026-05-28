@@ -17,7 +17,7 @@ package api
 //	open SSE writer (internal/ai/stream.New) to the HTTP response
 //	  ↓
 //	stash the (from_unix, to_unix, vehicle_id) tuple in ctx via
-//	  tools.WithScopedLogTraceWindow
+//	  summary.WithScopedLogTraceWindow
 //	  ↓
 //	synthesise the user-message that scopes to the in-scope
 //	  window and instructs the tool sequence
@@ -31,7 +31,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the (from_unix, to_unix,
-// vehicle_id) tuple in ctx via tools.WithScopedLogTraceWindow
+// vehicle_id) tuple in ctx via summary.WithScopedLogTraceWindow
 // BEFORE dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The
 // tools.queryTraceWindow tool's Execute method then REJECTS any
@@ -88,6 +88,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -142,7 +143,7 @@ type AILogTraceSummarizationHandler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     tools.TraceWindowSource
+	source     summary.TraceWindowSource
 	headerName string
 	maxIters   int
 }
@@ -158,14 +159,14 @@ type AILogTraceSummarizationHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_trace_window AND retrieve_log_chunks
-//	(registered by tools.RegisterLogTraceSummarizerTools
+//	(registered by summary.RegisterLogTraceSummarizerTools
 //	in router.go).
 //
 // strat:      the log-trace-summarization Strategy (one per
 //
 //	process).
 //
-// source:     the production tools.TraceWindowSource (currently
+// source:     the production summary.TraceWindowSource (currently
 //
 //	AILogTraceWindowSource — a deterministic empty
 //	adapter; the operator-facing log surface is
@@ -178,7 +179,7 @@ func NewAILogTraceSummarizationHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source tools.TraceWindowSource,
+	source summary.TraceWindowSource,
 	headerName string,
 ) *AILogTraceSummarizationHandler {
 	switch {
@@ -189,7 +190,7 @@ func NewAILogTraceSummarizationHandler(
 	case strat == nil:
 		panic("api: NewAILogTraceSummarizationHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAILogTraceSummarizationHandler: nil tools.TraceWindowSource")
+		panic("api: NewAILogTraceSummarizationHandler: nil summary.TraceWindowSource")
 	}
 	return &AILogTraceSummarizationHandler{
 		registry:   registry,
@@ -279,7 +280,7 @@ func (h *AILogTraceSummarizationHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, logtracesummarization.FeatureID)
-	ctx = tools.WithScopedLogTraceWindow(ctx, tools.ScopedLogTraceWindow{
+	ctx = summary.WithScopedLogTraceWindow(ctx, summary.ScopedLogTraceWindow{
 		FromUnix:  req.FromUnix,
 		ToUnix:    req.ToUnix,
 		VehicleID: req.VehicleID,
@@ -374,7 +375,7 @@ var _ http.Handler = (*AILogTraceSummarizationHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AILogTraceWindowSource is the production
-// tools.TraceWindowSource. The operator-facing log surface is
+// summary.TraceWindowSource. The operator-facing log surface is
 // stream-only — there is NO historical log persistence beyond
 // zerolog's stdout — so this adapter intentionally returns a
 // deterministic empty envelope describing the bound window. The
@@ -396,14 +397,14 @@ func NewAILogTraceWindowSource() *AILogTraceWindowSource {
 	return &AILogTraceWindowSource{}
 }
 
-// TraceWindow implements tools.TraceWindowSource. Returns a
+// TraceWindow implements summary.TraceWindowSource. Returns a
 // deterministic empty envelope describing the bound window. No
 // SQL is issued. No state is mutated.
 //
 // The envelope's slices are non-nil (empty-but-allocated) so JSON
 // marshalling renders [] rather than null — keeping the LLM's
 // tool-reply parsing predictable.
-func (a *AILogTraceWindowSource) TraceWindow(_ context.Context, fromUnix, toUnix, vehicleID int64) (*tools.TraceWindowEnvelope, error) {
+func (a *AILogTraceWindowSource) TraceWindow(_ context.Context, fromUnix, toUnix, vehicleID int64) (*summary.TraceWindowEnvelope, error) {
 	if fromUnix <= 0 {
 		return nil, fmt.Errorf("api ai log-trace-summarization: from_unix must be > 0")
 	}
@@ -413,20 +414,20 @@ func (a *AILogTraceWindowSource) TraceWindow(_ context.Context, fromUnix, toUnix
 	if vehicleID < 0 {
 		return nil, fmt.Errorf("api ai log-trace-summarization: vehicle_id must be >= 0")
 	}
-	return &tools.TraceWindowEnvelope{
+	return &summary.TraceWindowEnvelope{
 		FromUnix:       fromUnix,
 		ToUnix:         toUnix,
 		VehicleID:      vehicleID,
 		FromTime:       time.Unix(fromUnix, 0).UTC().Format(time.RFC3339),
 		ToTime:         time.Unix(toUnix, 0).UTC().Format(time.RFC3339),
 		LogEventCount:  0,
-		LevelBreakdown: []tools.LogLevelCount{},
-		TopTemplates:   []tools.LogTemplateCount{},
+		LevelBreakdown: []summary.LogLevelCount{},
+		TopTemplates:   []summary.LogTemplateCount{},
 		TraceSpanCount: 0,
-		TopTraceOps:    []tools.TraceOpStat{},
+		TopTraceOps:    []summary.TraceOpStat{},
 	}, nil
 }
 
 // Compile-time assertion: AILogTraceWindowSource satisfies
-// tools.TraceWindowSource.
-var _ tools.TraceWindowSource = (*AILogTraceWindowSource)(nil)
+// summary.TraceWindowSource.
+var _ summary.TraceWindowSource = (*AILogTraceWindowSource)(nil)
