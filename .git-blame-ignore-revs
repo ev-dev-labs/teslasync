@@ -37,3 +37,6 @@
 
 # refactor(R5.4): extract internal/models/chatbot subpackage
 2347f1b1f60c2e76b144e784568e95eb1822bfbd
+
+# refactor(R5.5): extract internal/models/energy subpackage
+a78b3c5fa64c1b8e9911d1a20ddd8310f8489123
