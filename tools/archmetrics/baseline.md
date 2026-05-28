@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T22:17:21Z, Go go1.26.1, commit 04373b2ef778431e14d89675866cbd89cb646f17_
+_Generated 2026-05-28T22:37:35Z, Go go1.26.1, commit 28818b2d1924670b7f0374b4feff4a1be6a1b63d_
 
 ## Summary
 
-- Packages: 335
+- Packages: 341
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 377916
+- Total non-blank LOC under cmd/+internal/+tools/: 378024
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-28T22:17:21Z, Go go1.26.1, commit 04373b2ef778431e14d89675866
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 225 | 145 | 109958 | yes | handler |
+| internal/api | 219 | 139 | 106700 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
 | internal/api/apicalllog | 2 | 0 | 69 | yes | handler |
 | internal/api/apikey | 2 | 0 | 165 | yes | handler |
@@ -180,6 +180,7 @@ _Generated 2026-05-28T22:17:21Z, Go go1.26.1, commit 04373b2ef778431e14d89675866
 | internal/api/auth | 2 | 0 | 152 | yes | handler |
 | internal/api/backup | 3 | 1 | 530 | yes | handler |
 | internal/api/dataquality | 2 | 0 | 65 | yes | handler |
+| internal/api/dlq | 2 | 1 | 515 | yes | handler |
 | internal/api/drivediagnostic | 2 | 1 | 458 | yes | handler |
 | internal/api/exportcolumns | 2 | 1 | 167 | yes | handler |
 | internal/api/feedback | 2 | 1 | 392 | yes | handler |
@@ -187,12 +188,15 @@ _Generated 2026-05-28T22:17:21Z, Go go1.26.1, commit 04373b2ef778431e14d89675866
 | internal/api/geocode | 2 | 0 | 77 | yes | handler |
 | internal/api/geofence | 3 | 1 | 846 | yes | handler |
 | internal/api/httpx | 3 | 2 | 360 | yes | handler |
+| internal/api/impersonate | 2 | 1 | 910 | yes | handler |
+| internal/api/ingestxray | 2 | 1 | 429 | yes | handler |
 | internal/api/lifetime | 2 | 1 | 878 | yes | handler |
 | internal/api/middleware | 4 | 2 | 763 | yes | handler |
 | internal/api/notification | 5 | 2 | 2380 | yes | handler |
 | internal/api/onboarding | 2 | 1 | 253 | yes | handler |
 | internal/api/openapi | 2 | 0 | 38 | yes | handler |
 | internal/api/periodstats | 2 | 0 | 157 | yes | handler |
+| internal/api/pinned | 2 | 1 | 673 | yes | handler |
 | internal/api/search | 2 | 1 | 1157 | yes | handler |
 | internal/api/search/searchtest | 2 | 0 | 132 | yes | platform |
 | internal/api/signalinspect | 3 | 1 | 1228 | yes | handler |
@@ -215,7 +219,9 @@ _Generated 2026-05-28T22:17:21Z, Go go1.26.1, commit 04373b2ef778431e14d89675866
 | internal/api/vehiclesettings | 2 | 1 | 850 | yes | handler |
 | internal/api/vehiclestates | 2 | 1 | 758 | yes | handler |
 | internal/api/visitedlocation | 2 | 0 | 64 | yes | handler |
+| internal/api/weberrors | 2 | 1 | 483 | yes | handler |
 | internal/api/webhookreceiver | 2 | 1 | 291 | yes | handler |
+| internal/api/webvitals | 2 | 1 | 356 | yes | handler |
 | internal/api/weeklydigest | 2 | 0 | 92 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1849 | yes | app |
@@ -391,7 +397,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 225 / 145 | 59 | 12 | 47 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 219 / 139 | 59 | 13 | 46 |
 
 ### `internal/models` detail
 
@@ -511,6 +517,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/auth`
 - `internal/api/onboarding`
 - `internal/api/user`
+- `internal/api/webvitals`
 
 **Planned but not yet on disk:**
 - `internal/api/system`
@@ -559,7 +566,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/software_update`
 - `internal/api/watch`
 - `internal/api/webhook`
-- `internal/api/webvitals`
 
 **Shared-helper subpackages (extracted in prep sub-phase):**
 - `internal/api/httpx`

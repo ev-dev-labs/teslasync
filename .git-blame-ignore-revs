@@ -250,3 +250,9 @@ f20f638dfe667b20d761efd0b950798ce57899d2 # refactor(R2d.26): carve internal/api/
 04373b2ef778431e14d89675866cbd89cb646f17 # refactor(R2d.29): carve internal/api/periodstats subpackage
 0aade8293056e0037188284f39d948f29078a180 # refactor(R2d.30): carve internal/api/user subpackage
 c745a5a77cca212384ba10139a2afcb4f1204404 # refactor(R2d.31): carve internal/api/drivediagnostic subpackage
+4a1867c0533345c5ca3e252fdae8cc95c1152d2c # refactor(R2d.32): carve internal/api/ingestxray subpackage
+ce8839686bc8e59ddbd0b73cd3a2884713c28c06 # refactor(R2d.33): carve internal/api/webvitals subpackage
+fb365ceac02c1530bba52ea1c0b86d924fb655b2 # refactor(R2d.34): carve internal/api/weberrors subpackage
+553b88f84ecb696646fc7f7360fe001bde9e7164 # refactor(R2d.35): carve internal/api/pinned subpackage
+cd8536febd2347af8eafc0ce673fbfec501d120a # refactor(R2d.36): carve internal/api/dlq subpackage
+28818b2d1924670b7f0374b4feff4a1be6a1b63d # refactor(R2d.37): carve internal/api/impersonate subpackage

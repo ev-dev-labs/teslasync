@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T22:17:16Z",
+  "generated_at": "2026-05-28T22:37:32Z",
   "go_version": "go1.26.1",
-  "commit_sha": "04373b2ef778431e14d89675866cbd89cb646f17",
+  "commit_sha": "28818b2d1924670b7f0374b4feff4a1be6a1b63d",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 225,
-      "test_files": 145,
-      "loc": 109958,
+      "go_files": 219,
+      "test_files": 139,
+      "loc": 106700,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2627,6 +2627,7 @@
         "internal/api/auth",
         "internal/api/backup",
         "internal/api/dataquality",
+        "internal/api/dlq",
         "internal/api/drivediagnostic",
         "internal/api/exportcolumns",
         "internal/api/feedback",
@@ -2634,12 +2635,15 @@
         "internal/api/geocode",
         "internal/api/geofence",
         "internal/api/httpx",
+        "internal/api/impersonate",
+        "internal/api/ingestxray",
         "internal/api/lifetime",
         "internal/api/middleware",
         "internal/api/notification",
         "internal/api/onboarding",
         "internal/api/openapi",
         "internal/api/periodstats",
+        "internal/api/pinned",
         "internal/api/search",
         "internal/api/search/searchtest",
         "internal/api/signalinspect",
@@ -2661,7 +2665,9 @@
         "internal/api/vehiclesettings",
         "internal/api/vehiclestates",
         "internal/api/visitedlocation",
+        "internal/api/weberrors",
         "internal/api/webhookreceiver",
+        "internal/api/webvitals",
         "internal/api/weeklydigest",
         "internal/apilog",
         "internal/app/adminobssvc",
@@ -2982,8 +2988,6 @@
         "devtools_handler_test.go",
         "diagnostic_handler.go",
         "diagnostic_handler_test.go",
-        "dlq_handler.go",
-        "dlq_handler_test.go",
         "doc.go",
         "drive_dynamics_handler.go",
         "drive_dynamics_handler_test.go",
@@ -3020,11 +3024,7 @@
         "health_test.go",
         "helpers.go",
         "helpers_extra_test.go",
-        "impersonate_handler.go",
-        "impersonate_handler_test.go",
         "import_handler.go",
-        "ingest_xray_handler.go",
-        "ingest_xray_handler_test.go",
         "location_snapshot_handler.go",
         "location_snapshot_handler_test.go",
         "maintenance_handler.go",
@@ -3037,8 +3037,6 @@
         "mileage_handler_test.go",
         "motor_handler.go",
         "motor_handler_test.go",
-        "pinned_handler.go",
-        "pinned_handler_test.go",
         "polling_handler.go",
         "push_handler.go",
         "push_handler_test.go",
@@ -3133,10 +3131,6 @@
         "vampire_drain_handler.go",
         "vampire_drain_handler_test.go",
         "watch_handler.go",
-        "web_errors_handler.go",
-        "web_errors_handler_test.go",
-        "web_vitals_handler.go",
-        "web_vitals_handler_test.go",
         "webhook_handler.go",
         "year_review_handler.go"
       ]
@@ -3303,6 +3297,24 @@
       ]
     },
     {
+      "path": "internal/api/dlq",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 515,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database/audit",
+        "internal/mqtt"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
       "path": "internal/api/drivediagnostic",
       "go_files": 2,
       "test_files": 1,
@@ -3432,6 +3444,42 @@
       ]
     },
     {
+      "path": "internal/api/impersonate",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 910,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/auth",
+        "internal/database/audit"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/ingestxray",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 429,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database/observability"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
       "path": "internal/api/lifetime",
       "go_files": 2,
       "test_files": 1,
@@ -3546,6 +3594,26 @@
       "files": [
         "doc.go",
         "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/pinned",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 673,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/admin",
+        "internal/models/dashboard"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -3957,6 +4025,23 @@
       ]
     },
     {
+      "path": "internal/api/weberrors",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 483,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/api/webvitals"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
       "path": "internal/api/webhookreceiver",
       "go_files": 2,
       "test_files": 1,
@@ -3967,6 +4052,22 @@
         "internal/api/httpx",
         "internal/automation/trigger",
         "internal/models"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/webvitals",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 356,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx"
       ],
       "files": [
         "doc.go",
@@ -7820,7 +7921,6 @@
       "devtools_handler_dtos.go",
       "devtools_handler_logs.go",
       "diagnostic_handler.go",
-      "dlq_handler.go",
       "doc.go",
       "drive_dynamics_handler.go",
       "drive_handler.go",
@@ -7846,9 +7946,7 @@
       "guard_handler.go",
       "health.go",
       "helpers.go",
-      "impersonate_handler.go",
       "import_handler.go",
-      "ingest_xray_handler.go",
       "location_snapshot_handler.go",
       "maintenance_handler.go",
       "media_handler.go",
@@ -7856,7 +7954,6 @@
       "middleware.go",
       "mileage_handler.go",
       "motor_handler.go",
-      "pinned_handler.go",
       "polling_handler.go",
       "push_handler.go",
       "queue_status_handler.go",
@@ -7918,8 +8015,6 @@
       "user_preference_handler.go",
       "vampire_drain_handler.go",
       "watch_handler.go",
-      "web_errors_handler.go",
-      "web_vitals_handler.go",
       "webhook_handler.go",
       "year_review_handler.go"
     ],
@@ -7961,6 +8056,10 @@
       "doc.go",
       "handler.go"
     ],
+    "internal/api/dlq": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/drivediagnostic": [
       "doc.go",
       "handler.go"
@@ -7991,6 +8090,14 @@
       "json.go",
       "tesla.go"
     ],
+    "internal/api/impersonate": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/ingestxray": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/lifetime": [
       "doc.go",
       "handler.go"
@@ -8017,6 +8124,10 @@
       "handler.go"
     ],
     "internal/api/periodstats": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/pinned": [
       "doc.go",
       "handler.go"
     ],
@@ -8110,7 +8221,15 @@
       "doc.go",
       "handler.go"
     ],
+    "internal/api/weberrors": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/webhookreceiver": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/webvitals": [
       "doc.go",
       "handler.go"
     ],
@@ -9229,8 +9348,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 225,
-      "flat_parent_test_files": 145,
+      "flat_parent_go_files": 219,
+      "flat_parent_test_files": 139,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",
@@ -9244,7 +9363,8 @@
         "feedback",
         "auth",
         "onboarding",
-        "user"
+        "user",
+        "webvitals"
       ],
       "missing_subpkgs": [
         "system",
@@ -9292,8 +9412,7 @@
         "maintenance",
         "software_update",
         "watch",
-        "webhook",
-        "webvitals"
+        "webhook"
       ],
       "shared_subpkgs": [
         "httpx",
