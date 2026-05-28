@@ -6,7 +6,7 @@
 // the source / retriever with deterministic fakes so the tests
 // stay hermetic (no api package import, no DB).
 
-package tools
+package feedback
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // stubFeedbackTriageSource records every LoadFeedback call + can
@@ -701,7 +702,7 @@ func TestAllowedFeedbackChunkSourceTypes(t *testing.T) {
 // all three tools land on the registry under their canonical names.
 func TestRegisterFeedbackQueueTriageTools_RegistersAllThree(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterFeedbackQueueTriageTools(r, FeedbackQueueTriageSources{
 		Source:    &stubFeedbackTriageSource{},
 		Retriever: &stubFeedbackRetriever{},
@@ -723,7 +724,7 @@ func TestRegisterFeedbackQueueTriageTools_RegistersAllThree(t *testing.T) {
 // first request.
 func TestRegisterFeedbackQueueTriageTools_DuplicateRegistration(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	srcs := FeedbackQueueTriageSources{
 		Source:    &stubFeedbackTriageSource{},
 		Retriever: &stubFeedbackRetriever{},

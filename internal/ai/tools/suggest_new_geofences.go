@@ -394,7 +394,7 @@ func (t *draftGeofence) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftGeofence) InputSchema() json.RawMessage {
-	return cachedSchema(geofenceDraftInput{})
+	return CachedSchema(geofenceDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -499,7 +499,7 @@ func (t *validateGeofenceTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateGeofenceTool) InputSchema() json.RawMessage {
-	return cachedSchema(geofenceValidateInput{})
+	return CachedSchema(geofenceValidateInput{})
 }
 
 // OutputSchema implements [Tool].

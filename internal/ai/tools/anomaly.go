@@ -148,7 +148,7 @@ func (t *queryAnomalyContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryAnomalyContext) InputSchema() json.RawMessage {
-	return cachedSchema(queryAnomalyContextInput{})
+	return CachedSchema(queryAnomalyContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

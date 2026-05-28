@@ -173,7 +173,7 @@ func (t *retrieveChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveChunksInput{})
+	return CachedSchema(retrieveChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -374,7 +374,7 @@ func (t *hydrateSearchResult) Description() string {
 
 // InputSchema implements [Tool].
 func (t *hydrateSearchResult) InputSchema() json.RawMessage {
-	return cachedSchema(hydrateSearchResultInput{})
+	return CachedSchema(hydrateSearchResultInput{})
 }
 
 // OutputSchema implements [Tool].

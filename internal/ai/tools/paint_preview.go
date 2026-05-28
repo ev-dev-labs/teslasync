@@ -228,7 +228,7 @@ func (t *draftPaintPreviewPrompt) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftPaintPreviewPrompt) InputSchema() json.RawMessage {
-	return cachedSchema(paintPreviewDraftInput{})
+	return CachedSchema(paintPreviewDraftInput{})
 }
 
 // OutputSchema implements [Tool].

@@ -207,7 +207,7 @@ func (t *querySafetySettings) Description() string {
 
 // InputSchema implements [Tool].
 func (t *querySafetySettings) InputSchema() json.RawMessage {
-	return cachedSchema(querySafetySettingsInput{})
+	return CachedSchema(querySafetySettingsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

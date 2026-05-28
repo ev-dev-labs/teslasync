@@ -280,7 +280,7 @@ func (t *draftAlertRulePatch) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftAlertRulePatch) InputSchema() json.RawMessage {
-	return cachedSchema(alertRulePatchInput{})
+	return CachedSchema(alertRulePatchInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

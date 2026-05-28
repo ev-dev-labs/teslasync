@@ -225,7 +225,7 @@ func (t *queryTirePressureTrend) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryTirePressureTrend) InputSchema() json.RawMessage {
-	return cachedSchema(queryTirePressureTrendInput{})
+	return CachedSchema(queryTirePressureTrendInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

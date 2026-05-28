@@ -268,7 +268,7 @@ func (t *retrieveStreamChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveStreamChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveStreamChunksInput{})
+	return CachedSchema(retrieveStreamChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -553,7 +553,7 @@ func (t *queryStreamInspector) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryStreamInspector) InputSchema() json.RawMessage {
-	return cachedSchema(queryStreamInspectorInput{})
+	return CachedSchema(queryStreamInspectorInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

@@ -100,7 +100,7 @@ func (t *queryYearInReviewContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryYearInReviewContext) InputSchema() json.RawMessage {
-	return cachedSchema(queryYearInReviewContextInput{})
+	return CachedSchema(queryYearInReviewContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

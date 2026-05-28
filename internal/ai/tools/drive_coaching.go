@@ -113,7 +113,7 @@ func (t *queryDriveTelemetrySummary) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryDriveTelemetrySummary) InputSchema() json.RawMessage {
-	return cachedSchema(queryDriveTelemetrySummaryInput{})
+	return CachedSchema(queryDriveTelemetrySummaryInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

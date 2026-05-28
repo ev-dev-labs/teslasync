@@ -386,7 +386,7 @@ func (t *draftAlertCategories) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftAlertCategories) InputSchema() json.RawMessage {
-	return cachedSchema(alertCategoriesDraftInput{})
+	return CachedSchema(alertCategoriesDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -561,7 +561,7 @@ func (t *validateAlertCategory) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateAlertCategory) InputSchema() json.RawMessage {
-	return cachedSchema(alertCategoryValidateInput{})
+	return CachedSchema(alertCategoryValidateInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form.

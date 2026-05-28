@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T05:31:26Z",
+  "generated_at": "2026-05-28T05:41:32Z",
   "go_version": "go1.26.1",
-  "commit_sha": "f022233e5e5bbef1d1e68f8dcd20a4370196d585",
+  "commit_sha": "97769774426a1aac7425028445cf315708d29b73",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 58,
-      "test_files": 51,
-      "loc": 47092,
+      "go_files": 57,
+      "test_files": 50,
+      "loc": 45544,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1941,8 +1941,6 @@
         "drive_search_test.go",
         "export_redaction_plan.go",
         "export_redaction_plan_test.go",
-        "feedback_queue_triage.go",
-        "feedback_queue_triage_test.go",
         "fuzz_schema_test.go",
         "help.go",
         "help_test.go",
@@ -2016,6 +2014,23 @@
       ]
     },
     {
+      "path": "internal/ai/tools/feedback",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1601,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/rag",
+        "internal/ai/tools"
+      ],
+      "files": [
+        "doc.go",
+        "triage.go",
+        "triage_test.go"
+      ]
+    },
+    {
       "path": "internal/alertmsg",
       "go_files": 3,
       "test_files": 1,
@@ -2037,7 +2052,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126491,
+      "loc": 126493,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2109,6 +2124,7 @@
         "internal/ai/strategy",
         "internal/ai/stream",
         "internal/ai/tools",
+        "internal/ai/tools/feedback",
         "internal/alertmsg",
         "internal/api",
         "internal/apilog",
@@ -5743,7 +5759,6 @@
       "drive_coaching.go",
       "drive_search.go",
       "export_redaction_plan.go",
-      "feedback_queue_triage.go",
       "help.go",
       "inbox_auto_categorization.go",
       "incident_timeline_summarizer.go",
@@ -5782,6 +5797,10 @@
       "voice_mode.go",
       "watch_face_nl_response.go",
       "year_review.go"
+    ],
+    "internal/ai/tools/feedback": [
+      "doc.go",
+      "triage.go"
     ],
     "internal/alertmsg": [
       "doc.go",
@@ -7000,10 +7019,12 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 58,
-      "flat_parent_test_files": 51,
+      "flat_parent_go_files": 57,
+      "flat_parent_test_files": 50,
       "planned_subpkgs": 13,
-      "existing_subpkgs": null,
+      "existing_subpkgs": [
+        "feedback"
+      ],
       "missing_subpkgs": [
         "alert",
         "automation",
@@ -7011,7 +7032,6 @@
         "charging",
         "diagnostics",
         "drive",
-        "feedback",
         "forecast",
         "location",
         "nl",

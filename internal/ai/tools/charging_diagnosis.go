@@ -125,7 +125,7 @@ func (t *queryChargeSession) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryChargeSession) InputSchema() json.RawMessage {
-	return cachedSchema(queryChargeSessionInput{})
+	return CachedSchema(queryChargeSessionInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -231,7 +231,7 @@ func (t *queryChargingAggregation) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryChargingAggregation) InputSchema() json.RawMessage {
-	return cachedSchema(queryChargingAggregationInput{})
+	return CachedSchema(queryChargingAggregationInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

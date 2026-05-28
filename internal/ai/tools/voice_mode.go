@@ -335,7 +335,7 @@ func (t *streamChatbotResponse) Description() string {
 
 // InputSchema implements [Tool].
 func (t *streamChatbotResponse) InputSchema() json.RawMessage {
-	return cachedSchema(streamChatbotResponseInput{})
+	return CachedSchema(streamChatbotResponseInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

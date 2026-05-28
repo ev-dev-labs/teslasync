@@ -132,7 +132,7 @@ func (t *trainAnomalyBaseline) Description() string {
 
 // InputSchema implements [Tool].
 func (t *trainAnomalyBaseline) InputSchema() json.RawMessage {
-	return cachedSchema(trainAnomalyBaselineInput{})
+	return CachedSchema(trainAnomalyBaselineInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -194,7 +194,7 @@ func (q *queryAnomalyBaseline) Description() string {
 
 // InputSchema implements [Tool].
 func (q *queryAnomalyBaseline) InputSchema() json.RawMessage {
-	return cachedSchema(queryAnomalyBaselineInput{})
+	return CachedSchema(queryAnomalyBaselineInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

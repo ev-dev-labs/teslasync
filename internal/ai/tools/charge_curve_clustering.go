@@ -197,7 +197,7 @@ func (t *retrieveChargeCurveChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveChargeCurveChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveChargeCurveChunksInput{})
+	return CachedSchema(retrieveChargeCurveChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -373,7 +373,7 @@ func (t *queryChargeCurveFeatures) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryChargeCurveFeatures) InputSchema() json.RawMessage {
-	return cachedSchema(queryChargeCurveFeaturesInput{})
+	return CachedSchema(queryChargeCurveFeaturesInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

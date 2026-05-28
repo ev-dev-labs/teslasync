@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T05:31:56Z, Go go1.26.1, commit f022233e5e5bbef1d1e68f8dcd20a4370196d585_
+_Generated 2026-05-28T05:41:34Z, Go go1.26.1, commit 97769774426a1aac7425028445cf315708d29b73_
 
 ## Summary
 
-- Packages: 232
+- Packages: 233
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372554
+- Total non-blank LOC under cmd/+internal/+tools/: 372609
 
 ## cmd/* main.go LOC
 
@@ -139,9 +139,10 @@ _Generated 2026-05-28T05:31:56Z, Go go1.26.1, commit f022233e5e5bbef1d1e68f8dcd2
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 58 | 51 | 47092 | yes | platform |
+| internal/ai/tools | 57 | 50 | 45544 | yes | platform |
+| internal/ai/tools/feedback | 2 | 1 | 1601 | yes |  |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126491 | yes | handler |
+| internal/api | 271 | 163 | 126493 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -285,7 +286,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
-| `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
+| `internal/ai/tools` | R6 | 109 | 57 / 50 | 13 | 1 | 12 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
@@ -329,6 +330,9 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 > 13 subpkgs from R1 audit. Per ADR-015 amendment, pure file-move only. Registry/schema/builtins/tool/validate stay at parent.
 
+**Existing subpackages on disk:**
+- `internal/ai/tools/feedback`
+
 **Planned but not yet on disk:**
 - `internal/ai/tools/alert`
 - `internal/ai/tools/automation`
@@ -336,7 +340,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/ai/tools/charging`
 - `internal/ai/tools/diagnostics`
 - `internal/ai/tools/drive`
-- `internal/ai/tools/feedback`
 - `internal/ai/tools/forecast`
 - `internal/ai/tools/location`
 - `internal/ai/tools/nl`

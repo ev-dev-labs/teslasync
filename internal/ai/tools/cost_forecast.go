@@ -256,7 +256,7 @@ func (t *queryCostForecast) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryCostForecast) InputSchema() json.RawMessage {
-	return cachedSchema(queryCostForecastInput{})
+	return CachedSchema(queryCostForecastInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

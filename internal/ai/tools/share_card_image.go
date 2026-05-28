@@ -326,7 +326,7 @@ func (t *draftImagePrompt) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftImagePrompt) InputSchema() json.RawMessage {
-	return cachedSchema(shareCardImageDraftInput{})
+	return CachedSchema(shareCardImageDraftInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -398,7 +398,7 @@ func (t *renderShareCardPreview) Description() string {
 
 // InputSchema implements [Tool].
 func (t *renderShareCardPreview) InputSchema() json.RawMessage {
-	return cachedSchema(shareCardImagePreviewInput{})
+	return CachedSchema(shareCardImagePreviewInput{})
 }
 
 // OutputSchema implements [Tool].

@@ -43,6 +43,7 @@ import (
 	// routes; tools/aivet refuses to merge a router change that
 	// introduces an AI route via a bare HandlerFunc.
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/feedback"
 
 	// Phase-50 / 0009 — F8 Redaction Layer. The decorator is the
 	// innermost wire-side wrap so every cloud call is sanitized
@@ -1955,7 +1956,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// AIFeedbackTriageSource adapter that wraps userFeedbackRepo
 	// and PII-minimizes the row into a FeedbackTriageEntry.
 	aiFeedbackTriageSource := NewAIFeedbackTriageSource(userFeedbackRepo)
-	tools.RegisterFeedbackQueueTriageTools(aiToolRegistry, tools.FeedbackQueueTriageSources{
+	feedback.RegisterFeedbackQueueTriageTools(aiToolRegistry, feedback.FeedbackQueueTriageSources{
 		Source:    aiFeedbackTriageSource,
 		Retriever: aiFeedbackTriageRetriever,
 	})

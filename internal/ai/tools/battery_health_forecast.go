@@ -197,7 +197,7 @@ func (t *queryBatteryHealthForecast) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryBatteryHealthForecast) InputSchema() json.RawMessage {
-	return cachedSchema(queryBatteryHealthForecastInput{})
+	return CachedSchema(queryBatteryHealthForecastInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

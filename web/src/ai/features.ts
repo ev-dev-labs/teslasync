@@ -523,7 +523,7 @@ export const AI_FEATURES: Readonly<Record<AiFeatureId, AiFeatureMeta>> = Object.
   "speed-profile-insights": Object.freeze({
     id: "speed-profile-insights",
     name: "Speed-profile insights",
-    description: "Opt-in LLM-narrated insights about a single drive's speed regime, outliers, and route context. Reads from the existing *models.Drive aggregates via two read-only tools; the deterministic SpeedHistogramChart + summary metrics on /drives/:id remain the canonical baseline when AI is off. Precise route coordinates remain tagged by the per-feature redaction policy; only the vehicle name may be narrated.",
+    description: "Opt-in LLM-narrated insights about a single drive's speed regime, outliers, and route context. Reads from the existing *drivemodel.Drive aggregates via two read-only tools; the deterministic SpeedHistogramChart + summary metrics on /drives/:id remain the canonical baseline when AI is off. Precise route coordinates remain tagged by the per-feature redaction policy; only the vehicle name may be narrated.",
     tier: "D",
     defaultOn: false,
     needsRag: false,

@@ -540,7 +540,7 @@ func (t *draftDataRepairPlan) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftDataRepairPlan) InputSchema() json.RawMessage {
-	return cachedSchema(dataRepairPlanInput{})
+	return CachedSchema(dataRepairPlanInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -633,7 +633,7 @@ func (t *validateDataRepairPlanTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateDataRepairPlanTool) InputSchema() json.RawMessage {
-	return cachedSchema(dataRepairPlanInput{})
+	return CachedSchema(dataRepairPlanInput{})
 }
 
 // OutputSchema implements [Tool].

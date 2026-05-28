@@ -475,7 +475,7 @@ func (t *draftExportRedactionPlan) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftExportRedactionPlan) InputSchema() json.RawMessage {
-	return cachedSchema(draftExportRedactionPlanInput{})
+	return CachedSchema(draftExportRedactionPlanInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -620,7 +620,7 @@ func (t *validateExportRedactionPlan) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateExportRedactionPlan) InputSchema() json.RawMessage {
-	return cachedSchema(validateExportRedactionPlanInput{})
+	return CachedSchema(validateExportRedactionPlanInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

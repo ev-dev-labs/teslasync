@@ -185,7 +185,7 @@ func (t *retrieveAnalyticsChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveAnalyticsChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveAnalyticsChunksInput{})
+	return CachedSchema(retrieveAnalyticsChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -381,7 +381,7 @@ func (t *queryLifetimeStats) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryLifetimeStats) InputSchema() json.RawMessage {
-	return cachedSchema(queryLifetimeStatsInput{})
+	return CachedSchema(queryLifetimeStatsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

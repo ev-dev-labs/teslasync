@@ -175,7 +175,7 @@ func (t *querySpeedProfile) Description() string {
 
 // InputSchema implements [Tool].
 func (t *querySpeedProfile) InputSchema() json.RawMessage {
-	return cachedSchema(querySpeedProfileInput{})
+	return CachedSchema(querySpeedProfileInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -358,7 +358,7 @@ func (t *queryDriveContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryDriveContext) InputSchema() json.RawMessage {
-	return cachedSchema(queryDriveContextInput{})
+	return CachedSchema(queryDriveContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

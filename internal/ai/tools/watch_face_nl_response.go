@@ -295,7 +295,7 @@ func (t *queryWatchContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryWatchContext) InputSchema() json.RawMessage {
-	return cachedSchema(queryWatchContextInput{})
+	return CachedSchema(queryWatchContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

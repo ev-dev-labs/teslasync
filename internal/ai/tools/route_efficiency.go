@@ -222,7 +222,7 @@ func (t *retrieveRouteChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveRouteChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveRouteChunksInput{})
+	return CachedSchema(retrieveRouteChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -401,7 +401,7 @@ func (t *queryRouteEfficiency) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryRouteEfficiency) InputSchema() json.RawMessage {
-	return cachedSchema(queryRouteEfficiencyInput{})
+	return CachedSchema(queryRouteEfficiencyInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

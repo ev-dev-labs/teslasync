@@ -189,7 +189,7 @@ func (t *queryTCOSummary) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryTCOSummary) InputSchema() json.RawMessage {
-	return cachedSchema(queryTCOSummaryInput{})
+	return CachedSchema(queryTCOSummaryInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

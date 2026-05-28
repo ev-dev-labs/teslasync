@@ -514,7 +514,7 @@ func (t *draftReadonlySQL) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftReadonlySQL) InputSchema() json.RawMessage {
-	return cachedSchema(readonlySQLInput{})
+	return CachedSchema(readonlySQLInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -608,7 +608,7 @@ func (t *validateReadonlySQLTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateReadonlySQLTool) InputSchema() json.RawMessage {
-	return cachedSchema(readonlySQLInput{})
+	return CachedSchema(readonlySQLInput{})
 }
 
 // OutputSchema implements [Tool].

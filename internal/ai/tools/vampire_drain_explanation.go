@@ -199,7 +199,7 @@ func (t *retrieveIdleDrainChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveIdleDrainChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveIdleDrainChunksInput{})
+	return CachedSchema(retrieveIdleDrainChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -364,7 +364,7 @@ func (t *queryVampireDrainWindows) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryVampireDrainWindows) InputSchema() json.RawMessage {
-	return cachedSchema(queryVampireDrainWindowsInput{})
+	return CachedSchema(queryVampireDrainWindowsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

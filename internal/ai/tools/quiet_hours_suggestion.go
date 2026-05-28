@@ -362,7 +362,7 @@ func (t *draftQuietHoursWindow) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftQuietHoursWindow) InputSchema() json.RawMessage {
-	return cachedSchema(draftQuietHoursWindowInput{})
+	return CachedSchema(draftQuietHoursWindowInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -571,7 +571,7 @@ func (t *validateQuietHoursWindow) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateQuietHoursWindow) InputSchema() json.RawMessage {
-	return cachedSchema(validateQuietHoursWindowInput{})
+	return CachedSchema(validateQuietHoursWindowInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

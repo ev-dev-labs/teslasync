@@ -174,7 +174,7 @@ func (t *draftClimateSchedule) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftClimateSchedule) InputSchema() json.RawMessage {
-	return cachedSchema(draftClimateScheduleInput{})
+	return CachedSchema(draftClimateScheduleInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -275,7 +275,7 @@ func (t *validateClimateSchedule) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateClimateSchedule) InputSchema() json.RawMessage {
-	return cachedSchema(validateClimateScheduleInput{})
+	return CachedSchema(validateClimateScheduleInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

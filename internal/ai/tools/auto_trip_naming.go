@@ -278,7 +278,7 @@ func (t *draftTripName) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftTripName) InputSchema() json.RawMessage {
-	return cachedSchema(tripNameDraftInput{})
+	return CachedSchema(tripNameDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -389,7 +389,7 @@ func (t *validateTripNameTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateTripNameTool) InputSchema() json.RawMessage {
-	return cachedSchema(tripNameValidateInput{})
+	return CachedSchema(tripNameValidateInput{})
 }
 
 // OutputSchema implements [Tool].

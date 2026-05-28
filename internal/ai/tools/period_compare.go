@@ -222,7 +222,7 @@ func (t *queryPeriodCompare) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryPeriodCompare) InputSchema() json.RawMessage {
-	return cachedSchema(queryPeriodCompareInput{})
+	return CachedSchema(queryPeriodCompareInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

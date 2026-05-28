@@ -300,7 +300,7 @@ func (t *retrieveMaintenanceChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveMaintenanceChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveMaintenanceChunksInput{})
+	return CachedSchema(retrieveMaintenanceChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -573,7 +573,7 @@ func (t *queryMaintenanceContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryMaintenanceContext) InputSchema() json.RawMessage {
-	return cachedSchema(queryMaintenanceContextInput{})
+	return CachedSchema(queryMaintenanceContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

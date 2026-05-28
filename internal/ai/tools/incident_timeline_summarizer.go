@@ -236,7 +236,7 @@ func (t *retrieveSystemChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveSystemChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveSystemChunksInput{})
+	return CachedSchema(retrieveSystemChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -402,7 +402,7 @@ func (t *queryIncidentTimeline) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryIncidentTimeline) InputSchema() json.RawMessage {
-	return cachedSchema(queryIncidentTimelineInput{})
+	return CachedSchema(queryIncidentTimelineInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

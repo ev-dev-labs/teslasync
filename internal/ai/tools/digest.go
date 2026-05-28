@@ -97,7 +97,7 @@ func (t *queryWeeklyDigestContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryWeeklyDigestContext) InputSchema() json.RawMessage {
-	return cachedSchema(queryWeeklyDigestContextInput{})
+	return CachedSchema(queryWeeklyDigestContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

@@ -15,7 +15,7 @@ package api
 //	  ↓
 //	open SSE writer (internal/ai/stream.New) to the HTTP response
 //	  ↓
-//	stash the feedback_id in ctx via tools.WithScopedFeedback
+//	stash the feedback_id in ctx via feedback.WithScopedFeedback
 //	  ↓
 //	synthesise the user-message that scopes to the in-scope row
 //	  and instructs the tool sequence
@@ -29,7 +29,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the body-supplied feedback_id
-// in ctx via tools.WithScopedFeedback BEFORE dispatcher.Run is
+// in ctx via feedback.WithScopedFeedback BEFORE dispatcher.Run is
 // invoked. The dispatcher propagates ctx unchanged through every
 // Tool.Execute call. The tools.draftFeedbackTriage and
 // tools.validateFeedbackTriageTool then REJECT any LLM-supplied
@@ -84,6 +84,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/feedback"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -126,7 +127,7 @@ type AIFeedbackQueueTriageHandler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     tools.FeedbackTriageSource
+	source     feedback.FeedbackTriageSource
 	headerName string
 	maxIters   int
 }
@@ -143,10 +144,10 @@ type AIFeedbackQueueTriageHandler struct {
 //
 //	draft_feedback_triage AND validate_feedback_triage
 //	AND retrieve_feedback_chunks (registered by
-//	tools.RegisterFeedbackQueueTriageTools in router.go).
+//	feedback.RegisterFeedbackQueueTriageTools in router.go).
 //
 // strat:      the feedback-queue-triage Strategy (one per process).
-// source:     the production tools.FeedbackTriageSource (a thin
+// source:     the production feedback.FeedbackTriageSource (a thin
 //
 //	wrapper around *database.UserFeedbackRepo.Get that
 //	PII-minimizes the row into a FeedbackTriageEntry).
@@ -158,7 +159,7 @@ func NewAIFeedbackQueueTriageHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source tools.FeedbackTriageSource,
+	source feedback.FeedbackTriageSource,
 	headerName string,
 ) *AIFeedbackQueueTriageHandler {
 	switch {
@@ -169,7 +170,7 @@ func NewAIFeedbackQueueTriageHandler(
 	case strat == nil:
 		panic("api: NewAIFeedbackQueueTriageHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAIFeedbackQueueTriageHandler: nil tools.FeedbackTriageSource")
+		panic("api: NewAIFeedbackQueueTriageHandler: nil feedback.FeedbackTriageSource")
 	}
 	return &AIFeedbackQueueTriageHandler{
 		registry:   registry,
@@ -242,7 +243,7 @@ func (h *AIFeedbackQueueTriageHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, feedbackqueuetriage.FeatureID)
-	ctx = tools.WithScopedFeedback(ctx, tools.ScopedFeedback{
+	ctx = feedback.WithScopedFeedback(ctx, feedback.ScopedFeedback{
 		FeedbackID: req.FeedbackID,
 	})
 
@@ -325,7 +326,7 @@ var _ http.Handler = (*AIFeedbackQueueTriageHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIFeedbackTriageSource is the production
-// tools.FeedbackTriageSource. It wraps the canonical
+// feedback.FeedbackTriageSource. It wraps the canonical
 // *database.UserFeedbackRepo.Get and PII-minimizes the row into a
 // FeedbackTriageEntry: only id / created_at / category / title /
 // body[truncated] / page_route / app_version / status /
@@ -347,7 +348,7 @@ func NewAIFeedbackTriageSource(repo *database.UserFeedbackRepo) *AIFeedbackTriag
 	return &AIFeedbackTriageSource{repo: repo}
 }
 
-// LoadFeedback implements tools.FeedbackTriageSource. Returns
+// LoadFeedback implements feedback.FeedbackTriageSource. Returns
 // (nil, nil) when the row does not exist (database.ErrFeedbackNotFound) —
 // the tool surfaces this as a "feedback_not_found" status so the
 // LLM can narrate honestly without crashing the dispatcher. Any
@@ -356,7 +357,7 @@ func NewAIFeedbackTriageSource(repo *database.UserFeedbackRepo) *AIFeedbackTriag
 // The body is truncated to aiFeedbackTriageBodyExcerptMaxChars to
 // bound the prompt-token budget; the canonical body is preserved
 // in the database column unchanged.
-func (a *AIFeedbackTriageSource) LoadFeedback(ctx context.Context, feedbackID int64) (*tools.FeedbackTriageEntry, error) {
+func (a *AIFeedbackTriageSource) LoadFeedback(ctx context.Context, feedbackID int64) (*feedback.FeedbackTriageEntry, error) {
 	row, err := a.repo.Get(ctx, feedbackID)
 	if err != nil {
 		if errors.Is(err, database.ErrFeedbackNotFound) {
@@ -368,7 +369,7 @@ func (a *AIFeedbackTriageSource) LoadFeedback(ctx context.Context, feedbackID in
 	if len(body) > aiFeedbackTriageBodyExcerptMaxChars {
 		body = body[:aiFeedbackTriageBodyExcerptMaxChars] + "…"
 	}
-	return &tools.FeedbackTriageEntry{
+	return &feedback.FeedbackTriageEntry{
 		ID:             row.ID,
 		CreatedAt:      row.CreatedAt.UTC().Format("2006-01-02T15:04:05Z07:00"),
 		Category:       row.Category,
@@ -382,5 +383,5 @@ func (a *AIFeedbackTriageSource) LoadFeedback(ctx context.Context, feedbackID in
 }
 
 // Compile-time assertion: AIFeedbackTriageSource satisfies
-// tools.FeedbackTriageSource.
-var _ tools.FeedbackTriageSource = (*AIFeedbackTriageSource)(nil)
+// feedback.FeedbackTriageSource.
+var _ feedback.FeedbackTriageSource = (*AIFeedbackTriageSource)(nil)

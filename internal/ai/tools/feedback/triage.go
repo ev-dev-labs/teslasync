@@ -84,7 +84,7 @@
 // recent_errors, or console_tail. Defence-in-depth on top of
 // PolicyAlertBuilder's deny-by-default redaction.
 
-package tools
+package feedback
 
 import (
 	"context"
@@ -96,6 +96,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -561,7 +562,7 @@ func (t *draftFeedbackTriage) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftFeedbackTriage) InputSchema() json.RawMessage {
-	return cachedSchema(feedbackTriageInput{})
+	return tools.CachedSchema(feedbackTriageInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -577,7 +578,7 @@ func (t *draftFeedbackTriage) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *draftFeedbackTriage) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[feedbackTriageInput](raw)
+	return tools.ValidateStruct[feedbackTriageInput](raw)
 }
 
 // Execute implements [Tool]. Loads the in-scope row, builds the
@@ -662,7 +663,7 @@ func (t *validateFeedbackTriageTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateFeedbackTriageTool) InputSchema() json.RawMessage {
-	return cachedSchema(feedbackTriageInput{})
+	return tools.CachedSchema(feedbackTriageInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -677,7 +678,7 @@ func (t *validateFeedbackTriageTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *validateFeedbackTriageTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[feedbackTriageInput](raw)
+	return tools.ValidateStruct[feedbackTriageInput](raw)
 }
 
 // Execute implements [Tool]. Same scope check as
@@ -826,7 +827,7 @@ func (t *retrieveFeedbackChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveFeedbackChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveFeedbackChunksInput{})
+	return tools.CachedSchema(retrieveFeedbackChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -842,7 +843,7 @@ func (t *retrieveFeedbackChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveFeedbackChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveFeedbackChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveFeedbackChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -943,7 +944,7 @@ type FeedbackQueueTriageSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterFeedbackQueueTriageTools(r *Registry, s FeedbackQueueTriageSources) {
+func RegisterFeedbackQueueTriageTools(r *tools.Registry, s FeedbackQueueTriageSources) {
 	r.Register(&draftFeedbackTriage{source: s.Source})
 	r.Register(&validateFeedbackTriageTool{})
 	r.Register(&retrieveFeedbackChunks{r: s.Retriever})

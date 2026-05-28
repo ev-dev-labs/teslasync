@@ -215,7 +215,7 @@ func (t *draftChargeSchedule) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftChargeSchedule) InputSchema() json.RawMessage {
-	return cachedSchema(draftChargeScheduleInput{})
+	return CachedSchema(draftChargeScheduleInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -337,7 +337,7 @@ func (t *validateChargeSchedule) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateChargeSchedule) InputSchema() json.RawMessage {
-	return cachedSchema(validateChargeScheduleInput{})
+	return CachedSchema(validateChargeScheduleInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

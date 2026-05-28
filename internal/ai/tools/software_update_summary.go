@@ -309,7 +309,7 @@ func (t *retrieveUpdateNotes) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveUpdateNotes) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveUpdateNotesInput{})
+	return CachedSchema(retrieveUpdateNotesInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -513,7 +513,7 @@ func (t *queryVehicleSoftware) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryVehicleSoftware) InputSchema() json.RawMessage {
-	return cachedSchema(queryVehicleSoftwareInput{})
+	return CachedSchema(queryVehicleSoftwareInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

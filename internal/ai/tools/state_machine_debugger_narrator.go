@@ -268,7 +268,7 @@ func (t *retrieveFSMChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveFSMChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveFSMChunksInput{})
+	return CachedSchema(retrieveFSMChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -505,7 +505,7 @@ func (t *queryFSMTrace) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryFSMTrace) InputSchema() json.RawMessage {
-	return cachedSchema(queryFSMTraceInput{})
+	return CachedSchema(queryFSMTraceInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

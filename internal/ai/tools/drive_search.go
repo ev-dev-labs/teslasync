@@ -191,7 +191,7 @@ func (t *retrieveDriveChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveDriveChunks) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveDriveChunksInput{})
+	return CachedSchema(retrieveDriveChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -389,7 +389,7 @@ func (t *hydrateDriveReplay) Description() string {
 
 // InputSchema implements [Tool].
 func (t *hydrateDriveReplay) InputSchema() json.RawMessage {
-	return cachedSchema(hydrateDriveReplayInput{})
+	return CachedSchema(hydrateDriveReplayInput{})
 }
 
 // OutputSchema implements [Tool].

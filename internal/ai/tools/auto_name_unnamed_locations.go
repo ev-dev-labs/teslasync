@@ -289,7 +289,7 @@ func (t *draftLocationName) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftLocationName) InputSchema() json.RawMessage {
-	return cachedSchema(locationNameDraftInput{})
+	return CachedSchema(locationNameDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -391,7 +391,7 @@ func (t *validateLocationNameTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateLocationNameTool) InputSchema() json.RawMessage {
-	return cachedSchema(locationNameValidateInput{})
+	return CachedSchema(locationNameValidateInput{})
 }
 
 // OutputSchema implements [Tool].

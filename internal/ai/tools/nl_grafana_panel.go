@@ -574,7 +574,7 @@ func (t *draftGrafanaPanel) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftGrafanaPanel) InputSchema() json.RawMessage {
-	return cachedSchema(grafanaPanelInput{})
+	return CachedSchema(grafanaPanelInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -670,7 +670,7 @@ func (t *validateGrafanaPanelTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateGrafanaPanelTool) InputSchema() json.RawMessage {
-	return cachedSchema(grafanaPanelInput{})
+	return CachedSchema(grafanaPanelInput{})
 }
 
 // OutputSchema implements [Tool].

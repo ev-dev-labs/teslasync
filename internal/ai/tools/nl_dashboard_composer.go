@@ -486,7 +486,7 @@ func (t *draftDashboardLayout) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftDashboardLayout) InputSchema() json.RawMessage {
-	return cachedSchema(dashboardLayoutInput{})
+	return CachedSchema(dashboardLayoutInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -583,7 +583,7 @@ func (t *validateDashboardLayoutTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateDashboardLayoutTool) InputSchema() json.RawMessage {
-	return cachedSchema(dashboardLayoutInput{})
+	return CachedSchema(dashboardLayoutInput{})
 }
 
 // OutputSchema implements [Tool].

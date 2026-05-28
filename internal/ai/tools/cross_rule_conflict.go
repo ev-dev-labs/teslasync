@@ -355,7 +355,7 @@ func (t *queryAlertRules) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryAlertRules) InputSchema() json.RawMessage {
-	return cachedSchema(alertRulesQueryInput{})
+	return CachedSchema(alertRulesQueryInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -517,7 +517,7 @@ func (t *detectRuleConflicts) Description() string {
 
 // InputSchema implements [Tool].
 func (t *detectRuleConflicts) InputSchema() json.RawMessage {
-	return cachedSchema(detectRuleConflictsInput{})
+	return CachedSchema(detectRuleConflictsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form.

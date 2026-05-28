@@ -249,7 +249,7 @@ func (t *queryChargersAlongRoute) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryChargersAlongRoute) InputSchema() json.RawMessage {
-	return cachedSchema(chargersAlongRouteInput{})
+	return CachedSchema(chargersAlongRouteInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -439,7 +439,7 @@ func (t *queryUserChargeDwells) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryUserChargeDwells) InputSchema() json.RawMessage {
-	return cachedSchema(userChargeDwellsInput{})
+	return CachedSchema(userChargeDwellsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -722,7 +722,7 @@ func (t *draftTripPlan) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftTripPlan) InputSchema() json.RawMessage {
-	return cachedSchema(draftTripPlanInput{})
+	return CachedSchema(draftTripPlanInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

@@ -161,7 +161,7 @@ func (t *trainChargeCurveClusters) Description() string {
 
 // InputSchema implements [Tool].
 func (t *trainChargeCurveClusters) InputSchema() json.RawMessage {
-	return cachedSchema(trainChargeCurveClustersInput{})
+	return CachedSchema(trainChargeCurveClustersInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -223,7 +223,7 @@ func (q *queryChargeCurveClusters) Description() string {
 
 // InputSchema implements [Tool].
 func (q *queryChargeCurveClusters) InputSchema() json.RawMessage {
-	return cachedSchema(queryChargeCurveClustersInput{})
+	return CachedSchema(queryChargeCurveClustersInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

@@ -497,7 +497,7 @@ func (t *draftSignalFilter) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftSignalFilter) InputSchema() json.RawMessage {
-	return cachedSchema(signalFilterInput{})
+	return CachedSchema(signalFilterInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -592,7 +592,7 @@ func (t *validateSignalFilterTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateSignalFilterTool) InputSchema() json.RawMessage {
-	return cachedSchema(signalFilterInput{})
+	return CachedSchema(signalFilterInput{})
 }
 
 // OutputSchema implements [Tool].

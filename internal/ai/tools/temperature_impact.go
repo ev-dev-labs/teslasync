@@ -194,7 +194,7 @@ func (t *queryTemperatureImpact) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryTemperatureImpact) InputSchema() json.RawMessage {
-	return cachedSchema(queryTemperatureImpactInput{})
+	return CachedSchema(queryTemperatureImpactInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;

@@ -194,7 +194,7 @@ func (t *retrieveDocs) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveDocs) InputSchema() json.RawMessage {
-	return cachedSchema(retrieveDocsInput{})
+	return CachedSchema(retrieveDocsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -352,7 +352,7 @@ func (t *citeHelpChunk) Description() string {
 
 // InputSchema implements [Tool].
 func (t *citeHelpChunk) InputSchema() json.RawMessage {
-	return cachedSchema(citeHelpChunkInput{})
+	return CachedSchema(citeHelpChunkInput{})
 }
 
 // OutputSchema implements [Tool].

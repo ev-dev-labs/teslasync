@@ -135,7 +135,7 @@ func (t *trainRangeModel) Description() string {
 
 // InputSchema implements [Tool].
 func (t *trainRangeModel) InputSchema() json.RawMessage {
-	return cachedSchema(trainRangeModelInput{})
+	return CachedSchema(trainRangeModelInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -197,7 +197,7 @@ func (q *queryRangePrediction) Description() string {
 
 // InputSchema implements [Tool].
 func (q *queryRangePrediction) InputSchema() json.RawMessage {
-	return cachedSchema(queryRangePredictionInput{})
+	return CachedSchema(queryRangePredictionInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.

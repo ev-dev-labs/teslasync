@@ -459,7 +459,7 @@ func (t *draftAutomationGraph) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftAutomationGraph) InputSchema() json.RawMessage {
-	return cachedSchema(automationGraphDraftInput{})
+	return CachedSchema(automationGraphDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -542,7 +542,7 @@ func (t *validateAutomationGraphTool) Description() string {
 // InputSchema implements [Tool]. Reuses the draft input schema —
 // validate-only consumes the same typed shape as draft.
 func (t *validateAutomationGraphTool) InputSchema() json.RawMessage {
-	return cachedSchema(automationGraphDraftInput{})
+	return CachedSchema(automationGraphDraftInput{})
 }
 
 // OutputSchema implements [Tool].
