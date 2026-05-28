@@ -1,12 +1,12 @@
 package api
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
 )
 
 // setupTestRouter creates a minimal chi router for testing health endpoints
@@ -25,41 +25,13 @@ func setupTestRouter() http.Handler {
 	return mux
 }
 
-func doRequest(handler http.Handler, method, path string, body string) *httptest.ResponseRecorder {
-	var bodyReader io.Reader
-	if body != "" {
-		bodyReader = strings.NewReader(body)
-	}
-	req := httptest.NewRequest(method, path, bodyReader)
-	req.Header.Set("Content-Type", "application/json")
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, req)
-	return rec
-}
-
-func assertStatus(t *testing.T, rec *httptest.ResponseRecorder, expected int) {
-	t.Helper()
-	if rec.Code != expected {
-		t.Errorf("expected status %d, got %d. Body: %s", expected, rec.Code, rec.Body.String())
-	}
-}
-
-func assertJSON(t *testing.T, rec *httptest.ResponseRecorder) map[string]interface{} {
-	t.Helper()
-	var result map[string]interface{}
-	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
-		t.Fatalf("response is not valid JSON: %v. Body: %s", err, rec.Body.String())
-	}
-	return result
-}
-
-func assertContentType(t *testing.T, rec *httptest.ResponseRecorder, expected string) {
-	t.Helper()
-	ct := rec.Header().Get("Content-Type")
-	if !strings.Contains(ct, expected) {
-		t.Errorf("expected Content-Type containing %q, got %q", expected, ct)
-	}
-}
+// Phase R2.0b (2026-05-28): doRequest / assertStatus / assertJSON /
+// assertContentType were promoted to internal/api/apitest with
+// exported names so R2a-R2e wave subpackages can import them. Call
+// sites below use apitest.DoRequest / apitest.AssertStatus /
+// apitest.AssertJSON / apitest.AssertContentType directly — no
+// parent wrappers were retained (only 40 call sites in 2 files, so
+// the mass-rewrite was preferable to drained-wrapper dead code).
 
 // ---------------------------------------------------------------------------
 // Health endpoint tests
@@ -67,10 +39,10 @@ func assertContentType(t *testing.T, rec *httptest.ResponseRecorder, expected st
 
 func TestHealthz_ReturnsOK(t *testing.T) {
 	handler := setupTestRouter()
-	rec := doRequest(handler, "GET", "/healthz", "")
-	assertStatus(t, rec, http.StatusOK)
-	assertContentType(t, rec, "application/json")
-	body := assertJSON(t, rec)
+	rec := apitest.DoRequest(handler, "GET", "/healthz", "")
+	apitest.AssertStatus(t, rec, http.StatusOK)
+	apitest.AssertContentType(t, rec, "application/json")
+	body := apitest.AssertJSON(t, rec)
 	if body["status"] != "ok" {
 		t.Errorf("expected status ok, got %v", body["status"])
 	}
@@ -78,10 +50,10 @@ func TestHealthz_ReturnsOK(t *testing.T) {
 
 func TestReadyz_ReturnsOK(t *testing.T) {
 	handler := setupTestRouter()
-	rec := doRequest(handler, "GET", "/readyz", "")
-	assertStatus(t, rec, http.StatusOK)
-	assertContentType(t, rec, "application/json")
-	body := assertJSON(t, rec)
+	rec := apitest.DoRequest(handler, "GET", "/readyz", "")
+	apitest.AssertStatus(t, rec, http.StatusOK)
+	apitest.AssertContentType(t, rec, "application/json")
+	body := apitest.AssertJSON(t, rec)
 	if body["status"] != "ok" {
 		t.Errorf("expected status ok, got %v", body["status"])
 	}
@@ -140,7 +112,7 @@ func TestSecurityHeadersMiddleware_PassesThrough(t *testing.T) {
 	if !called {
 		t.Error("inner handler was not called")
 	}
-	assertStatus(t, rec, http.StatusTeapot)
+	apitest.AssertStatus(t, rec, http.StatusTeapot)
 }
 
 // ---------------------------------------------------------------------------
@@ -157,7 +129,7 @@ func TestRecoveryMiddleware_NoPanic(t *testing.T) {
 	req := httptest.NewRequest("GET", "/safe", nil)
 	handler.ServeHTTP(rec, req)
 
-	assertStatus(t, rec, http.StatusOK)
+	apitest.AssertStatus(t, rec, http.StatusOK)
 }
 
 func TestRecoveryMiddleware_CatchesPanic(t *testing.T) {
@@ -170,8 +142,8 @@ func TestRecoveryMiddleware_CatchesPanic(t *testing.T) {
 	req := httptest.NewRequest("GET", "/panic", nil)
 	handler.ServeHTTP(rec, req)
 
-	assertStatus(t, rec, http.StatusInternalServerError)
-	body := assertJSON(t, rec)
+	apitest.AssertStatus(t, rec, http.StatusInternalServerError)
+	body := apitest.AssertJSON(t, rec)
 	if body["error"] != "internal server error" {
 		t.Errorf("expected error 'internal server error', got %v", body["error"])
 	}

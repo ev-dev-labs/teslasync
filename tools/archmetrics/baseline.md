@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T17:32:03Z, Go go1.26.1, commit 140d9e1e0bf0ef8bee451ac3424b660ce819ed4b_
+_Generated 2026-05-28T17:44:56Z, Go go1.26.1, commit d3a7ae1b7d7169e57af9181b77905cc791d20a4f_
 
 ## Summary
 
-- Packages: 290
+- Packages: 291
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 375118
+- Total non-blank LOC under cmd/+internal/+tools/: 375224
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,8 @@ _Generated 2026-05-28T17:32:03Z, Go go1.26.1, commit 140d9e1e0bf0ef8bee451ac3424
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126490 | yes | handler |
+| internal/api | 271 | 163 | 126465 | yes | handler |
+| internal/api/apitest | 2 | 0 | 131 | yes |  |
 | internal/api/httpx | 3 | 2 | 360 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1848 | yes | app |
