@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T02:00:17Z, Go go1.26.1, commit ac4e4e8871d5a81c98792fffaa56eb9bbf356bf3_
+_Generated 2026-05-28T03:10:22Z, Go go1.26.1, commit 86e8e49f7d68cc9bfca039b0f324a396b8507a62_
 
 ## Summary
 
 - Packages: 210
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 371843
+- Total non-blank LOC under cmd/+internal/+tools/: 371861
 
 ## cmd/* main.go LOC
 
@@ -248,7 +248,7 @@ _Generated 2026-05-28T02:00:17Z, Go go1.26.1, commit ac4e4e8871d5a81c98792fffaa5
 | tools/aigen | 2 | 1 | 338 | yes | tool |
 | tools/aistream-contract | 2 | 0 | 227 | yes | tool |
 | tools/aivet | 2 | 1 | 792 | yes | tool |
-| tools/archmetrics | 2 | 0 | 778 | yes | tool |
+| tools/archmetrics | 2 | 0 | 796 | yes | tool |
 | tools/eval-schema-check | 2 | 0 | 57 | yes | tool |
 
 ## doc.go adoption
@@ -261,90 +261,169 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 34 / 2 | 1 | 0 | 0 |
-| `internal/jobs` | R6 | 25 | 12 / 11 | 2 | 1 | 0 |
-| `internal/ai/tools` | R6 | 109 | 58 / 51 | 9 | 0 | 8 |
-| `internal/database` | R4 | 143 | 108 / 35 | 16 | 0 | 16 |
-| `internal/handler/v1` | R3 | 12 | 11 / 1 | 1 | 0 | 0 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 26 | 0 | 26 |
+| `internal/models` | R5 | 36 | 34 / 2 | 12 | 0 | 12 |
+| `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
+| `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
+| `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
+| `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
+
+### `internal/models` detail
+
+> 12 subpkgs from R1 audit. Smallest-first execution; parent retains doc.go + models.go + models_test.go only.
+
+**Planned but not yet on disk:**
+- `internal/models/alert`
+- `internal/models/automation`
+- `internal/models/charging`
+- `internal/models/dashboard`
+- `internal/models/drive`
+- `internal/models/notification`
+- `internal/models/security`
+- `internal/models/signal`
+- `internal/models/system`
+- `internal/models/telemetry`
+- `internal/models/tesla`
+- `internal/models/vehicle`
 
 ### `internal/jobs` detail
 
-> R0.5 canary extracted `embeddings` (2 files) as proof-of-recipe; R1 populates the remaining ai_*_indexer categories.
+> 4 subpkgs: embeddings (done R0.5), indexers (7 ai_*_indexer + tests), triage (alert+feedback), digests (weekly+yir).
 
 **Existing subpackages on disk:**
 - `internal/jobs/embeddings`
 
+**Planned but not yet on disk:**
+- `internal/jobs/indexers`
+- `internal/jobs/triage`
+- `internal/jobs/digests`
+
 ### `internal/ai/tools` detail
 
-> Per ADR-015 amendment, pure file-move only. AI guard preserved.
+> 13 subpkgs from R1 audit. Per ADR-015 amendment, pure file-move only. Registry/schema/builtins/tool/validate stay at parent.
 
 **Planned but not yet on disk:**
-- `internal/ai/tools/nl`
 - `internal/ai/tools/alert`
-- `internal/ai/tools/charge`
+- `internal/ai/tools/automation`
+- `internal/ai/tools/battery`
+- `internal/ai/tools/charging`
+- `internal/ai/tools/diagnostics`
 - `internal/ai/tools/drive`
-- `internal/ai/tools/auto`
-- `internal/ai/tools/voice`
-- `internal/ai/tools/route`
+- `internal/ai/tools/feedback`
+- `internal/ai/tools/forecast`
+- `internal/ai/tools/location`
+- `internal/ai/tools/nl`
 - `internal/ai/tools/safety`
+- `internal/ai/tools/share`
+- `internal/ai/tools/summary`
 
 ### `internal/database` detail
 
-> Touches many internal/api/* callers. Accept R2 double-touch budget (no temp compat layer).
+> 22 subpkgs from R1 audit. Touches many internal/api/* callers — accept R2 double-touch budget (no temp compat layer).
 
 **Planned but not yet on disk:**
-- `internal/database/vehicle`
-- `internal/database/charging`
-- `internal/database/drive`
-- `internal/database/signal`
-- `internal/database/automation`
-- `internal/database/notification`
+- `internal/database/achievement`
+- `internal/database/ai`
 - `internal/database/alert`
 - `internal/database/audit`
-- `internal/database/export`
-- `internal/database/achievement`
+- `internal/database/auth`
+- `internal/database/automation`
+- `internal/database/backup`
+- `internal/database/charging`
 - `internal/database/dashboard`
-- `internal/database/gdpr`
-- `internal/database/sharing`
-- `internal/database/telemetry`
-- `internal/database/tesla`
+- `internal/database/drive`
 - `internal/database/energy`
+- `internal/database/export`
+- `internal/database/feedback`
+- `internal/database/geo`
+- `internal/database/ingest`
+- `internal/database/notification`
+- `internal/database/onboarding`
+- `internal/database/settings`
+- `internal/database/signal`
+- `internal/database/system`
+- `internal/database/tesla`
+- `internal/database/vehicle`
 
-**Shared-helper subpackages (extracted in prep sub-phase):**
-- `internal/database/shared`
+### `internal/handler/v1` detail
+
+> 9 subpkgs from R1 audit. Tiny but critical — defines destination shape (Mount(r,deps) pattern) for R2 to adopt 1:1.
+
+**Planned but not yet on disk:**
+- `internal/handler/v1/admin`
+- `internal/handler/v1/charging`
+- `internal/handler/v1/dashboard`
+- `internal/handler/v1/export`
+- `internal/handler/v1/gdpr`
+- `internal/handler/v1/trip`
+- `internal/handler/v1/user`
+- `internal/handler/v1/vehicle`
+- `internal/handler/v1/shared`
 
 ### `internal/api` detail
 
-> Largest cluster. Extracted in 5 waves (R2a-R2e). R2.0 prep extracts httpx/apiparams/apitest first.
+> 55 subpkgs + 4 shared infra from R1 audit. Largest cluster. Extracted in 5 waves (R2a-R2e). R2.0 prep extracts httpx/apiparams/apitest/middleware first. ai/ has 14 sub-subpkgs (see cluster-map.md).
 
 **Planned but not yet on disk:**
+- `internal/api/system`
+- `internal/api/health`
+- `internal/api/sse`
+- `internal/api/openapi`
+- `internal/api/devtools`
+- `internal/api/observability`
+- `internal/api/analytics`
+- `internal/api/anomaly`
+- `internal/api/lifetime`
+- `internal/api/mileage`
+- `internal/api/sleep`
+- `internal/api/regen`
+- `internal/api/vampiredrain`
+- `internal/api/tco`
+- `internal/api/tempimpact`
+- `internal/api/speed`
+- `internal/api/routeeff`
+- `internal/api/signal`
+- `internal/api/dataquality`
+- `internal/api/fsm`
+- `internal/api/search`
+- `internal/api/diagnostic`
+- `internal/api/cost`
 - `internal/api/vehicle`
+- `internal/api/vehiclesys`
 - `internal/api/charging`
 - `internal/api/drive`
 - `internal/api/trip`
-- `internal/api/energy`
-- `internal/api/analytics`
 - `internal/api/telemetry`
+- `internal/api/fleet`
+- `internal/api/energy`
+- `internal/api/teslaapi`
+- `internal/api/ai`
+- `internal/api/admin`
 - `internal/api/automation`
 - `internal/api/alert`
 - `internal/api/notification`
-- `internal/api/admin`
-- `internal/api/settings`
-- `internal/api/auth`
-- `internal/api/sharing`
-- `internal/api/export`
-- `internal/api/signal`
-- `internal/api/system`
+- `internal/api/chatbot`
+- `internal/api/feedback`
+- `internal/api/data_repair`
 - `internal/api/dashboard`
-- `internal/api/motor`
-- `internal/api/climate`
-- `internal/api/security`
-- `internal/api/media`
-- `internal/api/tire`
-- `internal/api/location`
-- `internal/api/ai`
-- `internal/api/sse`
+- `internal/api/saved_views`
+- `internal/api/auth`
+- `internal/api/onboarding`
+- `internal/api/user`
+- `internal/api/settings`
+- `internal/api/share`
+- `internal/api/exports`
+- `internal/api/ingest`
+- `internal/api/geo`
+- `internal/api/safety`
+- `internal/api/bulk`
+- `internal/api/api_call_log`
+- `internal/api/audit`
+- `internal/api/maintenance`
+- `internal/api/software_update`
+- `internal/api/watch`
+- `internal/api/webhook`
+- `internal/api/webvitals`
 
 **Shared-helper subpackages (extracted in prep sub-phase):**
 - `internal/api/httpx`
