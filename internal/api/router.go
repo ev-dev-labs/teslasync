@@ -21,6 +21,7 @@ import (
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
+	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -4061,7 +4062,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				if telemetryHandler.signalLogRepo != nil {
 					mongoRepo = telemetryHandler.signalLogRepo
 				}
-				signalHandler := NewSignalHandler(mongoRepo)
+				signalHandler := apisignal.NewHandler(mongoRepo)
 				if db != nil {
 					signalHandler.WithDB(db)
 				}
@@ -4084,7 +4085,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/{signalName}/history", signalHandler.History)
 			} else {
 				// No telemetry handler at all — register with DB-only fallbacks
-				signalHandler := NewSignalHandler(nil)
+				signalHandler := apisignal.NewHandler(nil)
 				if db != nil {
 					signalHandler.WithDB(db)
 				}

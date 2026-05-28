@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
+	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -610,7 +611,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 				log.Warn().Err(err).Int64("vehicle_id", vid).Msg("alert test: live signal read failed")
 				continue
 			}
-			raw := liveSignalValuesToRaw(values)
+			raw := apisignal.LiveSignalValuesToRaw(values)
 			if len(raw) > 0 {
 				message = alertmsg.Substitute(message, raw)
 				break

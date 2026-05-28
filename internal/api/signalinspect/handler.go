@@ -1,4 +1,4 @@
-package api
+package signalinspect
 
 import (
 	"context"
@@ -11,13 +11,15 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
+
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/go-chi/chi/v5"
 )
 
-// SignalHandler serves the per-vehicle signal-inspector endpoints
+// Handler serves the per-vehicle signal-inspector endpoints
 // (/available, /live, /{signalName}/history, /snapshot, /diff, /stats).
 //
 // Phase-42 / Prompt 0069 — typed envelope rewrite:
@@ -38,7 +40,7 @@ import (
 // Prompt 0069 and continue to use SignalHistoryWriter. They are wired
 // here only so the chi route registration in router.go keeps the same
 // shape.
-type SignalHandler struct {
+type Handler struct {
 	signalLogRepo       *signaldb.SignalLogRepo       // legacy MongoDB (optional fallback)
 	signalHistoryWriter *signaldb.SignalHistoryWriter // legacy Postgres writer (snapshot/diff/stats only)
 	db                  *database.DB                  // primary Postgres for typed signal_log queries
@@ -46,16 +48,16 @@ type SignalHandler struct {
 	liveSignals         signal.LiveSignalStore
 }
 
-// NewSignalHandler creates a new SignalHandler. The MongoDB repo is
+// NewHandler creates a new Handler. The MongoDB repo is
 // retained as an optional cold-path fallback for /snapshot only; the
 // typed live and history paths do not depend on it.
-func NewSignalHandler(repo *signaldb.SignalLogRepo) *SignalHandler {
-	return &SignalHandler{signalLogRepo: repo}
+func NewHandler(repo *signaldb.SignalLogRepo) *Handler {
+	return &Handler{signalLogRepo: repo}
 }
 
 // WithDB adds the primary Postgres handle. Required for /history; the
 // typed signal_log query routes through this.
-func (h *SignalHandler) WithDB(db *database.DB) *SignalHandler {
+func (h *Handler) WithDB(db *database.DB) *Handler {
 	h.db = db
 	return h
 }
@@ -63,21 +65,21 @@ func (h *SignalHandler) WithDB(db *database.DB) *SignalHandler {
 // WithSignalHistory adds the legacy SignalHistoryWriter. Used only by
 // the snapshot/diff/stats endpoints (out of Prompt 0069 scope). The
 // typed /history endpoint queries signal_log directly via h.db.Pool.
-func (h *SignalHandler) WithSignalHistory(w *signaldb.SignalHistoryWriter) *SignalHandler {
+func (h *Handler) WithSignalHistory(w *signaldb.SignalHistoryWriter) *Handler {
 	h.signalHistoryWriter = w
 	return h
 }
 
 // WithRedisCache sets the Redis signal cache for live signal-keys
 // discovery (legacy fallback path; no longer wired into /available).
-func (h *SignalHandler) WithRedisCache(cache *signal.RedisSignalCache) *SignalHandler {
+func (h *Handler) WithRedisCache(cache *signal.RedisSignalCache) *Handler {
 	h.redisCache = cache
 	return h
 }
 
 // WithLiveSignalStore sets the live signal boundary (L1+L2) used by
 // /live and /snapshot.
-func (h *SignalHandler) WithLiveSignalStore(store signal.LiveSignalStore) *SignalHandler {
+func (h *Handler) WithLiveSignalStore(store signal.LiveSignalStore) *Handler {
 	h.liveSignals = store
 	return h
 }
@@ -110,16 +112,16 @@ type signalHistoryPoint struct {
 // after normalize.toSI). protomodel.SignalsByName is consulted only for
 // the response-level `expected_kind` and to short-circuit on an unknown
 // signal name.
-func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
 	signalName := chi.URLParam(r, "signalName")
 	if signalName == "" {
-		writeError(w, http.StatusBadRequest, "signal name required")
+		httpx.WriteError(w, http.StatusBadRequest, "signal name required")
 		return
 	}
 
@@ -132,7 +134,7 @@ func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if h.db == nil || h.db.Pool == nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"vehicle_id":    vehicleID,
 			"signal":        signalName,
 			"expected_kind": expectedKind,
@@ -146,11 +148,11 @@ func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 
 	points, err := h.queryHistory(r.Context(), vehicleID, signalName, from, to, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "query failed: "+err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "query failed: "+err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":    vehicleID,
 		"signal":        signalName,
 		"expected_kind": expectedKind,
@@ -166,7 +168,7 @@ func (h *SignalHandler) History(w http.ResponseWriter, r *http.Request) {
 //
 //	signal_log(vehicle_id, ts, field, value_kind,
 //	           str_value, bool_value, int_value, float_value, time_value)
-func (h *SignalHandler) queryHistory(ctx context.Context, vehicleID int64, signalName string, from, to time.Time, limit int) ([]signalHistoryPoint, error) {
+func (h *Handler) queryHistory(ctx context.Context, vehicleID int64, signalName string, from, to time.Time, limit int) ([]signalHistoryPoint, error) {
 	const q = `
 		SELECT ts, value_kind, str_value, bool_value, int_value, float_value, time_value
 		  FROM signal_log
@@ -292,15 +294,15 @@ func parseHistoryLimit(r *http.Request) int {
 // filter the response without breaking the URL contract.
 //
 // GET /api/v1/signals/{vehicleID}/available
-func (h *SignalHandler) AvailableSignals(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) AvailableSignals(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
 	signals := AvailableSignals()
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
 		"count":      len(signals),
 		"signals":    signals,
@@ -313,17 +315,17 @@ func (h *SignalHandler) AvailableSignals(w http.ResponseWriter, r *http.Request)
 //
 // Out of Prompt 0069 scope — kept compiling against SignalHistoryWriter
 // for backwards compatibility with existing route wiring.
-func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
 	if h.signalHistoryWriter != nil {
 		count, oldest, newest, err := h.signalHistoryWriter.GetGlobalStats(r.Context(), vehicleID)
 		if err == nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"vehicle_id": vehicleID,
 				"count":      count,
 				"oldest":     oldest,
@@ -336,7 +338,7 @@ func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	if h.signalLogRepo != nil {
 		count, oldest, newest, err := h.signalLogRepo.GetStats(r.Context(), vehicleID)
 		if err == nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"vehicle_id": vehicleID,
 				"count":      count,
 				"oldest":     oldest,
@@ -346,7 +348,7 @@ func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
 		"count":      0,
 		"oldest":     nil,
@@ -360,21 +362,21 @@ func (h *SignalHandler) Stats(w http.ResponseWriter, r *http.Request) {
 // the FSM debugger can keep surfacing which layer satisfied each read.
 //
 // GET /api/v1/signals/{vehicleID}/live
-func (h *SignalHandler) LiveState(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) LiveState(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
 	if h.liveSignals == nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store not initialized"})
+		httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store not initialized"})
 		return
 	}
 
 	raw, err := h.liveSignals.GetAll(r.Context(), vehicleID, signal.LiveSignalReadDistributed)
 	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store unavailable"})
+		httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store unavailable"})
 		return
 	}
 	now := time.Now().UTC()
@@ -386,7 +388,7 @@ func (h *SignalHandler) LiveState(w http.ResponseWriter, r *http.Request) {
 		signals[k] = buildLiveEntry(k, v, now)
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
 		"count":      len(signals),
 		"signals":    signals,
@@ -477,10 +479,10 @@ func classifyLiveSource(v *signal.Value, now time.Time) string {
 // legacy SignalHistoryWriter (out of Prompt 0069 scope).
 //
 // GET /api/v1/signals/{vehicleID}/snapshot?at=...&signals=BatteryLevel,Gear
-func (h *SignalHandler) Snapshot(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Snapshot(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
@@ -489,7 +491,7 @@ func (h *SignalHandler) Snapshot(w http.ResponseWriter, r *http.Request) {
 	if atStr := r.URL.Query().Get("at"); atStr != "" {
 		parsed, perr := time.Parse(time.RFC3339, atStr)
 		if perr != nil {
-			writeError(w, http.StatusBadRequest, "invalid at timestamp; expect RFC3339")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid at timestamp; expect RFC3339")
 			return
 		}
 		at = parsed.UTC()
@@ -521,14 +523,14 @@ func parseSignalNames(csv string) []string {
 	return out
 }
 
-func (h *SignalHandler) snapshotLive(w http.ResponseWriter, r *http.Request, vehicleID int64, requested []string, now time.Time) {
+func (h *Handler) snapshotLive(w http.ResponseWriter, r *http.Request, vehicleID int64, requested []string, now time.Time) {
 	if h.liveSignals == nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store not initialized"})
+		httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store not initialized"})
 		return
 	}
 	raw, err := h.liveSignals.GetAll(r.Context(), vehicleID, signal.LiveSignalReadDistributed)
 	if err != nil {
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store unavailable"})
+		httpx.WriteJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "live signal store unavailable"})
 		return
 	}
 
@@ -546,7 +548,7 @@ func (h *SignalHandler) snapshotLive(w http.ResponseWriter, r *http.Request, veh
 		signals[k] = buildLiveEntry(k, v, now)
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
 		"at":         now,
 		"count":      len(signals),
@@ -554,9 +556,9 @@ func (h *SignalHandler) snapshotLive(w http.ResponseWriter, r *http.Request, veh
 	})
 }
 
-func (h *SignalHandler) snapshotFromLog(w http.ResponseWriter, r *http.Request, vehicleID int64, requested []string, at time.Time) {
+func (h *Handler) snapshotFromLog(w http.ResponseWriter, r *http.Request, vehicleID int64, requested []string, at time.Time) {
 	if h.signalHistoryWriter == nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"vehicle_id": vehicleID,
 			"at":         at,
 			"count":      0,
@@ -592,7 +594,7 @@ func (h *SignalHandler) snapshotFromLog(w http.ResponseWriter, r *http.Request, 
 		signals[name] = entry
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
 		"at":         at,
 		"count":      len(signals),
@@ -656,21 +658,21 @@ type signalDiffRow struct {
 	Category string      `json:"category,omitempty"`
 }
 
-func (h *SignalHandler) Diff(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Diff(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
 	atA, err := parseAtParam(r, "at_a", time.Now().UTC().Add(-1*time.Hour))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid at_a timestamp; expect RFC3339")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid at_a timestamp; expect RFC3339")
 		return
 	}
 	atB, err := parseAtParam(r, "at_b", time.Now().UTC())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid at_b timestamp; expect RFC3339")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid at_b timestamp; expect RFC3339")
 		return
 	}
 
@@ -678,12 +680,12 @@ func (h *SignalHandler) Diff(w http.ResponseWriter, r *http.Request) {
 
 	snapA, err := h.collectSnapshot(r.Context(), vehicleID, requested, atA)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "snapshot a failed: "+err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "snapshot a failed: "+err.Error())
 		return
 	}
 	snapB, err := h.collectSnapshot(r.Context(), vehicleID, requested, atB)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "snapshot b failed: "+err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "snapshot b failed: "+err.Error())
 		return
 	}
 
@@ -715,7 +717,7 @@ func (h *SignalHandler) Diff(w http.ResponseWriter, r *http.Request) {
 
 	sort.Slice(rows, func(i, j int) bool { return rows[i].Name < rows[j].Name })
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
 		"at_a":       atA,
 		"at_b":       atB,
@@ -730,7 +732,7 @@ type signalSnapshotEntry struct {
 	ageMS  *int64
 }
 
-func (h *SignalHandler) collectSnapshot(ctx context.Context, vehicleID int64, requested []string, at time.Time) (map[string]signalSnapshotEntry, error) {
+func (h *Handler) collectSnapshot(ctx context.Context, vehicleID int64, requested []string, at time.Time) (map[string]signalSnapshotEntry, error) {
 	now := time.Now().UTC()
 	out := map[string]signalSnapshotEntry{}
 
@@ -850,12 +852,15 @@ func signalToFloat(v interface{}) (float64, bool) {
 	return 0, false
 }
 
-// liveSignalValuesToRaw flattens a *signal.Value snapshot into a plain
+// LiveSignalValuesToRaw flattens a *signal.Value snapshot into a plain
 // {name -> raw} map. Used by alert_handler_rules.go and
 // vehicle_handler.go for template rendering and BuildStateFromSignalStore
 // hydration; preserved here so the typed rewrite does not require
 // touching files outside the Prompt 0069 allowed-files list.
-func liveSignalValuesToRaw(values map[string]*signal.Value) map[string]interface{} {
+//
+// Exported by phase-R2d.4 so the parent api package can call into the
+// subpackage after the carve.
+func LiveSignalValuesToRaw(values map[string]*signal.Value) map[string]interface{} {
 	raw := make(map[string]interface{}, len(values))
 	for name, value := range values {
 		if value != nil {

@@ -1,4 +1,4 @@
-package api
+package signalinspect
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 )
 
 // fakeLiveSignalStore is a lightweight implementation of
-// signal.LiveSignalStore for SignalHandler tests. It keeps a single
+// signal.LiveSignalStore for Handler tests. It keeps a single
 // canned snapshot per vehicle and lets each test customize the timestamps
 // to exercise the L1/L2/STALE classification.
 type fakeLiveSignalStore struct {
@@ -77,7 +77,7 @@ func TestLiveStateClassifiesSourceL1(t *testing.T) {
 	store.snapshots[42] = map[string]*signal.Value{
 		"BatteryLevel": {Raw: float64(73), Timestamp: now.Add(-1 * time.Second)},
 	}
-	h := NewSignalHandler(nil)
+	h := NewHandler(nil)
 	h.WithLiveSignalStore(store)
 
 	rec := httptest.NewRecorder()
@@ -109,7 +109,7 @@ func TestLiveStateClassifiesSourceStale(t *testing.T) {
 	store.snapshots[42] = map[string]*signal.Value{
 		"BatteryLevel": {Raw: float64(50), Timestamp: now.Add(-5 * time.Minute)},
 	}
-	h := NewSignalHandler(nil)
+	h := NewHandler(nil)
 	h.WithLiveSignalStore(store)
 
 	rec := httptest.NewRecorder()
@@ -134,7 +134,7 @@ func TestLiveStateClassifiesSourceL2(t *testing.T) {
 	store.snapshots[42] = map[string]*signal.Value{
 		"BatteryLevel": {Raw: float64(50)}, // zero timestamp = legacy
 	}
-	h := NewSignalHandler(nil)
+	h := NewHandler(nil)
 	h.WithLiveSignalStore(store)
 
 	rec := httptest.NewRecorder()
@@ -161,7 +161,7 @@ func TestSnapshotPresentTimeUsesLiveStore(t *testing.T) {
 		"BatteryLevel": {Raw: float64(80), Timestamp: now.Add(-2 * time.Second)},
 		"Speed":        {Raw: float64(0), Timestamp: now.Add(-1 * time.Second)},
 	}
-	h := NewSignalHandler(nil)
+	h := NewHandler(nil)
 	h.WithLiveSignalStore(store)
 
 	rec := httptest.NewRecorder()
@@ -189,7 +189,7 @@ func TestSnapshotPresentTimeUsesLiveStore(t *testing.T) {
 // a 400 rather than silently falling back to "now".
 func TestSnapshotInvalidAtRejected(t *testing.T) {
 	store := newFakeLiveSignalStore()
-	h := NewSignalHandler(nil)
+	h := NewHandler(nil)
 	h.WithLiveSignalStore(store)
 
 	rec := httptest.NewRecorder()
@@ -205,7 +205,7 @@ func TestSnapshotInvalidAtRejected(t *testing.T) {
 // (not a 5xx) so the frontend renders an empty inspector cleanly.
 func TestSnapshotPastNoHistoryReturnsEmpty(t *testing.T) {
 	store := newFakeLiveSignalStore()
-	h := NewSignalHandler(nil)
+	h := NewHandler(nil)
 	h.WithLiveSignalStore(store) // signalHistoryWriter remains nil
 
 	old := time.Now().Add(-1 * time.Hour).UTC().Format(time.RFC3339)
@@ -234,7 +234,7 @@ func TestDiffOmitsUnchanged(t *testing.T) {
 		"BatteryLevel": {Raw: float64(80), Timestamp: now.Add(-1 * time.Second)},
 		"Speed":        {Raw: float64(0), Timestamp: now.Add(-1 * time.Second)},
 	}
-	h := NewSignalHandler(nil)
+	h := NewHandler(nil)
 	h.WithLiveSignalStore(store)
 
 	// Both at_a and at_b at "now" force collectSnapshot to use the live
@@ -265,7 +265,7 @@ func TestDiffOmitsUnchanged(t *testing.T) {
 // TestDiffInvalidAtRejected verifies a malformed at_a/at_b yields 400.
 func TestDiffInvalidAtRejected(t *testing.T) {
 	store := newFakeLiveSignalStore()
-	h := NewSignalHandler(nil)
+	h := NewHandler(nil)
 	h.WithLiveSignalStore(store)
 
 	rec := httptest.NewRecorder()

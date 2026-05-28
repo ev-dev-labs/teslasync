@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T20:26:42Z",
+  "generated_at": "2026-05-28T20:34:02Z",
   "go_version": "go1.26.1",
-  "commit_sha": "e5761405eb2135eef79b73bd65672c8bcedb51c2",
+  "commit_sha": "f8dd5fa70428c9a20038758f1996720885ea3e3a",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 254,
-      "test_files": 153,
-      "loc": 115770,
+      "go_files": 252,
+      "test_files": 152,
+      "loc": 114579,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2630,6 +2630,7 @@
         "internal/api/notification",
         "internal/api/search",
         "internal/api/search/searchtest",
+        "internal/api/signalinspect",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
         "internal/api/vehicleconfig",
@@ -3073,9 +3074,6 @@
         "settings_reset_handler.go",
         "settings_reset_handler_test.go",
         "share_handler.go",
-        "signal_handler.go",
-        "signal_handler_test.go",
-        "signals.go",
         "signals_catalog_handler.go",
         "signals_catalog_handler_test.go",
         "sleep_handler.go",
@@ -3377,6 +3375,27 @@
       "files": [
         "doc.go",
         "fake.go"
+      ]
+    },
+    {
+      "path": "internal/api/signalinspect",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 1228,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/signal",
+        "internal/signal",
+        "internal/tesla/protomodel"
+      ],
+      "files": [
+        "catalog.go",
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -7421,8 +7440,6 @@
       "settings_import_handler.go",
       "settings_reset_handler.go",
       "share_handler.go",
-      "signal_handler.go",
-      "signals.go",
       "signals_catalog_handler.go",
       "sleep_handler.go",
       "slo_handler.go",
@@ -7533,6 +7550,11 @@
     "internal/api/search/searchtest": [
       "doc.go",
       "fake.go"
+    ],
+    "internal/api/signalinspect": [
+      "catalog.go",
+      "doc.go",
+      "handler.go"
     ],
     "internal/api/vehicle": [
       "doc.go",
@@ -8673,8 +8695,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 254,
-      "flat_parent_test_files": 153,
+      "flat_parent_go_files": 252,
+      "flat_parent_test_files": 152,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "lifetime",

@@ -94,6 +94,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
+	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -459,7 +460,7 @@ func NewAISignalCatalogSource() *AISignalCatalogSourceImpl {
 // call into the shared proto-derived catalog. Allocations are
 // bounded by len(protomodel.Signals).
 func (a *AISignalCatalogSourceImpl) SignalCatalog(_ context.Context, _ int64) ([]AISignalCatalogEntry, error) {
-	src := AvailableSignals()
+	src := apisignal.AvailableSignals()
 	out := make([]AISignalCatalogEntry, 0, len(src))
 	for _, s := range src {
 		// Filter compound parents — the SPA's SignalSelector only

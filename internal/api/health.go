@@ -17,6 +17,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/sony/gobreaker"
+
+	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 )
 
 // MaintenanceView is the resolved service-mode snapshot returned by the
@@ -194,7 +196,7 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 				"port":              cfg.FleetTelemetry.Port,
 				"endpoint":          "/api/v1/telemetry",
 				"protocol":          "HTTP POST (JSON)",
-				"supported_signals": SubscribedSignals,
+				"supported_signals": apisignal.SubscribedSignals,
 			}
 		}
 
