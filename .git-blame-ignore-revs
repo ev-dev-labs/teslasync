@@ -205,3 +205,5 @@ d5bab8b3
 
 # R2b: carve internal/api/geofence (CRUD + bulk handlers)
 927f2b60d5a28e07c2ebd8692e60994f2d968a95
+# R2c: carve internal/api/vehicle (core VehicleHandler)
+6efc0579e0b342a586d0e7a87ea9b355c2cf8dcc
