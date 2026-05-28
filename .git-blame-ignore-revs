@@ -116,3 +116,6 @@ b66486d33deba3a99d69ee53d6f9a08f4cc0d807  # R6.24: carve ai/tools/anomaly (lesso
 ceb0b71952bd2147f50451f78de61f9eb8e292db  # R6.25: carve ai/tools/coaching (lessons 12-13: ptr helpers promoted + local fake duplication)
 450522501b7bb4628d942dfd4789818aa7b28ab9  # R6.26: carve ai/tools/diagnosis (lesson 14: inline-literal field rename)
 2fdd77e4c1640b0771bf43cbcd738ed5f97a9ec6  # R6.27: carve ai/tools/curve (lesson 15: dotted field-access rename)
+
+# R6.28: carve route_efficiency into internal/ai/tools/route/ (mass rename, no behaviour change)
+068408e14c8e0db23d69c43b0e7ec07842f016e4
