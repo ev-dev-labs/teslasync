@@ -17,6 +17,7 @@ import (
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	apikeyh "github.com/ev-dev-labs/teslasync/internal/api/apikey"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
+	apiauth "github.com/ev-dev-labs/teslasync/internal/api/auth"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
 	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
@@ -363,7 +364,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			logAuditFromRequest(db, r, "", action, "geofence", entityID, detail)
 		},
 	))
-	authHandler := NewAuthHandler(db, teslaClient, opt.Encryptor)
+	authHandler := apiauth.NewHandler(db, teslaClient, opt.Encryptor)
 	// Phase-46 / Prompt 31 — Sudo step-up. Construct the in-memory
 	// token store and the reauth HTTP handler once and share them
 	// across the route table. The store is the source of truth for
