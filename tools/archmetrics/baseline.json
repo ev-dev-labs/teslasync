@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T23:03:34Z",
+  "generated_at": "2026-05-28T23:36:25Z",
   "go_version": "go1.26.1",
-  "commit_sha": "8d81e76406af98fe5e322d405b1dfd0964da43ec",
+  "commit_sha": "d8ccd3897c8a3706cf7c9ef71afd230ef7dc1808",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 209,
-      "test_files": 128,
-      "loc": 100205,
+      "go_files": 195,
+      "test_files": 114,
+      "loc": 90213,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2618,6 +2618,9 @@
         "internal/ai/tools/yir",
         "internal/alertmsg",
         "internal/api",
+        "internal/api/adminfeedback",
+        "internal/api/adminlogstream",
+        "internal/api/adminmaintenance",
         "internal/api/anomaly",
         "internal/api/apibulk",
         "internal/api/apicalllog",
@@ -2629,6 +2632,8 @@
         "internal/api/auth",
         "internal/api/authsession",
         "internal/api/backup",
+        "internal/api/chartannotation",
+        "internal/api/dashboardlayout",
         "internal/api/dataquality",
         "internal/api/diagnostic",
         "internal/api/dlq",
@@ -2638,6 +2643,7 @@
         "internal/api/gasprice",
         "internal/api/geocode",
         "internal/api/geofence",
+        "internal/api/guard",
         "internal/api/httpx",
         "internal/api/impersonate",
         "internal/api/ingestxray",
@@ -2649,11 +2655,17 @@
         "internal/api/openapi",
         "internal/api/periodstats",
         "internal/api/pinned",
+        "internal/api/push",
+        "internal/api/queuestatus",
         "internal/api/quiethours",
         "internal/api/ratelimit",
+        "internal/api/rbac",
         "internal/api/savedviews",
+        "internal/api/scheduledexports",
         "internal/api/search",
         "internal/api/search/searchtest",
+        "internal/api/session",
+        "internal/api/settingsreset",
         "internal/api/signalinspect",
         "internal/api/signalscatalog",
         "internal/api/slo",
@@ -2665,8 +2677,10 @@
         "internal/api/teslauserconfig",
         "internal/api/teslauserorder",
         "internal/api/teslauserprofile",
+        "internal/api/totp",
         "internal/api/trip",
         "internal/api/tripsdetail",
+        "internal/api/vampiredrain",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
         "internal/api/vehicleconfig",
@@ -2747,7 +2761,6 @@
         "internal/models/automation",
         "internal/models/charging",
         "internal/models/chatbot",
-        "internal/models/dashboard",
         "internal/models/drive",
         "internal/models/export",
         "internal/models/geo",
@@ -2786,12 +2799,6 @@
       ],
       "files": [
         "acceptance_test.go",
-        "admin_feedback_handler.go",
-        "admin_feedback_handler_test.go",
-        "admin_log_stream_handler.go",
-        "admin_log_stream_handler_test.go",
-        "admin_maintenance_handler.go",
-        "admin_maintenance_handler_test.go",
         "ai_admin_handler.go",
         "ai_admin_handler_test.go",
         "ai_alert_handler.go",
@@ -2969,8 +2976,6 @@
         "charging_optimizer_handler_dtos.go",
         "charging_telemetry_handler.go",
         "charging_telemetry_handler_test.go",
-        "chart_annotation_handler.go",
-        "chart_annotation_handler_test.go",
         "chatbot_handler.go",
         "chatbot_handler_chat.go",
         "chatbot_handler_dtos.go",
@@ -2983,8 +2988,6 @@
         "computed_metrics.go",
         "converters.go",
         "cost_forecast_handler.go",
-        "dashboard_layout_handler.go",
-        "dashboard_layout_handler_test.go",
         "data_repair_handler.go",
         "devtools_handler.go",
         "devtools_handler_database.go",
@@ -3018,8 +3021,6 @@
         "fsm_handler.go",
         "fsm_handler_dtos.go",
         "fsm_handler_query.go",
-        "guard_handler.go",
-        "guard_handler_test.go",
         "handlers_test.go",
         "health.go",
         "health_test.go",
@@ -3037,16 +3038,10 @@
         "motor_handler.go",
         "motor_handler_test.go",
         "polling_handler.go",
-        "push_handler.go",
-        "push_handler_test.go",
-        "queue_status_handler.go",
-        "queue_status_handler_test.go",
         "range_projection_handler.go",
         "range_projection_handler_compute.go",
         "range_projection_handler_dtos.go",
         "range_projection_handler_test.go",
-        "rbac_handler.go",
-        "rbac_handler_test.go",
         "regen_handler.go",
         "route_efficiency_handler.go",
         "router.go",
@@ -3058,20 +3053,14 @@
         "safe.go",
         "safety_handler.go",
         "safety_handler_test.go",
-        "scheduled_exports_handler.go",
-        "scheduled_exports_handler_test.go",
         "security_handler.go",
         "security_handler_test.go",
         "security_validation_test.go",
-        "session_handler.go",
-        "session_handler_test.go",
         "settings_export_handler.go",
         "settings_export_handler_test.go",
         "settings_handler.go",
         "settings_import_handler.go",
         "settings_import_handler_test.go",
-        "settings_reset_handler.go",
-        "settings_reset_handler_test.go",
         "share_handler.go",
         "sleep_handler.go",
         "speed_profile_handler.go",
@@ -3109,19 +3098,71 @@
         "tesla_energy_history_handler_query.go",
         "tire_pressure_handler.go",
         "tire_pressure_handler_test.go",
-        "totp_handler.go",
-        "totp_handler_test.go",
         "trip_planner_handler.go",
         "trip_planner_handler_compute.go",
         "trip_planner_handler_dtos.go",
         "trip_planner_handler_test.go",
         "user_preference_handler.go",
         "user_preference_handler_test.go",
-        "vampire_drain_handler.go",
-        "vampire_drain_handler_test.go",
         "watch_handler.go",
         "webhook_handler.go",
         "year_review_handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/adminfeedback",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 680,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/config",
+        "internal/database",
+        "internal/database/user",
+        "internal/integrations"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/adminlogstream",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 688,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/platform"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/adminmaintenance",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 604,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/config",
+        "internal/database/system"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -3326,6 +3367,46 @@
       ]
     },
     {
+      "path": "internal/api/chartannotation",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 827,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/admin",
+        "internal/models/dashboard"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/dashboardlayout",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 754,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/admin",
+        "internal/models/dashboard"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
       "path": "internal/api/dataquality",
       "go_files": 2,
       "test_files": 0,
@@ -3487,6 +3568,27 @@
       ],
       "files": [
         "bulk_handler.go",
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/guard",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1090,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/config",
+        "internal/database/system",
+        "internal/database/vehicle",
+        "internal/models/vehicle",
+        "internal/tesla"
+      ],
+      "files": [
         "doc.go",
         "handler.go",
         "handler_test.go"
@@ -3702,6 +3804,43 @@
       ]
     },
     {
+      "path": "internal/api/push",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 608,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/notification",
+        "internal/models",
+        "internal/webpush"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/queuestatus",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 628,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database/worker"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
       "path": "internal/api/quiethours",
       "go_files": 2,
       "test_files": 1,
@@ -3742,6 +3881,24 @@
       ]
     },
     {
+      "path": "internal/api/rbac",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 684,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/auth",
+        "internal/database/auth"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
       "path": "internal/api/savedviews",
       "go_files": 2,
       "test_files": 1,
@@ -3759,6 +3916,23 @@
         "doc.go",
         "handler.go",
         "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/scheduledexports",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 737,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database/export"
+      ],
+      "files": [
+        "doc.go",
+        "scheduled_exports_handler.go",
+        "scheduled_exports_handler_test.go"
       ]
     },
     {
@@ -3791,6 +3965,41 @@
       "files": [
         "doc.go",
         "fake.go"
+      ]
+    },
+    {
+      "path": "internal/api/session",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 544,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/auth",
+        "internal/database/auth"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/settingsreset",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 391,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database/settings"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -3997,6 +4206,24 @@
       ]
     },
     {
+      "path": "internal/api/totp",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1268,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/crypto",
+        "internal/database/auth"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
       "path": "internal/api/trip",
       "go_files": 2,
       "test_files": 0,
@@ -4046,6 +4273,23 @@
       "files": [
         "doc.go",
         "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/vampiredrain",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 726,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database/drive"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -7979,9 +8223,6 @@
       "presets.go"
     ],
     "internal/api": [
-      "admin_feedback_handler.go",
-      "admin_log_stream_handler.go",
-      "admin_maintenance_handler.go",
       "ai_admin_handler.go",
       "ai_alert_handler.go",
       "ai_alert_tuning_handler.go",
@@ -8082,7 +8323,6 @@
       "charging_optimizer_handler_compute.go",
       "charging_optimizer_handler_dtos.go",
       "charging_telemetry_handler.go",
-      "chart_annotation_handler.go",
       "chatbot_handler.go",
       "chatbot_handler_chat.go",
       "chatbot_handler_dtos.go",
@@ -8093,7 +8333,6 @@
       "computed_metrics.go",
       "converters.go",
       "cost_forecast_handler.go",
-      "dashboard_layout_handler.go",
       "data_repair_handler.go",
       "devtools_handler.go",
       "devtools_handler_database.go",
@@ -8120,7 +8359,6 @@
       "fsm_handler.go",
       "fsm_handler_dtos.go",
       "fsm_handler_query.go",
-      "guard_handler.go",
       "health.go",
       "helpers.go",
       "import_handler.go",
@@ -8131,12 +8369,9 @@
       "middleware.go",
       "motor_handler.go",
       "polling_handler.go",
-      "push_handler.go",
-      "queue_status_handler.go",
       "range_projection_handler.go",
       "range_projection_handler_compute.go",
       "range_projection_handler_dtos.go",
-      "rbac_handler.go",
       "regen_handler.go",
       "route_efficiency_handler.go",
       "router.go",
@@ -8146,13 +8381,10 @@
       "rule_engine.go",
       "safe.go",
       "safety_handler.go",
-      "scheduled_exports_handler.go",
       "security_handler.go",
-      "session_handler.go",
       "settings_export_handler.go",
       "settings_handler.go",
       "settings_import_handler.go",
-      "settings_reset_handler.go",
       "share_handler.go",
       "sleep_handler.go",
       "speed_profile_handler.go",
@@ -8179,15 +8411,25 @@
       "tesla_energy_history_handler_dtos.go",
       "tesla_energy_history_handler_query.go",
       "tire_pressure_handler.go",
-      "totp_handler.go",
       "trip_planner_handler.go",
       "trip_planner_handler_compute.go",
       "trip_planner_handler_dtos.go",
       "user_preference_handler.go",
-      "vampire_drain_handler.go",
       "watch_handler.go",
       "webhook_handler.go",
       "year_review_handler.go"
+    ],
+    "internal/api/adminfeedback": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/adminlogstream": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/adminmaintenance": [
+      "doc.go",
+      "handler.go"
     ],
     "internal/api/anomaly": [
       "doc.go",
@@ -8235,6 +8477,14 @@
       "handler.go",
       "restore_handler.go"
     ],
+    "internal/api/chartannotation": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/dashboardlayout": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/dataquality": [
       "doc.go",
       "handler.go"
@@ -8269,6 +8519,10 @@
     ],
     "internal/api/geofence": [
       "bulk_handler.go",
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/guard": [
       "doc.go",
       "handler.go"
     ],
@@ -8322,6 +8576,14 @@
       "doc.go",
       "handler.go"
     ],
+    "internal/api/push": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/queuestatus": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/quiethours": [
       "doc.go",
       "handler.go"
@@ -8330,9 +8592,17 @@
       "doc.go",
       "handler.go"
     ],
+    "internal/api/rbac": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/savedviews": [
       "doc.go",
       "handler.go"
+    ],
+    "internal/api/scheduledexports": [
+      "doc.go",
+      "scheduled_exports_handler.go"
     ],
     "internal/api/search": [
       "doc.go",
@@ -8341,6 +8611,14 @@
     "internal/api/search/searchtest": [
       "doc.go",
       "fake.go"
+    ],
+    "internal/api/session": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/settingsreset": [
+      "doc.go",
+      "handler.go"
     ],
     "internal/api/signalinspect": [
       "catalog.go",
@@ -8388,6 +8666,10 @@
       "doc.go",
       "handler.go"
     ],
+    "internal/api/totp": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/trip": [
       "doc.go",
       "handler.go"
@@ -8397,6 +8679,10 @@
       "handler.go"
     ],
     "internal/api/user": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/vampiredrain": [
       "doc.go",
       "handler.go"
     ],
@@ -9559,14 +9845,15 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 209,
-      "flat_parent_test_files": 128,
+      "flat_parent_go_files": 195,
+      "flat_parent_test_files": 114,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",
         "anomaly",
         "lifetime",
         "mileage",
+        "vampiredrain",
         "tco",
         "dataquality",
         "search",
@@ -9589,7 +9876,6 @@
         "analytics",
         "sleep",
         "regen",
-        "vampiredrain",
         "tempimpact",
         "speed",
         "routeeff",

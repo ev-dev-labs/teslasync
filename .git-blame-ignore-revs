@@ -266,3 +266,17 @@ dd8e91f3cef4e8d05e22d62d000c5f8cda39da29 # refactor(R2d.43): carve internal/api/
 e4d35bc20e9145075d81dc1f240bb9ce453aef90 # refactor(R2d.47): carve internal/api/diagnostic subpackage
 1043a85d47c96b390a2950f2b28ee5caeb2b988a # refactor(R2d.45): carve internal/api/mileage subpackage
 8d81e76406af98fe5e322d405b1dfd0964da43ec # refactor(R2d.46): carve internal/api/anomaly subpackage
+ca595dc100cf9d443be43c411978ca4e1ddb56a2 # refactor(R2d.58): carve internal/api/totp subpackage
+fb63443941d888e9140e7ea95bd0d2bb46ce6305 # refactor(R2d.55): carve internal/api/rbac subpackage
+2c03875d3136fddef3be2b958a928bcd71976981 # refactor(R2d.57): carve internal/api/session subpackage
+cba85ea075766ae13d47404399b9efa40808d76f # refactor(R2d.48): carve internal/api/adminfeedback subpackage
+7b719ec699aa833559eaf4700346a6ab84c9ebde # refactor(R2d.49): carve internal/api/adminlogstream subpackage
+476958014f3b137cedd136a5217d0bb3bffde90a # refactor(R2d.50): carve internal/api/adminmaintenance subpackage
+80cfaacc27eb623dce28c2992d34cd8fafbbcdfb # refactor(R2d.51): carve internal/api/chartannotation subpackage
+34b0dceaf4ac2255bbfb1edcf501f08bffae34c9 # refactor(R2d.52): carve internal/api/dashboardlayout subpackage
+6efc81320f19f03dc227d9fecf7e177635e1ca34 # refactor(R2d.53): carve internal/api/guard subpackage
+02e23ce03e351484f3202b02046502683f022d62 # refactor(R2d.54): carve internal/api/push subpackage
+fdbc029402009adf784a0361fd76e04b424b408f # refactor(R2d.56): carve internal/api/scheduledexports subpackage
+a97e4ea536e7017b5e3c333c1a78a731295721cb # refactor(R2d.59): carve internal/api/vampiredrain subpackage
+bdc3d36790b1dee11ab1efc9f2fe77c5550d5872 # refactor(R2d.60): carve internal/api/settingsreset subpackage
+d8ccd3897c8a3706cf7c9ef71afd230ef7dc1808 # refactor(R2d.61): carve internal/api/queuestatus subpackage

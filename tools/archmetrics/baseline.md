@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T23:03:36Z, Go go1.26.1, commit 8d81e76406af98fe5e322d405b1dfd0964da43ec_
+_Generated 2026-05-28T23:36:27Z, Go go1.26.1, commit d8ccd3897c8a3706cf7c9ef71afd230ef7dc1808_
 
 ## Summary
 
-- Packages: 351
+- Packages: 365
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 378157
+- Total non-blank LOC under cmd/+internal/+tools/: 378394
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,10 @@ _Generated 2026-05-28T23:03:36Z, Go go1.26.1, commit 8d81e76406af98fe5e322d405b1
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 209 | 128 | 100205 | yes | handler |
+| internal/api | 195 | 114 | 90213 | yes | handler |
+| internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
+| internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
+| internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
 | internal/api/anomaly | 2 | 2 | 801 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
 | internal/api/apicalllog | 2 | 0 | 69 | yes | handler |
@@ -182,6 +185,8 @@ _Generated 2026-05-28T23:03:36Z, Go go1.26.1, commit 8d81e76406af98fe5e322d405b1
 | internal/api/auth | 2 | 0 | 152 | yes | handler |
 | internal/api/authsession | 2 | 1 | 365 | yes | handler |
 | internal/api/backup | 3 | 1 | 530 | yes | handler |
+| internal/api/chartannotation | 2 | 1 | 827 | yes | handler |
+| internal/api/dashboardlayout | 2 | 1 | 754 | yes | handler |
 | internal/api/dataquality | 2 | 0 | 65 | yes | handler |
 | internal/api/diagnostic | 2 | 1 | 933 | yes | handler |
 | internal/api/dlq | 2 | 1 | 515 | yes | handler |
@@ -191,6 +196,7 @@ _Generated 2026-05-28T23:03:36Z, Go go1.26.1, commit 8d81e76406af98fe5e322d405b1
 | internal/api/gasprice | 2 | 0 | 138 | yes | handler |
 | internal/api/geocode | 2 | 0 | 77 | yes | handler |
 | internal/api/geofence | 3 | 1 | 846 | yes | handler |
+| internal/api/guard | 2 | 1 | 1090 | yes | handler |
 | internal/api/httpx | 3 | 2 | 360 | yes | handler |
 | internal/api/impersonate | 2 | 1 | 910 | yes | handler |
 | internal/api/ingestxray | 2 | 1 | 429 | yes | handler |
@@ -202,11 +208,17 @@ _Generated 2026-05-28T23:03:36Z, Go go1.26.1, commit 8d81e76406af98fe5e322d405b1
 | internal/api/openapi | 2 | 0 | 38 | yes | handler |
 | internal/api/periodstats | 2 | 0 | 157 | yes | handler |
 | internal/api/pinned | 2 | 1 | 673 | yes | handler |
+| internal/api/push | 2 | 1 | 608 | yes | handler |
+| internal/api/queuestatus | 2 | 1 | 628 | yes | handler |
 | internal/api/quiethours | 2 | 1 | 589 | yes | handler |
 | internal/api/ratelimit | 2 | 1 | 533 | yes | handler |
+| internal/api/rbac | 2 | 1 | 684 | yes | handler |
 | internal/api/savedviews | 2 | 1 | 896 | yes | handler |
+| internal/api/scheduledexports | 2 | 1 | 737 | yes | handler |
 | internal/api/search | 2 | 1 | 1157 | yes | handler |
 | internal/api/search/searchtest | 2 | 0 | 132 | yes | platform |
+| internal/api/session | 2 | 1 | 544 | yes | handler |
+| internal/api/settingsreset | 2 | 1 | 391 | yes | handler |
 | internal/api/signalinspect | 3 | 1 | 1228 | yes | handler |
 | internal/api/signalscatalog | 2 | 1 | 976 | yes | handler |
 | internal/api/slo | 2 | 0 | 46 | yes | handler |
@@ -218,9 +230,11 @@ _Generated 2026-05-28T23:03:36Z, Go go1.26.1, commit 8d81e76406af98fe5e322d405b1
 | internal/api/teslauserconfig | 2 | 0 | 116 | yes | handler |
 | internal/api/teslauserorder | 2 | 0 | 123 | yes | handler |
 | internal/api/teslauserprofile | 2 | 0 | 96 | yes | handler |
+| internal/api/totp | 2 | 1 | 1268 | yes | handler |
 | internal/api/trip | 2 | 0 | 106 | yes | handler |
 | internal/api/tripsdetail | 2 | 1 | 458 | yes | handler |
 | internal/api/user | 2 | 0 | 170 | yes | handler |
+| internal/api/vampiredrain | 2 | 1 | 726 | yes | handler |
 | internal/api/vehicle | 2 | 1 | 616 | yes | handler |
 | internal/api/vehicleaccess | 2 | 0 | 448 | yes | handler |
 | internal/api/vehicleconfig | 2 | 1 | 527 | yes | handler |
@@ -407,7 +421,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 209 / 128 | 59 | 16 | 43 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 195 / 114 | 59 | 17 | 42 |
 
 ### `internal/models` detail
 
@@ -519,6 +533,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/anomaly`
 - `internal/api/lifetime`
 - `internal/api/mileage`
+- `internal/api/vampiredrain`
 - `internal/api/tco`
 - `internal/api/dataquality`
 - `internal/api/search`
@@ -541,7 +556,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/analytics`
 - `internal/api/sleep`
 - `internal/api/regen`
-- `internal/api/vampiredrain`
 - `internal/api/tempimpact`
 - `internal/api/speed`
 - `internal/api/routeeff`
