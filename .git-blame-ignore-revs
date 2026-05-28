@@ -134,3 +134,6 @@ c656262e32e98968b91f86ecc2ce7ef8d6e26808
 
 # R4.1 sharing/admin/gdpr triple carve
 4aa1aa25fac3c8f362383f4d2a747a4ac12bc97c
+
+# R4.2 admin extension (chart_annotation, pinned, places_cache, saved_views)
+44db40e0dc0922f60c62c6acf27f51415b829fc5
