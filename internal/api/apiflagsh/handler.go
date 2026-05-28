@@ -21,7 +21,7 @@
 //   - Reads are NOT audited (hot-path; forward-auth identity is the
 //     accountability surface).
 
-package api
+package apiflagsh
 
 import (
 	"context"
@@ -35,20 +35,21 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
 )
 
-// FlagsHandler serves the dynamic feature-flag admin surface.
-type FlagsHandler struct {
+// Handler serves the dynamic feature-flag admin surface.
+type Handler struct {
 	store           *flags.Store
 	audit           *auditdb.FeatureFlagChangesRepo
 	principalHeader string
 }
 
-// NewFlagsHandler constructs a handler bound to store + audit.
-func NewFlagsHandler(store *flags.Store, audit *auditdb.FeatureFlagChangesRepo, principalHeader string) *FlagsHandler {
-	return &FlagsHandler{
+// NewHandler constructs a handler bound to store + audit.
+func NewHandler(store *flags.Store, audit *auditdb.FeatureFlagChangesRepo, principalHeader string) *Handler {
+	return &Handler{
 		store:           store,
 		audit:           audit,
 		principalHeader: principalHeader,
@@ -83,14 +84,14 @@ type FlagWriteResponse struct {
 }
 
 // List serves GET /system/flags.
-func (h *FlagsHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "flag store not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "flag store not configured")
 		return
 	}
 	values, err := h.store.All(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	out := FlagsListResponse{
@@ -100,46 +101,46 @@ func (h *FlagsHandler) List(w http.ResponseWriter, r *http.Request) {
 	for k, v := range values {
 		out.Flags = append(out.Flags, FlagListEntry{Key: k, Value: v})
 	}
-	writeJSON(w, http.StatusOK, out)
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // Get serves GET /system/flags/{key}.
-func (h *FlagsHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "flag store not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "flag store not configured")
 		return
 	}
 	key := chi.URLParam(r, "key")
 	if strings.TrimSpace(key) == "" {
-		writeError(w, http.StatusBadRequest, "key is required")
+		httpx.WriteError(w, http.StatusBadRequest, "key is required")
 		return
 	}
 	v, err := h.store.Get(r.Context(), key)
 	if errors.Is(err, flags.ErrNotFound) {
-		writeError(w, http.StatusNotFound, "flag not set")
+		httpx.WriteError(w, http.StatusNotFound, "flag not set")
 		return
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, FlagListEntry{Key: key, Value: v})
+	httpx.WriteJSON(w, http.StatusOK, FlagListEntry{Key: key, Value: v})
 }
 
 // Set serves PUT /system/flags/{key}.
-func (h *FlagsHandler) Set(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Set(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "flag store not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "flag store not configured")
 		return
 	}
 	key := chi.URLParam(r, "key")
 	if strings.TrimSpace(key) == "" {
-		writeError(w, http.StatusBadRequest, "key is required")
+		httpx.WriteError(w, http.StatusBadRequest, "key is required")
 		return
 	}
 	var body FlagSetRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	defer r.Body.Close()
@@ -148,7 +149,7 @@ func (h *FlagsHandler) Set(w http.ResponseWriter, r *http.Request) {
 
 	prev, _, err := h.store.Set(r.Context(), key, body.Value)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -162,7 +163,7 @@ func (h *FlagsHandler) Set(w http.ResponseWriter, r *http.Request) {
 		Reason:    body.Reason,
 		TraceID:   traceIDFromContext(r.Context()),
 	})
-	writeJSON(w, http.StatusOK, FlagWriteResponse{
+	httpx.WriteJSON(w, http.StatusOK, FlagWriteResponse{
 		Key:      key,
 		OldValue: prev,
 		NewValue: body.Value,
@@ -171,21 +172,21 @@ func (h *FlagsHandler) Set(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete serves DELETE /system/flags/{key}.
-func (h *FlagsHandler) Delete(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "flag store not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "flag store not configured")
 		return
 	}
 	key := chi.URLParam(r, "key")
 	if strings.TrimSpace(key) == "" {
-		writeError(w, http.StatusBadRequest, "key is required")
+		httpx.WriteError(w, http.StatusBadRequest, "key is required")
 		return
 	}
 	reason := strings.TrimSpace(r.URL.Query().Get("reason"))
 
 	prev, hadPrev, err := h.store.Delete(r.Context(), key)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -205,7 +206,7 @@ func (h *FlagsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 		// signal it via 200 + Deleted=false so the SPA can show
 		// "nothing changed".
 	}
-	writeJSON(w, status, FlagWriteResponse{
+	httpx.WriteJSON(w, status, FlagWriteResponse{
 		Key:      key,
 		OldValue: prev,
 		Deleted:  hadPrev,
@@ -215,19 +216,19 @@ func (h *FlagsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 // Changes serves both GET /system/flags/changes and
 // GET /system/flags/{key}/changes.
-func (h *FlagsHandler) Changes(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Changes(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.audit == nil {
-		writeError(w, http.StatusServiceUnavailable, "flag audit repo not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "flag audit repo not configured")
 		return
 	}
 	key := chi.URLParam(r, "key") // empty for global endpoint
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
 	rows, err := h.audit.Recent(r.Context(), key, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"count":    len(rows),
 		"flag_key": key,
 		"limit":    limit,
@@ -237,7 +238,7 @@ func (h *FlagsHandler) Changes(w http.ResponseWriter, r *http.Request) {
 
 // --- helpers ---
 
-func (h *FlagsHandler) tryAudit(r *http.Request, in auditdb.FeatureFlagChangeInsert) int64 {
+func (h *Handler) tryAudit(r *http.Request, in auditdb.FeatureFlagChangeInsert) int64 {
 	if h == nil || h.audit == nil {
 		return 0
 	}

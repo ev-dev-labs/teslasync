@@ -7,7 +7,7 @@
 // because its constructor requires a *DB; the /changes endpoint
 // degrades to 503 in that branch which we cover as a separate test.
 
-package api
+package apiflagsh
 
 import (
 	"context"
@@ -38,12 +38,12 @@ func newFlagsTestStore(t *testing.T) (*flags.Store, func()) {
 	return store, cleanup
 }
 
-func TestFlagsHandler_List_Empty_ReturnsZero(t *testing.T) {
+func TestHandler_List_Empty_ReturnsZero(t *testing.T) {
 	t.Parallel()
 	store, cleanup := newFlagsTestStore(t)
 	defer cleanup()
 
-	h := NewFlagsHandler(store, nil, "X-Forwarded-User")
+	h := NewHandler(store, nil, "X-Forwarded-User")
 	req := httptest.NewRequest("GET", "/system/flags", nil)
 	rec := httptest.NewRecorder()
 	h.List(rec, req)
@@ -62,7 +62,7 @@ func TestFlagsHandler_List_Empty_ReturnsZero(t *testing.T) {
 	}
 }
 
-func TestFlagsHandler_SetGetDelete_Roundtrip(t *testing.T) {
+func TestHandler_SetGetDelete_Roundtrip(t *testing.T) {
 	t.Parallel()
 	store, cleanup := newFlagsTestStore(t)
 	defer cleanup()
@@ -72,7 +72,7 @@ func TestFlagsHandler_SetGetDelete_Roundtrip(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	h := NewFlagsHandler(store, nil, "X-Forwarded-User")
+	h := NewHandler(store, nil, "X-Forwarded-User")
 	r := chi.NewRouter()
 	r.Get("/system/flags/{key}", h.Get)
 	r.Put("/system/flags/{key}", h.Set)
@@ -129,12 +129,12 @@ func TestFlagsHandler_SetGetDelete_Roundtrip(t *testing.T) {
 	}
 }
 
-func TestFlagsHandler_Get_NotFound_Returns404(t *testing.T) {
+func TestHandler_Get_NotFound_Returns404(t *testing.T) {
 	t.Parallel()
 	store, cleanup := newFlagsTestStore(t)
 	defer cleanup()
 
-	h := NewFlagsHandler(store, nil, "X-Forwarded-User")
+	h := NewHandler(store, nil, "X-Forwarded-User")
 	r := chi.NewRouter()
 	r.Get("/system/flags/{key}", h.Get)
 	req := httptest.NewRequest("GET", "/system/flags/nonexistent.flag", nil)
@@ -145,11 +145,11 @@ func TestFlagsHandler_Get_NotFound_Returns404(t *testing.T) {
 	}
 }
 
-func TestFlagsHandler_Set_InvalidJSON_Returns400(t *testing.T) {
+func TestHandler_Set_InvalidJSON_Returns400(t *testing.T) {
 	t.Parallel()
 	store, cleanup := newFlagsTestStore(t)
 	defer cleanup()
-	h := NewFlagsHandler(store, nil, "X-Forwarded-User")
+	h := NewHandler(store, nil, "X-Forwarded-User")
 	r := chi.NewRouter()
 	r.Put("/system/flags/{key}", h.Set)
 	req := httptest.NewRequest("PUT", "/system/flags/a.b", strings.NewReader("not json"))
@@ -160,9 +160,9 @@ func TestFlagsHandler_Set_InvalidJSON_Returns400(t *testing.T) {
 	}
 }
 
-func TestFlagsHandler_NoStore_Returns503(t *testing.T) {
+func TestHandler_NoStore_Returns503(t *testing.T) {
 	t.Parallel()
-	h := NewFlagsHandler(nil, nil, "X-Forwarded-User")
+	h := NewHandler(nil, nil, "X-Forwarded-User")
 	req := httptest.NewRequest("GET", "/system/flags", nil)
 	rec := httptest.NewRecorder()
 	h.List(rec, req)
@@ -171,11 +171,11 @@ func TestFlagsHandler_NoStore_Returns503(t *testing.T) {
 	}
 }
 
-func TestFlagsHandler_Changes_NoRepo_Returns503(t *testing.T) {
+func TestHandler_Changes_NoRepo_Returns503(t *testing.T) {
 	t.Parallel()
 	store, cleanup := newFlagsTestStore(t)
 	defer cleanup()
-	h := NewFlagsHandler(store, nil, "X-Forwarded-User")
+	h := NewHandler(store, nil, "X-Forwarded-User")
 	r := chi.NewRouter()
 	r.Get("/system/flags/changes", h.Changes)
 	req := httptest.NewRequest("GET", "/system/flags/changes", nil)
