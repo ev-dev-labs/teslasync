@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -75,10 +77,10 @@ type fakeRules struct {
 func (f *fakeRules) GetAll(ctx context.Context) ([]*alertmodel.AlertRule, error) { return f.rules, nil }
 
 type fakeNotif struct {
-	logs []*models.NotificationLog
+	logs []*notificationmodel.NotificationLog
 }
 
-func (f *fakeNotif) GetLogs(ctx context.Context, limit, off int) ([]*models.NotificationLog, error) {
+func (f *fakeNotif) GetLogs(ctx context.Context, limit, off int) ([]*notificationmodel.NotificationLog, error) {
 	return f.logs, nil
 }
 

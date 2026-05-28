@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 )
 
 // NotificationScheduleRepo manages notification schedules.
@@ -16,7 +16,7 @@ func NewNotificationScheduleRepo(db *DB) *NotificationScheduleRepo {
 	return &NotificationScheduleRepo{db: db}
 }
 
-func (r *NotificationScheduleRepo) Create(ctx context.Context, s *models.NotificationSchedule) error {
+func (r *NotificationScheduleRepo) Create(ctx context.Context, s *notificationmodel.NotificationSchedule) error {
 	query := `INSERT INTO notification_schedules (channel_id, title, message, cron_expr, scheduled_at, next_run_at, enabled)
 		VALUES ($1, $2, $3, $4, $5, COALESCE($5, NOW()), $6) RETURNING id, created_at`
 	return r.db.Pool.QueryRow(ctx, query,
@@ -24,7 +24,7 @@ func (r *NotificationScheduleRepo) Create(ctx context.Context, s *models.Notific
 	).Scan(&s.ID, &s.CreatedAt)
 }
 
-func (r *NotificationScheduleRepo) List(ctx context.Context) ([]*models.NotificationSchedule, error) {
+func (r *NotificationScheduleRepo) List(ctx context.Context) ([]*notificationmodel.NotificationSchedule, error) {
 	query := `SELECT id, channel_id, title, message, cron_expr, scheduled_at, last_run_at, next_run_at, enabled, created_at, updated_at
 		FROM notification_schedules ORDER BY created_at DESC`
 	rows, err := r.db.Pool.Query(ctx, query)
@@ -32,9 +32,9 @@ func (r *NotificationScheduleRepo) List(ctx context.Context) ([]*models.Notifica
 		return nil, err
 	}
 	defer rows.Close()
-	var result []*models.NotificationSchedule
+	var result []*notificationmodel.NotificationSchedule
 	for rows.Next() {
-		s := &models.NotificationSchedule{}
+		s := &notificationmodel.NotificationSchedule{}
 		if err := rows.Scan(&s.ID, &s.ChannelID, &s.Title, &s.Message, &s.CronExpr,
 			&s.ScheduledAt, &s.LastRunAt, &s.NextRunAt, &s.Enabled, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
@@ -44,7 +44,7 @@ func (r *NotificationScheduleRepo) List(ctx context.Context) ([]*models.Notifica
 	return result, nil
 }
 
-func (r *NotificationScheduleRepo) GetDue(ctx context.Context) ([]*models.NotificationSchedule, error) {
+func (r *NotificationScheduleRepo) GetDue(ctx context.Context) ([]*notificationmodel.NotificationSchedule, error) {
 	query := `SELECT id, channel_id, title, message, cron_expr, scheduled_at, last_run_at, next_run_at, enabled, created_at, updated_at
 		FROM notification_schedules WHERE enabled = true AND next_run_at <= $1 ORDER BY next_run_at`
 	rows, err := r.db.Pool.Query(ctx, query, time.Now().UTC())
@@ -52,9 +52,9 @@ func (r *NotificationScheduleRepo) GetDue(ctx context.Context) ([]*models.Notifi
 		return nil, err
 	}
 	defer rows.Close()
-	var result []*models.NotificationSchedule
+	var result []*notificationmodel.NotificationSchedule
 	for rows.Next() {
-		s := &models.NotificationSchedule{}
+		s := &notificationmodel.NotificationSchedule{}
 		if err := rows.Scan(&s.ID, &s.ChannelID, &s.Title, &s.Message, &s.CronExpr,
 			&s.ScheduledAt, &s.LastRunAt, &s.NextRunAt, &s.Enabled, &s.CreatedAt, &s.UpdatedAt); err != nil {
 			return nil, err
@@ -93,7 +93,7 @@ func NewNotificationPreferenceRepo(db *DB) *NotificationPreferenceRepo {
 	return &NotificationPreferenceRepo{db: db}
 }
 
-func (r *NotificationPreferenceRepo) GetByChannel(ctx context.Context, channelID int64) ([]*models.NotificationPreference, error) {
+func (r *NotificationPreferenceRepo) GetByChannel(ctx context.Context, channelID int64) ([]*notificationmodel.NotificationPreference, error) {
 	query := `SELECT id, channel_id, event_type, enabled, created_at
 		FROM notification_preferences WHERE channel_id = $1 ORDER BY event_type`
 	rows, err := r.db.Pool.Query(ctx, query, channelID)
@@ -101,9 +101,9 @@ func (r *NotificationPreferenceRepo) GetByChannel(ctx context.Context, channelID
 		return nil, err
 	}
 	defer rows.Close()
-	var result []*models.NotificationPreference
+	var result []*notificationmodel.NotificationPreference
 	for rows.Next() {
-		p := &models.NotificationPreference{}
+		p := &notificationmodel.NotificationPreference{}
 		if err := rows.Scan(&p.ID, &p.ChannelID, &p.EventType, &p.Enabled, &p.CreatedAt); err != nil {
 			return nil, err
 		}
@@ -158,7 +158,7 @@ func (r *NotificationMetricRepo) Record(ctx context.Context, channelID int64, su
 	return err
 }
 
-func (r *NotificationMetricRepo) GetByChannel(ctx context.Context, channelID int64, days int) ([]*models.NotificationMetric, error) {
+func (r *NotificationMetricRepo) GetByChannel(ctx context.Context, channelID int64, days int) ([]*notificationmodel.NotificationMetric, error) {
 	query := `SELECT id, channel_id, date, total_sent, total_failed, avg_latency_ms
 		FROM notification_metrics WHERE channel_id = $1 AND date >= CURRENT_DATE - $2::INTEGER
 		ORDER BY date DESC`
@@ -167,9 +167,9 @@ func (r *NotificationMetricRepo) GetByChannel(ctx context.Context, channelID int
 		return nil, err
 	}
 	defer rows.Close()
-	var result []*models.NotificationMetric
+	var result []*notificationmodel.NotificationMetric
 	for rows.Next() {
-		m := &models.NotificationMetric{}
+		m := &notificationmodel.NotificationMetric{}
 		if err := rows.Scan(&m.ID, &m.ChannelID, &m.Date, &m.TotalSent, &m.TotalFailed, &m.AvgLatencyMs); err != nil {
 			return nil, err
 		}

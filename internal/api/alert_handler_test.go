@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/go-chi/chi/v5"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 func TestAlertRuleContractRejectsForbiddenFields(t *testing.T) {
@@ -632,10 +632,10 @@ func cloneAlertRuleForTest(rule *alertmodel.AlertRule) *alertmodel.AlertRule {
 }
 
 type fakeNotificationRepo struct {
-	logs []*models.NotificationLog
+	logs []*notificationmodel.NotificationLog
 
 	// Phase-46 / Prompt 20 — alert ack + audit timeline state.
-	logsByID    map[int64]*models.NotificationLog
+	logsByID    map[int64]*notificationmodel.NotificationLog
 	eventsByID  map[int64][]*alertmodel.NotificationLogEvent
 	nextEventID int64
 
@@ -667,14 +667,14 @@ type commentCall struct {
 	note  string
 }
 
-func (f *fakeNotificationRepo) GetLogs(context.Context, int, int) ([]*models.NotificationLog, error) {
+func (f *fakeNotificationRepo) GetLogs(context.Context, int, int) ([]*notificationmodel.NotificationLog, error) {
 	if f.logs == nil {
-		return []*models.NotificationLog{}, nil
+		return []*notificationmodel.NotificationLog{}, nil
 	}
 	return f.logs, nil
 }
 
-func (f *fakeNotificationRepo) CreateLog(_ context.Context, log *models.NotificationLog) error {
+func (f *fakeNotificationRepo) CreateLog(_ context.Context, log *notificationmodel.NotificationLog) error {
 	if log == nil {
 		return errors.New("notification log is nil")
 	}
@@ -683,15 +683,15 @@ func (f *fakeNotificationRepo) CreateLog(_ context.Context, log *models.Notifica
 	return nil
 }
 
-func (f *fakeNotificationRepo) GetChannel(context.Context, int64) (*models.NotificationChannel, error) {
+func (f *fakeNotificationRepo) GetChannel(context.Context, int64) (*notificationmodel.NotificationChannel, error) {
 	return nil, nil
 }
 
-func (f *fakeNotificationRepo) GetAllChannels(context.Context) ([]*models.NotificationChannel, error) {
-	return []*models.NotificationChannel{}, nil
+func (f *fakeNotificationRepo) GetAllChannels(context.Context) ([]*notificationmodel.NotificationChannel, error) {
+	return []*notificationmodel.NotificationChannel{}, nil
 }
 
-func (f *fakeNotificationRepo) GetLog(_ context.Context, id int64) (*models.NotificationLog, error) {
+func (f *fakeNotificationRepo) GetLog(_ context.Context, id int64) (*notificationmodel.NotificationLog, error) {
 	if f.getLogErr != nil {
 		return nil, f.getLogErr
 	}
@@ -701,7 +701,7 @@ func (f *fakeNotificationRepo) GetLog(_ context.Context, id int64) (*models.Noti
 	return f.logsByID[id], nil
 }
 
-func (f *fakeNotificationRepo) AcknowledgeLog(_ context.Context, id int64, actor, note string) (*models.NotificationLog, bool, error) {
+func (f *fakeNotificationRepo) AcknowledgeLog(_ context.Context, id int64, actor, note string) (*notificationmodel.NotificationLog, bool, error) {
 	if f.ackErr != nil {
 		return nil, false, f.ackErr
 	}
@@ -734,7 +734,7 @@ func (f *fakeNotificationRepo) AcknowledgeLog(_ context.Context, id int64, actor
 	return row, true, nil
 }
 
-func (f *fakeNotificationRepo) ReopenLog(_ context.Context, id int64, actor string) (*models.NotificationLog, bool, error) {
+func (f *fakeNotificationRepo) ReopenLog(_ context.Context, id int64, actor string) (*notificationmodel.NotificationLog, bool, error) {
 	if f.reopenErr != nil {
 		return nil, false, f.reopenErr
 	}
@@ -833,7 +833,7 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	logs := []*models.NotificationLog{
+	logs := []*notificationmodel.NotificationLog{
 		{ID: 1001, AlertID: &ruleCritID, Title: "Battery is low", Message: "5%", Status: "sent", CreatedAt: now},
 		{ID: 1002, AlertID: &ruleInfoID, Title: "Door unlocked", Message: "front-left", Status: "failed", CreatedAt: now},
 		{ID: 1003, AlertID: nil, Title: "Test notification", Message: "hello", Status: "sent", CreatedAt: now},

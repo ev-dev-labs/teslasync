@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T03:56:44Z",
+  "generated_at": "2026-05-28T04:00:49Z",
   "go_version": "go1.26.1",
-  "commit_sha": "a74917fb0edc46002c5a2cff51f3c424573be942",
+  "commit_sha": "8a72c96423050fb3942b65964f58067cda7a9ef8",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -148,7 +148,7 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 522,
+      "loc": 523,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -158,6 +158,7 @@
         "internal/database",
         "internal/models",
         "internal/models/alert",
+        "internal/models/notification",
         "internal/notification",
         "internal/notification/computed",
         "internal/resilience",
@@ -1883,7 +1884,7 @@
       "path": "internal/ai/tools",
       "go_files": 58,
       "test_files": 51,
-      "loc": 47076,
+      "loc": 47078,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1895,7 +1896,8 @@
         "internal/ml/range",
         "internal/models",
         "internal/models/alert",
-        "internal/models/geo"
+        "internal/models/geo",
+        "internal/models/notification"
       ],
       "files": [
         "alert_builder.go",
@@ -2031,7 +2033,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126472,
+      "loc": 126473,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2151,6 +2153,7 @@
         "internal/models/chatbot",
         "internal/models/export",
         "internal/models/geo",
+        "internal/models/notification",
         "internal/models/settings",
         "internal/mqtt",
         "internal/notification",
@@ -2938,11 +2941,12 @@
       "path": "internal/automation/action",
       "go_files": 6,
       "test_files": 5,
-      "loc": 3822,
+      "loc": 3824,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/models",
+        "internal/models/notification",
         "internal/notification",
         "internal/tesla"
       ],
@@ -3015,6 +3019,7 @@
       "imports": [
         "internal/domain",
         "internal/models",
+        "internal/models/notification",
         "internal/notification",
         "internal/tesla"
       ],
@@ -3174,6 +3179,7 @@
         "internal/models/energy",
         "internal/models/export",
         "internal/models/geo",
+        "internal/models/notification",
         "internal/tracing"
       ],
       "files": [
@@ -3953,9 +3959,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 33,
+      "go_files": 32,
       "test_files": 1,
-      "loc": 2464,
+      "loc": 2363,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -3981,7 +3987,6 @@
         "notification_channel_email_webhook.go",
         "notification_channel_ntfy_pushover.go",
         "notification_channel_slack_telegram.go",
-        "notification_log.go",
         "pinned.go",
         "position.go",
         "push_subscription.go",
@@ -4090,6 +4095,20 @@
       ]
     },
     {
+      "path": "internal/models/notification",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 129,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "log_group.go",
+        "notification.go"
+      ]
+    },
+    {
       "path": "internal/models/settings",
       "go_files": 2,
       "test_files": 0,
@@ -4136,12 +4155,13 @@
       "path": "internal/notification",
       "go_files": 4,
       "test_files": 2,
-      "loc": 1243,
+      "loc": 1244,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
         "internal/models",
+        "internal/models/notification",
         "internal/mqtt",
         "internal/platform/httputil"
       ],
@@ -5033,7 +5053,7 @@
     "cmd/export-worker": 250,
     "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 518,
+    "cmd/notification-worker": 519,
     "cmd/ocpp-server": 91,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 655,
@@ -6344,7 +6364,6 @@
       "notification_channel_email_webhook.go",
       "notification_channel_ntfy_pushover.go",
       "notification_channel_slack_telegram.go",
-      "notification_log.go",
       "pinned.go",
       "position.go",
       "push_subscription.go",
@@ -6385,6 +6404,11 @@
     "internal/models/geo": [
       "doc.go",
       "geo.go"
+    ],
+    "internal/models/notification": [
+      "doc.go",
+      "log_group.go",
+      "notification.go"
     ],
     "internal/models/settings": [
       "doc.go",
@@ -6692,7 +6716,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 33,
+      "flat_parent_go_files": 32,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6703,6 +6727,7 @@
         "energy",
         "export",
         "geo",
+        "notification",
         "settings"
       ],
       "missing_subpkgs": [
@@ -6710,7 +6735,6 @@
         "charging",
         "dashboard",
         "drive",
-        "notification",
         "security",
         "signal",
         "system",

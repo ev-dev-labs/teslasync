@@ -7,10 +7,11 @@ import (
 	"strings"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 )
 
@@ -19,7 +20,7 @@ import (
 // ChannelLoader loads enabled notification channels.
 // Implementations should return only enabled channels.
 type ChannelLoader interface {
-	GetAllChannels(ctx context.Context) ([]*models.NotificationChannel, error)
+	GetAllChannels(ctx context.Context) ([]*notificationmodel.NotificationChannel, error)
 }
 
 // NotifySender dispatches a single notification request.
@@ -105,7 +106,7 @@ func (fa *FailureAlerter) Send(ctx context.Context, event FailureEvent) error {
 	}
 
 	// Filter to only enabled channels.
-	var enabled []*models.NotificationChannel
+	var enabled []*notificationmodel.NotificationChannel
 	for _, ch := range allChannels {
 		if ch.Enabled {
 			enabled = append(enabled, ch)

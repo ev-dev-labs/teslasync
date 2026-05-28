@@ -5,8 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -36,13 +37,13 @@ func (h *NotificationScheduleHandler) ListSchedules(w http.ResponseWriter, r *ht
 		return
 	}
 	if schedules == nil {
-		schedules = []*models.NotificationSchedule{}
+		schedules = []*notificationmodel.NotificationSchedule{}
 	}
 	writeJSON(w, http.StatusOK, schedules)
 }
 
 func (h *NotificationScheduleHandler) CreateSchedule(w http.ResponseWriter, r *http.Request) {
-	var s models.NotificationSchedule
+	var s notificationmodel.NotificationSchedule
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -90,7 +91,7 @@ func (h *NotificationScheduleHandler) GetPreferences(w http.ResponseWriter, r *h
 		return
 	}
 	if prefs == nil {
-		prefs = []*models.NotificationPreference{}
+		prefs = []*notificationmodel.NotificationPreference{}
 	}
 	writeJSON(w, http.StatusOK, prefs)
 }
@@ -155,7 +156,7 @@ func (h *NotificationScheduleHandler) GetChannelMetrics(w http.ResponseWriter, r
 		return
 	}
 	if metrics == nil {
-		metrics = []*models.NotificationMetric{}
+		metrics = []*notificationmodel.NotificationMetric{}
 	}
 	writeJSON(w, http.StatusOK, metrics)
 }

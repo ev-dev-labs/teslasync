@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
@@ -218,7 +220,7 @@ func ExportNotificationLogs(db *database.DB) http.HandlerFunc {
 			return
 		}
 		if logs == nil {
-			logs = []*models.NotificationLog{}
+			logs = []*notificationmodel.NotificationLog{}
 		}
 
 		if format == "json" {

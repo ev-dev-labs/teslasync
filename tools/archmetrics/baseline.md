@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T03:56:45Z, Go go1.26.1, commit a74917fb0edc46002c5a2cff51f3c424573be942_
+_Generated 2026-05-28T04:00:50Z, Go go1.26.1, commit 8a72c96423050fb3942b65964f58067cda7a9ef8_
 
 ## Summary
 
-- Packages: 218
+- Packages: 219
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372064
+- Total non-blank LOC under cmd/+internal/+tools/: 372099
 
 ## cmd/* main.go LOC
 
@@ -21,7 +21,7 @@ _Generated 2026-05-28T03:56:45Z, Go go1.26.1, commit a74917fb0edc46002c5a2cff51f
 | cmd/export-worker/main.go | 250 |
 | cmd/fleet-config-validator/main.go | 327 |
 | cmd/metric-coverage-audit/main.go | 126 |
-| cmd/notification-worker/main.go | 518 |
+| cmd/notification-worker/main.go | 519 |
 | cmd/ocpp-server/main.go | 91 |
 | cmd/protogen-tesla/main.go | 73 |
 | cmd/pub-test-signal/main.go | 655 |
@@ -48,7 +48,7 @@ _Generated 2026-05-28T03:56:45Z, Go go1.26.1, commit a74917fb0edc46002c5a2cff51f
 | cmd/export-worker | 2 | 0 | 254 | yes | cmd-internal |
 | cmd/fleet-config-validator | 2 | 1 | 491 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
-| cmd/notification-worker | 2 | 0 | 522 | yes | cmd-internal |
+| cmd/notification-worker | 2 | 0 | 523 | yes | cmd-internal |
 | cmd/ocpp-server | 2 | 0 | 103 | yes | cmd-internal |
 | cmd/protogen-tesla | 4 | 1 | 2297 | yes | cmd-internal |
 | cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
@@ -139,9 +139,9 @@ _Generated 2026-05-28T03:56:45Z, Go go1.26.1, commit a74917fb0edc46002c5a2cff51f
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 58 | 51 | 47076 | yes | platform |
+| internal/ai/tools | 58 | 51 | 47078 | yes | platform |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126472 | yes | handler |
+| internal/api | 271 | 163 | 126473 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -157,7 +157,7 @@ _Generated 2026-05-28T03:56:45Z, Go go1.26.1, commit a74917fb0edc46002c5a2cff51f
 | internal/audit | 2 | 1 | 375 | yes | platform |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1604 | yes | platform |
-| internal/automation/action | 6 | 5 | 3822 | yes | platform |
+| internal/automation/action | 6 | 5 | 3824 | yes | platform |
 | internal/automation/condition | 9 | 8 | 3651 | yes | platform |
 | internal/automation/presets | 3 | 1 | 595 | yes | platform |
 | internal/automation/safety | 7 | 6 | 3565 | yes | platform |
@@ -203,7 +203,7 @@ _Generated 2026-05-28T03:56:45Z, Go go1.26.1, commit a74917fb0edc46002c5a2cff51f
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 33 | 1 | 2464 | yes | domain |
+| internal/models | 32 | 1 | 2363 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/models/auth | 2 | 1 | 66 | yes | domain |
 | internal/models/backup | 2 | 0 | 59 | yes | domain |
@@ -211,9 +211,10 @@ _Generated 2026-05-28T03:56:45Z, Go go1.26.1, commit a74917fb0edc46002c5a2cff51f
 | internal/models/energy | 2 | 0 | 27 | yes | domain |
 | internal/models/export | 2 | 0 | 59 | yes | domain |
 | internal/models/geo | 2 | 0 | 44 | yes | domain |
+| internal/models/notification | 3 | 0 | 129 | yes | domain |
 | internal/models/settings | 2 | 0 | 177 | yes | domain |
 | internal/mqtt | 7 | 7 | 4273 | yes | platform |
-| internal/notification | 4 | 2 | 1243 | yes | platform |
+| internal/notification | 4 | 2 | 1244 | yes | platform |
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |
 | internal/notifier | 2 | 1 | 450 | yes | platform |
 | internal/ocpp | 5 | 1 | 972 | yes | adapter |
@@ -269,7 +270,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 33 / 1 | 19 | 8 | 11 |
+| `internal/models` | R5 | 36 | 32 / 1 | 19 | 9 | 10 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -288,6 +289,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/energy`
 - `internal/models/export`
 - `internal/models/geo`
+- `internal/models/notification`
 - `internal/models/settings`
 
 **Planned but not yet on disk:**
@@ -295,7 +297,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/charging`
 - `internal/models/dashboard`
 - `internal/models/drive`
-- `internal/models/notification`
 - `internal/models/security`
 - `internal/models/signal`
 - `internal/models/system`

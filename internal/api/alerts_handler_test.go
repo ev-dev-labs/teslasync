@@ -9,16 +9,16 @@ import (
 	"testing"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/go-chi/chi/v5"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // Phase-46 / Prompt 20 — alert acknowledgement handler tests.
 
-func newAckTestHandler(logs ...*models.NotificationLog) (*AlertHandler, *fakeNotificationRepo, *fakeAlertRuleRepo) {
+func newAckTestHandler(logs ...*notificationmodel.NotificationLog) (*AlertHandler, *fakeNotificationRepo, *fakeAlertRuleRepo) {
 	ruleID := int64(11)
 	rule := &alertmodel.AlertRule{
 		ID:         ruleID,
@@ -31,7 +31,7 @@ func newAckTestHandler(logs ...*models.NotificationLog) (*AlertHandler, *fakeNot
 	}
 	notif := &fakeNotificationRepo{
 		logs:     logs,
-		logsByID: map[int64]*models.NotificationLog{},
+		logsByID: map[int64]*notificationmodel.NotificationLog{},
 	}
 	for _, l := range logs {
 		if l.AlertID == nil {
@@ -71,7 +71,7 @@ func TestAckHandler_GetAlert_NotFound(t *testing.T) {
 
 func TestAckHandler_GetAlert_IncludesSyntheticCreatedEvent(t *testing.T) {
 	created := time.Date(2025, 12, 8, 9, 14, 0, 0, time.UTC)
-	h, _, _ := newAckTestHandler(&models.NotificationLog{
+	h, _, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 100, Title: "Battery low", Status: "sent", CreatedAt: created,
 	})
 	rec := httptest.NewRecorder()
@@ -101,7 +101,7 @@ func TestAckHandler_GetAlert_IncludesSyntheticCreatedEvent(t *testing.T) {
 }
 
 func TestAckHandler_AcknowledgeAlert_WithNote_Persists(t *testing.T) {
-	h, notif, _ := newAckTestHandler(&models.NotificationLog{
+	h, notif, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 100, Title: "Battery low", Status: "sent", CreatedAt: time.Now().UTC(),
 	})
 	rec := httptest.NewRecorder()
@@ -141,7 +141,7 @@ func TestAckHandler_AcknowledgeAlert_WithNote_Persists(t *testing.T) {
 }
 
 func TestAckHandler_AcknowledgeAlert_EmptyBodyAllowed(t *testing.T) {
-	h, notif, _ := newAckTestHandler(&models.NotificationLog{
+	h, notif, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 101, Title: "Door unlocked", Status: "sent", CreatedAt: time.Now().UTC(),
 	})
 	rec := httptest.NewRecorder()
@@ -158,7 +158,7 @@ func TestAckHandler_AcknowledgeAlert_EmptyBodyAllowed(t *testing.T) {
 }
 
 func TestAckHandler_AcknowledgeAlert_EmptyJSONObjectAllowed(t *testing.T) {
-	h, notif, _ := newAckTestHandler(&models.NotificationLog{
+	h, notif, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 102, Title: "x", Status: "sent", CreatedAt: time.Now().UTC(),
 	})
 	rec := httptest.NewRecorder()
@@ -172,7 +172,7 @@ func TestAckHandler_AcknowledgeAlert_EmptyJSONObjectAllowed(t *testing.T) {
 }
 
 func TestAckHandler_AcknowledgeAlert_NoteTooLong(t *testing.T) {
-	h, _, _ := newAckTestHandler(&models.NotificationLog{
+	h, _, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 103, Status: "sent", CreatedAt: time.Now().UTC(),
 	})
 	long := strings.Repeat("a", maxAckNoteBytes+1)
@@ -185,7 +185,7 @@ func TestAckHandler_AcknowledgeAlert_NoteTooLong(t *testing.T) {
 }
 
 func TestAckHandler_AcknowledgeAlert_RejectsUnknownFields(t *testing.T) {
-	h, _, _ := newAckTestHandler(&models.NotificationLog{
+	h, _, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 104, Status: "sent", CreatedAt: time.Now().UTC(),
 	})
 	rec := httptest.NewRecorder()
@@ -210,7 +210,7 @@ func TestAckHandler_AcknowledgeAlert_Idempotent(t *testing.T) {
 	preExisting := now.Add(-time.Hour)
 	prev := "alice"
 	prevNote := "first ack"
-	h, _, _ := newAckTestHandler(&models.NotificationLog{
+	h, _, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 105, Status: "sent", CreatedAt: now,
 		AcknowledgedAt:      &preExisting,
 		AcknowledgedBy:      &prev,
@@ -233,7 +233,7 @@ func TestAckHandler_AcknowledgeAlert_Idempotent(t *testing.T) {
 }
 
 func TestAckHandler_CommentAlert_RequiresNote(t *testing.T) {
-	h, _, _ := newAckTestHandler(&models.NotificationLog{
+	h, _, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 106, Status: "sent", CreatedAt: time.Now().UTC(),
 	})
 	cases := []struct {
@@ -258,7 +258,7 @@ func TestAckHandler_CommentAlert_RequiresNote(t *testing.T) {
 }
 
 func TestAckHandler_CommentAlert_Persists(t *testing.T) {
-	h, notif, _ := newAckTestHandler(&models.NotificationLog{
+	h, notif, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 107, Status: "sent", CreatedAt: time.Now().UTC(),
 	})
 	rec := httptest.NewRecorder()
@@ -307,7 +307,7 @@ func TestAckHandler_ReopenAlert_ClearsAck(t *testing.T) {
 	preExisting := now.Add(-time.Hour)
 	prev := "alice"
 	prevNote := "investigating"
-	h, notif, _ := newAckTestHandler(&models.NotificationLog{
+	h, notif, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 108, Status: "sent", CreatedAt: now,
 		AcknowledgedAt:      &preExisting,
 		AcknowledgedBy:      &prev,
@@ -334,7 +334,7 @@ func TestAckHandler_ReopenAlert_ClearsAck(t *testing.T) {
 }
 
 func TestAckHandler_ReopenAlert_Idempotent(t *testing.T) {
-	h, notif, _ := newAckTestHandler(&models.NotificationLog{
+	h, notif, _ := newAckTestHandler(&notificationmodel.NotificationLog{
 		ID: 109, Status: "sent", CreatedAt: time.Now().UTC(),
 	})
 	rec := httptest.NewRecorder()
@@ -401,7 +401,7 @@ func TestNormalizeNote(t *testing.T) {
 
 func TestBuildAlertEventTimeline(t *testing.T) {
 	created := time.Date(2025, 12, 8, 9, 14, 0, 0, time.UTC)
-	logRow := &models.NotificationLog{ID: 200, CreatedAt: created}
+	logRow := &notificationmodel.NotificationLog{ID: 200, CreatedAt: created}
 	actor := "alice"
 	note := "Restarting MQTT"
 	events := []*alertmodel.NotificationLogEvent{

@@ -6,13 +6,14 @@ import (
 	"strings"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -49,15 +50,15 @@ type alertRuleBulkRepository interface {
 }
 
 type notificationRepository interface {
-	GetLogs(context.Context, int, int) ([]*models.NotificationLog, error)
-	CreateLog(context.Context, *models.NotificationLog) error
-	GetChannel(context.Context, int64) (*models.NotificationChannel, error)
-	GetAllChannels(context.Context) ([]*models.NotificationChannel, error)
+	GetLogs(context.Context, int, int) ([]*notificationmodel.NotificationLog, error)
+	CreateLog(context.Context, *notificationmodel.NotificationLog) error
+	GetChannel(context.Context, int64) (*notificationmodel.NotificationChannel, error)
+	GetAllChannels(context.Context) ([]*notificationmodel.NotificationChannel, error)
 
 	// Phase-46 / Prompt 20 — alert acknowledgement + audit timeline.
-	GetLog(context.Context, int64) (*models.NotificationLog, error)
-	AcknowledgeLog(context.Context, int64, string, string) (*models.NotificationLog, bool, error)
-	ReopenLog(context.Context, int64, string) (*models.NotificationLog, bool, error)
+	GetLog(context.Context, int64) (*notificationmodel.NotificationLog, error)
+	AcknowledgeLog(context.Context, int64, string, string) (*notificationmodel.NotificationLog, bool, error)
+	ReopenLog(context.Context, int64, string) (*notificationmodel.NotificationLog, bool, error)
 	CommentOnLog(context.Context, int64, string, string) (*alertmodel.NotificationLogEvent, error)
 	ListLogEvents(context.Context, int64) ([]*alertmodel.NotificationLogEvent, error)
 }
@@ -97,7 +98,7 @@ func (h *AlertHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if logs == nil {
-		logs = []*models.NotificationLog{}
+		logs = []*notificationmodel.NotificationLog{}
 	}
 	out, err := h.adaptNotificationLogsToAlerts(r.Context(), logs)
 	if err != nil {
@@ -181,7 +182,7 @@ func slugifyRuleName(name string) string {
 // adaptNotificationLogsToAlerts joins logs to their owning alert rules and
 // returns AlertResponse objects in the same order. Logs whose alert_id is
 // nil or whose rule was deleted get sensible "notification" defaults.
-func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs []*models.NotificationLog) ([]*AlertResponse, error) {
+func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs []*notificationmodel.NotificationLog) ([]*AlertResponse, error) {
 	if len(logs) == 0 {
 		return []*AlertResponse{}, nil
 	}

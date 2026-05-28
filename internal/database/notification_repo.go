@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // deriveNotificationLogGroupKey builds the deterministic group identifier
@@ -79,7 +79,7 @@ func NewNotificationRepo(db *DB) *NotificationRepo {
 
 // --- Channels ---
 
-func (r *NotificationRepo) CreateChannel(ctx context.Context, ch *models.NotificationChannel) error {
+func (r *NotificationRepo) CreateChannel(ctx context.Context, ch *notificationmodel.NotificationChannel) error {
 	now := time.Now().UTC()
 	if err := r.db.Pool.QueryRow(ctx,
 		`INSERT INTO notification_channels (name, kind, enabled, created_at, updated_at)
@@ -96,7 +96,7 @@ func (r *NotificationRepo) CreateChannel(ctx context.Context, ch *models.Notific
 	return nil
 }
 
-func (r *NotificationRepo) UpdateChannel(ctx context.Context, ch *models.NotificationChannel) error {
+func (r *NotificationRepo) UpdateChannel(ctx context.Context, ch *notificationmodel.NotificationChannel) error {
 	_, err := r.db.Pool.Exec(ctx,
 		`UPDATE notification_channels SET name=$1, kind=$2, enabled=$3, updated_at=$4 WHERE id=$5`,
 		ch.Name, ch.Type, ch.Enabled, time.Now().UTC(), ch.ID,
@@ -115,8 +115,8 @@ func (r *NotificationRepo) DeleteChannel(ctx context.Context, id int64) error {
 	return err
 }
 
-func (r *NotificationRepo) GetChannel(ctx context.Context, id int64) (*models.NotificationChannel, error) {
-	ch := &models.NotificationChannel{}
+func (r *NotificationRepo) GetChannel(ctx context.Context, id int64) (*notificationmodel.NotificationChannel, error) {
+	ch := &notificationmodel.NotificationChannel{}
 	err := r.db.Pool.QueryRow(ctx,
 		`SELECT id, name, kind, enabled, created_at, updated_at FROM notification_channels WHERE id=$1`, id,
 	).Scan(&ch.ID, &ch.Name, &ch.Type, &ch.Enabled, &ch.CreatedAt, &ch.UpdatedAt)
@@ -130,7 +130,7 @@ func (r *NotificationRepo) GetChannel(ctx context.Context, id int64) (*models.No
 	return ch, nil
 }
 
-func (r *NotificationRepo) GetAllChannels(ctx context.Context) ([]*models.NotificationChannel, error) {
+func (r *NotificationRepo) GetAllChannels(ctx context.Context) ([]*notificationmodel.NotificationChannel, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, name, kind, enabled, created_at, updated_at FROM notification_channels ORDER BY created_at DESC LIMIT 1000`,
 	)
@@ -139,9 +139,9 @@ func (r *NotificationRepo) GetAllChannels(ctx context.Context) ([]*models.Notifi
 	}
 	defer rows.Close()
 
-	var channels []*models.NotificationChannel
+	var channels []*notificationmodel.NotificationChannel
 	for rows.Next() {
-		ch := &models.NotificationChannel{}
+		ch := &notificationmodel.NotificationChannel{}
 		if err := rows.Scan(&ch.ID, &ch.Name, &ch.Type, &ch.Enabled, &ch.CreatedAt, &ch.UpdatedAt); err != nil {
 			return nil, err
 		}
@@ -161,7 +161,7 @@ func (r *NotificationRepo) GetAllChannels(ctx context.Context) ([]*models.Notifi
 
 // upsertChannelConfig inserts or updates the per-kind CTI child table row
 // for the given channel, keyed off Config map entries.
-func (r *NotificationRepo) upsertChannelConfig(ctx context.Context, ch *models.NotificationChannel) error {
+func (r *NotificationRepo) upsertChannelConfig(ctx context.Context, ch *notificationmodel.NotificationChannel) error {
 	if len(ch.Config) == 0 {
 		return nil
 	}
@@ -401,7 +401,7 @@ func (r *NotificationRepo) ToggleChannel(ctx context.Context, id int64, enabled 
 
 // --- Logs ---
 
-func (r *NotificationRepo) CreateLog(ctx context.Context, l *models.NotificationLog) error {
+func (r *NotificationRepo) CreateLog(ctx context.Context, l *notificationmodel.NotificationLog) error {
 	severity := strings.TrimSpace(strings.ToLower(l.Severity))
 	var sevArg any
 	if severity == "" {
@@ -475,7 +475,7 @@ func (r *NotificationRepo) MarkLogFailed(ctx context.Context, id int64, errMsg s
 // "cannot scan NULL into *string" failures on rows with no error message.
 const notificationLogColumns = `id, channel_id, alert_id, title, message, status, COALESCE(severity, ''), COALESCE(error, ''), created_at, sent_at, read_at, archived_at, acknowledged_at, acknowledged_by, acknowledgement_note`
 
-func scanNotificationLog(rows pgx.Row, l *models.NotificationLog) error {
+func scanNotificationLog(rows pgx.Row, l *notificationmodel.NotificationLog) error {
 	return rows.Scan(
 		&l.ID, &l.ChannelID, &l.AlertID, &l.Title, &l.Message, &l.Status, &l.Severity, &l.Error,
 		&l.CreatedAt, &l.SentAt, &l.ReadAt, &l.ArchivedAt,
@@ -483,7 +483,7 @@ func scanNotificationLog(rows pgx.Row, l *models.NotificationLog) error {
 	)
 }
 
-func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*models.NotificationLog, error) {
+func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT `+notificationLogColumns+`
 		 FROM notification_logs ORDER BY created_at DESC LIMIT $1 OFFSET $2`, limit, offset,
@@ -493,9 +493,9 @@ func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*m
 	}
 	defer rows.Close()
 
-	var logs []*models.NotificationLog
+	var logs []*notificationmodel.NotificationLog
 	for rows.Next() {
-		l := &models.NotificationLog{}
+		l := &notificationmodel.NotificationLog{}
 		if err := scanNotificationLog(rows, l); err != nil {
 			return nil, err
 		}
@@ -504,7 +504,7 @@ func (r *NotificationRepo) GetLogs(ctx context.Context, limit, offset int) ([]*m
 	return logs, rows.Err()
 }
 
-func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64, limit int) ([]*models.NotificationLog, error) {
+func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64, limit int) ([]*notificationmodel.NotificationLog, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT `+notificationLogColumns+`
 		 FROM notification_logs WHERE channel_id=$1 ORDER BY created_at DESC LIMIT $2`, channelID, limit,
@@ -514,9 +514,9 @@ func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64
 	}
 	defer rows.Close()
 
-	var logs []*models.NotificationLog
+	var logs []*notificationmodel.NotificationLog
 	for rows.Next() {
-		l := &models.NotificationLog{}
+		l := &notificationmodel.NotificationLog{}
 		if err := scanNotificationLog(rows, l); err != nil {
 			return nil, err
 		}
@@ -529,7 +529,7 @@ func (r *NotificationRepo) GetLogsByChannel(ctx context.Context, channelID int64
 // 'deferred_dnd' state, oldest first. The replay loop in
 // cmd/notification-worker walks the result on every tick and tries to
 // dispatch each row whose causing window has ended (Phase-46 / Prompt 19).
-func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*models.NotificationLog, error) {
+func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*notificationmodel.NotificationLog, error) {
 	if limit <= 0 || limit > 1000 {
 		limit = 200
 	}
@@ -545,9 +545,9 @@ func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*mode
 	}
 	defer rows.Close()
 
-	var logs []*models.NotificationLog
+	var logs []*notificationmodel.NotificationLog
 	for rows.Next() {
-		l := &models.NotificationLog{}
+		l := &notificationmodel.NotificationLog{}
 		if err := scanNotificationLog(rows, l); err != nil {
 			return nil, err
 		}
@@ -648,7 +648,7 @@ func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
 // Severity / vehicle filters are applied via a LEFT JOIN on alert_rules so
 // rows with NULL alert_id are still returned when no severity or vehicle
 // constraint is set, and are excluded when one is.
-func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLogFilters) ([]*models.NotificationLog, error) {
+func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLogFilters) ([]*notificationmodel.NotificationLog, error) {
 	if f.Limit <= 0 || f.Limit > 1000 {
 		f.Limit = 50
 	}
@@ -682,9 +682,9 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 	}
 	defer rows.Close()
 
-	var logs []*models.NotificationLog
+	var logs []*notificationmodel.NotificationLog
 	for rows.Next() {
-		l := &models.NotificationLog{}
+		l := &notificationmodel.NotificationLog{}
 		if err := scanNotificationLog(rows, l); err != nil {
 			return nil, fmt.Errorf("scan notification log: %w", err)
 		}
@@ -716,7 +716,7 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 // buildNotificationLogWhere helper; the tie is enforced by routing both
 // methods through the same builder rather than duplicating the clause
 // list.
-func (r *NotificationRepo) ListGrouped(ctx context.Context, f NotificationLogFilters) ([]*models.NotificationLogGroup, error) {
+func (r *NotificationRepo) ListGrouped(ctx context.Context, f NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error) {
 	if f.Limit <= 0 || f.Limit > 1000 {
 		f.Limit = 50
 	}
@@ -777,9 +777,9 @@ ORDER BY agg.latest_at DESC, nl.id DESC`
 	}
 	defer rows.Close()
 
-	groups := make([]*models.NotificationLogGroup, 0)
+	groups := make([]*notificationmodel.NotificationLogGroup, 0)
 	for rows.Next() {
-		g := &models.NotificationLogGroup{Latest: &models.NotificationLog{}}
+		g := &notificationmodel.NotificationLogGroup{Latest: &notificationmodel.NotificationLog{}}
 		var (
 			groupKey   *string
 			total      int64
@@ -984,12 +984,12 @@ func (r *NotificationRepo) GetStats(ctx context.Context) (map[string]interface{}
 
 // GetLog returns a single notification_logs row by id, or nil if no row
 // exists. Errors other than "not found" are wrapped and returned.
-func (r *NotificationRepo) GetLog(ctx context.Context, id int64) (*models.NotificationLog, error) {
+func (r *NotificationRepo) GetLog(ctx context.Context, id int64) (*notificationmodel.NotificationLog, error) {
 	row := r.db.Pool.QueryRow(ctx,
 		`SELECT `+notificationLogColumns+`
 		 FROM notification_logs WHERE id = $1`, id,
 	)
-	l := &models.NotificationLog{}
+	l := &notificationmodel.NotificationLog{}
 	if err := scanNotificationLog(row, l); err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil
@@ -1015,15 +1015,15 @@ func (r *NotificationRepo) GetLog(ctx context.Context, id int64) (*models.Notifi
 //
 // `note` is stored verbatim; trim whitespace before calling. Pass empty
 // string to leave the acknowledgement_note column NULL.
-func (r *NotificationRepo) AcknowledgeLog(ctx context.Context, id int64, actor, note string) (*models.NotificationLog, bool, error) {
+func (r *NotificationRepo) AcknowledgeLog(ctx context.Context, id int64, actor, note string) (*notificationmodel.NotificationLog, bool, error) {
 	var (
-		updated *models.NotificationLog
+		updated *notificationmodel.NotificationLog
 		newAck  bool
 	)
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		// Existence pre-read inside the tx so 404 is reliable even if a
 		// concurrent DELETE just removed the row.
-		existing := &models.NotificationLog{}
+		existing := &notificationmodel.NotificationLog{}
 		err := scanNotificationLog(
 			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
 			existing,
@@ -1078,7 +1078,7 @@ func (r *NotificationRepo) AcknowledgeLog(ctx context.Context, id int64, actor, 
 			return fmt.Errorf("notification_log_events ack insert: %w", err)
 		}
 
-		updated = &models.NotificationLog{}
+		updated = &notificationmodel.NotificationLog{}
 		if err := scanNotificationLog(
 			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
 			updated,
@@ -1099,13 +1099,13 @@ func (r *NotificationRepo) AcknowledgeLog(ctx context.Context, id int64, actor, 
 // reopening an already-reopened (or never-acked) row is a no-op that returns
 // the row unchanged with reopened=false. (nil, false, nil) signals "not
 // found" so the caller can render 404.
-func (r *NotificationRepo) ReopenLog(ctx context.Context, id int64, actor string) (*models.NotificationLog, bool, error) {
+func (r *NotificationRepo) ReopenLog(ctx context.Context, id int64, actor string) (*notificationmodel.NotificationLog, bool, error) {
 	var (
-		updated  *models.NotificationLog
+		updated  *notificationmodel.NotificationLog
 		reopened bool
 	)
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
-		existing := &models.NotificationLog{}
+		existing := &notificationmodel.NotificationLog{}
 		err := scanNotificationLog(
 			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
 			existing,
@@ -1151,7 +1151,7 @@ func (r *NotificationRepo) ReopenLog(ctx context.Context, id int64, actor string
 			return fmt.Errorf("notification_log_events reopen insert: %w", err)
 		}
 
-		updated = &models.NotificationLog{}
+		updated = &notificationmodel.NotificationLog{}
 		if err := scanNotificationLog(
 			tx.QueryRow(ctx, `SELECT `+notificationLogColumns+` FROM notification_logs WHERE id = $1`, id),
 			updated,

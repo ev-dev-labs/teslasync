@@ -1,4 +1,4 @@
-package models
+package notification
 
 // NotificationLogGroup is a server-grouped bucket of notification_logs
 // rows that share the same group_key (sha256(alert_id || severity)).

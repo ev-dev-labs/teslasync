@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 )
@@ -14,11 +16,11 @@ import (
 // --- Mocks ---
 
 type mockChannelRepo struct {
-	channels []*models.NotificationChannel
+	channels []*notificationmodel.NotificationChannel
 	err      error
 }
 
-func (m *mockChannelRepo) GetAllChannels(_ context.Context) ([]*models.NotificationChannel, error) {
+func (m *mockChannelRepo) GetAllChannels(_ context.Context) ([]*notificationmodel.NotificationChannel, error) {
 	if m.err != nil {
 		return nil, m.err
 	}
@@ -223,7 +225,7 @@ func TestResolveTemplate(t *testing.T) {
 // --- filterChannels Tests ---
 
 func TestFilterChannels(t *testing.T) {
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord #alerts", Type: "discord", Enabled: true},
 		{ID: 2, Name: "Slack ops", Type: "slack", Enabled: true},
 		{ID: 3, Name: "Disabled Telegram", Type: "telegram", Enabled: false},
@@ -273,7 +275,7 @@ func TestNotifyExecute_AllChannels(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Config: map[string]string{"webhook_url": "http://example.com"}, Enabled: true},
 		{ID: 2, Name: "Slack", Type: "slack", Config: map[string]string{"webhook_url": "http://example.com"}, Enabled: true},
 	}
@@ -323,7 +325,7 @@ func TestNotifyExecute_SingleChannel(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 		{ID: 2, Name: "Slack", Type: "slack", Enabled: true, Config: map[string]string{}},
 		{ID: 3, Name: "Ntfy", Type: "ntfy", Enabled: true, Config: map[string]string{}},
@@ -367,7 +369,7 @@ func TestNotifyExecute_PartialFailure(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 		{ID: 2, Name: "Slack", Type: "slack", Enabled: true, Config: map[string]string{}},
 	}
@@ -418,7 +420,7 @@ func TestNotifyExecute_PartialFailure(t *testing.T) {
 }
 
 func TestNotifyExecute_NoMatchingChannels(t *testing.T) {
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
@@ -440,7 +442,7 @@ func TestNotifyExecute_NoMatchingChannels(t *testing.T) {
 }
 
 func TestNotifyExecute_AllDisabledChannels(t *testing.T) {
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: false, Config: map[string]string{}},
 		{ID: 2, Name: "Slack", Type: "slack", Enabled: false, Config: map[string]string{}},
 	}
@@ -519,7 +521,7 @@ func TestNotifyExecute_TemplateResolution(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
@@ -569,7 +571,7 @@ func TestNotifyExecute_VehicleRepoError(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
@@ -599,7 +601,7 @@ func TestNotifyExecute_NilVehicleID(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
@@ -625,7 +627,7 @@ func TestNotifyExecute_ContextCancelled(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
@@ -656,7 +658,7 @@ func TestNotifyExecute_TimestampResolved(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 
@@ -689,7 +691,7 @@ func TestNotifyExecute_VarsOverrideAutoResolved(t *testing.T) {
 		return nil
 	}
 
-	channels := []*models.NotificationChannel{
+	channels := []*notificationmodel.NotificationChannel{
 		{ID: 1, Name: "Discord", Type: "discord", Enabled: true, Config: map[string]string{}},
 	}
 

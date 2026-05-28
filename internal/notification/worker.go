@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -188,7 +190,7 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 
 		// Success — log it
 		if req.ChannelID > 0 {
-			logEntry := &models.NotificationLog{
+			logEntry := &notificationmodel.NotificationLog{
 				ChannelID: req.ChannelID,
 				Title:     req.Title,
 				Message:   req.Message,
@@ -231,7 +233,7 @@ func (w *Worker) processNotification(ctx context.Context, req *Request) {
 		if lastErr != nil {
 			errStr = lastErr.Error()
 		}
-		logEntry := &models.NotificationLog{
+		logEntry := &notificationmodel.NotificationLog{
 			ChannelID: req.ChannelID,
 			Title:     req.Title,
 			Message:   req.Message,
@@ -274,7 +276,7 @@ func (w *Worker) Shutdown() {
 // state. The replay loop in cmd/notification-worker promotes the row to
 // 'sent' once the matching window ends. (Phase-46 / Prompt 19.)
 func (w *Worker) persistDeferred(ctx context.Context, req *Request, win *models.QuietHoursWindow) {
-	logEntry := &models.NotificationLog{
+	logEntry := &notificationmodel.NotificationLog{
 		ChannelID: req.ChannelID,
 		Title:     req.Title,
 		Message:   req.Message,

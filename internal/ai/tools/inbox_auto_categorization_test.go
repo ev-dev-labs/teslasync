@@ -19,8 +19,9 @@ import (
 	"strings"
 	"testing"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // stubInboxCategorizationSource is a deterministic fake
@@ -125,7 +126,7 @@ func TestCategoryForSignal_TrimsAndLowercases(t *testing.T) {
 func TestBucketByCategory_HappyPath(t *testing.T) {
 	t.Parallel()
 	id := func(v int64) *int64 { return &v }
-	rows := []*models.NotificationLog{
+	rows := []*notificationmodel.NotificationLog{
 		{ID: 1, AlertID: id(10), Severity: "warn"},
 		{ID: 2, AlertID: id(11), Severity: "warn"},
 		{ID: 3, AlertID: id(12), Severity: "critical"},
@@ -182,10 +183,10 @@ func TestBucketByCategory_HappyPath(t *testing.T) {
 func TestBucketByCategory_SampleRuleIDsCap(t *testing.T) {
 	t.Parallel()
 	id := func(v int64) *int64 { return &v }
-	rows := make([]*models.NotificationLog, 0, 20)
+	rows := make([]*notificationmodel.NotificationLog, 0, 20)
 	signalLookup := make(map[int64]string)
 	for i := int64(1); i <= 20; i++ {
-		rows = append(rows, &models.NotificationLog{ID: i, AlertID: id(i), Severity: "warn"})
+		rows = append(rows, &notificationmodel.NotificationLog{ID: i, AlertID: id(i), Severity: "warn"})
 		signalLookup[i] = "battery_level"
 	}
 	got := BucketByCategory(rows, signalLookup)
@@ -222,7 +223,7 @@ func TestBucketByCategory_EmptyRowsReturnsEmpty(t *testing.T) {
 func TestBucketByCategory_NilRowsAreSkipped(t *testing.T) {
 	t.Parallel()
 	id := func(v int64) *int64 { return &v }
-	rows := []*models.NotificationLog{
+	rows := []*notificationmodel.NotificationLog{
 		nil,
 		{ID: 1, AlertID: id(10), Severity: "warn"},
 	}

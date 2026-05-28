@@ -10,12 +10,13 @@ import (
 	"strings"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -625,7 +626,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	suppressTransportTitle := body.IncludeTitle != nil && !*body.IncludeTitle
 
 	// Create a notification log entry
-	nlog := &models.NotificationLog{
+	nlog := &notificationmodel.NotificationLog{
 		Title:   title,
 		Message: message,
 		Status:  "sent",

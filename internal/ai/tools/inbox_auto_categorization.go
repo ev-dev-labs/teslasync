@@ -57,8 +57,9 @@ import (
 	"strings"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ---------------------------------------------------------------------------
@@ -639,7 +640,7 @@ func (t *validateAlertCategory) Execute(_ context.Context, in any) (any, error) 
 // Pulled out of the production adapter so the tool unit tests
 // can exercise the bucketing semantics independently of the
 // repo IO.
-func BucketByCategory(rows []*models.NotificationLog, signalLookup map[int64]string) []CategoryCount {
+func BucketByCategory(rows []*notificationmodel.NotificationLog, signalLookup map[int64]string) []CategoryCount {
 	type bucket struct {
 		count   int
 		ruleSet map[int64]struct{}

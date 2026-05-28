@@ -29,11 +29,12 @@ import (
 	"testing"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TestWatchFaceNLAIOffUsesFixedCardsOnly is the load-bearing
@@ -426,7 +427,7 @@ func TestProjectWatchContextSignals_NilInputs(t *testing.T) {
 func TestProjectWatchAlertEntries_InvariantsHold(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2025, 1, 15, 14, 0, 0, 0, time.UTC)
-	rows := []*models.NotificationLog{
+	rows := []*notificationmodel.NotificationLog{
 		// Most recent: warning 5 min ago — KEEP.
 		{Severity: "warning", CreatedAt: now.Add(-5 * time.Minute), Title: "Door ajar at Home"},
 		// Critical 10 min ago — DROP (severity exclusion).
@@ -505,7 +506,7 @@ func TestProjectWatchAlertEntries_EmptyAndZeroMax(t *testing.T) {
 	if got := projectWatchAlertEntries(nil, 5, now); len(got) != 0 {
 		t.Errorf("nil rows → %d entries, want 0", len(got))
 	}
-	rows := []*models.NotificationLog{{Severity: "info", CreatedAt: now.Add(-time.Minute)}}
+	rows := []*notificationmodel.NotificationLog{{Severity: "info", CreatedAt: now.Add(-time.Minute)}}
 	if got := projectWatchAlertEntries(rows, 0, now); len(got) != 0 {
 		t.Errorf("max=0 → %d entries, want 0", len(got))
 	}

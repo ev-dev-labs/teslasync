@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/rs/zerolog"
@@ -496,7 +498,7 @@ func dispatchComputedMetricNotification(
 	vehicleID int64,
 	vehicleName string,
 	result computed.Result,
-	channels []*models.NotificationChannel,
+	channels []*notificationmodel.NotificationChannel,
 	mqttClient pahomqtt.Client,
 ) {
 	// Phase-50 / ADR-005: route computed-metric dispatch through the

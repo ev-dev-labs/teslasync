@@ -12,11 +12,12 @@ import (
 	"strings"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
@@ -42,8 +43,8 @@ type NotificationHandler struct {
 // notificationInboxStore is the slice of NotificationRepo used by the inbox
 // handlers (filter, bulk, unread-count). Extracted so tests can stub the DB.
 type notificationInboxStore interface {
-	GetLogsFiltered(ctx context.Context, f database.NotificationLogFilters) ([]*models.NotificationLog, error)
-	ListGrouped(ctx context.Context, f database.NotificationLogFilters) ([]*models.NotificationLogGroup, error)
+	GetLogsFiltered(ctx context.Context, f database.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error)
+	ListGrouped(ctx context.Context, f database.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error)
 	GetUnreadCount(ctx context.Context) (int64, error)
 	BulkSetRead(ctx context.Context, ids []int64, read bool) (int64, error)
 	BulkSetReadAll(ctx context.Context) (int64, error)
@@ -137,7 +138,7 @@ func (h *NotificationHandler) UpdateChannel(w http.ResponseWriter, r *http.Reque
 // the old shape (type + nested config map) and the new frontend shape
 // (kind + flat channel-specific fields). Returns the canonical model or an
 // error message string.
-func decodeChannelBody(r *http.Request) (*models.NotificationChannel, string) {
+func decodeChannelBody(r *http.Request) (*notificationmodel.NotificationChannel, string) {
 	var raw map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&raw); err != nil {
 		return nil, "invalid request body"
@@ -196,7 +197,7 @@ func decodeChannelBody(r *http.Request) (*models.NotificationChannel, string) {
 		}
 	}
 
-	return &models.NotificationChannel{
+	return &notificationmodel.NotificationChannel{
 		Name:    name,
 		Type:    channelType,
 		Config:  config,
@@ -206,7 +207,7 @@ func decodeChannelBody(r *http.Request) (*models.NotificationChannel, string) {
 
 // normalizeChannelResponse converts a canonical NotificationChannel (type +
 // config map) into the shape the frontend expects (kind + flat fields).
-func normalizeChannelResponse(ch *models.NotificationChannel) map[string]interface{} {
+func normalizeChannelResponse(ch *notificationmodel.NotificationChannel) map[string]interface{} {
 	resp := map[string]interface{}{
 		"id":         ch.ID,
 		"kind":       ch.Type,
@@ -283,7 +284,7 @@ func (h *NotificationHandler) TestChannel(w http.ResponseWriter, r *http.Request
 	}
 
 	now := time.Now().UTC()
-	logEntry := &models.NotificationLog{
+	logEntry := &notificationmodel.NotificationLog{
 		ChannelID: ch.ID,
 		Title:     "TeslaSync Test",
 		Message:   testMsg,
@@ -327,7 +328,7 @@ func (h *NotificationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if groups == nil {
-			groups = []*models.NotificationLogGroup{}
+			groups = []*notificationmodel.NotificationLogGroup{}
 		}
 		writeJSON(w, http.StatusOK, groups)
 		return
@@ -339,7 +340,7 @@ func (h *NotificationHandler) GetLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if logs == nil {
-		logs = []*models.NotificationLog{}
+		logs = []*notificationmodel.NotificationLog{}
 	}
 	writeJSON(w, http.StatusOK, logs)
 }
@@ -678,7 +679,7 @@ func (h *NotificationHandler) GetStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // sendNotification dispatches a message to the configured channel.
-func sendNotification(ch *models.NotificationChannel, title, message string) error {
+func sendNotification(ch *notificationmodel.NotificationChannel, title, message string) error {
 	switch ch.Type {
 	case "discord":
 		return sendDiscord(ch.Config["webhook_url"], title, message)

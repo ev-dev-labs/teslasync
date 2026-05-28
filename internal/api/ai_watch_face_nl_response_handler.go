@@ -73,6 +73,8 @@ import (
 	"strings"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -84,7 +86,6 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -564,7 +565,7 @@ func (a *AIWatchFaceNLAlertHistorySource) LoadRecentAlerts(ctx context.Context, 
 }
 
 // projectWatchAlertEntries projects the canonical
-// *models.NotificationLog rows into the narrow
+// *notificationmodel.NotificationLog rows into the narrow
 // tools.WatchAlertEntry slice. Pulled out for hermetic unit
 // testing — the test feeds a known row list and asserts the
 // projection invariants (critical exclusion, window
@@ -574,7 +575,7 @@ func (a *AIWatchFaceNLAlertHistorySource) LoadRecentAlerts(ctx context.Context, 
 // `now` is injected so the tests can pin the computed
 // age_seconds to a deterministic value rather than calling
 // time.Now() inside the projection.
-func projectWatchAlertEntries(rows []*models.NotificationLog, max int, now time.Time) []tools.WatchAlertEntry {
+func projectWatchAlertEntries(rows []*notificationmodel.NotificationLog, max int, now time.Time) []tools.WatchAlertEntry {
 	if max <= 0 {
 		// Defensive early-return BEFORE the make below: a
 		// negative cap on make([]…, 0, max) panics, and a

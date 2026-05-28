@@ -11,18 +11,19 @@ import (
 	"strings"
 	"testing"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fakeInboxStore is an in-memory stub of notificationInboxStore so handler
 // tests can exercise filter parsing and bulk endpoints without a live DB.
 type fakeInboxStore struct {
 	lastFilters database.NotificationLogFilters
-	rows        []*models.NotificationLog
+	rows        []*notificationmodel.NotificationLog
 	listErr     error
 
-	groups        []*models.NotificationLogGroup
+	groups        []*notificationmodel.NotificationLogGroup
 	listGroupErr  error
 	groupedFilter database.NotificationLogFilters
 	groupedCalls  int
@@ -57,7 +58,7 @@ type fakeInboxStore struct {
 	bulkDeleteErr    error
 }
 
-func (f *fakeInboxStore) GetLogsFiltered(_ context.Context, filters database.NotificationLogFilters) ([]*models.NotificationLog, error) {
+func (f *fakeInboxStore) GetLogsFiltered(_ context.Context, filters database.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error) {
 	f.lastFilters = filters
 	if f.listErr != nil {
 		return nil, f.listErr
@@ -65,7 +66,7 @@ func (f *fakeInboxStore) GetLogsFiltered(_ context.Context, filters database.Not
 	return f.rows, nil
 }
 
-func (f *fakeInboxStore) ListGrouped(_ context.Context, filters database.NotificationLogFilters) ([]*models.NotificationLogGroup, error) {
+func (f *fakeInboxStore) ListGrouped(_ context.Context, filters database.NotificationLogFilters) ([]*notificationmodel.NotificationLogGroup, error) {
 	f.groupedFilter = filters
 	f.groupedCalls++
 	if f.listGroupErr != nil {
@@ -302,7 +303,7 @@ func TestParseNotificationLogFilters(t *testing.T) {
 }
 
 func TestGetLogsHandler(t *testing.T) {
-	rows := []*models.NotificationLog{{ID: 1, ChannelID: 1, Title: "x"}}
+	rows := []*notificationmodel.NotificationLog{{ID: 1, ChannelID: 1, Title: "x"}}
 	store := &fakeInboxStore{rows: rows}
 	h := newTestHandler(store)
 	req := httptest.NewRequest(http.MethodGet, "/notifications?severity=critical&archived=true&q=foo", nil)
@@ -320,7 +321,7 @@ func TestGetLogsHandler(t *testing.T) {
 	if store.lastFilters.Query != "foo" {
 		t.Fatalf("query = %q", store.lastFilters.Query)
 	}
-	var out []*models.NotificationLog
+	var out []*notificationmodel.NotificationLog
 	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
@@ -698,10 +699,10 @@ func TestParseNotificationLogFilters_GroupKey(t *testing.T) {
 // null). The flat list path must NOT be hit.
 func TestGetLogsHandler_GroupedTrue(t *testing.T) {
 	gk := validGroupKey()
-	groups := []*models.NotificationLogGroup{
+	groups := []*notificationmodel.NotificationLogGroup{
 		{
 			GroupKey: &gk,
-			Latest:   &models.NotificationLog{ID: 99, Title: "tire"},
+			Latest:   &notificationmodel.NotificationLog{ID: 99, Title: "tire"},
 			Count:    3, UnreadCount: 2,
 			VehicleIDs: []int64{1, 2},
 		},
@@ -723,7 +724,7 @@ func TestGetLogsHandler_GroupedTrue(t *testing.T) {
 	if len(store.groupedFilter.Severities) != 1 || store.groupedFilter.Severities[0] != "warn" {
 		t.Fatalf("expected severity passed through to ListGrouped, got %v", store.groupedFilter.Severities)
 	}
-	var out []*models.NotificationLogGroup
+	var out []*notificationmodel.NotificationLogGroup
 	if err := json.Unmarshal(rr.Body.Bytes(), &out); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
@@ -773,7 +774,7 @@ func TestGetLogsHandler_GroupedAndGroupKeyMutuallyExclusive(t *testing.T) {
 // on accidental case quirks (e.g., "True", "1") sneaking past the parser
 // once and breaking pagination guarantees.
 func TestGetLogsHandler_GroupedFalseIgnored(t *testing.T) {
-	rows := []*models.NotificationLog{{ID: 1, Title: "x"}}
+	rows := []*notificationmodel.NotificationLog{{ID: 1, Title: "x"}}
 	store := &fakeInboxStore{rows: rows}
 	h := newTestHandler(store)
 	req := httptest.NewRequest(http.MethodGet, "/notifications?grouped=false", nil)

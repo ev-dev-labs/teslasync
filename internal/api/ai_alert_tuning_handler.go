@@ -54,6 +54,8 @@ import (
 	"strconv"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/go-chi/chi/v5"
@@ -67,7 +69,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiAlertTuningMaxIterations bounds the dispatcher's tool-loop.
@@ -490,7 +491,7 @@ func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int6
 // notification_logs with the underlying signal_log emission
 // that triggered the fire, which is out of scope for this
 // slice's surface.
-func wouldHaveFiredAfterPatch(lg *models.NotificationLog, proposed *alertmodel.AlertRule) bool {
+func wouldHaveFiredAfterPatch(lg *notificationmodel.NotificationLog, proposed *alertmodel.AlertRule) bool {
 	if proposed == nil {
 		return true
 	}

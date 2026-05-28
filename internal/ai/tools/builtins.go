@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -77,7 +79,7 @@ type AlertRuleSource interface {
 // NotificationSource is the read surface the recent-alerts tool
 // needs. Implemented by *database.NotificationRepo.GetLogs.
 type NotificationSource interface {
-	GetLogs(ctx context.Context, limit, offset int) ([]*models.NotificationLog, error)
+	GetLogs(ctx context.Context, limit, offset int) ([]*notificationmodel.NotificationLog, error)
 }
 
 // GeofenceSource is the read surface the geofences tool needs.

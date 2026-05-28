@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/rs/zerolog/log"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // Phase-46 / Prompt 20 — Alert acknowledgement with optional note.
@@ -230,8 +230,8 @@ func (h *AlertHandler) ReopenAlert(w http.ResponseWriter, r *http.Request) {
 // buildAlertDetailResponse adapts a notification_logs row + its persisted
 // events into the AlertDetailResponse wire shape, prepending a synthetic
 // "created" entry sourced from the row's created_at.
-func (h *AlertHandler) buildAlertDetailResponse(ctx context.Context, logRow *models.NotificationLog) (*AlertDetailResponse, error) {
-	adapted, err := h.adaptNotificationLogsToAlerts(ctx, []*models.NotificationLog{logRow})
+func (h *AlertHandler) buildAlertDetailResponse(ctx context.Context, logRow *notificationmodel.NotificationLog) (*AlertDetailResponse, error) {
+	adapted, err := h.adaptNotificationLogsToAlerts(ctx, []*notificationmodel.NotificationLog{logRow})
 	if err != nil {
 		return nil, err
 	}
@@ -257,7 +257,7 @@ func (h *AlertHandler) buildAlertDetailResponse(ctx context.Context, logRow *mod
 // created_at) and the persisted events stably ordered by occurred_at then id.
 //
 // Exported for unit tests as it is pure: it does not call into the database.
-func buildAlertEventTimeline(logRow *models.NotificationLog, events []*alertmodel.NotificationLogEvent) []AlertEventResponse {
+func buildAlertEventTimeline(logRow *notificationmodel.NotificationLog, events []*alertmodel.NotificationLogEvent) []AlertEventResponse {
 	out := make([]AlertEventResponse, 0, len(events)+1)
 	out = append(out, AlertEventResponse{
 		ID:         0, // synthetic; not from notification_log_events
