@@ -71,7 +71,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 )
 
@@ -268,7 +268,7 @@ func (h *AIMLChargingCurveHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 // http.Handler.
 var _ http.Handler = (*AIMLChargingCurveHandler)(nil)
 
-// AIChargingSessionSource is the production *database.ChargingRepo-backed
+// AIChargingSessionSource is the production *chargingdb.ChargingRepo-backed
 // adapter that satisfies mlchargingcurves.SessionSource. It
 // delegates to the existing GetByVehicle method on the repo (the
 // SAME `charging_sessions` rows the deterministic ChargingCurvePage
@@ -280,15 +280,15 @@ var _ http.Handler = (*AIMLChargingCurveHandler)(nil)
 // limit, offset, start, end); we always pass offset=0 since the
 // trainer wants the most-recent rows up to the limit.
 type AIChargingSessionSource struct {
-	repo *database.ChargingRepo
+	repo *chargingdb.ChargingRepo
 }
 
 // NewAIChargingSessionSource constructs the adapter. Panics on a
 // nil repo so the wiring bug surfaces at boot, not at first
 // request.
-func NewAIChargingSessionSource(repo *database.ChargingRepo) *AIChargingSessionSource {
+func NewAIChargingSessionSource(repo *chargingdb.ChargingRepo) *AIChargingSessionSource {
 	if repo == nil {
-		panic("api: NewAIChargingSessionSource: nil *database.ChargingRepo")
+		panic("api: NewAIChargingSessionSource: nil *chargingdb.ChargingRepo")
 	}
 	return &AIChargingSessionSource{repo: repo}
 }

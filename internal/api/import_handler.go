@@ -14,6 +14,7 @@ import (
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/rs/zerolog/log"
 )
@@ -21,14 +22,14 @@ import (
 // ImportHandler handles CSV import endpoints for drives and charging data.
 type ImportHandler struct {
 	driveRepo    *database.DriveRepo
-	chargingRepo *database.ChargingRepo
+	chargingRepo *chargingdb.ChargingRepo
 }
 
 // NewImportHandler creates a new ImportHandler.
 func NewImportHandler(db *database.DB) *ImportHandler {
 	return &ImportHandler{
 		driveRepo:    database.NewDriveRepo(db),
-		chargingRepo: database.NewChargingRepo(db),
+		chargingRepo: chargingdb.NewChargingRepo(db),
 	}
 }
 

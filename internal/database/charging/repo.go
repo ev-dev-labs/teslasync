@@ -1,10 +1,11 @@
-package database
+package charging
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	"github.com/jackc/pgx/v5"
@@ -14,10 +15,10 @@ import (
 // charging_sessions table (migration 000184_charging_si). Phase-48 Slice 2
 // removes the former translation layer; callers pass and receive SI fields.
 type ChargingRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewChargingRepo(db *DB) *ChargingRepo {
+func NewChargingRepo(db *database.DB) *ChargingRepo {
 	return &ChargingRepo{db: db}
 }
 
@@ -133,7 +134,7 @@ ORDER BY started_at DESC`
 	return sessions, rows.Err()
 }
 
-var chargingPartialAllowed = map[string]string{
+var ChargingPartialAllowed = map[string]string{
 	"ended_at":              "ended_at",
 	"start_soc_pct":         "start_soc_pct",
 	"end_soc_pct":           "end_soc_pct",
@@ -155,7 +156,7 @@ var chargingPartialAllowed = map[string]string{
 func filterChargingPartialFields(in map[string]interface{}) map[string]interface{} {
 	out := make(map[string]interface{}, len(in))
 	for k, v := range in {
-		if _, ok := chargingPartialAllowed[k]; ok {
+		if _, ok := ChargingPartialAllowed[k]; ok {
 			out[k] = v
 		}
 	}
@@ -164,7 +165,7 @@ func filterChargingPartialFields(in map[string]interface{}) map[string]interface
 
 func (r *ChargingRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
 	siFields := filterChargingPartialFields(fields)
-	query, args := buildPartialUpdate("charging_sessions", id, siFields, chargingPartialAllowed)
+	query, args := database.BuildPartialUpdate("charging_sessions", id, siFields, ChargingPartialAllowed)
 	if query == "" {
 		return nil
 	}
@@ -216,7 +217,7 @@ func (r *ChargingRepo) BulkDelete(ctx context.Context, ids []int64) (int64, erro
 	return deleted, nil
 }
 
-func (r *ChargingRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endTs time.Time,
+func (r *ChargingRepo) CompleteWithTx(ctx context.Context, tx database.DBTX, id int64, endTs time.Time,
 	totalEnergyAddedWh *float64, endSocPct *float64, peakPowerW, avgPowerW *float64,
 	costDecimal *float64, costCurrency *string) error {
 	query := `
@@ -231,9 +232,9 @@ WHERE id=$1`
 	return err
 }
 
-func (r *ChargingRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int64, fields map[string]interface{}) error {
+func (r *ChargingRepo) PartialUpdateWithTx(ctx context.Context, tx database.DBTX, id int64, fields map[string]interface{}) error {
 	siFields := filterChargingPartialFields(fields)
-	query, args := buildPartialUpdate("charging_sessions", id, siFields, chargingPartialAllowed)
+	query, args := database.BuildPartialUpdate("charging_sessions", id, siFields, ChargingPartialAllowed)
 	if query == "" {
 		return nil
 	}
@@ -241,7 +242,7 @@ func (r *ChargingRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int6
 	return err
 }
 
-func (r *ChargingRepo) BackfillChargingTelemetrySessionIDInTx(ctx context.Context, tx DBTX, sessionID, vehicleID int64, startTs, endTs time.Time) (int64, error) {
+func (r *ChargingRepo) BackfillChargingTelemetrySessionIDInTx(ctx context.Context, tx database.DBTX, sessionID, vehicleID int64, startTs, endTs time.Time) (int64, error) {
 	const sql = `
 UPDATE charging_telemetry
    SET session_id = $1

@@ -69,7 +69,7 @@ func TestChargePlanner_UsesCurrentSOC(t *testing.T) {
 	// db: nil — the carried-forward currentSOC (60) already exceeds the
 	// requested target (50), so the handler short-circuits at the
 	// "current SOC already meets target" branch before any
-	// database.NewChargePlanRepo call. teslaClient/cfg: nil for the
+	// chargingdb.NewChargePlanRepo call. teslaClient/cfg: nil for the
 	// same reason.
 	h := &ChargePlannerHandler{state: fake}
 

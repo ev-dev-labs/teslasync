@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T15:43:37Z",
+  "generated_at": "2026-05-28T15:52:27Z",
   "go_version": "go1.26.1",
-  "commit_sha": "d9a94d3671f1f1bcb65ab9f91b664c03bf9fb8d0",
+  "commit_sha": "13e2d260d0dab075b60b9ae6336eee9762cb5d62",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2506,7 +2506,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126595,
+      "loc": 126604,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2635,6 +2635,7 @@
         "internal/database/auth",
         "internal/database/automation",
         "internal/database/backup",
+        "internal/database/charging",
         "internal/database/gdpr",
         "internal/database/notification",
         "internal/database/observability",
@@ -3693,9 +3694,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 65,
+      "go_files": 63,
       "test_files": 24,
-      "loc": 16889,
+      "loc": 16534,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3705,7 +3706,6 @@
         "internal/metrics",
         "internal/models",
         "internal/models/alert",
-        "internal/models/charging",
         "internal/models/drive",
         "internal/models/energy",
         "internal/models/export",
@@ -3724,8 +3724,6 @@
         "api_call_log_repo.go",
         "cache.go",
         "cache_test.go",
-        "charge_plan_repo.go",
-        "charging_repo.go",
         "circuit_breaker.go",
         "circuit_breaker_test.go",
         "database.go",
@@ -3952,6 +3950,25 @@
         "config_repo.go",
         "doc.go",
         "run_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/charging",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 401,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/database/charging",
+        "internal/models/charging"
+      ],
+      "files": [
+        "doc.go",
+        "partial_allowed_test.go",
+        "plan_repo.go",
+        "repo.go"
       ]
     },
     {
@@ -4240,11 +4257,12 @@
       "path": "internal/export",
       "go_files": 9,
       "test_files": 3,
-      "loc": 3060,
+      "loc": 3061,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
+        "internal/database/charging",
         "internal/models/charging",
         "internal/models/drive",
         "internal/models/export",
@@ -5384,11 +5402,12 @@
       "path": "internal/service",
       "go_files": 4,
       "test_files": 1,
-      "loc": 1378,
+      "loc": 1379,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
+        "internal/database/charging",
         "internal/enums",
         "internal/events",
         "internal/models/charging",
@@ -5824,7 +5843,7 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2598,
+      "loc": 2599,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -5833,6 +5852,7 @@
         "internal/database",
         "internal/database/alert",
         "internal/database/auth",
+        "internal/database/charging",
         "internal/database/notification",
         "internal/enums",
         "internal/events",
@@ -7001,8 +7021,6 @@
       "ai_chat_continuations_repo.go",
       "api_call_log_repo.go",
       "cache.go",
-      "charge_plan_repo.go",
-      "charging_repo.go",
       "circuit_breaker.go",
       "database.go",
       "doc.go",
@@ -7114,6 +7132,11 @@
       "config_repo.go",
       "doc.go",
       "run_repo.go"
+    ],
+    "internal/database/charging": [
+      "doc.go",
+      "plan_repo.go",
+      "repo.go"
     ],
     "internal/database/gdpr": [
       "artifact_repo.go",
@@ -7851,7 +7874,7 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 65,
+      "flat_parent_go_files": 63,
       "flat_parent_test_files": 24,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
@@ -7861,11 +7884,11 @@
         "auth",
         "automation",
         "backup",
+        "charging",
         "notification"
       ],
       "missing_subpkgs": [
         "ai",
-        "charging",
         "dashboard",
         "drive",
         "energy",

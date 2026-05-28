@@ -19,6 +19,7 @@ import (
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
@@ -565,7 +566,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Vehicles:      database.NewVehicleRepo(db),
 		VehicleState:  aiToolsStateAdapter{r: stateReader},
 		Drives:        database.NewDriveRepo(db),
-		Charges:       database.NewChargingRepo(db),
+		Charges:       chargingdb.NewChargingRepo(db),
 		AlertRules:    dbalert.NewAlertRuleRepo(db),
 		Notifications: dbnotif.NewNotificationRepo(db),
 		Geofences:     database.NewGeofenceRepo(db),
@@ -580,7 +581,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// that pinned set.
 	digest.RegisterDigestTools(aiToolRegistry, digest.DigestSources{
 		Drives:  database.NewDriveRepo(db),
-		Charges: database.NewChargingRepo(db),
+		Charges: chargingdb.NewChargingRepo(db),
 	})
 	// Phase-50 / U3 (slice 0013) — register the yir-narration
 	// slice's read-only tool on the SAME process-wide registry so
@@ -590,7 +591,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// pin tests continue to see the canonical sets unchanged.
 	yir.RegisterYearReviewTools(aiToolRegistry, yir.YearReviewSources{
 		Drives:  database.NewDriveRepo(db),
-		Charges: database.NewChargingRepo(db),
+		Charges: chargingdb.NewChargingRepo(db),
 	})
 	aiChatbotHandler := NewAIChatbotHandler(
 		dbnotif.NewChatRepo(db),
@@ -790,7 +791,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// handler constructor below so the strategy's allowedTools
 	// resolve at boot.
 	diagnosis.RegisterChargingDiagnosisTools(aiToolRegistry, diagnosis.ChargingDiagnosisSources{
-		Charges: database.NewChargingRepo(db),
+		Charges: chargingdb.NewChargingRepo(db),
 	})
 	// Per-charging-session diagnosis handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
@@ -1046,7 +1047,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// flows through the existing canonical Plan button in the
 	// TripPlannerPage UI (unchanged baseline).
 	tripplantool.RegisterTripPlannerLLMAgentTools(aiToolRegistry, tripplantool.TripPlannerLLMAgentSources{
-		Chargers: database.NewChargingRepo(db),
+		Chargers: chargingdb.NewChargingRepo(db),
 		Planner:  NewAITripPlanComputer(tripPlannerHandler),
 	})
 	// trip-planner-llm-agent handler. One per process; stateless
@@ -1150,7 +1151,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// slice.
 	curve.RegisterChargingCurveFingerprintClusteringTools(aiToolRegistry, curve.ChargingCurveFingerprintClusteringSources{
 		Retriever: aiChargeCurveRetriever,
-		Charges:   database.NewChargingRepo(db),
+		Charges:   chargingdb.NewChargingRepo(db),
 	})
 	// charging-curve-fingerprint-clustering handler. One per
 	// process; stateless beyond constructor inputs. Must be
@@ -1739,7 +1740,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// handler is constructed so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
 	charge.RegisterChargeCurveClustersTools(aiToolRegistry, charge.ChargeCurveClustersSources{
-		Trainer: mlchargingcurves.NewTrainer(NewAIChargingSessionSource(database.NewChargingRepo(db))),
+		Trainer: mlchargingcurves.NewTrainer(NewAIChargingSessionSource(chargingdb.NewChargingRepo(db))),
 	})
 	// ml-charging-curve-clustering handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed

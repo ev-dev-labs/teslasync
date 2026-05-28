@@ -42,7 +42,7 @@
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → query_chargers_along_route and
 //     query_user_charge_dwells delegate to the shared tools.ChargeSource
-//     read interface satisfied at boot by *database.ChargingRepo
+//     read interface satisfied at boot by *chargingdb.ChargingRepo
 //     (no new SQL). draft_trip_plan delegates to a narrow
 //     TripPlanComputer port satisfied at boot by an adapter wrapping
 //     the existing *api.TripPlannerHandler — the same code path the
@@ -804,7 +804,7 @@ func (t *draftTripPlan) Execute(ctx context.Context, in any) (any, error) {
 // [AutoTripNamingSources] / [RouteEfficiencySuggestionsSources].
 //
 // Production wiring (router.go) instantiates the two production
-// adapters (*database.ChargingRepo, *api.AITripPlanComputer); tests
+// adapters (*chargingdb.ChargingRepo, *api.AITripPlanComputer); tests
 // substitute deterministic fakes.
 type TripPlannerLLMAgentSources struct {
 	Chargers tools.ChargeSource

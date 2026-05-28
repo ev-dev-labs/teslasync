@@ -615,7 +615,7 @@ func strContains(s, sub string) bool {
 // / [DigestSources] / [AnomalySources] but exposes only the surface
 // the two charging-diagnosis tools actually consume.
 //
-// Production wiring (router.go) reuses the same *database.ChargingRepo
+// Production wiring (router.go) reuses the same *chargingdb.ChargingRepo
 // instance the HTTP path is built around (and that Register12Builtins
 // already received); tests substitute deterministic fakes per-source.
 type ChargingDiagnosisSources struct {

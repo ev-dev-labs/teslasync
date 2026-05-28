@@ -11,6 +11,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
@@ -32,7 +33,7 @@ type Worker struct {
 	vehicleRepo   *database.VehicleRepo
 	posRepo       *database.PositionRepo
 	driveRepo     *database.DriveRepo
-	chargeRepo    *database.ChargingRepo
+	chargeRepo    *chargingdb.ChargingRepo
 	tokenRepo     *dbauth.TokenRepo
 	alertRuleRepo *dbalert.AlertRuleRepo
 	settingsRepo  *database.SettingsRepo
@@ -76,7 +77,7 @@ func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerCo
 		vehicleRepo:       database.NewVehicleRepo(db),
 		posRepo:           database.NewPositionRepo(db),
 		driveRepo:         database.NewDriveRepo(db),
-		chargeRepo:        database.NewChargingRepo(db),
+		chargeRepo:        chargingdb.NewChargingRepo(db),
 		tokenRepo:         dbauth.NewTokenRepo(db, enc),
 		alertRuleRepo:     dbalert.NewAlertRuleRepo(db),
 		settingsRepo:      database.NewSettingsRepo(db),

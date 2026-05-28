@@ -947,7 +947,7 @@ var Registry = map[string]Feature{
 	// in this slice): `query_chargers_along_route` and
 	// `query_user_charge_dwells` read the existing
 	// `charging_sessions` table via the shared ChargeSource port
-	// satisfied at boot by *database.ChargingRepo (no new SQL);
+	// satisfied at boot by *chargingdb.ChargingRepo (no new SQL);
 	// `draft_trip_plan` delegates to the canonical
 	// TripPlannerHandler.computePlan path via a narrow
 	// TripPlanComputer port satisfied by AITripPlanComputer

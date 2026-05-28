@@ -48,7 +48,7 @@
 //     delegates to the F7 rag.Retriever (the single canonical
 //     retrieval entry point); query_charge_curve_features delegates
 //     to a narrow tools.ChargeSource read interface satisfied at boot by
-//     an adapter wrapping the existing *database.ChargingRepo
+//     an adapter wrapping the existing *chargingdb.ChargingRepo
 //     (no new SQL).
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle. The
@@ -700,7 +700,7 @@ func roundChargeCurve(v float64, n int) float64 {
 // interfaces RegisterChargingCurveFingerprintClusteringTools needs.
 //
 // Production wiring (router.go) reuses the same rag.Retriever +
-// *database.ChargingRepo instances the rest of the AI surface is
+// *chargingdb.ChargingRepo instances the rest of the AI surface is
 // built around; tests substitute deterministic fakes per-source.
 type ChargingCurveFingerprintClusteringSources struct {
 	Retriever rag.Retriever

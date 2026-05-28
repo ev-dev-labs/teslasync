@@ -216,7 +216,7 @@ type LearnedCluster struct {
 // SessionSource is the narrow read interface the trainer needs to
 // pull per-vehicle charging session rows. In production it is
 // satisfied by a thin pgx-backed adapter wrapping
-// *database.ChargingRepo (the SAME `charging_sessions` rows the
+// *chargingdb.ChargingRepo (the SAME `charging_sessions` rows the
 // deterministic ChargingCurvePage already renders; the trainer
 // reads the SAME table, no new SQL semantics).
 //

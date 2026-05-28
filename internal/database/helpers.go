@@ -10,6 +10,14 @@ import "fmt"
 // Returns an empty query and nil args when no allowed fields are present,
 // signalling the caller that no update is needed.
 func buildPartialUpdate(table string, id int64, fields map[string]interface{}, allowed map[string]string) (string, []interface{}) {
+	return BuildPartialUpdate(table, id, fields, allowed)
+}
+
+// BuildPartialUpdate is the exported entry point for sibling subpackages
+// (e.g. internal/database/charging) that need the same partial-UPDATE
+// builder logic. The unexported buildPartialUpdate alias is retained for
+// the legacy in-package call sites still in this directory.
+func BuildPartialUpdate(table string, id int64, fields map[string]interface{}, allowed map[string]string) (string, []interface{}) {
 	setClauses := []string{}
 	args := []interface{}{}
 	argIdx := 1

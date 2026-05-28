@@ -1,10 +1,11 @@
-package database
+package charging
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -29,11 +30,11 @@ type ChargePlan struct {
 
 // ChargePlanRepo provides data access for the charge_plans table.
 type ChargePlanRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewChargePlanRepo creates a new ChargePlanRepo.
-func NewChargePlanRepo(db *DB) *ChargePlanRepo {
+func NewChargePlanRepo(db *database.DB) *ChargePlanRepo {
 	return &ChargePlanRepo{db: db}
 }
 

@@ -14,6 +14,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -131,12 +132,12 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 	// Persist draft plan. The AI handler does NOT call into this
 	// branch — it only proposes via computeSchedule and lets the user
 	// save through the canonical Apply / SmartChargePage Save buttons.
-	planRepo := database.NewChargePlanRepo(h.db)
+	planRepo := chargingdb.NewChargePlanRepo(h.db)
 	estKwh := resp.KWhNeeded
 	estCost := resp.Schedule.EstCost
 	chargeNowCost := resp.Comparison.ChargeNowCost
 	savings := resp.Comparison.Savings
-	dbPlan := &database.ChargePlan{
+	dbPlan := &chargingdb.ChargePlan{
 		VehicleID:      req.VehicleID,
 		TargetSOC:      req.TargetSOC,
 		DepartBy:       &departBy,
@@ -375,7 +376,7 @@ func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	planRepo := database.NewChargePlanRepo(h.db)
+	planRepo := chargingdb.NewChargePlanRepo(h.db)
 
 	plan, err := planRepo.GetByID(ctx, req.PlanID)
 	if err != nil {
@@ -490,7 +491,7 @@ func (h *ChargePlannerHandler) ListPlans(w http.ResponseWriter, r *http.Request)
 
 	limit, offset := pagination(r)
 
-	planRepo := database.NewChargePlanRepo(h.db)
+	planRepo := chargingdb.NewChargePlanRepo(h.db)
 	plans, err := planRepo.ListByVehicle(r.Context(), vehicleID, limit, offset)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to list charge plans")
@@ -499,7 +500,7 @@ func (h *ChargePlannerHandler) ListPlans(w http.ResponseWriter, r *http.Request)
 	}
 
 	if plans == nil {
-		plans = []*database.ChargePlan{}
+		plans = []*chargingdb.ChargePlan{}
 	}
 
 	writeJSON(w, http.StatusOK, plans)

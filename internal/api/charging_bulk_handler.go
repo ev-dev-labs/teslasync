@@ -9,7 +9,7 @@ import (
 )
 
 // chargingBulkStore is the narrow surface needed by BulkDelete; implemented
-// by *database.ChargingRepo and substitutable in tests.
+// by *chargingdb.ChargingRepo and substitutable in tests.
 type chargingBulkStore interface {
 	FilterExistingIDs(ctx context.Context, ids []int64) ([]int64, error)
 	BulkDelete(ctx context.Context, ids []int64) (int64, error)

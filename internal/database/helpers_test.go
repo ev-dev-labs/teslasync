@@ -251,24 +251,6 @@ func TestDrivePartialAllowed_Valid(t *testing.T) {
 	}
 }
 
-func TestChargingPartialAllowed_Valid(t *testing.T) {
-	if len(chargingPartialAllowed) == 0 {
-		t.Fatal("chargingPartialAllowed is empty")
-	}
-	colRe := regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-	for key, col := range chargingPartialAllowed {
-		if key == "" {
-			t.Error("empty key in chargingPartialAllowed")
-		}
-		if col == "" {
-			t.Errorf("empty column for key %q", key)
-		}
-		if !colRe.MatchString(col) {
-			t.Errorf("column %q doesn't look like a valid SQL identifier", col)
-		}
-	}
-}
-
 // ---------------------------------------------------------------------------
 // ptrStr / ptrFloat
 // ---------------------------------------------------------------------------

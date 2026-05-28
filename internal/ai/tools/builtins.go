@@ -70,7 +70,7 @@ type DriveSource interface {
 }
 
 // ChargeSource is the read surface the charging-domain tools need.
-// Implemented by *database.ChargingRepo.
+// Implemented by *chargingdb.ChargingRepo.
 type ChargeSource interface {
 	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*chargingmodel.ChargingSession, error)
 	GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error)

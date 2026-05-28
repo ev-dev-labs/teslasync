@@ -9,6 +9,7 @@ import (
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
@@ -24,26 +25,26 @@ import (
 // inject a fake without standing up a real pgx pool.
 type ChargingHandler struct {
 	db                *database.DB
-	chargingRepo      *database.ChargingRepo
+	chargingRepo      *chargingdb.ChargingRepo
 	charging          chargingByIDFetcher
 	state             signal.StateReader
 	live              signal.LiveStateReader
 	forwardAuthHeader string
 	// bulkOverride lets tests substitute the bulk store without standing up a
-	// real *database.ChargingRepo. Always nil in production.
+	// real *chargingdb.ChargingRepo. Always nil in production.
 	bulkOverride chargingBulkStore
 }
 
 // chargingByIDFetcher is the narrow interface needed by the migrated handlers
 // to fetch a single charging session header. It is satisfied by
-// *database.ChargingRepo and declared at the call site so tests can
+// *chargingdb.ChargingRepo and declared at the call site so tests can
 // substitute an in-memory fake.
 type chargingByIDFetcher interface {
 	GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error)
 }
 
 func NewChargingHandler(db *database.DB, state signal.StateReader, live signal.LiveStateReader) *ChargingHandler {
-	repo := database.NewChargingRepo(db)
+	repo := chargingdb.NewChargingRepo(db)
 	return &ChargingHandler{
 		db:           db,
 		chargingRepo: repo,

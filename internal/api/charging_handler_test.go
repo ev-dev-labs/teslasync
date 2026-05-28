@@ -16,7 +16,7 @@ import (
 
 // fakeChargingByIDFetcher is the in-memory charging session lookup used by
 // charging_handler tests so the migrated handlers can be exercised end-to-end
-// without a real *database.ChargingRepo / pgx pool.
+// without a real *chargingdb.ChargingRepo / pgx pool.
 type fakeChargingByIDFetcher struct {
 	session *chargingmodel.ChargingSession
 	err     error

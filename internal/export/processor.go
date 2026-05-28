@@ -12,13 +12,14 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 )
 
 // Processor generates export files from database data.
 type Processor struct {
 	vehicleRepo  *database.VehicleRepo
 	driveRepo    *database.DriveRepo
-	chargingRepo *database.ChargingRepo
+	chargingRepo *chargingdb.ChargingRepo
 	tripRepo     *database.TripRepo
 	db           *database.DB
 }
@@ -28,7 +29,7 @@ func NewProcessor(db *database.DB) *Processor {
 	return &Processor{
 		vehicleRepo:  database.NewVehicleRepo(db),
 		driveRepo:    database.NewDriveRepo(db),
-		chargingRepo: database.NewChargingRepo(db),
+		chargingRepo: chargingdb.NewChargingRepo(db),
 		tripRepo:     database.NewTripRepo(db),
 		db:           db,
 	}

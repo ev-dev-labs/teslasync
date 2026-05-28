@@ -17,6 +17,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	"github.com/ev-dev-labs/teslasync/internal/export"
 )
 
@@ -389,7 +390,7 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 func NewExportHandler(db *database.DB) http.HandlerFunc {
 	vehicleRepo := database.NewVehicleRepo(db)
 	driveRepo := database.NewDriveRepo(db)
-	chargingRepo := database.NewChargingRepo(db)
+	chargingRepo := chargingdb.NewChargingRepo(db)
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		exportType := chi.URLParam(r, "type")
@@ -474,7 +475,7 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 	cw.Flush()
 }
 
-func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *database.VehicleRepo, chargingRepo *database.ChargingRepo, format string) {
+func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *database.VehicleRepo, chargingRepo *chargingdb.ChargingRepo, format string) {
 	vehicles, err := vehicleRepo.GetAll(r.Context())
 	if err != nil {
 		http.Error(w, "failed to fetch vehicles", http.StatusInternalServerError)

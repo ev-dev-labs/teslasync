@@ -12,6 +12,7 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -72,7 +73,7 @@ type apiDriveState struct {
 // worker no longer needs to track them directly.
 type SessionService struct {
 	driveRepo  *database.DriveRepo
-	chargeRepo *database.ChargingRepo
+	chargeRepo *chargingdb.ChargingRepo
 	tripRepo   *database.TripRepo
 	eventBus   *events.Bus
 
@@ -86,7 +87,7 @@ type SessionService struct {
 func NewSessionService(db *database.DB, eventBus *events.Bus) *SessionService {
 	return &SessionService{
 		driveRepo:        database.NewDriveRepo(db),
-		chargeRepo:       database.NewChargingRepo(db),
+		chargeRepo:       chargingdb.NewChargingRepo(db),
 		tripRepo:         database.NewTripRepo(db),
 		eventBus:         eventBus,
 		activeDrives:     make(map[int64]int64),
