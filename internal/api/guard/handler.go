@@ -26,13 +26,14 @@
 //     rate-limited (soft mark-read).
 //
 // Frontend hook: web/src/api/hooks/useGuard.ts
-package api
+package guard
 
 import (
 	"context"
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -40,6 +41,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
@@ -124,18 +126,25 @@ func (h *GuardHandler) now() time.Time {
 	return time.Now().UTC()
 }
 
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
+}
+
 // parseVehicleID extracts the {vehicleID} chi path parameter as a
 // positive int64. Writes the appropriate 4xx and returns ok=false on
 // any malformed input.
 func (h *GuardHandler) parseVehicleID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "vehicleID")
 	if raw == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return 0, false
 	}
 	vid, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil || vid <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 		return 0, false
 	}
 	return vid, true
@@ -158,21 +167,21 @@ func (h *GuardHandler) Status(w http.ResponseWriter, r *http.Request) {
 	exists, err := h.repo.VehicleExists(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("guard.status: existence probe failed")
-		writeError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to verify vehicle")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
 	status, err := h.repo.Status(ctx, vehicleID, h.now())
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("guard.status: query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load guard status")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load guard status")
 		return
 	}
-	writeJSON(w, http.StatusOK, status)
+	httpx.WriteJSON(w, http.StatusOK, status)
 }
 
 // GuardEventsResponse is the envelope returned by Events. Mirrors the
@@ -198,21 +207,21 @@ func (h *GuardHandler) Events(w http.ResponseWriter, r *http.Request) {
 	if l := r.URL.Query().Get("limit"); l != "" {
 		v, err := strconv.Atoi(l)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "limit must be an integer")
+			httpx.WriteError(w, http.StatusBadRequest, "limit must be an integer")
 			return
 		}
 		if v < 1 {
-			writeError(w, http.StatusBadRequest, "limit must be >= 1")
+			httpx.WriteError(w, http.StatusBadRequest, "limit must be >= 1")
 			return
 		}
 		if v > guardEventsMaxLimit {
 			// Decision #2 max-cap envelope mirrors the Phase-43a /
 			// Prompt 0003+0004+0005 precedent — writeError can't add
 			// the `max` field, so we hand-write the JSON.
-			writeJSON(w, http.StatusBadRequest, map[string]any{
+			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "limit exceeds maximum",
 				"max":   guardEventsMaxLimit,
-				"code":  httpStatusCode(http.StatusBadRequest),
+				"code":  httpx.HTTPStatusCode(http.StatusBadRequest),
 			})
 			return
 		}
@@ -223,25 +232,25 @@ func (h *GuardHandler) Events(w http.ResponseWriter, r *http.Request) {
 	exists, err := h.repo.VehicleExists(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("guard.events: existence probe failed")
-		writeError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to verify vehicle")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
 	events, err := h.repo.Events(ctx, vehicleID, limit)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("limit", limit).Msg("guard.events: query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load guard events")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load guard events")
 		return
 	}
 	if events == nil {
 		events = []systemdb.GuardEvent{}
 	}
 
-	writeJSON(w, http.StatusOK, GuardEventsResponse{
+	httpx.WriteJSON(w, http.StatusOK, GuardEventsResponse{
 		VehicleID: vehicleID,
 		Events:    events,
 	})
@@ -265,12 +274,12 @@ func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 
 	eventIDRaw := chi.URLParam(r, "eventID")
 	if eventIDRaw == "" {
-		writeError(w, http.StatusBadRequest, "event_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "event_id is required")
 		return
 	}
 	eventID, err := strconv.ParseInt(eventIDRaw, 10, 64)
 	if err != nil || eventID <= 0 {
-		writeError(w, http.StatusBadRequest, "event_id must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "event_id must be a positive integer")
 		return
 	}
 
@@ -282,11 +291,11 @@ func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 	exists, err := h.repo.VehicleExists(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("guard.ack: existence probe failed")
-		writeError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to verify vehicle")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
@@ -297,7 +306,7 @@ func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 
 	updated, err := h.repo.Acknowledge(ctx, vehicleID, eventID, actor)
 	if errors.Is(err, systemdb.ErrGuardEventNotFound) {
-		writeError(w, http.StatusNotFound, "guard event not found")
+		httpx.WriteError(w, http.StatusNotFound, "guard event not found")
 		return
 	}
 	if err != nil {
@@ -306,11 +315,11 @@ func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 			Int64("event_id", eventID).
 			Str("actor", actor).
 			Msg("guard.ack: update failed")
-		writeError(w, http.StatusInternalServerError, "failed to acknowledge guard event")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to acknowledge guard event")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 // guardPanicCommands is the fixed sequence Panic dispatches when the
@@ -374,7 +383,7 @@ func (h *GuardHandler) Panic(w http.ResponseWriter, r *http.Request) {
 		// open-mode install where the operator has not configured a
 		// command proxy returns a clear actionable error rather than
 		// a 200 with an empty results array.
-		writeError(w, http.StatusNotImplemented, "Tesla command proxy not configured")
+		httpx.WriteError(w, http.StatusNotImplemented, "Tesla command proxy not configured")
 		return
 	}
 
@@ -382,11 +391,11 @@ func (h *GuardHandler) Panic(w http.ResponseWriter, r *http.Request) {
 	vehicle, err := h.vehicles.GetByID(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("guard.panic: vehicle lookup failed")
-		writeError(w, http.StatusInternalServerError, "failed to load vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load vehicle")
 		return
 	}
 	if vehicle == nil {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
@@ -420,8 +429,8 @@ func (h *GuardHandler) Panic(w http.ResponseWriter, r *http.Request) {
 		// 502 Bad Gateway — the proxy/Tesla rejected at least one
 		// command. The body still includes per-command results so the
 		// SPA can render which alerts succeeded.
-		writeJSON(w, http.StatusBadGateway, resp)
+		httpx.WriteJSON(w, http.StatusBadGateway, resp)
 		return
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }

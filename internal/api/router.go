@@ -36,6 +36,7 @@ import (
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
+	apiguard "github.com/ev-dev-labs/teslasync/internal/api/guard"
 	apiimpers "github.com/ev-dev-labs/teslasync/internal/api/impersonate"
 	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
@@ -623,7 +624,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
 	alertMessageHandler := NewAlertMessageHandler()
 	commandHandler := NewCommandHandler(db, teslaClient)
-	guardHandler := NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
+	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)
 	signalLogReader := signaldb.NewSignalLogReader(db)
 	batteryHandler := NewBatteryHandler(db, stateReader)
