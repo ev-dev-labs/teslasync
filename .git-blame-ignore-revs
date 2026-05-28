@@ -150,3 +150,5 @@ d0b0e61a4f88c159111336945150d0fcc584a71d # R4.8 carve user subpackage
 6619b52dcd2c9e641990bbbc233fcd442e914bd6
 # R4.10 audit cluster carve + Layer regex compliance fix across 23 doc.go files
 e42dfd8d02d9152d1a1449e555804624eeb530f1
+# R4.11 charging cluster carve (internal/database/charging/)
+d397160f446c249f2e2b57e517f561aa12172efe
