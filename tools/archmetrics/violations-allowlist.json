@@ -1,0 +1,54 @@
+{
+  "$schema": "tools/archmetrics/violations-allowlist.schema.json",
+  "$doc": [
+    "Per-legacy-package file-count ratchet. Each entry caps the .go file count for a flat-parent directory; counts can only DECREASE as the Phase R restructure carves files into subpackages.",
+    "",
+    "Semantics:",
+    "  * `path` is a repo-relative directory (no trailing slash).",
+    "  * `max_files` is the maximum allowed count of .go files at the FLAT parent of `path` (subpackages and _test.go files are EXEMPT — they are not counted).",
+    "  * A regression (new file pushing count above max_files) fails the archmetrics compare step.",
+    "  * Owners: when you carve another file out of a parent, REDUCE max_files in the same commit. Never increase it — that defeats the ratchet.",
+    "",
+    "Created: 2026-05-28 (Phase A3.3). Source for initial values: tools/archmetrics/baseline.json phase_r_progress.flat_parent_go_files at HEAD 6c858631 (end of Phase R5).",
+    "",
+    "Source of truth coupling: the `path` set MUST match tools/archmetrics/main.go plannedSubpackages. When adding a new hot-spot, update both files in the same commit."
+  ],
+  "packages": [
+    {
+      "path": "internal/api",
+      "max_files": 271,
+      "owner": "Phase R2 (waves R2a-R2e) + Phase C0-C10",
+      "notes": "Was 434 at R0. ADR-009 freeze on internal/api enforced by frozenPackages — new files banned outright; existing files migrate to internal/handler/v1 + internal/app/*svc per Clean Arch DAG."
+    },
+    {
+      "path": "internal/database",
+      "max_files": 108,
+      "owner": "Phase R4",
+      "notes": "Was 143 at R0. Largest backend cluster remaining. Will be carved into bounded-context repo subpackages (drive/, charging/, telemetry/, signal/, etc.)."
+    },
+    {
+      "path": "internal/ai/tools",
+      "max_files": 58,
+      "owner": "Phase R6",
+      "notes": "Was 109 at R0. Plain-function tool registry; carved by domain (charging/, drive/, vehicle/, etc.) so each tool sits with its consumer."
+    },
+    {
+      "path": "internal/jobs",
+      "max_files": 12,
+      "owner": "Phase R6",
+      "notes": "Was 23 at R0. R0.5 canary already extracted embeddings/. Remaining files split by job category."
+    },
+    {
+      "path": "internal/models",
+      "max_files": 18,
+      "owner": "Phase R5 (COMPLETE) + R5.20-R5.25 (DEFERRED)",
+      "notes": "Was 36 at R0. R5.1-R5.19 shipped 19 bounded-context subpackages. 18 files still at flat parent are sub-clusters of already-carved domains (automation core, notification core, trip, push_subscription, quiet_hours, vehicle-state enums) deferred to R5.20-R5.25 with 40+/30+ caller blast radius each."
+    },
+    {
+      "path": "internal/handler/v1",
+      "max_files": 11,
+      "owner": "Phase R3 + C0-C10",
+      "notes": "Was 12 at R0. Will be sub-split by domain (vehicles/, drives/, charging/, ...) as Clean Arch handler migration progresses (C0-C10)."
+    }
+  ]
+}

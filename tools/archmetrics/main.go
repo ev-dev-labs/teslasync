@@ -721,8 +721,72 @@ func diff(base, cur Snapshot) []string {
 			base.DocGoCoverage*100, cur.DocGoCoverage*100))
 	}
 
+	// Phase-A3.3 legacy-shrink-only ratchet. Each entry in
+	// violations-allowlist.json caps the .go file count for a
+	// flat-parent legacy package directory; counts can only DECREASE
+	// as Phase R carves files into subpackages. A file added to a
+	// flat parent that pushes the count above the allow-listed
+	// max_files fails this gate. Silently skipped if the allowlist
+	// file is missing (so the tool stays usable in CI checkouts
+	// without it during the transitional window).
+	if al, err := loadViolationsAllowlist("tools/archmetrics/violations-allowlist.json"); err == nil {
+		curHotspots := flatParentGoCounts(cur)
+		for _, entry := range al.Packages {
+			n, ok := curHotspots[entry.Path]
+			if !ok {
+				continue
+			}
+			if n > entry.MaxFiles {
+				regs = append(regs, fmt.Sprintf(
+					"legacy package %s grew above ratchet: %d > %d max_files (owner: %s). Either DELETE the new file or carve it into a subpackage; updating max_files upward is NEVER acceptable.",
+					entry.Path, n, entry.MaxFiles, entry.Owner,
+				))
+			}
+		}
+	}
+
 	sort.Strings(regs)
 	return regs
+}
+
+// violationsAllowlist mirrors the JSON file at
+// tools/archmetrics/violations-allowlist.json. See file for semantics.
+type violationsAllowlist struct {
+	Packages []violationsAllowlistEntry `json:"packages"`
+}
+
+type violationsAllowlistEntry struct {
+	Path     string `json:"path"`
+	MaxFiles int    `json:"max_files"`
+	Owner    string `json:"owner"`
+	Notes    string `json:"notes,omitempty"`
+}
+
+// loadViolationsAllowlist reads the per-legacy-package ratchet file.
+// Missing file is NOT an error — returns ErrNotExist so callers can
+// silently skip the ratchet check during transitional rollout.
+func loadViolationsAllowlist(path string) (violationsAllowlist, error) {
+	var al violationsAllowlist
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return al, err
+	}
+	if err := json.Unmarshal(data, &al); err != nil {
+		return al, fmt.Errorf("parse %s: %w", path, err)
+	}
+	return al, nil
+}
+
+// flatParentGoCounts returns the .go file count at the FLAT parent of
+// each package path (excludes _test.go and subpackages, matching the
+// semantics of PkgMetric.GoFiles and PhaseRProgress.FlatParentGoFiles
+// so the ratchet matches what is reported in the Markdown).
+func flatParentGoCounts(s Snapshot) map[string]int {
+	out := map[string]int{}
+	for _, p := range s.Packages {
+		out[p.Path] = p.GoFiles
+	}
+	return out
 }
 
 func emitMarkdown(w *os.File, s Snapshot) {
