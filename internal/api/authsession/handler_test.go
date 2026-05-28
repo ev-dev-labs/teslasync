@@ -1,4 +1,4 @@
-package api
+package authsession
 
 import (
 	"encoding/json"
@@ -11,7 +11,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
-// Phase-46 / Prompt 05 — AuthSessionHandler unit tests.
+// Phase-46 / Prompt 05 — Handler unit tests.
 
 func decodeAuthSessionBody(t *testing.T, body []byte) authSessionResponse {
 	t.Helper()
@@ -24,7 +24,7 @@ func decodeAuthSessionBody(t *testing.T, body []byte) authSessionResponse {
 
 func TestAuthSessionOpenMode(t *testing.T) {
 	cfg := &config.Config{Auth: config.AuthConfig{ForwardAuthHeader: ""}}
-	h := NewAuthSessionHandler(cfg)
+	h := NewHandler(cfg)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
@@ -53,7 +53,7 @@ func TestAuthSessionOpenMode(t *testing.T) {
 
 func TestAuthSessionUnauthenticatedReturns200(t *testing.T) {
 	cfg := &config.Config{Auth: config.AuthConfig{ForwardAuthHeader: "X-Forwarded-User"}}
-	h := NewAuthSessionHandler(cfg)
+	h := NewHandler(cfg)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
@@ -76,7 +76,7 @@ func TestAuthSessionUnauthenticatedReturns200(t *testing.T) {
 
 func TestAuthSessionAuthenticatedNoExpiryHeader(t *testing.T) {
 	cfg := &config.Config{Auth: config.AuthConfig{ForwardAuthHeader: "X-Forwarded-User"}}
-	h := NewAuthSessionHandler(cfg)
+	h := NewHandler(cfg)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
@@ -104,7 +104,7 @@ func TestAuthSessionAuthenticatedNoExpiryHeader(t *testing.T) {
 
 func TestAuthSessionExpiryRFC3339(t *testing.T) {
 	cfg := &config.Config{Auth: config.AuthConfig{ForwardAuthHeader: "X-Forwarded-User"}}
-	h := NewAuthSessionHandler(cfg)
+	h := NewHandler(cfg)
 	fixed := time.Date(2025, 5, 4, 12, 0, 0, 0, time.UTC)
 	h.now = func() time.Time { return fixed }
 
@@ -134,7 +134,7 @@ func TestAuthSessionExpiryRFC3339(t *testing.T) {
 
 func TestAuthSessionExpiryUnixSeconds(t *testing.T) {
 	cfg := &config.Config{Auth: config.AuthConfig{ForwardAuthHeader: "X-Forwarded-User"}}
-	h := NewAuthSessionHandler(cfg)
+	h := NewHandler(cfg)
 	fixed := time.Date(2025, 5, 4, 12, 0, 0, 0, time.UTC)
 	h.now = func() time.Time { return fixed }
 
@@ -157,7 +157,7 @@ func TestAuthSessionExpiryUnixSeconds(t *testing.T) {
 
 func TestAuthSessionExpiryGarbledHeader(t *testing.T) {
 	cfg := &config.Config{Auth: config.AuthConfig{ForwardAuthHeader: "X-Forwarded-User"}}
-	h := NewAuthSessionHandler(cfg)
+	h := NewHandler(cfg)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/auth/session", nil)
@@ -180,7 +180,7 @@ func TestAuthSessionExpiryGarbledHeader(t *testing.T) {
 
 func TestAuthSessionExpiryMillisecondHeader(t *testing.T) {
 	cfg := &config.Config{Auth: config.AuthConfig{ForwardAuthHeader: "X-Forwarded-User"}}
-	h := NewAuthSessionHandler(cfg)
+	h := NewHandler(cfg)
 	fixed := time.Date(2025, 5, 4, 12, 0, 0, 0, time.UTC)
 	h.now = func() time.Time { return fixed }
 

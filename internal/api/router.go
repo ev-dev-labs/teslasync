@@ -18,6 +18,7 @@ import (
 	apikeyh "github.com/ev-dev-labs/teslasync/internal/api/apikey"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apiauth "github.com/ev-dev-labs/teslasync/internal/api/auth"
+	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
 	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
@@ -1997,7 +1998,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// expired-session path that drove it here, infinite-looping the
 	// hard-expired modal. Per-IP rate limit is generous (60/min)
 	// because every SPA tab independently polls.
-	authSessionHandler := NewAuthSessionHandler(cfg)
+	authSessionHandler := apiauths.NewHandler(cfg)
 	r.With(
 		httprate.LimitByIP(60, 1*time.Minute),
 	).Get("/api/v1/auth/session", authSessionHandler.Session)

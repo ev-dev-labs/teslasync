@@ -1,4 +1,4 @@
-package api
+package authsession
 
 import (
 	"net/http"
@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
@@ -49,9 +50,9 @@ import (
 // useSessionMonitor short-circuits all banner/modal logic in this
 // branch — there is no session to expire when there is no auth.
 
-// AuthSessionHandler serves GET /api/v1/auth/session. Stateless — all
+// Handler serves GET /api/v1/auth/session. Stateless — all
 // data is derived from the inbound request headers + config snapshot.
-type AuthSessionHandler struct {
+type Handler struct {
 	// userHeader is the proxy header carrying the principal identity
 	// (e.g. "X-Forwarded-User"). Empty in open mode.
 	userHeader string
@@ -65,13 +66,13 @@ type AuthSessionHandler struct {
 	now func() time.Time
 }
 
-// NewAuthSessionHandler wires the handler from the application config.
+// NewHandler wires the handler from the application config.
 // emailHeader / expiresHeader use sensible defaults that match the
 // dominant ForwardAuth providers (oauth2-proxy, authentik, authelia);
 // operators with bespoke header names can set FORWARD_AUTH_EMAIL_HEADER
 // / FORWARD_AUTH_EXPIRES_HEADER on the deployment to override.
-func NewAuthSessionHandler(cfg *config.Config) *AuthSessionHandler {
-	h := &AuthSessionHandler{now: time.Now}
+func NewHandler(cfg *config.Config) *Handler {
+	h := &Handler{now: time.Now}
 	if cfg != nil {
 		h.userHeader = strings.TrimSpace(cfg.Auth.ForwardAuthHeader)
 	}
@@ -101,11 +102,11 @@ type authSessionResponse struct {
 }
 
 // Session handles GET /api/v1/auth/session. Always returns 200.
-func (h *AuthSessionHandler) Session(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Session(w http.ResponseWriter, r *http.Request) {
 	// Open mode: no auth header configured at all. SPA disables session
 	// monitoring entirely — there is nothing to expire.
 	if h.userHeader == "" {
-		writeJSON(w, http.StatusOK, authSessionResponse{
+		httpx.WriteJSON(w, http.StatusOK, authSessionResponse{
 			Authenticated: true,
 			Mode:          "open",
 		})
@@ -114,7 +115,7 @@ func (h *AuthSessionHandler) Session(w http.ResponseWriter, r *http.Request) {
 
 	subject := strings.TrimSpace(r.Header.Get(h.userHeader))
 	if subject == "" {
-		writeJSON(w, http.StatusOK, authSessionResponse{
+		httpx.WriteJSON(w, http.StatusOK, authSessionResponse{
 			Authenticated: false,
 			Mode:          "session",
 		})
@@ -136,7 +137,7 @@ func (h *AuthSessionHandler) Session(w http.ResponseWriter, r *http.Request) {
 		Renewable: true,
 	}
 
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // parseExpiry returns (RFC3339 string, seconds remaining) for the
@@ -148,7 +149,7 @@ func (h *AuthSessionHandler) Session(w http.ResponseWriter, r *http.Request) {
 //
 // Returns (nil, nil) when parsing fails so the SPA falls back to its
 // polling-only detection path.
-func (h *AuthSessionHandler) parseExpiry(raw string) (*string, *int64) {
+func (h *Handler) parseExpiry(raw string) (*string, *int64) {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return nil, nil
@@ -180,7 +181,7 @@ func (h *AuthSessionHandler) parseExpiry(raw string) (*string, *int64) {
 	return nil, nil
 }
 
-func (h *AuthSessionHandler) formatExpiry(t time.Time) (*string, *int64) {
+func (h *Handler) formatExpiry(t time.Time) (*string, *int64) {
 	formatted := t.UTC().Format(time.RFC3339)
 	remaining := int64(t.Sub(h.now()).Seconds())
 	return &formatted, &remaining
