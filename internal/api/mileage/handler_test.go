@@ -1,4 +1,4 @@
-package api
+package mileage
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
-// Phase-43a / Prompt 0004 — HTTP tests for MileageHandler.
+// Phase-43a / Prompt 0004 — HTTP tests for Handler.
 //
 // Coverage map vs Decision #7:
 //   (a) Monthly grouping correctness  -> TestMileage_Monthly_GroupingPassThrough
@@ -104,8 +104,8 @@ func (f *fakeMileageRepo) Daily(ctx context.Context, vehicleID int64, windowStar
 	return f.daily, nil
 }
 
-func newMileageHandlerForTest(repo *fakeMileageRepo, fixedNow time.Time) *MileageHandler {
-	return &MileageHandler{
+func newHandlerForTest(repo *fakeMileageRepo, fixedNow time.Time) *Handler {
+	return &Handler{
 		repo:  repo,
 		clock: func() time.Time { return fixedNow },
 	}
@@ -148,7 +148,7 @@ func TestMileage_Monthly_MonthsClamp(t *testing.T) {
 				exists:  map[int64]bool{42: true},
 				monthly: []drivedb.MileageMonthlyRow{},
 			}
-			h := newMileageHandlerForTest(repo, now)
+			h := newHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
 			h.Monthly(rec, mileageRequest("/mileage/monthly?"+c.query))
 
@@ -192,7 +192,7 @@ func TestMileage_BadVehicleID(t *testing.T) {
 		t.Run("monthly_"+c.name, func(t *testing.T) {
 			t.Parallel()
 			repo := &fakeMileageRepo{}
-			h := newMileageHandlerForTest(repo, now)
+			h := newHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
 			h.Monthly(rec, mileageRequest("/mileage/monthly?"+c.query))
 			if rec.Code != http.StatusBadRequest {
@@ -205,7 +205,7 @@ func TestMileage_BadVehicleID(t *testing.T) {
 		t.Run("stats_"+c.name, func(t *testing.T) {
 			t.Parallel()
 			repo := &fakeMileageRepo{}
-			h := newMileageHandlerForTest(repo, now)
+			h := newHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
 			h.Stats(rec, mileageRequest("/mileage/stats?"+c.query))
 			if rec.Code != http.StatusBadRequest {
@@ -224,7 +224,7 @@ func TestMileage_Monthly_UnknownVehicle_404(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeMileageRepo{exists: map[int64]bool{}} // 99 not present
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Monthly(rec, mileageRequest("/mileage/monthly?vehicle_id=99"))
 	if rec.Code != http.StatusNotFound {
@@ -239,7 +239,7 @@ func TestMileage_Stats_UnknownVehicle_404(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeMileageRepo{exists: map[int64]bool{}}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Stats(rec, mileageRequest("/mileage/stats?vehicle_id=99"))
 	if rec.Code != http.StatusNotFound {
@@ -258,7 +258,7 @@ func TestMileage_Monthly_EmptyVehicle_200(t *testing.T) {
 		exists:  map[int64]bool{42: true},
 		monthly: []drivedb.MileageMonthlyRow{},
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Monthly(rec, mileageRequest("/mileage/monthly?vehicle_id=42"))
 	if rec.Code != http.StatusOK {
@@ -292,7 +292,7 @@ func TestMileage_Stats_EmptyVehicle_200(t *testing.T) {
 		exists: map[int64]bool{42: true},
 		stats:  drivedb.MileageStats{}, // all zero, nil times
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Stats(rec, mileageRequest("/mileage/stats?vehicle_id=42"))
 	if rec.Code != http.StatusOK {
@@ -343,7 +343,7 @@ func TestMileage_Monthly_GroupingPassThrough(t *testing.T) {
 			{Bucket: may, DriveCount: 3, TotalKm: 90.0, TotalWhConsumed: nil, AvgEfficiencyWhPerKm: nil},
 		},
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Monthly(rec, mileageRequest("/mileage/monthly?vehicle_id=42&months=12"))
 
@@ -423,7 +423,7 @@ func TestMileage_Monthly_DefaultWindowIs24Months(t *testing.T) {
 		exists:  map[int64]bool{42: true},
 		monthly: []drivedb.MileageMonthlyRow{},
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Monthly(rec, mileageRequest("/mileage/monthly?vehicle_id=42"))
 	if rec.Code != http.StatusOK {
@@ -463,7 +463,7 @@ func TestMileage_Stats_LifetimeMatchesMonthlySum(t *testing.T) {
 			LifetimeKm: wantLifetime,
 		},
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Stats(rec, mileageRequest("/mileage/stats?vehicle_id=42"))
 	if rec.Code != http.StatusOK {
@@ -500,7 +500,7 @@ func TestMileage_Stats_WindowsPassThrough(t *testing.T) {
 			LastDriveAt:        mileagePtrTime(last),
 		},
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Stats(rec, mileageRequest("/mileage/stats?vehicle_id=42"))
 	if rec.Code != http.StatusOK {
@@ -567,7 +567,7 @@ func TestMileage_Monthly_RepoError_500(t *testing.T) {
 		exists:     map[int64]bool{42: true},
 		monthlyErr: errors.New("boom"),
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Monthly(rec, mileageRequest("/mileage/monthly?vehicle_id=42"))
 	if rec.Code != http.StatusInternalServerError {
@@ -582,7 +582,7 @@ func TestMileage_Stats_RepoError_500(t *testing.T) {
 		exists:   map[int64]bool{42: true},
 		statsErr: errors.New("boom"),
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Stats(rec, mileageRequest("/mileage/stats?vehicle_id=42"))
 	if rec.Code != http.StatusInternalServerError {
@@ -598,7 +598,7 @@ func TestMileage_VehicleExistsError_500(t *testing.T) {
 	t.Run("monthly", func(t *testing.T) {
 		t.Parallel()
 		repo := &fakeMileageRepo{existsErr: errors.New("db down")}
-		h := newMileageHandlerForTest(repo, now)
+		h := newHandlerForTest(repo, now)
 		rec := httptest.NewRecorder()
 		h.Monthly(rec, mileageRequest("/mileage/monthly?vehicle_id=42"))
 		if rec.Code != http.StatusInternalServerError {
@@ -612,7 +612,7 @@ func TestMileage_VehicleExistsError_500(t *testing.T) {
 	t.Run("stats", func(t *testing.T) {
 		t.Parallel()
 		repo := &fakeMileageRepo{existsErr: errors.New("db down")}
-		h := newMileageHandlerForTest(repo, now)
+		h := newHandlerForTest(repo, now)
 		rec := httptest.NewRecorder()
 		h.Stats(rec, mileageRequest("/mileage/stats?vehicle_id=42"))
 		if rec.Code != http.StatusInternalServerError {
@@ -704,7 +704,7 @@ func TestMileage_Daily_DaysClamp(t *testing.T) {
 			repo := &fakeMileageRepo{
 				exists: map[int64]bool{42: true},
 			}
-			h := newMileageHandlerForTest(repo, now)
+			h := newHandlerForTest(repo, now)
 			target := "/mileage/daily?vehicle_id=42"
 			if c.days != "" {
 				target += "&days=" + c.days
@@ -739,7 +739,7 @@ func TestMileage_Daily_BadVehicleID(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			repo := &fakeMileageRepo{}
-			h := newMileageHandlerForTest(repo, now)
+			h := newHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
 			h.Daily(rec, mileageRequest(c.target))
 			if rec.Code != http.StatusBadRequest {
@@ -759,7 +759,7 @@ func TestMileage_Daily_UnknownVehicle_404(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeMileageRepo{exists: map[int64]bool{}}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=99"))
 	if rec.Code != http.StatusNotFound {
@@ -777,7 +777,7 @@ func TestMileage_Daily_EmptyVehicle_200(t *testing.T) {
 		exists: map[int64]bool{7: true},
 		daily:  []drivedb.MileageDailyRow{},
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=7"))
 	if rec.Code != http.StatusOK {
@@ -806,7 +806,7 @@ func TestMileage_Daily_RepoError_500(t *testing.T) {
 		exists:   map[int64]bool{7: true},
 		dailyErr: errors.New("boom"),
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=7"))
 	if rec.Code != http.StatusInternalServerError {
@@ -830,7 +830,7 @@ func TestMileage_Daily_GroupingPassThrough(t *testing.T) {
 			{Day: day3, DriveCount: 4, TotalKm: 85.42, EndOdometerKm: nil},
 		},
 	}
-	h := newMileageHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Daily(rec, mileageRequest("/mileage/daily?vehicle_id=42&days=90"))
 	if rec.Code != http.StatusOK {

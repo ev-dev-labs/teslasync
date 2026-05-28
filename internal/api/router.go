@@ -34,6 +34,7 @@ import (
 	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
+	apimileage "github.com/ev-dev-labs/teslasync/internal/api/mileage"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
 	apionboard "github.com/ev-dev-labs/teslasync/internal/api/onboarding"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
@@ -712,7 +713,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	sleepHandler := NewSleepHandler(db)
 	// Phase-42 (prompt 0077): VampireDrainHandler deleted (vampire_drain_events).
 	visitedLocationHandler := apivisloc.NewHandler(db)
-	// Phase-42 (prompt 0077): MileageHandler deleted (daily_mileage); TCO derives
+	// Phase-42 (prompt 0077): legacy mileage handler deleted (daily_mileage); TCO derives
 	// distance via SUM(distance_m) FROM drives.
 	tripHandler := apitrip.NewHandler(db)
 	// Phase-42 (prompt 0077): VehicleStateHandler deleted (vehicle_states);
@@ -3421,7 +3422,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// 1000 → kWh. Frontend hooks useMonthlyMileage / useMileageStats
 		// stop returning 404. Same admin-style rate limit as
 		// /vehicle-states (Phase-43a / Prompt 0003 precedent).
-		mileageHandler := NewMileageHandler(drivedb.NewMileageRepo(db.Pool))
+		mileageHandler := apimileage.NewHandler(drivedb.NewMileageRepo(db.Pool))
 		r.Route("/mileage", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/monthly", mileageHandler.Monthly)

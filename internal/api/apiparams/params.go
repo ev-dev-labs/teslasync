@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -49,6 +50,11 @@ func Pagination(r *http.Request) (limit, offset int) {
 // chi.NewRouteContext + req.WithContext to inject the param.
 func URLParamInt64(r *http.Request, key string) (int64, error) {
 	return strconv.ParseInt(chi.URLParam(r, key), 10, 64)
+}
+
+// HTTPStatusCode maps an HTTP status code to the shared machine-readable error code.
+func HTTPStatusCode(status int) string {
+	return httpx.HTTPStatusCode(status)
 }
 
 // ParseDateRange extracts optional start/end date query params.

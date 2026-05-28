@@ -1,4 +1,4 @@
-// Phase-43a / Prompt 0004 — MileageHandler restores the
+// Phase-43a / Prompt 0004 — Handler restores the
 // /mileage/monthly + /mileage/stats endpoints deleted by Phase-42
 // prompt 0077 (which dropped the daily_mileage table). Both shapes are
 // now derived live from the SI-canonical drives table (mig 000185).
@@ -13,7 +13,7 @@
 // (camelCase totalDistance / avgDaily / etc.) belong to the deleted
 // handler and need a follow-up update outside this prompt's allowed-
 // files boundary.
-package api
+package mileage
 
 import (
 	"context"
@@ -23,10 +23,12 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
-// mileageRepository is the minimal repo surface MileageHandler needs.
+// mileageRepository is the minimal repo surface Handler needs.
 // Defined as an interface so the handler tests can supply a fake
 // without spinning up a database — the codebase has no pgxmock harness
 // (see repo memories from earlier phases).
@@ -42,17 +44,17 @@ type mileageRepository interface {
 // time.Now().UTC().
 type mileageClock func() time.Time
 
-// MileageHandler serves the two endpoints. Holds a repo + clock; no
+// Handler serves the two endpoints. Holds a repo + clock; no
 // other dependencies needed.
-type MileageHandler struct {
+type Handler struct {
 	repo  mileageRepository
 	clock mileageClock
 }
 
-// NewMileageHandler binds the handler to a repo. clock is production-
-// defaulted; tests construct via newMileageHandlerForTest.
-func NewMileageHandler(repo *drivedb.MileageRepo) *MileageHandler {
-	return &MileageHandler{repo: repo}
+// NewHandler binds the handler to a repo. clock is production-
+// defaulted; tests construct via newHandlerForTest.
+func NewHandler(repo *drivedb.MileageRepo) *Handler {
+	return &Handler{repo: repo}
 }
 
 const (
@@ -77,17 +79,17 @@ const (
 // parseMonthlyParams extracts and validates vehicle_id + months for
 // /mileage/monthly. Returns ok=false after writing the appropriate 4xx
 // response so the caller can early-return.
-func (h *MileageHandler) parseMonthlyParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, months int, ok bool) {
+func (h *Handler) parseMonthlyParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, months int, ok bool) {
 	q := r.URL.Query()
 
 	vidStr := q.Get("vehicle_id")
 	if vidStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return 0, 0, false
 	}
 	vid, err := strconv.ParseInt(vidStr, 10, 64)
 	if err != nil || vid <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 		return 0, 0, false
 	}
 
@@ -95,23 +97,23 @@ func (h *MileageHandler) parseMonthlyParams(w http.ResponseWriter, r *http.Reque
 	if m := q.Get("months"); m != "" {
 		v, err := strconv.Atoi(m)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "months must be an integer")
+			httpx.WriteError(w, http.StatusBadRequest, "months must be an integer")
 			return 0, 0, false
 		}
 		if v < 1 {
-			writeError(w, http.StatusBadRequest, "months must be >= 1")
+			httpx.WriteError(w, http.StatusBadRequest, "months must be >= 1")
 			return 0, 0, false
 		}
 		if v > mileageMaxMonths {
 			// Decision #3 requires a structured "months exceeds maximum"
 			// payload that the frontend can surface verbatim. Mirrors
 			// the Phase-43a / Prompt 0003 envelope: the shared
-			// writeError helper would emit only {error, code}; we
+			// httpx.WriteError would emit only {error, code}; we
 			// hand-write the JSON to add the `max` field.
-			writeJSON(w, http.StatusBadRequest, map[string]any{
+			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "months exceeds maximum",
 				"max":   mileageMaxMonths,
-				"code":  httpStatusCode(http.StatusBadRequest),
+				"code":  apiparams.HTTPStatusCode(http.StatusBadRequest),
 			})
 			return 0, 0, false
 		}
@@ -123,16 +125,16 @@ func (h *MileageHandler) parseMonthlyParams(w http.ResponseWriter, r *http.Reque
 // parseStatsParams extracts and validates vehicle_id only — /mileage/stats
 // has no window override (the lifetime + 7d/30d/365d rollups are
 // hard-locked per Decision #2).
-func (h *MileageHandler) parseStatsParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, ok bool) {
+func (h *Handler) parseStatsParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, ok bool) {
 	q := r.URL.Query()
 	vidStr := q.Get("vehicle_id")
 	if vidStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return 0, false
 	}
 	vid, err := strconv.ParseInt(vidStr, 10, 64)
 	if err != nil || vid <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 		return 0, false
 	}
 	return vid, true
@@ -183,7 +185,7 @@ type MileageStatsResponse struct {
 // "vehicle has no drive history yet" from "vehicle does not exist".
 // The latter returns 404. Decision #6 holds: zero drives must NOT
 // 404.
-func (h *MileageHandler) Monthly(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Monthly(w http.ResponseWriter, r *http.Request) {
 	vehicleID, months, ok := h.parseMonthlyParams(w, r)
 	if !ok {
 		return
@@ -193,11 +195,11 @@ func (h *MileageHandler) Monthly(w http.ResponseWriter, r *http.Request) {
 	exists, err := h.repo.VehicleExists(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("mileage.monthly: existence probe failed")
-		writeError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to verify vehicle")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
@@ -206,7 +208,7 @@ func (h *MileageHandler) Monthly(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.repo.Monthly(ctx, vehicleID, windowStart)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("months", months).Msg("mileage.monthly: query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load monthly mileage")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load monthly mileage")
 		return
 	}
 
@@ -224,7 +226,7 @@ func (h *MileageHandler) Monthly(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	writeJSON(w, http.StatusOK, out)
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // Stats serves GET /mileage/stats?vehicle_id=... .
@@ -233,7 +235,7 @@ func (h *MileageHandler) Monthly(w http.ResponseWriter, r *http.Request) {
 // cut-offs (now-7d / now-30d / now-365d) are computed once per request
 // and shared with the SQL FILTER aggregates so the response cannot
 // race the wall clock mid-query.
-func (h *MileageHandler) Stats(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	vehicleID, ok := h.parseStatsParams(w, r)
 	if !ok {
 		return
@@ -243,11 +245,11 @@ func (h *MileageHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	exists, err := h.repo.VehicleExists(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("mileage.stats: existence probe failed")
-		writeError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to verify vehicle")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
@@ -259,11 +261,11 @@ func (h *MileageHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.repo.Stats(ctx, vehicleID, since7d, since30d, since365d)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("mileage.stats: query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load mileage stats")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load mileage stats")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, MileageStatsResponse{
+	httpx.WriteJSON(w, http.StatusOK, MileageStatsResponse{
 		VehicleID:          vehicleID,
 		LifetimeKm:         stats.LifetimeKm,
 		Last7dKm:           stats.Last7dKm,
@@ -283,17 +285,17 @@ func (h *MileageHandler) Stats(w http.ResponseWriter, r *http.Request) {
 // Phase-43a / Prompt 0009 (fix/misc-fixes). Mirrors parseMonthlyParams
 // but with the days cap (Decision #3 of Prompt 0004 generalised to
 // daily granularity).
-func (h *MileageHandler) parseDailyParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, days int, ok bool) {
+func (h *Handler) parseDailyParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, days int, ok bool) {
 	q := r.URL.Query()
 
 	vidStr := q.Get("vehicle_id")
 	if vidStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return 0, 0, false
 	}
 	vid, err := strconv.ParseInt(vidStr, 10, 64)
 	if err != nil || vid <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 		return 0, 0, false
 	}
 
@@ -301,18 +303,18 @@ func (h *MileageHandler) parseDailyParams(w http.ResponseWriter, r *http.Request
 	if d := q.Get("days"); d != "" {
 		v, err := strconv.Atoi(d)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "days must be an integer")
+			httpx.WriteError(w, http.StatusBadRequest, "days must be an integer")
 			return 0, 0, false
 		}
 		if v < 1 {
-			writeError(w, http.StatusBadRequest, "days must be >= 1")
+			httpx.WriteError(w, http.StatusBadRequest, "days must be >= 1")
 			return 0, 0, false
 		}
 		if v > mileageMaxDays {
-			writeJSON(w, http.StatusBadRequest, map[string]any{
+			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "days exceeds maximum",
 				"max":   mileageMaxDays,
-				"code":  httpStatusCode(http.StatusBadRequest),
+				"code":  apiparams.HTTPStatusCode(http.StatusBadRequest),
 			})
 			return 0, 0, false
 		}
@@ -347,7 +349,7 @@ type MileageDailyResponse struct {
 // Returns 200 with {vehicle_id, days: []} for an existing vehicle even
 // when no drives are recorded — consistent with Monthly's Decision #6.
 // 404 only when the vehicle id is unknown.
-func (h *MileageHandler) Daily(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Daily(w http.ResponseWriter, r *http.Request) {
 	vehicleID, days, ok := h.parseDailyParams(w, r)
 	if !ok {
 		return
@@ -357,11 +359,11 @@ func (h *MileageHandler) Daily(w http.ResponseWriter, r *http.Request) {
 	exists, err := h.repo.VehicleExists(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("mileage.daily: existence probe failed")
-		writeError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to verify vehicle")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
@@ -370,7 +372,7 @@ func (h *MileageHandler) Daily(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.repo.Daily(ctx, vehicleID, windowStart)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", days).Msg("mileage.daily: query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load daily mileage")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load daily mileage")
 		return
 	}
 
@@ -387,13 +389,13 @@ func (h *MileageHandler) Daily(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	writeJSON(w, http.StatusOK, out)
+	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
 // now returns the injected clock value or wall time if no clock is
 // configured. Splitting it out keeps every time-derived computation in
 // the handler reading from the same source.
-func (h *MileageHandler) now() time.Time {
+func (h *Handler) now() time.Time {
 	if h.clock != nil {
 		return h.clock()
 	}
