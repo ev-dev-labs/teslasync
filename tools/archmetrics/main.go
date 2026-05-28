@@ -186,6 +186,99 @@ func (e forbiddenEdge) matchesTo(pkg string) bool {
 	return false
 }
 
+// hotspotPlan declares the Phase R bounded-context restructure target for a
+// currently-flat hot-spot folder. Pure REPORT MODE: emitted in the Markdown
+// report so progress against the restructure is visible, but does NOT fail
+// the gate. The DAG flip to enforced (per-subpkg) mode happens in Phase R13
+// once the subpackages actually exist on disk.
+//
+// Source of truth for the targets list is the cluster map at
+// docs/architecture/migration/cluster-map.md (populated incrementally in
+// R1/R7). Targets here are the same provisional set; this file is updated
+// whenever the cluster map is updated.
+//
+// Parent dir is interpreted as a glob-prefix matching every PkgMetric whose
+// Path starts with Parent + "/" (or equals Parent for the parent package
+// itself, which counts toward FileCountAtR0).
+type hotspotPlan struct {
+	Parent        string   // e.g. "internal/api"
+	Owner         string   // sub-phase that executes the split (e.g. "R2", "R5")
+	FileCountAtR0 int      // .go/.ts/.tsx file count when ADR-011 was committed
+	Targets       []string // intended subpackage / subdir names
+	Shared        []string // shared-helper subpackages extracted alongside (R2.0 prep, etc)
+	Notes         string   // optional commentary
+}
+
+// plannedSubpackages is the live snapshot of the Phase R intent. Each
+// entry corresponds to one flat-folder hot-spot identified during the
+// 2026-05-28 audit (see plan.md §16.1 + §16.2).
+//
+// As Phase R progresses, the actual on-disk structure will start to
+// match these targets. The Markdown report's "Phase R progress" section
+// renders, per hot-spot, how many of the planned subpackages now exist
+// on disk and how many flat-parent files remain.
+var plannedSubpackages = []hotspotPlan{
+	// ----------------------------------------------------------------------
+	// Backend hot-spots
+	// ----------------------------------------------------------------------
+	{
+		Parent:        "internal/models",
+		Owner:         "R5",
+		FileCountAtR0: 36,
+		Targets:       []string{"_TBD per R1 audit_"},
+		Notes:         "Smallest backend cluster; validates the recipe.",
+	},
+	{
+		Parent:        "internal/jobs",
+		Owner:         "R6",
+		FileCountAtR0: 25,
+		Targets:       []string{"_TBD per R1 audit_"},
+	},
+	{
+		Parent:        "internal/ai/tools",
+		Owner:         "R6",
+		FileCountAtR0: 109,
+		Targets: []string{
+			"nl", "alert", "charge", "drive", "auto", "voice", "route", "safety",
+			"_more TBD per R1 audit_",
+		},
+		Notes: "Per ADR-015 amendment, pure file-move only. AI guard preserved.",
+	},
+	{
+		Parent:        "internal/database",
+		Owner:         "R4",
+		FileCountAtR0: 143,
+		Targets: []string{
+			"vehicle", "charging", "drive", "signal", "automation", "notification",
+			"alert", "audit", "export", "achievement", "dashboard", "gdpr",
+			"sharing", "telemetry", "tesla", "energy",
+		},
+		Shared: []string{"shared"},
+		Notes:  "Touches many internal/api/* callers. Accept R2 double-touch budget (no temp compat layer).",
+	},
+	{
+		Parent:        "internal/handler/v1",
+		Owner:         "R3",
+		FileCountAtR0: 12,
+		Targets:       []string{"matching every R2 subpackage"},
+		Notes:         "Tiny but critical — defines destination shape for R2.",
+	},
+	{
+		Parent:        "internal/api",
+		Owner:         "R2 (waves R2a-R2e)",
+		FileCountAtR0: 434,
+		Targets: []string{
+			"vehicle", "charging", "drive", "trip", "energy", "analytics",
+			"telemetry", "automation", "alert", "notification", "admin",
+			"settings", "auth", "sharing", "export", "signal", "system",
+			"dashboard", "motor", "climate", "security", "media", "tire",
+			"location", "ai", "sse",
+		},
+		Shared: []string{"httpx", "apiparams", "apitest", "middleware"},
+		Notes:  "Largest cluster. Extracted in 5 waves (R2a-R2e). R2.0 prep extracts httpx/apiparams/apitest first.",
+	},
+}
+
 // PkgMetric is one row in the snapshot — one Go package directory.
 type PkgMetric struct {
 	Path      string   `json:"path"`            // repo-relative dir, forward slashes
@@ -213,6 +306,28 @@ type Snapshot struct {
 	// enforce the ADR-009 frozen-packages rule via a simple lookup rather
 	// than rescanning Packages.
 	FilesByPackage map[string][]string `json:"files_by_package"`
+	// PhaseRProgress is REPORT-ONLY (Phase-R/R0). For each hot-spot
+	// declared in plannedSubpackages it records the current parent-dir
+	// file count, the count of planned subpackages already created on
+	// disk, and the count of files still living at the flat parent. The
+	// compare path does NOT use this for regression detection; it is here
+	// purely so the JSON baseline carries the progress signal next to the
+	// rest of the snapshot.
+	PhaseRProgress []HotspotProgress `json:"phase_r_progress,omitempty"`
+}
+
+// HotspotProgress is the per-hot-spot REPORT-ONLY progress row.
+type HotspotProgress struct {
+	Parent              string   `json:"parent"`
+	Owner               string   `json:"owner"`
+	FileCountAtR0       int      `json:"file_count_at_r0"`
+	FlatParentGoFiles   int      `json:"flat_parent_go_files"`   // .go files at the flat parent now
+	FlatParentTestFiles int      `json:"flat_parent_test_files"` // _test.go files at the flat parent now
+	PlannedSubpkgs      int      `json:"planned_subpkgs"`
+	ExistingSubpkgs     []string `json:"existing_subpkgs"`
+	MissingSubpkgs      []string `json:"missing_subpkgs"`
+	SharedSubpkgs       []string `json:"shared_subpkgs,omitempty"`
+	Notes               string   `json:"notes,omitempty"`
 }
 
 func main() {
@@ -343,7 +458,53 @@ func collect() Snapshot {
 		ForbiddenEdges: edges,
 		DocGoCoverage:  cov,
 		FilesByPackage: filesByPackage(out),
+		PhaseRProgress: computePhaseRProgress(out),
 	}
+}
+
+// computePhaseRProgress is REPORT-ONLY. For each hot-spot in
+// plannedSubpackages, it asks "of the planned subpackages, how many
+// exist on disk under <parent>/<target> right now?" and counts the
+// flat-parent residual file count. Phase R completion criterion (R14
+// gate) requires that for every hot-spot, FlatParentGoFiles drops to
+// the small set permitted by ADR-011 §4 (doc.go + router.go +
+// composition file(s)) and ExistingSubpkgs covers every planned
+// target. Until then this is purely informational and never fails the
+// gate.
+func computePhaseRProgress(pkgs []PkgMetric) []HotspotProgress {
+	byPath := map[string]PkgMetric{}
+	for _, p := range pkgs {
+		byPath[p.Path] = p
+	}
+	out := make([]HotspotProgress, 0, len(plannedSubpackages))
+	for _, hs := range plannedSubpackages {
+		row := HotspotProgress{
+			Parent:         hs.Parent,
+			Owner:          hs.Owner,
+			FileCountAtR0:  hs.FileCountAtR0,
+			PlannedSubpkgs: len(hs.Targets),
+			SharedSubpkgs:  hs.Shared,
+			Notes:          hs.Notes,
+		}
+		if parent, ok := byPath[hs.Parent]; ok {
+			row.FlatParentGoFiles = parent.GoFiles
+			row.FlatParentTestFiles = parent.TestFiles
+		}
+		for _, t := range hs.Targets {
+			if strings.HasPrefix(t, "_") || strings.HasPrefix(t, "matching") {
+				// placeholder, not a concrete planned subpkg name yet
+				continue
+			}
+			subpkgPath := hs.Parent + "/" + t
+			if _, ok := byPath[subpkgPath]; ok {
+				row.ExistingSubpkgs = append(row.ExistingSubpkgs, t)
+			} else {
+				row.MissingSubpkgs = append(row.MissingSubpkgs, t)
+			}
+		}
+		out = append(out, row)
+	}
+	return out
 }
 
 // filesByPackage builds the per-package production .go file index used
@@ -614,5 +775,54 @@ func emitMarkdown(w *os.File, s Snapshot) {
 		}
 		fmt.Fprintln(w)
 		fmt.Fprintln(w, "</details>")
+	}
+
+	if len(s.PhaseRProgress) > 0 {
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "## Phase R — bounded-context restructure progress (REPORT-ONLY)")
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "_Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). "+
+			"This section is informational only — it never fails the gate. The DAG flip to enforced "+
+			"per-subpkg rules happens in Phase R13._")
+		fmt.Fprintln(w)
+		fmt.Fprintln(w, "| Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |")
+		fmt.Fprintln(w, "|---|---|---:|---|---:|---:|---:|")
+		for _, r := range s.PhaseRProgress {
+			fmt.Fprintf(w, "| `%s` | %s | %d | %d / %d | %d | %d | %d |\n",
+				r.Parent, r.Owner, r.FileCountAtR0,
+				r.FlatParentGoFiles, r.FlatParentTestFiles,
+				r.PlannedSubpkgs, len(r.ExistingSubpkgs), len(r.MissingSubpkgs))
+		}
+		fmt.Fprintln(w)
+		for _, r := range s.PhaseRProgress {
+			if len(r.ExistingSubpkgs) == 0 && len(r.MissingSubpkgs) == 0 {
+				continue
+			}
+			fmt.Fprintf(w, "### `%s` detail\n\n", r.Parent)
+			if r.Notes != "" {
+				fmt.Fprintf(w, "> %s\n\n", r.Notes)
+			}
+			if len(r.ExistingSubpkgs) > 0 {
+				fmt.Fprintln(w, "**Existing subpackages on disk:**")
+				for _, t := range r.ExistingSubpkgs {
+					fmt.Fprintf(w, "- `%s/%s`\n", r.Parent, t)
+				}
+				fmt.Fprintln(w)
+			}
+			if len(r.MissingSubpkgs) > 0 {
+				fmt.Fprintln(w, "**Planned but not yet on disk:**")
+				for _, t := range r.MissingSubpkgs {
+					fmt.Fprintf(w, "- `%s/%s`\n", r.Parent, t)
+				}
+				fmt.Fprintln(w)
+			}
+			if len(r.SharedSubpkgs) > 0 {
+				fmt.Fprintln(w, "**Shared-helper subpackages (extracted in prep sub-phase):**")
+				for _, t := range r.SharedSubpkgs {
+					fmt.Fprintf(w, "- `%s/%s`\n", r.Parent, t)
+				}
+				fmt.Fprintln(w)
+			}
+		}
 	}
 }

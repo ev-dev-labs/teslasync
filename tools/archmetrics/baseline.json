@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T00:09:47Z",
+  "generated_at": "2026-05-28T00:51:18Z",
   "go_version": "go1.26.1",
-  "commit_sha": "85fcfc82da38c47b72627b6f009b77c62700ae45",
+  "commit_sha": "aa3b44eb5fd99614ba02fa56141c3df03fb559c3",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2850,7 +2850,7 @@
       "path": "internal/arch",
       "go_files": 2,
       "test_files": 1,
-      "loc": 976,
+      "loc": 1109,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -4859,7 +4859,7 @@
       "path": "tools/archmetrics",
       "go_files": 2,
       "test_files": 0,
-      "loc": 569,
+      "loc": 774,
       "has_doc_go": true,
       "layer": "tool",
       "imports": null,
@@ -6512,5 +6512,134 @@
       "doc.go",
       "main.go"
     ]
-  }
+  },
+  "phase_r_progress": [
+    {
+      "parent": "internal/models",
+      "owner": "R5",
+      "file_count_at_r0": 36,
+      "flat_parent_go_files": 34,
+      "flat_parent_test_files": 2,
+      "planned_subpkgs": 1,
+      "existing_subpkgs": null,
+      "missing_subpkgs": null,
+      "notes": "Smallest backend cluster; validates the recipe."
+    },
+    {
+      "parent": "internal/jobs",
+      "owner": "R6",
+      "file_count_at_r0": 25,
+      "flat_parent_go_files": 13,
+      "flat_parent_test_files": 12,
+      "planned_subpkgs": 1,
+      "existing_subpkgs": null,
+      "missing_subpkgs": null
+    },
+    {
+      "parent": "internal/ai/tools",
+      "owner": "R6",
+      "file_count_at_r0": 109,
+      "flat_parent_go_files": 58,
+      "flat_parent_test_files": 51,
+      "planned_subpkgs": 9,
+      "existing_subpkgs": null,
+      "missing_subpkgs": [
+        "nl",
+        "alert",
+        "charge",
+        "drive",
+        "auto",
+        "voice",
+        "route",
+        "safety"
+      ],
+      "notes": "Per ADR-015 amendment, pure file-move only. AI guard preserved."
+    },
+    {
+      "parent": "internal/database",
+      "owner": "R4",
+      "file_count_at_r0": 143,
+      "flat_parent_go_files": 108,
+      "flat_parent_test_files": 35,
+      "planned_subpkgs": 16,
+      "existing_subpkgs": null,
+      "missing_subpkgs": [
+        "vehicle",
+        "charging",
+        "drive",
+        "signal",
+        "automation",
+        "notification",
+        "alert",
+        "audit",
+        "export",
+        "achievement",
+        "dashboard",
+        "gdpr",
+        "sharing",
+        "telemetry",
+        "tesla",
+        "energy"
+      ],
+      "shared_subpkgs": [
+        "shared"
+      ],
+      "notes": "Touches many internal/api/* callers. Accept R2 double-touch budget (no temp compat layer)."
+    },
+    {
+      "parent": "internal/handler/v1",
+      "owner": "R3",
+      "file_count_at_r0": 12,
+      "flat_parent_go_files": 11,
+      "flat_parent_test_files": 1,
+      "planned_subpkgs": 1,
+      "existing_subpkgs": null,
+      "missing_subpkgs": null,
+      "notes": "Tiny but critical — defines destination shape for R2."
+    },
+    {
+      "parent": "internal/api",
+      "owner": "R2 (waves R2a-R2e)",
+      "file_count_at_r0": 434,
+      "flat_parent_go_files": 271,
+      "flat_parent_test_files": 163,
+      "planned_subpkgs": 26,
+      "existing_subpkgs": null,
+      "missing_subpkgs": [
+        "vehicle",
+        "charging",
+        "drive",
+        "trip",
+        "energy",
+        "analytics",
+        "telemetry",
+        "automation",
+        "alert",
+        "notification",
+        "admin",
+        "settings",
+        "auth",
+        "sharing",
+        "export",
+        "signal",
+        "system",
+        "dashboard",
+        "motor",
+        "climate",
+        "security",
+        "media",
+        "tire",
+        "location",
+        "ai",
+        "sse"
+      ],
+      "shared_subpkgs": [
+        "httpx",
+        "apiparams",
+        "apitest",
+        "middleware"
+      ],
+      "notes": "Largest cluster. Extracted in 5 waves (R2a-R2e). R2.0 prep extracts httpx/apiparams/apitest first."
+    }
+  ]
 }

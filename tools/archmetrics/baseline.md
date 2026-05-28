@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T00:09:50Z, Go go1.26.1, commit 85fcfc82da38c47b72627b6f009b77c62700ae45_
+_Generated 2026-05-28T00:51:20Z, Go go1.26.1, commit aa3b44eb5fd99614ba02fa56141c3df03fb559c3_
 
 ## Summary
 
 - Packages: 209
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 371479
+- Total non-blank LOC under cmd/+internal/+tools/: 371817
 
 ## cmd/* main.go LOC
 
@@ -153,7 +153,7 @@ _Generated 2026-05-28T00:09:50Z, Go go1.26.1, commit 85fcfc82da38c47b72627b6f009
 | internal/app/notificationsvc | 2 | 1 | 311 | yes | app |
 | internal/app/tripsvc | 2 | 1 | 314 | yes | app |
 | internal/app/vehiclesvc | 3 | 1 | 350 | yes | app |
-| internal/arch | 2 | 1 | 976 | yes | tool |
+| internal/arch | 2 | 1 | 1109 | yes | tool |
 | internal/audit | 2 | 1 | 375 | yes | platform |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
 | internal/automation | 6 | 2 | 1604 | yes | platform |
@@ -247,9 +247,100 @@ _Generated 2026-05-28T00:09:50Z, Go go1.26.1, commit 85fcfc82da38c47b72627b6f009
 | tools/aigen | 2 | 1 | 338 | yes | tool |
 | tools/aistream-contract | 2 | 0 | 227 | yes | tool |
 | tools/aivet | 2 | 1 | 792 | yes | tool |
-| tools/archmetrics | 2 | 0 | 569 | yes | tool |
+| tools/archmetrics | 2 | 0 | 774 | yes | tool |
 | tools/eval-schema-check | 2 | 0 | 57 | yes | tool |
 
 ## doc.go adoption
 
 - Packages WITHOUT doc.go: 0
+
+## Phase R — bounded-context restructure progress (REPORT-ONLY)
+
+_Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This section is informational only — it never fails the gate. The DAG flip to enforced per-subpkg rules happens in Phase R13._
+
+| Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
+|---|---|---:|---|---:|---:|---:|
+| `internal/models` | R5 | 36 | 34 / 2 | 1 | 0 | 0 |
+| `internal/jobs` | R6 | 25 | 13 / 12 | 1 | 0 | 0 |
+| `internal/ai/tools` | R6 | 109 | 58 / 51 | 9 | 0 | 8 |
+| `internal/database` | R4 | 143 | 108 / 35 | 16 | 0 | 16 |
+| `internal/handler/v1` | R3 | 12 | 11 / 1 | 1 | 0 | 0 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 26 | 0 | 26 |
+
+### `internal/ai/tools` detail
+
+> Per ADR-015 amendment, pure file-move only. AI guard preserved.
+
+**Planned but not yet on disk:**
+- `internal/ai/tools/nl`
+- `internal/ai/tools/alert`
+- `internal/ai/tools/charge`
+- `internal/ai/tools/drive`
+- `internal/ai/tools/auto`
+- `internal/ai/tools/voice`
+- `internal/ai/tools/route`
+- `internal/ai/tools/safety`
+
+### `internal/database` detail
+
+> Touches many internal/api/* callers. Accept R2 double-touch budget (no temp compat layer).
+
+**Planned but not yet on disk:**
+- `internal/database/vehicle`
+- `internal/database/charging`
+- `internal/database/drive`
+- `internal/database/signal`
+- `internal/database/automation`
+- `internal/database/notification`
+- `internal/database/alert`
+- `internal/database/audit`
+- `internal/database/export`
+- `internal/database/achievement`
+- `internal/database/dashboard`
+- `internal/database/gdpr`
+- `internal/database/sharing`
+- `internal/database/telemetry`
+- `internal/database/tesla`
+- `internal/database/energy`
+
+**Shared-helper subpackages (extracted in prep sub-phase):**
+- `internal/database/shared`
+
+### `internal/api` detail
+
+> Largest cluster. Extracted in 5 waves (R2a-R2e). R2.0 prep extracts httpx/apiparams/apitest first.
+
+**Planned but not yet on disk:**
+- `internal/api/vehicle`
+- `internal/api/charging`
+- `internal/api/drive`
+- `internal/api/trip`
+- `internal/api/energy`
+- `internal/api/analytics`
+- `internal/api/telemetry`
+- `internal/api/automation`
+- `internal/api/alert`
+- `internal/api/notification`
+- `internal/api/admin`
+- `internal/api/settings`
+- `internal/api/auth`
+- `internal/api/sharing`
+- `internal/api/export`
+- `internal/api/signal`
+- `internal/api/system`
+- `internal/api/dashboard`
+- `internal/api/motor`
+- `internal/api/climate`
+- `internal/api/security`
+- `internal/api/media`
+- `internal/api/tire`
+- `internal/api/location`
+- `internal/api/ai`
+- `internal/api/sse`
+
+**Shared-helper subpackages (extracted in prep sub-phase):**
+- `internal/api/httpx`
+- `internal/api/apiparams`
+- `internal/api/apitest`
+- `internal/api/middleware`
+
