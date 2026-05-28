@@ -37,6 +37,7 @@ import (
 	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
+	apitels "github.com/ev-dev-labs/teslasync/internal/api/teslaenergylivestatus"
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
@@ -1081,7 +1082,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaChargingHistoryHandler := NewTeslaChargingHistoryHandler(teslaClient, db)
 	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
 	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)
-	teslaEnergyLiveStatusHandler := NewTeslaEnergyLiveStatusHandler(teslaClient, db)
+	teslaEnergyLiveStatusHandler := apitels.NewHandler(teslaClient, db)
 	energySiteHandler := NewEnergySiteHandler(teslaClient, db)
 	fleetTelemetryErrorHandler := NewFleetTelemetryErrorHandler(teslaClient, db)
 	// Phase-43a/0002 — wire the package-derived Fleet Telemetry coverage
