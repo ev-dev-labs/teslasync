@@ -110,3 +110,7 @@ scripts/check-loc.js
 
 # Redesign working notes (Phase 50+ /charging redesign)
 REDESIGN-NOTES.md
+
+# transient commit-message files used by R-phase recipe
+commit_msg.txt
+commit_msg*.txt

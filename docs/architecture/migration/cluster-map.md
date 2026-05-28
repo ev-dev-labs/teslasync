@@ -253,21 +253,34 @@ Each subpackage row lists:
   `internal/ai/tools/all/all.go` (`package all` re-importing every
   subpkg) so callers blank-import one path.
 
-### `internal/database/` (143 files, 35 tests) — owner: **R4**
+### `internal/database/` (143 files, 35 tests) — owner: **R4** — **COMPLETE 2026-05-28**
 
-- **Files moving out of parent:** 124
-- **Files staying in parent:** 19 — `doc.go`, `database.go`,
-  `database_test.go`, `database_tracing_test.go`, `cache.go`,
-  `cache_test.go`, `circuit_breaker.go`, `circuit_breaker_test.go`,
-  `from_map.go`, `helpers.go`, `helpers_test.go`, `maintenance.go`,
-  `migrate.go`, `mongodb.go`, `query_budget_tracer.go`,
-  `query_budget_tracer_test.go`, `retry.go`, `retry_test.go`,
-  `write_buffer.go`, `write_buffer_test.go`, `schema_test.go`.
-  *(All of these become `internal/database/shared/` candidates in a
-  follow-up R4.1 if growth continues. R4 v1 keeps them at parent so
-  the `*database.DB` struct definition stays alongside connection
-  helpers — sole exception to ADR-011 §6.)*
-- **Target subpackages: 21**
+> **STATUS:** All 14 planned subpackages carved + 14 additional that
+> emerged from the work (more granular aggregate roots than the initial
+> survey predicted). Parent now at the ADR-011 irreducible 12 files (was
+> 143). Final ratchet 143 -> 12. R4 shipped across R4.1..R4.26 cluster
+> commits + 26 blame-ignore commits + 5 sweep passes for the largest
+> (R4.26 settings). See `git log --oneline --grep="R4\\." main..HEAD`.
+
+- **Files moving out of parent:** 124 (carved across 28 subpackages)
+- **Files staying in parent:** 12 — the ADR-011 §5 irreducible shape:
+  composition (`database.go`, `doc.go`) + shared connection helpers
+  (`cache.go`, `circuit_breaker.go`, `helpers.go`, `migrate.go`,
+  `mongodb.go`, `null_helpers.go`, `retry.go`, `write_buffer.go`) +
+  tracing/maintenance infra (`query_budget_tracer.go`, `maintenance.go`).
+  These are NOT carved because they are the package-shared `*DB` /
+  `*Pool` plumbing that every subpkg imports; they have no aggregate
+  root.
+- **Final subpackages: 28** (initially planned 21; the survey predicted
+  fewer because some aggregates were initially lumped together — e.g.
+  `audit` ended up separate from `auth`, `position` separate from
+  `signal`, `quiethours` separate from `notification`).
+
+**Carved subpkgs (28, alphabetical):**
+achievement, admin, ai, alert, audit, auth, automation, backup,
+charging, drive, energy, export, gdpr, geofence, notification,
+observability, position, quiethours, settings, sharing, signal,
+system, telemetry, tesla, trip, user, vehicle, worker.
 
 | Subpkg | Files | Source files (matched by prefix) |
 | --- | --- | --- |
