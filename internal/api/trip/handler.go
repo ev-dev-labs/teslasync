@@ -1,4 +1,4 @@
-package api
+package trip
 
 import (
 	"net/http"
@@ -7,16 +7,18 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 )
 
-type TripHandler struct {
+type Handler struct {
 	repo *tripdb.TripRepo
 }
 
-func NewTripHandler(db *database.DB) *TripHandler {
-	return &TripHandler{repo: tripdb.NewTripRepo(db)}
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{repo: tripdb.NewTripRepo(db)}
 }
 
 type tripSummaryResponse struct {
@@ -74,38 +76,38 @@ func tripSummaryDTOs(in []*tripdb.TripSummary) []tripSummaryResponse {
 	return out
 }
 
-func (h *TripHandler) List(w http.ResponseWriter, r *http.Request) {
-	limit, offset := pagination(r)
-	startTime, endTime := parseDateRange(r)
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
+	limit, offset := apiparams.Pagination(r)
+	startTime, endTime := apiparams.ParseDateRange(r)
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 
 	if vehicleIDStr != "" {
 		vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 			return
 		}
 		trips, err := h.repo.GetByVehicle(r.Context(), vehicleID, limit, offset, startTime, endTime)
 		if err != nil {
 			log.Error().Err(err).Msg("failed to get trips")
-			writeError(w, http.StatusInternalServerError, "failed to get trips")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to get trips")
 			return
 		}
 		if trips == nil {
 			trips = make([]*tripdb.TripSummary, 0)
 		}
-		writeJSON(w, http.StatusOK, tripSummaryDTOs(trips))
+		httpx.WriteJSON(w, http.StatusOK, tripSummaryDTOs(trips))
 		return
 	}
 
 	trips, err := h.repo.GetAll(r.Context(), limit, offset, startTime, endTime)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get trips")
-		writeError(w, http.StatusInternalServerError, "failed to get trips")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get trips")
 		return
 	}
 	if trips == nil {
 		trips = make([]*tripdb.TripSummary, 0)
 	}
-	writeJSON(w, http.StatusOK, tripSummaryDTOs(trips))
+	httpx.WriteJSON(w, http.StatusOK, tripSummaryDTOs(trips))
 }

@@ -34,6 +34,7 @@ import (
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
+	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -685,7 +686,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	visitedLocationHandler := apivisloc.NewHandler(db)
 	// Phase-42 (prompt 0077): MileageHandler deleted (daily_mileage); TCO derives
 	// distance via SUM(distance_m) FROM drives.
-	tripHandler := NewTripHandler(db)
+	tripHandler := apitrip.NewHandler(db)
 	// Phase-42 (prompt 0077): VehicleStateHandler deleted (vehicle_states);
 	// current state is sourced from fsm_transitions / signal.StateReader.
 	backupHandler := apibackup.NewHandler(db)
