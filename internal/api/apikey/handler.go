@@ -1,4 +1,4 @@
-package api
+package apikey
 
 import (
 	"crypto/rand"
@@ -10,32 +10,48 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
 )
 
-// APIKeyHandler handles API key management endpoints.
-type APIKeyHandler struct {
+// Handler handles API key management endpoints.
+type Handler struct {
 	db                *database.DB
 	forwardAuthHeader string
+	audit             AuditFunc
 }
 
-// NewAPIKeyHandler creates a new APIKeyHandler.
+// AuditFunc is the audit-logging callback shape expected by Handler.
+type AuditFunc func(r *http.Request, headerName, action, resource string, entityID *int64, detail string)
+
+// Option mutates a Handler during construction.
+type Option func(*Handler)
+
+// WithAuditFunc installs the audit callback invoked after successful mutations.
+func WithAuditFunc(f AuditFunc) Option { return func(h *Handler) { h.audit = f } }
+
+// NewHandler creates a new Handler.
 //
 // forwardAuthHeader names the request header (e.g. X-Forwarded-User) that the
 // reverse-proxy auth provider injects; when set it is used as the actor on
 // emitted audit_logs entries so they appear in /users/me/activity.
-func NewAPIKeyHandler(db *database.DB, forwardAuthHeader string) *APIKeyHandler {
-	return &APIKeyHandler{db: db, forwardAuthHeader: forwardAuthHeader}
+func NewHandler(db *database.DB, forwardAuthHeader string, opts ...Option) *Handler {
+	h := &Handler{db: db, forwardAuthHeader: forwardAuthHeader}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // List returns all API keys (without the hash).
-func (h *APIKeyHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Pool.Query(r.Context(),
 		`SELECT id, name, key_prefix, permissions, last_used_at, created_at, expires_at FROM api_keys ORDER BY created_at DESC`)
 	if err != nil {
 		// Table may not exist yet — return empty array gracefully
-		writeJSON(w, http.StatusOK, []struct{}{})
+		httpx.WriteJSON(w, http.StatusOK, []struct{}{})
 		return
 	}
 	defer rows.Close()
@@ -58,22 +74,22 @@ func (h *APIKeyHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		keys = append(keys, k)
 	}
-	writeJSON(w, http.StatusOK, keys)
+	httpx.WriteJSON(w, http.StatusOK, keys)
 }
 
 // Create generates a new API key, stores its hash, and returns the raw key once.
-func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Name        string `json:"name"`
 		Permissions string `json:"permissions"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	name := strings.TrimSpace(body.Name)
 	if name == "" {
-		writeError(w, http.StatusBadRequest, "name is required")
+		httpx.WriteError(w, http.StatusBadRequest, "name is required")
 		return
 	}
 	perm := body.Permissions
@@ -82,13 +98,13 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	validPerms := map[string]bool{"read": true, "read-write": true, "admin": true}
 	if !validPerms[perm] {
-		writeError(w, http.StatusBadRequest, "permissions must be read, read-write, or admin")
+		httpx.WriteError(w, http.StatusBadRequest, "permissions must be read, read-write, or admin")
 		return
 	}
 
 	rawBytes := make([]byte, 32)
 	if _, err := rand.Read(rawBytes); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate key")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to generate key")
 		return
 	}
 	rawKey := "ts_" + hex.EncodeToString(rawBytes)
@@ -102,13 +118,13 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 		name, hash, prefix, perm).Scan(&id)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to create API key")
-		writeError(w, http.StatusInternalServerError, "failed to create API key")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to create API key")
 		return
 	}
 
-	logAuditFromRequest(h.db, r, h.forwardAuthHeader, "create", "api_key", &id, fmt.Sprintf("created key %q", name))
+	h.logAudit(r, "create", &id, fmt.Sprintf("created key %q", name))
 
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"id":          id,
 		"key":         rawKey,
 		"name":        name,
@@ -118,37 +134,44 @@ func (h *APIKeyHandler) Create(w http.ResponseWriter, r *http.Request) {
 }
 
 // Delete removes an API key by ID.
-func (h *APIKeyHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid key ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid key ID")
 		return
 	}
 	_, err = h.db.Pool.Exec(r.Context(), `DELETE FROM api_keys WHERE id = $1`, id)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to delete API key")
-		writeError(w, http.StatusInternalServerError, "failed to delete API key")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete API key")
 		return
 	}
-	logAuditFromRequest(h.db, r, h.forwardAuthHeader, "delete", "api_key", &id, fmt.Sprintf("deleted key id=%d", id))
-	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+	h.logAudit(r, "delete", &id, fmt.Sprintf("deleted key id=%d", id))
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 // Revoke marks an API key as expired (sets expires_at to now).
-func (h *APIKeyHandler) Revoke(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid key ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid key ID")
 		return
 	}
 	_, err = h.db.Pool.Exec(r.Context(), `UPDATE api_keys SET expires_at = NOW() WHERE id = $1`, id)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to revoke API key")
-		writeError(w, http.StatusInternalServerError, "failed to revoke API key")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to revoke API key")
 		return
 	}
-	logAuditFromRequest(h.db, r, h.forwardAuthHeader, "update", "api_key", &id, fmt.Sprintf("revoked key id=%d", id))
-	writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
+	h.logAudit(r, "update", &id, fmt.Sprintf("revoked key id=%d", id))
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
+}
+
+func (h *Handler) logAudit(r *http.Request, action string, entityID *int64, detail string) {
+	if h.audit == nil {
+		return
+	}
+	h.audit(r, h.forwardAuthHeader, action, "api_key", entityID, detail)
 }
 
 func sha256Hex(s string) string {

@@ -2,6 +2,8 @@ package api
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"time"
 
@@ -92,4 +94,9 @@ func findAPIKeyByHash(db *database.DB, ctx context.Context, hash string) (*authm
 func updateAPIKeyLastUsed(db *database.DB, ctx context.Context, id int64) error {
 	_, err := db.Pool.Exec(ctx, `UPDATE api_keys SET last_used_at = NOW() WHERE id = $1`, id)
 	return err
+}
+
+func sha256Hex(s string) string {
+	h := sha256.Sum256([]byte(s))
+	return hex.EncodeToString(h[:])
 }

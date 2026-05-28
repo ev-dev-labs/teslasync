@@ -15,6 +15,7 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
+	apikeyh "github.com/ev-dev-labs/teslasync/internal/api/apikey"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
@@ -699,7 +700,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	batteryDegradationHandler := NewBatteryDegradationHandler(db, stateReader, signalLogReader)
 	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := apicalllog.NewHandler(db)
-	apiKeyHandler := NewAPIKeyHandler(db, cfg.Auth.ForwardAuthHeader)
+	apiKeyHandler := apikeyh.NewHandler(db, cfg.Auth.ForwardAuthHeader, apikeyh.WithAuditFunc(
+		func(r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
+		},
+	))
 	// Phase-42 (prompt 0077): SignalCatalogHandler deleted (signal_catalog +
 	// signal_observations); the typed signal_log pipeline (000167+) is the
 	// authoritative catalog/observation surface.
