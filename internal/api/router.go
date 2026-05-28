@@ -43,6 +43,7 @@ import (
 	apipinned "github.com/ev-dev-labs/teslasync/internal/api/pinned"
 	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
 	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
+	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
 	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
@@ -578,7 +579,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// auth-mode aware (501 AUTH_MODE_OPEN in open mode) and the PUT
 	// route is wrapped in RequireSudo below.
 	rolePermissionsRepo := dbauth.NewRolePermissionsRepo(db)
-	rbacHandler := NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
+	rbacHandler := apirbac.NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
 
 	// Phase-46 / Prompt 46 — admin impersonation. The store mints
 	// HMAC-signed cookies (15-min TTL) carrying the original-admin /

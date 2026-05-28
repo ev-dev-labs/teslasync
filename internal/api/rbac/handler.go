@@ -17,7 +17,7 @@
 // middleware is itself a passthrough in open mode, so the open-mode
 // check below intentionally fires before any database work and never
 // depends on the sudo middleware running.
-package api
+package rbac
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
@@ -146,7 +147,7 @@ func (h *RBACHandler) resolveSubject(r *http.Request) (subject string, openMode 
 // open mode. Centralised so the SPA's useRbacMatrix hook can match
 // the exact code without snake-vs-camel drift.
 func writeOpenModeNotImplementedRBAC(w http.ResponseWriter) {
-	writeErrorCode(w, http.StatusNotImplemented,
+	httpx.WriteErrorCode(w, http.StatusNotImplemented,
 		"RBAC matrix requires forward-auth mode", tsauth.AuthModeOpenCode)
 }
 
@@ -176,7 +177,7 @@ func (h *RBACHandler) GetMatrix(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", RBACCodeMissingIdentity)
 		return
 	}
@@ -189,7 +190,7 @@ func (h *RBACHandler) GetMatrix(w http.ResponseWriter, r *http.Request) {
 	// editing a role they don't themselves hold.
 	storedRoles, err := h.store.ListAllRoleIDs(r.Context())
 	if err != nil {
-		writeErrorCode(w, http.StatusInternalServerError,
+		httpx.WriteErrorCode(w, http.StatusInternalServerError,
 			"failed to load matrix", RBACCodeMatrixLoadFailed)
 		return
 	}
@@ -205,7 +206,7 @@ func (h *RBACHandler) GetMatrix(w http.ResponseWriter, r *http.Request) {
 
 	matrix, err := h.store.GetMatrix(r.Context(), roleList)
 	if err != nil {
-		writeErrorCode(w, http.StatusInternalServerError,
+		httpx.WriteErrorCode(w, http.StatusInternalServerError,
 			"failed to load matrix", RBACCodeMatrixLoadFailed)
 		return
 	}
@@ -244,7 +245,7 @@ func (h *RBACHandler) GetMatrix(w http.ResponseWriter, r *http.Request) {
 		MyRoles:          myRoles,
 		GroupsHeaderName: h.groupsHeader,
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // UpsertMatrix implements PUT /api/v1/admin/rbac/matrix.
@@ -266,14 +267,14 @@ func (h *RBACHandler) UpsertMatrix(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if subject == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", RBACCodeMissingIdentity)
 		return
 	}
 
 	body, err := decodeRBACUpsertBody(r)
 	if err != nil {
-		writeErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeBadBody)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeBadBody)
 		return
 	}
 	if len(body.Cells) == 0 {
@@ -281,7 +282,7 @@ func (h *RBACHandler) UpsertMatrix(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if len(body.Cells) > MaxRBACUpsertCells {
-		writeErrorCode(w, http.StatusBadRequest,
+		httpx.WriteErrorCode(w, http.StatusBadRequest,
 			"too many cells in one update", RBACCodeBadBody)
 		return
 	}
@@ -298,19 +299,19 @@ func (h *RBACHandler) UpsertMatrix(w http.ResponseWriter, r *http.Request) {
 	if err := dbauth.ValidateCells(cells, tsauth.AllPermissionIDs()); err != nil {
 		switch {
 		case errors.Is(err, dbauth.ErrRolePermissionUnknownPermission):
-			writeErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeInvalidPermission)
+			httpx.WriteErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeInvalidPermission)
 			return
 		case errors.Is(err, dbauth.ErrRolePermissionEmptyRoleID):
-			writeErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeInvalidRole)
+			httpx.WriteErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeInvalidRole)
 			return
 		default:
-			writeErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeBadBody)
+			httpx.WriteErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeBadBody)
 			return
 		}
 	}
 
 	if err := h.store.UpsertCells(r.Context(), cells); err != nil {
-		writeErrorCode(w, http.StatusInternalServerError,
+		httpx.WriteErrorCode(w, http.StatusInternalServerError,
 			"failed to write matrix", RBACCodeMatrixWriteFailed)
 		return
 	}

@@ -14,7 +14,7 @@
 //   - PUT rejects an empty role_id with 400 INVALID_ROLE.
 //   - PUT rejects a body exceeding MaxRBACUpsertCells with 400 INVALID_BODY.
 
-package api
+package rbac
 
 import (
 	"context"
