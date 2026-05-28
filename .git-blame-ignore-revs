@@ -98,3 +98,5 @@ dd49ce9e1a89abcbb3eec8776bc45ace55c91c52
 c3be2d605395a2bcecfab7ba745aa6b1f58973c2
 # R6.11 — carve internal/ai/tools/schedule/ (charge + climate + quiet_hours)
 3c6826da34a9895210af4ef5d0550345e10db7ce
+# R6.12 — carve internal/ai/tools/summary/ (incident_timeline + log_trace + software_update + fsm_trace)
+7e611dab47c059942eb90ab008bb40b6922aac8c
