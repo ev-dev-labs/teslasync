@@ -108,3 +108,4 @@ c3be2d605395a2bcecfab7ba745aa6b1f58973c2
 47b4d69318ad1650259e8efd28441c90b6dde2ec # R6.18 charge cluster carve
 c83da7c51f955e23c18776c621f8cb93fbc4bb66 # R6.19 voice cluster carve
 870a4707a3c188d6310d3e1f22a29f9feaae6457  # R6.20: carve ai/tools/export
+d67d2dc1e1a96abfe5d6b6271541bc0f618ca765  # R6.7.5: toolstest exported fixtures prep
