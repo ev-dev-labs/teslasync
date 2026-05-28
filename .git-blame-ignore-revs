@@ -92,3 +92,5 @@ c94f18a3e9ceeeb57065fbf9a0323f5b75683c85
 472ef24fe9cbb6151db66360a52da3f954495527
 # R6.8 — carve internal/ai/tools/forecast/ (cost + period_compare + temperature_impact)
 75c644cb7faf03587f7f78d28066196cce36ee86
+# R6.9 — carve internal/ai/tools/predict/ (battery_health + range + anomaly_baseline)
+dd49ce9e1a89abcbb3eec8776bc45ace55c91c52
