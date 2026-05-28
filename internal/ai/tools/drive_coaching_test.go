@@ -34,7 +34,7 @@ func (f *failingDrivesImpl) GetByID(_ context.Context, _ int64) (*drivemodel.Dri
 
 // TestRegisterDriveCoachingTools_RegistersTool proves the wiring
 // helper installs the new tool on a fresh registry. Mirrors the
-// existing RegisterAnomalyTools / RegisterDigestTools test pattern.
+// existing RegisterAnomalyTools / digest.RegisterDigestTools test pattern.
 func TestRegisterDriveCoachingTools_RegistersTool(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
@@ -62,10 +62,6 @@ func TestRegisterDriveCoachingTools_DoesNotShadowBuiltins(t *testing.T) {
 		Geofences:     &fakeFences{},
 		Efficiency:    &fakeDrives{},
 	})
-	RegisterDigestTools(r, DigestSources{
-		Drives:  &fakeDrives{},
-		Charges: &fakeCharges{},
-	})
 	RegisterYearReviewTools(r, YearReviewSources{
 		Drives:  &fakeDrives{},
 		Charges: &fakeCharges{},
@@ -79,7 +75,6 @@ func TestRegisterDriveCoachingTools_DoesNotShadowBuiltins(t *testing.T) {
 		}
 	}
 	for _, name := range []string{
-		"query_weekly_digest_context",
 		"query_year_in_review_context",
 		"query_anomaly_context",
 		"query_drive_telemetry_summary",

@@ -128,6 +128,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/charge"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/digest"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/export"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
@@ -562,7 +563,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// FIRST so the BuiltinNames-pin test continues to see the 12
 	// canonical builtins; this call extends the registry beyond
 	// that pinned set.
-	tools.RegisterDigestTools(aiToolRegistry, tools.DigestSources{
+	digest.RegisterDigestTools(aiToolRegistry, digest.DigestSources{
 		Drives:  database.NewDriveRepo(db),
 		Charges: database.NewChargingRepo(db),
 	})

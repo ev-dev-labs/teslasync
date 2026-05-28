@@ -8,8 +8,8 @@
 // Design constraints (from the slice prompt):
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL written.**"
-//     We compose the existing DriveSource.GetByVehicle and
-//     ChargeSource.GetByVehicle methods that already back
+//     We compose the existing tools.DriveSource.GetByVehicle and
+//     tools.ChargeSource.GetByVehicle methods that already back
 //     query_drives_recent / query_charges_recent.
 //
 //   - The tool is a READ — Mutates() returns false. The dispatcher's
@@ -41,7 +41,7 @@
 // useUnits()/useFormatting() at the display boundary converts to
 // the user's preferred units before rendering.
 
-package tools
+package digest
 
 import (
 	"context"
@@ -49,6 +49,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
@@ -80,8 +81,8 @@ type queryWeeklyDigestContextInput struct {
 // Other strategies that want the same aggregate must add the name
 // to their own Tools() list.
 type queryWeeklyDigestContext struct {
-	drives  DriveSource
-	charges ChargeSource
+	drives  tools.DriveSource
+	charges tools.ChargeSource
 }
 
 // Name implements [Tool].
@@ -97,7 +98,7 @@ func (t *queryWeeklyDigestContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryWeeklyDigestContext) InputSchema() json.RawMessage {
-	return CachedSchema(queryWeeklyDigestContextInput{})
+	return tools.CachedSchema(queryWeeklyDigestContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -114,7 +115,7 @@ func (t *queryWeeklyDigestContext) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryWeeklyDigestContext) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryWeeklyDigestContextInput](raw)
+	return tools.ValidateStruct[queryWeeklyDigestContextInput](raw)
 }
 
 // Execute implements [Tool]. Two repo round-trips (drives + charges)
@@ -125,10 +126,10 @@ func (t *queryWeeklyDigestContext) Validate(raw json.RawMessage) (any, error) {
 func (t *queryWeeklyDigestContext) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(queryWeeklyDigestContextInput)
 	if t.drives == nil {
-		return nil, fmt.Errorf("query_weekly_digest_context: no DriveSource wired")
+		return nil, fmt.Errorf("query_weekly_digest_context: no tools.DriveSource wired")
 	}
 	if t.charges == nil {
-		return nil, fmt.Errorf("query_weekly_digest_context: no ChargeSource wired")
+		return nil, fmt.Errorf("query_weekly_digest_context: no tools.ChargeSource wired")
 	}
 
 	weekStart, weekEnd := isoWeekWindowUTC(time.Now().UTC(), input.WeekOffsetWeeks)
@@ -160,7 +161,7 @@ func (t *queryWeeklyDigestContext) Execute(ctx context.Context, in any) (any, er
 // aggregateWeeklyDigest is a pure helper: given the slices the
 // repos returned, compute the deterministic aggregate envelope.
 // Extracted so the unit test can call it directly without spinning
-// up a fake DriveSource / ChargeSource and so the body of Execute
+// up a fake tools.DriveSource / tools.ChargeSource and so the body of Execute
 // stays focused on IO + error wrapping.
 func aggregateWeeklyDigest(drives []*drivemodel.Drive, charges []*chargingmodel.ChargingSession) map[string]any {
 	var (
@@ -236,8 +237,8 @@ func isoWeekWindowUTC(now time.Time, offsetWeeks int) (start, end time.Time) {
 // ChargingRepo instances passed to [Register12Builtins]; tests
 // substitute deterministic fakes per-source.
 type DigestSources struct {
-	Drives  DriveSource
-	Charges ChargeSource
+	Drives  tools.DriveSource
+	Charges tools.ChargeSource
 }
 
 // RegisterDigestTools installs the digest-narration slice's tools on
@@ -247,6 +248,6 @@ type DigestSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterDigestTools(r *Registry, s DigestSources) {
+func RegisterDigestTools(r *tools.Registry, s DigestSources) {
 	r.Register(&queryWeeklyDigestContext{drives: s.Drives, charges: s.Charges})
 }

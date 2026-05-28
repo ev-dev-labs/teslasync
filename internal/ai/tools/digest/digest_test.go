@@ -1,11 +1,11 @@
 // Phase-50 / 0012 — U2 Weekly digest narration.
 //
 // digest_test.go covers the new query_weekly_digest_context tool +
-// the RegisterDigestTools wiring. The fakes (fakeDrives, fakeCharges)
+// the RegisterDigestTools wiring. The fakes (toolstest.FakeDrives, toolstest.FakeCharges)
 // live in builtins_test.go; this file is in the same package so it
 // reuses them directly.
 
-package tools
+package digest
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
@@ -20,13 +22,13 @@ import (
 
 // TestRegisterDigestTools_RegistersTool proves the wiring helper
 // installs the new tool on a fresh registry. Mirrors the existing
-// Register12Builtins test pattern.
+// tools.Register12Builtins test pattern.
 func TestRegisterDigestTools_RegistersTool(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterDigestTools(r, DigestSources{
-		Drives:  &fakeDrives{},
-		Charges: &fakeCharges{},
+		Drives:  &toolstest.FakeDrives{},
+		Charges: &toolstest.FakeCharges{},
 	})
 	if _, ok := r.Get("query_weekly_digest_context"); !ok {
 		t.Fatal("RegisterDigestTools did not register query_weekly_digest_context")
@@ -41,22 +43,22 @@ func TestRegisterDigestTools_RegistersTool(t *testing.T) {
 // a builtin to a digest-tool name).
 func TestRegisterDigestTools_DoesNotShadowBuiltins(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{},
-		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{},
-		Charges:       &fakeCharges{},
-		AlertRules:    &fakeRules{},
-		Notifications: &fakeNotif{},
-		Geofences:     &fakeFences{},
-		Efficiency:    &fakeDrives{},
+	r := tools.NewRegistry()
+	tools.Register12Builtins(r, tools.Sources{
+		Vehicles:      &toolstest.FakeVehicles{},
+		VehicleState:  &toolstest.FakeState{},
+		Drives:        &toolstest.FakeDrives{},
+		Charges:       &toolstest.FakeCharges{},
+		AlertRules:    &toolstest.FakeRules{},
+		Notifications: &toolstest.FakeNotif{},
+		Geofences:     &toolstest.FakeFences{},
+		Efficiency:    &toolstest.FakeDrives{},
 	})
 	RegisterDigestTools(r, DigestSources{
-		Drives:  &fakeDrives{},
-		Charges: &fakeCharges{},
+		Drives:  &toolstest.FakeDrives{},
+		Charges: &toolstest.FakeCharges{},
 	})
-	for _, name := range BuiltinNames {
+	for _, name := range tools.BuiltinNames {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("builtin %q lost after RegisterDigestTools", name)
 		}
@@ -72,7 +74,7 @@ func TestRegisterDigestTools_DoesNotShadowBuiltins(t *testing.T) {
 // here.
 func TestQueryWeeklyDigestContext_NameDescriptionMutates(t *testing.T) {
 	t.Parallel()
-	tool := &queryWeeklyDigestContext{drives: &fakeDrives{}, charges: &fakeCharges{}}
+	tool := &queryWeeklyDigestContext{drives: &toolstest.FakeDrives{}, charges: &toolstest.FakeCharges{}}
 	if got := tool.Name(); got != "query_weekly_digest_context" {
 		t.Errorf("Name() = %q, want %q", got, "query_weekly_digest_context")
 	}
@@ -93,7 +95,7 @@ func TestQueryWeeklyDigestContext_NameDescriptionMutates(t *testing.T) {
 // catch a typed-input error — that's the validator's job.
 func TestQueryWeeklyDigestContext_ValidateRejectsBadInput(t *testing.T) {
 	t.Parallel()
-	tool := &queryWeeklyDigestContext{drives: &fakeDrives{}, charges: &fakeCharges{}}
+	tool := &queryWeeklyDigestContext{drives: &toolstest.FakeDrives{}, charges: &toolstest.FakeCharges{}}
 
 	cases := []struct {
 		name string
@@ -119,7 +121,7 @@ func TestQueryWeeklyDigestContext_ValidateRejectsBadInput(t *testing.T) {
 // (when present must be within bounds; when absent defaults to 0).
 func TestQueryWeeklyDigestContext_ValidateAcceptsCanonical(t *testing.T) {
 	t.Parallel()
-	tool := &queryWeeklyDigestContext{drives: &fakeDrives{}, charges: &fakeCharges{}}
+	tool := &queryWeeklyDigestContext{drives: &toolstest.FakeDrives{}, charges: &toolstest.FakeCharges{}}
 
 	cases := []string{
 		`{"vehicle_id": 1}`,
@@ -165,8 +167,8 @@ func TestQueryWeeklyDigestContext_ExecuteAggregates(t *testing.T) {
 		nil, // tolerated
 	}
 	tool := &queryWeeklyDigestContext{
-		drives:  &fakeDrives{rows: drives},
-		charges: &fakeCharges{rows: charges},
+		drives:  &toolstest.FakeDrives{Rows: drives},
+		charges: &toolstest.FakeCharges{Rows: charges},
 	}
 
 	in := queryWeeklyDigestContextInput{VehicleID: 1, WeekOffsetWeeks: 0}
@@ -222,8 +224,8 @@ func TestQueryWeeklyDigestContext_ExecuteAggregates(t *testing.T) {
 func TestQueryWeeklyDigestContext_ExecuteEmptyWeek(t *testing.T) {
 	t.Parallel()
 	tool := &queryWeeklyDigestContext{
-		drives:  &fakeDrives{rows: nil},
-		charges: &fakeCharges{rows: nil},
+		drives:  &toolstest.FakeDrives{Rows: nil},
+		charges: &toolstest.FakeCharges{Rows: nil},
 	}
 	out, err := tool.Execute(context.Background(), queryWeeklyDigestContextInput{VehicleID: 1})
 	if err != nil {
@@ -251,14 +253,14 @@ func TestQueryWeeklyDigestContext_ExecuteEmptyWeek(t *testing.T) {
 func TestQueryWeeklyDigestContext_ExecuteRequiresSources(t *testing.T) {
 	t.Parallel()
 	t.Run("nil drives", func(t *testing.T) {
-		tool := &queryWeeklyDigestContext{drives: nil, charges: &fakeCharges{}}
+		tool := &queryWeeklyDigestContext{drives: nil, charges: &toolstest.FakeCharges{}}
 		_, err := tool.Execute(context.Background(), queryWeeklyDigestContextInput{VehicleID: 1})
 		if err == nil {
 			t.Fatal("Execute err = nil, want DriveSource error")
 		}
 	})
 	t.Run("nil charges", func(t *testing.T) {
-		tool := &queryWeeklyDigestContext{drives: &fakeDrives{}, charges: nil}
+		tool := &queryWeeklyDigestContext{drives: &toolstest.FakeDrives{}, charges: nil}
 		_, err := tool.Execute(context.Background(), queryWeeklyDigestContextInput{VehicleID: 1})
 		if err == nil {
 			t.Fatal("Execute err = nil, want ChargeSource error")

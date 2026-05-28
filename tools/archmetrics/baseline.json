@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:18:09Z",
+  "generated_at": "2026-05-28T07:24:51Z",
   "go_version": "go1.26.1",
-  "commit_sha": "c0df955d20c3239ee8bc173411b5b012e31e244a",
+  "commit_sha": "bf1b762401f96b81daf25f9243135a03edfd6d2c",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 19,
-      "test_files": 17,
-      "loc": 13021,
+      "go_files": 18,
+      "test_files": 16,
+      "loc": 12469,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1908,8 +1908,6 @@
         "charge_curve_clustering_test.go",
         "charging_diagnosis.go",
         "charging_diagnosis_test.go",
-        "digest.go",
-        "digest_test.go",
         "doc.go",
         "drive_coaching.go",
         "drive_coaching_test.go",
@@ -1993,6 +1991,25 @@
         "doc.go",
         "stream_inspector.go",
         "stream_inspector_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/digest",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 565,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest",
+        "internal/models/charging",
+        "internal/models/drive"
+      ],
+      "files": [
+        "digest.go",
+        "digest_test.go",
+        "doc.go"
       ]
     },
     {
@@ -2330,7 +2347,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126542,
+      "loc": 126543,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2405,6 +2422,7 @@
         "internal/ai/tools/alert",
         "internal/ai/tools/charge",
         "internal/ai/tools/diagnostic",
+        "internal/ai/tools/digest",
         "internal/ai/tools/export",
         "internal/ai/tools/feedback",
         "internal/ai/tools/forecast",
@@ -6040,7 +6058,6 @@
       "builtins.go",
       "charge_curve_clustering.go",
       "charging_diagnosis.go",
-      "digest.go",
       "doc.go",
       "drive_coaching.go",
       "help.go",
@@ -6069,6 +6086,10 @@
       "data_repair.go",
       "doc.go",
       "stream_inspector.go"
+    ],
+    "internal/ai/tools/digest": [
+      "digest.go",
+      "doc.go"
     ],
     "internal/ai/tools/export": [
       "doc.go",
@@ -7370,8 +7391,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 19,
-      "flat_parent_test_files": 17,
+      "flat_parent_go_files": 18,
+      "flat_parent_test_files": 16,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

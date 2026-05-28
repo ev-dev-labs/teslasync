@@ -20,7 +20,7 @@ import (
 
 // TestRegisterYearReviewTools_RegistersTool proves the wiring helper
 // installs the new tool on a fresh registry. Mirrors the existing
-// RegisterDigestTools test pattern.
+// digest.RegisterDigestTools test pattern.
 func TestRegisterYearReviewTools_RegistersTool(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry()
@@ -52,10 +52,6 @@ func TestRegisterYearReviewTools_DoesNotShadowBuiltins(t *testing.T) {
 		Geofences:     &fakeFences{},
 		Efficiency:    &fakeDrives{},
 	})
-	RegisterDigestTools(r, DigestSources{
-		Drives:  &fakeDrives{},
-		Charges: &fakeCharges{},
-	})
 	RegisterYearReviewTools(r, YearReviewSources{
 		Drives:  &fakeDrives{},
 		Charges: &fakeCharges{},
@@ -64,9 +60,6 @@ func TestRegisterYearReviewTools_DoesNotShadowBuiltins(t *testing.T) {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("builtin %q lost after RegisterYearReviewTools", name)
 		}
-	}
-	if _, ok := r.Get("query_weekly_digest_context"); !ok {
-		t.Error("query_weekly_digest_context missing after YIR registration")
 	}
 	if _, ok := r.Get("query_year_in_review_context"); !ok {
 		t.Error("query_year_in_review_context missing after registration")

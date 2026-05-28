@@ -77,7 +77,7 @@ type AIDigestHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_weekly_digest_context (registered by
-//	tools.RegisterDigestTools in router.go).
+//	digest.RegisterDigestTools in router.go).
 //
 // strat:      the digest-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
