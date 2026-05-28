@@ -202,3 +202,6 @@ c03b89a1365760c5624a8a18dc12b40057e86f86
 
 # R2.0f apibulk carve (catalog + helpers)
 d5bab8b3
+
+# R2b: carve internal/api/geofence (CRUD + bulk handlers)
+927f2b60d5a28e07c2ebd8692e60994f2d968a95
