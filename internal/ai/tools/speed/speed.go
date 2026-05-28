@@ -20,7 +20,7 @@
 //     adds nothing to the drive ingestion or aggregation pipeline.
 //
 //   - "No new SQL written." Both tools call the existing
-//     [DriveSource.GetByID] method (the same surface the
+//     [tools.DriveSource.GetByID] method (the same surface the
 //     query_drive_detail builtin and the query_drive_telemetry_summary
 //     coaching tool use). Speed-bucket math + regime classification
 //     happen in-memory on the *drivemodel.Drive row.
@@ -91,13 +91,14 @@
 // from SI inputs; the frontend's useUnits() at the display boundary
 // reformats to mi/kWh or kWh/100mi for US users.
 
-package tools
+package speed
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
@@ -137,7 +138,7 @@ const (
 // querySpeedProfileInput is the typed input shape for the
 // query_speed_profile tool. The dispatcher decodes the LLM's
 // tool-call arguments JSON into this struct via ValidateStruct so a
-// malformed input fails before any DriveSource method runs.
+// malformed input fails before any tools.DriveSource method runs.
 type querySpeedProfileInput struct {
 	// DriveID identifies the drive to summarise. Required + positive
 	// — the AI handler ALWAYS scopes to the caller-supplied
@@ -155,7 +156,7 @@ type querySpeedProfileInput struct {
 // envelope when the drive_telemetry table grows that surface) will
 // not bleed into the chatbot's tool surface.
 type querySpeedProfile struct {
-	src DriveSource
+	src tools.DriveSource
 }
 
 // Name implements [Tool].
@@ -175,7 +176,7 @@ func (t *querySpeedProfile) Description() string {
 
 // InputSchema implements [Tool].
 func (t *querySpeedProfile) InputSchema() json.RawMessage {
-	return CachedSchema(querySpeedProfileInput{})
+	return tools.CachedSchema(querySpeedProfileInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -191,7 +192,7 @@ func (t *querySpeedProfile) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *querySpeedProfile) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[querySpeedProfileInput](raw)
+	return tools.ValidateStruct[querySpeedProfileInput](raw)
 }
 
 // Execute implements [Tool]. One repo round-trip then in-memory
@@ -204,7 +205,7 @@ func (t *querySpeedProfile) Validate(raw json.RawMessage) (any, error) {
 func (t *querySpeedProfile) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(querySpeedProfileInput)
 	if t.src == nil {
-		return nil, fmt.Errorf("query_speed_profile: no DriveSource wired")
+		return nil, fmt.Errorf("query_speed_profile: no tools.DriveSource wired")
 	}
 	d, err := t.src.GetByID(ctx, input.DriveID)
 	if err != nil {
@@ -219,7 +220,7 @@ func (t *querySpeedProfile) Execute(ctx context.Context, in any) (any, error) {
 // summariseSpeedProfile is a pure helper: given a *drivemodel.Drive,
 // compute the deterministic speed-profile envelope. Extracted so the
 // unit test can call it directly without spinning up a fake
-// DriveSource and so the body of Execute stays focused on IO +
+// tools.DriveSource and so the body of Execute stays focused on IO +
 // error wrapping.
 //
 // All derivations are SAFE — division-by-zero is guarded, and
@@ -236,10 +237,10 @@ func summariseSpeedProfile(d *drivemodel.Drive) map[string]any {
 
 	// SI speed aggregates pass-through — nil-aware so JSON null is
 	// preserved when the column was NULL on the drive row.
-	out["avg_speed_mps"] = DerefFloat64Ptr(d.AvgSpeedMps)
-	out["max_speed_mps"] = DerefFloat64Ptr(d.MaxSpeedMps)
-	out["avg_power_w"] = DerefFloat64Ptr(d.AvgPowerW)
-	out["energy_used_wh"] = DerefFloat64Ptr(d.EnergyUsedWh)
+	out["avg_speed_mps"] = tools.DerefFloat64Ptr(d.AvgSpeedMps)
+	out["max_speed_mps"] = tools.DerefFloat64Ptr(d.MaxSpeedMps)
+	out["avg_power_w"] = tools.DerefFloat64Ptr(d.AvgPowerW)
+	out["energy_used_wh"] = tools.DerefFloat64Ptr(d.EnergyUsedWh)
 
 	// Derived km/h and mph — emitted alongside the SI values so the
 	// narration can quote a familiar unit without doing arithmetic
@@ -339,7 +340,7 @@ type queryDriveContextInput struct {
 // lat/lon/address is fixed at the tool boundary (not relying on
 // redaction-policy enforcement alone).
 type queryDriveContext struct {
-	src DriveSource
+	src tools.DriveSource
 }
 
 // Name implements [Tool].
@@ -358,7 +359,7 @@ func (t *queryDriveContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryDriveContext) InputSchema() json.RawMessage {
-	return CachedSchema(queryDriveContextInput{})
+	return tools.CachedSchema(queryDriveContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -372,7 +373,7 @@ func (t *queryDriveContext) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *queryDriveContext) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryDriveContextInput](raw)
+	return tools.ValidateStruct[queryDriveContextInput](raw)
 }
 
 // Execute implements [Tool]. One repo round-trip then in-memory
@@ -380,7 +381,7 @@ func (t *queryDriveContext) Validate(raw json.RawMessage) (any, error) {
 func (t *queryDriveContext) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(queryDriveContextInput)
 	if t.src == nil {
-		return nil, fmt.Errorf("query_drive_context: no DriveSource wired")
+		return nil, fmt.Errorf("query_drive_context: no tools.DriveSource wired")
 	}
 	d, err := t.src.GetByID(ctx, input.DriveID)
 	if err != nil {
@@ -395,7 +396,7 @@ func (t *queryDriveContext) Execute(ctx context.Context, in any) (any, error) {
 // buildDriveContext is a pure helper: given a *drivemodel.Drive, build
 // the temporal + battery + temperature envelope WITHOUT route
 // geometry. Extracted so the unit test can call it directly without
-// spinning up a fake DriveSource.
+// spinning up a fake tools.DriveSource.
 //
 // CRITICAL: this function MUST NOT return start_lat, start_lon,
 // end_lat, end_lon, start_address, or end_address. The presence of
@@ -424,8 +425,8 @@ func buildDriveContext(d *drivemodel.Drive) map[string]any {
 	// Battery — start, end, derived consumed delta. A regen-only
 	// drive can have a negative battery_consumed_pct (battery went
 	// UP), which is a valid observation, so we don't clamp.
-	out["start_battery_pct"] = DerefInt16Ptr(d.StartBatteryPct)
-	out["end_battery_pct"] = DerefInt16Ptr(d.EndBatteryPct)
+	out["start_battery_pct"] = tools.DerefInt16Ptr(d.StartBatteryPct)
+	out["end_battery_pct"] = tools.DerefInt16Ptr(d.EndBatteryPct)
 	if d.StartBatteryPct != nil && d.EndBatteryPct != nil {
 		consumed := int16(*d.StartBatteryPct) - int16(*d.EndBatteryPct)
 		out["battery_consumed_pct"] = consumed
@@ -437,9 +438,9 @@ func buildDriveContext(d *drivemodel.Drive) map[string]any {
 	// InsideTempAvgC is intentionally excluded: it's nil on every
 	// row by ADR-001 / Phase-42 (column dropped) and surfacing it
 	// would mislead the LLM about its availability.
-	out["outside_temp_avg_c"] = DerefFloat64Ptr(d.OutsideTempAvgC)
-	out["outside_temp_avg_f"] = CToFPtr(d.OutsideTempAvgC)
-	out["ended_status"] = DerefStringPtr(d.EndedStatus)
+	out["outside_temp_avg_c"] = tools.DerefFloat64Ptr(d.OutsideTempAvgC)
+	out["outside_temp_avg_f"] = tools.CToFPtr(d.OutsideTempAvgC)
+	out["ended_status"] = tools.DerefStringPtr(d.EndedStatus)
 
 	// Privacy: presence-only flags. The actual strings + lat/lon
 	// are NEVER returned by this tool. The slice's redaction
@@ -467,7 +468,7 @@ func buildDriveContext(d *drivemodel.Drive) map[string]any {
 // Register12Builtins already received); tests substitute
 // deterministic fakes per-source.
 type SpeedProfileInsightsSources struct {
-	Drives DriveSource
+	Drives tools.DriveSource
 }
 
 // RegisterSpeedProfileInsightsTools installs the
@@ -483,7 +484,7 @@ type SpeedProfileInsightsSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterSpeedProfileInsightsTools(r *Registry, s SpeedProfileInsightsSources) {
+func RegisterSpeedProfileInsightsTools(r *tools.Registry, s SpeedProfileInsightsSources) {
 	r.Register(&querySpeedProfile{src: s.Drives})
 	r.Register(&queryDriveContext{src: s.Drives})
 }

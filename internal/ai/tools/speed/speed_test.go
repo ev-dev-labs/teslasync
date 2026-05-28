@@ -3,12 +3,12 @@
 // speed_profile_test.go covers the new query_speed_profile +
 // query_drive_context tools and the RegisterSpeedProfileInsightsTools
 // wiring. Mirrors the shape of drive_coaching_test.go and
-// charging_diagnosis_test.go. Reuses the shared fakeDrives source
+// charging_diagnosis_test.go. Reuses the shared toolstest.FakeDrives source
 // from builtins_test.go and the failingDrivesImpl from
 // drive_coaching_test.go so the existing drive-domain tools and
 // these new tools share the same test substrate.
 
-package tools
+package speed
 
 import (
 	"context"
@@ -17,6 +17,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
@@ -26,7 +28,7 @@ import (
 // drive_coaching → coaching/ (this parent test cannot import the
 // subpkg without inducing a parent→child→parent test cycle).
 type failingDrivesImpl struct {
-	fakeDrives
+	toolstest.FakeDrives
 	getByIDErr error
 }
 
@@ -39,8 +41,8 @@ func (f *failingDrivesImpl) GetByID(_ context.Context, _ int64) (*drivemodel.Dri
 // Mirrors the existing RegisterDriveCoachingTools test pattern.
 func TestRegisterSpeedProfileInsightsTools_RegistersBothTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	RegisterSpeedProfileInsightsTools(r, SpeedProfileInsightsSources{Drives: &fakeDrives{}})
+	r := tools.NewRegistry()
+	RegisterSpeedProfileInsightsTools(r, SpeedProfileInsightsSources{Drives: &toolstest.FakeDrives{}})
 	for _, name := range []string{"query_speed_profile", "query_drive_context"} {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("RegisterSpeedProfileInsightsTools did not register %q", name)
@@ -55,20 +57,20 @@ func TestRegisterSpeedProfileInsightsTools_RegistersBothTools(t *testing.T) {
 // accidental same-name collision.
 func TestRegisterSpeedProfileInsightsTools_DoesNotShadowBuiltins(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
-	Register12Builtins(r, Sources{
-		Vehicles:      &fakeVehicles{},
-		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{},
-		Charges:       &fakeCharges{},
-		AlertRules:    &fakeRules{},
-		Notifications: &fakeNotif{},
-		Geofences:     &fakeFences{},
-		Efficiency:    &fakeDrives{},
+	r := tools.NewRegistry()
+	tools.Register12Builtins(r, tools.Sources{
+		Vehicles:      &toolstest.FakeVehicles{},
+		VehicleState:  &toolstest.FakeState{},
+		Drives:        &toolstest.FakeDrives{},
+		Charges:       &toolstest.FakeCharges{},
+		AlertRules:    &toolstest.FakeRules{},
+		Notifications: &toolstest.FakeNotif{},
+		Geofences:     &toolstest.FakeFences{},
+		Efficiency:    &toolstest.FakeDrives{},
 	})
-	RegisterSpeedProfileInsightsTools(r, SpeedProfileInsightsSources{Drives: &fakeDrives{}})
+	RegisterSpeedProfileInsightsTools(r, SpeedProfileInsightsSources{Drives: &toolstest.FakeDrives{}})
 
-	for _, name := range BuiltinNames {
+	for _, name := range tools.BuiltinNames {
 		if _, ok := r.Get(name); !ok {
 			t.Errorf("builtin %q lost after RegisterSpeedProfileInsightsTools", name)
 		}
@@ -88,7 +90,7 @@ func TestRegisterSpeedProfileInsightsTools_DoesNotShadowBuiltins(t *testing.T) {
 // tool out from under the strategy whitelist) fails here.
 func TestQuerySpeedProfile_NameDescriptionMutates(t *testing.T) {
 	t.Parallel()
-	tool := &querySpeedProfile{src: &fakeDrives{}}
+	tool := &querySpeedProfile{src: &toolstest.FakeDrives{}}
 	if got := tool.Name(); got != "query_speed_profile" {
 		t.Errorf("Name() = %q, want %q", got, "query_speed_profile")
 	}
@@ -107,7 +109,7 @@ func TestQuerySpeedProfile_NameDescriptionMutates(t *testing.T) {
 // tool's static metadata.
 func TestQueryDriveContext_NameDescriptionMutates(t *testing.T) {
 	t.Parallel()
-	tool := &queryDriveContext{src: &fakeDrives{}}
+	tool := &queryDriveContext{src: &toolstest.FakeDrives{}}
 	if got := tool.Name(); got != "query_drive_context" {
 		t.Errorf("Name() = %q, want %q", got, "query_drive_context")
 	}
@@ -126,7 +128,7 @@ func TestQueryDriveContext_NameDescriptionMutates(t *testing.T) {
 // catches missing / non-positive drive_id BEFORE Execute runs.
 func TestQuerySpeedProfile_ValidateRejectsBadInput(t *testing.T) {
 	t.Parallel()
-	tool := &querySpeedProfile{src: &fakeDrives{}}
+	tool := &querySpeedProfile{src: &toolstest.FakeDrives{}}
 
 	cases := []struct {
 		name string
@@ -150,7 +152,7 @@ func TestQuerySpeedProfile_ValidateRejectsBadInput(t *testing.T) {
 // validation contract for the context tool.
 func TestQueryDriveContext_ValidateRejectsBadInput(t *testing.T) {
 	t.Parallel()
-	tool := &queryDriveContext{src: &fakeDrives{}}
+	tool := &queryDriveContext{src: &toolstest.FakeDrives{}}
 
 	cases := []string{`{}`, `{"drive_id": 0}`, `{"drive_id": -1}`}
 	for _, raw := range cases {
@@ -176,8 +178,8 @@ func TestQuerySpeedProfile_ExecuteHappyPathHighway(t *testing.T) {
 	avgPower := 18000.0
 	energyUsedWh := 14000.0
 
-	src := &fakeDrives{
-		one: map[int64]*drivemodel.Drive{
+	src := &toolstest.FakeDrives{
+		One: map[int64]*drivemodel.Drive{
 			702: {
 				ID:           702,
 				VehicleID:    1,
@@ -290,8 +292,8 @@ func TestClassifySpeedRegime_EdgeCases(t *testing.T) {
 func TestQuerySpeedProfile_NilAggregatesPropagateAsNull(t *testing.T) {
 	t.Parallel()
 
-	src := &fakeDrives{
-		one: map[int64]*drivemodel.Drive{
+	src := &toolstest.FakeDrives{
+		One: map[int64]*drivemodel.Drive{
 			888: {
 				ID:        888,
 				VehicleID: 1,
@@ -340,7 +342,7 @@ func TestQuerySpeedProfile_NoSourceWired(t *testing.T) {
 
 func TestQuerySpeedProfile_DriveNotFound(t *testing.T) {
 	t.Parallel()
-	src := &fakeDrives{one: map[int64]*drivemodel.Drive{}}
+	src := &toolstest.FakeDrives{One: map[int64]*drivemodel.Drive{}}
 	tool := &querySpeedProfile{src: src}
 	in, _ := tool.Validate(json.RawMessage(`{"drive_id": 99}`))
 	_, err := tool.Execute(context.Background(), in)
@@ -472,8 +474,8 @@ func TestQueryDriveContext_ExecuteHappyPath(t *testing.T) {
 	startBat := int16(90)
 	endBat := int16(75)
 
-	src := &fakeDrives{
-		one: map[int64]*drivemodel.Drive{
+	src := &toolstest.FakeDrives{
+		One: map[int64]*drivemodel.Drive{
 			703: {
 				ID:              703,
 				VehicleID:       1,
@@ -521,7 +523,7 @@ func TestQueryDriveContext_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("drive not found", func(t *testing.T) {
-		tool := &queryDriveContext{src: &fakeDrives{one: map[int64]*drivemodel.Drive{}}}
+		tool := &queryDriveContext{src: &toolstest.FakeDrives{One: map[int64]*drivemodel.Drive{}}}
 		in, _ := tool.Validate(json.RawMessage(`{"drive_id": 99}`))
 		if _, err := tool.Execute(context.Background(), in); err == nil {
 			t.Fatal("Execute with missing drive: err = nil, want error")

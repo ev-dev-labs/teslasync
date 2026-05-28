@@ -145,6 +145,7 @@ import (
 	routetool "github.com/ev-dev-labs/teslasync/internal/ai/tools/route"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
+	speedtool "github.com/ev-dev-labs/teslasync/internal/ai/tools/speed"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
@@ -906,7 +907,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// resolve at boot. Both tools call DriveRepo.GetByID and
 	// derive their envelopes in-memory; no new SQL is written by
 	// this slice.
-	tools.RegisterSpeedProfileInsightsTools(aiToolRegistry, tools.SpeedProfileInsightsSources{
+	speedtool.RegisterSpeedProfileInsightsTools(aiToolRegistry, speedtool.SpeedProfileInsightsSources{
 		Drives: database.NewDriveRepo(db),
 	})
 	// Per-drive speed-profile insights handler. One per process;

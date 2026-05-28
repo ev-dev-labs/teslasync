@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T07:54:24Z, Go go1.26.1, commit a23c2cab1091fcd1920917692708e928f344a7d3_
+_Generated 2026-05-28T07:58:27Z, Go go1.26.1, commit a829639dc7854f12804a143126982b0119225b7c_
 
 ## Summary
 
-- Packages: 258
+- Packages: 259
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 373779
+- Total non-blank LOC under cmd/+internal/+tools/: 373829
 
 ## cmd/* main.go LOC
 
@@ -139,7 +139,7 @@ _Generated 2026-05-28T07:54:24Z, Go go1.26.1, commit a23c2cab1091fcd192091769270
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 14 | 10 | 7468 | yes | platform |
+| internal/ai/tools | 13 | 9 | 6520 | yes | platform |
 | internal/ai/tools/alert | 3 | 2 | 1754 | yes |  |
 | internal/ai/tools/anomaly | 2 | 1 | 571 | yes | domain |
 | internal/ai/tools/charge | 2 | 1 | 611 | yes | domain |
@@ -161,13 +161,14 @@ _Generated 2026-05-28T07:54:24Z, Go go1.26.1, commit a23c2cab1091fcd192091769270
 | internal/ai/tools/route | 2 | 1 | 1168 | yes |  |
 | internal/ai/tools/safety | 2 | 1 | 560 | yes |  |
 | internal/ai/tools/schedule | 4 | 3 | 2821 | yes | domain |
+| internal/ai/tools/speed | 2 | 1 | 997 | yes |  |
 | internal/ai/tools/summary | 5 | 4 | 4219 | yes | domain |
 | internal/ai/tools/toolstest | 2 | 0 | 176 | yes | domain |
 | internal/ai/tools/trip | 4 | 4 | 2511 | yes | domain |
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126549 | yes | handler |
+| internal/api | 271 | 163 | 126550 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -311,7 +312,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
-| `internal/ai/tools` | R6 | 109 | 14 / 10 | 13 | 7 | 6 |
+| `internal/ai/tools` | R6 | 109 | 13 / 9 | 13 | 7 | 6 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |

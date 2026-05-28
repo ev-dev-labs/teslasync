@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:54:23Z",
+  "generated_at": "2026-05-28T07:58:26Z",
   "go_version": "go1.26.1",
-  "commit_sha": "a23c2cab1091fcd1920917692708e928f344a7d3",
+  "commit_sha": "a829639dc7854f12804a143126982b0119225b7c",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 14,
-      "test_files": 10,
-      "loc": 7468,
+      "go_files": 13,
+      "test_files": 9,
+      "loc": 6520,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1914,8 +1914,6 @@
         "schema_test.go",
         "search.go",
         "search_test.go",
-        "speed_profile.go",
-        "speed_profile_test.go",
         "strhelpers.go",
         "test_helpers_test.go",
         "tool.go",
@@ -2323,6 +2321,23 @@
       ]
     },
     {
+      "path": "internal/ai/tools/speed",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 997,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest",
+        "internal/models/drive"
+      ],
+      "files": [
+        "doc.go",
+        "speed.go",
+        "speed_test.go"
+      ]
+    },
+    {
       "path": "internal/ai/tools/summary",
       "go_files": 5,
       "test_files": 4,
@@ -2448,7 +2463,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126549,
+      "loc": 126550,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2541,6 +2556,7 @@
         "internal/ai/tools/route",
         "internal/ai/tools/safety",
         "internal/ai/tools/schedule",
+        "internal/ai/tools/speed",
         "internal/ai/tools/summary",
         "internal/ai/tools/trip",
         "internal/ai/tools/voice",
@@ -6169,7 +6185,6 @@
       "registry.go",
       "schema.go",
       "search.go",
-      "speed_profile.go",
       "strhelpers.go",
       "tool.go",
       "trip_planner_llm_agent.go",
@@ -6275,6 +6290,10 @@
       "climate.go",
       "doc.go",
       "quiet_hours.go"
+    ],
+    "internal/ai/tools/speed": [
+      "doc.go",
+      "speed.go"
     ],
     "internal/ai/tools/summary": [
       "doc.go",
@@ -7518,8 +7537,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 14,
-      "flat_parent_test_files": 10,
+      "flat_parent_go_files": 13,
+      "flat_parent_test_files": 9,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",
