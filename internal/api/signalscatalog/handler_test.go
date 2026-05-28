@@ -1,4 +1,4 @@
-package api
+package signalscatalog
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
 
-// Phase-43a / Prompt 0007 — HTTP tests for SignalsCatalogHandler.
+// Phase-43a / Prompt 0007 — HTTP tests for Handler.
 //
 // Coverage map vs Decision #7:
 //   (a) Catalog includes routed-but-unobserved fields (last_seen_at NULL)
@@ -81,8 +81,8 @@ func (f *fakeSignalsCatalogRepo) Observations(ctx context.Context, params signal
 // router.Load()) so tests are deterministic regardless of whether
 // future routing.yaml prompts add or remove entries. The fixed clock
 // pins generated_at for shape assertions.
-func newSignalsCatalogHandlerForTest(repo *fakeSignalsCatalogRepo, entries []router.Entry, fixedNow time.Time) *SignalsCatalogHandler {
-	return &SignalsCatalogHandler{
+func newSignalsCatalogHandlerForTest(repo *fakeSignalsCatalogRepo, entries []router.Entry, fixedNow time.Time) *Handler {
+	return &Handler{
 		repo:    repo,
 		entries: entries,
 		clock:   func() time.Time { return fixedNow },
@@ -674,7 +674,7 @@ func TestNewSignalsCatalogHandler_LoadsRoutingYAML(t *testing.T) {
 	// Construct via the package-level helper but with a nil repo —
 	// this is fine because we never call Catalog or Observations
 	// here. The test exercises router.Load() via the constructor.
-	h := &SignalsCatalogHandler{}
+	h := &Handler{}
 	entries, err := router.Load()
 	if err != nil {
 		t.Fatalf("router.Load() failed: %v — production constructor would panic", err)

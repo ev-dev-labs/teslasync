@@ -1,4 +1,4 @@
-// Phase-43a / Prompt 0007 — SignalsCatalogHandler restores the
+// Phase-43a / Prompt 0007 — Handler restores the
 // /signals/catalog + /signals/observations endpoints deleted by
 // Phase-42 prompt 0077, backed by routing.yaml (catalog spine) +
 // signal_log (mig 000186, aggregates + observations).
@@ -13,7 +13,7 @@
 // SignalObservation) describe the dropped endpoint and will need a
 // follow-up update outside this prompt's allowed-files boundary.
 // The 404 -> 200 transition is the win this prompt ships.
-package api
+package signalscatalog
 
 import (
 	"context"
@@ -29,10 +29,12 @@ import (
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
 // signalsCatalogRepository is the minimal repo surface
-// SignalsCatalogHandler needs. Defined as an interface so the handler
+// Handler needs. Defined as an interface so the handler
 // tests can supply a fake without spinning up a database — the codebase
 // has no pgxmock harness (see repo memories from earlier phase-43a
 // prompts).
@@ -47,28 +49,28 @@ type signalsCatalogRepository interface {
 // time.Now().UTC().
 type signalsCatalogClock func() time.Time
 
-// SignalsCatalogHandler serves the two endpoints. The routing.yaml
+// Handler serves the two endpoints. The routing.yaml
 // entries are parsed once at construction (per Decision #6 — the
 // catalog is read-heavy and the underlying YAML changes only when a
 // new Tesla firmware bumps the proto, both of which require a process
 // restart anyway).
-type SignalsCatalogHandler struct {
+type Handler struct {
 	repo    signalsCatalogRepository
 	entries []router.Entry
 	clock   signalsCatalogClock
 }
 
-// NewSignalsCatalogHandler binds the handler to a repo and parses the
+// NewHandler binds the handler to a repo and parses the
 // embedded routing.yaml via router.Load(). Panics on parse failure
 // because every other consumer of router.Load() does the same — a
 // malformed embedded YAML is a compile-equivalent bug, not a runtime
 // condition.
-func NewSignalsCatalogHandler(repo *signaldb.SignalsCatalogRepo) *SignalsCatalogHandler {
+func NewHandler(repo *signaldb.SignalsCatalogRepo) *Handler {
 	entries, err := router.Load()
 	if err != nil {
-		panic(fmt.Sprintf("api.NewSignalsCatalogHandler: parse embedded routing.yaml: %v", err))
+		panic(fmt.Sprintf("api.NewHandler: parse embedded routing.yaml: %v", err))
 	}
-	return &SignalsCatalogHandler{repo: repo, entries: entries}
+	return &Handler{repo: repo, entries: entries}
 }
 
 // signalsCatalogLimitDefault and signalsCatalogLimitMax cap the
@@ -130,13 +132,13 @@ type SignalsObservationsResponse struct {
 // routing.yaml entry — routed-but-unobserved fields surface with
 // last_seen_at=null and the count fields=null. Sort order is field
 // ASC for stable rendering across requests.
-func (h *SignalsCatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	aggregates, err := h.repo.CatalogAggregates(ctx)
 	if err != nil {
 		log.Error().Err(err).Msg("signals_catalog.catalog: aggregate query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load catalog aggregates")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load catalog aggregates")
 		return
 	}
 
@@ -161,7 +163,7 @@ func (h *SignalsCatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) 
 		return out[i].Field < out[j].Field
 	})
 
-	writeJSON(w, http.StatusOK, SignalsCatalogResponse{
+	httpx.WriteJSON(w, http.StatusOK, SignalsCatalogResponse{
 		Signals:     out,
 		GeneratedAt: h.now(),
 	})
@@ -179,7 +181,7 @@ func (h *SignalsCatalogHandler) Catalog(w http.ResponseWriter, r *http.Request) 
 //	offset       default 0
 //
 // Returns 200 with {count, total, observations: [...]}.
-func (h *SignalsCatalogHandler) Observations(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Observations(w http.ResponseWriter, r *http.Request) {
 	params, ok := h.parseObservationsParams(w, r)
 	if !ok {
 		return
@@ -190,14 +192,14 @@ func (h *SignalsCatalogHandler) Observations(w http.ResponseWriter, r *http.Requ
 	total, err := h.repo.ObservationsCount(ctx, params)
 	if err != nil {
 		log.Error().Err(err).Msg("signals_catalog.observations: count query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load observations count")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load observations count")
 		return
 	}
 
 	rows, err := h.repo.Observations(ctx, params)
 	if err != nil {
 		log.Error().Err(err).Msg("signals_catalog.observations: select query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load observations")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load observations")
 		return
 	}
 
@@ -212,7 +214,7 @@ func (h *SignalsCatalogHandler) Observations(w http.ResponseWriter, r *http.Requ
 		})
 	}
 
-	writeJSON(w, http.StatusOK, SignalsObservationsResponse{
+	httpx.WriteJSON(w, http.StatusOK, SignalsObservationsResponse{
 		Count:        len(out),
 		Total:        total,
 		Observations: out,
@@ -222,7 +224,7 @@ func (h *SignalsCatalogHandler) Observations(w http.ResponseWriter, r *http.Requ
 // parseObservationsParams extracts and validates the optional filter
 // set from the query string. Returns ok=false after writing the
 // appropriate 4xx response so the caller can early-return.
-func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r *http.Request) (signaldb.ObservationsParams, bool) {
+func (h *Handler) parseObservationsParams(w http.ResponseWriter, r *http.Request) (signaldb.ObservationsParams, bool) {
 	q := r.URL.Query()
 	var params signaldb.ObservationsParams
 
@@ -230,7 +232,7 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 	if raw := q.Get("vehicle_id"); raw != "" {
 		ids, err := parseCSVInt64s(raw)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "vehicle_id must be a comma-separated list of positive integers")
+			httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a comma-separated list of positive integers")
 			return signaldb.ObservationsParams{}, false
 		}
 		params.VehicleIDs = ids
@@ -240,7 +242,7 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 	if raw := q.Get("field"); raw != "" {
 		fields := splitCSVTrimmed(raw)
 		if len(fields) == 0 {
-			writeError(w, http.StatusBadRequest, "field must be a comma-separated list of field names")
+			httpx.WriteError(w, http.StatusBadRequest, "field must be a comma-separated list of field names")
 			return signaldb.ObservationsParams{}, false
 		}
 		params.Fields = fields
@@ -250,7 +252,7 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 	if raw := q.Get("since"); raw != "" {
 		ts, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "since must be an RFC3339 timestamp")
+			httpx.WriteError(w, http.StatusBadRequest, "since must be an RFC3339 timestamp")
 			return signaldb.ObservationsParams{}, false
 		}
 		params.Since = &ts
@@ -260,7 +262,7 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 	if raw := q.Get("until"); raw != "" {
 		ts, err := time.Parse(time.RFC3339, raw)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "until must be an RFC3339 timestamp")
+			httpx.WriteError(w, http.StatusBadRequest, "until must be an RFC3339 timestamp")
 			return signaldb.ObservationsParams{}, false
 		}
 		params.Until = &ts
@@ -271,21 +273,21 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 	if raw := q.Get("limit"); raw != "" {
 		v, err := strconv.Atoi(raw)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "limit must be an integer")
+			httpx.WriteError(w, http.StatusBadRequest, "limit must be an integer")
 			return signaldb.ObservationsParams{}, false
 		}
 		if v < 1 {
-			writeError(w, http.StatusBadRequest, "limit must be >= 1")
+			httpx.WriteError(w, http.StatusBadRequest, "limit must be >= 1")
 			return signaldb.ObservationsParams{}, false
 		}
 		if v > signalsCatalogLimitMax {
 			// Decision #4 envelope mirroring vehicle_states / mileage
 			// precedent: structured `{error, max, code}` payload that
 			// the frontend can surface verbatim.
-			writeJSON(w, http.StatusBadRequest, map[string]any{
+			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "limit exceeds maximum",
 				"max":   signalsCatalogLimitMax,
-				"code":  httpStatusCode(http.StatusBadRequest),
+				"code":  httpx.HTTPStatusCode(http.StatusBadRequest),
 			})
 			return signaldb.ObservationsParams{}, false
 		}
@@ -296,11 +298,11 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 	if raw := q.Get("offset"); raw != "" {
 		v, err := strconv.Atoi(raw)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "offset must be an integer")
+			httpx.WriteError(w, http.StatusBadRequest, "offset must be an integer")
 			return signaldb.ObservationsParams{}, false
 		}
 		if v < 0 {
-			writeError(w, http.StatusBadRequest, "offset must be >= 0")
+			httpx.WriteError(w, http.StatusBadRequest, "offset must be >= 0")
 			return signaldb.ObservationsParams{}, false
 		}
 		params.Offset = v
@@ -310,7 +312,7 @@ func (h *SignalsCatalogHandler) parseObservationsParams(w http.ResponseWriter, r
 }
 
 // now returns the injected clock or wall time.
-func (h *SignalsCatalogHandler) now() time.Time {
+func (h *Handler) now() time.Time {
 	if h.clock != nil {
 		return h.clock()
 	}

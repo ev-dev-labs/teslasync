@@ -22,6 +22,7 @@ import (
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
+	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -4050,7 +4051,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// (Phase-43a / Prompt 0003 + Phase-46 / Prompt 41 precedent).
 		// Mounted BEFORE /signals/{vehicleID} so the static paths take
 		// precedence under chi v5's longest-static-prefix matching.
-		signalsCatalogHandler := NewSignalsCatalogHandler(signaldb.NewSignalsCatalogRepo(db.Pool))
+		signalsCatalogHandler := apisigcat.NewHandler(signaldb.NewSignalsCatalogRepo(db.Pool))
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/catalog", signalsCatalogHandler.Catalog)
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/signals/observations", signalsCatalogHandler.Observations)
 
