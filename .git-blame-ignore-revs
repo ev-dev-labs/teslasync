@@ -207,3 +207,6 @@ d5bab8b3
 927f2b60d5a28e07c2ebd8692e60994f2d968a95
 # R2c: carve internal/api/vehicle (core VehicleHandler)
 6efc0579e0b342a586d0e7a87ea9b355c2cf8dcc
+
+# R2c.1: carve internal/api/vehicleaccess (drivers + invitations)
+2a0ae4ccc73d924921a807fc0570a8bce284f04b
