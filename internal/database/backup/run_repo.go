@@ -1,9 +1,11 @@
-package database
+package backup
 
 import (
 	"context"
 	"errors"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
 
@@ -11,10 +13,10 @@ import (
 )
 
 type BackupRunRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewBackupRunRepo(db *DB) *BackupRunRepo {
+func NewBackupRunRepo(db *database.DB) *BackupRunRepo {
 	return &BackupRunRepo{db: db}
 }
 

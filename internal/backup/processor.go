@@ -20,6 +20,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbbackup "github.com/ev-dev-labs/teslasync/internal/database/backup"
 )
 
 var backupTables = []string{
@@ -54,15 +55,15 @@ var (
 // Processor handles backup creation and restoration.
 type Processor struct {
 	pool    *pgxpool.Pool
-	runRepo *database.BackupRunRepo
-	cfgRepo *database.BackupConfigRepo
+	runRepo *dbbackup.BackupRunRepo
+	cfgRepo *dbbackup.BackupConfigRepo
 }
 
 func NewProcessor(db *database.DB) *Processor {
 	return &Processor{
 		pool:    db.Pool,
-		runRepo: database.NewBackupRunRepo(db),
-		cfgRepo: database.NewBackupConfigRepo(db),
+		runRepo: dbbackup.NewBackupRunRepo(db),
+		cfgRepo: dbbackup.NewBackupConfigRepo(db),
 	}
 }
 

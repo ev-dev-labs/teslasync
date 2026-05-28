@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 88,
+      "max_files": 86,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5 canary 108-107 (achievement). R4.1 batch 107-104 (sharing, admin/dashboard_layout, gdpr). R4.2 batch 104-100 (admin extended). R4.3 batch 100-94 (observability — 6 files). R4.4 batch 94-88 (auth — 6 files: sessions, subjects, sudo_token, totp, token, role_permissions). Promoted nullIfEmpty to exported NullIfEmpty in parent for cross-subpkg reuse. Replaced parent isNoRowsError caller in scheduled_export_repo with errors.Is(err, pgx.ErrNoRows). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6). Planned: ~20 aggregates total."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5 canary 108-107 (achievement). R4.1 batch 107-104 (sharing, admin/dashboard_layout, gdpr). R4.2 batch 104-100 (admin extended). R4.3 batch 100-94 (observability — 6 files). R4.4 batch 94-88 (auth — 6 files; promoted nullIfEmpty -> NullIfEmpty). R4.5 batch 88-86 (backup — config + run). Recipe lesson: bulk sweep must also include cmd/ not just internal/ (cmd/backup-verify + cmd/export-worker imported these). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2). Planned: ~20 aggregates total."
     },
     {
       "path": "internal/ai/tools",

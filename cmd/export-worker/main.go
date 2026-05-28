@@ -21,6 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/backup"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbbackup "github.com/ev-dev-labs/teslasync/internal/database/backup"
 	"github.com/ev-dev-labs/teslasync/internal/export"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -149,8 +150,8 @@ func main() {
 
 	// Backup scheduler — checks for due backup configs every 60s
 	go func() {
-		backupCfgRepo := database.NewBackupConfigRepo(db)
-		backupRunRepo := database.NewBackupRunRepo(db)
+		backupCfgRepo := dbbackup.NewBackupConfigRepo(db)
+		backupRunRepo := dbbackup.NewBackupRunRepo(db)
 		processor := backup.NewProcessor(db)
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()

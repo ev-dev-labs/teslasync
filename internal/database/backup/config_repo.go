@@ -1,17 +1,19 @@
-package database
+package backup
 
 import (
 	"context"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
+
 	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
 )
 
 type BackupConfigRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewBackupConfigRepo(db *DB) *BackupConfigRepo {
+func NewBackupConfigRepo(db *database.DB) *BackupConfigRepo {
 	return &BackupConfigRepo{db: db}
 }
 

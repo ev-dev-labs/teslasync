@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T15:08:20Z, Go go1.26.1, commit 0cf14fa399dd02e94f27976424a5dcf27b6e8f2f_
+_Generated 2026-05-28T15:12:03Z, Go go1.26.1, commit 60835ff494d600511d25d7c9c4282abf8762b113_
 
 ## Summary
 
-- Packages: 267
+- Packages: 268
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374091
+- Total non-blank LOC under cmd/+internal/+tools/: 374107
 
 ## cmd/* main.go LOC
 
@@ -16,9 +16,9 @@ _Generated 2026-05-28T15:08:20Z, Go go1.26.1, commit 0cf14fa399dd02e94f27976424a
 | cmd/ai-eval/main.go | 151 |
 | cmd/audit-signal-types/main.go | 498 |
 | cmd/automation-worker/main.go | 350 |
-| cmd/backup-verify/main.go | 95 |
+| cmd/backup-verify/main.go | 96 |
 | cmd/chaos-runner/main.go | 144 |
-| cmd/export-worker/main.go | 250 |
+| cmd/export-worker/main.go | 251 |
 | cmd/fleet-config-validator/main.go | 327 |
 | cmd/metric-coverage-audit/main.go | 126 |
 | cmd/notification-worker/main.go | 519 |
@@ -43,9 +43,9 @@ _Generated 2026-05-28T15:08:20Z, Go go1.26.1, commit 0cf14fa399dd02e94f27976424a
 | cmd/ai-eval | 2 | 0 | 155 | yes | cmd-internal |
 | cmd/audit-signal-types | 2 | 0 | 521 | yes | cmd-internal |
 | cmd/automation-worker | 2 | 0 | 354 | yes | cmd-internal |
-| cmd/backup-verify | 2 | 0 | 109 | yes | cmd-internal |
+| cmd/backup-verify | 2 | 0 | 110 | yes | cmd-internal |
 | cmd/chaos-runner | 2 | 0 | 156 | yes | cmd-internal |
-| cmd/export-worker | 2 | 0 | 254 | yes | cmd-internal |
+| cmd/export-worker | 2 | 0 | 255 | yes | cmd-internal |
 | cmd/fleet-config-validator | 2 | 1 | 491 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
 | cmd/notification-worker | 2 | 0 | 523 | yes | cmd-internal |
@@ -170,7 +170,7 @@ _Generated 2026-05-28T15:08:20Z, Go go1.26.1, commit 0cf14fa399dd02e94f27976424a
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126571 | yes | handler |
+| internal/api | 271 | 163 | 126572 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1836 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
@@ -191,16 +191,17 @@ _Generated 2026-05-28T15:08:20Z, Go go1.26.1, commit 0cf14fa399dd02e94f27976424a
 | internal/automation/presets | 3 | 1 | 595 | yes | platform |
 | internal/automation/safety | 7 | 6 | 3565 | yes | platform |
 | internal/automation/trigger | 7 | 0 | 947 | yes | platform |
-| internal/backup | 3 | 1 | 668 | yes | platform |
+| internal/backup | 3 | 1 | 669 | yes | platform |
 | internal/backupverify | 2 | 1 | 314 | yes | platform |
 | internal/cache | 3 | 1 | 262 | yes | platform |
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 88 | 31 | 23474 | yes | platform |
+| internal/database | 86 | 31 | 23240 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes |  |
 | internal/database/admin | 6 | 0 | 873 | yes |  |
 | internal/database/auth | 7 | 4 | 1788 | yes |  |
+| internal/database/backup | 3 | 0 | 246 | yes |  |
 | internal/database/gdpr | 2 | 0 | 206 | yes |  |
 | internal/database/observability | 7 | 0 | 1396 | yes |  |
 | internal/database/sharing | 2 | 0 | 127 | yes |  |
@@ -321,7 +322,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 88 / 31 | 22 | 2 | 20 |
+| `internal/database` | R4 | 143 | 86 / 31 | 22 | 3 | 19 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 
@@ -388,13 +389,13 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 **Existing subpackages on disk:**
 - `internal/database/achievement`
 - `internal/database/auth`
+- `internal/database/backup`
 
 **Planned but not yet on disk:**
 - `internal/database/ai`
 - `internal/database/alert`
 - `internal/database/audit`
 - `internal/database/automation`
-- `internal/database/backup`
 - `internal/database/charging`
 - `internal/database/dashboard`
 - `internal/database/drive`

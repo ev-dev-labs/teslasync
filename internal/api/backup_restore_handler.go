@@ -15,18 +15,19 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/backup"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbbackup "github.com/ev-dev-labs/teslasync/internal/database/backup"
 )
 
 type BackupRestoreHandler struct {
-	cfgRepo   *database.BackupConfigRepo
-	runRepo   *database.BackupRunRepo
+	cfgRepo   *dbbackup.BackupConfigRepo
+	runRepo   *dbbackup.BackupRunRepo
 	processor *backup.Processor
 }
 
 func NewBackupRestoreHandler(db *database.DB) *BackupRestoreHandler {
 	return &BackupRestoreHandler{
-		cfgRepo:   database.NewBackupConfigRepo(db),
-		runRepo:   database.NewBackupRunRepo(db),
+		cfgRepo:   dbbackup.NewBackupConfigRepo(db),
+		runRepo:   dbbackup.NewBackupRunRepo(db),
 		processor: backup.NewProcessor(db),
 	}
 }

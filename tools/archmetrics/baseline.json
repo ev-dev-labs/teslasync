@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T15:08:19Z",
+  "generated_at": "2026-05-28T15:12:02Z",
   "go_version": "go1.26.1",
-  "commit_sha": "0cf14fa399dd02e94f27976424a5dcf27b6e8f2f",
+  "commit_sha": "60835ff494d600511d25d7c9c4282abf8762b113",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -65,14 +65,15 @@
       "path": "cmd/backup-verify",
       "go_files": 2,
       "test_files": 0,
-      "loc": 109,
+      "loc": 110,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
         "internal/backup",
         "internal/backupverify",
         "internal/config",
-        "internal/database"
+        "internal/database",
+        "internal/database/backup"
       ],
       "files": [
         "doc.go",
@@ -98,13 +99,14 @@
       "path": "cmd/export-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 254,
+      "loc": 255,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
         "internal/backup",
         "internal/config",
         "internal/database",
+        "internal/database/backup",
         "internal/export",
         "internal/models/backup",
         "internal/resilience",
@@ -2492,7 +2494,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126571,
+      "loc": 126572,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2617,6 +2619,7 @@
         "internal/database/achievement",
         "internal/database/admin",
         "internal/database/auth",
+        "internal/database/backup",
         "internal/database/gdpr",
         "internal/database/observability",
         "internal/database/sharing",
@@ -3574,11 +3577,12 @@
       "path": "internal/backup",
       "go_files": 3,
       "test_files": 1,
-      "loc": 668,
+      "loc": 669,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
+        "internal/database/backup",
         "internal/models/backup"
       ],
       "files": [
@@ -3670,9 +3674,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 88,
+      "go_files": 86,
       "test_files": 31,
-      "loc": 23474,
+      "loc": 23240,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3684,7 +3688,6 @@
         "internal/models",
         "internal/models/alert",
         "internal/models/automation",
-        "internal/models/backup",
         "internal/models/charging",
         "internal/models/chatbot",
         "internal/models/drive",
@@ -3723,8 +3726,6 @@
         "automation_step_child_repo_query.go",
         "automation_step_repo.go",
         "automation_variable_repo.go",
-        "backup_config_repo.go",
-        "backup_run_repo.go",
         "cache.go",
         "cache_test.go",
         "charge_plan_repo.go",
@@ -3876,6 +3877,22 @@
         "token_repo.go",
         "totp_repo.go",
         "totp_repo_test.go"
+      ]
+    },
+    {
+      "path": "internal/database/backup",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 246,
+      "has_doc_go": true,
+      "imports": [
+        "internal/database",
+        "internal/models/backup"
+      ],
+      "files": [
+        "config_repo.go",
+        "doc.go",
+        "run_repo.go"
       ]
     },
     {
@@ -5815,9 +5832,9 @@
     "cmd/ai-eval": 151,
     "cmd/audit-signal-types": 498,
     "cmd/automation-worker": 350,
-    "cmd/backup-verify": 95,
+    "cmd/backup-verify": 96,
     "cmd/chaos-runner": 144,
-    "cmd/export-worker": 250,
+    "cmd/export-worker": 251,
     "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
     "cmd/notification-worker": 519,
@@ -6889,8 +6906,6 @@
       "automation_step_child_repo_query.go",
       "automation_step_repo.go",
       "automation_variable_repo.go",
-      "backup_config_repo.go",
-      "backup_run_repo.go",
       "cache.go",
       "charge_plan_repo.go",
       "charging_repo.go",
@@ -6981,6 +6996,11 @@
       "sudo_token_repo.go",
       "token_repo.go",
       "totp_repo.go"
+    ],
+    "internal/database/backup": [
+      "config_repo.go",
+      "doc.go",
+      "run_repo.go"
     ],
     "internal/database/gdpr": [
       "artifact_repo.go",
@@ -7706,19 +7726,19 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 88,
+      "flat_parent_go_files": 86,
       "flat_parent_test_files": 31,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
-        "auth"
+        "auth",
+        "backup"
       ],
       "missing_subpkgs": [
         "ai",
         "alert",
         "audit",
         "automation",
-        "backup",
         "charging",
         "dashboard",
         "drive",
