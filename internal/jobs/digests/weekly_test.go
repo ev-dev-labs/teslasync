@@ -1,11 +1,11 @@
 // Phase-50 / 0012 — U2 Weekly digest narration.
 //
-// Tests for RunAIDigestWeekly. The off-mode + per-feature gate
+// Tests for RunWeekly. The off-mode + per-feature gate
 // tests are the slice's load-bearing ADR-015 §I12 evidence — they
 // prove the cron is fail-closed even when the scheduler keeps
 // ticking after an admin disables AI mid-week.
 
-package jobs
+package digests
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 )
 
 // fakeDigestSettings is a tiny in-memory implementation of
-// AIDigestWeeklySettingsReader for the unit tests. The zero value
+// WeeklySettingsReader for the unit tests. The zero value
 // returns ai_mode=” (which is NOT 'off' but ALSO not 'cloud'/'local'
 // — the function treats anything other than 'off' as on, then
 // re-checks the per-feature toggle).
@@ -50,7 +50,7 @@ func TestRunAIDigestWeekly_OffMode_NoFanout(t *testing.T) {
 		// Toggle on; mode trumps it.
 		enabled: map[string]bool{"digest-narration": true},
 	}
-	res, err := RunAIDigestWeekly(context.Background(), &database.DB{}, settings)
+	res, err := RunWeekly(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("off mode: unexpected err %v", err)
 	}
@@ -73,7 +73,7 @@ func TestRunAIDigestWeekly_FeatureToggleOff_NoFanout(t *testing.T) {
 		mode:    "cloud",
 		enabled: map[string]bool{"digest-narration": false},
 	}
-	res, err := RunAIDigestWeekly(context.Background(), &database.DB{}, settings)
+	res, err := RunWeekly(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("toggle off: unexpected err %v", err)
 	}
@@ -93,7 +93,7 @@ func TestRunAIDigestWeekly_OnMode_NoOp(t *testing.T) {
 		mode:    "cloud",
 		enabled: map[string]bool{"digest-narration": true},
 	}
-	res, err := RunAIDigestWeekly(context.Background(), &database.DB{}, settings)
+	res, err := RunWeekly(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("on mode: unexpected err %v", err)
 	}
@@ -114,7 +114,7 @@ func TestRunAIDigestWeekly_SettingsErrorIsFailClosed(t *testing.T) {
 	t.Parallel()
 	t.Run("ai_mode read error", func(t *testing.T) {
 		settings := fakeDigestSettings{modeErr: errors.New("db unreachable")}
-		res, err := RunAIDigestWeekly(context.Background(), &database.DB{}, settings)
+		res, err := RunWeekly(context.Background(), &database.DB{}, settings)
 		if err != nil {
 			t.Fatalf("settings ai_mode error: want nil err (fail-closed), got %v", err)
 		}
@@ -127,7 +127,7 @@ func TestRunAIDigestWeekly_SettingsErrorIsFailClosed(t *testing.T) {
 			mode:       "cloud",
 			enabledErr: errors.New("settings table degraded"),
 		}
-		res, err := RunAIDigestWeekly(context.Background(), &database.DB{}, settings)
+		res, err := RunWeekly(context.Background(), &database.DB{}, settings)
 		if err != nil {
 			t.Fatalf("toggle read error: want nil err (fail-closed), got %v", err)
 		}
@@ -143,10 +143,10 @@ func TestRunAIDigestWeekly_SettingsErrorIsFailClosed(t *testing.T) {
 // returns it directly instead of pretending to skip.
 func TestRunAIDigestWeekly_NilDeps(t *testing.T) {
 	t.Parallel()
-	if _, err := RunAIDigestWeekly(context.Background(), nil, fakeDigestSettings{}); err == nil {
+	if _, err := RunWeekly(context.Background(), nil, fakeDigestSettings{}); err == nil {
 		t.Error("nil db: want error")
 	}
-	if _, err := RunAIDigestWeekly(context.Background(), &database.DB{}, nil); err == nil {
+	if _, err := RunWeekly(context.Background(), &database.DB{}, nil); err == nil {
 		t.Error("nil settings: want error")
 	}
 }

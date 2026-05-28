@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T05:27:01Z, Go go1.26.1, commit 662587853eb72a388e49b819321fa7beaeb67acc_
+_Generated 2026-05-28T05:29:29Z, Go go1.26.1, commit cc57d4f000585ac6f0cd4becf580fe4f7f088f61_
 
 ## Summary
 
-- Packages: 230
+- Packages: 231
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372481
+- Total non-blank LOC under cmd/+internal/+tools/: 372513
 
 ## cmd/* main.go LOC
 
@@ -197,7 +197,8 @@ _Generated 2026-05-28T05:27:01Z, Go go1.26.1, commit 662587853eb72a388e49b819321
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/integrations/homeassistant | 3 | 1 | 515 | yes | adapter |
-| internal/jobs | 10 | 9 | 2635 | yes | platform |
+| internal/jobs | 8 | 7 | 2088 | yes | platform |
+| internal/jobs/digests | 3 | 2 | 579 | yes |  |
 | internal/jobs/embeddings | 2 | 1 | 262 | yes | platform |
 | internal/jobs/triage | 3 | 2 | 621 | yes |  |
 | internal/metrics | 6 | 2 | 1073 | yes | platform |
@@ -282,7 +283,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
-| `internal/jobs` | R6 | 23 | 10 / 9 | 4 | 2 | 2 |
+| `internal/jobs` | R6 | 23 | 8 / 7 | 4 | 3 | 1 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
@@ -320,10 +321,10 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 **Existing subpackages on disk:**
 - `internal/jobs/embeddings`
 - `internal/jobs/triage`
+- `internal/jobs/digests`
 
 **Planned but not yet on disk:**
 - `internal/jobs/indexers`
-- `internal/jobs/digests`
 
 ### `internal/ai/tools` detail
 

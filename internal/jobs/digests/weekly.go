@@ -1,4 +1,4 @@
-package jobs
+package digests
 
 // Phase-50 / 0012 — U2 Weekly digest narration.
 //
@@ -28,8 +28,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// AIDigestWeeklySettingsReader is the narrow view of
-// [database.SettingsRepo] [RunAIDigestWeekly] depends on. Defined
+// WeeklySettingsReader is the narrow view of
+// [database.SettingsRepo] [RunWeekly] depends on. Defined
 // inline so callers can supply a fake without dragging the full
 // settings repo into job tests.
 //
@@ -37,17 +37,17 @@ import (
 // feature ID. The job re-checks this on every tick so an admin who
 // disables digest-narration mid-week sees the next run no-op
 // immediately (no waiting for the worker pool to recycle).
-type AIDigestWeeklySettingsReader interface {
+type WeeklySettingsReader interface {
 	AIMode(ctx context.Context) (string, error)
 	AIFeatureEnabled(ctx context.Context, featureID string) (bool, error)
 }
 
-// AIDigestWeeklyResult reports the outcome of one tick. The fields
+// WeeklyResult reports the outcome of one tick. The fields
 // are all int because the real fan-out implementation will tally
 // per-vehicle narrations + push deliveries here; today the values
 // stay zero (the stub is a no-op when off, and a no-op-with-log
 // when on — narration generation lands in a future slice).
-type AIDigestWeeklyResult struct {
+type WeeklyResult struct {
 	// Skipped is 1 when the tick early-returned because ai_mode was
 	// off OR the per-feature toggle was off. Reported separately
 	// from "no work to do" so the ops dashboard can distinguish a
@@ -69,14 +69,14 @@ type AIDigestWeeklyResult struct {
 	Failed int
 }
 
-// RunAIDigestWeekly is the once-per-week cron entry for the
+// RunWeekly is the once-per-week cron entry for the
 // digest-narration slice's background fan-out.
 //
 // Re-checks ai_mode + the per-feature toggle at execution time per
 // ADR-015 §I12 #3 — the scheduler may have started this loop while
 // AI was on, but the admin can flip ai_mode='off' OR disable the
 // toggle at any moment and we MUST honour it immediately. If either
-// gate is off the function returns ([AIDigestWeeklyResult{Skipped:
+// gate is off the function returns ([WeeklyResult{Skipped:
 // 1}], nil) without touching the LLM, the tools, or the push fan-out.
 //
 // Settings read failures are LOGGED WARN and treated as off (no
@@ -90,16 +90,16 @@ type AIDigestWeeklyResult struct {
 //   - off mode (any kind) → Skipped=1, no LLM calls, no DB writes;
 //   - on mode             → Skipped=0, no LLM calls (yet), no DB writes;
 //   - errors              → only on nil-arg programming bugs.
-func RunAIDigestWeekly(
+func RunWeekly(
 	ctx context.Context,
 	db *database.DB,
-	settings AIDigestWeeklySettingsReader,
-) (AIDigestWeeklyResult, error) {
+	settings WeeklySettingsReader,
+) (WeeklyResult, error) {
 	if db == nil {
-		return AIDigestWeeklyResult{}, fmt.Errorf("jobs: RunAIDigestWeekly requires non-nil db")
+		return WeeklyResult{}, fmt.Errorf("jobs: RunWeekly requires non-nil db")
 	}
 	if settings == nil {
-		return AIDigestWeeklyResult{}, fmt.Errorf("jobs: RunAIDigestWeekly requires non-nil settings")
+		return WeeklyResult{}, fmt.Errorf("jobs: RunWeekly requires non-nil settings")
 	}
 
 	mode, err := settings.AIMode(ctx)
@@ -107,13 +107,13 @@ func RunAIDigestWeekly(
 		log.Warn().Err(err).
 			Str("job", "ai_digest_weekly").
 			Msg("settings read failed, treating as ai_mode=off (no fan-out)")
-		return AIDigestWeeklyResult{Skipped: 1}, nil
+		return WeeklyResult{Skipped: 1}, nil
 	}
 	if mode == rag.AIModeOff {
 		log.Debug().
 			Str("job", "ai_digest_weekly").
 			Msg("ai_mode=off, skipping (per ADR-015 §I12 #3)")
-		return AIDigestWeeklyResult{Skipped: 1}, nil
+		return WeeklyResult{Skipped: 1}, nil
 	}
 
 	enabled, err := settings.AIFeatureEnabled(ctx, "digest-narration")
@@ -122,14 +122,14 @@ func RunAIDigestWeekly(
 			Str("job", "ai_digest_weekly").
 			Str("feature_id", "digest-narration").
 			Msg("per-feature toggle read failed, treating as off (no fan-out)")
-		return AIDigestWeeklyResult{Skipped: 1}, nil
+		return WeeklyResult{Skipped: 1}, nil
 	}
 	if !enabled {
 		log.Debug().
 			Str("job", "ai_digest_weekly").
 			Str("feature_id", "digest-narration").
 			Msg("digest-narration toggle off, skipping (per ADR-015 §I7)")
-		return AIDigestWeeklyResult{Skipped: 1}, nil
+		return WeeklyResult{Skipped: 1}, nil
 	}
 
 	// On-mode path. The fan-out implementation (per-vehicle
@@ -140,5 +140,5 @@ func RunAIDigestWeekly(
 	log.Debug().
 		Str("job", "ai_digest_weekly").
 		Msg("ai_mode + feature on; fan-out implementation pending future slice")
-	return AIDigestWeeklyResult{}, nil
+	return WeeklyResult{}, nil
 }

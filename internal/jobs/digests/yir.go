@@ -1,4 +1,4 @@
-package jobs
+package digests
 
 // Phase-50 / 0013 — U3 Year-in-review narration.
 //
@@ -29,8 +29,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// AIYIRPregenSettingsReader is the narrow view of
-// [database.SettingsRepo] [RunAIYIRPregen] depends on. Defined
+// YIRSettingsReader is the narrow view of
+// [database.SettingsRepo] [RunYIR] depends on. Defined
 // inline so callers can supply a fake without dragging the full
 // settings repo into job tests.
 //
@@ -38,17 +38,17 @@ import (
 // feature ID. The job re-checks this on every tick so an admin who
 // disables yir-narration mid-cycle sees the next run no-op
 // immediately (no waiting for the worker pool to recycle).
-type AIYIRPregenSettingsReader interface {
+type YIRSettingsReader interface {
 	AIMode(ctx context.Context) (string, error)
 	AIFeatureEnabled(ctx context.Context, featureID string) (bool, error)
 }
 
-// AIYIRPregenResult reports the outcome of one tick. The fields
+// YIRResult reports the outcome of one tick. The fields
 // are all int because the real fan-out implementation will tally
 // per-vehicle narrations + push deliveries here; today the values
 // stay zero (the stub is a no-op when off, and a no-op-with-log
 // when on — narration generation lands in a future slice).
-type AIYIRPregenResult struct {
+type YIRResult struct {
 	// Skipped is 1 when the tick early-returned because ai_mode was
 	// off OR the per-feature toggle was off. Reported separately
 	// from "no work to do" so the ops dashboard can distinguish a
@@ -70,7 +70,7 @@ type AIYIRPregenResult struct {
 	Failed int
 }
 
-// RunAIYIRPregen is the periodic cron entry for the
+// RunYIR is the periodic cron entry for the
 // yir-narration slice's background fan-out — pre-generates the
 // year-in-review narration for each vehicle so the slide deck loads
 // instantly when the user opens the page.
@@ -79,7 +79,7 @@ type AIYIRPregenResult struct {
 // ADR-015 §I12 #3 — the scheduler may have started this loop while
 // AI was on, but the admin can flip ai_mode='off' OR disable the
 // toggle at any moment and we MUST honour it immediately. If either
-// gate is off the function returns ([AIYIRPregenResult{Skipped:
+// gate is off the function returns ([YIRResult{Skipped:
 // 1}], nil) without touching the LLM, the tools, or the push fan-out.
 //
 // Settings read failures are LOGGED WARN and treated as off (no
@@ -93,16 +93,16 @@ type AIYIRPregenResult struct {
 //   - off mode (any kind) → Skipped=1, no LLM calls, no DB writes;
 //   - on mode             → Skipped=0, no LLM calls (yet), no DB writes;
 //   - errors              → only on nil-arg programming bugs.
-func RunAIYIRPregen(
+func RunYIR(
 	ctx context.Context,
 	db *database.DB,
-	settings AIYIRPregenSettingsReader,
-) (AIYIRPregenResult, error) {
+	settings YIRSettingsReader,
+) (YIRResult, error) {
 	if db == nil {
-		return AIYIRPregenResult{}, fmt.Errorf("jobs: RunAIYIRPregen requires non-nil db")
+		return YIRResult{}, fmt.Errorf("jobs: RunYIR requires non-nil db")
 	}
 	if settings == nil {
-		return AIYIRPregenResult{}, fmt.Errorf("jobs: RunAIYIRPregen requires non-nil settings")
+		return YIRResult{}, fmt.Errorf("jobs: RunYIR requires non-nil settings")
 	}
 
 	mode, err := settings.AIMode(ctx)
@@ -110,13 +110,13 @@ func RunAIYIRPregen(
 		log.Warn().Err(err).
 			Str("job", "ai_yir_pregen").
 			Msg("settings read failed, treating as ai_mode=off (no fan-out)")
-		return AIYIRPregenResult{Skipped: 1}, nil
+		return YIRResult{Skipped: 1}, nil
 	}
 	if mode == rag.AIModeOff {
 		log.Debug().
 			Str("job", "ai_yir_pregen").
 			Msg("ai_mode=off, skipping (per ADR-015 §I12 #3)")
-		return AIYIRPregenResult{Skipped: 1}, nil
+		return YIRResult{Skipped: 1}, nil
 	}
 
 	enabled, err := settings.AIFeatureEnabled(ctx, "yir-narration")
@@ -125,14 +125,14 @@ func RunAIYIRPregen(
 			Str("job", "ai_yir_pregen").
 			Str("feature_id", "yir-narration").
 			Msg("per-feature toggle read failed, treating as off (no fan-out)")
-		return AIYIRPregenResult{Skipped: 1}, nil
+		return YIRResult{Skipped: 1}, nil
 	}
 	if !enabled {
 		log.Debug().
 			Str("job", "ai_yir_pregen").
 			Str("feature_id", "yir-narration").
 			Msg("yir-narration toggle off, skipping (per ADR-015 §I7)")
-		return AIYIRPregenResult{Skipped: 1}, nil
+		return YIRResult{Skipped: 1}, nil
 	}
 
 	// On-mode path. The fan-out implementation (per-vehicle
@@ -143,5 +143,5 @@ func RunAIYIRPregen(
 	log.Debug().
 		Str("job", "ai_yir_pregen").
 		Msg("ai_mode + feature on; fan-out implementation pending future slice")
-	return AIYIRPregenResult{}, nil
+	return YIRResult{}, nil
 }

@@ -34,9 +34,9 @@
     },
     {
       "path": "internal/jobs",
-      "max_files": 10,
+      "max_files": 8,
       "owner": "Phase R6",
-      "notes": "Was 23 at R0; 12 after R0.5 (embeddings/ canary). R6.1 (triage/ subpkg — alert_inbox + feedback) reduced parent to 10. Remaining files split into indexers/ + digests/ subpackages."
+      "notes": "Was 23 at R0; 12 after R0.5 (embeddings/); 10 after R6.1 (triage/); 8 after R6.2 (digests/ — weekly + yir). Remaining files split into indexers/ subpackage."
     },
     {
       "path": "internal/models",

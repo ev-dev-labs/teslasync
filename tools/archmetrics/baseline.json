@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T05:27:00Z",
+  "generated_at": "2026-05-28T05:29:27Z",
   "go_version": "go1.26.1",
-  "commit_sha": "662587853eb72a388e49b819321fa7beaeb67acc",
+  "commit_sha": "cc57d4f000585ac6f0cd4becf580fe4f7f088f61",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -3869,9 +3869,9 @@
     },
     {
       "path": "internal/jobs",
-      "go_files": 10,
-      "test_files": 9,
-      "loc": 2635,
+      "go_files": 8,
+      "test_files": 7,
+      "loc": 2088,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3881,8 +3881,6 @@
       "files": [
         "ai_charge_curve_indexer.go",
         "ai_charge_curve_indexer_test.go",
-        "ai_digest_weekly.go",
-        "ai_digest_weekly_test.go",
         "ai_docs_indexer.go",
         "ai_docs_indexer_test.go",
         "ai_drive_indexer.go",
@@ -3895,9 +3893,25 @@
         "ai_route_indexer_test.go",
         "ai_update_notes_indexer.go",
         "ai_update_notes_indexer_test.go",
-        "ai_yir_pregen.go",
-        "ai_yir_pregen_test.go",
         "doc.go"
+      ]
+    },
+    {
+      "path": "internal/jobs/digests",
+      "go_files": 3,
+      "test_files": 2,
+      "loc": 579,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/rag",
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "weekly.go",
+        "weekly_test.go",
+        "yir.go",
+        "yir_test.go"
       ]
     },
     {
@@ -6476,15 +6490,18 @@
     ],
     "internal/jobs": [
       "ai_charge_curve_indexer.go",
-      "ai_digest_weekly.go",
       "ai_docs_indexer.go",
       "ai_drive_indexer.go",
       "ai_idle_drain_indexer.go",
       "ai_log_trace_indexer.go",
       "ai_route_indexer.go",
       "ai_update_notes_indexer.go",
-      "ai_yir_pregen.go",
       "doc.go"
+    ],
+    "internal/jobs/digests": [
+      "doc.go",
+      "weekly.go",
+      "yir.go"
     ],
     "internal/jobs/embeddings": [
       "doc.go",
@@ -6953,16 +6970,16 @@
       "parent": "internal/jobs",
       "owner": "R6",
       "file_count_at_r0": 23,
-      "flat_parent_go_files": 10,
-      "flat_parent_test_files": 9,
+      "flat_parent_go_files": 8,
+      "flat_parent_test_files": 7,
       "planned_subpkgs": 4,
       "existing_subpkgs": [
         "embeddings",
-        "triage"
+        "triage",
+        "digests"
       ],
       "missing_subpkgs": [
-        "indexers",
-        "digests"
+        "indexers"
       ],
       "notes": "4 subpkgs: embeddings (done R0.5), indexers (7 ai_*_indexer + tests), triage (alert+feedback), digests (weekly+yir)."
     },
