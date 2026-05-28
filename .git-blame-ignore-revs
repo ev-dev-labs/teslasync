@@ -100,3 +100,5 @@ c3be2d605395a2bcecfab7ba745aa6b1f58973c2
 3c6826da34a9895210af4ef5d0550345e10db7ce
 # R6.12 — carve internal/ai/tools/summary/ (incident_timeline + log_trace + software_update + fsm_trace)
 7e611dab47c059942eb90ab008bb40b6922aac8c
+# R6.13 — carve internal/ai/tools/nlq/ (dashboard + grafana + sql)
+41d91d85a60bf183eda2a7f44013176103aee0f0
