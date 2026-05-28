@@ -94,3 +94,5 @@ c94f18a3e9ceeeb57065fbf9a0323f5b75683c85
 75c644cb7faf03587f7f78d28066196cce36ee86
 # R6.9 — carve internal/ai/tools/predict/ (battery_health + range + anomaly_baseline)
 dd49ce9e1a89abcbb3eec8776bc45ace55c91c52
+# R6.10 — carve internal/ai/tools/nl/ (signal_filter + watch_face + inbox)
+c3be2d605395a2bcecfab7ba745aa6b1f58973c2
