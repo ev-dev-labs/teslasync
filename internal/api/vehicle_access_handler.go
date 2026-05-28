@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
@@ -64,7 +66,7 @@ func (h *VehicleAccessHandler) ListDrivers(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if drivers == nil {
-		drivers = []*models.TeslaVehicleDriver{}
+		drivers = []*teslamodel.TeslaVehicleDriver{}
 	}
 	writeJSON(w, http.StatusOK, drivers)
 }
@@ -117,7 +119,7 @@ func (h *VehicleAccessHandler) RefreshDrivers(w http.ResponseWriter, r *http.Req
 		return
 	}
 	if stored == nil {
-		stored = []*models.TeslaVehicleDriver{}
+		stored = []*teslamodel.TeslaVehicleDriver{}
 	}
 
 	log.Info().Int("count", len(stored)).Int64("vehicle_id", vehicle.ID).Msg("vehicle drivers refresh complete")
@@ -186,7 +188,7 @@ func (h *VehicleAccessHandler) ListInvitations(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if invitations == nil {
-		invitations = []*models.TeslaVehicleInvitation{}
+		invitations = []*teslamodel.TeslaVehicleInvitation{}
 	}
 	writeJSON(w, http.StatusOK, invitations)
 }
@@ -239,7 +241,7 @@ func (h *VehicleAccessHandler) RefreshInvitations(w http.ResponseWriter, r *http
 		return
 	}
 	if stored == nil {
-		stored = []*models.TeslaVehicleInvitation{}
+		stored = []*teslamodel.TeslaVehicleInvitation{}
 	}
 
 	log.Info().Int("count", len(stored)).Int64("vehicle_id", vehicle.ID).Msg("vehicle invitations refresh complete")
@@ -332,7 +334,7 @@ func (h *VehicleAccessHandler) RevokeInvitation(w http.ResponseWriter, r *http.R
 
 // ---------- Response parsers ----------
 
-func parseDriversResponse(body []byte, vehicleID int64, vin string) ([]*models.TeslaVehicleDriver, error) {
+func parseDriversResponse(body []byte, vehicleID int64, vin string) ([]*teslamodel.TeslaVehicleDriver, error) {
 	var envelope struct {
 		Response []json.RawMessage `json:"response"`
 	}
@@ -340,7 +342,7 @@ func parseDriversResponse(body []byte, vehicleID int64, vin string) ([]*models.T
 		return nil, fmt.Errorf("unmarshal drivers envelope: %w", err)
 	}
 
-	var drivers []*models.TeslaVehicleDriver
+	var drivers []*teslamodel.TeslaVehicleDriver
 	for _, raw := range envelope.Response {
 		var d struct {
 			ShareUserID *int64  `json:"share_user_id"`
@@ -353,7 +355,7 @@ func parseDriversResponse(body []byte, vehicleID int64, vin string) ([]*models.T
 			log.Warn().Err(err).Msg("skipping unparseable driver entry")
 			continue
 		}
-		drivers = append(drivers, &models.TeslaVehicleDriver{
+		drivers = append(drivers, &teslamodel.TeslaVehicleDriver{
 			VehicleID:   vehicleID,
 			VIN:         vin,
 			ShareUserID: d.ShareUserID,
@@ -366,7 +368,7 @@ func parseDriversResponse(body []byte, vehicleID int64, vin string) ([]*models.T
 	return drivers, nil
 }
 
-func parseInvitationsResponse(body []byte, vehicleID int64, vin string) ([]*models.TeslaVehicleInvitation, error) {
+func parseInvitationsResponse(body []byte, vehicleID int64, vin string) ([]*teslamodel.TeslaVehicleInvitation, error) {
 	var envelope struct {
 		Response []json.RawMessage `json:"response"`
 	}
@@ -374,7 +376,7 @@ func parseInvitationsResponse(body []byte, vehicleID int64, vin string) ([]*mode
 		return nil, fmt.Errorf("unmarshal invitations envelope: %w", err)
 	}
 
-	var invitations []*models.TeslaVehicleInvitation
+	var invitations []*teslamodel.TeslaVehicleInvitation
 	for _, raw := range envelope.Response {
 		var inv struct {
 			ID        string  `json:"id"`
@@ -388,7 +390,7 @@ func parseInvitationsResponse(body []byte, vehicleID int64, vin string) ([]*mode
 			continue
 		}
 
-		invitation := &models.TeslaVehicleInvitation{
+		invitation := &teslamodel.TeslaVehicleInvitation{
 			VehicleID:    vehicleID,
 			VIN:          vin,
 			InvitationID: inv.ID,
@@ -410,7 +412,7 @@ func parseInvitationsResponse(body []byte, vehicleID int64, vin string) ([]*mode
 	return invitations, nil
 }
 
-func parseCreateInvitationResponse(body []byte, vehicleID int64, vin string) (*models.TeslaVehicleInvitation, error) {
+func parseCreateInvitationResponse(body []byte, vehicleID int64, vin string) (*teslamodel.TeslaVehicleInvitation, error) {
 	var envelope struct {
 		Response json.RawMessage `json:"response"`
 	}
@@ -429,7 +431,7 @@ func parseCreateInvitationResponse(body []byte, vehicleID int64, vin string) (*m
 		return nil, fmt.Errorf("unmarshal invitation: %w", err)
 	}
 
-	invitation := &models.TeslaVehicleInvitation{
+	invitation := &teslamodel.TeslaVehicleInvitation{
 		VehicleID:    vehicleID,
 		VIN:          vin,
 		InvitationID: inv.ID,

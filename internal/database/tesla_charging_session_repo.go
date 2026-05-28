@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -19,7 +20,7 @@ func NewTeslaChargingSessionRepo(db *DB) *TeslaChargingSessionRepo {
 }
 
 // GetAll returns paginated fleet charging sessions, optionally filtered by VIN.
-func (r *TeslaChargingSessionRepo) GetAll(ctx context.Context, vin string, limit, offset int) ([]*models.TeslaChargingSession, error) {
+func (r *TeslaChargingSessionRepo) GetAll(ctx context.Context, vin string, limit, offset int) ([]*teslamodel.TeslaChargingSession, error) {
 	query := `SELECT id, session_id, vin, charger_id, site_location_name,
 		charge_start_datetime, charge_stop_datetime,
 		energy_added_kwh, peak_power_kw, max_charge_rate_kw, charge_duration_s,
@@ -44,9 +45,9 @@ func (r *TeslaChargingSessionRepo) GetAll(ctx context.Context, vin string, limit
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaChargingSession
+	var results []*teslamodel.TeslaChargingSession
 	for rows.Next() {
-		s := &models.TeslaChargingSession{}
+		s := &teslamodel.TeslaChargingSession{}
 		if err := rows.Scan(
 			&s.ID, &s.SessionID, &s.VIN, &s.ChargerID, &s.SiteLocationName,
 			&s.ChargeStartDatetime, &s.ChargeStopDatetime,
@@ -63,14 +64,14 @@ func (r *TeslaChargingSessionRepo) GetAll(ctx context.Context, vin string, limit
 }
 
 // GetBySessionID returns a single charging session by Tesla session ID.
-func (r *TeslaChargingSessionRepo) GetBySessionID(ctx context.Context, sessionID int64) (*models.TeslaChargingSession, error) {
+func (r *TeslaChargingSessionRepo) GetBySessionID(ctx context.Context, sessionID int64) (*teslamodel.TeslaChargingSession, error) {
 	query := `SELECT id, session_id, vin, charger_id, site_location_name,
 		charge_start_datetime, charge_stop_datetime,
 		energy_added_kwh, peak_power_kw, max_charge_rate_kw, charge_duration_s,
 		charger_type, currency_code, total_cost, per_kwh_rate, idle_fee, congestion_fee,
 		latitude, longitude, fetched_at, created_at
 		FROM tesla_charging_sessions WHERE session_id = $1`
-	s := &models.TeslaChargingSession{}
+	s := &teslamodel.TeslaChargingSession{}
 	err := r.db.Pool.QueryRow(ctx, query, sessionID).Scan(
 		&s.ID, &s.SessionID, &s.VIN, &s.ChargerID, &s.SiteLocationName,
 		&s.ChargeStartDatetime, &s.ChargeStopDatetime,
@@ -89,7 +90,7 @@ func (r *TeslaChargingSessionRepo) GetBySessionID(ctx context.Context, sessionID
 }
 
 // GetSummary returns aggregated stats for Tesla fleet charging sessions, optionally filtered by VIN.
-func (r *TeslaChargingSessionRepo) GetSummary(ctx context.Context, vin string) (*models.TeslaChargingSessionSummary, error) {
+func (r *TeslaChargingSessionRepo) GetSummary(ctx context.Context, vin string) (*teslamodel.TeslaChargingSessionSummary, error) {
 	query := `SELECT COUNT(*), SUM(energy_added_kwh) * 1000.0, SUM(total_cost),
 		CASE WHEN SUM(energy_added_kwh) > 0 THEN SUM(total_cost) / SUM(energy_added_kwh) ELSE NULL END,
 		MAX(peak_power_kw)
@@ -100,7 +101,7 @@ func (r *TeslaChargingSessionRepo) GetSummary(ctx context.Context, vin string) (
 		args = append(args, vin)
 	}
 
-	s := &models.TeslaChargingSessionSummary{}
+	s := &teslamodel.TeslaChargingSessionSummary{}
 	err := r.db.Pool.QueryRow(ctx, query, args...).Scan(
 		&s.TotalSessions, &s.TotalWh, &s.TotalCost, &s.AvgCostPerKWh, &s.PeakPowerKW,
 	)
@@ -111,7 +112,7 @@ func (r *TeslaChargingSessionRepo) GetSummary(ctx context.Context, vin string) (
 }
 
 // UpsertBatch inserts or updates charging sessions by session_id.
-func (r *TeslaChargingSessionRepo) UpsertBatch(ctx context.Context, sessions []*models.TeslaChargingSession) (int, error) {
+func (r *TeslaChargingSessionRepo) UpsertBatch(ctx context.Context, sessions []*teslamodel.TeslaChargingSession) (int, error) {
 	if len(sessions) == 0 {
 		return 0, nil
 	}

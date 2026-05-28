@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -74,7 +75,7 @@ func (h *TeslaEnergyLiveStatusHandler) LiveStatusHistory(w http.ResponseWriter, 
 		return
 	}
 	if entries == nil {
-		entries = []*models.TeslaEnergyLiveStatus{}
+		entries = []*teslamodel.TeslaEnergyLiveStatus{}
 	}
 	writeJSON(w, http.StatusOK, entries)
 }
@@ -119,7 +120,7 @@ func (h *TeslaEnergyLiveStatusHandler) RefreshLiveStatus(w http.ResponseWriter, 
 }
 
 // parseLiveStatusResponse parses the Tesla live_status API response into our model.
-func parseLiveStatusResponse(body []byte, siteID int64) (*models.TeslaEnergyLiveStatus, error) {
+func parseLiveStatusResponse(body []byte, siteID int64) (*teslamodel.TeslaEnergyLiveStatus, error) {
 	var resp struct {
 		Response json.RawMessage `json:"response"`
 	}
@@ -152,7 +153,7 @@ func parseLiveStatusResponse(body []byte, siteID int64) (*models.TeslaEnergyLive
 		}
 	}
 
-	return &models.TeslaEnergyLiveStatus{
+	return &teslamodel.TeslaEnergyLiveStatus{
 		EnergySiteID:      siteID,
 		SolarPower:        data.SolarPower,
 		BatteryPower:      data.BatteryPower,

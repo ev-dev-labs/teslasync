@@ -1,4 +1,4 @@
-package models
+package tesla
 
 import "time"
 

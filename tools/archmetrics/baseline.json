@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:03:29Z",
+  "generated_at": "2026-05-28T04:08:07Z",
   "go_version": "go1.26.1",
-  "commit_sha": "71222fc405d761aacfff907e34334af81bf68ac1",
+  "commit_sha": "f3d57741569e940a56960be4798284c0dcd647c9",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2033,7 +2033,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126476,
+      "loc": 126478,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2156,6 +2156,7 @@
         "internal/models/geo",
         "internal/models/notification",
         "internal/models/settings",
+        "internal/models/tesla",
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
@@ -2630,7 +2631,7 @@
       "layer": "platform",
       "imports": [
         "internal/apilog",
-        "internal/models",
+        "internal/models/tesla",
         "internal/platform/httputil"
       ],
       "files": [
@@ -2664,7 +2665,7 @@
         "internal/integrations/homeassistant",
         "internal/jobs/embeddings",
         "internal/metrics",
-        "internal/models",
+        "internal/models/tesla",
         "internal/mqtt",
         "internal/notification",
         "internal/platform/httputil",
@@ -3183,6 +3184,7 @@
         "internal/models/export",
         "internal/models/geo",
         "internal/models/notification",
+        "internal/models/tesla",
         "internal/tracing"
       ],
       "files": [
@@ -3962,9 +3964,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 32,
+      "go_files": 31,
       "test_files": 1,
-      "loc": 2334,
+      "loc": 2099,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -3999,7 +4001,6 @@
         "signal.go",
         "system.go",
         "telemetry.go",
-        "tesla.go",
         "trip.go",
         "vehicle.go"
       ]
@@ -4135,6 +4136,20 @@
       "files": [
         "doc.go",
         "settings.go"
+      ]
+    },
+    {
+      "path": "internal/models/tesla",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 268,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "core.go",
+        "doc.go",
+        "tesla.go"
       ]
     },
     {
@@ -6389,7 +6404,6 @@
       "signal.go",
       "system.go",
       "telemetry.go",
-      "tesla.go",
       "trip.go",
       "vehicle.go"
     ],
@@ -6433,6 +6447,11 @@
     "internal/models/settings": [
       "doc.go",
       "settings.go"
+    ],
+    "internal/models/tesla": [
+      "core.go",
+      "doc.go",
+      "tesla.go"
     ],
     "internal/mqtt": [
       "dlq_inspector.go",
@@ -6736,7 +6755,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 32,
+      "flat_parent_go_files": 31,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6749,7 +6768,8 @@
         "export",
         "geo",
         "notification",
-        "settings"
+        "settings",
+        "tesla"
       ],
       "missing_subpkgs": [
         "charging",
@@ -6759,7 +6779,6 @@
         "signal",
         "system",
         "telemetry",
-        "tesla",
         "vehicle"
       ],
       "notes": "19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes."

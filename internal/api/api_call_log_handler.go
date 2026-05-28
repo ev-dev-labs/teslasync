@@ -3,8 +3,9 @@ package api
 import (
 	"net/http"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -36,7 +37,7 @@ func (h *APICallLogHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if logs == nil {
-		logs = []*models.APICallLog{}
+		logs = []*teslamodel.APICallLog{}
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"data":   logs,

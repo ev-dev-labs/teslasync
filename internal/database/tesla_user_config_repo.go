@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // TeslaUserConfigRepo provides data access for Tesla user configuration blobs.
@@ -21,8 +21,8 @@ func NewTeslaUserConfigRepo(db *DB) *TeslaUserConfigRepo {
 }
 
 // GetByType returns the stored config for a given type (e.g. "feature_config", "region").
-func (r *TeslaUserConfigRepo) GetByType(ctx context.Context, configType string) (*models.TeslaUserConfig, error) {
-	c := &models.TeslaUserConfig{}
+func (r *TeslaUserConfigRepo) GetByType(ctx context.Context, configType string) (*teslamodel.TeslaUserConfig, error) {
+	c := &teslamodel.TeslaUserConfig{}
 	query := `SELECT id, config_type, data, fetched_at, created_at, updated_at
 		FROM tesla_user_config WHERE config_type = $1`
 	err := r.db.Pool.QueryRow(ctx, query, configType).Scan(

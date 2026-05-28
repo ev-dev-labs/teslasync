@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
 // TeslaUserOrderRepo provides data access for Tesla user order records.
@@ -19,7 +19,7 @@ func NewTeslaUserOrderRepo(db *DB) *TeslaUserOrderRepo {
 }
 
 // GetAll returns all stored Tesla orders ordered by most recently updated first.
-func (r *TeslaUserOrderRepo) GetAll(ctx context.Context) ([]*models.TeslaUserOrder, error) {
+func (r *TeslaUserOrderRepo) GetAll(ctx context.Context) ([]*teslamodel.TeslaUserOrder, error) {
 	query := `SELECT id, order_id, model, status, delivery_date, vin, referral_code,
 		is_upgradable, fetched_at, created_at, updated_at
 		FROM tesla_user_orders ORDER BY updated_at DESC`
@@ -29,9 +29,9 @@ func (r *TeslaUserOrderRepo) GetAll(ctx context.Context) ([]*models.TeslaUserOrd
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaUserOrder
+	var results []*teslamodel.TeslaUserOrder
 	for rows.Next() {
-		o := &models.TeslaUserOrder{}
+		o := &teslamodel.TeslaUserOrder{}
 		if err := rows.Scan(&o.ID, &o.OrderID, &o.Model, &o.Status, &o.DeliveryDate,
 			&o.VIN, &o.ReferralCode, &o.IsUpgradable,
 			&o.FetchedAt, &o.CreatedAt, &o.UpdatedAt); err != nil {
@@ -43,7 +43,7 @@ func (r *TeslaUserOrderRepo) GetAll(ctx context.Context) ([]*models.TeslaUserOrd
 }
 
 // ReplaceAll deletes all existing orders and inserts the new set (full sync).
-func (r *TeslaUserOrderRepo) ReplaceAll(ctx context.Context, orders []*models.TeslaUserOrder) error {
+func (r *TeslaUserOrderRepo) ReplaceAll(ctx context.Context, orders []*teslamodel.TeslaUserOrder) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)

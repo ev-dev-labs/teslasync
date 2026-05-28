@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
@@ -22,7 +23,7 @@ type fakeInserter struct {
 	err     error
 }
 
-func (f *fakeInserter) CreateBatch(ctx context.Context, batch []*models.APICallLog) error {
+func (f *fakeInserter) CreateBatch(ctx context.Context, batch []*teslamodel.APICallLog) error {
 	if f.delay > 0 {
 		select {
 		case <-ctx.Done():
@@ -52,7 +53,7 @@ func counterValue(c prometheus.Counter) float64 {
 func TestNewAsync_NilInserter_ReturnsNoOp(t *testing.T) {
 	t.Parallel()
 	l := apilog.NewAsync(nil, apilog.AsyncOptions{})
-	l.Enqueue(&models.APICallLog{Service: "x", Endpoint: "/y"})
+	l.Enqueue(&teslamodel.APICallLog{Service: "x", Endpoint: "/y"})
 	if err := l.Shutdown(context.Background()); err != nil {
 		t.Fatalf("noop Shutdown returned error: %v", err)
 	}
@@ -67,7 +68,7 @@ func TestNewAsync_FlushesByBatchSize(t *testing.T) {
 		FlushInterval: time.Hour,
 	})
 	for i := 0; i < 6; i++ {
-		l.Enqueue(&models.APICallLog{Endpoint: "/x"})
+		l.Enqueue(&teslamodel.APICallLog{Endpoint: "/x"})
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
@@ -101,7 +102,7 @@ func TestEnqueue_QueueFull_DropsAndIncrementsCounter(t *testing.T) {
 	// guaranteed because the channel cap is 1 and CreateBatch holds
 	// the worker for 50ms.
 	for i := 0; i < 64; i++ {
-		l.Enqueue(&models.APICallLog{Endpoint: "/x"})
+		l.Enqueue(&teslamodel.APICallLog{Endpoint: "/x"})
 	}
 	after := counterValue(apilog.DropsCounter)
 	if after-before == 0 {
@@ -117,12 +118,12 @@ func TestShutdown_SecondEnqueueIsDropped(t *testing.T) {
 		BatchSize:     2,
 		FlushInterval: time.Hour,
 	})
-	l.Enqueue(&models.APICallLog{Endpoint: "/a"})
+	l.Enqueue(&teslamodel.APICallLog{Endpoint: "/a"})
 	if err := l.Shutdown(context.Background()); err != nil {
 		t.Fatalf("Shutdown: %v", err)
 	}
 	before := counterValue(apilog.DropsCounter)
-	l.Enqueue(&models.APICallLog{Endpoint: "/b"})
+	l.Enqueue(&teslamodel.APICallLog{Endpoint: "/b"})
 	after := counterValue(apilog.DropsCounter)
 	if after-before != 1 {
 		t.Errorf("post-Shutdown Enqueue: drops delta=%v, want 1", after-before)
@@ -137,7 +138,7 @@ func TestShutdown_ContextCancelled(t *testing.T) {
 		BatchSize:     1,
 		FlushInterval: time.Hour,
 	})
-	l.Enqueue(&models.APICallLog{Endpoint: "/x"})
+	l.Enqueue(&teslamodel.APICallLog{Endpoint: "/x"})
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 	defer cancel()
 	err := l.Shutdown(ctx)
@@ -148,10 +149,10 @@ func TestShutdown_ContextCancelled(t *testing.T) {
 
 type capturingLogger struct {
 	mu      sync.Mutex
-	entries []*models.APICallLog
+	entries []*teslamodel.APICallLog
 }
 
-func (c *capturingLogger) Enqueue(e *models.APICallLog) {
+func (c *capturingLogger) Enqueue(e *teslamodel.APICallLog) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.entries = append(c.entries, e)
@@ -222,7 +223,7 @@ func TestConcurrent_NoRace(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < 200; i++ {
-				l.Enqueue(&models.APICallLog{Endpoint: "/x"})
+				l.Enqueue(&teslamodel.APICallLog{Endpoint: "/x"})
 				atomic.AddInt64(&sent, 1)
 			}
 		}()

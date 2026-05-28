@@ -5,7 +5,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -18,7 +19,7 @@ func NewAPICallLogRepo(db *DB) *APICallLogRepo {
 	return &APICallLogRepo{db: db}
 }
 
-func (r *APICallLogRepo) Create(ctx context.Context, l *models.APICallLog) error {
+func (r *APICallLogRepo) Create(ctx context.Context, l *teslamodel.APICallLog) error {
 	if l.Service == "" {
 		l.Service = "tesla-api"
 	}
@@ -34,7 +35,7 @@ func (r *APICallLogRepo) Create(ctx context.Context, l *models.APICallLog) error
 // pgxpool.Pool already guarantees. Empty batches are no-ops. Each entry's
 // Ts field is honored (the middleware sets it to the request start time);
 // entries with a zero Ts fall back to the current UTC instant.
-func (r *APICallLogRepo) CreateBatch(ctx context.Context, batch []*models.APICallLog) error {
+func (r *APICallLogRepo) CreateBatch(ctx context.Context, batch []*teslamodel.APICallLog) error {
 	if len(batch) == 0 {
 		return nil
 	}
@@ -72,7 +73,7 @@ func (r *APICallLogRepo) CreateBatch(ctx context.Context, batch []*models.APICal
 	return err
 }
 
-func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate string) ([]*models.APICallLog, int, error) {
+func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, statusFilter, endpoint, service, startDate, endDate string) ([]*teslamodel.APICallLog, int, error) {
 	// Build dynamic query with filters
 	query := `SELECT id, ts, vehicle_id, service, http_method, endpoint, status_code, duration_ms, error_message, rate_limited, request_body, response_body FROM api_call_logs WHERE 1=1`
 	countQuery := `SELECT COUNT(*) FROM api_call_logs WHERE 1=1`
@@ -143,9 +144,9 @@ func (r *APICallLogRepo) GetAll(ctx context.Context, limit, offset int, method, 
 	}
 	defer rows.Close()
 
-	var logs []*models.APICallLog
+	var logs []*teslamodel.APICallLog
 	for rows.Next() {
-		l := &models.APICallLog{}
+		l := &teslamodel.APICallLog{}
 		if err := rows.Scan(&l.ID, &l.Ts, &l.VehicleID, &l.Service, &l.HTTPMethod, &l.Endpoint, &l.StatusCode, &l.DurationMs, &l.ErrorMessage, &l.RateLimited, &l.RequestBody, &l.ResponseBody); err != nil {
 			return nil, 0, err
 		}

@@ -8,6 +8,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 
@@ -25,7 +27,6 @@ import (
 	hadiscovery "github.com/ev-dev-labs/teslasync/internal/integrations/homeassistant"
 	embeddingsjobs "github.com/ev-dev-labs/teslasync/internal/jobs/embeddings"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
@@ -547,7 +548,7 @@ func (a *App) initAPILogging() {
 	}
 
 	a.TeslaClient.SetLogCallback(func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, callErr error) {
-		logEntry := &models.APICallLog{
+		logEntry := &teslamodel.APICallLog{
 			HTTPMethod: method,
 			Endpoint:   url,
 			DurationMs: int32(durationMs),

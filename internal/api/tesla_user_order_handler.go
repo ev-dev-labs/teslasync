@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -28,8 +29,8 @@ func NewTeslaUserOrderHandler(tc *tesla.Client, db *database.DB) *TeslaUserOrder
 
 // ordersEnvelope wraps the order list with sync metadata for the frontend.
 type ordersEnvelope struct {
-	Orders    []*models.TeslaUserOrder `json:"orders"`
-	FetchedAt *string                  `json:"fetched_at"`
+	Orders    []*teslamodel.TeslaUserOrder `json:"orders"`
+	FetchedAt *string                      `json:"fetched_at"`
 }
 
 // Orders returns stored orders from DB with sync metadata.
@@ -46,7 +47,7 @@ func (h *TeslaUserOrderHandler) Orders(w http.ResponseWriter, r *http.Request) {
 		Orders: orders,
 	}
 	if env.Orders == nil {
-		env.Orders = []*models.TeslaUserOrder{}
+		env.Orders = []*teslamodel.TeslaUserOrder{}
 	}
 	if len(orders) > 0 {
 		ts := orders[0].FetchedAt.UTC().Format(time.RFC3339)
@@ -87,7 +88,7 @@ func (h *TeslaUserOrderHandler) RefreshOrders(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var orders []*models.TeslaUserOrder
+	var orders []*teslamodel.TeslaUserOrder
 	for _, raw := range envelope.Response {
 		var o struct {
 			OrderID      string  `json:"order_id"`
@@ -102,7 +103,7 @@ func (h *TeslaUserOrderHandler) RefreshOrders(w http.ResponseWriter, r *http.Req
 			log.Warn().Err(err).Msg("skipping malformed order entry")
 			continue
 		}
-		order := &models.TeslaUserOrder{
+		order := &teslamodel.TeslaUserOrder{
 			OrderID:      o.OrderID,
 			Model:        o.Model,
 			Status:       o.Status,

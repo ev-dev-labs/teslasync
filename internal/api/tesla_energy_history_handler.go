@@ -6,8 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -68,7 +69,7 @@ func (h *TeslaEnergyHistoryHandler) EnergyHistory(w http.ResponseWriter, r *http
 		return
 	}
 	if entries == nil {
-		entries = []*models.TeslaEnergyHistory{}
+		entries = []*teslamodel.TeslaEnergyHistory{}
 	}
 	writeJSON(w, http.StatusOK, entries)
 }
@@ -133,7 +134,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 		return
 	}
 	if stored == nil {
-		stored = []*models.TeslaEnergyHistory{}
+		stored = []*teslamodel.TeslaEnergyHistory{}
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"entries":  stored,
@@ -163,7 +164,7 @@ func (h *TeslaEnergyHistoryHandler) BackupHistory(w http.ResponseWriter, r *http
 		return
 	}
 	if entries == nil {
-		entries = []*models.TeslaEnergyBackupEvent{}
+		entries = []*teslamodel.TeslaEnergyBackupEvent{}
 	}
 	writeJSON(w, http.StatusOK, entries)
 }
@@ -226,7 +227,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, 
 		return
 	}
 	if stored == nil {
-		stored = []*models.TeslaEnergyBackupEvent{}
+		stored = []*teslamodel.TeslaEnergyBackupEvent{}
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"entries":  stored,
@@ -256,7 +257,7 @@ func (h *TeslaEnergyHistoryHandler) ChargingHistory(w http.ResponseWriter, r *ht
 		return
 	}
 	if entries == nil {
-		entries = []*models.TeslaEnergyWCCharging{}
+		entries = []*teslamodel.TeslaEnergyWCCharging{}
 	}
 	writeJSON(w, http.StatusOK, entries)
 }
@@ -310,7 +311,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshChargingHistory(w http.ResponseWriter
 		return
 	}
 	if stored == nil {
-		stored = []*models.TeslaEnergyWCCharging{}
+		stored = []*teslamodel.TeslaEnergyWCCharging{}
 	}
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"entries":  stored,

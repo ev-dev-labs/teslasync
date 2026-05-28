@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -34,7 +35,7 @@ func (h *EnergySiteHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if sites == nil {
-		sites = []*models.TeslaEnergySite{}
+		sites = []*teslamodel.TeslaEnergySite{}
 	}
 	writeJSON(w, http.StatusOK, sites)
 }
@@ -81,7 +82,7 @@ func (h *EnergySiteHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if stored == nil {
-		stored = []*models.TeslaEnergySite{}
+		stored = []*teslamodel.TeslaEnergySite{}
 	}
 
 	log.Info().Int("count", len(stored)).Msg("energy sites refresh complete")
@@ -223,7 +224,7 @@ func (h *EnergySiteHandler) UpdateTOUSettings(w http.ResponseWriter, r *http.Req
 }
 
 // parseProductsResponse parses the Tesla /products response, filtering to energy products only.
-func parseProductsResponse(body []byte) ([]*models.TeslaEnergySite, error) {
+func parseProductsResponse(body []byte) ([]*teslamodel.TeslaEnergySite, error) {
 	var envelope struct {
 		Response []json.RawMessage `json:"response"`
 		Count    int               `json:"count"`
@@ -232,7 +233,7 @@ func parseProductsResponse(body []byte) ([]*models.TeslaEnergySite, error) {
 		return nil, fmt.Errorf("unmarshal products envelope: %w", err)
 	}
 
-	var sites []*models.TeslaEnergySite
+	var sites []*teslamodel.TeslaEnergySite
 
 	for _, raw := range envelope.Response {
 		// Peek at resource_type to filter out vehicles
@@ -275,7 +276,7 @@ func parseProductsResponse(body []byte) ([]*models.TeslaEnergySite, error) {
 			continue
 		}
 
-		sites = append(sites, &models.TeslaEnergySite{
+		sites = append(sites, &teslamodel.TeslaEnergySite{
 			EnergySiteID:      product.EnergySiteID,
 			ResourceType:      product.ResourceType,
 			SiteName:          product.SiteName,

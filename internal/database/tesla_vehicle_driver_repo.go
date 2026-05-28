@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
 // TeslaVehicleDriverRepo provides data access for vehicle drivers and share invitations.
@@ -19,7 +19,7 @@ func NewTeslaVehicleDriverRepo(db *DB) *TeslaVehicleDriverRepo {
 }
 
 // GetDriversByVehicleID returns all drivers for a given vehicle.
-func (r *TeslaVehicleDriverRepo) GetDriversByVehicleID(ctx context.Context, vehicleID int64) ([]*models.TeslaVehicleDriver, error) {
+func (r *TeslaVehicleDriverRepo) GetDriversByVehicleID(ctx context.Context, vehicleID int64) ([]*teslamodel.TeslaVehicleDriver, error) {
 	query := `SELECT id, vehicle_id, vin, share_user_id, driver_email, driver_name, role, fetched_at
 		FROM tesla_vehicle_drivers WHERE vehicle_id = $1 ORDER BY id ASC`
 
@@ -29,9 +29,9 @@ func (r *TeslaVehicleDriverRepo) GetDriversByVehicleID(ctx context.Context, vehi
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaVehicleDriver
+	var results []*teslamodel.TeslaVehicleDriver
 	for rows.Next() {
-		d := &models.TeslaVehicleDriver{}
+		d := &teslamodel.TeslaVehicleDriver{}
 		if err := rows.Scan(
 			&d.ID, &d.VehicleID, &d.VIN, &d.ShareUserID,
 			&d.DriverEmail, &d.DriverName, &d.Role, &d.FetchedAt,
@@ -44,7 +44,7 @@ func (r *TeslaVehicleDriverRepo) GetDriversByVehicleID(ctx context.Context, vehi
 }
 
 // ReplaceDriversForVehicle replaces all drivers for a vehicle with the given set.
-func (r *TeslaVehicleDriverRepo) ReplaceDriversForVehicle(ctx context.Context, vehicleID int64, drivers []*models.TeslaVehicleDriver) error {
+func (r *TeslaVehicleDriverRepo) ReplaceDriversForVehicle(ctx context.Context, vehicleID int64, drivers []*teslamodel.TeslaVehicleDriver) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -72,7 +72,7 @@ func (r *TeslaVehicleDriverRepo) ReplaceDriversForVehicle(ctx context.Context, v
 }
 
 // GetInvitationsByVehicleID returns all invitations for a given vehicle.
-func (r *TeslaVehicleDriverRepo) GetInvitationsByVehicleID(ctx context.Context, vehicleID int64) ([]*models.TeslaVehicleInvitation, error) {
+func (r *TeslaVehicleDriverRepo) GetInvitationsByVehicleID(ctx context.Context, vehicleID int64) ([]*teslamodel.TeslaVehicleInvitation, error) {
 	query := `SELECT id, vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, fetched_at, created_at
 		FROM tesla_vehicle_invitations WHERE vehicle_id = $1 ORDER BY created_at DESC`
 
@@ -82,9 +82,9 @@ func (r *TeslaVehicleDriverRepo) GetInvitationsByVehicleID(ctx context.Context, 
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaVehicleInvitation
+	var results []*teslamodel.TeslaVehicleInvitation
 	for rows.Next() {
-		inv := &models.TeslaVehicleInvitation{}
+		inv := &teslamodel.TeslaVehicleInvitation{}
 		if err := rows.Scan(
 			&inv.ID, &inv.VehicleID, &inv.VIN, &inv.InvitationID,
 			&inv.InviteURL, &inv.Status, &inv.ExpiresAt, &inv.CreatedBy,
@@ -98,7 +98,7 @@ func (r *TeslaVehicleDriverRepo) GetInvitationsByVehicleID(ctx context.Context, 
 }
 
 // ReplaceInvitationsForVehicle replaces all invitations for a vehicle with the given set.
-func (r *TeslaVehicleDriverRepo) ReplaceInvitationsForVehicle(ctx context.Context, vehicleID int64, invitations []*models.TeslaVehicleInvitation) error {
+func (r *TeslaVehicleDriverRepo) ReplaceInvitationsForVehicle(ctx context.Context, vehicleID int64, invitations []*teslamodel.TeslaVehicleInvitation) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)
@@ -127,7 +127,7 @@ func (r *TeslaVehicleDriverRepo) ReplaceInvitationsForVehicle(ctx context.Contex
 }
 
 // InsertInvitation inserts a single invitation record.
-func (r *TeslaVehicleDriverRepo) InsertInvitation(ctx context.Context, inv *models.TeslaVehicleInvitation) error {
+func (r *TeslaVehicleDriverRepo) InsertInvitation(ctx context.Context, inv *teslamodel.TeslaVehicleInvitation) error {
 	now := time.Now().UTC()
 	err := r.db.Pool.QueryRow(ctx, `INSERT INTO tesla_vehicle_invitations
 		(vehicle_id, vin, invitation_id, invite_url, status, expires_at, created_by, fetched_at, created_at)

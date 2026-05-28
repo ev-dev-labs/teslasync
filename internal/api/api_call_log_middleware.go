@@ -33,8 +33,9 @@ import (
 	"sync"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog/log"
@@ -216,7 +217,7 @@ func APICallLogMiddleware(logger APICallLogger, captureBodies bool, skip func(pa
 				duration := time.Since(start)
 				sanitizedURL, _ := redactURLAndHeaders(r)
 
-				entry := &models.APICallLog{
+				entry := &teslamodel.APICallLog{
 					Ts:         start.UTC(),
 					Service:    APILogServiceTag,
 					HTTPMethod: r.Method,

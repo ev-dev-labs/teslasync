@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
 // parseEnergyHistoryResponse parses Tesla calendar_history kind=energy response.
-func parseEnergyHistoryResponse(body []byte, siteID int64, period string) ([]*models.TeslaEnergyHistory, error) {
+func parseEnergyHistoryResponse(body []byte, siteID int64, period string) ([]*teslamodel.TeslaEnergyHistory, error) {
 	var resp teslaCalendarHistoryResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("unmarshal energy history: %w", err)
 	}
 
-	var entries []*models.TeslaEnergyHistory
+	var entries []*teslamodel.TeslaEnergyHistory
 	for _, raw := range resp.Response.TimeSeriesData {
 		var point struct {
 			Timestamp        string   `json:"timestamp"`
@@ -33,7 +33,7 @@ func parseEnergyHistoryResponse(body []byte, siteID int64, period string) ([]*mo
 		if err != nil {
 			continue
 		}
-		entries = append(entries, &models.TeslaEnergyHistory{
+		entries = append(entries, &teslamodel.TeslaEnergyHistory{
 			EnergySiteID:       siteID,
 			Period:             period,
 			Timestamp:          ts,
@@ -49,13 +49,13 @@ func parseEnergyHistoryResponse(body []byte, siteID int64, period string) ([]*mo
 }
 
 // parseBackupHistoryResponse parses Tesla calendar_history kind=backup response.
-func parseBackupHistoryResponse(body []byte, siteID int64, period string) ([]*models.TeslaEnergyBackupEvent, error) {
+func parseBackupHistoryResponse(body []byte, siteID int64, period string) ([]*teslamodel.TeslaEnergyBackupEvent, error) {
 	var resp teslaCalendarHistoryResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("unmarshal backup history: %w", err)
 	}
 
-	var entries []*models.TeslaEnergyBackupEvent
+	var entries []*teslamodel.TeslaEnergyBackupEvent
 	for _, raw := range resp.Response.TimeSeriesData {
 		var point struct {
 			Timestamp string `json:"timestamp"`
@@ -68,7 +68,7 @@ func parseBackupHistoryResponse(body []byte, siteID int64, period string) ([]*mo
 		if err != nil {
 			continue
 		}
-		entries = append(entries, &models.TeslaEnergyBackupEvent{
+		entries = append(entries, &teslamodel.TeslaEnergyBackupEvent{
 			EnergySiteID:    siteID,
 			Period:          period,
 			Timestamp:       ts,
@@ -79,13 +79,13 @@ func parseBackupHistoryResponse(body []byte, siteID int64, period string) ([]*mo
 }
 
 // parseWCChargingResponse parses Tesla telemetry_history kind=charge response.
-func parseWCChargingResponse(body []byte, siteID int64) ([]*models.TeslaEnergyWCCharging, error) {
+func parseWCChargingResponse(body []byte, siteID int64) ([]*teslamodel.TeslaEnergyWCCharging, error) {
 	var resp teslaTelemetryHistoryResponse
 	if err := json.Unmarshal(body, &resp); err != nil {
 		return nil, fmt.Errorf("unmarshal wc charging history: %w", err)
 	}
 
-	var entries []*models.TeslaEnergyWCCharging
+	var entries []*teslamodel.TeslaEnergyWCCharging
 	for _, raw := range resp.Response.Data {
 		var point struct {
 			Timestamp string   `json:"timestamp"`
@@ -99,7 +99,7 @@ func parseWCChargingResponse(body []byte, siteID int64) ([]*models.TeslaEnergyWC
 		if err != nil {
 			continue
 		}
-		entries = append(entries, &models.TeslaEnergyWCCharging{
+		entries = append(entries, &teslamodel.TeslaEnergyWCCharging{
 			EnergySiteID: siteID,
 			DIN:          point.DIN,
 			Timestamp:    ts,

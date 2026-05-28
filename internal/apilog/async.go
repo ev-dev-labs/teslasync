@@ -6,7 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -24,7 +25,7 @@ type AsyncOptions struct {
 // Drops are counted in DropsCounter; the worker stops when both the
 // channel is closed and drained.
 type asyncLogger struct {
-	ch        chan *models.APICallLog
+	ch        chan *teslamodel.APICallLog
 	inserter  BatchInserter
 	batchSize int
 	flushEvry time.Duration
@@ -60,7 +61,7 @@ func NewAsync(inserter BatchInserter, opts AsyncOptions) Logger {
 	}
 
 	a := &asyncLogger{
-		ch:        make(chan *models.APICallLog, cap),
+		ch:        make(chan *teslamodel.APICallLog, cap),
 		inserter:  inserter,
 		batchSize: bs,
 		flushEvry: fi,
@@ -70,7 +71,7 @@ func NewAsync(inserter BatchInserter, opts AsyncOptions) Logger {
 	return a
 }
 
-func (a *asyncLogger) Enqueue(entry *models.APICallLog) {
+func (a *asyncLogger) Enqueue(entry *teslamodel.APICallLog) {
 	if entry == nil {
 		return
 	}
@@ -114,7 +115,7 @@ func (a *asyncLogger) Shutdown(ctx context.Context) error {
 func (a *asyncLogger) run() {
 	defer close(a.done)
 
-	batch := make([]*models.APICallLog, 0, a.batchSize)
+	batch := make([]*teslamodel.APICallLog, 0, a.batchSize)
 	ticker := time.NewTicker(a.flushEvry)
 	defer ticker.Stop()
 

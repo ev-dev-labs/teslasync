@@ -5,10 +5,11 @@ import (
 	"net/http"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -28,8 +29,8 @@ func NewTeslaUserProfileHandler(tc *tesla.Client, db *database.DB) *TeslaUserPro
 
 // profileEnvelope wraps the profile with sync metadata for the frontend.
 type profileEnvelope struct {
-	Profile   *models.TeslaUserProfile `json:"profile"`
-	FetchedAt *string                  `json:"fetched_at"`
+	Profile   *teslamodel.TeslaUserProfile `json:"profile"`
+	FetchedAt *string                      `json:"fetched_at"`
 }
 
 // Profile returns the stored Tesla user profile from DB.
@@ -85,7 +86,7 @@ func (h *TeslaUserProfileHandler) RefreshProfile(w http.ResponseWriter, r *http.
 		return
 	}
 
-	profile := &models.TeslaUserProfile{
+	profile := &teslamodel.TeslaUserProfile{
 		Email:           envelope.Response.Email,
 		FullName:        envelope.Response.FullName,
 		ProfileImageURL: envelope.Response.ProfileImageURL,

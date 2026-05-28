@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
 // TeslaEnergyLiveStatusRepo provides data access for Tesla energy site live status snapshots.
@@ -19,7 +19,7 @@ func NewTeslaEnergyLiveStatusRepo(db *DB) *TeslaEnergyLiveStatusRepo {
 }
 
 // Create inserts a new live status snapshot.
-func (r *TeslaEnergyLiveStatusRepo) Create(ctx context.Context, s *models.TeslaEnergyLiveStatus) error {
+func (r *TeslaEnergyLiveStatusRepo) Create(ctx context.Context, s *teslamodel.TeslaEnergyLiveStatus) error {
 	query := `INSERT INTO tesla_energy_live_status (
 		energy_site_id, solar_power, battery_power, load_power,
 		grid_power, grid_services_power, energy_left, total_pack_energy,
@@ -42,7 +42,7 @@ func (r *TeslaEnergyLiveStatusRepo) Create(ctx context.Context, s *models.TeslaE
 }
 
 // GetLatest returns the most recent live status snapshot for a site.
-func (r *TeslaEnergyLiveStatusRepo) GetLatest(ctx context.Context, energySiteID int64) (*models.TeslaEnergyLiveStatus, error) {
+func (r *TeslaEnergyLiveStatusRepo) GetLatest(ctx context.Context, energySiteID int64) (*teslamodel.TeslaEnergyLiveStatus, error) {
 	query := `SELECT id, energy_site_id, solar_power, battery_power, load_power,
 		grid_power, grid_services_power, energy_left, total_pack_energy,
 		percentage_charged, grid_status, backup_capable, storm_mode_active,
@@ -52,7 +52,7 @@ func (r *TeslaEnergyLiveStatusRepo) GetLatest(ctx context.Context, energySiteID 
 		ORDER BY timestamp DESC
 		LIMIT 1`
 
-	s := &models.TeslaEnergyLiveStatus{}
+	s := &teslamodel.TeslaEnergyLiveStatus{}
 	err := r.db.Pool.QueryRow(ctx, query, energySiteID).Scan(
 		&s.ID, &s.EnergySiteID, &s.SolarPower, &s.BatteryPower, &s.LoadPower,
 		&s.GridPower, &s.GridServicesPower, &s.EnergyLeft, &s.TotalPackEnergy,
@@ -69,7 +69,7 @@ func (r *TeslaEnergyLiveStatusRepo) GetLatest(ctx context.Context, energySiteID 
 }
 
 // GetHistory returns live status snapshots for a site within a time range.
-func (r *TeslaEnergyLiveStatusRepo) GetHistory(ctx context.Context, energySiteID int64, since, until time.Time, limit int) ([]*models.TeslaEnergyLiveStatus, error) {
+func (r *TeslaEnergyLiveStatusRepo) GetHistory(ctx context.Context, energySiteID int64, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyLiveStatus, error) {
 	if limit <= 0 || limit > 2000 {
 		limit = 500
 	}
@@ -88,9 +88,9 @@ func (r *TeslaEnergyLiveStatusRepo) GetHistory(ctx context.Context, energySiteID
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaEnergyLiveStatus
+	var results []*teslamodel.TeslaEnergyLiveStatus
 	for rows.Next() {
-		s := &models.TeslaEnergyLiveStatus{}
+		s := &teslamodel.TeslaEnergyLiveStatus{}
 		if err := rows.Scan(
 			&s.ID, &s.EnergySiteID, &s.SolarPower, &s.BatteryPower, &s.LoadPower,
 			&s.GridPower, &s.GridServicesPower, &s.EnergyLeft, &s.TotalPackEnergy,

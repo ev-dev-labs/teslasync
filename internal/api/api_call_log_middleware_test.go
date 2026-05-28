@@ -15,8 +15,9 @@ import (
 	"testing"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	dto "github.com/prometheus/client_model/go"
@@ -40,12 +41,12 @@ func counterValue(c interface {
 // can exercise the drop path without time-based flake.
 type fakeAPILogStore struct {
 	mu         sync.Mutex
-	entries    []*models.APICallLog
+	entries    []*teslamodel.APICallLog
 	AlwaysFull bool
 	closed     bool
 }
 
-func (f *fakeAPILogStore) Enqueue(e *models.APICallLog) {
+func (f *fakeAPILogStore) Enqueue(e *teslamodel.APICallLog) {
 	if e == nil {
 		return
 	}
@@ -65,10 +66,10 @@ func (f *fakeAPILogStore) Shutdown(ctx context.Context) error {
 	return nil
 }
 
-func (f *fakeAPILogStore) Entries() []*models.APICallLog {
+func (f *fakeAPILogStore) Entries() []*teslamodel.APICallLog {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	out := make([]*models.APICallLog, len(f.entries))
+	out := make([]*teslamodel.APICallLog, len(f.entries))
 	copy(out, f.entries)
 	return out
 }
@@ -288,7 +289,7 @@ func TestT03_BodyCaptureOn_TruncatesAt10240Bytes_RequestAndResponse(t *testing.T
 
 	// The GET /api/v1/large entry should have ResponseBody capped at 10 KB
 	// (plus the truncation marker).
-	var getEntry, postEntry *models.APICallLog
+	var getEntry, postEntry *teslamodel.APICallLog
 	for _, e := range entries {
 		if e.HTTPMethod == "GET" {
 			getEntry = e
@@ -544,11 +545,11 @@ func TestT08_HandlerPanic_StillRecordsRequest_StatusCode500(t *testing.T) {
 // T09 to assert drain behavior of the production async logger.
 type fakeBatchInserter struct {
 	mu      sync.Mutex
-	batches [][]*models.APICallLog
+	batches [][]*teslamodel.APICallLog
 	delay   time.Duration
 }
 
-func (f *fakeBatchInserter) CreateBatch(ctx context.Context, batch []*models.APICallLog) error {
+func (f *fakeBatchInserter) CreateBatch(ctx context.Context, batch []*teslamodel.APICallLog) error {
 	if f.delay > 0 {
 		select {
 		case <-time.After(f.delay):
@@ -558,7 +559,7 @@ func (f *fakeBatchInserter) CreateBatch(ctx context.Context, batch []*models.API
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	cp := make([]*models.APICallLog, len(batch))
+	cp := make([]*teslamodel.APICallLog, len(batch))
 	copy(cp, batch)
 	f.batches = append(f.batches, cp)
 	return nil
@@ -585,7 +586,7 @@ func TestT09_Shutdown_DrainsPendingEntries_LaterEnqueueDropped(t *testing.T) {
 	})
 
 	for i := 0; i < 3; i++ {
-		logger.Enqueue(&models.APICallLog{
+		logger.Enqueue(&teslamodel.APICallLog{
 			Service:    APILogServiceTag,
 			HTTPMethod: "GET",
 			Endpoint:   fmt.Sprintf("/api/v1/test-%d", i),
@@ -605,7 +606,7 @@ func TestT09_Shutdown_DrainsPendingEntries_LaterEnqueueDropped(t *testing.T) {
 
 	before := counterValue(apilog.DropsCounter)
 	// MUST NOT panic
-	logger.Enqueue(&models.APICallLog{
+	logger.Enqueue(&teslamodel.APICallLog{
 		Service:    APILogServiceTag,
 		HTTPMethod: "GET",
 		Endpoint:   "/api/v1/post-shutdown",

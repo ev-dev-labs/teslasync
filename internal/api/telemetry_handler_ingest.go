@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -244,7 +246,7 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 	if state != nil && state.SignalCount%100 == 0 {
 		durationMs := int(time.Since(start).Milliseconds())
 		statusCode := http.StatusOK
-		logEntry := &models.APICallLog{
+		logEntry := &teslamodel.APICallLog{
 			HTTPMethod: "POST",
 			Endpoint:   fmt.Sprintf("/api/v1/telemetry (VIN: %s)", payload.VIN),
 			StatusCode: int16(statusCode),

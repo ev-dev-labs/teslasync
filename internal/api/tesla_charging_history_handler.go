@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
@@ -47,7 +48,7 @@ func (h *TeslaChargingHistoryHandler) List(w http.ResponseWriter, r *http.Reques
 	}
 
 	if entries == nil {
-		entries = []*models.TeslaChargingHistoryEntry{}
+		entries = []*teslamodel.TeslaChargingHistoryEntry{}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -72,7 +73,7 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 
 	log.Info().Str("vin", "***").Str("start", startTime).Str("end", endTime).Msg("refreshing tesla charging history")
 
-	var allEntries []*models.TeslaChargingHistoryEntry
+	var allEntries []*teslamodel.TeslaChargingHistoryEntry
 	pageNo := 1
 	pageSize := 50
 
@@ -137,7 +138,7 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 	}
 
 	if entries == nil {
-		entries = []*models.TeslaChargingHistoryEntry{}
+		entries = []*teslamodel.TeslaChargingHistoryEntry{}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -220,11 +221,11 @@ type teslaChargingInvoice struct {
 }
 
 // parseTeslaChargingEntries converts Tesla API items to model entries.
-func parseTeslaChargingEntries(items []teslaChargingHistoryItem, rawPage []byte) []*models.TeslaChargingHistoryEntry {
-	results := make([]*models.TeslaChargingHistoryEntry, 0, len(items))
+func parseTeslaChargingEntries(items []teslaChargingHistoryItem, rawPage []byte) []*teslamodel.TeslaChargingHistoryEntry {
+	results := make([]*teslamodel.TeslaChargingHistoryEntry, 0, len(items))
 
 	for _, item := range items {
-		e := &models.TeslaChargingHistoryEntry{
+		e := &teslamodel.TeslaChargingHistoryEntry{
 			SessionID:        item.SessionID,
 			VIN:              item.VIN,
 			SiteLocationName: item.SiteLocationName,

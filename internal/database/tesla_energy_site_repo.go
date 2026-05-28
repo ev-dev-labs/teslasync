@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -20,7 +21,7 @@ func NewTeslaEnergySiteRepo(db *DB) *TeslaEnergySiteRepo {
 }
 
 // GetAll returns all stored energy sites ordered by site name.
-func (r *TeslaEnergySiteRepo) GetAll(ctx context.Context) ([]*models.TeslaEnergySite, error) {
+func (r *TeslaEnergySiteRepo) GetAll(ctx context.Context) ([]*teslamodel.TeslaEnergySite, error) {
 	query := `SELECT id, energy_site_id, resource_type, site_name,
 		gateway_id, total_pack_energy, percentage_charged, battery_type,
 		backup_capable, storm_mode_enabled,
@@ -37,9 +38,9 @@ func (r *TeslaEnergySiteRepo) GetAll(ctx context.Context) ([]*models.TeslaEnergy
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaEnergySite
+	var results []*teslamodel.TeslaEnergySite
 	for rows.Next() {
-		s := &models.TeslaEnergySite{}
+		s := &teslamodel.TeslaEnergySite{}
 		if err := rows.Scan(
 			&s.ID, &s.EnergySiteID, &s.ResourceType, &s.SiteName,
 			&s.GatewayID, &s.TotalPackEnergy, &s.PercentageCharged, &s.BatteryType,
@@ -58,7 +59,7 @@ func (r *TeslaEnergySiteRepo) GetAll(ctx context.Context) ([]*models.TeslaEnergy
 
 // ReplaceAll upserts incoming sites and removes any that are no longer present,
 // preserving site_info_json and site_info_fetched_at across refreshes.
-func (r *TeslaEnergySiteRepo) ReplaceAll(ctx context.Context, sites []*models.TeslaEnergySite) error {
+func (r *TeslaEnergySiteRepo) ReplaceAll(ctx context.Context, sites []*teslamodel.TeslaEnergySite) error {
 	tx, err := r.db.Pool.Begin(ctx)
 	if err != nil {
 		return fmt.Errorf("begin tx: %w", err)

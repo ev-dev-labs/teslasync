@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -46,7 +47,7 @@ func (h *TeslaChargingSessionHandler) List(w http.ResponseWriter, r *http.Reques
 	}
 
 	if sessions == nil {
-		sessions = []*models.TeslaChargingSession{}
+		sessions = []*teslamodel.TeslaChargingSession{}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -72,7 +73,7 @@ func (h *TeslaChargingSessionHandler) Refresh(w http.ResponseWriter, r *http.Req
 
 	log.Info().Str("date_from", dateFrom).Str("date_to", dateTo).Msg("refreshing tesla charging sessions")
 
-	var allSessions []*models.TeslaChargingSession
+	var allSessions []*teslamodel.TeslaChargingSession
 	limit := 50
 	offset := 0
 
@@ -146,7 +147,7 @@ func (h *TeslaChargingSessionHandler) Refresh(w http.ResponseWriter, r *http.Req
 	}
 
 	if sessions == nil {
-		sessions = []*models.TeslaChargingSession{}
+		sessions = []*teslamodel.TeslaChargingSession{}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -195,11 +196,11 @@ type teslaChargingSessionLoc struct {
 }
 
 // parseTeslaChargingSessions converts Tesla API items to model entries.
-func parseTeslaChargingSessions(items []teslaChargingSessionItem) []*models.TeslaChargingSession {
-	results := make([]*models.TeslaChargingSession, 0, len(items))
+func parseTeslaChargingSessions(items []teslaChargingSessionItem) []*teslamodel.TeslaChargingSession {
+	results := make([]*teslamodel.TeslaChargingSession, 0, len(items))
 
 	for _, item := range items {
-		s := &models.TeslaChargingSession{
+		s := &teslamodel.TeslaChargingSession{
 			SessionID:        item.SessionID,
 			VIN:              item.VIN,
 			SiteLocationName: item.SiteLocationName,

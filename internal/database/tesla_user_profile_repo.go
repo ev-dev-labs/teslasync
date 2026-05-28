@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // TeslaUserProfileRepo provides data access for the Tesla account owner's profile.
@@ -21,8 +21,8 @@ func NewTeslaUserProfileRepo(db *DB) *TeslaUserProfileRepo {
 }
 
 // Get returns the stored Tesla user profile (single-row table).
-func (r *TeslaUserProfileRepo) Get(ctx context.Context) (*models.TeslaUserProfile, error) {
-	p := &models.TeslaUserProfile{}
+func (r *TeslaUserProfileRepo) Get(ctx context.Context) (*teslamodel.TeslaUserProfile, error) {
+	p := &teslamodel.TeslaUserProfile{}
 	query := `SELECT id, email, full_name, profile_image_url, fetched_at, created_at, updated_at
 		FROM tesla_user_profiles ORDER BY updated_at DESC LIMIT 1`
 	err := r.db.Pool.QueryRow(ctx, query).Scan(
@@ -39,7 +39,7 @@ func (r *TeslaUserProfileRepo) Get(ctx context.Context) (*models.TeslaUserProfil
 }
 
 // Upsert replaces the stored Tesla user profile (single-row table).
-func (r *TeslaUserProfileRepo) Upsert(ctx context.Context, p *models.TeslaUserProfile) error {
+func (r *TeslaUserProfileRepo) Upsert(ctx context.Context, p *teslamodel.TeslaUserProfile) error {
 	now := time.Now().UTC()
 
 	tx, err := r.db.Pool.Begin(ctx)

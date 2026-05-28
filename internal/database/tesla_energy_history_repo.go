@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 )
 
 // ---------------------------------------------------------------------------
@@ -22,7 +22,7 @@ func NewTeslaEnergyHistoryRepo(db *DB) *TeslaEnergyHistoryRepo {
 }
 
 // GetByRange returns energy history for a site filtered by period and date range.
-func (r *TeslaEnergyHistoryRepo) GetByRange(ctx context.Context, siteID int64, period string, since, until time.Time, limit int) ([]*models.TeslaEnergyHistory, error) {
+func (r *TeslaEnergyHistoryRepo) GetByRange(ctx context.Context, siteID int64, period string, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyHistory, error) {
 	if limit <= 0 || limit > 1000 {
 		limit = 500
 	}
@@ -41,9 +41,9 @@ func (r *TeslaEnergyHistoryRepo) GetByRange(ctx context.Context, siteID int64, p
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaEnergyHistory
+	var results []*teslamodel.TeslaEnergyHistory
 	for rows.Next() {
-		e := &models.TeslaEnergyHistory{}
+		e := &teslamodel.TeslaEnergyHistory{}
 		if err := rows.Scan(
 			&e.ID, &e.EnergySiteID, &e.Period, &e.Timestamp,
 			&e.SolarEnergyWh, &e.BatteryEnergyInWh, &e.BatteryEnergyOutWh,
@@ -58,7 +58,7 @@ func (r *TeslaEnergyHistoryRepo) GetByRange(ctx context.Context, siteID int64, p
 }
 
 // UpsertBatch inserts or updates energy history entries by (site_id, period, timestamp).
-func (r *TeslaEnergyHistoryRepo) UpsertBatch(ctx context.Context, entries []*models.TeslaEnergyHistory) (int, error) {
+func (r *TeslaEnergyHistoryRepo) UpsertBatch(ctx context.Context, entries []*teslamodel.TeslaEnergyHistory) (int, error) {
 	if len(entries) == 0 {
 		return 0, nil
 	}
@@ -109,7 +109,7 @@ func NewTeslaEnergyBackupEventRepo(db *DB) *TeslaEnergyBackupEventRepo {
 }
 
 // GetByRange returns backup events for a site filtered by date range.
-func (r *TeslaEnergyBackupEventRepo) GetByRange(ctx context.Context, siteID int64, since, until time.Time, limit int) ([]*models.TeslaEnergyBackupEvent, error) {
+func (r *TeslaEnergyBackupEventRepo) GetByRange(ctx context.Context, siteID int64, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyBackupEvent, error) {
 	if limit <= 0 || limit > 1000 {
 		limit = 500
 	}
@@ -125,9 +125,9 @@ func (r *TeslaEnergyBackupEventRepo) GetByRange(ctx context.Context, siteID int6
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaEnergyBackupEvent
+	var results []*teslamodel.TeslaEnergyBackupEvent
 	for rows.Next() {
-		e := &models.TeslaEnergyBackupEvent{}
+		e := &teslamodel.TeslaEnergyBackupEvent{}
 		if err := rows.Scan(
 			&e.ID, &e.EnergySiteID, &e.Period, &e.Timestamp,
 			&e.DurationSeconds, &e.FetchedAt,
@@ -140,7 +140,7 @@ func (r *TeslaEnergyBackupEventRepo) GetByRange(ctx context.Context, siteID int6
 }
 
 // UpsertBatch inserts or updates backup events by (site_id, period, timestamp).
-func (r *TeslaEnergyBackupEventRepo) UpsertBatch(ctx context.Context, entries []*models.TeslaEnergyBackupEvent) (int, error) {
+func (r *TeslaEnergyBackupEventRepo) UpsertBatch(ctx context.Context, entries []*teslamodel.TeslaEnergyBackupEvent) (int, error) {
 	if len(entries) == 0 {
 		return 0, nil
 	}
@@ -181,7 +181,7 @@ func NewTeslaEnergyWCChargingRepo(db *DB) *TeslaEnergyWCChargingRepo {
 }
 
 // GetByRange returns wall connector charging history for a site filtered by date range.
-func (r *TeslaEnergyWCChargingRepo) GetByRange(ctx context.Context, siteID int64, since, until time.Time, limit int) ([]*models.TeslaEnergyWCCharging, error) {
+func (r *TeslaEnergyWCChargingRepo) GetByRange(ctx context.Context, siteID int64, since, until time.Time, limit int) ([]*teslamodel.TeslaEnergyWCCharging, error) {
 	if limit <= 0 || limit > 1000 {
 		limit = 500
 	}
@@ -197,9 +197,9 @@ func (r *TeslaEnergyWCChargingRepo) GetByRange(ctx context.Context, siteID int64
 	}
 	defer rows.Close()
 
-	var results []*models.TeslaEnergyWCCharging
+	var results []*teslamodel.TeslaEnergyWCCharging
 	for rows.Next() {
-		e := &models.TeslaEnergyWCCharging{}
+		e := &teslamodel.TeslaEnergyWCCharging{}
 		if err := rows.Scan(
 			&e.ID, &e.EnergySiteID, &e.DIN, &e.Timestamp,
 			&e.EnergyWh, &e.FetchedAt,
@@ -212,7 +212,7 @@ func (r *TeslaEnergyWCChargingRepo) GetByRange(ctx context.Context, siteID int64
 }
 
 // UpsertBatch inserts or updates WC charging entries by (site_id, din, timestamp).
-func (r *TeslaEnergyWCChargingRepo) UpsertBatch(ctx context.Context, entries []*models.TeslaEnergyWCCharging) (int, error) {
+func (r *TeslaEnergyWCChargingRepo) UpsertBatch(ctx context.Context, entries []*teslamodel.TeslaEnergyWCCharging) (int, error) {
 	if len(entries) == 0 {
 		return 0, nil
 	}
