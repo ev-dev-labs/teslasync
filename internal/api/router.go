@@ -31,6 +31,7 @@ import (
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
 	apionboard "github.com/ev-dev-labs/teslasync/internal/api/onboarding"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
+	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
@@ -721,7 +722,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	rangeProjectionHandler := NewRangeProjectionHandler(db, stateReader)
 	drivetrainHealthHandler := NewDrivetrainHealthHandler(db, stateReader)
 	maintenanceHandler := NewMaintenanceHandler(db)
-	periodStatsHandler := NewPeriodStatsHandler(db)
+	periodStatsHandler := apiperiod.NewHandler(db)
 	drivingCoachHandler := NewDrivingCoachHandler(db)
 	costForecastHandler := NewCostForecastHandler(db)
 	chargingOptimizerHandler := NewChargingOptimizerHandler(db)
@@ -1261,7 +1262,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// period-compare-narration strategy. Must be registered
 	// before the handler constructor below so the strategy's
 	// allowedTools resolve at boot. The PeriodComparator adapter
-	// delegates to the same package-level api.ComputePeriodStats
+	// delegates to the same package-level apiperiod.ComputePeriodStats
 	// helper that also backs the canonical
 	// GET /api/v1/analytics/period-stats handler — the AI
 	// narrator quotes the SAME deterministic per-period

@@ -1,4 +1,4 @@
-package api
+package periodstats
 
 import (
 	"context"
@@ -8,16 +8,17 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// PeriodStatsHandler serves period comparison analytics.
-type PeriodStatsHandler struct {
+// Handler serves period comparison analytics.
+type Handler struct {
 	db *database.DB
 }
 
-func NewPeriodStatsHandler(db *database.DB) *PeriodStatsHandler {
-	return &PeriodStatsHandler{db: db}
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{db: db}
 }
 
 // PeriodStats is the canonical period-stats envelope returned by
@@ -50,9 +51,9 @@ type PeriodStats struct {
 // historical handler so the SPA never sees a 500 caused by a
 // recent charging-table schema drift).
 //
-// Extracted from PeriodStatsHandler.Get so the AI period-compare-
-// narration adapter can ground its narration in the SAME
-// deterministic envelope the chart renders.
+// Extracted from Handler.Get so the AI period-compare-narration
+// adapter can ground its narration in the SAME deterministic envelope
+// the chart renders.
 func ComputePeriodStats(ctx context.Context, db *database.DB, vehicleID int64, days int) (PeriodStats, error) {
 	dateFilter := ""
 	if days > 0 {
@@ -127,15 +128,15 @@ func ComputePeriodStats(ctx context.Context, db *database.DB, vehicleID int64, d
 	}, nil
 }
 
-func (h *PeriodStatsHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
-	vehicleID, err := parseInt64(vehicleIDStr)
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -145,11 +146,11 @@ func (h *PeriodStatsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	stats, err := ComputePeriodStats(r.Context(), h.db, vehicleID, days)
 	if err != nil {
 		log.Error().Err(err).Msg("period-stats: drives query")
-		writeError(w, http.StatusInternalServerError, "failed to query period stats")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query period stats")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"total_distance": stats.TotalDistance,
 		"total_drives":   stats.TotalDrives,
 		"energy_used":    stats.EnergyUsed,

@@ -64,6 +64,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
+	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -338,7 +339,7 @@ var _ http.Handler = (*AIPeriodCompareNarrationHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIPeriodCompareSource is the production forecast.PeriodComparator.
-// It delegates to the SHARED api.ComputePeriodStats helper that
+// It delegates to the SHARED apiperiod.ComputePeriodStats helper that
 // also backs the canonical GET /api/v1/analytics/period-stats
 // handler so the AI narration is grounded in the SAME
 // deterministic aggregate the chart on /period-compare renders.
@@ -366,7 +367,7 @@ func NewAIPeriodCompareSource(db *database.DB) *AIPeriodCompareSource {
 }
 
 // ComparePeriods implements forecast.PeriodComparator. Composes the
-// SAME api.ComputePeriodStats helper *PeriodStatsHandler.Get uses
+// SAME apiperiod.ComputePeriodStats helper *periodstats.Handler.Get uses
 // (called once per period window) so the returned envelope is
 // numerically identical (modulo rounding) to what GET
 // /api/v1/analytics/period-stats produces — the AI surface is
@@ -382,11 +383,11 @@ func (a *AIPeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID in
 		return nil, errors.New("api ai period-compare-narration: vehicle_id must be > 0")
 	}
 
-	statsA, err := ComputePeriodStats(ctx, a.db, vehicleID, daysA)
+	statsA, err := apiperiod.ComputePeriodStats(ctx, a.db, vehicleID, daysA)
 	if err != nil {
 		return nil, fmt.Errorf("api ai period-compare-narration: ComputePeriodStats(period_a): %w", err)
 	}
-	statsB, err := ComputePeriodStats(ctx, a.db, vehicleID, daysB)
+	statsB, err := apiperiod.ComputePeriodStats(ctx, a.db, vehicleID, daysB)
 	if err != nil {
 		return nil, fmt.Errorf("api ai period-compare-narration: ComputePeriodStats(period_b): %w", err)
 	}
