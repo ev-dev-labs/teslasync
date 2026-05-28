@@ -237,3 +237,5 @@ aae77fbea4d38cefa5c4d9b90accf93584375589 # refactor(R2d.15): carve internal/api/
 cc38438f002ee94e1e5e1f90960cd8cd09648d1c # refactor(R2d.16): carve internal/api/tco subpackage
 5daf2b00fe4c69bb5f4ca733cf88124d3acec355 # refactor(R2d.19): carve internal/api/onboarding subpackage
 c251f65e11e8f03698200cde9ceecf5dd6b51e5d # refactor(R2d.18): carve internal/api/teslauserprofile subpackage
+d73bdf33f86506e98298ff21e92a55a0f3e32430 # refactor(R2d.20): carve internal/api/trip subpackage
+4eceff2d87bfa8775a7598be8d7990804d46ef64 # refactor(R2d.21): carve internal/api/webhookreceiver subpackage

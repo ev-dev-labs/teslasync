@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T21:33:05Z, Go go1.26.1, commit 86f5b3d61fe98d9b7ea43a7f5e0b43adcd272fe4_
+_Generated 2026-05-28T21:43:57Z, Go go1.26.1, commit 632b0e3ff6b05393fb9f950b85ed8e919cbac90c_
 
 ## Summary
 
-- Packages: 323
+- Packages: 325
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 377716
+- Total non-blank LOC under cmd/+internal/+tools/: 377730
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-28T21:33:05Z, Go go1.26.1, commit 86f5b3d61fe98d9b7ea43a7f5e0
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 237 | 148 | 112220 | yes | handler |
+| internal/api | 235 | 147 | 111837 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
 | internal/api/apicalllog | 2 | 0 | 69 | yes | handler |
 | internal/api/apiparams | 2 | 1 | 358 | yes | handler |
@@ -196,6 +196,7 @@ _Generated 2026-05-28T21:33:05Z, Go go1.26.1, commit 86f5b3d61fe98d9b7ea43a7f5e0
 | internal/api/synthetic | 2 | 0 | 40 | yes | handler |
 | internal/api/tco | 3 | 1 | 506 | yes | handler |
 | internal/api/teslauserprofile | 2 | 0 | 96 | yes | handler |
+| internal/api/trip | 2 | 0 | 106 | yes | handler |
 | internal/api/vehicle | 2 | 1 | 616 | yes | handler |
 | internal/api/vehicleaccess | 2 | 0 | 448 | yes | handler |
 | internal/api/vehicleconfig | 2 | 1 | 527 | yes | handler |
@@ -204,6 +205,7 @@ _Generated 2026-05-28T21:33:05Z, Go go1.26.1, commit 86f5b3d61fe98d9b7ea43a7f5e0
 | internal/api/vehiclesettings | 2 | 1 | 850 | yes | handler |
 | internal/api/vehiclestates | 2 | 1 | 758 | yes | handler |
 | internal/api/visitedlocation | 2 | 0 | 64 | yes | handler |
+| internal/api/webhookreceiver | 2 | 1 | 291 | yes | handler |
 | internal/api/weeklydigest | 2 | 0 | 92 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1849 | yes | app |
@@ -379,7 +381,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 237 / 148 | 59 | 8 | 51 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 235 / 147 | 59 | 9 | 50 |
 
 ### `internal/models` detail
 
@@ -493,6 +495,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/dataquality`
 - `internal/api/search`
 - `internal/api/vehicle`
+- `internal/api/trip`
 - `internal/api/notification`
 - `internal/api/onboarding`
 
@@ -518,7 +521,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/vehiclesys`
 - `internal/api/charging`
 - `internal/api/drive`
-- `internal/api/trip`
 - `internal/api/telemetry`
 - `internal/api/fleet`
 - `internal/api/energy`

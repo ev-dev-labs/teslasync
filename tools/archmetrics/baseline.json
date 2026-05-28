@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T21:33:04Z",
+  "generated_at": "2026-05-28T21:43:56Z",
   "go_version": "go1.26.1",
-  "commit_sha": "86f5b3d61fe98d9b7ea43a7f5e0b43adcd272fe4",
+  "commit_sha": "632b0e3ff6b05393fb9f950b85ed8e919cbac90c",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 237,
-      "test_files": 148,
-      "loc": 112220,
+      "go_files": 235,
+      "test_files": 147,
+      "loc": 111837,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2643,6 +2643,7 @@
         "internal/api/synthetic",
         "internal/api/tco",
         "internal/api/teslauserprofile",
+        "internal/api/trip",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
         "internal/api/vehicleconfig",
@@ -2651,6 +2652,7 @@
         "internal/api/vehiclesettings",
         "internal/api/vehiclestates",
         "internal/api/visitedlocation",
+        "internal/api/webhookreceiver",
         "internal/api/weeklydigest",
         "internal/apilog",
         "internal/app/adminobssvc",
@@ -2666,7 +2668,6 @@
         "internal/automation/action",
         "internal/automation/condition",
         "internal/automation/presets",
-        "internal/automation/trigger",
         "internal/cache",
         "internal/config",
         "internal/crypto",
@@ -3123,7 +3124,6 @@
         "tire_pressure_handler_test.go",
         "totp_handler.go",
         "totp_handler_test.go",
-        "trip_handler.go",
         "trip_planner_handler.go",
         "trip_planner_handler_compute.go",
         "trip_planner_handler_dtos.go",
@@ -3141,8 +3141,6 @@
         "web_vitals_handler.go",
         "web_vitals_handler_test.go",
         "webhook_handler.go",
-        "webhook_receiver_handler.go",
-        "webhook_receiver_handler_test.go",
         "year_review_handler.go"
       ]
     },
@@ -3605,6 +3603,24 @@
       ]
     },
     {
+      "path": "internal/api/trip",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 106,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/trip"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
       "path": "internal/api/vehicle",
       "go_files": 2,
       "test_files": 1,
@@ -3759,6 +3775,24 @@
       "files": [
         "doc.go",
         "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/webhookreceiver",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 291,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/automation/trigger",
+        "internal/models"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -7707,7 +7741,6 @@
       "tesla_user_order_handler.go",
       "tire_pressure_handler.go",
       "totp_handler.go",
-      "trip_handler.go",
       "trip_planner_handler.go",
       "trip_planner_handler_compute.go",
       "trip_planner_handler_dtos.go",
@@ -7719,7 +7752,6 @@
       "web_errors_handler.go",
       "web_vitals_handler.go",
       "webhook_handler.go",
-      "webhook_receiver_handler.go",
       "year_review_handler.go"
     ],
     "internal/api/apibulk": [
@@ -7833,6 +7865,10 @@
       "doc.go",
       "handler.go"
     ],
+    "internal/api/trip": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/vehicle": [
       "doc.go",
       "handler.go"
@@ -7862,6 +7898,10 @@
       "handler.go"
     ],
     "internal/api/visitedlocation": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/webhookreceiver": [
       "doc.go",
       "handler.go"
     ],
@@ -8980,8 +9020,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 237,
-      "flat_parent_test_files": 148,
+      "flat_parent_go_files": 235,
+      "flat_parent_test_files": 147,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",
@@ -8990,6 +9030,7 @@
         "dataquality",
         "search",
         "vehicle",
+        "trip",
         "notification",
         "onboarding"
       ],
@@ -9015,7 +9056,6 @@
         "vehiclesys",
         "charging",
         "drive",
-        "trip",
         "telemetry",
         "fleet",
         "energy",
