@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
+	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 )
 
 // setupTestRouter creates a minimal chi router for testing health endpoints
@@ -67,7 +68,7 @@ func TestSecurityHeadersMiddleware(t *testing.T) {
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
-	handler := SecurityHeadersMiddleware(inner)
+	handler := apimw.SecurityHeaders(inner)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -103,7 +104,7 @@ func TestSecurityHeadersMiddleware_PassesThrough(t *testing.T) {
 		called = true
 		w.WriteHeader(http.StatusTeapot)
 	})
-	handler := SecurityHeadersMiddleware(inner)
+	handler := apimw.SecurityHeaders(inner)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/test", nil)
@@ -123,7 +124,7 @@ func TestRecoveryMiddleware_NoPanic(t *testing.T) {
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"ok": "true"})
 	})
-	handler := RecoveryMiddleware(inner)
+	handler := apimw.Recovery(inner)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/safe", nil)
@@ -136,7 +137,7 @@ func TestRecoveryMiddleware_CatchesPanic(t *testing.T) {
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("something went wrong")
 	})
-	handler := RecoveryMiddleware(inner)
+	handler := apimw.Recovery(inner)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/panic", nil)

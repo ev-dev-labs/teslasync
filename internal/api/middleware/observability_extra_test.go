@@ -1,4 +1,4 @@
-package api
+package middleware
 
 import (
 	"net/http"
@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-// Tests that complement the existing api_test.go middleware coverage.
+// Tests that complement the metrics_test.go middleware coverage.
 
 func TestSecurityHeadersPresence(t *testing.T) {
-	handler := SecurityHeadersMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := SecurityHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -40,7 +40,7 @@ func TestSecurityHeadersPresence(t *testing.T) {
 }
 
 func TestSecurityHeadersCSPPresent(t *testing.T) {
-	handler := SecurityHeadersMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := SecurityHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
@@ -55,7 +55,7 @@ func TestSecurityHeadersCSPPresent(t *testing.T) {
 }
 
 func TestRecoveryMiddlewareCatchesPanic(t *testing.T) {
-	handler := RecoveryMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := Recovery(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		panic("boom")
 	}))
 
@@ -69,7 +69,7 @@ func TestRecoveryMiddlewareCatchesPanic(t *testing.T) {
 }
 
 func TestRecoveryMiddlewareNoEffect(t *testing.T) {
-	handler := RecoveryMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := Recovery(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("fine"))
 	}))
@@ -85,7 +85,7 @@ func TestRecoveryMiddlewareNoEffect(t *testing.T) {
 
 func TestLoggerMiddlewareCallsNext(t *testing.T) {
 	called := false
-	handler := LoggerMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := Logger(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true
 		w.WriteHeader(http.StatusOK)
 	}))

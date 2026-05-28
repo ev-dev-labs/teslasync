@@ -1,7 +1,13 @@
 // Package apitest provides shared HTTP test helpers used across the
 // internal/api package and its R2a-R2e wave subpackages.
 //
-// Layer: handler-test
+// Layer: handler
+//
+// (Test helpers for the handler layer — the arch test enforces a closed
+// set of layer names {domain, port, adapter, app, handler, platform,
+// cmd-internal, tool}; "handler-test" is not in the set, and the cleanest
+// classification for a pure-test helper package whose only purpose is to
+// support handler tests is "handler".)
 //
 // # Why this subpackage exists
 //
@@ -58,4 +64,4 @@
 // assertion in 1-2 places, just inline it.
 package apitest
 
-// Layer: handler-test
+// Layer: handler

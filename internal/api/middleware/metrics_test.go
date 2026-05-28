@@ -1,4 +1,4 @@
-package api
+package middleware
 
 import (
 	"context"
@@ -16,8 +16,7 @@ import (
 
 // redCounterValue reads the float64 scalar of a CounterVec child for the
 // given label combination. Returns 0 when the child has not yet been
-// observed. Named distinctly from counterValue() in
-// api_call_log_middleware_test.go to avoid same-package collisions.
+// observed.
 func redCounterValue(t *testing.T, cv *prometheus.CounterVec, lvs ...string) float64 {
 	t.Helper()
 	c, err := cv.GetMetricWithLabelValues(lvs...)
@@ -82,7 +81,7 @@ func TestStatusClass(t *testing.T) {
 
 func TestRouteLabel_UsesChiPattern(t *testing.T) {
 	r := chi.NewRouter()
-	r.Use(MetricsMiddleware)
+	r.Use(Metrics)
 
 	var observed string
 	r.Get("/api/v1/widgets/{widgetID}", func(w http.ResponseWriter, r *http.Request) {
@@ -130,7 +129,7 @@ func TestMetricsMiddleware_HappyPath(t *testing.T) {
 	beforeDur := redHistogramSampleCount(t, method, route)
 
 	r := chi.NewRouter()
-	r.Use(MetricsMiddleware)
+	r.Use(Metrics)
 	r.Get(route, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("ok"))
@@ -175,7 +174,7 @@ func TestMetricsMiddleware_ErrorPath(t *testing.T) {
 	beforeDur := redHistogramSampleCount(t, method, route)
 
 	r := chi.NewRouter()
-	r.Use(MetricsMiddleware)
+	r.Use(Metrics)
 	r.Post(route, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)
 	})
@@ -218,7 +217,7 @@ func TestMetricsMiddleware_ClientErrorIsNotErrorBucket(t *testing.T) {
 	beforeErr := redCounterValue(t, redHTTPRequestErrorsTotal, method, route, "4xx")
 
 	r := chi.NewRouter()
-	r.Use(MetricsMiddleware)
+	r.Use(Metrics)
 	r.Get(route, func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusForbidden)
 	})
@@ -258,7 +257,7 @@ func failingHandler() http.Handler {
 }
 
 // TestMetricsMiddleware_RecordsAfterPanic asserts that even when the inner
-// handler panics, MetricsMiddleware's deferred record fires and the request
+// handler panics, Metrics's deferred record fires and the request
 // is counted as 5xx.
 func TestMetricsMiddleware_RecordsAfterPanic(t *testing.T) {
 	const route = "/test/panic"
@@ -268,7 +267,7 @@ func TestMetricsMiddleware_RecordsAfterPanic(t *testing.T) {
 	beforeErr := redCounterValue(t, redHTTPRequestErrorsTotal, method, route, "5xx")
 
 	r := chi.NewRouter()
-	r.Use(MetricsMiddleware)
+	r.Use(Metrics)
 	r.Get(route, failingHandler().ServeHTTP)
 
 	srv := httptest.NewServer(r)

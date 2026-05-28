@@ -17,6 +17,7 @@ import (
 
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
+	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
@@ -131,9 +132,9 @@ func newTestRouterWithLogger(t *testing.T, store APICallLogger, captureBodies bo
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
-	r.Use(TracingMiddleware)
-	r.Use(LoggerMiddleware)
-	r.Use(RecoveryMiddleware)
+	r.Use(apimw.Tracing)
+	r.Use(apimw.Logger)
+	r.Use(apimw.Recovery)
 	r.Use(APICallLogMiddleware(store, captureBodies, DefaultAPILogSkip))
 
 	// Skipped paths

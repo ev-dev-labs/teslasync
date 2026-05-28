@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apitest"
+	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -15,8 +16,8 @@ import (
 func acceptanceRouter() http.Handler {
 	r := chi.NewRouter()
 
-	r.Use(SecurityHeadersMiddleware)
-	r.Use(RecoveryMiddleware)
+	r.Use(apimw.SecurityHeaders)
+	r.Use(apimw.Recovery)
 
 	// Health endpoints — self-contained, no DB needed
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -145,7 +146,7 @@ func TestAcceptance_SecurityHeaders_OnAllResponses(t *testing.T) {
 
 func TestAcceptance_PanicRecovery(t *testing.T) {
 	r := chi.NewRouter()
-	r.Use(RecoveryMiddleware)
+	r.Use(apimw.Recovery)
 	r.Get("/boom", func(w http.ResponseWriter, r *http.Request) {
 		panic("kaboom")
 	})

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
@@ -223,12 +224,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Global middleware
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
-	r.Use(TracingMiddleware)
-	r.Use(LoggerMiddleware)
-	r.Use(RecoveryMiddleware)                    // Enhanced recovery that logs panics as structured errors
+	r.Use(apimw.Tracing)
+	r.Use(apimw.Logger)
+	r.Use(apimw.Recovery)                        // Enhanced recovery that logs panics as structured errors
 	r.Use(ErrorTrackingMiddleware(errorTracker)) // Centralized error aggregation
-	r.Use(PrometheusMiddleware)                  // Legacy {method,path,status} HTTP metrics (kept for back-compat dashboards)
-	r.Use(MetricsMiddleware)                     // RED metrics: http_requests_total / http_request_errors_total / http_request_duration_seconds with status_class
+	r.Use(apimw.Prometheus)                      // Legacy {method,path,status} HTTP metrics (kept for back-compat dashboards)
+	r.Use(apimw.Metrics)                         // RED metrics: http_requests_total / http_request_errors_total / http_request_duration_seconds with status_class
 	// Conditionally apply chi's Compress middleware. We MUST bypass it for
 	// Server-Sent Events: chi v5.0.12's compressor wraps the response writer
 	// and calls .Flush() on its internal encoder. When the response Content-
@@ -270,7 +271,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}))
 
 	// Security headers (clickjacking, MIME sniffing, CSP, HSTS, etc.)
-	r.Use(SecurityHeadersMiddleware)
+	r.Use(apimw.SecurityHeaders)
 
 	// Request body size limit (1 MB default). The vehicle photo
 	// upload endpoint legitimately ships up to ~12 MB (8 MB image

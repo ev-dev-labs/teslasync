@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T18:00:07Z",
+  "generated_at": "2026-05-28T18:13:50Z",
   "go_version": "go1.26.1",
-  "commit_sha": "a59f2cf10057a4be617ed7c949cb8ced378963a6",
+  "commit_sha": "d6421cb68364b1a34636ba8c161926b798ea275b",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 271,
-      "test_files": 163,
-      "loc": 126260,
+      "go_files": 270,
+      "test_files": 161,
+      "loc": 125584,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2621,6 +2621,7 @@
         "internal/api/apiparams",
         "internal/api/apitest",
         "internal/api/httpx",
+        "internal/api/middleware",
         "internal/apilog",
         "internal/app/adminobssvc",
         "internal/app/auditviewersvc",
@@ -3014,8 +3015,6 @@
         "media_handler_test.go",
         "metrics.go",
         "middleware.go",
-        "middleware_extra_test.go",
-        "middleware_metrics_test.go",
         "middleware_test.go",
         "mileage_handler.go",
         "mileage_handler_test.go",
@@ -3064,7 +3063,6 @@
         "scheduled_exports_handler_test.go",
         "search_handler.go",
         "search_handler_test.go",
-        "security.go",
         "security_handler.go",
         "security_handler_test.go",
         "security_validation_test.go",
@@ -3190,8 +3188,9 @@
       "path": "internal/api/apitest",
       "go_files": 2,
       "test_files": 0,
-      "loc": 131,
+      "loc": 137,
       "has_doc_go": true,
+      "layer": "handler",
       "imports": null,
       "files": [
         "apitest.go",
@@ -3214,6 +3213,26 @@
         "json_test.go",
         "tesla.go",
         "tesla_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/middleware",
+      "go_files": 4,
+      "test_files": 2,
+      "loc": 763,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/metrics"
+      ],
+      "files": [
+        "doc.go",
+        "metrics_test.go",
+        "observability.go",
+        "observability_extra_test.go",
+        "prometheus.go",
+        "security.go"
       ]
     },
     {
@@ -7122,7 +7141,6 @@
       "saved_views_handler.go",
       "scheduled_exports_handler.go",
       "search_handler.go",
-      "security.go",
       "security_handler.go",
       "session_handler.go",
       "settings_export_handler.go",
@@ -7205,6 +7223,12 @@
       "doc.go",
       "json.go",
       "tesla.go"
+    ],
+    "internal/api/middleware": [
+      "doc.go",
+      "observability.go",
+      "prometheus.go",
+      "security.go"
     ],
     "internal/apilog": [
       "async.go",
@@ -8317,8 +8341,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 271,
-      "flat_parent_test_files": 163,
+      "flat_parent_go_files": 270,
+      "flat_parent_test_files": 161,
       "planned_subpkgs": 59,
       "existing_subpkgs": null,
       "missing_subpkgs": [

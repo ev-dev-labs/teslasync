@@ -1,11 +1,11 @@
-package api
+package middleware
 
 import "net/http"
 
-// SecurityHeadersMiddleware adds standard security headers to all HTTP responses.
+// SecurityHeaders adds standard security headers to all HTTP responses.
 // These headers protect against common web vulnerabilities including clickjacking,
 // MIME-type sniffing, XSS, and protocol downgrade attacks.
-func SecurityHeadersMiddleware(next http.Handler) http.Handler {
+func SecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Prevent MIME-type sniffing
 		w.Header().Set("X-Content-Type-Options", "nosniff")
