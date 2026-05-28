@@ -1,4 +1,4 @@
-package api
+package weberrors
 
 import (
 	"encoding/json"
@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	apivitals "github.com/ev-dev-labs/teslasync/internal/api/webvitals"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -97,27 +98,27 @@ type rollingErrorEntry struct {
 	route string
 }
 
-// WebErrorHandler accepts browser-side error reports and exposes a
+// Handler accepts browser-side error reports and exposes a
 // last-hour rolling summary for the admin panel. Both endpoints share a
 // single instance so the summary reflects ingested reports without
 // reaching back into Prometheus.
-type WebErrorHandler struct {
+type Handler struct {
 	mu      sync.Mutex
 	rolling []rollingErrorEntry
 	now     func() time.Time
 }
 
-// NewWebErrorHandler constructs a stateless ingest + summary handler.
+// NewHandler constructs a stateless ingest + summary handler.
 // `now` is injectable for deterministic tests; nil falls back to time.Now.
-func NewWebErrorHandler() *WebErrorHandler {
-	return &WebErrorHandler{now: time.Now}
+func NewHandler() *Handler {
+	return &Handler{now: time.Now}
 }
 
 // Ingest handles `POST /api/v1/web-errors`. Validates and bounds the
 // payload, increments `teslasync_web_errors_total`, records into the
 // rolling window, and emits an INFO-level structured log so operators
 // can grep for client errors without a Prometheus query.
-func (h *WebErrorHandler) Ingest(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Ingest(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	r.Body = http.MaxBytesReader(w, r.Body, webErrorsRequestBodyLimit)
 
@@ -126,13 +127,13 @@ func (h *WebErrorHandler) Ingest(w http.ResponseWriter, r *http.Request) {
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&rep); err != nil {
 		webErrorsRejectedTotal.WithLabelValues("invalid_payload").Inc()
-		writeError(w, http.StatusBadRequest, "invalid payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid payload")
 		return
 	}
 
 	if strings.TrimSpace(rep.Message) == "" && strings.TrimSpace(rep.Name) == "" {
 		webErrorsRejectedTotal.WithLabelValues("empty").Inc()
-		writeError(w, http.StatusBadRequest, "empty error report")
+		httpx.WriteError(w, http.StatusBadRequest, "empty error report")
 		return
 	}
 
@@ -160,7 +161,7 @@ func (h *WebErrorHandler) Ingest(w http.ResponseWriter, r *http.Request) {
 // Summary handles `GET /api/v1/admin/web-errors/summary` and returns
 // {window_seconds, total, top:[{name, route, count}], as_of}. The body
 // is small (top N capped) and safe to poll on the admin page.
-func (h *WebErrorHandler) Summary(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
 	now := h.callNow()
 	cutoff := now.Add(-webErrorSummaryWindow)
 
@@ -205,7 +206,7 @@ func (h *WebErrorHandler) Summary(w http.ResponseWriter, r *http.Request) {
 		buckets = buckets[:webErrorSummaryTopN]
 	}
 
-	writeJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"window_seconds": int(webErrorSummaryWindow.Seconds()),
 		"total":          len(snapshot),
 		"top":            buckets,
@@ -213,7 +214,7 @@ func (h *WebErrorHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (h *WebErrorHandler) recordRolling(name, route string) {
+func (h *Handler) recordRolling(name, route string) {
 	now := h.callNow()
 	cutoff := now.Add(-webErrorSummaryWindow)
 
@@ -229,7 +230,7 @@ func (h *WebErrorHandler) recordRolling(name, route string) {
 	h.rolling = append(kept, rollingErrorEntry{at: now, name: name, route: route})
 }
 
-func (h *WebErrorHandler) callNow() time.Time {
+func (h *Handler) callNow() time.Time {
 	if h.now != nil {
 		return h.now()
 	}

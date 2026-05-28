@@ -1,4 +1,4 @@
-package api
+package weberrors
 
 import (
 	"encoding/json"
@@ -22,7 +22,7 @@ func TestWebErrorsIngest_ValidReport(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	rr := httptest.NewRecorder()
 
-	NewWebErrorHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("want 204, got %d (body=%s)", rr.Code, rr.Body.String())
@@ -33,7 +33,7 @@ func TestWebErrorsIngest_InvalidJSON(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-errors", strings.NewReader("not-json"))
 	rr := httptest.NewRecorder()
 
-	NewWebErrorHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d", rr.Code)
@@ -48,7 +48,7 @@ func TestWebErrorsIngest_EmptyReport(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-errors", strings.NewReader(body))
 	rr := httptest.NewRecorder()
 
-	NewWebErrorHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d (body=%s)", rr.Code, rr.Body.String())
@@ -63,7 +63,7 @@ func TestWebErrorsIngest_RejectsUnknownFields(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-errors", strings.NewReader(body))
 	rr := httptest.NewRecorder()
 
-	NewWebErrorHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d", rr.Code)
@@ -78,7 +78,7 @@ func TestWebErrorsIngest_BodyTooLargeRejected(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-errors", strings.NewReader(body))
 	rr := httptest.NewRecorder()
 
-	NewWebErrorHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusBadRequest {
 		t.Fatalf("want 400, got %d", rr.Code)
@@ -93,7 +93,7 @@ func TestWebErrorsIngest_LongStackAccepted(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-errors", strings.NewReader(body))
 	rr := httptest.NewRecorder()
 
-	NewWebErrorHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("want 204, got %d (body=%s)", rr.Code, rr.Body.String())
@@ -130,7 +130,7 @@ func TestWebErrorsIngest_UnknownNameBucketedAsOther(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/web-errors", strings.NewReader(body))
 	rr := httptest.NewRecorder()
 
-	NewWebErrorHandler().Ingest(rr, req)
+	NewHandler().Ingest(rr, req)
 
 	if rr.Code != http.StatusNoContent {
 		t.Fatalf("want 204, got %d", rr.Code)
@@ -141,7 +141,7 @@ func TestWebErrorsIngest_RouteNormalisedForLabelCardinality(t *testing.T) {
 	// /drives/123 must be normalised so the histogram doesn't grow a
 	// label per drive id. We assert on summary count rather than the
 	// internal label by recording a single ingest and reading it back.
-	h := NewWebErrorHandler()
+	h := NewHandler()
 	body := `{"name":"TypeError","message":"x","route":"/drives/12345"}`
 	req := httptest.NewRequest(http.MethodPost, "/web-errors", strings.NewReader(body))
 	rr := httptest.NewRecorder()
@@ -182,7 +182,7 @@ func TestWebErrorsSummary_RollingWindowEvictsOldEntries(t *testing.T) {
 	// and assert that an entry recorded "an hour ago" no longer appears
 	// in the summary.
 	now := time.Now()
-	h := &WebErrorHandler{now: func() time.Time { return now }}
+	h := &Handler{now: func() time.Time { return now }}
 
 	// Record at t0.
 	h.recordRolling("TypeError", "/dashboard")
@@ -204,7 +204,7 @@ func TestWebErrorsSummary_RollingWindowEvictsOldEntries(t *testing.T) {
 
 func TestWebErrorsSummary_TopNAndOrdering(t *testing.T) {
 	now := time.Now()
-	h := &WebErrorHandler{now: func() time.Time { return now }}
+	h := &Handler{now: func() time.Time { return now }}
 
 	// 3 distinct (name, route) buckets with different counts.
 	for i := 0; i < 5; i++ {
@@ -258,7 +258,7 @@ func TestWebErrorsSummary_TopNAndOrdering(t *testing.T) {
 
 // snapshotForTest exposes a copy of the rolling buffer (after eviction
 // sweep) so tests can assert on its contents without holding the lock.
-func (h *WebErrorHandler) snapshotForTest() []rollingErrorEntry {
+func (h *Handler) snapshotForTest() []rollingErrorEntry {
 	now := h.callNow()
 	cutoff := now.Add(-webErrorSummaryWindow)
 

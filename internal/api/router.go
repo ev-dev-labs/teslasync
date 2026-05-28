@@ -53,6 +53,7 @@ import (
 	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
 	apivehstates "github.com/ev-dev-labs/teslasync/internal/api/vehiclestates"
 	apivisloc "github.com/ev-dev-labs/teslasync/internal/api/visitedlocation"
+	apiwerr "github.com/ev-dev-labs/teslasync/internal/api/weberrors"
 	apiwhrx "github.com/ev-dev-labs/teslasync/internal/api/webhookreceiver"
 	apivitals "github.com/ev-dev-labs/teslasync/internal/api/webvitals"
 	apiweekly "github.com/ev-dev-labs/teslasync/internal/api/weeklydigest"
@@ -1977,7 +1978,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// — 50 reports/minute is generous without enabling spam). The
 	// summary endpoint below is admin-only and shares the same handler
 	// instance so the rolling-window state is consistent.
-	webErrorHandler := NewWebErrorHandler()
+	webErrorHandler := apiwerr.NewHandler()
 	r.With(
 		httprate.LimitByIP(50, 1*time.Minute),
 	).Post("/api/v1/web-errors", webErrorHandler.Ingest)
@@ -3842,7 +3843,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Admin: frontend error reporting summary (Phase 46 / Prompt 01).
-		// Last-hour rolling counts read from the same WebErrorHandler
+		// Last-hour rolling counts read from the same web error handler
 		// instance that the public /api/v1/web-errors POST endpoint
 		// writes to, so the summary stays in sync without going through
 		// Prometheus. Auth-protected by the parent /api/v1 ForwardAuth
