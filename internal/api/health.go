@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
@@ -27,13 +28,7 @@ import (
 // TESLASYNC_SYSTEM_MODE, "db" when an admin POSTed to
 // /admin/maintenance, "default" when neither is set. The SPA uses
 // `source == "env"` to disable the admin-panel write controls.
-type MaintenanceView struct {
-	Mode      string
-	Message   string
-	Until     *time.Time
-	UpdatedAt time.Time
-	Source    string
-}
+type MaintenanceView = apiadminmnt.MaintenanceView
 
 var startTime = time.Now()
 

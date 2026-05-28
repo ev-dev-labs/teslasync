@@ -1,4 +1,4 @@
-package api
+package adminmaintenance
 
 import (
 	"context"
@@ -73,7 +73,7 @@ func TestAdminMaintenanceGet(t *testing.T) {
 			UpdatedBy:          "alice",
 		},
 	}
-	h := NewAdminMaintenanceHandler(store, newTestCfg(), nil)
+	h := NewAdminMaintenanceHandler(store, newTestCfg())
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin/maintenance", nil)
@@ -93,7 +93,7 @@ func TestAdminMaintenanceGet(t *testing.T) {
 
 func TestAdminMaintenanceGetStoreErrorReturns500(t *testing.T) {
 	store := &fakeSystemStateStore{getErr: errors.New("boom")}
-	h := NewAdminMaintenanceHandler(store, newTestCfg(), nil)
+	h := NewAdminMaintenanceHandler(store, newTestCfg())
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/admin/maintenance", nil)
@@ -106,7 +106,7 @@ func TestAdminMaintenanceGetStoreErrorReturns500(t *testing.T) {
 
 func TestAdminMaintenanceSetHappyPath(t *testing.T) {
 	store := &fakeSystemStateStore{}
-	h := NewAdminMaintenanceHandler(store, newTestCfg(), nil)
+	h := NewAdminMaintenanceHandler(store, newTestCfg())
 
 	body := `{"mode":"maintenance","message":"upgrade","until":"2099-01-02T03:04:05Z"}`
 	rec := httptest.NewRecorder()
@@ -134,7 +134,7 @@ func TestAdminMaintenanceSetHappyPath(t *testing.T) {
 
 func TestAdminMaintenanceSetClearsOnOk(t *testing.T) {
 	store := &fakeSystemStateStore{}
-	h := NewAdminMaintenanceHandler(store, newTestCfg(), nil)
+	h := NewAdminMaintenanceHandler(store, newTestCfg())
 
 	body := `{"mode":"ok"}`
 	rec := httptest.NewRecorder()
@@ -151,7 +151,7 @@ func TestAdminMaintenanceSetClearsOnOk(t *testing.T) {
 
 func TestAdminMaintenanceSetRejectsInvalidMode(t *testing.T) {
 	store := &fakeSystemStateStore{}
-	h := NewAdminMaintenanceHandler(store, newTestCfg(), nil)
+	h := NewAdminMaintenanceHandler(store, newTestCfg())
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/admin/maintenance", strings.NewReader(`{"mode":"broken"}`))
@@ -167,7 +167,7 @@ func TestAdminMaintenanceSetRejectsInvalidMode(t *testing.T) {
 
 func TestAdminMaintenanceSetRejectsBadUntil(t *testing.T) {
 	store := &fakeSystemStateStore{}
-	h := NewAdminMaintenanceHandler(store, newTestCfg(), nil)
+	h := NewAdminMaintenanceHandler(store, newTestCfg())
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/admin/maintenance", strings.NewReader(`{"mode":"maintenance","until":"not-a-date"}`))
@@ -183,7 +183,7 @@ func TestAdminMaintenanceSetRejectsBadUntil(t *testing.T) {
 
 func TestAdminMaintenanceSetRejectsUnknownFields(t *testing.T) {
 	store := &fakeSystemStateStore{}
-	h := NewAdminMaintenanceHandler(store, newTestCfg(), nil)
+	h := NewAdminMaintenanceHandler(store, newTestCfg())
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/admin/maintenance", strings.NewReader(`{"mode":"ok","extra":"x"}`))
@@ -200,7 +200,7 @@ func TestAdminMaintenanceSetEnvOverrideSurfaced(t *testing.T) {
 		System: config.SystemConfig{Mode: "maintenance"},
 	}
 	store := &fakeSystemStateStore{}
-	h := NewAdminMaintenanceHandler(store, cfg, nil)
+	h := NewAdminMaintenanceHandler(store, cfg)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/admin/maintenance", strings.NewReader(`{"mode":"ok"}`))

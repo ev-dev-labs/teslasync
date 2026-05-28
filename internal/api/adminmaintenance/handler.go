@@ -1,4 +1,4 @@
-package api
+package adminmaintenance
 
 import (
 	"context"
@@ -11,8 +11,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 )
 
@@ -60,20 +60,33 @@ type SystemStateStore interface {
 // override is shadowing it on /system/health.
 type AdminMaintenanceHandler struct {
 	store   SystemStateStore
-	cfg     *config.Config
-	db      *database.DB
 	authHdr string
 	envMode string // captured at construction so the resolver and admin agree on env winner
+	audit   AuditFunc
 }
 
+// AuditFunc is the audit-logging callback shape expected by AdminMaintenanceHandler.
+type AuditFunc func(r *http.Request, headerName, action, resource string, entityID *int64, detail string)
+
+// Option mutates an AdminMaintenanceHandler during construction.
+type Option func(*AdminMaintenanceHandler)
+
+// WithAuditFunc installs the audit callback invoked after successful mutations.
+func WithAuditFunc(f AuditFunc) Option { return func(h *AdminMaintenanceHandler) { h.audit = f } }
+
 // NewAdminMaintenanceHandler wires the handler against the shared repo.
-// db is optional (used only for audit-log writes); cfg is required so
-// the audit actor can be derived from the configured ForwardAuth header.
-func NewAdminMaintenanceHandler(store SystemStateStore, cfg *config.Config, db *database.DB) *AdminMaintenanceHandler {
-	h := &AdminMaintenanceHandler{store: store, cfg: cfg, db: db}
+// cfg is optional; when present its ForwardAuth header attributes audit
+// rows and its system-mode env setting lets admin responses surface env overrides.
+func NewAdminMaintenanceHandler(store SystemStateStore, cfg *config.Config, opts ...Option) *AdminMaintenanceHandler {
+	h := &AdminMaintenanceHandler{store: store}
 	if cfg != nil {
 		h.authHdr = cfg.Auth.ForwardAuthHeader
 		h.envMode = strings.ToLower(strings.TrimSpace(cfg.System.Mode))
+	}
+	for _, opt := range opts {
+		if opt != nil {
+			opt(h)
+		}
 	}
 	return h
 }
@@ -99,21 +112,35 @@ type adminMaintenanceResponse struct {
 	EnvOverrideMode string  `json:"env_override_mode,omitempty"`
 }
 
+// MaintenanceView is the resolved service-mode snapshot returned by the
+// system-state provider closure passed into ExtendedHealthCheck. Source
+// indicates which input "won" — "env" when the operator set
+// TESLASYNC_SYSTEM_MODE, "db" when an admin POSTed to
+// /admin/maintenance, "default" when neither is set. The SPA uses
+// `source == "env"` to disable the admin-panel write controls.
+type MaintenanceView struct {
+	Mode      string
+	Message   string
+	Until     *time.Time
+	UpdatedAt time.Time
+	Source    string
+}
+
 // Get handles GET /admin/maintenance. Returns the current persisted
 // row plus a `source` marker that tells the SPA whether the env
 // override is currently shadowing the DB value.
 func (h *AdminMaintenanceHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "system state unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "system state unavailable")
 		return
 	}
 	state, err := h.store.Get(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("admin maintenance: failed to read system_state")
-		writeError(w, http.StatusInternalServerError, "failed to read system state")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read system state")
 		return
 	}
-	writeJSON(w, http.StatusOK, h.toResponse(state))
+	httpx.WriteJSON(w, http.StatusOK, h.toResponse(state))
 }
 
 // Set handles POST /admin/maintenance. Validates body, writes to the
@@ -121,7 +148,7 @@ func (h *AdminMaintenanceHandler) Get(w http.ResponseWriter, r *http.Request) {
 // reported with the conventional {error} JSON envelope.
 func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.store == nil {
-		writeError(w, http.StatusServiceUnavailable, "system state unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "system state unavailable")
 		return
 	}
 	defer r.Body.Close()
@@ -131,13 +158,13 @@ func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid payload")
 		return
 	}
 
 	mode, err := systemdb.ValidateSystemMode(req.Mode)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid mode (expected ok|degraded|maintenance)")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid mode (expected ok|degraded|maintenance)")
 		return
 	}
 
@@ -150,7 +177,7 @@ func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 	if req.Until != nil && strings.TrimSpace(*req.Until) != "" {
 		t, parseErr := time.Parse(time.RFC3339, strings.TrimSpace(*req.Until))
 		if parseErr != nil {
-			writeError(w, http.StatusBadRequest, "invalid until (expected RFC3339 timestamp)")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid until (expected RFC3339 timestamp)")
 			return
 		}
 		t = t.UTC()
@@ -172,15 +199,15 @@ func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 	state, err := h.store.Set(r.Context(), mode, message, untilTime, actor)
 	if err != nil {
 		if errors.Is(err, systemdb.ErrInvalidSystemMode) {
-			writeError(w, http.StatusBadRequest, "invalid mode (expected ok|degraded|maintenance)")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid mode (expected ok|degraded|maintenance)")
 			return
 		}
 		log.Error().Err(err).Msg("admin maintenance: failed to write system_state")
-		writeError(w, http.StatusInternalServerError, "failed to write system state")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to write system state")
 		return
 	}
 
-	if h.db != nil {
+	if h.audit != nil {
 		detail := fmt.Sprintf("mode=%s", state.Mode)
 		if state.MaintenanceMessage != "" {
 			detail += "; message_len=" + jsonSafeIntStr(len([]rune(state.MaintenanceMessage)))
@@ -188,10 +215,10 @@ func (h *AdminMaintenanceHandler) Set(w http.ResponseWriter, r *http.Request) {
 		if state.MaintenanceUntil != nil {
 			detail += "; until=" + state.MaintenanceUntil.UTC().Format(time.RFC3339)
 		}
-		logAuditFromRequest(h.db, r, h.authHdr, "system.maintenance.set", "system_state", nil, detail)
+		h.audit(r, h.authHdr, "system.maintenance.set", "system_state", nil, detail)
 	}
 
-	writeJSON(w, http.StatusOK, h.toResponse(state))
+	httpx.WriteJSON(w, http.StatusOK, h.toResponse(state))
 }
 
 // toResponse formats a SystemState into the JSON shape, layering on
@@ -280,6 +307,14 @@ func BuildMaintenanceProvider(store SystemStateStore, cfg *config.Config) func(c
 		}
 		return view
 	}
+}
+
+// actorFromRequest resolves the user identity for the system_state updated_by field.
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
 }
 
 // parseEnvUntil tolerates a malformed env value by returning nil so

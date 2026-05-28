@@ -16,6 +16,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
+	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
 	apianomaly "github.com/ev-dev-labs/teslasync/internal/api/anomaly"
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	apiflagsh "github.com/ev-dev-labs/teslasync/internal/api/apiflagsh"
@@ -2025,8 +2026,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// once here so the GET /system/health closure and the admin POST share
 	// the same store and env-vs-DB resolver semantics.
 	systemStateRepo := systemdb.NewSystemStateRepo(db)
-	adminMaintenanceHandler := NewAdminMaintenanceHandler(systemStateRepo, cfg, db)
-	maintenanceProvider := BuildMaintenanceProvider(systemStateRepo, cfg)
+	adminMaintenanceHandler := apiadminmnt.NewAdminMaintenanceHandler(
+		systemStateRepo,
+		cfg,
+		apiadminmnt.WithAuditFunc(func(r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
+		}),
+	)
+	maintenanceProvider := apiadminmnt.BuildMaintenanceProvider(systemStateRepo, cfg)
 
 	// Phase 46 / Prompt 08: in-app feedback widget. Repo is shared
 	// between the public POST ingest endpoint (rate-limited per
