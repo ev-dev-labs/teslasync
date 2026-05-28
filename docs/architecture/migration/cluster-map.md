@@ -1,12 +1,18 @@
-# Phase R — Cluster Map (R1 populated, R7 pending)
+# Phase R — Cluster Map (R1 + R7 populated)
 
-> **Status:** Backend audit populated in **R1** (this commit). Frontend
-> sections remain **SKELETON** awaiting R7 audit.
+> **Status:** Backend audit populated in **R1**. Frontend audit
+> populated in **R7**. Both halves now have concrete file-to-subpackage
+> mappings — no more `_TBD_` placeholders.
 >
-> **Source-of-truth coupling:** Every concrete target listed here MUST
-> also appear in `tools/archmetrics/main.go` `plannedSubpackages` so the
-> `arch-report` markdown reflects on-disk progress. When you add or
-> rename a target, update both files in the same commit.
+> **Source-of-truth coupling:**
+> - **Backend:** every concrete target listed here MUST also appear in
+>   `tools/archmetrics/main.go` `plannedSubpackages` so the
+>   `arch-report` markdown reflects on-disk progress. Update both
+>   files in the same commit.
+> - **Frontend:** progress is tracked via `eslint-plugin-boundaries`
+>   in `web/eslint.config.js` (report mode in R0–R12, enforced in
+>   R13). The plugin scans `.ts`/`.tsx` files and reports
+>   cross-boundary imports per the descriptors in that file.
 >
 > **Convention:** see ADR-011 §2-§7. Backend uses Option A short
 > idiomatic names with the alias suffix table; frontend uses category
@@ -418,75 +424,260 @@ Each subpackage row lists:
 
 ### `web/src/lib/` (104 files) — owner: **R11**
 
-- **Target subdirs:** _TBD per R7 audit; candidates include `format/`,
-  `geo/`, `dom/`, `calc/`, `data/`, `broadcast/`, `automation/`,
-  `ui/`, `csv/`, `time/`, `string/`, `validation/`._
-- **Public-entrypoint pattern:** allow direct imports from
-  `@/lib/format/date`, `@/lib/geo/distance`, etc. NO barrel
-  required (per rubber-duck #14; barrels strict only for
-  `components/*`).
-- **Risk notes:** Leaf dep for hooks AND widgets. Moved EARLIEST
-  in the frontend sequence to avoid double-touching downstream.
+- **Files moving out of parent:** 104
+- **Files staying in parent:** 0 — pure leaf utilities.
+  `web/src/lib/index.ts` is NOT created (per rubber-duck #14 — `lib/`
+  uses direct subpath imports for tree-shaking).
+- **Target subdirs: 13**
+
+| Subdir | Files | Source files |
+| --- | --- | --- |
+| `lib/format` | 12 | `currencyFormat.{ts,test.ts}`, `dateFormat.ts`, `datePresets.{ts,test.ts}`, `dateRange.ts`, `locale.ts`, `i18nDir.{ts,test.ts}`, `timezone.ts`, `numberFormat.ts`, `unitConversion.ts`, `unitInput.ts` |
+| `lib/geo` | 4 | `geo.ts`, `gpx.{ts,test.ts}`, `closestRoute.ts` |
+| `lib/calc` | 11 | `bucketing.ts`, `chargingAggregation.ts`, `drivesAggregation.ts`, `scoreScale.ts`, `preferredRange.ts`, `vehicleState.{ts,test.ts}`, `gear.{ts,test.ts}`, `metricSemantics.ts`, `signalObservation.ts` |
+| `lib/data` | 13 | `cleanNil.{ts,test.ts}`, `safeArray.ts`, `typeGuards.{ts,test.ts}`, `enums.{ts,test.ts}`, `parseEnums.{ts,test.ts}`, `parseSettingEnum.ts`, `fsm.ts`, `safetyEnum.{ts,test.ts}`, `settingsImportSchema.ts` |
+| `lib/storage` | 12 | `columnOrderStore.{ts,test.ts}`, `draftIndex.{ts,test.ts}`, `recentPages.{ts,test.ts}`, `searchHistory.ts`, `useLocalStorageSync.ts`, `titleStore.ts`, `cookieConsent.ts` |
+| `lib/broadcast` | 4 | `broadcast.ts`, `broadcastTopics.ts`, `queryBroadcast.ts`, `sseManager.ts` |
+| `lib/routing` | 3 | `routeMeta.ts`, `routePrefetch.ts`, `routeRegistry.ts` |
+| `lib/search` | 3 | `searchQuery.ts`, `commandRegistry.ts`, `commandFrecency.ts` |
+| `lib/errors` | 7 | `errorClassification.ts`, `errorMessage.ts`, `errorReporter.ts`, `report.ts`, `resilience.{ts,test.ts}`, `webVitalsReporter.ts` |
+| `lib/ui` | 16 | `cn.ts`, `colors.ts`, `vehicleColors.ts`, `tokens.ts`, `palettePrefix.ts`, `icons.ts`, `appIcon.ts`, `activityIcons.ts`, `chartA11y.ts`, `globalShortcuts.tsx`, `globalProgress.ts`, `tourLauncher.ts`, `tourRegistry.ts`, `notificationSound.ts`, `inlineHelpAllowlist.ts`, `touchTargetAllowlist.ts` |
+| `lib/csv` | 3 | `csvExport.ts`, `export.{ts,test.ts}` |
+| `lib/automation` | 7 | `automations.ts`, `automationSSE.ts`, `alertDrillthrough.{ts,test.ts}`, `confirmSilence.ts`, `signals.ts`, `signalCatalog.ts` |
+| `lib/security` | 6 | `maskValue.{ts,test.ts}`, `safeUUID.ts`, `certificate.{ts,test.ts}`, `teslaAuthRecovery.ts` |
+| `lib/async` | 2 | `pLimit.ts`, `constants.ts` |
+
+- **Public-entrypoint pattern:** direct imports from
+  `@/lib/format/dateFormat`, `@/lib/geo/distance`, etc. NO barrel.
+- **Risk notes:** Leaf dep for hooks AND widgets. Moved EARLIEST in
+  the frontend sequence to avoid double-touching downstream.
+- **Cross-subdir ambiguities to verify in R11:**
+  - `globalShortcuts.tsx` (only `.tsx` in `lib/`) placed under
+    `lib/ui` because it renders a JSX provider. Could alternatively
+    move to `@/components/keyboard/`.
+  - `signals.ts` + `signalCatalog.ts` placed under `lib/automation`
+    (they're used to declare alert/automation signal sources). If
+    R11 finds chart/widget callers dominate, flip to `lib/data`.
+  - `cookieConsent.ts` placed under `lib/storage` (it's a
+    persistence helper). Could move to `lib/ui`.
 
 ### `web/src/hooks/` (64 files) — owner: **R10**
 
-- **Target subdirs:** _TBD per R7 audit; candidates include `ui/`,
-  `data/`, `browser/`, `lifecycle/`, `formatting/`, `behavior/`._
+- **Files moving out of parent:** 64
+- **Files staying in parent:** 0 — same direct-import policy as lib.
+- **Target subdirs: 10**
+
+| Subdir | Files | Source files |
+| --- | --- | --- |
+| `hooks/ui` | 12 | `useBreadcrumbs.ts`, `useFaviconBadge.ts`, `useDynamicAppIcon.ts`, `useSidebarStyle.ts`, `useMotionPreference.ts`, `useGlobalProgress.ts`, `useMediaQuery.ts`, `useAnnouncer.ts`, `useTour.ts`, `useTitleBadge.ts`, `useDensitySync.ts`, `usePageTitle.ts` |
+| `hooks/behavior` | 14 | `useShortcutRegistry.ts`, `useKeyboardShortcuts.ts`, `useCommandRegistry.ts`, `useConfirm.ts`, `useNavigationGuard.ts`, `useDirtyForm.ts`, `useEditLease.ts`, `useFormDraft.ts`, `useSavedViewUrl.ts`, `useUrlState.ts`, `useInView.ts`, `useInfiniteScroll.ts`, `useBulkSelection.ts`, `useSortable.ts` |
+| `hooks/data` | 9 | `useFilteredList.ts`, `useDeferredFilter.ts`, `useActiveFilterChips.ts`, `useCompareWindow.ts`, `useRangeState.ts`, `useAsOfDate.ts`, `useHiddenSeries.ts`, `usePreferredRange.ts`, `useChangelog.ts` |
+| `hooks/formatting` | 5 | `useDateFormat.ts`, `useFormatting.ts`, `useUnits.ts`, `usePressureFormat.ts`, `useTimeFormatPreference.ts` |
+| `hooks/settings` | 2 | `useSettings.ts`, `useSelectedVehicle.ts` |
+| `hooks/live` | 9 | `useSSE.ts`, `useLiveConnection.ts`, `useRealtimeEvents.ts`, `useNotificationListener.ts`, `useVehicleLive.ts`, `useAutomationEvents.ts`, `useAdaptiveInterval.ts`, `useBackgroundJobs.ts`, `useTripReplay.ts` |
+| `hooks/ai` | 3 | `useAiEnabled.{ts,test.tsx}`, `useAiStream.ts` |
+| `hooks/system` | 7 | `useSessionMonitor.ts`, `useOnlineStatus.ts`, `useVersionWatcher.ts`, `useWebPush.ts`, `useCriticalAlertFlash.ts`, `useAchievementCelebrationPrefs.ts`, `useAlertContext.ts` |
+| `hooks/vehicle` | 1 | `useVehiclePaint.ts` |
+| `hooks/chart` | 2 | `useChartExport.ts`, `useChartPalette.ts` |
+
 - **Public-entrypoint pattern:** direct imports from
   `@/hooks/ui/useBreadcrumbs` etc. (same as `lib`).
 - **Risk notes:** Depends on `lib/` (move after R11).
+- **Note on AI scope:** `hooks/ai/useAiEnabled` is the gate every AI
+  component blank-checks. Per ADR-015 amendment §G3, this hook MUST
+  keep its `mode === 'off' → return { enabled: false }` early-return.
+  R10 acceptance: snapshot test of the hook's return shape pre/post.
 
 ### `web/src/api/hooks/` (67 files) — owner: **R8**
 
-- **Target subdirs:** Mirror the backend bounded contexts from R4
-  (each `useXxx.ts` lives in the subdir matching its
-  `internal/database/<x>/`).
+- **Files moving out of parent:** 65
+- **Files staying in parent:** 2 — `_toastHelpers.ts` (private
+  cross-hook util), `orphan-allowlist.ts` (audit allowlist).
+- **Target subdirs: 23** — each mirrors a backend bounded context
+  from R4 `internal/database/<x>/`.
+
+| Subdir | Files | Source files |
+| --- | --- | --- |
+| `api/hooks/achievements` | 1 | `useAchievementUnlocks.ts` |
+| `api/hooks/admin` | 9 | `useAdmin.ts`, `useFeatureFlags.ts`, `useImpersonation.ts`, `useOperatorConfidence.ts`, `useRbacMatrix.ts`, `useSystem.ts`, `useSystemDiagnostic.ts`, `useSystemQueues.ts`, `useApiHealth.ts` |
+| `api/hooks/ai` | 1 | `useAiUsage.ts` |
+| `api/hooks/alerts` | 5 | `useAlerts.ts`, `useAlertMessageHelpers.ts`, `useAnnotations.ts`, `useAnomalies.ts`, `useIncidents.ts` |
+| `api/hooks/analytics` | 1 | `useAnalytics.ts` |
+| `api/hooks/auth` | 5 | `useAuthMode.{ts,test.tsx}`, `useSessions.ts`, `useTOTP.ts`, `useGuard.ts` |
+| `api/hooks/automation` | 1 | `useAutomations.ts` |
+| `api/hooks/charging` | 1 | `useCharging.ts` |
+| `api/hooks/chatbot` | 1 | `useChat.ts` |
+| `api/hooks/commands` | 1 | `useCommands.ts` |
+| `api/hooks/dashboard` | 3 | `useDashboard.ts`, `useDashboardLayouts.ts`, `usePinned.ts` |
+| `api/hooks/drive` | 2 | `useDriving.ts`, `useTrips.ts` |
+| `api/hooks/energy` | 1 | `useEnergy.ts` |
+| `api/hooks/exports` | 2 | `useExports.{ts,test.tsx}` |
+| `api/hooks/feedback` | 1 | `useFeedback.ts` |
+| `api/hooks/locations` | 1 | `useLocations.ts` |
+| `api/hooks/notification` | 4 | `useNotificationChannels.{ts,test.tsx}`, `useNotifications.ts`, `usePush.ts` |
+| `api/hooks/onboarding` | 1 | `useOnboarding.ts` |
+| `api/hooks/saved_views` | 1 | `useSavedViews.ts` |
+| `api/hooks/search` | 1 | `useSearch.ts` |
+| `api/hooks/settings` | 4 | `useSettings.ts`, `useSettingsReset.ts`, `useAiSettings.ts`, `useSettingsBackup.ts` |
+| `api/hooks/sharing` | 1 | `useSharing.ts` |
+| `api/hooks/telemetry` | 8 | `useTelemetry.ts`, `useFleetTelemetry.ts`, `useSignals.ts`, `useFSM.ts`, `useIngestXRay.ts`, `useDLQ.ts`, `useLogStream.{ts,test.ts}` |
+| `api/hooks/user` | 1 | `useUser.ts` |
+| `api/hooks/vehicle` | 6 | `useVehicles.ts`, `useVehicleAccess.ts`, `useVehicleCommand.ts`, `useVehiclePhoto.ts`, `useVehicleSettings.ts`, `useVehicleSystems.ts` |
+| `api/hooks/watch` | 1 | `useWatch.ts` |
+| `api/hooks/optim` | 1 | `useOptimisticMutation.ts` |
+
 - **Public-entrypoint pattern:** direct imports from
-  `@/api/hooks/charging/useCharging`.
+  `@/api/hooks/charging/useCharging` etc.
 - **Risk notes:** Depends on `lib/` (R11) AND on knowing the
   backend's `internal/database/` subpkg names (R4). Move after both.
+- **Backend↔frontend coupling:** subdir names MUST stay synchronized
+  with `internal/database/*` from R4. CI check added in R8: every
+  `api/hooks/<x>` subdir name MUST appear in `internal/database/`
+  OR be an explicit frontend-only exception (admin, chatbot,
+  commands, optim, watch — listed in `tools/archmetrics/web_orphans.json`).
 
 ### `web/src/features/dashboard/widgets/` (121 files) — owner: **R9**
 
-- **Target subdirs:** _TBD per R7 audit; candidates include_
-  `battery/`, `charging/`, `climate/`, `drive/`, `energy/`,
-  `automation/`, `ai/`, `security/`, `vehicles/`, `alerts/`,
-  `system/`, `misc/`.
+- **Files moving out of parent:** 117 (excluding existing
+  `widgets/registry/` subdir which stays)
+- **Files staying in parent:** 4 — `registry.ts`, `types.ts`,
+  `WidgetShell.tsx`, `index.ts` (barrel)
+- **Target subdirs: 13**
+
+| Subdir | Files | Source widgets (count) |
+| --- | --- | --- |
+| `widgets/battery` | 11 | `BatteryCellsWidget`, `BatteryDegradationForecastWidget`, `BatteryDegradationTrendWidget`, `BatteryGaugeWidget`, `BatteryHealthAnalyticsWidget`, `BatteryRadialGaugeWidget`, `RangeBarWidget`, `RangeEstimateWidget`, `ProjectedRangeWidget`, `OdometerCounterWidget`, `VampireDrainWidget` |
+| `widgets/charging` | 12 | `ChargeCostTrackerWidget`, `ChargeHistoryWidget`, `ChargePlansWidget`, `ChargeSessionChartWidget`, `ChargeStatusWidget`, `ChargeStatusLiveWidget`, `ChargingOptimizerWidget`, `ChargingScheduleWidget`, `ChargingSessionDetailWidget`, `ChargingTelemetryWidget`, `SuperchargerHistoryWidget`, `WallConnectorWidget` |
+| `widgets/climate` | 4 | `ClimateControlPanelWidget`, `ClimateHistoryWidget`, `ClimateStatusWidget`, `WeatherAtCarWidget` |
+| `widgets/drive` | 17 | `DriveEfficiencyChartWidget`, `DriveScoreWidget`, `DriveScoreGaugeWidget`, `DriveTelemetryWidget`, `DrivetrainHealthWidget`, `DrivingCoachWidget`, `DrivingDynamicsWidget`, `RecentDrivesWidget`, `RecentDrivesListWidget`, `MileageStatsWidget`, `MonthlyMileageWidget`, `TripSummaryWidget`, `DestinationETAWidget`, `RouteEfficiencyWidget`, `SpeedHeatmapWidget`, `SpeedProfileWidget`, `RegenEfficiencyWidget` |
+| `widgets/energy` | 7 | `EnergyFlowWidget`, `EnergyFlowAnimatedWidget`, `EnergySiteInfoWidget`, `EnergyStatsWidget`, `LivePowerFlowWidget`, `PowerFlowHistoryWidget`, `SolarProductionWidget` |
+| `widgets/vehicle` | 13 | `DigitalTwinWidget`, `DigitalTwinMiniWidget`, `MaintenanceTrackerWidget`, `VehicleHeroWidget`, `VehicleHeroCardWidget`, `VehicleSpecsWidget`, `VehicleUpgradesWidget`, `WarrantyStatusWidget`, `MotorHistoryWidget`, `MotorPerformanceWidget`, `MediaHistoryWidget`, `MediaNowPlayingWidget`, `TirePressureHistoryWidget`, `TirePressureVisualWidget` |
+| `widgets/security` | 5 | `DoorWindowStatusWidget`, `GuardModeWidget`, `SafetyFeaturesWidget`, `SafetyHistoryWidget`, `SecurityStatusWidget`, `VehicleAccessWidget` |
+| `widgets/automation` | 2 | `AutomationHistoryWidget`, `AutomationStatusWidget` |
+| `widgets/alerts` | 3 | `AlertFeedWidget`, `AnomalyDetectorWidget`, `SentryEventLogWidget` |
+| `widgets/location` | 4 | `LocationFavoritesWidget`, `LocationMapWidget`, `PositionHeatmapWidget`, `GeofenceWidget` |
+| `widgets/signals` | 7 | `SignalCatalogWidget`, `SignalHealthWidget`, `SignalLogWidget`, `LiveSignalsWidget`, `LiveSignalSparklinesWidget`, `TelemetryErrorsWidget`, `StateTimelineWidget`, `FSMDistributionWidget` |
+| `widgets/system` | 14 | `SystemHealthWidget`, `UptimeMonitorWidget`, `VersionInfoWidget`, `MQTTStatusWidget`, `SubscriptionsWidget`, `BackupHistoryWidget`, `BackupMonitorWidget`, `APIUsageWidget`, `AuditLogWidget`, `ExportStatusWidget`, `NotificationStatsWidget`, `SoftwareUpdateHistoryWidget`, `SoftwareUpdateStatusWidget`, `ServiceStatusWidget`, `OnboardingChecklistWidget`, `SleepEfficiencyWidget`, `TelemetryErrorsWidget` *(or signals)*, `CommandHistoryWidget`, `CommandQuickActionsWidget` |
+| `widgets/summary` | 11 | `DashboardStatsWidget`, `LifetimeStatsWidget`, `CostBreakdownWidget`, `CostForecastWidget`, `WatchSummaryWidget`, `WeeklyDigestWidget`, `WeeklySummaryCardWidget`, `YearReviewWidget`, `RecentlyUnlockedAchievements`, `AnalyticsSummaryWidget`, `QuickNavWidget`, `FleetStatsWidget`, `FleetStatsBarWidget` |
+
 - **Existing `widgets/registry/` subdirectory** stays as-is.
 - **Public-entrypoint pattern:** widgets re-exported from
-  `features/dashboard/widgets/index.ts` barrel.
+  `features/dashboard/widgets/index.ts` barrel — `registry.ts` now
+  imports from each subdir via the barrel.
 - **Risk notes:** Imports from lib/hooks/api/hooks heavily. Move
   after R11/R10/R8.
+- **Heaviest subdirs:** `widgets/drive` (17), `widgets/system` (14),
+  `widgets/vehicle` (13) — all well under the ADR-011 §1 50-file
+  ceiling.
 
 ### `web/src/components/ai/` (61 files) — owner: **R12** *(per ADR-015 amendment)*
 
-- **Target subdirs:** _TBD per R7 audit; per-AI-feature subdirs._
+- **Files moving out of parent:** 53
+- **Files staying in parent:** 8 — `AIFeatureCard.tsx`,
+  `AiOutputPanel.tsx`, `AiLimitBanner.tsx`, `AIThinkingIndicator.tsx`,
+  `AIChatbotIndicator.tsx`, `withAiFeature.{tsx,test.tsx}`,
+  `ConfirmDialog.tsx`, plus new `index.ts` barrel
+- **Target subdirs: 12** — mirrors `internal/ai/tools/*` topic
+  partition 1:1
+
+| Subdir | Files | Source files |
+| --- | --- | --- |
+| `components/ai/alert` | 5 | `AIAlertTuningSuggestions`, `AICrossRuleConflictDetection`, `AIInboxAutoCategorization`, `AIQuietHoursSuggestion`, `AIAnomalyExplanations` |
+| `components/ai/automation` | 3 | `AINLAutomationBuilder`, `AIGeofenceAwareAutomationSuggestions`, `AISuggestNewGeofences` |
+| `components/ai/battery` | 4 | `AIBatteryHealthForecastNarrative`, `AILearnedAnomalyBaselines`, `AIRangePrediction`, `AIVampireDrainExplanation` |
+| `components/ai/charging` | 5 | `AIChargingCurveFingerprintClustering`, `AIChargingDiagnosis`, `AIMLChargingCurveClustering`, `AIPreheatPrecoolRecommender`, `AISmartChargeScheduleSuggestion` |
+| `components/ai/diagnostics` | 8 | `AIDataRepairSuggestions`, `AIIncidentTimelineSummarizer`, `AILogTraceSummarization`, `AIMqttSseInspectorExplanations`, `AIPredictiveMaintenance`, `AISoftwareUpdateChangelogSummarizer`, `AIStateMachineDebuggerNarrator`, `AITirePressureTrendReasoning` |
+| `components/ai/drive` | 7 | `AIDriveCoaching`, `AINLDriveSearch`, `AIRouteEfficiencySuggestions`, `AISpeedProfileInsights`, `AITripPlannerLLMAgent`, `AIAutoTripNameSuggestion`, `AICabinTemperatureImpactNarrative` |
+| `components/ai/forecast` | 4 | `AICostForecastNarration`, `AIPeriodCompareNarration`, `AITCONarration`, `AILifetimeStatsQA` |
+| `components/ai/location` | 1 | `AIAutoNameUnnamedLocations` |
+| `components/ai/nl` | 8 | `AINLAlertBuilder`, `AINLDashboardComposer`, `AINLGrafanaPanel`, `AINLSearch`, `AINLSqlPlayground`, `AISignalExplorerNlFilter`, `AIVoiceMode`, `AIWatchFaceNLResponse` |
+| `components/ai/safety` | 1 | `AISafetySettingExplainer` |
+| `components/ai/share` | 3 | `AIPiiRedactionSharedExports`, `AITripPostcardShareCardImageGeneration`, `AIVehiclePaintPreview` |
+| `components/ai/summary` | 4 | `AIDigestNarration`, `AIRAGHelp`, `AIYearReviewNarration`, `AIFeedbackQueueTriage` |
+
 - **Public-entrypoint pattern:** strict barrel
-  `components/ai/index.ts` (per rubber-duck #14 — barrels strict
-  for components).
+  `components/ai/index.ts` (NEW — created in R12) re-exports every
+  subdir's public components. External callers MUST import from
+  `@/components/ai` only — no deep imports.
+- **Parent retains:** the shared AI primitives
+  (`AIFeatureCard`, `AiOutputPanel`, `AiLimitBanner`,
+  `AIThinkingIndicator`, `AIChatbotIndicator`, `ConfirmDialog`) and
+  the AI guard HOC (`withAiFeature` + its test). Per ADR-015
+  amendment §G3, R12 must validate that **every component in every
+  subdir** is wrapped by `withAiFeature` — the audit script:
+  ```
+  grep -rL "withAiFeature" web/src/components/ai/*/
+  ```
+  MUST return zero matches.
 - **Risk notes:** ADR-015-amendment scope. AI guard wrapping
-  preserved.
+  preserved. Naming convention `AI*` prefix kept verbatim (per the
+  decision in ARCHITECTURE.md ADR-015 §G3 — `AI` prefix is the
+  visual marker for guarded components).
 
 ### `web/src/components/feedback/` (62 files) — owner: **R12**
 
-- **Target subdirs:** _TBD per R7 audit; candidates `loading/`,
-  `error/`, `empty/`, `alerts/`, `prompts/`._
+- **Files moving out of parent:** 61
+- **Files staying in parent:** 1 — `index.ts` (barrel)
+- **Target subdirs: 10**
+
+| Subdir | Files | Source files |
+| --- | --- | --- |
+| `feedback/loading` | 11 | `Spinner.tsx`, `Skeleton.tsx`, `ChartSkeleton.tsx`, `StatSkeleton.tsx`, `PageSkeleton.tsx`, `PageLoader.tsx`, `PageLoadSkeleton.{tsx,test.tsx}`, `TopProgress.tsx`, `SuspenseProgressBoundary.tsx`, `JobProgressDrawer.tsx` |
+| `feedback/errors` | 9 | `_ErrorState.tsx`, `ErrorBoundary.{tsx,test.tsx}`, `PageErrorBoundary.{tsx,test.tsx}`, `SectionErrorBoundary.{tsx,test.tsx}`, `ErrorDisplay.tsx`, `QueryError.tsx` |
+| `feedback/empty` | 2 | `EmptyState.tsx`, `EmptyStateThreshold.tsx` |
+| `feedback/banners` | 13 | `AlertBanner.tsx`, `BrowserCompatBanner.tsx`, `CookieConsentBanner.tsx`, `DraftRecoveryBanner.tsx`, `EditConflictBanner.tsx`, `ImpersonationBanner.{tsx,test.tsx}`, `LiveStaleDataBanner.tsx`, `MaintenanceBanner.tsx`, `NewVersionBanner.tsx`, `OfflineBanner.tsx`, `RateLimitBanner.tsx`, `TeslaReauthBanner.tsx`, `TimeMachineBanner.tsx` |
+| `feedback/modals` | 11 | `ChangelogModal.tsx`, `FeedbackModal.tsx`, `KeyboardShortcutsModal.tsx`, `ReauthDialog.{tsx,test.tsx}`, `SessionExpiredModal.tsx`, `SessionExpiringModal.tsx`, `DraftRestorePrompt.{tsx,test.tsx}`, `InstallPrompt.tsx`, `OnboardingWizard.tsx`, `ReleaseNotes.tsx` |
+| `feedback/toasts` | 4 | `Toast.{tsx,test.tsx}`, `AchievementUnlockedToast.tsx`, `AchievementUnlockListener.tsx`, `GotoIndicator.tsx` |
+| `feedback/guards` | 5 | `GuardedLink.tsx`, `NavigationGuardProvider.tsx`, `RequiresAuth.{tsx,test.tsx}` |
+| `feedback/tour` | 1 | `TourOverlay.tsx` |
+| `feedback/navigation` | 2 | `SkipToContent.tsx`, `ReloadPrompt.tsx` |
+| `feedback/inline` | 1 | `InlineCallout.tsx` |
+
 - **Public-entrypoint pattern:** strict barrel
-  `components/feedback/index.ts`.
+  `components/feedback/index.ts` (existing, refactored to re-export
+  from subdir barrels).
 
 ### `web/src/components/data-display/` (46 files) — owner: **R12**
 
-- **Target subdirs:** _TBD per R7 audit; candidates `metrics/`,
-  `cards/`, `tables/`, `lists/`, `timeline/`, `badges/`._
+- **Files moving out of parent:** 45
+- **Files staying in parent:** 1 — `index.ts` (barrel)
+- **Target subdirs: 7**
+
+| Subdir | Files | Source files |
+| --- | --- | --- |
+| `data-display/metrics` | 14 | `AnimatedNumber.tsx`, `MetricBar.tsx`, `MetricCard.tsx`, `StatCard.tsx`, `KpiOverviewCard.tsx`, `UsageCard.tsx`, `ProgressRing.tsx`, `Delta.{tsx,test.tsx}`, `BatteryDelta.tsx`, `InlineMetric.tsx`, `DriveScore.tsx`, `ScoreBadge.tsx`, `SeverityBadge.{tsx,test.tsx}` |
+| `data-display/cards` | 4 | `Avatar.tsx`, `ServiceStatus.tsx`, `KVList.tsx`, `UserCell.tsx` |
+| `data-display/tables` | 6 | `BulkActionsToolbar.tsx`, `BulkActionToolbar.tsx`, `ComparisonHeader.tsx`, `HistoryListRow.tsx`, `SavedViewMenu.tsx`, `DateGroupedList.tsx` |
+| `data-display/timeline` | 5 | `Timeline.tsx`, `TimelineItem.tsx`, `TimelineScrubber.tsx`, `TransitionArrow.tsx`, `RouteDisplay.tsx` |
+| `data-display/badges` | 8 | `StatusBadge.tsx`, `StatusDot.tsx`, `FSMBadge.tsx`, `SourceLayerBadge.tsx`, `FreshnessIndicator.tsx`, `DataFreshness.tsx`, `LiveIndicator.tsx`, `TimeStamp.tsx` |
+| `data-display/engines` | 5 | `InsightsEngine.{tsx,test.tsx}`, `PollingEngine.tsx`, `PlaybackControls.tsx`, `PlaybackSpeedMenu.tsx` |
+| `data-display/viz` | 2 | `TeslaCarViz.tsx`, `RecentActivityFeed.tsx` |
+
 - **Public-entrypoint pattern:** strict barrel
-  `components/data-display/index.ts`.
+  `components/data-display/index.ts` re-exports from subdir
+  barrels.
+- **Cross-subdir note:** `BulkActionsToolbar` + `BulkActionToolbar`
+  (singular vs plural) appear to be duplicates — R12 audit pass
+  MUST confirm and deprecate one before the move (do not move both
+  into the same subdir).
+- **Duplicate cleanup queue (R12):** any duplicate found above
+  becomes a separate cleanup commit before the move so the rename
+  history is clean.
 
 ## Acceptance criteria for this document
 
-This map is fleshed out as R1/R7 progress. By end of R7 every
-"_TBD per R7 audit_" placeholder above MUST be replaced with a
-concrete file-to-subpackage mapping, with each subpackage's file
-count noted.
+This map is fleshed out as R1/R7 progress. R1 + R7 are now both
+complete — every section above lists a concrete file-to-subpackage
+mapping with per-subpackage file counts.
 
-Per ADR-011 §1, no subpackage SHOULD exceed 50 files. If the audit
-shows a candidate cluster > 50 files, sub-split it.
+Per ADR-011 §1, no subpackage SHOULD exceed 50 files. The largest
+planned subpackages are:
+- Backend: `database/automation` (11), `api/telemetry` (16),
+  `api/ai/diagnostics` (16), `api/vehiclesys` (16) — all OK
+- Frontend: `widgets/drive` (17), `widgets/system` (~14),
+  `widgets/charging` (12), `data-display/metrics` (14) — all OK
+
+If any subsequent audit pass discovers a candidate cluster > 50
+files, sub-split it and update both this document AND
+`tools/archmetrics/main.go` `plannedSubpackages` in the same
+commit.
