@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T21:03:52Z",
+  "generated_at": "2026-05-28T21:06:41Z",
   "go_version": "go1.26.1",
-  "commit_sha": "1f8eb99b63ecf2f039afaccb77c1ec43b22366f8",
+  "commit_sha": "5d225fc2a5253c71e59759ab20e9805288302b1c",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 244,
+      "go_files": 243,
       "test_files": 151,
-      "loc": 113302,
+      "loc": 113255,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2637,6 +2637,7 @@
         "internal/api/signalinspect",
         "internal/api/signalscatalog",
         "internal/api/slo",
+        "internal/api/softwareupdate",
         "internal/api/synthetic",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
@@ -3079,7 +3080,6 @@
         "settings_reset_handler_test.go",
         "share_handler.go",
         "sleep_handler.go",
-        "software_update_handler.go",
         "speed_profile_handler.go",
         "sse_handler.go",
         "sse_handler_tracing_test.go",
@@ -3492,6 +3492,25 @@
       "imports": [
         "internal/api/httpx",
         "internal/slo"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/softwareupdate",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 63,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/system",
+        "internal/models/vehicle"
       ],
       "files": [
         "doc.go",
@@ -7573,7 +7592,6 @@
       "settings_reset_handler.go",
       "share_handler.go",
       "sleep_handler.go",
-      "software_update_handler.go",
       "speed_profile_handler.go",
       "sse_handler.go",
       "status_incidents_handler.go",
@@ -7705,6 +7723,10 @@
       "handler.go"
     ],
     "internal/api/slo": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/softwareupdate": [
       "doc.go",
       "handler.go"
     ],
@@ -8855,7 +8877,7 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 244,
+      "flat_parent_go_files": 243,
       "flat_parent_test_files": 151,
       "planned_subpkgs": 59,
       "existing_subpkgs": [

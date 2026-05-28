@@ -386,7 +386,7 @@ var _ http.Handler = (*AISoftwareUpdateChangelogSummarizerHandler)(nil)
 // /api/v1/vehicles/{id}/software-updates surface remains
 // reachable to the operator at all times — this adapter wraps
 // the SAME systemdb.SoftwareUpdateRepo.GetByVehicle the
-// canonical SoftwareUpdateHandler.GetByVehicle already serves,
+// canonical Handler.GetByVehicle already serves,
 // so the LLM and the operator see the SAME firmware history.
 // No new SQL is issued by this adapter; the read path is the
 // existing GetByVehicle method on SoftwareUpdateRepo. The
