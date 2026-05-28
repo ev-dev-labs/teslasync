@@ -18,7 +18,7 @@ package api
 //	open SSE writer (internal/ai/stream.New) to the HTTP response
 //	  ↓
 //	stash the export_type in ctx via
-//	  tools.WithScopedSharedExportRedactionWindow
+//	  export.WithScopedSharedExportRedactionWindow
 //	  ↓
 //	synthesise the user-message that scopes to the in-scope
 //	  export_type and instructs the tool sequence (draft →
@@ -34,7 +34,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the export_type in ctx via
-// tools.WithScopedSharedExportRedactionWindow BEFORE
+// export.WithScopedSharedExportRedactionWindow BEFORE
 // dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The
 // tools.draftExportRedactionPlan + tools.validateExportRedactionPlan
@@ -89,6 +89,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/export"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -111,7 +112,7 @@ const aiPiiRedactionSharedExportsMaxBodyBytes = 16 * 1024
 type aiPiiRedactionSharedExportsRequest struct {
 	// ExportType identifies the export the recommendation
 	// covers. Required, must be one of the values in
-	// tools.SharedExportTypes() ({account, analytics, backup,
+	// export.SharedExportTypes() ({account, analytics, backup,
 	// charging, drives, trips}).
 	ExportType string `json:"export_type"`
 }
@@ -144,7 +145,7 @@ type AIPiiRedactionSharedExportsHandler struct {
 //
 //	draft_export_redaction_plan AND
 //	validate_export_redaction_plan (registered by
-//	tools.RegisterPiiRedactionSharedExportsTools in
+//	export.RegisterPiiRedactionSharedExportsTools in
 //	router.go).
 //
 // strat:      the pii-redaction-shared-exports Strategy (one
@@ -179,7 +180,7 @@ func NewAIPiiRedactionSharedExportsHandler(
 
 // parsePiiRedactionSharedExportsRequest drains the body.
 // export_type is required and must appear in the canonical
-// allow-set tools.SharedExportTypes() — the validator catches an
+// allow-set export.SharedExportTypes() — the validator catches an
 // unknown value before the dispatcher is invoked. Absence /
 // invalid values surface as JSON 400 with a stable error key the
 // SPA can localise. Returns (req, true) when the body is
@@ -210,7 +211,7 @@ func parsePiiRedactionSharedExportsRequest(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusBadRequest, "export_type is required")
 		return req, false
 	}
-	allowed := tools.SharedExportTypes()
+	allowed := export.SharedExportTypes()
 	if !containsString(allowed, req.ExportType) {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("export_type must be one of %s", strings.Join(allowed, ", ")))
 		return req, false
@@ -248,7 +249,7 @@ func (h *AIPiiRedactionSharedExportsHandler) ServeHTTP(w http.ResponseWriter, r 
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, piiredactionsharedexports.FeatureID)
-	ctx = tools.WithScopedSharedExportRedactionWindow(ctx, tools.ScopedSharedExportRedactionWindow{
+	ctx = export.WithScopedSharedExportRedactionWindow(ctx, export.ScopedSharedExportRedactionWindow{
 		ExportType: req.ExportType,
 	})
 

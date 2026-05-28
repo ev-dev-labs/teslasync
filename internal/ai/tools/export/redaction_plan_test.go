@@ -13,13 +13,15 @@
 // matched scope ⇒ delegate. A future edit that bypasses any of
 // these gates would surface here.
 
-package tools
+package export
 
 import (
 	"context"
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -537,7 +539,7 @@ func TestValidateExportRedactionPlan_Execute_WarnsOnRecommendedModeDisagreement(
 
 func TestRegisterPiiRedactionSharedExportsTools_RegistersBothTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterPiiRedactionSharedExportsTools(r)
 	for _, name := range []string{"draft_export_redaction_plan", "validate_export_redaction_plan"} {
 		if _, ok := r.Get(name); !ok {

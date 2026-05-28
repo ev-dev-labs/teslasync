@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:05:08Z",
+  "generated_at": "2026-05-28T07:08:31Z",
   "go_version": "go1.26.1",
-  "commit_sha": "cf0424815f02fead7f92d7e5a10b436e652985dc",
+  "commit_sha": "8597dec026ffcc54c1843ffedf6eadc4cb8c079b",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 21,
-      "test_files": 19,
-      "loc": 14795,
+      "go_files": 20,
+      "test_files": 18,
+      "loc": 13553,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1913,8 +1913,6 @@
         "doc.go",
         "drive_coaching.go",
         "drive_coaching_test.go",
-        "export_redaction_plan.go",
-        "export_redaction_plan_test.go",
         "fuzz_schema_test.go",
         "help.go",
         "help_test.go",
@@ -1997,6 +1995,23 @@
         "doc.go",
         "stream_inspector.go",
         "stream_inspector_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/export",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1268,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/tools"
+      ],
+      "files": [
+        "doc.go",
+        "redaction_plan.go",
+        "redaction_plan_test.go"
       ]
     },
     {
@@ -2278,7 +2293,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126539,
+      "loc": 126541,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2353,6 +2368,7 @@
         "internal/ai/tools/alert",
         "internal/ai/tools/charge",
         "internal/ai/tools/diagnostic",
+        "internal/ai/tools/export",
         "internal/ai/tools/feedback",
         "internal/ai/tools/forecast",
         "internal/ai/tools/lifetime",
@@ -5989,7 +6005,6 @@
       "digest.go",
       "doc.go",
       "drive_coaching.go",
-      "export_redaction_plan.go",
       "help.go",
       "paint_preview.go",
       "redact_regex.go",
@@ -6017,6 +6032,10 @@
       "data_repair.go",
       "doc.go",
       "stream_inspector.go"
+    ],
+    "internal/ai/tools/export": [
+      "doc.go",
+      "redaction_plan.go"
     ],
     "internal/ai/tools/feedback": [
       "doc.go",
@@ -7306,8 +7325,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 21,
-      "flat_parent_test_files": 19,
+      "flat_parent_go_files": 20,
+      "flat_parent_test_files": 18,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

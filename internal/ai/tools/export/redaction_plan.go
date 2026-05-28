@@ -79,7 +79,7 @@
 // type cannot accidentally bypass the catalog and invent its
 // own categories.
 
-package tools
+package export
 
 import (
 	"context"
@@ -90,6 +90,7 @@ import (
 	"strings"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // sharedExportRedactionSourceManifest is the source-type string
@@ -475,7 +476,7 @@ func (t *draftExportRedactionPlan) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftExportRedactionPlan) InputSchema() json.RawMessage {
-	return CachedSchema(draftExportRedactionPlanInput{})
+	return tools.CachedSchema(draftExportRedactionPlanInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -492,7 +493,7 @@ func (t *draftExportRedactionPlan) RequiredScope() string { return "" }
 // allow-set that the validator's `oneof` tag would otherwise
 // duplicate-document.
 func (t *draftExportRedactionPlan) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[draftExportRedactionPlanInput](raw)
+	v, err := tools.ValidateStruct[draftExportRedactionPlanInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -620,7 +621,7 @@ func (t *validateExportRedactionPlan) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateExportRedactionPlan) InputSchema() json.RawMessage {
-	return CachedSchema(validateExportRedactionPlanInput{})
+	return tools.CachedSchema(validateExportRedactionPlanInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -638,7 +639,7 @@ func (t *validateExportRedactionPlan) RequiredScope() string { return "" }
 // recommended class is covered) happens in Execute so the
 // narrator can surface the full list of issues at once.
 func (t *validateExportRedactionPlan) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[validateExportRedactionPlanInput](raw)
+	v, err := tools.ValidateStruct[validateExportRedactionPlanInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -784,7 +785,7 @@ func catalogClassNamesHint(entry SharedExportPIICatalogEntry) string {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterPiiRedactionSharedExportsTools(r *Registry) {
+func RegisterPiiRedactionSharedExportsTools(r *tools.Registry) {
 	r.Register(&draftExportRedactionPlan{})
 	r.Register(&validateExportRedactionPlan{})
 }

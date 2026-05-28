@@ -128,6 +128,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/charge"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/export"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
@@ -2243,7 +2244,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// slice's tools never trigger an export and never touch the
 	// existing handlers. Registered AFTER the slice 0051 tools
 	// above so the registry's Names list grows deterministically.
-	tools.RegisterPiiRedactionSharedExportsTools(aiToolRegistry)
+	export.RegisterPiiRedactionSharedExportsTools(aiToolRegistry)
 	// pii-redaction-shared-exports handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
