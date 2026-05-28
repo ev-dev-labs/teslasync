@@ -19,7 +19,7 @@
 //  6. RegisterChargeCurveClustersTools installs both tools by
 //     canonical name on a fresh Registry.
 
-package tools
+package charge
 
 import (
 	"context"
@@ -28,6 +28,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
@@ -280,7 +281,7 @@ func TestQueryChargeCurveClusters_Mutates_IsFalse(t *testing.T) {
 
 func TestRegisterChargeCurveClustersTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterChargeCurveClustersTools(r, ChargeCurveClustersSources{
 		Trainer: mlchargingcurves.NewTrainer(&fakeChargeSessionSource{}),
 	})

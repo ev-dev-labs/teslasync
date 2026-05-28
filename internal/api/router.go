@@ -126,6 +126,7 @@ import (
 	yirnarration "github.com/ev-dev-labs/teslasync/internal/ai/strategies/yir-narration"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/charge"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
@@ -1718,7 +1719,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// exist in the lookback window). Tools registered BEFORE the
 	// handler is constructed so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	tools.RegisterChargeCurveClustersTools(aiToolRegistry, tools.ChargeCurveClustersSources{
+	charge.RegisterChargeCurveClustersTools(aiToolRegistry, charge.ChargeCurveClustersSources{
 		Trainer: mlchargingcurves.NewTrainer(NewAIChargingSessionSource(database.NewChargingRepo(db))),
 	})
 	// ml-charging-curve-clustering handler. One per process;

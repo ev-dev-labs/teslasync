@@ -91,7 +91,7 @@
 //   - "no duplicate write paths" → no save_*/update_*/delete_*
 //     tool exists in this slice; both tools are read-only.
 
-package tools
+package charge
 
 import (
 	"context"
@@ -100,6 +100,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 )
 
@@ -161,7 +162,7 @@ func (t *trainChargeCurveClusters) Description() string {
 
 // InputSchema implements [Tool].
 func (t *trainChargeCurveClusters) InputSchema() json.RawMessage {
-	return CachedSchema(trainChargeCurveClustersInput{})
+	return tools.CachedSchema(trainChargeCurveClustersInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -175,7 +176,7 @@ func (t *trainChargeCurveClusters) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *trainChargeCurveClusters) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[trainChargeCurveClustersInput](raw)
+	return tools.ValidateStruct[trainChargeCurveClustersInput](raw)
 }
 
 // Execute implements [Tool]. One trainer round-trip; no SQL is
@@ -223,7 +224,7 @@ func (q *queryChargeCurveClusters) Description() string {
 
 // InputSchema implements [Tool].
 func (q *queryChargeCurveClusters) InputSchema() json.RawMessage {
-	return CachedSchema(queryChargeCurveClustersInput{})
+	return tools.CachedSchema(queryChargeCurveClustersInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -237,7 +238,7 @@ func (q *queryChargeCurveClusters) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (q *queryChargeCurveClusters) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryChargeCurveClustersInput](raw)
+	return tools.ValidateStruct[queryChargeCurveClustersInput](raw)
 }
 
 // Execute implements [Tool]. Pure — no IO.
@@ -337,7 +338,7 @@ type ChargeCurveClustersSources struct {
 // ml-charging-curve-clustering slice's tools on r.
 //
 // Panics on duplicate registration (Registry.Register panics).
-func RegisterChargeCurveClustersTools(r *Registry, s ChargeCurveClustersSources) {
+func RegisterChargeCurveClustersTools(r *tools.Registry, s ChargeCurveClustersSources) {
 	r.Register(&trainChargeCurveClusters{trainer: s.Trainer})
 	r.Register(&queryChargeCurveClusters{})
 }

@@ -119,7 +119,7 @@ type AIMLChargingCurveHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	train_charge_curve_clusters + query_charge_curve_clusters
-//	(registered by tools.RegisterChargeCurveClustersTools in
+//	(registered by charge.RegisterChargeCurveClustersTools in
 //	router.go).
 //
 // strat:      the ml-charging-curve-clustering Strategy (one per

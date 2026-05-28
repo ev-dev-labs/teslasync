@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:58:29Z",
+  "generated_at": "2026-05-28T07:02:00Z",
   "go_version": "go1.26.1",
-  "commit_sha": "7d1dc0d4edac9001f911c5ba1081fd39ecdd87c8",
+  "commit_sha": "0bc48b30eb7f45920576b1f7b79ac14a4be0026a",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,15 +1882,14 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 23,
-      "test_files": 20,
-      "loc": 15829,
+      "go_files": 22,
+      "test_files": 19,
+      "loc": 15248,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/ai/provider",
         "internal/ai/rag",
-        "internal/ml/chargingcurves",
         "internal/models/alert",
         "internal/models/charging",
         "internal/models/drive",
@@ -1907,8 +1906,6 @@
         "builtins_test.go",
         "charge_curve_clustering.go",
         "charge_curve_clustering_test.go",
-        "charge_curve_clusters.go",
-        "charge_curve_clusters_test.go",
         "charging_diagnosis.go",
         "charging_diagnosis_test.go",
         "digest.go",
@@ -1960,6 +1957,24 @@
         "doc.go",
         "tuning.go",
         "tuning_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/charge",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 611,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/ml/chargingcurves",
+        "internal/models/charging"
+      ],
+      "files": [
+        "curve_clusters.go",
+        "curve_clusters_test.go",
+        "doc.go"
       ]
     },
     {
@@ -2249,7 +2264,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126536,
+      "loc": 126537,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2322,6 +2337,7 @@
         "internal/ai/stream",
         "internal/ai/tools",
         "internal/ai/tools/alert",
+        "internal/ai/tools/charge",
         "internal/ai/tools/diagnostic",
         "internal/ai/tools/feedback",
         "internal/ai/tools/forecast",
@@ -5954,7 +5970,6 @@
       "automation_builder.go",
       "builtins.go",
       "charge_curve_clustering.go",
-      "charge_curve_clusters.go",
       "charging_diagnosis.go",
       "digest.go",
       "doc.go",
@@ -5978,6 +5993,10 @@
       "builder.go",
       "doc.go",
       "tuning.go"
+    ],
+    "internal/ai/tools/charge": [
+      "curve_clusters.go",
+      "doc.go"
     ],
     "internal/ai/tools/diagnostic": [
       "cross_rule.go",
@@ -7269,8 +7288,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 23,
-      "flat_parent_test_files": 20,
+      "flat_parent_go_files": 22,
+      "flat_parent_test_files": 19,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",
