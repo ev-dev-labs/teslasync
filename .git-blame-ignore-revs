@@ -244,3 +244,9 @@ c9a209a98c9e74ce0b4e16b4dde80c1c2293a382 # refactor(R2d.23): carve internal/api/
 79e5df690de0f364d22247e84ae3498f066572e7 # refactor(R2d.24): carve internal/api/gasprice subpackage
 e1740a628bb8938fda7c8468b3576323c7382dad # refactor(R2d.25): carve internal/api/apikey subpackage
 f20f638dfe667b20d761efd0b950798ce57899d2 # refactor(R2d.26): carve internal/api/feedback subpackage
+
+0e758201b72d957586b8ebf9a2651969b7bfdd7d # refactor(R2d.27): carve internal/api/auth subpackage
+9f630e42f00e9062c0d567a03128338cbcd61692 # refactor(R2d.28): carve internal/api/teslaenergylivestatus subpackage
+04373b2ef778431e14d89675866cbd89cb646f17 # refactor(R2d.29): carve internal/api/periodstats subpackage
+0aade8293056e0037188284f39d948f29078a180 # refactor(R2d.30): carve internal/api/user subpackage
+c745a5a77cca212384ba10139a2afcb4f1204404 # refactor(R2d.31): carve internal/api/drivediagnostic subpackage
