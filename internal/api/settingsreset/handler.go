@@ -1,4 +1,4 @@
-package api
+package settingsreset
 
 // Phase-46 / Prompt 50 — Settings reset endpoint.
 //
@@ -35,9 +35,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
@@ -79,7 +81,7 @@ type settingsResetRequest struct {
 // RequireSudo upstream.
 func (h *SettingsResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	if h.repo == nil {
-		writeError(w, http.StatusInternalServerError, "settings reset: repo not configured")
+		httpx.WriteError(w, http.StatusInternalServerError, "settings reset: repo not configured")
 		return
 	}
 
@@ -98,11 +100,11 @@ func (h *SettingsResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 		} else {
 			var maxBytesErr *http.MaxBytesError
 			if errors.As(err, &maxBytesErr) {
-				writeError(w, http.StatusBadRequest,
+				httpx.WriteError(w, http.StatusBadRequest,
 					fmt.Sprintf("request body exceeds %d bytes", MaxSettingsResetBodyBytes))
 				return
 			}
-			writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+			httpx.WriteError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
 			return
 		}
 	}
@@ -113,17 +115,17 @@ func (h *SettingsResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	} else {
 		s, reason, err := settingsdb.CanonicalResetSection(req.Section)
 		if errors.Is(err, settingsdb.ErrSettingsResetDenied) {
-			writeErrorCode(w, http.StatusBadRequest, reason, "SECTION_DENIED")
+			httpx.WriteErrorCode(w, http.StatusBadRequest, reason, "SECTION_DENIED")
 			return
 		}
 		if errors.Is(err, settingsdb.ErrSettingsResetUnknownSection) {
-			writeErrorCode(w, http.StatusBadRequest,
+			httpx.WriteErrorCode(w, http.StatusBadRequest,
 				fmt.Sprintf("unknown section %q", req.Section), "SECTION_UNKNOWN")
 			return
 		}
 		if err != nil {
 			log.Error().Err(err).Str("section", req.Section).Msg("settings reset: section resolution failed")
-			writeError(w, http.StatusInternalServerError, "failed to resolve section")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to resolve section")
 			return
 		}
 		sections = []settingsdb.SettingsResetSection{s}
@@ -133,7 +135,7 @@ func (h *SettingsResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 	result, err := h.repo.ResetSections(r.Context(), userID, sections)
 	if err != nil {
 		if errors.Is(err, settingsdb.ErrSettingsResetQuietHoursRequiresUser) {
-			writeErrorCode(w, http.StatusUnauthorized,
+			httpx.WriteErrorCode(w, http.StatusUnauthorized,
 				"quiet_hours can only be reset by an authenticated user",
 				"MISSING_IDENTITY")
 			return
@@ -142,13 +144,20 @@ func (h *SettingsResetHandler) Reset(w http.ResponseWriter, r *http.Request) {
 			// Pre-flight catches single-section requests above; this
 			// path covers a bad section in the global whitelist
 			// (defensive — should never happen in production).
-			writeError(w, http.StatusBadRequest, err.Error())
+			httpx.WriteError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		log.Error().Err(err).Str("section", req.Section).Msg("settings reset: orchestrator failed")
-		writeError(w, http.StatusInternalServerError, "failed to reset settings")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to reset settings")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
 }

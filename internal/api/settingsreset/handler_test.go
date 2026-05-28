@@ -1,4 +1,4 @@
-package api
+package settingsreset
 
 // Phase-46 / Prompt 50 — handler tests for POST /settings/reset.
 //

@@ -55,6 +55,7 @@ import (
 	apischedexp "github.com/ev-dev-labs/teslasync/internal/api/scheduledexports"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
+	apisetreset "github.com/ev-dev-labs/teslasync/internal/api/settingsreset"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
 	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
@@ -543,7 +544,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Sudo-gated at the route below so the SPA's <ReauthDialog>
 	// always pops on the danger-zone "Reset ALL settings" button.
 	settingsResetRepo := settingsdb.NewSettingsResetRepo(db)
-	settingsResetHandler := NewSettingsResetHandler(settingsResetRepo, cfg.Auth.ForwardAuthHeader)
+	settingsResetHandler := apisetreset.NewSettingsResetHandler(settingsResetRepo, cfg.Auth.ForwardAuthHeader)
 	// Phase-46 / Prompt 65 — recurring scheduled exports.
 	//
 	// Owner identity comes from the configured FORWARD_AUTH_HEADER on
