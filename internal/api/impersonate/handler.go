@@ -25,7 +25,7 @@
 // via the AuditRepo. Cookie expiry does NOT fire an end row — only an
 // explicit POST /admin/impersonate/end does — so the count of end
 // rows is a precise "manually ended" metric.
-package api
+package impersonate
 
 import (
 	"context"
@@ -36,9 +36,9 @@ import (
 	"strings"
 	"time"
 
-	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
+	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 )
 
 // MaxImpersonationStartBodyBytes caps the JSON body of POST
@@ -77,28 +77,28 @@ type ImpersonationAuditWriter interface {
 	WriteImpersonationEnd(ctx context.Context, evt auditdb.AuditImpersonationEvent) error
 }
 
-// ImpersonationHandler bundles the four impersonation endpoints.
+// Handler bundles the four impersonation endpoints.
 // headerName is captured at construction so the open-mode check is
 // consistent with the rest of the handlers wired against the same
 // config snapshot.
-type ImpersonationHandler struct {
+type Handler struct {
 	store      *tsauth.ImpersonationStore
 	candidates ImpersonationCandidatesStore
 	audit      ImpersonationAuditWriter
 	headerName string // FORWARD_AUTH_HEADER value; empty == open mode.
 }
 
-// NewImpersonationHandler builds the handler. headerName is the
+// NewHandler builds the handler. headerName is the
 // trimmed FORWARD_AUTH_HEADER value (typically "X-Forwarded-User");
 // empty puts every endpoint into open-mode (501 AUTH_MODE_OPEN)
 // responses.
-func NewImpersonationHandler(
+func NewHandler(
 	store *tsauth.ImpersonationStore,
 	candidates ImpersonationCandidatesStore,
 	audit ImpersonationAuditWriter,
 	headerName string,
-) *ImpersonationHandler {
-	return &ImpersonationHandler{
+) *Handler {
+	return &Handler{
 		store:      store,
 		candidates: candidates,
 		audit:      audit,
@@ -152,7 +152,7 @@ type impersonationStartResponse struct {
 // in context first; outside of impersonation we fall back to the
 // header. Returns ("", true) when the install is in open mode so the
 // caller can short-circuit with 501 AUTH_MODE_OPEN.
-func (h *ImpersonationHandler) resolveActor(r *http.Request) (actor string, openMode bool) {
+func (h *Handler) resolveActor(r *http.Request) (actor string, openMode bool) {
 	if h.headerName == "" {
 		return "", true
 	}
@@ -166,8 +166,8 @@ func (h *ImpersonationHandler) resolveActor(r *http.Request) (actor string, open
 // response in open mode. Centralised so the SPA's useImpersonation
 // hook can match the exact code without snake-vs-camel drift.
 func writeOpenModeNotImplementedImpersonation(w http.ResponseWriter) {
-	writeErrorCode(w, http.StatusNotImplemented,
-		"impersonation requires forward-auth mode", AuthModeOpenCode)
+	httpx.WriteErrorCode(w, http.StatusNotImplemented,
+		"impersonation requires forward-auth mode", tsauth.AuthModeOpenCode)
 }
 
 // GetState implements GET /api/v1/admin/impersonate.
@@ -180,7 +180,7 @@ func writeOpenModeNotImplementedImpersonation(w http.ResponseWriter) {
 // Forward-auth, missing header: 401 MISSING_IDENTITY.
 // Forward-auth, no cookie: 200 mode="inactive".
 // Forward-auth, valid cookie: 200 mode="active" with subjects + expiry.
-func (h *ImpersonationHandler) GetState(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetState(w http.ResponseWriter, r *http.Request) {
 	if h.headerName == "" {
 		writeOpenModeNotImplementedImpersonation(w)
 		return
@@ -189,12 +189,12 @@ func (h *ImpersonationHandler) GetState(w http.ResponseWriter, r *http.Request) 
 	// impersonation is active — so an unauthenticated caller can't
 	// poll the endpoint as an oracle.
 	if strings.TrimSpace(r.Header.Get(h.headerName)) == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", ImpersonationCodeMissingIdentity)
 		return
 	}
 	if claim, ok := tsauth.CurrentImpersonationClaim(r.Context()); ok {
-		writeJSON(w, http.StatusOK, impersonationStateResponse{
+		httpx.WriteJSON(w, http.StatusOK, impersonationStateResponse{
 			Mode:          "active",
 			OriginalAdmin: claim.OriginalAdmin,
 			Target:        claim.Target,
@@ -202,7 +202,7 @@ func (h *ImpersonationHandler) GetState(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	writeJSON(w, http.StatusOK, impersonationStateResponse{Mode: "inactive"})
+	httpx.WriteJSON(w, http.StatusOK, impersonationStateResponse{Mode: "inactive"})
 }
 
 // Start implements POST /api/v1/admin/impersonate.
@@ -220,7 +220,7 @@ func (h *ImpersonationHandler) GetState(w http.ResponseWriter, r *http.Request) 
 // audit row, and returns 200 with the same envelope GetState would
 // return on the next request. Returning the envelope rather than 204
 // lets the SPA prime its cache without a follow-up GET.
-func (h *ImpersonationHandler) Start(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
 	if h.headerName == "" {
 		writeOpenModeNotImplementedImpersonation(w)
 		return
@@ -228,30 +228,30 @@ func (h *ImpersonationHandler) Start(w http.ResponseWriter, r *http.Request) {
 	// RequireNotImpersonating is mounted upstream, but check defensively
 	// in case this handler is wired without the middleware in a test.
 	if tsauth.IsImpersonating(r.Context()) {
-		writeErrorCode(w, http.StatusConflict,
+		httpx.WriteErrorCode(w, http.StatusConflict,
 			"already impersonating; end the current session first",
 			ImpersonationCodeAlreadyImpersonating)
 		return
 	}
 	actor := strings.TrimSpace(r.Header.Get(h.headerName))
 	if actor == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", ImpersonationCodeMissingIdentity)
 		return
 	}
 	body, err := decodeImpersonationStartBody(r)
 	if err != nil {
-		writeErrorCode(w, http.StatusBadRequest, err.Error(), ImpersonationCodeBadBody)
+		httpx.WriteErrorCode(w, http.StatusBadRequest, err.Error(), ImpersonationCodeBadBody)
 		return
 	}
 	target := strings.TrimSpace(body.Subject)
 	if target == "" {
-		writeErrorCode(w, http.StatusBadRequest,
+		httpx.WriteErrorCode(w, http.StatusBadRequest,
 			"subject is required", ImpersonationCodeInvalidTarget)
 		return
 	}
 	if target == actor {
-		writeErrorCode(w, http.StatusBadRequest,
+		httpx.WriteErrorCode(w, http.StatusBadRequest,
 			"cannot impersonate self", ImpersonationCodeInvalidTarget)
 		return
 	}
@@ -260,19 +260,19 @@ func (h *ImpersonationHandler) Start(w http.ResponseWriter, r *http.Request) {
 	// subject. Open the candidates list ONCE and reuse it.
 	candidates, err := h.candidates.ListDistinctActiveSubjects(r.Context())
 	if err != nil {
-		writeErrorCode(w, http.StatusInternalServerError,
+		httpx.WriteErrorCode(w, http.StatusInternalServerError,
 			"failed to load candidates", ImpersonationCodeCandidatesFailed)
 		return
 	}
 	if !containsString(candidates, target) {
-		writeErrorCode(w, http.StatusBadRequest,
+		httpx.WriteErrorCode(w, http.StatusBadRequest,
 			"target subject is not a known active session",
 			ImpersonationCodeInvalidTarget)
 		return
 	}
 	token, expiresAt, err := h.store.Mint(actor, target)
 	if err != nil {
-		writeErrorCode(w, http.StatusInternalServerError,
+		httpx.WriteErrorCode(w, http.StatusInternalServerError,
 			"failed to mint impersonation cookie", ImpersonationCodeMintFailed)
 		return
 	}
@@ -283,13 +283,13 @@ func (h *ImpersonationHandler) Start(w http.ResponseWriter, r *http.Request) {
 			IP:        impersonationClientIP(r),
 			UserAgent: r.UserAgent(),
 		}); writeErr != nil {
-			writeErrorCode(w, http.StatusInternalServerError,
+			httpx.WriteErrorCode(w, http.StatusInternalServerError,
 				"failed to write audit row", ImpersonationCodeAuditFailed)
 			return
 		}
 	}
 	tsauth.SetImpersonationCookie(w, r, token)
-	writeJSON(w, http.StatusOK, impersonationStartResponse{
+	httpx.WriteJSON(w, http.StatusOK, impersonationStartResponse{
 		Mode:          "active",
 		OriginalAdmin: actor,
 		Target:        target,
@@ -307,7 +307,7 @@ func (h *ImpersonationHandler) Start(w http.ResponseWriter, r *http.Request) {
 // Open mode: 501 AUTH_MODE_OPEN. The SPA never calls this in open
 // mode (the banner is hidden) but routing it consistently means a
 // misconfigured proxy flipping mode mid-flight does not 5xx.
-func (h *ImpersonationHandler) End(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) End(w http.ResponseWriter, r *http.Request) {
 	if h.headerName == "" {
 		writeOpenModeNotImplementedImpersonation(w)
 		return
@@ -330,7 +330,7 @@ func (h *ImpersonationHandler) End(w http.ResponseWriter, r *http.Request) {
 			// Audit failure should NOT block end — the cookie is
 			// already cleared. Surface a 5xx so the SPA can log the
 			// failure but still reflect the cleared state.
-			writeErrorCode(w, http.StatusInternalServerError,
+			httpx.WriteErrorCode(w, http.StatusInternalServerError,
 				"failed to write audit row", ImpersonationCodeAuditFailed)
 			return
 		}
@@ -349,20 +349,20 @@ func (h *ImpersonationHandler) End(w http.ResponseWriter, r *http.Request) {
 // Open mode: 501 AUTH_MODE_OPEN.
 // Forward-auth, missing header: 401 MISSING_IDENTITY.
 // Forward-auth, header set: 200 with the filtered list.
-func (h *ImpersonationHandler) Candidates(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Candidates(w http.ResponseWriter, r *http.Request) {
 	actor, openMode := h.resolveActor(r)
 	if openMode {
 		writeOpenModeNotImplementedImpersonation(w)
 		return
 	}
 	if actor == "" {
-		writeErrorCode(w, http.StatusUnauthorized,
+		httpx.WriteErrorCode(w, http.StatusUnauthorized,
 			"missing identity header", ImpersonationCodeMissingIdentity)
 		return
 	}
 	subjects, err := h.candidates.ListDistinctActiveSubjects(r.Context())
 	if err != nil {
-		writeErrorCode(w, http.StatusInternalServerError,
+		httpx.WriteErrorCode(w, http.StatusInternalServerError,
 			"failed to load candidates", ImpersonationCodeCandidatesFailed)
 		return
 	}
@@ -373,7 +373,7 @@ func (h *ImpersonationHandler) Candidates(w http.ResponseWriter, r *http.Request
 		}
 		out = append(out, impersonationCandidate{Subject: s})
 	}
-	writeJSON(w, http.StatusOK, impersonationCandidatesResponse{
+	httpx.WriteJSON(w, http.StatusOK, impersonationCandidatesResponse{
 		Mode:       "session",
 		Candidates: out,
 	})

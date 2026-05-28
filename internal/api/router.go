@@ -27,6 +27,7 @@ import (
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
+	apiimpers "github.com/ev-dev-labs/teslasync/internal/api/impersonate"
 	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
@@ -577,7 +578,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// see audit_repo.go for the rationale on co-locating that query.
 	auditRepo := auditdb.NewAuditRepoWithDB(db)
 	impersonationStore := tsauth.MustNewImpersonationStore()
-	impersonationHandler := NewImpersonationHandler(
+	impersonationHandler := apiimpers.NewHandler(
 		impersonationStore,
 		auditRepo,
 		auditRepo,

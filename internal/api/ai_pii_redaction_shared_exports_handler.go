@@ -79,6 +79,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/rs/zerolog/log"
@@ -212,7 +213,7 @@ func parsePiiRedactionSharedExportsRequest(w http.ResponseWriter, r *http.Reques
 		return req, false
 	}
 	allowed := export.SharedExportTypes()
-	if !containsString(allowed, req.ExportType) {
+	if !slices.Contains(allowed, req.ExportType) {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("export_type must be one of %s", strings.Join(allowed, ", ")))
 		return req, false
 	}

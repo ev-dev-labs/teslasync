@@ -15,7 +15,7 @@
 //   - POST end is idempotent when no claim is active.
 //   - GET candidates excludes the actor.
 
-package api
+package impersonate
 
 import (
 	"context"
@@ -83,17 +83,17 @@ func (s *fakeImpersonationStore) WriteImpersonationEnd(_ context.Context, evt au
 
 const impersonationTestForwardHeader = "X-Forwarded-User"
 
-func newImpersonationTestHandler(t *testing.T, store *fakeImpersonationStore, headerName string) (*ImpersonationHandler, *tsauth.ImpersonationStore) {
+func newImpersonationTestHandler(t *testing.T, store *fakeImpersonationStore, headerName string) (*Handler, *tsauth.ImpersonationStore) {
 	t.Helper()
 	cookieStore, err := tsauth.NewImpersonationStore()
 	if err != nil {
 		t.Fatalf("NewImpersonationStore: %v", err)
 	}
-	h := NewImpersonationHandler(cookieStore, store, store, headerName)
+	h := NewHandler(cookieStore, store, store, headerName)
 	return h, cookieStore
 }
 
-func TestImpersonationHandler_OpenMode(t *testing.T) {
+func TestHandler_OpenMode(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, "")
@@ -122,8 +122,8 @@ func TestImpersonationHandler_OpenMode(t *testing.T) {
 			if err := json.Unmarshal(rr.Body.Bytes(), &env); err != nil {
 				t.Fatalf("unmarshal body: %v", err)
 			}
-			if env["code"] != AuthModeOpenCode {
-				t.Fatalf("expected code %q, got %v", AuthModeOpenCode, env["code"])
+			if env["code"] != tsauth.AuthModeOpenCode {
+				t.Fatalf("expected code %q, got %v", tsauth.AuthModeOpenCode, env["code"])
 			}
 		})
 	}
@@ -137,7 +137,7 @@ func TestImpersonationHandler_OpenMode(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_GetState_MissingHeaderReturns401(t *testing.T) {
+func TestHandler_GetState_MissingHeaderReturns401(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -149,7 +149,7 @@ func TestImpersonationHandler_GetState_MissingHeaderReturns401(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_GetState_Inactive(t *testing.T) {
+func TestHandler_GetState_Inactive(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -169,7 +169,7 @@ func TestImpersonationHandler_GetState_Inactive(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_GetState_Active(t *testing.T) {
+func TestHandler_GetState_Active(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -198,7 +198,7 @@ func TestImpersonationHandler_GetState_Active(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Start_HappyPath(t *testing.T) {
+func TestHandler_Start_HappyPath(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{subjects: []string{"admin", "target"}}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -239,7 +239,7 @@ func TestImpersonationHandler_Start_HappyPath(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Start_RejectsSelfTarget(t *testing.T) {
+func TestHandler_Start_RejectsSelfTarget(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{subjects: []string{"admin"}}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -255,7 +255,7 @@ func TestImpersonationHandler_Start_RejectsSelfTarget(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Start_RejectsBlankTarget(t *testing.T) {
+func TestHandler_Start_RejectsBlankTarget(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -268,7 +268,7 @@ func TestImpersonationHandler_Start_RejectsBlankTarget(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Start_RejectsUnknownTarget(t *testing.T) {
+func TestHandler_Start_RejectsUnknownTarget(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{subjects: []string{"admin", "alice"}}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -287,7 +287,7 @@ func TestImpersonationHandler_Start_RejectsUnknownTarget(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Start_RejectsBadJSON(t *testing.T) {
+func TestHandler_Start_RejectsBadJSON(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -303,7 +303,7 @@ func TestImpersonationHandler_Start_RejectsBadJSON(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Start_RejectsAlreadyImpersonating(t *testing.T) {
+func TestHandler_Start_RejectsAlreadyImpersonating(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{subjects: []string{"admin", "target"}}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -325,7 +325,7 @@ func TestImpersonationHandler_Start_RejectsAlreadyImpersonating(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Start_MissingHeaderReturns401(t *testing.T) {
+func TestHandler_Start_MissingHeaderReturns401(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -337,7 +337,7 @@ func TestImpersonationHandler_Start_MissingHeaderReturns401(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_End_HappyPath(t *testing.T) {
+func TestHandler_End_HappyPath(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -376,7 +376,7 @@ func TestImpersonationHandler_End_HappyPath(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_End_Idempotent(t *testing.T) {
+func TestHandler_End_Idempotent(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -405,7 +405,7 @@ func TestImpersonationHandler_End_Idempotent(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Candidates_ExcludesActor(t *testing.T) {
+func TestHandler_Candidates_ExcludesActor(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{subjects: []string{"admin", "alice", "bob"}}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -440,7 +440,7 @@ func TestImpersonationHandler_Candidates_ExcludesActor(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Candidates_MissingHeaderReturns401(t *testing.T) {
+func TestHandler_Candidates_MissingHeaderReturns401(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
@@ -452,7 +452,7 @@ func TestImpersonationHandler_Candidates_MissingHeaderReturns401(t *testing.T) {
 	}
 }
 
-func TestImpersonationHandler_Candidates_DuringImpersonationUsesOriginalAdmin(t *testing.T) {
+func TestHandler_Candidates_DuringImpersonationUsesOriginalAdmin(t *testing.T) {
 	t.Parallel()
 	// Simulates the case where the SPA polls /candidates while the
 	// admin is mid-impersonation: the header has been rewritten to
@@ -487,7 +487,7 @@ func TestImpersonationHandler_Candidates_DuringImpersonationUsesOriginalAdmin(t 
 	}
 }
 
-func TestImpersonationHandler_Candidates_StoreErrorReturns500(t *testing.T) {
+func TestHandler_Candidates_StoreErrorReturns500(t *testing.T) {
 	t.Parallel()
 	store := &fakeImpersonationStore{subjectsErr: errBoomImpersonation}
 	h, _ := newImpersonationTestHandler(t, store, impersonationTestForwardHeader)
