@@ -43,6 +43,7 @@ import (
 	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
 	apivehstates "github.com/ev-dev-labs/teslasync/internal/api/vehiclestates"
 	apivisloc "github.com/ev-dev-labs/teslasync/internal/api/visitedlocation"
+	apiwhrx "github.com/ev-dev-labs/teslasync/internal/api/webhookreceiver"
 	apiweekly "github.com/ev-dev-labs/teslasync/internal/api/weeklydigest"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -1926,10 +1927,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Mounted before the /api/v1 subrouter so it is exempt from any
 	// ForwardAuth / auth middleware applied to the main API group.
 	if opt.WebhookTrigger != nil {
-		webhookReceiver := NewWebhookReceiverHandler(opt.WebhookTrigger)
+		webhookReceiver := apiwhrx.NewHandler(opt.WebhookTrigger)
 		r.With(
 			httprate.Limit(60, 1*time.Minute, httprate.WithKeyFuncs(
-				webhookTokenKeyFunc,
+				apiwhrx.WebhookTokenKeyFunc,
 			)),
 		).Post("/api/v1/automations/webhook/{token}", webhookReceiver.Receive)
 	}

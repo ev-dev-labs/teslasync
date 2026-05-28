@@ -1,4 +1,4 @@
-package api
+package webhookreceiver
 
 import (
 	"context"
@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/automation/trigger"
 )
 
@@ -19,23 +20,23 @@ type WebhookProcessor interface {
 	HandleWebhook(ctx context.Context, token string, payload []byte, signature string, remoteIP string) error
 }
 
-// WebhookReceiverHandler handles incoming webhook requests from external systems
+// Handler handles incoming webhook requests from external systems
 // (Home Assistant, IFTTT, Node-RED, etc.) to fire automation triggers.
 // The URL token IS the authentication — no ForwardAuth required.
-type WebhookReceiverHandler struct {
+type Handler struct {
 	processor WebhookProcessor
 }
 
-// NewWebhookReceiverHandler creates a handler backed by the given webhook processor.
-func NewWebhookReceiverHandler(p WebhookProcessor) *WebhookReceiverHandler {
-	return &WebhookReceiverHandler{processor: p}
+// NewHandler creates a handler backed by the given webhook processor.
+func NewHandler(p WebhookProcessor) *Handler {
+	return &Handler{processor: p}
 }
 
 // Receive handles POST /api/v1/automations/webhook/{token}.
-func (h *WebhookReceiverHandler) Receive(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Receive(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	if token == "" {
-		writeError(w, http.StatusBadRequest, "webhook token is required")
+		httpx.WriteError(w, http.StatusBadRequest, "webhook token is required")
 		return
 	}
 
@@ -44,10 +45,10 @@ func (h *WebhookReceiverHandler) Receive(w http.ResponseWriter, r *http.Request)
 		// MaxBytesReader wraps the body globally; a read failure here means
 		// either the payload exceeds the 1 MB limit or the client disconnected.
 		if isMaxBytesError(err) {
-			writeError(w, http.StatusRequestEntityTooLarge, "request body too large")
+			httpx.WriteError(w, http.StatusRequestEntityTooLarge, "request body too large")
 			return
 		}
-		writeError(w, http.StatusBadRequest, "failed to read request body")
+		httpx.WriteError(w, http.StatusBadRequest, "failed to read request body")
 		return
 	}
 
@@ -59,21 +60,21 @@ func (h *WebhookReceiverHandler) Receive(w http.ResponseWriter, r *http.Request)
 		switch {
 		case errors.Is(err, trigger.ErrWebhookNotFound):
 			// Return 404 — don't reveal whether the token exists but is disabled
-			writeError(w, http.StatusNotFound, "webhook not found")
+			httpx.WriteError(w, http.StatusNotFound, "webhook not found")
 		case errors.Is(err, trigger.ErrWebhookSignatureInvalid):
-			writeError(w, http.StatusForbidden, "invalid webhook signature")
+			httpx.WriteError(w, http.StatusForbidden, "invalid webhook signature")
 		case isPayloadError(err):
-			writeError(w, http.StatusBadRequest, "invalid webhook payload")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid webhook payload")
 		default:
 			log.Error().Err(err).
 				Str("token_prefix", safeTokenPrefix(token)).
 				Msg("webhook processing failed")
-			writeError(w, http.StatusInternalServerError, "webhook processing failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "webhook processing failed")
 		}
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]bool{"accepted": true})
+	httpx.WriteJSON(w, http.StatusOK, map[string]bool{"accepted": true})
 }
 
 // safeTokenPrefix returns the first 8 characters of a token for safe logging.
@@ -98,9 +99,9 @@ func isPayloadError(err error) bool {
 		strings.Contains(msg, "invalid webhook config")
 }
 
-// webhookTokenKeyFunc extracts the webhook token from the URL for per-token
+// WebhookTokenKeyFunc extracts the webhook token from the URL for per-token
 // rate limiting. Falls back to IP-based limiting if the token is missing.
-func webhookTokenKeyFunc(r *http.Request) (string, error) {
+func WebhookTokenKeyFunc(r *http.Request) (string, error) {
 	token := chi.URLParam(r, "token")
 	if token != "" {
 		return "webhook:" + token, nil

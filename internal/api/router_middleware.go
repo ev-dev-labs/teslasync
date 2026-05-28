@@ -5,6 +5,7 @@ import (
 
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
+	apiwhrx "github.com/ev-dev-labs/teslasync/internal/api/webhookreceiver"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
@@ -28,12 +29,12 @@ import (
 type RouterOptions struct {
 	AppVersion       string
 	Encryptor        *crypto.Encryptor
-	TelemetryHandler *TelemetryHandler      // If set, reuses existing handler (for hybrid mode wiring)
-	GasPriceWorker   *worker.GasPriceWorker // If set, enables gas price management endpoints
-	PollEngine       *polling.PollEngine    // If set, enables polling engine dashboard endpoints
-	SignalStore      *signal.Store          // If set, enables /internal/flush endpoint
-	WebhookTrigger   WebhookProcessor       // If set, enables public webhook receiver endpoint
-	CacheStore       *cache.Store           // If set, enables cached endpoints (trip planner, etc.)
+	TelemetryHandler *TelemetryHandler        // If set, reuses existing handler (for hybrid mode wiring)
+	GasPriceWorker   *worker.GasPriceWorker   // If set, enables gas price management endpoints
+	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
+	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
+	WebhookTrigger   apiwhrx.WebhookProcessor // If set, enables public webhook receiver endpoint
+	CacheStore       *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
 
 	// Phase-44 / observability-batch / Prompt F4. DLQInspector + replay
 	// audit repo enable /system/dlq{,/{id},/{id}/replay} when set.

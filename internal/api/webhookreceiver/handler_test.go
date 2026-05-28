@@ -1,4 +1,4 @@
-package api
+package webhookreceiver
 
 import (
 	"bytes"
@@ -64,9 +64,9 @@ func makeTestAutomation(id int64) *models.AutomationFull {
 	}
 }
 
-func setupWebhookReceiver(repo *mockWebhookReceiverRepo, engine *mockReceiverEngine) (*WebhookReceiverHandler, *chi.Mux) {
+func setupWebhookReceiver(repo *mockWebhookReceiverRepo, engine *mockReceiverEngine) (*Handler, *chi.Mux) {
 	wt := trigger.NewWebhookTrigger(repo, engine)
-	handler := NewWebhookReceiverHandler(wt)
+	handler := NewHandler(wt)
 
 	r := chi.NewRouter()
 	r.Post("/api/v1/automations/webhook/{token}", handler.Receive)
