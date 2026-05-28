@@ -96,3 +96,5 @@ c94f18a3e9ceeeb57065fbf9a0323f5b75683c85
 dd49ce9e1a89abcbb3eec8776bc45ace55c91c52
 # R6.10 — carve internal/ai/tools/nl/ (signal_filter + watch_face + inbox)
 c3be2d605395a2bcecfab7ba745aa6b1f58973c2
+# R6.11 — carve internal/ai/tools/schedule/ (charge + climate + quiet_hours)
+3c6826da34a9895210af4ef5d0550345e10db7ce
