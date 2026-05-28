@@ -1,36 +1,9 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http/httptest"
 	"testing"
 )
-
-func TestHTTPStatusCode(t *testing.T) {
-	tests := []struct {
-		status int
-		want   string
-	}{
-		{400, "BAD_REQUEST"},
-		{401, "UNAUTHORIZED"},
-		{403, "FORBIDDEN"},
-		{404, "NOT_FOUND"},
-		{405, "METHOD_NOT_ALLOWED"},
-		{409, "CONFLICT"},
-		{422, "UNPROCESSABLE_ENTITY"},
-		{429, "RATE_LIMITED"},
-		{500, "INTERNAL_ERROR"},
-		{503, "SERVICE_UNAVAILABLE"},
-		{504, "GATEWAY_TIMEOUT"},
-		{418, "ERROR"}, // unknown status
-	}
-	for _, tt := range tests {
-		got := httpStatusCode(tt.status)
-		if got != tt.want {
-			t.Errorf("httpStatusCode(%d) = %q, want %q", tt.status, got, tt.want)
-		}
-	}
-}
 
 func TestPagination(t *testing.T) {
 	tests := []struct {
@@ -111,49 +84,8 @@ func TestAllowedBackupTables(t *testing.T) {
 	}
 }
 
-// TestTeslaTokenExpired_PropagatesCode verifies the contract between the
-// Tesla-token-expired backend response and the frontend's distinct
-// {@link TeslaAuthExpiredError} surface (Phase-45 / Prompt 30).
-//
-// The frontend distinguishes "Tesla third-party OAuth grant expired" from
-// "Authentik session expired" purely by the JSON body's `code` field
-// (HTTP status is 401 in both cases). If this code drifts, the reauth
-// banner stops firing and users see a generic 401 toast with no
-// recovery path — a silent regression we must catch in CI.
-func TestTeslaTokenExpired_PropagatesCode(t *testing.T) {
-	rec := httptest.NewRecorder()
-	writeTeslaTokenExpired(rec)
-
-	if rec.Code != 401 {
-		t.Fatalf("status = %d, want 401", rec.Code)
-	}
-
-	gotCT := rec.Header().Get("Content-Type")
-	if gotCT == "" || gotCT[:16] != "application/json" {
-		t.Fatalf("Content-Type = %q, want application/json", gotCT)
-	}
-
-	var body map[string]string
-	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
-		t.Fatalf("decode body: %v", err)
-	}
-
-	if got := body["code"]; got != ErrCodeTeslaTokenExpired {
-		t.Errorf("body.code = %q, want %q", got, ErrCodeTeslaTokenExpired)
-	}
-	if got := body["code"]; got != "TESLA_TOKEN_EXPIRED" {
-		t.Errorf("body.code literal = %q, want %q (frontend matches on this exact string)", got, "TESLA_TOKEN_EXPIRED")
-	}
-	if body["error"] == "" {
-		t.Errorf("body.error is empty, want a human-readable message")
-	}
-}
-
-// TestTeslaTokenExpiredCodeConstant pins the wire value of the error
-// code so accidental renames are caught without grepping the frontend.
-func TestTeslaTokenExpiredCodeConstant(t *testing.T) {
-	if ErrCodeTeslaTokenExpired != "TESLA_TOKEN_EXPIRED" {
-		t.Errorf("ErrCodeTeslaTokenExpired = %q, want %q (frontend resilience.ts depends on this exact string)",
-			ErrCodeTeslaTokenExpired, "TESLA_TOKEN_EXPIRED")
-	}
-}
+// Phase R2.0a (2026-05-28): TestHTTPStatusCode,
+// TestTeslaTokenExpired_PropagatesCode, and
+// TestTeslaTokenExpiredCodeConstant were relocated to
+// internal/api/httpx/json_test.go + tesla_test.go alongside the
+// canonical exported helpers they exercise.

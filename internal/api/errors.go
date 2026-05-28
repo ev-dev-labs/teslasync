@@ -5,10 +5,6 @@ import "net/http"
 // Machine-readable error codes that are exposed in JSON error bodies and
 // consumed by the frontend to drive recovery flows.
 //
-// Phase-45 / Prompt 30 — TESLA_TOKEN_EXPIRED is the distinct signal the
-// SPA uses to surface the <TeslaReauthBanner> recovery UI; it MUST NOT
-// be conflated with the generic Authentik-session 401 path.
-//
 // Phase-46 / Prompt 57 — AUTH_MODE_OPEN is the canonical signal returned
 // by every endpoint that has no sensible behaviour without an upstream
 // identity provider configured. The SPA's auth-coupled hooks
@@ -17,9 +13,12 @@ import "net/http"
 // "feature requires authentication" placeholder. Mirrored as
 // internal/auth.AuthModeOpenCode for handlers that live outside the
 // api package.
+//
+// Phase R2.0a (2026-05-28) — ErrCodeTeslaTokenExpired was moved to
+// internal/api/httpx alongside WriteTeslaTokenExpired (the only
+// helper that uses it). See httpx.ErrCodeTeslaTokenExpired.
 const (
-	ErrCodeTeslaTokenExpired = "TESLA_TOKEN_EXPIRED"
-	ErrCodeAuthModeOpen      = "AUTH_MODE_OPEN"
+	ErrCodeAuthModeOpen = "AUTH_MODE_OPEN"
 )
 
 // Error categories for grouping and filtering.

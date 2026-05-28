@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:58:59Z",
+  "generated_at": "2026-05-28T17:32:02Z",
   "go_version": "go1.26.1",
-  "commit_sha": "0f942c400d65417046bac9903dc587c5f8a2eb33",
+  "commit_sha": "140d9e1e0bf0ef8bee451ac3424b660ce819ed4b",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2516,7 +2516,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126686,
+      "loc": 126490,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2618,6 +2618,7 @@
         "internal/ai/tools/yir",
         "internal/alertmsg",
         "internal/api",
+        "internal/api/httpx",
         "internal/apilog",
         "internal/app/adminobssvc",
         "internal/app/auditviewersvc",
@@ -3165,6 +3166,24 @@
         "webhook_receiver_handler_test.go",
         "weekly_digest_handler.go",
         "year_review_handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/httpx",
+      "go_files": 3,
+      "test_files": 2,
+      "loc": 360,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx"
+      ],
+      "files": [
+        "doc.go",
+        "json.go",
+        "json_test.go",
+        "tesla.go",
+        "tesla_test.go"
       ]
     },
     {
@@ -4766,7 +4785,7 @@
       "path": "internal/handler/v1",
       "go_files": 11,
       "test_files": 1,
-      "loc": 828,
+      "loc": 844,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -7143,6 +7162,11 @@
       "webhook_receiver_handler.go",
       "weekly_digest_handler.go",
       "year_review_handler.go"
+    ],
+    "internal/api/httpx": [
+      "doc.go",
+      "json.go",
+      "tesla.go"
     ],
     "internal/apilog": [
       "async.go",

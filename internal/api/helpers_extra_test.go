@@ -1,42 +1,19 @@
 package api
 
 import (
-	"encoding/json"
-	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 )
 
 // Tests that complement the existing api_test.go coverage.
-
-func TestWriteJSONContentType(t *testing.T) {
-	w := httptest.NewRecorder()
-	writeJSON(w, http.StatusOK, map[string]string{"k": "v"})
-
-	ct := w.Header().Get("Content-Type")
-	if ct != "application/json; charset=utf-8" {
-		t.Errorf("Content-Type = %q, want %q", ct, "application/json; charset=utf-8")
-	}
-}
-
-func TestWriteErrorAllStatusCodes(t *testing.T) {
-	tests := []struct {
-		status   int
-		wantCode string
-	}{
-		{http.StatusTeapot, "ERROR"},
-	}
-	for _, tt := range tests {
-		w := httptest.NewRecorder()
-		writeError(w, tt.status, "msg")
-		var r map[string]string
-		json.Unmarshal(w.Body.Bytes(), &r)
-		if r["code"] != tt.wantCode {
-			t.Errorf("status %d: code = %q, want %q", tt.status, r["code"], tt.wantCode)
-		}
-	}
-}
+//
+// Phase R2.0a (2026-05-28): TestWriteJSONContentType,
+// TestWriteErrorAllStatusCodes, and TestHttpStatusCodeMapping were
+// relocated to internal/api/httpx/json_test.go alongside the
+// canonical exported helpers they exercise. The pagination /
+// parseDateRange tests remain here for now and move with the
+// apiparams carve (Phase R2.0b).
 
 func TestPaginationBoundary(t *testing.T) {
 	r := httptest.NewRequest("GET", "/test?limit=1000", nil)
@@ -127,14 +104,5 @@ func TestParseDateRangeLegacyEndOfDay(t *testing.T) {
 	}
 }
 
-func TestHttpStatusCodeMapping(t *testing.T) {
-	if httpStatusCode(http.StatusNotFound) != "NOT_FOUND" {
-		t.Error("404 should map to NOT_FOUND")
-	}
-	if httpStatusCode(http.StatusConflict) != "CONFLICT" {
-		t.Error("409 should map to CONFLICT")
-	}
-	if httpStatusCode(299) != "ERROR" {
-		t.Error("unmapped status should return ERROR")
-	}
-}
+// Phase R2.0a (2026-05-28): TestHttpStatusCodeMapping was relocated to
+// internal/api/httpx/json_test.go.

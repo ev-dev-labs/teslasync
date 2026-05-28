@@ -179,104 +179,12 @@ func TestRecoveryMiddleware_CatchesPanic(t *testing.T) {
 
 // ---------------------------------------------------------------------------
 // writeJSON / writeError helper tests
+//
+// Phase R2.0a (2026-05-28): TestWriteJSON, TestWriteJSON_NilData,
+// TestWriteJSON_CustomStatus, TestWriteError, TestWriteError_AllCodes,
+// TestWriteErrorCode were relocated to internal/api/httpx/json_test.go
+// alongside the canonical exported helpers they exercise.
 // ---------------------------------------------------------------------------
-
-func TestWriteJSON(t *testing.T) {
-	rec := httptest.NewRecorder()
-	data := map[string]string{"key": "value"}
-	writeJSON(rec, http.StatusOK, data)
-
-	assertStatus(t, rec, http.StatusOK)
-	assertContentType(t, rec, "application/json")
-
-	body := assertJSON(t, rec)
-	if body["key"] != "value" {
-		t.Errorf("expected key=value, got %v", body["key"])
-	}
-}
-
-func TestWriteJSON_NilData(t *testing.T) {
-	rec := httptest.NewRecorder()
-	writeJSON(rec, http.StatusNoContent, nil)
-
-	assertStatus(t, rec, http.StatusNoContent)
-	assertContentType(t, rec, "application/json")
-	if rec.Body.Len() != 0 {
-		t.Errorf("expected empty body for nil data, got %q", rec.Body.String())
-	}
-}
-
-func TestWriteJSON_CustomStatus(t *testing.T) {
-	rec := httptest.NewRecorder()
-	writeJSON(rec, http.StatusCreated, map[string]int{"id": 42})
-
-	assertStatus(t, rec, http.StatusCreated)
-	body := assertJSON(t, rec)
-	if body["id"] != float64(42) {
-		t.Errorf("expected id=42, got %v", body["id"])
-	}
-}
-
-func TestWriteError(t *testing.T) {
-	rec := httptest.NewRecorder()
-	writeError(rec, http.StatusBadRequest, "bad request")
-
-	assertStatus(t, rec, http.StatusBadRequest)
-	assertContentType(t, rec, "application/json")
-
-	body := assertJSON(t, rec)
-	if body["error"] != "bad request" {
-		t.Errorf("expected error 'bad request', got %v", body["error"])
-	}
-	if body["code"] != "BAD_REQUEST" {
-		t.Errorf("expected code BAD_REQUEST, got %v", body["code"])
-	}
-}
-
-func TestWriteError_AllCodes(t *testing.T) {
-	tests := []struct {
-		status   int
-		wantCode string
-	}{
-		{http.StatusBadRequest, "BAD_REQUEST"},
-		{http.StatusUnauthorized, "UNAUTHORIZED"},
-		{http.StatusForbidden, "FORBIDDEN"},
-		{http.StatusNotFound, "NOT_FOUND"},
-		{http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED"},
-		{http.StatusConflict, "CONFLICT"},
-		{http.StatusUnprocessableEntity, "UNPROCESSABLE_ENTITY"},
-		{http.StatusTooManyRequests, "RATE_LIMITED"},
-		{http.StatusInternalServerError, "INTERNAL_ERROR"},
-		{http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE"},
-		{http.StatusGatewayTimeout, "GATEWAY_TIMEOUT"},
-		{http.StatusNotImplemented, "ERROR"}, // unmapped code
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.wantCode, func(t *testing.T) {
-			rec := httptest.NewRecorder()
-			writeError(rec, tt.status, "test")
-			body := assertJSON(t, rec)
-			if body["code"] != tt.wantCode {
-				t.Errorf("status %d: expected code %q, got %v", tt.status, tt.wantCode, body["code"])
-			}
-		})
-	}
-}
-
-func TestWriteErrorCode(t *testing.T) {
-	rec := httptest.NewRecorder()
-	writeErrorCode(rec, http.StatusForbidden, "custom msg", "CUSTOM_CODE")
-
-	assertStatus(t, rec, http.StatusForbidden)
-	body := assertJSON(t, rec)
-	if body["error"] != "custom msg" {
-		t.Errorf("expected error 'custom msg', got %v", body["error"])
-	}
-	if body["code"] != "CUSTOM_CODE" {
-		t.Errorf("expected code CUSTOM_CODE, got %v", body["code"])
-	}
-}
 
 // ---------------------------------------------------------------------------
 // Pagination helper tests

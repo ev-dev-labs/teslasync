@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -11,83 +10,58 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // globalErrorTracker is set during router initialization.
 var globalErrorTracker *ErrorTracker
 
-// JSON helper to write JSON responses.
+// writeJSON is a transitional wrapper around httpx.WriteJSON kept for
+// the duration of the internal/api -> internal/api/<resource>/
+// subpackage migration (Phase R2). New handlers — and handlers being
+// moved into resource subpackages — MUST call httpx.WriteJSON
+// directly. Deletion of this wrapper is gated on internal/api/
+// reaching its irreducible drained shape at end of Phase R2.
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	if data != nil {
-		_ = json.NewEncoder(w).Encode(data)
-	}
+	httpx.WriteJSON(w, status, data)
 }
 
-// httpStatusCode maps HTTP status codes to machine-readable error codes.
+// httpStatusCode is a transitional wrapper around httpx.HTTPStatusCode.
+// New code MUST call httpx.HTTPStatusCode directly. See writeJSON for
+// the broader transitional plan.
 func httpStatusCode(status int) string {
-	switch status {
-	case http.StatusBadRequest:
-		return "BAD_REQUEST"
-	case http.StatusUnauthorized:
-		return "UNAUTHORIZED"
-	case http.StatusForbidden:
-		return "FORBIDDEN"
-	case http.StatusNotFound:
-		return "NOT_FOUND"
-	case http.StatusMethodNotAllowed:
-		return "METHOD_NOT_ALLOWED"
-	case http.StatusConflict:
-		return "CONFLICT"
-	case http.StatusUnprocessableEntity:
-		return "UNPROCESSABLE_ENTITY"
-	case http.StatusTooManyRequests:
-		return "RATE_LIMITED"
-	case http.StatusInternalServerError:
-		return "INTERNAL_ERROR"
-	case http.StatusServiceUnavailable:
-		return "SERVICE_UNAVAILABLE"
-	case http.StatusGatewayTimeout:
-		return "GATEWAY_TIMEOUT"
-	default:
-		return "ERROR"
-	}
+	return httpx.HTTPStatusCode(status)
 }
 
-// Error helper to write JSON error responses with a consistent structure.
+// writeError is a transitional wrapper around httpx.WriteError. See
+// writeJSON for the broader transitional plan.
 func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{
-		"error": msg,
-		"code":  httpStatusCode(status),
-	})
+	httpx.WriteError(w, status, msg)
 }
 
-// writeErrorCode writes a JSON error response with a custom error code.
+// writeErrorCode is a transitional wrapper around httpx.WriteErrorCode.
+// See writeJSON for the broader transitional plan.
 func writeErrorCode(w http.ResponseWriter, status int, msg, code string) {
-	writeJSON(w, status, map[string]string{
-		"error": msg,
-		"code":  code,
-	})
+	httpx.WriteErrorCode(w, status, msg, code)
 }
 
-// writeTeslaTokenExpired writes the canonical 401 response that the
-// frontend translates into a {@link TeslaAuthExpiredError} and surfaces
-// via the <TeslaReauthBanner> recovery UI (Phase-45 / Prompt 30).
-//
-// Use this from any handler whose underlying call returned
-// {@link tesla.ErrUnauthorized} — i.e. the user's third-party Tesla
-// refresh token has expired and the backend can no longer act on their
-// behalf without a fresh OAuth grant.
+// writeTeslaTokenExpired is a transitional wrapper around
+// httpx.WriteTeslaTokenExpired. See writeJSON for the broader
+// transitional plan.
 func writeTeslaTokenExpired(w http.ResponseWriter) {
-	writeErrorCode(w, http.StatusUnauthorized, "Tesla account disconnected", ErrCodeTeslaTokenExpired)
+	httpx.WriteTeslaTokenExpired(w)
 }
 
 // writeAppError writes a structured error response using the centralized error catalog
 // and automatically records the error in the global error tracker and Prometheus.
+//
+// Stays in the parent internal/api package for R2.0a because AppError,
+// APIErrors (Prometheus metric), and the ErrorTracker are all
+// parent-bound. A dedicated future carve is expected to land the
+// AppError catalog at internal/api/apierr.
 func writeAppError(w http.ResponseWriter, r *http.Request, appErr *AppError) {
-	writeJSON(w, appErr.Status, map[string]string{
+	httpx.WriteJSON(w, appErr.Status, map[string]string{
 		"error":    appErr.Message,
 		"code":     appErr.Code,
 		"category": appErr.Category,

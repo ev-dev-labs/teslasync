@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T16:59:01Z, Go go1.26.1, commit 0f942c400d65417046bac9903dc587c5f8a2eb33_
+_Generated 2026-05-28T17:32:03Z, Go go1.26.1, commit 140d9e1e0bf0ef8bee451ac3424b660ce819ed4b_
 
 ## Summary
 
-- Packages: 289
+- Packages: 290
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374938
+- Total non-blank LOC under cmd/+internal/+tools/: 375118
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,8 @@ _Generated 2026-05-28T16:59:01Z, Go go1.26.1, commit 0f942c400d65417046bac9903dc
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126686 | yes | handler |
+| internal/api | 271 | 163 | 126490 | yes | handler |
+| internal/api/httpx | 3 | 2 | 360 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1848 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
@@ -250,7 +251,7 @@ _Generated 2026-05-28T16:59:01Z, Go go1.26.1, commit 0f942c400d65417046bac9903dc
 | internal/geocoding | 6 | 1 | 532 | yes | platform |
 | internal/handler/dto | 6 | 0 | 94 | yes | handler |
 | internal/handler/middleware | 11 | 1 | 829 | yes | handler |
-| internal/handler/v1 | 11 | 1 | 828 | yes | handler |
+| internal/handler/v1 | 11 | 1 | 844 | yes | handler |
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/integrations/homeassistant | 3 | 1 | 515 | yes | adapter |
