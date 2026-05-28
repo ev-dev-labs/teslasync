@@ -129,6 +129,7 @@ import (
 	anomalytool "github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/charge"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/coaching"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/curve"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnosis"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/digest"
@@ -1137,7 +1138,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// mirroring the deterministic L1/L2/DC bucketing the SPA's
 	// helpers.ts already applies — no new SQL is written by this
 	// slice.
-	tools.RegisterChargingCurveFingerprintClusteringTools(aiToolRegistry, tools.ChargingCurveFingerprintClusteringSources{
+	curve.RegisterChargingCurveFingerprintClusteringTools(aiToolRegistry, curve.ChargingCurveFingerprintClusteringSources{
 		Retriever: aiChargeCurveRetriever,
 		Charges:   database.NewChargingRepo(db),
 	})

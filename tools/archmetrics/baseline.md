@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T07:44:15Z, Go go1.26.1, commit 79478baa16fcab329f67b60279a0d0c275c9946a_
+_Generated 2026-05-28T07:48:14Z, Go go1.26.1, commit 07780280b99f6ea95db70aec0bd136a2a38ceb9d_
 
 ## Summary
 
-- Packages: 256
+- Packages: 257
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 373678
+- Total non-blank LOC under cmd/+internal/+tools/: 373725
 
 ## cmd/* main.go LOC
 
@@ -139,11 +139,12 @@ _Generated 2026-05-28T07:44:15Z, Go go1.26.1, commit 79478baa16fcab329f67b60279a
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 16 | 12 | 9731 | yes | platform |
+| internal/ai/tools | 15 | 11 | 8583 | yes | platform |
 | internal/ai/tools/alert | 3 | 2 | 1754 | yes |  |
 | internal/ai/tools/anomaly | 2 | 1 | 571 | yes | domain |
 | internal/ai/tools/charge | 2 | 1 | 611 | yes | domain |
 | internal/ai/tools/coaching | 2 | 1 | 677 | yes | domain |
+| internal/ai/tools/curve | 2 | 1 | 1194 | yes | domain |
 | internal/ai/tools/diagnosis | 2 | 1 | 1097 | yes | domain |
 | internal/ai/tools/diagnostic | 4 | 3 | 4366 | yes | domain |
 | internal/ai/tools/digest | 2 | 1 | 565 | yes | domain |
@@ -165,7 +166,7 @@ _Generated 2026-05-28T07:44:15Z, Go go1.26.1, commit 79478baa16fcab329f67b60279a
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126547 | yes | handler |
+| internal/api | 271 | 163 | 126548 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -309,7 +310,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
-| `internal/ai/tools` | R6 | 109 | 16 / 12 | 13 | 7 | 6 |
+| `internal/ai/tools` | R6 | 109 | 15 / 11 | 13 | 7 | 6 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |

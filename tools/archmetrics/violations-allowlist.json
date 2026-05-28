@@ -28,9 +28,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "max_files": 16,
+      "max_files": 15,
       "owner": "Phase R6 (in progress)",
-      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/); 52 after R6.7 (alert/); 49 after R6.8 (forecast/); 46 after R6.9 (predict/); 43 after R6.10 (nl/); 40 after R6.11 (schedule/); 36 after R6.12 (summary/); 33 after R6.13 (nlq/); 31 after R6.14 (trip/); 28 after R6.15 (diagnostic/); 25 after R6.16 (lifetime/); 23 after R6.17 (maintenance/); 22 after R6.18 (charge/); 21 after R6.19 (voice/); 20 after R6.20 (export/); R6.7.5 added toolstest/; 19 after R6.21 (paint/); 18 after R6.22 (digest/); 17 after R6.23 (yir/); 16 after R6.24 (anomaly/); 16 after R6.25 (coaching/ — promoted 4 ptr helpers to ptrhelpers.go, net unchanged); 16 after R6.26 (diagnosis/ — promoted unexported `lower` to exported tools.Lower in new strhelpers.go because 3 parent files + diagnosis subpkg all consume it; net unchanged). Plain-function tool registry; carved by domain. R6.4 exported parent helper cachedSchema → CachedSchema (40+ call sites). Detailed cluster notes: see commit messages R6.4-R6.26."
+      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/); 52 after R6.7 (alert/); 49 after R6.8 (forecast/); 46 after R6.9 (predict/); 43 after R6.10 (nl/); 40 after R6.11 (schedule/); 36 after R6.12 (summary/); 33 after R6.13 (nlq/); 31 after R6.14 (trip/); 28 after R6.15 (diagnostic/); 25 after R6.16 (lifetime/); 23 after R6.17 (maintenance/); 22 after R6.18 (charge/); 21 after R6.19 (voice/); 20 after R6.20 (export/); R6.7.5 added toolstest/; 19 after R6.21 (paint/); 18 after R6.22 (digest/); 17 after R6.23 (yir/); 16 after R6.24 (anomaly/); 16 after R6.25 (coaching/ +ptrhelpers.go); 16 after R6.26 (diagnosis/ +strhelpers.go); 15 after R6.27 (curve/ — no new parent file because no shared unexported helpers). Plain-function tool registry; carved by domain. R6.4 exported parent helper cachedSchema → CachedSchema (40+ call sites). Detailed cluster notes: see commit messages R6.4-R6.27."
     },
     {
       "path": "internal/jobs",

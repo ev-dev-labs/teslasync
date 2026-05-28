@@ -6,11 +6,11 @@
 // ChargeSource); the tests stub each port with a deterministic
 // fake so the tests stay hermetic (no DB, no embedding API).
 //
-// Reuses fakeCharges from builtins_test.go and fakeRetriever from
+// Reuses toolstest.FakeCharges from builtins_test.go and toolstest.FakeRetriever from
 // search_test.go so the existing charging-domain tools and these
 // new tools share the same test substrate.
 
-package tools
+package curve
 
 import (
 	"context"
@@ -24,6 +24,8 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 )
 
 // ---------------------------------------------------------------------------
@@ -35,8 +37,8 @@ import (
 // to the subject from ctx.
 func TestRetrieveChargeCurveChunks_HappyPath_ScopesBySubjectAndDelegates(t *testing.T) {
 	t.Parallel()
-	ret := &fakeRetriever{
-		out: []rag.Chunk{
+	ret := &toolstest.FakeRetriever{
+		Out: []rag.Chunk{
 			{SourceType: rag.SourceChargeSession, SourceID: "session-7", ChunkIdx: 0, Text: "DC fast 250kW", Score: 0.91},
 		},
 	}
@@ -59,8 +61,8 @@ func TestRetrieveChargeCurveChunks_HappyPath_ScopesBySubjectAndDelegates(t *test
 	if k := env["k"].(int); k != 4 {
 		t.Errorf("k = %d, want 4", k)
 	}
-	if len(ret.subjects) != 1 || ret.subjects[0] != "user-77" {
-		t.Errorf("subjects = %v, want [user-77]", ret.subjects)
+	if len(ret.Subjects) != 1 || ret.Subjects[0] != "user-77" {
+		t.Errorf("subjects = %v, want [user-77]", ret.Subjects)
 	}
 	chunks := env["chunks"].([]retrievedChargeCurveChunk)
 	if len(chunks) != 1 || chunks[0].SourceID != "session-7" {
@@ -76,7 +78,7 @@ func TestRetrieveChargeCurveChunks_DefaultK_When_ZeroOrMissing(t *testing.T) {
 		`{"query": "x", "source_types": ["charge_session"]}`,
 		`{"query": "x", "source_types": ["charge_session"], "k": 0}`,
 	} {
-		ret := &fakeRetriever{out: nil}
+		ret := &toolstest.FakeRetriever{Out: nil}
 		tool := &retrieveChargeCurveChunks{r: ret}
 		in, err := tool.Validate(json.RawMessage(raw))
 		if err != nil {
@@ -90,7 +92,7 @@ func TestRetrieveChargeCurveChunks_DefaultK_When_ZeroOrMissing(t *testing.T) {
 		if k := env["k"].(int); k != chargeCurveDefaultK {
 			t.Errorf("k = %d, want %d", k, chargeCurveDefaultK)
 		}
-		if got := ret.ks[0]; got != chargeCurveDefaultK {
+		if got := ret.Ks[0]; got != chargeCurveDefaultK {
 			t.Errorf("retriever saw k = %d, want %d", got, chargeCurveDefaultK)
 		}
 	}
@@ -104,7 +106,7 @@ func TestRetrieveChargeCurveChunks_DefaultK_When_ZeroOrMissing(t *testing.T) {
 // already cover the zero-matches narration.
 func TestRetrieveChargeCurveChunks_AcceptsForwardCompatChargeCurveSourceType(t *testing.T) {
 	t.Parallel()
-	ret := &fakeRetriever{out: nil}
+	ret := &toolstest.FakeRetriever{Out: nil}
 	tool := &retrieveChargeCurveChunks{r: ret}
 	in, err := tool.Validate(json.RawMessage(`{"query": "fingerprint", "source_types": ["charge_curve"]}`))
 	if err != nil {
@@ -113,7 +115,7 @@ func TestRetrieveChargeCurveChunks_AcceptsForwardCompatChargeCurveSourceType(t *
 	if _, err := tool.Execute(context.Background(), in); err != nil {
 		t.Fatalf("Execute err = %v", err)
 	}
-	if got := ret.sourceTypes[0]; len(got) != 1 || got[0] != chargeCurveSourceCurve {
+	if got := ret.SourceTypes[0]; len(got) != 1 || got[0] != chargeCurveSourceCurve {
 		t.Errorf("retriever saw source_types = %v, want [charge_curve]", got)
 	}
 }
@@ -123,7 +125,7 @@ func TestRetrieveChargeCurveChunks_AcceptsForwardCompatChargeCurveSourceType(t *
 // slice prompt did not enumerate.
 func TestRetrieveChargeCurveChunks_Validate_RejectsUnknownSourceType(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveChargeCurveChunks{r: &fakeRetriever{}}
+	tool := &retrieveChargeCurveChunks{r: &toolstest.FakeRetriever{}}
 	_, err := tool.Validate(json.RawMessage(`{"query": "x", "source_types": ["user_note"]}`))
 	if err == nil {
 		t.Fatal("expected error for disallowed source_type")
@@ -137,7 +139,7 @@ func TestRetrieveChargeCurveChunks_Validate_RejectsUnknownSourceType(t *testing.
 // proves a list with a repeated entry is rejected.
 func TestRetrieveChargeCurveChunks_Validate_RejectsDuplicateSourceTypes(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveChargeCurveChunks{r: &fakeRetriever{}}
+	tool := &retrieveChargeCurveChunks{r: &toolstest.FakeRetriever{}}
 	_, err := tool.Validate(json.RawMessage(`{"query": "x", "source_types": ["charge_session", "charge_session"]}`))
 	if err == nil {
 		t.Fatal("expected error for duplicate source_type")
@@ -148,7 +150,7 @@ func TestRetrieveChargeCurveChunks_Validate_RejectsDuplicateSourceTypes(t *testi
 // an empty query is rejected.
 func TestRetrieveChargeCurveChunks_Validate_RejectsEmptyQuery(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveChargeCurveChunks{r: &fakeRetriever{}}
+	tool := &retrieveChargeCurveChunks{r: &toolstest.FakeRetriever{}}
 	_, err := tool.Validate(json.RawMessage(`{"query": "", "source_types": ["charge_session"]}`))
 	if err == nil {
 		t.Fatal("expected error for empty query")
@@ -159,7 +161,7 @@ func TestRetrieveChargeCurveChunks_Validate_RejectsEmptyQuery(t *testing.T) {
 // the chargeCurveMaxQueryChars cap is enforced.
 func TestRetrieveChargeCurveChunks_Validate_RejectsOversizedQuery(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveChargeCurveChunks{r: &fakeRetriever{}}
+	tool := &retrieveChargeCurveChunks{r: &toolstest.FakeRetriever{}}
 	big := strings.Repeat("a", chargeCurveMaxQueryChars+1)
 	_, err := tool.Validate(json.RawMessage(`{"query": "` + big + `", "source_types": ["charge_session"]}`))
 	if err == nil {
@@ -175,7 +177,7 @@ func TestRetrieveChargeCurveChunks_Validate_RejectsOversizedQuery(t *testing.T) 
 func TestRetrieveChargeCurveChunks_Execute_PropagatesRetrieverError(t *testing.T) {
 	t.Parallel()
 	want := errors.New("rag boom")
-	tool := &retrieveChargeCurveChunks{r: &fakeRetriever{err: want}}
+	tool := &retrieveChargeCurveChunks{r: &toolstest.FakeRetriever{Err: want}}
 	in, err := tool.Validate(json.RawMessage(`{"query": "x", "source_types": ["charge_session"]}`))
 	if err != nil {
 		t.Fatalf("Validate err = %v", err)
@@ -205,7 +207,7 @@ func TestRetrieveChargeCurveChunks_Execute_NilRetrieverReturnsError(t *testing.T
 // posture.
 func TestRetrieveChargeCurveChunks_Mutates_IsFalse(t *testing.T) {
 	t.Parallel()
-	tool := &retrieveChargeCurveChunks{r: &fakeRetriever{}}
+	tool := &retrieveChargeCurveChunks{r: &toolstest.FakeRetriever{}}
 	if tool.Mutates() {
 		t.Fatal("retrieve_charge_curve_chunks must NOT mutate")
 	}
@@ -259,17 +261,17 @@ func TestQueryChargeCurveFeatures_HappyPath_BucketsByPowerTier(t *testing.T) {
 	t.Parallel()
 	rows := []*chargingmodel.ChargingSession{
 		// 4 L2 sessions (≈ 7 kW peak) — should dominate.
-		newSession(1, 7000, 6500, 24_000, ptrTime(fixedNowCC().Add(2*time.Hour)), 30, "wall_connector"),
-		newSession(2, 7100, 6600, 25_000, ptrTime(fixedNowCC().Add(2*time.Hour)), 31, "wall_connector"),
-		newSession(3, 6900, 6300, 23_000, ptrTime(fixedNowCC().Add(2*time.Hour)), 29, "wall_connector"),
-		newSession(4, 7050, 6450, 24_500, ptrTime(fixedNowCC().Add(2*time.Hour)), 30, "wall_connector"),
+		newSession(1, 7000, 6500, 24_000, toolstest.PtrTime(fixedNowCC().Add(2*time.Hour)), 30, "wall_connector"),
+		newSession(2, 7100, 6600, 25_000, toolstest.PtrTime(fixedNowCC().Add(2*time.Hour)), 31, "wall_connector"),
+		newSession(3, 6900, 6300, 23_000, toolstest.PtrTime(fixedNowCC().Add(2*time.Hour)), 29, "wall_connector"),
+		newSession(4, 7050, 6450, 24_500, toolstest.PtrTime(fixedNowCC().Add(2*time.Hour)), 30, "wall_connector"),
 		// 2 DC fast sessions (≈ 150 kW peak).
-		newSession(5, 150_000, 90_000, 50_000, ptrTime(fixedNowCC().Add(1*time.Hour)), 45, "supercharger"),
-		newSession(6, 145_000, 88_000, 48_000, ptrTime(fixedNowCC().Add(1*time.Hour)), 44, "supercharger"),
+		newSession(5, 150_000, 90_000, 50_000, toolstest.PtrTime(fixedNowCC().Add(1*time.Hour)), 45, "supercharger"),
+		newSession(6, 145_000, 88_000, 48_000, toolstest.PtrTime(fixedNowCC().Add(1*time.Hour)), 44, "supercharger"),
 		// 1 L1 session (1.4 kW peak).
-		newSession(7, 1400, 1200, 6_000, ptrTime(fixedNowCC().Add(8*time.Hour)), 50, "outlet"),
+		newSession(7, 1400, 1200, 6_000, toolstest.PtrTime(fixedNowCC().Add(8*time.Hour)), 50, "outlet"),
 	}
-	src := &fakeCharges{rows: rows}
+	src := &toolstest.FakeCharges{Rows: rows}
 	tool := &queryChargeCurveFeatures{src: src, now: fixedNowCC}
 	in, err := tool.Validate(json.RawMessage(`{"vehicle_id": 1}`))
 	if err != nil {
@@ -317,10 +319,10 @@ func TestQueryChargeCurveFeatures_HappyPath_BucketsByPowerTier(t *testing.T) {
 func TestQueryChargeCurveFeatures_HasEnoughData_FalseUnderThreshold(t *testing.T) {
 	t.Parallel()
 	rows := []*chargingmodel.ChargingSession{
-		newSession(1, 7000, 6500, 24_000, ptrTime(fixedNowCC().Add(2*time.Hour)), 30, "wall_connector"),
-		newSession(2, 7100, 6600, 25_000, ptrTime(fixedNowCC().Add(2*time.Hour)), 31, "wall_connector"),
+		newSession(1, 7000, 6500, 24_000, toolstest.PtrTime(fixedNowCC().Add(2*time.Hour)), 30, "wall_connector"),
+		newSession(2, 7100, 6600, 25_000, toolstest.PtrTime(fixedNowCC().Add(2*time.Hour)), 31, "wall_connector"),
 	}
-	tool := &queryChargeCurveFeatures{src: &fakeCharges{rows: rows}, now: fixedNowCC}
+	tool := &queryChargeCurveFeatures{src: &toolstest.FakeCharges{Rows: rows}, now: fixedNowCC}
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 1}`))
 	out, _ := tool.Execute(context.Background(), in)
 	env := out.(map[string]any)
@@ -334,7 +336,7 @@ func TestQueryChargeCurveFeatures_HasEnoughData_FalseUnderThreshold(t *testing.T
 // = false, no panic.
 func TestQueryChargeCurveFeatures_NoSessions_ReturnsEmptyClusters(t *testing.T) {
 	t.Parallel()
-	tool := &queryChargeCurveFeatures{src: &fakeCharges{}, now: fixedNowCC}
+	tool := &queryChargeCurveFeatures{src: &toolstest.FakeCharges{}, now: fixedNowCC}
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 1}`))
 	out, err := tool.Execute(context.Background(), in)
 	if err != nil {
@@ -358,7 +360,7 @@ func TestQueryChargeCurveFeatures_NoSessions_ReturnsEmptyClusters(t *testing.T) 
 // lookback_days is zero or omitted.
 func TestQueryChargeCurveFeatures_DefaultLookback_When_Zero(t *testing.T) {
 	t.Parallel()
-	tool := &queryChargeCurveFeatures{src: &fakeCharges{}, now: fixedNowCC}
+	tool := &queryChargeCurveFeatures{src: &toolstest.FakeCharges{}, now: fixedNowCC}
 	in, _ := tool.Validate(json.RawMessage(`{"vehicle_id": 1}`))
 	out, _ := tool.Execute(context.Background(), in)
 	env := out.(map[string]any)
@@ -413,7 +415,7 @@ func TestQueryChargeCurveFeatures_FingerprintHash_StableForSameInputs(t *testing
 // posture.
 func TestQueryChargeCurveFeatures_Mutates_IsFalse(t *testing.T) {
 	t.Parallel()
-	tool := &queryChargeCurveFeatures{src: &fakeCharges{}, now: fixedNowCC}
+	tool := &queryChargeCurveFeatures{src: &toolstest.FakeCharges{}, now: fixedNowCC}
 	if tool.Mutates() {
 		t.Fatal("query_charge_curve_features must NOT mutate")
 	}
@@ -439,10 +441,10 @@ func TestQueryChargeCurveFeatures_NilSource_ReturnsError(t *testing.T) {
 // canonical names.
 func TestRegisterChargingCurveFingerprintClusteringTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterChargingCurveFingerprintClusteringTools(r, ChargingCurveFingerprintClusteringSources{
-		Retriever: &fakeRetriever{},
-		Charges:   &fakeCharges{},
+		Retriever: &toolstest.FakeRetriever{},
+		Charges:   &toolstest.FakeCharges{},
 	})
 	for _, name := range []string{
 		"retrieve_charge_curve_chunks",
@@ -486,6 +488,6 @@ func newSession(id int64, peakW, avgW, energyWh float64, ended *time.Time, delta
 		PeakPowerW:         ptrCCF64(peakW),
 		AvgPowerW:          ptrCCF64(avgW),
 		TotalEnergyAddedWh: ptrCCF64(energyWh),
-		ChargerType:        ptrString(chargerType),
+		ChargerType:        toolstest.PtrString(chargerType),
 	}
 }

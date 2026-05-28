@@ -26,7 +26,7 @@
 //     LLM needs to narrate (session count, peak/avg power averages,
 //     total energy averaged per session, ramp shape ratio, dominant
 //     charger_type, example session IDs). Computed in-memory from
-//     ChargeSource.GetByVehicle — no new SQL is written by this
+//     tools.ChargeSource.GetByVehicle — no new SQL is written by this
 //     tool. The aggregation does NOT change the bucketing the user
 //     already sees on /charging-curve; it just summarises each
 //     bucket so the narrator has structured numbers to quote.
@@ -47,7 +47,7 @@
 //     duplicate write paths." → retrieve_charge_curve_chunks
 //     delegates to the F7 rag.Retriever (the single canonical
 //     retrieval entry point); query_charge_curve_features delegates
-//     to a narrow ChargeSource read interface satisfied at boot by
+//     to a narrow tools.ChargeSource read interface satisfied at boot by
 //     an adapter wrapping the existing *database.ChargingRepo
 //     (no new SQL).
 //
@@ -71,7 +71,7 @@
 // asks the assistant to search e.g. "user_note" cannot accidentally
 // expose a corpus the slice did not enumerate.
 
-package tools
+package curve
 
 import (
 	"context"
@@ -89,6 +89,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // chargeCurveSourceCurve is the source-type string reserved by the
@@ -197,7 +198,7 @@ func (t *retrieveChargeCurveChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveChargeCurveChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveChargeCurveChunksInput{})
+	return tools.CachedSchema(retrieveChargeCurveChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -213,7 +214,7 @@ func (t *retrieveChargeCurveChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveChargeCurveChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveChargeCurveChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveChargeCurveChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -279,7 +280,7 @@ const queryChargeCurveFeaturesMaxClusters = 6
 
 // queryChargeCurveFeaturesFetchLimit caps how many sessions we pull
 // from the repo before grouping. Generous (500) for a 90-day window;
-// the underlying ChargeSource paginates so we never load the whole
+// the underlying tools.ChargeSource paginates so we never load the whole
 // table.
 const queryChargeCurveFeaturesFetchLimit = 500
 
@@ -349,7 +350,7 @@ type chargeCurveClusterAgg struct {
 // queryChargeCurveFeatures is the read-only tool that returns the
 // deterministic per-cluster fingerprint envelope.
 type queryChargeCurveFeatures struct {
-	src ChargeSource
+	src tools.ChargeSource
 	// now returns the reference timestamp for the lookback
 	// window. Injectable so tests can pin a deterministic
 	// reference instant. Defaults to time.Now in
@@ -373,7 +374,7 @@ func (t *queryChargeCurveFeatures) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryChargeCurveFeatures) InputSchema() json.RawMessage {
-	return CachedSchema(queryChargeCurveFeaturesInput{})
+	return tools.CachedSchema(queryChargeCurveFeaturesInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -387,7 +388,7 @@ func (t *queryChargeCurveFeatures) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *queryChargeCurveFeatures) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryChargeCurveFeaturesInput](raw)
+	return tools.ValidateStruct[queryChargeCurveFeaturesInput](raw)
 }
 
 // Execute implements [Tool]. One repo round-trip then in-memory
@@ -395,7 +396,7 @@ func (t *queryChargeCurveFeatures) Validate(raw json.RawMessage) (any, error) {
 func (t *queryChargeCurveFeatures) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(queryChargeCurveFeaturesInput)
 	if t.src == nil {
-		return nil, fmt.Errorf("query_charge_curve_features: no ChargeSource wired")
+		return nil, fmt.Errorf("query_charge_curve_features: no tools.ChargeSource wired")
 	}
 	lookback := input.LookbackDays
 	if lookback == 0 {
@@ -456,7 +457,7 @@ var chargeCurveClusterIDs = []string{
 // aggregateChargeCurveFeatures is a pure helper: given a slice of
 // *chargingmodel.ChargingSession rows, compute the deterministic
 // per-cluster envelope. Extracted so the unit tests can call it
-// directly without spinning up a fake ChargeSource and so Execute
+// directly without spinning up a fake tools.ChargeSource and so Execute
 // stays focused on IO + error wrapping.
 //
 // The aggregation:
@@ -703,7 +704,7 @@ func roundChargeCurve(v float64, n int) float64 {
 // built around; tests substitute deterministic fakes per-source.
 type ChargingCurveFingerprintClusteringSources struct {
 	Retriever rag.Retriever
-	Charges   ChargeSource
+	Charges   tools.ChargeSource
 }
 
 // RegisterChargingCurveFingerprintClusteringTools installs the
@@ -713,7 +714,7 @@ type ChargingCurveFingerprintClusteringSources struct {
 // deterministically.
 //
 // Panics on duplicate registration (Registry.Register panics).
-func RegisterChargingCurveFingerprintClusteringTools(r *Registry, s ChargingCurveFingerprintClusteringSources) {
+func RegisterChargingCurveFingerprintClusteringTools(r *tools.Registry, s ChargingCurveFingerprintClusteringSources) {
 	r.Register(&retrieveChargeCurveChunks{r: s.Retriever})
 	r.Register(&queryChargeCurveFeatures{src: s.Charges, now: time.Now})
 }

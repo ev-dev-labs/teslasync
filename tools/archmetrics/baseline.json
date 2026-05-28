@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T07:44:13Z",
+  "generated_at": "2026-05-28T07:48:13Z",
   "go_version": "go1.26.1",
-  "commit_sha": "79478baa16fcab329f67b60279a0d0c275c9946a",
+  "commit_sha": "07780280b99f6ea95db70aec0bd136a2a38ceb9d",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 16,
-      "test_files": 12,
-      "loc": 9731,
+      "go_files": 15,
+      "test_files": 11,
+      "loc": 8583,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1902,8 +1902,6 @@
         "automation_builder_test.go",
         "builtins.go",
         "builtins_test.go",
-        "charge_curve_clustering.go",
-        "charge_curve_clustering_test.go",
         "doc.go",
         "fuzz_schema_test.go",
         "help.go",
@@ -1996,6 +1994,26 @@
       "files": [
         "coaching.go",
         "coaching_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/curve",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1194,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/rag",
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest",
+        "internal/models/charging"
+      ],
+      "files": [
+        "curve.go",
+        "curve_test.go",
         "doc.go"
       ]
     },
@@ -2413,7 +2431,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126547,
+      "loc": 126548,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2489,6 +2507,7 @@
         "internal/ai/tools/anomaly",
         "internal/ai/tools/charge",
         "internal/ai/tools/coaching",
+        "internal/ai/tools/curve",
         "internal/ai/tools/diagnosis",
         "internal/ai/tools/diagnostic",
         "internal/ai/tools/digest",
@@ -6125,7 +6144,6 @@
     "internal/ai/tools": [
       "automation_builder.go",
       "builtins.go",
-      "charge_curve_clustering.go",
       "doc.go",
       "help.go",
       "ptrhelpers.go",
@@ -6155,6 +6173,10 @@
     ],
     "internal/ai/tools/coaching": [
       "coaching.go",
+      "doc.go"
+    ],
+    "internal/ai/tools/curve": [
+      "curve.go",
       "doc.go"
     ],
     "internal/ai/tools/diagnosis": [
@@ -7475,8 +7497,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 16,
-      "flat_parent_test_files": 12,
+      "flat_parent_go_files": 15,
+      "flat_parent_test_files": 11,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",
