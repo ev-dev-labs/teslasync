@@ -40,7 +40,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 // ---------------------------------------------------------------------------
@@ -52,13 +52,13 @@ import (
 // LoadRules returns the seeded rules verbatim and records the
 // last-seen filter so tests can assert end-to-end propagation.
 type fakeCrossRuleConflictSource struct {
-	Rules      []*models.AlertRule
+	Rules      []*alertmodel.AlertRule
 	Err        error
 	LastFilter CrossRuleConflictFilters
 	Calls      int
 }
 
-func (f *fakeCrossRuleConflictSource) LoadRules(_ context.Context, filter CrossRuleConflictFilters) ([]*models.AlertRule, error) {
+func (f *fakeCrossRuleConflictSource) LoadRules(_ context.Context, filter CrossRuleConflictFilters) ([]*alertmodel.AlertRule, error) {
 	f.LastFilter = filter
 	f.Calls++
 	if f.Err != nil {
@@ -75,12 +75,12 @@ func bptr(v bool) *bool      { return &v }
 
 // rule constructs a baseline AlertRule with sensible defaults
 // the tests can override per case.
-func rule(id int64, name, signal, op string, opts ...func(*models.AlertRule)) *models.AlertRule {
-	r := &models.AlertRule{
+func rule(id int64, name, signal, op string, opts ...func(*alertmodel.AlertRule)) *alertmodel.AlertRule {
+	r := &alertmodel.AlertRule{
 		ID:          id,
 		Name:        name,
 		Enabled:     true,
-		Kind:        models.AlertRuleKindSignal,
+		Kind:        alertmodel.AlertRuleKindSignal,
 		SignalName:  signal,
 		Op:          op,
 		Severity:    "medium",
@@ -94,33 +94,35 @@ func rule(id int64, name, signal, op string, opts ...func(*models.AlertRule)) *m
 	return r
 }
 
-func withVehicleSubset(ids ...int64) func(*models.AlertRule) {
-	return func(r *models.AlertRule) { r.AllVehicles = false; r.VehicleIDs = ids }
+func withVehicleSubset(ids ...int64) func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.AllVehicles = false; r.VehicleIDs = ids }
 }
-func withValueNum(v float64) func(*models.AlertRule) {
-	return func(r *models.AlertRule) { r.ValueNum = f64(v) }
+func withValueNum(v float64) func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.ValueNum = f64(v) }
 }
-func withValueText(v string) func(*models.AlertRule) {
-	return func(r *models.AlertRule) { r.ValueText = sptr(v) }
+func withValueText(v string) func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.ValueText = sptr(v) }
 }
-func withValueBool(v bool) func(*models.AlertRule) {
-	return func(r *models.AlertRule) { r.ValueBool = bptr(v) }
+func withValueBool(v bool) func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.ValueBool = bptr(v) }
 }
-func withValueRange(lo, hi float64) func(*models.AlertRule) {
-	return func(r *models.AlertRule) { r.ValueMin = f64(lo); r.ValueMax = f64(hi) }
+func withValueRange(lo, hi float64) func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.ValueMin = f64(lo); r.ValueMax = f64(hi) }
 }
-func withSeverity(s string) func(*models.AlertRule) {
-	return func(r *models.AlertRule) { r.Severity = s }
+func withSeverity(s string) func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.Severity = s }
 }
-func withCooldown(m int) func(*models.AlertRule) {
-	return func(r *models.AlertRule) { r.CooldownMin = m }
+func withCooldown(m int) func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.CooldownMin = m }
 }
-func withTriggerMode(m string) func(*models.AlertRule) {
-	return func(r *models.AlertRule) { r.TriggerMode = m }
+func withTriggerMode(m string) func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.TriggerMode = m }
 }
-func disabled() func(*models.AlertRule) { return func(r *models.AlertRule) { r.Enabled = false } }
-func computedMetric() func(*models.AlertRule) {
-	return func(r *models.AlertRule) { r.Kind = models.AlertRuleKindComputedMetric }
+func disabled() func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.Enabled = false }
+}
+func computedMetric() func(*alertmodel.AlertRule) {
+	return func(r *alertmodel.AlertRule) { r.Kind = alertmodel.AlertRuleKindComputedMetric }
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +136,7 @@ func computedMetric() func(*models.AlertRule) {
 // redundant_duplicate conflict with Subsumes=true.
 func TestDetectRuleConflicts_RedundantDuplicateNumeric(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "low-batt-A", "battery_level", "<", withValueNum(20)),
 		rule(2, "low-batt-B", "battery_level", "<", withValueNum(20)),
 	}
@@ -162,7 +164,7 @@ func TestDetectRuleConflicts_RedundantDuplicateNumeric(t *testing.T) {
 // text signal produce a redundant_duplicate conflict.
 func TestDetectRuleConflicts_RedundantDuplicateText(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(10, "shift-park-A", "gear", "=", withValueText("P")),
 		rule(11, "shift-park-B", "gear", "=", withValueText("P")),
 	}
@@ -178,7 +180,7 @@ func TestDetectRuleConflicts_RedundantDuplicateText(t *testing.T) {
 // rule 2 (`battery_level<15`).
 func TestDetectRuleConflicts_OverlappingThresholdSubsumes(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "low-batt-broad", "battery_level", "<", withValueNum(20)),
 		rule(2, "low-batt-narrow", "battery_level", "<", withValueNum(15)),
 	}
@@ -203,7 +205,7 @@ func TestDetectRuleConflicts_OverlappingThresholdSubsumes(t *testing.T) {
 // `[10, 20]` and `[15, 25]`).
 func TestDetectRuleConflicts_OverlappingThresholdPartial(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "battery-mid-A", "battery_level", "between", withValueRange(10, 20)),
 		rule(2, "battery-mid-B", "battery_level", "between", withValueRange(15, 25)),
 	}
@@ -223,7 +225,7 @@ func TestDetectRuleConflicts_OverlappingThresholdPartial(t *testing.T) {
 // boundary alerts are legitimate).
 func TestDetectRuleConflicts_NonOverlappingNumeric(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "low-batt", "battery_level", "<", withValueNum(10)),
 		rule(2, "high-batt", "battery_level", ">", withValueNum(20)),
 	}
@@ -238,7 +240,7 @@ func TestDetectRuleConflicts_NonOverlappingNumeric(t *testing.T) {
 // other shape.
 func TestDetectRuleConflicts_DifferentSignals(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "battery", "battery_level", "<", withValueNum(20)),
 		rule(2, "speed", "vehicle_speed", "<", withValueNum(20)),
 	}
@@ -253,7 +255,7 @@ func TestDetectRuleConflicts_DifferentSignals(t *testing.T) {
 // at the SQL layer.
 func TestDetectRuleConflicts_DisabledSkipped(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "low-batt-A", "battery_level", "<", withValueNum(20)),
 		rule(2, "low-batt-B", "battery_level", "<", withValueNum(20), disabled()),
 	}
@@ -269,7 +271,7 @@ func TestDetectRuleConflicts_DisabledSkipped(t *testing.T) {
 // signal_name + value_num).
 func TestDetectRuleConflicts_ComputedMetricSkipped(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "low-batt", "battery_level", "<", withValueNum(20)),
 		rule(2, "computed-batt", "battery_level", "<", withValueNum(20), computedMetric()),
 	}
@@ -283,7 +285,7 @@ func TestDetectRuleConflicts_ComputedMetricSkipped(t *testing.T) {
 // two rules on different vehicle subsets do NOT conflict.
 func TestDetectRuleConflicts_DisjointVehicleSubsets(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "v1-batt", "battery_level", "<", withValueNum(20), withVehicleSubset(1)),
 		rule(2, "v2-batt", "battery_level", "<", withValueNum(20), withVehicleSubset(2)),
 	}
@@ -298,7 +300,7 @@ func TestDetectRuleConflicts_DisjointVehicleSubsets(t *testing.T) {
 // subsets that share at least one ID DO conflict.
 func TestDetectRuleConflicts_OverlappingVehicleSubsets(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "fleet-batt-A", "battery_level", "<", withValueNum(20), withVehicleSubset(1, 2)),
 		rule(2, "fleet-batt-B", "battery_level", "<", withValueNum(20), withVehicleSubset(2, 3)),
 	}
@@ -312,7 +314,7 @@ func TestDetectRuleConflicts_OverlappingVehicleSubsets(t *testing.T) {
 // AllVehicles overlaps with any subset.
 func TestDetectRuleConflicts_AllVehiclesSubsumesSubset(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "all-batt", "battery_level", "<", withValueNum(20)), // AllVehicles=true via default
 		rule(2, "v3-batt", "battery_level", "<", withValueNum(20), withVehicleSubset(3)),
 	}
@@ -327,7 +329,7 @@ func TestDetectRuleConflicts_AllVehiclesSubsumesSubset(t *testing.T) {
 // on the conflict, NOT as separate conflict kinds.
 func TestDetectRuleConflicts_MetadataFlags(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "broad-batt", "battery_level", "<", withValueNum(20),
 			withSeverity("low"), withCooldown(5), withTriggerMode("edge")),
 		rule(2, "narrow-batt", "battery_level", "<", withValueNum(15),
@@ -358,7 +360,7 @@ func TestDetectRuleConflicts_StableSortOrder(t *testing.T) {
 	t.Parallel()
 	// Three rules — pairs (1,2), (1,3), (2,3) — only (1,3)
 	// + (2,3) overlap. Insert in shuffled ID order.
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(3, "rule-3", "battery_level", "<", withValueNum(20)),
 		rule(1, "rule-1", "battery_level", "<", withValueNum(25)),
 		rule(2, "rule-2", "battery_level", "<", withValueNum(22)),
@@ -385,10 +387,10 @@ func TestDetectRuleConflicts_EmptyAndSingle(t *testing.T) {
 	if got := DetectRuleConflicts(nil); len(got) != 0 {
 		t.Errorf("nil rules: got %d conflicts; want 0", len(got))
 	}
-	if got := DetectRuleConflicts([]*models.AlertRule{}); len(got) != 0 {
+	if got := DetectRuleConflicts([]*alertmodel.AlertRule{}); len(got) != 0 {
 		t.Errorf("empty rules: got %d conflicts; want 0", len(got))
 	}
-	one := []*models.AlertRule{rule(1, "only", "battery_level", "<", withValueNum(20))}
+	one := []*alertmodel.AlertRule{rule(1, "only", "battery_level", "<", withValueNum(20))}
 	if got := DetectRuleConflicts(one); len(got) != 0 {
 		t.Errorf("single rule: got %d conflicts; want 0", len(got))
 	}
@@ -399,7 +401,7 @@ func TestDetectRuleConflicts_EmptyAndSingle(t *testing.T) {
 // against repo paths that pad slices).
 func TestDetectRuleConflicts_NilEntryIgnored(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "a", "battery_level", "<", withValueNum(20)),
 		nil,
 		rule(2, "b", "battery_level", "<", withValueNum(20)),
@@ -415,7 +417,7 @@ func TestDetectRuleConflicts_NilEntryIgnored(t *testing.T) {
 // `between [10, 30]` subsumes `between [15, 25]`.
 func TestDetectRuleConflicts_BetweenSubsumesBetween(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "broad", "battery_level", "between", withValueRange(10, 30)),
 		rule(2, "narrow", "battery_level", "between", withValueRange(15, 25)),
 	}
@@ -434,7 +436,7 @@ func TestDetectRuleConflicts_BetweenSubsumesBetween(t *testing.T) {
 // [25, 30]` (value in [25, 30]) at the `[25, 30]` segment.
 func TestDetectRuleConflicts_OutsideOverlapsBetween(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "out-band", "battery_level", "outside", withValueRange(10, 20)),
 		rule(2, "high-band", "battery_level", "between", withValueRange(25, 30)),
 	}
@@ -448,7 +450,7 @@ func TestDetectRuleConflicts_OutsideOverlapsBetween(t *testing.T) {
 // op (point complement) overlapping with `<`.
 func TestDetectRuleConflicts_NotEqualOverlapsLess(t *testing.T) {
 	t.Parallel()
-	rules := []*models.AlertRule{
+	rules := []*alertmodel.AlertRule{
 		rule(1, "ne", "battery_level", "!=", withValueNum(50)),
 		rule(2, "lt", "battery_level", "<", withValueNum(30)),
 	}
@@ -464,13 +466,13 @@ func TestDetectRuleConflicts_NotEqualOverlapsLess(t *testing.T) {
 
 func TestVehicleScopesOverlap_Cases(t *testing.T) {
 	t.Parallel()
-	all := func() *models.AlertRule { return rule(1, "x", "battery_level", "<", withValueNum(20)) }
-	sub := func(ids ...int64) *models.AlertRule {
+	all := func() *alertmodel.AlertRule { return rule(1, "x", "battery_level", "<", withValueNum(20)) }
+	sub := func(ids ...int64) *alertmodel.AlertRule {
 		return rule(2, "y", "battery_level", "<", withValueNum(20), withVehicleSubset(ids...))
 	}
 	cases := []struct {
 		name string
-		a, b *models.AlertRule
+		a, b *alertmodel.AlertRule
 		want bool
 	}{
 		{"all+all", all(), all(), true},
@@ -527,7 +529,7 @@ func TestNumericIntervalForRule_Ops(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			r := &models.AlertRule{Op: tc.op, ValueNum: tc.valNum, ValueMin: tc.valMin, ValueMax: tc.valMax}
+			r := &alertmodel.AlertRule{Op: tc.op, ValueNum: tc.valNum, ValueMin: tc.valMin, ValueMax: tc.valMax}
 			iv, ok := numericIntervalForRule(r)
 			if ok != tc.wantOK {
 				t.Fatalf("ok = %v; want %v", ok, tc.wantOK)
@@ -550,61 +552,61 @@ func TestPredicatesByteEqual_Cases(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
-		a, b *models.AlertRule
+		a, b *alertmodel.AlertRule
 		want bool
 	}{
 		{
 			"identical numeric",
-			&models.AlertRule{Op: "<", ValueNum: f64(20)},
-			&models.AlertRule{Op: "<", ValueNum: f64(20)},
+			&alertmodel.AlertRule{Op: "<", ValueNum: f64(20)},
+			&alertmodel.AlertRule{Op: "<", ValueNum: f64(20)},
 			true,
 		},
 		{
 			"different op",
-			&models.AlertRule{Op: "<", ValueNum: f64(20)},
-			&models.AlertRule{Op: ">", ValueNum: f64(20)},
+			&alertmodel.AlertRule{Op: "<", ValueNum: f64(20)},
+			&alertmodel.AlertRule{Op: ">", ValueNum: f64(20)},
 			false,
 		},
 		{
 			"different value_num",
-			&models.AlertRule{Op: "<", ValueNum: f64(20)},
-			&models.AlertRule{Op: "<", ValueNum: f64(15)},
+			&alertmodel.AlertRule{Op: "<", ValueNum: f64(20)},
+			&alertmodel.AlertRule{Op: "<", ValueNum: f64(15)},
 			false,
 		},
 		{
 			"identical text",
-			&models.AlertRule{Op: "=", ValueText: sptr("P")},
-			&models.AlertRule{Op: "=", ValueText: sptr("P")},
+			&alertmodel.AlertRule{Op: "=", ValueText: sptr("P")},
+			&alertmodel.AlertRule{Op: "=", ValueText: sptr("P")},
 			true,
 		},
 		{
 			"different text",
-			&models.AlertRule{Op: "=", ValueText: sptr("P")},
-			&models.AlertRule{Op: "=", ValueText: sptr("D")},
+			&alertmodel.AlertRule{Op: "=", ValueText: sptr("P")},
+			&alertmodel.AlertRule{Op: "=", ValueText: sptr("D")},
 			false,
 		},
 		{
 			"identical bool",
-			&models.AlertRule{Op: "=", ValueBool: bptr(true)},
-			&models.AlertRule{Op: "=", ValueBool: bptr(true)},
+			&alertmodel.AlertRule{Op: "=", ValueBool: bptr(true)},
+			&alertmodel.AlertRule{Op: "=", ValueBool: bptr(true)},
 			true,
 		},
 		{
 			"identical between",
-			&models.AlertRule{Op: "between", ValueMin: f64(10), ValueMax: f64(20)},
-			&models.AlertRule{Op: "between", ValueMin: f64(10), ValueMax: f64(20)},
+			&alertmodel.AlertRule{Op: "between", ValueMin: f64(10), ValueMax: f64(20)},
+			&alertmodel.AlertRule{Op: "between", ValueMin: f64(10), ValueMax: f64(20)},
 			true,
 		},
 		{
 			"both nil values",
-			&models.AlertRule{Op: "changed"},
-			&models.AlertRule{Op: "changed"},
+			&alertmodel.AlertRule{Op: "changed"},
+			&alertmodel.AlertRule{Op: "changed"},
 			true,
 		},
 		{
 			"nil vs non-nil",
-			&models.AlertRule{Op: "="},
-			&models.AlertRule{Op: "=", ValueText: sptr("P")},
+			&alertmodel.AlertRule{Op: "="},
+			&alertmodel.AlertRule{Op: "=", ValueText: sptr("P")},
 			false,
 		},
 	}
@@ -629,7 +631,7 @@ func TestPredicatesByteEqual_Cases(t *testing.T) {
 // attribution string.
 func TestQueryAlertRules_HappyPath(t *testing.T) {
 	t.Parallel()
-	src := &fakeCrossRuleConflictSource{Rules: []*models.AlertRule{
+	src := &fakeCrossRuleConflictSource{Rules: []*alertmodel.AlertRule{
 		rule(2, "b", "battery_level", "<", withValueNum(15)),
 		rule(1, "a", "battery_level", "<", withValueNum(20)),
 	}}
@@ -776,7 +778,7 @@ func TestQueryAlertRules_NilSource(t *testing.T) {
 // produce a structural conflict.
 func TestDetectRuleConflictsTool_HappyPath(t *testing.T) {
 	t.Parallel()
-	src := &fakeCrossRuleConflictSource{Rules: []*models.AlertRule{
+	src := &fakeCrossRuleConflictSource{Rules: []*alertmodel.AlertRule{
 		rule(1, "broad", "battery_level", "<", withValueNum(20)),
 		rule(2, "narrow", "battery_level", "<", withValueNum(15)),
 	}}
@@ -818,7 +820,7 @@ func TestDetectRuleConflictsTool_HappyPath(t *testing.T) {
 // source returns fewer than two enabled rules.
 func TestDetectRuleConflictsTool_NoData(t *testing.T) {
 	t.Parallel()
-	src := &fakeCrossRuleConflictSource{Rules: []*models.AlertRule{
+	src := &fakeCrossRuleConflictSource{Rules: []*alertmodel.AlertRule{
 		rule(1, "only", "battery_level", "<", withValueNum(20)),
 	}}
 	tool := &detectRuleConflicts{source: src}
@@ -841,7 +843,7 @@ func TestDetectRuleConflictsTool_NoData(t *testing.T) {
 // rules but none of them conflict.
 func TestDetectRuleConflictsTool_NoConflicts(t *testing.T) {
 	t.Parallel()
-	src := &fakeCrossRuleConflictSource{Rules: []*models.AlertRule{
+	src := &fakeCrossRuleConflictSource{Rules: []*alertmodel.AlertRule{
 		rule(1, "a", "battery_level", "<", withValueNum(20)),
 		rule(2, "b", "vehicle_speed", "<", withValueNum(50)),
 	}}

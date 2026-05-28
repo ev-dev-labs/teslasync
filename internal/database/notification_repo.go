@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
@@ -1069,7 +1071,7 @@ func (r *NotificationRepo) AcknowledgeLog(ctx context.Context, id int64, actor, 
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO notification_log_events (notification_log_id, actor, kind, note)
 			 VALUES ($1, $2, $3, $4)`,
-			id, actorArg, models.NotificationLogEventKindAcknowledged, noteArg,
+			id, actorArg, alertmodel.NotificationLogEventKindAcknowledged, noteArg,
 		); err != nil {
 			return fmt.Errorf("notification_log_events ack insert: %w", err)
 		}
@@ -1142,7 +1144,7 @@ func (r *NotificationRepo) ReopenLog(ctx context.Context, id int64, actor string
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO notification_log_events (notification_log_id, actor, kind)
 			 VALUES ($1, $2, $3)`,
-			id, actorArg, models.NotificationLogEventKindReopened,
+			id, actorArg, alertmodel.NotificationLogEventKindReopened,
 		); err != nil {
 			return fmt.Errorf("notification_log_events reopen insert: %w", err)
 		}
@@ -1167,8 +1169,8 @@ func (r *NotificationRepo) ReopenLog(ctx context.Context, id int64, actor string
 // columns. Returns the inserted event row with its server-assigned id and
 // occurred_at. Returns (nil, nil) when the parent notification_logs row is
 // missing so the caller can render 404.
-func (r *NotificationRepo) CommentOnLog(ctx context.Context, id int64, actor, note string) (*models.NotificationLogEvent, error) {
-	var event *models.NotificationLogEvent
+func (r *NotificationRepo) CommentOnLog(ctx context.Context, id int64, actor, note string) (*alertmodel.NotificationLogEvent, error) {
+	var event *alertmodel.NotificationLogEvent
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var exists bool
 		if err := tx.QueryRow(ctx,
@@ -1191,17 +1193,17 @@ func (r *NotificationRepo) CommentOnLog(ctx context.Context, id int64, actor, no
 		} else {
 			noteArg = note
 		}
-		ev := &models.NotificationLogEvent{
+		ev := &alertmodel.NotificationLogEvent{
 			NotificationLogID: id,
 			Actor:             nilOrPtr(actor),
-			Kind:              models.NotificationLogEventKindCommented,
+			Kind:              alertmodel.NotificationLogEventKindCommented,
 			Note:              nilOrPtr(note),
 		}
 		if err := tx.QueryRow(ctx,
 			`INSERT INTO notification_log_events (notification_log_id, actor, kind, note)
 			 VALUES ($1, $2, $3, $4)
 			 RETURNING id, occurred_at`,
-			id, actorArg, models.NotificationLogEventKindCommented, noteArg,
+			id, actorArg, alertmodel.NotificationLogEventKindCommented, noteArg,
 		).Scan(&ev.ID, &ev.OccurredAt); err != nil {
 			return fmt.Errorf("notification_log_events comment insert: %w", err)
 		}
@@ -1225,7 +1227,7 @@ func nilOrPtr(s string) *string {
 // supplied notification_logs id, oldest first. The synthetic "created" entry
 // is reconstructed by the API layer from notification_logs.created_at and is
 // NOT returned by this method.
-func (r *NotificationRepo) ListLogEvents(ctx context.Context, logID int64) ([]*models.NotificationLogEvent, error) {
+func (r *NotificationRepo) ListLogEvents(ctx context.Context, logID int64) ([]*alertmodel.NotificationLogEvent, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT id, notification_log_id, occurred_at, actor, kind, note, metadata
 		   FROM notification_log_events
@@ -1237,9 +1239,9 @@ func (r *NotificationRepo) ListLogEvents(ctx context.Context, logID int64) ([]*m
 		return nil, fmt.Errorf("notification_log_events list: %w", err)
 	}
 	defer rows.Close()
-	var events []*models.NotificationLogEvent
+	var events []*alertmodel.NotificationLogEvent
 	for rows.Next() {
-		ev := &models.NotificationLogEvent{}
+		ev := &alertmodel.NotificationLogEvent{}
 		if err := rows.Scan(
 			&ev.ID, &ev.NotificationLogID, &ev.OccurredAt,
 			&ev.Actor, &ev.Kind, &ev.Note, &ev.Metadata,

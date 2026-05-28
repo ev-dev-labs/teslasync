@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -465,7 +467,7 @@ func runComputedMetricTick(
 	span.SetAttributes(attribute.Int("notification.computed_metric.triggered", triggered))
 }
 
-func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
+func vehiclesForRule(rule *alertmodel.AlertRule, all []*models.Vehicle) []int64 {
 	// Phase-49 / Slice 0005: multi-vehicle picker. Honour the new
 	// sticky-all flag + explicit subset hydrated by the repo.
 	if rule.AllVehicles {
@@ -490,7 +492,7 @@ func vehiclesForRule(rule *models.AlertRule, all []*models.Vehicle) []int64 {
 
 func dispatchComputedMetricNotification(
 	ctx context.Context,
-	rule *models.AlertRule,
+	rule *alertmodel.AlertRule,
 	vehicleID int64,
 	vehicleName string,
 	result computed.Result,

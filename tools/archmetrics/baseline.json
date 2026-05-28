@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T03:26:03Z",
+  "generated_at": "2026-05-28T03:35:43Z",
   "go_version": "go1.26.1",
-  "commit_sha": "8a86689293fa48474df923051eb081c0c9c1c610",
+  "commit_sha": "6a156af00f8c373858364f30e7814d3001a9f3ab",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -148,7 +148,7 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 521,
+      "loc": 522,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -157,6 +157,7 @@
         "internal/config",
         "internal/database",
         "internal/models",
+        "internal/models/alert",
         "internal/notification",
         "internal/notification/computed",
         "internal/resilience",
@@ -1882,7 +1883,7 @@
       "path": "internal/ai/tools",
       "go_files": 58,
       "test_files": 51,
-      "loc": 47072,
+      "loc": 47076,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1892,7 +1893,8 @@
         "internal/ml/anomaly",
         "internal/ml/chargingcurves",
         "internal/ml/range",
-        "internal/models"
+        "internal/models",
+        "internal/models/alert"
       ],
       "files": [
         "alert_builder.go",
@@ -2014,7 +2016,7 @@
       "has_doc_go": true,
       "layer": "domain",
       "imports": [
-        "internal/models",
+        "internal/models/alert",
         "internal/tesla/protomodel"
       ],
       "files": [
@@ -2028,7 +2030,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126461,
+      "loc": 126469,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2142,6 +2144,7 @@
         "internal/ml/chargingcurves",
         "internal/ml/range",
         "internal/models",
+        "internal/models/alert",
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
@@ -3146,7 +3149,7 @@
       "path": "internal/database",
       "go_files": 108,
       "test_files": 35,
-      "loc": 27844,
+      "loc": 27848,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3157,6 +3160,7 @@
         "internal/crypto",
         "internal/metrics",
         "internal/models",
+        "internal/models/alert",
         "internal/tracing"
       ],
       "files": [
@@ -3935,15 +3939,13 @@
     },
     {
       "path": "internal/models",
-      "go_files": 34,
-      "test_files": 2,
-      "loc": 3027,
+      "go_files": 33,
+      "test_files": 1,
+      "loc": 2784,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
       "files": [
-        "alert.go",
-        "alert_test.go",
         "automation.go",
         "automation_step_action.go",
         "automation_step_condition.go",
@@ -3978,6 +3980,20 @@
         "tesla.go",
         "trip.go",
         "vehicle.go"
+      ]
+    },
+    {
+      "path": "internal/models/alert",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 259,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "alert.go",
+        "alert_test.go",
+        "doc.go"
       ]
     },
     {
@@ -4042,7 +4058,7 @@
       "imports": [
         "internal/database",
         "internal/metrics",
-        "internal/models"
+        "internal/models/alert"
       ],
       "files": [
         "compare.go",
@@ -4908,7 +4924,7 @@
     "cmd/export-worker": 250,
     "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 517,
+    "cmd/notification-worker": 518,
     "cmd/ocpp-server": 91,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 655,
@@ -6199,7 +6215,6 @@
       "trainer.go"
     ],
     "internal/models": [
-      "alert.go",
       "automation.go",
       "automation_step_action.go",
       "automation_step_condition.go",
@@ -6233,6 +6248,10 @@
       "tesla.go",
       "trip.go",
       "vehicle.go"
+    ],
+    "internal/models/alert": [
+      "alert.go",
+      "doc.go"
     ],
     "internal/mqtt": [
       "dlq_inspector.go",
@@ -6536,12 +6555,13 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 34,
-      "flat_parent_test_files": 2,
+      "flat_parent_go_files": 33,
+      "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
-      "existing_subpkgs": null,
+      "existing_subpkgs": [
+        "alert"
+      ],
       "missing_subpkgs": [
-        "alert",
         "auth",
         "automation",
         "backup",

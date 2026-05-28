@@ -14,17 +14,17 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 // stubAlertValidator records every call + can be wired to fail for
 // the rejection-path tests.
 type stubAlertValidator struct {
 	failWith error
-	calls    []*models.AlertRule
+	calls    []*alertmodel.AlertRule
 }
 
-func (s *stubAlertValidator) ValidateAlertRule(rule *models.AlertRule) error {
+func (s *stubAlertValidator) ValidateAlertRule(rule *alertmodel.AlertRule) error {
 	s.calls = append(s.calls, rule)
 	return s.failWith
 }
@@ -83,8 +83,8 @@ func TestDraftAlertRule_HappyPath_OK(t *testing.T) {
 	if len(env.Draft.VehicleIDs) != 1 || env.Draft.VehicleIDs[0] != 1 {
 		t.Errorf("Draft.VehicleIDs = %v, want [1]", env.Draft.VehicleIDs)
 	}
-	if env.Draft.Kind != models.AlertRuleKindSignal {
-		t.Errorf("Draft.Kind = %q, want %q", env.Draft.Kind, models.AlertRuleKindSignal)
+	if env.Draft.Kind != alertmodel.AlertRuleKindSignal {
+		t.Errorf("Draft.Kind = %q, want %q", env.Draft.Kind, alertmodel.AlertRuleKindSignal)
 	}
 	if !env.Draft.Enabled {
 		t.Error("Draft.Enabled = false, want true (default)")

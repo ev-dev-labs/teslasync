@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T03:26:04Z, Go go1.26.1, commit 8a86689293fa48474df923051eb081c0c9c1c610_
+_Generated 2026-05-28T03:35:44Z, Go go1.26.1, commit 6a156af00f8c373858364f30e7814d3001a9f3ab_
 
 ## Summary
 
-- Packages: 210
+- Packages: 211
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 371874
+- Total non-blank LOC under cmd/+internal/+tools/: 371907
 
 ## cmd/* main.go LOC
 
@@ -21,7 +21,7 @@ _Generated 2026-05-28T03:26:04Z, Go go1.26.1, commit 8a86689293fa48474df923051eb
 | cmd/export-worker/main.go | 250 |
 | cmd/fleet-config-validator/main.go | 327 |
 | cmd/metric-coverage-audit/main.go | 126 |
-| cmd/notification-worker/main.go | 517 |
+| cmd/notification-worker/main.go | 518 |
 | cmd/ocpp-server/main.go | 91 |
 | cmd/protogen-tesla/main.go | 73 |
 | cmd/pub-test-signal/main.go | 655 |
@@ -48,7 +48,7 @@ _Generated 2026-05-28T03:26:04Z, Go go1.26.1, commit 8a86689293fa48474df923051eb
 | cmd/export-worker | 2 | 0 | 254 | yes | cmd-internal |
 | cmd/fleet-config-validator | 2 | 1 | 491 | yes | cmd-internal |
 | cmd/metric-coverage-audit | 2 | 0 | 130 | yes | cmd-internal |
-| cmd/notification-worker | 2 | 0 | 521 | yes | cmd-internal |
+| cmd/notification-worker | 2 | 0 | 522 | yes | cmd-internal |
 | cmd/ocpp-server | 2 | 0 | 103 | yes | cmd-internal |
 | cmd/protogen-tesla | 4 | 1 | 2297 | yes | cmd-internal |
 | cmd/protogen-tesla/testdata/golden | 4 | 0 | 265 | yes | cmd-internal |
@@ -139,9 +139,9 @@ _Generated 2026-05-28T03:26:04Z, Go go1.26.1, commit 8a86689293fa48474df923051eb
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 58 | 51 | 47072 | yes | platform |
+| internal/ai/tools | 58 | 51 | 47076 | yes | platform |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126461 | yes | handler |
+| internal/api | 271 | 163 | 126469 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -168,7 +168,7 @@ _Generated 2026-05-28T03:26:04Z, Go go1.26.1, commit 8a86689293fa48474df923051eb
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 108 | 35 | 27844 | yes | platform |
+| internal/database | 108 | 35 | 27848 | yes | platform |
 | internal/dataquality | 4 | 0 | 347 | yes | platform |
 | internal/domain | 2 | 1 | 114 | yes | domain |
 | internal/domain/charging | 6 | 1 | 357 | yes | domain |
@@ -203,7 +203,8 @@ _Generated 2026-05-28T03:26:04Z, Go go1.26.1, commit 8a86689293fa48474df923051eb
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 34 | 2 | 3027 | yes | domain |
+| internal/models | 33 | 1 | 2784 | yes | domain |
+| internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/mqtt | 7 | 7 | 4273 | yes | platform |
 | internal/notification | 4 | 2 | 1243 | yes | platform |
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |
@@ -261,7 +262,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 34 / 2 | 19 | 0 | 19 |
+| `internal/models` | R5 | 36 | 33 / 1 | 19 | 1 | 18 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -272,8 +273,10 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 > 19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes.
 
-**Planned but not yet on disk:**
+**Existing subpackages on disk:**
 - `internal/models/alert`
+
+**Planned but not yet on disk:**
 - `internal/models/auth`
 - `internal/models/automation`
 - `internal/models/backup`

@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/rs/zerolog/log"
 )
@@ -118,7 +119,7 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 // passed through to notification.Request.SuppressTransportTitle — the
 // canonical title is still persisted in notification_logs and broadcast
 // over SSE regardless.
-func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *models.AlertRule, vehicleID int64, vin string, evalContext map[string]any, effectiveSeverity string) {
+func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmodel.AlertRule, vehicleID int64, vin string, evalContext map[string]any, effectiveSeverity string) {
 	severity := effectiveSeverity
 	if severity == "" {
 		severity = rule.Severity

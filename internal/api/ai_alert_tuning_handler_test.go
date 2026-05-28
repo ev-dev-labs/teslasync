@@ -80,7 +80,7 @@ func TestAlertTuningSuggestionsAIOffManualTuningWorks(t *testing.T) {
 		// `"surface":"baseline_manual_tuning"` envelope marker
 		// the canonical AlertHandler.UpdateAlertRule path
 		// produces (under test conditions; the production
-		// handler returns a real models.AlertRule). We mock it
+		// handler returns a real alertmodel.AlertRule). We mock it
 		// here so the test stays hermetic (no DB).
 		r.Put("/alerts/rules/{ruleID}", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")

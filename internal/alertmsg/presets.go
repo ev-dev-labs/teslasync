@@ -3,9 +3,9 @@ package alertmsg
 import (
 	"encoding/json"
 
-	_ "embed"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	_ "embed"
 )
 
 //go:embed presets.json
@@ -32,7 +32,7 @@ func mustLoadPresets() []Preset {
 //
 // The returned slice is a fresh copy — callers may freely sort or
 // extend it without mutating the package-level cache.
-func Presets(rule *models.AlertRule) []Preset {
+func Presets(rule *alertmodel.AlertRule) []Preset {
 	kind := ""
 	if rule != nil {
 		kind = rule.Kind

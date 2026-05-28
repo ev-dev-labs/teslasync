@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -55,7 +57,7 @@ type SettingsBundle struct {
 // not touched, so a partial bundle (e.g. only alert_rules) is valid.
 type SettingsBundleSections struct {
 	Settings   *models.Settings           `json:"settings,omitempty"`
-	AlertRules []*models.AlertRule        `json:"alert_rules,omitempty"`
+	AlertRules []*alertmodel.AlertRule    `json:"alert_rules,omitempty"`
 	Geofences  []*models.Geofence         `json:"geofences,omitempty"`
 	QuietHours []*models.QuietHoursWindow `json:"quiet_hours,omitempty"`
 }
@@ -93,9 +95,9 @@ type SettingsSerializerSettingsRepo interface {
 // serializer depends on. Apply uses GetAll to compute the diff +
 // Create/Update/Delete to converge.
 type SettingsSerializerAlertRepo interface {
-	GetAll(ctx context.Context) ([]*models.AlertRule, error)
-	Create(ctx context.Context, rule *models.AlertRule) error
-	Update(ctx context.Context, id int64, rule *models.AlertRule) error
+	GetAll(ctx context.Context) ([]*alertmodel.AlertRule, error)
+	Create(ctx context.Context, rule *alertmodel.AlertRule) error
+	Update(ctx context.Context, id int64, rule *alertmodel.AlertRule) error
 }
 
 // SettingsSerializerGeofenceRepo mirrors the alert surface for the
@@ -283,12 +285,12 @@ func (s *SettingsSerializer) ImportSettings(ctx context.Context, userID string, 
 // "updated". Rules absent from the import are LEFT IN PLACE — this is
 // an additive merge, not a destructive sync, so the user can hand-pick
 // rules across multiple installs without losing any.
-func (s *SettingsSerializer) applyAlertRules(ctx context.Context, incoming []*models.AlertRule, dryRun bool) (SectionResult, error) {
+func (s *SettingsSerializer) applyAlertRules(ctx context.Context, incoming []*alertmodel.AlertRule, dryRun bool) (SectionResult, error) {
 	current, err := s.alerts.GetAll(ctx)
 	if err != nil {
 		return SectionResult{}, fmt.Errorf("alert_rules import: list current: %w", err)
 	}
-	byKey := map[string]*models.AlertRule{}
+	byKey := map[string]*alertmodel.AlertRule{}
 	for _, r := range current {
 		byKey[alertRuleStableID(r.Name)] = r
 	}
@@ -501,7 +503,7 @@ func settingsEquivalent(a, b *models.Settings) bool {
 // Phase-50 / ADR-005: MsgTemplate + IncludeTitle are compared so a
 // reimport that toggles the title or rewords the body is recognised
 // as a behavioural change (and not silently skipped).
-func alertRulesEquivalent(a, b *models.AlertRule) bool {
+func alertRulesEquivalent(a, b *alertmodel.AlertRule) bool {
 	if a == nil || b == nil {
 		return a == b
 	}

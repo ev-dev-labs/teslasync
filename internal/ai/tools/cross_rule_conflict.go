@@ -57,7 +57,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 // ---------------------------------------------------------------------------
@@ -113,10 +113,10 @@ var ConflictKinds = []string{
 // Typed envelopes.
 // ---------------------------------------------------------------------------
 
-// AlertRuleSummary is the projection of models.AlertRule the
+// AlertRuleSummary is the projection of alertmodel.AlertRule the
 // query_alert_rules tool returns. Mirrors the fields the
 // detector (and the SPA conflict card) actually need; we
-// intentionally do NOT echo back the full models.AlertRule so
+// intentionally do NOT echo back the full alertmodel.AlertRule so
 // the LLM never sees fields it doesn't need (msg_template,
 // snoozed_until, etc.).
 type AlertRuleSummary struct {
@@ -243,7 +243,7 @@ type CrossRuleConflictSource interface {
 	// rule_id that belongs to a different user MUST surface as
 	// the rule being absent from the result, not as a leak of
 	// foreign rule metadata.
-	LoadRules(ctx context.Context, f CrossRuleConflictFilters) ([]*models.AlertRule, error)
+	LoadRules(ctx context.Context, f CrossRuleConflictFilters) ([]*alertmodel.AlertRule, error)
 }
 
 // CrossRuleConflictFilters is the narrow filter struct passed
@@ -640,7 +640,7 @@ func (t *detectRuleConflicts) Execute(ctx context.Context, in any) (any, error) 
 // VehicleIDs is copied (not aliased) so a downstream caller
 // that mutates the summary slice cannot leak through to the
 // repo's pooled rule struct.
-func projectRuleSummary(r *models.AlertRule) AlertRuleSummary {
+func projectRuleSummary(r *alertmodel.AlertRule) AlertRuleSummary {
 	out := AlertRuleSummary{
 		ID:          r.ID,
 		Name:        r.Name,
@@ -692,7 +692,7 @@ func projectRuleSummary(r *models.AlertRule) AlertRuleSummary {
 //     least one vehicle ID.
 //
 // Pulled out so the unit tests can pin every case explicitly.
-func vehicleScopesOverlap(a, b *models.AlertRule) bool {
+func vehicleScopesOverlap(a, b *alertmodel.AlertRule) bool {
 	if a.AllVehicles || b.AllVehicles {
 		return true
 	}
@@ -718,7 +718,7 @@ func vehicleScopesOverlap(a, b *models.AlertRule) bool {
 // reach this when both rules already share signal_name). Kind
 // is also checked by the caller — computed_metric vs signal
 // rules cannot redundant-duplicate each other.
-func predicatesByteEqual(a, b *models.AlertRule) bool {
+func predicatesByteEqual(a, b *alertmodel.AlertRule) bool {
 	if a.Op != b.Op {
 		return false
 	}
@@ -767,7 +767,7 @@ func predicatesByteEqual(a, b *models.AlertRule) bool {
 // degeneracy that prevents interval comparison — false-positives
 // are worse than missed conflicts here per the rubber-duck
 // critique.
-func numericIntervalsOverlap(a, b *models.AlertRule) (overlap, aSubsumesB, bSubsumesA bool) {
+func numericIntervalsOverlap(a, b *alertmodel.AlertRule) (overlap, aSubsumesB, bSubsumesA bool) {
 	ia, okA := numericIntervalForRule(a)
 	ib, okB := numericIntervalForRule(b)
 	if !okA || !okB {
@@ -816,7 +816,7 @@ const (
 // predicate into a numericInterval. Returns ok=false for any
 // rule whose op is non-numeric, whose required value slot is
 // nil, or whose between/outside bounds are inverted (min > max).
-func numericIntervalForRule(r *models.AlertRule) (numericInterval, bool) {
+func numericIntervalForRule(r *alertmodel.AlertRule) (numericInterval, bool) {
 	switch r.Op {
 	case "<":
 		if r.ValueNum == nil {
@@ -1002,11 +1002,11 @@ func boolPtrEqual(a, b *bool) bool {
 // IMPORTANT: this function does NOT mutate the input slice.
 // Pointers in the result envelope reference the input rules'
 // names but never modify them.
-func DetectRuleConflicts(rules []*models.AlertRule) []RuleConflict {
+func DetectRuleConflicts(rules []*alertmodel.AlertRule) []RuleConflict {
 	// Filter to enabled signal-kind rules. Computed-metric
 	// rules don't have the signal_name + value_num/min/max
 	// predicate this detector understands.
-	eligible := make([]*models.AlertRule, 0, len(rules))
+	eligible := make([]*alertmodel.AlertRule, 0, len(rules))
 	for _, r := range rules {
 		if r == nil {
 			continue
@@ -1014,7 +1014,7 @@ func DetectRuleConflicts(rules []*models.AlertRule) []RuleConflict {
 		if !r.Enabled {
 			continue
 		}
-		if r.Kind != "" && r.Kind != models.AlertRuleKindSignal {
+		if r.Kind != "" && r.Kind != alertmodel.AlertRuleKindSignal {
 			continue
 		}
 		if r.SignalName == "" {
@@ -1078,7 +1078,7 @@ func DetectRuleConflicts(rules []*models.AlertRule) []RuleConflict {
 //
 // The classifier performs no defensive re-checks of those —
 // they're load-bearing on the calling loop.
-func classifyPairConflict(a, b *models.AlertRule) (RuleConflict, bool) {
+func classifyPairConflict(a, b *alertmodel.AlertRule) (RuleConflict, bool) {
 	conf := RuleConflict{
 		RuleAID:             a.ID,
 		RuleBID:             b.ID,
@@ -1140,7 +1140,7 @@ func classifyPairConflict(a, b *models.AlertRule) (RuleConflict, bool) {
 // human-readable string for the conflict Reason. Used only
 // inside Reason — the canonical typed envelope still carries
 // the raw value_* pointers for the SPA to render directly.
-func formatOperand(r *models.AlertRule) string {
+func formatOperand(r *alertmodel.AlertRule) string {
 	switch r.Op {
 	case "between", "outside":
 		if r.ValueMin != nil && r.ValueMax != nil {

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
@@ -179,7 +181,7 @@ func (h *AlertHandler) ListRules(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rules == nil {
-		rules = []*models.AlertRule{}
+		rules = []*alertmodel.AlertRule{}
 	}
 	writeJSON(w, http.StatusOK, rules)
 }
@@ -423,7 +425,7 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		Name:                  name,
 		Description:           body.Description,
 		Enabled:               enabled,
@@ -574,7 +576,7 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Computed-metric preview path: skips notification dispatch entirely.
-	if body.Kind != nil && *body.Kind == models.AlertRuleKindComputedMetric {
+	if body.Kind != nil && *body.Kind == alertmodel.AlertRuleKindComputedMetric {
 		h.previewComputedMetric(w, r, body)
 		return
 	}
@@ -827,7 +829,7 @@ func validateAlertSeverity(severity string) (string, error) {
 // boundary additionally rejects `trigger_mode='once'` + escalation set
 // so the user gets a clean 400 rather than a 5xx from a constraint
 // violation.
-func validateAlertRuleEscalation(rule *models.AlertRule) error {
+func validateAlertRuleEscalation(rule *alertmodel.AlertRule) error {
 	if (rule.EscalationAfterMin == nil) != (rule.EscalationSeverity == nil) {
 		return errors.New("escalation_after_min and escalation_severity must be set together (both null or both populated)")
 	}
@@ -868,7 +870,7 @@ func alertSeverityRank(severity string) int {
 	}
 }
 
-func validateAlertRule(rule *models.AlertRule) error {
+func validateAlertRule(rule *alertmodel.AlertRule) error {
 	if rule.Name == "" {
 		return errors.New("name is required")
 	}
@@ -891,21 +893,21 @@ func validateAlertRule(rule *models.AlertRule) error {
 		return err
 	}
 	switch rule.Kind {
-	case "", models.AlertRuleKindSignal:
+	case "", alertmodel.AlertRuleKindSignal:
 		if strings.TrimSpace(rule.SignalName) == "" {
 			return errors.New("signal_name is required")
 		}
 		return validateAlertRuleOperand(rule)
-	case models.AlertRuleKindComputedMetric:
+	case alertmodel.AlertRuleKindComputedMetric:
 		return validateComputedMetricRule(rule)
 	default:
-		return fmt.Errorf("kind must be %q or %q", models.AlertRuleKindSignal, models.AlertRuleKindComputedMetric)
+		return fmt.Errorf("kind must be %q or %q", alertmodel.AlertRuleKindSignal, alertmodel.AlertRuleKindComputedMetric)
 	}
 }
 
 // validateComputedMetricRule enforces that all four metric_* fields are set
 // and reference a known metric / window / operator combination.
-func validateComputedMetricRule(rule *models.AlertRule) error {
+func validateComputedMetricRule(rule *alertmodel.AlertRule) error {
 	if rule.MetricID == nil || strings.TrimSpace(*rule.MetricID) == "" {
 		return errors.New("metric_id is required for computed_metric rules")
 	}
@@ -935,9 +937,9 @@ func validateComputedMetricRule(rule *models.AlertRule) error {
 // switching kinds doesn't leave stale data behind. For kind='signal' it nulls
 // the metric_* fields; for kind='computed_metric' it clears signal_name, op,
 // and the value_* operands.
-func normalizeAlertRuleByKind(rule *models.AlertRule) {
+func normalizeAlertRuleByKind(rule *alertmodel.AlertRule) {
 	switch rule.Kind {
-	case models.AlertRuleKindComputedMetric:
+	case alertmodel.AlertRuleKindComputedMetric:
 		rule.SignalName = ""
 		rule.Op = ""
 		rule.ValueNum = nil
@@ -946,7 +948,7 @@ func normalizeAlertRuleByKind(rule *models.AlertRule) {
 		rule.ValueMin = nil
 		rule.ValueMax = nil
 	default:
-		rule.Kind = models.AlertRuleKindSignal
+		rule.Kind = alertmodel.AlertRuleKindSignal
 		rule.MetricID = nil
 		rule.MetricWindow = nil
 		rule.MetricThreshold = nil
@@ -958,13 +960,13 @@ func normalizeAlertRuleByKind(rule *models.AlertRule) {
 // nil/empty defaults to "signal" (legacy behavior).
 func validateAlertRuleKind(kind *string) (string, error) {
 	if kind == nil || *kind == "" {
-		return models.AlertRuleKindSignal, nil
+		return alertmodel.AlertRuleKindSignal, nil
 	}
 	switch *kind {
-	case models.AlertRuleKindSignal, models.AlertRuleKindComputedMetric:
+	case alertmodel.AlertRuleKindSignal, alertmodel.AlertRuleKindComputedMetric:
 		return *kind, nil
 	default:
-		return "", fmt.Errorf("kind must be %q or %q", models.AlertRuleKindSignal, models.AlertRuleKindComputedMetric)
+		return "", fmt.Errorf("kind must be %q or %q", alertmodel.AlertRuleKindSignal, alertmodel.AlertRuleKindComputedMetric)
 	}
 }
 
@@ -982,7 +984,7 @@ func validateTriggerMode(mode *string) (string, error) {
 	}
 }
 
-func validateAlertRuleOperand(rule *models.AlertRule) error {
+func validateAlertRuleOperand(rule *alertmodel.AlertRule) error {
 	switch rule.Op {
 	case "<", "<=", ">", ">=":
 		if rule.ValueNum == nil {
@@ -1021,7 +1023,7 @@ func validateAlertRuleOperand(rule *models.AlertRule) error {
 	return nil
 }
 
-func countAlertValueOperands(rule *models.AlertRule) int {
+func countAlertValueOperands(rule *alertmodel.AlertRule) int {
 	count := 0
 	if rule.ValueNum != nil {
 		count++
@@ -1071,8 +1073,8 @@ func (h *AlertHandler) previewComputedMetric(w http.ResponseWriter, r *http.Requ
 		writeError(w, http.StatusServiceUnavailable, "computed-metric evaluator unavailable")
 		return
 	}
-	rule := &models.AlertRule{
-		Kind:            models.AlertRuleKindComputedMetric,
+	rule := &alertmodel.AlertRule{
+		Kind:            alertmodel.AlertRuleKindComputedMetric,
 		MetricID:        body.MetricID,
 		MetricWindow:    body.MetricWindow,
 		MetricOp:        body.MetricOp,
@@ -1097,7 +1099,7 @@ func (h *AlertHandler) previewComputedMetric(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	resp := map[string]interface{}{
-		"kind":          models.AlertRuleKindComputedMetric,
+		"kind":          alertmodel.AlertRuleKindComputedMetric,
 		"metric_id":     *rule.MetricID,
 		"metric_window": *rule.MetricWindow,
 		"metric_op":     *rule.MetricOp,

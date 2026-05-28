@@ -57,6 +57,8 @@ import (
 	"net/http"
 	"strings"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -66,7 +68,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiAlertBuilderMaxIterations bounds the dispatcher's tool-loop. The
@@ -277,6 +278,6 @@ func NewAIAlertRuleValidator() *AIAlertRuleValidator { return &AIAlertRuleValida
 // to the canonical validateAlertRule function — same code path the
 // POST /api/v1/alerts/rules handler runs, so a draft accepted here
 // is byte-equivalent to a draft accepted by the canonical handler.
-func (v *AIAlertRuleValidator) ValidateAlertRule(rule *models.AlertRule) error {
+func (v *AIAlertRuleValidator) ValidateAlertRule(rule *alertmodel.AlertRule) error {
 	return validateAlertRule(rule)
 }

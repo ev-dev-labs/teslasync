@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -31,7 +33,7 @@ func buildBundle(version int) *database.SettingsBundle {
 				Theme:          "neon-cyan",
 				Mode:           "dark",
 			},
-			AlertRules: []*models.AlertRule{
+			AlertRules: []*alertmodel.AlertRule{
 				{Name: "Battery Low", SignalName: "battery_level", Op: "<",
 					Severity: "warn", CooldownMin: 30, TriggerMode: "repeat", Kind: "signal", Enabled: true},
 			},
@@ -139,7 +141,7 @@ func TestSettingsImportHandler_RoundTrip_ExportThenImportYieldsSkip(t *testing.T
 		UnitOfLength: "mi", UnitOfTemp: "F", UnitOfPressure: "psi",
 		PreferredRange: "rated", Language: "en", Theme: "neon-cyan", Mode: "dark",
 	}
-	alerts.rules = []*models.AlertRule{
+	alerts.rules = []*alertmodel.AlertRule{
 		{ID: 1, Name: "Battery Low", SignalName: "battery_level", Op: "<",
 			Severity: "warn", CooldownMin: 30, TriggerMode: "repeat", Kind: "signal", Enabled: true},
 	}

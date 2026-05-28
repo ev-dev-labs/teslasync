@@ -11,9 +11,10 @@ import (
 	"sync"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -182,7 +183,7 @@ type EvalResult struct {
 
 // Evaluate checks a single rule against the current signal batch.
 // Returns whether the rule triggered and the rendered message.
-func (e *RuleEngine) Evaluate(rule *models.AlertRule, vehicleID int64, signals map[string]interface{}) EvalResult {
+func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signals map[string]interface{}) EvalResult {
 	// Snooze takes precedence over cooldown, condition, and trigger mode.
 	// While snoozed, no state is changed (no prev-signal updates) so the
 	// rule resumes its previous behavior cleanly when the snooze expires.
@@ -505,7 +506,7 @@ func (e *RuleEngine) SetLastFired(ruleID, vehicleID int64, t time.Time) {
 // (`rule.AllVehicles=true`) get a single fleet-baseline entry keyed on
 // vehicleID=0; per-vehicle state rows materialise organically as fires
 // happen against specific vehicles.
-func (e *RuleEngine) LoadCooldownFromDB(ctx context.Context, rules []*models.AlertRule) {
+func (e *RuleEngine) LoadCooldownFromDB(ctx context.Context, rules []*alertmodel.AlertRule) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	for _, rule := range rules {
@@ -522,7 +523,7 @@ func (e *RuleEngine) LoadCooldownFromDB(ctx context.Context, rules []*models.Ale
 // vehicleIDsForState returns the set of vehicle IDs to seed in the rule
 // state map. Sticky-all rules use the fleet-baseline key (vehicleID=0);
 // explicit-subset rules use each junction entry. Phase-49 / Slice 0005.
-func vehicleIDsForState(rule *models.AlertRule) []int64 {
+func vehicleIDsForState(rule *alertmodel.AlertRule) []int64 {
 	if rule == nil {
 		return nil
 	}
@@ -576,7 +577,7 @@ func (e *RuleEngine) LoadPrevSignalsFromStore(vehicleID int64, signals map[strin
 // Typed rule evaluation
 // ──────────────────────────────────────────────────────────────────────
 
-func evalRule(rule *models.AlertRule, signals, prevSignals map[string]interface{}) bool {
+func evalRule(rule *alertmodel.AlertRule, signals, prevSignals map[string]interface{}) bool {
 	if rule != nil {
 		// Continue with typed rule evaluation.
 	} else {
@@ -644,7 +645,7 @@ func evalRule(rule *models.AlertRule, signals, prevSignals map[string]interface{
 	return false
 }
 
-func alertRuleOperand(rule *models.AlertRule) (interface{}, bool) {
+func alertRuleOperand(rule *alertmodel.AlertRule) (interface{}, bool) {
 	if rule.ValueNum != nil {
 		return *rule.ValueNum, true
 	}
@@ -657,7 +658,7 @@ func alertRuleOperand(rule *models.AlertRule) (interface{}, bool) {
 	return nil, false
 }
 
-func evalRange(rule *models.AlertRule, current interface{}, inside bool) bool {
+func evalRange(rule *alertmodel.AlertRule, current interface{}, inside bool) bool {
 	if rule.ValueMin != nil && rule.ValueMax != nil {
 		aboveMin := compareNum(current, *rule.ValueMin) >= 0
 		belowMax := compareNum(current, *rule.ValueMax) <= 0
@@ -723,7 +724,7 @@ func compareNum(a, b interface{}) int {
 // isTransitionRule returns true for baseline-aware transition rules. Cooldown
 // reset only applies to transitions; threshold rules should not reset on brief
 // bounces to avoid notification storms.
-func isTransitionRule(rule *models.AlertRule) bool {
+func isTransitionRule(rule *alertmodel.AlertRule) bool {
 	if rule != nil {
 		switch rule.Op {
 		case "changed":

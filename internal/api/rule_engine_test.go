@@ -6,20 +6,21 @@ import (
 	"testing"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 func TestAlertRuleTypedComparisonOps(t *testing.T) {
 	tests := []struct {
 		name    string
-		rule    models.AlertRule
+		rule    alertmodel.AlertRule
 		signals map[string]interface{}
 		want    bool
 	}{
 		{
 			name: "equals text",
-			rule: models.AlertRule{
+			rule: alertmodel.AlertRule{
 				SignalName: "Gear",
 				Op:         "=",
 				ValueText:  strPtr("D"),
@@ -29,7 +30,7 @@ func TestAlertRuleTypedComparisonOps(t *testing.T) {
 		},
 		{
 			name: "equals bool false",
-			rule: models.AlertRule{
+			rule: alertmodel.AlertRule{
 				SignalName: "SentryMode",
 				Op:         "=",
 				ValueBool:  boolPtr(false),
@@ -39,7 +40,7 @@ func TestAlertRuleTypedComparisonOps(t *testing.T) {
 		},
 		{
 			name: "not equals number",
-			rule: models.AlertRule{
+			rule: alertmodel.AlertRule{
 				SignalName: "BatteryLevel",
 				Op:         "!=",
 				ValueNum:   floatPtr(75),
@@ -49,7 +50,7 @@ func TestAlertRuleTypedComparisonOps(t *testing.T) {
 		},
 		{
 			name: "less than",
-			rule: models.AlertRule{
+			rule: alertmodel.AlertRule{
 				SignalName: "BatteryLevel",
 				Op:         "<",
 				ValueNum:   floatPtr(20),
@@ -59,7 +60,7 @@ func TestAlertRuleTypedComparisonOps(t *testing.T) {
 		},
 		{
 			name: "less than or equal boundary",
-			rule: models.AlertRule{
+			rule: alertmodel.AlertRule{
 				SignalName: "BatteryLevel",
 				Op:         "<=",
 				ValueNum:   floatPtr(20),
@@ -69,7 +70,7 @@ func TestAlertRuleTypedComparisonOps(t *testing.T) {
 		},
 		{
 			name: "greater than",
-			rule: models.AlertRule{
+			rule: alertmodel.AlertRule{
 				SignalName: "Speed",
 				Op:         ">",
 				ValueNum:   floatPtr(85),
@@ -79,7 +80,7 @@ func TestAlertRuleTypedComparisonOps(t *testing.T) {
 		},
 		{
 			name: "greater than or equal boundary",
-			rule: models.AlertRule{
+			rule: alertmodel.AlertRule{
 				SignalName: "Speed",
 				Op:         ">=",
 				ValueNum:   floatPtr(85),
@@ -89,7 +90,7 @@ func TestAlertRuleTypedComparisonOps(t *testing.T) {
 		},
 		{
 			name: "missing operand",
-			rule: models.AlertRule{
+			rule: alertmodel.AlertRule{
 				SignalName: "Speed",
 				Op:         ">",
 			},
@@ -133,7 +134,7 @@ func TestAlertRuleRangeOps(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rule := &models.AlertRule{
+			rule := &alertmodel.AlertRule{
 				ID:          int64(i + 100),
 				Name:        tt.name,
 				CooldownMin: 15,
@@ -153,7 +154,7 @@ func TestAlertRuleRangeOps(t *testing.T) {
 }
 
 func TestAlertRuleRangeOpsRequireBounds(t *testing.T) {
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          120,
 		Name:        "Battery Window",
 		CooldownMin: 15,
@@ -171,7 +172,7 @@ func TestAlertRuleRangeOpsRequireBounds(t *testing.T) {
 
 func TestAlertRuleChangedRequiresBaseline(t *testing.T) {
 	engine := NewRuleEngine()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          200,
 		Name:        "Gear Changed",
 		CooldownMin: 15,
@@ -193,7 +194,7 @@ func TestAlertRuleChangedRequiresBaseline(t *testing.T) {
 
 func TestAlertRuleChangedDoesNotRepeatUnchangedValue(t *testing.T) {
 	engine := NewRuleEngine()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          201,
 		Name:        "Gear Changed",
 		CooldownMin: 15,
@@ -214,7 +215,7 @@ func TestAlertRuleChangedDoesNotRepeatUnchangedValue(t *testing.T) {
 
 func TestAlertRuleChangedWithTypedTargetResetsAfterConditionFalse(t *testing.T) {
 	engine := NewRuleEngine()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          202,
 		Name:        "Gear to Drive",
 		CooldownMin: 15,
@@ -248,7 +249,7 @@ func TestAlertRuleChangedWithTypedTargetResetsAfterConditionFalse(t *testing.T) 
 
 func TestAlertRuleChangedUsesLoadedBaseline(t *testing.T) {
 	engine := NewRuleEngine()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          203,
 		Name:        "Gear to Drive",
 		CooldownMin: 15,
@@ -277,7 +278,7 @@ func TestAlertRuleChangedUsesLoadedBaseline(t *testing.T) {
 
 func TestAlertRuleThresholdDoesNotResetCooldown(t *testing.T) {
 	engine := NewRuleEngine()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          300,
 		Name:        "Battery Low",
 		CooldownMin: 15,
@@ -321,7 +322,7 @@ func TestAlertRuleThresholdDoesNotResetCooldown(t *testing.T) {
 
 func TestAlertRuleCooldownNaturalExpiry(t *testing.T) {
 	engine := NewRuleEngine()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          301,
 		Name:        "Speed Alert",
 		CooldownMin: 0,
@@ -363,7 +364,7 @@ func TestIsTransitionRule(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			rule := &models.AlertRule{Op: tt.op}
+			rule := &alertmodel.AlertRule{Op: tt.op}
 			got := isTransitionRule(rule)
 			if got != tt.want {
 				t.Fatalf("isTransitionRule() = %v, want %v", got, tt.want)
@@ -376,7 +377,7 @@ func TestIsTransitionRule(t *testing.T) {
 
 func TestRuleEngine_TriggerMode_Repeat_FiresEveryCooldown(t *testing.T) {
 	engine := NewRuleEngine()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          400,
 		Name:        "Battery Full",
 		CooldownMin: 60,
@@ -412,7 +413,7 @@ func TestRuleEngine_TriggerMode_Repeat_FiresEveryCooldown(t *testing.T) {
 
 func TestRuleEngine_TriggerMode_Once_FiresOnceThenSuppresses(t *testing.T) {
 	engine := NewRuleEngine()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          401,
 		Name:        "Battery Full Once",
 		CooldownMin: 60,
@@ -451,7 +452,7 @@ func TestRuleEngine_TriggerMode_Once_FiresOnceThenSuppresses(t *testing.T) {
 
 func TestRuleEngine_TriggerMode_Once_TransitionTimeline(t *testing.T) {
 	engine := NewRuleEngine()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          402,
 		Name:        "Battery Full Toggle",
 		CooldownMin: 60,
@@ -477,7 +478,7 @@ func TestRuleEngine_TriggerMode_Once_TransitionTimeline(t *testing.T) {
 func TestRuleEngine_Snooze_Suppresses(t *testing.T) {
 	engine := NewRuleEngine()
 	until := time.Now().UTC().Add(time.Hour)
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:           500,
 		Name:         "Battery Full",
 		CooldownMin:  60,
@@ -507,7 +508,7 @@ func TestRuleEngine_Snooze_Suppresses(t *testing.T) {
 func TestRuleEngine_Snooze_BeatsTriggerMode(t *testing.T) {
 	engine := NewRuleEngine()
 	until := time.Now().UTC().Add(time.Hour)
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:           501,
 		Name:         "Battery Full Once Snoozed",
 		CooldownMin:  60,
@@ -536,7 +537,7 @@ func TestRuleEngine_Snooze_BeatsTriggerMode(t *testing.T) {
 func TestRuleEngine_Snooze_ExpiredAllowsOnceFire(t *testing.T) {
 	engine := NewRuleEngine()
 	past := time.Now().UTC().Add(-time.Hour)
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:           502,
 		Name:         "Battery Full Once Expired Snooze",
 		CooldownMin:  60,
@@ -633,8 +634,8 @@ func (f *fakeRuleStateStore) ClearLatch(_ context.Context, ruleID, vehicleID int
 }
 
 // onceModeRule returns a rule used by the persistence tests below.
-func onceModeRule(id int64) *models.AlertRule {
-	return &models.AlertRule{
+func onceModeRule(id int64) *alertmodel.AlertRule {
+	return &alertmodel.AlertRule{
 		ID:          id,
 		Name:        "Locked = true",
 		Enabled:     true,
@@ -750,7 +751,7 @@ func TestRuleEngine_PersistentLatch_RaceLost_Suppresses(t *testing.T) {
 func TestRuleEngine_PersistentLatch_RepeatModeNeverLatches(t *testing.T) {
 	t.Parallel()
 	store := newFakeRuleStateStore()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:          45,
 		Name:        "BatteryLow",
 		Enabled:     true,
@@ -828,8 +829,8 @@ func TestRuleEngine_NilStateRepo_FallsBackToInMemory(t *testing.T) {
 // numeric repeat-mode rule with a 1-minute cooldown. Tests bypass the
 // cooldown between rapid fires via SetLastFired(far-past) so the cap
 // is the only suppression knob being exercised.
-func repeatRuleWithCap(id int64, cap *int) *models.AlertRule {
-	return &models.AlertRule{
+func repeatRuleWithCap(id int64, cap *int) *alertmodel.AlertRule {
+	return &alertmodel.AlertRule{
 		ID:                    id,
 		Name:                  "BatteryLow",
 		Enabled:               true,
@@ -1191,7 +1192,7 @@ func TestEvaluate_FiresAfterCooldown_NoStackedFSM(t *testing.T) {
 // validation contract.
 // ---------------------------------------------------------------------
 
-func repeatRuleWithEscalation(id int64, afterMin int, escalated string) *models.AlertRule {
+func repeatRuleWithEscalation(id int64, afterMin int, escalated string) *alertmodel.AlertRule {
 	rule := repeatRuleWithCap(id, nil)
 	rule.EscalationAfterMin = intPtr(afterMin)
 	sev := escalated
@@ -1355,8 +1356,8 @@ func TestEvaluate_Escalation_NilFieldsBaseSeverity(t *testing.T) {
 func TestValidateAlertRuleEscalation_AllInvariants(t *testing.T) {
 	t.Parallel()
 
-	mkRule := func() *models.AlertRule {
-		return &models.AlertRule{
+	mkRule := func() *alertmodel.AlertRule {
+		return &alertmodel.AlertRule{
 			Name:        "x",
 			Severity:    "warn",
 			CooldownMin: 5,

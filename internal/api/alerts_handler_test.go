@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -18,14 +20,14 @@ import (
 
 func newAckTestHandler(logs ...*models.NotificationLog) (*AlertHandler, *fakeNotificationRepo, *fakeAlertRuleRepo) {
 	ruleID := int64(11)
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		ID:         ruleID,
 		Name:       "Battery low",
 		Severity:   "critical",
 		SignalName: "BatteryLevel",
 	}
 	ruleRepo := &fakeAlertRuleRepo{
-		byID: map[int64]*models.AlertRule{ruleID: rule},
+		byID: map[int64]*alertmodel.AlertRule{ruleID: rule},
 	}
 	notif := &fakeNotificationRepo{
 		logs:     logs,
@@ -402,9 +404,9 @@ func TestBuildAlertEventTimeline(t *testing.T) {
 	logRow := &models.NotificationLog{ID: 200, CreatedAt: created}
 	actor := "alice"
 	note := "Restarting MQTT"
-	events := []*models.NotificationLogEvent{
+	events := []*alertmodel.NotificationLogEvent{
 		{ID: 1, NotificationLogID: 200, OccurredAt: created.Add(7 * time.Minute),
-			Actor: &actor, Kind: models.NotificationLogEventKindAcknowledged, Note: &note},
+			Actor: &actor, Kind: alertmodel.NotificationLogEventKindAcknowledged, Note: &note},
 	}
 	out := buildAlertEventTimeline(logRow, events)
 	if len(out) != 2 {

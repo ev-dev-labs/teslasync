@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 func sp(s string) *string   { return &s }
@@ -18,25 +18,25 @@ func bp(b bool) *bool       { return &b }
 func TestRenderTitle(t *testing.T) {
 	cases := []struct {
 		name string
-		rule *models.AlertRule
+		rule *alertmodel.AlertRule
 		ctx  Context
 		want string
 	}{
 		{
 			name: "vehicle + rule",
-			rule: &models.AlertRule{Name: "Battery Low"},
+			rule: &alertmodel.AlertRule{Name: "Battery Low"},
 			ctx:  Context{"VehicleName": "Falcon"},
 			want: "Falcon — Battery Low",
 		},
 		{
 			name: "rule only",
-			rule: &models.AlertRule{Name: "Battery Low"},
+			rule: &alertmodel.AlertRule{Name: "Battery Low"},
 			ctx:  Context{},
 			want: "Battery Low",
 		},
 		{
 			name: "blank rule name falls back to Alert",
-			rule: &models.AlertRule{Name: "   "},
+			rule: &alertmodel.AlertRule{Name: "   "},
 			ctx:  Context{},
 			want: "Alert",
 		},
@@ -48,7 +48,7 @@ func TestRenderTitle(t *testing.T) {
 		},
 		{
 			name: "blank vehicle name is ignored",
-			rule: &models.AlertRule{Name: "Battery Low"},
+			rule: &alertmodel.AlertRule{Name: "Battery Low"},
 			ctx:  Context{"VehicleName": "  "},
 			want: "Battery Low",
 		},
@@ -72,13 +72,13 @@ func TestRenderTitle(t *testing.T) {
 func TestRenderDefaultBody(t *testing.T) {
 	cases := []struct {
 		name   string
-		rule   *models.AlertRule
+		rule   *alertmodel.AlertRule
 		signal map[string]any
 		want   string
 	}{
 		{
 			name: "state-change text equality: title is the message (empty body)",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				Kind: "signal", Op: "=", SignalName: "Gear", ValueText: sp("R"),
 			},
 			signal: map[string]any{"Gear": "R"},
@@ -86,7 +86,7 @@ func TestRenderDefaultBody(t *testing.T) {
 		},
 		{
 			name: "state-change bool: empty body",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				Kind: "signal", Op: "!=", SignalName: "VehicleLocked", ValueBool: bp(false),
 			},
 			signal: map[string]any{"VehicleLocked": false},
@@ -94,7 +94,7 @@ func TestRenderDefaultBody(t *testing.T) {
 		},
 		{
 			name: "changed bool: empty body",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				Kind: "signal", Op: "changed", SignalName: "Gear", ValueBool: bp(true),
 			},
 			signal: map[string]any{"Gear": "D"},
@@ -102,7 +102,7 @@ func TestRenderDefaultBody(t *testing.T) {
 		},
 		{
 			name: "threshold below: value + threshold",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				Kind: "signal", Op: "<", SignalName: "Soc", ValueNum: fp(20),
 			},
 			signal: map[string]any{"Soc": 18.2},
@@ -110,7 +110,7 @@ func TestRenderDefaultBody(t *testing.T) {
 		},
 		{
 			name: "threshold above >= integer formatting",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				Kind: "signal", Op: ">=", SignalName: "VehicleSpeed", ValueNum: fp(120),
 			},
 			signal: map[string]any{"VehicleSpeed": 125.0},
@@ -118,7 +118,7 @@ func TestRenderDefaultBody(t *testing.T) {
 		},
 		{
 			name: "between with value",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				Kind: "signal", Op: "between", SignalName: "Soc",
 				ValueMin: fp(40), ValueMax: fp(80),
 			},
@@ -127,7 +127,7 @@ func TestRenderDefaultBody(t *testing.T) {
 		},
 		{
 			name: "outside with value",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				Kind: "signal", Op: "outside", SignalName: "Soc",
 				ValueMin: fp(20), ValueMax: fp(80),
 			},
@@ -136,7 +136,7 @@ func TestRenderDefaultBody(t *testing.T) {
 		},
 		{
 			name: "computed metric comparison",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				Kind:            "computed_metric",
 				MetricID:        sp("avg_speed"),
 				MetricWindow:    sp("1h"),
@@ -148,7 +148,7 @@ func TestRenderDefaultBody(t *testing.T) {
 		},
 		{
 			name: "computed metric % change",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				Kind:            "computed_metric",
 				MetricID:        sp("energy_used"),
 				MetricWindow:    sp("24h"),
@@ -179,7 +179,7 @@ func TestRenderDefaultBody(t *testing.T) {
 // including whitespace inside braces and unknown-placeholder
 // pass-through.
 func TestRenderBodyTemplate(t *testing.T) {
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		Kind: "signal", Op: "<", SignalName: "Soc", ValueNum: fp(20),
 		MsgTemplate: sp("Battery on {{VehicleName}} is {{ Soc }}% (threshold {{Threshold}}). Unknown: {{nope}}"),
 	}
@@ -195,7 +195,7 @@ func TestRenderBodyTemplate(t *testing.T) {
 // but whitespace-only template is treated the same as nil and routes
 // to RenderDefaultBody.
 func TestRenderBodyTemplateBlankFallsBack(t *testing.T) {
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		Kind: "signal", Op: "<", SignalName: "Soc", ValueNum: fp(20),
 		MsgTemplate: sp("   \t\n   "),
 	}
@@ -252,7 +252,7 @@ func TestPlaceholdersAlwaysIncludeBuiltins(t *testing.T) {
 // least one sibling from the same protomodel Category. We use Gear
 // (Category=driving) and check that another driving signal shows up.
 func TestPlaceholdersSignalKindIncludesTriggerAndSiblings(t *testing.T) {
-	rule := &models.AlertRule{Kind: "signal", Op: "=", SignalName: "Gear", ValueText: sp("R")}
+	rule := &alertmodel.AlertRule{Kind: "signal", Op: "=", SignalName: "Gear", ValueText: sp("R")}
 	got := Placeholders(rule)
 	triggerSeen := false
 	siblingSeen := false
@@ -277,7 +277,7 @@ func TestPlaceholdersSignalKindIncludesTriggerAndSiblings(t *testing.T) {
 // substitute in BuildContext) and the per-Kind filter swallows the
 // signal-only "Min"/"Max" pair when the op doesn't need it.
 func TestPlaceholdersComputedKind(t *testing.T) {
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		Kind: "computed_metric", MetricID: sp("avg_speed"), MetricOp: sp(">"),
 	}
 	got := Placeholders(rule)
@@ -326,7 +326,7 @@ func TestPlaceholdersOpConditional(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			rule := &models.AlertRule{Kind: "signal", Op: tc.op, SignalName: "BatteryLevel"}
+			rule := &alertmodel.AlertRule{Kind: "signal", Op: tc.op, SignalName: "BatteryLevel"}
 			got := Placeholders(rule)
 			keys := map[string]bool{}
 			for _, p := range got {
@@ -373,7 +373,7 @@ func TestPresetsAreParseable(t *testing.T) {
 // keeps universal presets ("" kind) and drops the other kind's
 // catalogue.
 func TestPresetsFilterByKind(t *testing.T) {
-	rule := &models.AlertRule{Kind: "computed_metric"}
+	rule := &alertmodel.AlertRule{Kind: "computed_metric"}
 	for _, p := range Presets(rule) {
 		if p.Kind == "signal" {
 			t.Errorf("computed-metric rule got signal-only preset %q", p.ID)

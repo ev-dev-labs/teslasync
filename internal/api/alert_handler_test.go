@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -526,9 +528,9 @@ func newAlertHandlerForTestWithRepo(repo *fakeAlertRuleRepo) *AlertHandler {
 	}
 }
 
-func validAlertRuleForTest() *models.AlertRule {
+func validAlertRuleForTest() *alertmodel.AlertRule {
 	valueNum := 70.0
-	return &models.AlertRule{
+	return &alertmodel.AlertRule{
 		ID:          42,
 		Name:        "Speed warning",
 		Enabled:     true,
@@ -544,10 +546,10 @@ func validAlertRuleForTest() *models.AlertRule {
 }
 
 type fakeAlertRuleRepo struct {
-	existing  *models.AlertRule
-	byID      map[int64]*models.AlertRule
-	created   []*models.AlertRule
-	updated   []*models.AlertRule
+	existing  *alertmodel.AlertRule
+	byID      map[int64]*alertmodel.AlertRule
+	created   []*alertmodel.AlertRule
+	updated   []*alertmodel.AlertRule
 	snoozed   []snoozeRecord
 	snoozeErr error
 	notFound  bool
@@ -558,19 +560,19 @@ type snoozeRecord struct {
 	until *time.Time
 }
 
-func (f *fakeAlertRuleRepo) GetAll(context.Context) ([]*models.AlertRule, error) {
+func (f *fakeAlertRuleRepo) GetAll(context.Context) ([]*alertmodel.AlertRule, error) {
 	if f.existing == nil {
-		return []*models.AlertRule{}, nil
+		return []*alertmodel.AlertRule{}, nil
 	}
-	return []*models.AlertRule{f.existing}, nil
+	return []*alertmodel.AlertRule{f.existing}, nil
 }
 
-func (f *fakeAlertRuleRepo) Update(_ context.Context, _ int64, rule *models.AlertRule) error {
+func (f *fakeAlertRuleRepo) Update(_ context.Context, _ int64, rule *alertmodel.AlertRule) error {
 	f.updated = append(f.updated, cloneAlertRuleForTest(rule))
 	return nil
 }
 
-func (f *fakeAlertRuleRepo) GetByID(_ context.Context, id int64) (*models.AlertRule, error) {
+func (f *fakeAlertRuleRepo) GetByID(_ context.Context, id int64) (*alertmodel.AlertRule, error) {
 	if f.notFound {
 		return nil, nil
 	}
@@ -586,7 +588,7 @@ func (f *fakeAlertRuleRepo) GetByID(_ context.Context, id int64) (*models.AlertR
 	return cloneAlertRuleForTest(f.existing), nil
 }
 
-func (f *fakeAlertRuleRepo) Create(_ context.Context, rule *models.AlertRule) error {
+func (f *fakeAlertRuleRepo) Create(_ context.Context, rule *alertmodel.AlertRule) error {
 	rule.ID = 100 + int64(len(f.created))
 	rule.CreatedAt = time.Now().UTC()
 	rule.UpdatedAt = rule.CreatedAt
@@ -614,7 +616,7 @@ func (f *fakeAlertRuleRepo) SetSnooze(_ context.Context, id int64, until *time.T
 	return nil
 }
 
-func cloneAlertRuleForTest(rule *models.AlertRule) *models.AlertRule {
+func cloneAlertRuleForTest(rule *alertmodel.AlertRule) *alertmodel.AlertRule {
 	if rule == nil {
 		return nil
 	}
@@ -622,7 +624,7 @@ func cloneAlertRuleForTest(rule *models.AlertRule) *models.AlertRule {
 	if err != nil {
 		panic(err)
 	}
-	var cloned models.AlertRule
+	var cloned alertmodel.AlertRule
 	if err := json.Unmarshal(data, &cloned); err != nil {
 		panic(err)
 	}
@@ -634,7 +636,7 @@ type fakeNotificationRepo struct {
 
 	// Phase-46 / Prompt 20 — alert ack + audit timeline state.
 	logsByID    map[int64]*models.NotificationLog
-	eventsByID  map[int64][]*models.NotificationLogEvent
+	eventsByID  map[int64][]*alertmodel.NotificationLogEvent
 	nextEventID int64
 
 	getLogErr        error
@@ -724,9 +726,9 @@ func (f *fakeNotificationRepo) AcknowledgeLog(_ context.Context, id int64, actor
 		n := note
 		row.AcknowledgementNote = &n
 	}
-	f.appendEvent(id, &models.NotificationLogEvent{
+	f.appendEvent(id, &alertmodel.NotificationLogEvent{
 		Actor: nilOrPtrString(actor),
-		Kind:  models.NotificationLogEventKindAcknowledged,
+		Kind:  alertmodel.NotificationLogEventKindAcknowledged,
 		Note:  nilOrPtrString(note),
 	})
 	return row, true, nil
@@ -750,14 +752,14 @@ func (f *fakeNotificationRepo) ReopenLog(_ context.Context, id int64, actor stri
 	row.AcknowledgedAt = nil
 	row.AcknowledgedBy = nil
 	row.AcknowledgementNote = nil
-	f.appendEvent(id, &models.NotificationLogEvent{
+	f.appendEvent(id, &alertmodel.NotificationLogEvent{
 		Actor: nilOrPtrString(actor),
-		Kind:  models.NotificationLogEventKindReopened,
+		Kind:  alertmodel.NotificationLogEventKindReopened,
 	})
 	return row, true, nil
 }
 
-func (f *fakeNotificationRepo) CommentOnLog(_ context.Context, id int64, actor, note string) (*models.NotificationLogEvent, error) {
+func (f *fakeNotificationRepo) CommentOnLog(_ context.Context, id int64, actor, note string) (*alertmodel.NotificationLogEvent, error) {
 	if f.commentErr != nil {
 		return nil, f.commentErr
 	}
@@ -768,30 +770,30 @@ func (f *fakeNotificationRepo) CommentOnLog(_ context.Context, id int64, actor, 
 	if _, ok := f.logsByID[id]; !ok {
 		return nil, nil
 	}
-	ev := &models.NotificationLogEvent{
+	ev := &alertmodel.NotificationLogEvent{
 		Actor: nilOrPtrString(actor),
-		Kind:  models.NotificationLogEventKindCommented,
+		Kind:  alertmodel.NotificationLogEventKindCommented,
 		Note:  nilOrPtrString(note),
 	}
 	f.appendEvent(id, ev)
 	return ev, nil
 }
 
-func (f *fakeNotificationRepo) ListLogEvents(_ context.Context, logID int64) ([]*models.NotificationLogEvent, error) {
+func (f *fakeNotificationRepo) ListLogEvents(_ context.Context, logID int64) ([]*alertmodel.NotificationLogEvent, error) {
 	if f.listLogEventsErr != nil {
 		return nil, f.listLogEventsErr
 	}
 	if f.eventsByID == nil {
 		return nil, nil
 	}
-	out := make([]*models.NotificationLogEvent, len(f.eventsByID[logID]))
+	out := make([]*alertmodel.NotificationLogEvent, len(f.eventsByID[logID]))
 	copy(out, f.eventsByID[logID])
 	return out, nil
 }
 
-func (f *fakeNotificationRepo) appendEvent(logID int64, ev *models.NotificationLogEvent) {
+func (f *fakeNotificationRepo) appendEvent(logID int64, ev *alertmodel.NotificationLogEvent) {
 	if f.eventsByID == nil {
-		f.eventsByID = make(map[int64][]*models.NotificationLogEvent)
+		f.eventsByID = make(map[int64][]*alertmodel.NotificationLogEvent)
 	}
 	f.nextEventID++
 	ev.ID = f.nextEventID
@@ -816,14 +818,14 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	ruleInfoID := int64(22)
 	vehicleID := int64(7)
 
-	criticalRule := &models.AlertRule{
+	criticalRule := &alertmodel.AlertRule{
 		ID:         ruleCritID,
 		Name:       "Battery low (Model Y)",
 		Severity:   "critical",
 		SignalName: "BatteryLevel",
 		VehicleID:  &vehicleID,
 	}
-	infoRule := &models.AlertRule{
+	infoRule := &alertmodel.AlertRule{
 		ID:         ruleInfoID,
 		Name:       "Door unlocked",
 		Severity:   "info",
@@ -838,7 +840,7 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	}
 
 	repo := &fakeAlertRuleRepo{
-		byID: map[int64]*models.AlertRule{
+		byID: map[int64]*alertmodel.AlertRule{
 			ruleCritID: criticalRule,
 			ruleInfoID: infoRule,
 		},

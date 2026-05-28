@@ -54,6 +54,8 @@ import (
 	"strconv"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
@@ -363,7 +365,7 @@ func NewAIAlertTuningSource(rules *database.AlertRuleRepo, notifications *databa
 // the deterministic AlertStudio's PUT handler uses to read the
 // rule before applying the patch. Returns (nil, nil) when the
 // rule does not exist so the tool can surface "rule_not_found".
-func (a *AIAlertTuningSource) LoadRule(ctx context.Context, ruleID int64) (*models.AlertRule, error) {
+func (a *AIAlertTuningSource) LoadRule(ctx context.Context, ruleID int64) (*alertmodel.AlertRule, error) {
 	if ruleID <= 0 {
 		return nil, errors.New("api ai alert-tuning-suggestions: rule_id must be > 0")
 	}
@@ -393,7 +395,7 @@ func (a *AIAlertTuningSource) LoadRule(ctx context.Context, ruleID int64) (*mode
 // proposed is the merged patched rule (NOT the original) so the
 // would_have_fired_*_after_patch counts reflect the LLM's
 // proposal, not the current state.
-func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int64, proposed *models.AlertRule) (*tools.AlertRuleFiringHistory, error) {
+func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int64, proposed *alertmodel.AlertRule) (*tools.AlertRuleFiringHistory, error) {
 	if ruleID <= 0 {
 		return nil, errors.New("api ai alert-tuning-suggestions: rule_id must be > 0")
 	}
@@ -488,7 +490,7 @@ func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int6
 // notification_logs with the underlying signal_log emission
 // that triggered the fire, which is out of scope for this
 // slice's surface.
-func wouldHaveFiredAfterPatch(lg *models.NotificationLog, proposed *models.AlertRule) bool {
+func wouldHaveFiredAfterPatch(lg *models.NotificationLog, proposed *alertmodel.AlertRule) bool {
 	if proposed == nil {
 		return true
 	}

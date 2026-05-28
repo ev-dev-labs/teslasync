@@ -1,6 +1,8 @@
 package database
 
-import "github.com/ev-dev-labs/teslasync/internal/models"
+import (
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+)
 
 // modelsAlertRuleStub is a tiny shim used by alert_repo_test.go to
 // build minimal AlertRule fixtures focused on the multi-select fields.
@@ -11,8 +13,8 @@ type modelsAlertRuleStub struct {
 	VehicleIDs  []int64
 }
 
-func (s *modelsAlertRuleStub) toModel() *models.AlertRule {
-	return &models.AlertRule{
+func (s *modelsAlertRuleStub) toModel() *alertmodel.AlertRule {
+	return &alertmodel.AlertRule{
 		Name:        "fixture",
 		Enabled:     true,
 		SignalName:  "battery_level",
@@ -20,7 +22,7 @@ func (s *modelsAlertRuleStub) toModel() *models.AlertRule {
 		Severity:    "warn",
 		CooldownMin: 15,
 		TriggerMode: "repeat",
-		Kind:        models.AlertRuleKindSignal,
+		Kind:        alertmodel.AlertRuleKindSignal,
 		AllVehicles: s.AllVehicles,
 		VehicleIDs:  s.VehicleIDs,
 	}

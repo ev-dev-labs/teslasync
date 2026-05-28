@@ -22,10 +22,11 @@ import (
 	"strings"
 	"testing"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks is the
@@ -74,7 +75,7 @@ func TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks(t *testing.T) {
 		r.Post("/alerts/rules", func(w http.ResponseWriter, req *http.Request) {
 			// Echo a minimal canonical AlertRule shape with an
 			// "origin":"manual" marker the test can grep on.
-			var in models.AlertRule
+			var in alertmodel.AlertRule
 			if err := json.NewDecoder(req.Body).Decode(&in); err != nil {
 				writeError(w, http.StatusBadRequest, "invalid request body")
 				return
@@ -221,15 +222,15 @@ func TestAIAlertRuleValidator_DelegatesToCanonical(t *testing.T) {
 	t.Parallel()
 	v := NewAIAlertRuleValidator()
 
-	bad := &models.AlertRule{} // empty: missing name, signal_name, etc.
+	bad := &alertmodel.AlertRule{} // empty: missing name, signal_name, etc.
 	if err := v.ValidateAlertRule(bad); err == nil {
 		t.Error("ValidateAlertRule(empty) err = nil, want non-nil from canonical layer")
 	}
 
 	value := 20.0
-	good := &models.AlertRule{
+	good := &alertmodel.AlertRule{
 		Name:         "ok",
-		Kind:         models.AlertRuleKindSignal,
+		Kind:         alertmodel.AlertRuleKindSignal,
 		SignalName:   "battery_level",
 		Op:           "<",
 		ValueNum:     &value,

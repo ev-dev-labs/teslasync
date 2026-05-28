@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -67,10 +69,10 @@ func (f *fakeCharges) GetByID(ctx context.Context, id int64) (*models.ChargingSe
 }
 
 type fakeRules struct {
-	rules []*models.AlertRule
+	rules []*alertmodel.AlertRule
 }
 
-func (f *fakeRules) GetAll(ctx context.Context) ([]*models.AlertRule, error) { return f.rules, nil }
+func (f *fakeRules) GetAll(ctx context.Context) ([]*alertmodel.AlertRule, error) { return f.rules, nil }
 
 type fakeNotif struct {
 	logs []*models.NotificationLog
@@ -278,7 +280,7 @@ func TestQueryAlertsActive_FiltersDisabled(t *testing.T) {
 		VehicleState: &fakeState{},
 		Drives:       &fakeDrives{},
 		Charges:      &fakeCharges{},
-		AlertRules: &fakeRules{rules: []*models.AlertRule{
+		AlertRules: &fakeRules{rules: []*alertmodel.AlertRule{
 			{ID: 1, Enabled: true},
 			{ID: 2, Enabled: false},
 			{ID: 3, Enabled: true},

@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 
@@ -29,10 +31,10 @@ type AlertHandler struct {
 }
 
 type alertRuleRepository interface {
-	GetAll(context.Context) ([]*models.AlertRule, error)
-	Update(context.Context, int64, *models.AlertRule) error
-	GetByID(context.Context, int64) (*models.AlertRule, error)
-	Create(context.Context, *models.AlertRule) error
+	GetAll(context.Context) ([]*alertmodel.AlertRule, error)
+	Update(context.Context, int64, *alertmodel.AlertRule) error
+	GetByID(context.Context, int64) (*alertmodel.AlertRule, error)
+	Create(context.Context, *alertmodel.AlertRule) error
 	Delete(context.Context, int64) error
 	SetSnooze(context.Context, int64, *time.Time) error
 }
@@ -56,8 +58,8 @@ type notificationRepository interface {
 	GetLog(context.Context, int64) (*models.NotificationLog, error)
 	AcknowledgeLog(context.Context, int64, string, string) (*models.NotificationLog, bool, error)
 	ReopenLog(context.Context, int64, string) (*models.NotificationLog, bool, error)
-	CommentOnLog(context.Context, int64, string, string) (*models.NotificationLogEvent, error)
-	ListLogEvents(context.Context, int64) ([]*models.NotificationLogEvent, error)
+	CommentOnLog(context.Context, int64, string, string) (*alertmodel.NotificationLogEvent, error)
+	ListLogEvents(context.Context, int64) ([]*alertmodel.NotificationLogEvent, error)
 }
 
 func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store signal.LiveSignalStore) *AlertHandler {
@@ -191,7 +193,7 @@ func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs [
 			ruleIDs[*l.AlertID] = struct{}{}
 		}
 	}
-	rules := make(map[int64]*models.AlertRule, len(ruleIDs))
+	rules := make(map[int64]*alertmodel.AlertRule, len(ruleIDs))
 	for id := range ruleIDs {
 		rule, err := h.alertRuleRepo.GetByID(ctx, id)
 		if err != nil {

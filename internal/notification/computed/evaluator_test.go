@@ -6,8 +6,9 @@ import (
 	"testing"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fakeMetric returns a fixed value irrespective of window — keeps tests
@@ -45,15 +46,15 @@ func (f *fakeMetric) def(now func() time.Time) MetricDef {
 func ptrStr(s string) *string { return &s }
 func ptrF(v float64) *float64 { return &v }
 
-func newComputedRule(id int64, metric, window, op string, threshold float64) *models.AlertRule {
-	return &models.AlertRule{
+func newComputedRule(id int64, metric, window, op string, threshold float64) *alertmodel.AlertRule {
+	return &alertmodel.AlertRule{
 		ID:              id,
 		Name:            "test-" + metric,
 		Enabled:         true,
 		Severity:        "warn",
 		CooldownMin:     15,
 		TriggerMode:     "repeat",
-		Kind:            models.AlertRuleKindComputedMetric,
+		Kind:            alertmodel.AlertRuleKindComputedMetric,
 		MetricID:        ptrStr(metric),
 		MetricWindow:    ptrStr(window),
 		MetricThreshold: ptrF(threshold),

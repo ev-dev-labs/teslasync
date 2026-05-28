@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 // TestCreateAlert_AcceptsLegacyVehicleIDOnly pins the backward-compat
@@ -225,7 +225,7 @@ func TestUpdateRule_SwitchSpecificToAll(t *testing.T) {
 func TestGetAlertRule_EmitsLegacyAndNewVehicleFields(t *testing.T) {
 	cases := []struct {
 		name           string
-		rule           *models.AlertRule
+		rule           *alertmodel.AlertRule
 		wantAll        bool
 		wantIDs        []int64
 		wantHasLegacy  bool
@@ -234,7 +234,7 @@ func TestGetAlertRule_EmitsLegacyAndNewVehicleFields(t *testing.T) {
 	}{
 		{
 			name: "sticky_all_emits_empty_array_and_null_legacy",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				ID: 42, Name: "r1", Severity: "warn", SignalName: "VehicleSpeed", Op: ">",
 				ValueNum:    func() *float64 { v := 70.0; return &v }(),
 				CooldownMin: 15, TriggerMode: "repeat", Kind: "signal",
@@ -246,7 +246,7 @@ func TestGetAlertRule_EmitsLegacyAndNewVehicleFields(t *testing.T) {
 		},
 		{
 			name: "explicit_subset_emits_array_and_legacy_min",
-			rule: &models.AlertRule{
+			rule: &alertmodel.AlertRule{
 				ID: 42, Name: "r2", Severity: "warn", SignalName: "VehicleSpeed", Op: ">",
 				ValueNum:    func() *float64 { v := 70.0; return &v }(),
 				CooldownMin: 15, TriggerMode: "repeat", Kind: "signal",
@@ -260,7 +260,7 @@ func TestGetAlertRule_EmitsLegacyAndNewVehicleFields(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			repo := &fakeAlertRuleRepo{
-				byID: map[int64]*models.AlertRule{tc.rule.ID: tc.rule},
+				byID: map[int64]*alertmodel.AlertRule{tc.rule.ID: tc.rule},
 			}
 			handler := newAlertHandlerForTestWithRepo(repo)
 			rec := httptest.NewRecorder()

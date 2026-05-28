@@ -45,7 +45,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 // AlertRuleValidator is the narrow validation interface the alert
@@ -65,7 +65,7 @@ type AlertRuleValidator interface {
 	// acceptance; an error whose Error() text is suitable for
 	// surfacing to the LLM (it'll be relayed back as a tool error
 	// reply) on rejection.
-	ValidateAlertRule(rule *models.AlertRule) error
+	ValidateAlertRule(rule *alertmodel.AlertRule) error
 }
 
 // alertRuleDraftInput is the typed input shape both tools share. The
@@ -73,7 +73,7 @@ type AlertRuleValidator interface {
 // struct via ValidateStruct so a malformed input fails before any
 // validator method runs.
 //
-// Field choice mirrors models.AlertRule's writeable surface plus the
+// Field choice mirrors alertmodel.AlertRule's writeable surface plus the
 // `vehicle_id` scoping enforced by the AI handler — the LLM may
 // propose a different vehicle, but the handler clamps it to the
 // caller's actual scope before invoking the tool. The handler
@@ -158,7 +158,7 @@ type alertRuleDraftOutput struct {
 	// = false). All numeric / pointer fields are populated exactly
 	// as the LLM proposed them (after typed parsing) — no
 	// silent normalization beyond the canonical validator's path.
-	Draft *models.AlertRule `json:"draft"`
+	Draft *alertmodel.AlertRule `json:"draft"`
 
 	// Status is "ok" or "invalid".
 	Status string `json:"status"`
@@ -174,7 +174,7 @@ type alertRuleDraftOutput struct {
 }
 
 // buildDraftRule converts the LLM-proposed typed input into a
-// *models.AlertRule with the vehicle scope clamped to the caller's
+// *alertmodel.AlertRule with the vehicle scope clamped to the caller's
 // actual vehicle. Pulled out so both tools (draft_alert_rule and
 // validate_alert_rule) construct the rule the same way and a future
 // edit to scope semantics touches one place.
@@ -185,8 +185,8 @@ type alertRuleDraftOutput struct {
 // scoping. The strategy's system prompt instructs the LLM to refuse
 // cross-vehicle requests, but a confused model could still emit one;
 // the typed clamp here is the load-bearing guard.
-func buildDraftRule(input alertRuleDraftInput) *models.AlertRule {
-	rule := &models.AlertRule{
+func buildDraftRule(input alertRuleDraftInput) *alertmodel.AlertRule {
+	rule := &alertmodel.AlertRule{
 		Name:        input.Name,
 		SignalName:  input.SignalName,
 		Op:          input.Op,
@@ -210,7 +210,7 @@ func buildDraftRule(input alertRuleDraftInput) *models.AlertRule {
 		// builder targets signal-threshold rules; the
 		// computed-metric path is reachable from a different
 		// surface and a future strategy.
-		Kind: models.AlertRuleKindSignal,
+		Kind: alertmodel.AlertRuleKindSignal,
 		// Enabled defaults to true so a saved draft starts firing
 		// immediately; the user can toggle it from the studio.
 		Enabled: true,

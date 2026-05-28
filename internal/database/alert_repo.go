@@ -5,7 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -34,7 +35,7 @@ const alertRuleColumns = `id, name, description, enabled, vehicle_id, all_vehicl
 	msg_template, include_title,
 	created_at, updated_at`
 
-func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *models.AlertRule) error {
+func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *alertmodel.AlertRule) error {
 	return row.Scan(
 		&ar.ID, &ar.Name, &ar.Description, &ar.Enabled, &ar.VehicleID, &ar.AllVehicles,
 		&ar.SignalName, &ar.Op, &ar.ValueNum, &ar.ValueText, &ar.ValueBool,
@@ -53,11 +54,11 @@ func scanAlertRule(row interface{ Scan(dest ...any) error }, ar *models.AlertRul
 // initialises VehicleIDs to a non-nil slice so JSON encoding emits `[]`
 // instead of `null` (Phase-49 / Slice 0005 / Decision D8 + R3 from
 // rubber-duck critique). Safe to call with an empty rules slice.
-func (r *AlertRuleRepo) hydrateRuleVehicles(ctx context.Context, q pgxQuerier, rules []*models.AlertRule) error {
+func (r *AlertRuleRepo) hydrateRuleVehicles(ctx context.Context, q pgxQuerier, rules []*alertmodel.AlertRule) error {
 	if len(rules) == 0 {
 		return nil
 	}
-	byID := make(map[int64]*models.AlertRule, len(rules))
+	byID := make(map[int64]*alertmodel.AlertRule, len(rules))
 	ids := make([]int64, 0, len(rules))
 	for _, ar := range rules {
 		if ar == nil {
@@ -178,7 +179,7 @@ func dedupAndSortVehicleIDs(in []int64) []int64 {
 	return out
 }
 
-func (r *AlertRuleRepo) GetAll(ctx context.Context) ([]*models.AlertRule, error) {
+func (r *AlertRuleRepo) GetAll(ctx context.Context) ([]*alertmodel.AlertRule, error) {
 	query := `SELECT ` + alertRuleColumns + ` FROM alert_rules ORDER BY id LIMIT 1000`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
@@ -186,9 +187,9 @@ func (r *AlertRuleRepo) GetAll(ctx context.Context) ([]*models.AlertRule, error)
 	}
 	defer rows.Close()
 
-	var rules []*models.AlertRule
+	var rules []*alertmodel.AlertRule
 	for rows.Next() {
-		ar := &models.AlertRule{}
+		ar := &alertmodel.AlertRule{}
 		if err := scanAlertRule(rows, ar); err != nil {
 			return nil, err
 		}
@@ -206,7 +207,7 @@ func (r *AlertRuleRepo) GetAll(ctx context.Context) ([]*models.AlertRule, error)
 // GetEnabledByKind returns enabled rules of a specific kind. Used by the
 // computed-metric scheduled evaluator to skip signal rules cheaply via the
 // idx_alert_rules_kind_enabled partial index.
-func (r *AlertRuleRepo) GetEnabledByKind(ctx context.Context, kind string) ([]*models.AlertRule, error) {
+func (r *AlertRuleRepo) GetEnabledByKind(ctx context.Context, kind string) ([]*alertmodel.AlertRule, error) {
 	query := `SELECT ` + alertRuleColumns + ` FROM alert_rules
 		WHERE kind = $1 AND enabled = TRUE ORDER BY id LIMIT 1000`
 	rows, err := r.db.Pool.Query(ctx, query, kind)
@@ -215,9 +216,9 @@ func (r *AlertRuleRepo) GetEnabledByKind(ctx context.Context, kind string) ([]*m
 	}
 	defer rows.Close()
 
-	var rules []*models.AlertRule
+	var rules []*alertmodel.AlertRule
 	for rows.Next() {
-		ar := &models.AlertRule{}
+		ar := &alertmodel.AlertRule{}
 		if err := scanAlertRule(rows, ar); err != nil {
 			return nil, err
 		}
@@ -238,7 +239,7 @@ func (r *AlertRuleRepo) GetEnabledByKind(ctx context.Context, kind string) ([]*m
 // (deprecated legacy column) is always overwritten with
 // `legacyVehicleIDFor(...)` to keep both spellings in sync per Decision
 // D7. Phase-49 / Slice 0005.
-func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *models.AlertRule) error {
+func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *alertmodel.AlertRule) error {
 	vehicleIDs := dedupAndSortVehicleIDs(rule.VehicleIDs)
 	if err := validateVehicleSelection(rule.AllVehicles, vehicleIDs); err != nil {
 		return err
@@ -299,9 +300,9 @@ func (r *AlertRuleRepo) Update(ctx context.Context, id int64, rule *models.Alert
 	})
 }
 
-func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*models.AlertRule, error) {
+func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*alertmodel.AlertRule, error) {
 	query := `SELECT ` + alertRuleColumns + ` FROM alert_rules WHERE id = $1`
-	ar := &models.AlertRule{}
+	ar := &alertmodel.AlertRule{}
 	err := scanAlertRule(r.db.Pool.QueryRow(ctx, query, id), ar)
 	if err == pgx.ErrNoRows {
 		return nil, nil
@@ -309,7 +310,7 @@ func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*models.AlertRul
 	if err != nil {
 		return nil, err
 	}
-	if err := r.hydrateRuleVehicles(ctx, r.db.Pool, []*models.AlertRule{ar}); err != nil {
+	if err := r.hydrateRuleVehicles(ctx, r.db.Pool, []*alertmodel.AlertRule{ar}); err != nil {
 		return nil, err
 	}
 	return ar, nil
@@ -318,9 +319,9 @@ func (r *AlertRuleRepo) GetByID(ctx context.Context, id int64) (*models.AlertRul
 // Create inserts the rule and its junction rows in a single transaction.
 // Same validation + legacy-column-mirroring contract as Update.
 // Phase-49 / Slice 0005.
-func (r *AlertRuleRepo) Create(ctx context.Context, rule *models.AlertRule) error {
+func (r *AlertRuleRepo) Create(ctx context.Context, rule *alertmodel.AlertRule) error {
 	if rule.Kind == "" {
-		rule.Kind = models.AlertRuleKindSignal
+		rule.Kind = alertmodel.AlertRuleKindSignal
 	}
 	vehicleIDs := dedupAndSortVehicleIDs(rule.VehicleIDs)
 	if err := validateVehicleSelection(rule.AllVehicles, vehicleIDs); err != nil {
@@ -441,7 +442,7 @@ func (r *AlertRuleRepo) SetSnooze(ctx context.Context, id int64, until *time.Tim
 }
 
 // RuleAppliesToDB is the database-resident counterpart to
-// `(*models.AlertRule).AppliesTo` for callers that don't already have
+// `(*alertmodel.AlertRule).AppliesTo` for callers that don't already have
 // the rule loaded in memory (settings export validators, admin tooling).
 // Returns true when the rule has all_vehicles=TRUE OR an explicit
 // (rule_id, vehicle_id) row exists in the junction table. Phase-49 /

@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 // stubAlertTuningSource is a deterministic fake implementing
@@ -26,22 +26,22 @@ import (
 // the tool routes through the port (no parallel DB access) and
 // surface the canned shape the test author wants.
 type stubAlertTuningSource struct {
-	rule          *models.AlertRule
+	rule          *alertmodel.AlertRule
 	loadRuleErr   error
 	loadRuleCalls []int64
 
 	history             *AlertRuleFiringHistory
 	loadHistoryErr      error
 	loadHistoryRuleIDs  []int64
-	loadHistoryProposed []*models.AlertRule
+	loadHistoryProposed []*alertmodel.AlertRule
 }
 
-func (s *stubAlertTuningSource) LoadRule(_ context.Context, ruleID int64) (*models.AlertRule, error) {
+func (s *stubAlertTuningSource) LoadRule(_ context.Context, ruleID int64) (*alertmodel.AlertRule, error) {
 	s.loadRuleCalls = append(s.loadRuleCalls, ruleID)
 	return s.rule, s.loadRuleErr
 }
 
-func (s *stubAlertTuningSource) LoadFiringHistory(_ context.Context, ruleID int64, proposed *models.AlertRule) (*AlertRuleFiringHistory, error) {
+func (s *stubAlertTuningSource) LoadFiringHistory(_ context.Context, ruleID int64, proposed *alertmodel.AlertRule) (*AlertRuleFiringHistory, error) {
 	s.loadHistoryRuleIDs = append(s.loadHistoryRuleIDs, ruleID)
 	s.loadHistoryProposed = append(s.loadHistoryProposed, proposed)
 	return s.history, s.loadHistoryErr
@@ -50,8 +50,8 @@ func (s *stubAlertTuningSource) LoadFiringHistory(_ context.Context, ruleID int6
 // helper — ptrFloat64 lives in route_efficiency_test.go
 func ptrInt(v int) *int { return &v }
 
-func sampleRule() *models.AlertRule {
-	return &models.AlertRule{
+func sampleRule() *alertmodel.AlertRule {
+	return &alertmodel.AlertRule{
 		ID:           42,
 		Name:         "Battery low",
 		Enabled:      true,
@@ -63,7 +63,7 @@ func sampleRule() *models.AlertRule {
 		Severity:     "warn",
 		CooldownMin:  5,
 		TriggerMode:  "repeat",
-		Kind:         models.AlertRuleKindSignal,
+		Kind:         alertmodel.AlertRuleKindSignal,
 		IncludeTitle: true,
 	}
 }

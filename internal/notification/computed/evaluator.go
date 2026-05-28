@@ -6,9 +6,10 @@ import (
 	"sync"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // Evaluator evaluates kind='computed_metric' alert rules on a scheduled
@@ -73,13 +74,13 @@ func NewWithRegistry(registry map[string]MetricDef, now func() time.Time) *Evalu
 
 // Evaluate computes the metric for one rule + vehicle and returns whether
 // the rule should fire. Honors snoozed_until and the rule's cooldown_min.
-func (e *Evaluator) Evaluate(ctx context.Context, rule *models.AlertRule, vehicleID int64) (Result, error) {
+func (e *Evaluator) Evaluate(ctx context.Context, rule *alertmodel.AlertRule, vehicleID int64) (Result, error) {
 	if rule == nil {
 		return Result{}, fmt.Errorf("computed_metric: nil rule")
 	}
-	if rule.Kind != models.AlertRuleKindComputedMetric {
+	if rule.Kind != alertmodel.AlertRuleKindComputedMetric {
 		return Result{}, fmt.Errorf("computed_metric: rule %d has kind %q, expected %q",
-			rule.ID, rule.Kind, models.AlertRuleKindComputedMetric)
+			rule.ID, rule.Kind, alertmodel.AlertRuleKindComputedMetric)
 	}
 	if rule.MetricID == nil || rule.MetricWindow == nil || rule.MetricThreshold == nil || rule.MetricOp == nil {
 		return Result{}, fmt.Errorf("computed_metric: rule %d missing metric_*", rule.ID)
@@ -163,7 +164,7 @@ func (e *Evaluator) Evaluate(ctx context.Context, rule *models.AlertRule, vehicl
 // Preview computes the metric without firing — used by POST /alerts/test
 // for kind='computed_metric' so the rule builder UI can show "right now
 // this is X". Bypasses snooze and cooldown.
-func (e *Evaluator) Preview(ctx context.Context, rule *models.AlertRule, vehicleID int64) (Result, bool, error) {
+func (e *Evaluator) Preview(ctx context.Context, rule *alertmodel.AlertRule, vehicleID int64) (Result, bool, error) {
 	if rule == nil {
 		return Result{}, false, fmt.Errorf("computed_metric: nil rule")
 	}

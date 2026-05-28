@@ -5,8 +5,9 @@ import (
 	"io"
 	"net/http"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // AlertMessageHandler serves the three read-only helper endpoints the
@@ -79,9 +80,9 @@ type alertMessagePreviewResponse struct {
 // returned. Used by the editor's "Pick a preset" dialog.
 func (h *AlertMessageHandler) MessagePresets(w http.ResponseWriter, r *http.Request) {
 	kind := r.URL.Query().Get("kind")
-	var rule *models.AlertRule
+	var rule *alertmodel.AlertRule
 	if kind != "" {
-		rule = &models.AlertRule{Kind: kind}
+		rule = &alertmodel.AlertRule{Kind: kind}
 	}
 	out := alertmsg.Presets(rule)
 	writeJSON(w, http.StatusOK, out)
@@ -92,7 +93,7 @@ func (h *AlertMessageHandler) MessagePresets(w http.ResponseWriter, r *http.Requ
 // editor's `{{` popover and the "Insert placeholder" toolbar button.
 func (h *AlertMessageHandler) MessagePlaceholders(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	rule := &models.AlertRule{
+	rule := &alertmodel.AlertRule{
 		Kind:       q.Get("kind"),
 		SignalName: q.Get("signal_name"),
 		Op:         q.Get("op"),
@@ -166,13 +167,13 @@ func (h *AlertMessageHandler) MessagePreview(w http.ResponseWriter, r *http.Requ
 	writeJSON(w, http.StatusOK, alertMessagePreviewResponse{Title: title, Body: bodyOut})
 }
 
-// previewRuleFromRequest builds a transient *models.AlertRule from the
+// previewRuleFromRequest builds a transient *alertmodel.AlertRule from the
 // preview request body. It does NOT call validateAlertRule — the
 // preview path is for previewing, not validating, so a half-filled
 // draft should still render something. Fields not supplied default to
 // their zero values.
-func previewRuleFromRequest(req *alertMessagePreviewRequest) *models.AlertRule {
-	rule := &models.AlertRule{
+func previewRuleFromRequest(req *alertMessagePreviewRequest) *alertmodel.AlertRule {
+	rule := &alertmodel.AlertRule{
 		Name:            req.Name,
 		Kind:            req.Kind,
 		SignalName:      req.SignalName,
@@ -208,7 +209,7 @@ func previewRuleFromRequest(req *alertMessagePreviewRequest) *models.AlertRule {
 //   - state-change against text                 -> the configured text value
 //   - state-change against bool                 -> the configured bool value
 //   - everything else                           -> "sample"
-func hydrateSampleValue(rule *models.AlertRule, signals map[string]any) {
+func hydrateSampleValue(rule *alertmodel.AlertRule, signals map[string]any) {
 	if rule == nil || rule.SignalName == "" {
 		return
 	}

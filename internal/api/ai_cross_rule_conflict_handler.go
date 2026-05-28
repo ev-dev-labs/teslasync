@@ -62,6 +62,8 @@ import (
 	"net/http"
 	"strings"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -72,7 +74,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiCrossRuleConflictMaxIterations bounds the dispatcher's
@@ -346,7 +347,7 @@ func NewAICrossRuleConflictSource(rules *database.AlertRuleRepo) *AICrossRuleCon
 //
 // The Limit field caps the returned slice so a runaway request
 // cannot blow past the canonical 500-row cap.
-func (a *AICrossRuleConflictSource) LoadRules(ctx context.Context, f tools.CrossRuleConflictFilters) ([]*models.AlertRule, error) {
+func (a *AICrossRuleConflictSource) LoadRules(ctx context.Context, f tools.CrossRuleConflictFilters) ([]*alertmodel.AlertRule, error) {
 	limit := f.Limit
 	if limit <= 0 || limit > aiCrossRuleConflictMaxLimit {
 		limit = aiCrossRuleConflictDefaultLimit
@@ -366,7 +367,7 @@ func (a *AICrossRuleConflictSource) LoadRules(ctx context.Context, f tools.Cross
 		}
 	}
 
-	out := make([]*models.AlertRule, 0, len(all))
+	out := make([]*alertmodel.AlertRule, 0, len(all))
 	for _, r := range all {
 		if r == nil {
 			continue

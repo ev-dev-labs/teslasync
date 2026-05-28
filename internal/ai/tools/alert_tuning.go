@@ -53,7 +53,7 @@ import (
 	"errors"
 	"sort"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 )
 
 // ---------------------------------------------------------------------------
@@ -122,8 +122,8 @@ type AlertRuleFiringHistory struct {
 //     than start over.
 type AlertRulePatchProposal struct {
 	RuleID          int64                   `json:"rule_id"`
-	RuleBefore      *models.AlertRule       `json:"rule_before"`
-	Proposed        *models.AlertRule       `json:"proposed"`
+	RuleBefore      *alertmodel.AlertRule   `json:"rule_before"`
+	Proposed        *alertmodel.AlertRule   `json:"proposed"`
 	History         *AlertRuleFiringHistory `json:"history"`
 	Status          string                  `json:"status"`
 	ValidationError string                  `json:"validation_error,omitempty"`
@@ -153,7 +153,7 @@ type AlertTuningSource interface {
 	// (nil, nil) when no rule exists — the tool surfaces this
 	// as a "rule_not_found" status so the LLM can explain the
 	// problem to the user without crashing the dispatcher.
-	LoadRule(ctx context.Context, ruleID int64) (*models.AlertRule, error)
+	LoadRule(ctx context.Context, ruleID int64) (*alertmodel.AlertRule, error)
 
 	// LoadFiringHistory returns the rolling firing-event
 	// summary for ruleID across the recent windows. The
@@ -162,7 +162,7 @@ type AlertTuningSource interface {
 	// compute WouldHaveFired*AfterPatch. Returns a non-nil
 	// summary even when SampleSize is small — HasEnoughHistory
 	// flips false in that case so the LLM can disclose it.
-	LoadFiringHistory(ctx context.Context, ruleID int64, proposed *models.AlertRule) (*AlertRuleFiringHistory, error)
+	LoadFiringHistory(ctx context.Context, ruleID int64, proposed *alertmodel.AlertRule) (*AlertRuleFiringHistory, error)
 }
 
 // ---------------------------------------------------------------------------
@@ -378,7 +378,7 @@ func (t *draftAlertRulePatch) Execute(ctx context.Context, in any) (any, error) 
 	return out, nil
 }
 
-// applyPatch produces a NEW *models.AlertRule with the
+// applyPatch produces a NEW *alertmodel.AlertRule with the
 // LLM-proposed patch applied on top of the existing rule.
 // Fields the patch leaves nil / empty are preserved verbatim
 // from the existing rule. Pulled out so the test can exercise
@@ -387,7 +387,7 @@ func (t *draftAlertRulePatch) Execute(ctx context.Context, in any) (any, error) 
 // IMPORTANT: this function does NOT mutate `existing`. It
 // constructs a fresh struct value and overwrites only the
 // patched fields.
-func applyPatch(existing *models.AlertRule, patch alertRulePatchInput) *models.AlertRule {
+func applyPatch(existing *alertmodel.AlertRule, patch alertRulePatchInput) *alertmodel.AlertRule {
 	// Shallow-copy first so unrelated metadata (ID, Name,
 	// Description, VehicleIDs, AllVehicles, Kind, Enabled,
 	// IncludeTitle, msg_template, snoozed_until, escalation_*,

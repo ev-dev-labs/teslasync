@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -69,7 +71,7 @@ type ChargeSource interface {
 // AlertRuleSource is the read surface the alert-rule tools need.
 // Implemented by *database.AlertRuleRepo.
 type AlertRuleSource interface {
-	GetAll(ctx context.Context) ([]*models.AlertRule, error)
+	GetAll(ctx context.Context) ([]*alertmodel.AlertRule, error)
 }
 
 // NotificationSource is the read surface the recent-alerts tool
@@ -442,7 +444,7 @@ func (t *queryAlertsActive) Execute(ctx context.Context, in any) (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	active := make([]*models.AlertRule, 0, len(rules))
+	active := make([]*alertmodel.AlertRule, 0, len(rules))
 	for _, r := range rules {
 		if r.Enabled {
 			active = append(active, r)

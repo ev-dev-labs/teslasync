@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -51,20 +53,20 @@ func (f *fakeSettingsRepo) Upsert(_ context.Context, s *models.Settings) error {
 
 // fakeAlertRepo mirrors the SettingsSerializerAlertRepo surface.
 type fakeAlertRepo struct {
-	rules     []*models.AlertRule
-	created   []*models.AlertRule
-	updated   map[int64]*models.AlertRule
+	rules     []*alertmodel.AlertRule
+	created   []*alertmodel.AlertRule
+	updated   map[int64]*alertmodel.AlertRule
 	listErr   error
 	createErr error
 	updateErr error
 	nextID    int64
 }
 
-func (f *fakeAlertRepo) GetAll(_ context.Context) ([]*models.AlertRule, error) {
+func (f *fakeAlertRepo) GetAll(_ context.Context) ([]*alertmodel.AlertRule, error) {
 	if f.listErr != nil {
 		return nil, f.listErr
 	}
-	out := make([]*models.AlertRule, 0, len(f.rules))
+	out := make([]*alertmodel.AlertRule, 0, len(f.rules))
 	for _, r := range f.rules {
 		cp := *r
 		out = append(out, &cp)
@@ -72,7 +74,7 @@ func (f *fakeAlertRepo) GetAll(_ context.Context) ([]*models.AlertRule, error) {
 	return out, nil
 }
 
-func (f *fakeAlertRepo) Create(_ context.Context, rule *models.AlertRule) error {
+func (f *fakeAlertRepo) Create(_ context.Context, rule *alertmodel.AlertRule) error {
 	if f.createErr != nil {
 		return f.createErr
 	}
@@ -86,12 +88,12 @@ func (f *fakeAlertRepo) Create(_ context.Context, rule *models.AlertRule) error 
 	return nil
 }
 
-func (f *fakeAlertRepo) Update(_ context.Context, id int64, rule *models.AlertRule) error {
+func (f *fakeAlertRepo) Update(_ context.Context, id int64, rule *alertmodel.AlertRule) error {
 	if f.updateErr != nil {
 		return f.updateErr
 	}
 	if f.updated == nil {
-		f.updated = map[int64]*models.AlertRule{}
+		f.updated = map[int64]*alertmodel.AlertRule{}
 	}
 	cp := *rule
 	cp.ID = id
@@ -285,7 +287,7 @@ func TestSettingsExportHandler_Export_ReturnsBundleWithAllSections(t *testing.T)
 		Theme:          "neon-cyan",
 		Mode:           "dark",
 	}
-	alerts.rules = []*models.AlertRule{
+	alerts.rules = []*alertmodel.AlertRule{
 		{ID: 1, Name: "Battery Low", SignalName: "battery_level", Op: "<",
 			ValueNum: func() *float64 { v := 20.0; return &v }(),
 			Severity: "warn", CooldownMin: 30, TriggerMode: "repeat", Kind: "signal", Enabled: true},
@@ -348,7 +350,7 @@ func TestSettingsExportHandler_Export_NoSensitiveFieldsLeak(t *testing.T) {
 	// hit the wire.
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
 	settings.current = &models.Settings{UnitOfLength: "mi"}
-	alerts.rules = []*models.AlertRule{}
+	alerts.rules = []*alertmodel.AlertRule{}
 	geofences.geofences = []*models.Geofence{}
 	quiet.byUser = map[string][]*models.QuietHoursWindow{"u": {}}
 
@@ -373,7 +375,7 @@ func TestSettingsExportHandler_Export_NoSensitiveFieldsLeak(t *testing.T) {
 func TestSettingsExportHandler_Export_ScopesQuietHoursPerUser(t *testing.T) {
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
 	settings.current = &models.Settings{}
-	alerts.rules = []*models.AlertRule{}
+	alerts.rules = []*alertmodel.AlertRule{}
 	geofences.geofences = []*models.Geofence{}
 	quiet.byUser = map[string][]*models.QuietHoursWindow{
 		"alice@example.com": {{ID: 1, UserID: "alice@example.com", StartLocal: "22:00", EndLocal: "07:00", Timezone: "UTC"}},

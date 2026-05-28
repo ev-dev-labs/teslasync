@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -41,7 +43,7 @@ type alertCommentRequest struct {
 	Note *string `json:"note"`
 }
 
-// AlertEventResponse mirrors models.NotificationLogEvent for the wire.
+// AlertEventResponse mirrors alertmodel.NotificationLogEvent for the wire.
 //
 // Field names are snake_case so the frontend's camelCaseKeys helper produces
 // matching camelCase keys without needing manual remapping. The synthetic
@@ -255,7 +257,7 @@ func (h *AlertHandler) buildAlertDetailResponse(ctx context.Context, logRow *mod
 // created_at) and the persisted events stably ordered by occurred_at then id.
 //
 // Exported for unit tests as it is pure: it does not call into the database.
-func buildAlertEventTimeline(logRow *models.NotificationLog, events []*models.NotificationLogEvent) []AlertEventResponse {
+func buildAlertEventTimeline(logRow *models.NotificationLog, events []*alertmodel.NotificationLogEvent) []AlertEventResponse {
 	out := make([]AlertEventResponse, 0, len(events)+1)
 	out = append(out, AlertEventResponse{
 		ID:         0, // synthetic; not from notification_log_events
@@ -268,7 +270,7 @@ func buildAlertEventTimeline(logRow *models.NotificationLog, events []*models.No
 	return out
 }
 
-func eventToWire(ev *models.NotificationLogEvent) AlertEventResponse {
+func eventToWire(ev *alertmodel.NotificationLogEvent) AlertEventResponse {
 	return AlertEventResponse{
 		ID:         ev.ID,
 		OccurredAt: ev.OccurredAt,
