@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T20:56:45Z",
+  "generated_at": "2026-05-28T20:59:01Z",
   "go_version": "go1.26.1",
-  "commit_sha": "803568d81f2632d404918419c7245bf56588f47c",
+  "commit_sha": "63d099749914af1ac921d41765b052b2ec95529b",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 247,
+      "go_files": 246,
       "test_files": 151,
-      "loc": 113471,
+      "loc": 113422,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2634,6 +2634,7 @@
         "internal/api/search/searchtest",
         "internal/api/signalinspect",
         "internal/api/signalscatalog",
+        "internal/api/slo",
         "internal/api/synthetic",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
@@ -3078,7 +3079,6 @@
         "settings_reset_handler_test.go",
         "share_handler.go",
         "sleep_handler.go",
-        "slo_handler.go",
         "software_update_handler.go",
         "speed_profile_handler.go",
         "sse_handler.go",
@@ -3448,6 +3448,22 @@
         "doc.go",
         "handler.go",
         "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/slo",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 46,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/slo"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
       ]
     },
     {
@@ -7527,7 +7543,6 @@
       "settings_reset_handler.go",
       "share_handler.go",
       "sleep_handler.go",
-      "slo_handler.go",
       "software_update_handler.go",
       "speed_profile_handler.go",
       "sse_handler.go",
@@ -7648,6 +7663,10 @@
       "handler.go"
     ],
     "internal/api/signalscatalog": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/slo": [
       "doc.go",
       "handler.go"
     ],
@@ -8798,7 +8817,7 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 247,
+      "flat_parent_go_files": 246,
       "flat_parent_test_files": 151,
       "planned_subpkgs": 59,
       "existing_subpkgs": [

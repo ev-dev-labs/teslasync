@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T20:56:46Z, Go go1.26.1, commit 803568d81f2632d404918419c7245bf56588f47c_
+_Generated 2026-05-28T20:59:02Z, Go go1.26.1, commit 63d099749914af1ac921d41765b052b2ec95529b_
 
 ## Summary
 
-- Packages: 314
+- Packages: 315
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 377602
+- Total non-blank LOC under cmd/+internal/+tools/: 377599
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-28T20:56:46Z, Go go1.26.1, commit 803568d81f2632d404918419c72
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 247 | 151 | 113471 | yes | handler |
+| internal/api | 246 | 151 | 113422 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
 | internal/api/apicalllog | 2 | 0 | 69 | yes | handler |
 | internal/api/apiparams | 2 | 1 | 358 | yes | handler |
@@ -187,6 +187,7 @@ _Generated 2026-05-28T20:56:46Z, Go go1.26.1, commit 803568d81f2632d404918419c72
 | internal/api/search/searchtest | 2 | 0 | 132 | yes | platform |
 | internal/api/signalinspect | 3 | 1 | 1228 | yes | handler |
 | internal/api/signalscatalog | 2 | 1 | 976 | yes | handler |
+| internal/api/slo | 2 | 0 | 46 | yes | handler |
 | internal/api/synthetic | 2 | 0 | 40 | yes | handler |
 | internal/api/vehicle | 2 | 1 | 616 | yes | handler |
 | internal/api/vehicleaccess | 2 | 0 | 448 | yes | handler |
@@ -370,7 +371,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 247 / 151 | 59 | 5 | 54 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 246 / 151 | 59 | 5 | 54 |
 
 ### `internal/models` detail
 

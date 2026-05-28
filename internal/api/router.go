@@ -25,6 +25,7 @@ import (
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
+	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
@@ -3768,7 +3769,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// p46-synthetic). Each handler degrades to 503 SUBSYSTEM_NOT_CONFIGURED
 			// when its backing subsystem wasn't wired in opt — see
 			// RouterOptions for the optionality contract.
-			sloHandler := NewSLOHandler(opt.SLOCatalog, opt.SLOTracker)
+			sloHandler := apislo.NewHandler(opt.SLOCatalog, opt.SLOTracker)
 			r.Get("/admin/observability/slo", sloHandler.Snapshot)
 
 			dqHandler := NewDataQualityHandler(opt.DataQualityScorer)
