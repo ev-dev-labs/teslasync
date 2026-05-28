@@ -26,6 +26,7 @@ import (
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
+	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
@@ -3699,7 +3700,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// vehicleID is in the URL because the cost of an
 			// unbounded fleet-wide query is too high for the
 			// signal_log hypertable.
-			ingestXRayHandler := NewIngestXRayHandler(dbobs.NewIngestXRayRepo(db.Pool))
+			ingestXRayHandler := apixray.NewHandler(dbobs.NewIngestXRayRepo(db.Pool))
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/ingest-xray/{vehicleID}", ingestXRayHandler.Get)
 		})

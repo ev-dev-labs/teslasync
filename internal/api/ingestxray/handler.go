@@ -28,7 +28,7 @@
 // per-minute buckets answer "is it still flowing?". Both are read-only
 // signal_log queries, no JOINs, indexed by (vehicle_id, ts).
 
-package api
+package ingestxray
 
 import (
 	"context"
@@ -37,13 +37,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 )
 
-// IngestXRayHandler bundles the per-vehicle X-Ray endpoint.
-type IngestXRayHandler struct {
+// Handler bundles the per-vehicle X-Ray endpoint.
+type Handler struct {
 	repo ingestXRayRepo
 }
 
@@ -56,19 +56,19 @@ type ingestXRayRepo interface {
 	LastSeen(ctx context.Context, vehicleID int64) (time.Time, error)
 }
 
-// NewIngestXRayHandler constructs a handler bound to repo. repo may be
+// NewHandler constructs a handler bound to repo. repo may be
 // nil — the endpoint degrades to 503 in that branch.
-func NewIngestXRayHandler(repo *dbobs.IngestXRayRepo) *IngestXRayHandler {
+func NewHandler(repo *dbobs.IngestXRayRepo) *Handler {
 	if repo == nil {
-		return &IngestXRayHandler{repo: nil}
+		return &Handler{repo: nil}
 	}
-	return &IngestXRayHandler{repo: repo}
+	return &Handler{repo: repo}
 }
 
-// newIngestXRayHandlerForTest constructs a handler with a fake repo
+// newHandlerForTest constructs a handler with a fake repo
 // implementing ingestXRayRepo. Exported for the handler tests only.
-func newIngestXRayHandlerForTest(repo ingestXRayRepo) *IngestXRayHandler {
-	return &IngestXRayHandler{repo: repo}
+func newHandlerForTest(repo ingestXRayRepo) *Handler {
+	return &Handler{repo: repo}
 }
 
 // IngestXRayResponse is the JSON shape returned by Get.
@@ -106,15 +106,14 @@ var (
 )
 
 // Get serves the GET endpoint.
-func (h *IngestXRayHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.repo == nil {
-		writeError(w, http.StatusServiceUnavailable, "ingest x-ray repo not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "ingest x-ray repo not configured")
 		return
 	}
-	idStr := chi.URLParam(r, "vehicleID")
-	vehicleID, err := strconv.ParseInt(idStr, 10, 64)
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil || vehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicleID must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicleID must be a positive integer")
 		return
 	}
 
@@ -124,7 +123,7 @@ func (h *IngestXRayHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	windowDur, ok := ingestXRayAllowedWindows[windowStr]
 	if !ok {
-		writeError(w, http.StatusBadRequest, "window must be one of 5m,15m,1h,6h,24h")
+		httpx.WriteError(w, http.StatusBadRequest, "window must be one of 5m,15m,1h,6h,24h")
 		return
 	}
 
@@ -134,14 +133,14 @@ func (h *IngestXRayHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	bucketDur, ok := ingestXRayAllowedBuckets[bucketStr]
 	if !ok {
-		writeError(w, http.StatusBadRequest, "bucket must be one of 30s,1m,5m,15m,1h")
+		httpx.WriteError(w, http.StatusBadRequest, "bucket must be one of 30s,1m,5m,15m,1h")
 		return
 	}
 
 	// Sanity: bucket must be smaller than window or the chart has at
 	// most one bucket. Operator can override by widening window.
 	if bucketDur >= windowDur {
-		writeError(w, http.StatusBadRequest, "bucket must be smaller than window")
+		httpx.WriteError(w, http.StatusBadRequest, "bucket must be smaller than window")
 		return
 	}
 
@@ -152,17 +151,17 @@ func (h *IngestXRayHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	fields, err := h.repo.FieldStats(r.Context(), vehicleID, windowStart, limit)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	buckets, err := h.repo.SampleCountByBucket(r.Context(), vehicleID, windowStart, bucketDur)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	lastSeen, err := h.repo.LastSeen(r.Context(), vehicleID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -190,5 +189,5 @@ func (h *IngestXRayHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 		resp.FreshnessSeconds = &fresh
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }

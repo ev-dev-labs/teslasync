@@ -8,7 +8,7 @@
 //   - 200 happy path including freshness_seconds derivation
 //   - 500 when repo errors propagate
 
-package api
+package ingestxray
 
 import (
 	"context"
@@ -60,7 +60,7 @@ func (f *fakeIngestXRayRepo) LastSeen(_ context.Context, vid int64) (time.Time, 
 
 // ----- routing helper --------------------------------------------
 
-func mountIngestXRay(h *IngestXRayHandler) http.Handler {
+func mountIngestXRay(h *Handler) http.Handler {
 	r := chi.NewRouter()
 	r.Get("/system/ingest-xray/{vehicleID}", h.Get)
 	return r
@@ -68,9 +68,9 @@ func mountIngestXRay(h *IngestXRayHandler) http.Handler {
 
 // ----- tests -----------------------------------------------------
 
-func TestIngestXRayHandler_NilRepo_Returns503(t *testing.T) {
+func TestHandler_NilRepo_Returns503(t *testing.T) {
 	t.Parallel()
-	h := NewIngestXRayHandler(nil)
+	h := NewHandler(nil)
 	srv := httptest.NewServer(mountIngestXRay(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/system/ingest-xray/1")
@@ -83,7 +83,7 @@ func TestIngestXRayHandler_NilRepo_Returns503(t *testing.T) {
 	}
 }
 
-func TestIngestXRayHandler_BadVehicleID(t *testing.T) {
+func TestHandler_BadVehicleID(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		name string
@@ -97,7 +97,7 @@ func TestIngestXRayHandler_BadVehicleID(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			fake := &fakeIngestXRayRepo{}
-			h := newIngestXRayHandlerForTest(fake)
+			h := newHandlerForTest(fake)
 			srv := httptest.NewServer(mountIngestXRay(h))
 			defer srv.Close()
 			resp, err := http.Get(srv.URL + "/system/ingest-xray/" + tc.id)
@@ -115,10 +115,10 @@ func TestIngestXRayHandler_BadVehicleID(t *testing.T) {
 	}
 }
 
-func TestIngestXRayHandler_BadWindow(t *testing.T) {
+func TestHandler_BadWindow(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIngestXRayRepo{}
-	h := newIngestXRayHandlerForTest(fake)
+	h := newHandlerForTest(fake)
 	srv := httptest.NewServer(mountIngestXRay(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/system/ingest-xray/1?window=bogus")
@@ -131,10 +131,10 @@ func TestIngestXRayHandler_BadWindow(t *testing.T) {
 	}
 }
 
-func TestIngestXRayHandler_BadBucket(t *testing.T) {
+func TestHandler_BadBucket(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIngestXRayRepo{}
-	h := newIngestXRayHandlerForTest(fake)
+	h := newHandlerForTest(fake)
 	srv := httptest.NewServer(mountIngestXRay(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/system/ingest-xray/1?bucket=bogus")
@@ -147,10 +147,10 @@ func TestIngestXRayHandler_BadBucket(t *testing.T) {
 	}
 }
 
-func TestIngestXRayHandler_BucketGreaterThanWindow_Returns400(t *testing.T) {
+func TestHandler_BucketGreaterThanWindow_Returns400(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIngestXRayRepo{}
-	h := newIngestXRayHandlerForTest(fake)
+	h := newHandlerForTest(fake)
 	srv := httptest.NewServer(mountIngestXRay(h))
 	defer srv.Close()
 	// window=5m, bucket=1h → bucket > window
@@ -164,7 +164,7 @@ func TestIngestXRayHandler_BucketGreaterThanWindow_Returns400(t *testing.T) {
 	}
 }
 
-func TestIngestXRayHandler_HappyPath_200WithFreshness(t *testing.T) {
+func TestHandler_HappyPath_200WithFreshness(t *testing.T) {
 	t.Parallel()
 	lastSeen := time.Now().UTC().Add(-30 * time.Second)
 	fake := &fakeIngestXRayRepo{
@@ -178,7 +178,7 @@ func TestIngestXRayHandler_HappyPath_200WithFreshness(t *testing.T) {
 		},
 		lastSeen: lastSeen,
 	}
-	h := newIngestXRayHandlerForTest(fake)
+	h := newHandlerForTest(fake)
 	srv := httptest.NewServer(mountIngestXRay(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/system/ingest-xray/42?window=1h&bucket=1m&limit=50")
@@ -219,14 +219,14 @@ func TestIngestXRayHandler_HappyPath_200WithFreshness(t *testing.T) {
 	}
 }
 
-func TestIngestXRayHandler_HappyPath_NoLastSeenOmitsFreshness(t *testing.T) {
+func TestHandler_HappyPath_NoLastSeenOmitsFreshness(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIngestXRayRepo{
 		fields:  []dbobs.IngestXRayFieldStat{},
 		buckets: []dbobs.IngestXRayBucket{},
 		// lastSeen left as zero time
 	}
-	h := newIngestXRayHandlerForTest(fake)
+	h := newHandlerForTest(fake)
 	srv := httptest.NewServer(mountIngestXRay(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/system/ingest-xray/7")
@@ -252,10 +252,10 @@ func TestIngestXRayHandler_HappyPath_NoLastSeenOmitsFreshness(t *testing.T) {
 	}
 }
 
-func TestIngestXRayHandler_RepoError_500(t *testing.T) {
+func TestHandler_RepoError_500(t *testing.T) {
 	t.Parallel()
 	fake := &fakeIngestXRayRepo{errFields: errors.New("simulated db error")}
-	h := newIngestXRayHandlerForTest(fake)
+	h := newHandlerForTest(fake)
 	srv := httptest.NewServer(mountIngestXRay(h))
 	defer srv.Close()
 	resp, err := http.Get(srv.URL + "/system/ingest-xray/1")
