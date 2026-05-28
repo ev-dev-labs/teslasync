@@ -21,7 +21,7 @@
 //   - `query_vampire_drain_windows` — a typed read tool that
 //     returns the SAME deterministic envelope the canonical baseline
 //     GET /vampire-drain + GET /vampire-drain/stats handlers serve.
-//     Composes the existing *database.VampireDrainRepo Events +
+//     Composes the existing *drivedb.VampireDrainRepo Events +
 //     Stats methods through a narrow [VampireDrainSource] port; NO
 //     new SQL is written by this tool. The aggregation
 //     (event_count, total_observed_hours, avg / median / p95
@@ -46,7 +46,7 @@
 //     retrieval entry point); query_vampire_drain_windows delegates
 //     to a narrow VampireDrainSource read interface satisfied at
 //     boot by an adapter wrapping the existing
-//     *database.VampireDrainRepo (no new SQL).
+//     *drivedb.VampireDrainRepo (no new SQL).
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle.
 //     The envelope-building math is pure Go on the typed
@@ -84,7 +84,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // vampireDrainSourceIdleDrain / vampireDrainSourceVehicleState /
@@ -299,7 +299,7 @@ const vampireDrainWindowsStatsLimit = 1000
 // VampireDrainSource is the narrow port the
 // query_vampire_drain_windows tool delegates to. In production it is
 // satisfied by *api.AIVampireDrainSource (which composes
-// *database.VampireDrainRepo); in tests we substitute deterministic
+// *drivedb.VampireDrainRepo); in tests we substitute deterministic
 // fakes so the tool unit tests stay hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update method
@@ -308,14 +308,14 @@ const vampireDrainWindowsStatsLimit = 1000
 type VampireDrainSource interface {
 	// Events returns drain events for vehicleID since
 	// windowStart, capped at limit rows (ordered started_at
-	// DESC). Mirrors *database.VampireDrainRepo.Events.
-	Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]database.VampireDrainEvent, error)
+	// DESC). Mirrors *drivedb.VampireDrainRepo.Events.
+	Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]drivedb.VampireDrainEvent, error)
 
 	// Stats returns the aggregate rollup for vehicleID over the
 	// same windowStart cut-off. sampleWindowDays is echoed back
 	// in the rollup's SampleWindowDays field. Mirrors
-	// *database.VampireDrainRepo.Stats.
-	Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (database.VampireDrainStats, error)
+	// *drivedb.VampireDrainRepo.Stats.
+	Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (drivedb.VampireDrainStats, error)
 }
 
 // queryVampireDrainWindowsInput is the typed input shape.
@@ -451,8 +451,8 @@ func buildVampireDrainEnvelope(
 	eventLimit int,
 	windowStart time.Time,
 	windowEnd time.Time,
-	events []database.VampireDrainEvent,
-	stats database.VampireDrainStats,
+	events []drivedb.VampireDrainEvent,
+	stats drivedb.VampireDrainStats,
 ) map[string]any {
 	rfc3339 := "2006-01-02T15:04:05Z07:00"
 
@@ -553,7 +553,7 @@ func roundVampireDrainPtr(v *float64, n int) any {
 // RegisterVampireDrainExplanationTools needs.
 //
 // Production wiring (router.go) reuses the same rag.Retriever +
-// *database.VampireDrainRepo instances the rest of the AI surface is
+// *drivedb.VampireDrainRepo instances the rest of the AI surface is
 // built around; tests substitute deterministic fakes per-source.
 type VampireDrainExplanationSources struct {
 	Retriever rag.Retriever

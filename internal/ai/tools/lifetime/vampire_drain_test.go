@@ -17,7 +17,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // ---------------------------------------------------------------------------
@@ -255,13 +255,13 @@ type fakeVampireDrainSource struct {
 		sampleDays  int
 		limit       int
 	}
-	events    []database.VampireDrainEvent
-	stats     database.VampireDrainStats
+	events    []drivedb.VampireDrainEvent
+	stats     drivedb.VampireDrainStats
 	eventsErr error
 	statsErr  error
 }
 
-func (f *fakeVampireDrainSource) Events(_ context.Context, vehicleID int64, windowStart time.Time, limit int) ([]database.VampireDrainEvent, error) {
+func (f *fakeVampireDrainSource) Events(_ context.Context, vehicleID int64, windowStart time.Time, limit int) ([]drivedb.VampireDrainEvent, error) {
 	f.eventCalls = append(f.eventCalls, struct {
 		vehicleID   int64
 		windowStart time.Time
@@ -273,7 +273,7 @@ func (f *fakeVampireDrainSource) Events(_ context.Context, vehicleID int64, wind
 	return f.events, nil
 }
 
-func (f *fakeVampireDrainSource) Stats(_ context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (database.VampireDrainStats, error) {
+func (f *fakeVampireDrainSource) Stats(_ context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (drivedb.VampireDrainStats, error) {
 	f.statCalls = append(f.statCalls, struct {
 		vehicleID   int64
 		windowStart time.Time
@@ -281,7 +281,7 @@ func (f *fakeVampireDrainSource) Stats(_ context.Context, vehicleID int64, windo
 		limit       int
 	}{vehicleID, windowStart, sampleWindowDays, limit})
 	if f.statsErr != nil {
-		return database.VampireDrainStats{}, f.statsErr
+		return drivedb.VampireDrainStats{}, f.statsErr
 	}
 	out := f.stats
 	out.SampleWindowDays = sampleWindowDays
@@ -453,7 +453,7 @@ func TestBuildVampireDrainEnvelope_HasEnoughDataThreshold(t *testing.T) {
 	avg := 1.4
 	med := 1.3
 	p95 := 3.1
-	stats := database.VampireDrainStats{
+	stats := drivedb.VampireDrainStats{
 		EventCount:           5,
 		TotalObservedHours:   120,
 		AvgDrainPctPerDay:    &avg,
@@ -470,7 +470,7 @@ func TestBuildVampireDrainEnvelope_HasEnoughDataThreshold(t *testing.T) {
 func TestBuildVampireDrainEnvelope_InsufficientData(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2024, 11, 1, 0, 0, 0, 0, time.UTC)
-	stats := database.VampireDrainStats{
+	stats := drivedb.VampireDrainStats{
 		EventCount:           0,
 		TotalObservedHours:   0,
 		AvgDrainPctPerDay:    nil,
@@ -494,7 +494,7 @@ func TestBuildVampireDrainEnvelope_InsufficientData(t *testing.T) {
 func TestBuildVampireDrainEnvelope_WorstEventIsHighestRate(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2024, 11, 1, 0, 0, 0, 0, time.UTC)
-	events := []database.VampireDrainEvent{
+	events := []drivedb.VampireDrainEvent{
 		{StartedAt: now.Add(-10 * time.Hour), EndedAt: now.Add(-2 * time.Hour), DurationHours: 8, StartBatteryPct: 80, EndBatteryPct: 78, DrainPct: 2, DrainPctPerDay: 6.0},
 		{StartedAt: now.Add(-30 * time.Hour), EndedAt: now.Add(-20 * time.Hour), DurationHours: 10, StartBatteryPct: 90, EndBatteryPct: 89, DrainPct: 1, DrainPctPerDay: 2.4},
 		{StartedAt: now.Add(-50 * time.Hour), EndedAt: now.Add(-40 * time.Hour), DurationHours: 10, StartBatteryPct: 70, EndBatteryPct: 65, DrainPct: 5, DrainPctPerDay: 12.0},
@@ -502,7 +502,7 @@ func TestBuildVampireDrainEnvelope_WorstEventIsHighestRate(t *testing.T) {
 	avg := 6.8
 	med := 6.0
 	p95 := 11.4
-	stats := database.VampireDrainStats{
+	stats := drivedb.VampireDrainStats{
 		EventCount:           3,
 		TotalObservedHours:   28,
 		AvgDrainPctPerDay:    &avg,

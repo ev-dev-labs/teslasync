@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 63,
+      "max_files": 59,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.10 carved 12 subpkgs. R4.11 batch 65-63 (charging — charging_repo + charge_plan_repo, 2 src files). Helper promotion: buildPartialUpdate (parent unexported, used by drive_repo + charging) promoted to exported BuildPartialUpdate so charging subpkg can call database.BuildPartialUpdate; unexported alias retained for in-package callers (drive_repo, helpers_test). Test fragment TestChargingPartialAllowed_Valid extracted from helpers_test.go to charging/partial_allowed_test.go alongside the carved code. chargingPartialAllowed map exported as ChargingPartialAllowed. Lesson 32 NEW: helper functions used by both parent and subpkg get the NullIfEmpty-style export-with-alias treatment (exported public name + unexported alias for legacy in-package callers); same will apply to ptrStr/ptrFloat/insertRowFromMap when drive/energy carves land. Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2). Planned: ~20 aggregates total."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.11 carved 13 subpkgs. R4.12 batch 63-59 (drive — drive_repo + drive_diagnostic_repo + mileage_repo + vampire_drain_repo, 4 src files). Helper promotion: drivePartialAllowed exported as DrivePartialAllowed; companion test extracted to drive/partial_allowed_test.go (external test pkg). Caller sweep 32 files across ai (8), api (20), export, service, worker. Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4). Planned: ~20 aggregates total."
     },
     {
       "path": "internal/ai/tools",

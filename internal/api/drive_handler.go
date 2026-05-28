@@ -2,19 +2,20 @@ package api
 
 import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // DriveHandler handles drive-related HTTP requests.
 type DriveHandler struct {
 	db                *database.DB
-	driveRepo         *database.DriveRepo
+	driveRepo         *drivedb.DriveRepo
 	posRepo           *database.PositionRepo
 	signalLogReader   *database.SignalLogReader
 	live              signal.LiveStateReader
 	forwardAuthHeader string
 	// bulkOverride lets tests substitute the bulk store without standing up a
-	// real *database.DriveRepo. Always nil in production.
+	// real *drivedb.DriveRepo. Always nil in production.
 	bulkOverride driveBulkStore
 }
 
@@ -24,7 +25,7 @@ type DriveHandler struct {
 func NewDriveHandler(db *database.DB, live signal.LiveStateReader) *DriveHandler {
 	return &DriveHandler{
 		db:              db,
-		driveRepo:       database.NewDriveRepo(db),
+		driveRepo:       drivedb.NewDriveRepo(db),
 		posRepo:         database.NewPositionRepo(db),
 		signalLogReader: database.NewSignalLogReader(db),
 		live:            live,

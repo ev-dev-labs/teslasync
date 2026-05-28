@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // Phase-43a / Prompt 0005 — HTTP tests for VampireDrainHandler.
@@ -42,10 +42,10 @@ type fakeVampireDrainRepo struct {
 	exists    map[int64]bool
 	existsErr error
 
-	events    []database.VampireDrainEvent
+	events    []drivedb.VampireDrainEvent
 	eventsErr error
 
-	stats    database.VampireDrainStats
+	stats    drivedb.VampireDrainStats
 	statsErr error
 
 	gotExistsCalls []int64
@@ -78,7 +78,7 @@ func (f *fakeVampireDrainRepo) VehicleExists(ctx context.Context, vehicleID int6
 	return v, nil
 }
 
-func (f *fakeVampireDrainRepo) Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]database.VampireDrainEvent, error) {
+func (f *fakeVampireDrainRepo) Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]drivedb.VampireDrainEvent, error) {
 	f.gotEventsCalls = append(f.gotEventsCalls, vdEventsCall{vehicleID, windowStart, limit})
 	if f.eventsErr != nil {
 		return nil, f.eventsErr
@@ -86,10 +86,10 @@ func (f *fakeVampireDrainRepo) Events(ctx context.Context, vehicleID int64, wind
 	return f.events, nil
 }
 
-func (f *fakeVampireDrainRepo) Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (database.VampireDrainStats, error) {
+func (f *fakeVampireDrainRepo) Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (drivedb.VampireDrainStats, error) {
 	f.gotStatsCalls = append(f.gotStatsCalls, vdStatsCall{vehicleID, windowStart, sampleWindowDays, limit})
 	if f.statsErr != nil {
-		return database.VampireDrainStats{}, f.statsErr
+		return drivedb.VampireDrainStats{}, f.statsErr
 	}
 	return f.stats, nil
 }
@@ -137,7 +137,7 @@ func TestVampireDrain_Events_LimitClamp(t *testing.T) {
 			t.Parallel()
 			repo := &fakeVampireDrainRepo{
 				exists: map[int64]bool{42: true},
-				events: []database.VampireDrainEvent{},
+				events: []drivedb.VampireDrainEvent{},
 			}
 			h := newVampireDrainHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
@@ -258,7 +258,7 @@ func TestVampireDrain_Events_EmptyVehicle_200(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeVampireDrainRepo{
 		exists: map[int64]bool{42: true},
-		events: []database.VampireDrainEvent{}, // empty
+		events: []drivedb.VampireDrainEvent{}, // empty
 	}
 	h := newVampireDrainHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
@@ -291,7 +291,7 @@ func TestVampireDrain_Stats_EmptyVehicle_200(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeVampireDrainRepo{
 		exists: map[int64]bool{42: true},
-		stats: database.VampireDrainStats{
+		stats: drivedb.VampireDrainStats{
 			EventCount:           0,
 			TotalObservedHours:   0,
 			AvgDrainPctPerDay:    nil,
@@ -334,7 +334,7 @@ func TestVampireDrain_Events_HappyPath_PayloadShape(t *testing.T) {
 	w1End := w1Start.Add(8 * time.Hour)
 	repo := &fakeVampireDrainRepo{
 		exists: map[int64]bool{42: true},
-		events: []database.VampireDrainEvent{
+		events: []drivedb.VampireDrainEvent{
 			{
 				StartedAt:       w1Start,
 				EndedAt:         w1End,
@@ -387,7 +387,7 @@ func TestVampireDrain_Stats_HappyPath_PayloadShape(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeVampireDrainRepo{
 		exists: map[int64]bool{42: true},
-		stats: database.VampireDrainStats{
+		stats: drivedb.VampireDrainStats{
 			EventCount:           5,
 			TotalObservedHours:   72.5,
 			AvgDrainPctPerDay:    vdPtrFloat(4.2),
@@ -475,7 +475,7 @@ func TestVampireDrain_Events_WindowIs365Days(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeVampireDrainRepo{
 		exists: map[int64]bool{42: true},
-		events: []database.VampireDrainEvent{},
+		events: []drivedb.VampireDrainEvent{},
 	}
 	h := newVampireDrainHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()

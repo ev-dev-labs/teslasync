@@ -1,4 +1,4 @@
-package database
+package drive
 
 import (
 	"context"
@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
-// txRecorder is an in-file fake satisfying the DBTX interface for unit
+// txRecorder is an in-file fake satisfying the database.DBTX interface for unit
 // testing the BackfillDriveTelemetryDriveIDInTx method without a live
 // database. Only Exec is exercised by the method under test; Query and
 // QueryRow are present to satisfy the interface and panic if called so
@@ -47,7 +48,7 @@ func (t *txRecorder) QueryRow(_ context.Context, _ string, _ ...any) pgx.Row {
 }
 
 // Compile-time guarantee.
-var _ DBTX = (*txRecorder)(nil)
+var _ database.DBTX = (*txRecorder)(nil)
 
 // TestBackfillDriveTelemetryDriveIDInTx_SQLShape pins the canonical SQL
 // the C4 backfill issues:

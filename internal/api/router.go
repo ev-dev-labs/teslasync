@@ -20,6 +20,7 @@ import (
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
@@ -565,12 +566,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	tools.Register12Builtins(aiToolRegistry, tools.Sources{
 		Vehicles:      database.NewVehicleRepo(db),
 		VehicleState:  aiToolsStateAdapter{r: stateReader},
-		Drives:        database.NewDriveRepo(db),
+		Drives:        drivedb.NewDriveRepo(db),
 		Charges:       chargingdb.NewChargingRepo(db),
 		AlertRules:    dbalert.NewAlertRuleRepo(db),
 		Notifications: dbnotif.NewNotificationRepo(db),
 		Geofences:     database.NewGeofenceRepo(db),
-		Efficiency:    database.NewDriveRepo(db),
+		Efficiency:    drivedb.NewDriveRepo(db),
 	})
 	// Phase-50 / U2 (slice 0012) — register the digest-narration
 	// slice's read-only tool on the SAME process-wide registry so
@@ -580,7 +581,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// canonical builtins; this call extends the registry beyond
 	// that pinned set.
 	digest.RegisterDigestTools(aiToolRegistry, digest.DigestSources{
-		Drives:  database.NewDriveRepo(db),
+		Drives:  drivedb.NewDriveRepo(db),
 		Charges: chargingdb.NewChargingRepo(db),
 	})
 	// Phase-50 / U3 (slice 0013) — register the yir-narration
@@ -590,7 +591,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// builtins + digest tools above must register first so the
 	// pin tests continue to see the canonical sets unchanged.
 	yir.RegisterYearReviewTools(aiToolRegistry, yir.YearReviewSources{
-		Drives:  database.NewDriveRepo(db),
+		Drives:  drivedb.NewDriveRepo(db),
 		Charges: chargingdb.NewChargingRepo(db),
 	})
 	aiChatbotHandler := NewAIChatbotHandler(
@@ -771,7 +772,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// `query_drive_detail` / `query_drives_recent` /
 	// `query_anomaly_context` / `query_year_in_review_context`).
 	coaching.RegisterDriveCoachingTools(aiToolRegistry, coaching.DriveCoachingSources{
-		Drives: database.NewDriveRepo(db),
+		Drives: drivedb.NewDriveRepo(db),
 	})
 	// Per-drive coaching handler. One per process; stateless beyond
 	// constructor inputs. Must be constructed AFTER the tool
@@ -917,7 +918,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// derive their envelopes in-memory; no new SQL is written by
 	// this slice.
 	speedtool.RegisterSpeedProfileInsightsTools(aiToolRegistry, speedtool.SpeedProfileInsightsSources{
-		Drives: database.NewDriveRepo(db),
+		Drives: drivedb.NewDriveRepo(db),
 	})
 	// Per-drive speed-profile insights handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
@@ -965,7 +966,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// SQL is written by this slice.
 	routetool.RegisterRouteEfficiencySuggestionsTools(aiToolRegistry, routetool.RouteEfficiencySuggestionsSources{
 		Retriever: aiRouteEfficiencyRetriever,
-		Drives:    database.NewDriveRepo(db),
+		Drives:    drivedb.NewDriveRepo(db),
 	})
 	// Route-efficiency-suggestions handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
@@ -1445,13 +1446,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// registered before the handler constructor below so the
 	// strategy's allowedTools resolve at boot.
 	// query_vampire_drain_windows composes the SAME
-	// *database.VampireDrainRepo.Events + .Stats methods that
+	// *drivedb.VampireDrainRepo.Events + .Stats methods that
 	// back the canonical baseline GET /vampire-drain + GET
 	// /vampire-drain/stats handlers — no new SQL is written by
 	// this slice.
 	lifetime.RegisterVampireDrainExplanationTools(aiToolRegistry, lifetime.VampireDrainExplanationSources{
 		Retriever: aiIdleDrainRetriever,
-		Drains:    NewAIVampireDrainSource(database.NewVampireDrainRepo(db.Pool)),
+		Drains:    NewAIVampireDrainSource(drivedb.NewVampireDrainRepo(db.Pool)),
 	})
 	// vampire-drain-explanation handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
@@ -2358,7 +2359,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	aiVoiceModeChatSource := NewAIVoiceModeChatContextSource(dbnotif.NewChatRepo(db))
 	aiVoiceModeVehicleSource := NewAIVoiceModeVehicleSnapshotSource(
 		database.NewVehicleRepo(db),
-		database.NewDriveRepo(db),
+		drivedb.NewDriveRepo(db),
 		liveStateReader,
 	)
 	voice.RegisterVoiceModeTools(aiToolRegistry, voice.VoiceModeSources{
@@ -2836,8 +2837,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// the FSM ended the drive. Read-only, 60/min IP
 				// throttle, inherits /api/v1 forward-auth gate.
 				driveDiagnosticHandler := NewDriveDiagnosticHandler(
-					database.NewDriveRepo(db),
-					database.NewDriveDiagnosticRepo(db.Pool),
+					drivedb.NewDriveRepo(db),
+					drivedb.NewDriveDiagnosticRepo(db.Pool),
 				)
 				r.With(httprate.LimitByIP(60, 1*time.Minute)).
 					Get("/why-ended", driveDiagnosticHandler.Get)
@@ -3320,7 +3321,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// charging windows excluded via signal_log.field='ChargeState'
 		// (int_value > 1). Same admin-style rate limit as /mileage and
 		// /vehicle-states (Phase-43a precedent).
-		vampireDrainHandler := NewVampireDrainHandler(database.NewVampireDrainRepo(db.Pool))
+		vampireDrainHandler := NewVampireDrainHandler(drivedb.NewVampireDrainRepo(db.Pool))
 		r.Route("/vampire-drain", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/", vampireDrainHandler.Events)
@@ -3337,7 +3338,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// 1000 → kWh. Frontend hooks useMonthlyMileage / useMileageStats
 		// stop returning 404. Same admin-style rate limit as
 		// /vehicle-states (Phase-43a / Prompt 0003 precedent).
-		mileageHandler := NewMileageHandler(database.NewMileageRepo(db.Pool))
+		mileageHandler := NewMileageHandler(drivedb.NewMileageRepo(db.Pool))
 		r.Route("/mileage", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/monthly", mileageHandler.Monthly)

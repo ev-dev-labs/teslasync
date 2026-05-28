@@ -23,7 +23,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // mileageRepository is the minimal repo surface MileageHandler needs.
@@ -32,9 +32,9 @@ import (
 // (see repo memories from earlier phases).
 type mileageRepository interface {
 	VehicleExists(ctx context.Context, vehicleID int64) (bool, error)
-	Monthly(ctx context.Context, vehicleID int64, windowStart time.Time) ([]database.MileageMonthlyRow, error)
-	Stats(ctx context.Context, vehicleID int64, since7d, since30d, since365d time.Time) (database.MileageStats, error)
-	Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]database.MileageDailyRow, error)
+	Monthly(ctx context.Context, vehicleID int64, windowStart time.Time) ([]drivedb.MileageMonthlyRow, error)
+	Stats(ctx context.Context, vehicleID int64, since7d, since30d, since365d time.Time) (drivedb.MileageStats, error)
+	Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]drivedb.MileageDailyRow, error)
 }
 
 // mileageClock is injected so handler tests can pin the window
@@ -51,7 +51,7 @@ type MileageHandler struct {
 
 // NewMileageHandler binds the handler to a repo. clock is production-
 // defaulted; tests construct via newMileageHandlerForTest.
-func NewMileageHandler(repo *database.MileageRepo) *MileageHandler {
+func NewMileageHandler(repo *drivedb.MileageRepo) *MileageHandler {
 	return &MileageHandler{repo: repo}
 }
 

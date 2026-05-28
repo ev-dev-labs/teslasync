@@ -20,7 +20,7 @@
 // web/src/types/analytics.ts) currently use legacy camelCase fields from
 // the deleted handler; updating those types is out-of-scope for this
 // prompt's allowed-files boundary.
-package database
+package drive
 
 import (
 	"context"

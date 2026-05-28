@@ -9,14 +9,14 @@ import (
 )
 
 // driveBulkStore is the narrow surface needed by BulkDelete; implemented by
-// *database.DriveRepo and substitutable in tests.
+// *drivedb.DriveRepo and substitutable in tests.
 type driveBulkStore interface {
 	FilterExistingIDs(ctx context.Context, ids []int64) ([]int64, error)
 	BulkDelete(ctx context.Context, ids []int64) (int64, error)
 }
 
 // driveBulkRepo returns the active driveBulkStore. Production wiring uses the
-// concrete *database.DriveRepo via NewDriveHandler; tests can swap it on the
+// concrete *drivedb.DriveRepo via NewDriveHandler; tests can swap it on the
 // handler before invoking BulkDelete.
 func (h *DriveHandler) driveBulkRepo() driveBulkStore {
 	if h.bulkOverride != nil {

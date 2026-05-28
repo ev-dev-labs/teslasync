@@ -47,7 +47,7 @@
 //     the F7 rag.Retriever (the single canonical retrieval entry
 //     point); query_route_efficiency delegates to a narrow
 //     tools.DriveSource read interface satisfied at boot by an adapter
-//     wrapping the existing *database.DriveRepo (no new SQL).
+//     wrapping the existing *drivedb.DriveRepo (no new SQL).
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle. The
 //     route-aggregation math is pure Go on a *drivemodel.Drive slice.
@@ -619,7 +619,7 @@ func roundN(v float64, n int) float64 {
 // only the surface the two route-efficiency tools actually consume.
 //
 // Production wiring (router.go) reuses the same rag.Retriever +
-// *database.DriveRepo instances the rest of the AI surface is
+// *drivedb.DriveRepo instances the rest of the AI surface is
 // built around; tests substitute deterministic fakes per-source.
 type RouteEfficiencySuggestionsSources struct {
 	Retriever rag.Retriever

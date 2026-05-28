@@ -247,7 +247,7 @@ func summariseDriveForCoaching(d *drivemodel.Drive) map[string]any {
 // [AnomalySources] but exposes only the surface the
 // query_drive_telemetry_summary tool actually consumes.
 //
-// Production wiring (router.go) reuses the same *database.DriveRepo
+// Production wiring (router.go) reuses the same *drivedb.DriveRepo
 // instance the HTTP path is built around (and that
 // Register12Builtins already received); tests substitute
 // deterministic fakes per-source.

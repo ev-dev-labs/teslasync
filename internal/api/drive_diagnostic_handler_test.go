@@ -23,7 +23,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // ----- fakes ------------------------------------------------------
@@ -41,8 +41,8 @@ func (f *fakeDriveLookup) GetByID(_ context.Context, id int64) (*drivemodel.Driv
 }
 
 type fakeDriveDiagReader struct {
-	transitions []database.DriveDiagnosticTransition
-	signals     []database.DriveDiagnosticSignal
+	transitions []drivedb.DriveDiagnosticTransition
+	signals     []drivedb.DriveDiagnosticSignal
 	errTrans    error
 	errSigs     error
 
@@ -53,13 +53,13 @@ type fakeDriveDiagReader struct {
 	gotSigsFields     []string
 }
 
-func (f *fakeDriveDiagReader) TransitionsAround(_ context.Context, vid int64, _ time.Time, w time.Duration) ([]database.DriveDiagnosticTransition, error) {
+func (f *fakeDriveDiagReader) TransitionsAround(_ context.Context, vid int64, _ time.Time, w time.Duration) ([]drivedb.DriveDiagnosticTransition, error) {
 	f.gotTransVehicleID = vid
 	f.gotTransWindow = w
 	return f.transitions, f.errTrans
 }
 
-func (f *fakeDriveDiagReader) SignalsAround(_ context.Context, vid int64, _ time.Time, w time.Duration, fields []string) ([]database.DriveDiagnosticSignal, error) {
+func (f *fakeDriveDiagReader) SignalsAround(_ context.Context, vid int64, _ time.Time, w time.Duration, fields []string) ([]drivedb.DriveDiagnosticSignal, error) {
 	f.gotSigsVehicleID = vid
 	f.gotSigsWindow = w
 	f.gotSigsFields = append([]string(nil), fields...)
@@ -196,10 +196,10 @@ func TestDriveDiagnosticHandler_HappyPath_EndedDrive(t *testing.T) {
 		EndedStatus: &endedStatus,
 	}}
 	diag := &fakeDriveDiagReader{
-		transitions: []database.DriveDiagnosticTransition{
+		transitions: []drivedb.DriveDiagnosticTransition{
 			{ID: 1, TS: end.Add(-2 * time.Second), FSMName: "vehicle", FromState: "drive", ToState: "parked", Trigger: "Gear=P"},
 		},
-		signals: []database.DriveDiagnosticSignal{
+		signals: []drivedb.DriveDiagnosticSignal{
 			{TS: end.Add(-1 * time.Second), Field: "Gear", Value: "P"},
 			{TS: end.Add(-3 * time.Second), Field: "VehicleSpeed", Value: "0"},
 		},
@@ -258,8 +258,8 @@ func TestDriveDiagnosticHandler_HappyPath_InProgressDrive(t *testing.T) {
 		EndTs:     nil, // in progress
 	}}
 	diag := &fakeDriveDiagReader{
-		transitions: []database.DriveDiagnosticTransition{},
-		signals:     []database.DriveDiagnosticSignal{},
+		transitions: []drivedb.DriveDiagnosticTransition{},
+		signals:     []drivedb.DriveDiagnosticSignal{},
 	}
 	h := newDriveDiagnosticHandlerForTest(drv, diag)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))

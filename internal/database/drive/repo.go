@@ -1,4 +1,4 @@
-package database
+package drive
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -37,7 +38,7 @@ import (
 // DriveRepo provides drive session data access against the SI canonical
 // drives table (migration 000185_drives_si).
 type DriveRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // driveColumns is the SI canonical SELECT column list (migration 000185).
@@ -105,7 +106,7 @@ func socPctToInt16(p *float32) *int16 {
 	return &v
 }
 
-func NewDriveRepo(db *DB) *DriveRepo {
+func NewDriveRepo(db *database.DB) *DriveRepo {
 	return &DriveRepo{db: db}
 }
 
@@ -268,10 +269,10 @@ func (r *DriveRepo) ResumeForMerge(ctx context.Context, id int64) error {
 	return err
 }
 
-// drivePartialAllowed enumerates the SI canonical columns that PartialUpdate
+// DrivePartialAllowed enumerates the SI canonical columns that PartialUpdate
 // is allowed to mutate. Callers MUST pass SI canonical keys directly
 // (Phase-48 — no display-unit aliasing).
-var drivePartialAllowed = map[string]string{
+var DrivePartialAllowed = map[string]string{
 	"ended_at":           "ended_at",
 	"distance_m":         "distance_m",
 	"duration_s":         "duration_s",
@@ -300,7 +301,7 @@ var drivePartialAllowed = map[string]string{
 // MUST be keyed by SI canonical column names (Phase-48 — no display-unit
 // aliasing).
 func (r *DriveRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
-	query, args := buildPartialUpdate("drives", id, fields, drivePartialAllowed)
+	query, args := database.BuildPartialUpdate("drives", id, fields, DrivePartialAllowed)
 	if query == "" {
 		return nil
 	}
@@ -363,7 +364,7 @@ func (r *DriveRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) 
 // CompleteWithTx is like Complete but uses the provided transaction.
 // All arguments are SI canonical (Phase-48): distance in meters, duration
 // in seconds, max speed in m/s, avg power in Watts, outside temp in °C.
-func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endTs time.Time,
+func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx database.DBTX, id int64, endTs time.Time,
 	distanceM float64, durationS int64, endBatteryPct *int16,
 	maxSpeedMps, avgPowerW, outsideTempAvgC *float64) error {
 	endSoc := pctInt16ToFloat32(endBatteryPct)
@@ -404,8 +405,8 @@ func (r *DriveRepo) FindMissingAddresses(ctx context.Context) ([]*drivemodel.Dri
 
 // PartialUpdateWithTx is like PartialUpdate but uses the provided transaction.
 // The fields map MUST be keyed by SI canonical column names.
-func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int64, fields map[string]interface{}) error {
-	query, args := buildPartialUpdate("drives", id, fields, drivePartialAllowed)
+func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx database.DBTX, id int64, fields map[string]interface{}) error {
+	query, args := database.BuildPartialUpdate("drives", id, fields, DrivePartialAllowed)
 	if query == "" {
 		return nil
 	}
@@ -429,7 +430,7 @@ func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx DBTX, id int64, 
 // when a merge has resumed an earlier drive via tryMergeDriveLocked the
 // bound is the ORIGINAL start, not the resume point) so all per-tick
 // readings within the merged window get attributed.
-func (r *DriveRepo) BackfillDriveTelemetryDriveIDInTx(ctx context.Context, tx DBTX, driveID, vehicleID int64, startTs, endTs time.Time) (int64, error) {
+func (r *DriveRepo) BackfillDriveTelemetryDriveIDInTx(ctx context.Context, tx database.DBTX, driveID, vehicleID int64, startTs, endTs time.Time) (int64, error) {
 	const sql = `
 		UPDATE drive_telemetry
 		   SET drive_id = $1

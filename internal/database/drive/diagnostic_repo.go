@@ -19,7 +19,7 @@
 // hypertable temporarily unavailable) would empty the whole result.
 // Splitting them lets the handler degrade gracefully.
 
-package database
+package drive
 
 import (
 	"context"

@@ -1208,7 +1208,7 @@ var Registry = map[string]Feature{
 	//     is the correct behaviour: the strategy's goldens already
 	//     cover the zero-matches narration.
 	//   - query_vampire_drain_windows — a deterministic typed
-	//     envelope derived from the SAME *database.VampireDrainRepo
+	//     envelope derived from the SAME *drivedb.VampireDrainRepo
 	//     that backs the canonical baseline GET /vampire-drain +
 	//     GET /vampire-drain/stats handlers; the AI narration is
 	//     therefore grounded in the same numbers the chart renders,

@@ -1,7 +1,6 @@
 package database
 
 import (
-	"regexp"
 	"strings"
 	"testing"
 )
@@ -232,24 +231,6 @@ func TestBuildPartialUpdate_SQLSafety(t *testing.T) {
 // ---------------------------------------------------------------------------
 // Validate the actual allowed-field maps used by drive and charging repos
 // ---------------------------------------------------------------------------
-
-func TestDrivePartialAllowed_Valid(t *testing.T) {
-	if len(drivePartialAllowed) == 0 {
-		t.Fatal("drivePartialAllowed is empty")
-	}
-	colRe := regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
-	for key, col := range drivePartialAllowed {
-		if key == "" {
-			t.Error("empty key in drivePartialAllowed")
-		}
-		if col == "" {
-			t.Errorf("empty column for key %q", key)
-		}
-		if !colRe.MatchString(col) {
-			t.Errorf("column %q doesn't look like a valid SQL identifier", col)
-		}
-	}
-}
 
 // ---------------------------------------------------------------------------
 // ptrStr / ptrFloat

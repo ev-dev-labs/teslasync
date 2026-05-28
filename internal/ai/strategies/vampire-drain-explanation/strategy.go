@@ -16,7 +16,7 @@
 //   - the two read-only tools the LLM is allowed to call:
 //
 //     1. `query_vampire_drain_windows` — typed envelope derived
-//     from the SAME *database.VampireDrainRepo that backs the
+//     from the SAME *drivedb.VampireDrainRepo that backs the
 //     canonical baseline GET /vampire-drain + GET
 //     /vampire-drain/stats handlers. The AI narration is grounded
 //     in the same numbers the chart renders, never a parallel
@@ -151,7 +151,7 @@ const SystemPrompt = `You are the TeslaSync vampire-drain narrator. ` +
 //
 // Both tools are READ / pure-functional: neither touches the
 // database write path. query_vampire_drain_windows composes the
-// SAME *database.VampireDrainRepo Events / Stats methods that back
+// SAME *drivedb.VampireDrainRepo Events / Stats methods that back
 // the canonical baseline GET /vampire-drain + GET
 // /vampire-drain/stats handlers; retrieve_idle_drain_chunks goes
 // through the F7 retrieval entry point and only issues SELECTs

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // Phase-43a / Prompt 0004 — HTTP tests for MileageHandler.
@@ -38,13 +38,13 @@ type fakeMileageRepo struct {
 	exists    map[int64]bool
 	existsErr error
 
-	monthly    []database.MileageMonthlyRow
+	monthly    []drivedb.MileageMonthlyRow
 	monthlyErr error
 
-	stats    database.MileageStats
+	stats    drivedb.MileageStats
 	statsErr error
 
-	daily    []database.MileageDailyRow
+	daily    []drivedb.MileageDailyRow
 	dailyErr error
 
 	gotExistsCalls  []int64
@@ -80,7 +80,7 @@ func (f *fakeMileageRepo) VehicleExists(ctx context.Context, vehicleID int64) (b
 	return v, nil
 }
 
-func (f *fakeMileageRepo) Monthly(ctx context.Context, vehicleID int64, windowStart time.Time) ([]database.MileageMonthlyRow, error) {
+func (f *fakeMileageRepo) Monthly(ctx context.Context, vehicleID int64, windowStart time.Time) ([]drivedb.MileageMonthlyRow, error) {
 	f.gotMonthlyCalls = append(f.gotMonthlyCalls, monthlyCall{vehicleID, windowStart})
 	if f.monthlyErr != nil {
 		return nil, f.monthlyErr
@@ -88,15 +88,15 @@ func (f *fakeMileageRepo) Monthly(ctx context.Context, vehicleID int64, windowSt
 	return f.monthly, nil
 }
 
-func (f *fakeMileageRepo) Stats(ctx context.Context, vehicleID int64, since7d, since30d, since365d time.Time) (database.MileageStats, error) {
+func (f *fakeMileageRepo) Stats(ctx context.Context, vehicleID int64, since7d, since30d, since365d time.Time) (drivedb.MileageStats, error) {
 	f.gotStatsCalls = append(f.gotStatsCalls, statsCall{vehicleID, since7d, since30d, since365d})
 	if f.statsErr != nil {
-		return database.MileageStats{}, f.statsErr
+		return drivedb.MileageStats{}, f.statsErr
 	}
 	return f.stats, nil
 }
 
-func (f *fakeMileageRepo) Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]database.MileageDailyRow, error) {
+func (f *fakeMileageRepo) Daily(ctx context.Context, vehicleID int64, windowStart time.Time) ([]drivedb.MileageDailyRow, error) {
 	f.gotDailyCalls = append(f.gotDailyCalls, dailyCall{vehicleID, windowStart})
 	if f.dailyErr != nil {
 		return nil, f.dailyErr
@@ -146,7 +146,7 @@ func TestMileage_Monthly_MonthsClamp(t *testing.T) {
 			t.Parallel()
 			repo := &fakeMileageRepo{
 				exists:  map[int64]bool{42: true},
-				monthly: []database.MileageMonthlyRow{},
+				monthly: []drivedb.MileageMonthlyRow{},
 			}
 			h := newMileageHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
@@ -256,7 +256,7 @@ func TestMileage_Monthly_EmptyVehicle_200(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeMileageRepo{
 		exists:  map[int64]bool{42: true},
-		monthly: []database.MileageMonthlyRow{},
+		monthly: []drivedb.MileageMonthlyRow{},
 	}
 	h := newMileageHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
@@ -290,7 +290,7 @@ func TestMileage_Stats_EmptyVehicle_200(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeMileageRepo{
 		exists: map[int64]bool{42: true},
-		stats:  database.MileageStats{}, // all zero, nil times
+		stats:  drivedb.MileageStats{}, // all zero, nil times
 	}
 	h := newMileageHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
@@ -337,7 +337,7 @@ func TestMileage_Monthly_GroupingPassThrough(t *testing.T) {
 
 	repo := &fakeMileageRepo{
 		exists: map[int64]bool{42: true},
-		monthly: []database.MileageMonthlyRow{
+		monthly: []drivedb.MileageMonthlyRow{
 			{Bucket: mar, DriveCount: 5, TotalKm: 120.5, TotalWhConsumed: mileagePtrFloat(20.0), AvgEfficiencyWhPerKm: mileagePtrFloat(166.0)},
 			{Bucket: apr, DriveCount: 8, TotalKm: 250.0, TotalWhConsumed: mileagePtrFloat(40.0), AvgEfficiencyWhPerKm: mileagePtrFloat(160.0)},
 			{Bucket: may, DriveCount: 3, TotalKm: 90.0, TotalWhConsumed: nil, AvgEfficiencyWhPerKm: nil},
@@ -421,7 +421,7 @@ func TestMileage_Monthly_DefaultWindowIs24Months(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeMileageRepo{
 		exists:  map[int64]bool{42: true},
-		monthly: []database.MileageMonthlyRow{},
+		monthly: []drivedb.MileageMonthlyRow{},
 	}
 	h := newMileageHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
@@ -449,7 +449,7 @@ func TestMileage_Stats_LifetimeMatchesMonthlySum(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 
-	monthly := []database.MileageMonthlyRow{
+	monthly := []drivedb.MileageMonthlyRow{
 		{TotalKm: 120.5},
 		{TotalKm: 250.0},
 		{TotalKm: 90.0},
@@ -459,7 +459,7 @@ func TestMileage_Stats_LifetimeMatchesMonthlySum(t *testing.T) {
 	repo := &fakeMileageRepo{
 		exists:  map[int64]bool{42: true},
 		monthly: monthly,
-		stats: database.MileageStats{
+		stats: drivedb.MileageStats{
 			LifetimeKm: wantLifetime,
 		},
 	}
@@ -489,7 +489,7 @@ func TestMileage_Stats_WindowsPassThrough(t *testing.T) {
 
 	repo := &fakeMileageRepo{
 		exists: map[int64]bool{42: true},
-		stats: database.MileageStats{
+		stats: drivedb.MileageStats{
 			LifetimeKm:         12345.67,
 			Last7dKm:           45.0,
 			Last30dKm:          200.0,
@@ -775,7 +775,7 @@ func TestMileage_Daily_EmptyVehicle_200(t *testing.T) {
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeMileageRepo{
 		exists: map[int64]bool{7: true},
-		daily:  []database.MileageDailyRow{},
+		daily:  []drivedb.MileageDailyRow{},
 	}
 	h := newMileageHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
@@ -824,7 +824,7 @@ func TestMileage_Daily_GroupingPassThrough(t *testing.T) {
 	odo := 51234.567
 	repo := &fakeMileageRepo{
 		exists: map[int64]bool{42: true},
-		daily: []database.MileageDailyRow{
+		daily: []drivedb.MileageDailyRow{
 			{Day: day1, DriveCount: 2, TotalKm: 12.5, EndOdometerKm: &odo},
 			{Day: day2, DriveCount: 1, TotalKm: 3.0, EndOdometerKm: nil},
 			{Day: day3, DriveCount: 4, TotalKm: 85.42, EndOdometerKm: nil},

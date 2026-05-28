@@ -11,19 +11,20 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	"github.com/rs/zerolog/log"
 )
 
 // DataRepairHandler handles endpoints for repairing incomplete/stale sessions.
 type DataRepairHandler struct {
 	chargingRepo *chargingdb.ChargingRepo
-	driveRepo    *database.DriveRepo
+	driveRepo    *drivedb.DriveRepo
 }
 
 func NewDataRepairHandler(db *database.DB) *DataRepairHandler {
 	return &DataRepairHandler{
 		chargingRepo: chargingdb.NewChargingRepo(db),
-		driveRepo:    database.NewDriveRepo(db),
+		driveRepo:    drivedb.NewDriveRepo(db),
 	}
 }
 

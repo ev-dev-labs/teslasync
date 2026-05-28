@@ -29,7 +29,7 @@ type driveDetailHandler struct {
 }
 
 // driveByIDFetcher is the narrow interface needed by the migrated handlers
-// to fetch a single drive header. It is satisfied by *database.DriveRepo and
+// to fetch a single drive header. It is satisfied by *drivedb.DriveRepo and
 // declared at the call site so tests can substitute an in-memory fake.
 type driveByIDFetcher interface {
 	GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error)

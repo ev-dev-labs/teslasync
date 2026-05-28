@@ -99,6 +99,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -464,7 +465,7 @@ func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sess
 
 // AIVoiceModeVehicleSnapshotSource is the production adapter
 // satisfying voice.VehicleSnapshotSource. It wraps the canonical
-// *database.VehicleRepo + *database.DriveRepo +
+// *database.VehicleRepo + *drivedb.DriveRepo +
 // signal.LiveStateReader so the AI tool reads from the SAME
 // data sources the rest of the API surface already does — no
 // new SQL, no duplicate read paths.
@@ -484,7 +485,7 @@ func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sess
 // should not contain them.
 type AIVoiceModeVehicleSnapshotSource struct {
 	vehicles  *database.VehicleRepo
-	drives    *database.DriveRepo
+	drives    *drivedb.DriveRepo
 	liveState signal.LiveStateReader
 }
 
@@ -497,14 +498,14 @@ type AIVoiceModeVehicleSnapshotSource struct {
 // gracefully.
 func NewAIVoiceModeVehicleSnapshotSource(
 	v *database.VehicleRepo,
-	d *database.DriveRepo,
+	d *drivedb.DriveRepo,
 	live signal.LiveStateReader,
 ) *AIVoiceModeVehicleSnapshotSource {
 	switch {
 	case v == nil:
 		panic("api: NewAIVoiceModeVehicleSnapshotSource: nil vehicles *database.VehicleRepo")
 	case d == nil:
-		panic("api: NewAIVoiceModeVehicleSnapshotSource: nil drives *database.DriveRepo")
+		panic("api: NewAIVoiceModeVehicleSnapshotSource: nil drives *drivedb.DriveRepo")
 	}
 	return &AIVoiceModeVehicleSnapshotSource{
 		vehicles:  v,

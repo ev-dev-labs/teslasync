@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T15:52:27Z",
+  "generated_at": "2026-05-28T15:57:58Z",
   "go_version": "go1.26.1",
-  "commit_sha": "13e2d260d0dab075b60b9ae6336eee9762cb5d62",
+  "commit_sha": "1115e4978f61577eeeaa582de5e735d95b96153b",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2158,7 +2158,7 @@
         "internal/ai/provider",
         "internal/ai/rag",
         "internal/ai/tools",
-        "internal/database"
+        "internal/database/drive"
       ],
       "files": [
         "doc.go",
@@ -2506,7 +2506,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126604,
+      "loc": 126614,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2636,6 +2636,7 @@
         "internal/database/automation",
         "internal/database/backup",
         "internal/database/charging",
+        "internal/database/drive",
         "internal/database/gdpr",
         "internal/database/notification",
         "internal/database/observability",
@@ -3694,9 +3695,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 63,
-      "test_files": 24,
-      "loc": 16534,
+      "go_files": 59,
+      "test_files": 21,
+      "loc": 14554,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3706,7 +3707,6 @@
         "internal/metrics",
         "internal/models",
         "internal/models/alert",
-        "internal/models/drive",
         "internal/models/energy",
         "internal/models/export",
         "internal/models/geo",
@@ -3730,9 +3730,6 @@
         "database_test.go",
         "database_tracing_test.go",
         "doc.go",
-        "drive_diagnostic_repo.go",
-        "drive_repo.go",
-        "drive_repo_backfill_test.go",
         "energy_repo.go",
         "export_job_repo.go",
         "export_job_repo_bulk.go",
@@ -3746,8 +3743,6 @@
         "helpers_test.go",
         "maintenance.go",
         "migrate.go",
-        "mileage_repo.go",
-        "mileage_repo_test.go",
         "mongodb.go",
         "null_helpers.go",
         "position_repo.go",
@@ -3790,8 +3785,6 @@
         "trip_repo.go",
         "trips_detail_repo.go",
         "trips_detail_repo_test.go",
-        "vampire_drain_repo.go",
-        "vampire_drain_repo_test.go",
         "vehicle_photo_repo.go",
         "vehicle_repo.go",
         "vehicle_settings_repo.go",
@@ -3969,6 +3962,31 @@
         "partial_allowed_test.go",
         "plan_repo.go",
         "repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/drive",
+      "go_files": 5,
+      "test_files": 4,
+      "loc": 2022,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/database/drive",
+        "internal/models/drive",
+        "internal/tracing"
+      ],
+      "files": [
+        "diagnostic_repo.go",
+        "doc.go",
+        "mileage_repo.go",
+        "mileage_repo_test.go",
+        "partial_allowed_test.go",
+        "repo.go",
+        "repo_backfill_test.go",
+        "vampire_drain_repo.go",
+        "vampire_drain_repo_test.go"
       ]
     },
     {
@@ -4257,12 +4275,13 @@
       "path": "internal/export",
       "go_files": 9,
       "test_files": 3,
-      "loc": 3061,
+      "loc": 3062,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
         "internal/database/charging",
+        "internal/database/drive",
         "internal/models/charging",
         "internal/models/drive",
         "internal/models/export",
@@ -5402,12 +5421,13 @@
       "path": "internal/service",
       "go_files": 4,
       "test_files": 1,
-      "loc": 1379,
+      "loc": 1380,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
         "internal/database/charging",
+        "internal/database/drive",
         "internal/enums",
         "internal/events",
         "internal/models/charging",
@@ -5843,7 +5863,7 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2599,
+      "loc": 2600,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -5853,6 +5873,7 @@
         "internal/database/alert",
         "internal/database/auth",
         "internal/database/charging",
+        "internal/database/drive",
         "internal/database/notification",
         "internal/enums",
         "internal/events",
@@ -7024,8 +7045,6 @@
       "circuit_breaker.go",
       "database.go",
       "doc.go",
-      "drive_diagnostic_repo.go",
-      "drive_repo.go",
       "energy_repo.go",
       "export_job_repo.go",
       "export_job_repo_bulk.go",
@@ -7037,7 +7056,6 @@
       "helpers.go",
       "maintenance.go",
       "migrate.go",
-      "mileage_repo.go",
       "mongodb.go",
       "null_helpers.go",
       "position_repo.go",
@@ -7070,7 +7088,6 @@
       "tesla_vehicle_driver_repo.go",
       "trip_repo.go",
       "trips_detail_repo.go",
-      "vampire_drain_repo.go",
       "vehicle_photo_repo.go",
       "vehicle_repo.go",
       "vehicle_settings_repo.go",
@@ -7137,6 +7154,13 @@
       "doc.go",
       "plan_repo.go",
       "repo.go"
+    ],
+    "internal/database/drive": [
+      "diagnostic_repo.go",
+      "doc.go",
+      "mileage_repo.go",
+      "repo.go",
+      "vampire_drain_repo.go"
     ],
     "internal/database/gdpr": [
       "artifact_repo.go",
@@ -7874,8 +7898,8 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 63,
-      "flat_parent_test_files": 24,
+      "flat_parent_go_files": 59,
+      "flat_parent_test_files": 21,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
@@ -7885,12 +7909,12 @@
         "automation",
         "backup",
         "charging",
+        "drive",
         "notification"
       ],
       "missing_subpkgs": [
         "ai",
         "dashboard",
-        "drive",
         "energy",
         "export",
         "feedback",

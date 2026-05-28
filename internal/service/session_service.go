@@ -13,6 +13,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -72,7 +73,7 @@ type apiDriveState struct {
 // worker's API-polling path. It owns the active-session maps so the
 // worker no longer needs to track them directly.
 type SessionService struct {
-	driveRepo  *database.DriveRepo
+	driveRepo  *drivedb.DriveRepo
 	chargeRepo *chargingdb.ChargingRepo
 	tripRepo   *database.TripRepo
 	eventBus   *events.Bus
@@ -86,7 +87,7 @@ type SessionService struct {
 // NewSessionService creates a SessionService.
 func NewSessionService(db *database.DB, eventBus *events.Bus) *SessionService {
 	return &SessionService{
-		driveRepo:        database.NewDriveRepo(db),
+		driveRepo:        drivedb.NewDriveRepo(db),
 		chargeRepo:       chargingdb.NewChargingRepo(db),
 		tripRepo:         database.NewTripRepo(db),
 		eventBus:         eventBus,

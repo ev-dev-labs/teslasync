@@ -63,7 +63,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // aiVampireDrainMaxIterations bounds the dispatcher's tool-loop.
@@ -287,30 +287,30 @@ var _ http.Handler = (*AIVampireDrainHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIVampireDrainSource is the production lifetime.VampireDrainSource.
-// It delegates to the SHARED *database.VampireDrainRepo that also
+// It delegates to the SHARED *drivedb.VampireDrainRepo that also
 // backs the canonical baseline GET /vampire-drain + GET
 // /vampire-drain/stats handlers so the AI narration is grounded in
 // the SAME deterministic envelope the chart on /vampire-drain
 // renders. No new SQL is added by this slice.
 //
-// The struct holds *database.VampireDrainRepo; the constructor
+// The struct holds *drivedb.VampireDrainRepo; the constructor
 // panics on a nil so a wiring bug surfaces at boot.
 type AIVampireDrainSource struct {
-	repo *database.VampireDrainRepo
+	repo *drivedb.VampireDrainRepo
 }
 
 // NewAIVampireDrainSource constructs the adapter. Panics on a nil
-// *database.VampireDrainRepo so a wiring mistake surfaces at boot
+// *drivedb.VampireDrainRepo so a wiring mistake surfaces at boot
 // rather than as a nil-deref on first AI request.
-func NewAIVampireDrainSource(repo *database.VampireDrainRepo) *AIVampireDrainSource {
+func NewAIVampireDrainSource(repo *drivedb.VampireDrainRepo) *AIVampireDrainSource {
 	if repo == nil {
-		panic("api: NewAIVampireDrainSource: nil *database.VampireDrainRepo")
+		panic("api: NewAIVampireDrainSource: nil *drivedb.VampireDrainRepo")
 	}
 	return &AIVampireDrainSource{repo: repo}
 }
 
 // Events implements lifetime.VampireDrainSource. Composes the SAME
-// *database.VampireDrainRepo.Events the canonical
+// *drivedb.VampireDrainRepo.Events the canonical
 // VampireDrainHandler.Events handler uses so the returned event
 // slice is numerically identical to what GET /vampire-drain
 // produces — the AI surface is grounded in the SAME deterministic
@@ -318,7 +318,7 @@ func NewAIVampireDrainSource(repo *database.VampireDrainRepo) *AIVampireDrainSou
 //
 // The function does NOT recompute or override anything the
 // canonical handler computes; it merely re-uses the repo method.
-func (a *AIVampireDrainSource) Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]database.VampireDrainEvent, error) {
+func (a *AIVampireDrainSource) Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]drivedb.VampireDrainEvent, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai vampire-drain-explanation: vehicle_id must be > 0")
 	}
@@ -333,19 +333,19 @@ func (a *AIVampireDrainSource) Events(ctx context.Context, vehicleID int64, wind
 }
 
 // Stats implements lifetime.VampireDrainSource. Composes the SAME
-// *database.VampireDrainRepo.Stats the canonical
+// *drivedb.VampireDrainRepo.Stats the canonical
 // VampireDrainHandler.Stats handler uses so the returned rollup is
 // numerically identical to what GET /vampire-drain/stats produces.
-func (a *AIVampireDrainSource) Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (database.VampireDrainStats, error) {
+func (a *AIVampireDrainSource) Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (drivedb.VampireDrainStats, error) {
 	if vehicleID <= 0 {
-		return database.VampireDrainStats{}, errors.New("api ai vampire-drain-explanation: vehicle_id must be > 0")
+		return drivedb.VampireDrainStats{}, errors.New("api ai vampire-drain-explanation: vehicle_id must be > 0")
 	}
 	if limit <= 0 {
-		return database.VampireDrainStats{}, errors.New("api ai vampire-drain-explanation: limit must be > 0")
+		return drivedb.VampireDrainStats{}, errors.New("api ai vampire-drain-explanation: limit must be > 0")
 	}
 	out, err := a.repo.Stats(ctx, vehicleID, windowStart, sampleWindowDays, limit)
 	if err != nil {
-		return database.VampireDrainStats{}, fmt.Errorf("api ai vampire-drain-explanation: repo.Stats: %w", err)
+		return drivedb.VampireDrainStats{}, fmt.Errorf("api ai vampire-drain-explanation: repo.Stats: %w", err)
 	}
 	return out, nil
 }

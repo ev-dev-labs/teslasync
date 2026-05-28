@@ -63,7 +63,7 @@ type VehicleStateSource interface {
 }
 
 // DriveSource is the read surface the drive-domain tools need.
-// Implemented by *database.DriveRepo.
+// Implemented by *drivedb.DriveRepo.
 type DriveSource interface {
 	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error)
 	GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error)

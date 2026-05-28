@@ -12,6 +12,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -24,7 +25,7 @@ type vehicleListFetcher interface {
 	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
 }
 
-// driveByVehicleFetcher abstracts *database.DriveRepo.GetByVehicle so
+// driveByVehicleFetcher abstracts *drivedb.DriveRepo.GetByVehicle so
 // analytics handler tests can avoid a real driveRepo.
 type driveByVehicleFetcher interface {
 	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error)
@@ -57,7 +58,7 @@ type AnalyticsHandler struct {
 func NewAnalyticsHandler(db *database.DB, state signal.StateReader) *AnalyticsHandler {
 	return &AnalyticsHandler{
 		vehicleRepo:  database.NewVehicleRepo(db),
-		driveRepo:    database.NewDriveRepo(db),
+		driveRepo:    drivedb.NewDriveRepo(db),
 		chargingRepo: chargingdb.NewChargingRepo(db),
 		positionRepo: database.NewPositionRepo(db),
 		db:           db,

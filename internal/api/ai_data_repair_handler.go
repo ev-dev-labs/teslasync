@@ -101,6 +101,7 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // aiDataRepairSuggestionsMaxIterations bounds the dispatcher's
@@ -126,7 +127,7 @@ const aiDataRepairMaxBodyBytes = 16 * 1024
 // AIDataRepairSource is the narrow read interface the handler
 // consumes to load the current stale-session inventory. Production
 // wiring satisfies it with the SAME chargingdb.ChargingRepo.GetStale
-// + database.DriveRepo.GetStale paths the canonical baseline
+// + drivedb.DriveRepo.GetStale paths the canonical baseline
 // data_repair_handler uses, so the AI sees the same inventory the
 // user sees on the /system/data-repair page.
 //
@@ -136,7 +137,7 @@ const aiDataRepairMaxBodyBytes = 16 * 1024
 type AIDataRepairSource interface {
 	// StaleSessions returns the current stale-charging + stale-
 	// drives inventory at cutoff, identical to what
-	// chargingdb.ChargingRepo.GetStale + database.DriveRepo.GetStale
+	// chargingdb.ChargingRepo.GetStale + drivedb.DriveRepo.GetStale
 	// return for the same cutoff. Both slices are non-nil but may
 	// be empty. The returned slices MUST be safe for the caller to
 	// retain.
@@ -428,13 +429,13 @@ var _ http.Handler = (*AIDataRepairSuggestionsHandler)(nil)
 
 // AIDataRepairSourceImpl is the production AIDataRepairSource. It
 // delegates to the SHARED chargingdb.ChargingRepo.GetStale +
-// database.DriveRepo.GetStale paths that ALSO back the canonical
+// drivedb.DriveRepo.GetStale paths that ALSO back the canonical
 // baseline DataRepairHandler.GetStaleSessions handler so the AI
 // surface sees the same inventory the user sees on the
 // /system/data-repair page. No new SQL is added by this slice.
 type AIDataRepairSourceImpl struct {
 	chargingRepo *chargingdb.ChargingRepo
-	driveRepo    *database.DriveRepo
+	driveRepo    *drivedb.DriveRepo
 }
 
 // NewAIDataRepairSource constructs the adapter from the shared
@@ -446,7 +447,7 @@ func NewAIDataRepairSource(db *database.DB) *AIDataRepairSourceImpl {
 	}
 	return &AIDataRepairSourceImpl{
 		chargingRepo: chargingdb.NewChargingRepo(db),
-		driveRepo:    database.NewDriveRepo(db),
+		driveRepo:    drivedb.NewDriveRepo(db),
 	}
 }
 

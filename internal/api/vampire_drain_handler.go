@@ -29,7 +29,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // vampireDrainRepository is the minimal repo surface VampireDrainHandler
@@ -38,8 +38,8 @@ import (
 // (see repo memories from earlier phases).
 type vampireDrainRepository interface {
 	VehicleExists(ctx context.Context, vehicleID int64) (bool, error)
-	Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]database.VampireDrainEvent, error)
-	Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (database.VampireDrainStats, error)
+	Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]drivedb.VampireDrainEvent, error)
+	Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (drivedb.VampireDrainStats, error)
 }
 
 // vampireDrainClock is injected so handler tests can pin the window
@@ -56,7 +56,7 @@ type VampireDrainHandler struct {
 
 // NewVampireDrainHandler binds the handler to a repo. clock is
 // production-defaulted; tests construct via newVampireDrainHandlerForTest.
-func NewVampireDrainHandler(repo *database.VampireDrainRepo) *VampireDrainHandler {
+func NewVampireDrainHandler(repo *drivedb.VampireDrainRepo) *VampireDrainHandler {
 	return &VampireDrainHandler{repo: repo}
 }
 
@@ -153,8 +153,8 @@ func (h *VampireDrainHandler) parseStatsParams(w http.ResponseWriter, r *http.Re
 // envelope shape (rather than a bare array) matches Decision #2 and
 // the precedent set by /vehicle-states/timeline.
 type VampireDrainEventsResponse struct {
-	VehicleID int64                        `json:"vehicle_id"`
-	Events    []database.VampireDrainEvent `json:"events"`
+	VehicleID int64                       `json:"vehicle_id"`
+	Events    []drivedb.VampireDrainEvent `json:"events"`
 }
 
 // Events serves GET /vampire-drain?vehicle_id=...&limit=N.
@@ -191,7 +191,7 @@ func (h *VampireDrainHandler) Events(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if events == nil {
-		events = []database.VampireDrainEvent{}
+		events = []drivedb.VampireDrainEvent{}
 	}
 
 	writeJSON(w, http.StatusOK, VampireDrainEventsResponse{
@@ -201,7 +201,7 @@ func (h *VampireDrainHandler) Events(w http.ResponseWriter, r *http.Request) {
 }
 
 // VampireDrainStatsResponse is the envelope returned by Stats. Mirrors
-// the database.VampireDrainStats shape with vehicle_id prepended.
+// the drivedb.VampireDrainStats shape with vehicle_id prepended.
 type VampireDrainStatsResponse struct {
 	VehicleID            int64    `json:"vehicle_id"`
 	EventCount           int      `json:"event_count"`

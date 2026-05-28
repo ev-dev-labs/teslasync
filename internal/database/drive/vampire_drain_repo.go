@@ -39,7 +39,7 @@
 // computeDrainEvents so they remain pure-Go testable without a DB
 // harness (the codebase has no pgxmock — see repo memories from
 // Phase-42a / Phase-43a prompts).
-package database
+package drive
 
 import (
 	"context"

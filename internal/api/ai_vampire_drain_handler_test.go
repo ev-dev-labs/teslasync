@@ -247,7 +247,7 @@ func TestAIVampireDrainHandler_AcceptsCanonicalBody(t *testing.T) {
 }
 
 // TestAIVampireDrainSource_PanicsOnNilRepo asserts the production
-// adapter constructor refuses a nil *database.VampireDrainRepo —
+// adapter constructor refuses a nil *drivedb.VampireDrainRepo —
 // a wiring bug at boot must surface as a panic, not as a nil-deref
 // on first AI request.
 func TestAIVampireDrainSource_PanicsOnNilRepo(t *testing.T) {

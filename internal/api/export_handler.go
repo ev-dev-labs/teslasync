@@ -18,6 +18,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	"github.com/ev-dev-labs/teslasync/internal/export"
 )
 
@@ -389,7 +390,7 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 // Kept for backward compatibility with direct download use cases.
 func NewExportHandler(db *database.DB) http.HandlerFunc {
 	vehicleRepo := database.NewVehicleRepo(db)
-	driveRepo := database.NewDriveRepo(db)
+	driveRepo := drivedb.NewDriveRepo(db)
 	chargingRepo := chargingdb.NewChargingRepo(db)
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -410,7 +411,7 @@ func NewExportHandler(db *database.DB) http.HandlerFunc {
 	}
 }
 
-func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.VehicleRepo, driveRepo *database.DriveRepo, format string) {
+func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.VehicleRepo, driveRepo *drivedb.DriveRepo, format string) {
 	vehicles, err := vehicleRepo.GetAll(r.Context())
 	if err != nil {
 		http.Error(w, "failed to fetch vehicles", http.StatusInternalServerError)

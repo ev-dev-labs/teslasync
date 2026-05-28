@@ -463,7 +463,7 @@ func buildDriveContext(d *drivemodel.Drive) map[string]any {
 // only the surface the two speed-profile-insights tools actually
 // consume.
 //
-// Production wiring (router.go) reuses the same *database.DriveRepo
+// Production wiring (router.go) reuses the same *drivedb.DriveRepo
 // instance the HTTP path is built around (and that
 // Register12Builtins already received); tests substitute
 // deterministic fakes per-source.

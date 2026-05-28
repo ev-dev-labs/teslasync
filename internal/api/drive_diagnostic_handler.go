@@ -45,7 +45,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // driveLookup is the narrow Drive-load surface used by the handler.
@@ -54,10 +54,10 @@ type driveLookup interface {
 }
 
 // driveDiagnosticReader is the narrow diagnostic-read surface used by
-// the handler. The concrete *database.DriveDiagnosticRepo satisfies it.
+// the handler. The concrete *drivedb.DriveDiagnosticRepo satisfies it.
 type driveDiagnosticReader interface {
-	TransitionsAround(ctx context.Context, vehicleID int64, ts time.Time, window time.Duration) ([]database.DriveDiagnosticTransition, error)
-	SignalsAround(ctx context.Context, vehicleID int64, ts time.Time, window time.Duration, fields []string) ([]database.DriveDiagnosticSignal, error)
+	TransitionsAround(ctx context.Context, vehicleID int64, ts time.Time, window time.Duration) ([]drivedb.DriveDiagnosticTransition, error)
+	SignalsAround(ctx context.Context, vehicleID int64, ts time.Time, window time.Duration, fields []string) ([]drivedb.DriveDiagnosticSignal, error)
 }
 
 // DriveDiagnosticHandler serves the per-drive "why did it end" view.
@@ -69,7 +69,7 @@ type DriveDiagnosticHandler struct {
 // NewDriveDiagnosticHandler constructs a handler bound to driveRepo +
 // diagRepo. nil-typed args are normalised to nil-interface so the
 // handler's nil-check trips cleanly.
-func NewDriveDiagnosticHandler(driveRepo *database.DriveRepo, diagRepo *database.DriveDiagnosticRepo) *DriveDiagnosticHandler {
+func NewDriveDiagnosticHandler(driveRepo *drivedb.DriveRepo, diagRepo *drivedb.DriveDiagnosticRepo) *DriveDiagnosticHandler {
 	h := &DriveDiagnosticHandler{}
 	if driveRepo != nil {
 		h.driveRepo = driveRepo
@@ -88,14 +88,14 @@ func newDriveDiagnosticHandlerForTest(driveRepo driveLookup, diagRepo driveDiagn
 
 // DriveDiagnosticResponse is the JSON shape returned by Get.
 type DriveDiagnosticResponse struct {
-	DriveID        int64                                `json:"drive_id"`
-	VehicleID      int64                                `json:"vehicle_id"`
-	StartTs        string                               `json:"start_ts"`
-	EndTs          *string                              `json:"end_ts,omitempty"`
-	EndedStatus    *string                              `json:"ended_status,omitempty"`
-	Window         string                               `json:"window"`
-	FSMTransitions []database.DriveDiagnosticTransition `json:"fsm_transitions"`
-	SignalWindow   []database.DriveDiagnosticSignal     `json:"signal_window"`
+	DriveID        int64                               `json:"drive_id"`
+	VehicleID      int64                               `json:"vehicle_id"`
+	StartTs        string                              `json:"start_ts"`
+	EndTs          *string                             `json:"end_ts,omitempty"`
+	EndedStatus    *string                             `json:"ended_status,omitempty"`
+	Window         string                              `json:"window"`
+	FSMTransitions []drivedb.DriveDiagnosticTransition `json:"fsm_transitions"`
+	SignalWindow   []drivedb.DriveDiagnosticSignal     `json:"signal_window"`
 }
 
 var driveDiagnosticAllowedWindows = map[string]time.Duration{

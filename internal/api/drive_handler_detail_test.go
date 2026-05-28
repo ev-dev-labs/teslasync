@@ -17,7 +17,7 @@ import (
 
 // fakeDriveByIDFetcher is the in-memory drive lookup used by drive_handler_detail
 // tests so the migrated handlers can be exercised end-to-end without a real
-// *database.DriveRepo / pgx pool.
+// *drivedb.DriveRepo / pgx pool.
 type fakeDriveByIDFetcher struct {
 	drive *drivemodel.Drive
 	err   error

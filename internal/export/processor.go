@@ -13,12 +13,13 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
 // Processor generates export files from database data.
 type Processor struct {
 	vehicleRepo  *database.VehicleRepo
-	driveRepo    *database.DriveRepo
+	driveRepo    *drivedb.DriveRepo
 	chargingRepo *chargingdb.ChargingRepo
 	tripRepo     *database.TripRepo
 	db           *database.DB
@@ -28,7 +29,7 @@ type Processor struct {
 func NewProcessor(db *database.DB) *Processor {
 	return &Processor{
 		vehicleRepo:  database.NewVehicleRepo(db),
-		driveRepo:    database.NewDriveRepo(db),
+		driveRepo:    drivedb.NewDriveRepo(db),
 		chargingRepo: chargingdb.NewChargingRepo(db),
 		tripRepo:     database.NewTripRepo(db),
 		db:           db,
