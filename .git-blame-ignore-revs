@@ -224,3 +224,4 @@ faf6e82597540fa2f91b12d250fce74135d779e1 # refactor(R2d.2): carve internal/api/l
 e57d08bf1d77d7ebb7f530b08f77b40dee8b1c1d # refactor(R2d.3): carve internal/api/notification subpackage
 c1e998296a6d29b662cbbcc7bd7589d7322a5b99 # refactor(R2d.4): carve internal/api/signalinspect subpackage
 44f6e0edb63ff780ac00e2c2dff3ccc3ba6b9933 # refactor(R2d.5): carve internal/api/signalscatalog subpackage
+f6813cacbaea30121f71c1ef0091a75c599707f4 # refactor(R2d.6): carve internal/api/openapi subpackage
