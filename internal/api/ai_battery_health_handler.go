@@ -60,6 +60,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -104,7 +105,7 @@ type AIBatteryHealthHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	query_battery_health_forecast (registered by
-//	tools.RegisterBatteryHealthForecastNarrativeTools in router.go).
+//	predict.RegisterBatteryHealthForecastNarrativeTools in router.go).
 //
 // strat:      the battery-health-forecast-narrative Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
@@ -244,7 +245,7 @@ var _ http.Handler = (*AIBatteryHealthHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIBatteryHealthForecaster is the production
-// tools.BatteryHealthForecaster. It delegates to the same
+// predict.BatteryHealthForecaster. It delegates to the same
 // package-level helpers (synthesizeBatterySnapshots,
 // predictDegradation, computeRiskFactors, lookupVehicleCapacityWh)
 // that back the deterministic GET /api/v1/analytics/battery-degradation
@@ -275,7 +276,7 @@ func NewAIBatteryHealthForecaster(db *database.DB, state signal.StateReader, slr
 	return &AIBatteryHealthForecaster{db: db, state: state, signalLogReader: slr}
 }
 
-// ForecastBatteryHealth implements tools.BatteryHealthForecaster.
+// ForecastBatteryHealth implements predict.BatteryHealthForecaster.
 // Composes the SAME package-level helpers
 // *BatteryDegradationHandler uses so the returned envelope is
 // numerically identical (modulo rounding) to what
@@ -286,7 +287,7 @@ func NewAIBatteryHealthForecaster(db *database.DB, state signal.StateReader, slr
 // The function does NOT recompute or override anything the
 // canonical handler computes; it only reshapes the existing output
 // into a typed envelope the LLM can quote.
-func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, vehicleID int64) (*tools.BatteryHealthForecast, error) {
+func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, vehicleID int64) (*predict.BatteryHealthForecast, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai battery-health-forecast-narrative: vehicle_id must be > 0")
 	}
@@ -376,7 +377,7 @@ func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, v
 
 	// Charging habits — same SQL the canonical Predict handler
 	// runs (Phase-42 SI charging_sessions, migration 000184).
-	habits := tools.BatteryHealthChargingHabits{}
+	habits := predict.BatteryHealthChargingHabits{}
 	if a.db != nil {
 		var avgEnergyWh float64
 		err = a.db.Pool.QueryRow(ctx, `
@@ -399,7 +400,7 @@ func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, v
 			// Non-fatal — return zero counts so the LLM
 			// honestly narrates that there are no charging
 			// habits to ground the forecast in.
-			habits = tools.BatteryHealthChargingHabits{}
+			habits = predict.BatteryHealthChargingHabits{}
 		}
 	}
 
@@ -451,9 +452,9 @@ func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, v
 		deepDischargePct = float64(habits.DeepDischargeCount) / float64(totalCharges) * 100
 	}
 	rfs := computeRiskFactors(fastChargeRatio, highSocPct, avgTemp, cyclesPerMonth, deepDischargePct)
-	riskFactors := make([]tools.BatteryHealthRiskFactor, 0, len(rfs))
+	riskFactors := make([]predict.BatteryHealthRiskFactor, 0, len(rfs))
 	for _, rf := range rfs {
-		riskFactors = append(riskFactors, tools.BatteryHealthRiskFactor{
+		riskFactors = append(riskFactors, predict.BatteryHealthRiskFactor{
 			Name:   rf.Name,
 			Score:  rf.Score,
 			Label:  rf.Label,
@@ -478,7 +479,7 @@ func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, v
 	slopePerYear := math.Abs(regression.Prediction.SlopePerYear)
 	ratePerMonth := math.Round(regression.RatePerMonth*1000) / 1000
 
-	envelope := &tools.BatteryHealthForecast{
+	envelope := &predict.BatteryHealthForecast{
 		VehicleID:                  vehicleID,
 		CurrentHealthPct:           math.Round(currentHealth*10) / 10,
 		CurrentCapacityWh:          math.Round(currentCapacity*10) / 10,
@@ -498,5 +499,5 @@ func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, v
 	return envelope, nil
 }
 
-// Compile-time assertion: AIBatteryHealthForecaster satisfies tools.BatteryHealthForecaster.
-var _ tools.BatteryHealthForecaster = (*AIBatteryHealthForecaster)(nil)
+// Compile-time assertion: AIBatteryHealthForecaster satisfies predict.BatteryHealthForecaster.
+var _ predict.BatteryHealthForecaster = (*AIBatteryHealthForecaster)(nil)

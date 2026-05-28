@@ -16,7 +16,7 @@
 //     never pause for confirmation on these read-only tools.
 //  6. RegisterLearnedAnomalyBaselineTools installs both tools by
 //     canonical name on a fresh Registry.
-package tools
+package predict
 
 import (
 	"context"
@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 )
 
@@ -240,7 +241,7 @@ func TestQueryAnomalyBaseline_Mutates_IsFalse(t *testing.T) {
 
 func TestRegisterLearnedAnomalyBaselineTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterLearnedAnomalyBaselineTools(r, LearnedAnomalyBaselineSources{
 		Trainer: anomaly.NewTrainer(&fakeLearnedAnomalySource{}),
 	})

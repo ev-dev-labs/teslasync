@@ -16,7 +16,7 @@
 //     pause for confirmation on these read-only tools.
 //  6. RegisterRangePredictorTools installs both tools by canonical
 //     name on a fresh Registry.
-package tools
+package predict
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 )
 
@@ -240,7 +241,7 @@ func TestQueryRangePrediction_Mutates_IsFalse(t *testing.T) {
 
 func TestRegisterRangePredictorTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterRangePredictorTools(r, RangePredictorSources{
 		Trainer: mlrange.NewTrainer(&fakeRangeStatsSource{}),
 	})

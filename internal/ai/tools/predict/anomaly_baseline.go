@@ -66,7 +66,7 @@
 //   - "no duplicate write paths" → no save_*/update_*/delete_*
 //     tool exists in this slice; both tools are read-only.
 
-package tools
+package predict
 
 import (
 	"context"
@@ -75,6 +75,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 )
 
@@ -132,7 +133,7 @@ func (t *trainAnomalyBaseline) Description() string {
 
 // InputSchema implements [Tool].
 func (t *trainAnomalyBaseline) InputSchema() json.RawMessage {
-	return CachedSchema(trainAnomalyBaselineInput{})
+	return tools.CachedSchema(trainAnomalyBaselineInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -146,7 +147,7 @@ func (t *trainAnomalyBaseline) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *trainAnomalyBaseline) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[trainAnomalyBaselineInput](raw)
+	return tools.ValidateStruct[trainAnomalyBaselineInput](raw)
 }
 
 // Execute implements [Tool]. One trainer round-trip; no SQL is
@@ -194,7 +195,7 @@ func (q *queryAnomalyBaseline) Description() string {
 
 // InputSchema implements [Tool].
 func (q *queryAnomalyBaseline) InputSchema() json.RawMessage {
-	return CachedSchema(queryAnomalyBaselineInput{})
+	return tools.CachedSchema(queryAnomalyBaselineInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -208,7 +209,7 @@ func (q *queryAnomalyBaseline) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (q *queryAnomalyBaseline) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryAnomalyBaselineInput](raw)
+	return tools.ValidateStruct[queryAnomalyBaselineInput](raw)
 }
 
 // Execute implements [Tool]. Pure — no IO.
@@ -300,7 +301,7 @@ type LearnedAnomalyBaselineSources struct {
 // learned-per-vehicle-anomaly-baselines slice's tools on r.
 //
 // Panics on duplicate registration (Registry.Register panics).
-func RegisterLearnedAnomalyBaselineTools(r *Registry, s LearnedAnomalyBaselineSources) {
+func RegisterLearnedAnomalyBaselineTools(r *tools.Registry, s LearnedAnomalyBaselineSources) {
 	r.Register(&trainAnomalyBaseline{trainer: s.Trainer})
 	r.Register(&queryAnomalyBaseline{})
 }

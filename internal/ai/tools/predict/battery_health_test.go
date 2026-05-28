@@ -4,7 +4,7 @@
 // wraps a narrow [BatteryHealthForecaster] port; tests substitute a
 // deterministic fake so the unit tests stay hermetic.
 
-package tools
+package predict
 
 import (
 	"context"
@@ -12,6 +12,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // fakeBatteryHealthForecaster is a hermetic stand-in for
@@ -234,7 +236,7 @@ func TestQueryBatteryHealthForecast_Execute_PropagatesForecasterError(t *testing
 // proves the registration helper adds the tool to the registry.
 func TestRegisterBatteryHealthForecastNarrativeTools_RegistersOne(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterBatteryHealthForecastNarrativeTools(r, BatteryHealthForecastNarrativeSources{
 		Forecaster: &fakeBatteryHealthForecaster{},
 	})

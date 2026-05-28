@@ -67,12 +67,14 @@
 // useUnits()/useFormatting() at the display boundary converts to
 // the user's preferred units before rendering.
 
-package tools
+package predict
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -197,7 +199,7 @@ func (t *queryBatteryHealthForecast) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryBatteryHealthForecast) InputSchema() json.RawMessage {
-	return CachedSchema(queryBatteryHealthForecastInput{})
+	return tools.CachedSchema(queryBatteryHealthForecastInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -214,7 +216,7 @@ func (t *queryBatteryHealthForecast) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryBatteryHealthForecast) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryBatteryHealthForecastInput](raw)
+	return tools.ValidateStruct[queryBatteryHealthForecastInput](raw)
 }
 
 // Execute implements [Tool]. Delegates to the
@@ -260,6 +262,6 @@ type BatteryHealthForecastNarrativeSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterBatteryHealthForecastNarrativeTools(r *Registry, s BatteryHealthForecastNarrativeSources) {
+func RegisterBatteryHealthForecastNarrativeTools(r *tools.Registry, s BatteryHealthForecastNarrativeSources) {
 	r.Register(&queryBatteryHealthForecast{forecaster: s.Forecaster})
 }

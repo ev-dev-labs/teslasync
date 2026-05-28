@@ -29,7 +29,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
 )
 
 // TestBatteryHealthNarrativeAIOffShowsChartOnly is the
@@ -247,15 +247,15 @@ func TestAIBatteryHealthForecaster_PanicsOnNilStateReader(t *testing.T) {
 
 // TestAIBatteryHealthForecaster_SatisfiesInterface is a compile-time
 // + runtime assertion that the production adapter implements
-// tools.BatteryHealthForecaster. The compile-time `var _` line in
+// predict.BatteryHealthForecaster. The compile-time `var _` line in
 // the handler file gives the same guarantee, but this test fails
 // with a clear message if a future refactor accidentally narrows
 // the interface contract.
 func TestAIBatteryHealthForecaster_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
-	var iface tools.BatteryHealthForecaster = (*AIBatteryHealthForecaster)(nil)
+	var iface predict.BatteryHealthForecaster = (*AIBatteryHealthForecaster)(nil)
 	if iface == nil {
-		t.Logf("AIBatteryHealthForecaster satisfies tools.BatteryHealthForecaster (nil cast)")
+		t.Logf("AIBatteryHealthForecaster satisfies predict.BatteryHealthForecaster (nil cast)")
 	}
 }
 

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:14:23Z",
+  "generated_at": "2026-05-28T06:18:11Z",
   "go_version": "go1.26.1",
-  "commit_sha": "554ef6b95c7bbbc987f35f3b38f461b3d4b3ba5b",
+  "commit_sha": "7b680a2f6fc8015b5a67ec2c912580beebb7e98e",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,18 +1882,16 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 49,
-      "test_files": 42,
-      "loc": 39774,
+      "go_files": 46,
+      "test_files": 39,
+      "loc": 38277,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/ai/provider",
         "internal/ai/rag",
         "internal/database",
-        "internal/ml/anomaly",
         "internal/ml/chargingcurves",
-        "internal/ml/range",
         "internal/models",
         "internal/models/alert",
         "internal/models/charging",
@@ -1909,8 +1907,6 @@
         "auto_trip_naming_test.go",
         "automation_builder.go",
         "automation_builder_test.go",
-        "battery_health_forecast.go",
-        "battery_health_forecast_test.go",
         "builtins.go",
         "builtins_test.go",
         "charge_curve_clustering.go",
@@ -1939,8 +1935,6 @@
         "inbox_auto_categorization_test.go",
         "incident_timeline_summarizer.go",
         "incident_timeline_summarizer_test.go",
-        "learned_anomaly_baseline.go",
-        "learned_anomaly_baseline_test.go",
         "lifetime_stats_qa.go",
         "lifetime_stats_qa_test.go",
         "log_trace_summarizer.go",
@@ -1958,8 +1952,6 @@
         "preheat_precool_recommender_test.go",
         "quiet_hours_suggestion.go",
         "quiet_hours_suggestion_test.go",
-        "range_predictor.go",
-        "range_predictor_test.go",
         "registry.go",
         "registry_test.go",
         "route_efficiency.go",
@@ -2069,6 +2061,28 @@
       ]
     },
     {
+      "path": "internal/ai/tools/predict",
+      "go_files": 4,
+      "test_files": 3,
+      "loc": 1531,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools",
+        "internal/ml/anomaly",
+        "internal/ml/range"
+      ],
+      "files": [
+        "anomaly_baseline.go",
+        "anomaly_baseline_test.go",
+        "battery_health.go",
+        "battery_health_test.go",
+        "doc.go",
+        "range.go",
+        "range_test.go"
+      ]
+    },
+    {
       "path": "internal/ai/tools/safety",
       "go_files": 2,
       "test_files": 1,
@@ -2105,7 +2119,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126504,
+      "loc": 126506,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2181,6 +2195,7 @@
         "internal/ai/tools/feedback",
         "internal/ai/tools/forecast",
         "internal/ai/tools/location",
+        "internal/ai/tools/predict",
         "internal/ai/tools/safety",
         "internal/alertmsg",
         "internal/api",
@@ -5800,7 +5815,6 @@
       "anomaly.go",
       "auto_trip_naming.go",
       "automation_builder.go",
-      "battery_health_forecast.go",
       "builtins.go",
       "charge_curve_clustering.go",
       "charge_curve_clusters.go",
@@ -5815,7 +5829,6 @@
       "help.go",
       "inbox_auto_categorization.go",
       "incident_timeline_summarizer.go",
-      "learned_anomaly_baseline.go",
       "lifetime_stats_qa.go",
       "log_trace_summarizer.go",
       "mqtt_sse_inspector_explanations.go",
@@ -5826,7 +5839,6 @@
       "predictive_maintenance.go",
       "preheat_precool_recommender.go",
       "quiet_hours_suggestion.go",
-      "range_predictor.go",
       "registry.go",
       "route_efficiency.go",
       "schema.go",
@@ -5866,6 +5878,12 @@
       "auto_name.go",
       "doc.go",
       "geofences.go"
+    ],
+    "internal/ai/tools/predict": [
+      "anomaly_baseline.go",
+      "battery_health.go",
+      "doc.go",
+      "range.go"
     ],
     "internal/ai/tools/safety": [
       "doc.go",
@@ -7088,8 +7106,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 49,
-      "flat_parent_test_files": 42,
+      "flat_parent_go_files": 46,
+      "flat_parent_test_files": 39,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

@@ -128,6 +128,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
@@ -1069,7 +1070,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deterministic chart / hero-cards / recommendations panel
 	// on /battery (BatteryHealthPage) remain the canonical
 	// baseline.
-	tools.RegisterBatteryHealthForecastNarrativeTools(aiToolRegistry, tools.BatteryHealthForecastNarrativeSources{
+	predict.RegisterBatteryHealthForecastNarrativeTools(aiToolRegistry, predict.BatteryHealthForecastNarrativeSources{
 		Forecaster: NewAIBatteryHealthForecaster(db, stateReader, signalLogReader),
 	})
 	// battery-health-forecast-narrative handler. One per process;
@@ -1658,7 +1659,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// the lookback window. Tools registered BEFORE the handler is
 	// constructed so the dispatcher can resolve the strategy's
 	// allowedTools at boot.
-	tools.RegisterLearnedAnomalyBaselineTools(aiToolRegistry, tools.LearnedAnomalyBaselineSources{
+	predict.RegisterLearnedAnomalyBaselineTools(aiToolRegistry, predict.LearnedAnomalyBaselineSources{
 		Trainer: anomaly.NewTrainer(NewAISignalSampleSource(db)),
 	})
 	// learned-per-vehicle-anomaly-baselines handler. One per
@@ -1682,7 +1683,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// exist in the lookback window. Tools registered BEFORE the
 	// handler is constructed so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	tools.RegisterRangePredictorTools(aiToolRegistry, tools.RangePredictorSources{
+	predict.RegisterRangePredictorTools(aiToolRegistry, predict.RangePredictorSources{
 		Trainer: mlrange.NewTrainer(NewAIDriveStatsSource(db)),
 	})
 	// range-prediction-model handler. One per process; stateless

@@ -102,7 +102,7 @@ type AILearnedAnomalyBaselineHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	train_anomaly_baseline + query_anomaly_baseline
-//	(registered by tools.RegisterLearnedAnomalyBaselineTools
+//	(registered by predict.RegisterLearnedAnomalyBaselineTools
 //	in router.go).
 //
 // strat:      the learned-per-vehicle-anomaly-baselines Strategy

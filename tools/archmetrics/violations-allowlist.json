@@ -28,9 +28,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "max_files": 49,
+      "max_files": 46,
       "owner": "Phase R6 (in progress)",
-      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/ — auto_name + geofences combined into one bounded-context cluster sharing LocationSource port); 52 after R6.7 (alert/ — builder + tuning combined; ptrFloat64 test helper inlined locally; toolstest fixture pkg deferred until next shared-fixture cluster); 49 after R6.8 (forecast/ — cost + period_compare + temperature_impact narration-tool family; local var `forecast` renamed to `forecastMonths` in handler to avoid shadowing the imported pkg name). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites) so sibling subpackages can reuse the memoized JSON-Schema cache through the canonical tools.CachedSchema entrypoint."
+      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/ — auto_name + geofences combined into one bounded-context cluster sharing LocationSource port); 52 after R6.7 (alert/ — builder + tuning combined; ptrFloat64 test helper inlined locally; toolstest fixture pkg deferred until next shared-fixture cluster); 49 after R6.8 (forecast/ — cost + period_compare + temperature_impact narration-tool family; local var `forecast` renamed to `forecastMonths` in handler to avoid shadowing the imported pkg name); 46 after R6.9 (predict/ — battery_health + range + learned_anomaly_baseline train-and-query narrative tools). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites) so sibling subpackages can reuse the memoized JSON-Schema cache through the canonical tools.CachedSchema entrypoint."
     },
     {
       "path": "internal/jobs",

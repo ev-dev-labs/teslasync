@@ -68,7 +68,7 @@
 //   - "no duplicate write paths" → no save_*/update_*/delete_*
 //     tool exists in this slice; both tools are read-only.
 
-package tools
+package predict
 
 import (
 	"context"
@@ -77,6 +77,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 )
 
@@ -135,7 +136,7 @@ func (t *trainRangeModel) Description() string {
 
 // InputSchema implements [Tool].
 func (t *trainRangeModel) InputSchema() json.RawMessage {
-	return CachedSchema(trainRangeModelInput{})
+	return tools.CachedSchema(trainRangeModelInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -149,7 +150,7 @@ func (t *trainRangeModel) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *trainRangeModel) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[trainRangeModelInput](raw)
+	return tools.ValidateStruct[trainRangeModelInput](raw)
 }
 
 // Execute implements [Tool]. One trainer round-trip; no SQL is
@@ -197,7 +198,7 @@ func (q *queryRangePrediction) Description() string {
 
 // InputSchema implements [Tool].
 func (q *queryRangePrediction) InputSchema() json.RawMessage {
-	return CachedSchema(queryRangePredictionInput{})
+	return tools.CachedSchema(queryRangePredictionInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -211,7 +212,7 @@ func (q *queryRangePrediction) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (q *queryRangePrediction) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryRangePredictionInput](raw)
+	return tools.ValidateStruct[queryRangePredictionInput](raw)
 }
 
 // Execute implements [Tool]. Pure — no IO.
@@ -303,7 +304,7 @@ type RangePredictorSources struct {
 // slice's tools on r.
 //
 // Panics on duplicate registration (Registry.Register panics).
-func RegisterRangePredictorTools(r *Registry, s RangePredictorSources) {
+func RegisterRangePredictorTools(r *tools.Registry, s RangePredictorSources) {
 	r.Register(&trainRangeModel{trainer: s.Trainer})
 	r.Register(&queryRangePrediction{})
 }
