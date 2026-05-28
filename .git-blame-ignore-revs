@@ -220,3 +220,4 @@ c6d7985e251cc19be2c7ba4b500c29442a6b2d64
 737d37702731c5a8c59ef0b2c5b50a353dc81822
 a048e1b2411b43628a066f872976bf555577b9b8
 02265a87e9cc0b60ab6467d11bb764be10bb4547 # refactor(R2d.1): carve internal/api/search subpackage
+faf6e82597540fa2f91b12d250fce74135d779e1 # refactor(R2d.2): carve internal/api/lifetime subpackage
