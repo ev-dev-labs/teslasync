@@ -4,7 +4,7 @@
 // runs only when DATABASE_URL or TESLASYNC_TEST_DSN points at a
 // reachable PostgreSQL instance, mirroring the rest of
 // internal/database (ai_call_log_repo_test.go, scheduled_export_repo_test.go).
-package database
+package ai
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -99,7 +100,7 @@ func TestContinuationsRepo_RoundTrip(t *testing.T) {
 		t.Skip("ai_chat_continuations table missing; run migrations against this DSN")
 	}
 
-	db := &DB{Pool: pool}
+	db := &database.DB{Pool: pool}
 	repo := NewAIChatContinuationsRepo(db)
 
 	subject := "continuations-roundtrip-test@example.com"
@@ -176,7 +177,7 @@ func TestContinuationsRepo_RoundTrip_ExpiredRowNotResumable(t *testing.T) {
 		t.Skip("ai_chat_continuations table missing")
 	}
 
-	db := &DB{Pool: pool}
+	db := &database.DB{Pool: pool}
 
 	subject := "continuations-expiry-test@example.com"
 	id := "test-continuation-expiry-" + time.Now().UTC().Format("20060102150405.000")

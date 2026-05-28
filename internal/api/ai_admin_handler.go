@@ -33,7 +33,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 )
 
 // AIAdminRedactionBypassFeatureID is the meta-feature ID registered
@@ -83,13 +83,13 @@ func (a adminGuardSettings) AIFeatureEnabled(ctx context.Context, featureID stri
 
 // AIAdminHandler bundles the admin endpoints with their dependencies.
 type AIAdminHandler struct {
-	repo *database.AICallLogRepo
+	repo *aidb.AICallLogRepo
 }
 
 // NewAIAdminHandler constructs the handler. repo is required and MUST
 // be the same instance the audit decorator writes to so reads see
 // recent writes promptly.
-func NewAIAdminHandler(repo *database.AICallLogRepo) *AIAdminHandler {
+func NewAIAdminHandler(repo *aidb.AICallLogRepo) *AIAdminHandler {
 	if repo == nil {
 		panic("api: NewAIAdminHandler called with nil repo")
 	}
@@ -103,7 +103,7 @@ func NewAIAdminHandler(repo *database.AICallLogRepo) *AIAdminHandler {
 func mountAIAdminRoutes(
 	r chi.Router,
 	settings guard.Settings,
-	repo *database.AICallLogRepo,
+	repo *aidb.AICallLogRepo,
 ) {
 	adminGuard := guard.New(adminGuardSettings{inner: settings})
 	h := NewAIAdminHandler(repo)

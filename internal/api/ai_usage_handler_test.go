@@ -28,17 +28,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 )
 
-// fakeAIUsageRepo replaces the real *database.AICallLogRepo so the
+// fakeAIUsageRepo replaces the real *aidb.AICallLogRepo so the
 // handler tests do not require a DB pool. The handler stores the repo
 // as a typed pointer so we can't use an interface — instead we
 // accept the actual struct type and let the caller seed pre-canned
 // rows on per-method response channels.
 //
 // To stay honest about typing, we test by constructing a real
-// *database.AICallLogRepo with db=nil and exercising the helpers that
+// *aidb.AICallLogRepo with db=nil and exercising the helpers that
 // don't touch the pool (validators), plus we test the handler logic
 // in isolation by extracting parseUsageSince / parseUsageLimit and
 // exercising the method bodies via a ServeHTTP shim that swaps in a
@@ -184,9 +184,9 @@ func TestParseUsageLimit(t *testing.T) {
 		{"-5", usageDefaultRecentLimit},
 		{"1", 1},
 		{"50", 50},
-		{strconv.Itoa(database.AICallRecentMax), database.AICallRecentMax},
-		{strconv.Itoa(database.AICallRecentMax + 1), database.AICallRecentMax},
-		{"99999", database.AICallRecentMax},
+		{strconv.Itoa(aidb.AICallRecentMax), aidb.AICallRecentMax},
+		{strconv.Itoa(aidb.AICallRecentMax + 1), aidb.AICallRecentMax},
+		{"99999", aidb.AICallRecentMax},
 	}
 	for _, tc := range tests {
 		got := parseUsageLimit(tc.raw)
@@ -219,7 +219,7 @@ func TestAIUsageHandler_TodayReturns500OnRepoError(t *testing.T) {
 	// a request whose context is already cancelled so the pool call
 	// (if it ran) would short-circuit; but the nil pool dereference
 	// happens first. Both paths land us in the 500 branch.
-	repo := &database.AICallLogRepo{} // nil pool
+	repo := &aidb.AICallLogRepo{} // nil pool
 	h := &AIUsageHandler{repo: repo, headerName: ""}
 
 	req := httptest.NewRequest(http.MethodGet, "/ai/usage/today", nil)

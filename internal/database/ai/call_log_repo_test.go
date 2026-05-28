@@ -5,7 +5,7 @@
 // TESLASYNC_TEST_DSN points at a reachable PostgreSQL+TimescaleDB
 // instance, mirroring the rest of internal/database (e.g.
 // scheduled_export_repo_test.go).
-package database
+package ai
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // TestAICallLogRepo_Recent_LimitValidator pins the contract that
@@ -87,7 +88,7 @@ func TestAICallLogRepo_RoundTrip(t *testing.T) {
 		t.Skip("ai_call_log table missing; run migrations against this DSN")
 	}
 
-	db := &DB{Pool: pool}
+	db := &database.DB{Pool: pool}
 	repo := NewAICallLogRepo(db)
 
 	ctx := context.Background()

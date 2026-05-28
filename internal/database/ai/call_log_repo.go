@@ -14,7 +14,7 @@
 // FORWARD_AUTH_HEADER deployment cannot leak one user's spend to
 // another via the AiUsageCard. Open mode passes "" as the subject and
 // reads back the open-mode rows symmetrically.
-package database
+package ai
 
 import (
 	"context"
@@ -26,16 +26,17 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // AICallLogRepo provides AI audit log data access.
 type AICallLogRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewAICallLogRepo constructs the repo. Single-line constructor matches
-// every other *Repo in this package; the *DB carries the pool.
-func NewAICallLogRepo(db *DB) *AICallLogRepo {
+// every other *Repo in this package; the *database.DB carries the pool.
+func NewAICallLogRepo(db *database.DB) *AICallLogRepo {
 	return &AICallLogRepo{db: db}
 }
 

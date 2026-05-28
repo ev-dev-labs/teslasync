@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:06:18Z",
+  "generated_at": "2026-05-28T16:09:39Z",
   "go_version": "go1.26.1",
-  "commit_sha": "c027f10dafe94ec8c919e4cc431d575853abfeb8",
+  "commit_sha": "e2cfb390edfe6bcbb7f80b78689143244da7adb0",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2507,7 +2507,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126623,
+      "loc": 126624,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2631,6 +2631,7 @@
         "internal/database",
         "internal/database/achievement",
         "internal/database/admin",
+        "internal/database/ai",
         "internal/database/alert",
         "internal/database/audit",
         "internal/database/auth",
@@ -3699,14 +3700,12 @@
     },
     {
       "path": "internal/database",
-      "go_files": 52,
-      "test_files": 20,
-      "loc": 13216,
+      "go_files": 50,
+      "test_files": 18,
+      "loc": 12315,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
-        "internal/ai/provider",
-        "internal/ai/redact",
         "internal/config",
         "internal/metrics",
         "internal/models",
@@ -3719,10 +3718,6 @@
         "internal/tracing"
       ],
       "files": [
-        "ai_call_log_repo.go",
-        "ai_call_log_repo_test.go",
-        "ai_chat_continuations_repo.go",
-        "ai_chat_continuations_repo_test.go",
         "api_call_log_repo.go",
         "cache.go",
         "cache_test.go",
@@ -3826,6 +3821,26 @@
         "pinned_repo.go",
         "places_cache_repo.go",
         "saved_views_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/ai",
+      "go_files": 3,
+      "test_files": 2,
+      "loc": 928,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/redact",
+        "internal/database"
+      ],
+      "files": [
+        "call_log_repo.go",
+        "call_log_repo_test.go",
+        "chat_continuations_repo.go",
+        "chat_continuations_repo_test.go",
+        "doc.go"
       ]
     },
     {
@@ -7076,8 +7091,6 @@
       "totp_secret.go"
     ],
     "internal/database": [
-      "ai_call_log_repo.go",
-      "ai_chat_continuations_repo.go",
       "api_call_log_repo.go",
       "cache.go",
       "circuit_breaker.go",
@@ -7140,6 +7153,11 @@
       "pinned_repo.go",
       "places_cache_repo.go",
       "saved_views_repo.go"
+    ],
+    "internal/database/ai": [
+      "call_log_repo.go",
+      "chat_continuations_repo.go",
+      "doc.go"
     ],
     "internal/database/alert": [
       "doc.go",
@@ -7942,11 +7960,12 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 52,
-      "flat_parent_test_files": 20,
+      "flat_parent_go_files": 50,
+      "flat_parent_test_files": 18,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
+        "ai",
         "alert",
         "audit",
         "auth",
@@ -7958,7 +7977,6 @@
         "notification"
       ],
       "missing_subpkgs": [
-        "ai",
         "dashboard",
         "export",
         "feedback",

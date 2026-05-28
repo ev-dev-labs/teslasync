@@ -1,0 +1,36 @@
+refactor(R4.15): carve internal/database/ai (call_log + chat_continuations)
+
+Move AI-subsystem persistence into its own bounded-context subpkg per
+ADR-011, continuing the internal/database aggregate-root restructure.
+
+Files (4 source + 0 helpers; 5 caller files swept):
+  internal/database/ai_call_log_repo.go            -> internal/database/ai/call_log_repo.go
+  internal/database/ai_call_log_repo_test.go       -> internal/database/ai/call_log_repo_test.go
+  internal/database/ai_chat_continuations_repo.go  -> internal/database/ai/chat_continuations_repo.go
+  internal/database/ai_chat_continuations_repo_test.go -> internal/database/ai/chat_continuations_repo_test.go
+  internal/database/ai/doc.go                      (NEW, // Layer: adapter)
+
+Symbols promoted to subpkg (alias idb per ADR-011):
+  AICallLogRepo, NewAICallLogRepo, AICallFeatureRow, AICallRecentRow,
+  AICallTodayAggregate, AICallRecentMax, AIRedactionBypassRow,
+  ErrAICallLogInvalidLimit, AIChatContinuationsRepo,
+  NewAIChatContinuationsRepo, NewAIChatContinuationsRepoFor,
+  ContinuationRow, DefaultContinuationTTL, ErrContinuationNotFound.
+
+Callers updated (database.X -> idb.X + import alias):
+  internal/ai/limit/cost.go
+  internal/api/{ai_admin_handler,ai_usage_handler,ai_usage_handler_test,router}.go
+
+No helper deps (no buildPartialUpdate / NullIfEmpty / ptr helpers).
+No cycles (verified via grep against parent peers).
+ADR-015 contract unaffected (file-move-only; adapter-layer persistence,
+not runtime AI execution).
+
+internal/database allowlist ratchet: 52 -> 50 src files.
+archmetrics + baseline regenerated.
+
+Carved subpkgs so far (17): achievement, sharing, admin, gdpr,
+observability, auth, backup, notification, automation, user, alert,
+audit, charging, drive, trip, energy, ai.
+
+Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

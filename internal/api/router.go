@@ -16,6 +16,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
@@ -414,7 +415,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// satisfies provider.AuditSink) and survives for the lifetime
 	// of the process; a buffer of 1024 absorbs short bursts and
 	// drops the oldest entry on overflow with a Prometheus counter.
-	aiCallLogRepo := database.NewAICallLogRepo(db)
+	aiCallLogRepo := aidb.NewAICallLogRepo(db)
 	aiAuditWriter := provider.NewAsyncAuditWriter(context.Background(), aiCallLogRepo, 1024)
 	aiRegistry := provider.NewRegistry(
 		aiSettingsReader{repo: aiSettingsRepo},

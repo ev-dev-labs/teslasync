@@ -11,7 +11,7 @@ import (
 
 // CostRepo is the narrow port the [CostCap] consults to learn the
 // user's accumulated spend so far today. The production wiring uses
-// [internal/database.AICallLogRepo] (its Today method returns a
+// [internal/aidb.AICallLogRepo] (its Today method returns a
 // CostMicroCents int64 — see the Adapter helper at the bottom of
 // this file).
 //

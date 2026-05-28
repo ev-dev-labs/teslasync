@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 52,
+      "max_files": 50,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.13 carved 15 subpkgs. R4.14 batch 56-52 (energy — energy_repo + tesla_energy_history + tesla_energy_live_status + tesla_energy_site, 4 src files). No helper deps. CommandLogRepo grouped under energy/ for now (sole producer is energy-site command flow). Caller sweep 8 files (cmd/automation-worker + api 5 + automation/action + service). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4), trip (3), energy (4). Planned: ~20 aggregates total."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5-R4.14 carved 16 subpkgs. R4.15 batch 52-50 (ai — ai_call_log_repo + ai_chat_continuations_repo, 2 src files). No helper deps. Caller sweep 5 files (ai/limit/cost + api ai_admin/ai_usage/router). Carved subpkgs: achievement, sharing, admin (5), gdpr, observability (6), auth (6), backup (2), notification (4), automation (10), user (2), alert (2), audit (4), charging (2), drive (4), trip (3), energy (4), ai (2). Planned: ~20 aggregates total."
     },
     {
       "path": "internal/ai/tools",

@@ -37,7 +37,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 )
 
 // AIUsageFeatureID is the special-case meta-feature ID registered in
@@ -91,14 +91,14 @@ func (u usageGuardSettings) AIFeatureEnabled(ctx context.Context, featureID stri
 // AIUsageHandler bundles the three usage endpoints with the dependencies
 // they need.
 type AIUsageHandler struct {
-	repo       *database.AICallLogRepo
+	repo       *aidb.AICallLogRepo
 	headerName string // FORWARD_AUTH_HEADER name; "" in open mode.
 }
 
 // NewAIUsageHandler constructs the handler. Both repo and headerName
 // are required; repo MUST be the same instance the audit decorator
 // writes to so reads see the writes promptly.
-func NewAIUsageHandler(repo *database.AICallLogRepo, headerName string) *AIUsageHandler {
+func NewAIUsageHandler(repo *aidb.AICallLogRepo, headerName string) *AIUsageHandler {
 	if repo == nil {
 		panic("api: NewAIUsageHandler called with nil repo")
 	}
@@ -116,7 +116,7 @@ func NewAIUsageHandler(repo *database.AICallLogRepo, headerName string) *AIUsage
 func mountAIUsageRoutes(
 	r chi.Router,
 	settings guard.Settings,
-	repo *database.AICallLogRepo,
+	repo *aidb.AICallLogRepo,
 	headerName string,
 ) {
 	usageGuard := guard.New(usageGuardSettings{inner: settings})
@@ -229,8 +229,8 @@ func parseUsageLimit(raw string) int {
 	if n <= 0 {
 		return usageDefaultRecentLimit
 	}
-	if n > database.AICallRecentMax {
-		return database.AICallRecentMax
+	if n > aidb.AICallRecentMax {
+		return aidb.AICallRecentMax
 	}
 	return n
 }

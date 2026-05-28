@@ -18,7 +18,7 @@
 // principal. A continuation looked up with the wrong subject behaves
 // the same as one that doesn't exist (constant-time defence against
 // id enumeration).
-package database
+package ai
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -64,7 +65,7 @@ type ContinuationRow struct {
 // AIChatContinuationsRepo is the data access layer for paused
 // dispatcher runs.
 type AIChatContinuationsRepo struct {
-	db *DB
+	db *database.DB
 	// nowFn is the time source. Tests inject a fixed clock so
 	// expiry-window assertions are deterministic; production wires
 	// time.Now via the constructor default.
@@ -74,14 +75,14 @@ type AIChatContinuationsRepo struct {
 // NewAIChatContinuationsRepo constructs the repo with the default
 // (real-clock) time source. Tests use NewAIChatContinuationsRepoFor
 // to inject a deterministic clock.
-func NewAIChatContinuationsRepo(db *DB) *AIChatContinuationsRepo {
+func NewAIChatContinuationsRepo(db *database.DB) *AIChatContinuationsRepo {
 	return &AIChatContinuationsRepo{db: db, nowFn: time.Now}
 }
 
 // NewAIChatContinuationsRepoFor is a test-only constructor that
 // pins the repo's clock. Production code MUST use
 // NewAIChatContinuationsRepo.
-func NewAIChatContinuationsRepoFor(db *DB, now func() time.Time) *AIChatContinuationsRepo {
+func NewAIChatContinuationsRepoFor(db *database.DB, now func() time.Time) *AIChatContinuationsRepo {
 	return &AIChatContinuationsRepo{db: db, nowFn: now}
 }
 
