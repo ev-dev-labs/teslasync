@@ -94,29 +94,10 @@ package models
 
 // TeslaEnergySite, TeslaEnergyLiveStatus moved to internal/models/tesla in phase-R5.11.
 
-// DerefFloat64 safely dereferences a *float64, returning 0 if nil.
-func DerefFloat64(p *float64) float64 {
-	if p == nil {
-		return 0
-	}
-	return *p
-}
-
-// DerefString safely dereferences a *string, returning "" if nil.
-func DerefString(p *string) string {
-	if p == nil {
-		return ""
-	}
-	return *p
-}
-
-// DerefBool safely dereferences a *bool, returning false if nil.
-func DerefBool(p *bool) bool {
-	if p == nil {
-		return false
-	}
-	return *p
-}
+// DerefFloat64 / DerefString / DerefBool helpers were deleted in phase-R5.99
+// after audit confirmed zero callers remained (per no-tech-debt mandate).
+// Use the standard `if p != nil { v = *p }` idiom or per-field defaults
+// at the use-case / DTO boundary.
 
 // AutomationVariable moved to internal/models/automation in phase-R5.10.
 

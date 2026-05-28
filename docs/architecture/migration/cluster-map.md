@@ -44,6 +44,23 @@ Each subpackage row lists:
 
 ### `internal/models/` (36 files, 2 tests) — owner: **R5**
 
+> **R5 SHIPPED — status as of HEAD `97e2242f` (R5.14 + blame-ignore push)**:
+> R5.1–R5.14 + R5.99 cleanup all DONE on `chore/repo-reorganization`.
+> 14 of 19 planned subpackages shipped as standalone bounded contexts:
+> alert (R5.1), auth (R5.2), backup (R5.3), chatbot (R5.4), energy
+> (R5.5), export (R5.6), geo (R5.7), settings (R5.8), notification
+> (R5.9), automation (R5.10), tesla (R5.11), vehicle (R5.12), charging
+> (R5.13), drive (R5.14). The 3 unused `Deref*` helpers were deleted in
+> R5.99 per the no-tech-debt mandate.
+>
+> **NOT YET SHIPPED (5 remaining):** `models/dashboard`, `models/security`,
+> `models/signal`, `models/system`, `models/telemetry` — these are
+> existing parent-dir files (`dashboard_layout.go`, `security.go`,
+> `signal.go`, `system.go`, `telemetry.go` + co-located files) that
+> still live in `package models`. Future R5.15–R5.19 cluster moves will
+> finish the job; they follow the same `git mv` + package-rename +
+> alias-import recipe used by R5.12/13/14.
+>
 > **R5.0 expansion (2026-05-28):** initial R1 audit only classified the
 > 35 single-purpose files. `models.go` (679 lines) is NOT a thin glue
 > file — it hosts 35 concrete domain types + 7 helper funcs/methods
