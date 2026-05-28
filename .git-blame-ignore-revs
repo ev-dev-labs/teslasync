@@ -40,3 +40,6 @@
 
 # refactor(R5.5): extract internal/models/energy subpackage
 a78b3c5fa64c1b8e9911d1a20ddd8310f8489123
+
+# refactor(R5.6): extract internal/models/export subpackage
+ef3423f9a77a0d166ac9349b5ea6c8bce520e003
