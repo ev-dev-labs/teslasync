@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T21:06:41Z",
+  "generated_at": "2026-05-28T21:09:06Z",
   "go_version": "go1.26.1",
-  "commit_sha": "5d225fc2a5253c71e59759ab20e9805288302b1c",
+  "commit_sha": "e9bf2d43bc30dbc7d1fb4bc09613207d3c8e5052",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 243,
-      "test_files": 151,
-      "loc": 113255,
+      "go_files": 242,
+      "test_files": 150,
+      "loc": 113110,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2625,6 +2625,7 @@
         "internal/api/apperror",
         "internal/api/backup",
         "internal/api/dataquality",
+        "internal/api/exportcolumns",
         "internal/api/geocode",
         "internal/api/geofence",
         "internal/api/httpx",
@@ -2993,8 +2994,6 @@
         "errors.go",
         "export_handler.go",
         "exports_bulk_handler.go",
-        "exports_columns_handler.go",
-        "exports_columns_handler_test.go",
         "feedback_handler.go",
         "feedback_handler_test.go",
         "flags_handler.go",
@@ -3271,6 +3270,23 @@
       "files": [
         "doc.go",
         "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/exportcolumns",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 167,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/export"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -7538,7 +7554,6 @@
       "errors.go",
       "export_handler.go",
       "exports_bulk_handler.go",
-      "exports_columns_handler.go",
       "feedback_handler.go",
       "flags_handler.go",
       "fleet_telemetry_error_handler.go",
@@ -7667,6 +7682,10 @@
       "restore_handler.go"
     ],
     "internal/api/dataquality": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/exportcolumns": [
       "doc.go",
       "handler.go"
     ],
@@ -8877,8 +8896,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 243,
-      "flat_parent_test_files": 151,
+      "flat_parent_go_files": 242,
+      "flat_parent_test_files": 150,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",

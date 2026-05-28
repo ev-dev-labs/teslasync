@@ -18,6 +18,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
+	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
@@ -4156,7 +4157,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			pahoClient = mqttClient.Underlying()
 		}
 		exportJobHandler := NewExportJobHandler(db, pahoClient)
-		exportColumnsHandler := NewExportColumnsHandler()
+		exportColumnsHandler := apiexpcol.NewHandler()
 		// Phase-46 / Prompt 62 — column-selector UI fetches the publishable
 		// column catalog for the active export type. Read-only and cheap;
 		// rate-limited to soak up accidental SPA loops.

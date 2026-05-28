@@ -1,4 +1,4 @@
-package api
+package exportcolumns
 
 import (
 	"encoding/json"
@@ -9,8 +9,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/export"
 )
 
-func TestExportColumnsHandler_ListColumns(t *testing.T) {
-	h := NewExportColumnsHandler()
+func TestHandler_ListColumns(t *testing.T) {
+	h := NewHandler()
 
 	t.Run("missing type returns 400", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/api/v1/exports/columns", nil)

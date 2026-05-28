@@ -1,20 +1,21 @@
-package api
+package exportcolumns
 
 import (
 	"net/http"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/export"
 )
 
-// ExportColumnsHandler exposes the publishable column metadata for each
-// export job type so the frontend column picker can render checkboxes
-// without hard-coding the catalog. Phase-46 / Prompt 62.
-type ExportColumnsHandler struct{}
+// Handler exposes the publishable column metadata for each export job
+// type so the frontend column picker can render checkboxes without
+// hard-coding the catalog. Phase-46 / Prompt 62.
+type Handler struct{}
 
-// NewExportColumnsHandler returns a handler with no dependencies; the
-// catalog lives statically in the export package.
-func NewExportColumnsHandler() *ExportColumnsHandler {
-	return &ExportColumnsHandler{}
+// NewHandler returns a handler with no dependencies; the catalog lives
+// statically in the export package.
+func NewHandler() *Handler {
+	return &Handler{}
 }
 
 // ListColumns serves GET /api/v1/exports/columns?type={drives|charging|...}.
@@ -34,10 +35,10 @@ func NewExportColumnsHandler() *ExportColumnsHandler {
 // recognised, its column set is dynamic (e.g. account exports span many
 // tables) and a per-column picker does not apply. The client should hide
 // the picker UI for such types and submit without a `columns` field.
-func (h *ExportColumnsHandler) ListColumns(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListColumns(w http.ResponseWriter, r *http.Request) {
 	jobType := r.URL.Query().Get("type")
 	if jobType == "" {
-		writeError(w, http.StatusBadRequest, "type query parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "type query parameter is required")
 		return
 	}
 
@@ -52,7 +53,7 @@ func (h *ExportColumnsHandler) ListColumns(w http.ResponseWriter, r *http.Reques
 		cols = []export.ColumnInfo{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"type":               jobType,
 		"columns":            cols,
 		"supports_selection": supports,
