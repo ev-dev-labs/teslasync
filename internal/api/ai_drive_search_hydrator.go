@@ -2,7 +2,7 @@ package api
 
 // Phase-50 / 0021 — D1 Natural-language drive search and replay.
 //
-// ai_drive_search_hydrator.go implements tools.DriveReplayHydrator
+// ai_drive_search_hydrator.go implements trip.DriveReplayHydrator
 // using the existing canonical pgSearcher backend. The slice's
 // DriveReplayHydrator port resolves a (sourceType, sourceID)
 // reference from a RAG chunk into a human-friendly envelope (title,
@@ -55,11 +55,11 @@ import (
 	"strconv"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 )
 
 // aiDriveSearchHydrator is the production
-// tools.DriveReplayHydrator implementation. One per process;
+// trip.DriveReplayHydrator implementation. One per process;
 // stateless beyond the searcher port. Safe for concurrent use
 // across requests.
 type aiDriveSearchHydrator struct {
@@ -76,17 +76,17 @@ func newAIDriveSearchHydrator(s Searcher) *aiDriveSearchHydrator {
 	return &aiDriveSearchHydrator{s: s}
 }
 
-// HydrateOne implements [tools.DriveReplayHydrator]. Delegates to
+// HydrateOne implements [trip.DriveReplayHydrator]. Delegates to
 // the canonical pgSearcher's SearchDrives method using the
 // source_id as both query and idHint, with limit=1, so the
 // underlying SQL's exact-ID match bonus selects the target row in
 // O(1).
 //
-// Returns [tools.ErrDriveReplayHydratorNotFound] when no row
+// Returns [trip.ErrDriveReplayHydratorNotFound] when no row
 // matches the (subject, type, id) tuple — the AI tool surfaces
 // this as a status="not_found" envelope so the LLM can adapt its
 // narration without retrying.
-func (h *aiDriveSearchHydrator) HydrateOne(ctx context.Context, _userSubject, sourceType, sourceID string) (*tools.HydratedDriveReplay, error) {
+func (h *aiDriveSearchHydrator) HydrateOne(ctx context.Context, _userSubject, sourceType, sourceID string) (*trip.HydratedDriveReplay, error) {
 	// route_segment and location_summary are forward-compat
 	// reservations per the slice prompt — no canonical replay
 	// surface today. Surface as not_found so the LLM can adapt
@@ -97,9 +97,9 @@ func (h *aiDriveSearchHydrator) HydrateOne(ctx context.Context, _userSubject, so
 		// set; an unknown type is also not_found.
 		switch sourceType {
 		case "route_segment", "location_summary":
-			return nil, tools.ErrDriveReplayHydratorNotFound
+			return nil, trip.ErrDriveReplayHydratorNotFound
 		default:
-			return nil, tools.ErrDriveReplayHydratorNotFound
+			return nil, trip.ErrDriveReplayHydratorNotFound
 		}
 	}
 
@@ -109,7 +109,7 @@ func (h *aiDriveSearchHydrator) HydrateOne(ctx context.Context, _userSubject, so
 		// drive_summary corpus (drive IDs are int64). Surface
 		// as not_found rather than a tool error so the LLM can
 		// adapt.
-		return nil, tools.ErrDriveReplayHydratorNotFound
+		return nil, trip.ErrDriveReplayHydratorNotFound
 	}
 
 	hits, err := h.s.SearchDrives(ctx, sourceID, idHint, 1)
@@ -118,7 +118,7 @@ func (h *aiDriveSearchHydrator) HydrateOne(ctx context.Context, _userSubject, so
 	}
 	for _, hit := range hits {
 		if hit.ID == idHint {
-			out := &tools.HydratedDriveReplay{
+			out := &trip.HydratedDriveReplay{
 				SourceType: sourceType,
 				SourceID:   sourceID,
 				Title:      hit.Title,
@@ -137,7 +137,7 @@ func (h *aiDriveSearchHydrator) HydrateOne(ctx context.Context, _userSubject, so
 			return out, nil
 		}
 	}
-	return nil, tools.ErrDriveReplayHydratorNotFound
+	return nil, trip.ErrDriveReplayHydratorNotFound
 }
 
 // appendReplay derives "/drives/{id}/replay" from "/drives/{id}".
@@ -153,8 +153,8 @@ func appendReplay(url string) string {
 }
 
 // Compile-time assertion: aiDriveSearchHydrator satisfies
-// tools.DriveReplayHydrator.
-var _ tools.DriveReplayHydrator = (*aiDriveSearchHydrator)(nil)
+// trip.DriveReplayHydrator.
+var _ trip.DriveReplayHydrator = (*aiDriveSearchHydrator)(nil)
 
 // _ is a compile-time guard against the package-private errors
 // import drifting. The import is genuinely required (future

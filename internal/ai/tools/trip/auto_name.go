@@ -52,7 +52,7 @@
 //     are restored only in the final SSE frame returned to the same
 //     authenticated user.
 
-package tools
+package trip
 
 import (
 	"context"
@@ -61,6 +61,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -278,7 +279,7 @@ func (t *draftTripName) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftTripName) InputSchema() json.RawMessage {
-	return CachedSchema(tripNameDraftInput{})
+	return tools.CachedSchema(tripNameDraftInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -293,7 +294,7 @@ func (t *draftTripName) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *draftTripName) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[tripNameDraftInput](raw)
+	return tools.ValidateStruct[tripNameDraftInput](raw)
 }
 
 // Execute implements [Tool]. Reads the trip header + detail to build
@@ -389,7 +390,7 @@ func (t *validateTripNameTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateTripNameTool) InputSchema() json.RawMessage {
-	return CachedSchema(tripNameValidateInput{})
+	return tools.CachedSchema(tripNameValidateInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -403,7 +404,7 @@ func (t *validateTripNameTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *validateTripNameTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[tripNameValidateInput](raw)
+	return tools.ValidateStruct[tripNameValidateInput](raw)
 }
 
 // Execute implements [Tool]. Same error semantics as
@@ -460,7 +461,7 @@ type AutoTripNamingSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterAutoTripNamingTools(r *Registry, s AutoTripNamingSources) {
+func RegisterAutoTripNamingTools(r *tools.Registry, s AutoTripNamingSources) {
 	r.Register(&draftTripName{trips: s.Trips, details: s.Details, validator: s.Validator})
 	r.Register(&validateTripNameTool{trips: s.Trips, validator: s.Validator})
 }

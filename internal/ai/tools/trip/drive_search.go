@@ -56,7 +56,7 @@
 // simply has nothing indexed yet, and the strategy's goldens
 // already cover the zero-matches narration.
 
-package tools
+package trip
 
 import (
 	"context"
@@ -68,6 +68,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // nlDriveSearchSourceRouteSegment / nlDriveSearchSourceLocationSummary
@@ -191,7 +192,7 @@ func (t *retrieveDriveChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveDriveChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveDriveChunksInput{})
+	return tools.CachedSchema(retrieveDriveChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -211,7 +212,7 @@ func (t *retrieveDriveChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveDriveChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveDriveChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveDriveChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -389,7 +390,7 @@ func (t *hydrateDriveReplay) Description() string {
 
 // InputSchema implements [Tool].
 func (t *hydrateDriveReplay) InputSchema() json.RawMessage {
-	return CachedSchema(hydrateDriveReplayInput{})
+	return tools.CachedSchema(hydrateDriveReplayInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -405,7 +406,7 @@ func (t *hydrateDriveReplay) RequiredScope() string { return "" }
 // Validate implements [Tool]. Delegates to the shared validator,
 // then enforces the per-feature source-type allowlist.
 func (t *hydrateDriveReplay) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[hydrateDriveReplayInput](raw)
+	v, err := tools.ValidateStruct[hydrateDriveReplayInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -469,7 +470,7 @@ type DriveSearchSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterDriveSearchTools(r *Registry, s DriveSearchSources) {
+func RegisterDriveSearchTools(r *tools.Registry, s DriveSearchSources) {
 	r.Register(&retrieveDriveChunks{r: s.Retriever})
 	r.Register(&hydrateDriveReplay{h: s.Hydrator})
 }

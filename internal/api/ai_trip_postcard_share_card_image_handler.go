@@ -111,7 +111,7 @@ type AITripPostcardShareCardImageGenerationHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_image_prompt AND render_share_card_preview (both
-//	registered by tools.RegisterTripPostcardShareCardImageGenerationTools
+//	registered by trip.RegisterTripPostcardShareCardImageGenerationTools
 //	in router.go).
 //
 // strat:      the trip-postcard-share-card-image-generation

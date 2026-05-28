@@ -6,7 +6,7 @@
 // deterministic fakes so the tests stay hermetic (no api or database
 // package, no DB).
 
-package tools
+package trip
 
 import (
 	"context"
@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
@@ -366,7 +367,7 @@ func TestValidateTripNameShape_TableDriven(t *testing.T) {
 // the registry's Lookup.
 func TestRegisterAutoTripNamingTools_RegistersBothTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	trips, details := newTestTripFixtures()
 	validator := &stubTripNameValidator{}
 	RegisterAutoTripNamingTools(r, AutoTripNamingSources{

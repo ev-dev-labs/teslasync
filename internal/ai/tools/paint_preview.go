@@ -124,7 +124,7 @@ type paintPreviewSuggestion struct {
 //     pattern.
 //
 // The lat/long + street-address detectors are shared with the
-// share-card validator (reLatLong, reStreetAddr in
+// share-card validator (ReLatLong, ReStreetAddr in
 // share_card_image.go) — defence-in-depth against an LLM that
 // received cleartext for any reason.
 func validatePaintPreviewString(label, value string, maxLen int) error {
@@ -147,10 +147,10 @@ func validatePaintPreviewString(label, value string, maxLen int) error {
 			return fmt.Errorf("paint preview %s must not contain control characters", label)
 		}
 	}
-	if reLatLong.MatchString(value) {
+	if ReLatLong.MatchString(value) {
 		return fmt.Errorf("paint preview %s must not contain precise lat/long coordinates", label)
 	}
-	if reStreetAddr.MatchString(value) {
+	if ReStreetAddr.MatchString(value) {
 		return fmt.Errorf("paint preview %s must not contain precise street addresses", label)
 	}
 	return nil

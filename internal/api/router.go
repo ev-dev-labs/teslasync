@@ -134,6 +134,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
@@ -867,7 +868,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// path the typed GET /api/v1/search baseline uses (ADR-015 §I3
 	// baseline-intact: no duplicate read path is introduced by
 	// this slice).
-	tools.RegisterDriveSearchTools(aiToolRegistry, tools.DriveSearchSources{
+	trip.RegisterDriveSearchTools(aiToolRegistry, trip.DriveSearchSources{
 		Retriever: aiDriveSearchRetriever,
 		Hydrator:  newAIDriveSearchHydrator(newPGSearcher(db)),
 	})
@@ -970,7 +971,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// triggered. The actual trip-name persistence flows through
 	// an explicit user confirmation in the TripDetailPage UI
 	// (out of scope for this slice).
-	tools.RegisterAutoTripNamingTools(aiToolRegistry, tools.AutoTripNamingSources{
+	trip.RegisterAutoTripNamingTools(aiToolRegistry, trip.AutoTripNamingSources{
 		Trips:     NewAITripSourceAdapter(aiAutoTripNamingDetailRepo),
 		Details:   aiAutoTripNamingDetailRepo,
 		Validator: NewAITripNameValidator(),
@@ -2497,7 +2498,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// (same read path the GET /api/v1/trips/{id} baseline handler
 	// uses). Registered AFTER nl-dashboard-composer above so the
 	// registry's Names list grows deterministically.
-	tools.RegisterTripPostcardShareCardImageGenerationTools(aiToolRegistry, tools.TripPostcardShareCardImageGenerationSources{
+	trip.RegisterTripPostcardShareCardImageGenerationTools(aiToolRegistry, trip.TripPostcardShareCardImageGenerationSources{
 		Details: aiAutoTripNamingDetailRepo,
 	})
 	// trip-postcard-share-card-image-generation handler. One per

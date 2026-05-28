@@ -4,7 +4,7 @@
 // Both tools are pure functions over input + TripDetailSource so
 // the tests stay hermetic (no api or database package, no DB).
 
-package tools
+package trip
 
 import (
 	"context"
@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
@@ -323,7 +324,7 @@ func TestRenderShareCardPreview_TripNotFound(t *testing.T) {
 // and they are addressable by canonical name.
 func TestRegisterTripPostcardShareCardImageGenerationTools_RegistersBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	details := &stubTripDetailSource{byID: map[int64]*database.TripDetail{}}
 	RegisterTripPostcardShareCardImageGenerationTools(r, TripPostcardShareCardImageGenerationSources{Details: details})
 

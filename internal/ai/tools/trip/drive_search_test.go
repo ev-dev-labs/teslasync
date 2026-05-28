@@ -6,7 +6,7 @@
 // with a deterministic fake so the tests stay hermetic (no DB, no
 // embedding API).
 
-package tools
+package trip
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // fakeDriveReplayHydrator records every HydrateOne call + returns a
@@ -360,7 +361,7 @@ func TestHydrateDriveReplay_Mutates_False(t *testing.T) {
 // both tools under their canonical names.
 func TestRegisterDriveSearchTools_WiresBoth(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterDriveSearchTools(r, DriveSearchSources{
 		Retriever: &fakeRetriever{},
 		Hydrator:  &fakeDriveReplayHydrator{},
@@ -383,7 +384,7 @@ func TestRegisterDriveSearchTools_DuplicateRegistrationPanics(t *testing.T) {
 			t.Errorf("second RegisterDriveSearchTools did not panic")
 		}
 	}()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterDriveSearchTools(r, DriveSearchSources{Retriever: &fakeRetriever{}, Hydrator: &fakeDriveReplayHydrator{}})
 	RegisterDriveSearchTools(r, DriveSearchSources{Retriever: &fakeRetriever{}, Hydrator: &fakeDriveReplayHydrator{}})
 }

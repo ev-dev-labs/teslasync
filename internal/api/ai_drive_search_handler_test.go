@@ -27,7 +27,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 )
 
 // TestNLDriveSearchReplayAIOff404 is the load-bearing off-mode
@@ -235,7 +235,7 @@ func TestAIDriveSearchHydrator_NotFoundOnNonNumericID(t *testing.T) {
 	if err == nil {
 		t.Fatalf("HydrateOne err = nil, want ErrDriveReplayHydratorNotFound")
 	}
-	if !errors.Is(err, tools.ErrDriveReplayHydratorNotFound) {
+	if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
 		t.Errorf("HydrateOne err = %v, want ErrDriveReplayHydratorNotFound", err)
 	}
 }
@@ -250,7 +250,7 @@ func TestAIDriveSearchHydrator_NotFoundOnNoMatch(t *testing.T) {
 	fake.hits[SearchTypeDrive] = nil // empty result
 	h := newAIDriveSearchHydrator(fake)
 	_, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "999")
-	if !errors.Is(err, tools.ErrDriveReplayHydratorNotFound) {
+	if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
 		t.Errorf("HydrateOne err = %v, want ErrDriveReplayHydratorNotFound", err)
 	}
 }
@@ -265,7 +265,7 @@ func TestAIDriveSearchHydrator_NotFoundOnForwardCompatSourceTypes(t *testing.T) 
 	h := newAIDriveSearchHydrator(newFakeSearcher())
 	for _, st := range []string{"route_segment", "location_summary"} {
 		_, err := h.HydrateOne(context.Background(), "alice", st, "1")
-		if !errors.Is(err, tools.ErrDriveReplayHydratorNotFound) {
+		if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
 			t.Errorf("HydrateOne(%s) err = %v, want ErrDriveReplayHydratorNotFound", st, err)
 		}
 	}
@@ -279,7 +279,7 @@ func TestAIDriveSearchHydrator_NotFoundOnUnknownSourceType(t *testing.T) {
 	t.Parallel()
 	h := newAIDriveSearchHydrator(newFakeSearcher())
 	_, err := h.HydrateOne(context.Background(), "alice", "unknown_corpus", "1")
-	if !errors.Is(err, tools.ErrDriveReplayHydratorNotFound) {
+	if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
 		t.Errorf("HydrateOne err = %v, want ErrDriveReplayHydratorNotFound", err)
 	}
 }

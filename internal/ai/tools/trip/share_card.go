@@ -52,17 +52,17 @@
 //     defence-in-depth against an LLM that received cleartext for
 //     any reason.
 
-package tools
+package trip
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"unicode"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
@@ -183,19 +183,6 @@ type shareCardImagePreview struct {
 // city / region pair; better a refused preview than a leaked
 // address in the user's clipboard.
 
-// reLatLong matches a "lat, long" pair: two signed decimal numbers
-// of length >= 4 chars including the sign separated by ", " or ",".
-// Examples: "37.7749, -122.4194", "47.6, -122.3" (positive
-// allowed too). Three-digit-plus integer pairs without decimals
-// are NOT flagged — those are usually distances / temperatures.
-var reLatLong = regexp.MustCompile(`-?\d{1,3}\.\d{2,},\s*-?\d{1,3}\.\d{2,}`)
-
-// reStreetAddr matches an obvious "<number> <Word> <Street-type>"
-// pattern. Examples: "123 Main St", "5500 Castle Pines Drive".
-// The street-type list is restrictive on purpose (Street/St/Ave/...
-// only) so generic phrases like "5 mile run" are not flagged.
-var reStreetAddr = regexp.MustCompile(`(?i)\b\d{1,6}\s+[A-Z][a-zA-Z]{2,}(?:\s+[A-Z][a-zA-Z]+)*\s+(Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Court|Ct|Highway|Hwy|Parkway|Pkwy)\b`)
-
 // validateShareCardImageString runs the deterministic per-field
 // share-card validation. Extracted so the tool can reject the LLM's
 // proposal byte-equivalent to what a future canonical share-card
@@ -228,10 +215,10 @@ func validateShareCardImageString(label, value string, maxLen int) error {
 			return fmt.Errorf("share-card %s must not contain control characters", label)
 		}
 	}
-	if reLatLong.MatchString(value) {
+	if tools.ReLatLong.MatchString(value) {
 		return fmt.Errorf("share-card %s must not contain precise lat/long coordinates", label)
 	}
-	if reStreetAddr.MatchString(value) {
+	if tools.ReStreetAddr.MatchString(value) {
 		return fmt.Errorf("share-card %s must not contain precise street addresses", label)
 	}
 	return nil
@@ -326,7 +313,7 @@ func (t *draftImagePrompt) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftImagePrompt) InputSchema() json.RawMessage {
-	return CachedSchema(shareCardImageDraftInput{})
+	return tools.CachedSchema(shareCardImageDraftInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -340,7 +327,7 @@ func (t *draftImagePrompt) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *draftImagePrompt) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[shareCardImageDraftInput](raw)
+	return tools.ValidateStruct[shareCardImageDraftInput](raw)
 }
 
 // Execute implements [Tool]. Reads the trip detail to build the
@@ -398,7 +385,7 @@ func (t *renderShareCardPreview) Description() string {
 
 // InputSchema implements [Tool].
 func (t *renderShareCardPreview) InputSchema() json.RawMessage {
-	return CachedSchema(shareCardImagePreviewInput{})
+	return tools.CachedSchema(shareCardImagePreviewInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -412,7 +399,7 @@ func (t *renderShareCardPreview) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *renderShareCardPreview) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[shareCardImagePreviewInput](raw)
+	return tools.ValidateStruct[shareCardImagePreviewInput](raw)
 }
 
 // Execute implements [Tool]. Validation failures surface as
@@ -503,7 +490,7 @@ type TripPostcardShareCardImageGenerationSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterTripPostcardShareCardImageGenerationTools(r *Registry, s TripPostcardShareCardImageGenerationSources) {
+func RegisterTripPostcardShareCardImageGenerationTools(r *tools.Registry, s TripPostcardShareCardImageGenerationSources) {
 	r.Register(&draftImagePrompt{details: s.Details})
 	r.Register(&renderShareCardPreview{details: s.Details})
 }

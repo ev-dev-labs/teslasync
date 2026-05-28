@@ -62,6 +62,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -95,7 +96,7 @@ type AIAutoTripNameHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_trip_name AND validate_trip_name (both registered by
-//	tools.RegisterAutoTripNamingTools in router.go).
+//	trip.RegisterAutoTripNamingTools in router.go).
 //
 // strat:      the auto-trip-naming Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
@@ -239,7 +240,7 @@ var _ http.Handler = (*AIAutoTripNameHandler)(nil)
 // byte-equivalent. Pinned by tests on both sides.
 const autoTripNameMaxNameLen = 200
 
-// AITripNameValidator is the production tools.TripNameValidator. It
+// AITripNameValidator is the production trip.TripNameValidator. It
 // enforces the same trimming + length + control-character rules that
 // the future canonical trip-update handler will enforce, so a draft
 // accepted by the AI tool is byte-equivalent to a draft accepted by
@@ -248,7 +249,7 @@ const autoTripNameMaxNameLen = 200
 // The struct is intentionally empty — the validator is a pure
 // function. The receiver is kept so the production wiring is a
 // noun ("the validator") in router.go and tests can substitute a
-// fake by satisfying the tools.TripNameValidator interface.
+// fake by satisfying the trip.TripNameValidator interface.
 type AITripNameValidator struct{}
 
 // NewAITripNameValidator constructs the validator.
@@ -256,7 +257,7 @@ func NewAITripNameValidator() *AITripNameValidator {
 	return &AITripNameValidator{}
 }
 
-// ValidateTripName implements tools.TripNameValidator. Rules:
+// ValidateTripName implements trip.TripNameValidator. Rules:
 //
 //   - rune-trimmed name must be 1-200 chars;
 //   - no control characters (Unicode category Cc) anywhere;
@@ -290,7 +291,7 @@ func (v *AITripNameValidator) ValidateTripName(_ *models.Trip, proposed string) 
 }
 
 // AITripSourceAdapter wires *database.TripRepo into the
-// tools.TripSource interface. Since TripRepo does not have a
+// trip.TripSource interface. Since TripRepo does not have a
 // GetByID method (the existing baseline reads trip header via the
 // detail repo's GetTrip), the adapter delegates to the detail repo
 // and projects the *database.TripDetail header onto a *models.Trip.
@@ -312,7 +313,7 @@ func NewAITripSourceAdapter(details *database.TripsDetailRepo) *AITripSourceAdap
 	return &AITripSourceAdapter{details: details}
 }
 
-// GetTripByID implements tools.TripSource. Returns (nil, nil) if the
+// GetTripByID implements trip.TripSource. Returns (nil, nil) if the
 // detail repo reports ErrTripNotFound; any other error is propagated.
 // The projection copies only the fields the validator + draft
 // builder actually consume — the full TripDetail aggregate is read
@@ -342,6 +343,6 @@ func (a *AITripSourceAdapter) GetTripByID(ctx context.Context, tripID int64) (*m
 
 // Compile-time assertions: the adapters satisfy the tool ports.
 var (
-	_ tools.TripSource        = (*AITripSourceAdapter)(nil)
-	_ tools.TripNameValidator = (*AITripNameValidator)(nil)
+	_ trip.TripSource        = (*AITripSourceAdapter)(nil)
+	_ trip.TripNameValidator = (*AITripNameValidator)(nil)
 )

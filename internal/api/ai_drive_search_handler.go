@@ -108,7 +108,7 @@ type AIDriveSearchHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	retrieve_drive_chunks + hydrate_drive_replay
-//	(registered by tools.RegisterDriveSearchTools in router.go).
+//	(registered by trip.RegisterDriveSearchTools in router.go).
 //
 // strat:      the nl-drive-search-replay Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
