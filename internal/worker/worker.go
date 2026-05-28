@@ -4,11 +4,12 @@ import (
 	"sync"
 	"time"
 
+	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
+
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/events"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -58,7 +59,7 @@ type Worker struct {
 	fallbackPollInterval time.Duration // overrides cfg.PollInterval when fleet telemetry is primary
 
 	// Cached polling config — refreshed each poll cycle from the database.
-	pollingConfig *models.LegacyPollingConfig
+	pollingConfig *settingsmodel.LegacyPollingConfig
 
 	// Adaptive polling engine — evaluates API responses to determine optimal
 	// poll intervals. When set, replaces the fixed-interval backoff logic.

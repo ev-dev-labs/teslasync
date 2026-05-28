@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"time"
 
+	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
@@ -241,7 +243,7 @@ func (h *SettingsHandler) ToggleAPISuspend(w http.ResponseWriter, r *http.Reques
 // this endpoint returns a backward-compatible LegacyPollingConfig with
 // all endpoints enabled (default safe state).
 func (h *SettingsHandler) GetPollingConfig(w http.ResponseWriter, r *http.Request) {
-	pc := models.DefaultPollingConfig()
+	pc := settingsmodel.DefaultPollingConfig()
 	writeJSON(w, http.StatusOK, pc)
 }
 
@@ -249,7 +251,7 @@ func (h *SettingsHandler) GetPollingConfig(w http.ResponseWriter, r *http.Reques
 // Per-vehicle polling tuning now lives in the `polling_config` table;
 // this is a no-op that returns the default config.
 func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Request) {
-	var pc models.LegacyPollingConfig
+	var pc settingsmodel.LegacyPollingConfig
 	if err := json.NewDecoder(r.Body).Decode(&pc); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return

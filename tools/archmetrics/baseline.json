@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T03:53:24Z",
+  "generated_at": "2026-05-28T03:56:44Z",
   "go_version": "go1.26.1",
-  "commit_sha": "3147de1de6a0cafabd18f15542086f5ada576e0f",
+  "commit_sha": "a74917fb0edc46002c5a2cff51f3c424573be942",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2031,7 +2031,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126471,
+      "loc": 126472,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2151,6 +2151,7 @@
         "internal/models/chatbot",
         "internal/models/export",
         "internal/models/geo",
+        "internal/models/settings",
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
@@ -3954,7 +3955,7 @@
       "path": "internal/models",
       "go_files": 33,
       "test_files": 1,
-      "loc": 2614,
+      "loc": 2464,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4086,6 +4087,19 @@
       "files": [
         "doc.go",
         "geo.go"
+      ]
+    },
+    {
+      "path": "internal/models/settings",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 177,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "settings.go"
       ]
     },
     {
@@ -4902,7 +4916,7 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2594,
+      "loc": 2595,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4914,6 +4928,7 @@
         "internal/metrics",
         "internal/models",
         "internal/models/auth",
+        "internal/models/settings",
         "internal/mqtt",
         "internal/notification",
         "internal/polling",
@@ -6371,6 +6386,10 @@
       "doc.go",
       "geo.go"
     ],
+    "internal/models/settings": [
+      "doc.go",
+      "settings.go"
+    ],
     "internal/mqtt": [
       "dlq_inspector.go",
       "dlq_production.go",
@@ -6683,7 +6702,8 @@
         "chatbot",
         "energy",
         "export",
-        "geo"
+        "geo",
+        "settings"
       ],
       "missing_subpkgs": [
         "automation",
@@ -6692,7 +6712,6 @@
         "drive",
         "notification",
         "security",
-        "settings",
         "signal",
         "system",
         "telemetry",

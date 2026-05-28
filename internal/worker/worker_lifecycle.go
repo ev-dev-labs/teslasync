@@ -7,6 +7,8 @@ import (
 	"runtime/debug"
 	"time"
 
+	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
+
 	authmodel "github.com/ev-dev-labs/teslasync/internal/models/auth"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
@@ -136,7 +138,7 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 	// Load polling config for this cycle (per-vehicle configs are in the
 	// polling_config table; the worker still uses the legacy feature-flag
 	// struct for endpoint selection until the full migration is complete).
-	defaultPC := models.DefaultPollingConfig()
+	defaultPC := settingsmodel.DefaultPollingConfig()
 	pc := &defaultPC
 	w.pollingConfig = pc
 
