@@ -17,17 +17,17 @@ import (
 	"github.com/pquerna/otp/totp"
 
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
-// fakeTOTPStore is the in-memory stand-in for *database.TOTPRepo used
+// fakeTOTPStore is the in-memory stand-in for *dbauth.TOTPRepo used
 // by every handler test in this file. Behaviour mirrors the real repo
 // closely enough that the handler can exercise its full code paths
 // without a Postgres dependency.
 type fakeTOTPStore struct {
 	mu          sync.Mutex
-	enrollments map[string]*database.TOTPEnrollmentRow
-	credentials map[string]*database.TOTPCredentialRow
+	enrollments map[string]*dbauth.TOTPEnrollmentRow
+	credentials map[string]*dbauth.TOTPCredentialRow
 
 	beginErr     error
 	getEnrollErr error
@@ -42,8 +42,8 @@ type fakeTOTPStore struct {
 
 func newFakeStore() *fakeTOTPStore {
 	return &fakeTOTPStore{
-		enrollments: make(map[string]*database.TOTPEnrollmentRow),
-		credentials: make(map[string]*database.TOTPCredentialRow),
+		enrollments: make(map[string]*dbauth.TOTPEnrollmentRow),
+		credentials: make(map[string]*dbauth.TOTPCredentialRow),
 	}
 }
 
@@ -53,7 +53,7 @@ func (s *fakeTOTPStore) BeginEnrollment(_ context.Context, subject string, secre
 	if s.beginErr != nil {
 		return s.beginErr
 	}
-	s.enrollments[subject] = &database.TOTPEnrollmentRow{
+	s.enrollments[subject] = &dbauth.TOTPEnrollmentRow{
 		Subject:           subject,
 		SecretEncrypted:   append([]byte(nil), secret...),
 		BackupCodesHashed: append([]string(nil), hashes...),
@@ -63,7 +63,7 @@ func (s *fakeTOTPStore) BeginEnrollment(_ context.Context, subject string, secre
 	return nil
 }
 
-func (s *fakeTOTPStore) GetEnrollment(_ context.Context, subject string) (*database.TOTPEnrollmentRow, error) {
+func (s *fakeTOTPStore) GetEnrollment(_ context.Context, subject string) (*dbauth.TOTPEnrollmentRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.getEnrollErr != nil {
@@ -71,13 +71,13 @@ func (s *fakeTOTPStore) GetEnrollment(_ context.Context, subject string) (*datab
 	}
 	row, ok := s.enrollments[subject]
 	if !ok {
-		return nil, database.ErrTOTPNotFound
+		return nil, dbauth.ErrTOTPNotFound
 	}
 	cp := *row
 	return &cp, nil
 }
 
-func (s *fakeTOTPStore) ActivateEnrollment(_ context.Context, subject string) (*database.TOTPCredentialRow, error) {
+func (s *fakeTOTPStore) ActivateEnrollment(_ context.Context, subject string) (*dbauth.TOTPCredentialRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.activateErr != nil {
@@ -85,9 +85,9 @@ func (s *fakeTOTPStore) ActivateEnrollment(_ context.Context, subject string) (*
 	}
 	row, ok := s.enrollments[subject]
 	if !ok {
-		return nil, database.ErrTOTPNotFound
+		return nil, dbauth.ErrTOTPNotFound
 	}
-	cred := &database.TOTPCredentialRow{
+	cred := &dbauth.TOTPCredentialRow{
 		Subject:           subject,
 		SecretEncrypted:   append([]byte(nil), row.SecretEncrypted...),
 		BackupCodesHashed: append([]string(nil), row.BackupCodesHashed...),
@@ -99,7 +99,7 @@ func (s *fakeTOTPStore) ActivateEnrollment(_ context.Context, subject string) (*
 	return &cp, nil
 }
 
-func (s *fakeTOTPStore) GetCredential(_ context.Context, subject string) (*database.TOTPCredentialRow, error) {
+func (s *fakeTOTPStore) GetCredential(_ context.Context, subject string) (*dbauth.TOTPCredentialRow, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.getCredErr != nil {
@@ -107,7 +107,7 @@ func (s *fakeTOTPStore) GetCredential(_ context.Context, subject string) (*datab
 	}
 	row, ok := s.credentials[subject]
 	if !ok {
-		return nil, database.ErrTOTPNotFound
+		return nil, dbauth.ErrTOTPNotFound
 	}
 	cp := *row
 	cp.BackupCodesHashed = append([]string(nil), row.BackupCodesHashed...)
@@ -133,7 +133,7 @@ func (s *fakeTOTPStore) RotateBackupCodes(_ context.Context, subject string, has
 	}
 	row, ok := s.credentials[subject]
 	if !ok {
-		return database.ErrTOTPNotFound
+		return dbauth.ErrTOTPNotFound
 	}
 	row.BackupCodesHashed = append([]string(nil), hashes...)
 	return nil
@@ -164,7 +164,7 @@ func (s *fakeTOTPStore) MarkFailure(_ context.Context, subject string) (int, err
 	}
 	row, ok := s.credentials[subject]
 	if !ok {
-		return 0, database.ErrTOTPNotFound
+		return 0, dbauth.ErrTOTPNotFound
 	}
 	row.FailedAttempts++
 	now := time.Now().UTC()
@@ -180,7 +180,7 @@ func (s *fakeTOTPStore) ConsumeBackupCode(_ context.Context, subject, hashed str
 	}
 	row, ok := s.credentials[subject]
 	if !ok {
-		return false, database.ErrTOTPNotFound
+		return false, dbauth.ErrTOTPNotFound
 	}
 	for i, h := range row.BackupCodesHashed {
 		if h == hashed {
@@ -291,7 +291,7 @@ func TestTOTPHandler_GetStatus_NotEnrolled(t *testing.T) {
 func TestTOTPHandler_GetStatus_Active(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now().UTC().Add(-time.Hour)
-	store.credentials["alice"] = &database.TOTPCredentialRow{
+	store.credentials["alice"] = &dbauth.TOTPCredentialRow{
 		Subject:           "alice",
 		SecretEncrypted:   []byte("encrypted"),
 		BackupCodesHashed: []string{"a", "b", "c"},
@@ -391,7 +391,7 @@ func TestTOTPHandler_Verify_ExpiredEnrollment(t *testing.T) {
 		t.Fatalf("generate: %v", err)
 	}
 	_ = base32Secret
-	store.enrollments["alice"] = &database.TOTPEnrollmentRow{
+	store.enrollments["alice"] = &dbauth.TOTPEnrollmentRow{
 		Subject:           "alice",
 		SecretEncrypted:   rawSecret,
 		BackupCodesHashed: []string{},
@@ -409,7 +409,7 @@ func TestTOTPHandler_Verify_ExpiredEnrollment(t *testing.T) {
 func TestTOTPHandler_Verify_WrongCode(t *testing.T) {
 	store := newFakeStore()
 	rawSecret, _, _ := crypto.GenerateTOTPSecret()
-	store.enrollments["alice"] = &database.TOTPEnrollmentRow{
+	store.enrollments["alice"] = &dbauth.TOTPEnrollmentRow{
 		Subject:           "alice",
 		SecretEncrypted:   rawSecret,
 		BackupCodesHashed: []string{},
@@ -435,7 +435,7 @@ func TestTOTPHandler_Verify_RealCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generate: %v", err)
 	}
-	store.enrollments["alice"] = &database.TOTPEnrollmentRow{
+	store.enrollments["alice"] = &dbauth.TOTPEnrollmentRow{
 		Subject:           "alice",
 		SecretEncrypted:   rawSecret,
 		BackupCodesHashed: []string{},
@@ -490,7 +490,7 @@ func TestTOTPHandler_VerifySudo_ValidCodeMintsToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("generate: %v", err)
 	}
-	store.credentials["alice"] = &database.TOTPCredentialRow{
+	store.credentials["alice"] = &dbauth.TOTPCredentialRow{
 		Subject:         "alice",
 		SecretEncrypted: rawSecret,
 		ActivatedAt:     time.Now(),
@@ -522,7 +522,7 @@ func TestTOTPHandler_VerifySudo_BackupCode(t *testing.T) {
 	for i, p := range plain {
 		hashed[i] = crypto.HashBackupCode(p)
 	}
-	store.credentials["alice"] = &database.TOTPCredentialRow{
+	store.credentials["alice"] = &dbauth.TOTPCredentialRow{
 		Subject:           "alice",
 		SecretEncrypted:   []byte("ignored"),
 		BackupCodesHashed: hashed,
@@ -545,7 +545,7 @@ func TestTOTPHandler_VerifySudo_BackupCode(t *testing.T) {
 
 func TestTOTPHandler_VerifySudo_BothFieldsRejected(t *testing.T) {
 	store := newFakeStore()
-	store.credentials["alice"] = &database.TOTPCredentialRow{
+	store.credentials["alice"] = &dbauth.TOTPCredentialRow{
 		Subject:         "alice",
 		SecretEncrypted: []byte("x"),
 	}
@@ -561,7 +561,7 @@ func TestTOTPHandler_VerifySudo_BothFieldsRejected(t *testing.T) {
 func TestTOTPHandler_VerifySudo_RateLimitTrips(t *testing.T) {
 	store := newFakeStore()
 	rawSecret, _, _ := crypto.GenerateTOTPSecret()
-	store.credentials["alice"] = &database.TOTPCredentialRow{
+	store.credentials["alice"] = &dbauth.TOTPCredentialRow{
 		Subject:         "alice",
 		SecretEncrypted: rawSecret,
 		ActivatedAt:     time.Now(),
@@ -594,7 +594,7 @@ func TestTOTPHandler_VerifySudo_RateLimitTrips(t *testing.T) {
 
 func TestTOTPHandler_Revoke_RemovesCredential(t *testing.T) {
 	store := newFakeStore()
-	store.credentials["alice"] = &database.TOTPCredentialRow{Subject: "alice", SecretEncrypted: []byte("x")}
+	store.credentials["alice"] = &dbauth.TOTPCredentialRow{Subject: "alice", SecretEncrypted: []byte("x")}
 	h, _ := newTOTPTestHandler(t, store, "X-Forwarded-User")
 	rr := httptest.NewRecorder()
 	h.Revoke(rr, newRequest(t, "DELETE", "/auth/totp", "alice", ""))
@@ -628,7 +628,7 @@ func TestTOTPHandler_RegenerateBackupCodes_NoCredential(t *testing.T) {
 
 func TestTOTPHandler_RegenerateBackupCodes_Success(t *testing.T) {
 	store := newFakeStore()
-	store.credentials["alice"] = &database.TOTPCredentialRow{
+	store.credentials["alice"] = &dbauth.TOTPCredentialRow{
 		Subject:           "alice",
 		SecretEncrypted:   []byte("x"),
 		BackupCodesHashed: []string{"old1", "old2"},

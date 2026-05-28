@@ -18,7 +18,7 @@
 // The store is intentionally placed under internal/database (not
 // internal/api) so that a Redis-backed implementation can drop into the
 // same package without churning the api package's import graph.
-package database
+package auth
 
 import (
 	"crypto/hmac"

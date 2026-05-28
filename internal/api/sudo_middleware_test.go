@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // Phase-46 / Prompt 31 — middleware + reauth-handler unit tests.
@@ -30,9 +30,9 @@ func staticTOTPVerifier(want string) TOTPVerifier {
 	}
 }
 
-func newTestSudoBundle(t *testing.T, cfg SudoConfig) (*SudoHandler, *database.SudoTokenStore) {
+func newTestSudoBundle(t *testing.T, cfg SudoConfig) (*SudoHandler, *dbauth.SudoTokenStore) {
 	t.Helper()
-	store := database.NewSudoTokenStore(cfg.TTL)
+	store := dbauth.NewSudoTokenStore(cfg.TTL)
 	return NewSudoHandler(cfg, store, staticTOTPVerifier("123456")), store
 }
 
@@ -76,7 +76,7 @@ func newReauthRequest(t *testing.T, header, subject string, body any) *http.Requ
 // --- SudoTokenStore (database package) -------------------------------
 
 func TestSudoTokenStore_MintValidate(t *testing.T) {
-	store := database.NewSudoTokenStore(50 * time.Millisecond)
+	store := dbauth.NewSudoTokenStore(50 * time.Millisecond)
 
 	token, exp, err := store.Mint("alice")
 	if err != nil {
@@ -112,7 +112,7 @@ func TestSudoTokenStore_MintValidate(t *testing.T) {
 }
 
 func TestSudoTokenStore_Revoke(t *testing.T) {
-	store := database.NewSudoTokenStore(time.Minute)
+	store := dbauth.NewSudoTokenStore(time.Minute)
 	token, _, err := store.Mint("alice")
 	if err != nil {
 		t.Fatalf("mint: %v", err)
@@ -137,7 +137,7 @@ func TestSudoTokenStore_Revoke(t *testing.T) {
 }
 
 func TestSudoTokenStore_Sweep(t *testing.T) {
-	store := database.NewSudoTokenStore(50 * time.Millisecond)
+	store := dbauth.NewSudoTokenStore(50 * time.Millisecond)
 
 	if _, _, err := store.Mint("alice"); err != nil {
 		t.Fatalf("mint: %v", err)
@@ -161,7 +161,7 @@ func TestSudoTokenStore_Sweep(t *testing.T) {
 // --- RequireSudo middleware -----------------------------------------
 
 func TestRequireSudo_OpenModePassthrough(t *testing.T) {
-	store := database.NewSudoTokenStore(time.Minute)
+	store := dbauth.NewSudoTokenStore(time.Minute)
 	mw := RequireSudo(store, SudoConfig{HeaderName: ""})
 	called := false
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -196,7 +196,7 @@ func TestRequireSudo_NilStoreReturns500(t *testing.T) {
 }
 
 func TestRequireSudo_MissingTokenReturns401WithCode(t *testing.T) {
-	store := database.NewSudoTokenStore(time.Minute)
+	store := dbauth.NewSudoTokenStore(time.Minute)
 	mw := RequireSudo(store, SudoConfig{HeaderName: testHeader})
 	called := false
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -220,7 +220,7 @@ func TestRequireSudo_MissingTokenReturns401WithCode(t *testing.T) {
 }
 
 func TestRequireSudo_MissingIdentityHeader(t *testing.T) {
-	store := database.NewSudoTokenStore(time.Minute)
+	store := dbauth.NewSudoTokenStore(time.Minute)
 	mw := RequireSudo(store, SudoConfig{HeaderName: testHeader})
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		t.Fatalf("must not invoke downstream handler")
@@ -242,7 +242,7 @@ func TestRequireSudo_MissingIdentityHeader(t *testing.T) {
 }
 
 func TestRequireSudo_ValidTokenAllowsRequest(t *testing.T) {
-	store := database.NewSudoTokenStore(time.Minute)
+	store := dbauth.NewSudoTokenStore(time.Minute)
 	token, _, _ := store.Mint("alice")
 	mw := RequireSudo(store, SudoConfig{HeaderName: testHeader})
 	called := false
@@ -265,7 +265,7 @@ func TestRequireSudo_ValidTokenAllowsRequest(t *testing.T) {
 }
 
 func TestRequireSudo_TokenBoundToWrongSubject(t *testing.T) {
-	store := database.NewSudoTokenStore(time.Minute)
+	store := dbauth.NewSudoTokenStore(time.Minute)
 	token, _, _ := store.Mint("alice")
 	mw := RequireSudo(store, SudoConfig{HeaderName: testHeader})
 	h := mw(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

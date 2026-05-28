@@ -10,6 +10,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // onboardingTokenReader is the narrow surface OnboardingHandler needs
@@ -50,7 +51,7 @@ func NewOnboardingHandler(db *database.DB, enc ...*crypto.Encryptor) *Onboarding
 		e = enc[0]
 	}
 	return &OnboardingHandler{
-		tokens: database.NewTokenRepo(db, e),
+		tokens: dbauth.NewTokenRepo(db, e),
 		repo:   database.NewOnboardingRepo(db),
 	}
 }

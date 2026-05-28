@@ -430,7 +430,7 @@ func (r *ScheduledExportRepo) Get(ctx context.Context, id int64) (*ScheduledExpo
 	row := r.db.Pool.QueryRow(ctx, query, id)
 	out, err := scanScheduledExportRow(row)
 	if err != nil {
-		if isNoRowsError(err) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrScheduledExportNotFound
 		}
 		return nil, fmt.Errorf("scheduled_export get: %w", err)
@@ -534,7 +534,7 @@ func (r *ScheduledExportRepo) Update(ctx context.Context, id int64, owner string
 	)
 	out, err := scanScheduledExportRow(row)
 	if err != nil {
-		if isNoRowsError(err) {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrScheduledExportNotFound
 		}
 		return nil, fmt.Errorf("scheduled_export update: %w", err)

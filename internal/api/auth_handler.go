@@ -10,13 +10,14 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
 
 // AuthHandler handles OAuth flow with Tesla.
 type AuthHandler struct {
-	tokenRepo   *database.TokenRepo
+	tokenRepo   *dbauth.TokenRepo
 	teslaClient *tesla.Client
 }
 
@@ -26,7 +27,7 @@ func NewAuthHandler(db *database.DB, tc *tesla.Client, enc ...*crypto.Encryptor)
 		e = enc[0]
 	}
 	return &AuthHandler{
-		tokenRepo:   database.NewTokenRepo(db, e),
+		tokenRepo:   dbauth.NewTokenRepo(db, e),
 		teslaClient: tc,
 	}
 }

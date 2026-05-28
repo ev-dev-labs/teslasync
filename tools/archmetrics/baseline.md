@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T15:00:27Z, Go go1.26.1, commit cc4304ebf5e2d0e8d7bde75b5da961f57cc3d9b8_
+_Generated 2026-05-28T15:08:20Z, Go go1.26.1, commit 0cf14fa399dd02e94f27976424a5dcf27b6e8f2f_
 
 ## Summary
 
-- Packages: 266
+- Packages: 267
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374061
+- Total non-blank LOC under cmd/+internal/+tools/: 374091
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-28T15:00:27Z, Go go1.26.1, commit cc4304ebf5e2d0e8d7bde75b5da
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126568 | yes | handler |
+| internal/api | 271 | 163 | 126571 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1836 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
@@ -197,9 +197,10 @@ _Generated 2026-05-28T15:00:27Z, Go go1.26.1, commit cc4304ebf5e2d0e8d7bde75b5da
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 94 | 35 | 25236 | yes | platform |
+| internal/database | 88 | 31 | 23474 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes |  |
 | internal/database/admin | 6 | 0 | 873 | yes |  |
+| internal/database/auth | 7 | 4 | 1788 | yes |  |
 | internal/database/gdpr | 2 | 0 | 206 | yes |  |
 | internal/database/observability | 7 | 0 | 1396 | yes |  |
 | internal/database/sharing | 2 | 0 | 127 | yes |  |
@@ -300,7 +301,7 @@ _Generated 2026-05-28T15:00:27Z, Go go1.26.1, commit cc4304ebf5e2d0e8d7bde75b5da
 | internal/units | 2 | 0 | 63 | yes | platform |
 | internal/v2h | 2 | 1 | 554 | yes | platform |
 | internal/webpush | 2 | 1 | 519 | yes | platform |
-| internal/worker | 8 | 3 | 2596 | yes | platform |
+| internal/worker | 8 | 3 | 2597 | yes | platform |
 | tools/aigen | 2 | 1 | 338 | yes | tool |
 | tools/aistream-contract | 2 | 0 | 227 | yes | tool |
 | tools/aivet | 2 | 1 | 792 | yes | tool |
@@ -320,7 +321,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 94 / 35 | 22 | 1 | 21 |
+| `internal/database` | R4 | 143 | 88 / 31 | 22 | 2 | 20 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 
@@ -386,12 +387,12 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 **Existing subpackages on disk:**
 - `internal/database/achievement`
+- `internal/database/auth`
 
 **Planned but not yet on disk:**
 - `internal/database/ai`
 - `internal/database/alert`
 - `internal/database/audit`
-- `internal/database/auth`
 - `internal/database/automation`
 - `internal/database/backup`
 - `internal/database/charging`

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T15:00:25Z",
+  "generated_at": "2026-05-28T15:08:19Z",
   "go_version": "go1.26.1",
-  "commit_sha": "cc4304ebf5e2d0e8d7bde75b5da961f57cc3d9b8",
+  "commit_sha": "0cf14fa399dd02e94f27976424a5dcf27b6e8f2f",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2492,7 +2492,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126568,
+      "loc": 126571,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2616,6 +2616,7 @@
         "internal/database",
         "internal/database/achievement",
         "internal/database/admin",
+        "internal/database/auth",
         "internal/database/gdpr",
         "internal/database/observability",
         "internal/database/sharing",
@@ -3397,7 +3398,7 @@
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
-        "internal/database"
+        "internal/database/auth"
       ],
       "files": [
         "doc.go",
@@ -3669,9 +3670,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 94,
-      "test_files": 35,
-      "loc": 25236,
+      "go_files": 88,
+      "test_files": 31,
+      "loc": 23474,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3679,11 +3680,9 @@
         "internal/ai/redact",
         "internal/automation/trigger",
         "internal/config",
-        "internal/crypto",
         "internal/metrics",
         "internal/models",
         "internal/models/alert",
-        "internal/models/auth",
         "internal/models/automation",
         "internal/models/backup",
         "internal/models/charging",
@@ -3713,10 +3712,6 @@
         "api_call_log_repo.go",
         "audit_log_query_repo.go",
         "audit_repo.go",
-        "auth_sessions_repo.go",
-        "auth_sessions_repo_test.go",
-        "auth_subjects_repo.go",
-        "auth_subjects_repo_test.go",
         "automation_history_repo.go",
         "automation_history_repo_test.go",
         "automation_repo.go",
@@ -3775,8 +3770,6 @@
         "raw_telemetry_repo.go",
         "retry.go",
         "retry_test.go",
-        "role_permissions_repo.go",
-        "role_permissions_repo_test.go",
         "scheduled_export_repo.go",
         "scheduled_export_repo_test.go",
         "schema_test.go",
@@ -3794,7 +3787,6 @@
         "signals_catalog_repo_test.go",
         "software_update_repo.go",
         "software_update_repo_test.go",
-        "sudo_token_repo.go",
         "system_state_repo.go",
         "system_state_repo_test.go",
         "tesla_charging_history_repo.go",
@@ -3807,9 +3799,6 @@
         "tesla_user_order_repo.go",
         "tesla_user_profile_repo.go",
         "tesla_vehicle_driver_repo.go",
-        "token_repo.go",
-        "totp_repo.go",
-        "totp_repo_test.go",
         "trip_repo.go",
         "trips_detail_repo.go",
         "trips_detail_repo_test.go",
@@ -3862,6 +3851,31 @@
         "pinned_repo.go",
         "places_cache_repo.go",
         "saved_views_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/auth",
+      "go_files": 7,
+      "test_files": 4,
+      "loc": 1788,
+      "has_doc_go": true,
+      "imports": [
+        "internal/crypto",
+        "internal/database",
+        "internal/models/auth"
+      ],
+      "files": [
+        "doc.go",
+        "role_permissions_repo.go",
+        "role_permissions_repo_test.go",
+        "sessions_repo.go",
+        "sessions_repo_test.go",
+        "subjects_repo.go",
+        "subjects_repo_test.go",
+        "sudo_token_repo.go",
+        "token_repo.go",
+        "totp_repo.go",
+        "totp_repo_test.go"
       ]
     },
     {
@@ -5687,13 +5701,14 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2596,
+      "loc": 2597,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/config",
         "internal/crypto",
         "internal/database",
+        "internal/database/auth",
         "internal/enums",
         "internal/events",
         "internal/metrics",
@@ -6864,8 +6879,6 @@
       "api_call_log_repo.go",
       "audit_log_query_repo.go",
       "audit_repo.go",
-      "auth_sessions_repo.go",
-      "auth_subjects_repo.go",
       "automation_history_repo.go",
       "automation_repo.go",
       "automation_repo_bulk.go",
@@ -6911,7 +6924,6 @@
       "quiet_hours_repo.go",
       "raw_telemetry_repo.go",
       "retry.go",
-      "role_permissions_repo.go",
       "scheduled_export_repo.go",
       "settings_repo.go",
       "settings_reset.go",
@@ -6924,7 +6936,6 @@
       "signal_log_repo.go",
       "signals_catalog_repo.go",
       "software_update_repo.go",
-      "sudo_token_repo.go",
       "system_state_repo.go",
       "tesla_charging_history_repo.go",
       "tesla_charging_session_repo.go",
@@ -6936,8 +6947,6 @@
       "tesla_user_order_repo.go",
       "tesla_user_profile_repo.go",
       "tesla_vehicle_driver_repo.go",
-      "token_repo.go",
-      "totp_repo.go",
       "trip_repo.go",
       "trips_detail_repo.go",
       "user_feedback_repo.go",
@@ -6963,6 +6972,15 @@
       "pinned_repo.go",
       "places_cache_repo.go",
       "saved_views_repo.go"
+    ],
+    "internal/database/auth": [
+      "doc.go",
+      "role_permissions_repo.go",
+      "sessions_repo.go",
+      "subjects_repo.go",
+      "sudo_token_repo.go",
+      "token_repo.go",
+      "totp_repo.go"
     ],
     "internal/database/gdpr": [
       "artifact_repo.go",
@@ -7688,17 +7706,17 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 94,
-      "flat_parent_test_files": 35,
+      "flat_parent_go_files": 88,
+      "flat_parent_test_files": 31,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
-        "achievement"
+        "achievement",
+        "auth"
       ],
       "missing_subpkgs": [
         "ai",
         "alert",
         "audit",
-        "auth",
         "automation",
         "backup",
         "charging",

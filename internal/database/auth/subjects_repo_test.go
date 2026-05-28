@@ -14,7 +14,7 @@
 //   - isNoRowsError uses errors.Is against pgx.ErrNoRows (not a raw
 //     string compare) so a future driver upgrade does not silently
 //     break "subject not found" semantics.
-package database
+package auth
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -46,7 +47,7 @@ func TestAuthSubjectsRepo_UpsertRejectsEmptySubject(t *testing.T) {
 	// Even with a configured pool, an empty/whitespace subject must
 	// be rejected before any SQL runs. We exercise the guard by
 	// passing a non-nil but unused pool wrapper.
-	repo := NewAuthSubjectsRepo(&DB{})
+	repo := NewAuthSubjectsRepo(&database.DB{})
 	ctx := context.Background()
 	now := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
 
@@ -61,7 +62,7 @@ func TestAuthSubjectsRepo_UpsertRejectsEmptySubject(t *testing.T) {
 }
 
 func TestAuthSubjectsRepo_GetRejectsEmptySubject(t *testing.T) {
-	repo := NewAuthSubjectsRepo(&DB{})
+	repo := NewAuthSubjectsRepo(&database.DB{})
 	ctx := context.Background()
 	for _, in := range []string{"", "   "} {
 		t.Run(fmt.Sprintf("subject=%q", in), func(t *testing.T) {

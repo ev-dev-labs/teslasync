@@ -18,7 +18,7 @@
 // the same _test.go importing auth would form a cycle inside the
 // `go test ./internal/database/...` test binary. Tests stub the
 // known-permissions set with a small inline map instead.
-package database
+package auth
 
 import (
 	"context"

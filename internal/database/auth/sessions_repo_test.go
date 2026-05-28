@@ -12,7 +12,7 @@
 //   - The debounced-bumper only allows one bump per id per window.
 //   - nullIfEmptyIP rejects malformed input rather than letting it
 //     through to the INET column.
-package database
+package auth
 
 import (
 	"bytes"

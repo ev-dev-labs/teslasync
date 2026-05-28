@@ -16,7 +16,7 @@
 // so a SELECT on the entire table would be both larger than necessary
 // and a foot-gun (a stale row from an old deploy could leak into the
 // response).
-package database
+package auth
 
 import (
 	"context"
@@ -26,6 +26,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // ErrRolePermissionUnknownPermission is returned by UpsertCells when
@@ -67,13 +69,13 @@ type RolePermissionCell struct {
 // the auth package in here would form an import cycle (auth →
 // database → auth).
 type RolePermissionsRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewRolePermissionsRepo returns a repo bound to db. Pass nil for in-
 // memory tests that exercise only the validators — the repo's queries
 // dereference db.Pool lazily inside each method.
-func NewRolePermissionsRepo(db *DB) *RolePermissionsRepo {
+func NewRolePermissionsRepo(db *database.DB) *RolePermissionsRepo {
 	return &RolePermissionsRepo{db: db}
 }
 

@@ -14,7 +14,7 @@
 // In open mode (no FORWARD_AUTH_HEADER configured) no rows are
 // recorded — the recorder middleware is a passthrough. The repo
 // itself is still safe to construct so the wiring path is uniform.
-package database
+package auth
 
 import (
 	"context"
@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // AuthSubjectRow is the in-memory projection of a row in auth_subjects.
@@ -50,7 +52,7 @@ var ErrAuthSubjectNotFound = errors.New("auth_subject: not found")
 // middleware does its own debounce so we never spam the DB with
 // per-request UPSERTs.
 type AuthSubjectsRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewAuthSubjectsRepo wires the repo to a database pool.
@@ -58,7 +60,7 @@ type AuthSubjectsRepo struct {
 // db may be nil for tests that exercise only the helpers exported
 // from this file; methods that touch the pool then return a guard
 // error rather than dereference nil.
-func NewAuthSubjectsRepo(db *DB) *AuthSubjectsRepo {
+func NewAuthSubjectsRepo(db *database.DB) *AuthSubjectsRepo {
 	return &AuthSubjectsRepo{db: db}
 }
 

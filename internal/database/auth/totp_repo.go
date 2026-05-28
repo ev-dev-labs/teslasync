@@ -9,7 +9,7 @@
 // Subject identity comes from the ForwardAuth header value — see
 // `internal/api/totp_handler.go` for the derivation. This file is
 // strictly responsible for storage; subject validation lives upstream.
-package database
+package auth
 
 import (
 	"context"
@@ -19,6 +19,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // TOTPEnrollmentRow is the in-memory projection of a row in
@@ -57,14 +59,14 @@ var ErrTOTPNotFound = errors.New("totp: not found")
 // All methods are safe for concurrent use — they go through the pool's
 // connection acquisition or through a single explicit transaction.
 type TOTPRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewTOTPRepo wires a TOTPRepo to a database pool. The encryptor is NOT
 // held here because we want repository tests to exercise the byte
 // transport independently of the cipher; the api/totp_handler owns the
 // Encryptor and feeds already-sealed bytes to the repo.
-func NewTOTPRepo(db *DB) *TOTPRepo {
+func NewTOTPRepo(db *database.DB) *TOTPRepo {
 	return &TOTPRepo{db: db}
 }
 

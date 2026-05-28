@@ -34,7 +34,7 @@ import (
 	"time"
 
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // AuthModeForward / AuthModeOpen are the two values returned in
@@ -155,7 +155,7 @@ func forwardAuthCapabilities() AuthModeCapabilities {
 	}
 }
 
-// authSubjectsStoreAdapter narrows *database.AuthSubjectsRepo to the
+// authSubjectsStoreAdapter narrows *dbauth.AuthSubjectsRepo to the
 // tsauth.SubjectStore interface expected by the recorder. The repo's
 // Upsert returns the row for callers (admin panels) that want the
 // edited display_name back; the recorder only needs the side-effect
@@ -167,7 +167,7 @@ func forwardAuthCapabilities() AuthModeCapabilities {
 // next to the handler makes the contract's complete server surface
 // reviewable in one file.
 type authSubjectsStoreAdapter struct {
-	repo *database.AuthSubjectsRepo
+	repo *dbauth.AuthSubjectsRepo
 }
 
 // Upsert satisfies tsauth.SubjectStore. Errors propagate to the

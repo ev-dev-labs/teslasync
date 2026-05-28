@@ -20,7 +20,7 @@
 //     (no trimming, no case folding) for the same reason as the sudo
 //     token store: any normalisation drift would break the cross-table
 //     join with audit_logs and the future RBAC layer.
-package database
+package auth
 
 import (
 	"context"
@@ -35,6 +35,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // AuthSessionRow is the in-memory projection of a row in auth_sessions.
@@ -72,7 +74,7 @@ const AuthSessionTokenLength = 32
 // across a Helm rollout already get it from the upstream IdP, and we
 // don't want a stolen DB dump alone to be useful.
 type AuthSessionsRepo struct {
-	db     *DB
+	db     *database.DB
 	secret []byte
 }
 
@@ -82,7 +84,7 @@ type AuthSessionsRepo struct {
 // rand.Read is documented to never fail on supported platforms; if it
 // ever does we'd rather panic at construction than silently mint
 // predictable-secret cookies.
-func NewAuthSessionsRepo(db *DB) *AuthSessionsRepo {
+func NewAuthSessionsRepo(db *database.DB) *AuthSessionsRepo {
 	secret := make([]byte, 32)
 	if _, err := rand.Read(secret); err != nil {
 		panic(fmt.Sprintf("auth_sessions: cannot read crypto/rand: %v", err))
@@ -126,7 +128,7 @@ func (r *AuthSessionsRepo) Create(ctx context.Context, subject string, cookieHas
 		VALUES ($1, $2, $3, $4, now(), now())
 		RETURNING id`
 	var id uuid.UUID
-	err := r.db.Pool.QueryRow(ctx, q, subject, cookieHash, nullIfEmpty(userAgent), nullIfEmptyIP(ip)).Scan(&id)
+	err := r.db.Pool.QueryRow(ctx, q, subject, cookieHash, database.NullIfEmpty(userAgent), nullIfEmptyIP(ip)).Scan(&id)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("auth_sessions: create: %w", err)
 	}

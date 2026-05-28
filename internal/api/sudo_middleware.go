@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // Phase-46 / Prompt 31 — sudo-style step-up reauth.
@@ -67,7 +67,7 @@ type SudoConfig struct {
 	TOTPSecret string
 
 	// TTL is how long a successful reauth grants. Defaults to
-	// [database.DefaultSudoTokenTTL]; operators override via
+	// [dbauth.DefaultSudoTokenTTL]; operators override via
 	// TESLASYNC_SUDO_TTL_SECONDS.
 	TTL time.Duration
 
@@ -86,7 +86,7 @@ func LoadSudoConfig(cfg *config.Config) SudoConfig {
 	if cfg != nil {
 		header = strings.TrimSpace(cfg.Auth.ForwardAuthHeader)
 	}
-	ttl := database.DefaultSudoTokenTTL
+	ttl := dbauth.DefaultSudoTokenTTL
 	if raw := strings.TrimSpace(os.Getenv("TESLASYNC_SUDO_TTL_SECONDS")); raw != "" {
 		if n, err := strconv.Atoi(raw); err == nil && n > 0 {
 			ttl = time.Duration(n) * time.Second
@@ -119,7 +119,7 @@ type TOTPVerifier func(secret, code string) error
 // table — the store IS the source of truth for sudo state.
 type SudoHandler struct {
 	cfg      SudoConfig
-	store    *database.SudoTokenStore
+	store    *dbauth.SudoTokenStore
 	verifier TOTPVerifier
 }
 
@@ -127,7 +127,7 @@ type SudoHandler struct {
 // that case the TOTP path returns 503 REAUTH_NOT_CONFIGURED even when
 // a TOTP secret is configured (production wires a real verifier from
 // the OTP library landed in prompt 35).
-func NewSudoHandler(cfg SudoConfig, store *database.SudoTokenStore, verifier TOTPVerifier) *SudoHandler {
+func NewSudoHandler(cfg SudoConfig, store *dbauth.SudoTokenStore, verifier TOTPVerifier) *SudoHandler {
 	return &SudoHandler{cfg: cfg, store: store, verifier: verifier}
 }
 
@@ -270,7 +270,7 @@ func decodeReauthBody(r *http.Request) (reauthRequest, error) {
 // The SPA's interceptor matches on `code === 'SUDO_REQUIRED'` to
 // decide whether to open <ReauthDialog>; never match on the human
 // message string.
-func RequireSudo(store *database.SudoTokenStore, cfg SudoConfig) func(http.Handler) http.Handler {
+func RequireSudo(store *dbauth.SudoTokenStore, cfg SudoConfig) func(http.Handler) http.Handler {
 	if store == nil {
 		// Defensive — a nil store means the handler bundle was wired
 		// incorrectly; serving the route open would silently undo the

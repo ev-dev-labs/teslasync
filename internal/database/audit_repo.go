@@ -182,11 +182,22 @@ func (r *AuditRepo) WriteRevealEvent(ctx context.Context, evt AuditRevealEvent) 
 // nullIfEmpty mirrors the `nullableStr` helper in audit.go but lives
 // in this file so the repo has zero cross-file dependencies. The
 // returned `any` is what pgx expects for a NULL-able TEXT bind.
-func nullIfEmpty(s string) any {
+// NullIfEmpty returns nil for empty strings, otherwise the string. Useful
+// for INSERT/UPDATE parameters where empty values should map to SQL NULL
+// rather than the empty string. Exported (Phase R4) so sibling subpackages
+// (e.g. internal/database/auth) can reuse it without duplicating the helper.
+func NullIfEmpty(s string) any {
 	if s == "" {
 		return nil
 	}
 	return s
+}
+
+// nullIfEmpty is a local convenience alias retained for the legacy
+// in-package call sites still in this file. New callers should use
+// [NullIfEmpty] (exported).
+func nullIfEmpty(s string) any {
+	return NullIfEmpty(s)
 }
 
 // AuditImpersonationEvent is the shared write-shape for both the

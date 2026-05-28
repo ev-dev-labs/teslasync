@@ -1,4 +1,4 @@
-package database
+package auth
 
 import (
 	"context"
@@ -8,15 +8,17 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/jackc/pgx/v5"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // TokenRepo provides token data access with optional encryption.
 type TokenRepo struct {
-	db  *DB
+	db  *database.DB
 	enc *crypto.Encryptor
 }
 
-func NewTokenRepo(db *DB, enc ...*crypto.Encryptor) *TokenRepo {
+func NewTokenRepo(db *database.DB, enc ...*crypto.Encryptor) *TokenRepo {
 	var e *crypto.Encryptor
 	if len(enc) > 0 {
 		e = enc[0]

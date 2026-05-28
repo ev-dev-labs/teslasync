@@ -32,13 +32,13 @@ import (
 
 // DefaultSubjectRecorderInterval is the minimum gap between
 // successive Upsert writes for the same subject inside a single
-// process. 60 seconds matches the [database.NewDebouncedBumper]
+// process. 60 seconds matches the [dbauth.NewDebouncedBumper]
 // default used by the session tracker so operators see a single
 // consistent "last activity" cadence across the auth surface.
 const DefaultSubjectRecorderInterval = 60 * time.Second
 
 // SubjectStore is the storage seam for the recorder. Production
-// wires this to *database.AuthSubjectsRepo; tests substitute an
+// wires this to *dbauth.AuthSubjectsRepo; tests substitute an
 // in-memory fake.
 //
 // The interface is intentionally minimal — only the side-effect the

@@ -16,6 +16,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
@@ -309,7 +310,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// gated request, the handler writes to it on a successful
 	// /auth/reauth.
 	sudoCfg := LoadSudoConfig(cfg)
-	sudoStore := database.NewSudoTokenStore(sudoCfg.TTL)
+	sudoStore := dbauth.NewSudoTokenStore(sudoCfg.TTL)
 	// Phase-46 / Prompt 35 — wire the real RFC 6238 verifier so the
 	// shared TESLASYNC_SUDO_TOTP_SECRET path validates for real (and
 	// not just NULL-on-arrival as it did before). We pass a thin
@@ -328,7 +329,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// pending/active tables; mints sudo tokens via the shared sudoStore
 	// from prompt 31 so a successful per-user TOTP step-up is
 	// indistinguishable downstream from a successful password step-up.
-	totpRepo := database.NewTOTPRepo(db)
+	totpRepo := dbauth.NewTOTPRepo(db)
 	totpHandler := NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
 
 	// Phase-46 / Prompt 42 — active sessions / device management.
@@ -340,7 +341,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// secret is freshly generated on every restart — desired
 	// semantics for a "local session" primitive; operators wanting
 	// cross-restart persistence already get it from the upstream IdP.
-	authSessionsRepo := database.NewAuthSessionsRepo(db)
+	authSessionsRepo := dbauth.NewAuthSessionsRepo(db)
 	sessionHandler := NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
 
 	// Phase-46 / Prompt 57 — Auth-mode contract.
@@ -358,7 +359,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// wrapped in RequireSubjectMiddleware so it stays reachable in
 	// open mode AND when the upstream proxy strips the header on a
 	// specific request.
-	authSubjectsRepo := database.NewAuthSubjectsRepo(db)
+	authSubjectsRepo := dbauth.NewAuthSubjectsRepo(db)
 	subjectRecorder := tsauth.NewSubjectRecorder(authSubjectsStoreAdapter{repo: authSubjectsRepo}, tsauth.SubjectRecorderOptions{})
 	systemAuthModeHandler := NewSystemAuthModeHandler(cfg.Auth.ForwardAuthHeader, cfg.Auth.ProviderHint)
 	_ = authSubjectsRepo // referenced via subjectRecorder; held for future per-user tables.
@@ -496,7 +497,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// hand-maintained catalog in internal/auth. The handler is
 	// auth-mode aware (501 AUTH_MODE_OPEN in open mode) and the PUT
 	// route is wrapped in RequireSudo below.
-	rolePermissionsRepo := database.NewRolePermissionsRepo(db)
+	rolePermissionsRepo := dbauth.NewRolePermissionsRepo(db)
 	rbacHandler := NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
 
 	// Phase-46 / Prompt 46 — admin impersonation. The store mints

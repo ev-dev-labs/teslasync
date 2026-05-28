@@ -31,14 +31,14 @@ import (
 	"github.com/google/uuid"
 
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // SessionListStore is the storage seam for the sessions handler.
-// Production wires this to *database.AuthSessionsRepo; tests substitute
+// Production wires this to *dbauth.AuthSessionsRepo; tests substitute
 // an in-memory fake.
 type SessionListStore interface {
-	ListActiveBySubject(ctx context.Context, subject string) ([]database.AuthSessionRow, error)
+	ListActiveBySubject(ctx context.Context, subject string) ([]dbauth.AuthSessionRow, error)
 	Revoke(ctx context.Context, id uuid.UUID, subject string) error
 	RevokeAllOthers(ctx context.Context, subject string, exceptID uuid.UUID) (int64, error)
 }
@@ -190,7 +190,7 @@ func (h *SessionHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.store.Revoke(r.Context(), id, subject); err != nil {
-		if errors.Is(err, database.ErrAuthSessionNotFound) {
+		if errors.Is(err, dbauth.ErrAuthSessionNotFound) {
 			// Idempotent — caller may have already revoked this row
 			// in a parallel tab. Treat as success so the SPA's
 			// optimistic update doesn't have to special-case 404s.

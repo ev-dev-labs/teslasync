@@ -28,7 +28,7 @@ import (
 	"strings"
 
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // MaxRBACMatrixBodyBytes caps the PUT body so a malicious or buggy
@@ -52,11 +52,11 @@ const (
 )
 
 // RBACMatrixStore is the storage seam the handler uses to load and
-// mutate role bindings. Production wires *database.RolePermissionsRepo;
+// mutate role bindings. Production wires *dbauth.RolePermissionsRepo;
 // tests substitute an in-memory fake.
 type RBACMatrixStore interface {
 	GetMatrix(ctx context.Context, roles []string) (map[string]map[string]bool, error)
-	UpsertCells(ctx context.Context, cells []database.RolePermissionCell) error
+	UpsertCells(ctx context.Context, cells []dbauth.RolePermissionCell) error
 	ListAllRoleIDs(ctx context.Context) ([]string, error)
 }
 
@@ -286,21 +286,21 @@ func (h *RBACHandler) UpsertMatrix(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cells := make([]database.RolePermissionCell, 0, len(body.Cells))
+	cells := make([]dbauth.RolePermissionCell, 0, len(body.Cells))
 	for _, c := range body.Cells {
-		cells = append(cells, database.RolePermissionCell{
+		cells = append(cells, dbauth.RolePermissionCell{
 			RoleID:       c.RoleID,
 			PermissionID: c.PermissionID,
 			Allowed:      c.Allowed,
 		})
 	}
 
-	if err := database.ValidateCells(cells, tsauth.AllPermissionIDs()); err != nil {
+	if err := dbauth.ValidateCells(cells, tsauth.AllPermissionIDs()); err != nil {
 		switch {
-		case errors.Is(err, database.ErrRolePermissionUnknownPermission):
+		case errors.Is(err, dbauth.ErrRolePermissionUnknownPermission):
 			writeErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeInvalidPermission)
 			return
-		case errors.Is(err, database.ErrRolePermissionEmptyRoleID):
+		case errors.Is(err, dbauth.ErrRolePermissionEmptyRoleID):
 			writeErrorCode(w, http.StatusBadRequest, err.Error(), RBACCodeInvalidRole)
 			return
 		default:

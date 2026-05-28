@@ -32,7 +32,7 @@ import (
 	qrcode "github.com/skip2/go-qrcode"
 
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // AuthModeOpenCode is the response `code` returned by every TOTP
@@ -84,7 +84,7 @@ const totpBackupCodeCount = 10
 const totpQRPixelSize = 256
 
 // TOTPStore is the storage seam for the handler. The production wiring
-// in router.go binds this to *database.TOTPRepo; tests substitute an
+// in router.go binds this to *dbauth.TOTPRepo; tests substitute an
 // in-memory fake (see fakeTOTPStore in totp_handler_test.go).
 //
 // The interface is intentionally minimal — every method maps 1-to-1 to
@@ -92,9 +92,9 @@ const totpQRPixelSize = 256
 // Redis-backed store does not require resurrecting unused methods.
 type TOTPStore interface {
 	BeginEnrollment(ctx context.Context, subject string, secretEncrypted []byte, backupHashes []string) error
-	GetEnrollment(ctx context.Context, subject string) (*database.TOTPEnrollmentRow, error)
-	ActivateEnrollment(ctx context.Context, subject string) (*database.TOTPCredentialRow, error)
-	GetCredential(ctx context.Context, subject string) (*database.TOTPCredentialRow, error)
+	GetEnrollment(ctx context.Context, subject string) (*dbauth.TOTPEnrollmentRow, error)
+	ActivateEnrollment(ctx context.Context, subject string) (*dbauth.TOTPCredentialRow, error)
+	GetCredential(ctx context.Context, subject string) (*dbauth.TOTPCredentialRow, error)
 	Revoke(ctx context.Context, subject string) error
 	RotateBackupCodes(ctx context.Context, subject string, hashes []string) error
 	MarkUsed(ctx context.Context, subject string) error
@@ -104,7 +104,7 @@ type TOTPStore interface {
 
 // SudoMinter is the narrow seam the TOTP handler uses to mint a sudo
 // token after a successful per-user TOTP step-up. Implemented by
-// *database.SudoTokenStore so the production wiring just passes the
+// *dbauth.SudoTokenStore so the production wiring just passes the
 // existing store from prompt 31 — no second token store, no shared
 // secret duplication.
 type SudoMinter interface {
@@ -253,7 +253,7 @@ func (h *TOTPHandler) GetStatus(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cred, err := h.store.GetCredential(r.Context(), subject)
-	if errors.Is(err, database.ErrTOTPNotFound) {
+	if errors.Is(err, dbauth.ErrTOTPNotFound) {
 		writeJSON(w, http.StatusOK, totpStatusResponse{
 			Mode: "session",
 		})
@@ -373,7 +373,7 @@ func (h *TOTPHandler) Verify(w http.ResponseWriter, r *http.Request) {
 	}
 
 	enrollment, err := h.store.GetEnrollment(r.Context(), subject)
-	if errors.Is(err, database.ErrTOTPNotFound) {
+	if errors.Is(err, dbauth.ErrTOTPNotFound) {
 		writeError(w, http.StatusNotFound, "no pending enrollment")
 		return
 	}
@@ -462,7 +462,7 @@ func (h *TOTPHandler) VerifySudo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cred, err := h.store.GetCredential(r.Context(), subject)
-	if errors.Is(err, database.ErrTOTPNotFound) {
+	if errors.Is(err, dbauth.ErrTOTPNotFound) {
 		writeErrorCode(w, http.StatusUnauthorized,
 			"no TOTP credential enrolled", totpInvalidCode)
 		return
@@ -570,7 +570,7 @@ func (h *TOTPHandler) RegenerateBackupCodes(w http.ResponseWriter, r *http.Reque
 		hashes[i] = crypto.HashBackupCode(c)
 	}
 	if err := h.store.RotateBackupCodes(r.Context(), subject, hashes); err != nil {
-		if errors.Is(err, database.ErrTOTPNotFound) {
+		if errors.Is(err, dbauth.ErrTOTPNotFound) {
 			writeError(w, http.StatusNotFound, "no active TOTP credential")
 			return
 		}

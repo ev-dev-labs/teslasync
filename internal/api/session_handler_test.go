@@ -28,12 +28,12 @@ import (
 	"github.com/google/uuid"
 
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // fakeSessionListStore is the in-memory test double for SessionListStore.
 type fakeSessionListStore struct {
-	rows               []database.AuthSessionRow
+	rows               []dbauth.AuthSessionRow
 	listErr            error
 	revokeErr          error
 	revokeAllErr       error
@@ -43,7 +43,7 @@ type fakeSessionListStore struct {
 	listSubject        string
 }
 
-func (s *fakeSessionListStore) ListActiveBySubject(_ context.Context, subject string) ([]database.AuthSessionRow, error) {
+func (s *fakeSessionListStore) ListActiveBySubject(_ context.Context, subject string) ([]dbauth.AuthSessionRow, error) {
 	s.listSubject = subject
 	if s.listErr != nil {
 		return nil, s.listErr
@@ -137,7 +137,7 @@ func TestSessionHandler_ListReturnsRowsAndCurrentFlag(t *testing.T) {
 	otherID := uuid.New()
 	now := time.Date(2026, 5, 5, 12, 0, 0, 0, time.UTC)
 	store := &fakeSessionListStore{
-		rows: []database.AuthSessionRow{
+		rows: []dbauth.AuthSessionRow{
 			{
 				ID:         currentID,
 				Subject:    "alice",
@@ -191,7 +191,7 @@ func TestSessionHandler_ListReturnsRowsAndCurrentFlag(t *testing.T) {
 
 func TestSessionHandler_ListNoCurrentInContext(t *testing.T) {
 	store := &fakeSessionListStore{
-		rows: []database.AuthSessionRow{{ID: uuid.New(), Subject: "alice"}},
+		rows: []dbauth.AuthSessionRow{{ID: uuid.New(), Subject: "alice"}},
 	}
 	h := NewSessionHandler(store, sessionTestHeader)
 
@@ -269,7 +269,7 @@ func TestSessionHandler_RevokeSuccess(t *testing.T) {
 }
 
 func TestSessionHandler_RevokeIdempotentOnNotFound(t *testing.T) {
-	store := &fakeSessionListStore{revokeErr: database.ErrAuthSessionNotFound}
+	store := &fakeSessionListStore{revokeErr: dbauth.ErrAuthSessionNotFound}
 	h := NewSessionHandler(store, sessionTestHeader)
 	id := uuid.New()
 

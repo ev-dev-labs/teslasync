@@ -26,7 +26,7 @@ import (
 	"testing"
 
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
 // fakeRBACStore is the in-memory test double for RBACMatrixStore.
@@ -36,7 +36,7 @@ type fakeRBACStore struct {
 	upsertErr    error
 	listErr      error
 	upsertCalled int32
-	upsertCells  []database.RolePermissionCell
+	upsertCells  []dbauth.RolePermissionCell
 }
 
 func (s *fakeRBACStore) GetMatrix(_ context.Context, roles []string) (map[string]map[string]bool, error) {
@@ -64,7 +64,7 @@ func (s *fakeRBACStore) GetMatrix(_ context.Context, roles []string) (map[string
 	return out, nil
 }
 
-func (s *fakeRBACStore) UpsertCells(_ context.Context, cells []database.RolePermissionCell) error {
+func (s *fakeRBACStore) UpsertCells(_ context.Context, cells []dbauth.RolePermissionCell) error {
 	atomic.AddInt32(&s.upsertCalled, 1)
 	if s.upsertErr != nil {
 		return s.upsertErr
