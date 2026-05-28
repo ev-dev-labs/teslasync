@@ -125,3 +125,6 @@ dbf849e8fd951e8bfdea276d07a4ac8ca37474bd
 
 # R6.30: carve automation_builder into internal/ai/tools/automation/ (mass rename, no behaviour change)
 d523ce244a91efd56f2576a55f512cf6a3581687
+
+# R6.31: carve trip_planner_llm_agent into internal/ai/tools/tripplan/ (mass rename, no behaviour change; R6 ai/tools carving COMPLETE)
+b697826aff6d280616c8f1c27a838c5bf16f016a
