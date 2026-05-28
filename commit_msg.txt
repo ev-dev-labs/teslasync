@@ -1,35 +1,33 @@
-refactor(R4.17): carve internal/database/worker (status + queue obs)
+refactor(R4.18): carve internal/database/telemetry (raw + fleet errors)
 
-Move background-worker observability persistence into its own
-bounded-context subpkg per ADR-011.
+Move Tesla telemetry-state persistence into its own bounded-context
+subpkg per ADR-011.
 
-Files (2 source; 8 caller files swept):
-  internal/database/worker_status_repo.go       -> internal/database/worker/status_repo.go
-  internal/database/worker_status_queue_repo.go -> internal/database/worker/status_queue_repo.go
-  internal/database/worker/doc.go               (NEW, // Layer: adapter)
+Files (2 source; 4 caller files swept):
+  internal/database/raw_telemetry_repo.go              -> internal/database/telemetry/raw_repo.go
+  internal/database/tesla_fleet_telemetry_error_repo.go -> internal/database/telemetry/fleet_error_repo.go
+  internal/database/telemetry/doc.go                   (NEW, // Layer: adapter)
 
-Symbols promoted (alias workerdb per ADR-011 — mandatory because
-internal/worker runtime package also imports the database layer):
-  WorkerStatusStore, MemoryWorkerStatusStore, NewMemoryWorkerStatusStore,
-  RedisWorkerStatusStore, NewRedisWorkerStatusStore, RecordHeartbeat,
-  GetMany, KnownWorkerNames, WorkerHeartbeat, ErrWorkerNameRequired,
-  WorkerQueueRepo, NewWorkerQueueRepo, QueueCounters, QueueJob,
-  RecentJobs, Counters, ErrUnknownQueueWorker,
-  WorkerNameNotification, WorkerNameExport, WorkerNameAutomation,
-  WorkerNames.
+Symbols promoted (alias 	elemetrydb):
+  RawTelemetryRepo, NewRawTelemetryRepo, CaptureStats,
+  TeslaFleetTelemetryErrorRepo, NewTeslaFleetTelemetryErrorRepo,
+  GetActiveErrorVINs, GetErrors, ReplaceErrorVINs, UpsertErrors.
 
-Callers updated (database.X -> workerdb.X + import alias):
-  internal/api/{queue_status_handler,queue_status_handler_test,router}.go
-  internal/worker/{heartbeat,heartbeat_test}.go
+Note: raw_repo.go references *database.MongoClient (qualified to parent
+during transform). MongoClient stays in parent per ADR-006 because it
+is shared infra not specific to telemetry capture.
 
-No helper deps. No cycles (parent peers had comment-only false-positives).
-LESSON 33 reconfirmed: WorkerName* untyped consts needed second sweep
-after first build pass surfaced them.
+Callers updated:
+  internal/api/{fleet_telemetry_error_handler,telemetry_handler,
+                telemetry_handler_wiring}.go
+  internal/app/new.go
 
-internal/database allowlist ratchet: 46 -> 44 src files.
+No helper deps. No cycles (parent peers had no symbol references).
 
-Carved subpkgs so far (19): achievement, sharing, admin, gdpr,
+internal/database allowlist ratchet: 44 -> 42 src files.
+
+Carved subpkgs so far (20): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
-audit, charging, drive, trip, energy, ai, export, worker.
+audit, charging, drive, trip, energy, ai, export, worker, telemetry.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -77,7 +78,7 @@ type TelemetryHandler struct {
 	fsmHandler *FSMHandler
 
 	// Raw telemetry capture (optional, backed by MongoDB)
-	rawTelemetryRepo *database.RawTelemetryRepo
+	rawTelemetryRepo *telemetrydb.RawTelemetryRepo
 	captureEnabled   atomic.Bool
 
 	// Per-signal logging to MongoDB (optional)

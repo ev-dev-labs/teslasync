@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:18:23Z",
+  "generated_at": "2026-05-28T16:21:22Z",
   "go_version": "go1.26.1",
-  "commit_sha": "dabfda26fe3cb49f8b9f081b40b75f2804582565",
+  "commit_sha": "c855100a19b87d9bf33ff21f60c3b0da972b7680",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2508,7 +2508,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126627,
+      "loc": 126630,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2646,6 +2646,7 @@
         "internal/database/notification",
         "internal/database/observability",
         "internal/database/sharing",
+        "internal/database/telemetry",
         "internal/database/trip",
         "internal/database/user",
         "internal/database/worker",
@@ -3174,7 +3175,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1841,
+      "loc": 1842,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3190,6 +3191,7 @@
         "internal/database/gdpr",
         "internal/database/notification",
         "internal/database/observability",
+        "internal/database/telemetry",
         "internal/database/trip",
         "internal/dataquality",
         "internal/events",
@@ -3703,9 +3705,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 44,
+      "go_files": 42,
       "test_files": 17,
-      "loc": 10450,
+      "loc": 10188,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3745,7 +3747,6 @@
         "query_budget_tracer_test.go",
         "quiet_hours_repo.go",
         "quiet_hours_repo_test.go",
-        "raw_telemetry_repo.go",
         "retry.go",
         "retry_test.go",
         "schema_test.go",
@@ -3767,7 +3768,6 @@
         "system_state_repo_test.go",
         "tesla_charging_history_repo.go",
         "tesla_charging_session_repo.go",
-        "tesla_fleet_telemetry_error_repo.go",
         "tesla_user_config_repo.go",
         "tesla_user_order_repo.go",
         "tesla_user_profile_repo.go",
@@ -4106,6 +4106,23 @@
       "files": [
         "doc.go",
         "token_repo.go"
+      ]
+    },
+    {
+      "path": "internal/database/telemetry",
+      "go_files": 3,
+      "test_files": 0,
+      "loc": 287,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/models/telemetry"
+      ],
+      "files": [
+        "doc.go",
+        "fleet_error_repo.go",
+        "raw_repo.go"
       ]
     },
     {
@@ -7141,7 +7158,6 @@
       "position_repo.go",
       "query_budget_tracer.go",
       "quiet_hours_repo.go",
-      "raw_telemetry_repo.go",
       "retry.go",
       "settings_repo.go",
       "settings_reset.go",
@@ -7157,7 +7173,6 @@
       "system_state_repo.go",
       "tesla_charging_history_repo.go",
       "tesla_charging_session_repo.go",
-      "tesla_fleet_telemetry_error_repo.go",
       "tesla_user_config_repo.go",
       "tesla_user_order_repo.go",
       "tesla_user_profile_repo.go",
@@ -7275,6 +7290,11 @@
     "internal/database/sharing": [
       "doc.go",
       "token_repo.go"
+    ],
+    "internal/database/telemetry": [
+      "doc.go",
+      "fleet_error_repo.go",
+      "raw_repo.go"
     ],
     "internal/database/trip": [
       "detail_repo.go",
@@ -7999,7 +8019,7 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 44,
+      "flat_parent_go_files": 42,
       "flat_parent_test_files": 17,
       "planned_subpkgs": 22,
       "existing_subpkgs": [

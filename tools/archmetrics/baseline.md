@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T16:18:24Z, Go go1.26.1, commit dabfda26fe3cb49f8b9f081b40b75f2804582565_
+_Generated 2026-05-28T16:21:24Z, Go go1.26.1, commit c855100a19b87d9bf33ff21f60c3b0da972b7680_
 
 ## Summary
 
-- Packages: 280
+- Packages: 281
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 374537
+- Total non-blank LOC under cmd/+internal/+tools/: 374566
 
 ## cmd/* main.go LOC
 
@@ -170,9 +170,9 @@ _Generated 2026-05-28T16:18:24Z, Go go1.26.1, commit dabfda26fe3cb49f8b9f081b40b
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126627 | yes | handler |
+| internal/api | 271 | 163 | 126630 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
-| internal/app | 6 | 1 | 1841 | yes | app |
+| internal/app | 6 | 1 | 1842 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
 | internal/app/auditviewersvc | 3 | 0 | 77 | yes | app |
 | internal/app/chargingsvc | 2 | 1 | 301 | yes | app |
@@ -197,7 +197,7 @@ _Generated 2026-05-28T16:18:24Z, Go go1.26.1, commit dabfda26fe3cb49f8b9f081b40b
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 44 | 17 | 10450 | yes | platform |
+| internal/database | 42 | 17 | 10188 | yes | platform |
 | internal/database/achievement | 2 | 0 | 93 | yes | adapter |
 | internal/database/admin | 6 | 0 | 873 | yes | adapter |
 | internal/database/ai | 3 | 2 | 928 | yes | adapter |
@@ -214,6 +214,7 @@ _Generated 2026-05-28T16:18:24Z, Go go1.26.1, commit dabfda26fe3cb49f8b9f081b40b
 | internal/database/notification | 5 | 1 | 1950 | yes | adapter |
 | internal/database/observability | 7 | 0 | 1396 | yes | adapter |
 | internal/database/sharing | 2 | 0 | 127 | yes | adapter |
+| internal/database/telemetry | 3 | 0 | 287 | yes | adapter |
 | internal/database/trip | 4 | 1 | 775 | yes | adapter |
 | internal/database/user | 3 | 1 | 806 | yes | adapter |
 | internal/database/worker | 3 | 0 | 523 | yes | adapter |
@@ -334,7 +335,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 44 / 17 | 22 | 12 | 10 |
+| `internal/database` | R4 | 143 | 42 / 17 | 22 | 12 | 10 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 

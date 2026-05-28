@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 
 	// Side-effect import: registers the
@@ -31,14 +32,14 @@ import (
 // FleetTelemetryErrorHandler serves partner-level fleet telemetry error data.
 type FleetTelemetryErrorHandler struct {
 	teslaClient *tesla.Client
-	repo        *database.TeslaFleetTelemetryErrorRepo
+	repo        *telemetrydb.TeslaFleetTelemetryErrorRepo
 }
 
 // NewFleetTelemetryErrorHandler creates a new handler.
 func NewFleetTelemetryErrorHandler(tc *tesla.Client, db *database.DB) *FleetTelemetryErrorHandler {
 	return &FleetTelemetryErrorHandler{
 		teslaClient: tc,
-		repo:        database.NewTeslaFleetTelemetryErrorRepo(db),
+		repo:        telemetrydb.NewTeslaFleetTelemetryErrorRepo(db),
 	}
 }
 

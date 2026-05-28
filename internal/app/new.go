@@ -24,6 +24,7 @@ import (
 	dbgdpr "github.com/ev-dev-labs/teslasync/internal/database/gdpr"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
@@ -765,7 +766,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 				mongoClient.Close()
 				return nil
 			})
-			rawRepo := database.NewRawTelemetryRepo(mongoClient)
+			rawRepo := telemetrydb.NewRawTelemetryRepo(mongoClient)
 			a.TelemetryHandler.SetRawTelemetryRepo(rawRepo)
 
 			signalLogRepo := database.NewSignalLogRepo(mongoClient)

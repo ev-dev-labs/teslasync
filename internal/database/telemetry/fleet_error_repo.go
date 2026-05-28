@@ -1,20 +1,21 @@
-package database
+package telemetry
 
 import (
 	"context"
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 )
 
 // TeslaFleetTelemetryErrorRepo provides data access for fleet telemetry error records.
 type TeslaFleetTelemetryErrorRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewTeslaFleetTelemetryErrorRepo creates a new repository.
-func NewTeslaFleetTelemetryErrorRepo(db *DB) *TeslaFleetTelemetryErrorRepo {
+func NewTeslaFleetTelemetryErrorRepo(db *database.DB) *TeslaFleetTelemetryErrorRepo {
 	return &TeslaFleetTelemetryErrorRepo{db: db}
 }
 

@@ -1,9 +1,10 @@
-package database
+package telemetry
 
 import (
 	"context"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 
 	"github.com/rs/zerolog/log"
@@ -20,7 +21,7 @@ type RawTelemetryRepo struct {
 }
 
 // NewRawTelemetryRepo creates the repo and ensures indexes (including TTL).
-func NewRawTelemetryRepo(mc *MongoClient) *RawTelemetryRepo {
+func NewRawTelemetryRepo(mc *database.MongoClient) *RawTelemetryRepo {
 	coll := mc.Database().Collection(rawSignalsCollection)
 	repo := &RawTelemetryRepo{coll: coll}
 	repo.ensureIndexes(mc.TTLDays())

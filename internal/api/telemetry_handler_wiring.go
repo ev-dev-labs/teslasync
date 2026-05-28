@@ -6,6 +6,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
@@ -58,7 +59,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 }
 
 // SetRawTelemetryRepo enables raw telemetry signal capture to MongoDB.
-func (h *TelemetryHandler) SetRawTelemetryRepo(repo *database.RawTelemetryRepo) {
+func (h *TelemetryHandler) SetRawTelemetryRepo(repo *telemetrydb.RawTelemetryRepo) {
 	h.rawTelemetryRepo = repo
 }
 
