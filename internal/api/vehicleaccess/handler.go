@@ -1,4 +1,4 @@
-package api
+package vehicleaccess
 
 import (
 	"encoding/json"
@@ -6,29 +6,29 @@ import (
 	"net/http"
 	"time"
 
-	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
-
-	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
-
-	"github.com/go-chi/chi/v5"
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/rs/zerolog/log"
 )
 
-// VehicleAccessHandler serves vehicle driver and share invitation data.
-type VehicleAccessHandler struct {
+// Handler serves vehicle driver and share invitation data.
+type Handler struct {
 	teslaClient *tesla.Client
 	repo        *tesladb.TeslaVehicleDriverRepo
 	vehicleRepo *vehicledb.VehicleRepo
 }
 
-// NewVehicleAccessHandler creates a new handler.
-func NewVehicleAccessHandler(tc *tesla.Client, db *database.DB) *VehicleAccessHandler {
-	return &VehicleAccessHandler{
+// NewHandler creates a new handler.
+func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
+	return &Handler{
 		teslaClient: tc,
 		repo:        tesladb.NewTeslaVehicleDriverRepo(db),
 		vehicleRepo: vehicledb.NewVehicleRepo(db),
@@ -36,8 +36,8 @@ func NewVehicleAccessHandler(tc *tesla.Client, db *database.DB) *VehicleAccessHa
 }
 
 // resolveVehicle looks up the vehicle record from the vehicleID URL param.
-func (h *VehicleAccessHandler) resolveVehicle(r *http.Request) (*vehiclemodel.Vehicle, error) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) resolveVehicle(r *http.Request) (*vehiclemodel.Vehicle, error) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
 		return nil, fmt.Errorf("invalid vehicle ID: %w", err)
 	}
@@ -55,36 +55,36 @@ func (h *VehicleAccessHandler) resolveVehicle(r *http.Request) (*vehiclemodel.Ve
 
 // ListDrivers returns stored drivers for a vehicle.
 // GET /api/v1/vehicles/{vehicleID}/drivers
-func (h *VehicleAccessHandler) ListDrivers(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) ListDrivers(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
 	drivers, err := h.repo.GetDriversByVehicleID(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to list vehicle drivers")
-		writeError(w, http.StatusInternalServerError, "failed to list drivers")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list drivers")
 		return
 	}
 	if drivers == nil {
 		drivers = []*teslamodel.TeslaVehicleDriver{}
 	}
-	writeJSON(w, http.StatusOK, drivers)
+	httpx.WriteJSON(w, http.StatusOK, drivers)
 }
 
 // RefreshDrivers fetches drivers from Tesla API and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/drivers/refresh
-func (h *VehicleAccessHandler) RefreshDrivers(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshDrivers(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
 	vehicle, err := h.resolveVehicle(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -93,32 +93,32 @@ func (h *VehicleAccessHandler) RefreshDrivers(w http.ResponseWriter, r *http.Req
 	body, status, err := h.teslaClient.GetVehicleDrivers(r.Context(), vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla vehicle drivers API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch drivers from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch drivers from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla vehicle drivers non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
 	drivers, err := parseDriversResponse(body, vehicle.ID, vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to parse drivers response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
 	if err := h.repo.ReplaceDriversForVehicle(r.Context(), vehicle.ID, drivers); err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("failed to save vehicle drivers")
-		writeError(w, http.StatusInternalServerError, "failed to save drivers")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save drivers")
 		return
 	}
 
 	stored, err := h.repo.GetDriversByVehicleID(r.Context(), vehicle.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list drivers after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to list drivers")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list drivers")
 		return
 	}
 	if stored == nil {
@@ -126,20 +126,20 @@ func (h *VehicleAccessHandler) RefreshDrivers(w http.ResponseWriter, r *http.Req
 	}
 
 	log.Info().Int("count", len(stored)).Int64("vehicle_id", vehicle.ID).Msg("vehicle drivers refresh complete")
-	writeJSON(w, http.StatusOK, stored)
+	httpx.WriteJSON(w, http.StatusOK, stored)
 }
 
 // RemoveDriver revokes a driver's access via Tesla API and refreshes from Tesla.
 // DELETE /api/v1/vehicles/{vehicleID}/drivers
-func (h *VehicleAccessHandler) RemoveDriver(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RemoveDriver(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
 	vehicle, err := h.resolveVehicle(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -147,11 +147,11 @@ func (h *VehicleAccessHandler) RemoveDriver(w http.ResponseWriter, r *http.Reque
 		ShareUserID int64 `json:"share_user_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if req.ShareUserID == 0 {
-		writeError(w, http.StatusBadRequest, "share_user_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "share_user_id is required")
 		return
 	}
 
@@ -160,12 +160,12 @@ func (h *VehicleAccessHandler) RemoveDriver(w http.ResponseWriter, r *http.Reque
 	_, status, err := h.teslaClient.RemoveVehicleDriver(r.Context(), vehicle.VIN, req.ShareUserID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla remove driver API error")
-		writeError(w, http.StatusBadGateway, "failed to remove driver via Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to remove driver via Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Int64("vehicle_id", vehicle.ID).Msg("tesla remove driver non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
@@ -177,36 +177,36 @@ func (h *VehicleAccessHandler) RemoveDriver(w http.ResponseWriter, r *http.Reque
 
 // ListInvitations returns stored invitations for a vehicle.
 // GET /api/v1/vehicles/{vehicleID}/invitations
-func (h *VehicleAccessHandler) ListInvitations(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+func (h *Handler) ListInvitations(w http.ResponseWriter, r *http.Request) {
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
 	invitations, err := h.repo.GetInvitationsByVehicleID(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to list vehicle invitations")
-		writeError(w, http.StatusInternalServerError, "failed to list invitations")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list invitations")
 		return
 	}
 	if invitations == nil {
 		invitations = []*teslamodel.TeslaVehicleInvitation{}
 	}
-	writeJSON(w, http.StatusOK, invitations)
+	httpx.WriteJSON(w, http.StatusOK, invitations)
 }
 
 // RefreshInvitations fetches invitations from Tesla API and saves to DB.
 // POST /api/v1/vehicles/{vehicleID}/invitations/refresh
-func (h *VehicleAccessHandler) RefreshInvitations(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshInvitations(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
 	vehicle, err := h.resolveVehicle(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -215,32 +215,32 @@ func (h *VehicleAccessHandler) RefreshInvitations(w http.ResponseWriter, r *http
 	body, status, err := h.teslaClient.GetVehicleInvitations(r.Context(), vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla vehicle invitations API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch invitations from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch invitations from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla vehicle invitations non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
 	invitations, err := parseInvitationsResponse(body, vehicle.ID, vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to parse invitations response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
 	if err := h.repo.ReplaceInvitationsForVehicle(r.Context(), vehicle.ID, invitations); err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("failed to save vehicle invitations")
-		writeError(w, http.StatusInternalServerError, "failed to save invitations")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save invitations")
 		return
 	}
 
 	stored, err := h.repo.GetInvitationsByVehicleID(r.Context(), vehicle.ID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list invitations after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to list invitations")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list invitations")
 		return
 	}
 	if stored == nil {
@@ -248,20 +248,20 @@ func (h *VehicleAccessHandler) RefreshInvitations(w http.ResponseWriter, r *http
 	}
 
 	log.Info().Int("count", len(stored)).Int64("vehicle_id", vehicle.ID).Msg("vehicle invitations refresh complete")
-	writeJSON(w, http.StatusOK, stored)
+	httpx.WriteJSON(w, http.StatusOK, stored)
 }
 
 // CreateInvitation creates a share invite via Tesla API and refreshes from Tesla.
 // POST /api/v1/vehicles/{vehicleID}/invitations
-func (h *VehicleAccessHandler) CreateInvitation(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CreateInvitation(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
 	vehicle, err := h.resolveVehicle(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -270,12 +270,12 @@ func (h *VehicleAccessHandler) CreateInvitation(w http.ResponseWriter, r *http.R
 	body, status, err := h.teslaClient.CreateVehicleInvitation(r.Context(), vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla create invitation API error")
-		writeError(w, http.StatusBadGateway, "failed to create invitation via Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to create invitation via Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla create invitation non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
@@ -283,37 +283,37 @@ func (h *VehicleAccessHandler) CreateInvitation(w http.ResponseWriter, r *http.R
 	inv, err := parseCreateInvitationResponse(body, vehicle.ID, vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to parse create invitation response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
 	if err := h.repo.InsertInvitation(r.Context(), inv); err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("failed to save invitation")
-		writeError(w, http.StatusInternalServerError, "failed to save invitation")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save invitation")
 		return
 	}
 
 	log.Info().Str("invitation_id", inv.InvitationID).Int64("vehicle_id", vehicle.ID).Msg("vehicle invitation created")
-	writeJSON(w, http.StatusCreated, inv)
+	httpx.WriteJSON(w, http.StatusCreated, inv)
 }
 
 // RevokeInvitation revokes a pending invite via Tesla API and refreshes from Tesla.
 // POST /api/v1/vehicles/{vehicleID}/invitations/{invitationID}/revoke
-func (h *VehicleAccessHandler) RevokeInvitation(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RevokeInvitation(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
 	vehicle, err := h.resolveVehicle(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	invitationID := chi.URLParam(r, "invitationID")
 	if invitationID == "" {
-		writeError(w, http.StatusBadRequest, "invitation ID is required")
+		httpx.WriteError(w, http.StatusBadRequest, "invitation ID is required")
 		return
 	}
 
@@ -322,12 +322,12 @@ func (h *VehicleAccessHandler) RevokeInvitation(w http.ResponseWriter, r *http.R
 	_, status, err := h.teslaClient.RevokeVehicleInvitation(r.Context(), vehicle.VIN, invitationID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("tesla revoke invitation API error")
-		writeError(w, http.StatusBadGateway, "failed to revoke invitation via Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to revoke invitation via Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Int64("vehicle_id", vehicle.ID).Msg("tesla revoke invitation non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
@@ -452,4 +452,14 @@ func parseCreateInvitationResponse(body []byte, vehicleID int64, vin string) (*t
 	}
 
 	return invitation, nil
+}
+
+// truncateBody returns the first 500 bytes of a response body for
+// logging. Duplicated from internal/api/tesla_energy_history_handler.go
+// until that handler is also carved and the parent copy can be deleted.
+func truncateBody(b []byte) string {
+	if len(b) > 500 {
+		return string(b[:500])
+	}
+	return string(b)
 }

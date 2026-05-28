@@ -19,6 +19,7 @@ import (
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
+	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
@@ -1054,7 +1055,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaUserConfigHandler := NewTeslaUserConfigHandler(teslaClient, db)
 	teslaUserOrderHandler := NewTeslaUserOrderHandler(teslaClient, db)
 	teslaUserProfileHandler := NewTeslaUserProfileHandler(teslaClient, db)
-	vehicleAccessHandler := NewVehicleAccessHandler(teslaClient, db)
+	vehicleAccessHandler := apivehaccess.NewHandler(teslaClient, db)
 	vehicleInfoHandler := NewVehicleInfoHandler(teslaClient, db)
 	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader)
 
