@@ -19,7 +19,7 @@
 // `useVampireDrainEvents` (which currently uses `select: safeArray`)
 // will need a follow-up to extract the `events` field — same pattern as
 // the Phase-43a / Prompt 0003 follow-up note for useStateSummary.
-package api
+package vampiredrain
 
 import (
 	"context"
@@ -29,6 +29,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
@@ -93,12 +94,12 @@ func (h *VampireDrainHandler) parseEventsParams(w http.ResponseWriter, r *http.R
 
 	vidStr := q.Get("vehicle_id")
 	if vidStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return 0, 0, false
 	}
 	vid, err := strconv.ParseInt(vidStr, 10, 64)
 	if err != nil || vid <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 		return 0, 0, false
 	}
 
@@ -106,11 +107,11 @@ func (h *VampireDrainHandler) parseEventsParams(w http.ResponseWriter, r *http.R
 	if l := q.Get("limit"); l != "" {
 		v, err := strconv.Atoi(l)
 		if err != nil {
-			writeError(w, http.StatusBadRequest, "limit must be an integer")
+			httpx.WriteError(w, http.StatusBadRequest, "limit must be an integer")
 			return 0, 0, false
 		}
 		if v < 1 {
-			writeError(w, http.StatusBadRequest, "limit must be >= 1")
+			httpx.WriteError(w, http.StatusBadRequest, "limit must be >= 1")
 			return 0, 0, false
 		}
 		if v > vampireDrainMaxLimit {
@@ -119,10 +120,10 @@ func (h *VampireDrainHandler) parseEventsParams(w http.ResponseWriter, r *http.R
 			// the Phase-43a / Prompt 0003+0004 envelope: writeError
 			// would emit only {error, code}; we hand-write the JSON
 			// to add the `max` field.
-			writeJSON(w, http.StatusBadRequest, map[string]any{
+			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "limit exceeds maximum",
 				"max":   vampireDrainMaxLimit,
-				"code":  httpStatusCode(http.StatusBadRequest),
+				"code":  httpx.HTTPStatusCode(http.StatusBadRequest),
 			})
 			return 0, 0, false
 		}
@@ -138,12 +139,12 @@ func (h *VampireDrainHandler) parseStatsParams(w http.ResponseWriter, r *http.Re
 	q := r.URL.Query()
 	vidStr := q.Get("vehicle_id")
 	if vidStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return 0, false
 	}
 	vid, err := strconv.ParseInt(vidStr, 10, 64)
 	if err != nil || vid <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 		return 0, false
 	}
 	return vid, true
@@ -174,11 +175,11 @@ func (h *VampireDrainHandler) Events(w http.ResponseWriter, r *http.Request) {
 	exists, err := h.repo.VehicleExists(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("vampire_drain.events: existence probe failed")
-		writeError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to verify vehicle")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
@@ -187,14 +188,14 @@ func (h *VampireDrainHandler) Events(w http.ResponseWriter, r *http.Request) {
 	events, err := h.repo.Events(ctx, vehicleID, windowStart, limit)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("limit", limit).Msg("vampire_drain.events: query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load vampire drain events")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load vampire drain events")
 		return
 	}
 	if events == nil {
 		events = []drivedb.VampireDrainEvent{}
 	}
 
-	writeJSON(w, http.StatusOK, VampireDrainEventsResponse{
+	httpx.WriteJSON(w, http.StatusOK, VampireDrainEventsResponse{
 		VehicleID: vehicleID,
 		Events:    events,
 	})
@@ -227,11 +228,11 @@ func (h *VampireDrainHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	exists, err := h.repo.VehicleExists(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("vampire_drain.stats: existence probe failed")
-		writeError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to verify vehicle")
 		return
 	}
 	if !exists {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
@@ -240,11 +241,11 @@ func (h *VampireDrainHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.repo.Stats(ctx, vehicleID, windowStart, vampireDrainStatsWindowDays, vampireDrainStatsLimit)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("vampire_drain.stats: query failed")
-		writeError(w, http.StatusInternalServerError, "failed to load vampire drain stats")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load vampire drain stats")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, VampireDrainStatsResponse{
+	httpx.WriteJSON(w, http.StatusOK, VampireDrainStatsResponse{
 		VehicleID:            vehicleID,
 		EventCount:           stats.EventCount,
 		TotalObservedHours:   stats.TotalObservedHours,

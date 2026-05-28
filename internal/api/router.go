@@ -69,6 +69,7 @@ import (
 	apitotp "github.com/ev-dev-labs/teslasync/internal/api/totp"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
 	apitripsd "github.com/ev-dev-labs/teslasync/internal/api/tripsdetail"
+	apivamp "github.com/ev-dev-labs/teslasync/internal/api/vampiredrain"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -3427,7 +3428,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// charging windows excluded via signal_log.field='ChargeState'
 		// (int_value > 1). Same admin-style rate limit as /mileage and
 		// /vehicle-states (Phase-43a precedent).
-		vampireDrainHandler := NewVampireDrainHandler(drivedb.NewVampireDrainRepo(db.Pool))
+		vampireDrainHandler := apivamp.NewVampireDrainHandler(drivedb.NewVampireDrainRepo(db.Pool))
 		r.Route("/vampire-drain", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/", vampireDrainHandler.Events)
