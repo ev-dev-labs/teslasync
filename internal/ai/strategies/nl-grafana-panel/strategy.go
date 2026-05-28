@@ -20,7 +20,7 @@
 //     {prompt, panel, rationale} input and return a normalised +
 //     validated GrafanaPanelDraft envelope. The tool is per-request
 //     scope-bound to the curated catalog the handler installed via
-//     tools.WithGrafanaPanelScope; the LLM CANNOT propose a panel
+//     nlq.WithGrafanaPanelScope; the LLM CANNOT propose a panel
 //     type, datasource type, or postgres table that is not in the
 //     catalog. Defence-in-depth against prompt injection in
 //     operator-authored prompts.

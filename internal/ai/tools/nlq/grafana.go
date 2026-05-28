@@ -56,7 +56,7 @@
 //     the Grafana panel-builder page, which is what allows them to
 //     paste it into their own Grafana dashboard editor.
 
-package tools
+package nlq
 
 import (
 	"context"
@@ -65,6 +65,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -574,7 +576,7 @@ func (t *draftGrafanaPanel) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftGrafanaPanel) InputSchema() json.RawMessage {
-	return CachedSchema(grafanaPanelInput{})
+	return tools.CachedSchema(grafanaPanelInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -595,7 +597,7 @@ func (t *draftGrafanaPanel) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *draftGrafanaPanel) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[grafanaPanelInput](raw)
+	return tools.ValidateStruct[grafanaPanelInput](raw)
 }
 
 // Execute implements [Tool]. Builds the draft, runs the scope +
@@ -670,7 +672,7 @@ func (t *validateGrafanaPanelTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateGrafanaPanelTool) InputSchema() json.RawMessage {
-	return CachedSchema(grafanaPanelInput{})
+	return tools.CachedSchema(grafanaPanelInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -685,7 +687,7 @@ func (t *validateGrafanaPanelTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *validateGrafanaPanelTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[grafanaPanelInput](raw)
+	return tools.ValidateStruct[grafanaPanelInput](raw)
 }
 
 // Execute implements [Tool]. Same scope + shape checks as
@@ -741,7 +743,7 @@ type NLGrafanaPanelSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterNLGrafanaPanelTools(r *Registry, s NLGrafanaPanelSources) {
+func RegisterNLGrafanaPanelTools(r *tools.Registry, s NLGrafanaPanelSources) {
 	r.Register(&draftGrafanaPanel{validator: s.Validator})
 	r.Register(&validateGrafanaPanelTool{validator: s.Validator})
 }

@@ -129,6 +129,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
@@ -2408,7 +2409,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// registry's Names list grows deterministically.
 	aiNLSqlPlaygroundCatalogSource := NewAINLSQLSchemaCatalogSource()
 	aiNLSqlPlaygroundValidator := NewAINLSQLValidator()
-	tools.RegisterNLSqlPlaygroundTools(aiToolRegistry, tools.NLSqlPlaygroundSources{
+	nlq.RegisterNLSqlPlaygroundTools(aiToolRegistry, nlq.NLSqlPlaygroundSources{
 		Validator: aiNLSqlPlaygroundValidator,
 	})
 	// nl-sql-playground handler. One per process; stateless
@@ -2440,7 +2441,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deterministically.
 	aiNLGrafanaPanelCatalogSource := NewAINLGrafanaPanelCatalogSource()
 	aiNLGrafanaPanelValidator := NewAINLGrafanaValidator()
-	tools.RegisterNLGrafanaPanelTools(aiToolRegistry, tools.NLGrafanaPanelSources{
+	nlq.RegisterNLGrafanaPanelTools(aiToolRegistry, nlq.NLGrafanaPanelSources{
 		Validator: aiNLGrafanaPanelValidator,
 	})
 	// nl-grafana-panel handler. One per process; stateless
@@ -2463,7 +2464,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// applied. The tools share the SAME single-dimension
 	// allowlist enforcement: every slot.panel_name MUST be in
 	// the in-scope curated panel catalog the handler installs in
-	// ctx via tools.WithDashboardComposerScope. The validator is
+	// ctx via nlq.WithDashboardComposerScope. The validator is
 	// permissive (shape checks already in the tool); kept as an
 	// adapter for future semantic checks. The curated install-
 	// wide panel catalog (six install-wide panel templates) is
@@ -2473,7 +2474,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// registry's Names list grows deterministically.
 	aiNLDashboardComposerCatalogSource := NewAINLDashboardComposerCatalogSource()
 	aiNLDashboardComposerValidator := NewAINLDashboardComposerValidator()
-	tools.RegisterNLDashboardComposerTools(aiToolRegistry, tools.NLDashboardComposerSources{
+	nlq.RegisterNLDashboardComposerTools(aiToolRegistry, nlq.NLDashboardComposerSources{
 		Validator: aiNLDashboardComposerValidator,
 	})
 	// nl-dashboard-composer handler. One per process; stateless

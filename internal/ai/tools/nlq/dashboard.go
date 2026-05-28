@@ -57,7 +57,7 @@
 //     allows them to paste it into their own Grafana dashboard
 //     editor.
 
-package tools
+package nlq
 
 import (
 	"context"
@@ -65,6 +65,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -486,7 +488,7 @@ func (t *draftDashboardLayout) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftDashboardLayout) InputSchema() json.RawMessage {
-	return CachedSchema(dashboardLayoutInput{})
+	return tools.CachedSchema(dashboardLayoutInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -508,7 +510,7 @@ func (t *draftDashboardLayout) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *draftDashboardLayout) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[dashboardLayoutInput](raw)
+	return tools.ValidateStruct[dashboardLayoutInput](raw)
 }
 
 // Execute implements [Tool]. Builds the draft, runs the scope +
@@ -583,7 +585,7 @@ func (t *validateDashboardLayoutTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateDashboardLayoutTool) InputSchema() json.RawMessage {
-	return CachedSchema(dashboardLayoutInput{})
+	return tools.CachedSchema(dashboardLayoutInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -598,7 +600,7 @@ func (t *validateDashboardLayoutTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *validateDashboardLayoutTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[dashboardLayoutInput](raw)
+	return tools.ValidateStruct[dashboardLayoutInput](raw)
 }
 
 // Execute implements [Tool]. Same scope + shape checks as
@@ -655,7 +657,7 @@ type NLDashboardComposerSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterNLDashboardComposerTools(r *Registry, s NLDashboardComposerSources) {
+func RegisterNLDashboardComposerTools(r *tools.Registry, s NLDashboardComposerSources) {
 	r.Register(&draftDashboardLayout{validator: s.Validator})
 	r.Register(&validateDashboardLayoutTool{validator: s.Validator})
 }

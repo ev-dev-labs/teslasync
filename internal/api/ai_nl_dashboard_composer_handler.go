@@ -8,7 +8,7 @@ package api
 // three-dimensional catalog (panel-types + datasource-types +
 // tables) the handler loads a single curated install-wide
 // catalog (panel names + their hint copy) up-front and installs
-// the snapshot into ctx via tools.WithDashboardComposerScope:
+// the snapshot into ctx via nlq.WithDashboardComposerScope:
 //
 //	URL  /api/v1/ai/power/dashboard/draft
 //	  ↓
@@ -19,7 +19,7 @@ package api
 //	load curated dashboard panel catalog via the source port
 //	  ↓
 //	stash in-scope (panel-names) snapshot in ctx via
-//	  tools.WithDashboardComposerScope(...)
+//	  nlq.WithDashboardComposerScope(...)
 //	  ↓
 //	open SSE writer (internal/ai/stream.New)
 //	  ↓
@@ -35,7 +35,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the panel-name snapshot
-// in ctx via tools.WithDashboardComposerScope BEFORE
+// in ctx via nlq.WithDashboardComposerScope BEFORE
 // dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The tools
 // draft_dashboard_layout + validate_dashboard_layout REJECT any
@@ -89,6 +89,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -178,7 +179,7 @@ type AINLDashboardComposerHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_dashboard_layout AND validate_dashboard_layout
-//	(registered by tools.RegisterNLDashboardComposerTools
+//	(registered by nlq.RegisterNLDashboardComposerTools
 //	in router.go).
 //
 // strat:      the nl-dashboard-composer Strategy (one per
@@ -309,7 +310,7 @@ func (h *AINLDashboardComposerHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, nldashboardcomposer.FeatureID)
-	ctx = tools.WithDashboardComposerScope(ctx, panelNames)
+	ctx = nlq.WithDashboardComposerScope(ctx, panelNames)
 
 	// 5) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nldashboardcomposer.FeatureID))
@@ -476,11 +477,11 @@ func (a *AINLDashboardComposerCatalogSourceImpl) DashboardComposerCatalog(_ cont
 var _ AINLDashboardComposerCatalogSource = (*AINLDashboardComposerCatalogSourceImpl)(nil)
 
 // ---------------------------------------------------------------------
-// Production wiring for the tools.DashboardLayoutValidator interface.
+// Production wiring for the nlq.DashboardLayoutValidator interface.
 // ---------------------------------------------------------------------
 
 // AINLDashboardComposerValidator is the production
-// tools.DashboardLayoutValidator. The shape checks (panel-name
+// nlq.DashboardLayoutValidator. The shape checks (panel-name
 // catalog, slot count, per-slot grid bounds, duplicate-panel
 // detector, overlap detector) are already enforced by the
 // tool's checkDashboardLayoutScopeAndShape before this
@@ -510,13 +511,13 @@ func NewAINLDashboardComposerValidator() *AINLDashboardComposerValidator {
 }
 
 // ValidateDashboardLayout implements
-// tools.DashboardLayoutValidator.
+// nlq.DashboardLayoutValidator.
 //
 // Future-extension hook: add semantic checks here as later
 // slices need them. Keeping the body intentionally minimal so
 // the slice's mandate ("propose-only, no semantic surprises")
 // is locally legible.
-func (v *AINLDashboardComposerValidator) ValidateDashboardLayout(draft *tools.DashboardLayoutDraft) error {
+func (v *AINLDashboardComposerValidator) ValidateDashboardLayout(draft *nlq.DashboardLayoutDraft) error {
 	if draft == nil {
 		return errors.New("api ai nl-dashboard-composer: nil DashboardLayoutDraft")
 	}
@@ -524,4 +525,4 @@ func (v *AINLDashboardComposerValidator) ValidateDashboardLayout(draft *tools.Da
 }
 
 // Compile-time assertion.
-var _ tools.DashboardLayoutValidator = (*AINLDashboardComposerValidator)(nil)
+var _ nlq.DashboardLayoutValidator = (*AINLDashboardComposerValidator)(nil)

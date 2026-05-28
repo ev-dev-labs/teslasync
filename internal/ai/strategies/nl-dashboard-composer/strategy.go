@@ -19,7 +19,7 @@
 //     rationale} input and return a normalised + validated
 //     DashboardLayoutDraft envelope. The tool is per-request
 //     scope-bound to the curated panel catalog the handler
-//     installed via tools.WithDashboardComposerScope; the LLM
+//     installed via nlq.WithDashboardComposerScope; the LLM
 //     CANNOT propose a panel name that is not in the catalog.
 //     Defence-in-depth against prompt injection in
 //     operator-authored prompts.

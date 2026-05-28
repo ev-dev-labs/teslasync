@@ -26,7 +26,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 )
 
 // TestNLSQLPlaygroundAIOffManualSQLWorks is the load-bearing
@@ -274,7 +274,7 @@ func TestBuildNLSqlPlaygroundUserMessage_EmptyCatalog(t *testing.T) {
 func TestAINLSQLValidator_AcceptsValidDraft(t *testing.T) {
 	t.Parallel()
 	v := NewAINLSQLValidator()
-	drafts := []*tools.ReadonlySQLDraft{
+	drafts := []*nlq.ReadonlySQLDraft{
 		{
 			Prompt:    "how many drives last week",
 			SQL:       "SELECT COUNT(*) FROM drives WHERE started_at >= NOW() - INTERVAL '7 days'",

@@ -9,7 +9,7 @@ package api
 // schema catalog (a hardcoded whitelist of safe read-only table
 // names — drives, charging_sessions, vehicles, alerts, and
 // signal_log_view) up-front and installs the snapshot of table-
-// names into ctx via tools.WithScopedSchemaCatalog:
+// names into ctx via nlq.WithScopedSchemaCatalog:
 //
 //	URL  /api/v1/ai/power/sql/draft
 //	  ↓
@@ -22,7 +22,7 @@ package api
 //	load curated schema catalog via the source port
 //	  ↓
 //	stash in-scope (table-set) snapshot in ctx via
-//	  tools.WithScopedSchemaCatalog(tableNames)
+//	  nlq.WithScopedSchemaCatalog(tableNames)
 //	  ↓
 //	synthesise the user-message that lists the in-scope catalog
 //	  (table name + column list per row) so the LLM has
@@ -37,7 +37,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the (table-name set)
-// snapshot in ctx via tools.WithScopedSchemaCatalog BEFORE
+// snapshot in ctx via nlq.WithScopedSchemaCatalog BEFORE
 // dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The tools
 // draft_readonly_sql + validate_readonly_sql REJECT any LLM-
@@ -88,6 +88,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -201,7 +202,7 @@ type AINLSQLPlaygroundHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_readonly_sql AND validate_readonly_sql
-//	(registered by tools.RegisterNLSqlPlaygroundTools
+//	(registered by nlq.RegisterNLSqlPlaygroundTools
 //	in router.go).
 //
 // strat:      the nl-sql-playground Strategy (one per process).
@@ -332,7 +333,7 @@ func (h *AINLSQLPlaygroundHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, nlsqlplayground.FeatureID)
-	ctx = tools.WithScopedSchemaCatalog(ctx, tableNames)
+	ctx = nlq.WithScopedSchemaCatalog(ctx, tableNames)
 
 	// 5) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nlsqlplayground.FeatureID))
@@ -572,10 +573,10 @@ func (a *AINLSQLSchemaCatalogSourceImpl) SchemaCatalog(_ context.Context) ([]AIN
 var _ AINLSQLSchemaCatalogSource = (*AINLSQLSchemaCatalogSourceImpl)(nil)
 
 // ---------------------------------------------------------------------
-// Production wiring for the tools.ReadonlySQLValidator interface.
+// Production wiring for the nlq.ReadonlySQLValidator interface.
 // ---------------------------------------------------------------------
 
-// AINLSQLValidator is the production tools.ReadonlySQLValidator.
+// AINLSQLValidator is the production nlq.ReadonlySQLValidator.
 // The shape checks (SELECT/WITH prefix, no-semicolon, no-DML/DDL
 // keyword scan, in-scope catalog table check) are already
 // enforced by the tool's checkReadonlySQLScopeAndShape before
@@ -604,13 +605,13 @@ func NewAINLSQLValidator() *AINLSQLValidator {
 	return &AINLSQLValidator{}
 }
 
-// ValidateReadonlySQL implements tools.ReadonlySQLValidator.
+// ValidateReadonlySQL implements nlq.ReadonlySQLValidator.
 //
 // Future-extension hook: add semantic checks here as later
 // slices need them. Keeping the body intentionally minimal so
 // the slice's mandate ("propose-only, no semantic surprises")
 // is locally legible.
-func (v *AINLSQLValidator) ValidateReadonlySQL(draft *tools.ReadonlySQLDraft) error {
+func (v *AINLSQLValidator) ValidateReadonlySQL(draft *nlq.ReadonlySQLDraft) error {
 	if draft == nil {
 		return errors.New("api ai nl-sql-playground: nil ReadonlySQLDraft")
 	}
@@ -618,4 +619,4 @@ func (v *AINLSQLValidator) ValidateReadonlySQL(draft *tools.ReadonlySQLDraft) er
 }
 
 // Compile-time assertion.
-var _ tools.ReadonlySQLValidator = (*AINLSQLValidator)(nil)
+var _ nlq.ReadonlySQLValidator = (*AINLSQLValidator)(nil)

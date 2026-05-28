@@ -28,7 +28,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 )
 
 // TestNLGrafanaPanelAIOffManualEditorWorks is the load-bearing
@@ -308,24 +308,24 @@ func TestBuildNLGrafanaPanelUserMessage_EmptyCatalogs(t *testing.T) {
 func TestAINLGrafanaValidator_AcceptsValidDraft(t *testing.T) {
 	t.Parallel()
 	v := NewAINLGrafanaValidator()
-	drafts := []*tools.GrafanaPanelDraft{
+	drafts := []*nlq.GrafanaPanelDraft{
 		{
 			Prompt: "daily drives this month",
-			Panel: tools.GrafanaPanelEnvelope{
+			Panel: nlq.GrafanaPanelEnvelope{
 				Title: "Drives per day",
 				Type:  "timeseries",
-				Datasource: tools.GrafanaDatasourceRef{
+				Datasource: nlq.GrafanaDatasourceRef{
 					Type: "postgres",
 					UID:  "tesla-postgres",
 				},
-				Targets: []tools.GrafanaPanelTarget{
+				Targets: []nlq.GrafanaPanelTarget{
 					{
 						RefID:  "A",
 						RawSQL: "SELECT date_trunc('day', started_at) AS time, SUM(distance_m) AS value FROM drives GROUP BY 1 LIMIT 100",
 						Format: "time_series",
 					},
 				},
-				GridPos: tools.GrafanaPanelGridPos{X: 0, Y: 0, W: 12, H: 8},
+				GridPos: nlq.GrafanaPanelGridPos{X: 0, Y: 0, W: 12, H: 8},
 			},
 			Rationale: "aggregates the drives table by day",
 		},

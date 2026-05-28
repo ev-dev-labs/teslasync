@@ -17,7 +17,7 @@
 //     {prompt, sql, rationale} input and return a normalised +
 //     validated ReadonlySQLDraft envelope. The tool is per-request
 //     scope-bound to the curated schema catalog the handler installed
-//     via tools.WithScopedSchemaCatalog; the LLM CANNOT propose a
+//     via nlq.WithScopedSchemaCatalog; the LLM CANNOT propose a
 //     table name that is not in the catalog. Defence-in-depth
 //     against prompt injection in operator-authored prompts.
 //

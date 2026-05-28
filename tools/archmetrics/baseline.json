@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:30:53Z",
+  "generated_at": "2026-05-28T06:35:13Z",
   "go_version": "go1.26.1",
-  "commit_sha": "6ce26856b46dda8b0c3e0e9efe27b78f21806827",
+  "commit_sha": "7a04b68f77b74d03becb571a9b103b582f8ade59",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 36,
+      "go_files": 33,
       "test_files": 29,
-      "loc": 28188,
+      "loc": 26302,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1935,9 +1935,6 @@
         "lifetime_stats_qa_test.go",
         "mqtt_sse_inspector_explanations.go",
         "mqtt_sse_inspector_explanations_test.go",
-        "nl_dashboard_composer.go",
-        "nl_grafana_panel.go",
-        "nl_sql_playground.go",
         "paint_preview.go",
         "paint_preview_test.go",
         "predictive_maintenance.go",
@@ -2063,6 +2060,23 @@
       ]
     },
     {
+      "path": "internal/ai/tools/nlq",
+      "go_files": 4,
+      "test_files": 0,
+      "loc": 1921,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/tools"
+      ],
+      "files": [
+        "dashboard.go",
+        "doc.go",
+        "grafana.go",
+        "sql.go"
+      ]
+    },
+    {
       "path": "internal/ai/tools/predict",
       "go_files": 4,
       "test_files": 3,
@@ -2166,7 +2180,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126519,
+      "loc": 126523,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2243,6 +2257,7 @@
         "internal/ai/tools/forecast",
         "internal/ai/tools/location",
         "internal/ai/tools/nl",
+        "internal/ai/tools/nlq",
         "internal/ai/tools/predict",
         "internal/ai/tools/safety",
         "internal/ai/tools/schedule",
@@ -5879,9 +5894,6 @@
       "help.go",
       "lifetime_stats_qa.go",
       "mqtt_sse_inspector_explanations.go",
-      "nl_dashboard_composer.go",
-      "nl_grafana_panel.go",
-      "nl_sql_playground.go",
       "paint_preview.go",
       "predictive_maintenance.go",
       "registry.go",
@@ -5924,6 +5936,12 @@
       "inbox.go",
       "signal_filter.go",
       "watch_face.go"
+    ],
+    "internal/ai/tools/nlq": [
+      "dashboard.go",
+      "doc.go",
+      "grafana.go",
+      "sql.go"
     ],
     "internal/ai/tools/predict": [
       "anomaly_baseline.go",
@@ -7165,7 +7183,7 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 36,
+      "flat_parent_go_files": 33,
       "flat_parent_test_files": 29,
       "planned_subpkgs": 13,
       "existing_subpkgs": [

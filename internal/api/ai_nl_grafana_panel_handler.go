@@ -8,7 +8,7 @@ package api
 // table-name catalog the handler loads three install-wide curated
 // catalogs (panel-type whitelist, datasource-type whitelist, and
 // table-name whitelist) up-front and installs the snapshots into
-// ctx via tools.WithGrafanaPanelScope:
+// ctx via nlq.WithGrafanaPanelScope:
 //
 //	URL  /api/v1/ai/power/grafana-panel/draft
 //	  ↓
@@ -19,7 +19,7 @@ package api
 //	load curated panel-builder catalog via the source port
 //	  ↓
 //	stash in-scope (panel-types, ds-types, tables) snapshots in
-//	  ctx via tools.WithGrafanaPanelScope(...)
+//	  ctx via nlq.WithGrafanaPanelScope(...)
 //	  ↓
 //	open SSE writer (internal/ai/stream.New)
 //	  ↓
@@ -35,7 +35,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the (panel-type, ds-type,
-// table-name) snapshots in ctx via tools.WithGrafanaPanelScope
+// table-name) snapshots in ctx via nlq.WithGrafanaPanelScope
 // BEFORE dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The tools
 // draft_grafana_panel + validate_grafana_panel REJECT any LLM-
@@ -87,6 +87,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -214,7 +215,7 @@ type AINLGrafanaPanelHandler struct {
 // toolReg:    process-wide tool registry. MUST contain
 //
 //	draft_grafana_panel AND validate_grafana_panel
-//	(registered by tools.RegisterNLGrafanaPanelTools
+//	(registered by nlq.RegisterNLGrafanaPanelTools
 //	in router.go).
 //
 // strat:      the nl-grafana-panel Strategy (one per process).
@@ -354,7 +355,7 @@ func (h *AINLGrafanaPanelHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, nlgrafanapanel.FeatureID)
-	ctx = tools.WithGrafanaPanelScope(ctx, panelTypeNames, dsTypeNames, tableNames)
+	ctx = nlq.WithGrafanaPanelScope(ctx, panelTypeNames, dsTypeNames, tableNames)
 
 	// 5) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nlgrafanapanel.FeatureID))
@@ -581,10 +582,10 @@ func (a *AINLGrafanaPanelCatalogSourceImpl) PanelBuilderCatalog(_ context.Contex
 var _ AINLGrafanaPanelCatalogSource = (*AINLGrafanaPanelCatalogSourceImpl)(nil)
 
 // ---------------------------------------------------------------------
-// Production wiring for the tools.GrafanaPanelValidator interface.
+// Production wiring for the nlq.GrafanaPanelValidator interface.
 // ---------------------------------------------------------------------
 
-// AINLGrafanaValidator is the production tools.GrafanaPanelValidator.
+// AINLGrafanaValidator is the production nlq.GrafanaPanelValidator.
 // The shape checks (panel-type catalog, datasource-type catalog,
 // per-target shape, postgres rawSql contract, prometheus expr
 // contract, gridPos bounds) are already enforced by the tool's
@@ -613,13 +614,13 @@ func NewAINLGrafanaValidator() *AINLGrafanaValidator {
 	return &AINLGrafanaValidator{}
 }
 
-// ValidateGrafanaPanel implements tools.GrafanaPanelValidator.
+// ValidateGrafanaPanel implements nlq.GrafanaPanelValidator.
 //
 // Future-extension hook: add semantic checks here as later slices
 // need them. Keeping the body intentionally minimal so the
 // slice's mandate ("propose-only, no semantic surprises") is
 // locally legible.
-func (v *AINLGrafanaValidator) ValidateGrafanaPanel(draft *tools.GrafanaPanelDraft) error {
+func (v *AINLGrafanaValidator) ValidateGrafanaPanel(draft *nlq.GrafanaPanelDraft) error {
 	if draft == nil {
 		return errors.New("api ai nl-grafana-panel: nil GrafanaPanelDraft")
 	}
@@ -627,4 +628,4 @@ func (v *AINLGrafanaValidator) ValidateGrafanaPanel(draft *tools.GrafanaPanelDra
 }
 
 // Compile-time assertion.
-var _ tools.GrafanaPanelValidator = (*AINLGrafanaValidator)(nil)
+var _ nlq.GrafanaPanelValidator = (*AINLGrafanaValidator)(nil)

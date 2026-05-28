@@ -28,7 +28,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 )
 
 // TestNLDashboardComposerAIOffManualComposerWorks is the
@@ -275,19 +275,19 @@ func TestBuildNLDashboardComposerUserMessage_EmptyCatalog(t *testing.T) {
 func TestAINLDashboardComposerValidator_AcceptsValidDraft(t *testing.T) {
 	t.Parallel()
 	v := NewAINLDashboardComposerValidator()
-	drafts := []*tools.DashboardLayoutDraft{
+	drafts := []*nlq.DashboardLayoutDraft{
 		{
 			Prompt: "give me an overview dashboard",
-			Dashboard: tools.DashboardEnvelope{
+			Dashboard: nlq.DashboardEnvelope{
 				Title: "Fleet overview",
-				Slots: []tools.DashboardSlot{
+				Slots: []nlq.DashboardSlot{
 					{
 						PanelName: "drives_per_day_timeseries",
-						GridPos:   tools.DashboardSlotGrid{X: 0, Y: 0, W: 24, H: 8},
+						GridPos:   nlq.DashboardSlotGrid{X: 0, Y: 0, W: 24, H: 8},
 					},
 					{
 						PanelName: "battery_soc_stat",
-						GridPos:   tools.DashboardSlotGrid{X: 0, Y: 8, W: 12, H: 6},
+						GridPos:   nlq.DashboardSlotGrid{X: 0, Y: 8, W: 12, H: 6},
 					},
 				},
 			},

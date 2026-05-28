@@ -58,7 +58,7 @@
 //     user clicks the canonical baseline Run button on the SQL
 //     playground, which is what invokes any actual query.
 
-package tools
+package nlq
 
 import (
 	"context"
@@ -68,6 +68,8 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -514,7 +516,7 @@ func (t *draftReadonlySQL) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftReadonlySQL) InputSchema() json.RawMessage {
-	return CachedSchema(readonlySQLInput{})
+	return tools.CachedSchema(readonlySQLInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -535,7 +537,7 @@ func (t *draftReadonlySQL) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *draftReadonlySQL) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[readonlySQLInput](raw)
+	return tools.ValidateStruct[readonlySQLInput](raw)
 }
 
 // Execute implements [Tool]. Builds the draft, runs the scope +
@@ -608,7 +610,7 @@ func (t *validateReadonlySQLTool) Description() string {
 
 // InputSchema implements [Tool].
 func (t *validateReadonlySQLTool) InputSchema() json.RawMessage {
-	return CachedSchema(readonlySQLInput{})
+	return tools.CachedSchema(readonlySQLInput{})
 }
 
 // OutputSchema implements [Tool].
@@ -623,7 +625,7 @@ func (t *validateReadonlySQLTool) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *validateReadonlySQLTool) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[readonlySQLInput](raw)
+	return tools.ValidateStruct[readonlySQLInput](raw)
 }
 
 // Execute implements [Tool]. Same scope + shape checks as
@@ -679,7 +681,7 @@ type NLSqlPlaygroundSources struct {
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterNLSqlPlaygroundTools(r *Registry, s NLSqlPlaygroundSources) {
+func RegisterNLSqlPlaygroundTools(r *tools.Registry, s NLSqlPlaygroundSources) {
 	r.Register(&draftReadonlySQL{validator: s.Validator})
 	r.Register(&validateReadonlySQLTool{validator: s.Validator})
 }
