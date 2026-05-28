@@ -28,7 +28,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	tripplantool "github.com/ev-dev-labs/teslasync/internal/ai/tools/tripplan"
 )
 
 // TestTripPlannerAIOffUsesHeuristicPlanner is the load-bearing
@@ -242,7 +242,7 @@ func TestAITripPlanComputer_PanicsOnNilPlanner(t *testing.T) {
 
 // TestAITripPlanComputer_SatisfiesInterface is a compile-time +
 // runtime assertion that the production adapter implements
-// tools.TripPlanComputer. The compile-time `var _` line in the
+// tripplantool.TripPlanComputer. The compile-time `var _` line in the
 // handler file gives the same guarantee, but this test fails with a
 // clear message if a future refactor accidentally narrows the
 // interface contract.
@@ -250,12 +250,12 @@ func TestAITripPlanComputer_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
 	// We only inspect the type — no need to construct a real
 	// *TripPlannerHandler; the interface satisfaction is static.
-	var iface tools.TripPlanComputer = (*AITripPlanComputer)(nil)
+	var iface tripplantool.TripPlanComputer = (*AITripPlanComputer)(nil)
 	if iface == nil {
 		// The (*AITripPlanComputer)(nil) cast above already proves
 		// interface satisfaction; the nil-check is defence in
 		// depth against a future generics quirk.
-		t.Logf("AITripPlanComputer satisfies tools.TripPlanComputer (nil cast)")
+		t.Logf("AITripPlanComputer satisfies tripplantool.TripPlanComputer (nil cast)")
 	}
 }
 

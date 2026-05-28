@@ -6,11 +6,11 @@
 // the tests stub each port with a deterministic fake so the tests
 // stay hermetic (no DB, no canonical-planner round-trip).
 //
-// Reuses the shared `fakeCharges` source from builtins_test.go so
+// Reuses the shared `toolstest.FakeCharges` source from builtins_test.go so
 // the existing charging-domain tools and these new tools share the
 // same test substrate.
 
-package tools
+package tripplan
 
 import (
 	"context"
@@ -20,6 +20,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/toolstest"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
@@ -34,16 +36,7 @@ func fixedNowFn() func() time.Time {
 	return func() time.Time { return t }
 }
 
-// ptrTime is a helper for *time.Time fields on
 // *chargingmodel.ChargingSession.
-func ptrTime(t time.Time) *time.Time { return &t }
-
-// Local ptr helpers — originally defined in route_efficiency_test.go,
-// duplicated here after the R6.28 carve of route_efficiency → route/
-// (parent test cannot import the subpkg without inducing a cycle).
-func ptrStr(s string) *string       { return &s }
-func ptrFloat64(v float64) *float64 { return &v }
-
 // ---------------------------------------------------------------------------
 // query_chargers_along_route
 // ---------------------------------------------------------------------------
@@ -71,39 +64,39 @@ func TestQueryChargersAlongRoute_FiltersByCorridor(t *testing.T) {
 		{
 			ID: 1, VehicleID: 42, StartedAt: sf,
 			EndedAt:  ended(sf, 30),
-			StartLat: ptrFloat64(35.92), StartLng: ptrFloat64(-120.30),
-			StartPlace: ptrStr("Halfway SC"),
-			PeakPowerW: ptrFloat64(150000), AvgPowerW: ptrFloat64(100000),
-			DeltaSocPct: ptrFloat64(40), TotalEnergyAddedWh: ptrFloat64(30000),
+			StartLat: toolstest.PtrFloat64(35.92), StartLng: toolstest.PtrFloat64(-120.30),
+			StartPlace: toolstest.PtrString("Halfway SC"),
+			PeakPowerW: toolstest.PtrFloat64(150000), AvgPowerW: toolstest.PtrFloat64(100000),
+			DeltaSocPct: toolstest.PtrFloat64(40), TotalEnergyAddedWh: toolstest.PtrFloat64(30000),
 		},
 		{
 			ID: 2, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 7),
 			EndedAt:  ended(sf.AddDate(0, 0, 7), 25),
-			StartLat: ptrFloat64(35.92), StartLng: ptrFloat64(-120.30),
-			StartPlace: ptrStr("Halfway SC"),
-			PeakPowerW: ptrFloat64(140000), AvgPowerW: ptrFloat64(95000),
-			DeltaSocPct: ptrFloat64(35), TotalEnergyAddedWh: ptrFloat64(28000),
+			StartLat: toolstest.PtrFloat64(35.92), StartLng: toolstest.PtrFloat64(-120.30),
+			StartPlace: toolstest.PtrString("Halfway SC"),
+			PeakPowerW: toolstest.PtrFloat64(140000), AvgPowerW: toolstest.PtrFloat64(95000),
+			DeltaSocPct: toolstest.PtrFloat64(35), TotalEnergyAddedWh: toolstest.PtrFloat64(28000),
 		},
 		// 1 visit to "Near LA SC" inside corridor
 		{
 			ID: 3, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 14),
 			EndedAt:  ended(sf.AddDate(0, 0, 14), 20),
-			StartLat: ptrFloat64(34.5), StartLng: ptrFloat64(-118.5),
-			StartPlace: ptrStr("Near LA SC"),
-			PeakPowerW: ptrFloat64(150000), AvgPowerW: ptrFloat64(110000),
-			DeltaSocPct: ptrFloat64(30), TotalEnergyAddedWh: ptrFloat64(22000),
+			StartLat: toolstest.PtrFloat64(34.5), StartLng: toolstest.PtrFloat64(-118.5),
+			StartPlace: toolstest.PtrString("Near LA SC"),
+			PeakPowerW: toolstest.PtrFloat64(150000), AvgPowerW: toolstest.PtrFloat64(110000),
+			DeltaSocPct: toolstest.PtrFloat64(30), TotalEnergyAddedWh: toolstest.PtrFloat64(22000),
 		},
 		// 1 visit to "Kansas SC" OUT of corridor — must be skipped.
 		{
 			ID: 4, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 21),
 			EndedAt:  ended(sf.AddDate(0, 0, 21), 60),
-			StartLat: ptrFloat64(40.0), StartLng: ptrFloat64(-100.0),
-			StartPlace: ptrStr("Kansas SC"),
-			PeakPowerW: ptrFloat64(150000), AvgPowerW: ptrFloat64(120000),
-			DeltaSocPct: ptrFloat64(50), TotalEnergyAddedWh: ptrFloat64(40000),
+			StartLat: toolstest.PtrFloat64(40.0), StartLng: toolstest.PtrFloat64(-100.0),
+			StartPlace: toolstest.PtrString("Kansas SC"),
+			PeakPowerW: toolstest.PtrFloat64(150000), AvgPowerW: toolstest.PtrFloat64(120000),
+			DeltaSocPct: toolstest.PtrFloat64(50), TotalEnergyAddedWh: toolstest.PtrFloat64(40000),
 		},
 	}
-	tool := &queryChargersAlongRoute{src: &fakeCharges{rows: rows}, now: fixedNowFn()}
+	tool := &queryChargersAlongRoute{src: &toolstest.FakeCharges{Rows: rows}, now: fixedNowFn()}
 
 	rawIn := json.RawMessage(`{
 		"vehicle_id": 42,
@@ -146,7 +139,7 @@ func TestQueryChargersAlongRoute_FiltersByCorridor(t *testing.T) {
 // lookback_days are zero/missing.
 func TestQueryChargersAlongRoute_DefaultsApplied(t *testing.T) {
 	t.Parallel()
-	tool := &queryChargersAlongRoute{src: &fakeCharges{rows: nil}, now: fixedNowFn()}
+	tool := &queryChargersAlongRoute{src: &toolstest.FakeCharges{Rows: nil}, now: fixedNowFn()}
 	rawIn := json.RawMessage(`{
 		"vehicle_id": 42,
 		"origin_lat": 37.78, "origin_lng": -122.42,
@@ -199,7 +192,7 @@ func TestQueryChargersAlongRoute_NoChargeSource(t *testing.T) {
 // wraps a ChargeSource error verbatim rather than swallowing it.
 func TestQueryChargersAlongRoute_PropagatesSourceError(t *testing.T) {
 	t.Parallel()
-	tool := &queryChargersAlongRoute{src: &failingCharges{err: errors.New("db down")}, now: fixedNowFn()}
+	tool := &queryChargersAlongRoute{src: &failingCharges{Err: errors.New("db down")}, now: fixedNowFn()}
 	rawIn := json.RawMessage(`{
 		"vehicle_id": 42,
 		"origin_lat": 0, "origin_lng": 0,
@@ -254,22 +247,22 @@ func TestQueryUserChargeDwells_AggregatesByPlace(t *testing.T) {
 		// 2 visits to "Home" — 30min and 50min dwell.
 		{
 			ID: 1, VehicleID: 42, StartedAt: sf, EndedAt: ended(sf, 30),
-			StartPlace:  ptrStr("Home"),
-			DeltaSocPct: ptrFloat64(20), TotalEnergyAddedWh: ptrFloat64(15000),
+			StartPlace:  toolstest.PtrString("Home"),
+			DeltaSocPct: toolstest.PtrFloat64(20), TotalEnergyAddedWh: toolstest.PtrFloat64(15000),
 		},
 		{
 			ID: 2, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 1), EndedAt: ended(sf.AddDate(0, 0, 1), 50),
-			StartPlace:  ptrStr("Home"),
-			DeltaSocPct: ptrFloat64(30), TotalEnergyAddedWh: ptrFloat64(22000),
+			StartPlace:  toolstest.PtrString("Home"),
+			DeltaSocPct: toolstest.PtrFloat64(30), TotalEnergyAddedWh: toolstest.PtrFloat64(22000),
 		},
 		// 1 visit to "Work" — 60min dwell.
 		{
 			ID: 3, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 2), EndedAt: ended(sf.AddDate(0, 0, 2), 60),
-			StartPlace:  ptrStr("Work"),
-			DeltaSocPct: ptrFloat64(15), TotalEnergyAddedWh: ptrFloat64(11000),
+			StartPlace:  toolstest.PtrString("Work"),
+			DeltaSocPct: toolstest.PtrFloat64(15), TotalEnergyAddedWh: toolstest.PtrFloat64(11000),
 		},
 	}
-	tool := &queryUserChargeDwells{src: &fakeCharges{rows: rows}, now: fixedNowFn()}
+	tool := &queryUserChargeDwells{src: &toolstest.FakeCharges{Rows: rows}, now: fixedNowFn()}
 	rawIn := json.RawMessage(`{"vehicle_id": 42, "lookback_days": 90}`)
 	in, err := tool.Validate(rawIn)
 	if err != nil {
@@ -307,9 +300,9 @@ func TestQueryUserChargeDwells_SkipsNilStartPlace(t *testing.T) {
 	sf := time.Date(2024, 11, 1, 8, 0, 0, 0, time.UTC)
 	rows := []*chargingmodel.ChargingSession{
 		{ID: 1, VehicleID: 42, StartedAt: sf, StartPlace: nil},
-		{ID: 2, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 1), StartPlace: ptrStr("Home")},
+		{ID: 2, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 1), StartPlace: toolstest.PtrString("Home")},
 	}
-	tool := &queryUserChargeDwells{src: &fakeCharges{rows: rows}, now: fixedNowFn()}
+	tool := &queryUserChargeDwells{src: &toolstest.FakeCharges{Rows: rows}, now: fixedNowFn()}
 	rawIn := json.RawMessage(`{"vehicle_id": 42}`)
 	in, _ := tool.Validate(rawIn)
 	out, err := tool.Execute(context.Background(), in)
@@ -343,18 +336,18 @@ func TestQueryUserChargeDwells_PropOnlyContract(t *testing.T) {
 // by the draft_trip_plan tests. It records the last request and
 // returns a canned envelope.
 type fakeTripPlanComputer struct {
-	last *TripPlanComputeRequest
-	out  *TripPlanComputeResult
-	err  error
+	Last *TripPlanComputeRequest
+	Out  *TripPlanComputeResult
+	Err  error
 }
 
 func (f *fakeTripPlanComputer) ComputeTripPlan(_ context.Context, req TripPlanComputeRequest) (*TripPlanComputeResult, error) {
 	cp := req
-	f.last = &cp
-	if f.err != nil {
-		return nil, f.err
+	f.Last = &cp
+	if f.Err != nil {
+		return nil, f.Err
 	}
-	return f.out, nil
+	return f.Out, nil
 }
 
 // TestDraftTripPlan_DelegatesAndStampsStatus proves draft_trip_plan
@@ -373,7 +366,7 @@ func TestDraftTripPlan_DelegatesAndStampsStatus(t *testing.T) {
 		ChargeStops: []TripPlanChargeStop{{Name: "Halfway SC", IsRecommended: true}},
 		SOCCurve:    []TripPlanSOCPoint{},
 	}
-	planner := &fakeTripPlanComputer{out: canned}
+	planner := &fakeTripPlanComputer{Out: canned}
 	tool := &draftTripPlan{planner: planner}
 
 	rawIn := json.RawMessage(`{
@@ -403,11 +396,11 @@ func TestDraftTripPlan_DelegatesAndStampsStatus(t *testing.T) {
 	if env.Plan.Route.TotalDistanceM != 700_000 {
 		t.Errorf("Plan.Route.TotalDistanceM = %v, want 700000", env.Plan.Route.TotalDistanceM)
 	}
-	if planner.last == nil {
-		t.Fatal("planner.last is nil; computePlan never called")
+	if planner.Last == nil {
+		t.Fatal("planner.Last is nil; computePlan never called")
 	}
-	if planner.last.VehicleID != 42 {
-		t.Errorf("planner.last.VehicleID = %d, want 42", planner.last.VehicleID)
+	if planner.Last.VehicleID != 42 {
+		t.Errorf("planner.Last.VehicleID = %d, want 42", planner.Last.VehicleID)
 	}
 }
 
@@ -417,7 +410,7 @@ func TestDraftTripPlan_DelegatesAndStampsStatus(t *testing.T) {
 func TestDraftTripPlan_DefaultsApplied(t *testing.T) {
 	t.Parallel()
 	canned := &TripPlanComputeResult{Route: TripPlanRoute{Feasible: true}}
-	planner := &fakeTripPlanComputer{out: canned}
+	planner := &fakeTripPlanComputer{Out: canned}
 	tool := &draftTripPlan{planner: planner}
 	// Provide CurrentSOC; omit the optional knobs.
 	rawIn := json.RawMessage(`{
@@ -431,14 +424,14 @@ func TestDraftTripPlan_DefaultsApplied(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute err = %v", err)
 	}
-	if planner.last.ChargeLimitSOC != 90 {
-		t.Errorf("default ChargeLimitSOC = %v, want 90", planner.last.ChargeLimitSOC)
+	if planner.Last.ChargeLimitSOC != 90 {
+		t.Errorf("default ChargeLimitSOC = %v, want 90", planner.Last.ChargeLimitSOC)
 	}
-	if planner.last.MinArrivalSOC != 20 {
-		t.Errorf("default MinArrivalSOC = %v, want 20", planner.last.MinArrivalSOC)
+	if planner.Last.MinArrivalSOC != 20 {
+		t.Errorf("default MinArrivalSOC = %v, want 20", planner.Last.MinArrivalSOC)
 	}
-	if planner.last.SpeedFactor != 1.0 {
-		t.Errorf("default SpeedFactor = %v, want 1.0", planner.last.SpeedFactor)
+	if planner.Last.SpeedFactor != 1.0 {
+		t.Errorf("default SpeedFactor = %v, want 1.0", planner.Last.SpeedFactor)
 	}
 }
 
@@ -448,7 +441,7 @@ func TestDraftTripPlan_DefaultsApplied(t *testing.T) {
 func TestDraftTripPlan_StampsInfeasibleStatus(t *testing.T) {
 	t.Parallel()
 	canned := &TripPlanComputeResult{Route: TripPlanRoute{Feasible: false}}
-	planner := &fakeTripPlanComputer{out: canned}
+	planner := &fakeTripPlanComputer{Out: canned}
 	tool := &draftTripPlan{planner: planner}
 	rawIn := json.RawMessage(`{
 		"vehicle_id": 42,
@@ -470,7 +463,7 @@ func TestDraftTripPlan_StampsInfeasibleStatus(t *testing.T) {
 // TripPlanComputer error verbatim rather than swallowing it.
 func TestDraftTripPlan_PropagatesComputeError(t *testing.T) {
 	t.Parallel()
-	planner := &fakeTripPlanComputer{err: errors.New("planner down")}
+	planner := &fakeTripPlanComputer{Err: errors.New("planner down")}
 	tool := &draftTripPlan{planner: planner}
 	rawIn := json.RawMessage(`{
 		"vehicle_id": 42,
@@ -530,9 +523,9 @@ func TestDraftTripPlan_PropOnlyContract(t *testing.T) {
 // public registration entry point installs all three tools by name.
 func TestRegisterTripPlannerLLMAgentTools_RegistersAllThree(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	RegisterTripPlannerLLMAgentTools(r, TripPlannerLLMAgentSources{
-		Chargers: &fakeCharges{},
+		Chargers: &toolstest.FakeCharges{},
 		Planner:  &fakeTripPlanComputer{},
 	})
 	for _, want := range []string{
@@ -554,13 +547,13 @@ func TestRegisterTripPlannerLLMAgentTools_RegistersAllThree(t *testing.T) {
 // error-propagation tests can prove the tool wraps cleanly without
 // swallowing the cause.
 type failingCharges struct {
-	err error
+	Err error
 }
 
 func (f *failingCharges) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*chargingmodel.ChargingSession, error) {
-	return nil, f.err
+	return nil, f.Err
 }
 
 func (f *failingCharges) GetByID(_ context.Context, _ int64) (*chargingmodel.ChargingSession, error) {
-	return nil, f.err
+	return nil, f.Err
 }

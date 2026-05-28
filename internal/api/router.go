@@ -149,6 +149,7 @@ import (
 	speedtool "github.com/ev-dev-labs/teslasync/internal/ai/tools/speed"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
+	tripplantool "github.com/ev-dev-labs/teslasync/internal/ai/tools/tripplan"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/yir"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
@@ -1038,7 +1039,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// therefore never triggered; the actual trip-plan persistence
 	// flows through the existing canonical Plan button in the
 	// TripPlannerPage UI (unchanged baseline).
-	tools.RegisterTripPlannerLLMAgentTools(aiToolRegistry, tools.TripPlannerLLMAgentSources{
+	tripplantool.RegisterTripPlannerLLMAgentTools(aiToolRegistry, tripplantool.TripPlannerLLMAgentSources{
 		Chargers: database.NewChargingRepo(db),
 		Planner:  NewAITripPlanComputer(tripPlannerHandler),
 	})

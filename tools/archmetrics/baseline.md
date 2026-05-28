@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T08:02:39Z, Go go1.26.1, commit 5e19874d078edbce721a1f456aace9cdcc6c59e2_
+_Generated 2026-05-28T08:07:37Z, Go go1.26.1, commit 4de16915433a8bd39c1e2460355fbfebab191ec8_
 
 ## Summary
 
-- Packages: 260
+- Packages: 261
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 373887
+- Total non-blank LOC under cmd/+internal/+tools/: 373960
 
 ## cmd/* main.go LOC
 
@@ -139,7 +139,7 @@ _Generated 2026-05-28T08:02:39Z, Go go1.26.1, commit 5e19874d078edbce721a1f456aa
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 12 | 8 | 5516 | yes | platform |
+| internal/ai/tools | 11 | 7 | 4231 | yes | platform |
 | internal/ai/tools/alert | 3 | 2 | 1754 | yes |  |
 | internal/ai/tools/anomaly | 2 | 1 | 571 | yes | domain |
 | internal/ai/tools/automation | 2 | 1 | 1061 | yes |  |
@@ -166,10 +166,11 @@ _Generated 2026-05-28T08:02:39Z, Go go1.26.1, commit 5e19874d078edbce721a1f456aa
 | internal/ai/tools/summary | 5 | 4 | 4219 | yes | domain |
 | internal/ai/tools/toolstest | 2 | 0 | 176 | yes | domain |
 | internal/ai/tools/trip | 4 | 4 | 2511 | yes | domain |
+| internal/ai/tools/tripplan | 2 | 1 | 1356 | yes |  |
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126551 | yes | handler |
+| internal/api | 271 | 163 | 126553 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -313,7 +314,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
-| `internal/ai/tools` | R6 | 109 | 12 / 8 | 13 | 8 | 5 |
+| `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |

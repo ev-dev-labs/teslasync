@@ -56,6 +56,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	tripplantool "github.com/ev-dev-labs/teslasync/internal/ai/tools/tripplan"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -115,7 +116,7 @@ type AITripPlannerLLMHandler struct {
 //
 //	query_chargers_along_route, query_user_charge_dwells AND
 //	draft_trip_plan (all three registered by
-//	tools.RegisterTripPlannerLLMAgentTools in router.go).
+//	tripplantool.RegisterTripPlannerLLMAgentTools in router.go).
 //
 // strat:      the trip-planner-llm-agent Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
@@ -293,7 +294,7 @@ var _ http.Handler = (*AITripPlannerLLMHandler)(nil)
 // the auto-trip-naming slice's AITripNameValidator pattern.
 // ---------------------------------------------------------------------
 
-// AITripPlanComputer is the production tools.TripPlanComputer. It
+// AITripPlanComputer is the production tripplantool.TripPlanComputer. It
 // delegates to the canonical *TripPlannerHandler.computePlan path so
 // a plan proposed by the AI tool is byte-equivalent to a plan
 // returned by POST /api/v1/trip-planner/plan.
@@ -313,17 +314,17 @@ func NewAITripPlanComputer(planner *TripPlannerHandler) *AITripPlanComputer {
 	return &AITripPlanComputer{planner: planner}
 }
 
-// ComputeTripPlan implements tools.TripPlanComputer. Translates the
-// typed [tools.TripPlanComputeRequest] into a canonical
+// ComputeTripPlan implements tripplantool.TripPlanComputer. Translates the
+// typed [tripplantool.TripPlanComputeRequest] into a canonical
 // *tripPlanRequest, delegates to the same in-process computePlan
 // method the deterministic POST /api/v1/trip-planner/plan handler
 // uses, and translates the *tripPlanResponse back into a typed
-// [tools.TripPlanComputeResult]. SI-canonical end-to-end:
+// [tripplantool.TripPlanComputeResult]. SI-canonical end-to-end:
 // total_distance_m, total_duration_s, total_energy_wh, arrival_soc.
 //
 // The compute call is bounded by ctx; a context-cancel from the SPA
 // closing the SSE connection terminates the computation cleanly.
-func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tools.TripPlanComputeRequest) (*tools.TripPlanComputeResult, error) {
+func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tripplantool.TripPlanComputeRequest) (*tripplantool.TripPlanComputeResult, error) {
 	baselineReq := &tripPlanRequest{
 		VehicleID: req.VehicleID,
 		Origin: tripPlanLocation{
@@ -350,8 +351,8 @@ func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tools.Trip
 	if resp == nil {
 		return nil, errors.New("ai trip-planner-llm-agent: computePlan returned nil response")
 	}
-	out := &tools.TripPlanComputeResult{
-		Route: tools.TripPlanRoute{
+	out := &tripplantool.TripPlanComputeResult{
+		Route: tripplantool.TripPlanRoute{
 			TotalDistanceM:    resp.Route.TotalDistanceM,
 			TotalDurationS:    resp.Route.TotalDurationS,
 			DrivingDurationS:  resp.Route.DrivingDurationS,
@@ -362,16 +363,16 @@ func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tools.Trip
 			Feasible:          resp.Route.Feasible,
 			IsEstimate:        resp.Route.IsEstimate,
 		},
-		Legs:        make([]tools.TripPlanLeg, 0, len(resp.Legs)),
-		ChargeStops: make([]tools.TripPlanChargeStop, 0, len(resp.ChargeStops)),
-		SOCCurve:    make([]tools.TripPlanSOCPoint, 0, len(resp.SOCCurve)),
+		Legs:        make([]tripplantool.TripPlanLeg, 0, len(resp.Legs)),
+		ChargeStops: make([]tripplantool.TripPlanChargeStop, 0, len(resp.ChargeStops)),
+		SOCCurve:    make([]tripplantool.TripPlanSOCPoint, 0, len(resp.SOCCurve)),
 	}
 	for _, leg := range resp.Legs {
-		out.Legs = append(out.Legs, tools.TripPlanLeg{
-			From: tools.TripPlanLocation{
+		out.Legs = append(out.Legs, tripplantool.TripPlanLeg{
+			From: tripplantool.TripPlanLocation{
 				Lat: leg.From.Lat, Lng: leg.From.Lng, Name: leg.From.Name,
 			},
-			To: tools.TripPlanLocation{
+			To: tripplantool.TripPlanLocation{
 				Lat: leg.To.Lat, Lng: leg.To.Lng, Name: leg.To.Name,
 			},
 			DistanceM:  leg.DistanceM,
@@ -382,9 +383,9 @@ func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tools.Trip
 		})
 	}
 	for _, cs := range resp.ChargeStops {
-		out.ChargeStops = append(out.ChargeStops, tools.TripPlanChargeStop{
+		out.ChargeStops = append(out.ChargeStops, tripplantool.TripPlanChargeStop{
 			Name: cs.Name,
-			Location: tools.TripPlanLocation{
+			Location: tripplantool.TripPlanLocation{
 				Lat: cs.Location.Lat, Lng: cs.Location.Lng, Name: cs.Location.Name,
 			},
 			ChargeFromSOC:   cs.ChargeFromSOC,
@@ -396,7 +397,7 @@ func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tools.Trip
 		})
 	}
 	for _, p := range resp.SOCCurve {
-		out.SOCCurve = append(out.SOCCurve, tools.TripPlanSOCPoint{
+		out.SOCCurve = append(out.SOCCurve, tripplantool.TripPlanSOCPoint{
 			DistanceM: p.DistanceM,
 			SOC:       p.SOC,
 		})
@@ -405,4 +406,4 @@ func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tools.Trip
 }
 
 // Compile-time assertion: AITripPlanComputer satisfies the tool port.
-var _ tools.TripPlanComputer = (*AITripPlanComputer)(nil)
+var _ tripplantool.TripPlanComputer = (*AITripPlanComputer)(nil)

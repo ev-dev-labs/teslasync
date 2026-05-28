@@ -28,9 +28,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "max_files": 12,
-      "owner": "Phase R6 (in progress)",
-      "notes": "Was 109 at R0; 58 at R6 start; carved progressively R6.4-R6.30. 14 after R6.28 (route/); 13 after R6.29 (speed/); 12 after R6.30 (automation/ — aliased automationtool per Lesson 11 collision with internal/automation; consumed already-promoted tools.Lower from R6.26). Plain-function tool registry; carved by domain. R6.4 exported parent helper cachedSchema → CachedSchema (40+ call sites). Detailed cluster notes: see commit messages R6.4-R6.30."
+      "max_files": 11,
+      "owner": "Phase R6 (COMPLETE — all carveable tools migrated)",
+      "notes": "Was 109 at R0; 58 at R6 start; carved progressively R6.4-R6.31. 13 after R6.29 (speed/); 12 after R6.30 (automation/); 11 after R6.31 (tripplan/ — last carveable tool). Parent now holds 9 mandatory infra files (builtins.go, doc.go, help.go, redact_regex.go, registry.go, schema.go, search.go, tool.go, validate.go) + 2 R6.25-26 promoted shared utility files (ptrhelpers.go, strhelpers.go). All 28 carved subpackages: alert, anomaly, automation, charge, coaching, curve, diagnosis, diagnostic, digest, export, feedback, forecast, lifetime, location, maintenance, nl, paint, predict, route, safety, schedule, speed, summary, trip, tripplan, voice, yir + toolstest/. Plain-function tool registry; carved by domain. R6.4 exported parent helper cachedSchema → CachedSchema (40+ call sites). Detailed cluster notes: see commit messages R6.4-R6.31."
     },
     {
       "path": "internal/jobs",

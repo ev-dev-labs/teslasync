@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T08:02:38Z",
+  "generated_at": "2026-05-28T08:07:36Z",
   "go_version": "go1.26.1",
-  "commit_sha": "5e19874d078edbce721a1f456aace9cdcc6c59e2",
+  "commit_sha": "4de16915433a8bd39c1e2460355fbfebab191ec8",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 12,
-      "test_files": 8,
-      "loc": 5516,
+      "go_files": 11,
+      "test_files": 7,
+      "loc": 4231,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1915,8 +1915,6 @@
         "strhelpers.go",
         "test_helpers_test.go",
         "tool.go",
-        "trip_planner_llm_agent.go",
-        "trip_planner_llm_agent_test.go",
         "validate.go"
       ]
     },
@@ -2422,6 +2420,23 @@
       ]
     },
     {
+      "path": "internal/ai/tools/tripplan",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 1356,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/tools",
+        "internal/ai/tools/toolstest",
+        "internal/models/charging"
+      ],
+      "files": [
+        "doc.go",
+        "tripplan.go",
+        "tripplan_test.go"
+      ]
+    },
+    {
       "path": "internal/ai/tools/voice",
       "go_files": 2,
       "test_files": 0,
@@ -2477,7 +2492,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126551,
+      "loc": 126553,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2574,6 +2589,7 @@
         "internal/ai/tools/speed",
         "internal/ai/tools/summary",
         "internal/ai/tools/trip",
+        "internal/ai/tools/tripplan",
         "internal/ai/tools/voice",
         "internal/ai/tools/yir",
         "internal/alertmsg",
@@ -6201,7 +6217,6 @@
       "search.go",
       "strhelpers.go",
       "tool.go",
-      "trip_planner_llm_agent.go",
       "validate.go"
     ],
     "internal/ai/tools/alert": [
@@ -6329,6 +6344,10 @@
       "doc.go",
       "drive_search.go",
       "share_card.go"
+    ],
+    "internal/ai/tools/tripplan": [
+      "doc.go",
+      "tripplan.go"
     ],
     "internal/ai/tools/voice": [
       "doc.go",
@@ -7555,8 +7574,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 12,
-      "flat_parent_test_files": 8,
+      "flat_parent_go_files": 11,
+      "flat_parent_test_files": 7,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

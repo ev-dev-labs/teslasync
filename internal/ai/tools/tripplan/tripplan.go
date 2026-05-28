@@ -8,7 +8,7 @@
 //     destination so the LLM has historical evidence of which
 //     chargers the user has actually used near the planned route.
 //     READ-only against the existing charging_sessions table via the
-//     shared [ChargeSource] interface — no new SQL is written by
+//     shared [tools.ChargeSource] interface — no new SQL is written by
 //     this tool.
 //
 //   - `query_user_charge_dwells` — aggregates the same charging
@@ -41,7 +41,7 @@
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → query_chargers_along_route and
-//     query_user_charge_dwells delegate to the shared ChargeSource
+//     query_user_charge_dwells delegate to the shared tools.ChargeSource
 //     read interface satisfied at boot by *database.ChargingRepo
 //     (no new SQL). draft_trip_plan delegates to a narrow
 //     TripPlanComputer port satisfied at boot by an adapter wrapping
@@ -64,7 +64,7 @@
 //     provider sees `<addr id='1'/>` and the user sees the real
 //     "Mountain View Supercharger" string.
 
-package tools
+package tripplan
 
 import (
 	"context"
@@ -74,6 +74,8 @@ import (
 	"math"
 	"sort"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -106,7 +108,7 @@ const tripPlannerLLMAgentDefaultCorridorKm = 25.0
 const tripPlannerLLMAgentMaxCorridorKm = 500.0
 
 // tripPlannerLLMAgentFetchLimit caps the per-call charging-session
-// fetch. Generous for a 180-day window; the underlying ChargeSource
+// fetch. Generous for a 180-day window; the underlying tools.ChargeSource
 // paginates so we never load the whole table.
 const tripPlannerLLMAgentFetchLimit = 1000
 
@@ -227,7 +229,7 @@ type chargerCorridorEnvelope struct {
 // sessions whose corridor offset is below corridor_km → group by
 // start_place → return a sorted envelope.
 type queryChargersAlongRoute struct {
-	src ChargeSource
+	src tools.ChargeSource
 	// now is the reference timestamp for the lookback window.
 	// Injectable so tests can pin a deterministic instant. Defaults
 	// to time.Now in RegisterTripPlannerLLMAgentTools.
@@ -249,7 +251,7 @@ func (t *queryChargersAlongRoute) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryChargersAlongRoute) InputSchema() json.RawMessage {
-	return CachedSchema(chargersAlongRouteInput{})
+	return tools.CachedSchema(chargersAlongRouteInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -263,7 +265,7 @@ func (t *queryChargersAlongRoute) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *queryChargersAlongRoute) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[chargersAlongRouteInput](raw)
+	return tools.ValidateStruct[chargersAlongRouteInput](raw)
 }
 
 // Execute implements [Tool]. One repo round-trip then in-memory
@@ -421,7 +423,7 @@ type chargerDwellEnvelope struct {
 // vehicle's charging history → group by start_place → return a
 // sorted envelope of per-place dwell aggregates.
 type queryUserChargeDwells struct {
-	src ChargeSource
+	src tools.ChargeSource
 	now func() time.Time
 }
 
@@ -439,7 +441,7 @@ func (t *queryUserChargeDwells) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryUserChargeDwells) InputSchema() json.RawMessage {
-	return CachedSchema(userChargeDwellsInput{})
+	return tools.CachedSchema(userChargeDwellsInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -453,7 +455,7 @@ func (t *queryUserChargeDwells) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *queryUserChargeDwells) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[userChargeDwellsInput](raw)
+	return tools.ValidateStruct[userChargeDwellsInput](raw)
 }
 
 // Execute implements [Tool]. One repo round-trip then in-memory
@@ -722,7 +724,7 @@ func (t *draftTripPlan) Description() string {
 
 // InputSchema implements [Tool].
 func (t *draftTripPlan) InputSchema() json.RawMessage {
-	return CachedSchema(draftTripPlanInput{})
+	return tools.CachedSchema(draftTripPlanInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -736,7 +738,7 @@ func (t *draftTripPlan) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
 func (t *draftTripPlan) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[draftTripPlanInput](raw)
+	return tools.ValidateStruct[draftTripPlanInput](raw)
 }
 
 // Execute implements [Tool]. Delegates to the TripPlanComputer port.
@@ -805,7 +807,7 @@ func (t *draftTripPlan) Execute(ctx context.Context, in any) (any, error) {
 // adapters (*database.ChargingRepo, *api.AITripPlanComputer); tests
 // substitute deterministic fakes.
 type TripPlannerLLMAgentSources struct {
-	Chargers ChargeSource
+	Chargers tools.ChargeSource
 	Planner  TripPlanComputer
 }
 
@@ -817,7 +819,7 @@ type TripPlannerLLMAgentSources struct {
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.
-func RegisterTripPlannerLLMAgentTools(r *Registry, s TripPlannerLLMAgentSources) {
+func RegisterTripPlannerLLMAgentTools(r *tools.Registry, s TripPlannerLLMAgentSources) {
 	now := time.Now
 	r.Register(&queryChargersAlongRoute{src: s.Chargers, now: now})
 	r.Register(&queryUserChargeDwells{src: s.Chargers, now: now})
