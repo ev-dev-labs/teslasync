@@ -34,3 +34,6 @@
 
 # refactor(R5.3): extract internal/models/backup subpackage
 0a6f81ae96ced2e3204531bcc02872eedfc05383
+
+# refactor(R5.4): extract internal/models/chatbot subpackage
+2347f1b1f60c2e76b144e784568e95eb1822bfbd
