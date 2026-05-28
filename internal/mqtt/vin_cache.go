@@ -18,7 +18,7 @@ import (
 
 // VINCacheLoader is the data-source side of NewVINCache. It returns every
 // (vin, vehicleID) pair the deployment knows about. Production wiring
-// passes a closure over *database.VehicleRepo.GetAll; tests pass a fake.
+// passes a closure over *vehicledb.VehicleRepo.GetAll; tests pass a fake.
 //
 // The cache calls Loader exactly once on construction (preload) and once
 // per RefreshInterval thereafter; the data path (Resolve) never invokes

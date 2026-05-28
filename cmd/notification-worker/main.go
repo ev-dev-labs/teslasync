@@ -29,6 +29,7 @@ import (
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -294,7 +295,7 @@ func main() {
 	// the rule count is small.
 	alertRuleRepo := dbalert.NewAlertRuleRepo(db)
 	notifRepoForCM := dbnotif.NewNotificationRepo(db)
-	vehicleRepo := database.NewVehicleRepo(db)
+	vehicleRepo := vehicledb.NewVehicleRepo(db)
 	computedEval := computed.New(db)
 	const computedMetricInterval = 5 * time.Minute
 	go func() {
@@ -398,7 +399,7 @@ func setupLogger(level string) {
 func runComputedMetricTick(
 	ctx context.Context,
 	alertRuleRepo *dbalert.AlertRuleRepo,
-	vehicleRepo *database.VehicleRepo,
+	vehicleRepo *vehicledb.VehicleRepo,
 	notifRepo *dbnotif.NotificationRepo,
 	evaluator *computed.Evaluator,
 	mqttClient pahomqtt.Client,

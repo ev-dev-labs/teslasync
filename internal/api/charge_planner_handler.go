@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -394,7 +395,7 @@ func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Look up vehicle VIN
-	vehicleRepo := database.NewVehicleRepo(h.db)
+	vehicleRepo := vehicledb.NewVehicleRepo(h.db)
 	vehicle, err := vehicleRepo.GetByID(ctx, plan.VehicleID)
 	if err != nil || vehicle == nil {
 		writeError(w, http.StatusNotFound, "vehicle not found")

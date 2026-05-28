@@ -12,6 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
@@ -23,7 +24,7 @@ type TelemetryAlertEvaluator struct {
 	alertRuleRepo *dbalert.AlertRuleRepo
 	notifRepo     *dbnotif.NotificationRepo
 	settingsRepo  *database.SettingsRepo
-	vehicleRepo   *database.VehicleRepo
+	vehicleRepo   *vehicledb.VehicleRepo
 	eventBus      *events.Bus
 	eventHub      *EventHub
 	ruleEngine    *RuleEngine
@@ -42,7 +43,7 @@ func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *Even
 		alertRuleRepo: dbalert.NewAlertRuleRepo(db),
 		notifRepo:     dbnotif.NewNotificationRepo(db),
 		settingsRepo:  database.NewSettingsRepo(db),
-		vehicleRepo:   database.NewVehicleRepo(db),
+		vehicleRepo:   vehicledb.NewVehicleRepo(db),
 		eventBus:      eventBus,
 		eventHub:      hub,
 		ruleEngine:    engine,

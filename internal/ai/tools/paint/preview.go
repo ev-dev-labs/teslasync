@@ -24,7 +24,7 @@
 //   - "The LLM never writes raw SQL and never bypasses existing
 //     handlers." → the tool delegates the vehicle read to the
 //     narrow tools.VehicleSource interface (production:
-//     *database.VehicleRepo, the same read path the GET
+//     *vehicledb.VehicleRepo, the same read path the GET
 //     /api/v1/vehicles handlers already use). No new SQL.
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
 //     tool exists in this slice; the evidence is a pure read. The
@@ -295,7 +295,7 @@ func (t *draftPaintPreviewPrompt) Execute(ctx context.Context, in any) (any, err
 // [TripPostcardShareCardImageGenerationSources].
 //
 // Production wiring (router.go) instantiates the production adapter
-// (*database.VehicleRepo); tests substitute deterministic fakes.
+// (*vehicledb.VehicleRepo); tests substitute deterministic fakes.
 type VehiclePaintPreviewSources struct {
 	Vehicles tools.VehicleSource
 }

@@ -19,7 +19,7 @@ import (
 
 // fakeVehicleListFetcher is the in-memory vehicleListFetcher used by
 // analytics handler tests so the migrated Fleet endpoint can be exercised
-// end-to-end without a real *database.VehicleRepo / pgx pool.
+// end-to-end without a real *vehicledb.VehicleRepo / pgx pool.
 type fakeVehicleListFetcher struct {
 	vehicles []*vehiclemodel.Vehicle
 	err      error

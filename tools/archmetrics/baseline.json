@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T16:29:23Z",
+  "generated_at": "2026-05-28T16:33:34Z",
   "go_version": "go1.26.1",
-  "commit_sha": "cf7e09bed5f5ec547a065228cf1157b8deb523d0",
+  "commit_sha": "7ecaffeaf042e31205f90799225a820395315c3f",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -39,7 +39,7 @@
       "path": "cmd/automation-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 358,
+      "loc": 359,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -54,6 +54,7 @@
         "internal/database/energy",
         "internal/database/notification",
         "internal/database/system",
+        "internal/database/vehicle",
         "internal/mqtt",
         "internal/notification",
         "internal/resilience",
@@ -155,7 +156,7 @@
       "path": "cmd/notification-worker",
       "go_files": 2,
       "test_files": 0,
-      "loc": 526,
+      "loc": 527,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
@@ -166,6 +167,7 @@
         "internal/database/alert",
         "internal/database/notification",
         "internal/database/system",
+        "internal/database/vehicle",
         "internal/models/alert",
         "internal/models/notification",
         "internal/models/vehicle",
@@ -245,12 +247,13 @@
       "path": "cmd/resubscribe",
       "go_files": 2,
       "test_files": 1,
-      "loc": 671,
+      "loc": 672,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
         "internal/config",
         "internal/database",
+        "internal/database/vehicle",
         "internal/models/vehicle",
         "internal/resilience",
         "internal/tesla",
@@ -334,12 +337,13 @@
       "path": "cmd/unit-drift-validator",
       "go_files": 2,
       "test_files": 1,
-      "loc": 296,
+      "loc": 297,
       "has_doc_go": true,
       "layer": "cmd-internal",
       "imports": [
         "internal/config",
         "internal/database",
+        "internal/database/vehicle",
         "internal/worker"
       ],
       "files": [
@@ -2510,7 +2514,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126645,
+      "loc": 126659,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2653,6 +2657,7 @@
         "internal/database/tesla",
         "internal/database/trip",
         "internal/database/user",
+        "internal/database/vehicle",
         "internal/database/worker",
         "internal/dataquality",
         "internal/enums",
@@ -3179,7 +3184,7 @@
       "path": "internal/app",
       "go_files": 6,
       "test_files": 1,
-      "loc": 1844,
+      "loc": 1845,
       "has_doc_go": true,
       "layer": "app",
       "imports": [
@@ -3198,6 +3203,7 @@
         "internal/database/system",
         "internal/database/telemetry",
         "internal/database/trip",
+        "internal/database/vehicle",
         "internal/dataquality",
         "internal/events",
         "internal/flags",
@@ -3710,9 +3716,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 32,
-      "test_files": 14,
-      "loc": 8214,
+      "go_files": 29,
+      "test_files": 13,
+      "loc": 7402,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3722,7 +3728,6 @@
         "internal/models/alert",
         "internal/models/system",
         "internal/models/telemetry",
-        "internal/models/vehicle",
         "internal/tracing"
       ],
       "files": [
@@ -3763,13 +3768,9 @@
         "signal_log_repo.go",
         "signals_catalog_repo.go",
         "signals_catalog_repo_test.go",
-        "vehicle_photo_repo.go",
-        "vehicle_repo.go",
         "vehicle_settings_repo.go",
         "vehicle_settings_repo_test.go",
         "vehicle_settings_resolver.go",
-        "vehicle_states_repo.go",
-        "vehicle_states_repo_test.go",
         "write_buffer.go",
         "write_buffer_test.go"
       ]
@@ -4198,6 +4199,27 @@
       ]
     },
     {
+      "path": "internal/database/vehicle",
+      "go_files": 5,
+      "test_files": 1,
+      "loc": 853,
+      "has_doc_go": true,
+      "layer": "adapter",
+      "imports": [
+        "internal/database",
+        "internal/models/vehicle",
+        "internal/tracing"
+      ],
+      "files": [
+        "doc.go",
+        "name_lookup.go",
+        "photo_repo.go",
+        "repo.go",
+        "states_repo.go",
+        "states_repo_test.go"
+      ]
+    },
+    {
       "path": "internal/database/worker",
       "go_files": 3,
       "test_files": 0,
@@ -4408,7 +4430,7 @@
       "path": "internal/export",
       "go_files": 9,
       "test_files": 3,
-      "loc": 3064,
+      "loc": 3065,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4417,6 +4439,7 @@
         "internal/database/drive",
         "internal/database/export",
         "internal/database/trip",
+        "internal/database/vehicle",
         "internal/models/charging",
         "internal/models/drive",
         "internal/models/export",
@@ -5556,7 +5579,7 @@
       "path": "internal/service",
       "go_files": 4,
       "test_files": 1,
-      "loc": 1382,
+      "loc": 1383,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -5565,6 +5588,7 @@
         "internal/database/drive",
         "internal/database/energy",
         "internal/database/trip",
+        "internal/database/vehicle",
         "internal/enums",
         "internal/events",
         "internal/models/charging",
@@ -6000,7 +6024,7 @@
       "path": "internal/worker",
       "go_files": 8,
       "test_files": 3,
-      "loc": 2600,
+      "loc": 2602,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -6012,6 +6036,7 @@
         "internal/database/charging",
         "internal/database/drive",
         "internal/database/notification",
+        "internal/database/vehicle",
         "internal/database/worker",
         "internal/enums",
         "internal/events",
@@ -6118,22 +6143,22 @@
   "cmd_loc": {
     "cmd/ai-eval": 151,
     "cmd/audit-signal-types": 498,
-    "cmd/automation-worker": 354,
+    "cmd/automation-worker": 355,
     "cmd/backup-verify": 96,
     "cmd/chaos-runner": 144,
     "cmd/export-worker": 252,
     "cmd/fleet-config-validator": 327,
     "cmd/metric-coverage-audit": 126,
-    "cmd/notification-worker": 522,
+    "cmd/notification-worker": 523,
     "cmd/ocpp-server": 91,
     "cmd/protogen-tesla": 73,
     "cmd/pub-test-signal": 655,
-    "cmd/resubscribe": 446,
+    "cmd/resubscribe": 447,
     "cmd/slo-coverage-audit": 199,
     "cmd/slogen": 356,
     "cmd/teslasync": 71,
     "cmd/trace-coverage-audit": 381,
-    "cmd/unit-drift-validator": 154
+    "cmd/unit-drift-validator": 155
   },
   "forbidden_edges": [
     "internal/handler/middleware -\u003e internal/database (rule: internal/handler/* -\u003e internal/database)"
@@ -7202,11 +7227,8 @@
       "signal_log_reader_query.go",
       "signal_log_repo.go",
       "signals_catalog_repo.go",
-      "vehicle_photo_repo.go",
-      "vehicle_repo.go",
       "vehicle_settings_repo.go",
       "vehicle_settings_resolver.go",
-      "vehicle_states_repo.go",
       "write_buffer.go"
     ],
     "internal/database/achievement": [
@@ -7347,6 +7369,13 @@
       "doc.go",
       "feedback_repo.go",
       "onboarding_repo.go"
+    ],
+    "internal/database/vehicle": [
+      "doc.go",
+      "name_lookup.go",
+      "photo_repo.go",
+      "repo.go",
+      "states_repo.go"
     ],
     "internal/database/worker": [
       "doc.go",
@@ -8060,8 +8089,8 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 32,
-      "flat_parent_test_files": 14,
+      "flat_parent_go_files": 29,
+      "flat_parent_test_files": 13,
       "planned_subpkgs": 22,
       "existing_subpkgs": [
         "achievement",
@@ -8077,7 +8106,8 @@
         "export",
         "notification",
         "system",
-        "tesla"
+        "tesla",
+        "vehicle"
       ],
       "missing_subpkgs": [
         "dashboard",
@@ -8086,8 +8116,7 @@
         "ingest",
         "onboarding",
         "settings",
-        "signal",
-        "vehicle"
+        "signal"
       ],
       "notes": "22 subpkgs from R1 audit. Touches many internal/api/* callers — accept R2 double-touch budget (no temp compat layer)."
     },

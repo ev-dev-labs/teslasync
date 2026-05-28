@@ -53,14 +53,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
 // ─── Fakes ──────────────────────────────────────────────────────
 
 type fakeVehiclePhotoStore struct {
 	mu     sync.Mutex
-	rows   map[int64]*database.VehiclePhotoRow
+	rows   map[int64]*vehicledb.VehiclePhotoRow
 	getErr error
 	upsErr error
 	delErr error
@@ -68,10 +68,10 @@ type fakeVehiclePhotoStore struct {
 }
 
 func newFakeVehiclePhotoStore() *fakeVehiclePhotoStore {
-	return &fakeVehiclePhotoStore{rows: make(map[int64]*database.VehiclePhotoRow)}
+	return &fakeVehiclePhotoStore{rows: make(map[int64]*vehicledb.VehiclePhotoRow)}
 }
 
-func (f *fakeVehiclePhotoStore) Get(_ context.Context, vehicleID int64) (*database.VehiclePhotoRow, error) {
+func (f *fakeVehiclePhotoStore) Get(_ context.Context, vehicleID int64) (*vehicledb.VehiclePhotoRow, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.getErr != nil {
@@ -79,7 +79,7 @@ func (f *fakeVehiclePhotoStore) Get(_ context.Context, vehicleID int64) (*databa
 	}
 	row, ok := f.rows[vehicleID]
 	if !ok {
-		return nil, database.ErrVehiclePhotoNotFound
+		return nil, vehicledb.ErrVehiclePhotoNotFound
 	}
 	// Return a copy so the handler can't mutate the fake's
 	// internal state by accident.
@@ -89,7 +89,7 @@ func (f *fakeVehiclePhotoStore) Get(_ context.Context, vehicleID int64) (*databa
 
 func (f *fakeVehiclePhotoStore) Upsert(
 	_ context.Context, vehicleID int64, thumb, medium, full string,
-) (*database.VehiclePhotoRow, error) {
+) (*vehicledb.VehiclePhotoRow, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.upsErr != nil {
@@ -99,7 +99,7 @@ func (f *fakeVehiclePhotoStore) Upsert(
 	if f.nowFn != nil {
 		now = f.nowFn()
 	}
-	row := &database.VehiclePhotoRow{
+	row := &vehicledb.VehiclePhotoRow{
 		VehicleID:  vehicleID,
 		ThumbPath:  thumb,
 		MediumPath: medium,
@@ -111,7 +111,7 @@ func (f *fakeVehiclePhotoStore) Upsert(
 	return &cp, nil
 }
 
-func (f *fakeVehiclePhotoStore) Delete(_ context.Context, vehicleID int64) (*database.VehiclePhotoRow, error) {
+func (f *fakeVehiclePhotoStore) Delete(_ context.Context, vehicleID int64) (*vehicledb.VehiclePhotoRow, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	if f.delErr != nil {
@@ -119,7 +119,7 @@ func (f *fakeVehiclePhotoStore) Delete(_ context.Context, vehicleID int64) (*dat
 	}
 	row, ok := f.rows[vehicleID]
 	if !ok {
-		return nil, database.ErrVehiclePhotoNotFound
+		return nil, vehicledb.ErrVehiclePhotoNotFound
 	}
 	delete(f.rows, vehicleID)
 	cp := *row

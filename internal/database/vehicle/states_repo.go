@@ -26,7 +26,7 @@
 // All queries scope to fsm_name='vehicle'. The unified table also holds
 // rows for drive_session/charge_session/alert_cooldown/notification/command
 // FSMs; including them would inflate state counts.
-package database
+package vehicle
 
 import (
 	"context"

@@ -15,6 +15,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -22,7 +23,7 @@ import (
 type VehicleAccessHandler struct {
 	teslaClient *tesla.Client
 	repo        *tesladb.TeslaVehicleDriverRepo
-	vehicleRepo *database.VehicleRepo
+	vehicleRepo *vehicledb.VehicleRepo
 }
 
 // NewVehicleAccessHandler creates a new handler.
@@ -30,7 +31,7 @@ func NewVehicleAccessHandler(tc *tesla.Client, db *database.DB) *VehicleAccessHa
 	return &VehicleAccessHandler{
 		teslaClient: tc,
 		repo:        tesladb.NewTeslaVehicleDriverRepo(db),
-		vehicleRepo: database.NewVehicleRepo(db),
+		vehicleRepo: vehicledb.NewVehicleRepo(db),
 	}
 }
 

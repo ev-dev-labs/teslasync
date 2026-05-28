@@ -25,6 +25,7 @@ import (
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -156,7 +157,7 @@ func main() {
 	// ── Repositories ──────────────────────────────────────────────────
 	automationRepo := dbauto.NewAutomationRepo(db)
 	historyRepo := dbauto.NewAutomationHistoryRepo(db)
-	vehicleRepo := database.NewVehicleRepo(db)
+	vehicleRepo := vehicledb.NewVehicleRepo(db)
 	commandLogRepo := energydb.NewCommandLogRepo(db)
 	settingsRepo := database.NewSettingsRepo(db)
 	notifRepo := dbnotif.NewNotificationRepo(db)

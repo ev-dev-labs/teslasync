@@ -27,6 +27,7 @@ import (
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
@@ -436,7 +437,7 @@ func (a *App) initHomeAssistantPublisher(ctx context.Context) {
 		a.Cfg.HomeAssistant.DiscoveryPrefix,
 		a.MQTT.Prefix(),
 	)
-	vehicleRepo := database.NewVehicleRepo(a.DB)
+	vehicleRepo := vehicledb.NewVehicleRepo(a.DB)
 	interval := a.Cfg.HomeAssistant.PublishInterval
 	if interval <= 0 {
 		interval = time.Hour
@@ -688,7 +689,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		Bool("redis_l2", redisSignalCache != nil).
 		Msg("live signal store initialized")
 
-	vehicleRepo := database.NewVehicleRepo(a.DB)
+	vehicleRepo := vehicledb.NewVehicleRepo(a.DB)
 	vehicles, err := vehicleRepo.GetAll(ctx)
 	if err != nil {
 		log.Warn().Err(err).Msg("live signal store: vehicle list unavailable during warmup")
@@ -799,7 +800,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 // + SoftwareUpdateObserver → normalize.Pipeline → MQTT PipelineSubscriber.
 // Any missing writer or invalid routing rule fails the process at startup;
 // per ADR-004 #12 there is no feature flag and no parallel pipeline.
-func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *database.VehicleRepo) error {
+func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb.VehicleRepo) error {
 	pipelineLogger := log.With().Str("component", "tesla_pipeline").Logger()
 
 	pipelineWriters := map[router.Destination]router.Writer{
@@ -1193,7 +1194,7 @@ func (a *App) initGasPriceWorker(ctx context.Context) {
 }
 
 func (a *App) initUnitDriftValidator(ctx context.Context) {
-	driftVehicleRepo := database.NewVehicleRepo(a.DB)
+	driftVehicleRepo := vehicledb.NewVehicleRepo(a.DB)
 	driftValidator := worker.NewUnitDriftValidator(a.DB, driftVehicleRepo)
 	resilience.SafeGoLoop(ctx, "unit-drift-validator", func(loopCtx context.Context) {
 		driftValidator.Start(loopCtx, worker.Options{})

@@ -98,9 +98,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -465,7 +465,7 @@ func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sess
 
 // AIVoiceModeVehicleSnapshotSource is the production adapter
 // satisfying voice.VehicleSnapshotSource. It wraps the canonical
-// *database.VehicleRepo + *drivedb.DriveRepo +
+// *vehicledb.VehicleRepo + *drivedb.DriveRepo +
 // signal.LiveStateReader so the AI tool reads from the SAME
 // data sources the rest of the API surface already does — no
 // new SQL, no duplicate read paths.
@@ -484,7 +484,7 @@ func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sess
 // LLM has no reason to surface them, and a leaked transcript
 // should not contain them.
 type AIVoiceModeVehicleSnapshotSource struct {
-	vehicles  *database.VehicleRepo
+	vehicles  *vehicledb.VehicleRepo
 	drives    *drivedb.DriveRepo
 	liveState signal.LiveStateReader
 }
@@ -497,13 +497,13 @@ type AIVoiceModeVehicleSnapshotSource struct {
 // and the system prompt's "no current data" branch handles it
 // gracefully.
 func NewAIVoiceModeVehicleSnapshotSource(
-	v *database.VehicleRepo,
+	v *vehicledb.VehicleRepo,
 	d *drivedb.DriveRepo,
 	live signal.LiveStateReader,
 ) *AIVoiceModeVehicleSnapshotSource {
 	switch {
 	case v == nil:
-		panic("api: NewAIVoiceModeVehicleSnapshotSource: nil vehicles *database.VehicleRepo")
+		panic("api: NewAIVoiceModeVehicleSnapshotSource: nil vehicles *vehicledb.VehicleRepo")
 	case d == nil:
 		panic("api: NewAIVoiceModeVehicleSnapshotSource: nil drives *drivedb.DriveRepo")
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	"github.com/ev-dev-labs/teslasync/internal/database/sharing"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -22,7 +23,7 @@ type ShareHandler struct {
 	shareRepo   *sharing.TokenRepo
 	driveRepo   *drivedb.DriveRepo
 	posRepo     *database.PositionRepo
-	vehicleRepo *database.VehicleRepo
+	vehicleRepo *vehicledb.VehicleRepo
 }
 
 func NewShareHandler(db *database.DB) *ShareHandler {
@@ -30,7 +31,7 @@ func NewShareHandler(db *database.DB) *ShareHandler {
 		shareRepo:   sharing.NewTokenRepo(db),
 		driveRepo:   drivedb.NewDriveRepo(db),
 		posRepo:     database.NewPositionRepo(db),
-		vehicleRepo: database.NewVehicleRepo(db),
+		vehicleRepo: vehicledb.NewVehicleRepo(db),
 	}
 }
 

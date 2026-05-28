@@ -22,7 +22,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
 // vehicleStatesRepository is the minimal repo surface VehicleStatesHandler
@@ -31,8 +31,8 @@ import (
 // (see repo memories from earlier phases).
 type vehicleStatesRepository interface {
 	VehicleExists(ctx context.Context, vehicleID int64) (bool, error)
-	Timeline(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]database.VehicleStateTransition, error)
-	Summary(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]database.VehicleStateSummaryRow, float64, error)
+	Timeline(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]vehicledb.VehicleStateTransition, error)
+	Summary(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]vehicledb.VehicleStateSummaryRow, float64, error)
 }
 
 // vehicleStatesClock is injected so handler tests can pin the window
@@ -49,7 +49,7 @@ type VehicleStatesHandler struct {
 
 // NewVehicleStatesHandler binds the handler to a repo. clock is
 // production-defaulted; tests construct via newVehicleStatesHandlerForTest.
-func NewVehicleStatesHandler(repo *database.VehicleStatesRepo) *VehicleStatesHandler {
+func NewVehicleStatesHandler(repo *vehicledb.VehicleStatesRepo) *VehicleStatesHandler {
 	return &VehicleStatesHandler{repo: repo}
 }
 
@@ -114,17 +114,17 @@ func (h *VehicleStatesHandler) parseVehicleStatesParams(w http.ResponseWriter, r
 // Snake-case JSON tags so the frontend hooks can read either
 // camelCaseKeys-transformed or original keys per project convention.
 type VehicleStatesTimelineResponse struct {
-	VehicleID   int64                             `json:"vehicle_id"`
-	Days        int                               `json:"days"`
-	Transitions []database.VehicleStateTransition `json:"transitions"`
+	VehicleID   int64                              `json:"vehicle_id"`
+	Days        int                                `json:"days"`
+	Transitions []vehicledb.VehicleStateTransition `json:"transitions"`
 }
 
 // VehicleStatesSummaryResponse is the envelope returned by Summary.
 type VehicleStatesSummaryResponse struct {
-	VehicleID    int64                             `json:"vehicle_id"`
-	Days         int                               `json:"days"`
-	TotalSeconds float64                           `json:"total_seconds"`
-	ByState      []database.VehicleStateSummaryRow `json:"by_state"`
+	VehicleID    int64                              `json:"vehicle_id"`
+	Days         int                                `json:"days"`
+	TotalSeconds float64                            `json:"total_seconds"`
+	ByState      []vehicledb.VehicleStateSummaryRow `json:"by_state"`
 }
 
 // Timeline serves GET /vehicle-states/timeline?vehicle_id=...&days=N.
@@ -161,7 +161,7 @@ func (h *VehicleStatesHandler) Timeline(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if transitions == nil {
-		transitions = []database.VehicleStateTransition{}
+		transitions = []vehicledb.VehicleStateTransition{}
 	}
 
 	writeJSON(w, http.StatusOK, VehicleStatesTimelineResponse{
@@ -202,7 +202,7 @@ func (h *VehicleStatesHandler) Summary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if rows == nil {
-		rows = []database.VehicleStateSummaryRow{}
+		rows = []vehicledb.VehicleStateSummaryRow{}
 	}
 
 	writeJSON(w, http.StatusOK, VehicleStatesSummaryResponse{

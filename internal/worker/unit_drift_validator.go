@@ -47,6 +47,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
 // unitDriftTracerName scopes spans for the periodic unit-drift validator.
@@ -54,7 +55,7 @@ const unitDriftTracerName = "internal/worker/unit_drift"
 
 func unitDriftTracer() oteltrace.Tracer { return otel.Tracer(unitDriftTracerName) }
 
-// vehicleRepoAdapter wraps *database.VehicleRepo so its GetAll method
+// vehicleRepoAdapter wraps *vehicledb.VehicleRepo so its GetAll method
 // (which returns []*vehiclemodel.Vehicle) satisfies vehicleLister (which
 // returns []int64). The validator never needs the rest of the
 // Vehicle struct — just the ID — so flattening here keeps the
@@ -172,7 +173,7 @@ const (
 	defaultCronInterval = 24 * time.Hour
 )
 
-// vehicleLister is the subset of database.VehicleRepo the validator
+// vehicleLister is the subset of vehicledb.VehicleRepo the validator
 // needs. Carved as an interface so unit tests can inject without a
 // real DB.
 type vehicleLister interface {
@@ -236,7 +237,7 @@ type UnitDriftValidator struct {
 // VehicleRepo and a SignalLogReader over the given pool. Tests bypass
 // this constructor and inject the interfaces directly via
 // NewUnitDriftValidatorWithDeps.
-func NewUnitDriftValidator(db *database.DB, vehicleRepo *database.VehicleRepo) *UnitDriftValidator {
+func NewUnitDriftValidator(db *database.DB, vehicleRepo *vehicledb.VehicleRepo) *UnitDriftValidator {
 	return &UnitDriftValidator{
 		vehicles: &vehicleRepoAdapter{repo: vehicleRepo},
 		signals:  &pgxSignalReader{pool: db.Pool},

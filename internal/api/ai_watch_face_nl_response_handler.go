@@ -85,8 +85,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -356,7 +356,7 @@ func buildWatchFaceNLResponseUserMessage(message string) string {
 
 // AIWatchFaceNLContextSource is the production adapter
 // satisfying nl.WatchContextSource. It wraps the canonical
-// *database.VehicleRepo + *signal.RedisSignalCache so the AI
+// *vehicledb.VehicleRepo + *signal.RedisSignalCache so the AI
 // tool reads from the SAME data sources the deterministic
 // /watch/summary handler already does — no new SQL, no
 // duplicate live-state reads.
@@ -366,7 +366,7 @@ func buildWatchFaceNLResponseUserMessage(message string) string {
 // the canonical /watch/summary handler runs the same two calls
 // per refresh tick.
 type AIWatchFaceNLContextSource struct {
-	vehicles   *database.VehicleRepo
+	vehicles   *vehicledb.VehicleRepo
 	redisCache *signal.RedisSignalCache
 }
 
@@ -378,9 +378,9 @@ type AIWatchFaceNLContextSource struct {
 // alone (vehicle_name only; every live-state field serializes
 // as null), mirroring the deterministic /watch/summary
 // handler's degraded-mode fallback.
-func NewAIWatchFaceNLContextSource(v *database.VehicleRepo, cache *signal.RedisSignalCache) *AIWatchFaceNLContextSource {
+func NewAIWatchFaceNLContextSource(v *vehicledb.VehicleRepo, cache *signal.RedisSignalCache) *AIWatchFaceNLContextSource {
 	if v == nil {
-		panic("api: NewAIWatchFaceNLContextSource: nil *database.VehicleRepo")
+		panic("api: NewAIWatchFaceNLContextSource: nil *vehicledb.VehicleRepo")
 	}
 	return &AIWatchFaceNLContextSource{vehicles: v, redisCache: cache}
 }

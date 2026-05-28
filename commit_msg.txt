@@ -1,43 +1,53 @@
-refactor(R4.20): carve internal/database/tesla (account/Fleet-API mirrors)
+refactor(R4.21): carve internal/database/vehicle (heart of system, 38 callers)
 
-Move Tesla-account / Fleet-API mirror repositories into their own
-bounded-context subpkg per ADR-011. These are distinct from the SI
-canonical signal-derived aggregates in internal/database/{charging,
-drive,energy,signal}.
+Move the Vehicle aggregate-root repositories into their own bounded-
+context subpkg per ADR-011. This is the largest single cluster in R4
+(measured by downstream blast radius) — vehicle ID is the foreign key
+into drive, charging, energy, signal, telemetry, notification,
+automation, alert, settings, ...
 
-Files (6 source; 7 caller files swept):
-  tesla_charging_history_repo.go -> internal/database/tesla/charging_history_repo.go
-  tesla_charging_session_repo.go -> internal/database/tesla/charging_session_repo.go
-  tesla_user_config_repo.go      -> internal/database/tesla/user_config_repo.go
-  tesla_user_order_repo.go       -> internal/database/tesla/user_order_repo.go
-  tesla_user_profile_repo.go     -> internal/database/tesla/user_profile_repo.go
-  tesla_vehicle_driver_repo.go   -> internal/database/tesla/vehicle_driver_repo.go
-  internal/database/tesla/doc.go (NEW, // Layer: adapter)
+Files (3 source + 1 test + 1 NEW adapter; 38 caller files swept):
+  internal/database/vehicle_repo.go            -> internal/database/vehicle/repo.go
+  internal/database/vehicle_photo_repo.go      -> internal/database/vehicle/photo_repo.go
+  internal/database/vehicle_states_repo.go     -> internal/database/vehicle/states_repo.go
+  internal/database/vehicle_states_repo_test.go -> internal/database/vehicle/states_repo_test.go
+  internal/database/vehicle/name_lookup.go     (NEW — extracted from parent
+                                                vehicle_settings_resolver.go)
+  internal/database/vehicle/doc.go             (NEW, // Layer: adapter)
 
-Symbols promoted (alias 	esladb):
-  TeslaChargingHistoryRepo, NewTeslaChargingHistoryRepo,
-  TeslaChargingSessionRepo, NewTeslaChargingSessionRepo,
-  TeslaUserConfigRepo, NewTeslaUserConfigRepo,
-  TeslaUserOrderRepo, NewTeslaUserOrderRepo,
-  TeslaUserProfileRepo, NewTeslaUserProfileRepo,
-  TeslaVehicleDriverRepo, NewTeslaVehicleDriverRepo.
+LESSON 34: when a parent file (vehicle_settings_resolver.go) holds a
+*concrete-type* adapter for a child aggregate (*VehicleRepo wired to
+VehicleNameLookup interface), the adapter must move INTO the child
+subpkg to avoid a parent->child compile cycle. The interface stays in
+the parent (resolver still depends only on the interface seam) and the
+adapter constructor renames from NewVehicleNameLookup to NewNameLookup
+following Go style (package name qualifies — vehicle.NewNameLookup is
+preferred over vehicle.NewVehicleNameLookup stutter).
 
-Callers updated (each handler is the sole consumer of its repo):
-  internal/api/{tesla_charging_history_handler,
-                tesla_charging_session_handler,
-                tesla_user_config_handler,
-                tesla_user_order_handler,
-                tesla_user_profile_handler,
-                vehicle_access_handler,
-                vehicle_info_handler}.go
+Symbols promoted (alias ehicledb per ADR-011):
+  VehicleRepo, NewVehicleRepo,
+  VehiclePhotoRepo, NewVehiclePhotoRepo, VehiclePhotoRow,
+  ErrVehiclePhotoNotFound,
+  VehicleStatesRepo, NewVehicleStatesRepo,
+  VehicleStateSummaryRow, VehicleStateTransition.
+  NewNameLookup (was NewVehicleNameLookup in parent).
 
-No helper deps. No cycles. No method-receiver-on-DB issues.
+Callers updated across 38 files in api/ (30+), service/, app/,
+ai/tools/ — bulk regex sweep, no logic change.
 
-internal/database allowlist ratchet: 38 -> 32 src files.
+Settings repos (settings_repo / settings_reset / settings_serializer /
+vehicle_settings_repo / vehicle_settings_resolver) stay in parent for
+now — they will be carved together in R4.25 once their interlocked
+serializer dependencies are resolved.
 
-Carved subpkgs so far (22): achievement, sharing, admin, gdpr,
+No new helper deps. No cycles after the adapter extraction (verified
+by go build ./...).
+
+internal/database allowlist ratchet: 32 -> 29 src files.
+
+Carved subpkgs so far (23): achievement, sharing, admin, gdpr,
 observability, auth, backup, notification, automation, user, alert,
 audit, charging, drive, trip, energy, ai, export, worker, telemetry,
-system, tesla.
+system, tesla, vehicle.
 
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

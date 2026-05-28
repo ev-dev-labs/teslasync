@@ -10,6 +10,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -18,7 +19,7 @@ import (
 type VehicleInfoHandler struct {
 	teslaClient *tesla.Client
 	configRepo  *tesladb.TeslaUserConfigRepo
-	vehicleRepo *database.VehicleRepo
+	vehicleRepo *vehicledb.VehicleRepo
 }
 
 // NewVehicleInfoHandler creates a new handler.
@@ -26,7 +27,7 @@ func NewVehicleInfoHandler(tc *tesla.Client, db *database.DB) *VehicleInfoHandle
 	return &VehicleInfoHandler{
 		teslaClient: tc,
 		configRepo:  tesladb.NewTeslaUserConfigRepo(db),
-		vehicleRepo: database.NewVehicleRepo(db),
+		vehicleRepo: vehicledb.NewVehicleRepo(db),
 	}
 }
 

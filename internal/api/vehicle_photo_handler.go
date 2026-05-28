@@ -57,7 +57,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/imaging"
 )
 
@@ -121,11 +121,11 @@ const (
 
 // VehiclePhotoStore is the storage seam the handler uses to
 // persist + look up photo index rows. Production wires
-// *database.VehiclePhotoRepo; tests substitute an in-memory fake.
+// *vehicledb.VehiclePhotoRepo; tests substitute an in-memory fake.
 type VehiclePhotoStore interface {
-	Get(ctx context.Context, vehicleID int64) (*database.VehiclePhotoRow, error)
-	Upsert(ctx context.Context, vehicleID int64, thumb, medium, full string) (*database.VehiclePhotoRow, error)
-	Delete(ctx context.Context, vehicleID int64) (*database.VehiclePhotoRow, error)
+	Get(ctx context.Context, vehicleID int64) (*vehicledb.VehiclePhotoRow, error)
+	Upsert(ctx context.Context, vehicleID int64, thumb, medium, full string) (*vehicledb.VehiclePhotoRow, error)
+	Delete(ctx context.Context, vehicleID int64) (*vehicledb.VehiclePhotoRow, error)
 }
 
 // VehiclePhotoHandler bundles the four photo endpoints.
@@ -213,7 +213,7 @@ func (h *VehiclePhotoHandler) GetMeta(w http.ResponseWriter, r *http.Request) {
 	}
 	row, err := h.store.Get(r.Context(), vehicleID)
 	if err != nil {
-		if errors.Is(err, database.ErrVehiclePhotoNotFound) {
+		if errors.Is(err, vehicledb.ErrVehiclePhotoNotFound) {
 			writeJSON(w, http.StatusOK, vehiclePhotoMetaResponse{HasPhoto: false})
 			return
 		}
@@ -251,7 +251,7 @@ func (h *VehiclePhotoHandler) GetFile(w http.ResponseWriter, r *http.Request) {
 	}
 	row, err := h.store.Get(r.Context(), vehicleID)
 	if err != nil {
-		if errors.Is(err, database.ErrVehiclePhotoNotFound) {
+		if errors.Is(err, vehicledb.ErrVehiclePhotoNotFound) {
 			writeErrorCode(w, http.StatusNotFound, "photo not found", PhotoCodeNotFound)
 			return
 		}
@@ -475,7 +475,7 @@ func (h *VehiclePhotoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	row, err := h.store.Delete(r.Context(), vehicleID)
 	if err != nil {
-		if errors.Is(err, database.ErrVehiclePhotoNotFound) {
+		if errors.Is(err, vehicledb.ErrVehiclePhotoNotFound) {
 			w.WriteHeader(http.StatusNoContent)
 			return
 		}
@@ -580,7 +580,7 @@ func (h *VehiclePhotoHandler) requireVehicleExists(ctx context.Context, w http.R
 // size. Caller has already validated `size` against the supported
 // set; the default branch is unreachable but keeps the compiler
 // happy.
-func relPathFromRow(row *database.VehiclePhotoRow, size string) string {
+func relPathFromRow(row *vehicledb.VehiclePhotoRow, size string) string {
 	switch size {
 	case PhotoSizeThumb:
 		return row.ThumbPath

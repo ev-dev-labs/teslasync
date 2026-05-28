@@ -20,6 +20,7 @@ import (
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/export"
 )
 
@@ -390,7 +391,7 @@ func (h *ExportHandler) SubmitAccountJob(w http.ResponseWriter, r *http.Request)
 // NewExportHandler returns a handler for the legacy synchronous data export endpoint.
 // Kept for backward compatibility with direct download use cases.
 func NewExportHandler(db *database.DB) http.HandlerFunc {
-	vehicleRepo := database.NewVehicleRepo(db)
+	vehicleRepo := vehicledb.NewVehicleRepo(db)
 	driveRepo := drivedb.NewDriveRepo(db)
 	chargingRepo := chargingdb.NewChargingRepo(db)
 
@@ -412,7 +413,7 @@ func NewExportHandler(db *database.DB) http.HandlerFunc {
 	}
 }
 
-func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.VehicleRepo, driveRepo *drivedb.DriveRepo, format string) {
+func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *vehicledb.VehicleRepo, driveRepo *drivedb.DriveRepo, format string) {
 	vehicles, err := vehicleRepo.GetAll(r.Context())
 	if err != nil {
 		http.Error(w, "failed to fetch vehicles", http.StatusInternalServerError)
@@ -477,7 +478,7 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *database.
 	cw.Flush()
 }
 
-func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *database.VehicleRepo, chargingRepo *chargingdb.ChargingRepo, format string) {
+func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *vehicledb.VehicleRepo, chargingRepo *chargingdb.ChargingRepo, format string) {
 	vehicles, err := vehicleRepo.GetAll(r.Context())
 	if err != nil {
 		http.Error(w, "failed to fetch vehicles", http.StatusInternalServerError)

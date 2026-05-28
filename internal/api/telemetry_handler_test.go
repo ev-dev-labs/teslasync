@@ -170,7 +170,7 @@ func (f *fakePipelineDispatcher) ProcessAtomics(_ context.Context, atomics []cod
 // is caught here too. The cleanest assertion: build a handler with a
 // recording vehicleRepo stub and assert errPipelineNotWired propagates.
 //
-// Implementation note: TelemetryHandler.vehicleRepo is *database.VehicleRepo
+// Implementation note: TelemetryHandler.vehicleRepo is *vehicledb.VehicleRepo
 // — a concrete struct, not an interface — so this test cannot stub it
 // without an interface seam. We test the nil-pipeline contract via the
 // post-vehicleRepo-success path: see TestProcessBatch_DispatchesToPipeline

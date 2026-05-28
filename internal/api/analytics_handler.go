@@ -13,10 +13,11 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// vehicleListFetcher abstracts *database.VehicleRepo.GetAll so analytics
+// vehicleListFetcher abstracts *vehicledb.VehicleRepo.GetAll so analytics
 // handler tests can inject a fake fleet roster without standing up a
 // Postgres pool. The Fleet endpoint walks the entire vehicle list to
 // compute per-vehicle drive / charge / battery rollups, so this is the
@@ -57,7 +58,7 @@ type AnalyticsHandler struct {
 
 func NewAnalyticsHandler(db *database.DB, state signal.StateReader) *AnalyticsHandler {
 	return &AnalyticsHandler{
-		vehicleRepo:  database.NewVehicleRepo(db),
+		vehicleRepo:  vehicledb.NewVehicleRepo(db),
 		driveRepo:    drivedb.NewDriveRepo(db),
 		chargingRepo: chargingdb.NewChargingRepo(db),
 		positionRepo: database.NewPositionRepo(db),

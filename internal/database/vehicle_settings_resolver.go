@@ -224,41 +224,6 @@ func (r *VehicleSettingsResolver) resolveOne(
 	}, nil
 }
 
-// vehicleNameLookupAdapter adapts the production *VehicleRepo to the
-// VehicleNameLookup seam without exposing the full repo surface to
-// the resolver. The router wires this adapter at construction time.
-type vehicleNameLookupAdapter struct {
-	repo *VehicleRepo
-}
-
-// NewVehicleNameLookup returns a VehicleNameLookup backed by the
-// supplied *VehicleRepo. Returns nil when repo is nil so the caller
-// can pass it straight into NewVehicleSettingsResolver and rely on
-// the resolver's nil-tolerance.
-func NewVehicleNameLookup(repo *VehicleRepo) VehicleNameLookup {
-	if repo == nil {
-		return nil
-	}
-	return &vehicleNameLookupAdapter{repo: repo}
-}
-
-// GetDisplayName satisfies VehicleNameLookup. Maps a missing vehicle
-// to (("", false, nil)) so the resolver short-circuits to the
-// default — the API handler is the right place to surface 404 if
-// the vehicle truly doesn't exist; the resolver itself stays
-// fault-tolerant so a stale cache reference doesn't fail the bulk
-// resolve.
-func (a *vehicleNameLookupAdapter) GetDisplayName(ctx context.Context, vehicleID int64) (string, bool, error) {
-	v, err := a.repo.GetByID(ctx, vehicleID)
-	if err != nil {
-		return "", false, err
-	}
-	if v == nil {
-		return "", false, nil
-	}
-	return v.DisplayName, true, nil
-}
-
 // userSettingsLookupAdapter adapts the production *SettingsRepo to
 // the UserSettingsLookup seam.
 type userSettingsLookupAdapter struct {

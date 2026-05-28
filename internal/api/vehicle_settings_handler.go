@@ -33,6 +33,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
 // MaxVehicleSettingsBodyBytes caps the PUT body size so a malicious
@@ -306,14 +307,14 @@ func decodeValueForKey(key string, raw json.RawMessage) (any, error) {
 // to the VehicleExistenceChecker seam. Cheap probe — uses GetByID
 // and discards the result.
 type vehicleExistenceCheckerAdapter struct {
-	repo *database.VehicleRepo
+	repo *vehicledb.VehicleRepo
 }
 
 // NewVehicleExistenceChecker returns a VehicleExistenceChecker
-// backed by the supplied *database.VehicleRepo. Returns nil when
+// backed by the supplied *vehicledb.VehicleRepo. Returns nil when
 // repo is nil so the caller can wire a safe default in test
 // harnesses; production passes a non-nil repo.
-func NewVehicleExistenceChecker(repo *database.VehicleRepo) VehicleExistenceChecker {
+func NewVehicleExistenceChecker(repo *vehicledb.VehicleRepo) VehicleExistenceChecker {
 	if repo == nil {
 		return nil
 	}

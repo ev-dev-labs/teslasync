@@ -47,7 +47,7 @@ import (
 // ---------------------------------------------------------------------------
 
 // VehicleSource is the read surface the vehicle-domain tools need.
-// Implemented by *database.VehicleRepo (GetAll, GetByID).
+// Implemented by *vehicledb.VehicleRepo (GetAll, GetByID).
 type VehicleSource interface {
 	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
 	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)

@@ -51,6 +51,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	teslaconfig "github.com/ev-dev-labs/teslasync/internal/tesla/config"
@@ -89,7 +90,7 @@ type pusher interface {
 	SubscribeFleetTelemetry(ctx context.Context, sub tesla.FleetTelemetrySubscription) ([]byte, int, error)
 }
 
-// vehicleLister is the subset of *database.VehicleRepo that resubscribe
+// vehicleLister is the subset of *vehicledb.VehicleRepo that resubscribe
 // needs. Same rationale as pusher: lets main_test.go inject a fixed
 // vehicle list without a real database connection.
 type vehicleLister interface {
@@ -204,7 +205,7 @@ func run(args []string, stdout, stderr *os.File, getenv func(string) string) int
 	defer db.Close()
 
 	teslaClient := tesla.NewClient(cfg.Tesla)
-	vehicleRepo := database.NewVehicleRepo(db)
+	vehicleRepo := vehicledb.NewVehicleRepo(db)
 
 	rc := runConfig{
 		dryRun:            *dryRun,

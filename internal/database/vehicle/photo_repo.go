@@ -9,7 +9,7 @@
 // handler owns disk IO, multipart parsing, and image processing —
 // this layer only persists the paths so a future move to S3-backed
 // storage can swap the handler without touching the DB schema.
-package database
+package vehicle
 
 import (
 	"context"
@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -42,12 +43,12 @@ type VehiclePhotoRow struct {
 // Stateless; safe to call concurrently — every method takes a
 // context and forwards to the shared pgx pool.
 type VehiclePhotoRepo struct {
-	db *DB
+	db *database.DB
 }
 
 // NewVehiclePhotoRepo wires the repo to a database pool. No
 // background work is started; the repo is purely a thin SQL facade.
-func NewVehiclePhotoRepo(db *DB) *VehiclePhotoRepo {
+func NewVehiclePhotoRepo(db *database.DB) *VehiclePhotoRepo {
 	return &VehiclePhotoRepo{db: db}
 }
 

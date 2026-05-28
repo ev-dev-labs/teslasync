@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -59,7 +59,7 @@ func (a *liveSignalStoreAdapter) GetAll(ctx context.Context, vehicleID int64) (m
 	return out, nil
 }
 
-// vinByIDResolver bridges *database.VehicleRepo (whose lookup returns
+// vinByIDResolver bridges *vehicledb.VehicleRepo (whose lookup returns
 // the full *vehiclemodel.Vehicle) to the teslapipeline.VINResolver
 // interface (which only needs the VIN string). Returns a wrapped
 // "vehicle not registered" error when the row is nil so the
@@ -67,7 +67,7 @@ func (a *liveSignalStoreAdapter) GetAll(ctx context.Context, vehicleID int64) (m
 // without leaking the VIN itself; the legacy AlertEvaluator + session
 // tracker handle the same case identically.
 type vinByIDResolver struct {
-	repo *database.VehicleRepo
+	repo *vehicledb.VehicleRepo
 }
 
 func (r *vinByIDResolver) VINByID(ctx context.Context, vehicleID int64) (string, error) {

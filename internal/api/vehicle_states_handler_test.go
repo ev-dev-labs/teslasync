@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
 // Phase-43a / Prompt 0003 — HTTP tests for VehicleStatesHandler.
@@ -40,10 +40,10 @@ type fakeVehicleStatesRepo struct {
 	exists    map[int64]bool
 	existsErr error
 
-	timeline    []database.VehicleStateTransition
+	timeline    []vehicledb.VehicleStateTransition
 	timelineErr error
 
-	summaryRows  []database.VehicleStateSummaryRow
+	summaryRows  []vehicledb.VehicleStateSummaryRow
 	summaryTotal float64
 	summaryErr   error
 
@@ -73,7 +73,7 @@ func (f *fakeVehicleStatesRepo) VehicleExists(ctx context.Context, vehicleID int
 	return v, nil
 }
 
-func (f *fakeVehicleStatesRepo) Timeline(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]database.VehicleStateTransition, error) {
+func (f *fakeVehicleStatesRepo) Timeline(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]vehicledb.VehicleStateTransition, error) {
 	f.gotTimelineCalls = append(f.gotTimelineCalls, timelineCall{vehicleID, windowStart, windowEnd})
 	if f.timelineErr != nil {
 		return nil, f.timelineErr
@@ -81,7 +81,7 @@ func (f *fakeVehicleStatesRepo) Timeline(ctx context.Context, vehicleID int64, w
 	return f.timeline, nil
 }
 
-func (f *fakeVehicleStatesRepo) Summary(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]database.VehicleStateSummaryRow, float64, error) {
+func (f *fakeVehicleStatesRepo) Summary(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]vehicledb.VehicleStateSummaryRow, float64, error) {
 	f.gotSummaryCalls = append(f.gotSummaryCalls, summaryCall{vehicleID, windowStart, windowEnd})
 	if f.summaryErr != nil {
 		return nil, 0, f.summaryErr
@@ -132,7 +132,7 @@ func TestVehicleStates_Timeline_DaysClamp(t *testing.T) {
 			t.Parallel()
 			repo := &fakeVehicleStatesRepo{
 				exists:   map[int64]bool{42: true},
-				timeline: []database.VehicleStateTransition{},
+				timeline: []vehicledb.VehicleStateTransition{},
 			}
 			h := newVehicleStatesHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
@@ -201,7 +201,7 @@ func TestVehicleStates_Summary_DaysClamp(t *testing.T) {
 			t.Parallel()
 			repo := &fakeVehicleStatesRepo{
 				exists:      map[int64]bool{42: true},
-				summaryRows: []database.VehicleStateSummaryRow{},
+				summaryRows: []vehicledb.VehicleStateSummaryRow{},
 			}
 			h := newVehicleStatesHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
@@ -267,7 +267,7 @@ func TestVehicleStates_Timeline_OrderingASC(t *testing.T) {
 	t3 := time.Date(2026, 5, 6, 11, 0, 0, 0, time.UTC)
 	repo := &fakeVehicleStatesRepo{
 		exists: map[int64]bool{42: true},
-		timeline: []database.VehicleStateTransition{
+		timeline: []vehicledb.VehicleStateTransition{
 			{Ts: t1, FromState: vsPtrStr("Online"), ToState: "Driving", TriggerField: vsPtrStr("Gear"), TriggerValue: vsPtrStr("D")},
 			{Ts: t2, FromState: vsPtrStr("Driving"), ToState: "Parked", TriggerField: vsPtrStr("Gear"), TriggerValue: vsPtrStr("P")},
 			{Ts: t3, FromState: vsPtrStr("Parked"), ToState: "Charging", TriggerField: vsPtrStr("ChargingActive"), TriggerValue: vsPtrStr("true")},
@@ -324,7 +324,7 @@ func TestVehicleStates_Summary_PercentageSumsTo100(t *testing.T) {
 
 	repo := &fakeVehicleStatesRepo{
 		exists: map[int64]bool{42: true},
-		summaryRows: []database.VehicleStateSummaryRow{
+		summaryRows: []vehicledb.VehicleStateSummaryRow{
 			{State: "Asleep", TotalSeconds: 50000, Percentage: 50.0, TransitionCount: 2},
 			{State: "Online", TotalSeconds: 30000, Percentage: 30.0, TransitionCount: 5},
 			{State: "Driving", TotalSeconds: 15000, Percentage: 15.0, TransitionCount: 1},
@@ -490,7 +490,7 @@ func TestVehicleStates_VehicleExists_AlwaysRuns(t *testing.T) {
 	repo := &fakeVehicleStatesRepo{
 		exists: map[int64]bool{}, // unknown vehicle
 		// But the repo has dangling transition rows we must NEVER reach.
-		timeline: []database.VehicleStateTransition{
+		timeline: []vehicledb.VehicleStateTransition{
 			{Ts: t1, FromState: vsPtrStr("Online"), ToState: "Driving", TriggerField: vsPtrStr("Gear"), TriggerValue: vsPtrStr("D")},
 		},
 	}
@@ -556,7 +556,7 @@ func TestVehicleStates_RepoError_500(t *testing.T) {
 // require a live pool; the repo's nil-pool panic is covered in
 // TestNewVehicleStatesRepo_NilPoolPanics (vehicle_states_repo_test.go).
 // This test just confirms the production constructor accepts a typed
-// *database.VehicleStatesRepo without compile errors.
+// *vehicledb.VehicleStatesRepo without compile errors.
 var _ = NewVehicleStatesHandler // ensure exported constructor symbol
 
 func TestVehicleStatesHandler_ImplementsContract(t *testing.T) {

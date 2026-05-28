@@ -21,6 +21,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -37,7 +38,7 @@ type DevToolsHandler struct {
 	mqttClient   *mqtt.Client
 	cfg          *config.Config
 	settingsRepo *database.SettingsRepo
-	vehicleRepo  *database.VehicleRepo
+	vehicleRepo  *vehicledb.VehicleRepo
 	redisCache   *signal.RedisSignalCache
 	signalStore  *signal.Store
 }
@@ -81,7 +82,7 @@ func NewDevToolsHandler(tc *tesla.Client, opts ...DevToolsOption) *DevToolsHandl
 	}
 	if h.db != nil {
 		h.settingsRepo = database.NewSettingsRepo(h.db)
-		h.vehicleRepo = database.NewVehicleRepo(h.db)
+		h.vehicleRepo = vehicledb.NewVehicleRepo(h.db)
 	}
 	return h
 }

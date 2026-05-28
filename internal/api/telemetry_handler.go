@@ -12,6 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -44,7 +45,7 @@ var _ mqtt.StreamingHealthRecorder = (*TelemetryHandler)(nil)
 type TelemetryHandler struct {
 	db                    *database.DB
 	posRepo               *database.PositionRepo
-	vehicleRepo           *database.VehicleRepo
+	vehicleRepo           *vehicledb.VehicleRepo
 	swUpdateRepo          *systemdb.SoftwareUpdateRepo
 	mqttClient            *mqtt.Client
 	logRepo               *systemdb.APICallLogRepo

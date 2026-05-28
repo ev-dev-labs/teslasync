@@ -7,6 +7,7 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -34,7 +35,7 @@ type SignalStateReader interface {
 // interacting with repositories directly for complex operations.
 type VehicleService struct {
 	db            *database.DB
-	vehicleRepo   *database.VehicleRepo
+	vehicleRepo   *vehicledb.VehicleRepo
 	positionRepo  *database.PositionRepo
 	settingsRepo  *database.SettingsRepo
 	stateProvider *vehicleStateProvider
@@ -52,7 +53,7 @@ type VehicleService struct {
 func NewVehicleService(db *database.DB) *VehicleService {
 	return &VehicleService{
 		db:            db,
-		vehicleRepo:   database.NewVehicleRepo(db),
+		vehicleRepo:   vehicledb.NewVehicleRepo(db),
 		positionRepo:  database.NewPositionRepo(db),
 		settingsRepo:  database.NewSettingsRepo(db),
 		stateProvider: &vehicleStateProvider{db: db},
@@ -76,7 +77,7 @@ func (s *VehicleService) PositionRepo() *database.PositionRepo {
 }
 
 // VehicleRepo returns the underlying vehicle repository for simple CRUD.
-func (s *VehicleService) VehicleRepo() *database.VehicleRepo {
+func (s *VehicleService) VehicleRepo() *vehicledb.VehicleRepo {
 	return s.vehicleRepo
 }
 

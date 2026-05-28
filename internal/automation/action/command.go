@@ -20,7 +20,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
-// VehicleRepo is the subset of database.VehicleRepo needed by CommandExecutor.
+// VehicleRepo is the subset of vehicledb.VehicleRepo needed by CommandExecutor.
 type VehicleRepo interface {
 	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
 	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)

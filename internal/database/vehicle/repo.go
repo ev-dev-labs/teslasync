@@ -1,9 +1,10 @@
-package database
+package vehicle
 
 import (
 	"context"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -12,10 +13,10 @@ import (
 
 // VehicleRepo provides vehicle data access operations.
 type VehicleRepo struct {
-	db *DB
+	db *database.DB
 }
 
-func NewVehicleRepo(db *DB) *VehicleRepo {
+func NewVehicleRepo(db *database.DB) *VehicleRepo {
 	return &VehicleRepo{db: db}
 }
 

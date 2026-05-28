@@ -41,8 +41,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
@@ -59,7 +59,7 @@ type guardRepository interface {
 }
 
 // guardVehicleResolver looks up the VIN required by tesla.Client.SendCommand.
-// The production wiring satisfies this with *database.VehicleRepo; tests
+// The production wiring satisfies this with *vehicledb.VehicleRepo; tests
 // supply a fake.
 type guardVehicleResolver interface {
 	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
@@ -94,7 +94,7 @@ type GuardHandler struct {
 // can be tested without mutating shared config state.
 func NewGuardHandler(
 	repo *systemdb.GuardRepo,
-	vehicles *database.VehicleRepo,
+	vehicles *vehicledb.VehicleRepo,
 	cmd *tesla.Client,
 	cfg *config.Config,
 ) *GuardHandler {

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -43,7 +44,7 @@ type WatchComplication struct {
 // WatchHandler handles lightweight watch-optimized endpoints.
 type WatchHandler struct {
 	db           *database.DB
-	vehicleRepo  *database.VehicleRepo
+	vehicleRepo  *vehicledb.VehicleRepo
 	settingsRepo *database.SettingsRepo
 	teslaClient  *tesla.Client
 	redisCache   *signal.RedisSignalCache
@@ -53,7 +54,7 @@ type WatchHandler struct {
 func NewWatchHandler(db *database.DB, tc *tesla.Client) *WatchHandler {
 	return &WatchHandler{
 		db:           db,
-		vehicleRepo:  database.NewVehicleRepo(db),
+		vehicleRepo:  vehicledb.NewVehicleRepo(db),
 		settingsRepo: database.NewSettingsRepo(db),
 		teslaClient:  tc,
 	}
@@ -311,7 +312,7 @@ func (h *WatchHandler) queryWatchSummary(ctx context.Context, vehicleID int64) (
 
 // resolveWatchVehicleID extracts vehicle_id from query params, falling back
 // to the first vehicle if not specified.
-func resolveWatchVehicleID(r *http.Request, repo *database.VehicleRepo) (int64, error) {
+func resolveWatchVehicleID(r *http.Request, repo *vehicledb.VehicleRepo) (int64, error) {
 	if vidStr := r.URL.Query().Get("vehicle_id"); vidStr != "" {
 		vid, err := strconv.ParseInt(vidStr, 10, 64)
 		if err != nil || vid <= 0 {

@@ -29,6 +29,7 @@ import (
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	workerdb "github.com/ev-dev-labs/teslasync/internal/database/worker"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
@@ -481,10 +482,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// instances back both the global settings handler above and
 	// the per-vehicle resolver below.
 	vehicleSettingsRepo := database.NewVehicleSettingsRepo(db)
-	vehicleSettingsRepoForRouter := database.NewVehicleRepo(db)
+	vehicleSettingsRepoForRouter := vehicledb.NewVehicleRepo(db)
 	vehicleSettingsResolver := database.NewVehicleSettingsResolver(
 		vehicleSettingsRepo,
-		database.NewVehicleNameLookup(vehicleSettingsRepoForRouter),
+		vehicledb.NewNameLookup(vehicleSettingsRepoForRouter),
 		database.NewUserSettingsLookup(database.NewSettingsRepo(db)),
 	)
 	vehicleSettingsHandler := NewVehicleSettingsHandler(
@@ -497,7 +498,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// owns the on-disk write/read pipeline plus the per-vehicle
 	// upload mutex; the repo is a thin SQL facade that persists
 	// the rendered paths in vehicle_photos.
-	vehiclePhotoRepo := database.NewVehiclePhotoRepo(db)
+	vehiclePhotoRepo := vehicledb.NewVehiclePhotoRepo(db)
 	vehiclePhotoHandler := NewVehiclePhotoHandler(
 		vehiclePhotoRepo,
 		NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
@@ -544,7 +545,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	alertHandler := NewAlertHandler(db, eventHub, pahoForAlerts, alertLiveSignalStore)
 	alertMessageHandler := NewAlertMessageHandler()
 	commandHandler := NewCommandHandler(db, teslaClient)
-	guardHandler := NewGuardHandler(systemdb.NewGuardRepo(db.Pool), database.NewVehicleRepo(db), teslaClient, cfg)
+	guardHandler := NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)
 	signalLogReader := database.NewSignalLogReader(db)
 	batteryHandler := NewBatteryHandler(db, stateReader)
@@ -570,7 +571,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// below) bridges the two without leaking types across packages.
 	aiToolRegistry := tools.NewRegistry()
 	tools.Register12Builtins(aiToolRegistry, tools.Sources{
-		Vehicles:      database.NewVehicleRepo(db),
+		Vehicles:      vehicledb.NewVehicleRepo(db),
 		VehicleState:  aiToolsStateAdapter{r: stateReader},
 		Drives:        drivedb.NewDriveRepo(db),
 		Charges:       chargingdb.NewChargingRepo(db),
@@ -1820,7 +1821,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	automationHandler := NewAutomationHandler(db,
 		WithCommandExecutor(action.NewCommandExecutor(
-			database.NewVehicleRepo(db),
+			vehicledb.NewVehicleRepo(db),
 			energydb.NewCommandLogRepo(db),
 			&settingsCheckerAdapter{database.NewSettingsRepo(db)},
 			teslaClient,
@@ -2364,7 +2365,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// the registry's Names list grows deterministically.
 	aiVoiceModeChatSource := NewAIVoiceModeChatContextSource(dbnotif.NewChatRepo(db))
 	aiVoiceModeVehicleSource := NewAIVoiceModeVehicleSnapshotSource(
-		database.NewVehicleRepo(db),
+		vehicledb.NewVehicleRepo(db),
 		drivedb.NewDriveRepo(db),
 		liveStateReader,
 	)
@@ -2403,7 +2404,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// readers. Registered AFTER the slice 0055 tools above so
 	// the registry's Names list grows deterministically.
 	aiWatchFaceNLContextSource := NewAIWatchFaceNLContextSource(
-		database.NewVehicleRepo(db),
+		vehicledb.NewVehicleRepo(db),
 		redisSignalCache,
 	)
 	aiWatchFaceNLAlertHistorySource := NewAIWatchFaceNLAlertHistorySource(
@@ -2546,12 +2547,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// vehicle-paint-preview (Phase-50 / 0061, GEN2 slice). Registers
 	// the propose-only draft_paint_preview_prompt tool on the shared
 	// registry so the dispatcher can resolve it when the strategy
-	// runs; production wiring reuses *database.VehicleRepo (the same
+	// runs; production wiring reuses *vehicledb.VehicleRepo (the same
 	// read path the GET /api/v1/vehicles handlers already use, so
 	// no new SQL is added). Registered AFTER trip-postcard above so
 	// the registry's Names list grows deterministically.
 	paint.RegisterVehiclePaintPreviewTools(aiToolRegistry, paint.VehiclePaintPreviewSources{
-		Vehicles: database.NewVehicleRepo(db),
+		Vehicles: vehicledb.NewVehicleRepo(db),
 	})
 	// vehicle-paint-preview handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
@@ -3377,7 +3378,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// frontend hooks useStateTimeline / useTimeline / useStateSummary
 		// stop returning 404. Same admin-style rate limit as /system/queues
 		// (Phase-46 / Prompt 41 precedent).
-		vehicleStatesHandler := NewVehicleStatesHandler(database.NewVehicleStatesRepo(db.Pool))
+		vehicleStatesHandler := NewVehicleStatesHandler(vehicledb.NewVehicleStatesRepo(db.Pool))
 		r.Route("/vehicle-states", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/timeline", vehicleStatesHandler.Timeline)

@@ -13,6 +13,7 @@ import (
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
@@ -31,7 +32,7 @@ type vehicleHealth struct {
 // Worker polls Tesla API for vehicle data and stores it.
 type Worker struct {
 	db            *database.DB
-	vehicleRepo   *database.VehicleRepo
+	vehicleRepo   *vehicledb.VehicleRepo
 	posRepo       *database.PositionRepo
 	driveRepo     *drivedb.DriveRepo
 	chargeRepo    *chargingdb.ChargingRepo
@@ -75,7 +76,7 @@ type Worker struct {
 func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerConfig, eb *events.Bus, enc *crypto.Encryptor) *Worker {
 	return &Worker{
 		db:                db,
-		vehicleRepo:       database.NewVehicleRepo(db),
+		vehicleRepo:       vehicledb.NewVehicleRepo(db),
 		posRepo:           database.NewPositionRepo(db),
 		driveRepo:         drivedb.NewDriveRepo(db),
 		chargeRepo:        chargingdb.NewChargingRepo(db),
