@@ -8,12 +8,13 @@ import (
 	"net/http"
 	"strconv"
 
+	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/backup"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 type BackupRestoreHandler struct {
@@ -40,7 +41,7 @@ func (h *BackupRestoreHandler) ListConfigs(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	if configs == nil {
-		configs = []*models.BackupConfig{}
+		configs = []*backupmodel.BackupConfig{}
 	}
 	writeJSON(w, http.StatusOK, configs)
 }
@@ -60,7 +61,7 @@ func (h *BackupRestoreHandler) GetConfig(w http.ResponseWriter, r *http.Request)
 }
 
 func (h *BackupRestoreHandler) CreateConfig(w http.ResponseWriter, r *http.Request) {
-	var cfg models.BackupConfig
+	var cfg backupmodel.BackupConfig
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
 		writeAppError(w, r, ErrInvalidJSON)
 		return
@@ -102,7 +103,7 @@ func (h *BackupRestoreHandler) UpdateConfig(w http.ResponseWriter, r *http.Reque
 		writeAppError(w, r, ErrInvalidID.WithMessage("invalid config ID"))
 		return
 	}
-	var cfg models.BackupConfig
+	var cfg backupmodel.BackupConfig
 	if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
 		writeAppError(w, r, ErrInvalidJSON)
 		return
@@ -166,7 +167,7 @@ func (h *BackupRestoreHandler) ListRuns(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if runs == nil {
-		runs = []*models.BackupRun{}
+		runs = []*backupmodel.BackupRun{}
 	}
 	writeJSON(w, http.StatusOK, runs)
 }
@@ -198,7 +199,7 @@ func (h *BackupRestoreHandler) TriggerBackup(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	run := &models.BackupRun{
+	run := &backupmodel.BackupRun{
 		ConfigID:   &cfg.ID,
 		RunType:    "backup",
 		BackupType: cfg.BackupType,
@@ -219,7 +220,7 @@ func (h *BackupRestoreHandler) TriggerBackup(w http.ResponseWriter, r *http.Requ
 
 // TriggerQuickBackup starts an immediate full backup with default settings (no config needed).
 func (h *BackupRestoreHandler) TriggerQuickBackup(w http.ResponseWriter, r *http.Request) {
-	cfg := &models.BackupConfig{
+	cfg := &backupmodel.BackupConfig{
 		Name:           "Quick Backup",
 		BackupType:     "full",
 		Provider:       "local",
@@ -227,7 +228,7 @@ func (h *BackupRestoreHandler) TriggerQuickBackup(w http.ResponseWriter, r *http
 		Compress:       true,
 	}
 
-	run := &models.BackupRun{
+	run := &backupmodel.BackupRun{
 		RunType:    "backup",
 		BackupType: "full",
 		Status:     "queued",

@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -20,7 +22,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/export"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 
@@ -172,7 +173,7 @@ func main() {
 				}
 				span.SetAttributes(attribute.Int("backup.due_count", len(dueConfigs)))
 				for _, cfg := range dueConfigs {
-					run := &models.BackupRun{
+					run := &backupmodel.BackupRun{
 						ConfigID:   &cfg.ID,
 						RunType:    "backup",
 						BackupType: cfg.BackupType,
@@ -192,7 +193,7 @@ func main() {
 					// trace "which tick scheduled this backup" without making
 					// the tick wait synchronously.
 					tickSpanCtx := span.SpanContext()
-					go func(cfg *models.BackupConfig, run *models.BackupRun) {
+					go func(cfg *backupmodel.BackupConfig, run *backupmodel.BackupRun) {
 						runCtx, runSpan := workerTracer().Start(
 							context.Background(),
 							"export.backup_run",

@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
 )
 
 type BackupConfigRepo struct {
@@ -15,7 +15,7 @@ func NewBackupConfigRepo(db *DB) *BackupConfigRepo {
 	return &BackupConfigRepo{db: db}
 }
 
-func (r *BackupConfigRepo) Create(ctx context.Context, c *models.BackupConfig) error {
+func (r *BackupConfigRepo) Create(ctx context.Context, c *backupmodel.BackupConfig) error {
 	query := `INSERT INTO backup_configs (name, enabled, backup_type, frequency_days, max_retention, provider, provider_config, include_tables, compress, encrypt, next_run_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id, created_at, updated_at`
 	var nextRun *time.Time
@@ -29,10 +29,10 @@ func (r *BackupConfigRepo) Create(ctx context.Context, c *models.BackupConfig) e
 	).Scan(&c.ID, &c.CreatedAt, &c.UpdatedAt)
 }
 
-func (r *BackupConfigRepo) GetByID(ctx context.Context, id int64) (*models.BackupConfig, error) {
+func (r *BackupConfigRepo) GetByID(ctx context.Context, id int64) (*backupmodel.BackupConfig, error) {
 	query := `SELECT id, name, enabled, backup_type, frequency_days, max_retention, provider, provider_config, include_tables, compress, encrypt, last_run_at, next_run_at, created_at, updated_at
 		FROM backup_configs WHERE id = $1`
-	c := &models.BackupConfig{}
+	c := &backupmodel.BackupConfig{}
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&c.ID, &c.Name, &c.Enabled, &c.BackupType, &c.FrequencyDays, &c.MaxRetention,
 		&c.Provider, &c.ProviderConfig, &c.IncludeTables, &c.Compress, &c.Encrypt,
@@ -44,7 +44,7 @@ func (r *BackupConfigRepo) GetByID(ctx context.Context, id int64) (*models.Backu
 	return c, nil
 }
 
-func (r *BackupConfigRepo) List(ctx context.Context) ([]*models.BackupConfig, error) {
+func (r *BackupConfigRepo) List(ctx context.Context) ([]*backupmodel.BackupConfig, error) {
 	query := `SELECT id, name, enabled, backup_type, frequency_days, max_retention, provider, provider_config, include_tables, compress, encrypt, last_run_at, next_run_at, created_at, updated_at
 		FROM backup_configs ORDER BY created_at DESC`
 	rows, err := r.db.Pool.Query(ctx, query)
@@ -52,9 +52,9 @@ func (r *BackupConfigRepo) List(ctx context.Context) ([]*models.BackupConfig, er
 		return nil, err
 	}
 	defer rows.Close()
-	var configs []*models.BackupConfig
+	var configs []*backupmodel.BackupConfig
 	for rows.Next() {
-		c := &models.BackupConfig{}
+		c := &backupmodel.BackupConfig{}
 		if err := rows.Scan(&c.ID, &c.Name, &c.Enabled, &c.BackupType, &c.FrequencyDays, &c.MaxRetention,
 			&c.Provider, &c.ProviderConfig, &c.IncludeTables, &c.Compress, &c.Encrypt,
 			&c.LastRunAt, &c.NextRunAt, &c.CreatedAt, &c.UpdatedAt); err != nil {
@@ -65,7 +65,7 @@ func (r *BackupConfigRepo) List(ctx context.Context) ([]*models.BackupConfig, er
 	return configs, rows.Err()
 }
 
-func (r *BackupConfigRepo) Update(ctx context.Context, c *models.BackupConfig) error {
+func (r *BackupConfigRepo) Update(ctx context.Context, c *backupmodel.BackupConfig) error {
 	query := `UPDATE backup_configs SET name=$2, enabled=$3, backup_type=$4, frequency_days=$5, max_retention=$6, provider=$7, provider_config=$8, include_tables=$9, compress=$10, encrypt=$11, next_run_at=$12, updated_at=NOW()
 		WHERE id=$1`
 	var nextRun *time.Time
@@ -83,7 +83,7 @@ func (r *BackupConfigRepo) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
-func (r *BackupConfigRepo) GetDueConfigs(ctx context.Context) ([]*models.BackupConfig, error) {
+func (r *BackupConfigRepo) GetDueConfigs(ctx context.Context) ([]*backupmodel.BackupConfig, error) {
 	query := `SELECT id, name, enabled, backup_type, frequency_days, max_retention, provider, provider_config, include_tables, compress, encrypt, last_run_at, next_run_at, created_at, updated_at
 		FROM backup_configs WHERE enabled = true AND (next_run_at IS NULL OR next_run_at <= NOW())
 		ORDER BY next_run_at ASC`
@@ -92,9 +92,9 @@ func (r *BackupConfigRepo) GetDueConfigs(ctx context.Context) ([]*models.BackupC
 		return nil, err
 	}
 	defer rows.Close()
-	var configs []*models.BackupConfig
+	var configs []*backupmodel.BackupConfig
 	for rows.Next() {
-		c := &models.BackupConfig{}
+		c := &backupmodel.BackupConfig{}
 		if err := rows.Scan(&c.ID, &c.Name, &c.Enabled, &c.BackupType, &c.FrequencyDays, &c.MaxRetention,
 			&c.Provider, &c.ProviderConfig, &c.IncludeTables, &c.Compress, &c.Encrypt,
 			&c.LastRunAt, &c.NextRunAt, &c.CreatedAt, &c.UpdatedAt); err != nil {

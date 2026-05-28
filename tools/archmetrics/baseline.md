@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T03:40:32Z, Go go1.26.1, commit f136ed5b83fa20d60110652c25e6c5753d37e8f3_
+_Generated 2026-05-28T03:44:06Z, Go go1.26.1, commit baa044718f6e226e90cbabfc033acde63657ed34_
 
 ## Summary
 
-- Packages: 212
+- Packages: 213
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 371934
+- Total non-blank LOC under cmd/+internal/+tools/: 371955
 
 ## cmd/* main.go LOC
 
@@ -203,9 +203,10 @@ _Generated 2026-05-28T03:40:32Z, Go go1.26.1, commit f136ed5b83fa20d60110652c25e
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 33 | 1 | 2744 | yes | domain |
+| internal/models | 33 | 1 | 2706 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/models/auth | 2 | 1 | 66 | yes | domain |
+| internal/models/backup | 2 | 0 | 59 | yes | domain |
 | internal/mqtt | 7 | 7 | 4273 | yes | platform |
 | internal/notification | 4 | 2 | 1243 | yes | platform |
 | internal/notification/computed | 4 | 1 | 1004 | yes | platform |
@@ -263,7 +264,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 33 / 1 | 19 | 2 | 17 |
+| `internal/models` | R5 | 36 | 33 / 1 | 19 | 3 | 16 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -277,10 +278,10 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 **Existing subpackages on disk:**
 - `internal/models/alert`
 - `internal/models/auth`
+- `internal/models/backup`
 
 **Planned but not yet on disk:**
 - `internal/models/automation`
-- `internal/models/backup`
 - `internal/models/charging`
 - `internal/models/chatbot`
 - `internal/models/dashboard`

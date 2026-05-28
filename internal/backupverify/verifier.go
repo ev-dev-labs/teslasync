@@ -37,8 +37,9 @@ import (
 	"fmt"
 	"time"
 
+	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
+
 	"github.com/ev-dev-labs/teslasync/internal/backup"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // Verifier runs the backup drill. Construct via NewVerifier.
@@ -54,12 +55,12 @@ type Verifier struct {
 // BackupRunsLookup is the narrow surface the verifier needs from the
 // backup_runs repo. Kept narrow so tests don't need the full repo.
 type BackupRunsLookup interface {
-	LatestSuccessful(ctx context.Context) (*models.BackupRun, error)
+	LatestSuccessful(ctx context.Context) (*backupmodel.BackupRun, error)
 }
 
 // BackupConfigsLookup mirrors the read needed against backup_configs.
 type BackupConfigsLookup interface {
-	GetByID(ctx context.Context, id int64) (*models.BackupConfig, error)
+	GetByID(ctx context.Context, id int64) (*backupmodel.BackupConfig, error)
 }
 
 // Result summarises a single verification run.

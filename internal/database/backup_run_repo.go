@@ -5,9 +5,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/jackc/pgx/v5"
+	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 type BackupRunRepo struct {
@@ -18,7 +18,7 @@ func NewBackupRunRepo(db *DB) *BackupRunRepo {
 	return &BackupRunRepo{db: db}
 }
 
-func (r *BackupRunRepo) Create(ctx context.Context, run *models.BackupRun) error {
+func (r *BackupRunRepo) Create(ctx context.Context, run *backupmodel.BackupRun) error {
 	query := `INSERT INTO backup_runs (config_id, run_type, backup_type, status, provider, metadata)
 		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id, created_at`
 	return r.db.Pool.QueryRow(ctx, query,
@@ -49,10 +49,10 @@ func (r *BackupRunRepo) Fail(ctx context.Context, id int64, errMsg string, durat
 	return err
 }
 
-func (r *BackupRunRepo) GetByID(ctx context.Context, id int64) (*models.BackupRun, error) {
+func (r *BackupRunRepo) GetByID(ctx context.Context, id int64) (*backupmodel.BackupRun, error) {
 	query := `SELECT id, config_id, run_type, backup_type, status, provider, file_name, file_path, file_size, record_count, table_count, checksum, duration_ms, error_message, metadata, started_at, completed_at, created_at
 		FROM backup_runs WHERE id = $1`
-	run := &models.BackupRun{}
+	run := &backupmodel.BackupRun{}
 	err := r.db.Pool.QueryRow(ctx, query, id).Scan(
 		&run.ID, &run.ConfigID, &run.RunType, &run.BackupType, &run.Status, &run.Provider,
 		&run.FileName, &run.FilePath, &run.FileSize, &run.RecordCount, &run.TableCount,
@@ -65,7 +65,7 @@ func (r *BackupRunRepo) GetByID(ctx context.Context, id int64) (*models.BackupRu
 	return run, nil
 }
 
-func (r *BackupRunRepo) List(ctx context.Context, limit, offset int) ([]*models.BackupRun, error) {
+func (r *BackupRunRepo) List(ctx context.Context, limit, offset int) ([]*backupmodel.BackupRun, error) {
 	query := `SELECT id, config_id, run_type, backup_type, status, provider, file_name, file_path, file_size, record_count, table_count, checksum, duration_ms, error_message, metadata, started_at, completed_at, created_at
 		FROM backup_runs ORDER BY created_at DESC LIMIT $1 OFFSET $2`
 	rows, err := r.db.Pool.Query(ctx, query, limit, offset)
@@ -73,9 +73,9 @@ func (r *BackupRunRepo) List(ctx context.Context, limit, offset int) ([]*models.
 		return nil, err
 	}
 	defer rows.Close()
-	var runs []*models.BackupRun
+	var runs []*backupmodel.BackupRun
 	for rows.Next() {
-		run := &models.BackupRun{}
+		run := &backupmodel.BackupRun{}
 		if err := rows.Scan(
 			&run.ID, &run.ConfigID, &run.RunType, &run.BackupType, &run.Status, &run.Provider,
 			&run.FileName, &run.FilePath, &run.FileSize, &run.RecordCount, &run.TableCount,
@@ -89,7 +89,7 @@ func (r *BackupRunRepo) List(ctx context.Context, limit, offset int) ([]*models.
 	return runs, rows.Err()
 }
 
-func (r *BackupRunRepo) ListByConfig(ctx context.Context, configID int64, limit int) ([]*models.BackupRun, error) {
+func (r *BackupRunRepo) ListByConfig(ctx context.Context, configID int64, limit int) ([]*backupmodel.BackupRun, error) {
 	query := `SELECT id, config_id, run_type, backup_type, status, provider, file_name, file_path, file_size, record_count, table_count, checksum, duration_ms, error_message, metadata, started_at, completed_at, created_at
 		FROM backup_runs WHERE config_id = $1 ORDER BY created_at DESC LIMIT $2`
 	rows, err := r.db.Pool.Query(ctx, query, configID, limit)
@@ -97,9 +97,9 @@ func (r *BackupRunRepo) ListByConfig(ctx context.Context, configID int64, limit 
 		return nil, err
 	}
 	defer rows.Close()
-	var runs []*models.BackupRun
+	var runs []*backupmodel.BackupRun
 	for rows.Next() {
-		run := &models.BackupRun{}
+		run := &backupmodel.BackupRun{}
 		if err := rows.Scan(
 			&run.ID, &run.ConfigID, &run.RunType, &run.BackupType, &run.Status, &run.Provider,
 			&run.FileName, &run.FilePath, &run.FileSize, &run.RecordCount, &run.TableCount,
@@ -117,10 +117,10 @@ func (r *BackupRunRepo) ListByConfig(ctx context.Context, configID int64, limit 
 // Returns (nil, nil) when no successful backup exists yet — callers
 // MUST treat this as a verification failure rather than a transient
 // error. Phase-49 / p49-backup-verify.
-func (r *BackupRunRepo) LatestSuccessful(ctx context.Context) (*models.BackupRun, error) {
+func (r *BackupRunRepo) LatestSuccessful(ctx context.Context) (*backupmodel.BackupRun, error) {
 	query := `SELECT id, config_id, run_type, backup_type, status, provider, file_name, file_path, file_size, record_count, table_count, checksum, duration_ms, error_message, metadata, started_at, completed_at, created_at
 		FROM backup_runs WHERE status = 'success' AND file_path IS NOT NULL ORDER BY created_at DESC LIMIT 1`
-	run := &models.BackupRun{}
+	run := &backupmodel.BackupRun{}
 	if err := r.db.Pool.QueryRow(ctx, query).Scan(
 		&run.ID, &run.ConfigID, &run.RunType, &run.BackupType, &run.Status, &run.Provider,
 		&run.FileName, &run.FilePath, &run.FileSize, &run.RecordCount, &run.TableCount,

@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T03:40:31Z",
+  "generated_at": "2026-05-28T03:44:05Z",
   "go_version": "go1.26.1",
-  "commit_sha": "f136ed5b83fa20d60110652c25e6c5753d37e8f3",
+  "commit_sha": "baa044718f6e226e90cbabfc033acde63657ed34",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -106,7 +106,7 @@
         "internal/config",
         "internal/database",
         "internal/export",
-        "internal/models",
+        "internal/models/backup",
         "internal/resilience",
         "internal/tracing"
       ],
@@ -2146,6 +2146,7 @@
         "internal/models",
         "internal/models/alert",
         "internal/models/auth",
+        "internal/models/backup",
         "internal/mqtt",
         "internal/notification",
         "internal/notification/computed",
@@ -3057,7 +3058,7 @@
       "layer": "platform",
       "imports": [
         "internal/database",
-        "internal/models"
+        "internal/models/backup"
       ],
       "files": [
         "doc.go",
@@ -3075,7 +3076,7 @@
       "layer": "platform",
       "imports": [
         "internal/backup",
-        "internal/models"
+        "internal/models/backup"
       ],
       "files": [
         "doc.go",
@@ -3163,6 +3164,7 @@
         "internal/models",
         "internal/models/alert",
         "internal/models/auth",
+        "internal/models/backup",
         "internal/tracing"
       ],
       "files": [
@@ -3943,7 +3945,7 @@
       "path": "internal/models",
       "go_files": 33,
       "test_files": 1,
-      "loc": 2744,
+      "loc": 2706,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4009,6 +4011,19 @@
       "files": [
         "auth.go",
         "auth_test.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/models/backup",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 59,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "backup.go",
         "doc.go"
       ]
     },
@@ -6274,6 +6289,10 @@
       "auth.go",
       "doc.go"
     ],
+    "internal/models/backup": [
+      "backup.go",
+      "doc.go"
+    ],
     "internal/mqtt": [
       "dlq_inspector.go",
       "dlq_production.go",
@@ -6581,11 +6600,11 @@
       "planned_subpkgs": 19,
       "existing_subpkgs": [
         "alert",
-        "auth"
+        "auth",
+        "backup"
       ],
       "missing_subpkgs": [
         "automation",
-        "backup",
         "charging",
         "chatbot",
         "dashboard",
