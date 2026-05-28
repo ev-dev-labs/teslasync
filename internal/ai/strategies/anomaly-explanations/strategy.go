@@ -9,7 +9,7 @@
 //     suppression or threshold edits;
 //   - the single read-only tool the LLM is allowed to call —
 //     `query_anomaly_context` — which calls into the existing
-//     *api.AnomalyHandler.DetectAnomalies (no new SQL written);
+//     (*apianomaly.Handler).DetectAnomalies (no new SQL written);
 //   - the redaction policy (`PolicyDigest`) which allows
 //     ClassVehicleName so the narration can address the user's car
 //     by name; every other PII class is redacted via round-trip tags.

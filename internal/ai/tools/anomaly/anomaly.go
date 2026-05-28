@@ -11,7 +11,7 @@
 //   - "thin Tool wrapper over an existing handler. **No new SQL written.**"
 //     The tool does not query Postgres directly — it calls
 //     [AnomalySource.DetectAnomalies], which is satisfied at boot by
-//     the existing *api.AnomalyHandler whose Z-score / range / trend
+//     the existing *apianomaly.Handler whose Z-score / range / trend
 //     SQL is unchanged from the pre-refactor handler. The Phase-50/0014
 //     refactor extracted those SQL queries into a method without
 //     adding, modifying, or duplicating any of them.
@@ -77,7 +77,7 @@ type AnomalyContextEntry struct {
 // AnomalyContextResult is the shared aggregate the detector returns.
 // Anomalies is non-nil even when empty; HealthSummary always includes
 // the five canonical category keys; counts default to zero. These
-// invariants are enforced by AnomalyHandler.DetectAnomalies — both
+// invariants are enforced by (*apianomaly.Handler).DetectAnomalies — both
 // the HTTP path and the AI tool rely on them.
 type AnomalyContextResult struct {
 	Anomalies        []AnomalyContextEntry `json:"anomalies"`
@@ -88,7 +88,7 @@ type AnomalyContextResult struct {
 }
 
 // AnomalySource is the narrow read interface the anomaly tool needs.
-// In production it is satisfied by *api.AnomalyHandler (compile-time
+// In production it is satisfied by *apianomaly.Handler (compile-time
 // assertion in internal/api/anomaly_handler.go); tests substitute a
 // deterministic fake.
 //
@@ -99,7 +99,7 @@ type AnomalyContextResult struct {
 type AnomalySource interface {
 	// DetectAnomalies runs the full detection pipeline (Z-score
 	// outliers, range violations, trend deltas) for one vehicle
-	// over the last `days` days. Per the AnomalyHandler contract,
+	// over the last `days` days. Per the apianomaly.Handler contract,
 	// the returned pointer is always non-nil; per-stage query
 	// failures are logged and swallowed (graceful degradation).
 	DetectAnomalies(ctx context.Context, vehicleID int64, days int) (*AnomalyContextResult, error)
@@ -180,7 +180,7 @@ const defaultAnomalyDays = 7
 //
 // A failure from DetectAnomalies is propagated as-is so the
 // dispatcher emits a tool-error frame — but in practice the
-// AnomalyHandler implementation always returns a nil error
+// apianomaly.Handler implementation always returns a nil error
 // (graceful-degradation contract), so the only real error path here
 // is "tool was wired with a nil AnomalySource".
 func (t *queryAnomalyContext) Execute(ctx context.Context, in any) (any, error) {
@@ -219,7 +219,7 @@ func (t *queryAnomalyContext) Execute(ctx context.Context, in any) (any, error) 
 // [YearReviewSources] but exposes only the surface the anomaly
 // explanation tool actually consumes.
 //
-// Production wiring (router.go) reuses the same *api.AnomalyHandler
+// Production wiring (router.go) reuses the same *apianomaly.Handler
 // instance the HTTP path is built around; tests substitute
 // deterministic fakes per-source.
 type AnomalySources struct {

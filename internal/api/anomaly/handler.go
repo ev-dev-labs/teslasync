@@ -1,4 +1,4 @@
-package api
+package anomaly
 
 import (
 	"context"
@@ -11,35 +11,36 @@ import (
 
 	"github.com/rs/zerolog/log"
 
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
+	aitools "github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// AnomalyHandler detects unusual signal values and produces health alerts.
+// Handler detects unusual signal values and produces health alerts.
 //
 // Phase-50 / 0014 — U4 Anomaly explanation narration.
 //
 // The detector logic (Z-score outliers, range violations, trend deltas) was
 // previously embedded inside [GetAnomalies]. It has been extracted into the
-// public method [AnomalyHandler.DetectAnomalies] so the U4 AI tool
-// `query_anomaly_context` (internal/ai/tools/anomaly.go) can reuse the
+// public method [Handler.DetectAnomalies] so the U4 AI tool
+// `query_anomaly_context` (internal/ai/tools/anomaly/anomaly.go) can reuse the
 // SAME detection code with NO new SQL written. The HTTP handler is now a
 // thin wrapper that calls DetectAnomalies + writes the response — the wire
 // shape is byte-equivalent to the pre-refactor handler (verified by
 // TestGetAnomalies_WireShapeUnchanged).
-type AnomalyHandler struct {
+type Handler struct {
 	db *database.DB
 }
 
-func NewAnomalyHandler(db *database.DB) *AnomalyHandler {
-	return &AnomalyHandler{db: db}
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{db: db}
 }
 
-// Compile-time assertion: AnomalyHandler satisfies the AnomalySource
-// interface from internal/ai/tools/anomaly.go. A future edit that drops
+// Compile-time assertion: Handler satisfies the AnomalySource
+// interface from internal/ai/tools/anomaly/anomaly.go. A future edit that drops
 // DetectAnomalies or changes its signature breaks this build, surfacing
 // the wiring bug at compile time instead of at first AI request.
-var _ anomaly.AnomalySource = (*AnomalyHandler)(nil)
+var _ aitools.AnomalySource = (*Handler)(nil)
 
 // ── Response types ───────────────────────────────────────────
 
@@ -133,19 +134,19 @@ var signalDisplayName = map[string]string{
 // GetAnomalies handles GET /analytics/anomalies?vehicle_id=X&days=7
 //
 // Phase-50/0014: this method is now a thin wrapper around the public
-// [AnomalyHandler.DetectAnomalies] detector. The detector returns the
+// [Handler.DetectAnomalies] detector. The detector returns the
 // AI-shared result type, which we translate back into the legacy
 // anomalyResponse wire shape (no field renames, no semantic changes).
 // TestGetAnomalies_WireShapeUnchanged pins this guarantee.
-func (h *AnomalyHandler) GetAnomalies(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetAnomalies(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -162,11 +163,11 @@ func (h *AnomalyHandler) GetAnomalies(w http.ResponseWriter, r *http.Request) {
 		// error. A non-nil error here means the contract was
 		// broken — which would itself be a regression.
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("anomaly: DetectAnomalies returned error")
-		writeError(w, http.StatusInternalServerError, "failed to detect anomalies")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to detect anomalies")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, anomalyContextResultToResponse(result))
+	httpx.WriteJSON(w, http.StatusOK, anomalyContextResultToResponse(result))
 }
 
 // anomalyContextResultToResponse converts the AI-shared
@@ -176,7 +177,7 @@ func (h *AnomalyHandler) GetAnomalies(w http.ResponseWriter, r *http.Request) {
 //
 // Field-by-field mapping is intentional (no struct embedding) so a
 // future change to either side is loud rather than silent.
-func anomalyContextResultToResponse(r *anomaly.AnomalyContextResult) anomalyResponse {
+func anomalyContextResultToResponse(r *aitools.AnomalyContextResult) anomalyResponse {
 	if r == nil {
 		// Defensive: should not happen — DetectAnomalies always
 		// returns a non-nil pointer. But if a future edit ever
@@ -217,7 +218,7 @@ func anomalyContextResultToResponse(r *anomaly.AnomalyContextResult) anomalyResp
 // days and returns the deduplicated, severity-sorted result.
 //
 // The method is the canonical service the HTTP handler [GetAnomalies]
-// AND the AI tool `query_anomaly_context` (internal/ai/tools/anomaly.go)
+// AND the AI tool `query_anomaly_context` (internal/ai/tools/anomaly/anomaly.go)
 // both call into — there is exactly ONE detector, period.
 //
 // Behavioural contract preserved across the Phase-50/0014 refactor:
@@ -238,7 +239,7 @@ func anomalyContextResultToResponse(r *anomaly.AnomalyContextResult) anomalyResp
 //   - HealthSummary always includes the five canonical category keys
 //     (battery, tires, motors, hvac, charging) seeded to "normal" so
 //     the frontend can render the health grid without nil checks.
-func (h *AnomalyHandler) DetectAnomalies(ctx context.Context, vehicleID int64, days int) (*anomaly.AnomalyContextResult, error) {
+func (h *Handler) DetectAnomalies(ctx context.Context, vehicleID int64, days int) (*aitools.AnomalyContextResult, error) {
 	since := time.Now().AddDate(0, 0, -days)
 
 	var allAnomalies []anomalyEntry
@@ -300,15 +301,15 @@ func (h *AnomalyHandler) DetectAnomalies(ctx context.Context, vehicleID int64, d
 	// Convert to the AI-shared shape. Pre-allocating the slice with
 	// len/cap=len(allAnomalies) preserves the "empty slice, not nil"
 	// invariant that the legacy wire shape relied on.
-	out := &anomaly.AnomalyContextResult{
-		Anomalies:        make([]anomaly.AnomalyContextEntry, 0, len(allAnomalies)),
+	out := &aitools.AnomalyContextResult{
+		Anomalies:        make([]aitools.AnomalyContextEntry, 0, len(allAnomalies)),
 		HealthSummary:    healthSummary,
 		SignalsMonitored: signalsChecked,
 		AnomaliesLast7d:  len(allAnomalies),
 		AnomaliesLast24h: last24h,
 	}
 	for _, a := range allAnomalies {
-		out.Anomalies = append(out.Anomalies, anomaly.AnomalyContextEntry{
+		out.Anomalies = append(out.Anomalies, aitools.AnomalyContextEntry{
 			Signal:     a.Signal,
 			Type:       a.Type,
 			Severity:   a.Severity,
@@ -324,7 +325,7 @@ func (h *AnomalyHandler) DetectAnomalies(ctx context.Context, vehicleID int64, d
 
 // ── Z-score detection ────────────────────────────────────────
 
-func (h *AnomalyHandler) detectZScoreAnomalies(ctx context.Context, vehicleID int64, since time.Time) ([]anomalyEntry, int) {
+func (h *Handler) detectZScoreAnomalies(ctx context.Context, vehicleID int64, since time.Time) ([]anomalyEntry, int) {
 
 	rows, err := h.db.Pool.Query(ctx, `
 		WITH stats AS (
@@ -397,7 +398,7 @@ func (h *AnomalyHandler) detectZScoreAnomalies(ctx context.Context, vehicleID in
 
 // ── Range violation detection ────────────────────────────────
 
-func (h *AnomalyHandler) detectRangeViolations(ctx context.Context, vehicleID int64, since time.Time) []anomalyEntry {
+func (h *Handler) detectRangeViolations(ctx context.Context, vehicleID int64, since time.Time) []anomalyEntry {
 
 	var anomalies []anomalyEntry
 
@@ -449,7 +450,7 @@ func (h *AnomalyHandler) detectRangeViolations(ctx context.Context, vehicleID in
 
 // ── Trend anomaly detection ──────────────────────────────────
 
-func (h *AnomalyHandler) detectTrendAnomalies(ctx context.Context, vehicleID int64) []anomalyEntry {
+func (h *Handler) detectTrendAnomalies(ctx context.Context, vehicleID int64) []anomalyEntry {
 
 	trendSignals := []string{
 		"BatteryLevel", "PackVoltage",
@@ -550,4 +551,8 @@ func deduplicateAnomalies(anomalies []anomalyEntry) []anomalyEntry {
 		result = append(result, a)
 	}
 	return result
+}
+
+func round2(v float64) float64 {
+	return math.Round(v*100) / 100
 }

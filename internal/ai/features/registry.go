@@ -292,7 +292,7 @@ var Registry = map[string]Feature{
 	// Detector behaviour, threshold values, and alerting routing are
 	// UNCHANGED. The strategy reads anomalies via the typed
 	// `query_anomaly_context` tool which delegates to the existing
-	// AnomalyHandler.DetectAnomalies — no new SQL, no parallel
+	// (*apianomaly.Handler).DetectAnomalies — no new SQL, no parallel
 	// detector implementation.
 	//
 	// Backend: POST /api/v1/ai/anomalies/explain is mounted by

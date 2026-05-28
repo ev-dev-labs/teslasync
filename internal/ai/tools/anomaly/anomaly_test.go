@@ -40,7 +40,7 @@ func (f *fakeAnomalySource) DetectAnomalies(_ context.Context, vehicleID int64, 
 	if f.result != nil {
 		return f.result, nil
 	}
-	// Default: empty-but-well-formed result mirroring AnomalyHandler's
+	// Default: empty-but-well-formed result mirroring apianomaly.Handler's
 	// graceful-degradation contract.
 	return &AnomalyContextResult{
 		Anomalies: []AnomalyContextEntry{},

@@ -3,7 +3,7 @@
 // Wire-shape / refactor-safety tests for the baseline anomaly handler.
 //
 // The Phase-50/0014 refactor extracted the detector code from
-// AnomalyHandler.GetAnomalies into the public AnomalyHandler.DetectAnomalies
+// Handler.GetAnomalies into the public Handler.DetectAnomalies
 // method so the AI tool query_anomaly_context can reuse it. The HTTP
 // handler is now a thin wrapper that calls DetectAnomalies + writes
 // the response via anomalyContextResultToResponse.
@@ -16,14 +16,14 @@
 // to a nil slice) breaks the frontend silently — this test catches
 // it loudly.
 
-package api
+package anomaly
 
 import (
 	"encoding/json"
 	"strings"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
+	aitools "github.com/ev-dev-labs/teslasync/internal/ai/tools/anomaly"
 )
 
 // TestGetAnomalies_WireShapeUnchanged is the load-bearing wire-shape
@@ -50,8 +50,8 @@ func TestGetAnomalies_WireShapeUnchanged(t *testing.T) {
 	// frontend's `data.anomalies.map(...)` calls.
 	t.Run("empty_result_emits_anomalies_array_not_null", func(t *testing.T) {
 		t.Parallel()
-		empty := &anomaly.AnomalyContextResult{
-			Anomalies: []anomaly.AnomalyContextEntry{},
+		empty := &aitools.AnomalyContextResult{
+			Anomalies: []aitools.AnomalyContextEntry{},
 			HealthSummary: map[string]string{
 				"battery": "normal", "tires": "normal", "motors": "normal",
 				"hvac": "normal", "charging": "normal",
@@ -102,8 +102,8 @@ func TestGetAnomalies_WireShapeUnchanged(t *testing.T) {
 	// preserve every one of them at the JSON boundary.
 	t.Run("realistic_result_preserves_every_legacy_field", func(t *testing.T) {
 		t.Parallel()
-		full := &anomaly.AnomalyContextResult{
-			Anomalies: []anomaly.AnomalyContextEntry{
+		full := &aitools.AnomalyContextResult{
+			Anomalies: []aitools.AnomalyContextEntry{
 				{
 					Signal:     "TpmsPressureFl",
 					Type:       "range",
@@ -207,8 +207,8 @@ func TestGetAnomalies_WireShapeUnchanged(t *testing.T) {
 func TestAnomalyContextResultToResponse_HealthSummaryAliased(t *testing.T) {
 	t.Parallel()
 	src := map[string]string{"battery": "normal"}
-	in := &anomaly.AnomalyContextResult{
-		Anomalies:     []anomaly.AnomalyContextEntry{},
+	in := &aitools.AnomalyContextResult{
+		Anomalies:     []aitools.AnomalyContextEntry{},
 		HealthSummary: src,
 	}
 	out := anomalyContextResultToResponse(in)

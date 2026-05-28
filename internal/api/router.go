@@ -14,6 +14,7 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	apianomaly "github.com/ev-dev-labs/teslasync/internal/api/anomaly"
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	apiflagsh "github.com/ev-dev-labs/teslasync/internal/api/apiflagsh"
 	apikeyh "github.com/ev-dev-labs/teslasync/internal/api/apikey"
@@ -745,7 +746,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	drivingCoachHandler := NewDrivingCoachHandler(db)
 	costForecastHandler := NewCostForecastHandler(db)
 	chargingOptimizerHandler := NewChargingOptimizerHandler(db)
-	anomalyHandler := NewAnomalyHandler(db)
+	anomalyHandler := apianomaly.NewHandler(db)
 	// Phase-50 / U4 (slice 0014) — register the anomaly-explanations
 	// slice's read-only tool on the SAME process-wide registry so
 	// the dispatcher can resolve `query_anomaly_context` for the
@@ -753,8 +754,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Register12Builtins + RegisterDigestTools + RegisterYearReviewTools
 	// so the BuiltinNames-pin test continues to see the canonical
 	// builtins; this call extends the registry beyond the pinned set.
-	// AnomalyHandler implements aitools.AnomalySource via
-	// (*AnomalyHandler).DetectAnomalies — see anomaly_handler.go.
+	// apianomaly.Handler implements aitools.AnomalySource via
+	// (*apianomaly.Handler).DetectAnomalies — see internal/api/anomaly/handler.go.
 	anomalytool.RegisterAnomalyTools(aiToolRegistry, anomalytool.AnomalySources{
 		Anomaly: anomalyHandler,
 	})

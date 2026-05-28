@@ -1,7 +1,7 @@
 // Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
 //
 // safe-range parity test: pins
-// internal/api.safeRanges <-> internal/ml/anomaly.StaticEnvelope()
+// internal/api/anomaly.safeRanges <-> internal/ml/anomaly.StaticEnvelope()
 // byte-for-byte. The two maps MUST stay identical for the lifetime
 // of the slice; if a future change updates one but not the other,
 // learned-baseline fallback would silently disagree with the
@@ -12,21 +12,21 @@
 // internal/ml/anomaly/safe_ranges.go; this test is the load-bearing
 // guard that keeps the duplication safe.
 
-package api
+package anomaly
 
 import (
 	"reflect"
 	"sort"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
+	mlanomaly "github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
 )
 
 // TestSafeRangesParity_APIvsMLAnomaly proves the two copies of the
 // canonical safe-range envelope stay byte-equal. A failure here
 // means either:
 //
-//   - The deterministic detector at internal/api/anomaly_handler.go
+//   - The deterministic detector at internal/api/anomaly/handler.go
 //     was updated without mirroring the change to
 //     internal/ml/anomaly/safe_ranges.go (or vice-versa), OR
 //   - A new signal was added to one map but not the other — the
@@ -39,7 +39,7 @@ func TestSafeRangesParity_APIvsMLAnomaly(t *testing.T) {
 	t.Parallel()
 
 	apiCopy := safeRanges
-	mlCopy := anomaly.StaticEnvelope()
+	mlCopy := mlanomaly.StaticEnvelope()
 
 	if len(apiCopy) != len(mlCopy) {
 		t.Fatalf("safe-range key count drift: api=%d ml=%d", len(apiCopy), len(mlCopy))
@@ -56,7 +56,7 @@ func TestSafeRangesParity_APIvsMLAnomaly(t *testing.T) {
 		for _, k := range apiKeys {
 			a, ok := mlCopy[k]
 			if !ok {
-				t.Errorf("signal %q present in internal/api.safeRanges, missing from anomaly.StaticEnvelope()", k)
+				t.Errorf("signal %q present in internal/api/anomaly.safeRanges, missing from internal/ml/anomaly.StaticEnvelope()", k)
 				continue
 			}
 			if a != apiCopy[k] {
@@ -65,7 +65,7 @@ func TestSafeRangesParity_APIvsMLAnomaly(t *testing.T) {
 		}
 		for k := range mlCopy {
 			if _, ok := apiCopy[k]; !ok {
-				t.Errorf("signal %q present in anomaly.StaticEnvelope(), missing from internal/api.safeRanges", k)
+				t.Errorf("signal %q present in internal/ml/anomaly.StaticEnvelope(), missing from internal/api/anomaly.safeRanges", k)
 			}
 		}
 		t.Fatal("safe-range maps drifted — see errors above; update BOTH copies in the same commit")
@@ -73,15 +73,15 @@ func TestSafeRangesParity_APIvsMLAnomaly(t *testing.T) {
 }
 
 // TestSafeRangesParity_MLEnvelopeReturnsCopy is a cheap defensive
-// check that anomaly.StaticEnvelope() returns a fresh map each call
+// check that internal/ml/anomaly.StaticEnvelope() returns a fresh map each call
 // — mutating one consumer's result must NOT corrupt the canonical
 // internal table that the trainer's fallback consults.
 func TestSafeRangesParity_MLEnvelopeReturnsCopy(t *testing.T) {
 	t.Parallel()
-	first := anomaly.StaticEnvelope()
+	first := mlanomaly.StaticEnvelope()
 	first["BatteryLevel"] = [2]float64{-999, 999}
-	second := anomaly.StaticEnvelope()
+	second := mlanomaly.StaticEnvelope()
 	if second["BatteryLevel"] == ([2]float64{-999, 999}) {
-		t.Fatal("anomaly.StaticEnvelope() leaked the canonical map; mutation by one caller corrupted the next")
+		t.Fatal("internal/ml/anomaly.StaticEnvelope() leaked the canonical map; mutation by one caller corrupted the next")
 	}
 }
