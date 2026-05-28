@@ -1,29 +1,31 @@
-package database
+package achievement
 
 import (
 	"context"
 	"fmt"
 	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// AchievementUnlockRepo persists first-unlock timestamps for lifetime
+// UnlockRepo persists first-unlock timestamps for lifetime
 // achievements. Used by the lifetime handler to detect locked → unlocked
 // transitions and surface them as celebration events.
 //
 // vehicleID = 0 represents the fleet-wide (no vehicle filter) bucket so the
 // (achievement_id, vehicle_id) primary key behaves correctly under standard
 // UNIQUE semantics (no NULL-aware comparison required).
-type AchievementUnlockRepo struct {
-	db *DB
+type UnlockRepo struct {
+	db *database.DB
 }
 
-// NewAchievementUnlockRepo wires a repository against the shared pool.
-func NewAchievementUnlockRepo(db *DB) *AchievementUnlockRepo {
-	return &AchievementUnlockRepo{db: db}
+// NewUnlockRepo wires a repository against the shared pool.
+func NewUnlockRepo(db *database.DB) *UnlockRepo {
+	return &UnlockRepo{db: db}
 }
 
-// AchievementUnlock is a single persisted unlock row.
-type AchievementUnlock struct {
+// Unlock is a single persisted unlock row.
+type Unlock struct {
 	AchievementID string
 	VehicleID     int64
 	UnlockedAt    time.Time
@@ -31,7 +33,7 @@ type AchievementUnlock struct {
 
 // ListByVehicle returns every persisted unlock for the given vehicle scope.
 // Pass vehicleID = 0 for the fleet-wide bucket.
-func (r *AchievementUnlockRepo) ListByVehicle(ctx context.Context, vehicleID int64) ([]AchievementUnlock, error) {
+func (r *UnlockRepo) ListByVehicle(ctx context.Context, vehicleID int64) ([]Unlock, error) {
 	rows, err := r.db.Pool.Query(ctx,
 		`SELECT achievement_id, vehicle_id, unlocked_at
 		 FROM achievement_unlocks
@@ -43,9 +45,9 @@ func (r *AchievementUnlockRepo) ListByVehicle(ctx context.Context, vehicleID int
 	}
 	defer rows.Close()
 
-	var out []AchievementUnlock
+	var out []Unlock
 	for rows.Next() {
-		var u AchievementUnlock
+		var u Unlock
 		if err := rows.Scan(&u.AchievementID, &u.VehicleID, &u.UnlockedAt); err != nil {
 			return nil, fmt.Errorf("achievement_unlocks scan: %w", err)
 		}
@@ -59,7 +61,7 @@ func (r *AchievementUnlockRepo) ListByVehicle(ctx context.Context, vehicleID int
 // insert actually happened (a fresh transition); false when the row already
 // existed (idempotent re-evaluation). The returned timestamp is the persisted
 // `unlocked_at` value in either case so callers can echo it back to clients.
-func (r *AchievementUnlockRepo) RecordUnlock(ctx context.Context, achievementID string, vehicleID int64, when time.Time) (bool, time.Time, error) {
+func (r *UnlockRepo) RecordUnlock(ctx context.Context, achievementID string, vehicleID int64, when time.Time) (bool, time.Time, error) {
 	var inserted bool
 	var unlockedAt time.Time
 	err := r.db.Pool.QueryRow(ctx,

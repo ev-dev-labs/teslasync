@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/database/achievement"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -28,11 +29,11 @@ type LifetimeHandler struct {
 	now      func() time.Time
 }
 
-// achievementUnlockStore is the slice of *database.AchievementUnlockRepo
+// achievementUnlockStore is the slice of *achievement.UnlockRepo
 // consumed by the lifetime handler. Extracted as an interface so unit tests
 // can drive the transition-detection logic without a real pgx pool.
 type achievementUnlockStore interface {
-	ListByVehicle(ctx context.Context, vehicleID int64) ([]database.AchievementUnlock, error)
+	ListByVehicle(ctx context.Context, vehicleID int64) ([]achievement.Unlock, error)
 	RecordUnlock(ctx context.Context, achievementID string, vehicleID int64, when time.Time) (bool, time.Time, error)
 }
 
@@ -52,7 +53,7 @@ type achievementEventBroadcaster interface {
 func NewLifetimeHandler(db *database.DB, eventHub *EventHub) *LifetimeHandler {
 	h := &LifetimeHandler{
 		db:      db,
-		unlocks: database.NewAchievementUnlockRepo(db),
+		unlocks: achievement.NewUnlockRepo(db),
 		now:     func() time.Time { return time.Now().UTC() },
 	}
 	if eventHub != nil {

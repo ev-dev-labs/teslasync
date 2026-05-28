@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/database/achievement"
 )
 
 // fakeAchievementUnlockStore is the in-memory test double for the
@@ -21,16 +21,16 @@ type fakeAchievementUnlockStore struct {
 	listCalls int
 }
 
-func (f *fakeAchievementUnlockStore) ListByVehicle(_ context.Context, _ int64) ([]database.AchievementUnlock, error) {
+func (f *fakeAchievementUnlockStore) ListByVehicle(_ context.Context, _ int64) ([]achievement.Unlock, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.listCalls++
 	if f.listErr != nil {
 		return nil, f.listErr
 	}
-	out := make([]database.AchievementUnlock, 0, len(f.unlocks))
+	out := make([]achievement.Unlock, 0, len(f.unlocks))
 	for id, ts := range f.unlocks {
-		out = append(out, database.AchievementUnlock{
+		out = append(out, achievement.Unlock{
 			AchievementID: id,
 			UnlockedAt:    ts,
 		})

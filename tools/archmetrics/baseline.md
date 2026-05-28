@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T08:07:37Z, Go go1.26.1, commit 4de16915433a8bd39c1e2460355fbfebab191ec8_
+_Generated 2026-05-28T14:41:02Z, Go go1.26.1, commit 360d0b1dc8d9e68219ca23fd2b0303b2c398134e_
 
 ## Summary
 
-- Packages: 261
+- Packages: 262
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 373960
+- Total non-blank LOC under cmd/+internal/+tools/: 373977
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-28T08:07:37Z, Go go1.26.1, commit 4de16915433a8bd39c1e2460355
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126553 | yes | handler |
+| internal/api | 271 | 163 | 126554 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -197,7 +197,8 @@ _Generated 2026-05-28T08:07:37Z, Go go1.26.1, commit 4de16915433a8bd39c1e2460355
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 108 | 35 | 27851 | yes | platform |
+| internal/database | 107 | 35 | 27774 | yes | platform |
+| internal/database/achievement | 2 | 0 | 93 | yes |  |
 | internal/dataquality | 4 | 0 | 347 | yes | platform |
 | internal/domain | 2 | 1 | 114 | yes | domain |
 | internal/domain/charging | 6 | 1 | 357 | yes | domain |
@@ -315,7 +316,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
-| `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
+| `internal/database` | R4 | 143 | 107 / 35 | 22 | 1 | 21 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
 | `internal/api` | R2 (waves R2a-R2e) | 434 | 271 / 163 | 59 | 0 | 59 |
 
@@ -379,8 +380,10 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 > 22 subpkgs from R1 audit. Touches many internal/api/* callers — accept R2 double-touch budget (no temp compat layer).
 
-**Planned but not yet on disk:**
+**Existing subpackages on disk:**
 - `internal/database/achievement`
+
+**Planned but not yet on disk:**
 - `internal/database/ai`
 - `internal/database/alert`
 - `internal/database/audit`

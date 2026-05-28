@@ -22,9 +22,9 @@
     },
     {
       "path": "internal/database",
-      "max_files": 108,
+      "max_files": 107,
       "owner": "Phase R4",
-      "notes": "Was 143 at R0. Largest backend cluster remaining. Will be carved into bounded-context repo subpackages (drive/, charging/, telemetry/, signal/, etc.)."
+      "notes": "Was 143 at R0; 108 at R4 start. R4.0.5 canary carve (achievement_unlock_repo.go to internal/database/achievement/) ratcheted 108 to 107. Will be carved into ~20 bounded-context repo subpackages (achievement, alert, audit, auth, automation, backup, charge, dashboard, drive, energy, gdpr, notification, sharing, telemetry, tesla, trips, user, vehicle, worker_status). Simpler design adopted: subpackages directly import parent for *DB (no shared/ pkg extraction); cycle-free because parent never imports children."
     },
     {
       "path": "internal/ai/tools",

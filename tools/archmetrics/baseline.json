@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T08:07:36Z",
+  "generated_at": "2026-05-28T14:41:00Z",
   "go_version": "go1.26.1",
-  "commit_sha": "4de16915433a8bd39c1e2460355fbfebab191ec8",
+  "commit_sha": "360d0b1dc8d9e68219ca23fd2b0303b2c398134e",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2492,7 +2492,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126553,
+      "loc": 126554,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2614,6 +2614,7 @@
         "internal/config",
         "internal/crypto",
         "internal/database",
+        "internal/database/achievement",
         "internal/dataquality",
         "internal/enums",
         "internal/events",
@@ -3662,9 +3663,9 @@
     },
     {
       "path": "internal/database",
-      "go_files": 108,
+      "go_files": 107,
       "test_files": 35,
-      "loc": 27851,
+      "loc": 27774,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3694,7 +3695,6 @@
         "internal/tracing"
       ],
       "files": [
-        "achievement_unlock_repo.go",
         "ai_call_log_repo.go",
         "ai_call_log_repo_test.go",
         "ai_chat_continuations_repo.go",
@@ -3837,6 +3837,20 @@
         "worker_status_repo.go",
         "write_buffer.go",
         "write_buffer_test.go"
+      ]
+    },
+    {
+      "path": "internal/database/achievement",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 93,
+      "has_doc_go": true,
+      "imports": [
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "unlock_repo.go"
       ]
     },
     {
@@ -6784,7 +6798,6 @@
       "totp_secret.go"
     ],
     "internal/database": [
-      "achievement_unlock_repo.go",
       "ai_call_log_repo.go",
       "ai_chat_continuations_repo.go",
       "alert_repo.go",
@@ -6892,6 +6905,10 @@
       "worker_status_queue_repo.go",
       "worker_status_repo.go",
       "write_buffer.go"
+    ],
+    "internal/database/achievement": [
+      "doc.go",
+      "unlock_repo.go"
     ],
     "internal/dataquality": [
       "doc.go",
@@ -7600,12 +7617,13 @@
       "parent": "internal/database",
       "owner": "R4",
       "file_count_at_r0": 143,
-      "flat_parent_go_files": 108,
+      "flat_parent_go_files": 107,
       "flat_parent_test_files": 35,
       "planned_subpkgs": 22,
-      "existing_subpkgs": null,
+      "existing_subpkgs": [
+        "achievement"
+      ],
       "missing_subpkgs": [
-        "achievement",
         "ai",
         "alert",
         "audit",
