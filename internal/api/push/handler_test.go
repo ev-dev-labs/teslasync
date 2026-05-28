@@ -1,4 +1,4 @@
-package api
+package push
 
 import (
 	"bytes"

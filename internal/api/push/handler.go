@@ -1,4 +1,4 @@
-package api
+package push
 
 import (
 	"context"
@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -49,21 +50,33 @@ type pushKeySource interface {
 type PushHandler struct {
 	repo              pushSubscriptionsRepo
 	svc               pushKeySource
-	auditDB           *database.DB
 	forwardAuthHeader string
+	auditFunc         AuditFunc
 }
+
+// AuditFunc is the audit-logging callback shape expected by PushHandler.
+type AuditFunc func(r *http.Request, headerName, action, resource string, entityID *int64, detail string)
+
+// Option mutates a PushHandler during construction.
+type Option func(*PushHandler)
+
+// WithAuditFunc installs the audit callback invoked after successful mutations.
+func WithAuditFunc(f AuditFunc) Option { return func(h *PushHandler) { h.auditFunc = f } }
 
 // NewPushHandler wires the production push_subscriptions repo and the
 // process-wide webpush.Service singleton. forwardAuthHeader matches the
 // header injected by the reverse-proxy auth provider; when empty, the
 // audit log records an empty actor (dev-mode behaviour).
-func NewPushHandler(db *database.DB, svc *webpush.Service, forwardAuthHeader string) *PushHandler {
-	return &PushHandler{
+func NewPushHandler(db *database.DB, svc *webpush.Service, forwardAuthHeader string, opts ...Option) *PushHandler {
+	h := &PushHandler{
 		repo:              dbnotif.NewPushSubscriptionsRepo(db),
 		svc:               svc,
-		auditDB:           db,
 		forwardAuthHeader: forwardAuthHeader,
 	}
+	for _, opt := range opts {
+		opt(h)
+	}
+	return h
 }
 
 // maxPushBodyBytes caps each request body. Endpoints + keys are well
@@ -98,10 +111,10 @@ type pushDeleteRequest struct {
 // Enable button.
 func (h *PushHandler) PublicKey(w http.ResponseWriter, r *http.Request) {
 	if h.svc == nil || !h.svc.IsEnabled() {
-		writeError(w, http.StatusNotFound, "web push is not configured on this install")
+		httpx.WriteError(w, http.StatusNotFound, "web push is not configured on this install")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{
 		"publicKey": h.svc.PublicKey(),
 	})
 }
@@ -115,28 +128,28 @@ func (h *PushHandler) PublicKey(w http.ResponseWriter, r *http.Request) {
 //	body: { "endpoint": "...", "keys": { "p256dh": "...", "auth": "..." } }
 func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	if h.svc == nil || !h.svc.IsEnabled() {
-		writeError(w, http.StatusNotFound, "web push is not configured on this install")
+		httpx.WriteError(w, http.StatusNotFound, "web push is not configured on this install")
 		return
 	}
 
 	body, readErr := readPushBody(r)
 	if readErr != nil {
-		writeError(w, readErr.status, readErr.msg)
+		httpx.WriteError(w, readErr.status, readErr.msg)
 		return
 	}
 
 	var req pushSubscribeRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	endpoint, vErr := validatePushEndpoint(req.Endpoint)
 	if vErr != nil {
-		writeError(w, http.StatusBadRequest, vErr.Error())
+		httpx.WriteError(w, http.StatusBadRequest, vErr.Error())
 		return
 	}
 	if strings.TrimSpace(req.Keys.P256DH) == "" || strings.TrimSpace(req.Keys.Auth) == "" {
-		writeError(w, http.StatusBadRequest, "p256dh and auth keys are required")
+		httpx.WriteError(w, http.StatusBadRequest, "p256dh and auth keys are required")
 		return
 	}
 
@@ -149,12 +162,12 @@ func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.repo.Upsert(r.Context(), row); err != nil {
 		log.Error().Err(err).Msg("push subscribe failed")
-		writeError(w, http.StatusInternalServerError, "failed to save subscription")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save subscription")
 		return
 	}
 
 	h.audit(r, "push.subscribe", &row.ID, pushAuditDetail(endpoint, ua))
-	writeJSON(w, http.StatusCreated, row)
+	httpx.WriteJSON(w, http.StatusCreated, row)
 }
 
 // List returns every subscription registered on this install. In single-
@@ -167,19 +180,19 @@ func (h *PushHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 //	GET /api/v1/push/subscribe
 func (h *PushHandler) List(w http.ResponseWriter, r *http.Request) {
 	if h.svc == nil || !h.svc.IsEnabled() {
-		writeJSON(w, http.StatusOK, []*models.PushSubscription{})
+		httpx.WriteJSON(w, http.StatusOK, []*models.PushSubscription{})
 		return
 	}
 	rows, err := h.repo.ListAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("push list failed")
-		writeError(w, http.StatusInternalServerError, "failed to list push subscriptions")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list push subscriptions")
 		return
 	}
 	if rows == nil {
 		rows = []*models.PushSubscription{}
 	}
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
 // Unsubscribe removes a single subscription by endpoint. The browser
@@ -192,26 +205,26 @@ func (h *PushHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *PushHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	body, readErr := readPushBody(r)
 	if readErr != nil {
-		writeError(w, readErr.status, readErr.msg)
+		httpx.WriteError(w, readErr.status, readErr.msg)
 		return
 	}
 	var req pushDeleteRequest
 	if err := json.Unmarshal(body, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	endpoint, vErr := validatePushEndpoint(req.Endpoint)
 	if vErr != nil {
-		writeError(w, http.StatusBadRequest, vErr.Error())
+		httpx.WriteError(w, http.StatusBadRequest, vErr.Error())
 		return
 	}
 	if err := h.repo.DeleteByEndpoint(r.Context(), nil, endpoint); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			writeError(w, http.StatusNotFound, "subscription not found")
+			httpx.WriteError(w, http.StatusNotFound, "subscription not found")
 			return
 		}
 		log.Error().Err(err).Msg("push unsubscribe failed")
-		writeError(w, http.StatusInternalServerError, "failed to remove subscription")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to remove subscription")
 		return
 	}
 	h.audit(r, "push.unsubscribe", nil, pushAuditDetail(endpoint, nil))
@@ -307,10 +320,10 @@ func endpointFingerprint(endpoint string) string {
 }
 
 // audit forwards the mutation to the shared audit logger. No-op when
-// auditDB is nil (handler-only unit tests).
+// no audit callback is installed (handler-only unit tests).
 func (h *PushHandler) audit(r *http.Request, action string, entityID *int64, detail string) {
-	if h.auditDB == nil {
+	if h.auditFunc == nil {
 		return
 	}
-	logAuditFromRequest(h.auditDB, r, h.forwardAuthHeader, action, "push_subscription", entityID, detail)
+	h.auditFunc(r, h.forwardAuthHeader, action, "push_subscription", entityID, detail)
 }

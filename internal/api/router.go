@@ -47,6 +47,7 @@ import (
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
 	apipinned "github.com/ev-dev-labs/teslasync/internal/api/pinned"
+	apipush "github.com/ev-dev-labs/teslasync/internal/api/push"
 	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
 	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
 	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
@@ -612,7 +613,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
 		},
 	))
-	pushHandler := NewPushHandler(db, webpush.Default(), cfg.Auth.ForwardAuthHeader)
+	pushHandler := apipush.NewPushHandler(db, webpush.Default(), cfg.Auth.ForwardAuthHeader, apipush.WithAuditFunc(
+		func(r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
+		},
+	))
 	var pahoForAlerts pahomqtt.Client
 	if mqttClient != nil {
 		pahoForAlerts = mqttClient.Underlying()
