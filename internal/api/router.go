@@ -24,6 +24,7 @@ import (
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
+	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -3772,7 +3773,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/admin/observability/data-quality", dqHandler.Score)
 			r.Get("/admin/observability/lineage", dqHandler.Lineage)
 
-			syntheticHandler := NewSyntheticHandler(opt.SyntheticRunner)
+			syntheticHandler := apisynthetic.NewHandler(opt.SyntheticRunner)
 			r.Get("/admin/observability/synthetic", syntheticHandler.Snapshot)
 		})
 

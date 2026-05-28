@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T20:46:19Z",
+  "generated_at": "2026-05-28T20:51:38Z",
   "go_version": "go1.26.1",
-  "commit_sha": "c62f0d43a56e9f56b81b5b2d3b8c74507a5915a6",
+  "commit_sha": "99c4d54a8cd71449215dea4aba46b996d04f4bfc",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 250,
+      "go_files": 249,
       "test_files": 151,
-      "loc": 113600,
+      "loc": 113566,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2633,6 +2633,7 @@
         "internal/api/search/searchtest",
         "internal/api/signalinspect",
         "internal/api/signalscatalog",
+        "internal/api/synthetic",
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
         "internal/api/vehicleconfig",
@@ -3086,7 +3087,6 @@
         "status_v1_handler_test.go",
         "sudo_middleware.go",
         "sudo_middleware_test.go",
-        "synthetic_handler.go",
         "system_auth_mode_handler.go",
         "system_auth_mode_handler_test.go",
         "system_handler.go",
@@ -3429,6 +3429,22 @@
         "doc.go",
         "handler.go",
         "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/synthetic",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 40,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/synthetic"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
       ]
     },
     {
@@ -7481,7 +7497,6 @@
       "status_incidents_handler.go",
       "status_v1_handler.go",
       "sudo_middleware.go",
-      "synthetic_handler.go",
       "system_auth_mode_handler.go",
       "system_handler.go",
       "tco_handler.go",
@@ -7593,6 +7608,10 @@
       "handler.go"
     ],
     "internal/api/signalscatalog": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/synthetic": [
       "doc.go",
       "handler.go"
     ],
@@ -8735,7 +8754,7 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 250,
+      "flat_parent_go_files": 249,
       "flat_parent_test_files": 151,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
