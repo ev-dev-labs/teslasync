@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -45,17 +47,17 @@ func (f *fakeState) SignalAt(ctx context.Context, vid int64, sig string, at time
 }
 
 type fakeDrives struct {
-	rows []*models.Drive
-	one  map[int64]*models.Drive
+	rows []*drivemodel.Drive
+	one  map[int64]*drivemodel.Drive
 }
 
-func (f *fakeDrives) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*models.Drive, error) {
+func (f *fakeDrives) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*drivemodel.Drive, error) {
 	if limit > 0 && limit < len(f.rows) {
 		return f.rows[:limit], nil
 	}
 	return f.rows, nil
 }
-func (f *fakeDrives) GetByID(ctx context.Context, id int64) (*models.Drive, error) {
+func (f *fakeDrives) GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error) {
 	return f.one[id], nil
 }
 
@@ -236,7 +238,7 @@ func TestQueryDrivesRecent_RespectsLimit(t *testing.T) {
 	Register12Builtins(r, Sources{
 		Vehicles:      &fakeVehicles{},
 		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{rows: []*models.Drive{{ID: 1}, {ID: 2}, {ID: 3}}},
+		Drives:        &fakeDrives{rows: []*drivemodel.Drive{{ID: 1}, {ID: 2}, {ID: 3}}},
 		Charges:       &fakeCharges{},
 		AlertRules:    &fakeRules{},
 		Notifications: &fakeNotif{},
@@ -264,7 +266,7 @@ func TestQueryDriveDetail_NotFound(t *testing.T) {
 	Register12Builtins(r, Sources{
 		Vehicles:      &fakeVehicles{},
 		VehicleState:  &fakeState{},
-		Drives:        &fakeDrives{one: map[int64]*models.Drive{}},
+		Drives:        &fakeDrives{one: map[int64]*drivemodel.Drive{}},
 		Charges:       &fakeCharges{},
 		AlertRules:    &fakeRules{},
 		Notifications: &fakeNotif{},
@@ -339,7 +341,7 @@ func TestQueryEfficiencyPeriod_ComputesWhPerKm(t *testing.T) {
 		AlertRules:    &fakeRules{},
 		Notifications: &fakeNotif{},
 		Geofences:     &fakeFences{},
-		Efficiency: &fakeDrives{rows: []*models.Drive{
+		Efficiency: &fakeDrives{rows: []*drivemodel.Drive{
 			{ID: 1, DistanceM: 50_000, EnergyUsedWh: &used1},  // 50 km
 			{ID: 2, DistanceM: 100_000, EnergyUsedWh: &used2}, // 100 km
 		}},

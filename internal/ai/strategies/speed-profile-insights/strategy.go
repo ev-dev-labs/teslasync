@@ -9,9 +9,9 @@
 //     generalises across drives or vehicles;
 //   - the two read-only tools the LLM is allowed to call —
 //     `query_speed_profile` (returns SI aggregates plus a derived
-//     speed regime classification from the existing *models.Drive
+//     speed regime classification from the existing *drivemodel.Drive
 //     row) and `query_drive_context` (returns the drive's temporal +
-//     battery + temperature envelope from the SAME *models.Drive
+//     battery + temperature envelope from the SAME *drivemodel.Drive
 //     row);
 //   - the redaction policy (`PolicySpeedProfileInsights`) which
 //     allows ClassVehicleName so the narration can address the
@@ -118,7 +118,7 @@ const SystemPrompt = `You are the TeslaSync speed-profile analyst. ` +
 // to mount a strategy that references an unknown tool.
 //
 // This slice ships zero mutating tools: speed-profile insights only
-// READS already-aggregated drive state from the same *models.Drive
+// READS already-aggregated drive state from the same *drivemodel.Drive
 // row the deterministic chart already renders from. A future
 // "schedule a maintenance reminder based on this drive" strategy
 // that needs to write would add its own strategy with its own

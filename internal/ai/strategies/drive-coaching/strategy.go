@@ -8,10 +8,10 @@
 //     samples, never proposes mutations, never generalises across
 //     drives or vehicles;
 //   - the two read-only tools the LLM is allowed to call —
-//     `query_drive_detail` (existing builtin; one *models.Drive by ID)
+//     `query_drive_detail` (existing builtin; one *drivemodel.Drive by ID)
 //     and `query_drive_telemetry_summary` (new in this slice; a
 //     deterministic envelope of pre-aggregated drive metrics derived
-//     from the same *models.Drive row, exposing coaching-friendly
+//     from the same *drivemodel.Drive row, exposing coaching-friendly
 //     derived fields such as regen_share_pct and kwh_per_100km);
 //   - the redaction policy (`PolicyDriveCoaching`) which allows
 //     ClassVehicleName so the narration can address the user's car by

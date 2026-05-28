@@ -2,9 +2,9 @@
 //
 // speed_profile.go ships TWO new read-only tools:
 // `query_speed_profile` (SI aggregates plus a derived speed regime
-// classification from the *models.Drive row) and
+// classification from the *drivemodel.Drive row) and
 // `query_drive_context` (the drive's temporal + battery +
-// temperature envelope from the SAME *models.Drive row).
+// temperature envelope from the SAME *drivemodel.Drive row).
 //
 // Together they form the two-tool whitelist the
 // speed-profile-insights strategy is allowed to call (see
@@ -23,7 +23,7 @@
 //     [DriveSource.GetByID] method (the same surface the
 //     query_drive_detail builtin and the query_drive_telemetry_summary
 //     coaching tool use). Speed-bucket math + regime classification
-//     happen in-memory on the *models.Drive row.
+//     happen in-memory on the *drivemodel.Drive row.
 //
 //   - Privacy-by-default for route geometry: neither tool returns
 //     start_lat / start_lon / end_lat / end_lon, nor the unredacted
@@ -98,7 +98,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
 // ---------------------------------------------------------------------------
@@ -147,7 +147,7 @@ type querySpeedProfileInput struct {
 }
 
 // querySpeedProfile is the read-only tool that returns ONE
-// *models.Drive's SI speed aggregates plus a derived regime
+// *drivemodel.Drive's SI speed aggregates plus a derived regime
 // classification. Distinct from the existing query_drive_detail
 // builtin so the speed-profile-insights strategy's allowed-tool
 // whitelist can stay self-contained: future per-feature changes to
@@ -216,7 +216,7 @@ func (t *querySpeedProfile) Execute(ctx context.Context, in any) (any, error) {
 	return summariseSpeedProfile(d), nil
 }
 
-// summariseSpeedProfile is a pure helper: given a *models.Drive,
+// summariseSpeedProfile is a pure helper: given a *drivemodel.Drive,
 // compute the deterministic speed-profile envelope. Extracted so the
 // unit test can call it directly without spinning up a fake
 // DriveSource and so the body of Execute stays focused on IO +
@@ -226,7 +226,7 @@ func (t *querySpeedProfile) Execute(ctx context.Context, in any) (any, error) {
 // nil-pointer aggregates remain nil in the output envelope (rather
 // than collapsing to zero, which would silently mislead the
 // narration about whether a metric is "zero" or "unknown").
-func summariseSpeedProfile(d *models.Drive) map[string]any {
+func summariseSpeedProfile(d *drivemodel.Drive) map[string]any {
 	out := map[string]any{
 		"drive_id":   d.ID,
 		"vehicle_id": d.VehicleID,
@@ -331,7 +331,7 @@ type queryDriveContextInput struct {
 }
 
 // queryDriveContext is the read-only tool that returns ONE
-// *models.Drive's temporal + battery + temperature envelope WITHOUT
+// *drivemodel.Drive's temporal + battery + temperature envelope WITHOUT
 // route geometry. Distinct from the existing query_drive_detail
 // builtin and from query_drive_telemetry_summary so the
 // speed-profile-insights strategy's allowed-tool whitelist can stay
@@ -392,7 +392,7 @@ func (t *queryDriveContext) Execute(ctx context.Context, in any) (any, error) {
 	return buildDriveContext(d), nil
 }
 
-// buildDriveContext is a pure helper: given a *models.Drive, build
+// buildDriveContext is a pure helper: given a *drivemodel.Drive, build
 // the temporal + battery + temperature envelope WITHOUT route
 // geometry. Extracted so the unit test can call it directly without
 // spinning up a fake DriveSource.
@@ -403,7 +403,7 @@ func (t *queryDriveContext) Execute(ctx context.Context, in any) (any, error) {
 // the LLM can reason about route character ("this drive had named
 // endpoints") without ever seeing the address string. The unit test
 // TestBuildDriveContext_ExcludesPreciseRouteData pins this.
-func buildDriveContext(d *models.Drive) map[string]any {
+func buildDriveContext(d *drivemodel.Drive) map[string]any {
 	out := map[string]any{
 		"drive_id":   d.ID,
 		"vehicle_id": d.VehicleID,

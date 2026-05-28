@@ -10,11 +10,11 @@ import (
 	"strconv"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	"github.com/rs/zerolog/log"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // processImportDrives imports drive records from CSV data stored in the job's file_data.
@@ -77,7 +77,7 @@ func (p *Processor) processImportDrives(ctx context.Context, req *JobRequest) (*
 			speedMax, _ = strconv.ParseFloat(record[idx], 64)
 		}
 
-		d := &models.Drive{
+		d := &drivemodel.Drive{
 			VehicleID: vehicleID,
 			StartTs:   startDate,
 			DistanceM: distance,

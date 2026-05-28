@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
 // TestRegisterYearReviewTools_RegistersTool proves the wiring helper
@@ -162,7 +162,7 @@ func TestQueryYearInReviewContext_ExecuteAggregates(t *testing.T) {
 	added2 := float64(15000)
 	added3 := float64(60000)
 
-	drives := []*models.Drive{
+	drives := []*drivemodel.Drive{
 		{ID: 1, VehicleID: 1, DistanceM: 50000, DurationS: 1800, EnergyUsedWh: &used1, RegenEnergyWh: &regen1},
 		{ID: 2, VehicleID: 1, DistanceM: 75000, DurationS: 2700, EnergyUsedWh: &used2},
 		{ID: 3, VehicleID: 1, DistanceM: 17000, DurationS: 600 /* nil energy */},

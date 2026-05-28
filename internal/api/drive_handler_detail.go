@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
@@ -31,7 +32,7 @@ type driveDetailHandler struct {
 // to fetch a single drive header. It is satisfied by *database.DriveRepo and
 // declared at the call site so tests can substitute an in-memory fake.
 type driveByIDFetcher interface {
-	GetByID(ctx context.Context, id int64) (*models.Drive, error)
+	GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error)
 }
 
 // NewDriveDetail constructs the migrated drive handler. It internally
@@ -268,7 +269,7 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 // Inputs are SI canonical post-Phase-42 (Odometer in meters, VehicleSpeed
 // in m/s, PackVoltage*PackCurrent in Watts), so values are written
 // directly to the SI-canonical Drive fields with no unit conversion.
-func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *models.Drive, now time.Time) error {
+func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *drivemodel.Drive, now time.Time) error {
 	startState, err := h.state.State(ctx, drive.VehicleID, drive.StartTs)
 	if err != nil {
 		return fmt.Errorf("start snapshot at %s: %w", drive.StartTs.Format(time.RFC3339Nano), err)

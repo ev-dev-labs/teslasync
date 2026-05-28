@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -30,7 +31,7 @@ func generateToken() (string, error) {
 }
 
 // Create inserts a new share token for a drive, generating a unique token.
-func (r *ShareTokenRepo) Create(ctx context.Context, st *models.ShareToken) error {
+func (r *ShareTokenRepo) Create(ctx context.Context, st *drivemodel.ShareToken) error {
 	token, err := generateToken()
 	if err != nil {
 		return err
@@ -49,8 +50,8 @@ func (r *ShareTokenRepo) Create(ctx context.Context, st *models.ShareToken) erro
 }
 
 // GetByToken retrieves a share token by its public token string.
-func (r *ShareTokenRepo) GetByToken(ctx context.Context, token string) (*models.ShareToken, error) {
-	st := &models.ShareToken{}
+func (r *ShareTokenRepo) GetByToken(ctx context.Context, token string) (*drivemodel.ShareToken, error) {
+	st := &drivemodel.ShareToken{}
 	query := `
 		SELECT id, token, drive_id, created_by, title, description,
 			include_map, include_telemetry, include_speed, views, expires_at, created_at
@@ -70,7 +71,7 @@ func (r *ShareTokenRepo) GetByToken(ctx context.Context, token string) (*models.
 }
 
 // ListByDrive returns all share tokens for a given drive.
-func (r *ShareTokenRepo) ListByDrive(ctx context.Context, driveID int64) ([]*models.ShareToken, error) {
+func (r *ShareTokenRepo) ListByDrive(ctx context.Context, driveID int64) ([]*drivemodel.ShareToken, error) {
 	query := `
 		SELECT id, token, drive_id, created_by, title, description,
 			include_map, include_telemetry, include_speed, views, expires_at, created_at
@@ -82,9 +83,9 @@ func (r *ShareTokenRepo) ListByDrive(ctx context.Context, driveID int64) ([]*mod
 	}
 	defer rows.Close()
 
-	var tokens []*models.ShareToken
+	var tokens []*drivemodel.ShareToken
 	for rows.Next() {
-		st := &models.ShareToken{}
+		st := &drivemodel.ShareToken{}
 		if err := rows.Scan(
 			&st.ID, &st.Token, &st.DriveID, &st.CreatedBy, &st.Title, &st.Description,
 			&st.IncludeMap, &st.IncludeTelemetry, &st.IncludeSpeed, &st.Views,

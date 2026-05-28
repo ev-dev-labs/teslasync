@@ -8,9 +8,9 @@ package models
 
 // Position has moved to position.go (regenerated for post-migration schema).
 
-// Drive has moved to drive.go (regenerated for post-migration schema).
+// Drive has moved to internal/models/drive in phase-R5.14.
 
-// DriveTelemetryReading has moved to drive.go.
+// DriveTelemetryReading has moved to internal/models/drive in phase-R5.14.
 
 // ChargeTelemetryReading has moved to internal/models/charging in phase-R5.13.
 
@@ -134,6 +134,6 @@ func DerefBool(p *bool) bool {
 
 // GuardConfig has moved to internal/models/vehicle in phase-R5.12.
 
-// ShareToken has moved to drive.go.
+// ShareToken has moved to internal/models/drive in phase-R5.14.
 
 // GuardEvent has moved to internal/models/vehicle in phase-R5.12.

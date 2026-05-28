@@ -633,7 +633,7 @@ var Registry = map[string]Feature{
 	// require migrations that are explicitly NOT in this slice's
 	// allowed file list. The two read-only tools fully satisfy the
 	// strategy's needs from the existing per-drive aggregates on
-	// the *models.Drive struct.
+	// the *drivemodel.Drive struct.
 	"drive-coaching": {
 		ID:          "drive-coaching",
 		Name:        "Per-drive coaching",
@@ -818,7 +818,7 @@ var Registry = map[string]Feature{
 	// The AI handler streams SSE frames from the dispatch loop; the
 	// two declared tools are query_speed_profile (returns SI-canonical
 	// aggregates plus derived speed regime classification from the
-	// existing *models.Drive struct) and query_drive_context (returns
+	// existing *drivemodel.Drive struct) and query_drive_context (returns
 	// the drive's temporal + battery + temperature envelope). Both
 	// are read-only and call `DriveSource.GetByID` directly — no new
 	// SQL is added by this slice. The route is mounted under
@@ -851,7 +851,7 @@ var Registry = map[string]Feature{
 	"speed-profile-insights": {
 		ID:          "speed-profile-insights",
 		Name:        "Speed-profile insights",
-		Description: "Opt-in LLM-narrated insights about a single drive's speed regime, outliers, and route context. Reads from the existing *models.Drive aggregates via two read-only tools; the deterministic SpeedHistogramChart + summary metrics on /drives/:id remain the canonical baseline when AI is off. Precise route coordinates remain tagged by the per-feature redaction policy; only the vehicle name may be narrated.",
+		Description: "Opt-in LLM-narrated insights about a single drive's speed regime, outliers, and route context. Reads from the existing *drivemodel.Drive aggregates via two read-only tools; the deterministic SpeedHistogramChart + summary metrics on /drives/:id remain the canonical baseline when AI is off. Precise route coordinates remain tagged by the per-feature redaction policy; only the vehicle name may be narrated.",
 		Tier:        "D",
 		DefaultOn:   false,
 		NeedsRAG:    false,

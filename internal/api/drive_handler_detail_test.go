@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/go-chi/chi/v5"
 )
@@ -18,12 +19,12 @@ import (
 // tests so the migrated handlers can be exercised end-to-end without a real
 // *database.DriveRepo / pgx pool.
 type fakeDriveByIDFetcher struct {
-	drive *models.Drive
+	drive *drivemodel.Drive
 	err   error
 	calls int
 }
 
-func (f *fakeDriveByIDFetcher) GetByID(_ context.Context, _ int64) (*models.Drive, error) {
+func (f *fakeDriveByIDFetcher) GetByID(_ context.Context, _ int64) (*drivemodel.Drive, error) {
 	f.calls++
 	return f.drive, f.err
 }
@@ -41,11 +42,11 @@ func newDriveDetailRequest(t *testing.T, driveID, target string) *http.Request {
 	return req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
 }
 
-// completedDrive is a minimal *models.Drive fixture for tests that exercise
+// completedDrive is a minimal *drivemodel.Drive fixture for tests that exercise
 // the completed-drive path (EndTs != nil → enrichLiveDrive is NOT invoked).
-func completedDrive(driveID, vehicleID int64, start, end time.Time) *models.Drive {
+func completedDrive(driveID, vehicleID int64, start, end time.Time) *drivemodel.Drive {
 	endCopy := end
-	return &models.Drive{
+	return &drivemodel.Drive{
 		ID:        driveID,
 		VehicleID: vehicleID,
 		StartTs:   start,
@@ -53,10 +54,10 @@ func completedDrive(driveID, vehicleID int64, start, end time.Time) *models.Driv
 	}
 }
 
-// inProgressDrive is a minimal *models.Drive fixture for tests that exercise
+// inProgressDrive is a minimal *drivemodel.Drive fixture for tests that exercise
 // the in-progress path (EndTs == nil → enrichLiveDrive IS invoked).
-func inProgressDrive(driveID, vehicleID int64, start time.Time) *models.Drive {
-	return &models.Drive{
+func inProgressDrive(driveID, vehicleID int64, start time.Time) *drivemodel.Drive {
+	return &drivemodel.Drive{
 		ID:        driveID,
 		VehicleID: vehicleID,
 		StartTs:   start,

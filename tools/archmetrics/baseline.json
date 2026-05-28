@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:14:09Z",
+  "generated_at": "2026-05-28T04:16:50Z",
   "go_version": "go1.26.1",
-  "commit_sha": "f6c8fcf16f17f6470437bdd40b597bc7a3b27795",
+  "commit_sha": "13d0d72fa7ffb04afa80837fc925b78eb8601bb7",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1884,7 +1884,7 @@
       "path": "internal/ai/tools",
       "go_files": 58,
       "test_files": 51,
-      "loc": 47088,
+      "loc": 47090,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1897,6 +1897,7 @@
         "internal/models",
         "internal/models/alert",
         "internal/models/charging",
+        "internal/models/drive",
         "internal/models/geo",
         "internal/models/notification",
         "internal/models/vehicle"
@@ -2035,7 +2036,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126488,
+      "loc": 126489,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2155,6 +2156,7 @@
         "internal/models/backup",
         "internal/models/charging",
         "internal/models/chatbot",
+        "internal/models/drive",
         "internal/models/export",
         "internal/models/geo",
         "internal/models/notification",
@@ -3188,6 +3190,7 @@
         "internal/models/backup",
         "internal/models/charging",
         "internal/models/chatbot",
+        "internal/models/drive",
         "internal/models/energy",
         "internal/models/export",
         "internal/models/geo",
@@ -3542,8 +3545,8 @@
       "layer": "platform",
       "imports": [
         "internal/database",
-        "internal/models",
         "internal/models/charging",
+        "internal/models/drive",
         "internal/models/export",
         "internal/mqtt"
       ],
@@ -3974,9 +3977,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 29,
+      "go_files": 28,
       "test_files": 1,
-      "loc": 1765,
+      "loc": 1648,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -3988,7 +3991,6 @@
         "chart_annotation.go",
         "dashboard_layout.go",
         "doc.go",
-        "drive.go",
         "enum_automation_steps.go",
         "enum_automation_triggers.go",
         "enum_notification_channels.go",
@@ -4092,6 +4094,20 @@
       "files": [
         "chatbot.go",
         "doc.go"
+      ]
+    },
+    {
+      "path": "internal/models/drive",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 142,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "drive.go",
+        "drive_test.go"
       ]
     },
     {
@@ -4572,8 +4588,8 @@
         "internal/database",
         "internal/enums",
         "internal/events",
-        "internal/models",
         "internal/models/charging",
+        "internal/models/drive",
         "internal/models/energy",
         "internal/models/vehicle",
         "internal/signal",
@@ -6421,7 +6437,6 @@
       "chart_annotation.go",
       "dashboard_layout.go",
       "doc.go",
-      "drive.go",
       "enum_automation_steps.go",
       "enum_automation_triggers.go",
       "enum_notification_channels.go",
@@ -6467,6 +6482,10 @@
     "internal/models/chatbot": [
       "chatbot.go",
       "doc.go"
+    ],
+    "internal/models/drive": [
+      "doc.go",
+      "drive.go"
     ],
     "internal/models/energy": [
       "doc.go",
@@ -6800,7 +6819,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 29,
+      "flat_parent_go_files": 28,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6810,6 +6829,7 @@
         "backup",
         "charging",
         "chatbot",
+        "drive",
         "energy",
         "export",
         "geo",
@@ -6820,7 +6840,6 @@
       ],
       "missing_subpkgs": [
         "dashboard",
-        "drive",
         "security",
         "signal",
         "system",

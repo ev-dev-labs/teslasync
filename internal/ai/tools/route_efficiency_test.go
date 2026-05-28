@@ -21,12 +21,13 @@ import (
 	"testing"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// ptrStr is a helper for *string fields on models.Drive.
+// ptrStr is a helper for *string fields on drivemodel.Drive.
 func ptrStr(s string) *string       { return &s }
 func ptrInt16(v int16) *int16       { return &v }
 func ptrFloat64(v float64) *float64 { return &v }
@@ -257,11 +258,11 @@ func fixedNow() time.Time {
 	return time.Date(2025, 6, 1, 12, 0, 0, 0, time.UTC)
 }
 
-// makeRouteDrive constructs a minimal *models.Drive with the
+// makeRouteDrive constructs a minimal *drivemodel.Drive with the
 // fields query_route_efficiency consumes. Keeps the test data
 // declarative.
-func makeRouteDrive(start, end string, distM, durS, avgMps, tempC float64, startSoc, endSoc int16) *models.Drive {
-	return &models.Drive{
+func makeRouteDrive(start, end string, distM, durS, avgMps, tempC float64, startSoc, endSoc int16) *drivemodel.Drive {
+	return &drivemodel.Drive{
 		StartTs:         fixedNow().Add(-24 * time.Hour),
 		StartAddress:    ptrStr(start),
 		EndAddress:      ptrStr(end),
@@ -281,7 +282,7 @@ func makeRouteDrive(start, end string, distM, durS, avgMps, tempC float64, start
 func TestQueryRouteEfficiency_HappyPath_GroupsRoutesAndComputesMetrics(t *testing.T) {
 	t.Parallel()
 	src := &fakeDrives{
-		rows: []*models.Drive{
+		rows: []*drivemodel.Drive{
 			// Home → Work: 3 drives
 			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 80, 70), // 16.09 kWh/100mi
 			makeRouteDrive("Home", "Work", 10000, 1200, 8.3, 22, 80, 68), // 19.31 kWh/100mi
@@ -412,7 +413,7 @@ type failingByVehicleDrives struct {
 	err error
 }
 
-func (f *failingByVehicleDrives) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*models.Drive, error) {
+func (f *failingByVehicleDrives) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*drivemodel.Drive, error) {
 	return nil, f.err
 }
 
@@ -434,7 +435,7 @@ func TestQueryRouteEfficiency_Execute_RepoErrorWrapped(t *testing.T) {
 // even when more groups exist.
 func TestAggregateRouteEfficiency_TruncatesToMaxRoutes(t *testing.T) {
 	t.Parallel()
-	var rows []*models.Drive
+	var rows []*drivemodel.Drive
 	for i := 0; i < queryRouteEfficiencyMaxRoutes+5; i++ {
 		start := "Place" + string(rune('A'+i))
 		end := "Place" + string(rune('A'+i)) + "End"
@@ -456,14 +457,14 @@ func TestAggregateRouteEfficiency_TruncatesToMaxRoutes(t *testing.T) {
 // AVG() semantics.
 func TestAggregateRouteEfficiency_NilMetricsWhenMissingSource(t *testing.T) {
 	t.Parallel()
-	d := &models.Drive{
+	d := &drivemodel.Drive{
 		StartAddress: ptrStr("A"),
 		EndAddress:   ptrStr("B"),
 		DistanceM:    10000,
 		DurationS:    1200,
 		// no AvgSpeedMps, no OutsideTempAvgC, no SoC
 	}
-	env := aggregateRouteEfficiency([]*models.Drive{d})
+	env := aggregateRouteEfficiency([]*drivemodel.Drive{d})
 	routes := env["routes"].([]map[string]any)
 	if len(routes) != 1 {
 		t.Fatalf("len = %d, want 1", len(routes))

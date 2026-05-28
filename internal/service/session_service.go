@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -12,7 +14,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -128,7 +129,7 @@ func (s *SessionService) startDrive(ctx context.Context, vehicle *vehiclemodel.V
 	soc := float64(batteryLevel)
 	bl := int16(batteryLevel)
 
-	drive := &models.Drive{
+	drive := &drivemodel.Drive{
 		VehicleID:       vehicle.ID,
 		StartTs:         now,
 		StartBatteryPct: &bl,

@@ -19,22 +19,23 @@ import (
 	"testing"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ----- fakes ------------------------------------------------------
 
 type fakeDriveLookup struct {
-	drive *models.Drive
+	drive *drivemodel.Drive
 	err   error
 
 	gotID int64
 }
 
-func (f *fakeDriveLookup) GetByID(_ context.Context, id int64) (*models.Drive, error) {
+func (f *fakeDriveLookup) GetByID(_ context.Context, id int64) (*drivemodel.Drive, error) {
 	f.gotID = id
 	return f.drive, f.err
 }
@@ -167,7 +168,7 @@ func TestDriveDiagnosticHandler_BadWindow_Returns400(t *testing.T) {
 	t.Parallel()
 	start := time.Now().UTC().Add(-1 * time.Hour)
 	end := time.Now().UTC().Add(-5 * time.Minute)
-	drv := &fakeDriveLookup{drive: &models.Drive{ID: 1, VehicleID: 7, StartTs: start, EndTs: &end}}
+	drv := &fakeDriveLookup{drive: &drivemodel.Drive{ID: 1, VehicleID: 7, StartTs: start, EndTs: &end}}
 	diag := &fakeDriveDiagReader{}
 	h := newDriveDiagnosticHandlerForTest(drv, diag)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))
@@ -187,7 +188,7 @@ func TestDriveDiagnosticHandler_HappyPath_EndedDrive(t *testing.T) {
 	start := time.Now().UTC().Add(-1 * time.Hour)
 	end := time.Now().UTC().Add(-5 * time.Minute)
 	endedStatus := "completed"
-	drv := &fakeDriveLookup{drive: &models.Drive{
+	drv := &fakeDriveLookup{drive: &drivemodel.Drive{
 		ID:          42,
 		VehicleID:   7,
 		StartTs:     start,
@@ -250,7 +251,7 @@ func TestDriveDiagnosticHandler_HappyPath_EndedDrive(t *testing.T) {
 func TestDriveDiagnosticHandler_HappyPath_InProgressDrive(t *testing.T) {
 	t.Parallel()
 	start := time.Now().UTC().Add(-30 * time.Minute)
-	drv := &fakeDriveLookup{drive: &models.Drive{
+	drv := &fakeDriveLookup{drive: &drivemodel.Drive{
 		ID:        7,
 		VehicleID: 1,
 		StartTs:   start,
@@ -291,7 +292,7 @@ func TestDriveDiagnosticHandler_DiagRepoErr_Returns500(t *testing.T) {
 	t.Parallel()
 	start := time.Now().UTC().Add(-1 * time.Hour)
 	end := time.Now().UTC().Add(-5 * time.Minute)
-	drv := &fakeDriveLookup{drive: &models.Drive{ID: 1, VehicleID: 1, StartTs: start, EndTs: &end}}
+	drv := &fakeDriveLookup{drive: &drivemodel.Drive{ID: 1, VehicleID: 1, StartTs: start, EndTs: &end}}
 	diag := &fakeDriveDiagReader{errTrans: errors.New("hypertable busy")}
 	h := newDriveDiagnosticHandlerForTest(drv, diag)
 	srv := httptest.NewServer(mountDriveDiagnostic(h))

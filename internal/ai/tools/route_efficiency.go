@@ -50,7 +50,7 @@
 //     wrapping the existing *database.DriveRepo (no new SQL).
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle. The
-//     route-aggregation math is pure Go on a *models.Drive slice.
+//     route-aggregation math is pure Go on a *drivemodel.Drive slice.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
 //     tool exists in this slice; aggregation is a pure read.
@@ -90,9 +90,10 @@ import (
 	"strings"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // routeEffSourceRouteEfficiency / routeEffSourceWeatherContext are
@@ -351,7 +352,7 @@ type queryRouteEfficiencyInput struct {
 
 // routeAgg accumulates per-(start_place, end_place) metrics during
 // the in-memory group-by. Mirrors the SQL handler's CASE/AVG/MIN/MAX
-// expressions but executed in Go on a *models.Drive slice.
+// expressions but executed in Go on a *drivemodel.Drive slice.
 type routeAgg struct {
 	startPlace     string
 	endPlace       string
@@ -448,7 +449,7 @@ func (t *queryRouteEfficiency) Execute(ctx context.Context, in any) (any, error)
 }
 
 // aggregateRouteEfficiency is a pure helper: given a slice of
-// *models.Drive rows, compute the deterministic route-efficiency
+// *drivemodel.Drive rows, compute the deterministic route-efficiency
 // envelope. Extracted so the unit tests can call it directly
 // without spinning up a fake DriveSource and so Execute stays
 // focused on IO + error wrapping.
@@ -471,7 +472,7 @@ func (t *queryRouteEfficiency) Execute(ctx context.Context, in any) (any, error)
 //
 // The output is sorted by trip_count DESC (matches the SQL ORDER
 // BY) and truncated to queryRouteEfficiencyMaxRoutes.
-func aggregateRouteEfficiency(drives []*models.Drive) map[string]any {
+func aggregateRouteEfficiency(drives []*drivemodel.Drive) map[string]any {
 	aggs := map[string]*routeAgg{}
 	for _, d := range drives {
 		if d == nil {

@@ -4,12 +4,13 @@ import (
 	"context"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -25,7 +26,7 @@ type vehicleListFetcher interface {
 // driveByVehicleFetcher abstracts *database.DriveRepo.GetByVehicle so
 // analytics handler tests can avoid a real driveRepo.
 type driveByVehicleFetcher interface {
-	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Drive, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error)
 }
 
 // chargingByVehicleFetcher abstracts *database.ChargingRepo.GetByVehicle so

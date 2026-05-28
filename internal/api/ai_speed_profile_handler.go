@@ -221,7 +221,7 @@ func (h *AISpeedProfileInsightsHandler) ServeHTTP(w http.ResponseWriter, r *http
 	//
 	// Note: vehicle_id is intentionally NOT included here. The LLM
 	// learns the vehicle from the tool reply (query_speed_profile
-	// returns the *models.Drive's VehicleID field; query_drive_context
+	// returns the *drivemodel.Drive's VehicleID field; query_drive_context
 	// echoes the same). Including a user-controllable vehicle hint
 	// in the prompt would risk cross-tenant leak via prompt
 	// injection — keeping the drive_id as the sole identifier

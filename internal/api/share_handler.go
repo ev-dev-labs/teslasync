@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/go-chi/chi/v5"
@@ -129,7 +131,7 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 		includeTelemetry = *req.IncludeTelemetry
 	}
 
-	st := &models.ShareToken{
+	st := &drivemodel.ShareToken{
 		DriveID:          driveID,
 		IncludeMap:       true,
 		IncludeSpeed:     includeSpeed,
@@ -180,7 +182,7 @@ func (h *ShareHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if tokens == nil {
-		tokens = make([]*models.ShareToken, 0)
+		tokens = make([]*drivemodel.ShareToken, 0)
 	}
 	writeJSON(w, http.StatusOK, tokens)
 }
@@ -312,7 +314,7 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 // buildPublicProfiles populates map points, elevation, speed, and telemetry
 // from drive positions/telemetry. It clips the first and last few points to
 // hide exact start/end locations.
-func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShareResponse, drive *models.Drive, share *models.ShareToken) {
+func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShareResponse, drive *drivemodel.Drive, share *drivemodel.ShareToken) {
 	// Drive telemetry repo removed — fall back to positions only.
 	if drive.EndTs != nil {
 		positions, _ := h.posRepo.ListByVehicle(ctx, drive.VehicleID, drive.StartTs, *drive.EndTs)
@@ -324,7 +326,7 @@ func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShar
 
 const clipPoints = 3 // number of points to clip from start/end for privacy
 
-func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions []models.Position, share *models.ShareToken) {
+func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions []models.Position, share *drivemodel.ShareToken) {
 	n := len(positions)
 	if n <= clipPoints*2 {
 		return

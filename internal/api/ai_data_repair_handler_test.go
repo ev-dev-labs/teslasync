@@ -25,13 +25,14 @@ import (
 	"testing"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TestDataRepairSuggestionsAIOffManualRunbookWorks is the load-
@@ -280,7 +281,7 @@ func TestBuildDataRepairSuggestionsUserMessage_DeterministicShape(t *testing.T) 
 		{ID: 7, StartedAt: now.Add(-72 * time.Hour)},  // 72h ago
 		{ID: 42, StartedAt: now.Add(-25 * time.Hour)}, // 25h ago
 	}
-	drives := []*models.Drive{
+	drives := []*drivemodel.Drive{
 		{ID: 99, StartTs: now.Add(-48 * time.Hour)},
 	}
 	got := buildDataRepairSuggestionsUserMessage(now, charging, drives)

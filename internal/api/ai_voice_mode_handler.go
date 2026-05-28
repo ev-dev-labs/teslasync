@@ -82,6 +82,8 @@ import (
 	"strings"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
@@ -96,7 +98,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -608,7 +609,7 @@ func coerceVoiceModeIntPercent(raw any) (int, bool) {
 	return int(math.Round(pct)), true
 }
 
-// formatVoiceModeLastDriveSummary projects a *models.Drive into
+// formatVoiceModeLastDriveSummary projects a *drivemodel.Drive into
 // a one-line spoken-style summary the strategy can quote
 // verbatim. Pulled out for hermetic unit testing.
 //
@@ -626,7 +627,7 @@ func coerceVoiceModeIntPercent(raw any) (int, bool) {
 // the `cToFPtr` precedent in drive_coaching.go that emits both
 // SI + display fields when the LLM cannot be trusted to do
 // arithmetic on negative or fractional values.
-func formatVoiceModeLastDriveSummary(d *models.Drive) string {
+func formatVoiceModeLastDriveSummary(d *drivemodel.Drive) string {
 	if d == nil || d.DistanceM <= 0 {
 		return ""
 	}

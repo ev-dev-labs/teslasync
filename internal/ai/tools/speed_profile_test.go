@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
 // TestRegisterSpeedProfileInsightsTools_RegistersBothTools proves
@@ -177,7 +177,7 @@ func TestQuerySpeedProfile_ExecuteHappyPathHighway(t *testing.T) {
 	energyUsedWh := 14000.0
 
 	src := &fakeDrives{
-		one: map[int64]*models.Drive{
+		one: map[int64]*drivemodel.Drive{
 			702: {
 				ID:           702,
 				VehicleID:    1,
@@ -291,7 +291,7 @@ func TestQuerySpeedProfile_NilAggregatesPropagateAsNull(t *testing.T) {
 	t.Parallel()
 
 	src := &fakeDrives{
-		one: map[int64]*models.Drive{
+		one: map[int64]*drivemodel.Drive{
 			888: {
 				ID:        888,
 				VehicleID: 1,
@@ -340,7 +340,7 @@ func TestQuerySpeedProfile_NoSourceWired(t *testing.T) {
 
 func TestQuerySpeedProfile_DriveNotFound(t *testing.T) {
 	t.Parallel()
-	src := &fakeDrives{one: map[int64]*models.Drive{}}
+	src := &fakeDrives{one: map[int64]*drivemodel.Drive{}}
 	tool := &querySpeedProfile{src: src}
 	in, _ := tool.Validate(json.RawMessage(`{"drive_id": 99}`))
 	_, err := tool.Execute(context.Background(), in)
@@ -382,7 +382,7 @@ func TestBuildDriveContext_ExcludesPreciseRouteData(t *testing.T) {
 	endBat := int16(60)
 	endStatus := "completed"
 
-	d := &models.Drive{
+	d := &drivemodel.Drive{
 		ID:              701,
 		VehicleID:       1,
 		StartTs:         time.Date(2024, 6, 1, 8, 0, 0, 0, time.UTC),
@@ -438,7 +438,7 @@ func TestBuildDriveContext_ExcludesPreciseRouteData(t *testing.T) {
 // presence-flag contract when the underlying columns are NULL.
 func TestBuildDriveContext_NilAddressesPresenceFalse(t *testing.T) {
 	t.Parallel()
-	d := &models.Drive{
+	d := &drivemodel.Drive{
 		ID:        702,
 		VehicleID: 1,
 		StartTs:   time.Date(2024, 6, 2, 9, 0, 0, 0, time.UTC),
@@ -473,7 +473,7 @@ func TestQueryDriveContext_ExecuteHappyPath(t *testing.T) {
 	endBat := int16(75)
 
 	src := &fakeDrives{
-		one: map[int64]*models.Drive{
+		one: map[int64]*drivemodel.Drive{
 			703: {
 				ID:              703,
 				VehicleID:       1,
@@ -521,7 +521,7 @@ func TestQueryDriveContext_ErrorPaths(t *testing.T) {
 	})
 
 	t.Run("drive not found", func(t *testing.T) {
-		tool := &queryDriveContext{src: &fakeDrives{one: map[int64]*models.Drive{}}}
+		tool := &queryDriveContext{src: &fakeDrives{one: map[int64]*drivemodel.Drive{}}}
 		in, _ := tool.Validate(json.RawMessage(`{"drive_id": 99}`))
 		if _, err := tool.Execute(context.Background(), in); err == nil {
 			t.Fatal("Execute with missing drive: err = nil, want error")

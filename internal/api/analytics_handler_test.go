@@ -8,11 +8,12 @@ import (
 	"testing"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -35,7 +36,7 @@ func (f *fakeVehicleListFetcher) GetAll(_ context.Context) ([]*vehiclemodel.Vehi
 // focused on the StateReader integration / error propagation contract.
 type fakeDriveByVehicleFetcher struct{}
 
-func (fakeDriveByVehicleFetcher) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*models.Drive, error) {
+func (fakeDriveByVehicleFetcher) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*drivemodel.Drive, error) {
 	return nil, nil
 }
 

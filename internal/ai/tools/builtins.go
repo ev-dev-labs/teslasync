@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -63,8 +65,8 @@ type VehicleStateSource interface {
 // DriveSource is the read surface the drive-domain tools need.
 // Implemented by *database.DriveRepo.
 type DriveSource interface {
-	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Drive, error)
-	GetByID(ctx context.Context, id int64) (*models.Drive, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error)
+	GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error)
 }
 
 // ChargeSource is the read surface the charging-domain tools need.
@@ -97,7 +99,7 @@ type GeofenceSource interface {
 // DriveSource the listing tool uses, so this is a thin wrapper
 // rather than a new repo dependency.
 type EfficiencySource interface {
-	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Drive, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error)
 }
 
 // Sources bundles every narrow source the built-in tools need. One

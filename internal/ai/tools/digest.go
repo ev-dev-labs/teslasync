@@ -49,9 +49,9 @@ import (
 	"fmt"
 	"time"
 
-	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
 // queryWeeklyDigestContextInput is the typed input shape for the
@@ -162,7 +162,7 @@ func (t *queryWeeklyDigestContext) Execute(ctx context.Context, in any) (any, er
 // Extracted so the unit test can call it directly without spinning
 // up a fake DriveSource / ChargeSource and so the body of Execute
 // stays focused on IO + error wrapping.
-func aggregateWeeklyDigest(drives []*models.Drive, charges []*chargingmodel.ChargingSession) map[string]any {
+func aggregateWeeklyDigest(drives []*drivemodel.Drive, charges []*chargingmodel.ChargingSession) map[string]any {
 	var (
 		drivesCount                  int
 		distM, energyUsedWh, regenWh float64

@@ -5,10 +5,11 @@ import (
 	"math"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	"github.com/ev-dev-labs/teslasync/internal/enums"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
 	"github.com/jackc/pgx/v5"
@@ -326,7 +327,7 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 // normalisation. The legacy units.NormalizeDistance/NormalizeSpeed calls
 // would have actively corrupted SI values by treating meters as miles or
 // km depending on the user's preference setting.
-func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, drive *models.Drive, startSnap, endSnap map[string]interface{}, endTs time.Time) {
+func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, drive *drivemodel.Drive, startSnap, endSnap map[string]interface{}, endTs time.Time) {
 	if startSnap == nil {
 		startSnap = map[string]interface{}{}
 	}

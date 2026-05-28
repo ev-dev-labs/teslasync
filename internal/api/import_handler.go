@@ -7,12 +7,13 @@ import (
 	"strconv"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -90,7 +91,7 @@ func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 		}
 		speedMax, _ := strconv.ParseFloat(record[5], 64)
 
-		d := &models.Drive{
+		d := &drivemodel.Drive{
 			VehicleID: vehicleID,
 			StartTs:   startDate,
 			DistanceM: distance * 1609.344,

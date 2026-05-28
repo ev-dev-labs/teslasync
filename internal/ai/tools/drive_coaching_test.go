@@ -15,7 +15,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
 // failingDrivesImpl wraps the real DriveSource signature properly via
@@ -28,7 +28,7 @@ type failingDrivesImpl struct {
 	getByIDErr error
 }
 
-func (f *failingDrivesImpl) GetByID(_ context.Context, _ int64) (*models.Drive, error) {
+func (f *failingDrivesImpl) GetByID(_ context.Context, _ int64) (*drivemodel.Drive, error) {
 	return nil, f.getByIDErr
 }
 
@@ -176,7 +176,7 @@ func TestQueryDriveTelemetrySummary_ExecuteHappyPath(t *testing.T) {
 	endedStatus := "completed"
 
 	src := &fakeDrives{
-		one: map[int64]*models.Drive{
+		one: map[int64]*drivemodel.Drive{
 			101: {
 				ID:              101,
 				VehicleID:       1,
@@ -274,7 +274,7 @@ func TestQueryDriveTelemetrySummary_NilAggregatesPropagateAsNull(t *testing.T) {
 	t.Parallel()
 
 	src := &fakeDrives{
-		one: map[int64]*models.Drive{
+		one: map[int64]*drivemodel.Drive{
 			202: {
 				ID:        202,
 				VehicleID: 1,
@@ -321,7 +321,7 @@ func TestQueryDriveTelemetrySummary_RegenShareNilOnZeroEnvelope(t *testing.T) {
 
 	zero := 0.0
 	src := &fakeDrives{
-		one: map[int64]*models.Drive{
+		one: map[int64]*drivemodel.Drive{
 			303: {
 				ID:            303,
 				VehicleID:     1,
@@ -352,7 +352,7 @@ func TestQueryDriveTelemetrySummary_KwhPer100KmNilOnZeroDistance(t *testing.T) {
 
 	used := 100.0
 	src := &fakeDrives{
-		one: map[int64]*models.Drive{
+		one: map[int64]*drivemodel.Drive{
 			404: {
 				ID:           404,
 				VehicleID:    1,
@@ -393,7 +393,7 @@ func TestQueryDriveTelemetrySummary_NoSourceWired(t *testing.T) {
 // covered 0 m, used 0 Wh" which is silently wrong.
 func TestQueryDriveTelemetrySummary_DriveNotFound(t *testing.T) {
 	t.Parallel()
-	src := &fakeDrives{one: map[int64]*models.Drive{}} // empty
+	src := &fakeDrives{one: map[int64]*drivemodel.Drive{}} // empty
 	tool := &queryDriveTelemetrySummary{src: src}
 	in, _ := tool.Validate(json.RawMessage(`{"drive_id": 99}`))
 	_, err := tool.Execute(context.Background(), in)

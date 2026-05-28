@@ -10,7 +10,7 @@
 // Design constraints (from the slice prompt):
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL written.**"
-//     The tool reads ONE *models.Drive row via the existing
+//     The tool reads ONE *drivemodel.Drive row via the existing
 //     [DriveSource.GetByID] method (the same surface
 //     query_drive_detail uses) and computes coaching-friendly
 //     derived fields (regen_share_pct, kwh_per_100km,
@@ -33,7 +33,7 @@
 //     per-strategy whitelist still gates which strategies can call it.
 //
 // The tool's output is a deterministic envelope mirroring the
-// *models.Drive aggregate fields plus three derived fields the
+// *drivemodel.Drive aggregate fields plus three derived fields the
 // coach prefers to quote in plain English:
 //
 //	{
@@ -69,7 +69,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
 
 // queryDriveTelemetrySummaryInput is the typed input shape for the
@@ -90,7 +90,7 @@ type queryDriveTelemetrySummaryInput struct {
 }
 
 // queryDriveTelemetrySummary is the read-only tool that computes
-// coaching-friendly derived fields from a single *models.Drive row.
+// coaching-friendly derived fields from a single *drivemodel.Drive row.
 // It is one of the TWO tools the drive-coaching strategy is allowed
 // to call (the other being the existing query_drive_detail builtin).
 type queryDriveTelemetrySummary struct {
@@ -155,7 +155,7 @@ func (t *queryDriveTelemetrySummary) Execute(ctx context.Context, in any) (any, 
 	return summariseDriveForCoaching(d), nil
 }
 
-// summariseDriveForCoaching is a pure helper: given a *models.Drive,
+// summariseDriveForCoaching is a pure helper: given a *drivemodel.Drive,
 // compute the deterministic coaching envelope. Extracted so the
 // unit test can call it directly without spinning up a fake
 // DriveSource and so the body of Execute stays focused on IO +
@@ -165,7 +165,7 @@ func (t *queryDriveTelemetrySummary) Execute(ctx context.Context, in any) (any, 
 // nil-pointer aggregates remain nil in the output envelope (rather
 // than collapsing to zero, which would silently mislead the coach
 // about whether a metric is "zero" or "unknown").
-func summariseDriveForCoaching(d *models.Drive) map[string]any {
+func summariseDriveForCoaching(d *drivemodel.Drive) map[string]any {
 	out := map[string]any{
 		"drive_id":   d.ID,
 		"vehicle_id": d.VehicleID,

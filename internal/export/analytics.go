@@ -8,9 +8,9 @@ import (
 	"sort"
 	"time"
 
-	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
 // processAnalytics generates a fleet analytics report as JSON.
@@ -73,7 +73,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 		}
 
 		// Fetch all data for this vehicle (paginated)
-		var allDrives []*models.Drive
+		var allDrives []*drivemodel.Drive
 		offset := 0
 		for {
 			drives, _ := p.driveRepo.GetByVehicle(ctx, v.ID, 500, offset, time.Time{}, time.Time{})

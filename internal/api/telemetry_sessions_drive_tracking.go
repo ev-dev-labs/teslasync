@@ -6,11 +6,12 @@ import (
 	"sync"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
 	"github.com/jackc/pgx/v5"
@@ -303,7 +304,7 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 		return
 	}
 
-	drive := &models.Drive{
+	drive := &drivemodel.Drive{
 		VehicleID: vehicleID,
 		StartTs:   startTs,
 	}
@@ -646,7 +647,7 @@ func (t *TelemetrySessionTracker) flushDriveTelemetry(ctx context.Context, drive
 }
 
 func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, drive *streamingDrive, signals map[string]interface{}) {
-	reading := &models.DriveTelemetryReading{
+	reading := &drivemodel.DriveTelemetryReading{
 		DriveID:   drive.DriveID,
 		VehicleID: drive.VehicleID,
 	}

@@ -212,7 +212,7 @@ func (h *AIDriveCoachHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	//
 	// Note: vehicle_id is intentionally NOT included here. The LLM
 	// learns the vehicle from the tool reply (query_drive_detail
-	// returns the *models.Drive whose VehicleID field is the
+	// returns the *drivemodel.Drive whose VehicleID field is the
 	// authoritative source). Including a user-controllable vehicle
 	// hint in the prompt would risk cross-tenant leak via prompt
 	// injection — keeping the drive_id as the sole identifier

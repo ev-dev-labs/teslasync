@@ -41,15 +41,16 @@ import (
 	"strings"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // driveLookup is the narrow Drive-load surface used by the handler.
 type driveLookup interface {
-	GetByID(ctx context.Context, id int64) (*models.Drive, error)
+	GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error)
 }
 
 // driveDiagnosticReader is the narrow diagnostic-read surface used by

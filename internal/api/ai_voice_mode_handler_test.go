@@ -30,13 +30,14 @@ import (
 	"testing"
 	"time"
 
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TestVoiceModeAIOffNoVoiceControlsOrStorage is the
@@ -276,17 +277,17 @@ func TestFormatVoiceModeLastDriveSummary(t *testing.T) {
 
 	cases := []struct {
 		name string
-		d    *models.Drive
+		d    *drivemodel.Drive
 		want string
 	}{
 		{"nil drive", nil, ""},
-		{"zero distance", &models.Drive{DistanceM: 0, StartTs: today}, ""},
-		{"sub_half_mile is dropped", &models.Drive{DistanceM: 500, StartTs: today}, ""},
-		{"one_mile_today", &models.Drive{DistanceM: 1609.344, StartTs: today}, "1 mile today"},
-		{"two_miles_today", &models.Drive{DistanceM: 2 * 1609.344, StartTs: today}, "2 miles today"},
-		{"twelve_miles_yesterday", &models.Drive{DistanceM: 12 * 1609.344, StartTs: yesterday}, "12 miles yesterday"},
-		{"rounding_half_up", &models.Drive{DistanceM: 11.7 * 1609.344, StartTs: today}, "12 miles today"},
-		{"ten_days_ago_uses_month_form", &models.Drive{DistanceM: 8 * 1609.344, StartTs: tenDaysAgo},
+		{"zero distance", &drivemodel.Drive{DistanceM: 0, StartTs: today}, ""},
+		{"sub_half_mile is dropped", &drivemodel.Drive{DistanceM: 500, StartTs: today}, ""},
+		{"one_mile_today", &drivemodel.Drive{DistanceM: 1609.344, StartTs: today}, "1 mile today"},
+		{"two_miles_today", &drivemodel.Drive{DistanceM: 2 * 1609.344, StartTs: today}, "2 miles today"},
+		{"twelve_miles_yesterday", &drivemodel.Drive{DistanceM: 12 * 1609.344, StartTs: yesterday}, "12 miles yesterday"},
+		{"rounding_half_up", &drivemodel.Drive{DistanceM: 11.7 * 1609.344, StartTs: today}, "12 miles today"},
+		{"ten_days_ago_uses_month_form", &drivemodel.Drive{DistanceM: 8 * 1609.344, StartTs: tenDaysAgo},
 			"8 miles " + tenDaysAgo.Format("January 2")},
 	}
 	for _, tc := range cases {

@@ -6,7 +6,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/jackc/pgx/v5"
 )
@@ -24,12 +25,12 @@ import (
 //   - start_lat / start_lng / end_lat / end_lng (DOUBLE PRECISION, WGS84°)
 //   - start_place / end_place (TEXT, geocoded place names)
 //
-// Phase-48 (SI canonical mega-PR): models.Drive is now SI canonical, so this
+// Phase-48 (SI canonical mega-PR): drivemodel.Drive is now SI canonical, so this
 // repo no longer performs any unit conversion. The frontend converts at the
 // display boundary using useUnits()/lib/unitConversion's SI-floor formatters.
 //
 // Phase-42 dropped these columns (forward-only — ADR-004 #2). The fields
-// survive on models.Drive for JSON shape stability and surface nil/derived:
+// survive on drivemodel.Drive for JSON shape stability and surface nil/derived:
 //   - InsideTempAvgC, Score, EndedStatus → always nil
 //   - CreatedAt → started_at; UpdatedAt → ended_at-or-started_at
 
@@ -46,10 +47,10 @@ const driveColumns = `id, vehicle_id, started_at, ended_at, duration_s, distance
 	energy_used_wh, regen_energy_wh, avg_speed_mps, max_speed_mps, avg_power_w,
 	ambient_temp_c_avg`
 
-// scanDrive scans the SI canonical column list into a models.Drive. No unit
+// scanDrive scans the SI canonical column list into a drivemodel.Drive. No unit
 // conversion is performed — both struct and DB are SI canonical.
-func scanDrive(row interface{ Scan(dest ...any) error }) (*models.Drive, error) {
-	d := &models.Drive{}
+func scanDrive(row interface{ Scan(dest ...any) error }) (*drivemodel.Drive, error) {
+	d := &drivemodel.Drive{}
 	var (
 		durationSec *int64
 		distanceM   *float64
@@ -95,7 +96,7 @@ func scanDrive(row interface{ Scan(dest ...any) error }) (*models.Drive, error) 
 }
 
 // socPctToInt16 rounds a REAL percent value (0-100) to the int16 form
-// exposed by models.Drive.StartBatteryPct / EndBatteryPct.
+// exposed by drivemodel.Drive.StartBatteryPct / EndBatteryPct.
 func socPctToInt16(p *float32) *int16 {
 	if p == nil {
 		return nil
@@ -108,7 +109,7 @@ func NewDriveRepo(db *DB) *DriveRepo {
 	return &DriveRepo{db: db}
 }
 
-func (r *DriveRepo) Create(ctx context.Context, d *models.Drive) error {
+func (r *DriveRepo) Create(ctx context.Context, d *drivemodel.Drive) error {
 	ctx, span := tracing.DBSpan(ctx, "insert", "drives", tracing.VehicleID(d.VehicleID))
 	defer span.End()
 	var startSoc *float32
@@ -156,7 +157,7 @@ func (r *DriveRepo) Complete(ctx context.Context, id int64, endTs time.Time,
 	return err
 }
 
-func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.Drive, error) {
+func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*drivemodel.Drive, error) {
 	ctx, span := tracing.DBSpan(ctx, "select", "drives", tracing.VehicleID(vehicleID))
 	defer span.End()
 	query := `SELECT ` + driveColumns + ` FROM drives WHERE vehicle_id=$1`
@@ -180,7 +181,7 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 	}
 	defer rows.Close()
 
-	var drives []*models.Drive
+	var drives []*drivemodel.Drive
 	for rows.Next() {
 		d, err := scanDrive(rows)
 		if err != nil {
@@ -191,7 +192,7 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 	return drives, rows.Err()
 }
 
-func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*models.Drive, error) {
+func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error) {
 	ctx, span := tracing.DBSpan(ctx, "select", "drives", tracing.DriveID(id))
 	defer span.End()
 	query := `SELECT ` + driveColumns + ` FROM drives WHERE id=$1`
@@ -205,7 +206,7 @@ func (r *DriveRepo) GetByID(ctx context.Context, id int64) (*models.Drive, error
 
 // GetStale returns drives that have no end timestamp and started before the
 // cutoff time.
-func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.Drive, error) {
+func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*drivemodel.Drive, error) {
 	query := `SELECT ` + driveColumns + ` FROM drives WHERE ended_at IS NULL AND started_at < $1
 		ORDER BY started_at DESC`
 	rows, err := r.db.Pool.Query(ctx, query, cutoff)
@@ -214,7 +215,7 @@ func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.D
 	}
 	defer rows.Close()
 
-	var drives []*models.Drive
+	var drives []*drivemodel.Drive
 	for rows.Next() {
 		d, err := scanDrive(rows)
 		if err != nil {
@@ -232,7 +233,7 @@ func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.D
 // Gear=P frames within a longer trip. The merge target's ended_at is
 // cleared by ResumeForMerge so the live tracker can extend it to the true
 // end timestamp.
-func (r *DriveRepo) FindRecentEndedForMerge(ctx context.Context, vehicleID int64, startTs time.Time, window time.Duration) (*models.Drive, error) {
+func (r *DriveRepo) FindRecentEndedForMerge(ctx context.Context, vehicleID int64, startTs time.Time, window time.Duration) (*drivemodel.Drive, error) {
 	if window <= 0 {
 		return nil, nil
 	}
@@ -379,7 +380,7 @@ func (r *DriveRepo) CompleteWithTx(ctx context.Context, tx DBTX, id int64, endTs
 // FindMissingAddresses returns drives that have coordinates but no geocoded
 // place name. Used for backfilling place names on startup for drives created
 // before geocoding was added.
-func (r *DriveRepo) FindMissingAddresses(ctx context.Context) ([]*models.Drive, error) {
+func (r *DriveRepo) FindMissingAddresses(ctx context.Context) ([]*drivemodel.Drive, error) {
 	query := `SELECT ` + driveColumns + ` FROM drives
 		WHERE (start_lat IS NOT NULL AND start_lng IS NOT NULL AND (start_place IS NULL OR start_place = ''))
 		   OR (end_lat IS NOT NULL AND end_lng IS NOT NULL AND (end_place IS NULL OR end_place = ''))
@@ -390,7 +391,7 @@ func (r *DriveRepo) FindMissingAddresses(ctx context.Context) ([]*models.Drive, 
 	}
 	defer rows.Close()
 
-	var drives []*models.Drive
+	var drives []*drivemodel.Drive
 	for rows.Next() {
 		d, err := scanDrive(rows)
 		if err != nil {

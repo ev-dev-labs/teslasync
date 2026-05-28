@@ -5,7 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -33,7 +34,7 @@ func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 	// Guarantee a JSON array (`[]`) instead of `null` so SPA hooks that
 	// call `.map`/`.length` on the response don't crash on empty results.
 	if drives == nil {
-		drives = []*models.Drive{}
+		drives = []*drivemodel.Drive{}
 	}
 	writeJSON(w, http.StatusOK, drives)
 }
