@@ -22,3 +22,9 @@
 # stuttering Embeddings* prefix). Zero behavioural change; sole
 # external caller updated to alias-import per ADR-011 convention.
 5dde1443803983d43af565f792b83366ba190006
+
+# R5.1 — Phase R first model cluster: extract internal/models/alert
+# subpackage (2 files + new doc.go). 35 caller files updated to
+# alertmodel.* alias per ADR-011 §3. Pure mechanical move + import
+# rewrites; zero behavioural change.
+59ac8f2b432ab68cc61b484befdcf68f5f671a90
