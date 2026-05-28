@@ -256,3 +256,13 @@ fb365ceac02c1530bba52ea1c0b86d924fb655b2 # refactor(R2d.34): carve internal/api/
 553b88f84ecb696646fc7f7360fe001bde9e7164 # refactor(R2d.35): carve internal/api/pinned subpackage
 cd8536febd2347af8eafc0ce673fbfec501d120a # refactor(R2d.36): carve internal/api/dlq subpackage
 28818b2d1924670b7f0374b4feff4a1be6a1b63d # refactor(R2d.37): carve internal/api/impersonate subpackage
+ac905218a51a62190b0b646f6694a7d21b62174d # refactor(R2d.38): carve internal/api/tripsdetail subpackage
+7f0b8b5d867137be58dea263a2003bb67babaed4 # refactor(R2d.39): carve internal/api/authsession subpackage
+ac2bbdbeb7b93f871a0d1ad0e59d4dc9d5fb78ea # refactor(R2d.40): carve internal/api/quiethours subpackage
+4a31f90e9220378cd68829ec4a60c4b2d9c868bc # refactor(R2d.41): carve internal/api/apiflagsh subpackage
+eb5bb6c342c6b0c2df48fb89b40aa60134b02227 # refactor(R2d.42): carve internal/api/sysauthmode subpackage
+dd8e91f3cef4e8d05e22d62d000c5f8cda39da29 # refactor(R2d.43): carve internal/api/ratelimit subpackage
+5b0f31579d6160aedabeb88cdd447b9ef16031b2 # refactor(R2d.44): carve internal/api/savedviews subpackage
+e4d35bc20e9145075d81dc1f240bb9ce453aef90 # refactor(R2d.47): carve internal/api/diagnostic subpackage
+1043a85d47c96b390a2950f2b28ee5caeb2b988a # refactor(R2d.45): carve internal/api/mileage subpackage
+8d81e76406af98fe5e322d405b1dfd0964da43ec # refactor(R2d.46): carve internal/api/anomaly subpackage
