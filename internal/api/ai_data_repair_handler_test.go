@@ -25,6 +25,8 @@ import (
 	"testing"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
@@ -274,7 +276,7 @@ func TestAIDataRepairSuggestionsHandler_RejectsBadBody(t *testing.T) {
 func TestBuildDataRepairSuggestionsUserMessage_DeterministicShape(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2024, 3, 15, 14, 32, 0, 0, time.UTC)
-	charging := []*models.ChargingSession{
+	charging := []*chargingmodel.ChargingSession{
 		{ID: 7, StartedAt: now.Add(-72 * time.Hour)},  // 72h ago
 		{ID: 42, StartedAt: now.Add(-25 * time.Hour)}, // 25h ago
 	}

@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -26,8 +27,8 @@ start_odometer_m, end_odometer_m, start_lat, start_lng,
 start_place, total_energy_added_wh, peak_power_w, avg_power_w,
 cost_decimal, cost_currency, cable_type, charger_type`
 
-func scanChargingSession(row interface{ Scan(dest ...any) error }) (*models.ChargingSession, error) {
-	c := &models.ChargingSession{}
+func scanChargingSession(row interface{ Scan(dest ...any) error }) (*chargingmodel.ChargingSession, error) {
+	c := &chargingmodel.ChargingSession{}
 	err := row.Scan(
 		&c.ID, &c.VehicleID, &c.StartedAt, &c.EndedAt,
 		&c.StartSocPct, &c.EndSocPct, &c.DeltaSocPct,
@@ -41,7 +42,7 @@ func scanChargingSession(row interface{ Scan(dest ...any) error }) (*models.Char
 	return c, nil
 }
 
-func (r *ChargingRepo) Create(ctx context.Context, c *models.ChargingSession) error {
+func (r *ChargingRepo) Create(ctx context.Context, c *chargingmodel.ChargingSession) error {
 	query := `
 INSERT INTO charging_sessions (vehicle_id, started_at, start_soc_pct, charger_type, start_place, start_lat, start_lng, start_odometer_m)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -66,7 +67,7 @@ WHERE id=$1`
 	return err
 }
 
-func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.ChargingSession, error) {
+func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*chargingmodel.ChargingSession, error) {
 	query := `SELECT ` + chargingColumns + ` FROM charging_sessions WHERE vehicle_id=$1`
 	args := []interface{}{vehicleID}
 	argIdx := 2
@@ -88,7 +89,7 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 	}
 	defer rows.Close()
 
-	var sessions []*models.ChargingSession
+	var sessions []*chargingmodel.ChargingSession
 	for rows.Next() {
 		c, err := scanChargingSession(rows)
 		if err != nil {
@@ -99,7 +100,7 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 	return sessions, rows.Err()
 }
 
-func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*models.ChargingSession, error) {
+func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error) {
 	query := `SELECT ` + chargingColumns + ` FROM charging_sessions WHERE id=$1`
 	c, err := scanChargingSession(r.db.Pool.QueryRow(ctx, query, id))
 	if err == pgx.ErrNoRows {
@@ -111,7 +112,7 @@ func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*models.ChargingS
 	return c, nil
 }
 
-func (r *ChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*models.ChargingSession, error) {
+func (r *ChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*chargingmodel.ChargingSession, error) {
 	query := `SELECT ` + chargingColumns + ` FROM charging_sessions
 WHERE ended_at IS NULL AND started_at < $1
 ORDER BY started_at DESC`
@@ -121,7 +122,7 @@ ORDER BY started_at DESC`
 	}
 	defer rows.Close()
 
-	var sessions []*models.ChargingSession
+	var sessions []*chargingmodel.ChargingSession
 	for rows.Next() {
 		c, err := scanChargingSession(rows)
 		if err != nil {

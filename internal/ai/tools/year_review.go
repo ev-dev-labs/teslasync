@@ -52,6 +52,8 @@ import (
 	"fmt"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -168,7 +170,7 @@ func (t *queryYearInReviewContext) Execute(ctx context.Context, in any) (any, er
 //
 // Mirrors aggregateWeeklyDigest's shape so a future shared aggregator
 // can be factored out without breaking either tool's golden output.
-func aggregateYearInReview(drives []*models.Drive, charges []*models.ChargingSession) map[string]any {
+func aggregateYearInReview(drives []*models.Drive, charges []*chargingmodel.ChargingSession) map[string]any {
 	var (
 		drivesCount                  int
 		distM, energyUsedWh, regenWh float64

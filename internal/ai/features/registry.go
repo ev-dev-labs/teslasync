@@ -693,7 +693,7 @@ var Registry = map[string]Feature{
 	// migrations explicitly outside this slice's allowed file list.
 	// The two read-only tools fully satisfy the strategy's needs
 	// from the existing per-session aggregates on the
-	// *models.ChargingSession struct plus the deterministic
+	// *chargingmodel.ChargingSession struct plus the deterministic
 	// flag-detection logic that today lives in
 	// web/src/lib/chargingAggregation.ts (slice 0019 mirrors that
 	// logic server-side as a *read-only* tool — flag computation

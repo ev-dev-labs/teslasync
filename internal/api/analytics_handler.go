@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -29,7 +31,7 @@ type driveByVehicleFetcher interface {
 // chargingByVehicleFetcher abstracts *database.ChargingRepo.GetByVehicle so
 // analytics handler tests can avoid a real chargingRepo.
 type chargingByVehicleFetcher interface {
-	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.ChargingSession, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*chargingmodel.ChargingSession, error)
 }
 
 // AnalyticsHandler handles fleet analytics HTTP requests.

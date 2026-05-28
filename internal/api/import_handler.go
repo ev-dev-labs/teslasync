@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -175,7 +177,7 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 		}
 
 		startSocPct := float64(startBattery)
-		c := &models.ChargingSession{
+		c := &chargingmodel.ChargingSession{
 			VehicleID:          vehicleID,
 			StartedAt:          startDate,
 			TotalEnergyAddedWh: &energyAdded,

@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
@@ -68,8 +70,8 @@ type DriveSource interface {
 // ChargeSource is the read surface the charging-domain tools need.
 // Implemented by *database.ChargingRepo.
 type ChargeSource interface {
-	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*models.ChargingSession, error)
-	GetByID(ctx context.Context, id int64) (*models.ChargingSession, error)
+	GetByVehicle(ctx context.Context, vehicleID int64, limit, offset int, startTime, endTime time.Time) ([]*chargingmodel.ChargingSession, error)
+	GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error)
 }
 
 // AlertRuleSource is the read surface the alert-rule tools need.

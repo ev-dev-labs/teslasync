@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
 // fixedNowFn returns a deterministic `func() time.Time` clock for
@@ -35,7 +35,7 @@ func fixedNowFn() func() time.Time {
 }
 
 // ptrTime is a helper for *time.Time fields on
-// *models.ChargingSession.
+// *chargingmodel.ChargingSession.
 func ptrTime(t time.Time) *time.Time { return &t }
 
 // ---------------------------------------------------------------------------
@@ -60,7 +60,7 @@ func TestQueryChargersAlongRoute_FiltersByCorridor(t *testing.T) {
 		out := t.Add(time.Duration(mins * float64(time.Minute)))
 		return &out
 	}
-	rows := []*models.ChargingSession{
+	rows := []*chargingmodel.ChargingSession{
 		// 2 visits to "Halfway SC" inside corridor
 		{
 			ID: 1, VehicleID: 42, StartedAt: sf,
@@ -244,7 +244,7 @@ func TestQueryUserChargeDwells_AggregatesByPlace(t *testing.T) {
 		out := t.Add(time.Duration(mins * float64(time.Minute)))
 		return &out
 	}
-	rows := []*models.ChargingSession{
+	rows := []*chargingmodel.ChargingSession{
 		// 2 visits to "Home" — 30min and 50min dwell.
 		{
 			ID: 1, VehicleID: 42, StartedAt: sf, EndedAt: ended(sf, 30),
@@ -299,7 +299,7 @@ func TestQueryUserChargeDwells_AggregatesByPlace(t *testing.T) {
 func TestQueryUserChargeDwells_SkipsNilStartPlace(t *testing.T) {
 	t.Parallel()
 	sf := time.Date(2024, 11, 1, 8, 0, 0, 0, time.UTC)
-	rows := []*models.ChargingSession{
+	rows := []*chargingmodel.ChargingSession{
 		{ID: 1, VehicleID: 42, StartedAt: sf, StartPlace: nil},
 		{ID: 2, VehicleID: 42, StartedAt: sf.AddDate(0, 0, 1), StartPlace: ptrStr("Home")},
 	}
@@ -551,10 +551,10 @@ type failingCharges struct {
 	err error
 }
 
-func (f *failingCharges) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*models.ChargingSession, error) {
+func (f *failingCharges) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*chargingmodel.ChargingSession, error) {
 	return nil, f.err
 }
 
-func (f *failingCharges) GetByID(_ context.Context, _ int64) (*models.ChargingSession, error) {
+func (f *failingCharges) GetByID(_ context.Context, _ int64) (*chargingmodel.ChargingSession, error) {
 	return nil, f.err
 }

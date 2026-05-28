@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
@@ -25,8 +27,8 @@ func NewDataRepairHandler(db *database.DB) *DataRepairHandler {
 
 // StaleSessionsResponse contains charging sessions and drives that are still open.
 type StaleSessionsResponse struct {
-	StaleCharging []*models.ChargingSession `json:"stale_charging"`
-	StaleDrives   []*models.Drive           `json:"stale_drives"`
+	StaleCharging []*chargingmodel.ChargingSession `json:"stale_charging"`
+	StaleDrives   []*models.Drive                  `json:"stale_drives"`
 }
 
 // GetStaleSessions returns sessions with no end_ts that started more than 24 hours ago.
@@ -49,7 +51,7 @@ func (h *DataRepairHandler) GetStaleSessions(w http.ResponseWriter, r *http.Requ
 	}
 
 	if charging == nil {
-		charging = make([]*models.ChargingSession, 0)
+		charging = make([]*chargingmodel.ChargingSession, 0)
 	}
 	if drives == nil {
 		drives = make([]*models.Drive, 0)

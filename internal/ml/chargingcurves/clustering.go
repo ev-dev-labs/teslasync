@@ -65,7 +65,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
 // SourceLearned marks a per-cluster LearnedCluster whose statistics
@@ -222,7 +222,7 @@ type LearnedCluster struct {
 //
 // Tests substitute a deterministic in-memory fake.
 type SessionSource interface {
-	// SessionsForVehicle returns the *models.ChargingSession slice
+	// SessionsForVehicle returns the *chargingmodel.ChargingSession slice
 	// for the vehicle scoped to the lookback window [start, end].
 	// limit caps the slice length.
 	//
@@ -230,7 +230,7 @@ type SessionSource interface {
 	// "no sessions in window"). A nil error with a nil slice is a
 	// programming bug and is treated by the trainer as "no
 	// sessions".
-	SessionsForVehicle(ctx context.Context, vehicleID int64, limit int, start, end time.Time) ([]*models.ChargingSession, error)
+	SessionsForVehicle(ctx context.Context, vehicleID int64, limit int, start, end time.Time) ([]*chargingmodel.ChargingSession, error)
 }
 
 // Trainer computes per-vehicle learned charging-curve clusters.
@@ -324,7 +324,7 @@ func (t *Trainer) Train(ctx context.Context, vehicleID int64, lookbackDays int) 
 	}
 
 	// Bucket sessions by cluster ID.
-	bucketed := make(map[string][]*models.ChargingSession, len(ClusterIDs))
+	bucketed := make(map[string][]*chargingmodel.ChargingSession, len(ClusterIDs))
 	for _, s := range sessions {
 		if s == nil {
 			continue
@@ -357,7 +357,7 @@ func (t *Trainer) Train(ctx context.Context, vehicleID int64, lookbackDays int) 
 // single cluster. SessionCount is the actual observed count
 // (always > 0 since Train skips empty buckets) so the narrator can
 // quote it.
-func fallbackCluster(clusterID string, sessions []*models.ChargingSession) LearnedCluster {
+func fallbackCluster(clusterID string, sessions []*chargingmodel.ChargingSession) LearnedCluster {
 	dominant := dominantChargerType(sessions)
 	exampleIDs := exampleSessionIDs(sessions)
 	return LearnedCluster{
@@ -376,14 +376,14 @@ func fallbackCluster(clusterID string, sessions []*models.ChargingSession) Learn
 //
 // This function does NOT validate len(sessions); the caller (Train)
 // has already gated on len(sessions) >= MinSessions.
-func learnedCluster(clusterID string, sessions []*models.ChargingSession) LearnedCluster {
-	peakPowers := pluckFloat(sessions, func(s *models.ChargingSession) *float64 { return s.PeakPowerW })
-	avgPowers := pluckFloat(sessions, func(s *models.ChargingSession) *float64 { return s.AvgPowerW })
-	energies := pluckFloat(sessions, func(s *models.ChargingSession) *float64 { return s.TotalEnergyAddedWh })
-	durations := pluckFloat(sessions, func(s *models.ChargingSession) *float64 {
+func learnedCluster(clusterID string, sessions []*chargingmodel.ChargingSession) LearnedCluster {
+	peakPowers := pluckFloat(sessions, func(s *chargingmodel.ChargingSession) *float64 { return s.PeakPowerW })
+	avgPowers := pluckFloat(sessions, func(s *chargingmodel.ChargingSession) *float64 { return s.AvgPowerW })
+	energies := pluckFloat(sessions, func(s *chargingmodel.ChargingSession) *float64 { return s.TotalEnergyAddedWh })
+	durations := pluckFloat(sessions, func(s *chargingmodel.ChargingSession) *float64 {
 		return s.DurationMinutes()
 	})
-	deltaSocs := pluckFloat(sessions, func(s *models.ChargingSession) *float64 { return s.DeltaSocPct })
+	deltaSocs := pluckFloat(sessions, func(s *chargingmodel.ChargingSession) *float64 { return s.DeltaSocPct })
 	ramps := rampShapes(sessions)
 
 	peakMean, peakStddev := meanStddev(peakPowers)
@@ -421,7 +421,7 @@ func learnedCluster(clusterID string, sessions []*models.ChargingSession) Learne
 // pluckFloat extracts a non-nil, finite subset of values from
 // sessions via the supplied accessor. Defensive against NaN /
 // +/-Inf / nil values that would corrupt the mean.
-func pluckFloat(sessions []*models.ChargingSession, accessor func(*models.ChargingSession) *float64) []float64 {
+func pluckFloat(sessions []*chargingmodel.ChargingSession, accessor func(*chargingmodel.ChargingSession) *float64) []float64 {
 	out := make([]float64, 0, len(sessions))
 	for _, s := range sessions {
 		v := accessor(s)
@@ -439,7 +439,7 @@ func pluckFloat(sessions []*models.ChargingSession, accessor func(*models.Chargi
 // rampShapes computes per-session ramp_shape = avg/peak. Skipped
 // when either avg or peak is nil / non-positive (would produce
 // 0/0 or div-by-zero).
-func rampShapes(sessions []*models.ChargingSession) []float64 {
+func rampShapes(sessions []*chargingmodel.ChargingSession) []float64 {
 	out := make([]float64, 0, len(sessions))
 	for _, s := range sessions {
 		if s.AvgPowerW == nil || s.PeakPowerW == nil {
@@ -463,7 +463,7 @@ func rampShapes(sessions []*models.ChargingSession) []float64 {
 // most sessions. Ties broken alphabetically. "unspecified" when no
 // session names a type. Mirrors dominantString in
 // internal/ai/tools/charge_curve_clustering.go (C3 sibling).
-func dominantChargerType(sessions []*models.ChargingSession) string {
+func dominantChargerType(sessions []*chargingmodel.ChargingSession) string {
 	counts := make(map[string]int, len(sessions))
 	for _, s := range sessions {
 		ct := "unspecified"
@@ -494,7 +494,7 @@ func dominantChargerType(sessions []*models.ChargingSession) string {
 // exampleSessionIDs returns the first MaxExampleSessionIDs session
 // IDs in observation order — useful for the narrator to ground a
 // "see session N" reference without drowning the envelope in IDs.
-func exampleSessionIDs(sessions []*models.ChargingSession) []int64 {
+func exampleSessionIDs(sessions []*chargingmodel.ChargingSession) []int64 {
 	limit := MaxExampleSessionIDs
 	if len(sessions) < limit {
 		limit = len(sessions)

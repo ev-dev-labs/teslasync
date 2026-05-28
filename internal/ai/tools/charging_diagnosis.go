@@ -76,7 +76,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
 // ---------------------------------------------------------------------------
@@ -103,7 +103,7 @@ type queryChargeSessionInput struct {
 }
 
 // queryChargeSession is the read-only tool that returns ONE
-// *models.ChargingSession by its ID. Distinct from the existing
+// *chargingmodel.ChargingSession by its ID. Distinct from the existing
 // query_charge_detail builtin (which exposes the same surface under
 // a different name) so the charging-diagnosis strategy's allowed-
 // tool whitelist can stay self-contained: future per-feature
@@ -267,7 +267,7 @@ func (t *queryChargingAggregation) Execute(ctx context.Context, in any) (any, er
 }
 
 // aggregateChargingSession is a pure helper: given a
-// *models.ChargingSession, compute the deterministic diagnosis
+// *chargingmodel.ChargingSession, compute the deterministic diagnosis
 // envelope. Extracted so the unit test can call it directly without
 // spinning up a fake ChargeSource and so the body of Execute stays
 // focused on IO + error wrapping.
@@ -276,7 +276,7 @@ func (t *queryChargingAggregation) Execute(ctx context.Context, in any) (any, er
 // nil-pointer aggregates remain nil in the output envelope (rather
 // than collapsing to zero, which would silently mislead the
 // diagnosis about whether a metric is "zero" or "unknown").
-func aggregateChargingSession(c *models.ChargingSession) map[string]any {
+func aggregateChargingSession(c *chargingmodel.ChargingSession) map[string]any {
 	out := map[string]any{
 		"session_id": c.ID,
 		"vehicle_id": c.VehicleID,
@@ -409,7 +409,7 @@ func aggregateChargingSession(c *models.ChargingSession) map[string]any {
 //
 // kwhAdded is taken in as a pointer so the helper can avoid
 // re-reading c.TotalEnergyAddedWh — but it's safe to pass nil.
-func computeAvgPowerKw(c *models.ChargingSession, durMin *float64, kwhAdded *float64) *float64 {
+func computeAvgPowerKw(c *chargingmodel.ChargingSession, durMin *float64, kwhAdded *float64) *float64 {
 	if durMin != nil && *durMin > 0 && kwhAdded != nil && *kwhAdded > 0 {
 		v := *kwhAdded / (*durMin / 60.0)
 		return &v
@@ -424,7 +424,7 @@ func computeAvgPowerKw(c *models.ChargingSession, durMin *float64, kwhAdded *flo
 // computeCostPerKwh mirrors the frontend's costPerKwh(session):
 // returns nil for free / unknown / zero-energy sessions, otherwise
 // cost_decimal / kwhAdded.
-func computeCostPerKwh(c *models.ChargingSession, kwhAdded *float64) *float64 {
+func computeCostPerKwh(c *chargingmodel.ChargingSession, kwhAdded *float64) *float64 {
 	if kwhAdded == nil || *kwhAdded <= 0 {
 		return nil
 	}
@@ -466,7 +466,7 @@ func classifyChargerCategory(chargerType string) string {
 // secondary observations if it judges them relevant. The first
 // element is also exposed as `flag` for parity with the user's
 // badge.
-func detectChargingFlags(c *models.ChargingSession, durMin *float64, kwhAdded *float64, avgPowerKw *float64, cpk *float64) []string {
+func detectChargingFlags(c *chargingmodel.ChargingSession, durMin *float64, kwhAdded *float64, avgPowerKw *float64, cpk *float64) []string {
 	flags := []string{}
 
 	// Helper: the frontend treats nil duration as 0 for flag math;
@@ -526,7 +526,7 @@ func detectChargingFlags(c *models.ChargingSession, durMin *float64, kwhAdded *f
 // chargingFlagDetail emits a per-flag human-readable detail map
 // the LLM can quote verbatim. Empty input → empty map (not nil) so
 // JSON marshalling stays consistent.
-func chargingFlagDetail(flags []string, c *models.ChargingSession, durMin *float64, kwhAdded *float64, avgPowerKw *float64, cpk *float64) map[string]any {
+func chargingFlagDetail(flags []string, c *chargingmodel.ChargingSession, durMin *float64, kwhAdded *float64, avgPowerKw *float64, cpk *float64) map[string]any {
 	out := map[string]any{}
 	for _, f := range flags {
 		switch f {

@@ -12,7 +12,7 @@
 //     or vehicles;
 //   - the two read-only tools the LLM is allowed to call —
 //     `query_charge_session` (new in this slice; thin envelope over
-//     a single *models.ChargingSession by ID) and
+//     a single *chargingmodel.ChargingSession by ID) and
 //     `query_charging_aggregation` (new in this slice; deterministic
 //     flag-detection envelope mirroring the frontend
 //     web/src/lib/chargingAggregation.ts logic — trickle / expensive

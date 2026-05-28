@@ -52,7 +52,7 @@
 //     (no new SQL).
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle. The
-//     cluster-aggregation math is pure Go on a *models.ChargingSession
+//     cluster-aggregation math is pure Go on a *chargingmodel.ChargingSession
 //     slice.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
@@ -85,9 +85,10 @@ import (
 	"strings"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // chargeCurveSourceCurve is the source-type string reserved by the
@@ -453,7 +454,7 @@ var chargeCurveClusterIDs = []string{
 }
 
 // aggregateChargeCurveFeatures is a pure helper: given a slice of
-// *models.ChargingSession rows, compute the deterministic
+// *chargingmodel.ChargingSession rows, compute the deterministic
 // per-cluster envelope. Extracted so the unit tests can call it
 // directly without spinning up a fake ChargeSource and so Execute
 // stays focused on IO + error wrapping.
@@ -473,7 +474,7 @@ var chargeCurveClusterIDs = []string{
 //   - Truncates to queryChargeCurveFeaturesMaxClusters.
 //   - Reports has_enough_data=true only if the dominant cluster
 //     has ≥ queryChargeCurveFeaturesMinSessionsForData sessions.
-func aggregateChargeCurveFeatures(sessions []*models.ChargingSession) map[string]any {
+func aggregateChargeCurveFeatures(sessions []*chargingmodel.ChargingSession) map[string]any {
 	aggs := map[string]*chargeCurveClusterAgg{}
 	for _, s := range sessions {
 		if s == nil {

@@ -6,8 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
@@ -38,7 +39,7 @@ type ChargingHandler struct {
 // *database.ChargingRepo and declared at the call site so tests can
 // substitute an in-memory fake.
 type chargingByIDFetcher interface {
-	GetByID(ctx context.Context, id int64) (*models.ChargingSession, error)
+	GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error)
 }
 
 func NewChargingHandler(db *database.DB, state signal.StateReader, live signal.LiveStateReader) *ChargingHandler {
@@ -104,7 +105,7 @@ func (h *ChargingHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) 
 	// are no sessions; the SPA charging hooks crash on null when calling
 	// `.map`/`.length` and prefer the canonical empty-array shape.
 	if sessions == nil {
-		sessions = []*models.ChargingSession{}
+		sessions = []*chargingmodel.ChargingSession{}
 	}
 	writeJSON(w, http.StatusOK, sessions)
 }
@@ -144,7 +145,7 @@ func (h *ChargingHandler) Get(w http.ResponseWriter, r *http.Request) {
 // chargingSessionResponse builds the JSON response map for a charging session,
 // including the live indicator. This preserves the original JSON field names
 // from the ChargingSession model while adding the extra "live" field.
-func chargingSessionResponse(s *models.ChargingSession, live bool) map[string]interface{} {
+func chargingSessionResponse(s *chargingmodel.ChargingSession, live bool) map[string]interface{} {
 	return map[string]interface{}{
 		"id":                    s.ID,
 		"vehicle_id":            s.VehicleID,
@@ -176,7 +177,7 @@ func chargingSessionResponse(s *models.ChargingSession, live bool) map[string]in
 // lookup fails — the caller should respond 500 because the live derivation
 // depends on both baselines (battery / energy deltas need the start sample,
 // current power / battery readings need the now sample).
-func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *models.ChargingSession, now time.Time) error {
+func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *chargingmodel.ChargingSession, now time.Time) error {
 	startState, err := h.state.State(ctx, session.VehicleID, session.StartedAt)
 	if err != nil {
 		return fmt.Errorf("start snapshot at %s: %w", session.StartedAt.Format(time.RFC3339Nano), err)

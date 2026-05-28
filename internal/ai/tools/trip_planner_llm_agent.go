@@ -50,7 +50,7 @@
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle. The
 //     corridor projection and per-place aggregation math is pure Go
-//     on a []*models.ChargingSession slice.
+//     on a []*chargingmodel.ChargingSession slice.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
 //     tool exists in this slice; both query tools are pure reads

@@ -12,10 +12,9 @@ package models
 
 // DriveTelemetryReading has moved to drive.go.
 
-// ChargeTelemetryReading has moved to charging.go.
+// ChargeTelemetryReading has moved to internal/models/charging in phase-R5.13.
 
-// ChargingSession is defined in charging.go to mirror the post-migration
-// `charging_sessions` schema (migrations/000142_baseline_typed.up.sql).
+// ChargingSession has moved to internal/models/charging in phase-R5.13.
 
 // Address moved to internal/models/geo in phase-R5.7.
 

@@ -28,19 +28,20 @@ import (
 	"testing"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fakeChargeSessionSource is a deterministic in-memory
 // SessionSource for tool tests. Mirrors the fake in
 // internal/ml/chargingcurves's tests.
 type fakeChargeSessionSource struct {
-	sessions []*models.ChargingSession
+	sessions []*chargingmodel.ChargingSession
 }
 
-func (f *fakeChargeSessionSource) SessionsForVehicle(_ context.Context, _ int64, _ int, _, _ time.Time) ([]*models.ChargingSession, error) {
-	out := make([]*models.ChargingSession, len(f.sessions))
+func (f *fakeChargeSessionSource) SessionsForVehicle(_ context.Context, _ int64, _ int, _, _ time.Time) ([]*chargingmodel.ChargingSession, error) {
+	out := make([]*chargingmodel.ChargingSession, len(f.sessions))
 	copy(out, f.sessions)
 	return out, nil
 }
@@ -57,10 +58,10 @@ func strPtrCharge(s string) *string { return &s }
 // makeChargeSession builds a session with peak/avg/energy + an
 // ended_at 1 hour after started_at so DurationMinutes() returns
 // non-nil.
-func makeChargeSession(id int64, peakW, avgW, energyWh float64, chargerType string) *models.ChargingSession {
+func makeChargeSession(id int64, peakW, avgW, energyWh float64, chargerType string) *chargingmodel.ChargingSession {
 	startedAt := time.Date(2026, 5, 1, 22, 0, 0, 0, time.UTC)
 	endedAt := startedAt.Add(time.Hour)
-	return &models.ChargingSession{
+	return &chargingmodel.ChargingSession{
 		ID:                 id,
 		VehicleID:          42,
 		StartedAt:          startedAt,

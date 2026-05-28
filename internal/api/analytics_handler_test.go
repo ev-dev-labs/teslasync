@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -43,7 +45,7 @@ func (fakeDriveByVehicleFetcher) GetByVehicle(_ context.Context, _ int64, _, _ i
 // contract.
 type fakeChargingByVehicleFetcher struct{}
 
-func (fakeChargingByVehicleFetcher) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*models.ChargingSession, error) {
+func (fakeChargingByVehicleFetcher) GetByVehicle(_ context.Context, _ int64, _, _ int, _, _ time.Time) ([]*chargingmodel.ChargingSession, error) {
 	return nil, nil
 }
 

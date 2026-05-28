@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T04:11:39Z, Go go1.26.1, commit ea1d011a13d10698bec13c7de09e2e64c1bd8d64_
+_Generated 2026-05-28T04:14:10Z, Go go1.26.1, commit f6c8fcf16f17f6470437bdd40b597bc7a3b27795_
 
 ## Summary
 
-- Packages: 222
+- Packages: 223
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372206
+- Total non-blank LOC under cmd/+internal/+tools/: 372246
 
 ## cmd/* main.go LOC
 
@@ -139,9 +139,9 @@ _Generated 2026-05-28T04:11:39Z, Go go1.26.1, commit ea1d011a13d10698bec13c7de09
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 58 | 51 | 47081 | yes | platform |
+| internal/ai/tools | 58 | 51 | 47088 | yes | platform |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126481 | yes | handler |
+| internal/api | 271 | 163 | 126488 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -180,7 +180,7 @@ _Generated 2026-05-28T04:11:39Z, Go go1.26.1, commit ea1d011a13d10698bec13c7de09
 | internal/domain/vehicle | 5 | 1 | 350 | yes | domain |
 | internal/enums | 5 | 1 | 304 | yes | platform |
 | internal/events | 2 | 1 | 145 | yes | platform |
-| internal/export | 9 | 3 | 3058 | yes | platform |
+| internal/export | 9 | 3 | 3060 | yes | platform |
 | internal/export/gdpr | 2 | 0 | 254 | yes | platform |
 | internal/flags | 2 | 1 | 556 | yes | platform |
 | internal/fsm | 11 | 3 | 2507 | yes | platform |
@@ -203,11 +203,12 @@ _Generated 2026-05-28T04:11:39Z, Go go1.26.1, commit ea1d011a13d10698bec13c7de09
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 30 | 1 | 1851 | yes | domain |
+| internal/models | 29 | 1 | 1765 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/models/auth | 2 | 1 | 66 | yes | domain |
 | internal/models/automation | 2 | 0 | 55 | yes | domain |
 | internal/models/backup | 2 | 0 | 59 | yes | domain |
+| internal/models/charging | 2 | 1 | 109 | yes | domain |
 | internal/models/chatbot | 2 | 0 | 38 | yes | domain |
 | internal/models/energy | 2 | 0 | 27 | yes | domain |
 | internal/models/export | 2 | 0 | 59 | yes | domain |
@@ -236,7 +237,7 @@ _Generated 2026-05-28T04:11:39Z, Go go1.26.1, commit ea1d011a13d10698bec13c7de09
 | internal/resilience | 2 | 4 | 721 | yes | platform |
 | internal/rotation | 2 | 1 | 360 | yes | platform |
 | internal/schemacheck | 2 | 1 | 234 | yes | platform |
-| internal/service | 4 | 1 | 1377 | yes | platform |
+| internal/service | 4 | 1 | 1378 | yes | platform |
 | internal/signal | 11 | 11 | 7540 | yes | platform |
 | internal/signal/signaltest | 2 | 0 | 103 | yes | platform |
 | internal/slo | 3 | 1 | 727 | yes | platform |
@@ -273,7 +274,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 30 / 1 | 19 | 12 | 7 |
+| `internal/models` | R5 | 36 | 29 / 1 | 19 | 13 | 6 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -289,6 +290,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/auth`
 - `internal/models/automation`
 - `internal/models/backup`
+- `internal/models/charging`
 - `internal/models/chatbot`
 - `internal/models/energy`
 - `internal/models/export`
@@ -299,7 +301,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/vehicle`
 
 **Planned but not yet on disk:**
-- `internal/models/charging`
 - `internal/models/dashboard`
 - `internal/models/drive`
 - `internal/models/security`

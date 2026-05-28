@@ -20,9 +20,10 @@ import (
 	"testing"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ---------------------------------------------------------------------------
@@ -256,7 +257,7 @@ func TestQueryChargeCurveFeatures_PowerTiersMatchFrontend(t *testing.T) {
 // sort.
 func TestQueryChargeCurveFeatures_HappyPath_BucketsByPowerTier(t *testing.T) {
 	t.Parallel()
-	rows := []*models.ChargingSession{
+	rows := []*chargingmodel.ChargingSession{
 		// 4 L2 sessions (≈ 7 kW peak) — should dominate.
 		newSession(1, 7000, 6500, 24_000, ptrTime(fixedNowCC().Add(2*time.Hour)), 30, "wall_connector"),
 		newSession(2, 7100, 6600, 25_000, ptrTime(fixedNowCC().Add(2*time.Hour)), 31, "wall_connector"),
@@ -315,7 +316,7 @@ func TestQueryChargeCurveFeatures_HappyPath_BucketsByPowerTier(t *testing.T) {
 // proves the threshold gate fires for very sparse data.
 func TestQueryChargeCurveFeatures_HasEnoughData_FalseUnderThreshold(t *testing.T) {
 	t.Parallel()
-	rows := []*models.ChargingSession{
+	rows := []*chargingmodel.ChargingSession{
 		newSession(1, 7000, 6500, 24_000, ptrTime(fixedNowCC().Add(2*time.Hour)), 30, "wall_connector"),
 		newSession(2, 7100, 6600, 25_000, ptrTime(fixedNowCC().Add(2*time.Hour)), 31, "wall_connector"),
 	}
@@ -470,13 +471,13 @@ func TestAllowedChargeCurveSourceTypes_DefensiveCopy(t *testing.T) {
 // newSession is a small helper for constructing test sessions
 // inline. EndedAt is required because DurationMinutes() returns nil
 // otherwise.
-func newSession(id int64, peakW, avgW, energyWh float64, ended *time.Time, deltaSocPct float64, chargerType string) *models.ChargingSession {
+func newSession(id int64, peakW, avgW, energyWh float64, ended *time.Time, deltaSocPct float64, chargerType string) *chargingmodel.ChargingSession {
 	startedAt := fixedNowCC().Add(-1 * time.Hour)
 	if ended == nil {
 		end := startedAt.Add(2 * time.Hour)
 		ended = &end
 	}
-	return &models.ChargingSession{
+	return &chargingmodel.ChargingSession{
 		ID:                 id,
 		VehicleID:          1,
 		StartedAt:          startedAt,

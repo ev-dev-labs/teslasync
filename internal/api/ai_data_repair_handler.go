@@ -85,6 +85,8 @@ import (
 	"strings"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -135,7 +137,7 @@ type AIDataRepairSource interface {
 	// return for the same cutoff. Both slices are non-nil but may
 	// be empty. The returned slices MUST be safe for the caller to
 	// retain.
-	StaleSessions(ctx context.Context, cutoff time.Time) (charging []*models.ChargingSession, drives []*models.Drive, err error)
+	StaleSessions(ctx context.Context, cutoff time.Time) (charging []*chargingmodel.ChargingSession, drives []*models.Drive, err error)
 }
 
 // AIDataRepairSuggestionsHandler is the HTTP handler for
@@ -271,7 +273,7 @@ func (h *AIDataRepairSuggestionsHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	// Defensive: never propagate nil slices into the scope helper
 	// or the user-message synthesizer.
 	if charging == nil {
-		charging = make([]*models.ChargingSession, 0)
+		charging = make([]*chargingmodel.ChargingSession, 0)
 	}
 	if drives == nil {
 		drives = make([]*models.Drive, 0)
@@ -357,7 +359,7 @@ func (h *AIDataRepairSuggestionsHandler) ServeHTTP(w http.ResponseWriter, r *htt
 // Exported as `BuildDataRepairSuggestionsUserMessage` would only be
 // useful for tests; instead the test calls the unexported helper
 // directly from the same package.
-func buildDataRepairSuggestionsUserMessage(now time.Time, charging []*models.ChargingSession, drives []*models.Drive) string {
+func buildDataRepairSuggestionsUserMessage(now time.Time, charging []*chargingmodel.ChargingSession, drives []*models.Drive) string {
 	var b strings.Builder
 
 	b.WriteString("Suggest a single typed RepairPlan for ONE row in the in-scope stale-session inventory below. ")
@@ -372,7 +374,7 @@ func buildDataRepairSuggestionsUserMessage(now time.Time, charging []*models.Cha
 	// hashing — the canonical GetStale ORDER BY is started_at, but
 	// the LLM sees the IDs and any UI ordering is the SPA's
 	// concern.
-	sortedCharging := append([]*models.ChargingSession(nil), charging...)
+	sortedCharging := append([]*chargingmodel.ChargingSession(nil), charging...)
 	sort.Slice(sortedCharging, func(i, j int) bool { return sortedCharging[i].ID < sortedCharging[j].ID })
 	if len(sortedCharging) == 0 {
 		b.WriteString("\n\nStale charging sessions: NONE.\n")
@@ -447,7 +449,7 @@ func NewAIDataRepairSource(db *database.DB) *AIDataRepairSourceImpl {
 
 // StaleSessions implements AIDataRepairSource. Two repo round-
 // trips; both are READ-only.
-func (a *AIDataRepairSourceImpl) StaleSessions(ctx context.Context, cutoff time.Time) ([]*models.ChargingSession, []*models.Drive, error) {
+func (a *AIDataRepairSourceImpl) StaleSessions(ctx context.Context, cutoff time.Time) ([]*chargingmodel.ChargingSession, []*models.Drive, error) {
 	charging, err := a.chargingRepo.GetStale(ctx, cutoff)
 	if err != nil {
 		return nil, nil, fmt.Errorf("api ai data-repair-suggestions: ChargingRepo.GetStale: %w", err)
@@ -457,7 +459,7 @@ func (a *AIDataRepairSourceImpl) StaleSessions(ctx context.Context, cutoff time.
 		return nil, nil, fmt.Errorf("api ai data-repair-suggestions: DriveRepo.GetStale: %w", err)
 	}
 	if charging == nil {
-		charging = make([]*models.ChargingSession, 0)
+		charging = make([]*chargingmodel.ChargingSession, 0)
 	}
 	if drives == nil {
 		drives = make([]*models.Drive, 0)

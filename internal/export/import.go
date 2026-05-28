@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -161,7 +163,7 @@ func (p *Processor) processImportCharging(ctx context.Context, req *JobRequest) 
 			continue
 		}
 
-		c := &models.ChargingSession{
+		c := &chargingmodel.ChargingSession{
 			VehicleID:          vehicleID,
 			StartedAt:          startDate,
 			TotalEnergyAddedWh: &energyAdded,

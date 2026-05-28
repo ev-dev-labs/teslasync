@@ -5,10 +5,11 @@ import (
 	"sync"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -165,7 +166,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		}
 		startTs = eventTimeOrNow(startTs)
 
-		session := &models.ChargingSession{
+		session := &chargingmodel.ChargingSession{
 			VehicleID:   vehicleID,
 			StartedAt:   startTs,
 			StartSocPct: floatPtr(float64(batteryLevel)),
@@ -287,7 +288,7 @@ func (t *TelemetrySessionTracker) flushChargeTelemetry(ctx context.Context, char
 }
 
 func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, charge *streamingCharge, signals map[string]interface{}) {
-	reading := &models.ChargeTelemetryReading{
+	reading := &chargingmodel.ChargeTelemetryReading{
 		SessionID: telemetryInt64Ptr(charge.SessionID),
 		VehicleID: charge.VehicleID,
 		Ts:        time.Now().UTC(),

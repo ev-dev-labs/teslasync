@@ -13,6 +13,8 @@ import (
 	"testing"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -167,7 +169,7 @@ func TestQueryYearInReviewContext_ExecuteAggregates(t *testing.T) {
 		{ID: 4, VehicleID: 1, DistanceM: 120000, DurationS: 4500, EnergyUsedWh: &used3, RegenEnergyWh: &regen2},
 		nil, // tolerated; Execute skips
 	}
-	charges := []*models.ChargingSession{
+	charges := []*chargingmodel.ChargingSession{
 		{ID: 10, VehicleID: 1, TotalEnergyAddedWh: &added1},
 		{ID: 11, VehicleID: 1, TotalEnergyAddedWh: &added2},
 		{ID: 12, VehicleID: 1 /* nil energy */},

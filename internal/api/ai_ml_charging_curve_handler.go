@@ -60,6 +60,8 @@ import (
 	"net/http"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -71,7 +73,6 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiMLChargingCurveMaxIterations bounds the dispatcher's tool-loop.
@@ -305,9 +306,9 @@ func NewAIChargingSessionSource(repo *database.ChargingRepo) *AIChargingSessionS
 //     started_at DESC.
 //   - start / end form the inclusive lookback window the trainer
 //     computed from time.Now() - lookbackDays * 24h.
-func (s *AIChargingSessionSource) SessionsForVehicle(ctx context.Context, vehicleID int64, limit int, start, end time.Time) ([]*models.ChargingSession, error) {
+func (s *AIChargingSessionSource) SessionsForVehicle(ctx context.Context, vehicleID int64, limit int, start, end time.Time) ([]*chargingmodel.ChargingSession, error) {
 	if vehicleID <= 0 {
-		return []*models.ChargingSession{}, nil
+		return []*chargingmodel.ChargingSession{}, nil
 	}
 	rows, err := s.repo.GetByVehicle(ctx, vehicleID, limit, 0, start, end)
 	if err != nil {

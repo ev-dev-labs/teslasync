@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:11:38Z",
+  "generated_at": "2026-05-28T04:14:09Z",
   "go_version": "go1.26.1",
-  "commit_sha": "ea1d011a13d10698bec13c7de09e2e64c1bd8d64",
+  "commit_sha": "f6c8fcf16f17f6470437bdd40b597bc7a3b27795",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1884,7 +1884,7 @@
       "path": "internal/ai/tools",
       "go_files": 58,
       "test_files": 51,
-      "loc": 47081,
+      "loc": 47088,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1896,6 +1896,7 @@
         "internal/ml/range",
         "internal/models",
         "internal/models/alert",
+        "internal/models/charging",
         "internal/models/geo",
         "internal/models/notification",
         "internal/models/vehicle"
@@ -2034,7 +2035,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126481,
+      "loc": 126488,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2152,6 +2153,7 @@
         "internal/models/auth",
         "internal/models/automation",
         "internal/models/backup",
+        "internal/models/charging",
         "internal/models/chatbot",
         "internal/models/export",
         "internal/models/geo",
@@ -3184,6 +3186,7 @@
         "internal/models/auth",
         "internal/models/automation",
         "internal/models/backup",
+        "internal/models/charging",
         "internal/models/chatbot",
         "internal/models/energy",
         "internal/models/export",
@@ -3534,12 +3537,13 @@
       "path": "internal/export",
       "go_files": 9,
       "test_files": 3,
-      "loc": 3058,
+      "loc": 3060,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/database",
         "internal/models",
+        "internal/models/charging",
         "internal/models/export",
         "internal/mqtt"
       ],
@@ -3945,7 +3949,7 @@
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
-        "internal/models"
+        "internal/models/charging"
       ],
       "files": [
         "clustering.go",
@@ -3970,9 +3974,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 30,
+      "go_files": 29,
       "test_files": 1,
-      "loc": 1851,
+      "loc": 1765,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -3981,7 +3985,6 @@
         "automation_step_action.go",
         "automation_step_condition.go",
         "automation_step_trigger.go",
-        "charging.go",
         "chart_annotation.go",
         "dashboard_layout.go",
         "doc.go",
@@ -4061,6 +4064,20 @@
       "imports": null,
       "files": [
         "backup.go",
+        "doc.go"
+      ]
+    },
+    {
+      "path": "internal/models/charging",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 109,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "charging.go",
+        "charging_test.go",
         "doc.go"
       ]
     },
@@ -4548,7 +4565,7 @@
       "path": "internal/service",
       "go_files": 4,
       "test_files": 1,
-      "loc": 1377,
+      "loc": 1378,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -4556,6 +4573,7 @@
         "internal/enums",
         "internal/events",
         "internal/models",
+        "internal/models/charging",
         "internal/models/energy",
         "internal/models/vehicle",
         "internal/signal",
@@ -6400,7 +6418,6 @@
       "automation_step_action.go",
       "automation_step_condition.go",
       "automation_step_trigger.go",
-      "charging.go",
       "chart_annotation.go",
       "dashboard_layout.go",
       "doc.go",
@@ -6441,6 +6458,10 @@
     ],
     "internal/models/backup": [
       "backup.go",
+      "doc.go"
+    ],
+    "internal/models/charging": [
+      "charging.go",
       "doc.go"
     ],
     "internal/models/chatbot": [
@@ -6779,7 +6800,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 30,
+      "flat_parent_go_files": 29,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6787,6 +6808,7 @@
         "auth",
         "automation",
         "backup",
+        "charging",
         "chatbot",
         "energy",
         "export",
@@ -6797,7 +6819,6 @@
         "vehicle"
       ],
       "missing_subpkgs": [
-        "charging",
         "dashboard",
         "drive",
         "security",

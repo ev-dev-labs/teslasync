@@ -8,6 +8,8 @@ import (
 	"sort"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
@@ -85,7 +87,7 @@ func (p *Processor) processAnalytics(ctx context.Context, req *JobRequest) (*Pro
 			}
 		}
 
-		var allSessions []*models.ChargingSession
+		var allSessions []*chargingmodel.ChargingSession
 		offset = 0
 		for {
 			sessions, _ := p.chargingRepo.GetByVehicle(ctx, v.ID, 500, offset, time.Time{}, time.Time{})

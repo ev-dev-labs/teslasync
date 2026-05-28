@@ -5,6 +5,8 @@ import (
 	"math"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -453,7 +455,7 @@ func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, dr
 // completeRecoveredCharge closes a charge that was left open after a crash, using
 // signal_log snapshots to populate end values. Best-effort: if snapshots are
 // empty the session is still closed with whatever data is available.
-func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, charge *models.ChargingSession, startSnap, endSnap map[string]interface{}, endTs time.Time) {
+func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, charge *chargingmodel.ChargingSession, startSnap, endSnap map[string]interface{}, endTs time.Time) {
 	if startSnap == nil {
 		startSnap = map[string]interface{}{}
 	}

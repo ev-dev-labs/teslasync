@@ -222,7 +222,7 @@ func (h *AIChargingDiagnosisHandler) ServeHTTP(w http.ResponseWriter, r *http.Re
 	//
 	// Note: vehicle_id is intentionally NOT included here. The
 	// LLM learns the vehicle from the tool reply
-	// (query_charge_session returns the *models.ChargingSession
+	// (query_charge_session returns the *chargingmodel.ChargingSession
 	// whose VehicleID field is the authoritative source).
 	// Including a user-controllable vehicle hint in the prompt
 	// would risk cross-tenant leak via prompt injection —

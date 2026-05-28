@@ -8,7 +8,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/go-chi/chi/v5"
 )
@@ -17,12 +18,12 @@ import (
 // charging_handler tests so the migrated handlers can be exercised end-to-end
 // without a real *database.ChargingRepo / pgx pool.
 type fakeChargingByIDFetcher struct {
-	session *models.ChargingSession
+	session *chargingmodel.ChargingSession
 	err     error
 	calls   int
 }
 
-func (f *fakeChargingByIDFetcher) GetByID(_ context.Context, _ int64) (*models.ChargingSession, error) {
+func (f *fakeChargingByIDFetcher) GetByID(_ context.Context, _ int64) (*chargingmodel.ChargingSession, error) {
 	f.calls++
 	return f.session, f.err
 }
@@ -42,9 +43,9 @@ func newChargingRequest(t *testing.T, sessionID, target string) *http.Request {
 
 // completedChargingSession is a minimal fixture for tests that exercise the
 // completed-session path (EndedAt != nil → enrichLiveCharge is NOT invoked).
-func completedChargingSession(sessionID, vehicleID int64, start, end time.Time) *models.ChargingSession {
+func completedChargingSession(sessionID, vehicleID int64, start, end time.Time) *chargingmodel.ChargingSession {
 	endCopy := end
-	return &models.ChargingSession{
+	return &chargingmodel.ChargingSession{
 		ID:        sessionID,
 		VehicleID: vehicleID,
 		StartedAt: start,
@@ -54,8 +55,8 @@ func completedChargingSession(sessionID, vehicleID int64, start, end time.Time) 
 
 // inProgressChargingSession is a minimal fixture for tests that exercise the
 // in-progress path (EndedAt == nil → enrichLiveCharge IS invoked).
-func inProgressChargingSession(sessionID, vehicleID int64, start time.Time) *models.ChargingSession {
-	return &models.ChargingSession{
+func inProgressChargingSession(sessionID, vehicleID int64, start time.Time) *chargingmodel.ChargingSession {
+	return &chargingmodel.ChargingSession{
 		ID:        sessionID,
 		VehicleID: vehicleID,
 		StartedAt: start,

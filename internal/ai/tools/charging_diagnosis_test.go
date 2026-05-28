@@ -17,7 +17,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
 // failingChargesImpl wraps the real ChargeSource signature properly
@@ -30,7 +30,7 @@ type failingChargesImpl struct {
 	getByIDErr error
 }
 
-func (f *failingChargesImpl) GetByID(_ context.Context, _ int64) (*models.ChargingSession, error) {
+func (f *failingChargesImpl) GetByID(_ context.Context, _ int64) (*chargingmodel.ChargingSession, error) {
 	return nil, f.getByIDErr
 }
 
@@ -94,8 +94,8 @@ func TestRegisterChargingDiagnosisTools_DoesNotShadowBuiltins(t *testing.T) {
 func TestQueryChargeSession_HappyPath(t *testing.T) {
 	t.Parallel()
 	now := time.Now()
-	want := &models.ChargingSession{ID: 501, VehicleID: 1, StartedAt: now}
-	src := &fakeCharges{one: map[int64]*models.ChargingSession{501: want}}
+	want := &chargingmodel.ChargingSession{ID: 501, VehicleID: 1, StartedAt: now}
+	src := &fakeCharges{one: map[int64]*chargingmodel.ChargingSession{501: want}}
 	tool := &queryChargeSession{src: src}
 
 	in, err := tool.Validate(json.RawMessage(`{"session_id": 501}`))
@@ -115,7 +115,7 @@ func TestQueryChargeSession_HappyPath(t *testing.T) {
 // explicit error so the dispatcher emits a tool-error frame.
 func TestQueryChargeSession_NotFound(t *testing.T) {
 	t.Parallel()
-	src := &fakeCharges{one: map[int64]*models.ChargingSession{}}
+	src := &fakeCharges{one: map[int64]*chargingmodel.ChargingSession{}}
 	tool := &queryChargeSession{src: src}
 
 	in, err := tool.Validate(json.RawMessage(`{"session_id": 999}`))
@@ -174,7 +174,7 @@ func TestQueryChargingAggregation_TrickleFlag(t *testing.T) {
 	end := start.Add(7 * time.Hour)
 	pwr := 1600.0      // W
 	energy := 11_200.0 // Wh — 1.6 kW * 7 h
-	c := &models.ChargingSession{
+	c := &chargingmodel.ChargingSession{
 		ID:                 501,
 		VehicleID:          1,
 		StartedAt:          start,
@@ -207,7 +207,7 @@ func TestQueryChargingAggregation_ExpensiveFlag(t *testing.T) {
 	currency := "USD"
 	chargerType := "Supercharger"
 	energy := 28_000.0
-	c := &models.ChargingSession{
+	c := &chargingmodel.ChargingSession{
 		ID:                 502,
 		VehicleID:          1,
 		StartedAt:          start,
@@ -246,7 +246,7 @@ func TestQueryChargingAggregation_NoFlagsHealthySession(t *testing.T) {
 	cost := 2.10
 	chargerType := "Supercharger"
 	energy := 7_000.0
-	c := &models.ChargingSession{
+	c := &chargingmodel.ChargingSession{
 		ID:                 503,
 		VehicleID:          1,
 		StartedAt:          start,
@@ -273,7 +273,7 @@ func TestQueryChargingAggregation_TelemetryGapFlag(t *testing.T) {
 	start := time.Date(2026, 5, 1, 22, 0, 0, 0, time.UTC)
 	end := start.Add(10 * time.Minute)
 	energy := 0.0
-	c := &models.ChargingSession{
+	c := &chargingmodel.ChargingSession{
 		ID:                 504,
 		VehicleID:          1,
 		StartedAt:          start,
@@ -297,7 +297,7 @@ func TestQueryChargingAggregation_BadPowerFlag(t *testing.T) {
 	chargerType := "DC Fast"
 	pwr := 1000.0   // W = 1 kW
 	energy := 750.0 // Wh — small enough to keep avg power computation honest
-	c := &models.ChargingSession{
+	c := &chargingmodel.ChargingSession{
 		ID:                 505,
 		VehicleID:          1,
 		StartedAt:          start,
@@ -330,7 +330,7 @@ func TestQueryChargingAggregation_BadPowerFlag(t *testing.T) {
 func TestQueryChargingAggregation_InProgressSession(t *testing.T) {
 	t.Parallel()
 	start := time.Now()
-	c := &models.ChargingSession{
+	c := &chargingmodel.ChargingSession{
 		ID:        506,
 		VehicleID: 1,
 		StartedAt: start,
@@ -413,7 +413,7 @@ func TestClassifyChargerCategory(t *testing.T) {
 // can iterate it without a nil-check.
 func TestQueryChargingAggregation_FlagDetailMapAlwaysReturned(t *testing.T) {
 	t.Parallel()
-	c := &models.ChargingSession{ID: 507, VehicleID: 1, StartedAt: time.Now()}
+	c := &chargingmodel.ChargingSession{ID: 507, VehicleID: 1, StartedAt: time.Now()}
 	out := aggregateChargingSession(c)
 	if _, ok := out["flag_detail"].(map[string]any); !ok {
 		t.Errorf("flag_detail is not map[string]any: %T (%v)", out["flag_detail"], out["flag_detail"])
@@ -427,7 +427,7 @@ func TestQueryChargingAggregation_NilEnergyDoesNotCrash(t *testing.T) {
 	t.Parallel()
 	start := time.Now()
 	end := start.Add(time.Hour)
-	c := &models.ChargingSession{
+	c := &chargingmodel.ChargingSession{
 		ID:        508,
 		VehicleID: 1,
 		StartedAt: start,
@@ -447,7 +447,7 @@ func TestQueryChargingAggregation_NilEnergyDoesNotCrash(t *testing.T) {
 // the documented envelope at the top of charging_diagnosis.go.
 func TestQueryChargingAggregation_FullEnvelopeShape(t *testing.T) {
 	t.Parallel()
-	c := &models.ChargingSession{ID: 509, VehicleID: 1, StartedAt: time.Now()}
+	c := &chargingmodel.ChargingSession{ID: 509, VehicleID: 1, StartedAt: time.Now()}
 	out := aggregateChargingSession(c)
 	wantKeys := []string{
 		"session_id", "vehicle_id", "duration_min", "kwh_added", "avg_power_kw",
@@ -478,7 +478,7 @@ func TestQueryChargingAggregation_PriorityOrder(t *testing.T) {
 	start := time.Date(2026, 5, 1, 0, 0, 0, 0, time.UTC)
 	end := start.Add(7 * time.Hour)
 	energy := 0.0
-	c := &models.ChargingSession{
+	c := &chargingmodel.ChargingSession{
 		ID:                 510,
 		VehicleID:          1,
 		StartedAt:          start,

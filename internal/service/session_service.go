@@ -5,6 +5,8 @@ import (
 	"sync"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -423,7 +425,7 @@ func (s *SessionService) TrackChargeFromAPI(ctx context.Context, vehicle *vehicl
 
 	if isCharging && !hasActiveCharge {
 		cbl := float64(data.ChargeState.BatteryLevel)
-		session := &models.ChargingSession{
+		session := &chargingmodel.ChargingSession{
 			VehicleID:   vehicle.ID,
 			StartedAt:   time.Now().UTC(),
 			StartSocPct: &cbl,

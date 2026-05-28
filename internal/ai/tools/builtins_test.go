@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
@@ -58,17 +60,17 @@ func (f *fakeDrives) GetByID(ctx context.Context, id int64) (*models.Drive, erro
 }
 
 type fakeCharges struct {
-	rows []*models.ChargingSession
-	one  map[int64]*models.ChargingSession
+	rows []*chargingmodel.ChargingSession
+	one  map[int64]*chargingmodel.ChargingSession
 }
 
-func (f *fakeCharges) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*models.ChargingSession, error) {
+func (f *fakeCharges) GetByVehicle(ctx context.Context, vid int64, limit, off int, st, et time.Time) ([]*chargingmodel.ChargingSession, error) {
 	if limit > 0 && limit < len(f.rows) {
 		return f.rows[:limit], nil
 	}
 	return f.rows, nil
 }
-func (f *fakeCharges) GetByID(ctx context.Context, id int64) (*models.ChargingSession, error) {
+func (f *fakeCharges) GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error) {
 	return f.one[id], nil
 }
 
