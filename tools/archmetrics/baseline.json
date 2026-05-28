@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T19:42:23Z",
+  "generated_at": "2026-05-28T19:48:31Z",
   "go_version": "go1.26.1",
-  "commit_sha": "fa16a53bb99a6711a13934ed16d23f56daf7ca31",
+  "commit_sha": "c61427b5d1db25769722d8bee19401b373a76b5f",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 262,
-      "test_files": 160,
-      "loc": 122868,
+      "go_files": 261,
+      "test_files": 159,
+      "loc": 122153,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2630,6 +2630,7 @@
         "internal/api/vehicleaccess",
         "internal/api/vehicleconfig",
         "internal/api/vehicleinfo",
+        "internal/api/vehiclestates",
         "internal/apilog",
         "internal/app/adminobssvc",
         "internal/app/auditviewersvc",
@@ -3149,8 +3150,6 @@
         "vehicle_photo_handler_test.go",
         "vehicle_settings_handler.go",
         "vehicle_settings_handler_test.go",
-        "vehicle_states_handler.go",
-        "vehicle_states_handler_test.go",
         "visited_location_handler.go",
         "watch_handler.go",
         "web_errors_handler.go",
@@ -3393,6 +3392,23 @@
       "files": [
         "doc.go",
         "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/vehiclestates",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 758,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database/vehicle"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -7353,7 +7369,6 @@
       "vampire_drain_handler.go",
       "vehicle_photo_handler.go",
       "vehicle_settings_handler.go",
-      "vehicle_states_handler.go",
       "visited_location_handler.go",
       "watch_handler.go",
       "web_errors_handler.go",
@@ -7414,6 +7429,10 @@
       "handler.go"
     ],
     "internal/api/vehicleinfo": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/vehiclestates": [
       "doc.go",
       "handler.go"
     ],
@@ -8528,8 +8547,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 262,
-      "flat_parent_test_files": 160,
+      "flat_parent_go_files": 261,
+      "flat_parent_test_files": 159,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "vehicle"

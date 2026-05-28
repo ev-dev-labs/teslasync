@@ -1,4 +1,4 @@
-package api
+package vehiclestates
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
-// Phase-43a / Prompt 0003 — HTTP tests for VehicleStatesHandler.
+// Phase-43a / Prompt 0003 — HTTP tests for Handler.
 //
 // Coverage map vs Decision #8:
 //   (a) Timeline ordering ASC          -> TestVehicleStates_Timeline_OrderingASC
@@ -89,8 +89,8 @@ func (f *fakeVehicleStatesRepo) Summary(ctx context.Context, vehicleID int64, wi
 	return f.summaryRows, f.summaryTotal, nil
 }
 
-func newVehicleStatesHandlerForTest(repo *fakeVehicleStatesRepo, fixedNow time.Time) *VehicleStatesHandler {
-	return &VehicleStatesHandler{
+func newHandlerForTest(repo *fakeVehicleStatesRepo, fixedNow time.Time) *Handler {
+	return &Handler{
 		repo:  repo,
 		clock: func() time.Time { return fixedNow },
 	}
@@ -134,7 +134,7 @@ func TestVehicleStates_Timeline_DaysClamp(t *testing.T) {
 				exists:   map[int64]bool{42: true},
 				timeline: []vehicledb.VehicleStateTransition{},
 			}
-			h := newVehicleStatesHandlerForTest(repo, now)
+			h := newHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
 			h.Timeline(rec, vsRequest("/vehicle-states/timeline?"+c.query))
 
@@ -203,7 +203,7 @@ func TestVehicleStates_Summary_DaysClamp(t *testing.T) {
 				exists:      map[int64]bool{42: true},
 				summaryRows: []vehicledb.VehicleStateSummaryRow{},
 			}
-			h := newVehicleStatesHandlerForTest(repo, now)
+			h := newHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
 			h.Summary(rec, vsRequest("/vehicle-states/summary?"+c.query))
 			if rec.Code != c.wantStatus {
@@ -233,7 +233,7 @@ func TestVehicleStates_BadVehicleID(t *testing.T) {
 		t.Run("timeline_"+c.name, func(t *testing.T) {
 			t.Parallel()
 			repo := &fakeVehicleStatesRepo{}
-			h := newVehicleStatesHandlerForTest(repo, now)
+			h := newHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
 			h.Timeline(rec, vsRequest("/vehicle-states/timeline?"+c.query))
 			if rec.Code != http.StatusBadRequest {
@@ -246,7 +246,7 @@ func TestVehicleStates_BadVehicleID(t *testing.T) {
 		t.Run("summary_"+c.name, func(t *testing.T) {
 			t.Parallel()
 			repo := &fakeVehicleStatesRepo{}
-			h := newVehicleStatesHandlerForTest(repo, now)
+			h := newHandlerForTest(repo, now)
 			rec := httptest.NewRecorder()
 			h.Summary(rec, vsRequest("/vehicle-states/summary?"+c.query))
 			if rec.Code != http.StatusBadRequest {
@@ -273,7 +273,7 @@ func TestVehicleStates_Timeline_OrderingASC(t *testing.T) {
 			{Ts: t3, FromState: vsPtrStr("Parked"), ToState: "Charging", TriggerField: vsPtrStr("ChargingActive"), TriggerValue: vsPtrStr("true")},
 		},
 	}
-	h := newVehicleStatesHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Timeline(rec, vsRequest("/vehicle-states/timeline?vehicle_id=42&days=7"))
 
@@ -332,7 +332,7 @@ func TestVehicleStates_Summary_PercentageSumsTo100(t *testing.T) {
 		},
 		summaryTotal: 100000,
 	}
-	h := newVehicleStatesHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Summary(rec, vsRequest("/vehicle-states/summary?vehicle_id=42&days=30"))
 
@@ -390,7 +390,7 @@ func TestVehicleStates_Timeline_EmptyVehicle_200(t *testing.T) {
 		exists:   map[int64]bool{42: true},
 		timeline: nil, // simulates "no transitions yet"
 	}
-	h := newVehicleStatesHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Timeline(rec, vsRequest("/vehicle-states/timeline?vehicle_id=42"))
 
@@ -421,7 +421,7 @@ func TestVehicleStates_Summary_EmptyVehicle_200(t *testing.T) {
 		summaryRows:  nil,
 		summaryTotal: 0,
 	}
-	h := newVehicleStatesHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Summary(rec, vsRequest("/vehicle-states/summary?vehicle_id=42"))
 
@@ -449,7 +449,7 @@ func TestVehicleStates_Timeline_UnknownVehicle_404(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeVehicleStatesRepo{exists: map[int64]bool{}}
-	h := newVehicleStatesHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Timeline(rec, vsRequest("/vehicle-states/timeline?vehicle_id=999"))
 
@@ -465,7 +465,7 @@ func TestVehicleStates_Summary_UnknownVehicle_404(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
 	repo := &fakeVehicleStatesRepo{exists: map[int64]bool{}}
-	h := newVehicleStatesHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Summary(rec, vsRequest("/vehicle-states/summary?vehicle_id=999"))
 
@@ -494,7 +494,7 @@ func TestVehicleStates_VehicleExists_AlwaysRuns(t *testing.T) {
 			{Ts: t1, FromState: vsPtrStr("Online"), ToState: "Driving", TriggerField: vsPtrStr("Gear"), TriggerValue: vsPtrStr("D")},
 		},
 	}
-	h := newVehicleStatesHandlerForTest(repo, now)
+	h := newHandlerForTest(repo, now)
 	rec := httptest.NewRecorder()
 	h.Timeline(rec, vsRequest("/vehicle-states/timeline?vehicle_id=999"))
 
@@ -514,7 +514,7 @@ func TestVehicleStates_RepoError_500(t *testing.T) {
 	t.Run("timeline_existence_err", func(t *testing.T) {
 		t.Parallel()
 		repo := &fakeVehicleStatesRepo{existsErr: errors.New("db down")}
-		h := newVehicleStatesHandlerForTest(repo, now)
+		h := newHandlerForTest(repo, now)
 		rec := httptest.NewRecorder()
 		h.Timeline(rec, vsRequest("/vehicle-states/timeline?vehicle_id=42"))
 		if rec.Code != http.StatusInternalServerError {
@@ -527,7 +527,7 @@ func TestVehicleStates_RepoError_500(t *testing.T) {
 			exists:      map[int64]bool{42: true},
 			timelineErr: errors.New("query failed"),
 		}
-		h := newVehicleStatesHandlerForTest(repo, now)
+		h := newHandlerForTest(repo, now)
 		rec := httptest.NewRecorder()
 		h.Timeline(rec, vsRequest("/vehicle-states/timeline?vehicle_id=42"))
 		if rec.Code != http.StatusInternalServerError {
@@ -540,7 +540,7 @@ func TestVehicleStates_RepoError_500(t *testing.T) {
 			exists:     map[int64]bool{42: true},
 			summaryErr: errors.New("query failed"),
 		}
-		h := newVehicleStatesHandlerForTest(repo, now)
+		h := newHandlerForTest(repo, now)
 		rec := httptest.NewRecorder()
 		h.Summary(rec, vsRequest("/vehicle-states/summary?vehicle_id=42"))
 		if rec.Code != http.StatusInternalServerError {
@@ -551,13 +551,13 @@ func TestVehicleStates_RepoError_500(t *testing.T) {
 
 // ---------- Production constructor sanity ----------
 
-// NewVehicleStatesHandler with a real (nil-pool-rejecting) repo isn't
-// exercised here because constructing a real *VehicleStatesRepo would
-// require a live pool; the repo's nil-pool panic is covered in
+// NewHandler with a real (nil-pool-rejecting) repo isn't exercised
+// here because constructing a real *VehicleStatesRepo would require a
+// live pool; the repo's nil-pool panic is covered in
 // TestNewVehicleStatesRepo_NilPoolPanics (vehicle_states_repo_test.go).
-// This test just confirms the production constructor accepts a typed
-// *vehicledb.VehicleStatesRepo without compile errors.
-var _ = NewVehicleStatesHandler // ensure exported constructor symbol
+// This reference just confirms the production constructor symbol
+// remains exported.
+var _ = NewHandler // ensure exported constructor symbol
 
 func TestVehicleStatesHandler_ImplementsContract(t *testing.T) {
 	t.Parallel()

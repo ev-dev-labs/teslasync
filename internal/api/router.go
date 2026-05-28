@@ -22,6 +22,7 @@ import (
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
 	apivehinfo "github.com/ev-dev-labs/teslasync/internal/api/vehicleinfo"
+	apivehstates "github.com/ev-dev-labs/teslasync/internal/api/vehiclestates"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
@@ -3396,7 +3397,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// frontend hooks useStateTimeline / useTimeline / useStateSummary
 		// stop returning 404. Same admin-style rate limit as /system/queues
 		// (Phase-46 / Prompt 41 precedent).
-		vehicleStatesHandler := NewVehicleStatesHandler(vehicledb.NewVehicleStatesRepo(db.Pool))
+		vehicleStatesHandler := apivehstates.NewHandler(vehicledb.NewVehicleStatesRepo(db.Pool))
 		r.Route("/vehicle-states", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/timeline", vehicleStatesHandler.Timeline)
