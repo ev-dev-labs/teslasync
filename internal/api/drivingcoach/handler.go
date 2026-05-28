@@ -1,4 +1,4 @@
-package api
+package drivingcoach
 
 import (
 	"fmt"
@@ -10,10 +10,15 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-const nominalBatteryCapacityWh = 75000.0
+const (
+	nominalBatteryCapacityWh = 75000.0
+	driveStatsMetersPerMile  = 1609.344
+	driveStatsMpsPerMph      = 0.44704
+)
 
 // DrivingCoachHandler analyses driving patterns and produces coaching insights.
 type DrivingCoachHandler struct {
@@ -92,12 +97,12 @@ type driveAnalysis struct {
 func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -133,7 +138,7 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		0.5*driveStatsMetersPerMile)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("driving-coach: query failed")
-		writeError(w, http.StatusInternalServerError, "failed to get driving data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get driving data")
 		return
 	}
 	defer rows.Close()
@@ -157,7 +162,7 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 
 	// Empty response when no qualifying drives exist
 	if len(drives) == 0 {
-		writeJSON(w, http.StatusOK, coachResponse{
+		httpx.WriteJSON(w, http.StatusOK, coachResponse{
 			StyleBreakdown:  map[string]int{"efficient": 0, "moderate": 0, "aggressive": 0},
 			Patterns:        coachPatterns{},
 			WeeklyTrend:     []coachWeeklyTrend{},
@@ -314,7 +319,7 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		})
 	}
 
-	writeJSON(w, http.StatusOK, coachResponse{
+	httpx.WriteJSON(w, http.StatusOK, coachResponse{
 		OverallScore:        overallScore,
 		EfficiencyWhKm:      math.Round(avgEfficiency*10) / 10,
 		BestEfficiencyWhKm:  math.Round(bestEfficiency*10) / 10,
