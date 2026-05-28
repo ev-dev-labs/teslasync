@@ -67,3 +67,5 @@ c9009e01d0cdf23e668949c9f2618dbbbc75b0ed # R5.14 carve internal/models/drive sub
 5950d663
 # R5.19 telemetry+position move
 aacf69ba268c7ea808c77b3cb18a0b0a614fd4bd
+# R5.17 signal carve-out
+06f0a8b272314eb3c3ad12cfd0aa6ad4aa80f899
