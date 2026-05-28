@@ -27,4 +27,20 @@
 // Direct DB access, raw SQL, or pulling rows through internal/models is
 // a hard arch_test failure. Move the logic into internal/app/<name>svc
 // (or extend the existing service) and call THAT from the handler.
+//
+// Subpackages (ADR-011):
+//
+//	v1 currently holds <30 files (1 per resource), so per ADR-011's
+//	≥30-file threshold no subpackage split is required yet. Once the
+//	internal/api -> handler/v1 migration (Phase R2) lands in waves
+//	and one or more resources need multiple handler files (split by
+//	surface: list / detail / bulk / events / ...), each resource
+//	graduates to its own subpkg following the alias convention:
+//
+//	  internal/handler/v1/<resource>/
+//
+//	imported by the router as `<resource>handler` (e.g. charginghandler,
+//	vehiclehandler) per ADR-011 §3. The router file then mounts each
+//	subpkg via its `Mount(r chi.Router, deps Deps)` constructor per
+//	ADR-011 §7.
 package v1
