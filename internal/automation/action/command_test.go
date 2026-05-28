@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
 // --- Mocks ---
@@ -70,7 +70,7 @@ func (m *mockCommandLogRepo) Create(_ context.Context, cl *vehiclemodel.CommandL
 type mockSettingsChecker struct {
 	suspended  bool
 	suspendErr error
-	pollingCfg *models.PollingConfig
+	pollingCfg *systemmodel.PollingConfig
 	pollingErr error
 }
 
@@ -78,7 +78,7 @@ func (m *mockSettingsChecker) IsAPISuspended(_ context.Context) (bool, error) {
 	return m.suspended, m.suspendErr
 }
 
-func (m *mockSettingsChecker) GetPollingConfig(_ context.Context) (*models.PollingConfig, error) {
+func (m *mockSettingsChecker) GetPollingConfig(_ context.Context) (*systemmodel.PollingConfig, error) {
 	if m.pollingErr != nil {
 		return nil, m.pollingErr
 	}
@@ -127,8 +127,8 @@ func (m *mockTeslaCommander) SendCommand(_ context.Context, vin string, command 
 
 // --- Helpers ---
 
-func defaultPollingConfig() *models.PollingConfig {
-	return &models.PollingConfig{
+func defaultPollingConfig() *systemmodel.PollingConfig {
+	return &systemmodel.PollingConfig{
 		AwakeIntervalSec:   30,
 		AsleepIntervalSec:  300,
 		DrivingIntervalSec: 15,

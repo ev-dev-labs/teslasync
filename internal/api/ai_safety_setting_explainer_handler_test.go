@@ -25,11 +25,12 @@ import (
 	"strings"
 	"testing"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TestSafetySettingExplainerAIOffShowsStaticHelpOnly is the
@@ -290,7 +291,7 @@ func TestBuildSafetySettingExplainerUserMessage(t *testing.T) {
 // envelope shape so the regression surfaces in CI.
 func TestProjectSafetySettingsEnvelope_AllSafetyKeysPresent(t *testing.T) {
 	t.Parallel()
-	env := projectSafetySettingsEnvelope(&models.Settings{
+	env := projectSafetySettingsEnvelope(&systemmodel.Settings{
 		QuietHoursEnabled:    true,
 		QuietHoursStart:      "23:00",
 		QuietHoursEnd:        "06:30",

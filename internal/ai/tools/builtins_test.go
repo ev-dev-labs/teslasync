@@ -7,6 +7,8 @@ import (
 	"testing"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
@@ -16,8 +18,6 @@ import (
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // fake repos --------------------------------------------------------------
@@ -91,10 +91,12 @@ func (f *fakeNotif) GetLogs(ctx context.Context, limit, off int) ([]*notificatio
 }
 
 type fakeFences struct {
-	fences []*models.Geofence
+	fences []*systemmodel.Geofence
 }
 
-func (f *fakeFences) GetAll(ctx context.Context) ([]*models.Geofence, error) { return f.fences, nil }
+func (f *fakeFences) GetAll(ctx context.Context) ([]*systemmodel.Geofence, error) {
+	return f.fences, nil
+}
 
 // Register12Builtins basic shape ------------------------------------------
 

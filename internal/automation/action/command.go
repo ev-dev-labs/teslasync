@@ -9,6 +9,8 @@ import (
 	"strings"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/rs/zerolog"
@@ -36,7 +38,7 @@ type CommandLogRepo interface {
 // SettingsChecker provides safety-gate checks before command execution.
 type SettingsChecker interface {
 	IsAPISuspended(ctx context.Context) (bool, error)
-	GetPollingConfig(ctx context.Context) (*models.PollingConfig, error)
+	GetPollingConfig(ctx context.Context) (*systemmodel.PollingConfig, error)
 }
 
 // TeslaCommander abstracts the Tesla client for testability.

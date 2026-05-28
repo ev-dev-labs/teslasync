@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"math"
 
-	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
 const earthRadiusM = 6371000.0
@@ -69,7 +69,7 @@ var ParseLocationConfig = DecodeLocationSpec
 // EvaluateLocation checks whether the vehicle's last known position is inside
 // or outside the specified geofence. Uses the spherical law of cosines
 // (matching the SQL formula in GeofenceRepo.FindByCoordinates) for consistency.
-func EvaluateLocation(cfg *LocationConfig, state *vehiclemodel.VehicleState, geofence *models.Geofence) (Result, json.RawMessage, error) {
+func EvaluateLocation(cfg *LocationConfig, state *vehiclemodel.VehicleState, geofence *systemmodel.Geofence) (Result, json.RawMessage, error) {
 	if state == nil {
 		return Result{}, nil, fmt.Errorf("vehicle state is nil")
 	}

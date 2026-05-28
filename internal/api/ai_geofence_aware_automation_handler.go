@@ -65,6 +65,8 @@ import (
 	"sort"
 	"strings"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -75,7 +77,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiGeofenceAwareAutomationMaxIterations bounds the dispatcher's
@@ -125,7 +126,7 @@ type AIGeofenceAwareAutomationHandler struct {
 // geofence catalog for the synthesised user message; it never
 // writes, deletes, or mutates a geofence.
 type GeofenceLister interface {
-	GetAll(ctx context.Context) ([]*models.Geofence, error)
+	GetAll(ctx context.Context) ([]*systemmodel.Geofence, error)
 }
 
 // NewAIGeofenceAwareAutomationHandler constructs the handler. All
@@ -347,13 +348,13 @@ func (h *AIGeofenceAwareAutomationHandler) ServeHTTP(w http.ResponseWriter, r *h
 // its purpose). The LLM only needs id + name + category to pick
 // the right place_id; the canonical typed automation handler reads
 // the geometry from the database when the saved automation runs.
-func buildGeofenceCatalogLine(geofences []*models.Geofence, maxEntries int) string {
+func buildGeofenceCatalogLine(geofences []*systemmodel.Geofence, maxEntries int) string {
 	if len(geofences) == 0 {
 		return "Geofence catalog is empty for this user (no place_ids to reference). Refuse the request politely and explain that the user must add at least one geofence at /geofences before this assistant can propose a geofence-aware automation."
 	}
 	// Defensive copy so we don't mutate the caller's slice with
 	// our sort.
-	in := make([]*models.Geofence, 0, len(geofences))
+	in := make([]*systemmodel.Geofence, 0, len(geofences))
 	for _, g := range geofences {
 		if g == nil {
 			continue

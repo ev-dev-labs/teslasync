@@ -7,8 +7,9 @@ import (
 	"strings"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -169,14 +170,14 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Table may not exist yet — return empty array instead of 500
 		// to avoid tripping the frontend circuit breaker
-		writeJSON(w, http.StatusOK, []models.AuditLog{})
+		writeJSON(w, http.StatusOK, []systemmodel.AuditLog{})
 		return
 	}
 	defer rows.Close()
 
-	logs := []models.AuditLog{}
+	logs := []systemmodel.AuditLog{}
 	for rows.Next() {
-		var l models.AuditLog
+		var l systemmodel.AuditLog
 		if err := rows.Scan(&l.ID, &l.Ts, &l.Actor, &l.Action, &l.EntityType, &l.EntityID, &l.Detail); err != nil {
 			continue
 		}

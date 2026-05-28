@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/jackc/pgx/v5"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/jackc/pgx/v5"
 )
 
 // SettingsRepo provides settings data access over the typed key/value
@@ -16,7 +16,7 @@ import (
 //
 // ADR-011 Option A — typed-struct facade.
 //
-// Callers continue to operate on a single *models.Settings value; the
+// Callers continue to operate on a single *systemmodel.Settings value; the
 // repo is responsible for hydrating that struct from N rows of the
 // `settings` table on read and decomposing it back into N upserts on
 // write. Each setting is one row keyed by its JSON tag, with `data_kind`
@@ -38,8 +38,8 @@ func NewSettingsRepo(db *DB) *SettingsRepo {
 // defaults the pre-refactor wide-row schema used. Get() overlays stored
 // rows on top of this baseline so missing keys fall back to these
 // values without an extra round-trip.
-func settingsDefaults() *models.Settings {
-	return &models.Settings{
+func settingsDefaults() *systemmodel.Settings {
+	return &systemmodel.Settings{
 		UnitOfLength:         "km",
 		UnitOfTemp:           "C",
 		UnitOfPressure:       "bar",
@@ -82,7 +82,7 @@ func settingsDefaults() *models.Settings {
 
 // Get reads every row from the `settings` table and hydrates a typed
 // Settings struct keyed by JSON tag. Missing keys fall back to defaults.
-func (r *SettingsRepo) Get(ctx context.Context) (*models.Settings, error) {
+func (r *SettingsRepo) Get(ctx context.Context) (*systemmodel.Settings, error) {
 	const query = `
 		SELECT key, value_text, value_num, value_bool, value_jsonb, data_kind
 		FROM settings`
@@ -116,7 +116,7 @@ func (r *SettingsRepo) Get(ctx context.Context) (*models.Settings, error) {
 // applySettingsRow maps one persisted row onto the typed Settings
 // struct. Unknown keys are tolerated (forward-compat) and silently
 // ignored. NULL value_* columns leave the default in place.
-func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *float64, vBool *bool, vJSON []byte) {
+func applySettingsRow(s *systemmodel.Settings, key, _ string, vText *string, vNum *float64, vBool *bool, vJSON []byte) {
 	switch key {
 	case "unit_of_length":
 		if vText != nil {
@@ -266,7 +266,7 @@ func applySettingsRow(s *models.Settings, key, _ string, vText *string, vNum *fl
 // field) executed inside a single transaction. Either all fields are
 // persisted or none are. Each upsert clears the sibling value_* columns
 // so `data_kind` always agrees with the populated column.
-func (r *SettingsRepo) Upsert(ctx context.Context, s *models.Settings) error {
+func (r *SettingsRepo) Upsert(ctx context.Context, s *systemmodel.Settings) error {
 	if s == nil {
 		return errors.New("settings upsert: nil settings")
 	}
@@ -473,13 +473,13 @@ func (r *SettingsRepo) UpsertDashboardLayouts(ctx context.Context, jsonStr strin
 // GetPollingConfig returns the first polling configuration row, or nil if
 // the polling_config table is empty. The action.SettingsChecker interface
 // uses this to retrieve timing parameters for command wake-up sequences.
-func (r *SettingsRepo) GetPollingConfig(ctx context.Context) (*models.PollingConfig, error) {
+func (r *SettingsRepo) GetPollingConfig(ctx context.Context) (*systemmodel.PollingConfig, error) {
 	const query = `
 		SELECT vehicle_id, awake_interval_sec, asleep_interval_sec,
 		       driving_interval_sec, enabled, created_at, updated_at
 		FROM polling_config
 		LIMIT 1`
-	pc := &models.PollingConfig{}
+	pc := &systemmodel.PollingConfig{}
 	err := r.db.Pool.QueryRow(ctx, query).Scan(
 		&pc.VehicleID, &pc.AwakeIntervalSec, &pc.AsleepIntervalSec,
 		&pc.DrivingIntervalSec, &pc.Enabled, &pc.CreatedAt, &pc.UpdatedAt,
@@ -556,7 +556,7 @@ func (r *SettingsRepo) AIFeatureEnabled(ctx context.Context, featureID string) (
 // marshalJSONOrEmpty serialises v to JSON, returning "{}" for nil
 // maps so the JSONB columns always carry a parseable document. The
 // only error path is a value with an unmarshalable type, which is
-// not reachable for the typed maps in models.Settings.
+// not reachable for the typed maps in systemmodel.Settings.
 func marshalJSONOrEmpty(v any) (string, error) {
 	if v == nil {
 		return "{}", nil

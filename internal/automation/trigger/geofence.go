@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -55,9 +57,9 @@ type geofenceAutoDisabler interface {
 type PlaceDataProvider interface {
 	// FindByCoordinates returns every place whose circle (lat/lon, radius_m)
 	// contains the given point.
-	FindByCoordinates(ctx context.Context, lat, lng float64) ([]*models.Place, error)
+	FindByCoordinates(ctx context.Context, lat, lng float64) ([]*systemmodel.Place, error)
 	// GetByID returns the place with the given id, or nil if not found.
-	GetByID(ctx context.Context, id int64) (*models.Place, error)
+	GetByID(ctx context.Context, id int64) (*systemmodel.Place, error)
 }
 
 // geofenceSnapshot is the JSON payload passed to engine.Evaluate when a

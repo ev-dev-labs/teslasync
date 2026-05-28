@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/ev-dev-labs/teslasync/internal/models"
@@ -56,9 +58,9 @@ type SettingsBundle struct {
 // is independently optional on import — missing sections are simply
 // not touched, so a partial bundle (e.g. only alert_rules) is valid.
 type SettingsBundleSections struct {
-	Settings   *models.Settings           `json:"settings,omitempty"`
+	Settings   *systemmodel.Settings      `json:"settings,omitempty"`
 	AlertRules []*alertmodel.AlertRule    `json:"alert_rules,omitempty"`
-	Geofences  []*models.Geofence         `json:"geofences,omitempty"`
+	Geofences  []*systemmodel.Geofence    `json:"geofences,omitempty"`
 	QuietHours []*models.QuietHoursWindow `json:"quiet_hours,omitempty"`
 }
 
@@ -87,8 +89,8 @@ type ImportResult struct {
 // serializer depends on. Production = *SettingsRepo; tests provide an
 // in-memory fake.
 type SettingsSerializerSettingsRepo interface {
-	Get(ctx context.Context) (*models.Settings, error)
-	Upsert(ctx context.Context, s *models.Settings) error
+	Get(ctx context.Context) (*systemmodel.Settings, error)
+	Upsert(ctx context.Context, s *systemmodel.Settings) error
 }
 
 // SettingsSerializerAlertRepo is the narrow alert-rules surface the
@@ -103,9 +105,9 @@ type SettingsSerializerAlertRepo interface {
 // SettingsSerializerGeofenceRepo mirrors the alert surface for the
 // geofences section.
 type SettingsSerializerGeofenceRepo interface {
-	GetAll(ctx context.Context) ([]*models.Geofence, error)
-	Create(ctx context.Context, g *models.Geofence) error
-	Update(ctx context.Context, g *models.Geofence) error
+	GetAll(ctx context.Context) ([]*systemmodel.Geofence, error)
+	Create(ctx context.Context, g *systemmodel.Geofence) error
+	Update(ctx context.Context, g *systemmodel.Geofence) error
 }
 
 // SettingsSerializerQuietHoursRepo is the per-user surface used by
@@ -337,12 +339,12 @@ func (s *SettingsSerializer) applyAlertRules(ctx context.Context, incoming []*al
 
 // applyGeofences mirrors applyAlertRules for the geofences section.
 // Stable_id is the lowercased name; missing rows are NOT deleted.
-func (s *SettingsSerializer) applyGeofences(ctx context.Context, incoming []*models.Geofence, dryRun bool) (SectionResult, error) {
+func (s *SettingsSerializer) applyGeofences(ctx context.Context, incoming []*systemmodel.Geofence, dryRun bool) (SectionResult, error) {
 	current, err := s.geofences.GetAll(ctx)
 	if err != nil {
 		return SectionResult{}, fmt.Errorf("geofences import: list current: %w", err)
 	}
-	byKey := map[string]*models.Geofence{}
+	byKey := map[string]*systemmodel.Geofence{}
 	for _, g := range current {
 		byKey[alertRuleStableID(g.Name)] = g
 	}
@@ -481,7 +483,7 @@ func quietHoursStableID(w *models.QuietHoursWindow) string {
 // contains map[string]bool / map[string]any fields (ai_features /
 // ai_provider_config, ADR-015) which the language forbids from
 // direct struct comparison.
-func settingsEquivalent(a, b *models.Settings) bool {
+func settingsEquivalent(a, b *systemmodel.Settings) bool {
 	if a == nil || b == nil {
 		return a == b
 	}
@@ -570,7 +572,7 @@ func int64SliceEqSorted(a, b []int64) bool {
 // bundle against a row that has alerts enabled WILL flip the row off. This
 // matches the rest of settings-import semantics (omitted fields = explicit
 // false) and is the agreed trade-off for keeping the merge stable.
-func geofencesEquivalent(a, b *models.Geofence) bool {
+func geofencesEquivalent(a, b *systemmodel.Geofence) bool {
 	if a == nil || b == nil {
 		return a == b
 	}

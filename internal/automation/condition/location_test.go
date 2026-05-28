@@ -6,9 +6,9 @@ import (
 	"math"
 	"testing"
 
-	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 )
 
 // ─── Config Parsing Tests ───────────────────────────────
@@ -101,7 +101,7 @@ func TestSphericalDistance_Antipodal(t *testing.T) {
 
 // ─── Evaluate Tests ─────────────────────────────────────
 
-func makeGeofence(id int64, name string, lat, lon, radius float64) *models.Geofence {
+func makeGeofence(id int64, name string, lat, lon, radius float64) *systemmodel.Geofence {
 	// Build a simple square polygon around the center point
 	// Approximate square whose farthest vertex is radius meters from center.
 	deltaLat := (radius / math.Sqrt2) / earthRadiusM * 180 / math.Pi
@@ -113,7 +113,7 @@ func makeGeofence(id int64, name string, lat, lon, radius float64) *models.Geofe
 		lon-deltaLon, lat+deltaLat,
 		lon-deltaLon, lat-deltaLat,
 	)
-	return &models.Geofence{
+	return &systemmodel.Geofence{
 		ID:         id,
 		Name:       name,
 		PolygonWKT: wkt,

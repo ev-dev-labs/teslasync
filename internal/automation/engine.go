@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
@@ -50,7 +52,7 @@ type StateProvider interface {
 
 // PlaceProvider retrieves typed place data for geofence condition evaluation.
 type PlaceProvider interface {
-	GetByID(ctx context.Context, id int64) (*models.Place, error)
+	GetByID(ctx context.Context, id int64) (*systemmodel.Place, error)
 }
 
 // ── Engine ─────────────────────────────────────────────────────────────

@@ -33,7 +33,7 @@ import (
 
 // UserPrefs captures the subset of the global Application settings
 // that affect LLM narration. Field semantics match the canonical
-// values stored in [models.Settings] (e.g. "Miles" / "Kilometers"
+// values stored in [systemmodel.Settings] (e.g. "Miles" / "Kilometers"
 // for UnitOfLength). Empty strings / zero values are treated as
 // "unspecified" and skipped when formatting the system hint.
 type UserPrefs struct {

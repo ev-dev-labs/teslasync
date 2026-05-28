@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T04:29:23Z",
+  "generated_at": "2026-05-28T04:32:14Z",
   "go_version": "go1.26.1",
-  "commit_sha": "7ca017d668584d9003998baf7c5a095cc10c531c",
+  "commit_sha": "3d54e125dc58dd0d15c93a03f57a0c76f6018d9a",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1884,7 +1884,7 @@
       "path": "internal/ai/tools",
       "go_files": 58,
       "test_files": 51,
-      "loc": 47090,
+      "loc": 47092,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1900,6 +1900,7 @@
         "internal/models/drive",
         "internal/models/geo",
         "internal/models/notification",
+        "internal/models/system",
         "internal/models/vehicle"
       ],
       "files": [
@@ -2036,7 +2037,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126489,
+      "loc": 126491,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2162,6 +2163,7 @@
         "internal/models/geo",
         "internal/models/notification",
         "internal/models/settings",
+        "internal/models/system",
         "internal/models/telemetry",
         "internal/models/tesla",
         "internal/models/vehicle",
@@ -2924,7 +2926,7 @@
       "path": "internal/automation",
       "go_files": 6,
       "test_files": 2,
-      "loc": 1610,
+      "loc": 1611,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -2935,6 +2937,7 @@
         "internal/enums",
         "internal/models",
         "internal/models/automation",
+        "internal/models/system",
         "internal/models/vehicle",
         "internal/signal"
       ],
@@ -2953,12 +2956,13 @@
       "path": "internal/automation/action",
       "go_files": 6,
       "test_files": 5,
-      "loc": 3826,
+      "loc": 3827,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
         "internal/models",
         "internal/models/notification",
+        "internal/models/system",
         "internal/models/vehicle",
         "internal/notification",
         "internal/tesla"
@@ -2986,6 +2990,7 @@
       "layer": "platform",
       "imports": [
         "internal/models",
+        "internal/models/system",
         "internal/models/vehicle"
       ],
       "files": [
@@ -3057,11 +3062,12 @@
       "path": "internal/automation/trigger",
       "go_files": 7,
       "test_files": 0,
-      "loc": 946,
+      "loc": 947,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
-        "internal/models"
+        "internal/models",
+        "internal/models/system"
       ],
       "files": [
         "compare.go",
@@ -3175,7 +3181,7 @@
       "path": "internal/database",
       "go_files": 108,
       "test_files": 35,
-      "loc": 27850,
+      "loc": 27851,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -3198,6 +3204,7 @@
         "internal/models/export",
         "internal/models/geo",
         "internal/models/notification",
+        "internal/models/system",
         "internal/models/telemetry",
         "internal/models/tesla",
         "internal/models/vehicle",
@@ -3981,9 +3988,9 @@
     },
     {
       "path": "internal/models",
-      "go_files": 19,
+      "go_files": 18,
       "test_files": 1,
-      "loc": 1295,
+      "loc": 849,
       "has_doc_go": true,
       "layer": "domain",
       "imports": null,
@@ -4006,7 +4013,6 @@
         "notification_channel_slack_telegram.go",
         "push_subscription.go",
         "quiet_hours.go",
-        "system.go",
         "trip.go"
       ]
     },
@@ -4212,6 +4218,19 @@
         "doc.go",
         "enums.go",
         "signal.go"
+      ]
+    },
+    {
+      "path": "internal/models/system",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 479,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": null,
+      "files": [
+        "doc.go",
+        "system.go"
       ]
     },
     {
@@ -6499,7 +6518,6 @@
       "notification_channel_slack_telegram.go",
       "push_subscription.go",
       "quiet_hours.go",
-      "system.go",
       "trip.go"
     ],
     "internal/models/alert": [
@@ -6566,6 +6584,10 @@
       "doc.go",
       "enums.go",
       "signal.go"
+    ],
+    "internal/models/system": [
+      "doc.go",
+      "system.go"
     ],
     "internal/models/telemetry": [
       "doc.go",
@@ -6883,7 +6905,7 @@
       "parent": "internal/models",
       "owner": "R5",
       "file_count_at_r0": 36,
-      "flat_parent_go_files": 19,
+      "flat_parent_go_files": 18,
       "flat_parent_test_files": 1,
       "planned_subpkgs": 19,
       "existing_subpkgs": [
@@ -6902,13 +6924,12 @@
         "security",
         "settings",
         "signal",
+        "system",
         "telemetry",
         "tesla",
         "vehicle"
       ],
-      "missing_subpkgs": [
-        "system"
-      ],
+      "missing_subpkgs": null,
       "notes": "19 subpkgs (R5.0 expanded from 12 after models.go classification: +auth, +backup, +chatbot, +energy, +export, +geo, +settings). models.go split into its targets; unused DerefFloat64/String/Bool helpers deleted per no-tech-debt mandate. Smallest-first execution; parent retains only doc.go after R5 completes."
     },
     {

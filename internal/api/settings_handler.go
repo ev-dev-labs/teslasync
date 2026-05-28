@@ -7,10 +7,11 @@ import (
 	"regexp"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -62,7 +63,7 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
-	var s models.Settings
+	var s systemmodel.Settings
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -411,7 +412,7 @@ func isValidIANATimezone(s string) bool {
 // `incoming.AIFeaturesArchived` was already non-nil (e.g. the request
 // body carried it from a round-trip), the archive replaces it on a
 // fresh archive event but is left alone otherwise.
-func applyAIArchiveOnModeFlip(existing, incoming *models.Settings) {
+func applyAIArchiveOnModeFlip(existing, incoming *systemmodel.Settings) {
 	if incoming == nil || incoming.AIMode != "off" {
 		return
 	}

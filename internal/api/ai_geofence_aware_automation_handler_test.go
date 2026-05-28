@@ -23,10 +23,11 @@ import (
 	"strings"
 	"testing"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks is
@@ -245,8 +246,8 @@ func TestAIGeofenceAwareAutomationHandler_AcceptsCanonicalBody(t *testing.T) {
 func TestBuildGeofenceCatalogLine(t *testing.T) {
 	t.Parallel()
 
-	homeCat := models.GeofenceCategoryHome
-	workCat := models.GeofenceCategoryWork
+	homeCat := systemmodel.GeofenceCategoryHome
+	workCat := systemmodel.GeofenceCategoryWork
 
 	t.Run("empty catalog yields refusal hint", func(t *testing.T) {
 		got := buildGeofenceCatalogLine(nil, 50)
@@ -259,7 +260,7 @@ func TestBuildGeofenceCatalogLine(t *testing.T) {
 	})
 
 	t.Run("renders id+name+category, sorted by id, no lat/lon", func(t *testing.T) {
-		in := []*models.Geofence{
+		in := []*systemmodel.Geofence{
 			{ID: 7, Name: "Office", Category: &workCat, PolygonWKT: "POLYGON((1 2,3 4,5 6,1 2))"},
 			{ID: 1, Name: "Home", Category: &homeCat, PolygonWKT: "POLYGON((10 20,30 40,50 60,10 20))"},
 			{ID: 5, Name: "Cabin", Category: nil, PolygonWKT: "POLYGON((100 200,300 400,500 600,100 200))"},
@@ -301,9 +302,9 @@ func TestBuildGeofenceCatalogLine(t *testing.T) {
 	})
 
 	t.Run("respects entry cap", func(t *testing.T) {
-		in := make([]*models.Geofence, 0, 100)
+		in := make([]*systemmodel.Geofence, 0, 100)
 		for i := int64(1); i <= 100; i++ {
-			in = append(in, &models.Geofence{ID: i, Name: "G", Category: &homeCat})
+			in = append(in, &systemmodel.Geofence{ID: i, Name: "G", Category: &homeCat})
 		}
 		got := buildGeofenceCatalogLine(in, 3)
 		// id=1, 2, 3 must appear; id=4 must NOT.
@@ -318,7 +319,7 @@ func TestBuildGeofenceCatalogLine(t *testing.T) {
 	})
 
 	t.Run("nil entries skipped without panic", func(t *testing.T) {
-		in := []*models.Geofence{
+		in := []*systemmodel.Geofence{
 			nil,
 			{ID: 1, Name: "Home", Category: &homeCat},
 			nil,

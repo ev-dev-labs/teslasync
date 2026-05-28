@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -24,24 +26,24 @@ import (
 
 // fakeSettingsRepo is a minimal in-memory replacement for *database.SettingsRepo.
 type fakeSettingsRepo struct {
-	current  *models.Settings
-	upserted *models.Settings
+	current  *systemmodel.Settings
+	upserted *systemmodel.Settings
 	getErr   error
 	upErr    error
 }
 
-func (f *fakeSettingsRepo) Get(_ context.Context) (*models.Settings, error) {
+func (f *fakeSettingsRepo) Get(_ context.Context) (*systemmodel.Settings, error) {
 	if f.getErr != nil {
 		return nil, f.getErr
 	}
 	if f.current == nil {
-		return &models.Settings{}, nil
+		return &systemmodel.Settings{}, nil
 	}
 	cp := *f.current
 	return &cp, nil
 }
 
-func (f *fakeSettingsRepo) Upsert(_ context.Context, s *models.Settings) error {
+func (f *fakeSettingsRepo) Upsert(_ context.Context, s *systemmodel.Settings) error {
 	if f.upErr != nil {
 		return f.upErr
 	}
@@ -108,20 +110,20 @@ func (f *fakeAlertRepo) Update(_ context.Context, id int64, rule *alertmodel.Ale
 
 // fakeGeofenceRepo mirrors the SettingsSerializerGeofenceRepo surface.
 type fakeGeofenceRepo struct {
-	geofences []*models.Geofence
-	created   []*models.Geofence
-	updated   map[int64]*models.Geofence
+	geofences []*systemmodel.Geofence
+	created   []*systemmodel.Geofence
+	updated   map[int64]*systemmodel.Geofence
 	listErr   error
 	createErr error
 	updateErr error
 	nextID    int64
 }
 
-func (f *fakeGeofenceRepo) GetAll(_ context.Context) ([]*models.Geofence, error) {
+func (f *fakeGeofenceRepo) GetAll(_ context.Context) ([]*systemmodel.Geofence, error) {
 	if f.listErr != nil {
 		return nil, f.listErr
 	}
-	out := make([]*models.Geofence, 0, len(f.geofences))
+	out := make([]*systemmodel.Geofence, 0, len(f.geofences))
 	for _, g := range f.geofences {
 		cp := *g
 		out = append(out, &cp)
@@ -129,7 +131,7 @@ func (f *fakeGeofenceRepo) GetAll(_ context.Context) ([]*models.Geofence, error)
 	return out, nil
 }
 
-func (f *fakeGeofenceRepo) Create(_ context.Context, g *models.Geofence) error {
+func (f *fakeGeofenceRepo) Create(_ context.Context, g *systemmodel.Geofence) error {
 	if f.createErr != nil {
 		return f.createErr
 	}
@@ -143,12 +145,12 @@ func (f *fakeGeofenceRepo) Create(_ context.Context, g *models.Geofence) error {
 	return nil
 }
 
-func (f *fakeGeofenceRepo) Update(_ context.Context, g *models.Geofence) error {
+func (f *fakeGeofenceRepo) Update(_ context.Context, g *systemmodel.Geofence) error {
 	if f.updateErr != nil {
 		return f.updateErr
 	}
 	if f.updated == nil {
-		f.updated = map[int64]*models.Geofence{}
+		f.updated = map[int64]*systemmodel.Geofence{}
 	}
 	cp := *g
 	f.updated[g.ID] = &cp
@@ -276,9 +278,9 @@ func sptr(s string) *string { return &s }
 func iptr(v int64) *int64   { return &v }
 
 func TestSettingsExportHandler_Export_ReturnsBundleWithAllSections(t *testing.T) {
-	cat := models.GeofenceCategoryHome
+	cat := systemmodel.GeofenceCategoryHome
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
-	settings.current = &models.Settings{
+	settings.current = &systemmodel.Settings{
 		UnitOfLength:   "mi",
 		UnitOfTemp:     "F",
 		UnitOfPressure: "psi",
@@ -292,7 +294,7 @@ func TestSettingsExportHandler_Export_ReturnsBundleWithAllSections(t *testing.T)
 			ValueNum: func() *float64 { v := 20.0; return &v }(),
 			Severity: "warn", CooldownMin: 30, TriggerMode: "repeat", Kind: "signal", Enabled: true},
 	}
-	geofences.geofences = []*models.Geofence{
+	geofences.geofences = []*systemmodel.Geofence{
 		{ID: 1, Name: "Home", PolygonWKT: "POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))", Category: &cat},
 	}
 	quiet.byUser = map[string][]*models.QuietHoursWindow{
@@ -349,9 +351,9 @@ func TestSettingsExportHandler_Export_NoSensitiveFieldsLeak(t *testing.T) {
 	// to one of the underlying models, this canary fires before they
 	// hit the wire.
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
-	settings.current = &models.Settings{UnitOfLength: "mi"}
+	settings.current = &systemmodel.Settings{UnitOfLength: "mi"}
 	alerts.rules = []*alertmodel.AlertRule{}
-	geofences.geofences = []*models.Geofence{}
+	geofences.geofences = []*systemmodel.Geofence{}
 	quiet.byUser = map[string][]*models.QuietHoursWindow{"u": {}}
 
 	h := NewSettingsExportHandler(ser, "X-Forwarded-User")
@@ -374,9 +376,9 @@ func TestSettingsExportHandler_Export_NoSensitiveFieldsLeak(t *testing.T) {
 
 func TestSettingsExportHandler_Export_ScopesQuietHoursPerUser(t *testing.T) {
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
-	settings.current = &models.Settings{}
+	settings.current = &systemmodel.Settings{}
 	alerts.rules = []*alertmodel.AlertRule{}
-	geofences.geofences = []*models.Geofence{}
+	geofences.geofences = []*systemmodel.Geofence{}
 	quiet.byUser = map[string][]*models.QuietHoursWindow{
 		"alice@example.com": {{ID: 1, UserID: "alice@example.com", StartLocal: "22:00", EndLocal: "07:00", Timezone: "UTC"}},
 		"bob@example.com":   {{ID: 2, UserID: "bob@example.com", StartLocal: "23:00", EndLocal: "06:00", Timezone: "UTC"}},

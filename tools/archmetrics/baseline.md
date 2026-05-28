@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T04:29:24Z, Go go1.26.1, commit 7ca017d668584d9003998baf7c5a095cc10c531c_
+_Generated 2026-05-28T04:32:15Z, Go go1.26.1, commit 3d54e125dc58dd0d15c93a03f57a0c76f6018d9a_
 
 ## Summary
 
-- Packages: 228
+- Packages: 229
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372340
+- Total non-blank LOC under cmd/+internal/+tools/: 372381
 
 ## cmd/* main.go LOC
 
@@ -139,9 +139,9 @@ _Generated 2026-05-28T04:29:24Z, Go go1.26.1, commit 7ca017d668584d9003998baf7c5
 | internal/ai/strategy | 2 | 1 | 160 | yes | port |
 | internal/ai/strategy/redactadapter | 2 | 1 | 134 | yes | adapter |
 | internal/ai/stream | 2 | 1 | 1188 | yes | platform |
-| internal/ai/tools | 58 | 51 | 47090 | yes | platform |
+| internal/ai/tools | 58 | 51 | 47092 | yes | platform |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 271 | 163 | 126489 | yes | handler |
+| internal/api | 271 | 163 | 126491 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1832 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 167 | yes | app |
@@ -156,19 +156,19 @@ _Generated 2026-05-28T04:29:24Z, Go go1.26.1, commit 7ca017d668584d9003998baf7c5
 | internal/arch | 2 | 1 | 1117 | yes | tool |
 | internal/audit | 2 | 1 | 375 | yes | platform |
 | internal/auth | 6 | 4 | 2384 | yes | platform |
-| internal/automation | 6 | 2 | 1610 | yes | platform |
-| internal/automation/action | 6 | 5 | 3826 | yes | platform |
+| internal/automation | 6 | 2 | 1611 | yes | platform |
+| internal/automation/action | 6 | 5 | 3827 | yes | platform |
 | internal/automation/condition | 9 | 8 | 3653 | yes | platform |
 | internal/automation/presets | 3 | 1 | 595 | yes | platform |
 | internal/automation/safety | 7 | 6 | 3565 | yes | platform |
-| internal/automation/trigger | 7 | 0 | 946 | yes | platform |
+| internal/automation/trigger | 7 | 0 | 947 | yes | platform |
 | internal/backup | 3 | 1 | 668 | yes | platform |
 | internal/backupverify | 2 | 1 | 314 | yes | platform |
 | internal/cache | 3 | 1 | 262 | yes | platform |
 | internal/chaos | 3 | 1 | 423 | yes | tool |
 | internal/config | 3 | 1 | 722 | yes | platform |
 | internal/crypto | 3 | 2 | 666 | yes | platform |
-| internal/database | 108 | 35 | 27850 | yes | platform |
+| internal/database | 108 | 35 | 27851 | yes | platform |
 | internal/dataquality | 4 | 0 | 347 | yes | platform |
 | internal/domain | 2 | 1 | 114 | yes | domain |
 | internal/domain/charging | 6 | 1 | 357 | yes | domain |
@@ -203,7 +203,7 @@ _Generated 2026-05-28T04:29:24Z, Go go1.26.1, commit 7ca017d668584d9003998baf7c5
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
 | internal/ml/chargingcurves | 2 | 1 | 928 | yes | platform |
 | internal/ml/range | 3 | 1 | 1017 | yes | platform |
-| internal/models | 19 | 1 | 1295 | yes | domain |
+| internal/models | 18 | 1 | 849 | yes | domain |
 | internal/models/alert | 2 | 1 | 259 | yes | domain |
 | internal/models/auth | 2 | 1 | 66 | yes | domain |
 | internal/models/automation | 2 | 0 | 55 | yes | domain |
@@ -219,6 +219,7 @@ _Generated 2026-05-28T04:29:24Z, Go go1.26.1, commit 7ca017d668584d9003998baf7c5
 | internal/models/security | 2 | 0 | 41 | yes | domain |
 | internal/models/settings | 2 | 0 | 177 | yes | domain |
 | internal/models/signal | 3 | 0 | 111 | yes | domain |
+| internal/models/system | 2 | 0 | 479 | yes | domain |
 | internal/models/telemetry | 3 | 0 | 77 | yes | domain |
 | internal/models/tesla | 3 | 0 | 268 | yes | domain |
 | internal/models/vehicle | 2 | 1 | 273 | yes | domain |
@@ -279,7 +280,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
-| `internal/models` | R5 | 36 | 19 / 1 | 19 | 18 | 1 |
+| `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
 | `internal/jobs` | R6 | 23 | 12 / 11 | 4 | 1 | 3 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
@@ -306,12 +307,10 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/models/security`
 - `internal/models/settings`
 - `internal/models/signal`
+- `internal/models/system`
 - `internal/models/telemetry`
 - `internal/models/tesla`
 - `internal/models/vehicle`
-
-**Planned but not yet on disk:**
-- `internal/models/system`
 
 ### `internal/jobs` detail
 

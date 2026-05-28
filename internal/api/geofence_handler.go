@@ -8,8 +8,9 @@ import (
 	"net/http"
 	"strings"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/rs/zerolog/log"
 )
 
@@ -31,9 +32,9 @@ import (
 // coalesceGeofenceRequestSpellings merge them after decode. camelCase wins
 // on conflict because that's the documented client contract.
 type geofenceCreateRequest struct {
-	Name       string                   `json:"name"`
-	PolygonWKT string                   `json:"polygon_wkt"`
-	Category   *models.GeofenceCategory `json:"category"`
+	Name       string                        `json:"name"`
+	PolygonWKT string                        `json:"polygon_wkt"`
+	Category   *systemmodel.GeofenceCategory `json:"category"`
 
 	Latitude  *float64 `json:"latitude"`
 	Longitude *float64 `json:"longitude"`
@@ -105,7 +106,7 @@ func circleToPolygonWKT(latDeg, lonDeg, radiusMeters float64, segments int) stri
 }
 
 // decodeGeofenceWriteBody unmarshals the request and resolves whichever
-// geometry the client supplied into a populated *models.Geofence.
+// geometry the client supplied into a populated *systemmodel.Geofence.
 //
 // Returns the populated Geofence AND the raw decoded request so the caller
 // (Update) can detect field presence on `*bool` toggles for merge semantics.
@@ -113,14 +114,14 @@ func circleToPolygonWKT(latDeg, lonDeg, radiusMeters float64, segments int) stri
 // Validation that depends on the resolved geometry (centroid bounds, radius
 // limits) is delegated to validateGeofence() so Create and Update share one
 // rule set.
-func decodeGeofenceWriteBody(body io.Reader) (*models.Geofence, *geofenceCreateRequest, error) {
+func decodeGeofenceWriteBody(body io.Reader) (*systemmodel.Geofence, *geofenceCreateRequest, error) {
 	var req geofenceCreateRequest
 	if err := json.NewDecoder(body).Decode(&req); err != nil {
 		return nil, nil, fmt.Errorf("decode geofence body: %w", err)
 	}
 	coalesceGeofenceRequestSpellings(&req)
 
-	g := &models.Geofence{
+	g := &systemmodel.Geofence{
 		Name:       strings.TrimSpace(req.Name),
 		PolygonWKT: strings.TrimSpace(req.PolygonWKT),
 		Category:   req.Category,
@@ -142,7 +143,7 @@ func decodeGeofenceWriteBody(body io.Reader) (*models.Geofence, *geofenceCreateR
 	return g, &req, nil
 }
 
-func validateGeofence(g *models.Geofence) error {
+func validateGeofence(g *systemmodel.Geofence) error {
 	if g.Latitude() < -90 || g.Latitude() > 90 {
 		return fmt.Errorf("latitude must be between -90 and 90")
 	}

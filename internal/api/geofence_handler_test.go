@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-chi/chi/v5"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	"github.com/go-chi/chi/v5"
 )
 
 func TestCircleToPolygonWKT_RoundTripsCenterAndRadius(t *testing.T) {
@@ -206,21 +206,21 @@ func TestDecodeGeofenceWriteBody_CamelCaseWinsOnConflict(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 type fakeGeofenceUpdateRepo struct {
-	stored        *models.Geofence
+	stored        *systemmodel.Geofence
 	getByIDErr    error
-	getByIDResult *models.Geofence
+	getByIDResult *systemmodel.Geofence
 	updateErr     error
 	updateCalls   int
-	lastUpdate    *models.Geofence
+	lastUpdate    *systemmodel.Geofence
 }
 
-func (f *fakeGeofenceUpdateRepo) GetByID(_ context.Context, _ int64) (*models.Geofence, error) {
+func (f *fakeGeofenceUpdateRepo) GetByID(_ context.Context, _ int64) (*systemmodel.Geofence, error) {
 	if f.getByIDErr != nil {
 		return nil, f.getByIDErr
 	}
 	return f.getByIDResult, nil
 }
-func (f *fakeGeofenceUpdateRepo) Update(_ context.Context, g *models.Geofence) error {
+func (f *fakeGeofenceUpdateRepo) Update(_ context.Context, g *systemmodel.Geofence) error {
 	f.updateCalls++
 	if f.updateErr != nil {
 		return f.updateErr
@@ -290,8 +290,8 @@ func runGeofenceUpdateMerge(t *testing.T, repo *fakeGeofenceUpdateRepo, id int64
 	return w
 }
 
-func basePersistedGeofence() *models.Geofence {
-	return &models.Geofence{
+func basePersistedGeofence() *systemmodel.Geofence {
+	return &systemmodel.Geofence{
 		ID:           1,
 		Name:         "Home",
 		PolygonWKT:   "POLYGON((-74.0 40.0,-74.001 40.0,-74.001 40.001,-74.0 40.001,-74.0 40.0))",

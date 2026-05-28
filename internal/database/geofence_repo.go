@@ -5,7 +5,8 @@ import (
 	"math"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/models"
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/jackc/pgx/v5"
 )
 
@@ -16,7 +17,7 @@ const geofenceColumns = `id, name, polygon_wkt, category, enabled, alert_on_entr
 
 // scanGeofence is the single point of truth for geofences row → struct
 // mapping so a column rename only requires one edit.
-func scanGeofence(row pgx.Row, g *models.Geofence) error {
+func scanGeofence(row pgx.Row, g *systemmodel.Geofence) error {
 	return row.Scan(
 		&g.ID,
 		&g.Name,
@@ -39,7 +40,7 @@ func NewGeofenceRepo(db *DB) *GeofenceRepo {
 	return &GeofenceRepo{db: db}
 }
 
-func (r *GeofenceRepo) Create(ctx context.Context, g *models.Geofence) error {
+func (r *GeofenceRepo) Create(ctx context.Context, g *systemmodel.Geofence) error {
 	query := `INSERT INTO geofences (name, polygon_wkt, category, enabled, alert_on_entry, alert_on_exit, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $7) RETURNING id`
 	now := time.Now().UTC()
@@ -50,7 +51,7 @@ func (r *GeofenceRepo) Create(ctx context.Context, g *models.Geofence) error {
 	).Scan(&g.ID)
 }
 
-func (r *GeofenceRepo) GetAll(ctx context.Context) ([]*models.Geofence, error) {
+func (r *GeofenceRepo) GetAll(ctx context.Context) ([]*systemmodel.Geofence, error) {
 	query := `SELECT ` + geofenceColumns + ` FROM geofences ORDER BY name LIMIT 500`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
@@ -58,9 +59,9 @@ func (r *GeofenceRepo) GetAll(ctx context.Context) ([]*models.Geofence, error) {
 	}
 	defer rows.Close()
 
-	var geofences []*models.Geofence
+	var geofences []*systemmodel.Geofence
 	for rows.Next() {
-		g := &models.Geofence{}
+		g := &systemmodel.Geofence{}
 		if err := scanGeofence(rows, g); err != nil {
 			return nil, err
 		}
@@ -69,9 +70,9 @@ func (r *GeofenceRepo) GetAll(ctx context.Context) ([]*models.Geofence, error) {
 	return geofences, rows.Err()
 }
 
-func (r *GeofenceRepo) GetByID(ctx context.Context, id int64) (*models.Geofence, error) {
+func (r *GeofenceRepo) GetByID(ctx context.Context, id int64) (*systemmodel.Geofence, error) {
 	query := `SELECT ` + geofenceColumns + ` FROM geofences WHERE id=$1`
-	g := &models.Geofence{}
+	g := &systemmodel.Geofence{}
 	err := scanGeofence(r.db.Pool.QueryRow(ctx, query, id), g)
 	if err == pgx.ErrNoRows {
 		return nil, nil
@@ -79,7 +80,7 @@ func (r *GeofenceRepo) GetByID(ctx context.Context, id int64) (*models.Geofence,
 	return g, err
 }
 
-func (r *GeofenceRepo) Update(ctx context.Context, g *models.Geofence) error {
+func (r *GeofenceRepo) Update(ctx context.Context, g *systemmodel.Geofence) error {
 	query := `UPDATE geofences
 		SET name=$2, polygon_wkt=$3, category=$4,
 		    enabled=$5, alert_on_entry=$6, alert_on_exit=$7,
@@ -106,7 +107,7 @@ func (r *GeofenceRepo) Delete(ctx context.Context, id int64) error {
 // NOTE: this intentionally does NOT filter on `enabled`. The reverse-geocoder
 // and friendly-name lookups want every fence; alert evaluators (FSM,
 // notification dispatcher) MUST filter g.Enabled themselves.
-func (r *GeofenceRepo) FindByCoordinates(ctx context.Context, lat, lng float64) ([]*models.Geofence, error) {
+func (r *GeofenceRepo) FindByCoordinates(ctx context.Context, lat, lng float64) ([]*systemmodel.Geofence, error) {
 	query := `SELECT ` + geofenceColumns + ` FROM geofences`
 	rows, err := r.db.Pool.Query(ctx, query)
 	if err != nil {
@@ -114,9 +115,9 @@ func (r *GeofenceRepo) FindByCoordinates(ctx context.Context, lat, lng float64) 
 	}
 	defer rows.Close()
 
-	var geofences []*models.Geofence
+	var geofences []*systemmodel.Geofence
 	for rows.Next() {
-		g := &models.Geofence{}
+		g := &systemmodel.Geofence{}
 		if err := scanGeofence(rows, g); err != nil {
 			return nil, err
 		}

@@ -3,13 +3,14 @@ package api
 import (
 	"context"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/crypto"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/rotation"
@@ -80,8 +81,8 @@ type settingsCheckerAdapter struct {
 	*database.SettingsRepo
 }
 
-func (a *settingsCheckerAdapter) GetPollingConfig(_ context.Context) (*models.PollingConfig, error) {
-	return &models.PollingConfig{
+func (a *settingsCheckerAdapter) GetPollingConfig(_ context.Context) (*systemmodel.PollingConfig, error) {
+	return &systemmodel.PollingConfig{
 		AwakeIntervalSec:   60,
 		AsleepIntervalSec:  600,
 		DrivingIntervalSec: 10,

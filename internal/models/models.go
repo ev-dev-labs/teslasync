@@ -2,7 +2,7 @@ package models
 
 // APIKey moved to internal/models/auth in phase-R5.2.
 
-// AuditLog has moved to system.go (regenerated for post-migration schema).
+// AuditLog moved to internal/models/system in phase-R5.18 (along with 14 other types).
 
 // Vehicle has moved to internal/models/vehicle in phase-R5.12.
 

@@ -66,6 +66,8 @@ import (
 	"net/http"
 	"strings"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -76,7 +78,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // aiSafetySettingExplainerMaxIterations bounds the dispatcher's
@@ -378,7 +379,7 @@ func (a *AISafetySettingExplainerSource) LoadSafetySettings(ctx context.Context)
 }
 
 // projectSafetySettingsEnvelope builds the typed envelope from a
-// hydrated *models.Settings. Pulled out for hermetic unit
+// hydrated *systemmodel.Settings. Pulled out for hermetic unit
 // testing — the test feeds a known Settings value and asserts
 // every safety-related entry is present with the expected
 // current_value, default_value, allowed_values, and
@@ -389,7 +390,7 @@ func (a *AISafetySettingExplainerSource) LoadSafetySettings(ctx context.Context)
 // A divergence is a load-bearing change reviewers should
 // catch — the registry-coverage harness does not enforce this
 // invariant, so the cross-check is human.
-func projectSafetySettingsEnvelope(cur *models.Settings) *tools.SafetySettingsEnvelope {
+func projectSafetySettingsEnvelope(cur *systemmodel.Settings) *tools.SafetySettingsEnvelope {
 	if cur == nil {
 		// Defensive: render an empty envelope rather than
 		// panic. The LLM's "refuse out-of-scope" directive

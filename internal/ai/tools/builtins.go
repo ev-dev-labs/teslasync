@@ -28,6 +28,8 @@ import (
 	"sync"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
@@ -37,8 +39,6 @@ import (
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
-
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // ---------------------------------------------------------------------------
@@ -91,7 +91,7 @@ type NotificationSource interface {
 // GeofenceSource is the read surface the geofences tool needs.
 // Implemented by *database.GeofenceRepo.
 type GeofenceSource interface {
-	GetAll(ctx context.Context) ([]*models.Geofence, error)
+	GetAll(ctx context.Context) ([]*systemmodel.Geofence, error)
 }
 
 // EfficiencySource is the read surface the efficiency tool needs.

@@ -12,6 +12,8 @@ import (
 	"testing"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -24,7 +26,7 @@ func buildBundle(version int) *database.SettingsBundle {
 		SchemaVersion: version,
 		ExportedAt:    time.Now().UTC(),
 		Sections: database.SettingsBundleSections{
-			Settings: &models.Settings{
+			Settings: &systemmodel.Settings{
 				UnitOfLength:   "mi",
 				UnitOfTemp:     "F",
 				UnitOfPressure: "psi",
@@ -37,7 +39,7 @@ func buildBundle(version int) *database.SettingsBundle {
 				{Name: "Battery Low", SignalName: "battery_level", Op: "<",
 					Severity: "warn", CooldownMin: 30, TriggerMode: "repeat", Kind: "signal", Enabled: true},
 			},
-			Geofences: []*models.Geofence{
+			Geofences: []*systemmodel.Geofence{
 				{Name: "Home", PolygonWKT: "POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))"},
 			},
 			QuietHours: []*models.QuietHoursWindow{
@@ -66,7 +68,7 @@ func postSettingsImport(t *testing.T, h *SettingsImportHandler, body any, user s
 
 func TestSettingsImportHandler_DryRun_PreviewsAddsWithoutWriting(t *testing.T) {
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
-	settings.current = &models.Settings{}
+	settings.current = &systemmodel.Settings{}
 	bundle := buildBundle(database.SettingsBundleSchemaVersion)
 	h := NewSettingsImportHandler(ser, "X-Forwarded-User")
 
@@ -110,7 +112,7 @@ func TestSettingsImportHandler_DryRun_PreviewsAddsWithoutWriting(t *testing.T) {
 
 func TestSettingsImportHandler_Apply_PersistsAcrossSections(t *testing.T) {
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
-	settings.current = &models.Settings{}
+	settings.current = &systemmodel.Settings{}
 	bundle := buildBundle(database.SettingsBundleSchemaVersion)
 	h := NewSettingsImportHandler(ser, "X-Forwarded-User")
 
@@ -137,7 +139,7 @@ func TestSettingsImportHandler_RoundTrip_ExportThenImportYieldsSkip(t *testing.T
 	// (no behaviour change, no writes). Models the "save backup, restore
 	// on the same install" UX.
 	ser, settings, alerts, geofences, quiet := newTestSettingsSerializer()
-	settings.current = &models.Settings{
+	settings.current = &systemmodel.Settings{
 		UnitOfLength: "mi", UnitOfTemp: "F", UnitOfPressure: "psi",
 		PreferredRange: "rated", Language: "en", Theme: "neon-cyan", Mode: "dark",
 	}
@@ -145,7 +147,7 @@ func TestSettingsImportHandler_RoundTrip_ExportThenImportYieldsSkip(t *testing.T
 		{ID: 1, Name: "Battery Low", SignalName: "battery_level", Op: "<",
 			Severity: "warn", CooldownMin: 30, TriggerMode: "repeat", Kind: "signal", Enabled: true},
 	}
-	geofences.geofences = []*models.Geofence{
+	geofences.geofences = []*systemmodel.Geofence{
 		{ID: 1, Name: "Home", PolygonWKT: "POLYGON((0 0, 1 0, 1 1, 0 1, 0 0))"},
 	}
 	quiet.byUser = map[string][]*models.QuietHoursWindow{
@@ -186,7 +188,7 @@ func TestSettingsImportHandler_RoundTrip_ExportThenImportYieldsSkip(t *testing.T
 
 func TestSettingsImportHandler_RejectsUnsupportedSchemaVersion(t *testing.T) {
 	ser, settings, _, _, _ := newTestSettingsSerializer()
-	settings.current = &models.Settings{}
+	settings.current = &systemmodel.Settings{}
 	h := NewSettingsImportHandler(ser, "")
 
 	for _, v := range []int{0, 999, -1} {

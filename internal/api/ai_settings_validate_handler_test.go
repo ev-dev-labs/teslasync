@@ -27,8 +27,9 @@ import (
 	"testing"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
-	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
 // --- test helpers -----------------------------------------------------
@@ -492,14 +493,14 @@ func TestAISettingsValidateHandler_MalformedJSON_Rejected(t *testing.T) {
 // --- applyAIArchiveOnModeFlip tests -----------------------------------
 
 func TestApplyAIArchiveOnModeFlip_LocalToOff_Archives(t *testing.T) {
-	existing := &models.Settings{
+	existing := &systemmodel.Settings{
 		AIMode: "local",
 		AIFeatures: map[string]bool{
 			"chatbot-llm":        true,
 			"ai-provider-health": false, // explicitly false → not archived
 		},
 	}
-	incoming := &models.Settings{
+	incoming := &systemmodel.Settings{
 		AIMode: "off",
 		// Buggy SPA leaves the prior map in the body — handler clears it.
 		AIFeatures: map[string]bool{"chatbot-llm": true},
@@ -519,11 +520,11 @@ func TestApplyAIArchiveOnModeFlip_LocalToOff_Archives(t *testing.T) {
 }
 
 func TestApplyAIArchiveOnModeFlip_OffToOff_NoOp(t *testing.T) {
-	existing := &models.Settings{
+	existing := &systemmodel.Settings{
 		AIMode:     "off",
 		AIFeatures: map[string]bool{}, // already off
 	}
-	incoming := &models.Settings{
+	incoming := &systemmodel.Settings{
 		AIMode:             "off",
 		AIFeatures:         map[string]bool{},
 		AIFeaturesArchived: map[string]bool{"sentinel": true},
@@ -544,8 +545,8 @@ func TestApplyAIArchiveOnModeFlip_OffToOff_NoOp(t *testing.T) {
 
 func TestApplyAIArchiveOnModeFlip_LocalToLocal_NoOp(t *testing.T) {
 	// Mode-on transitions are not archive events.
-	existing := &models.Settings{AIMode: "local", AIFeatures: map[string]bool{"chatbot-llm": true}}
-	incoming := &models.Settings{
+	existing := &systemmodel.Settings{AIMode: "local", AIFeatures: map[string]bool{"chatbot-llm": true}}
+	incoming := &systemmodel.Settings{
 		AIMode:     "local",
 		AIFeatures: map[string]bool{"chatbot-llm": true},
 	}
@@ -565,8 +566,8 @@ func TestApplyAIArchiveOnModeFlip_LocalToOff_EmptyPrior_NoArchive(t *testing.T) 
 	// is nothing meaningful to archive, so AIFeaturesArchived
 	// stays nil (the persisted column will round-trip as the
 	// existing archive value, which is the right behaviour).
-	existing := &models.Settings{AIMode: "local", AIFeatures: map[string]bool{}}
-	incoming := &models.Settings{AIMode: "off", AIFeatures: map[string]bool{}}
+	existing := &systemmodel.Settings{AIMode: "local", AIFeatures: map[string]bool{}}
+	incoming := &systemmodel.Settings{AIMode: "off", AIFeatures: map[string]bool{}}
 
 	applyAIArchiveOnModeFlip(existing, incoming)
 
@@ -582,11 +583,11 @@ func TestApplyAIArchiveOnModeFlip_DefensiveClone(t *testing.T) {
 	// The archive must be a copy, not an alias — mutating the
 	// existing settings after the helper returns must not affect
 	// the snapshot we just wrote.
-	existing := &models.Settings{
+	existing := &systemmodel.Settings{
 		AIMode:     "cloud",
 		AIFeatures: map[string]bool{"chatbot-llm": true},
 	}
-	incoming := &models.Settings{AIMode: "off"}
+	incoming := &systemmodel.Settings{AIMode: "off"}
 
 	applyAIArchiveOnModeFlip(existing, incoming)
 
@@ -605,11 +606,11 @@ func TestApplyAIArchiveOnModeFlip_DefensiveClone(t *testing.T) {
 func TestApplyAIArchiveOnModeFlip_NilIncoming_NoOp(t *testing.T) {
 	// Permissive on nil — the helper must not panic when a caller
 	// passes a half-constructed pointer.
-	applyAIArchiveOnModeFlip(&models.Settings{AIMode: "local"}, nil)
+	applyAIArchiveOnModeFlip(&systemmodel.Settings{AIMode: "local"}, nil)
 }
 
 func TestApplyAIArchiveOnModeFlip_NilExisting_ClearsAndReturns(t *testing.T) {
-	incoming := &models.Settings{
+	incoming := &systemmodel.Settings{
 		AIMode:     "off",
 		AIFeatures: map[string]bool{"chatbot-llm": true},
 	}
