@@ -1,25 +1,26 @@
-package api
+package teslauserconfig
 
 import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+
+	"github.com/rs/zerolog/log"
 )
 
-// TeslaUserConfigHandler serves Tesla user-level configuration data (feature flags, region).
-type TeslaUserConfigHandler struct {
+// Handler serves Tesla user-level configuration data (feature flags, region).
+type Handler struct {
 	teslaClient *tesla.Client
 	configRepo  *tesladb.TeslaUserConfigRepo
 }
 
-// NewTeslaUserConfigHandler creates a new handler.
-func NewTeslaUserConfigHandler(tc *tesla.Client, db *database.DB) *TeslaUserConfigHandler {
-	return &TeslaUserConfigHandler{
+// NewHandler creates a new handler.
+func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
+	return &Handler{
 		teslaClient: tc,
 		configRepo:  tesladb.NewTeslaUserConfigRepo(db),
 	}
@@ -33,13 +34,13 @@ type configEnvelope struct {
 
 // FeatureConfig returns stored feature config from DB.
 // GET /api/v1/tesla/user/feature-config
-func (h *TeslaUserConfigHandler) FeatureConfig(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) FeatureConfig(w http.ResponseWriter, r *http.Request) {
 	h.getConfig(w, r, "feature_config")
 }
 
 // RefreshFeatureConfig fetches feature config from Tesla and saves to DB.
 // POST /api/v1/tesla/user/feature-config/refresh
-func (h *TeslaUserConfigHandler) RefreshFeatureConfig(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshFeatureConfig(w http.ResponseWriter, r *http.Request) {
 	h.refreshConfig(w, r, "feature_config", func() ([]byte, int, error) {
 		return h.teslaClient.GetUserFeatureConfig(r.Context())
 	})
@@ -47,44 +48,44 @@ func (h *TeslaUserConfigHandler) RefreshFeatureConfig(w http.ResponseWriter, r *
 
 // Region returns stored region from DB.
 // GET /api/v1/tesla/user/region
-func (h *TeslaUserConfigHandler) Region(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Region(w http.ResponseWriter, r *http.Request) {
 	h.getConfig(w, r, "region")
 }
 
 // RefreshRegion fetches region from Tesla and saves to DB.
 // POST /api/v1/tesla/user/region/refresh
-func (h *TeslaUserConfigHandler) RefreshRegion(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshRegion(w http.ResponseWriter, r *http.Request) {
 	h.refreshConfig(w, r, "region", func() ([]byte, int, error) {
 		return h.teslaClient.GetUserRegion(r.Context())
 	})
 }
 
 // getConfig is a shared helper to return stored config with fetched_at metadata.
-func (h *TeslaUserConfigHandler) getConfig(w http.ResponseWriter, r *http.Request, configType string) {
+func (h *Handler) getConfig(w http.ResponseWriter, r *http.Request, configType string) {
 	cfg, err := h.configRepo.GetByType(r.Context(), configType)
 	if err != nil {
 		log.Error().Err(err).Str("config_type", configType).Msg("failed to fetch user config")
-		writeError(w, http.StatusInternalServerError, "failed to fetch "+configType)
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch "+configType)
 		return
 	}
 	if cfg == nil {
-		writeJSON(w, http.StatusOK, configEnvelope{
+		httpx.WriteJSON(w, http.StatusOK, configEnvelope{
 			Data:      json.RawMessage("{}"),
 			FetchedAt: nil,
 		})
 		return
 	}
 	ts := cfg.FetchedAt.UTC().Format("2006-01-02T15:04:05Z")
-	writeJSON(w, http.StatusOK, configEnvelope{
+	httpx.WriteJSON(w, http.StatusOK, configEnvelope{
 		Data:      json.RawMessage(cfg.Data),
 		FetchedAt: &ts,
 	})
 }
 
 // refreshConfig is a shared helper to fetch from Tesla, unwrap the envelope, persist, and return.
-func (h *TeslaUserConfigHandler) refreshConfig(w http.ResponseWriter, r *http.Request, configType string, fetch func() ([]byte, int, error)) {
+func (h *Handler) refreshConfig(w http.ResponseWriter, r *http.Request, configType string, fetch func() ([]byte, int, error)) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -93,12 +94,12 @@ func (h *TeslaUserConfigHandler) refreshConfig(w http.ResponseWriter, r *http.Re
 	body, status, err := fetch()
 	if err != nil {
 		log.Error().Err(err).Str("config_type", configType).Msg("tesla user config API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("config_type", configType).Msg("tesla user config non-2xx")
-		writeError(w, http.StatusBadGateway, "Tesla API returned non-success status")
+		httpx.WriteError(w, http.StatusBadGateway, "Tesla API returned non-success status")
 		return
 	}
 
@@ -108,7 +109,7 @@ func (h *TeslaUserConfigHandler) refreshConfig(w http.ResponseWriter, r *http.Re
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		log.Error().Err(err).Str("config_type", configType).Msg("failed to parse tesla response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
@@ -119,7 +120,7 @@ func (h *TeslaUserConfigHandler) refreshConfig(w http.ResponseWriter, r *http.Re
 
 	if err := h.configRepo.Upsert(r.Context(), configType, data); err != nil {
 		log.Error().Err(err).Str("config_type", configType).Msg("failed to save user config")
-		writeError(w, http.StatusInternalServerError, "failed to save "+configType)
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save "+configType)
 		return
 	}
 

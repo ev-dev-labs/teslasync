@@ -33,6 +33,7 @@ import (
 	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
+	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
@@ -1082,7 +1083,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// teslaconfig.Builder. The handler is mounted inside the existing
 	// /tesla/fleet-telemetry route block below.
 	fleetTelemetryHandler := NewFleetTelemetryHandler(cfg)
-	teslaUserConfigHandler := NewTeslaUserConfigHandler(teslaClient, db)
+	teslaUserConfigHandler := apituc.NewHandler(teslaClient, db)
 	teslaUserOrderHandler := apituo.NewHandler(teslaClient, db)
 	teslaUserProfileHandler := apitup.NewHandler(teslaClient, db)
 	vehicleAccessHandler := apivehaccess.NewHandler(teslaClient, db)
