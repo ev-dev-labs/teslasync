@@ -96,7 +96,7 @@
 // confused LLM that asks the assistant to search e.g. "user_note"
 // cannot accidentally expose a corpus the slice did not enumerate.
 
-package tools
+package maintenance
 
 import (
 	"context"
@@ -107,6 +107,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // maintenanceSourceMaintenanceEvent is the source-type string
@@ -300,7 +301,7 @@ func (t *retrieveMaintenanceChunks) Description() string {
 
 // InputSchema implements [Tool].
 func (t *retrieveMaintenanceChunks) InputSchema() json.RawMessage {
-	return CachedSchema(retrieveMaintenanceChunksInput{})
+	return tools.CachedSchema(retrieveMaintenanceChunksInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -316,7 +317,7 @@ func (t *retrieveMaintenanceChunks) RequiredScope() string { return "" }
 // then enforces the per-feature source-type allowlist that the
 // validator's `oneof` tag cannot express for slice fields.
 func (t *retrieveMaintenanceChunks) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[retrieveMaintenanceChunksInput](raw)
+	v, err := tools.ValidateStruct[retrieveMaintenanceChunksInput](raw)
 	if err != nil {
 		return nil, err
 	}
@@ -573,7 +574,7 @@ func (t *queryMaintenanceContext) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryMaintenanceContext) InputSchema() json.RawMessage {
-	return CachedSchema(queryMaintenanceContextInput{})
+	return tools.CachedSchema(queryMaintenanceContextInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
@@ -587,7 +588,7 @@ func (t *queryMaintenanceContext) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryMaintenanceContext) Validate(raw json.RawMessage) (any, error) {
-	v, err := ValidateStruct[queryMaintenanceContextInput](raw)
+	v, err := tools.ValidateStruct[queryMaintenanceContextInput](raw)
 	if err != nil {
 		return v, err
 	}
@@ -667,7 +668,7 @@ type PredictiveMaintenanceSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterPredictiveMaintenanceTools(r *Registry, s PredictiveMaintenanceSources) {
+func RegisterPredictiveMaintenanceTools(r *tools.Registry, s PredictiveMaintenanceSources) {
 	r.Register(&queryMaintenanceContext{src: s.MaintenanceContext})
 	r.Register(&retrieveMaintenanceChunks{r: s.Retriever})
 }

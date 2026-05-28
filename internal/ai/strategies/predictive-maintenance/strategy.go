@@ -21,12 +21,12 @@
 //
 //     1. `query_maintenance_context` — accept a typed
 //     {vehicle_id} input and return the deterministic
-//     [tools.MaintenancePredictionContextEnvelope] (vehicle id,
+//     [maintenance.MaintenancePredictionContextEnvelope] (vehicle id,
 //     current_mileage, items with derived status/due dates/due
 //     mileage/intervals, recent service records, and a summary
 //     count breakdown). The tool is per-request scope-bound to
 //     the vehicle_id the handler installed via
-//     tools.WithScopedMaintenancePredictionWindow; the LLM
+//     maintenance.WithScopedMaintenancePredictionWindow; the LLM
 //     CANNOT query a different vehicle. Defence-in-depth
 //     against prompt injection in operator-authored
 //     service-record description / provider strings.

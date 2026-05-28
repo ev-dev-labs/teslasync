@@ -17,7 +17,7 @@ package api
 //	open SSE writer (internal/ai/stream.New) to the HTTP response
 //	  ↓
 //	stash the vehicle_id in ctx via
-//	  tools.WithScopedMaintenancePredictionWindow
+//	  maintenance.WithScopedMaintenancePredictionWindow
 //	  ↓
 //	synthesise the user-message that scopes to the in-scope
 //	  vehicle and instructs the tool sequence
@@ -32,7 +32,7 @@ package api
 //
 // Per-request scope binding (defence against prompt-injection
 // exfiltration): the handler installs the vehicle_id in ctx via
-// tools.WithScopedMaintenancePredictionWindow BEFORE
+// maintenance.WithScopedMaintenancePredictionWindow BEFORE
 // dispatcher.Run is invoked. The dispatcher propagates ctx
 // unchanged through every Tool.Execute call. The
 // tools.queryMaintenanceContext tool's Execute method then
@@ -91,6 +91,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -127,7 +128,7 @@ type AIPredictiveMaintenanceHandler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     tools.MaintenancePredictionContextSource
+	source     maintenance.MaintenancePredictionContextSource
 	headerName string
 	maxIters   int
 }
@@ -145,7 +146,7 @@ type AIPredictiveMaintenanceHandler struct {
 //
 //	query_maintenance_context AND
 //	retrieve_maintenance_chunks (registered by
-//	tools.RegisterPredictiveMaintenanceTools in
+//	maintenance.RegisterPredictiveMaintenanceTools in
 //	router.go).
 //
 // strat:      the predictive-maintenance Strategy (one per
@@ -154,7 +155,7 @@ type AIPredictiveMaintenanceHandler struct {
 //
 // source:     the production
 //
-//	tools.MaintenancePredictionContextSource
+//	maintenance.MaintenancePredictionContextSource
 //	(currently AIPredictiveMaintenanceContextSource —
 //	wraps the SAME default-items + Redis-odometer
 //	reader the canonical baseline GET
@@ -169,7 +170,7 @@ func NewAIPredictiveMaintenanceHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source tools.MaintenancePredictionContextSource,
+	source maintenance.MaintenancePredictionContextSource,
 	headerName string,
 ) *AIPredictiveMaintenanceHandler {
 	switch {
@@ -180,7 +181,7 @@ func NewAIPredictiveMaintenanceHandler(
 	case strat == nil:
 		panic("api: NewAIPredictiveMaintenanceHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAIPredictiveMaintenanceHandler: nil tools.MaintenancePredictionContextSource")
+		panic("api: NewAIPredictiveMaintenanceHandler: nil maintenance.MaintenancePredictionContextSource")
 	}
 	return &AIPredictiveMaintenanceHandler{
 		registry:   registry,
@@ -255,7 +256,7 @@ func (h *AIPredictiveMaintenanceHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, predictivemaintenance.FeatureID)
-	ctx = tools.WithScopedMaintenancePredictionWindow(ctx, tools.ScopedMaintenancePredictionWindow{
+	ctx = maintenance.WithScopedMaintenancePredictionWindow(ctx, maintenance.ScopedMaintenancePredictionWindow{
 		VehicleID: req.VehicleID,
 	})
 
@@ -344,7 +345,7 @@ var _ http.Handler = (*AIPredictiveMaintenanceHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AIPredictiveMaintenanceContextSource is the production
-// tools.MaintenancePredictionContextSource. The canonical
+// maintenance.MaintenancePredictionContextSource. The canonical
 // baseline /api/v1/maintenance surface remains reachable to the
 // operator at all times — this adapter wraps the SAME
 // default-items + Redis-odometer reader the canonical
@@ -390,7 +391,7 @@ func NewAIPredictiveMaintenanceContextSource(db *database.DB, redisCache *signal
 }
 
 // MaintenanceContext implements
-// tools.MaintenancePredictionContextSource. Returns a typed
+// maintenance.MaintenancePredictionContextSource. Returns a typed
 // envelope for the in-scope vehicleID. No state is mutated.
 // No SQL is issued by this method (the underlying
 // MaintenanceHandler.defaultItems is a pure-functional builder
@@ -401,7 +402,7 @@ func NewAIPredictiveMaintenanceContextSource(db *database.DB, redisCache *signal
 // The envelope's slices are non-nil (empty-but-allocated) so
 // JSON marshalling renders [] rather than null — keeping the
 // LLM's tool-reply parsing predictable.
-func (a *AIPredictiveMaintenanceContextSource) MaintenanceContext(ctx context.Context, vehicleID int64) (*tools.MaintenancePredictionContextEnvelope, error) {
+func (a *AIPredictiveMaintenanceContextSource) MaintenanceContext(ctx context.Context, vehicleID int64) (*maintenance.MaintenancePredictionContextEnvelope, error) {
 	if vehicleID <= 0 {
 		return nil, fmt.Errorf("api ai predictive-maintenance: vehicle_id must be > 0")
 	}
@@ -440,10 +441,10 @@ func (a *AIPredictiveMaintenanceContextSource) MaintenanceContext(ctx context.Co
 	// frontend already reads them as-is from /api/v1/maintenance,
 	// (b) the Phase-48 instruction forbids touching the
 	// existing SI-canonicalization mapping in this slice.
-	items := make([]tools.MaintenancePredictionItem, 0, len(raw))
-	summary := tools.MaintenancePredictionSummary{}
+	items := make([]maintenance.MaintenancePredictionItem, 0, len(raw))
+	summary := maintenance.MaintenancePredictionSummary{}
 	for _, m := range raw {
-		it := tools.MaintenancePredictionItem{}
+		it := maintenance.MaintenancePredictionItem{}
 		if v, ok := m["id"].(int); ok {
 			it.ID = int64(v)
 		}
@@ -503,9 +504,9 @@ func (a *AIPredictiveMaintenanceContextSource) MaintenanceContext(ctx context.Co
 	// records table can swap the empty-slice initialisation
 	// for a real read without changing the tool /
 	// handler / strategy contract.
-	recentRecords := make([]tools.MaintenancePredictionServiceRecord, 0)
+	recentRecords := make([]maintenance.MaintenancePredictionServiceRecord, 0)
 
-	return &tools.MaintenancePredictionContextEnvelope{
+	return &maintenance.MaintenancePredictionContextEnvelope{
 		VehicleID:      vehicleID,
 		CurrentMileage: currentMileage,
 		Items:          items,
@@ -515,5 +516,5 @@ func (a *AIPredictiveMaintenanceContextSource) MaintenanceContext(ctx context.Co
 }
 
 // Compile-time assertion: AIPredictiveMaintenanceContextSource
-// satisfies tools.MaintenancePredictionContextSource.
-var _ tools.MaintenancePredictionContextSource = (*AIPredictiveMaintenanceContextSource)(nil)
+// satisfies maintenance.MaintenancePredictionContextSource.
+var _ maintenance.MaintenancePredictionContextSource = (*AIPredictiveMaintenanceContextSource)(nil)

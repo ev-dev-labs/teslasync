@@ -42,7 +42,7 @@ package api
 //     /api/v1/ai/*; no field on the existing baseline JSON shape
 //     is added or modified by this slice. The tool envelope's
 //     extra honest-method fields live in the AI-only typed
-//     [tools.TirePressureTrend] envelope, not on the baseline
+//     [maintenance.TirePressureTrend] envelope, not on the baseline
 //     /tire-pressure response.
 
 import (
@@ -63,6 +63,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
@@ -274,7 +275,7 @@ var _ http.Handler = (*AITirePressureTrendHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AITirePressureTrendSource is the production
-// tools.TirePressureTrendSource. It runs the SAME
+// maintenance.TirePressureTrendSource. It runs the SAME
 // signal.StateReader.Timeline projection that backs the canonical
 // GET /api/v1/tire-pressure handler so the AI narration is
 // grounded in the SAME numbers the four-corner gauges on
@@ -297,7 +298,7 @@ func NewAITirePressureTrendSource(state signal.StateReader) *AITirePressureTrend
 }
 
 // QueryTirePressureTrend implements
-// tools.TirePressureTrendSource. Composes the SAME
+// maintenance.TirePressureTrendSource. Composes the SAME
 // signal.StateReader.Timeline projection the canonical
 // TirePressureHandler.List uses, with two extras:
 //
@@ -315,12 +316,12 @@ func NewAITirePressureTrendSource(state signal.StateReader) *AITirePressureTrend
 //
 // The function does NOT recompute or override anything the
 // canonical handler computes; it only reshapes the existing
-// output into the typed [tools.TirePressureTrend] envelope the
+// output into the typed [maintenance.TirePressureTrend] envelope the
 // LLM can quote. Sample-size + has_enough_data flagging,
 // deterministic likely-cause hints, and insight generation are
 // added on top — they are pure-functional derivations of the
 // per-corner aggregate.
-func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, vehicleID int64) (*tools.TirePressureTrend, error) {
+func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, vehicleID int64) (*maintenance.TirePressureTrend, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai tire-pressure-trend-reasoning: vehicle_id must be > 0")
 	}
@@ -339,7 +340,7 @@ func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, 
 		return nil, fmt.Errorf("api ai tire-pressure-trend-reasoning: timeline query: %w", err)
 	}
 
-	envelope := &tools.TirePressureTrend{
+	envelope := &maintenance.TirePressureTrend{
 		VehicleID:           vehicleID,
 		WindowDays:          aiTirePressureTrendWindowDays,
 		MinRequiredReadings: aiTirePressureTrendMinReadings,
@@ -349,13 +350,13 @@ func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, 
 			"Outside ambient correlation is a heuristic: when all four corners trend down together AND the rolling average outside temperature dropped materially across the same window, seasonal contraction is the most likely deterministic driver rather than a puncture.",
 			fmt.Sprintf("Minimum total TpmsPressure emission count across all four corners for a meaningful narrative is %d readings; below this threshold has_enough_data is false.", aiTirePressureTrendMinReadings),
 		},
-		Thresholds: tools.TirePressureThresholds{
+		Thresholds: maintenance.TirePressureThresholds{
 			SoftLowPa:   tirePressureSoftLowPa,
 			NormalMinPa: tirePressureNormalMinPa,
 			NormalMaxPa: tirePressureNormalMaxPa,
 			SoftHighPa:  tirePressureSoftHighPa,
 		},
-		Tires:        []tools.TirePressureCorner{},
+		Tires:        []maintenance.TirePressureCorner{},
 		LikelyCauses: []string{},
 		Insights:     []string{},
 	}
@@ -373,7 +374,7 @@ func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, 
 	}
 
 	totalReadings := 0
-	cornerByPos := make(map[string]*tools.TirePressureCorner, 4)
+	cornerByPos := make(map[string]*maintenance.TirePressureCorner, 4)
 	for _, c := range corners {
 		series := extractCornerSeries(rows, c.field)
 		summary := summariseCorner(c.pos, c.label, series)
@@ -473,7 +474,7 @@ func extractCornerSeries(rows []signal.TimelineRow, field string) []timelinePoin
 // summary out of the forward-folded TimelineRow slice.
 // Returns nil when the OutsideTemp signal has no readings in
 // the window (the narrator must not invent a correlation).
-func extractOutsideTempSummary(rows []signal.TimelineRow) *tools.TireOutsideTempSummary {
+func extractOutsideTempSummary(rows []signal.TimelineRow) *maintenance.TireOutsideTempSummary {
 	count := 0
 	var sum, minV, maxV float64
 	var lastVal float64
@@ -515,7 +516,7 @@ func extractOutsideTempSummary(rows []signal.TimelineRow) *tools.TireOutsideTemp
 	if count == 0 {
 		return nil
 	}
-	return &tools.TireOutsideTempSummary{
+	return &maintenance.TireOutsideTempSummary{
 		ReadingCount: count,
 		AvgTempC:     math.Round((sum/float64(count))*10) / 10,
 		MinTempC:     math.Round(minV*10) / 10,
@@ -524,14 +525,14 @@ func extractOutsideTempSummary(rows []signal.TimelineRow) *tools.TireOutsideTemp
 }
 
 // summariseCorner reduces a per-corner [timelinePoint] series
-// to the typed tools.TirePressureCorner envelope: latest,
+// to the typed maintenance.TirePressureCorner envelope: latest,
 // average, min, max, rate-of-change-per-day, and the
 // deterministic threshold-driven status. RateePaPerDay is the
 // least-squares slope (in Pa/day) of the points; when fewer
 // than 2 points are available it is 0 and the
 // DaysUntilSoftLowEstimate is nil.
-func summariseCorner(pos, label string, series []timelinePoint) tools.TirePressureCorner {
-	out := tools.TirePressureCorner{
+func summariseCorner(pos, label string, series []timelinePoint) maintenance.TirePressureCorner {
+	out := maintenance.TirePressureCorner{
 		Position:                 pos,
 		Label:                    label,
 		ReadingCount:             len(series),
@@ -688,7 +689,7 @@ func signalValueToFloat(v any) (float64, bool) {
 //     rate at least 2× the average across the other three
 //     corners. Single-corner anomaly suggests a puncture
 //     rather than weather.
-func buildTirePressureLikelyCauses(tires []tools.TirePressureCorner, outside *tools.TireOutsideTempSummary) []string {
+func buildTirePressureLikelyCauses(tires []maintenance.TirePressureCorner, outside *maintenance.TireOutsideTempSummary) []string {
 	if len(tires) == 0 {
 		return []string{}
 	}
@@ -721,7 +722,7 @@ func buildTirePressureLikelyCauses(tires []tools.TirePressureCorner, outside *to
 // negative rate is at least 2× the average of the other three
 // corners' negative rates. Returns (false, "") when the data
 // does not fit the single-corner-anomaly pattern.
-func detectSingleCornerLeak(tires []tools.TirePressureCorner) (bool, string) {
+func detectSingleCornerLeak(tires []maintenance.TirePressureCorner) (bool, string) {
 	if len(tires) < 4 {
 		return false, ""
 	}
@@ -768,7 +769,7 @@ func detectSingleCornerLeak(tires []tools.TirePressureCorner) (bool, string) {
 // insight strings the narrator may quote. The insights are
 // pure derivations of the per-corner aggregate + the threshold
 // band; they never invent numbers.
-func buildTirePressureInsights(tires []tools.TirePressureCorner, _ tools.TirePressureThresholds) []string {
+func buildTirePressureInsights(tires []maintenance.TirePressureCorner, _ maintenance.TirePressureThresholds) []string {
 	if len(tires) == 0 {
 		return []string{}
 	}
@@ -811,5 +812,5 @@ func buildTirePressureInsights(tires []tools.TirePressureCorner, _ tools.TirePre
 }
 
 // Compile-time assertion: AITirePressureTrendSource satisfies
-// tools.TirePressureTrendSource.
-var _ tools.TirePressureTrendSource = (*AITirePressureTrendSource)(nil)
+// maintenance.TirePressureTrendSource.
+var _ maintenance.TirePressureTrendSource = (*AITirePressureTrendSource)(nil)

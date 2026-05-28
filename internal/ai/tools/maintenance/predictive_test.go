@@ -15,7 +15,7 @@
 // delegate. A future edit that bypasses any of these gates
 // would surface here.
 
-package tools
+package maintenance
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -476,7 +477,7 @@ func TestQueryMaintenanceContext_Execute_RefusesMissingScope(t *testing.T) {
 
 func TestRegisterPredictiveMaintenanceTools_AddsBothTools(t *testing.T) {
 	t.Parallel()
-	r := NewRegistry()
+	r := tools.NewRegistry()
 	src := &fakeMaintenanceContextSource{}
 	ret := &fakeMaintenanceRetriever{}
 	RegisterPredictiveMaintenanceTools(r, PredictiveMaintenanceSources{

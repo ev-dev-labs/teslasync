@@ -130,6 +130,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/predict"
@@ -1496,7 +1497,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// signal.StateReader.Timeline projection the canonical
 	// TirePressureHandler.List already runs — no parallel write
 	// path; the LLM never persists.
-	tools.RegisterTirePressureTrendReasoningTools(aiToolRegistry, tools.TirePressureTrendReasoningSources{
+	maintenance.RegisterTirePressureTrendReasoningTools(aiToolRegistry, maintenance.TirePressureTrendReasoningSources{
 		Source: NewAITirePressureTrendSource(stateReader),
 	})
 	// tire-pressure-trend-reasoning handler. One per process;
@@ -2134,7 +2135,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		}
 	}
 	aiPredictiveMaintenanceContextSource := NewAIPredictiveMaintenanceContextSource(db, aiPredictiveMaintenanceRedisCache)
-	tools.RegisterPredictiveMaintenanceTools(aiToolRegistry, tools.PredictiveMaintenanceSources{
+	maintenance.RegisterPredictiveMaintenanceTools(aiToolRegistry, maintenance.PredictiveMaintenanceSources{
 		Retriever:          aiPredictiveMaintenanceRetriever,
 		MaintenanceContext: aiPredictiveMaintenanceContextSource,
 	})

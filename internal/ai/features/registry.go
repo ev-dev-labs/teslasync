@@ -3097,7 +3097,7 @@ var Registry = map[string]Feature{
 	//
 	// Per-request scope binding: the AI handler installs the
 	// body-supplied vehicle_id in ctx via
-	// tools.WithScopedMaintenancePredictionWindow. The
+	// maintenance.WithScopedMaintenancePredictionWindow. The
 	// query_maintenance_context tool refuses any LLM-supplied
 	// vehicle_id that does not match the in-scope vehicle. This
 	// defeats prompt-injection exfiltration via operator-authored

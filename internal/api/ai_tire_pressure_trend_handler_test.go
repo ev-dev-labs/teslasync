@@ -29,7 +29,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -236,12 +236,12 @@ func TestAITirePressureTrendSource_PanicsOnNilState(t *testing.T) {
 
 // TestAITirePressureTrendSource_SatisfiesInterface is a
 // compile-time + runtime assertion that the production adapter
-// implements tools.TirePressureTrendSource.
+// implements maintenance.TirePressureTrendSource.
 func TestAITirePressureTrendSource_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
-	var iface tools.TirePressureTrendSource = (*AITirePressureTrendSource)(nil)
+	var iface maintenance.TirePressureTrendSource = (*AITirePressureTrendSource)(nil)
 	if iface == nil {
-		t.Logf("AITirePressureTrendSource satisfies tools.TirePressureTrendSource (nil cast)")
+		t.Logf("AITirePressureTrendSource satisfies maintenance.TirePressureTrendSource (nil cast)")
 	}
 }
 
@@ -371,7 +371,7 @@ func TestTireRawToPa_NormalisesUnits(t *testing.T) {
 // rate is materially worse than the other three.
 func TestDetectSingleCornerLeak_FlagsObviousOutlier(t *testing.T) {
 	t.Parallel()
-	tires := []tools.TirePressureCorner{
+	tires := []maintenance.TirePressureCorner{
 		{Position: "fl", Label: "Front Left", RatePaPerDay: -300},
 		{Position: "fr", Label: "Front Right", RatePaPerDay: -200},
 		{Position: "rl", Label: "Rear Left", RatePaPerDay: -250},
@@ -392,7 +392,7 @@ func TestDetectSingleCornerLeak_FlagsObviousOutlier(t *testing.T) {
 // "single-corner anomaly" on a normal sample.
 func TestDetectSingleCornerLeak_IgnoresNonLeak(t *testing.T) {
 	t.Parallel()
-	tires := []tools.TirePressureCorner{
+	tires := []maintenance.TirePressureCorner{
 		{Position: "fl", RatePaPerDay: 0},
 		{Position: "fr", RatePaPerDay: 100},
 		{Position: "rl", RatePaPerDay: 50},
@@ -410,13 +410,13 @@ func TestDetectSingleCornerLeak_IgnoresNonLeak(t *testing.T) {
 // temperature is below the 5°C heuristic.
 func TestBuildTirePressureLikelyCauses_ColdWeatherCorrelation(t *testing.T) {
 	t.Parallel()
-	tires := []tools.TirePressureCorner{
+	tires := []maintenance.TirePressureCorner{
 		{Position: "fl", RatePaPerDay: -250},
 		{Position: "fr", RatePaPerDay: -220},
 		{Position: "rl", RatePaPerDay: -240},
 		{Position: "rr", RatePaPerDay: -260},
 	}
-	outside := &tools.TireOutsideTempSummary{ReadingCount: 10, AvgTempC: 1.5, MinTempC: -5, MaxTempC: 8}
+	outside := &maintenance.TireOutsideTempSummary{ReadingCount: 10, AvgTempC: 1.5, MinTempC: -5, MaxTempC: 8}
 	causes := buildTirePressureLikelyCauses(tires, outside)
 	gotColdWeather := false
 	for _, c := range causes {
@@ -435,13 +435,13 @@ func TestBuildTirePressureLikelyCauses_ColdWeatherCorrelation(t *testing.T) {
 // cannot quote a phantom seasonal explanation in summer.
 func TestBuildTirePressureLikelyCauses_NoColdWeatherWhenWarm(t *testing.T) {
 	t.Parallel()
-	tires := []tools.TirePressureCorner{
+	tires := []maintenance.TirePressureCorner{
 		{Position: "fl", RatePaPerDay: -250},
 		{Position: "fr", RatePaPerDay: -220},
 		{Position: "rl", RatePaPerDay: -240},
 		{Position: "rr", RatePaPerDay: -260},
 	}
-	outside := &tools.TireOutsideTempSummary{ReadingCount: 10, AvgTempC: 22, MinTempC: 18, MaxTempC: 28}
+	outside := &maintenance.TireOutsideTempSummary{ReadingCount: 10, AvgTempC: 22, MinTempC: 18, MaxTempC: 28}
 	causes := buildTirePressureLikelyCauses(tires, outside)
 	for _, c := range causes {
 		if strings.Contains(c, "cold-weather correlation") {

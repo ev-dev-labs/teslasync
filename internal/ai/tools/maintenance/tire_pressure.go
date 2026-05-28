@@ -72,12 +72,14 @@
 // quote it; every other PII class — VIN, lat/long, addresses —
 // remains tagged via round-trip markers.
 
-package tools
+package maintenance
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
 // ---------------------------------------------------------------------------
@@ -225,7 +227,7 @@ func (t *queryTirePressureTrend) Description() string {
 
 // InputSchema implements [Tool].
 func (t *queryTirePressureTrend) InputSchema() json.RawMessage {
-	return CachedSchema(queryTirePressureTrendInput{})
+	return tools.CachedSchema(queryTirePressureTrendInput{})
 }
 
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object;
@@ -242,7 +244,7 @@ func (t *queryTirePressureTrend) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryTirePressureTrend) Validate(raw json.RawMessage) (any, error) {
-	return ValidateStruct[queryTirePressureTrendInput](raw)
+	return tools.ValidateStruct[queryTirePressureTrendInput](raw)
 }
 
 // Execute implements [Tool]. Delegates to the
@@ -288,6 +290,6 @@ type TirePressureTrendReasoningSources struct {
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first
 // request.
-func RegisterTirePressureTrendReasoningTools(r *Registry, s TirePressureTrendReasoningSources) {
+func RegisterTirePressureTrendReasoningTools(r *tools.Registry, s TirePressureTrendReasoningSources) {
 	r.Register(&queryTirePressureTrend{source: s.Source})
 }

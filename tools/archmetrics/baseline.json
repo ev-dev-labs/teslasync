@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T06:54:50Z",
+  "generated_at": "2026-05-28T06:58:29Z",
   "go_version": "go1.26.1",
-  "commit_sha": "44072abd41cb94734a026bcf3b08bc97f3f1664b",
+  "commit_sha": "7d1dc0d4edac9001f911c5ba1081fd39ecdd87c8",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -1882,9 +1882,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "go_files": 25,
-      "test_files": 21,
-      "loc": 17201,
+      "go_files": 23,
+      "test_files": 20,
+      "loc": 15829,
       "has_doc_go": true,
       "layer": "platform",
       "imports": [
@@ -1923,8 +1923,6 @@
         "help_test.go",
         "paint_preview.go",
         "paint_preview_test.go",
-        "predictive_maintenance.go",
-        "predictive_maintenance_test.go",
         "redact_regex.go",
         "registry.go",
         "registry_test.go",
@@ -1937,7 +1935,6 @@
         "speed_profile.go",
         "speed_profile_test.go",
         "test_helpers_test.go",
-        "tire_pressure_trend.go",
         "tool.go",
         "trip_planner_llm_agent.go",
         "trip_planner_llm_agent_test.go",
@@ -2063,6 +2060,25 @@
         "doc.go",
         "geofences.go",
         "geofences_test.go"
+      ]
+    },
+    {
+      "path": "internal/ai/tools/maintenance",
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 1401,
+      "has_doc_go": true,
+      "layer": "domain",
+      "imports": [
+        "internal/ai/provider",
+        "internal/ai/rag",
+        "internal/ai/tools"
+      ],
+      "files": [
+        "doc.go",
+        "predictive.go",
+        "predictive_test.go",
+        "tire_pressure.go"
       ]
     },
     {
@@ -2233,7 +2249,7 @@
       "path": "internal/api",
       "go_files": 271,
       "test_files": 163,
-      "loc": 126533,
+      "loc": 126536,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2311,6 +2327,7 @@
         "internal/ai/tools/forecast",
         "internal/ai/tools/lifetime",
         "internal/ai/tools/location",
+        "internal/ai/tools/maintenance",
         "internal/ai/tools/nl",
         "internal/ai/tools/nlq",
         "internal/ai/tools/predict",
@@ -5945,14 +5962,12 @@
       "export_redaction_plan.go",
       "help.go",
       "paint_preview.go",
-      "predictive_maintenance.go",
       "redact_regex.go",
       "registry.go",
       "route_efficiency.go",
       "schema.go",
       "search.go",
       "speed_profile.go",
-      "tire_pressure_trend.go",
       "tool.go",
       "trip_planner_llm_agent.go",
       "validate.go",
@@ -5990,6 +6005,11 @@
       "auto_name.go",
       "doc.go",
       "geofences.go"
+    ],
+    "internal/ai/tools/maintenance": [
+      "doc.go",
+      "predictive.go",
+      "tire_pressure.go"
     ],
     "internal/ai/tools/nl": [
       "doc.go",
@@ -7249,8 +7269,8 @@
       "parent": "internal/ai/tools",
       "owner": "R6",
       "file_count_at_r0": 109,
-      "flat_parent_go_files": 25,
-      "flat_parent_test_files": 21,
+      "flat_parent_go_files": 23,
+      "flat_parent_test_files": 20,
       "planned_subpkgs": 13,
       "existing_subpkgs": [
         "alert",

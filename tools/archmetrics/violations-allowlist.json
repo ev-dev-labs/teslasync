@@ -28,9 +28,9 @@
     },
     {
       "path": "internal/ai/tools",
-      "max_files": 25,
+      "max_files": 23,
       "owner": "Phase R6 (in progress)",
-      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/); 52 after R6.7 (alert/); 49 after R6.8 (forecast/); 46 after R6.9 (predict/); 43 after R6.10 (nl/); 40 after R6.11 (schedule/); 36 after R6.12 (summary/); 33 after R6.13 (nlq/); 31 after R6.14 (trip/); 28 after R6.15 (diagnostic/); 25 after R6.16 (lifetime/ — lifetime_stats_qa + tco_summary + vampire_drain_explanation; long-horizon narrative summary cluster). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites) so sibling subpackages can reuse the memoized JSON-Schema cache through the canonical tools.CachedSchema entrypoint. Detailed cluster notes: see commit messages R6.4-R6.16."
+      "notes": "Was 109 at R0; 58 at R6 start; 57 after R6.4 (feedback/); 56 after R6.5 (safety/); 54 after R6.6 (location/); 52 after R6.7 (alert/); 49 after R6.8 (forecast/); 46 after R6.9 (predict/); 43 after R6.10 (nl/); 40 after R6.11 (schedule/); 36 after R6.12 (summary/); 33 after R6.13 (nlq/); 31 after R6.14 (trip/); 28 after R6.15 (diagnostic/); 25 after R6.16 (lifetime/); 23 after R6.17 (maintenance/ — predictive_maintenance + tire_pressure_trend; 2-file cluster, tire_pressure_trend has no _test.go covered by ai_tire_pressure_trend_handler_test.go in internal/api). Plain-function tool registry; carved by domain so each tool sits with its consumer. R6.4 exported parent-pkg helper cachedSchema → CachedSchema (40+ call sites) so sibling subpackages can reuse the memoized JSON-Schema cache through the canonical tools.CachedSchema entrypoint. Detailed cluster notes: see commit messages R6.4-R6.17."
     },
     {
       "path": "internal/jobs",
