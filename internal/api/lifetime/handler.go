@@ -1,4 +1,4 @@
-package api
+package lifetime
 
 import (
 	"context"
@@ -8,13 +8,14 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/database/achievement"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
 
-// LifetimeHandler serves all-time aggregated statistics with achievements.
+// Handler serves all-time aggregated statistics with achievements.
 //
 // Phase-40 / Prompt 63: in addition to computing achievements, the handler
 // detects locked → unlocked transitions and broadcasts them on the SSE event
@@ -22,10 +23,10 @@ import (
 // unlock timestamps are stored in the `achievement_unlocks` table; the SSE
 // event is fire-and-forget — failure to broadcast does not roll back the
 // stats response.
-type LifetimeHandler struct {
+type Handler struct {
 	db       *database.DB
 	unlocks  achievementUnlockStore
-	eventHub achievementEventBroadcaster
+	eventHub EventBroadcaster
 	now      func() time.Time
 }
 
@@ -37,21 +38,23 @@ type achievementUnlockStore interface {
 	RecordUnlock(ctx context.Context, achievementID string, vehicleID int64, when time.Time) (bool, time.Time, error)
 }
 
-// achievementEventBroadcaster is the slice of *EventHub used to publish
-// `achievement_unlocked` events. Extracted so tests can record the
-// broadcasts without spinning up an SSE hub goroutine. Ctx threads through
-// so the sse.broadcast span chains under the achievement evaluation span.
-type achievementEventBroadcaster interface {
+// EventBroadcaster is the slice of *api.EventHub used to publish
+// `achievement_unlocked` events. Exported so the parent api package can
+// inject its concrete *EventHub (which auto-satisfies this interface) into
+// NewHandler without the subpackage taking a dependency on the SSE hub type.
+// Ctx threads through so the sse.broadcast span chains under the
+// achievement evaluation span.
+type EventBroadcaster interface {
 	BroadcastWithContext(ctx context.Context, eventType string, data interface{})
 }
 
-// NewLifetimeHandler creates a new LifetimeHandler.
+// NewHandler creates a new lifetime stats Handler.
 //
 // `eventHub` is optional — when nil (e.g. in unit tests that do not exercise
 // the celebration path) transitions are still persisted, but no SSE event is
 // broadcast.
-func NewLifetimeHandler(db *database.DB, eventHub *EventHub) *LifetimeHandler {
-	h := &LifetimeHandler{
+func NewHandler(db *database.DB, eventHub EventBroadcaster) *Handler {
+	h := &Handler{
 		db:      db,
 		unlocks: achievement.NewUnlockRepo(db),
 		now:     func() time.Time { return time.Now().UTC() },
@@ -480,12 +483,22 @@ func computeAchievementsList(fieldValues map[string]float64) []Achievement {
 	return achievements
 }
 
+// safeFloat returns 0 if v is NaN or Inf, otherwise v. Local copy of the
+// parent api.safeFloat helper — duplicated here so the subpackage stays
+// free of any dependency on the parent's converters.go.
+func safeFloat(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	return v
+}
+
 var (
 	errLifetimeNilDB      = fmt.Errorf("ComputeLifetimeStats: nil database pool")
 	errLifetimeBadVehicle = fmt.Errorf("ComputeLifetimeStats: vehicle_id must be >= 0")
 )
 
-func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetLifetimeStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Optional vehicle filter
@@ -493,7 +506,7 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	if v := r.URL.Query().Get("vehicle_id"); v != "" {
 		parsed, err := strconv.ParseInt(v, 10, 64)
 		if err != nil || parsed <= 0 {
-			writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 			return
 		}
 		vehicleID = parsed
@@ -504,7 +517,7 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 	stats, err := ComputeLifetimeStats(ctx, h.db, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Msg("lifetime: failed to compute stats")
-		writeError(w, http.StatusInternalServerError, "failed to get lifetime stats")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get lifetime stats")
 		return
 	}
 
@@ -567,7 +580,7 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 		"achievements": stats.Achievements,
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
 // evaluateAchievements computes the achievement list for the given field
@@ -575,7 +588,7 @@ func (h *LifetimeHandler) GetLifetimeStats(w http.ResponseWriter, r *http.Reques
 // `achievement_unlocked` SSE event for each transition. Persistence and
 // broadcast failures are logged but do not surface as errors so the lifetime
 // stats response is never blocked by celebration plumbing.
-func (h *LifetimeHandler) evaluateAchievements(ctx context.Context, vehicleID int64, fieldValues map[string]float64) []Achievement {
+func (h *Handler) evaluateAchievements(ctx context.Context, vehicleID int64, fieldValues map[string]float64) []Achievement {
 	// Phase-40 / Prompt 63: load already-persisted unlocks for this vehicle
 	// scope so we can (a) populate `unlocked_at` from the canonical store and
 	// (b) detect locked → unlocked transitions to broadcast as SSE events.

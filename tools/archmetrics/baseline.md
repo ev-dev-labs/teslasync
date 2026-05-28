@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T20:13:23Z, Go go1.26.1, commit 2b2276d50e609f828d588b74870607c70939d36c_
+_Generated 2026-05-28T20:19:55Z, Go go1.26.1, commit d35875f89b1dfcbbd0a910c9ef49354d0bc20e37_
 
 ## Summary
 
-- Packages: 306
+- Packages: 307
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 377371
+- Total non-blank LOC under cmd/+internal/+tools/: 377408
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-28T20:13:23Z, Go go1.26.1, commit 2b2276d50e609f828d588b74870
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 258 | 156 | 118914 | yes | handler |
+| internal/api | 257 | 155 | 118073 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
 | internal/api/apiparams | 2 | 1 | 358 | yes | handler |
 | internal/api/apitest | 2 | 0 | 137 | yes | handler |
@@ -178,6 +178,7 @@ _Generated 2026-05-28T20:13:23Z, Go go1.26.1, commit 2b2276d50e609f828d588b74870
 | internal/api/backup | 3 | 1 | 530 | yes | handler |
 | internal/api/geofence | 3 | 1 | 846 | yes | handler |
 | internal/api/httpx | 3 | 2 | 360 | yes | handler |
+| internal/api/lifetime | 2 | 1 | 878 | yes | handler |
 | internal/api/middleware | 4 | 2 | 763 | yes | handler |
 | internal/api/search | 2 | 1 | 1157 | yes | handler |
 | internal/api/search/searchtest | 2 | 0 | 132 | yes | platform |
@@ -362,7 +363,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 258 / 156 | 59 | 2 | 57 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 257 / 155 | 59 | 3 | 56 |
 
 ### `internal/models` detail
 
@@ -470,6 +471,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 > 55 subpkgs + 4 shared infra from R1 audit. Largest cluster. Extracted in 5 waves (R2a-R2e). R2.0 prep extracts httpx/apiparams/apitest/middleware first. ai/ has 14 sub-subpkgs (see cluster-map.md).
 
 **Existing subpackages on disk:**
+- `internal/api/lifetime`
 - `internal/api/search`
 - `internal/api/vehicle`
 
@@ -482,7 +484,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/observability`
 - `internal/api/analytics`
 - `internal/api/anomaly`
-- `internal/api/lifetime`
 - `internal/api/mileage`
 - `internal/api/sleep`
 - `internal/api/regen`

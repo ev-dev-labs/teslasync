@@ -61,6 +61,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
+	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -326,7 +327,7 @@ func (a *AILifetimeStatsSource) LifetimeStats(ctx context.Context, vehicleID int
 		return nil, errors.New("api ai lifetime-stats-qa: vehicle_id must be > 0")
 	}
 
-	stats, err := ComputeLifetimeStats(ctx, a.db, vehicleID)
+	stats, err := apilifetime.ComputeLifetimeStats(ctx, a.db, vehicleID)
 	if err != nil {
 		return nil, fmt.Errorf("api ai lifetime-stats-qa: ComputeLifetimeStats: %w", err)
 	}

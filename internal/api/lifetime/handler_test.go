@@ -1,4 +1,4 @@
-package api
+package lifetime
 
 import (
 	"context"
@@ -89,7 +89,7 @@ func TestEvaluateAchievements_FirstUnlock_PersistsAndBroadcasts(t *testing.T) {
 	store := &fakeAchievementUnlockStore{}
 	hub := &recordingBroadcaster{}
 	now := time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC)
-	h := &LifetimeHandler{
+	h := &Handler{
 		unlocks:  store,
 		eventHub: hub,
 		now:      func() time.Time { return now },
@@ -169,7 +169,7 @@ func TestEvaluateAchievements_AlreadyUnlocked_NoBroadcast(t *testing.T) {
 		},
 	}
 	hub := &recordingBroadcaster{}
-	h := &LifetimeHandler{
+	h := &Handler{
 		unlocks:  store,
 		eventHub: hub,
 		now:      func() time.Time { return time.Date(2026, 5, 1, 12, 0, 0, 0, time.UTC) },
@@ -218,7 +218,7 @@ func TestEvaluateAchievements_PersistError_DoesNotBroadcast(t *testing.T) {
 		insertErr: errors.New("simulated DB write failure"),
 	}
 	hub := &recordingBroadcaster{}
-	h := &LifetimeHandler{
+	h := &Handler{
 		unlocks:  store,
 		eventHub: hub,
 		now:      func() time.Time { return time.Now().UTC() },
@@ -241,7 +241,7 @@ func TestEvaluateAchievements_ListError_FallsBackToLegacyBehaviour(t *testing.T)
 	store := &fakeAchievementUnlockStore{
 		listErr: errors.New("transient read failure"),
 	}
-	h := &LifetimeHandler{
+	h := &Handler{
 		unlocks:  store,
 		eventHub: &recordingBroadcaster{},
 		now:      func() time.Time { return time.Now().UTC() },

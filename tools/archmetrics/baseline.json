@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T20:13:21Z",
+  "generated_at": "2026-05-28T20:19:53Z",
   "go_version": "go1.26.1",
-  "commit_sha": "2b2276d50e609f828d588b74870607c70939d36c",
+  "commit_sha": "d35875f89b1dfcbbd0a910c9ef49354d0bc20e37",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 258,
-      "test_files": 156,
-      "loc": 118914,
+      "go_files": 257,
+      "test_files": 155,
+      "loc": 118073,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2625,6 +2625,7 @@
         "internal/api/backup",
         "internal/api/geofence",
         "internal/api/httpx",
+        "internal/api/lifetime",
         "internal/api/middleware",
         "internal/api/search",
         "internal/api/search/searchtest",
@@ -2654,7 +2655,6 @@
         "internal/config",
         "internal/crypto",
         "internal/database",
-        "internal/database/achievement",
         "internal/database/admin",
         "internal/database/ai",
         "internal/database/alert",
@@ -3012,8 +3012,6 @@
         "import_handler.go",
         "ingest_xray_handler.go",
         "ingest_xray_handler_test.go",
-        "lifetime_handler.go",
-        "lifetime_handler_test.go",
         "location_snapshot_handler.go",
         "location_snapshot_handler_test.go",
         "maintenance_handler.go",
@@ -3287,6 +3285,24 @@
         "json_test.go",
         "tesla.go",
         "tesla_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/lifetime",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 878,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/achievement"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
       ]
     },
     {
@@ -7345,7 +7361,6 @@
       "impersonate_handler.go",
       "import_handler.go",
       "ingest_xray_handler.go",
-      "lifetime_handler.go",
       "location_snapshot_handler.go",
       "maintenance_handler.go",
       "media_handler.go",
@@ -7474,6 +7489,10 @@
       "doc.go",
       "json.go",
       "tesla.go"
+    ],
+    "internal/api/lifetime": [
+      "doc.go",
+      "handler.go"
     ],
     "internal/api/middleware": [
       "doc.go",
@@ -8628,10 +8647,11 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 258,
-      "flat_parent_test_files": 156,
+      "flat_parent_go_files": 257,
+      "flat_parent_test_files": 155,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
+        "lifetime",
         "search",
         "vehicle"
       ],
@@ -8644,7 +8664,6 @@
         "observability",
         "analytics",
         "anomaly",
-        "lifetime",
         "mileage",
         "sleep",
         "regen",

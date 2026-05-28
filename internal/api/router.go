@@ -19,6 +19,7 @@ import (
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
+	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
 	apivehconfig "github.com/ev-dev-labs/teslasync/internal/api/vehicleconfig"
@@ -1040,7 +1041,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		autotripnaming.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	lifetimeHandler := NewLifetimeHandler(db, eventHub)
+	lifetimeHandler := apilifetime.NewHandler(db, eventHub)
 	yearReviewHandler := NewYearReviewHandler(db)
 	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
 	energyFlowHandler := NewEnergyFlowHandler(db, stateReader, liveStateReader)
