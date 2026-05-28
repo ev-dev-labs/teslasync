@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-28T05:29:29Z, Go go1.26.1, commit cc57d4f000585ac6f0cd4becf580fe4f7f088f61_
+_Generated 2026-05-28T05:31:56Z, Go go1.26.1, commit f022233e5e5bbef1d1e68f8dcd20a4370196d585_
 
 ## Summary
 
-- Packages: 231
+- Packages: 232
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 372513
+- Total non-blank LOC under cmd/+internal/+tools/: 372554
 
 ## cmd/* main.go LOC
 
@@ -197,9 +197,10 @@ _Generated 2026-05-28T05:29:29Z, Go go1.26.1, commit cc57d4f000585ac6f0cd4becf58
 | internal/imaging | 2 | 1 | 510 | yes | platform |
 | internal/integrations | 2 | 0 | 134 | yes | platform |
 | internal/integrations/homeassistant | 3 | 1 | 515 | yes | adapter |
-| internal/jobs | 8 | 7 | 2088 | yes | platform |
+| internal/jobs | 1 | 0 | 21 | yes | platform |
 | internal/jobs/digests | 3 | 2 | 579 | yes |  |
 | internal/jobs/embeddings | 2 | 1 | 262 | yes | platform |
+| internal/jobs/indexers | 8 | 7 | 2108 | yes |  |
 | internal/jobs/triage | 3 | 2 | 621 | yes |  |
 | internal/metrics | 6 | 2 | 1073 | yes | platform |
 | internal/ml/anomaly | 3 | 1 | 746 | yes | platform |
@@ -283,7 +284,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | Hot-spot | Owner | Files@R0 | Flat parent now (.go / _test.go) | Planned | Existing | Missing |
 |---|---|---:|---|---:|---:|---:|
 | `internal/models` | R5 | 36 | 18 / 1 | 19 | 19 | 0 |
-| `internal/jobs` | R6 | 23 | 8 / 7 | 4 | 3 | 1 |
+| `internal/jobs` | R6 | 23 | 1 / 0 | 4 | 4 | 0 |
 | `internal/ai/tools` | R6 | 109 | 58 / 51 | 13 | 0 | 13 |
 | `internal/database` | R4 | 143 | 108 / 35 | 22 | 0 | 22 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
@@ -320,11 +321,9 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 
 **Existing subpackages on disk:**
 - `internal/jobs/embeddings`
+- `internal/jobs/indexers`
 - `internal/jobs/triage`
 - `internal/jobs/digests`
-
-**Planned but not yet on disk:**
-- `internal/jobs/indexers`
 
 ### `internal/ai/tools` detail
 

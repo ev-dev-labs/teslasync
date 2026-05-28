@@ -34,9 +34,9 @@
     },
     {
       "path": "internal/jobs",
-      "max_files": 8,
-      "owner": "Phase R6",
-      "notes": "Was 23 at R0; 12 after R0.5 (embeddings/); 10 after R6.1 (triage/); 8 after R6.2 (digests/ — weekly + yir). Remaining files split into indexers/ subpackage."
+      "max_files": 1,
+      "owner": "Phase R6 (COMPLETE for jobs)",
+      "notes": "Was 23 at R0; 12 after R0.5 (embeddings/); 10 after R6.1 (triage/); 8 after R6.2 (digests/); 1 after R6.3 (indexers/ — last cluster). Parent now holds only doc.go per ADR-011 §5. All 4 planned subpkgs (embeddings, triage, digests, indexers) exist on disk."
     },
     {
       "path": "internal/models",

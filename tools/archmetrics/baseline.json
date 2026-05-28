@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-28T05:29:27Z",
+  "generated_at": "2026-05-28T05:31:26Z",
   "go_version": "go1.26.1",
-  "commit_sha": "cc57d4f000585ac6f0cd4becf580fe4f7f088f61",
+  "commit_sha": "f022233e5e5bbef1d1e68f8dcd20a4370196d585",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -3869,30 +3869,13 @@
     },
     {
       "path": "internal/jobs",
-      "go_files": 8,
-      "test_files": 7,
-      "loc": 2088,
+      "go_files": 1,
+      "test_files": 0,
+      "loc": 21,
       "has_doc_go": true,
       "layer": "platform",
-      "imports": [
-        "internal/ai/rag",
-        "internal/database"
-      ],
+      "imports": null,
       "files": [
-        "ai_charge_curve_indexer.go",
-        "ai_charge_curve_indexer_test.go",
-        "ai_docs_indexer.go",
-        "ai_docs_indexer_test.go",
-        "ai_drive_indexer.go",
-        "ai_drive_indexer_test.go",
-        "ai_idle_drain_indexer.go",
-        "ai_idle_drain_indexer_test.go",
-        "ai_log_trace_indexer.go",
-        "ai_log_trace_indexer_test.go",
-        "ai_route_indexer.go",
-        "ai_route_indexer_test.go",
-        "ai_update_notes_indexer.go",
-        "ai_update_notes_indexer_test.go",
         "doc.go"
       ]
     },
@@ -3929,6 +3912,34 @@
         "doc.go",
         "ttl.go",
         "ttl_test.go"
+      ]
+    },
+    {
+      "path": "internal/jobs/indexers",
+      "go_files": 8,
+      "test_files": 7,
+      "loc": 2108,
+      "has_doc_go": true,
+      "imports": [
+        "internal/ai/rag",
+        "internal/database"
+      ],
+      "files": [
+        "charge_curve.go",
+        "charge_curve_test.go",
+        "doc.go",
+        "docs.go",
+        "docs_test.go",
+        "drive.go",
+        "drive_test.go",
+        "idle_drain.go",
+        "idle_drain_test.go",
+        "log_trace.go",
+        "log_trace_test.go",
+        "route.go",
+        "route_test.go",
+        "update_notes.go",
+        "update_notes_test.go"
       ]
     },
     {
@@ -6489,13 +6500,6 @@
       "doc.go"
     ],
     "internal/jobs": [
-      "ai_charge_curve_indexer.go",
-      "ai_docs_indexer.go",
-      "ai_drive_indexer.go",
-      "ai_idle_drain_indexer.go",
-      "ai_log_trace_indexer.go",
-      "ai_route_indexer.go",
-      "ai_update_notes_indexer.go",
       "doc.go"
     ],
     "internal/jobs/digests": [
@@ -6506,6 +6510,16 @@
     "internal/jobs/embeddings": [
       "doc.go",
       "ttl.go"
+    ],
+    "internal/jobs/indexers": [
+      "charge_curve.go",
+      "doc.go",
+      "docs.go",
+      "drive.go",
+      "idle_drain.go",
+      "log_trace.go",
+      "route.go",
+      "update_notes.go"
     ],
     "internal/jobs/triage": [
       "alert_inbox.go",
@@ -6970,17 +6984,16 @@
       "parent": "internal/jobs",
       "owner": "R6",
       "file_count_at_r0": 23,
-      "flat_parent_go_files": 8,
-      "flat_parent_test_files": 7,
+      "flat_parent_go_files": 1,
+      "flat_parent_test_files": 0,
       "planned_subpkgs": 4,
       "existing_subpkgs": [
         "embeddings",
+        "indexers",
         "triage",
         "digests"
       ],
-      "missing_subpkgs": [
-        "indexers"
-      ],
+      "missing_subpkgs": null,
       "notes": "4 subpkgs: embeddings (done R0.5), indexers (7 ai_*_indexer + tests), triage (alert+feedback), digests (weekly+yir)."
     },
     {

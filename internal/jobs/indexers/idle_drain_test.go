@@ -1,11 +1,11 @@
 // Phase-50 / 0030 — C5 Vampire-drain explanation.
 //
-// Tests for RunAIIdleDrainIndexer. The off-mode + per-feature
+// Tests for RunIdleDrain. The off-mode + per-feature
 // gate tests are the slice's load-bearing ADR-015 §I12 evidence —
 // they prove the cron is fail-closed even when the scheduler keeps
 // ticking after an admin disables AI mid-day.
 
-package jobs
+package indexers
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 )
 
 // fakeIdleDrainIndexerSettings is a tiny in-memory implementation
-// of AIIdleDrainIndexerSettingsReader for the unit tests. The
+// of IdleDrainSettingsReader for the unit tests. The
 // zero value returns ai_mode=” (which is NOT 'off' but ALSO not
 // 'cloud'/'local' — the function treats anything other than 'off'
 // as on, then re-checks the per-feature toggle).
@@ -51,7 +51,7 @@ func TestRunAIIdleDrainIndexer_OffMode_NoFanout(t *testing.T) {
 		// Toggle on; mode trumps it.
 		enabled: map[string]bool{"vampire-drain-explanation": true},
 	}
-	res, err := RunAIIdleDrainIndexer(context.Background(), &database.DB{}, settings)
+	res, err := RunIdleDrain(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("off mode: unexpected err %v", err)
 	}
@@ -74,7 +74,7 @@ func TestRunAIIdleDrainIndexer_FeatureToggleOff_NoFanout(t *testing.T) {
 		mode:    "cloud",
 		enabled: map[string]bool{"vampire-drain-explanation": false},
 	}
-	res, err := RunAIIdleDrainIndexer(context.Background(), &database.DB{}, settings)
+	res, err := RunIdleDrain(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("toggle off: unexpected err %v", err)
 	}
@@ -94,7 +94,7 @@ func TestRunAIIdleDrainIndexer_OnMode_NoOp(t *testing.T) {
 		mode:    "cloud",
 		enabled: map[string]bool{"vampire-drain-explanation": true},
 	}
-	res, err := RunAIIdleDrainIndexer(context.Background(), &database.DB{}, settings)
+	res, err := RunIdleDrain(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("on mode: unexpected err %v", err)
 	}
@@ -114,7 +114,7 @@ func TestRunAIIdleDrainIndexer_SettingsErrorIsFailClosed(t *testing.T) {
 	t.Parallel()
 	t.Run("ai_mode read error", func(t *testing.T) {
 		settings := fakeIdleDrainIndexerSettings{modeErr: errors.New("db unreachable")}
-		res, err := RunAIIdleDrainIndexer(context.Background(), &database.DB{}, settings)
+		res, err := RunIdleDrain(context.Background(), &database.DB{}, settings)
 		if err != nil {
 			t.Fatalf("settings ai_mode error: want nil err (fail-closed), got %v", err)
 		}
@@ -127,7 +127,7 @@ func TestRunAIIdleDrainIndexer_SettingsErrorIsFailClosed(t *testing.T) {
 			mode:       "cloud",
 			enabledErr: errors.New("settings table degraded"),
 		}
-		res, err := RunAIIdleDrainIndexer(context.Background(), &database.DB{}, settings)
+		res, err := RunIdleDrain(context.Background(), &database.DB{}, settings)
 		if err != nil {
 			t.Fatalf("toggle read error: want nil err (fail-closed), got %v", err)
 		}
@@ -143,10 +143,10 @@ func TestRunAIIdleDrainIndexer_SettingsErrorIsFailClosed(t *testing.T) {
 // returns it directly instead of pretending to skip.
 func TestRunAIIdleDrainIndexer_NilDeps(t *testing.T) {
 	t.Parallel()
-	if _, err := RunAIIdleDrainIndexer(context.Background(), nil, fakeIdleDrainIndexerSettings{}); err == nil {
+	if _, err := RunIdleDrain(context.Background(), nil, fakeIdleDrainIndexerSettings{}); err == nil {
 		t.Error("nil db: want error")
 	}
-	if _, err := RunAIIdleDrainIndexer(context.Background(), &database.DB{}, nil); err == nil {
+	if _, err := RunIdleDrain(context.Background(), &database.DB{}, nil); err == nil {
 		t.Error("nil settings: want error")
 	}
 }

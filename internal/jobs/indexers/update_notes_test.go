@@ -1,11 +1,11 @@
 // Phase-50 / 0051 — M3 software-update-changelog-summarizer.
 //
-// Tests for RunAIUpdateNotesIndexer. The off-mode + per-feature
+// Tests for RunUpdateNotes. The off-mode + per-feature
 // gate tests are the slice's load-bearing ADR-015 §I12 evidence —
 // they prove the cron is fail-closed even when the scheduler keeps
 // ticking after an admin disables AI mid-day.
 
-package jobs
+package indexers
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 )
 
 // fakeUpdateNotesIndexerSettings is a tiny in-memory implementation
-// of AIUpdateNotesIndexerSettingsReader for the unit tests. The
+// of UpdateNotesSettingsReader for the unit tests. The
 // zero value returns ai_mode=” (which is NOT 'off' but ALSO not
 // 'cloud'/'local' — the function treats anything other than 'off'
 // as on, then re-checks the per-feature toggle).
@@ -51,7 +51,7 @@ func TestRunAIUpdateNotesIndexer_OffMode_NoFanout(t *testing.T) {
 		// Toggle on; mode trumps it.
 		enabled: map[string]bool{"software-update-changelog-summarizer": true},
 	}
-	res, err := RunAIUpdateNotesIndexer(context.Background(), &database.DB{}, settings)
+	res, err := RunUpdateNotes(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("off mode: unexpected err %v", err)
 	}
@@ -75,7 +75,7 @@ func TestRunAIUpdateNotesIndexer_FeatureToggleOff_NoFanout(t *testing.T) {
 		mode:    "cloud",
 		enabled: map[string]bool{"software-update-changelog-summarizer": false},
 	}
-	res, err := RunAIUpdateNotesIndexer(context.Background(), &database.DB{}, settings)
+	res, err := RunUpdateNotes(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("toggle off: unexpected err %v", err)
 	}
@@ -95,7 +95,7 @@ func TestRunAIUpdateNotesIndexer_OnMode_NoOp(t *testing.T) {
 		mode:    "cloud",
 		enabled: map[string]bool{"software-update-changelog-summarizer": true},
 	}
-	res, err := RunAIUpdateNotesIndexer(context.Background(), &database.DB{}, settings)
+	res, err := RunUpdateNotes(context.Background(), &database.DB{}, settings)
 	if err != nil {
 		t.Fatalf("on mode: unexpected err %v", err)
 	}
@@ -117,7 +117,7 @@ func TestRunAIUpdateNotesIndexer_SettingsErrorIsFailClosed(t *testing.T) {
 	t.Parallel()
 	t.Run("ai_mode read error", func(t *testing.T) {
 		settings := fakeUpdateNotesIndexerSettings{modeErr: errors.New("db unreachable")}
-		res, err := RunAIUpdateNotesIndexer(context.Background(), &database.DB{}, settings)
+		res, err := RunUpdateNotes(context.Background(), &database.DB{}, settings)
 		if err != nil {
 			t.Fatalf("settings ai_mode error: want nil err (fail-closed), got %v", err)
 		}
@@ -130,7 +130,7 @@ func TestRunAIUpdateNotesIndexer_SettingsErrorIsFailClosed(t *testing.T) {
 			mode:       "cloud",
 			enabledErr: errors.New("settings table degraded"),
 		}
-		res, err := RunAIUpdateNotesIndexer(context.Background(), &database.DB{}, settings)
+		res, err := RunUpdateNotes(context.Background(), &database.DB{}, settings)
 		if err != nil {
 			t.Fatalf("toggle read error: want nil err (fail-closed), got %v", err)
 		}
@@ -146,10 +146,10 @@ func TestRunAIUpdateNotesIndexer_SettingsErrorIsFailClosed(t *testing.T) {
 // returns it directly instead of pretending to skip.
 func TestRunAIUpdateNotesIndexer_NilDeps(t *testing.T) {
 	t.Parallel()
-	if _, err := RunAIUpdateNotesIndexer(context.Background(), nil, fakeUpdateNotesIndexerSettings{}); err == nil {
+	if _, err := RunUpdateNotes(context.Background(), nil, fakeUpdateNotesIndexerSettings{}); err == nil {
 		t.Error("nil db: want error")
 	}
-	if _, err := RunAIUpdateNotesIndexer(context.Background(), &database.DB{}, nil); err == nil {
+	if _, err := RunUpdateNotes(context.Background(), &database.DB{}, nil); err == nil {
 		t.Error("nil settings: want error")
 	}
 }
