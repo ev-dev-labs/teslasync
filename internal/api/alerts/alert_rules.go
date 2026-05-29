@@ -1,4 +1,4 @@
-package api
+package alerts
 
 import (
 	"bytes"
@@ -870,6 +870,11 @@ func alertSeverityRank(severity string) int {
 	default:
 		return 0
 	}
+}
+
+// ValidateAlertRule applies the canonical alert-rule validation used by HTTP and AI draft flows.
+func ValidateAlertRule(rule *alertmodel.AlertRule) error {
+	return validateAlertRule(rule)
 }
 
 func validateAlertRule(rule *alertmodel.AlertRule) error {

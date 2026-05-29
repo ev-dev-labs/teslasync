@@ -1,9 +1,10 @@
-package api
+package alerts
 
 import (
 	"fmt"
 	"net/http"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 	"github.com/rs/zerolog/log"
 )
 
@@ -37,9 +38,9 @@ func (h *AlertHandler) bulkSetRulesEnabled(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	ids, err := decodeBulkIDsRequest(r)
+	ids, err := apibulk.DecodeIDsRequest(r)
 	if err != nil {
-		writeBulkBadRequest(w, err)
+		apibulk.WriteBadRequest(w, err)
 		return
 	}
 
@@ -49,7 +50,7 @@ func (h *AlertHandler) bulkSetRulesEnabled(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusInternalServerError, "failed to validate alert rules for bulk update")
 		return
 	}
-	failed := computeMissingIDs(ids, existing)
+	failed := apibulk.ComputeMissingIDs(ids, existing)
 
 	updated, err := h.bulkRuleRepo.BulkSetEnabled(r.Context(), existing, enabled)
 	if err != nil {
@@ -67,7 +68,7 @@ func (h *AlertHandler) bulkSetRulesEnabled(w http.ResponseWriter, r *http.Reques
 			fmt.Sprintf("%s count=%d failed=%d", action, updated, len(failed)))
 	}
 
-	writeJSON(w, http.StatusOK, bulkOperationResult{
+	writeJSON(w, http.StatusOK, apibulk.OperationResult{
 		Updated: &updated,
 		Failed:  failed,
 	})
