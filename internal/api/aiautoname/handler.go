@@ -1,4 +1,4 @@
-package api
+package aiautoname
 
 // Phase-50 / 0037 — G1 Auto-name unnamed locations.
 //
@@ -67,23 +67,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// aiAutoNameUnnamedLocationsMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most draft-then-validate-then-answer
 // (with optional retries) — a hard ceiling of 6 is generous. Mirrors
 // aiAutoTripNamingMaxIterations.
-const aiAutoNameUnnamedLocationsMaxIterations = 6
+const maxIterations = 6
 
-// AIAutoNameUnnamedLocationsHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/locations/{locationID}/name/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIAutoNameUnnamedLocationsHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -91,7 +92,7 @@ type AIAutoNameUnnamedLocationsHandler struct {
 	maxIters   int
 }
 
-// NewAIAutoNameUnnamedLocationsHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -104,30 +105,30 @@ type AIAutoNameUnnamedLocationsHandler struct {
 //
 // strat:      the auto-name-unnamed-locations Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIAutoNameUnnamedLocationsHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIAutoNameUnnamedLocationsHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIAutoNameUnnamedLocationsHandler: nil provider.Registry")
+		panic("aiautoname: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIAutoNameUnnamedLocationsHandler: nil tools.Registry")
+		panic("aiautoname: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIAutoNameUnnamedLocationsHandler: nil strategy.Strategy")
+		panic("aiautoname: NewHandler: nil strategy.Strategy")
 	}
-	return &AIAutoNameUnnamedLocationsHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiAutoNameUnnamedLocationsMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseAutoNameUnnamedLocationsURL extracts and validates the
+// parseURL extracts and validates the
 // locationID URL parameter. Pulled out so the off-mode test and the
 // validator-only test can exercise the same parsing without
 // constructing a full handler with stub deps. The function writes a
@@ -136,22 +137,30 @@ func NewAIAutoNameUnnamedLocationsHandler(
 //
 // locationID MUST be a positive integer; zero or negative values are
 // rejected with a 400.
-func parseAutoNameUnnamedLocationsURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
+func parseURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "locationID")
 	if raw == "" {
-		writeError(w, http.StatusBadRequest, "locationID URL parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "locationID URL parameter is required")
 		return 0, false
 	}
 	id, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("locationID must be a positive integer (got %q)", raw))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("locationID must be a positive integer (got %q)", raw))
 		return 0, false
 	}
 	if id <= 0 {
-		writeError(w, http.StatusBadRequest, "locationID must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "locationID must be > 0")
 		return 0, false
 	}
 	return id, true
+}
+
+// denyAllConfirm is the dispatcher's user-confirm hook. Auto-name unnamed
+// locations declares only propose-only tools, so this should never be called;
+// if a future edit accidentally adds a mutating tool, fail closed instead of
+// mutating fleet state.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
 // ServeHTTP implements [http.Handler]. The locationID is parsed
@@ -159,10 +168,10 @@ func parseAutoNameUnnamedLocationsURL(w http.ResponseWriter, r *http.Request) (i
 // closed via the dispatcher's deferred WriteDone. Every error path
 // either writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIAutoNameUnnamedLocationsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate URL parameters. Body is intentionally
 	// ignored; this endpoint takes its only input from the URL.
-	locationID, ok := parseAutoNameUnnamedLocationsURL(w, r)
+	locationID, ok := parseURL(w, r)
 	if !ok {
 		return
 	}
@@ -173,7 +182,7 @@ func (h *AIAutoNameUnnamedLocationsHandler) ServeHTTP(w http.ResponseWriter, r *
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), autonameunnamedlocations.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai auto-name-unnamed-locations: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -186,7 +195,7 @@ func (h *AIAutoNameUnnamedLocationsHandler) ServeHTTP(w http.ResponseWriter, r *
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(autonameunnamedlocations.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai auto-name-unnamed-locations: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -229,9 +238,9 @@ func (h *AIAutoNameUnnamedLocationsHandler) ServeHTTP(w http.ResponseWriter, r *
 	}
 }
 
-// Compile-time assertion: AIAutoNameUnnamedLocationsHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AIAutoNameUnnamedLocationsHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interfaces declared by
@@ -246,7 +255,7 @@ var _ http.Handler = (*AIAutoNameUnnamedLocationsHandler)(nil)
 // is byte-equivalent. Pinned by tests on both sides.
 const autoNameUnnamedLocationsMaxNameLen = 200
 
-// AILocationNameValidator is the production
+// LocationNameValidator is the production
 // location.LocationNameValidator. It enforces the same trimming +
 // length + control-character rules that a future canonical save
 // handler will enforce, so a draft accepted by the AI tool is
@@ -256,11 +265,11 @@ const autoNameUnnamedLocationsMaxNameLen = 200
 // function. The receiver is kept so the production wiring is a
 // noun ("the validator") in router.go and tests can substitute a
 // fake by satisfying the location.LocationNameValidator interface.
-type AILocationNameValidator struct{}
+type LocationNameValidator struct{}
 
-// NewAILocationNameValidator constructs the validator.
-func NewAILocationNameValidator() *AILocationNameValidator {
-	return &AILocationNameValidator{}
+// NewLocationNameValidator constructs the validator.
+func NewLocationNameValidator() *LocationNameValidator {
+	return &LocationNameValidator{}
 }
 
 // ValidateLocationName implements location.LocationNameValidator.
@@ -274,7 +283,7 @@ func NewAILocationNameValidator() *AILocationNameValidator {
 // is shape-only — but kept on the interface so a future per-location
 // rule (e.g. "name must not equal another geofence's name on the
 // same vehicle") can be added without rewiring callers.
-func (v *AILocationNameValidator) ValidateLocationName(_ *geomodel.VisitedLocation, proposed string) error {
+func (v *LocationNameValidator) ValidateLocationName(_ *geomodel.VisitedLocation, proposed string) error {
 	if proposed == "" {
 		return errors.New("location name must not be empty")
 	}
@@ -297,7 +306,7 @@ func (v *AILocationNameValidator) ValidateLocationName(_ *geomodel.VisitedLocati
 	return nil
 }
 
-// AILocationSource is the production location.LocationSource. It
+// LocationSource is the production location.LocationSource. It
 // composes the canonical drives table read path so the AI projection
 // is grounded in the SAME aggregate the deterministic
 // /api/v1/locations baseline serves. No write path is invoked.
@@ -317,18 +326,18 @@ func (v *AILocationNameValidator) ValidateLocationName(_ *geomodel.VisitedLocati
 //
 // The struct holds a *database.DB for the parameterised query; the
 // constructor panics on a nil so a wiring bug surfaces at boot.
-type AILocationSource struct {
+type LocationSource struct {
 	db *database.DB
 }
 
-// NewAILocationSource constructs the adapter. Panics on a nil DB so
+// NewLocationSource constructs the adapter. Panics on a nil DB so
 // a wiring mistake surfaces at boot rather than as a nil-deref on
 // first AI request.
-func NewAILocationSource(db *database.DB) *AILocationSource {
+func NewLocationSource(db *database.DB) *LocationSource {
 	if db == nil {
-		panic("api: NewAILocationSource: nil *database.DB")
+		panic("aiautoname: NewLocationSource: nil *database.DB")
 	}
-	return &AILocationSource{db: db}
+	return &LocationSource{db: db}
 }
 
 // LoadVisitedLocation implements location.LocationSource. Returns
@@ -340,7 +349,7 @@ func NewAILocationSource(db *database.DB) *AILocationSource {
 //
 // The error text is suitable for surfacing to the LLM (it'll be
 // relayed back as a tool error reply).
-func (a *AILocationSource) LoadVisitedLocation(ctx context.Context, locationID int64) (*geomodel.VisitedLocation, error) {
+func (a *LocationSource) LoadVisitedLocation(ctx context.Context, locationID int64) (*geomodel.VisitedLocation, error) {
 	const q = `WITH anchor AS (
 			SELECT vehicle_id, end_place
 			FROM drives
@@ -386,6 +395,6 @@ func (a *AILocationSource) LoadVisitedLocation(ctx context.Context, locationID i
 
 // Compile-time assertions: the adapters satisfy the tool ports.
 var (
-	_ location.LocationSource        = (*AILocationSource)(nil)
-	_ location.LocationNameValidator = (*AILocationNameValidator)(nil)
+	_ location.LocationSource        = (*LocationSource)(nil)
+	_ location.LocationNameValidator = (*LocationNameValidator)(nil)
 )

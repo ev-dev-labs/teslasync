@@ -21,6 +21,7 @@ import (
 	aialerttune "github.com/ev-dev-labs/teslasync/internal/api/aialerttune"
 	aianomaly "github.com/ev-dev-labs/teslasync/internal/api/aianomaly"
 	aiautomation "github.com/ev-dev-labs/teslasync/internal/api/aiautomation"
+	aiautoname "github.com/ev-dev-labs/teslasync/internal/api/aiautoname"
 	aiautotripname "github.com/ev-dev-labs/teslasync/internal/api/aiautotripname"
 	aibatthealth "github.com/ev-dev-labs/teslasync/internal/api/aibatthealth"
 	aichargcurve "github.com/ev-dev-labs/teslasync/internal/api/aichargcurve"
@@ -1776,24 +1777,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// `draft_location_name` + `validate_location_name` are
 	// registered on the process-wide tool registry so the
 	// dispatcher can resolve the strategy's allowedTools at
-	// boot. AILocationSource derives the visited-location
+	// boot. aiautoname.LocationSource derives the visited-location
 	// aggregate from the SI canonical drives table (the legacy
 	// visited_locations table was dropped in Phase-42 / Prompt
 	// 0076; visited-location aggregates are derived on demand)
 	// so the LLM reads the SAME aggregate the canonical
-	// VisitedLocationRepo emits. AILocationNameValidator
+	// VisitedLocationRepo emits. aiautoname.LocationNameValidator
 	// mirrors the byte-equivalent shape rules the canonical
 	// save handler will enforce (1-200 chars, no control chars,
 	// no leading/trailing whitespace).
 	location.RegisterAutoNameUnnamedLocationsTools(aiToolRegistry, location.AutoNameUnnamedLocationsSources{
-		Locations: NewAILocationSource(db),
-		Validator: NewAILocationNameValidator(),
+		Locations: aiautoname.NewLocationSource(db),
+		Validator: aiautoname.NewLocationNameValidator(),
 	})
 	// auto-name-unnamed-locations handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiAutoNameUnnamedLocationsHandler := NewAIAutoNameUnnamedLocationsHandler(
+	aiAutoNameUnnamedLocationsHandler := aiautoname.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		autonameunnamedlocations.New(),
@@ -1805,7 +1806,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// `validate_geofence` are registered on the process-wide tool
 	// registry so the dispatcher can resolve the strategy's
 	// allowedTools at boot. We REUSE the slice-0037
-	// *AILocationSource adapter — both strategies grok the same
+	// aiautoname.LocationSource adapter — both strategies grok the same
 	// *geomodel.VisitedLocation aggregate (drives-table grouped on
 	// vehicle_id + end_place), so duplicating the adapter would
 	// be a wiring smell rather than an actual decoupling.
@@ -1814,7 +1815,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// validateGeofence enforces (1-200 chars, no control chars,
 	// no leading/trailing whitespace, radius 50-1000 meters).
 	location.RegisterSuggestNewGeofencesTools(aiToolRegistry, location.SuggestNewGeofencesSources{
-		Locations: NewAILocationSource(db),
+		Locations: aiautoname.NewLocationSource(db),
 		Validator: NewAISuggestGeofenceValidator(),
 	})
 	// suggest-new-geofences handler. One per process; stateless

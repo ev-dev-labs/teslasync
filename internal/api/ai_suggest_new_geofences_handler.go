@@ -290,11 +290,11 @@ var _ http.Handler = (*AISuggestNewGeofencesHandler)(nil)
 // Production wiring for the tool interfaces declared by
 // internal/ai/tools/suggest_new_geofences.go. Kept in the same file
 // as the handler so the wiring intent is local to the slice;
-// mirrors the auto-name-unnamed-locations AILocationNameValidator
+// mirrors the auto-name-unnamed-locations LocationNameValidator
 // pattern.
 //
 // The LocationSource interface is satisfied by the existing
-// *api.AILocationSource adapter wired by slice 0037 — the same
+// *aiautoname.LocationSource adapter wired by slice 0037 — the same
 // drives-table read produces the same *geomodel.VisitedLocation
 // aggregate this slice consumes. We do NOT add a duplicate adapter
 // here; router.go reuses the slice-0037 instance for both

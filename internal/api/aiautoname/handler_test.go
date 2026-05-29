@@ -14,7 +14,7 @@
 // (`go run ./cmd/ai-eval -feature auto-name-unnamed-locations`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aiautoname
 
 import (
 	"context"
@@ -29,6 +29,25 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	if s.on == nil {
+		return false, nil
+	}
+	return s.on[id], nil
+}
 
 // TestAutoNameLocationsAIOffManualNamingWorks is the load-bearing
 // off-mode contract proof for slice 0037. It mounts the AI
@@ -137,13 +156,13 @@ func TestAIAutoNameLocationsHandler_PanicsOnNilWiring(t *testing.T) {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIAutoNameUnnamedLocationsHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIAutoNameUnnamedLocationsHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -179,8 +198,8 @@ func TestAIAutoNameLocationsHandler_RejectsBadLocationID(t *testing.T) {
 			rctx.URLParams.Add("locationID", tc.locationID)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
-			if id, ok := parseAutoNameUnnamedLocationsURL(rec, req); ok {
-				t.Fatalf("parseAutoNameUnnamedLocationsURL returned ok=true for %q (id=%d)", tc.locationID, id)
+			if id, ok := parseURL(rec, req); ok {
+				t.Fatalf("parseURL returned ok=true for %q (id=%d)", tc.locationID, id)
 			}
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400 (body=%q)", rec.Code, rec.Body.String())
@@ -213,9 +232,9 @@ func TestAIAutoNameLocationsHandler_AcceptsCanonicalLocationID(t *testing.T) {
 			rctx.URLParams.Add("locationID", tc.locationID)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
-			id, ok := parseAutoNameUnnamedLocationsURL(rec, req)
+			id, ok := parseURL(rec, req)
 			if !ok {
-				t.Fatalf("parseAutoNameUnnamedLocationsURL returned ok=false for %q (status=%d, body=%q)", tc.locationID, rec.Code, rec.Body.String())
+				t.Fatalf("parseURL returned ok=false for %q (status=%d, body=%q)", tc.locationID, rec.Code, rec.Body.String())
 			}
 			if id != tc.want {
 				t.Errorf("id = %d, want %d", id, tc.want)
@@ -224,15 +243,15 @@ func TestAIAutoNameLocationsHandler_AcceptsCanonicalLocationID(t *testing.T) {
 	}
 }
 
-// TestAILocationNameValidator_TableDriven pins the production
+// TestLocationNameValidator_TableDriven pins the production
 // validator wrapper's rules. Mirrors the equivalent table in
 // tools/auto_name_unnamed_locations_test.go's
 // TestValidateLocationNameShape so the AI tool's verdict is
 // byte-equivalent to the validator the canonical save handler
 // will use.
-func TestAILocationNameValidator_TableDriven(t *testing.T) {
+func TestLocationNameValidator_TableDriven(t *testing.T) {
 	t.Parallel()
-	v := NewAILocationNameValidator()
+	v := NewLocationNameValidator()
 	loc := &geomodel.VisitedLocation{ID: 501, VehicleID: 7, AddressName: "47.6062,-122.3321"}
 
 	cases := []struct {
@@ -270,15 +289,15 @@ func TestAILocationNameValidator_TableDriven(t *testing.T) {
 	}
 }
 
-// TestAILocationSource_PanicsOnNilDB asserts the production source
+// TestLocationSource_PanicsOnNilDB asserts the production source
 // adapter constructor refuses a nil DB so a wiring bug surfaces at
 // boot, not as a nil-deref on first AI request.
-func TestAILocationSource_PanicsOnNilDB(t *testing.T) {
+func TestLocationSource_PanicsOnNilDB(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAILocationSource(nil) did not panic")
+			t.Fatal("NewLocationSource(nil) did not panic")
 		}
 	}()
-	NewAILocationSource(nil)
+	NewLocationSource(nil)
 }
