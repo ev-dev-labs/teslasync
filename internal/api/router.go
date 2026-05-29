@@ -39,6 +39,7 @@ import (
 	apidiag "github.com/ev-dev-labs/teslasync/internal/api/diagnostic"
 	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
 	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
+	apidrivedyn "github.com/ev-dev-labs/teslasync/internal/api/drivedyn"
 	apienergyflow "github.com/ev-dev-labs/teslasync/internal/api/energyflow"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
@@ -729,7 +730,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
 	motorHandler := NewMotorHandler(stateReader, liveStateReader)
-	driveDynamicsHandler := NewDriveDynamicsHandler(stateReader, liveStateReader)
+	driveDynamicsHandler := apidrivedyn.NewDriveDynamicsHandler(stateReader, liveStateReader)
 	climateHandler := apiclimate.NewClimateHandler(stateReader, liveStateReader)
 	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
 	chargingTelemetryHandler := apichargetelem.NewChargingTelemetryHandler(stateReader, liveStateReader)
