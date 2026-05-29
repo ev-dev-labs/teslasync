@@ -1,4 +1,4 @@
-package api
+package rangeproj
 
 import (
 	"context"
@@ -6,15 +6,54 @@ import (
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
+
+const driveStatsMetersPerMile = 1609.344
+
+func estimateBatteryCapacityWh(vin string, model string) (float64, string) {
+	if len(vin) >= 8 {
+		switch vin[7] {
+		case 'E', 'F':
+			return 60000.0, "vin_estimate"
+		case 'K', 'L', 'M':
+			return 75000.0, "vin_estimate"
+		case 'S', 'A', 'P':
+			return 100000.0, "vin_estimate"
+		}
+	}
+
+	m := strings.ToLower(model)
+	if strings.Contains(m, "model s") || strings.Contains(m, "model x") {
+		return 100000.0, "model_estimate"
+	}
+	return 75000.0, "default"
+}
+
+func lookupVehicleCapacityWh(ctx context.Context, db *database.DB, vehicleID int64) (float64, string) {
+	var vin string
+	var model *string
+	err := db.Pool.QueryRow(ctx,
+		`SELECT vin, model FROM vehicles WHERE id = $1`, vehicleID,
+	).Scan(&vin, &model)
+	if err != nil {
+		return 75000.0, "default"
+	}
+	m := ""
+	if model != nil {
+		m = *model
+	}
+	return estimateBatteryCapacityWh(vin, m)
+}
 
 // RangeProjectionHandler serves projected range analytics.
 //
@@ -54,12 +93,12 @@ func (h *RangeProjectionHandler) WithRedisCache(cache *signal.RedisSignalCache) 
 func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -83,44 +122,44 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		val, err := h.state.SignalAt(ctx, vehicleID, "BatteryLevel", now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "BatteryLevel").Msg("range-projection: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read range projection state")
 			return
 		}
 		if val != nil {
-			if v, ok := toFloatOk(val); ok {
+			if v, ok := signal.Float64(val); ok {
 				batteryLevel = &v
 			}
 		}
 		val, err = h.state.SignalAt(ctx, vehicleID, "EstBatteryRange", now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("range-projection: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read range projection state")
 			return
 		}
 		if val != nil {
-			if v, ok := toFloatOk(val); ok {
+			if v, ok := signal.Float64(val); ok {
 				estRange = &v
 			}
 		}
 		val, err = h.state.SignalAt(ctx, vehicleID, "RatedRange", now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "RatedRange").Msg("range-projection: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read range projection state")
 			return
 		}
 		if val != nil {
-			if v, ok := toFloatOk(val); ok {
+			if v, ok := signal.Float64(val); ok {
 				ratedRange = &v
 			}
 		}
 		val, err = h.state.SignalAt(ctx, vehicleID, "IdealBatteryRange", now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "IdealBatteryRange").Msg("range-projection: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read range projection state")
 			return
 		}
 		if val != nil {
-			if v, ok := toFloatOk(val); ok {
+			if v, ok := signal.Float64(val); ok {
 				idealRange = &v
 			}
 		}
@@ -202,7 +241,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		val, err := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("range-projection: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read range projection state")
 			return
 		}
 		if val != nil {
@@ -301,7 +340,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		accuracyNote = fmt.Sprintf("Based on %d drives over %d months", totalDrives, monthsOfData)
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		// Original fields (backward compatible)
 		"current_range_km":   math.Round(adjustedRange*10) / 10,
 		"projected_range_km": math.Round(projectedRange*10) / 10,
@@ -481,9 +520,9 @@ func (h *RangeProjectionHandler) buildScenarios(matrix []efficiencyBucket, batte
 // GetByVehicle handles GET /vehicles/{vehicleID}/battery/projected-range
 // Returns the ProjectedRangeData shape the frontend expects.
 func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
@@ -504,33 +543,33 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 		val, err := h.state.SignalAt(ctx, vehicleID, "BatteryLevel", now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "BatteryLevel").Msg("range-projection: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read range projection state")
 			return
 		}
 		if val != nil {
-			if v, ok := toFloatOk(val); ok {
+			if v, ok := signal.Float64(val); ok {
 				batteryLevel = &v
 			}
 		}
 		val, err = h.state.SignalAt(ctx, vehicleID, "RatedRange", now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "RatedRange").Msg("range-projection: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read range projection state")
 			return
 		}
 		if val != nil {
-			if v, ok := toFloatOk(val); ok {
+			if v, ok := signal.Float64(val); ok {
 				ratedRange = &v
 			}
 		}
 		val, err = h.state.SignalAt(ctx, vehicleID, "IdealBatteryRange", now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "IdealBatteryRange").Msg("range-projection: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read range projection state")
 			return
 		}
 		if val != nil {
-			if v, ok := toFloatOk(val); ok {
+			if v, ok := signal.Float64(val); ok {
 				idealRange = &v
 			}
 		}
@@ -557,7 +596,7 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 		val, err := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("range-projection: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read range projection state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read range projection state")
 			return
 		}
 		if val != nil {
@@ -603,7 +642,7 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 		}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"current_range_km":     math.Round(currentRange*10) / 10,
 		"new_range_km":         math.Round(newRange*10) / 10,
 		"degradation_pct":      math.Round(degradation*10) / 10,

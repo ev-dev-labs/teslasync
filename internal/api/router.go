@@ -66,6 +66,7 @@ import (
 	apipush "github.com/ev-dev-labs/teslasync/internal/api/push"
 	apiqueue "github.com/ev-dev-labs/teslasync/internal/api/queuestatus"
 	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
+	apirangeproj "github.com/ev-dev-labs/teslasync/internal/api/rangeproj"
 	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
 	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
 	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
@@ -774,7 +775,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	tempImpactHandler := NewTempImpactHandler(db)
 	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
 	batteryCellsHandler := NewBatteryCellsHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
-	rangeProjectionHandler := NewRangeProjectionHandler(db, stateReader)
+	rangeProjectionHandler := apirangeproj.NewRangeProjectionHandler(db, stateReader)
 	drivetrainHealthHandler := apidrivetrain.NewDrivetrainHealthHandler(db, stateReader)
 	maintenanceHandler := NewMaintenanceHandler(db)
 	periodStatsHandler := apiperiod.NewHandler(db)

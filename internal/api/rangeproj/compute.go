@@ -1,4 +1,4 @@
-package api
+package rangeproj
 
 func getEfficiency(lookup map[string]efficiencyBucket, temp, speed string) float64 {
 	if b, ok := lookup[temp+"|"+speed]; ok {

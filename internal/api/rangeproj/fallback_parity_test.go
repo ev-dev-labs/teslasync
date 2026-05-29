@@ -1,7 +1,7 @@
 // Phase-50 / 0063 — ML2 Range-prediction model.
 //
 // fallback parity test: pins
-// internal/api.defaultEfficiency <-> internal/ml/range.HeuristicWhPerKm
+// internal/api/rangeproj.defaultEfficiency <-> internal/ml/range.HeuristicWhPerKm
 // at representative bucket points. The two formulas MUST stay
 // mathematically equivalent at the (temp_bucket × speed_bucket)
 // midpoints for the lifetime of the slice; if a future change
@@ -12,10 +12,10 @@
 //
 // The duplication is intentional and documented in
 // internal/ml/range/linear.go (mlrange.HeuristicWhPerKm references
-// the api-side formula in its docstring); this test is the
+// the rangeproj-side formula in its docstring); this test is the
 // load-bearing guard that keeps the duplication safe.
 
-package api
+package rangeproj
 
 import (
 	"math"
@@ -33,22 +33,22 @@ import (
 //   - mlrange.HeuristicWhPerKm pins each bucket to a representative
 //     (temp, speed) pair (see representativeTempC /
 //     representativeSpeedKmh in linear.go) so the per-bucket Wh/km
-//     is a pure function of bucket name. The api-side
+//     is a pure function of bucket name. The rangeproj-side
 //     defaultEfficiency takes raw (tempC int, speedKmh int) so we
 //     evaluate it at the SAME representative midpoints the
 //     mlrange package picked.
 //
 //   - This is the contract the parity test enforces: for the four
 //     temp bucket midpoints × three speed bucket midpoints = 12
-//     pairs, the api defaultEfficiency must return EXACTLY the same
+//     pairs, the rangeproj defaultEfficiency must return EXACTLY the same
 //     Wh/km the mlrange.HeuristicWhPerKm returns for the
 //     corresponding bucket-name pair.
 //
 // A failure here means either:
 //
 //   - The deterministic projection at
-//     internal/api/range_projection_handler_compute.go's
-//     defaultEfficiency was updated without mirroring the change to
+//     internal/api/rangeproj/compute.go's defaultEfficiency was updated
+//     without mirroring the change to
 //     internal/ml/range/linear.go's HeuristicWhPerKm, OR
 //
 //   - A new bucket boundary or multiplier was added to one formula
@@ -78,7 +78,7 @@ func TestRangeFallbackParity_APIvsMLRange(t *testing.T) {
 		{"mild", "suburban", 20, 70},
 		{"mild", "highway", 20, 110},
 		// hot midpoint = 30°C (intentionally below the 35°C trigger so
-		// the legacy api `tempC > 35` branch does NOT fire — the
+		// the rangeproj `tempC > 35` branch does NOT fire — the
 		// mlrange representative midpoint is pinned at 30 to keep the
 		// "hot" bucket a pure speed-driven multiplier).
 		{"hot", "city", 30, 35},
@@ -94,7 +94,7 @@ func TestRangeFallbackParity_APIvsMLRange(t *testing.T) {
 			continue
 		}
 		if math.Abs(apiVal-mlVal) > 1e-9 {
-			t.Errorf("bucket %s/%s @ (temp=%d°C, speed=%dkm/h): api defaultEfficiency=%v, mlrange.HeuristicWhPerKm=%v — formulas drifted; update BOTH copies in the same commit",
+			t.Errorf("bucket %s/%s @ (temp=%d°C, speed=%dkm/h): rangeproj defaultEfficiency=%v, mlrange.HeuristicWhPerKm=%v — formulas drifted; update BOTH copies in the same commit",
 				tc.tempBucket, tc.speedBucket, tc.midTempC, tc.midSpeedKmh, apiVal, mlVal)
 		}
 	}
@@ -102,7 +102,7 @@ func TestRangeFallbackParity_APIvsMLRange(t *testing.T) {
 
 // TestRangeFallbackParity_TempBucketForAgrees proves the two
 // tempBucketFor implementations agree at the bucket boundary edges.
-// The api-side tempBucketFor takes int; mlrange.TempBucketFor takes
+// The rangeproj-side tempBucketFor takes int; mlrange.TempBucketFor takes
 // float64 — but both partition the same domain.
 func TestRangeFallbackParity_TempBucketForAgrees(t *testing.T) {
 	t.Parallel()
@@ -112,7 +112,7 @@ func TestRangeFallbackParity_TempBucketForAgrees(t *testing.T) {
 		apiBucket := tempBucketFor(tc)
 		mlBucket := mlrange.TempBucketFor(float64(tc))
 		if apiBucket != mlBucket {
-			t.Errorf("tempC=%d: api tempBucketFor=%q, ml TempBucketFor=%q — bucket boundary drift", tc, apiBucket, mlBucket)
+			t.Errorf("tempC=%d: rangeproj tempBucketFor=%q, ml TempBucketFor=%q — bucket boundary drift", tc, apiBucket, mlBucket)
 		}
 	}
 }

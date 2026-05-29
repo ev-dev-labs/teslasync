@@ -1,4 +1,4 @@
-package api
+package rangeproj
 
 type rangeFactor struct {
 	Name        string  `json:"name"`
