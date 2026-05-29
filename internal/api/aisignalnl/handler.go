@@ -1,4 +1,4 @@
-package api
+package aisignalnl
 
 // Phase-50 / 0044 — S3 Signal explorer NL filter.
 //
@@ -94,6 +94,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
@@ -117,7 +118,7 @@ const aiSignalExplorerNlFilterMaxBodyBytes = 16 * 1024
 // out of the window.
 const aiSignalExplorerNlFilterMaxPromptChars = 1024
 
-// AISignalCatalogSource is the narrow read interface the handler
+// SignalCatalogSource is the narrow read interface the handler
 // consumes to load the per-vehicle signal catalog. Production
 // wiring satisfies it via api.AvailableSignals (the SAME catalog
 // the canonical baseline GET /api/v1/signals/{vehicleID}/available
@@ -131,19 +132,19 @@ const aiSignalExplorerNlFilterMaxPromptChars = 1024
 // catalog is global), but is plumbed through so a future per-
 // vehicle filter (e.g. firmware-gated signals) can be added
 // without churning the interface.
-type AISignalCatalogSource interface {
+type SignalCatalogSource interface {
 	// SignalCatalog returns the per-vehicle signal catalog as a
 	// list of (name, value_kind) pairs at the time of the call.
 	// Both keys are non-empty for valid entries. The returned
 	// slice MUST be safe for the caller to retain.
-	SignalCatalog(ctx context.Context, vehicleID int64) ([]AISignalCatalogEntry, error)
+	SignalCatalog(ctx context.Context, vehicleID int64) ([]SignalCatalogEntry, error)
 }
 
-// AISignalCatalogEntry is a (name, value_kind) pair for one signal.
+// SignalCatalogEntry is a (name, value_kind) pair for one signal.
 // value_kind is the protomodel ValueKind string (e.g. "ValueKindFloat",
 // "ValueKindInt", "ValueKindLocation") used by the SignalExplorerPage
 // to pick a typed renderer for the history chart.
-type AISignalCatalogEntry struct {
+type SignalCatalogEntry struct {
 	Name      string
 	ValueKind string
 }
@@ -162,22 +163,22 @@ type aiSignalExplorerNlFilterRequest struct {
 	Prompt string `json:"prompt"`
 }
 
-// AISignalExplorerNlFilterHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/signals/filter/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AISignalExplorerNlFilterHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     AISignalCatalogSource
+	source     SignalCatalogSource
 	headerName string
 	maxIters   int
 }
 
-// NewAISignalExplorerNlFilterHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -195,31 +196,31 @@ type AISignalExplorerNlFilterHandler struct {
 //
 //	process).
 //
-// source:     the production AISignalCatalogSource (currently
+// source:     the production SignalCatalogSource (currently
 //
 //	api.AvailableSignals adapter).
 //
 // headerName: forward-auth header name; used to extract subject for
 //
 //	audit.
-func NewAISignalExplorerNlFilterHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source AISignalCatalogSource,
+	source SignalCatalogSource,
 	headerName string,
-) *AISignalExplorerNlFilterHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAISignalExplorerNlFilterHandler: nil provider.Registry")
+		panic("aisignalnl: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAISignalExplorerNlFilterHandler: nil tools.Registry")
+		panic("aisignalnl: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAISignalExplorerNlFilterHandler: nil strategy.Strategy")
+		panic("aisignalnl: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAISignalExplorerNlFilterHandler: nil AISignalCatalogSource")
+		panic("aisignalnl: NewHandler: nil SignalCatalogSource")
 	}
-	return &AISignalExplorerNlFilterHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -272,6 +273,14 @@ func parseSignalExplorerNlFilterRequest(w http.ResponseWriter, r *http.Request) 
 	return req, true
 }
 
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
 // bytesTrim is a defensive ASCII whitespace trimmer used only by
 // the body-empty check. Avoids importing bytes for one call.
 func bytesTrim(b []byte) []byte {
@@ -290,7 +299,7 @@ func bytesTrim(b []byte) []byte {
 // error path either writes a structured frame onto the SSE stream
 // (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
-func (h *AISignalExplorerNlFilterHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseSignalExplorerNlFilterRequest(w, r)
 	if !ok {
@@ -318,7 +327,7 @@ func (h *AISignalExplorerNlFilterHandler) ServeHTTP(w http.ResponseWriter, r *ht
 		return
 	}
 	if catalog == nil {
-		catalog = make([]AISignalCatalogEntry, 0)
+		catalog = make([]SignalCatalogEntry, 0)
 	}
 
 	// Defensive: empty catalog is a degenerate but legal state
@@ -396,7 +405,7 @@ func (h *AISignalExplorerNlFilterHandler) ServeHTTP(w http.ResponseWriter, r *ht
 // Exported as `BuildSignalExplorerNlFilterUserMessage` would only
 // be useful for tests; instead the test calls the unexported
 // helper directly from the same package.
-func buildSignalExplorerNlFilterUserMessage(vehicleID int64, prompt string, catalog []AISignalCatalogEntry) string {
+func buildSignalExplorerNlFilterUserMessage(vehicleID int64, prompt string, catalog []SignalCatalogEntry) string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "Suggest a single typed SignalFilter draft for vehicle %d that satisfies the user's request below. ", vehicleID)
@@ -408,7 +417,7 @@ func buildSignalExplorerNlFilterUserMessage(vehicleID int64, prompt string, cata
 	b.WriteString("Do NOT claim the filter was applied — the user reviews the proposal in the AI side panel and clicks the Apply button to copy the draft into the baseline form. ")
 
 	// Sort catalog by name for deterministic prompt hashing.
-	sorted := append([]AISignalCatalogEntry(nil), catalog...)
+	sorted := append([]SignalCatalogEntry(nil), catalog...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
 	if len(sorted) == 0 {
 		b.WriteString("\n\nIn-scope signal catalog: NONE.\n")
@@ -427,9 +436,9 @@ func buildSignalExplorerNlFilterUserMessage(vehicleID int64, prompt string, cata
 	return b.String()
 }
 
-// Compile-time assertion: AISignalExplorerNlFilterHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AISignalExplorerNlFilterHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the source + validator interfaces declared by
@@ -437,7 +446,7 @@ var _ http.Handler = (*AISignalExplorerNlFilterHandler)(nil)
 // file as the handler so the wiring intent is local to the slice.
 // ---------------------------------------------------------------------
 
-// AISignalCatalogSourceImpl is the production AISignalCatalogSource.
+// SignalCatalogSourceImpl is the production SignalCatalogSource.
 // It delegates to the SHARED AvailableSignals() function that ALSO
 // backs the canonical baseline GET /api/v1/signals/{vehicleID}/available
 // handler so the AI surface sees the same catalog the user sees on
@@ -447,21 +456,21 @@ var _ http.Handler = (*AISignalExplorerNlFilterHandler)(nil)
 // argument is plumbed through but unused. A future slice that
 // gates signals per-firmware can scope here without churning the
 // interface.
-type AISignalCatalogSourceImpl struct{}
+type SignalCatalogSourceImpl struct{}
 
-// NewAISignalCatalogSource constructs the adapter. No deps —
+// NewSignalCatalogSource constructs the adapter. No deps —
 // AvailableSignals is package-static. Returned by-pointer for
 // symmetry with the other AI* source types.
-func NewAISignalCatalogSource() *AISignalCatalogSourceImpl {
-	return &AISignalCatalogSourceImpl{}
+func NewSignalCatalogSource() *SignalCatalogSourceImpl {
+	return &SignalCatalogSourceImpl{}
 }
 
-// SignalCatalog implements AISignalCatalogSource. One synchronous
+// SignalCatalog implements SignalCatalogSource. One synchronous
 // call into the shared proto-derived catalog. Allocations are
 // bounded by len(protomodel.Signals).
-func (a *AISignalCatalogSourceImpl) SignalCatalog(_ context.Context, _ int64) ([]AISignalCatalogEntry, error) {
+func (a *SignalCatalogSourceImpl) SignalCatalog(_ context.Context, _ int64) ([]SignalCatalogEntry, error) {
 	src := apisignal.AvailableSignals()
-	out := make([]AISignalCatalogEntry, 0, len(src))
+	out := make([]SignalCatalogEntry, 0, len(src))
 	for _, s := range src {
 		// Filter compound parents — the SPA's SignalSelector only
 		// surfaces atomic-children, so the LLM should not propose
@@ -469,7 +478,7 @@ func (a *AISignalCatalogSourceImpl) SignalCatalog(_ context.Context, _ int64) ([
 		if s.IsCompound {
 			continue
 		}
-		out = append(out, AISignalCatalogEntry{
+		out = append(out, SignalCatalogEntry{
 			Name:      s.Name,
 			ValueKind: s.ValueKind,
 		})
@@ -478,13 +487,13 @@ func (a *AISignalCatalogSourceImpl) SignalCatalog(_ context.Context, _ int64) ([
 }
 
 // Compile-time assertion.
-var _ AISignalCatalogSource = (*AISignalCatalogSourceImpl)(nil)
+var _ SignalCatalogSource = (*SignalCatalogSourceImpl)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the nl.SignalFilterValidator interface.
 // ---------------------------------------------------------------------
 
-// AISignalFilterValidator is the production
+// SignalFilterValidator is the production
 // nl.SignalFilterValidator. It enforces the SAME canonical
 // SignalExplorerPage range/limit enumeration that the SPA's
 // SignalSelector + RangePicker + per-page select would enforce, so
@@ -492,14 +501,14 @@ var _ AISignalCatalogSource = (*AISignalCatalogSourceImpl)(nil)
 // be accepted by the baseline form.
 //
 // Stateless. Held by value; safe for concurrent use.
-type AISignalFilterValidator struct{}
+type SignalFilterValidator struct{}
 
-// NewAISignalFilterValidator constructs the validator. No deps —
+// NewSignalFilterValidator constructs the validator. No deps —
 // the canonical enumeration lives as exported helpers in the
 // tools package. Returned by-pointer for symmetry with the other
 // AI* validator types.
-func NewAISignalFilterValidator() *AISignalFilterValidator {
-	return &AISignalFilterValidator{}
+func NewSignalFilterValidator() *SignalFilterValidator {
+	return &SignalFilterValidator{}
 }
 
 // ValidateSignalFilter implements nl.SignalFilterValidator.
@@ -520,7 +529,7 @@ func NewAISignalFilterValidator() *AISignalFilterValidator {
 // page sizes. There is nothing else for the AI surface to enforce
 // — the canonical baseline GET /api/v1/signals/{vehicleID}/{signalName}/history
 // path will silently filter any stragglers.
-func (v *AISignalFilterValidator) ValidateSignalFilter(filter *nl.SignalFilter) error {
+func (v *SignalFilterValidator) ValidateSignalFilter(filter *nl.SignalFilter) error {
 	if filter == nil {
 		return errors.New("api ai signal-explorer-nl-filter: nil SignalFilter")
 	}
@@ -532,4 +541,4 @@ func (v *AISignalFilterValidator) ValidateSignalFilter(filter *nl.SignalFilter) 
 }
 
 // Compile-time assertion.
-var _ nl.SignalFilterValidator = (*AISignalFilterValidator)(nil)
+var _ nl.SignalFilterValidator = (*SignalFilterValidator)(nil)

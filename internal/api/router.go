@@ -57,6 +57,7 @@ import (
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisafetyexp "github.com/ev-dev-labs/teslasync/internal/api/aisafetyexp"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
+	aisignalnl "github.com/ev-dev-labs/teslasync/internal/api/aisignalnl"
 	aismartcharge "github.com/ev-dev-labs/teslasync/internal/api/aismartcharge"
 	aispeedprof "github.com/ev-dev-labs/teslasync/internal/api/aispeedprof"
 	aitempimpact "github.com/ev-dev-labs/teslasync/internal/api/aitempimpact"
@@ -1545,16 +1546,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// catalog that backs the baseline
 	// GET /api/v1/signals/{vehicleID}/available endpoint.
 	nl.RegisterSignalExplorerNlFilterTools(aiToolRegistry, nl.SignalExplorerNlFilterSources{
-		Validator: NewAISignalFilterValidator(),
+		Validator: aisignalnl.NewSignalFilterValidator(),
 	})
 	// signal-explorer-nl-filter handler. Constructed after the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiSignalExplorerNlFilterHandler := NewAISignalExplorerNlFilterHandler(
+	aiSignalExplorerNlFilterHandler := aisignalnl.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		signalexplorernlfilter.New(),
-		NewAISignalCatalogSource(),
+		aisignalnl.NewSignalCatalogSource(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 

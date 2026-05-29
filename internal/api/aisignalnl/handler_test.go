@@ -15,7 +15,7 @@
 // signal-explorer-nl-filter`); duplicating that here would require
 // a live database fixture.
 
-package api
+package aisignalnl
 
 import (
 	"bytes"
@@ -30,6 +30,22 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestSignalExplorerNLAIOffManualFiltersWork is the load-bearing
 // off-mode contract proof for slice 0044. It mounts the AI
@@ -160,23 +176,23 @@ func TestSignalExplorerNLAIOffManualFiltersWork(t *testing.T) {
 	}
 }
 
-// TestAISignalExplorerNlFilterHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAISignalExplorerNlFilterHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAISignalExplorerNlFilterHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAISignalExplorerNlFilterHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -184,11 +200,11 @@ func TestAISignalExplorerNlFilterHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAISignalExplorerNlFilterHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the body BEFORE doing anything else — a body
 // that fails to decode as JSON object MUST surface as a JSON 400,
 // not a half-opened stream that confuses the frontend.
-func TestAISignalExplorerNlFilterHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -231,7 +247,7 @@ func TestAISignalExplorerNlFilterHandler_RejectsBadBody(t *testing.T) {
 // catch it before the goldens silently drift.
 func TestBuildSignalExplorerNlFilterUserMessage_DeterministicShape(t *testing.T) {
 	t.Parallel()
-	catalog := []AISignalCatalogEntry{
+	catalog := []SignalCatalogEntry{
 		{Name: "VehicleSpeed", ValueKind: "ValueKindFloat"},
 		{Name: "BatteryLevel", ValueKind: "ValueKindFloat"},
 		{Name: "OutsideTemp", ValueKind: "ValueKindFloat"},
@@ -282,13 +298,13 @@ func TestBuildSignalExplorerNlFilterUserMessage_EmptyCatalog(t *testing.T) {
 	}
 }
 
-// TestAISignalFilterValidator_AcceptsValidFilter pins the
+// TestSignalFilterValidator_AcceptsValidFilter pins the
 // validator's accept path: a well-formed SignalFilter returns nil.
 // Future slices that add semantic checks will need to update this
 // test.
-func TestAISignalFilterValidator_AcceptsValidFilter(t *testing.T) {
+func TestSignalFilterValidator_AcceptsValidFilter(t *testing.T) {
 	t.Parallel()
-	v := NewAISignalFilterValidator()
+	v := NewSignalFilterValidator()
 	filters := []*nl.SignalFilter{
 		{VehicleID: 7, Signals: []string{"VehicleSpeed"}, RangePreset: "today", PerPage: 25},
 		{VehicleID: 7, Signals: []string{"BatteryLevel"}, RangePreset: "yesterday", PerPage: 50},
@@ -301,24 +317,24 @@ func TestAISignalFilterValidator_AcceptsValidFilter(t *testing.T) {
 	}
 }
 
-// TestAISignalFilterValidator_RejectsNil pins the defensive nil
+// TestSignalFilterValidator_RejectsNil pins the defensive nil
 // check.
-func TestAISignalFilterValidator_RejectsNil(t *testing.T) {
+func TestSignalFilterValidator_RejectsNil(t *testing.T) {
 	t.Parallel()
-	v := NewAISignalFilterValidator()
+	v := NewSignalFilterValidator()
 	if err := v.ValidateSignalFilter(nil); err == nil {
 		t.Error("ValidateSignalFilter(nil) err = nil, want error")
 	}
 }
 
-// TestAISignalCatalogSourceImpl_ReturnsAtomicSignals proves the
+// TestSignalCatalogSourceImpl_ReturnsAtomicSignals proves the
 // production source returns a non-empty list of signal names with
 // `Name` and `ValueKind` populated, derived from the proto-derived
 // AvailableSignals function. The catalog MUST exclude compound
 // parents because the SPA SignalSelector only renders atomics.
-func TestAISignalCatalogSourceImpl_ReturnsAtomicSignals(t *testing.T) {
+func TestSignalCatalogSourceImpl_ReturnsAtomicSignals(t *testing.T) {
 	t.Parallel()
-	src := NewAISignalCatalogSource()
+	src := NewSignalCatalogSource()
 	got, err := src.SignalCatalog(context.Background(), 7)
 	if err != nil {
 		t.Fatalf("SignalCatalog err = %v, want nil", err)
