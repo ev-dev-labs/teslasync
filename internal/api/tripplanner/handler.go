@@ -1,4 +1,4 @@
-package api
+package tripplanner
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -62,12 +63,12 @@ func NewTripPlannerHandler(db *database.DB, cache *cache.Store, state signal.Sta
 func (h *TripPlannerHandler) Plan(w http.ResponseWriter, r *http.Request) {
 	var req tripPlanRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if req.VehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 
@@ -84,10 +85,10 @@ func (h *TripPlannerHandler) Plan(w http.ResponseWriter, r *http.Request) {
 		val, err := h.state.SignalAt(ctx, req.VehicleID, "BatteryLevel", time.Now())
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Str("signal", "BatteryLevel").Msg("trip planner: failed to read current SOC")
-			writeError(w, http.StatusInternalServerError, "failed to read current battery state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read current battery state")
 			return
 		}
-		if soc, ok := toFloatOk(val); ok && soc > 0 {
+		if soc, ok := signal.Float64(val); ok && soc > 0 {
 			req.CurrentSOC = soc
 		}
 	}
@@ -103,25 +104,25 @@ func (h *TripPlannerHandler) Plan(w http.ResponseWriter, r *http.Request) {
 		val, err := h.state.SignalAt(ctx, req.VehicleID, "Location", time.Now())
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Str("signal", "Location").Msg("trip planner: failed to read current location")
-			writeError(w, http.StatusInternalServerError, "failed to read current location")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read current location")
 			return
 		}
 		if loc, ok := val.(map[string]any); ok {
-			if lat, ok := toFloatOk(loc["Lat"]); ok {
+			if lat, ok := signal.Float64(loc["Lat"]); ok {
 				req.Origin.Lat = lat
 			}
-			if lng, ok := toFloatOk(loc["Lng"]); ok {
+			if lng, ok := signal.Float64(loc["Lng"]); ok {
 				req.Origin.Lng = lng
 			}
 		}
 	}
 
 	if req.Origin.Lat == 0 && req.Origin.Lng == 0 {
-		writeError(w, http.StatusBadRequest, "origin is required")
+		httpx.WriteError(w, http.StatusBadRequest, "origin is required")
 		return
 	}
 	if req.Destination.Lat == 0 && req.Destination.Lng == 0 {
-		writeError(w, http.StatusBadRequest, "destination is required")
+		httpx.WriteError(w, http.StatusBadRequest, "destination is required")
 		return
 	}
 
@@ -142,9 +143,9 @@ func (h *TripPlannerHandler) Plan(w http.ResponseWriter, r *http.Request) {
 	plan, err := h.computePlan(ctx, &req)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Msg("trip plan computation failed")
-		writeError(w, http.StatusInternalServerError, "failed to compute trip plan")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to compute trip plan")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, plan)
+	httpx.WriteJSON(w, http.StatusOK, plan)
 }

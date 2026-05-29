@@ -1,4 +1,4 @@
-package api
+package tripplanner
 
 import (
 	"context"
@@ -8,6 +8,11 @@ import (
 )
 
 // ── Core algorithm ──────────────────────────────────────────────────────
+
+// ComputePlan computes a deterministic trip plan for non-HTTP callers.
+func (h *TripPlannerHandler) ComputePlan(ctx context.Context, req *TripPlanRequest) (*TripPlanResponse, error) {
+	return h.computePlan(ctx, req)
+}
 
 func (h *TripPlannerHandler) computePlan(ctx context.Context, req *tripPlanRequest) (*tripPlanResponse, error) {
 	// 1. Estimate route distance (haversine × driving factor)

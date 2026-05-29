@@ -57,6 +57,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tripplantool "github.com/ev-dev-labs/teslasync/internal/ai/tools/tripplan"
+	apitripplanner "github.com/ev-dev-labs/teslasync/internal/api/tripplanner"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -84,7 +85,7 @@ type aiTripPlannerLLMDraftRequest struct {
 	SpeedFactor    float64                       `json:"speed_factor,omitempty"`
 }
 
-// aiTripPlannerLLMDraftLocation mirrors tripPlanLocation (the
+// aiTripPlannerLLMDraftLocation mirrors tripplanner.TripPlanLocation (the
 // canonical baseline shape) so the SPA can post the same form-state
 // payload to the AI endpoint.
 type aiTripPlannerLLMDraftLocation struct {
@@ -295,44 +296,44 @@ var _ http.Handler = (*AITripPlannerLLMHandler)(nil)
 // ---------------------------------------------------------------------
 
 // AITripPlanComputer is the production tripplantool.TripPlanComputer. It
-// delegates to the canonical *TripPlannerHandler.computePlan path so
-// a plan proposed by the AI tool is byte-equivalent to a plan
-// returned by POST /api/v1/trip-planner/plan.
+// delegates to the canonical tripplanner ComputePlan path so a plan proposed
+// by the AI tool is byte-equivalent to a plan returned by
+// POST /api/v1/trip-planner/plan.
 //
-// The struct holds a non-nil *TripPlannerHandler reference (panics
-// at construction on nil) so a wiring bug surfaces at boot.
+// The struct holds a non-nil *tripplanner.TripPlannerHandler reference
+// (panics at construction on nil) so a wiring bug surfaces at boot.
 type AITripPlanComputer struct {
-	planner *TripPlannerHandler
+	planner *apitripplanner.TripPlannerHandler
 }
 
 // NewAITripPlanComputer constructs the adapter. Panics on nil so a
 // wiring mistake surfaces at boot.
-func NewAITripPlanComputer(planner *TripPlannerHandler) *AITripPlanComputer {
+func NewAITripPlanComputer(planner *apitripplanner.TripPlannerHandler) *AITripPlanComputer {
 	if planner == nil {
-		panic("api: NewAITripPlanComputer: nil *TripPlannerHandler")
+		panic("api: NewAITripPlanComputer: nil *tripplanner.TripPlannerHandler")
 	}
 	return &AITripPlanComputer{planner: planner}
 }
 
 // ComputeTripPlan implements tripplantool.TripPlanComputer. Translates the
 // typed [tripplantool.TripPlanComputeRequest] into a canonical
-// *tripPlanRequest, delegates to the same in-process computePlan
+// *tripplanner.TripPlanRequest, delegates to the same in-process ComputePlan
 // method the deterministic POST /api/v1/trip-planner/plan handler
-// uses, and translates the *tripPlanResponse back into a typed
+// uses, and translates the *tripplanner.TripPlanResponse back into a typed
 // [tripplantool.TripPlanComputeResult]. SI-canonical end-to-end:
 // total_distance_m, total_duration_s, total_energy_wh, arrival_soc.
 //
 // The compute call is bounded by ctx; a context-cancel from the SPA
 // closing the SSE connection terminates the computation cleanly.
 func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tripplantool.TripPlanComputeRequest) (*tripplantool.TripPlanComputeResult, error) {
-	baselineReq := &tripPlanRequest{
+	baselineReq := &apitripplanner.TripPlanRequest{
 		VehicleID: req.VehicleID,
-		Origin: tripPlanLocation{
+		Origin: apitripplanner.TripPlanLocation{
 			Lat:  req.OriginLat,
 			Lng:  req.OriginLng,
 			Name: req.OriginName,
 		},
-		Destination: tripPlanLocation{
+		Destination: apitripplanner.TripPlanLocation{
 			Lat:  req.DestLat,
 			Lng:  req.DestLng,
 			Name: req.DestName,
@@ -340,16 +341,16 @@ func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tripplanto
 		CurrentSOC:     req.CurrentSOC,
 		ChargeLimitSOC: req.ChargeLimitSOC,
 		MinArrivalSOC:  req.MinArrivalSOC,
-		Preferences: tripPlanPreferences{
+		Preferences: apitripplanner.TripPlanPreferences{
 			SpeedFactor: req.SpeedFactor,
 		},
 	}
-	resp, err := a.planner.computePlan(ctx, baselineReq)
+	resp, err := a.planner.ComputePlan(ctx, baselineReq)
 	if err != nil {
-		return nil, fmt.Errorf("ai trip-planner-llm-agent: computePlan: %w", err)
+		return nil, fmt.Errorf("ai trip-planner-llm-agent: ComputePlan: %w", err)
 	}
 	if resp == nil {
-		return nil, errors.New("ai trip-planner-llm-agent: computePlan returned nil response")
+		return nil, errors.New("ai trip-planner-llm-agent: ComputePlan returned nil response")
 	}
 	out := &tripplantool.TripPlanComputeResult{
 		Route: tripplantool.TripPlanRoute{

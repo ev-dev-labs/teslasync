@@ -1,4 +1,4 @@
-package api
+package tripplanner
 
 import (
 	"bytes"
@@ -13,6 +13,41 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
+
+type signalAtCallRecord struct {
+	vehicleID int64
+	name      string
+	at        time.Time
+}
+
+type fakeStateReader struct {
+	stateFn    func(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error)
+	signalAtFn func(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error)
+	timelineFn func(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error)
+}
+
+func (f *fakeStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error) {
+	if f.stateFn == nil {
+		return signal.State{}, nil
+	}
+	return f.stateFn(ctx, vehicleID, at)
+}
+
+func (f *fakeStateReader) SignalAt(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error) {
+	if f.signalAtFn == nil {
+		return nil, nil
+	}
+	return f.signalAtFn(ctx, vehicleID, name, at)
+}
+
+func (f *fakeStateReader) Timeline(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error) {
+	if f.timelineFn == nil {
+		return nil, nil
+	}
+	return f.timelineFn(ctx, vehicleID, fields, from, to, opts)
+}
+
+var _ signal.StateReader = (*fakeStateReader)(nil)
 
 // newTripPlannerPlanRequest builds a POST /trip-planner/plan request with
 // the supplied JSON body. The handler decodes the body via
