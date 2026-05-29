@@ -57,6 +57,7 @@ import (
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisafetyexp "github.com/ev-dev-labs/teslasync/internal/api/aisafetyexp"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
+	"github.com/ev-dev-labs/teslasync/internal/api/aisettingsvalidate"
 	aisignalnl "github.com/ev-dev-labs/teslasync/internal/api/aisignalnl"
 	aismartcharge "github.com/ev-dev-labs/teslasync/internal/api/aismartcharge"
 	aispeedprof "github.com/ev-dev-labs/teslasync/internal/api/aispeedprof"
@@ -3186,7 +3187,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// in off mode by ADR-015 §I6. Auth-only — no sudo —
 			// because the worst-case write the call enables is
 			// the same one /settings allows already.
-			r.Post("/settings/ai/validate-config", AISettingsValidateHandler(aiRegistry, aiSettingsReader{repo: aiSettingsRepo}))
+			r.Post("/settings/ai/validate-config", aisettingsvalidate.Handler(aiRegistry, aiSettingsReader{repo: aiSettingsRepo}))
 			// Phase-46 / Prompt 36 — JSON bundle export + import.
 			// Export is read-only; import is sudo-gated because a
 			// large alert-rule replay or bulk geofence rewrite is a

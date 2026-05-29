@@ -1,4 +1,4 @@
-package api
+package aisettingsvalidate
 
 // Phase-50 / 0003 — F2 Settings UI for AI.
 // Phase-50 / Azure adapter — extended for cloud-probe validation.
@@ -51,6 +51,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
 // validateConfigRequest is the JSON body of POST
@@ -146,7 +147,7 @@ const validateConfigCloudTimeout = 30 * time.Second
 // "invalid" in the SPA.
 var httpStatusInErrorRe = regexp.MustCompile(`status (\d{3})`)
 
-// AISettingsValidateHandler returns the http.HandlerFunc for
+// Handler returns the http.HandlerFunc for
 // POST /api/v1/settings/ai/validate-config.
 //
 // registry must be non-nil — required for cloud-mode probes. settings
@@ -154,17 +155,17 @@ var httpStatusInErrorRe = regexp.MustCompile(`status (\d{3})`)
 // Passing nil for either panics at boot, which is the right failure
 // mode (a misconfigured router would otherwise silently 500 every
 // validate call).
-func AISettingsValidateHandler(registry *provider.Registry, settings provider.SettingsReader) http.HandlerFunc {
+func Handler(registry *provider.Registry, settings provider.SettingsReader) http.HandlerFunc {
 	if registry == nil {
-		panic("api: AISettingsValidateHandler called with nil registry")
+		panic("api: Handler called with nil registry")
 	}
 	if settings == nil {
-		panic("api: AISettingsValidateHandler called with nil settings")
+		panic("api: Handler called with nil settings")
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req validateConfigRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeError(w, http.StatusBadRequest, "invalid request body")
+			httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 			return
 		}
 
@@ -178,11 +179,11 @@ func AISettingsValidateHandler(registry *provider.Registry, settings provider.Se
 			return
 
 		case provider.ModeOff, "":
-			writeError(w, http.StatusBadRequest, "ai_mode must be 'local' or 'cloud' to validate")
+			httpx.WriteError(w, http.StatusBadRequest, "ai_mode must be 'local' or 'cloud' to validate")
 			return
 
 		default:
-			writeError(w, http.StatusBadRequest, "ai_mode must be 'off', 'local', or 'cloud'")
+			httpx.WriteError(w, http.StatusBadRequest, "ai_mode must be 'off', 'local', or 'cloud'")
 			return
 		}
 	}
@@ -209,10 +210,10 @@ func handleValidateLocal(w http.ResponseWriter, r *http.Request, req validateCon
 		if errors.Is(err, provider.ErrLocalModeViolation) {
 			code = validateConfigCodeNotLocal
 		}
-		writeErrorCode(w, http.StatusUnprocessableEntity, err.Error(), code)
+		httpx.WriteErrorCode(w, http.StatusUnprocessableEntity, err.Error(), code)
 		return
 	}
-	writeJSON(w, http.StatusOK, validateConfigResponse{
+	httpx.WriteJSON(w, http.StatusOK, validateConfigResponse{
 		OK:       true,
 		Mode:     provider.ModeLocal,
 		BaseURL:  baseURL,
@@ -250,7 +251,7 @@ func handleValidateCloud(
 		name = provider.ResolveProviderName(view, "")
 	}
 	if name == "" {
-		writeErrorCode(w, http.StatusBadRequest,
+		httpx.WriteErrorCode(w, http.StatusBadRequest,
 			"provider name is required for cloud validation",
 			validateConfigCodeUnknownProvider)
 		return
@@ -278,13 +279,13 @@ func handleValidateCloud(
 	// likely missing field, then base_url for Azure, then
 	// deployment for Azure OpenAI Service flavor.
 	if cfg.APIKey == "" {
-		writeErrorCode(w, http.StatusUnprocessableEntity,
+		httpx.WriteErrorCode(w, http.StatusUnprocessableEntity,
 			"api key is required for cloud validation",
 			validateConfigCodeMissingAPIKey)
 		return
 	}
 	if name == provider.NameAzure && cfg.BaseURL == "" {
-		writeErrorCode(w, http.StatusUnprocessableEntity,
+		httpx.WriteErrorCode(w, http.StatusUnprocessableEntity,
 			"resource endpoint URL is required for Azure",
 			validateConfigCodeMissingBaseURL)
 		return
@@ -296,7 +297,7 @@ func handleValidateCloud(
 		}
 		if flavor == provider.AzureFlavorOpenAI &&
 			cfg.Deployment == "" && cfg.Model == "" {
-			writeErrorCode(w, http.StatusUnprocessableEntity,
+			httpx.WriteErrorCode(w, http.StatusUnprocessableEntity,
 				"deployment name (or model) is required for Azure OpenAI Service",
 				validateConfigCodeMissingDeployment)
 			return
@@ -313,7 +314,7 @@ func handleValidateCloud(
 		if errors.Is(err, provider.ErrUnknownProvider) {
 			code = validateConfigCodeUnknownProvider
 		}
-		writeErrorCode(w, http.StatusUnprocessableEntity, err.Error(), code)
+		httpx.WriteErrorCode(w, http.StatusUnprocessableEntity, err.Error(), code)
 		return
 	}
 
@@ -337,7 +338,7 @@ func handleValidateCloud(
 			Str("provider", name).
 			Str("code", code).
 			Msg("ai settings: cloud probe failed")
-		writeErrorCode(w, http.StatusUnprocessableEntity, msg, code)
+		httpx.WriteErrorCode(w, http.StatusUnprocessableEntity, msg, code)
 		return
 	}
 
@@ -349,7 +350,7 @@ func handleValidateCloud(
 		_ = resp
 	}
 
-	writeJSON(w, http.StatusOK, validateConfigResponse{
+	httpx.WriteJSON(w, http.StatusOK, validateConfigResponse{
 		OK:          true,
 		Mode:        provider.ModeCloud,
 		BaseURL:     cfg.BaseURL,
@@ -404,5 +405,12 @@ func classifyCloudProbeError(ctx context.Context, err error) (code, message stri
 	return validateConfigCodeInvalid, msg
 }
 
-// firstNonEmpty is defined in feedback_handler.go (same package)
-// and reused here so we don't duplicate the trivial helper.
+// firstNonEmpty returns the first non-blank string among values.
+func firstNonEmpty(values ...string) string {
+	for _, v := range values {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}

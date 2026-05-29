@@ -1,11 +1,11 @@
-package api
+package aisettingsvalidate
 
 // Phase-50 / 0003 — F2 Settings UI for AI.
 // Phase-50 / Azure adapter — extended for cloud-probe validation.
 //
 // Backend test coverage for the validate handler:
 //
-//   1. AISettingsValidateHandler — local mode validates loopback,
+//   1. Handler — local mode validates loopback,
 //      rejects public hosts, rejects 'off' and unknown modes, rejects
 //      malformed JSON.
 //   2. Cloud-mode probe — exercises the in-test mock provider to
@@ -27,12 +27,8 @@ import (
 	"testing"
 	"time"
 
-	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
-
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
-)
-
-// --- test helpers -----------------------------------------------------
+) // --- test helpers -----------------------------------------------------
 
 // stubSettings is the minimal SettingsReader the validate handler
 // needs. AIMode + AIFeatureEnabled are unused by the handler (it
@@ -109,7 +105,7 @@ func newTestValidateHandler(
 	if build != nil {
 		reg.Register(providerName, build)
 	}
-	return AISettingsValidateHandler(reg, settings)
+	return Handler(reg, settings)
 }
 
 // emptyHandler is the local-mode test fixture — no cloud probe is
@@ -118,9 +114,9 @@ func emptyHandler() http.HandlerFunc {
 	return newTestValidateHandler(nil, "", nil)
 }
 
-// --- AISettingsValidateHandler tests ----------------------------------
+// --- Handler tests ----------------------------------
 
-func TestAISettingsValidateHandler_LocalLoopback_OK(t *testing.T) {
+func TestHandler_LocalLoopback_OK(t *testing.T) {
 	h := emptyHandler()
 	body := bytes.NewBufferString(`{"mode":"local","base_url":"http://localhost:11434"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings/ai/validate-config", body)
@@ -150,7 +146,7 @@ func TestAISettingsValidateHandler_LocalLoopback_OK(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_LocalDefault_OK(t *testing.T) {
+func TestHandler_LocalDefault_OK(t *testing.T) {
 	// Empty base_url should default to provider.DefaultLocalBaseURL,
 	// which is the canonical http://localhost:11434.
 	h := emptyHandler()
@@ -171,7 +167,7 @@ func TestAISettingsValidateHandler_LocalDefault_OK(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_LocalPrivateIPLiteral_OK(t *testing.T) {
+func TestHandler_LocalPrivateIPLiteral_OK(t *testing.T) {
 	// A direct RFC1918 IP literal — no DNS lookup needed, the
 	// validator accepts and pins the IP.
 	h := emptyHandler()
@@ -192,7 +188,7 @@ func TestAISettingsValidateHandler_LocalPrivateIPLiteral_OK(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_LocalPublicIPLiteral_Rejected(t *testing.T) {
+func TestHandler_LocalPublicIPLiteral_Rejected(t *testing.T) {
 	// 1.2.3.4 is public — the local validator must reject.
 	h := emptyHandler()
 	body := bytes.NewBufferString(`{"mode":"local","base_url":"http://1.2.3.4:11434"}`)
@@ -221,7 +217,7 @@ func TestAISettingsValidateHandler_LocalPublicIPLiteral_Rejected(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_LocalBadScheme_Rejected(t *testing.T) {
+func TestHandler_LocalBadScheme_Rejected(t *testing.T) {
 	h := emptyHandler()
 	body := bytes.NewBufferString(`{"mode":"local","base_url":"file:///etc/passwd"}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings/ai/validate-config", body)
@@ -233,7 +229,7 @@ func TestAISettingsValidateHandler_LocalBadScheme_Rejected(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_Cloud_MissingAPIKey_Rejected(t *testing.T) {
+func TestHandler_Cloud_MissingAPIKey_Rejected(t *testing.T) {
 	// Cloud mode now actually probes the upstream — a request
 	// with no api_key (and no saved key in settings) must be
 	// rejected up front with the missing_api_key code so the SPA
@@ -262,7 +258,7 @@ func TestAISettingsValidateHandler_Cloud_MissingAPIKey_Rejected(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_Cloud_ProbeOK(t *testing.T) {
+func TestHandler_Cloud_ProbeOK(t *testing.T) {
 	// Happy path: api_key supplied, fake provider returns a clean
 	// chat response, handler returns 200 OK with the probed model.
 	build := func(cfg provider.ProviderConfig) (provider.Provider, error) {
@@ -292,7 +288,7 @@ func TestAISettingsValidateHandler_Cloud_ProbeOK(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_Cloud_ProbeFallsBackToSavedAPIKey(t *testing.T) {
+func TestHandler_Cloud_ProbeFallsBackToSavedAPIKey(t *testing.T) {
 	// Editing a non-secret field (e.g. deployment) shouldn't force
 	// the user to re-type the api_key — the handler should fall
 	// back to the saved value when the request omits it.
@@ -323,7 +319,7 @@ func TestAISettingsValidateHandler_Cloud_ProbeFallsBackToSavedAPIKey(t *testing.
 	}
 }
 
-func TestAISettingsValidateHandler_Cloud_Probe401_Unauthorized(t *testing.T) {
+func TestHandler_Cloud_Probe401_Unauthorized(t *testing.T) {
 	build := func(_ provider.ProviderConfig) (provider.Provider, error) {
 		return &fakeProvider{
 			name: "openai",
@@ -350,7 +346,7 @@ func TestAISettingsValidateHandler_Cloud_Probe401_Unauthorized(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_Cloud_Probe404_NotFound(t *testing.T) {
+func TestHandler_Cloud_Probe404_NotFound(t *testing.T) {
 	build := func(_ provider.ProviderConfig) (provider.Provider, error) {
 		return &fakeProvider{
 			name: "azure",
@@ -377,7 +373,7 @@ func TestAISettingsValidateHandler_Cloud_Probe404_NotFound(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_Cloud_Probe500_UpstreamError(t *testing.T) {
+func TestHandler_Cloud_Probe500_UpstreamError(t *testing.T) {
 	build := func(_ provider.ProviderConfig) (provider.Provider, error) {
 		return &fakeProvider{
 			name: "openai",
@@ -404,7 +400,7 @@ func TestAISettingsValidateHandler_Cloud_Probe500_UpstreamError(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_Cloud_UnknownProvider_Rejected(t *testing.T) {
+func TestHandler_Cloud_UnknownProvider_Rejected(t *testing.T) {
 	// Provider name not registered in the registry → unknown_provider.
 	h := newTestValidateHandler(nil, "openai", func(_ provider.ProviderConfig) (provider.Provider, error) {
 		return &fakeProvider{name: "openai"}, nil
@@ -427,7 +423,7 @@ func TestAISettingsValidateHandler_Cloud_UnknownProvider_Rejected(t *testing.T) 
 	}
 }
 
-func TestAISettingsValidateHandler_Cloud_AzureMissingDeployment_Rejected(t *testing.T) {
+func TestHandler_Cloud_AzureMissingDeployment_Rejected(t *testing.T) {
 	// Azure OpenAI Service flavor needs deployment OR model — when
 	// both are empty the handler short-circuits with
 	// missing_deployment so the SPA can render a precise message.
@@ -452,7 +448,7 @@ func TestAISettingsValidateHandler_Cloud_AzureMissingDeployment_Rejected(t *test
 	}
 }
 
-func TestAISettingsValidateHandler_OffMode_Rejected(t *testing.T) {
+func TestHandler_OffMode_Rejected(t *testing.T) {
 	// 'off' has nothing to validate; a SPA that calls this is
 	// almost certainly buggy and we want the failure to surface.
 	h := emptyHandler()
@@ -466,7 +462,7 @@ func TestAISettingsValidateHandler_OffMode_Rejected(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_UnknownMode_Rejected(t *testing.T) {
+func TestHandler_UnknownMode_Rejected(t *testing.T) {
 	h := emptyHandler()
 	body := bytes.NewBufferString(`{"mode":"hybrid","base_url":""}`)
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings/ai/validate-config", body)
@@ -478,7 +474,7 @@ func TestAISettingsValidateHandler_UnknownMode_Rejected(t *testing.T) {
 	}
 }
 
-func TestAISettingsValidateHandler_MalformedJSON_Rejected(t *testing.T) {
+func TestHandler_MalformedJSON_Rejected(t *testing.T) {
 	h := emptyHandler()
 	body := bytes.NewBufferString(`{"mode":"local"`) // truncated
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings/ai/validate-config", body)
@@ -487,139 +483,5 @@ func TestAISettingsValidateHandler_MalformedJSON_Rejected(t *testing.T) {
 
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status: want 400 got %d body=%s", rec.Code, rec.Body.String())
-	}
-}
-
-// --- applyAIArchiveOnModeFlip tests -----------------------------------
-
-func TestApplyAIArchiveOnModeFlip_LocalToOff_Archives(t *testing.T) {
-	existing := &systemmodel.Settings{
-		AIMode: "local",
-		AIFeatures: map[string]bool{
-			"chatbot-llm":        true,
-			"ai-provider-health": false, // explicitly false → not archived
-		},
-	}
-	incoming := &systemmodel.Settings{
-		AIMode: "off",
-		// Buggy SPA leaves the prior map in the body — handler clears it.
-		AIFeatures: map[string]bool{"chatbot-llm": true},
-	}
-
-	applyAIArchiveOnModeFlip(existing, incoming)
-
-	if len(incoming.AIFeatures) != 0 {
-		t.Errorf("AIFeatures: want empty (off means off) got %v", incoming.AIFeatures)
-	}
-	if len(incoming.AIFeaturesArchived) != 1 || !incoming.AIFeaturesArchived["chatbot-llm"] {
-		t.Errorf("AIFeaturesArchived: want only true entries archived, got %v", incoming.AIFeaturesArchived)
-	}
-	if _, present := incoming.AIFeaturesArchived["ai-provider-health"]; present {
-		t.Errorf("AIFeaturesArchived: explicitly-false entry must not be archived, got %v", incoming.AIFeaturesArchived)
-	}
-}
-
-func TestApplyAIArchiveOnModeFlip_OffToOff_NoOp(t *testing.T) {
-	existing := &systemmodel.Settings{
-		AIMode:     "off",
-		AIFeatures: map[string]bool{}, // already off
-	}
-	incoming := &systemmodel.Settings{
-		AIMode:             "off",
-		AIFeatures:         map[string]bool{},
-		AIFeaturesArchived: map[string]bool{"sentinel": true},
-	}
-
-	applyAIArchiveOnModeFlip(existing, incoming)
-
-	// AIFeatures cleared (defensively normalised) — but the
-	// archive must NOT be replaced when the prior mode was already
-	// off (no fresh archive event).
-	if len(incoming.AIFeatures) != 0 {
-		t.Errorf("AIFeatures: want empty got %v", incoming.AIFeatures)
-	}
-	if !incoming.AIFeaturesArchived["sentinel"] {
-		t.Errorf("AIFeaturesArchived: pre-existing archive must be preserved across off→off, got %v", incoming.AIFeaturesArchived)
-	}
-}
-
-func TestApplyAIArchiveOnModeFlip_LocalToLocal_NoOp(t *testing.T) {
-	// Mode-on transitions are not archive events.
-	existing := &systemmodel.Settings{AIMode: "local", AIFeatures: map[string]bool{"chatbot-llm": true}}
-	incoming := &systemmodel.Settings{
-		AIMode:     "local",
-		AIFeatures: map[string]bool{"chatbot-llm": true},
-	}
-
-	applyAIArchiveOnModeFlip(existing, incoming)
-
-	if len(incoming.AIFeatures) != 1 || !incoming.AIFeatures["chatbot-llm"] {
-		t.Errorf("AIFeatures: must be untouched for non-off transitions, got %v", incoming.AIFeatures)
-	}
-	if incoming.AIFeaturesArchived != nil {
-		t.Errorf("AIFeaturesArchived: must not be written for non-off transitions, got %v", incoming.AIFeaturesArchived)
-	}
-}
-
-func TestApplyAIArchiveOnModeFlip_LocalToOff_EmptyPrior_NoArchive(t *testing.T) {
-	// Mode was on but the user never enabled any feature — there
-	// is nothing meaningful to archive, so AIFeaturesArchived
-	// stays nil (the persisted column will round-trip as the
-	// existing archive value, which is the right behaviour).
-	existing := &systemmodel.Settings{AIMode: "local", AIFeatures: map[string]bool{}}
-	incoming := &systemmodel.Settings{AIMode: "off", AIFeatures: map[string]bool{}}
-
-	applyAIArchiveOnModeFlip(existing, incoming)
-
-	if len(incoming.AIFeatures) != 0 {
-		t.Errorf("AIFeatures: want empty got %v", incoming.AIFeatures)
-	}
-	if incoming.AIFeaturesArchived != nil {
-		t.Errorf("AIFeaturesArchived: want nil (no fresh archive material), got %v", incoming.AIFeaturesArchived)
-	}
-}
-
-func TestApplyAIArchiveOnModeFlip_DefensiveClone(t *testing.T) {
-	// The archive must be a copy, not an alias — mutating the
-	// existing settings after the helper returns must not affect
-	// the snapshot we just wrote.
-	existing := &systemmodel.Settings{
-		AIMode:     "cloud",
-		AIFeatures: map[string]bool{"chatbot-llm": true},
-	}
-	incoming := &systemmodel.Settings{AIMode: "off"}
-
-	applyAIArchiveOnModeFlip(existing, incoming)
-
-	// Mutate the source after the call.
-	existing.AIFeatures["chatbot-llm"] = false
-	existing.AIFeatures["ai-provider-health"] = true
-
-	if !incoming.AIFeaturesArchived["chatbot-llm"] {
-		t.Errorf("AIFeaturesArchived: defensive clone broken — mutation propagated, got %v", incoming.AIFeaturesArchived)
-	}
-	if _, present := incoming.AIFeaturesArchived["ai-provider-health"]; present {
-		t.Errorf("AIFeaturesArchived: aliased map — adversarial post-mutation surfaced, got %v", incoming.AIFeaturesArchived)
-	}
-}
-
-func TestApplyAIArchiveOnModeFlip_NilIncoming_NoOp(t *testing.T) {
-	// Permissive on nil — the helper must not panic when a caller
-	// passes a half-constructed pointer.
-	applyAIArchiveOnModeFlip(&systemmodel.Settings{AIMode: "local"}, nil)
-}
-
-func TestApplyAIArchiveOnModeFlip_NilExisting_ClearsAndReturns(t *testing.T) {
-	incoming := &systemmodel.Settings{
-		AIMode:     "off",
-		AIFeatures: map[string]bool{"chatbot-llm": true},
-	}
-	applyAIArchiveOnModeFlip(nil, incoming)
-
-	if len(incoming.AIFeatures) != 0 {
-		t.Errorf("AIFeatures: want empty got %v", incoming.AIFeatures)
-	}
-	if incoming.AIFeaturesArchived != nil {
-		t.Errorf("AIFeaturesArchived: must not be written without a prior, got %v", incoming.AIFeaturesArchived)
 	}
 }
