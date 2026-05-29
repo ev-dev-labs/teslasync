@@ -1,4 +1,4 @@
-package api
+package aitirepress
 
 // Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
 //
@@ -64,24 +64,25 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// aiTirePressureTrendMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most query_tire_pressure_trend →
 // answer (with optional retries). A hard ceiling of 8 is
 // generous, matching aiCabinTemperatureImpactMaxIterations /
 // aiCostForecastNarrationMaxIterations.
-const aiTirePressureTrendMaxIterations = 8
+const maxIterations = 8
 
-// aiTirePressureTrendWindowDays is the trailing-window length
+// windowDays is the trailing-window length
 // the production adapter projects through signal.StateReader.
 // 30 days mirrors the slice prompt's "30-day trend" framing AND
 // the SPA's default preset on TirePressurePage.
-const aiTirePressureTrendWindowDays = 30
+const windowDays = 30
 
-// aiTirePressureTrendMinReadings is the minimum total
+// minReadings is the minimum total
 // TpmsPressure* emission count (across all four corners) the
 // adapter requires before it lets the narrator quote a
 // per-tire trend. Below this threshold has_enough_data flips
@@ -90,7 +91,7 @@ const aiTirePressureTrendWindowDays = 30
 // across a 30-day window is too sparse to fit a meaningful
 // linear trend (TPMS re-emits on the order of once per drive,
 // sometimes only once per week for a parked vehicle).
-const aiTirePressureTrendMinReadings = 20
+const minReadings = 20
 
 // Pressure thresholds in Pascals (SI). Mirror the SPA's
 // TirePressurePage (web/src/features/vehicle-systems/pages/
@@ -110,24 +111,46 @@ const (
 // correlation hint.
 const tireOutsideTempSignal = "OutsideTemp"
 
-// aiTirePressureTrendRequest is the JSON body shape this
+// Signal → JSON field mappings for TPMS timeline / state projection.
+// Field names are snake_case; the frontend camelCaseKeys transform produces
+// matching camelCase keys (e.g. front_left → frontLeft).
+var tirePressureMappings = []signal.FieldMapping{
+	{Signal: "TpmsPressureFl", Field: "front_left"},
+	{Signal: "TpmsPressureFr", Field: "front_right"},
+	{Signal: "TpmsPressureRl", Field: "rear_left"},
+	{Signal: "TpmsPressureRr", Field: "rear_right"},
+	{Signal: "TpmsLastSeenPressureTimeFl", Field: "last_seen_fl"},
+	{Signal: "TpmsLastSeenPressureTimeFr", Field: "last_seen_fr"},
+	{Signal: "TpmsLastSeenPressureTimeRl", Field: "last_seen_rl"},
+	{Signal: "TpmsLastSeenPressureTimeRr", Field: "last_seen_rr"},
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// request is the JSON body shape this
 // handler accepts. Mirrors the
 // /api/v1/tire-pressure?vehicle_id= query-string contract —
 // vehicle_id is required, no other params — kept as a JSON body
 // so the SPA can post from the same form state the
 // tire-pressure page already uses.
-type aiTirePressureTrendRequest struct {
+type request struct {
 	VehicleID int64 `json:"vehicle_id"`
 }
 
-// AITirePressureTrendHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/tire-pressure/trends/explain.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AITirePressureTrendHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -135,30 +158,30 @@ type AITirePressureTrendHandler struct {
 	maxIters   int
 }
 
-// NewAITirePressureTrendHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first
 // request.
-func NewAITirePressureTrendHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AITirePressureTrendHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAITirePressureTrendHandler: nil provider.Registry")
+		panic("aitirepress: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAITirePressureTrendHandler: nil tools.Registry")
+		panic("aitirepress: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAITirePressureTrendHandler: nil strategy.Strategy")
+		panic("aitirepress: NewHandler: nil strategy.Strategy")
 	}
-	return &AITirePressureTrendHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiTirePressureTrendMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -167,13 +190,13 @@ func NewAITirePressureTrendHandler(
 // same parsing without constructing a full handler with stub
 // deps. The function writes a 400 on failure and returns the
 // (req, ok) pair so the caller can early-return.
-func parseTirePressureTrendBody(w http.ResponseWriter, r *http.Request) (*aiTirePressureTrendRequest, bool) {
+func parseTirePressureTrendBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 	if r.Body == nil {
 		writeError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiTirePressureTrendRequest
+	var req request
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
@@ -193,7 +216,7 @@ func parseTirePressureTrendBody(w http.ResponseWriter, r *http.Request) (*aiTire
 // writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
-func (h *AITirePressureTrendHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	body, ok := parseTirePressureTrendBody(w, r)
 	if !ok {
 		return
@@ -262,9 +285,9 @@ func (h *AITirePressureTrendHandler) ServeHTTP(w http.ResponseWriter, r *http.Re
 	}
 }
 
-// Compile-time assertion: AITirePressureTrendHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AITirePressureTrendHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -292,7 +315,7 @@ type AITirePressureTrendSource struct {
 // rather than as a nil-deref on first AI request.
 func NewAITirePressureTrendSource(state signal.StateReader) *AITirePressureTrendSource {
 	if state == nil {
-		panic("api: NewAITirePressureTrendSource: nil signal.StateReader")
+		panic("aitirepress: NewAITirePressureTrendSource: nil signal.StateReader")
 	}
 	return &AITirePressureTrendSource{state: state}
 }
@@ -327,7 +350,7 @@ func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, 
 	}
 
 	to := time.Now()
-	from := to.AddDate(0, 0, -aiTirePressureTrendWindowDays)
+	from := to.AddDate(0, 0, -windowDays)
 
 	// Project the 4 TPMS corners + OutsideTemp across the
 	// 30-day window in chart mode (one row per emission, no
@@ -342,13 +365,13 @@ func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, 
 
 	envelope := &maintenance.TirePressureTrend{
 		VehicleID:           vehicleID,
-		WindowDays:          aiTirePressureTrendWindowDays,
-		MinRequiredReadings: aiTirePressureTrendMinReadings,
+		WindowDays:          windowDays,
+		MinRequiredReadings: minReadings,
 		Method:              "Linear least-squares slope across the 30-day TpmsPressure* change-feed window per corner; corner status is assigned by the deterministic soft-low / normal-min / normal-max / soft-high thresholds; outside-ambient summary is the rolling 30-day average / min / max of the OutsideTemp signal.",
 		Assumptions: []string{
 			"Per-corner trend is a descriptive linear slope across the recent change-feed window; it is NOT a forecast or regression model.",
 			"Outside ambient correlation is a heuristic: when all four corners trend down together AND the rolling average outside temperature dropped materially across the same window, seasonal contraction is the most likely deterministic driver rather than a puncture.",
-			fmt.Sprintf("Minimum total TpmsPressure emission count across all four corners for a meaningful narrative is %d readings; below this threshold has_enough_data is false.", aiTirePressureTrendMinReadings),
+			fmt.Sprintf("Minimum total TpmsPressure emission count across all four corners for a meaningful narrative is %d readings; below this threshold has_enough_data is false.", minReadings),
 		},
 		Thresholds: maintenance.TirePressureThresholds{
 			SoftLowPa:   tirePressureSoftLowPa,
@@ -387,7 +410,7 @@ func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, 
 	}
 
 	envelope.SampleSize = totalReadings
-	envelope.HasEnoughData = totalReadings >= aiTirePressureTrendMinReadings
+	envelope.HasEnoughData = totalReadings >= minReadings
 
 	// Outside-temperature summary across the same window.
 	outside := extractOutsideTempSummary(rows)

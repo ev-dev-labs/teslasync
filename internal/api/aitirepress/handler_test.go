@@ -15,7 +15,7 @@
 // (`go run ./cmd/ai-eval -feature tire-pressure-trend-reasoning`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aitirepress
 
 import (
 	"bytes"
@@ -32,6 +32,22 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestTirePressureReasoningAIOffShowsThresholdsOnly is the
 // load-bearing off-mode contract proof for slice 0033. It mounts
@@ -133,23 +149,23 @@ func TestTirePressureReasoningAIOffShowsThresholdsOnly(t *testing.T) {
 	}
 }
 
-// TestAITirePressureTrendHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAITirePressureTrendHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAITirePressureTrendHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAITirePressureTrendHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -157,11 +173,11 @@ func TestAITirePressureTrendHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAITirePressureTrendHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the JSON body BEFORE opening the SSE stream
 // — a missing or unparseable body must surface as a JSON 400,
 // not a half-opened stream that confuses the frontend.
-func TestAITirePressureTrendHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -191,9 +207,9 @@ func TestAITirePressureTrendHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAITirePressureTrendHandler_AcceptsCanonicalBody proves the
+// TestHandler_AcceptsCanonicalBody proves the
 // parser does NOT bounce the happy-path shapes.
-func TestAITirePressureTrendHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -267,7 +283,7 @@ func (f *fakeTirePressureState) Timeline(_ context.Context, _ int64, _ []signal.
 
 // TestQueryTirePressureTrend_HasEnoughDataFalseClearsPerCornerStatus
 // proves that when the total reading count across all four
-// corners is below aiTirePressureTrendMinReadings the adapter
+// corners is below minReadings the adapter
 // clears per-corner Status / RatePaPerDay / DaysUntilSoftLowEstimate
 // AND returns empty LikelyCauses + Insights — defence in depth so
 // the narrator cannot quote a noisy classification from a 3-row
