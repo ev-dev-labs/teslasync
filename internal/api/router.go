@@ -26,6 +26,7 @@ import (
 	apiauth "github.com/ev-dev-labs/teslasync/internal/api/auth"
 	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
+	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apiannot "github.com/ev-dev-labs/teslasync/internal/api/chartannotation"
 	apicommand "github.com/ev-dev-labs/teslasync/internal/api/command"
 	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
@@ -755,7 +756,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Phase-42 (prompt 0077): SignalCatalogHandler deleted (signal_catalog +
 	// signal_observations); the typed signal_log pipeline (000167+) is the
 	// authoritative catalog/observation surface.
-	chargingHeatmapHandler := NewChargingHeatmapHandler(db)
+	chargingHeatmapHandler := apichargeheatmap.NewChargingHeatmapHandler(db)
 	speedProfileHandler := NewSpeedProfileHandler(db)
 	dataRepairHandler := NewDataRepairHandler(db)
 	tempImpactHandler := NewTempImpactHandler(db)

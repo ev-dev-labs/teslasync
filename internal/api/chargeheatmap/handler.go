@@ -1,11 +1,14 @@
-package api
+package chargeheatmap
 
 import (
 	"math"
 	"net/http"
+	"strconv"
 
-	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
 // ChargingHeatmapHandler serves aggregated charging-pattern analytics.
@@ -43,12 +46,12 @@ type chargingSummary struct {
 func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
-	vehicleID, err := parseInt64(vehicleIDStr)
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -70,7 +73,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		ORDER BY day_of_week, hour_of_day`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("charging heatmap: failed to query heatmap data")
-		writeError(w, http.StatusInternalServerError, "failed to query heatmap data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query heatmap data")
 		return
 	}
 	defer heatmapRows.Close()
@@ -80,7 +83,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		var c heatmapCell
 		if err := heatmapRows.Scan(&c.DayOfWeek, &c.HourOfDay, &c.SessionCount, &c.AvgEnergyWh, &c.AvgCost); err != nil {
 			log.Error().Err(err).Msg("charging heatmap: scan heatmap row")
-			writeError(w, http.StatusInternalServerError, "failed to scan heatmap data")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan heatmap data")
 			return
 		}
 		c.AvgEnergyWh = math.Round(c.AvgEnergyWh*100) / 100
@@ -89,7 +92,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := heatmapRows.Err(); err != nil {
 		log.Error().Err(err).Msg("charging heatmap: rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read heatmap data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read heatmap data")
 		return
 	}
 
@@ -108,7 +111,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		LIMIT 10`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("charging heatmap: failed to query locations")
-		writeError(w, http.StatusInternalServerError, "failed to query location data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query location data")
 		return
 	}
 	defer locRows.Close()
@@ -118,7 +121,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		var l locationBreakdown
 		if err := locRows.Scan(&l.Location, &l.Count, &l.TotalWh, &l.TotalCost, &l.AvgPowerW); err != nil {
 			log.Error().Err(err).Msg("charging heatmap: scan location row")
-			writeError(w, http.StatusInternalServerError, "failed to scan location data")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan location data")
 			return
 		}
 		l.TotalWh = math.Round(l.TotalWh*100) / 100
@@ -128,7 +131,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := locRows.Err(); err != nil {
 		log.Error().Err(err).Msg("charging heatmap: location rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read location data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read location data")
 		return
 	}
 
@@ -144,7 +147,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		Scan(&summary.TotalSessions, &summary.TotalWh, &summary.TotalCost, &summary.AvgDurationS)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("charging heatmap: failed to query summary")
-		writeError(w, http.StatusInternalServerError, "failed to query summary")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query summary")
 		return
 	}
 	summary.TotalWh = math.Round(summary.TotalWh*100) / 100
@@ -158,7 +161,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		locations = []locationBreakdown{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"heatmap":   heatmap,
 		"locations": locations,
 		"summary":   summary,
