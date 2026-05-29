@@ -1,4 +1,4 @@
-package api
+package chatbot
 
 // Phase-50 / 0011 — U1 Chatbot LLM upgrade.
 //
@@ -75,7 +75,7 @@ type BaselineResponder struct {
 // the wiring bug surfaces at boot, not at first request).
 func NewBaselineResponder(h *ChatbotHandler) *BaselineResponder {
 	if h == nil {
-		panic("api: NewBaselineResponder: nil ChatbotHandler")
+		panic("chatbot: NewBaselineResponder: nil ChatbotHandler")
 	}
 	return &BaselineResponder{h: h}
 }

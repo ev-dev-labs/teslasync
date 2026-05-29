@@ -25,6 +25,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	apichatbot "github.com/ev-dev-labs/teslasync/internal/api/chatbot"
 )
 
 // stubGuardSettings is a minimal in-memory guard.Settings used to
@@ -111,7 +112,7 @@ func TestChatbotAIOffUsesBaselineAndAiRoute404(t *testing.T) {
 	// the heuristic itself is exercised by the existing
 	// chatbot_handler tests; we just prove the wrapper preserves the
 	// invariant that the baseline path remains a no-AI fallback.
-	var _ ChatResponder = (*BaselineResponder)(nil)
+	var _ apichatbot.ChatResponder = (*apichatbot.BaselineResponder)(nil)
 	defer func() {
 		// NewBaselineResponder(nil) MUST panic; a silent
 		// nil-acceptance would let a misordered boot ship a
@@ -120,7 +121,7 @@ func TestChatbotAIOffUsesBaselineAndAiRoute404(t *testing.T) {
 			t.Fatal("NewBaselineResponder(nil) did not panic")
 		}
 	}()
-	NewBaselineResponder(nil)
+	apichatbot.NewBaselineResponder(nil)
 }
 
 // TestAIChatbotHandler_PanicsOnNilWiring asserts the handler
