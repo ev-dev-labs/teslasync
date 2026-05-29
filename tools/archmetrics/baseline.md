@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-29T02:01:30Z, Go go1.26.1, commit c5af318a9a4db4e638889ac674bc4aaf1806a481_
+_Generated 2026-05-29T03:26:49Z, Go go1.26.1, commit e6ca081d5c46f6c70fa9b914d2eb3f78e73a6a10_
 
 ## Summary
 
-- Packages: 411
+- Packages: 435
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 380516
+- Total non-blank LOC under cmd/+internal/+tools/: 381605
 
 ## cmd/* main.go LOC
 
@@ -170,10 +170,34 @@ _Generated 2026-05-29T02:01:30Z, Go go1.26.1, commit c5af318a9a4db4e638889ac674b
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 114 | 89 | 61391 | yes | handler |
+| internal/api | 88 | 67 | 47778 | yes | handler |
 | internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
 | internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
 | internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
+| internal/api/aialert | 2 | 1 | 539 | yes | handler |
+| internal/api/aialerttune | 2 | 1 | 843 | yes | handler |
+| internal/api/aianomaly | 2 | 1 | 453 | yes | handler |
+| internal/api/aiautomation | 2 | 1 | 552 | yes | handler |
+| internal/api/aiautotripname | 2 | 1 | 597 | yes | handler |
+| internal/api/aibatthealth | 2 | 1 | 1059 | yes | handler |
+| internal/api/aichargcurve | 2 | 1 | 446 | yes | handler |
+| internal/api/aichargdiag | 2 | 1 | 485 | yes | handler |
+| internal/api/aichatbot | 2 | 1 | 489 | yes | handler |
+| internal/api/aiclimate | 2 | 1 | 772 | yes | handler |
+| internal/api/aicostfcst | 2 | 1 | 492 | yes | handler |
+| internal/api/aidigest | 2 | 2 | 398 | yes | handler |
+| internal/api/aidrivecoach | 2 | 1 | 451 | yes | handler |
+| internal/api/aidrivesearch | 3 | 1 | 725 | yes | handler |
+| internal/api/airaghelp | 2 | 1 | 483 | yes | handler |
+| internal/api/airouteeff | 2 | 1 | 490 | yes | handler |
+| internal/api/aisearch | 3 | 1 | 704 | yes | handler |
+| internal/api/aismartcharge | 2 | 1 | 568 | yes | handler |
+| internal/api/aispeedprof | 2 | 1 | 474 | yes | handler |
+| internal/api/aitempimpact | 2 | 1 | 793 | yes | handler |
+| internal/api/aitirepress | 2 | 1 | 1223 | yes | handler |
+| internal/api/aitripplanllm | 2 | 1 | 654 | yes | handler |
+| internal/api/aivampire | 2 | 1 | 599 | yes | handler |
+| internal/api/aiyir | 2 | 1 | 413 | yes | handler |
 | internal/api/alertmsg | 2 | 0 | 245 | yes | handler |
 | internal/api/alerts | 7 | 4 | 3611 | yes | handler |
 | internal/api/analytics | 4 | 1 | 764 | yes | handler |
@@ -467,7 +491,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 114 / 89 | 59 | 31 | 28 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 88 / 67 | 59 | 31 | 28 |
 
 ### `internal/models` detail
 
