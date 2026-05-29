@@ -7,7 +7,7 @@
 //     *ChargePlannerHandler.computeSchedule path via a narrow
 //     [ChargeScheduleComputer] port (production:
 //     AIChargeScheduleComputer in
-//     internal/api/ai_smart_charge_schedule_handler.go) and returns
+//     internal/api/aismartcharge/handler.go) and returns
 //     the same envelope POST /api/v1/charge-planner/optimize
 //     produces today (plan_id=0, current_soc, target_soc, kwh_needed,
 //     estimated_duration_hours, schedule {start_time, end_time,
@@ -71,7 +71,7 @@ import (
 // draft_charge_schedule passes to the [ChargeScheduleComputer] port.
 // Mirrors the field-for-field shape of *api.optimizeRequest +
 // {currentSOC, departBy parsed time, now} so the production adapter
-// (in internal/api/ai_smart_charge_schedule_handler.go) can translate
+// (in internal/api/aismartcharge/handler.go) can translate
 // without loss, and tests can substitute a deterministic fake without
 // pulling internal/api into the tools package.
 //
@@ -136,7 +136,7 @@ type ChargeScheduleComputeResult struct {
 
 // ChargeScheduleComputer is the narrow port the
 // draft_charge_schedule tool delegates to. In production it is
-// satisfied by *api.AIChargeScheduleComputer (wraps
+// satisfied by *aismartcharge.AIChargeScheduleComputer (wraps
 // *api.ChargePlannerHandler); tests substitute deterministic fakes
 // so the tool unit tests stay hermetic.
 //

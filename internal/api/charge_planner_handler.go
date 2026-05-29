@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
@@ -523,3 +525,74 @@ func (h *ChargePlannerHandler) ListRatePlans(w http.ResponseWriter, r *http.Requ
 	sort.Slice(plans, func(i, j int) bool { return plans[i].ID < plans[j].ID })
 	writeJSON(w, http.StatusOK, plans)
 }
+
+// ComputeChargeSchedule implements schedule.ChargeScheduleComputer by delegating
+// to the canonical charge-planner compute path without persisting a plan.
+func (h *ChargePlannerHandler) ComputeChargeSchedule(ctx context.Context, req schedule.ChargeScheduleComputeRequest) (*schedule.ChargeScheduleComputeResult, error) {
+	if h == nil {
+		return nil, errors.New("charge planner: nil handler")
+	}
+	departBy, err := time.Parse(time.RFC3339, req.DepartBy)
+	if err != nil {
+		return nil, fmt.Errorf("ai smart-charge-schedule-suggestion: depart_by parse: %w", err)
+	}
+	baselineReq := optimizeRequest{
+		VehicleID:       req.VehicleID,
+		TargetSOC:       req.TargetSOC,
+		DepartBy:        req.DepartBy,
+		RatePlanID:      req.RatePlanID,
+		MaxAmps:         req.MaxAmps,
+		BatteryCapacity: req.BatteryCapacity,
+		ChargerVoltage:  req.ChargerVoltage,
+		PreferOffPeak:   req.PreferOffPeak,
+	}
+	applyOptimizeRequestDefaults(&baselineReq)
+	resp, err := h.computeSchedule(ctx, baselineReq, departBy, req.CurrentSOC, time.Now().UTC())
+	if err != nil {
+		return nil, fmt.Errorf("ai smart-charge-schedule-suggestion: computeSchedule: %w", err)
+	}
+	if resp == nil {
+		return nil, errors.New("ai smart-charge-schedule-suggestion: computeSchedule returned nil response")
+	}
+	out := &schedule.ChargeScheduleComputeResult{
+		PlanID:           resp.PlanID,
+		CurrentSOC:       resp.CurrentSOC,
+		TargetSOC:        resp.TargetSOC,
+		KWhNeeded:        resp.KWhNeeded,
+		EstDurationHours: resp.EstDurationHours,
+		Schedule: schedule.ChargeWindow{
+			StartTime:    resp.Schedule.StartTime,
+			EndTime:      resp.Schedule.EndTime,
+			RateCentsKWh: resp.Schedule.RateCentsKWh,
+			EstCost:      resp.Schedule.EstCost,
+			RateTier:     resp.Schedule.RateTier,
+		},
+		Comparison: schedule.CostComparison{
+			ChargeNowCost: resp.Comparison.ChargeNowCost,
+			OptimizedCost: resp.Comparison.OptimizedCost,
+			Savings:       resp.Comparison.Savings,
+			SavingsPct:    resp.Comparison.SavingsPct,
+		},
+		Alternatives: make([]schedule.ChargeWindow, 0, len(resp.Alternatives)),
+		HourlyRates:  make([]schedule.HourlyRate, 0, len(resp.HourlyRates)),
+	}
+	for _, alt := range resp.Alternatives {
+		out.Alternatives = append(out.Alternatives, schedule.ChargeWindow{
+			StartTime:    alt.StartTime,
+			EndTime:      alt.EndTime,
+			RateCentsKWh: alt.RateCentsKWh,
+			EstCost:      alt.EstCost,
+			RateTier:     alt.RateTier,
+		})
+	}
+	for _, hr := range resp.HourlyRates {
+		out.HourlyRates = append(out.HourlyRates, schedule.HourlyRate{
+			Hour:      hr.Hour,
+			RateCents: hr.RateCents,
+			Tier:      hr.Tier,
+		})
+	}
+	return out, nil
+}
+
+var _ schedule.ChargeScheduleComputer = (*ChargePlannerHandler)(nil)

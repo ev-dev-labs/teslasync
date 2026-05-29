@@ -1,9 +1,9 @@
-package api
+package aismartcharge
 
 // Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
 //
-// ai_smart_charge_schedule_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/charging/schedule/draft. The flow
+// handler.go implements the LLM-backed handler at
+// POST /api/v1/ai/charging/schedule/draft. The flow
 // mirrors ai_trip_planner_llm_handler.go (same dispatch+stream loop,
 // no persistence — one-shot proposal):
 //
@@ -45,7 +45,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -62,20 +61,20 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiSmartChargeScheduleMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most draft_charge_schedule →
 // validate_charge_schedule → answer (with optional retries). A
 // hard ceiling of 8 is generous. Mirrors
 // aiTripPlannerLLMAgentMaxIterations.
-const aiSmartChargeScheduleMaxIterations = 8
+const maxIterations = 8
 
-// aiSmartChargeScheduleDraftRequest is the JSON body shape this
+// draftRequest is the JSON body shape this
 // handler accepts. SOC fields are 0..100 percent; time fields are
 // RFC3339; rate fields stay in their canonical units. The shape
 // mirrors the *typed* surface area of POST
 // /api/v1/charge-planner/optimize so a SPA call site can construct
 // the AI draft request from the same form state.
-type aiSmartChargeScheduleDraftRequest struct {
+type draftRequest struct {
 	VehicleID       int64   `json:"vehicle_id"`
 	TargetSOC       int     `json:"target_soc"`
 	DepartBy        string  `json:"depart_by"` // RFC3339
@@ -87,14 +86,14 @@ type aiSmartChargeScheduleDraftRequest struct {
 	CurrentSOC      int     `json:"current_soc"`
 }
 
-// AISmartChargeScheduleHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/charging/schedule/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once at
 // boot.
-type AISmartChargeScheduleHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -102,7 +101,7 @@ type AISmartChargeScheduleHandler struct {
 	maxIters   int
 }
 
-// NewAISmartChargeScheduleHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -115,41 +114,52 @@ type AISmartChargeScheduleHandler struct {
 //
 // strat:      the smart-charge-schedule-suggestion Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAISmartChargeScheduleHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AISmartChargeScheduleHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAISmartChargeScheduleHandler: nil provider.Registry")
+		panic("aismartcharge: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAISmartChargeScheduleHandler: nil tools.Registry")
+		panic("aismartcharge: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAISmartChargeScheduleHandler: nil strategy.Strategy")
+		panic("aismartcharge: NewHandler: nil strategy.Strategy")
 	}
-	return &AISmartChargeScheduleHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiSmartChargeScheduleMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseSmartChargeScheduleDraftBody decodes + validates the JSON
+func writeError(w http.ResponseWriter, status int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": msg})
+}
+
+// denyAllConfirm is a defence-in-depth confirm hook for propose-only AI tools.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// parseDraftBody decodes + validates the JSON
 // body. Pulled out so the validator-only test can exercise the
 // same parsing without constructing a full handler with stub deps.
 // The function writes a 400 on failure and returns the (req, ok)
 // pair so the caller can early-return.
-func parseSmartChargeScheduleDraftBody(w http.ResponseWriter, r *http.Request) (*aiSmartChargeScheduleDraftRequest, bool) {
+func parseDraftBody(w http.ResponseWriter, r *http.Request) (*draftRequest, bool) {
 	if r.Body == nil {
 		writeError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiSmartChargeScheduleDraftRequest
+	var req draftRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
@@ -200,9 +210,9 @@ func parseSmartChargeScheduleDraftBody(w http.ResponseWriter, r *http.Request) (
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AISmartChargeScheduleHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
-	body, ok := parseSmartChargeScheduleDraftBody(w, r)
+	body, ok := parseDraftBody(w, r)
 	if !ok {
 		return
 	}
@@ -278,113 +288,38 @@ func (h *AISmartChargeScheduleHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	}
 }
 
-// Compile-time assertion: AISmartChargeScheduleHandler satisfies http.Handler.
-var _ http.Handler = (*AISmartChargeScheduleHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
-// internal/ai/tools/smart_charge_schedule_suggestion.go. Kept in
-// the same file as the handler so the wiring intent is local to
+// internal/ai/tools/schedule/charge.go. Kept in the same file as
+// the handler so the wiring intent is local to
 // the slice; mirrors the trip-planner-llm-agent slice's
 // AITripPlanComputer pattern.
 // ---------------------------------------------------------------------
 
-// AIChargeScheduleComputer is the production
-// schedule.ChargeScheduleComputer. It delegates to the canonical
-// *ChargePlannerHandler.computeSchedule path so a schedule
-// proposed by the AI tool is byte-equivalent to the schedule
-// returned by POST /api/v1/charge-planner/optimize (modulo the
-// PlanID, which is 0 because this path never persists).
-//
-// The struct holds a non-nil *ChargePlannerHandler reference (the
-// constructor panics on nil) so a wiring bug surfaces at boot.
+// AIChargeScheduleComputer is the production schedule.ChargeScheduleComputer
+// wrapper used by the smart-charge schedule suggestion tools. It
+// delegates to the canonical charge planner implementation supplied by
+// router.go and keeps the AI tool surface propose-only.
 type AIChargeScheduleComputer struct {
-	planner *ChargePlannerHandler
+	planner schedule.ChargeScheduleComputer
 }
 
-// NewAIChargeScheduleComputer constructs the adapter. Panics on
-// nil so a wiring mistake surfaces at boot.
-func NewAIChargeScheduleComputer(planner *ChargePlannerHandler) *AIChargeScheduleComputer {
+// NewAIChargeScheduleComputer constructs the adapter. Panics on nil so a
+// wiring mistake surfaces at boot.
+func NewAIChargeScheduleComputer(planner schedule.ChargeScheduleComputer) *AIChargeScheduleComputer {
 	if planner == nil {
-		panic("api: NewAIChargeScheduleComputer: nil *ChargePlannerHandler")
+		panic("aismartcharge: NewAIChargeScheduleComputer: nil schedule.ChargeScheduleComputer")
 	}
 	return &AIChargeScheduleComputer{planner: planner}
 }
 
-// ComputeChargeSchedule implements schedule.ChargeScheduleComputer.
-// Translates the typed [schedule.ChargeScheduleComputeRequest] into a
-// canonical optimizeRequest, delegates to the same in-process
-// computeSchedule method the deterministic POST
-// /api/v1/charge-planner/optimize handler uses, and translates the
-// *optimizeResponse back into a typed
-// [schedule.ChargeScheduleComputeResult]. PlanID stays 0 because this
-// path never persists.
-//
-// The compute call is bounded by ctx; a context-cancel from the
-// SPA closing the SSE connection terminates the computation
-// cleanly.
+// ComputeChargeSchedule implements schedule.ChargeScheduleComputer by
+// delegating to the canonical charge planner.
 func (a *AIChargeScheduleComputer) ComputeChargeSchedule(ctx context.Context, req schedule.ChargeScheduleComputeRequest) (*schedule.ChargeScheduleComputeResult, error) {
-	departBy, err := time.Parse(time.RFC3339, req.DepartBy)
-	if err != nil {
-		return nil, fmt.Errorf("ai smart-charge-schedule-suggestion: depart_by parse: %w", err)
-	}
-	baselineReq := optimizeRequest{
-		VehicleID:       req.VehicleID,
-		TargetSOC:       req.TargetSOC,
-		DepartBy:        req.DepartBy,
-		RatePlanID:      req.RatePlanID,
-		MaxAmps:         req.MaxAmps,
-		BatteryCapacity: req.BatteryCapacity,
-		ChargerVoltage:  req.ChargerVoltage,
-		PreferOffPeak:   req.PreferOffPeak,
-	}
-	applyOptimizeRequestDefaults(&baselineReq)
-	resp, err := a.planner.computeSchedule(ctx, baselineReq, departBy, req.CurrentSOC, time.Now().UTC())
-	if err != nil {
-		return nil, fmt.Errorf("ai smart-charge-schedule-suggestion: computeSchedule: %w", err)
-	}
-	if resp == nil {
-		return nil, errors.New("ai smart-charge-schedule-suggestion: computeSchedule returned nil response")
-	}
-	out := &schedule.ChargeScheduleComputeResult{
-		PlanID:           resp.PlanID, // always 0 — computeSchedule does not persist
-		CurrentSOC:       resp.CurrentSOC,
-		TargetSOC:        resp.TargetSOC,
-		KWhNeeded:        resp.KWhNeeded,
-		EstDurationHours: resp.EstDurationHours,
-		Schedule: schedule.ChargeWindow{
-			StartTime:    resp.Schedule.StartTime,
-			EndTime:      resp.Schedule.EndTime,
-			RateCentsKWh: resp.Schedule.RateCentsKWh,
-			EstCost:      resp.Schedule.EstCost,
-			RateTier:     resp.Schedule.RateTier,
-		},
-		Comparison: schedule.CostComparison{
-			ChargeNowCost: resp.Comparison.ChargeNowCost,
-			OptimizedCost: resp.Comparison.OptimizedCost,
-			Savings:       resp.Comparison.Savings,
-			SavingsPct:    resp.Comparison.SavingsPct,
-		},
-		Alternatives: make([]schedule.ChargeWindow, 0, len(resp.Alternatives)),
-		HourlyRates:  make([]schedule.HourlyRate, 0, len(resp.HourlyRates)),
-	}
-	for _, alt := range resp.Alternatives {
-		out.Alternatives = append(out.Alternatives, schedule.ChargeWindow{
-			StartTime:    alt.StartTime,
-			EndTime:      alt.EndTime,
-			RateCentsKWh: alt.RateCentsKWh,
-			EstCost:      alt.EstCost,
-			RateTier:     alt.RateTier,
-		})
-	}
-	for _, hr := range resp.HourlyRates {
-		out.HourlyRates = append(out.HourlyRates, schedule.HourlyRate{
-			Hour:      hr.Hour,
-			RateCents: hr.RateCents,
-			Tier:      hr.Tier,
-		})
-	}
-	return out, nil
+	return a.planner.ComputeChargeSchedule(ctx, req)
 }
 
 // Compile-time assertion: AIChargeScheduleComputer satisfies schedule.ChargeScheduleComputer.

@@ -32,6 +32,7 @@ import (
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
+	aismartcharge "github.com/ev-dev-labs/teslasync/internal/api/aismartcharge"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -1234,13 +1235,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Schedule button in the SmartChargePage UI (unchanged
 	// baseline).
 	schedule.RegisterSmartChargeScheduleSuggestionTools(aiToolRegistry, schedule.SmartChargeScheduleSuggestionSources{
-		Planner: NewAIChargeScheduleComputer(chargePlannerHandler),
+		Planner: aismartcharge.NewAIChargeScheduleComputer(chargePlannerHandler),
 	})
 	// smart-charge-schedule-suggestion handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiSmartChargeScheduleHandler := NewAISmartChargeScheduleHandler(
+	aiSmartChargeScheduleHandler := aismartcharge.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		smartchargeschedulesuggestion.New(),
