@@ -13,7 +13,7 @@
 // require a live database fixture (the AI handler persists turns via
 // *dbnotif.ChatRepo, which is not interface-segregated yet).
 
-package api
+package aichatbot
 
 import (
 	"context"
@@ -124,22 +124,22 @@ func TestChatbotAIOffUsesBaselineAndAiRoute404(t *testing.T) {
 	apichatbot.NewBaselineResponder(nil)
 }
 
-// TestAIChatbotHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at boot
 // must surface as a panic, not as a nil-deref on first request.
-func TestAIChatbotHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"nil chat repo", func() { NewAIChatbotHandler(nil, nil, nil, nil, "") }},
+		{"nil chat repo", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIChatbotHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()

@@ -24,6 +24,7 @@ import (
 	aiautotripname "github.com/ev-dev-labs/teslasync/internal/api/aiautotripname"
 	aichargcurve "github.com/ev-dev-labs/teslasync/internal/api/aichargcurve"
 	aichargdiag "github.com/ev-dev-labs/teslasync/internal/api/aichargdiag"
+	aichatbot "github.com/ev-dev-labs/teslasync/internal/api/aichatbot"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -745,7 +746,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Drives:  drivedb.NewDriveRepo(db),
 		Charges: chargingdb.NewChargingRepo(db),
 	})
-	aiChatbotHandler := NewAIChatbotHandler(
+	aiChatbotHandler := aichatbot.NewHandler(
 		dbnotif.NewChatRepo(db),
 		aiRegistry,
 		aiToolRegistry,

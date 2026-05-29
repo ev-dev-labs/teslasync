@@ -2,13 +2,18 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
+	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
+	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 )
 
 // writeJSON is a transitional wrapper around httpx.WriteJSON kept for
@@ -39,6 +44,74 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 func writeErrorCode(w http.ResponseWriter, status int, msg, code string) {
 	httpx.WriteErrorCode(w, status, msg, code)
 }
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+func historyToProviderMessages(rows []*chatbotmodel.ChatMessage, currentUserMessage string) []provider.Message {
+	if len(rows) == 0 {
+		return nil
+	}
+	out := make([]provider.Message, 0, len(rows))
+	for i, m := range rows {
+		if i == len(rows)-1 && m.Role == "user" && m.Content == currentUserMessage {
+			continue
+		}
+		out = append(out, provider.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+type recordingStreamWriter struct {
+	inner *stream.Writer
+	buf   strings.Builder
+}
+
+func (r *recordingStreamWriter) WriteDelta(s string) error {
+	r.buf.WriteString(s)
+	return r.inner.WriteDelta(s)
+}
+
+func (r *recordingStreamWriter) WriteToolCall(call provider.ToolCall) error {
+	return r.inner.WriteToolCall(call)
+}
+
+func (r *recordingStreamWriter) WriteToolResult(name string, result json.RawMessage) error {
+	return r.inner.WriteToolResult(name, result)
+}
+
+func (r *recordingStreamWriter) WriteToolError(name string, err error) error {
+	return r.inner.WriteToolError(name, err)
+}
+
+func (r *recordingStreamWriter) WriteDone() error {
+	return r.inner.WriteDone()
+}
+
+func (r *recordingStreamWriter) EmitLimitError(message, reason string, retryAfterS int, bannerLevel string, baselineAvailable bool) error {
+	return r.inner.WriteLimitError(message, stream.LimitDecisionPayload{
+		Reason:            reason,
+		RetryAfterS:       retryAfterS,
+		BannerLevel:       bannerLevel,
+		BaselineAvailable: baselineAvailable,
+	})
+}
+
+func (r *recordingStreamWriter) text() string {
+	return r.buf.String()
+}
+
+var (
+	_ dispatch.StreamWriter      = (*recordingStreamWriter)(nil)
+	_ dispatch.LimitErrorEmitter = (*recordingStreamWriter)(nil)
+)
 
 // writeTeslaTokenExpired drained to zero callers by R2d batch 8 (carves
 // drained all token-issuing handlers into resource subpackages, which call

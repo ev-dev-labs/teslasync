@@ -1,8 +1,8 @@
-package api
+package aichatbot
 
 // Phase-50 / 0011 — U1 Chatbot LLM upgrade.
 //
-// ai_chatbot_handler.go implements the real LLM-backed handler that
+// handler.go implements the real LLM-backed handler that
 // replaces the F0 stub at POST /api/v1/ai/chatbot. The flow is:
 //
 //   request JSON {message, session_id}
@@ -52,11 +52,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
-// aiChatbotHistoryLimit is the upper bound on how many prior messages
+// historyLimit is the upper bound on how many prior messages
 // we hand to the LLM as context. Picked to balance:
 //
 //   - Token budget: ~16 messages × ~80 tokens average ≈ 1.3K input
@@ -67,22 +68,22 @@ import (
 // History older than this is silently dropped. The full record is
 // always kept in the chatbot_messages table for audit and the
 // /chatbot/history endpoint.
-const aiChatbotHistoryLimit = 16
+const historyLimit = 16
 
-// aiChatbotMaxIterations bounds the dispatcher's tool-loop. The
+// maxIterations bounds the dispatcher's tool-loop. The
 // chatbot is one-question-one-answer plus optional tool round-trips;
 // a hard ceiling of 6 protects against pathological model loops
 // without truncating any realistic conversation. Tested in
-// TestAIChatbotHandler_OnPathDispatches.
-const aiChatbotMaxIterations = 6
+// TestHandler_OnPathDispatches.
+const maxIterations = 6
 
-// AIChatbotHandler is the HTTP handler for POST /api/v1/ai/chatbot.
+// Handler is the HTTP handler for POST /api/v1/ai/chatbot.
 //
 // Construction is in router.go (so the dispatcher's tool registry +
 // provider registry are wired once at boot). The handler itself is
 // stateless beyond its constructor inputs and is safe for concurrent
 // use across requests.
-type AIChatbotHandler struct {
+type Handler struct {
 	chat       *dbnotif.ChatRepo
 	registry   *provider.Registry
 	tools      *tools.Registry
@@ -92,7 +93,7 @@ type AIChatbotHandler struct {
 	historyN   int
 }
 
-// NewAIChatbotHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -101,38 +102,38 @@ type AIChatbotHandler struct {
 // toolReg:       process-wide tool registry (Register12Builtins-populated).
 // strat:         the chatbot-llm Strategy (one per process).
 // headerName:    forward-auth header name; used to extract subject for audit.
-func NewAIChatbotHandler(
+func NewHandler(
 	chat *dbnotif.ChatRepo,
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIChatbotHandler {
+) *Handler {
 	switch {
 	case chat == nil:
-		panic("api: NewAIChatbotHandler: nil ChatRepo")
+		panic("aichatbot: NewHandler: nil ChatRepo")
 	case registry == nil:
-		panic("api: NewAIChatbotHandler: nil provider.Registry")
+		panic("aichatbot: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIChatbotHandler: nil tools.Registry")
+		panic("aichatbot: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIChatbotHandler: nil strategy.Strategy")
+		panic("aichatbot: NewHandler: nil strategy.Strategy")
 	}
-	return &AIChatbotHandler{
+	return &Handler{
 		chat:       chat,
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiChatbotMaxIterations,
-		historyN:   aiChatbotHistoryLimit,
+		maxIters:   maxIterations,
+		historyN:   historyLimit,
 	}
 }
 
-// aiChatbotRequest is the wire shape for POST /api/v1/ai/chatbot.
+// request is the wire shape for POST /api/v1/ai/chatbot.
 // Mirrors the existing baseline endpoint so the frontend can call
 // either route without DTO drift.
-type aiChatbotRequest struct {
+type request struct {
 	Message   string `json:"message"`
 	SessionID string `json:"session_id"`
 }
@@ -142,15 +143,15 @@ type aiChatbotRequest struct {
 // after the SSE stream closes. Every error path writes a structured
 // frame onto the SSE stream (when the writer has been opened) or a
 // plain JSON 4xx/5xx (before it has).
-func (h *AIChatbotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
-	var body aiChatbotRequest
+	var body request
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if strings.TrimSpace(body.Message) == "" {
-		writeError(w, http.StatusBadRequest, "message is required")
+		httpx.WriteError(w, http.StatusBadRequest, "message is required")
 		return
 	}
 	if body.SessionID == "" {
@@ -188,7 +189,7 @@ func (h *AIChatbotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), chatbotllm.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai chatbot: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -208,7 +209,7 @@ func (h *AIChatbotHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Non-flushable response writer (test recorder, etc.).
 		// Emit a plain JSON 500 — the SSE headers were not sent.
 		log.Error().Err(err).Msg("ai chatbot: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
