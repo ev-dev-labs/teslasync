@@ -97,6 +97,7 @@ import (
 	apisleep "github.com/ev-dev-labs/teslasync/internal/api/sleep"
 	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
 	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
+	apispeedprof "github.com/ev-dev-labs/teslasync/internal/api/speedprofile"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apiauthmode "github.com/ev-dev-labs/teslasync/internal/api/sysauthmode"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
@@ -791,7 +792,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// signal_observations); the typed signal_log pipeline (000167+) is the
 	// authoritative catalog/observation surface.
 	chargingHeatmapHandler := apichargeheatmap.NewChargingHeatmapHandler(db)
-	speedProfileHandler := NewSpeedProfileHandler(db)
+	speedProfileHandler := apispeedprof.NewSpeedProfileHandler(db)
 	dataRepairHandler := apidatarepair.NewDataRepairHandler(db)
 	tempImpactHandler := NewTempImpactHandler(db)
 	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
