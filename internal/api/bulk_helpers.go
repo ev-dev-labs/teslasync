@@ -1,8 +1,6 @@
 package api
 
 import (
-	"net/http"
-
 	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 )
 
@@ -47,18 +45,6 @@ var (
 	errBulkIDsTooMany  = apibulk.ErrIDsTooMany
 )
 
-// decodeBulkIDsRequest is a 1-line wrapper around apibulk.DecodeIDsRequest.
-func decodeBulkIDsRequest(r *http.Request) ([]int64, error) {
-	return apibulk.DecodeIDsRequest(r)
-}
-
-// decodeAutomationBulkBody is a 1-line wrapper around apibulk.DecodeOpBody.
-// The historic parent name is retained for the bridge era; new code
-// should call apibulk.DecodeOpBody directly.
-func decodeAutomationBulkBody(r *http.Request) (automationBulkBody, error) {
-	return apibulk.DecodeOpBody(r)
-}
-
 // dedupeInt64s is a 1-line wrapper around apibulk.DedupeInt64s.
 func dedupeInt64s(in []int64) []int64 {
 	return apibulk.DedupeInt64s(in)
@@ -67,9 +53,4 @@ func dedupeInt64s(in []int64) []int64 {
 // computeMissingIDs is a 1-line wrapper around apibulk.ComputeMissingIDs.
 func computeMissingIDs(requested, existing []int64) []bulkFailedID {
 	return apibulk.ComputeMissingIDs(requested, existing)
-}
-
-// writeBulkBadRequest is a 1-line wrapper around apibulk.WriteBadRequest.
-func writeBulkBadRequest(w http.ResponseWriter, err error) {
-	apibulk.WriteBadRequest(w, err)
 }

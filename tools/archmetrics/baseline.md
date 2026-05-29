@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-29T00:48:09Z, Go go1.26.1, commit c4bede836b1639ae4da4713797f5df283088be62_
+_Generated 2026-05-29T02:01:30Z, Go go1.26.1, commit c5af318a9a4db4e638889ac674bc4aaf1806a481_
 
 ## Summary
 
-- Packages: 387
+- Packages: 411
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 379217
+- Total non-blank LOC under cmd/+internal/+tools/: 380516
 
 ## cmd/* main.go LOC
 
@@ -170,11 +170,13 @@ _Generated 2026-05-29T00:48:09Z, Go go1.26.1, commit c4bede836b1639ae4da4713797f
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 166 | 102 | 80508 | yes | handler |
+| internal/api | 114 | 89 | 61391 | yes | handler |
 | internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
 | internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
 | internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
 | internal/api/alertmsg | 2 | 0 | 245 | yes | handler |
+| internal/api/alerts | 7 | 4 | 3611 | yes | handler |
+| internal/api/analytics | 4 | 1 | 764 | yes | handler |
 | internal/api/anomaly | 2 | 2 | 801 | yes | handler |
 | internal/api/apibulk | 2 | 1 | 460 | yes | handler |
 | internal/api/apicalllog | 2 | 0 | 69 | yes | handler |
@@ -183,13 +185,18 @@ _Generated 2026-05-29T00:48:09Z, Go go1.26.1, commit c4bede836b1639ae4da4713797f
 | internal/api/apiparams | 2 | 1 | 363 | yes | handler |
 | internal/api/apitest | 2 | 0 | 137 | yes | handler |
 | internal/api/apperror | 3 | 1 | 508 | yes | handler |
+| internal/api/audit | 2 | 0 | 180 | yes | handler |
 | internal/api/auth | 2 | 0 | 152 | yes | handler |
 | internal/api/authsession | 2 | 1 | 365 | yes | handler |
+| internal/api/automation | 11 | 1 | 4620 | yes | handler |
 | internal/api/backup | 3 | 1 | 530 | yes | handler |
+| internal/api/battery | 2 | 1 | 418 | yes | handler |
 | internal/api/chargeheatmap | 2 | 0 | 161 | yes | handler |
 | internal/api/chargeopt | 4 | 0 | 578 | yes | handler |
 | internal/api/chargetelem | 2 | 1 | 319 | yes | handler |
+| internal/api/charging | 3 | 1 | 767 | yes | handler |
 | internal/api/chartannotation | 2 | 1 | 827 | yes | handler |
+| internal/api/chatbot | 5 | 1 | 851 | yes | handler |
 | internal/api/climate | 2 | 1 | 413 | yes | handler |
 | internal/api/command | 2 | 1 | 343 | yes | handler |
 | internal/api/dashboardlayout | 2 | 1 | 754 | yes | handler |
@@ -200,18 +207,24 @@ _Generated 2026-05-29T00:48:09Z, Go go1.26.1, commit c4bede836b1639ae4da4713797f
 | internal/api/dlq | 2 | 1 | 515 | yes | handler |
 | internal/api/drivediagnostic | 2 | 1 | 458 | yes | handler |
 | internal/api/drivedyn | 2 | 1 | 485 | yes | handler |
+| internal/api/drives | 5 | 2 | 1818 | yes | handler |
 | internal/api/drivetrain | 2 | 1 | 331 | yes | handler |
 | internal/api/drivingcoach | 2 | 0 | 385 | yes | handler |
+| internal/api/energy | 2 | 0 | 100 | yes | handler |
 | internal/api/energyflow | 2 | 1 | 224 | yes | handler |
 | internal/api/energysite | 2 | 0 | 274 | yes | handler |
 | internal/api/exportcolumns | 2 | 1 | 167 | yes | handler |
+| internal/api/exports | 3 | 1 | 864 | yes | handler |
 | internal/api/feedback | 2 | 1 | 392 | yes | handler |
+| internal/api/fleettelemetry | 3 | 1 | 627 | yes | handler |
 | internal/api/gasprice | 2 | 0 | 138 | yes | handler |
 | internal/api/geocode | 2 | 0 | 77 | yes | handler |
 | internal/api/geofence | 3 | 1 | 846 | yes | handler |
 | internal/api/guard | 2 | 1 | 1090 | yes | handler |
 | internal/api/httpx | 3 | 2 | 360 | yes | handler |
 | internal/api/impersonate | 2 | 1 | 910 | yes | handler |
+| internal/api/importer | 2 | 0 | 240 | yes | handler |
+| internal/api/inboundwebhook | 2 | 0 | 57 | yes | handler |
 | internal/api/ingestxray | 2 | 1 | 429 | yes | handler |
 | internal/api/lifetime | 2 | 1 | 878 | yes | handler |
 | internal/api/locsnap | 2 | 1 | 538 | yes | handler |
@@ -224,6 +237,7 @@ _Generated 2026-05-29T00:48:09Z, Go go1.26.1, commit c4bede836b1639ae4da4713797f
 | internal/api/openapi | 2 | 0 | 38 | yes | handler |
 | internal/api/periodstats | 2 | 0 | 157 | yes | handler |
 | internal/api/pinned | 2 | 1 | 673 | yes | handler |
+| internal/api/polling | 2 | 0 | 213 | yes | handler |
 | internal/api/push | 2 | 1 | 608 | yes | handler |
 | internal/api/queuestatus | 2 | 1 | 628 | yes | handler |
 | internal/api/quiethours | 2 | 1 | 589 | yes | handler |
@@ -239,23 +253,33 @@ _Generated 2026-05-29T00:48:09Z, Go go1.26.1, commit c4bede836b1639ae4da4713797f
 | internal/api/search/searchtest | 2 | 0 | 132 | yes | platform |
 | internal/api/security | 2 | 1 | 496 | yes | handler |
 | internal/api/session | 2 | 1 | 544 | yes | handler |
+| internal/api/settings | 4 | 2 | 1221 | yes | handler |
 | internal/api/settingsreset | 2 | 1 | 391 | yes | handler |
 | internal/api/share | 2 | 0 | 345 | yes | handler |
 | internal/api/signalinspect | 3 | 1 | 1228 | yes | handler |
 | internal/api/signalscatalog | 2 | 1 | 976 | yes | handler |
+| internal/api/sleep | 2 | 0 | 230 | yes | handler |
 | internal/api/slo | 2 | 0 | 46 | yes | handler |
 | internal/api/softwareupdate | 2 | 0 | 63 | yes | handler |
+| internal/api/speedprofile | 2 | 0 | 355 | yes | handler |
+| internal/api/status | 3 | 1 | 830 | yes | handler |
 | internal/api/synthetic | 2 | 0 | 40 | yes | handler |
 | internal/api/sysauthmode | 2 | 1 | 339 | yes | handler |
 | internal/api/tco | 3 | 1 | 506 | yes | handler |
+| internal/api/teslachargehist | 2 | 0 | 269 | yes | handler |
+| internal/api/teslachargesess | 2 | 0 | 221 | yes | handler |
+| internal/api/teslaenergyhist | 4 | 0 | 468 | yes | handler |
 | internal/api/teslaenergylivestatus | 2 | 0 | 194 | yes | handler |
 | internal/api/teslauserconfig | 2 | 0 | 116 | yes | handler |
 | internal/api/teslauserorder | 2 | 0 | 123 | yes | handler |
 | internal/api/teslauserprofile | 2 | 0 | 96 | yes | handler |
+| internal/api/tirepressure | 2 | 1 | 379 | yes | handler |
 | internal/api/totp | 2 | 1 | 1268 | yes | handler |
 | internal/api/trip | 2 | 0 | 106 | yes | handler |
+| internal/api/tripplanner | 4 | 1 | 839 | yes | handler |
 | internal/api/tripsdetail | 2 | 1 | 458 | yes | handler |
 | internal/api/user | 2 | 0 | 170 | yes | handler |
+| internal/api/userpref | 2 | 1 | 474 | yes | handler |
 | internal/api/vampiredrain | 2 | 1 | 726 | yes | handler |
 | internal/api/vehicle | 2 | 1 | 616 | yes | handler |
 | internal/api/vehicleaccess | 2 | 0 | 448 | yes | handler |
@@ -443,7 +467,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 166 / 102 | 59 | 22 | 37 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 114 / 89 | 59 | 31 | 28 |
 
 ### `internal/models` detail
 
@@ -553,9 +577,11 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 **Existing subpackages on disk:**
 - `internal/api/openapi`
 - `internal/api/devtools`
+- `internal/api/analytics`
 - `internal/api/anomaly`
 - `internal/api/lifetime`
 - `internal/api/mileage`
+- `internal/api/sleep`
 - `internal/api/regen`
 - `internal/api/vampiredrain`
 - `internal/api/tco`
@@ -564,14 +590,21 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/search`
 - `internal/api/diagnostic`
 - `internal/api/vehicle`
+- `internal/api/charging`
 - `internal/api/trip`
+- `internal/api/energy`
+- `internal/api/automation`
 - `internal/api/notification`
+- `internal/api/chatbot`
 - `internal/api/feedback`
 - `internal/api/auth`
 - `internal/api/onboarding`
 - `internal/api/user`
+- `internal/api/settings`
 - `internal/api/share`
+- `internal/api/exports`
 - `internal/api/safety`
+- `internal/api/audit`
 - `internal/api/webvitals`
 
 **Planned but not yet on disk:**
@@ -579,35 +612,26 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/health`
 - `internal/api/sse`
 - `internal/api/observability`
-- `internal/api/analytics`
-- `internal/api/sleep`
 - `internal/api/tempimpact`
 - `internal/api/speed`
 - `internal/api/signal`
 - `internal/api/fsm`
 - `internal/api/cost`
 - `internal/api/vehiclesys`
-- `internal/api/charging`
 - `internal/api/drive`
 - `internal/api/telemetry`
 - `internal/api/fleet`
-- `internal/api/energy`
 - `internal/api/teslaapi`
 - `internal/api/ai`
 - `internal/api/admin`
-- `internal/api/automation`
 - `internal/api/alert`
-- `internal/api/chatbot`
 - `internal/api/data_repair`
 - `internal/api/dashboard`
 - `internal/api/saved_views`
-- `internal/api/settings`
-- `internal/api/exports`
 - `internal/api/ingest`
 - `internal/api/geo`
 - `internal/api/bulk`
 - `internal/api/api_call_log`
-- `internal/api/audit`
 - `internal/api/maintenance`
 - `internal/api/software_update`
 - `internal/api/watch`

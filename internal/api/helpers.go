@@ -61,11 +61,11 @@ func pagination(r *http.Request) (limit, offset int) {
 	return apiparams.Pagination(r)
 }
 
-// urlParamInt64 is a transitional wrapper around apiparams.URLParamInt64.
-// See pagination for the broader transitional plan.
-func urlParamInt64(r *http.Request, key string) (int64, error) {
-	return apiparams.URLParamInt64(r, key)
-}
+// urlParamInt64 was a transitional wrapper around apiparams.URLParamInt64.
+// Removed in R2d batch 9: every parent-package caller has been carved
+// into a resource subpackage that imports apiparams directly. Add a new
+// caller? Use apiparams.URLParamInt64 instead — do not reintroduce this
+// wrapper.
 
 // parseDateRange is a transitional wrapper around apiparams.ParseDateRange.
 // See pagination for the broader transitional plan + the detailed

@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
