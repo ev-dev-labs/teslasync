@@ -15,10 +15,11 @@
 // data-repair-suggestions`); duplicating that here would require a
 // live database fixture.
 
-package api
+package aidatarep
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,6 +35,22 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestDataRepairSuggestionsAIOffManualRunbookWorks is the load-
 // bearing off-mode contract proof for slice 0043. It mounts the AI
@@ -197,23 +214,23 @@ func TestDataRepairSuggestionsAIOffManualRunbookWorks(t *testing.T) {
 	}
 }
 
-// TestAIDataRepairSuggestionsHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIDataRepairSuggestionsHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIDataRepairSuggestionsHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIDataRepairSuggestionsHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -221,24 +238,24 @@ func TestAIDataRepairSuggestionsHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestNewAIDataRepairSource_PanicsOnNilDB asserts the production
+// TestNewSource_PanicsOnNilDB asserts the production
 // source adapter refuses a nil *database.DB. A wiring bug at boot
 // must surface as a panic, not as a nil-deref on first request.
-func TestNewAIDataRepairSource_PanicsOnNilDB(t *testing.T) {
+func TestNewSource_PanicsOnNilDB(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAIDataRepairSource(nil) did not panic")
+			t.Fatal("NewSource(nil) did not panic")
 		}
 	}()
-	NewAIDataRepairSource(nil)
+	NewSource(nil)
 }
 
-// TestAIDataRepairSuggestionsHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the body BEFORE doing anything else — a body
 // that fails to decode as JSON object MUST surface as a JSON 400,
 // not a half-opened stream that confuses the frontend.
-func TestAIDataRepairSuggestionsHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -325,13 +342,13 @@ func TestBuildDataRepairSuggestionsUserMessage_EmptyInventory(t *testing.T) {
 	}
 }
 
-// TestAIDataRepairPlanValidator_AcceptsValidPlan pins the
+// TestPlanValidator_AcceptsValidPlan pins the
 // validator's accept path: a well-formed RepairPlan returns nil.
 // Future slices that add semantic checks will need to update this
 // test.
-func TestAIDataRepairPlanValidator_AcceptsValidPlan(t *testing.T) {
+func TestPlanValidator_AcceptsValidPlan(t *testing.T) {
 	t.Parallel()
-	v := NewAIDataRepairPlanValidator()
+	v := NewPlanValidator()
 	plans := []*diagnostic.DataRepairPlan{
 		{TargetKind: "charging", TargetID: 42, Action: "close"},
 		{TargetKind: "drive", TargetID: 99, Action: "discard"},
@@ -344,11 +361,11 @@ func TestAIDataRepairPlanValidator_AcceptsValidPlan(t *testing.T) {
 	}
 }
 
-// TestAIDataRepairPlanValidator_RejectsNil pins the defensive nil
+// TestPlanValidator_RejectsNil pins the defensive nil
 // check.
-func TestAIDataRepairPlanValidator_RejectsNil(t *testing.T) {
+func TestPlanValidator_RejectsNil(t *testing.T) {
 	t.Parallel()
-	v := NewAIDataRepairPlanValidator()
+	v := NewPlanValidator()
 	if err := v.ValidateDataRepairPlan(nil); err == nil {
 		t.Error("ValidateDataRepairPlan(nil) err = nil, want error")
 	}

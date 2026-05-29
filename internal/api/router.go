@@ -30,6 +30,7 @@ import (
 	aiclimate "github.com/ev-dev-labs/teslasync/internal/api/aiclimate"
 	aicostfcst "github.com/ev-dev-labs/teslasync/internal/api/aicostfcst"
 	aicrossrule "github.com/ev-dev-labs/teslasync/internal/api/aicrossrule"
+	aidatarep "github.com/ev-dev-labs/teslasync/internal/api/aidatarep"
 	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
 	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
 	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
@@ -1496,16 +1497,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// composes the SAME ChargingRepo.GetStale + DriveRepo.GetStale
 	// paths that back the baseline DataRepairHandler.GetStaleSessions.
 	diagnostic.RegisterDataRepairSuggestionsTools(aiToolRegistry, diagnostic.DataRepairSuggestionsSources{
-		Validator: NewAIDataRepairPlanValidator(),
+		Validator: aidatarep.NewPlanValidator(),
 	})
 	// data-repair-suggestions handler. Constructed after the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiDataRepairSuggestionsHandler := NewAIDataRepairSuggestionsHandler(
+	aiDataRepairSuggestionsHandler := aidatarep.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		datarepairsuggestions.New(),
-		NewAIDataRepairSource(db),
+		aidatarep.NewSource(db),
 		cfg.Auth.ForwardAuthHeader,
 	)
 

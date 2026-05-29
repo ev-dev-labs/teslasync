@@ -1,4 +1,4 @@
-package api
+package aidatarep
 
 // Phase-50 / 0043 — S2 Data repair suggestions.
 //
@@ -98,6 +98,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
@@ -124,7 +125,15 @@ const aiDataRepairSuggestionsStaleCutoff = 24 * time.Hour
 // programming bug; bound it cheaply.
 const aiDataRepairMaxBodyBytes = 16 * 1024
 
-// AIDataRepairSource is the narrow read interface the handler
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Source is the narrow read interface the handler
 // consumes to load the current stale-session inventory. Production
 // wiring satisfies it with the SAME chargingdb.ChargingRepo.GetStale
 // + drivedb.DriveRepo.GetStale paths the canonical baseline
@@ -134,7 +143,7 @@ const aiDataRepairMaxBodyBytes = 16 * 1024
 // The interface is intentionally narrow (one method) so test fakes
 // stay small and the production implementation cannot accidentally
 // widen the surface.
-type AIDataRepairSource interface {
+type Source interface {
 	// StaleSessions returns the current stale-charging + stale-
 	// drives inventory at cutoff, identical to what
 	// chargingdb.ChargingRepo.GetStale + drivedb.DriveRepo.GetStale
@@ -144,23 +153,23 @@ type AIDataRepairSource interface {
 	StaleSessions(ctx context.Context, cutoff time.Time) (charging []*chargingmodel.ChargingSession, drives []*drivemodel.Drive, err error)
 }
 
-// AIDataRepairSuggestionsHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/system/data-repair/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIDataRepairSuggestionsHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     AIDataRepairSource
+	source     Source
 	headerName string
 	maxIters   int
 	now        func() time.Time
 }
 
-// NewAIDataRepairSuggestionsHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -178,31 +187,31 @@ type AIDataRepairSuggestionsHandler struct {
 //
 //	process).
 //
-// source:     the production AIDataRepairSource (composes
+// source:     the production Source (composes
 //
 //	ChargingRepo.GetStale + DriveRepo.GetStale).
 //
 // headerName: forward-auth header name; used to extract subject for
 //
 //	audit.
-func NewAIDataRepairSuggestionsHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source AIDataRepairSource,
+	source Source,
 	headerName string,
-) *AIDataRepairSuggestionsHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIDataRepairSuggestionsHandler: nil provider.Registry")
+		panic("aidatarep: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIDataRepairSuggestionsHandler: nil tools.Registry")
+		panic("aidatarep: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIDataRepairSuggestionsHandler: nil strategy.Strategy")
+		panic("aidatarep: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAIDataRepairSuggestionsHandler: nil AIDataRepairSource")
+		panic("aidatarep: NewHandler: nil Source")
 	}
-	return &AIDataRepairSuggestionsHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -245,7 +254,7 @@ func parseDataRepairSuggestionsRequest(w http.ResponseWriter, r *http.Request) b
 // error path either writes a structured frame onto the SSE stream
 // (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
-func (h *AIDataRepairSuggestionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body (empty / {} / null
 	// accepted; anything else 400).
 	if !parseDataRepairSuggestionsRequest(w, r) {
@@ -417,9 +426,9 @@ func buildDataRepairSuggestionsUserMessage(now time.Time, charging []*chargingmo
 	return b.String()
 }
 
-// Compile-time assertion: AIDataRepairSuggestionsHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AIDataRepairSuggestionsHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the source + validator interfaces declared by
@@ -427,40 +436,40 @@ var _ http.Handler = (*AIDataRepairSuggestionsHandler)(nil)
 // as the handler so the wiring intent is local to the slice.
 // ---------------------------------------------------------------------
 
-// AIDataRepairSourceImpl is the production AIDataRepairSource. It
+// sourceImpl is the production Source. It
 // delegates to the SHARED chargingdb.ChargingRepo.GetStale +
 // drivedb.DriveRepo.GetStale paths that ALSO back the canonical
 // baseline DataRepairHandler.GetStaleSessions handler so the AI
 // surface sees the same inventory the user sees on the
 // /system/data-repair page. No new SQL is added by this slice.
-type AIDataRepairSourceImpl struct {
+type sourceImpl struct {
 	chargingRepo *chargingdb.ChargingRepo
 	driveRepo    *drivedb.DriveRepo
 }
 
-// NewAIDataRepairSource constructs the adapter from the shared
+// NewSource constructs the adapter from the shared
 // *database.DB. Panics on a nil *database.DB so a wiring mistake
 // surfaces at boot rather than as a nil-deref on first AI request.
-func NewAIDataRepairSource(db *database.DB) *AIDataRepairSourceImpl {
+func NewSource(db *database.DB) Source {
 	if db == nil {
-		panic("api: NewAIDataRepairSource: nil *database.DB")
+		panic("aidatarep: NewSource: nil *database.DB")
 	}
-	return &AIDataRepairSourceImpl{
+	return &sourceImpl{
 		chargingRepo: chargingdb.NewChargingRepo(db),
 		driveRepo:    drivedb.NewDriveRepo(db),
 	}
 }
 
-// StaleSessions implements AIDataRepairSource. Two repo round-
+// StaleSessions implements Source. Two repo round-
 // trips; both are READ-only.
-func (a *AIDataRepairSourceImpl) StaleSessions(ctx context.Context, cutoff time.Time) ([]*chargingmodel.ChargingSession, []*drivemodel.Drive, error) {
+func (a *sourceImpl) StaleSessions(ctx context.Context, cutoff time.Time) ([]*chargingmodel.ChargingSession, []*drivemodel.Drive, error) {
 	charging, err := a.chargingRepo.GetStale(ctx, cutoff)
 	if err != nil {
-		return nil, nil, fmt.Errorf("api ai data-repair-suggestions: ChargingRepo.GetStale: %w", err)
+		return nil, nil, fmt.Errorf("aidatarep: ChargingRepo.GetStale: %w", err)
 	}
 	drives, err := a.driveRepo.GetStale(ctx, cutoff)
 	if err != nil {
-		return nil, nil, fmt.Errorf("api ai data-repair-suggestions: DriveRepo.GetStale: %w", err)
+		return nil, nil, fmt.Errorf("aidatarep: DriveRepo.GetStale: %w", err)
 	}
 	if charging == nil {
 		charging = make([]*chargingmodel.ChargingSession, 0)
@@ -472,13 +481,13 @@ func (a *AIDataRepairSourceImpl) StaleSessions(ctx context.Context, cutoff time.
 }
 
 // Compile-time assertion.
-var _ AIDataRepairSource = (*AIDataRepairSourceImpl)(nil)
+var _ Source = (*sourceImpl)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the diagnostic.DataRepairPlanValidator interface.
 // ---------------------------------------------------------------------
 
-// AIDataRepairPlanValidator is the production
+// PlanValidator is the production
 // diagnostic.DataRepairPlanValidator. It enforces the SAME per-kind
 // allowlist + canonical-handler semantics that
 // chargingRepo.PartialUpdate / driveRepo.PartialUpdate would
@@ -486,13 +495,13 @@ var _ AIDataRepairSource = (*AIDataRepairSourceImpl)(nil)
 // that would be accepted by PUT /api/v1/data-repair/{kind}/{id}.
 //
 // Stateless. Held by value; safe for concurrent use.
-type AIDataRepairPlanValidator struct{}
+type PlanValidator struct{}
 
-// NewAIDataRepairPlanValidator constructs the validator. No deps —
+// NewPlanValidator constructs the validator. No deps —
 // the per-kind allowlist is package-static. Returned by-pointer for
 // symmetry with the other AI* validator types.
-func NewAIDataRepairPlanValidator() *AIDataRepairPlanValidator {
-	return &AIDataRepairPlanValidator{}
+func NewPlanValidator() *PlanValidator {
+	return &PlanValidator{}
 }
 
 // ValidateDataRepairPlan implements diagnostic.DataRepairPlanValidator.
@@ -512,9 +521,9 @@ func NewAIDataRepairPlanValidator() *AIDataRepairPlanValidator {
 // is nothing else for the AI surface to enforce — the canonical
 // PartialUpdate path will silently filter any stragglers, and the
 // canonical CloseCharging / DeleteCharging handlers take no body.
-func (v *AIDataRepairPlanValidator) ValidateDataRepairPlan(plan *diagnostic.DataRepairPlan) error {
+func (v *PlanValidator) ValidateDataRepairPlan(plan *diagnostic.DataRepairPlan) error {
 	if plan == nil {
-		return errors.New("api ai data-repair-suggestions: nil RepairPlan")
+		return errors.New("aidatarep: nil RepairPlan")
 	}
 	// Future-extension hook: add semantic checks here as later
 	// slices need them. Keeping the body intentionally minimal so
@@ -524,4 +533,4 @@ func (v *AIDataRepairPlanValidator) ValidateDataRepairPlan(plan *diagnostic.Data
 }
 
 // Compile-time assertion.
-var _ diagnostic.DataRepairPlanValidator = (*AIDataRepairPlanValidator)(nil)
+var _ diagnostic.DataRepairPlanValidator = (*PlanValidator)(nil)
