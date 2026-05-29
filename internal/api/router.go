@@ -50,6 +50,7 @@ import (
 	apidrives "github.com/ev-dev-labs/teslasync/internal/api/drives"
 	apidrivetrain "github.com/ev-dev-labs/teslasync/internal/api/drivetrain"
 	apidrivingcoach "github.com/ev-dev-labs/teslasync/internal/api/drivingcoach"
+	apienergy "github.com/ev-dev-labs/teslasync/internal/api/energy"
 	apienergyflow "github.com/ev-dev-labs/teslasync/internal/api/energyflow"
 	apienergysite "github.com/ev-dev-labs/teslasync/internal/api/energysite"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
@@ -665,7 +666,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	alertMessageHandler := apialertmsg.NewAlertMessageHandler()
 	commandHandler := apicommand.NewCommandHandler(db, teslaClient)
 	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
-	energyHandler := NewEnergyHandler(energySvc)
+	energyHandler := apienergy.NewEnergyHandler(energySvc)
 	signalLogReader := signaldb.NewSignalLogReader(db)
 	batteryHandler := apibattery.NewBatteryHandler(db, stateReader)
 	analyticsHandler := apianalytics.NewAnalyticsHandler(db, stateReader)

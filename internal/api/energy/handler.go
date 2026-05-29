@@ -1,10 +1,12 @@
-package api
+package energy
 
 import (
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/rs/zerolog/log"
 )
@@ -19,9 +21,9 @@ func NewEnergyHandler(energySvc *service.EnergyService) *EnergyHandler {
 }
 
 func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
@@ -42,11 +44,11 @@ func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.energySvc.CalculateStats(r.Context(), vehicleID, days)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get energy stats")
-		writeError(w, http.StatusInternalServerError, "failed to get energy stats")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get energy stats")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":              stats.VehicleID,
 		"period_days":             stats.PeriodDays,
 		"total_energy_used_wh":    stats.TotalEnergy,
@@ -64,12 +66,12 @@ func (h *EnergyHandler) Stats(w http.ResponseWriter, r *http.Request) {
 func (h *EnergyHandler) AnalyticsStats(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -83,11 +85,11 @@ func (h *EnergyHandler) AnalyticsStats(w http.ResponseWriter, r *http.Request) {
 	stats, err := h.energySvc.CalculateStats(r.Context(), vehicleID, days)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get energy stats")
-		writeError(w, http.StatusInternalServerError, "failed to get energy stats")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get energy stats")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":              stats.VehicleID,
 		"period_days":             stats.PeriodDays,
 		"total_energy_used_wh":    stats.TotalEnergy,
