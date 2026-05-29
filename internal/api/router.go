@@ -45,6 +45,7 @@ import (
 	apienergyflow "github.com/ev-dev-labs/teslasync/internal/api/energyflow"
 	apienergysite "github.com/ev-dev-labs/teslasync/internal/api/energysite"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
+	apiexports "github.com/ev-dev-labs/teslasync/internal/api/exports"
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
@@ -4236,14 +4237,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Export
-		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", NewExportHandler(db))
+		r.With(httprate.LimitByIP(10, 1*time.Minute)).Get("/export/{type}", apiexports.NewExportHandler(db))
 
 		// Export Jobs (async, MQTT-backed)
 		var pahoClient pahomqtt.Client
 		if mqttClient != nil {
 			pahoClient = mqttClient.Underlying()
 		}
-		exportJobHandler := NewExportJobHandler(db, pahoClient)
+		exportJobHandler := apiexports.NewExportJobHandler(db, pahoClient)
 		exportColumnsHandler := apiexpcol.NewHandler()
 		// Phase-46 / Prompt 62 — column-selector UI fetches the publishable
 		// column catalog for the active export type. Read-only and cheap;

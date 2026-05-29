@@ -1,12 +1,16 @@
-package api
+package exports
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"strings"
+	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
 )
 
@@ -158,4 +162,80 @@ func computeMissingStringIDs(requested, existing []string) []exportBulkFailedID 
 		missing = append(missing, exportBulkFailedID{ID: id, Reason: "not_found"})
 	}
 	return missing
+}
+
+type auditEntry struct {
+	Actor      string
+	Action     string
+	EntityType string
+	EntityID   *int64
+	Detail     string
+	IP         string
+	UserAgent  string
+}
+
+func nullableStr(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+func insertAuditLog(db *database.DB, ctx context.Context, e auditEntry) {
+	const query = `
+		INSERT INTO audit_logs (ts, actor, action, entity_type, entity_id, detail, ip, user_agent)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+	_, err := db.Pool.Exec(ctx, query,
+		time.Now().UTC(),
+		e.Actor,
+		e.Action,
+		e.EntityType,
+		e.EntityID,
+		e.Detail,
+		nullableStr(e.IP),
+		nullableStr(e.UserAgent),
+	)
+	if err != nil {
+		log.Warn().Err(err).Str("action", e.Action).Str("entity_type", e.EntityType).Msg("failed to write audit log")
+	}
+}
+
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
+}
+
+func clientIP(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.IndexByte(xff, ','); i >= 0 {
+			xff = xff[:i]
+		}
+		if ip := strings.TrimSpace(xff); ip != "" {
+			return ip
+		}
+	}
+	if r.RemoteAddr == "" {
+		return ""
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
+}
+
+func logAuditFromRequest(db *database.DB, r *http.Request, headerName, action, resource string, entityID *int64, detail string) {
+	insertAuditLog(db, r.Context(), auditEntry{
+		Actor:      actorFromRequest(r, headerName),
+		Action:     action,
+		EntityType: resource,
+		EntityID:   entityID,
+		Detail:     detail,
+		IP:         clientIP(r),
+		UserAgent:  r.UserAgent(),
+	})
 }
