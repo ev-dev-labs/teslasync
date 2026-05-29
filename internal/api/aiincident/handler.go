@@ -1,4 +1,4 @@
-package api
+package aiincident
 
 // Phase-50 / 0042 — S1 Incident timeline summarizer.
 //
@@ -80,24 +80,25 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
+	apihttpx "github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 )
 
-// aiIncidentTimelineSummarizerMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most query_incident_timeline →
 // (optional) retrieve_system_chunks → answer (with optional retries).
 // A hard ceiling of 8 is generous, matching the other narrator
 // handlers.
-const aiIncidentTimelineSummarizerMaxIterations = 8
+const maxIterations = 8
 
-// AIIncidentTimelineSummarizerHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/system/incidents/{incidentID}/summarize.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIIncidentTimelineSummarizerHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -105,7 +106,7 @@ type AIIncidentTimelineSummarizerHandler struct {
 	maxIters   int
 }
 
-// NewAIIncidentTimelineSummarizerHandler constructs the handler.
+// NewHandler constructs the handler.
 // All non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -123,30 +124,30 @@ type AIIncidentTimelineSummarizerHandler struct {
 // headerName: forward-auth header name; used to extract subject for
 //
 //	audit.
-func NewAIIncidentTimelineSummarizerHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIIncidentTimelineSummarizerHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIIncidentTimelineSummarizerHandler: nil provider.Registry")
+		panic("api/aiincident: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIIncidentTimelineSummarizerHandler: nil tools.Registry")
+		panic("api/aiincident: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIIncidentTimelineSummarizerHandler: nil strategy.Strategy")
+		panic("api/aiincident: NewHandler: nil strategy.Strategy")
 	}
-	return &AIIncidentTimelineSummarizerHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiIncidentTimelineSummarizerMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseIncidentTimelineSummarizerRequest extracts the URL incidentID
+// parseRequest extracts the URL incidentID
 // and (optionally) drains an empty JSON body. Pulled out so the
 // validator-only test can exercise the same parsing without
 // constructing a full handler with stub deps. Writes a 400 on
@@ -158,7 +159,7 @@ func NewAIIncidentTimelineSummarizerHandler(
 // don't break. DisallowUnknownFields is off because the handler has
 // nothing meaningful to do with body fields (the incidentID is in
 // the URL path, not the body).
-func parseIncidentTimelineSummarizerRequest(w http.ResponseWriter, r *http.Request) (int64, bool) {
+func parseRequest(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "incidentID")
 	if raw == "" {
 		writeError(w, http.StatusBadRequest, "incidentID URL parameter is required")
@@ -196,9 +197,9 @@ func parseIncidentTimelineSummarizerRequest(w http.ResponseWriter, r *http.Reque
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIIncidentTimelineSummarizerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the URL incidentID.
-	incidentID, ok := parseIncidentTimelineSummarizerRequest(w, r)
+	incidentID, ok := parseRequest(w, r)
 	if !ok {
 		return
 	}
@@ -280,9 +281,18 @@ func (h *AIIncidentTimelineSummarizerHandler) ServeHTTP(w http.ResponseWriter, r
 	}
 }
 
-// Compile-time assertion: AIIncidentTimelineSummarizerHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AIIncidentTimelineSummarizerHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	apihttpx.WriteError(w, status, msg)
+}
+
+// denyAllConfirm rejects every mutating tool as defence-in-depth.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -293,7 +303,7 @@ var _ http.Handler = (*AIIncidentTimelineSummarizerHandler)(nil)
 // pattern.
 // ---------------------------------------------------------------------
 
-// AIIncidentTimelineSource is the production
+// IncidentTimelineSource is the production
 // summary.IncidentTimelineSource. It delegates to the SHARED
 // dbobs.IncidentRepo.Get path that also backs the canonical
 // baseline GET /api/v1/status/incidents/{id} handler so the AI
@@ -303,18 +313,18 @@ var _ http.Handler = (*AIIncidentTimelineSummarizerHandler)(nil)
 //
 // The struct holds a *dbobs.IncidentRepo; the constructor panics
 // on a nil so a wiring bug surfaces at boot.
-type AIIncidentTimelineSource struct {
+type IncidentTimelineSource struct {
 	repo *dbobs.IncidentRepo
 }
 
-// NewAIIncidentTimelineSource constructs the adapter. Panics on a
+// NewIncidentTimelineSource constructs the adapter. Panics on a
 // nil *dbobs.IncidentRepo so a wiring mistake surfaces at boot
 // rather than as a nil-deref on first AI request.
-func NewAIIncidentTimelineSource(repo *dbobs.IncidentRepo) *AIIncidentTimelineSource {
+func NewIncidentTimelineSource(repo *dbobs.IncidentRepo) *IncidentTimelineSource {
 	if repo == nil {
-		panic("api: NewAIIncidentTimelineSource: nil *dbobs.IncidentRepo")
+		panic("api/aiincident: NewIncidentTimelineSource: nil *dbobs.IncidentRepo")
 	}
-	return &AIIncidentTimelineSource{repo: repo}
+	return &IncidentTimelineSource{repo: repo}
 }
 
 // IncidentTimeline implements summary.IncidentTimelineSource. Composes
@@ -330,14 +340,14 @@ func NewAIIncidentTimelineSource(repo *dbobs.IncidentRepo) *AIIncidentTimelineSo
 // the LLM can quote. Timestamps are stringified to RFC3339 UTC for
 // determinism; the operator-installed wall-clock is preserved without
 // timezone-conversion guesswork.
-func (a *AIIncidentTimelineSource) IncidentTimeline(ctx context.Context, incidentID int64) (*summary.IncidentTimelineEnvelope, error) {
+func (a *IncidentTimelineSource) IncidentTimeline(ctx context.Context, incidentID int64) (*summary.IncidentTimelineEnvelope, error) {
 	if incidentID <= 0 {
-		return nil, errors.New("api ai incident-timeline-summarizer: incident_id must be > 0")
+		return nil, errors.New("api/aiincident: incident_id must be > 0")
 	}
 
 	inc, err := a.repo.Get(ctx, incidentID)
 	if err != nil {
-		return nil, fmt.Errorf("api ai incident-timeline-summarizer: IncidentRepo.Get: %w", err)
+		return nil, fmt.Errorf("api/aiincident: IncidentRepo.Get: %w", err)
 	}
 
 	updates := make([]summary.IncidentTimelineUpdate, 0, len(inc.Updates))
@@ -380,6 +390,6 @@ func (a *AIIncidentTimelineSource) IncidentTimeline(ctx context.Context, inciden
 	}, nil
 }
 
-// Compile-time assertion: AIIncidentTimelineSource satisfies
+// Compile-time assertion: IncidentTimelineSource satisfies
 // summary.IncidentTimelineSource.
-var _ summary.IncidentTimelineSource = (*AIIncidentTimelineSource)(nil)
+var _ summary.IncidentTimelineSource = (*IncidentTimelineSource)(nil)

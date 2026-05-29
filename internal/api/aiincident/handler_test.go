@@ -14,10 +14,11 @@
 // incident-timeline-summarizer`); duplicating that here would
 // require a live database fixture.
 
-package api
+package aiincident
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,6 +28,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestIncidentTimelineAIOffShowsRawTimelineOnly is the load-bearing
 // off-mode contract proof for slice 0042. It mounts the AI
@@ -136,23 +153,23 @@ func TestIncidentTimelineAIOffShowsRawTimelineOnly(t *testing.T) {
 	}
 }
 
-// TestAIIncidentTimelineSummarizerHandler_PanicsOnNilWiring asserts
+// TestHandler_PanicsOnNilWiring asserts
 // the handler constructor refuses zero-valued dependencies. A
 // wiring bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAIIncidentTimelineSummarizerHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIIncidentTimelineSummarizerHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIIncidentTimelineSummarizerHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -160,25 +177,25 @@ func TestAIIncidentTimelineSummarizerHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestNewAIIncidentTimelineSource_PanicsOnNilRepo asserts the
+// TestNewIncidentTimelineSource_PanicsOnNilRepo asserts the
 // production source adapter refuses a nil repo. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first request.
-func TestNewAIIncidentTimelineSource_PanicsOnNilRepo(t *testing.T) {
+func TestNewIncidentTimelineSource_PanicsOnNilRepo(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAIIncidentTimelineSource(nil) did not panic")
+			t.Fatal("NewIncidentTimelineSource(nil) did not panic")
 		}
 	}()
-	NewAIIncidentTimelineSource(nil)
+	NewIncidentTimelineSource(nil)
 }
 
-// TestAIIncidentTimelineSummarizerHandler_RejectsBadURLParam asserts
+// TestHandler_RejectsBadURLParam asserts
 // the handler validates the URL incidentID BEFORE opening the SSE
 // stream — a missing, unparseable, or out-of-range param must
 // surface as a JSON 400, not a half-opened stream that confuses the
 // frontend.
-func TestAIIncidentTimelineSummarizerHandler_RejectsBadURLParam(t *testing.T) {
+func TestHandler_RejectsBadURLParam(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -206,7 +223,7 @@ func TestAIIncidentTimelineSummarizerHandler_RejectsBadURLParam(t *testing.T) {
 			// configured value when the route pattern matches.
 			r := chi.NewRouter()
 			r.Post("/system/incidents/{incidentID}/summarize", func(w http.ResponseWriter, req *http.Request) {
-				id, ok := parseIncidentTimelineSummarizerRequest(w, req)
+				id, ok := parseRequest(w, req)
 				switch {
 				case ok != tc.wantOK:
 					t.Errorf("ok = %v, want %v", ok, tc.wantOK)

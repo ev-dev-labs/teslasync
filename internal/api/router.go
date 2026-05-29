@@ -37,6 +37,7 @@ import (
 	aifeedtri "github.com/ev-dev-labs/teslasync/internal/api/aifeedtri"
 	aifsmnar "github.com/ev-dev-labs/teslasync/internal/api/aifsmnar"
 	aigeofautom "github.com/ev-dev-labs/teslasync/internal/api/aigeofautom"
+	aiincident "github.com/ev-dev-labs/teslasync/internal/api/aiincident"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -1471,13 +1472,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// — no new SQL is written by this slice.
 	summary.RegisterIncidentTimelineSummarizerTools(aiToolRegistry, summary.IncidentTimelineSummarizerSources{
 		Retriever:        aiSystemRetriever,
-		IncidentTimeline: NewAIIncidentTimelineSource(dbobs.NewIncidentRepo(db)),
+		IncidentTimeline: aiincident.NewIncidentTimelineSource(dbobs.NewIncidentRepo(db)),
 	})
 	// incident-timeline-summarizer handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiIncidentTimelineSummarizerHandler := NewAIIncidentTimelineSummarizerHandler(
+	aiIncidentTimelineSummarizerHandler := aiincident.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		incidenttimelinesummarizer.New(),
