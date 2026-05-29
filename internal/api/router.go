@@ -98,6 +98,7 @@ import (
 	apichatbot "github.com/ev-dev-labs/teslasync/internal/api/chatbot"
 	apiclimate "github.com/ev-dev-labs/teslasync/internal/api/climate"
 	apicommand "github.com/ev-dev-labs/teslasync/internal/api/command"
+	"github.com/ev-dev-labs/teslasync/internal/api/costforecast"
 	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
 	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
@@ -871,7 +872,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	maintenanceHandler := maintenance.NewHandler(db)
 	periodStatsHandler := apiperiod.NewHandler(db)
 	drivingCoachHandler := apidrivingcoach.NewDrivingCoachHandler(db)
-	costForecastHandler := NewCostForecastHandler(db)
+	costForecastHandler := costforecast.NewHandler(db)
 	chargingOptimizerHandler := apichargeopt.NewChargingOptimizerHandler(db)
 	anomalyHandler := apianomaly.NewHandler(db)
 	// Phase-50 / U4 (slice 0014) — register the anomaly-explanations
@@ -1385,7 +1386,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// narrator quotes the SAME deterministic forecast the chart
 	// renders (no duplicated SQL).
 	forecast.RegisterCostForecastNarrationTools(aiToolRegistry, forecast.CostForecastNarrationSources{
-		Forecaster: NewAICostForecaster(db),
+		Forecaster: costforecast.NewAICostForecaster(db),
 	})
 	// cost-forecast-narration handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed

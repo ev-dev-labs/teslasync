@@ -1,4 +1,4 @@
-package api
+package costforecast
 
 import (
 	"context"
@@ -12,16 +12,17 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// CostForecastHandler produces energy cost forecasts from charging history.
-type CostForecastHandler struct {
+// Handler produces energy cost forecasts from charging history.
+type Handler struct {
 	db *database.DB
 }
 
-func NewCostForecastHandler(db *database.DB) *CostForecastHandler {
-	return &CostForecastHandler{db: db}
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{db: db}
 }
 
 // ── Response types ───────────────────────────────────────────
@@ -117,7 +118,7 @@ func ComputeCostForecast(ctx context.Context, db *database.DB, vehicleID int64, 
 		return costForecastResponse{}, CostForecastMeta{}, err
 	}
 
-	tmpHandler := &CostForecastHandler{db: db}
+	tmpHandler := &Handler{db: db}
 	forecast := tmpHandler.computeForecast(historical, months)
 	breakdown := tmpHandler.computeBreakdown(ctx, vehicleID, historical)
 	gasCmp := tmpHandler.computeGasComparison(ctx, vehicleID, historical)
@@ -211,15 +212,15 @@ func loadCostHistorical(ctx context.Context, db *database.DB, vehicleID int64) (
 }
 
 // GetForecast handles GET /analytics/cost-forecast?vehicle_id=X&months=6
-func (h *CostForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetForecast(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -231,16 +232,16 @@ func (h *CostForecastHandler) GetForecast(w http.ResponseWriter, r *http.Request
 	resp, _, err := ComputeCostForecast(r.Context(), h.db, vehicleID, forecastMonths)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("cost-forecast: compute failed")
-		writeError(w, http.StatusInternalServerError, "failed to get cost data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get cost data")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // ── Forecast computation ─────────────────────────────────────
 
-func (h *CostForecastHandler) computeForecast(historical []historicalMonth, months int) []forecastMonth {
+func (h *Handler) computeForecast(historical []historicalMonth, months int) []forecastMonth {
 	if len(historical) < 3 {
 		return []forecastMonth{}
 	}
@@ -353,7 +354,7 @@ func (h *CostForecastHandler) computeForecast(historical []historicalMonth, mont
 
 // ── Breakdown computation ────────────────────────────────────
 
-func (h *CostForecastHandler) computeBreakdown(ctx context.Context, vehicleID int64, historical []historicalMonth) costBreakdown {
+func (h *Handler) computeBreakdown(ctx context.Context, vehicleID int64, historical []historicalMonth) costBreakdown {
 	var homeCost, homekWh, scCost, sckWh float64
 	var homeCount, scCount int
 
@@ -414,7 +415,7 @@ func (h *CostForecastHandler) computeBreakdown(ctx context.Context, vehicleID in
 
 // ── Gas comparison ───────────────────────────────────────────
 
-func (h *CostForecastHandler) computeGasComparison(ctx context.Context, vehicleID int64, historical []historicalMonth) gasComparison {
+func (h *Handler) computeGasComparison(ctx context.Context, vehicleID int64, historical []historicalMonth) gasComparison {
 	const defaultGasPrice = 1.50     // $/L
 	const defaultConsumption = 0.085 // L/km (gas car)
 
@@ -553,7 +554,7 @@ const defaultCostForecastMonths = 6
 // deterministic forecast model the chart on /cost-analysis
 // renders. No new SQL is added by this slice.
 //
-// Refactoring the existing CostForecastHandler.GetForecast to
+// Refactoring the existing Handler.GetForecast to
 // pull its core into the package-level ComputeCostForecast helper
 // (and having both call sites use it) was the deliberate choice
 // over duplicating the SQL/math here — the slice 0029 rubber-duck
@@ -576,7 +577,7 @@ func NewAICostForecaster(db *database.DB) *AICostForecaster {
 }
 
 // ForecastCosts implements forecast.CostForecaster. Composes the
-// SAME api.ComputeCostForecast helper *CostForecastHandler.GetForecast
+// SAME api.ComputeCostForecast helper *Handler.GetForecast
 // uses so the returned envelope is numerically identical (modulo
 // rounding) to what GET /api/v1/analytics/cost-forecast produces
 // — the AI surface is grounded in the SAME deterministic model
