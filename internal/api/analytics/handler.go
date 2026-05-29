@@ -1,21 +1,17 @@
-package api
+package analytics
 
 import (
 	"context"
 	"time"
 
-	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
-
-	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
-
-	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
-
 	"github.com/ev-dev-labs/teslasync/internal/database"
-
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 

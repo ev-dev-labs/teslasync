@@ -19,6 +19,7 @@ import (
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
+	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
 	apianomaly "github.com/ev-dev-labs/teslasync/internal/api/anomaly"
 	apicalllog "github.com/ev-dev-labs/teslasync/internal/api/apicalllog"
 	apiflagsh "github.com/ev-dev-labs/teslasync/internal/api/apiflagsh"
@@ -662,7 +663,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	energyHandler := NewEnergyHandler(energySvc)
 	signalLogReader := signaldb.NewSignalLogReader(db)
 	batteryHandler := NewBatteryHandler(db, stateReader)
-	analyticsHandler := NewAnalyticsHandler(db, stateReader)
+	analyticsHandler := apianalytics.NewAnalyticsHandler(db, stateReader)
 	notificationHandler := apinotif.NewHandler(db)
 	notificationChannelHandler := apinotif.NewChannelHandler(db)
 	notifScheduleHandler := apinotif.NewScheduleHandler(db)

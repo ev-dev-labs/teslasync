@@ -1,4 +1,4 @@
-package api
+package analytics
 
 import (
 	"context"
@@ -8,14 +8,37 @@ import (
 	"testing"
 	"time"
 
-	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
-
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
-
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
-
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
+
+type stateCallRecord struct {
+	vehicleID int64
+	at        time.Time
+}
+
+type fakeStateReader struct {
+	stateFn func(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error)
+}
+
+func (f *fakeStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error) {
+	if f.stateFn == nil {
+		return signal.State{}, nil
+	}
+	return f.stateFn(ctx, vehicleID, at)
+}
+
+func (f *fakeStateReader) SignalAt(context.Context, int64, string, time.Time) (signal.SignalValue, error) {
+	return nil, nil
+}
+
+func (f *fakeStateReader) Timeline(context.Context, int64, []signal.FieldMapping, time.Time, time.Time, signal.TimelineOptions) ([]signal.TimelineRow, error) {
+	return nil, nil
+}
+
+var _ signal.StateReader = (*fakeStateReader)(nil)
 
 // fakeVehicleListFetcher is the in-memory vehicleListFetcher used by
 // analytics handler tests so the migrated Fleet endpoint can be exercised
