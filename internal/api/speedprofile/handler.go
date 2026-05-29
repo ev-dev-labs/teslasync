@@ -1,15 +1,20 @@
-package api
+package speedprofile
 
 import (
 	"errors"
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 )
+
+const driveStatsMetersPerMile = 1609.344
 
 // SpeedProfileHandler serves speed-distribution and efficiency analytics.
 type SpeedProfileHandler struct {
@@ -50,12 +55,12 @@ type efficiencyPoint struct {
 func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
-	vehicleID, err := parseInt64(vehicleIDStr)
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -64,7 +69,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// trailing-window default). When set the bounds apply uniformly to all
 	// three sub-queries below so distribution, categories, and the
 	// per-drive scatter all reflect the same window.
-	startTime, endTime := parseDateRange(r)
+	startTime, endTime := apiparams.ParseDateRange(r)
 	hasRange := !startTime.IsZero() && !endTime.IsZero()
 
 	ctx := r.Context()
@@ -114,7 +119,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query distribution")
-		writeError(w, http.StatusInternalServerError, "failed to query speed distribution")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query speed distribution")
 		return
 	}
 	defer distRows.Close()
@@ -125,7 +130,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		var avgPowerW *float64
 		if err := distRows.Scan(&b.SpeedBucket, &b.Readings, &avgPowerW); err != nil {
 			log.Error().Err(err).Msg("speed profile: scan distribution row")
-			writeError(w, http.StatusInternalServerError, "failed to scan speed distribution")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan speed distribution")
 			return
 		}
 		if avgPowerW != nil {
@@ -135,7 +140,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := distRows.Err(); err != nil {
 		log.Error().Err(err).Msg("speed profile: distribution rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read speed distribution")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read speed distribution")
 		return
 	}
 
@@ -183,7 +188,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency categories")
-		writeError(w, http.StatusInternalServerError, "failed to query efficiency categories")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query efficiency categories")
 		return
 	}
 	defer catRows.Close()
@@ -194,7 +199,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		var avgSpd, batPer *float64
 		if err := catRows.Scan(&c.Category, &c.DriveCount, &avgSpd, &batPer); err != nil {
 			log.Error().Err(err).Msg("speed profile: scan category row")
-			writeError(w, http.StatusInternalServerError, "failed to scan efficiency categories")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan efficiency categories")
 			return
 		}
 		if avgSpd != nil {
@@ -207,7 +212,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := catRows.Err(); err != nil {
 		log.Error().Err(err).Msg("speed profile: category rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read efficiency categories")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read efficiency categories")
 		return
 	}
 
@@ -244,7 +249,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("speed profile: failed to query efficiency points")
-		writeError(w, http.StatusInternalServerError, "failed to query efficiency points")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query efficiency points")
 		return
 	}
 	defer ptRows.Close()
@@ -254,7 +259,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		var p efficiencyPoint
 		if err := ptRows.Scan(&p.SpeedAvgMps, &p.Distance, &p.Efficiency); err != nil {
 			log.Error().Err(err).Msg("speed profile: scan efficiency point")
-			writeError(w, http.StatusInternalServerError, "failed to scan efficiency points")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan efficiency points")
 			return
 		}
 		p.SpeedAvgMps = math.Round(p.SpeedAvgMps*100) / 100
@@ -264,7 +269,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := ptRows.Err(); err != nil {
 		log.Error().Err(err).Msg("speed profile: efficiency points iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read efficiency points")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read efficiency points")
 		return
 	}
 
@@ -354,7 +359,7 @@ FROM eligible
 		optimalSpeedMps = math.Round(*optimalMps*100) / 100
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"distribution":      distribution,
 		"categories":        categories,
 		"points":            points,
