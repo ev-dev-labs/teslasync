@@ -1,18 +1,22 @@
-package api
+package automation
 
 import (
 	"context"
 	"time"
 )
 
+type eventHub interface {
+	BroadcastWithContext(ctx context.Context, eventType string, data interface{})
+}
+
 // AutomationEventPublisher broadcasts automation lifecycle events to
 // SSE clients connected to the /api/v1/automations/events stream.
 type AutomationEventPublisher struct {
-	hub *EventHub
+	hub eventHub
 }
 
 // NewAutomationEventPublisher creates a publisher backed by the given SSE hub.
-func NewAutomationEventPublisher(hub *EventHub) *AutomationEventPublisher {
+func NewAutomationEventPublisher(hub eventHub) *AutomationEventPublisher {
 	return &AutomationEventPublisher{hub: hub}
 }
 

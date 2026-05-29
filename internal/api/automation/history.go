@@ -1,4 +1,4 @@
-package api
+package automation
 
 import (
 	"net/http"

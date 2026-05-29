@@ -1,4 +1,4 @@
-package api
+package automation
 
 import (
 	"context"
@@ -13,6 +13,11 @@ import (
 // reloads its trigger configurations.
 type automationMQTTReloader struct {
 	client *mqtt.Client
+}
+
+// NewMQTTReloader creates the MQTT-backed automation reload publisher.
+func NewMQTTReloader(client *mqtt.Client) AutomationMQTTPublisher {
+	return &automationMQTTReloader{client: client}
 }
 
 // PublishReload publishes a reload signal. Fire-and-forget — errors are logged

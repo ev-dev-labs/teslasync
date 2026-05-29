@@ -28,6 +28,7 @@ import (
 	apiaudit "github.com/ev-dev-labs/teslasync/internal/api/audit"
 	apiauth "github.com/ev-dev-labs/teslasync/internal/api/auth"
 	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
+	apiautomation "github.com/ev-dev-labs/teslasync/internal/api/automation"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
@@ -841,9 +842,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	// Phase-50 / N2 (slice 0016) nl-automation-builder. Mirrors the
 	// alert-builder wiring above. AIAutomationGraphValidator is a
-	// thin wrapper around the unexported decodeAutomationInputDTO
-	// function in automation_handler_decode.go — same code path the
-	// canonical POST /api/v1/automations handler uses. Drafts
+	// thin wrapper around the automation subpackage validator in
+	// internal/api/automation/decode.go — same code path the canonical
+	// POST /api/v1/automations handler uses. Drafts
 	// accepted by the AI tool are byte-equivalent to drafts accepted
 	// by the canonical handler (ADR-015 §I3 baseline-intact).
 	automationtool.RegisterAutomationBuilderTools(aiToolRegistry, automationtool.AutomationBuilderSources{
@@ -1936,24 +1937,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// SSE event hub for automation real-time events
 	automationEventHub := NewEventHub()
-	automationPublisher := NewAutomationEventPublisher(automationEventHub)
+	automationPublisher := apiautomation.NewAutomationEventPublisher(automationEventHub)
 
 	// Wire MQTT publisher for automation config change notifications
-	var automationMQTTPublisher AutomationMQTTPublisher
+	var automationMQTTPublisher apiautomation.AutomationMQTTPublisher
 	if mqttClient != nil {
-		automationMQTTPublisher = &automationMQTTReloader{client: mqttClient}
+		automationMQTTPublisher = apiautomation.NewMQTTReloader(mqttClient)
 	}
 
-	automationHandler := NewAutomationHandler(db,
-		WithCommandExecutor(action.NewCommandExecutor(
+	automationHandler := apiautomation.NewAutomationHandler(db,
+		apiautomation.WithCommandExecutor(action.NewCommandExecutor(
 			vehicledb.NewVehicleRepo(db),
 			energydb.NewCommandLogRepo(db),
 			&settingsCheckerAdapter{settingsdb.NewSettingsRepo(db)},
 			teslaClient,
 		)),
-		WithAutomationEventPublisher(automationPublisher),
-		WithAutomationAuditor(automation.NewAuditor(NewDBAuditWriter(db))),
-		WithAutomationMQTTPublisher(automationMQTTPublisher),
+		apiautomation.WithAutomationEventPublisher(automationPublisher),
+		apiautomation.WithAutomationAuditor(automation.NewAuditor(NewDBAuditWriter(db))),
+		apiautomation.WithAutomationMQTTPublisher(automationMQTTPublisher),
 	)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {

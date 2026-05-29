@@ -30,10 +30,10 @@ package api
 //     POST /api/v1/automations handler AFTER the user explicitly
 //     clicks Save in the AutomationBuilderPage UI.
 //   - The deterministic AutomationBuilderPage form +
-//     decodeAutomationInputDTO validator at
-//     `internal/api/automation_handler_decode.go` remain the
-//     canonical baseline for any user with `ai_mode='off'`. The
-//     save path is unchanged.
+//     automation.ValidateAutomationInput validator at
+//     `internal/api/automation/decode.go` remain the canonical
+//     baseline for any user with `ai_mode='off'`. The save path is
+//     unchanged.
 //
 // ADR-015 alignment:
 //
@@ -66,6 +66,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	apiautomation "github.com/ev-dev-labs/teslasync/internal/api/automation"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -259,10 +260,9 @@ var _ http.Handler = (*AIAutomationHandler)(nil)
 
 // AIAutomationGraphValidator is the production implementation of
 // automationtool.AutomationGraphValidator. It is a thin wrapper around the
-// unexported decodeAutomationInputDTO function in
-// automation_handler_decode.go, kept in this file so the AI tool
-// registration path can wire the canonical validator without
-// exposing the unexported function to the rest of the codebase.
+// automation subpackage's canonical typed payload validator so the AI tool
+// registration path can wire the same validation path used by the manual
+// save endpoint.
 //
 // One per process; stateless.
 type AIAutomationGraphValidator struct{}
@@ -276,16 +276,12 @@ func NewAIAutomationGraphValidator() *AIAutomationGraphValidator {
 }
 
 // ValidateAutomationWire implements [automationtool.AutomationGraphValidator].
-// Delegates to the canonical decodeAutomationInputDTO function — same
-// code path the POST /api/v1/automations handler runs, so a draft
-// accepted here is byte-equivalent to a draft accepted by the
-// canonical handler.
+// Delegates to the canonical automation input validator — same code path the
+// POST /api/v1/automations handler runs, so a draft accepted here is
+// byte-equivalent to a draft accepted by the canonical handler.
 func (v *AIAutomationGraphValidator) ValidateAutomationWire(wireJSON json.RawMessage) error {
 	if len(wireJSON) == 0 {
 		return fmt.Errorf("empty wire payload")
 	}
-	if _, err := decodeAutomationInputDTO(bytes.NewReader(wireJSON)); err != nil {
-		return err
-	}
-	return nil
+	return apiautomation.ValidateAutomationInput(bytes.NewReader(wireJSON))
 }
