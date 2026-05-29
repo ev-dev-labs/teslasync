@@ -1,4 +1,4 @@
-package api
+package chargetelem
 
 import (
 	"net/http"
@@ -7,6 +7,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -57,13 +59,13 @@ func NewChargingTelemetryHandler(state signal.StateReader, live signal.LiveState
 func (h *ChargingTelemetryHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	from := time.Now().AddDate(0, 0, -7)
 	to := time.Now()
-	if start, end := parseDateRange(r); !start.IsZero() {
+	if start, end := apiparams.ParseDateRange(r); !start.IsZero() {
 		from = start
 		if !end.IsZero() {
 			to = end
@@ -74,11 +76,11 @@ func (h *ChargingTelemetryHandler) List(w http.ResponseWriter, r *http.Request) 
 		vehicleID, chargingTelemetryMappings, from, to, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get charging telemetry from signal_log")
-		writeError(w, http.StatusInternalServerError, "failed to get charging telemetry data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging telemetry data")
 		return
 	}
 	rows := timelineRowsToFlat(timelineRows)
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
 // Latest returns the most recent charging telemetry values, derived from the
@@ -86,14 +88,14 @@ func (h *ChargingTelemetryHandler) List(w http.ResponseWriter, r *http.Request) 
 func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest charging telemetry")
-		writeError(w, http.StatusInternalServerError, "failed to get latest charging telemetry")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get latest charging telemetry")
 		return
 	}
 
@@ -106,9 +108,25 @@ func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request
 	// Merge DC power: for DC fast-charging, DCChargingPower is the active value.
 	// Override charger_power_w (from ACChargingPower) when DC power is positive.
 	if dcVal, ok := snap["DCChargingPower"]; ok {
-		if dc, dcOk := toFloatOk(dcVal); dcOk && dc > 0 {
+		if dc, dcOk := signal.Float64(dcVal); dcOk && dc > 0 {
 			result["charger_power_w"] = dcVal
 		}
 	}
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+// timelineRowsToFlat converts ordered TimelineRows into the legacy
+// []map[string]interface{} flat-pivot shape ({"ts": ts, "<field>": value, ...}).
+// Duplicated locally until the parent drive detail helper is carved/shared.
+func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rows))
+	for _, tr := range rows {
+		row := make(map[string]interface{}, len(tr.Fields)+1)
+		for k, v := range tr.Fields {
+			row[k] = v
+		}
+		row["ts"] = tr.Timestamp
+		out = append(out, row)
+	}
+	return out
 }
