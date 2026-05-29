@@ -1,4 +1,4 @@
-package api
+package energyflow
 
 import (
 	"context"
@@ -14,8 +14,38 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
+type stateCallRecord struct {
+	vehicleID int64
+	at        time.Time
+}
+
+type fakeStateReader struct {
+	stateFn func(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error)
+}
+
+func (f *fakeStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error) {
+	if f.stateFn == nil {
+		return signal.State{}, nil
+	}
+	return f.stateFn(ctx, vehicleID, at)
+}
+
+func (f *fakeStateReader) SignalAt(context.Context, int64, string, time.Time) (signal.SignalValue, error) {
+	return nil, nil
+}
+
+func (f *fakeStateReader) Timeline(context.Context, int64, []signal.FieldMapping, time.Time, time.Time, signal.TimelineOptions) ([]signal.TimelineRow, error) {
+	return nil, nil
+}
+
+var _ signal.StateReader = (*fakeStateReader)(nil)
+
+func newTestLiveStateReader(state signal.StateReader) signal.LiveStateReader {
+	return signal.MustNewLiveStateReader(signal.NewNoopLiveSignalStore(), state)
+}
+
 // newEnergyFlowRequest builds an *http.Request with the chi route context
-// wired so urlParamInt64(r, "vehicleID") inside the handler resolves to
+// wired so apiparams.URLParamInt64(r, "vehicleID") inside the handler resolves to
 // vehicleID. Mirrors newChargingRequest / newDriveDetailRequest.
 func newEnergyFlowRequest(t *testing.T, vehicleID string) *http.Request {
 	t.Helper()

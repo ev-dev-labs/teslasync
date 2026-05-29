@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
@@ -217,6 +219,10 @@ func (h *BatteryCellsHandler) GetByVehicle(w http.ResponseWriter, r *http.Reques
 	q.Set("vehicle_id", urlParamVehicleID(r))
 	r.URL.RawQuery = q.Encode()
 	h.Get(w, r)
+}
+
+func urlParamVehicleID(r *http.Request) string {
+	return chi.URLParam(r, "vehicleID")
 }
 
 func round2(v float64) float64 {

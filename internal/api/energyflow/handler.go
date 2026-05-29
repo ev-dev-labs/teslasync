@@ -1,15 +1,15 @@
-package api
+package energyflow
 
 import (
 	"context"
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -37,9 +37,9 @@ func NewEnergyFlowHandler(db *database.DB, state signal.StateReader, live signal
 }
 
 func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
@@ -52,33 +52,33 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	snap, err := h.live.LiveState(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to read energy flow state")
-		writeError(w, http.StatusInternalServerError, "failed to read energy flow state")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read energy flow state")
 		return
 	}
 
-	if v, ok := toFloatOk(snap["DCChargingPower"]); ok {
+	if v, ok := signal.Float64(snap["DCChargingPower"]); ok {
 		dcPower = &v
 	}
-	if v, ok := toFloatOk(snap["ACChargingPower"]); ok {
+	if v, ok := signal.Float64(snap["ACChargingPower"]); ok {
 		acPower = &v
 	}
-	if v, ok := toFloatOk(snap["EnergyRemaining"]); ok {
+	if v, ok := signal.Float64(snap["EnergyRemaining"]); ok {
 		energyRemaining = &v
 	}
-	if v, ok := toFloatOk(snap["PackVoltage"]); ok {
+	if v, ok := signal.Float64(snap["PackVoltage"]); ok {
 		packVoltage = &v
 	}
-	if v, ok := toFloatOk(snap["PackCurrent"]); ok {
+	if v, ok := signal.Float64(snap["PackCurrent"]); ok {
 		packCurrent = &v
 	}
-	if v, ok := toFloatOk(snap["BatteryLevel"]); ok {
+	if v, ok := signal.Float64(snap["BatteryLevel"]); ok {
 		soc = &v
 	}
 	if s, ok := snap["ChargeState"].(string); ok {
 		chargeState = &s
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"dc_charging_power": dcPower,
 		"ac_charging_power": acPower,
 		"energy_remaining":  energyRemaining,
@@ -87,11 +87,4 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"soc":               soc,
 		"charge_state":      chargeState,
 	})
-}
-
-// urlParamVehicleID extracts vehicleID from chi URL param. Retained here
-// (rather than collocated with EnergyFlowHandler usage) because
-// battery_cells_handler.go also depends on this helper.
-func urlParamVehicleID(r *http.Request) string {
-	return chi.URLParam(r, "vehicleID")
 }
