@@ -15,10 +15,11 @@
 // duplicating that here would require a live database + signal
 // store fixture.
 
-package api
+package aichargcurve
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,6 +29,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestChargingCurveClusteringAIOffShowsChartsOnly is the
 // load-bearing off-mode contract proof for slice 0028. It mounts
@@ -128,21 +147,21 @@ func TestChargingCurveClusteringAIOffShowsChartsOnly(t *testing.T) {
 	}
 }
 
-// TestAIChargingCurveClusteringHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies.
-func TestAIChargingCurveClusteringHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIChargingCurveClusteringHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIChargingCurveClusteringHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -150,11 +169,11 @@ func TestAIChargingCurveClusteringHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIChargingCurveClusteringHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the JSON body BEFORE opening the SSE stream —
 // a missing, unparseable, or out-of-range body must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAIChargingCurveClusteringHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -174,8 +193,8 @@ func TestAIChargingCurveClusteringHandler_RejectsBadBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/charging/curves/clusters/explain", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			if body, ok := parseChargingCurveClusteringExplainBody(rec, req); ok {
-				t.Fatalf("parseChargingCurveClusteringExplainBody returned ok=true for %q (body=%+v)", tc.name, body)
+			if body, ok := parseExplainBody(rec, req); ok {
+				t.Fatalf("parseExplainBody returned ok=true for %q (body=%+v)", tc.name, body)
 			}
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400 (body=%q)", rec.Code, rec.Body.String())
@@ -184,9 +203,9 @@ func TestAIChargingCurveClusteringHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAIChargingCurveClusteringHandler_AcceptsCanonicalBody proves
+// TestHandler_AcceptsCanonicalBody proves
 // the parser does NOT bounce the happy-path shapes.
-func TestAIChargingCurveClusteringHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
@@ -201,12 +220,12 @@ func TestAIChargingCurveClusteringHandler_AcceptsCanonicalBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/charging/curves/clusters/explain", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			body, ok := parseChargingCurveClusteringExplainBody(rec, req)
+			body, ok := parseExplainBody(rec, req)
 			if !ok {
-				t.Fatalf("parseChargingCurveClusteringExplainBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
+				t.Fatalf("parseExplainBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
 			}
 			if body == nil {
-				t.Fatalf("parseChargingCurveClusteringExplainBody returned ok=true but nil body for %q", tc.name)
+				t.Fatalf("parseExplainBody returned ok=true but nil body for %q", tc.name)
 			}
 		})
 	}

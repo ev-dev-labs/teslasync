@@ -22,6 +22,7 @@ import (
 	aianomaly "github.com/ev-dev-labs/teslasync/internal/api/aianomaly"
 	aiautomation "github.com/ev-dev-labs/teslasync/internal/api/aiautomation"
 	aiautotripname "github.com/ev-dev-labs/teslasync/internal/api/aiautotripname"
+	aichargcurve "github.com/ev-dev-labs/teslasync/internal/api/aichargcurve"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -1310,7 +1311,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiChargingCurveClusteringHandler := NewAIChargingCurveClusteringHandler(
+	aiChargingCurveClusteringHandler := aichargcurve.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		chargingcurvefingerprintclustering.New(),

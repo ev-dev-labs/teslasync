@@ -1,8 +1,8 @@
-package api
+package aichargcurve
 
 // Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
 //
-// ai_charging_curve_clustering_handler.go implements the LLM-backed
+// handler.go implements the LLM-backed
 // handler at POST /api/v1/ai/charging/curves/clusters/explain. The
 // flow mirrors ai_battery_health_handler.go (same dispatch+stream
 // loop, no persistence — one-shot read-only narration):
@@ -45,6 +45,7 @@ package api
 //     is added or modified by this slice.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -57,33 +58,34 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiChargingCurveClusteringMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most retrieve_charge_curve_chunks →
 // query_charge_curve_features → answer (with optional retries). A
 // hard ceiling of 8 is generous, matching the other read-only
 // narrators.
-const aiChargingCurveClusteringMaxIterations = 8
+const maxIterations = 8
 
-// aiChargingCurveClusteringExplainRequest is the JSON body shape
+// explainRequest is the JSON body shape
 // this handler accepts. Mirrors the
 // /api/v1/analytics/charging-curve query-string contract —
 // vehicle_id is the only required field — kept as a JSON body so
 // the SPA can post from the same form state the deterministic UI
 // already binds to.
-type aiChargingCurveClusteringExplainRequest struct {
+type explainRequest struct {
 	VehicleID int64 `json:"vehicle_id"`
 }
 
-// AIChargingCurveClusteringHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/charging/curves/clusters/explain.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIChargingCurveClusteringHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -91,7 +93,7 @@ type AIChargingCurveClusteringHandler struct {
 	maxIters   int
 }
 
-// NewAIChargingCurveClusteringHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -107,52 +109,56 @@ type AIChargingCurveClusteringHandler struct {
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAIChargingCurveClusteringHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIChargingCurveClusteringHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIChargingCurveClusteringHandler: nil provider.Registry")
+		panic("aichargcurve: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIChargingCurveClusteringHandler: nil tools.Registry")
+		panic("aichargcurve: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIChargingCurveClusteringHandler: nil strategy.Strategy")
+		panic("aichargcurve: NewHandler: nil strategy.Strategy")
 	}
-	return &AIChargingCurveClusteringHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiChargingCurveClusteringMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseChargingCurveClusteringExplainBody decodes + validates the
+// parseExplainBody decodes + validates the
 // JSON body. Pulled out so the validator-only test can exercise the
 // same parsing without constructing a full handler with stub deps.
 // The function writes a 400 on failure and returns the (req, ok)
 // pair so the caller can early-return.
-func parseChargingCurveClusteringExplainBody(w http.ResponseWriter, r *http.Request) (*aiChargingCurveClusteringExplainRequest, bool) {
+func parseExplainBody(w http.ResponseWriter, r *http.Request) (*explainRequest, bool) {
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "request body is required")
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiChargingCurveClusteringExplainRequest
+	var req explainRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return nil, false
 	}
 	if req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be > 0")
 		return nil, false
 	}
 	return &req, true
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
 // ServeHTTP implements [http.Handler]. The body is decoded, the
@@ -160,9 +166,9 @@ func parseChargingCurveClusteringExplainBody(w http.ResponseWriter, r *http.Requ
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIChargingCurveClusteringHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
-	body, ok := parseChargingCurveClusteringExplainBody(w, r)
+	body, ok := parseExplainBody(w, r)
 	if !ok {
 		return
 	}
@@ -173,7 +179,7 @@ func (h *AIChargingCurveClusteringHandler) ServeHTTP(w http.ResponseWriter, r *h
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), chargingcurvefingerprintclustering.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai charging-curve-fingerprint-clustering: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -186,7 +192,7 @@ func (h *AIChargingCurveClusteringHandler) ServeHTTP(w http.ResponseWriter, r *h
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(chargingcurvefingerprintclustering.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai charging-curve-fingerprint-clustering: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -238,6 +244,6 @@ func (h *AIChargingCurveClusteringHandler) ServeHTTP(w http.ResponseWriter, r *h
 	}
 }
 
-// Compile-time assertion: AIChargingCurveClusteringHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AIChargingCurveClusteringHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
