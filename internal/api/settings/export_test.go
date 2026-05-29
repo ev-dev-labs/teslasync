@@ -1,4 +1,4 @@
-package api
+package settings
 
 // Phase-46 / Prompt 36 — settings export handler tests.
 //

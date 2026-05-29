@@ -1,4 +1,4 @@
-package api
+package settings
 
 import (
 	"encoding/json"
@@ -11,6 +11,7 @@ import (
 
 	settingsmodel "github.com/ev-dev-labs/teslasync/internal/models/settings"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
@@ -21,7 +22,7 @@ import (
 type SettingsHandler struct {
 	settingsRepo     *settingsdb.SettingsRepo
 	db               *database.DB
-	telemetryHandler *TelemetryHandler
+	telemetryHandler any
 }
 
 func NewSettingsHandler(db *database.DB) *SettingsHandler {
@@ -29,7 +30,7 @@ func NewSettingsHandler(db *database.DB) *SettingsHandler {
 }
 
 // SetTelemetryHandler allows the settings handler to sync capture toggle changes.
-func (h *SettingsHandler) SetTelemetryHandler(th *TelemetryHandler) {
+func (h *SettingsHandler) SetTelemetryHandler(th any) {
 	h.telemetryHandler = th
 }
 
@@ -37,7 +38,7 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	s, err := h.settingsRepo.Get(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get settings")
-		writeError(w, http.StatusInternalServerError, "failed to get settings")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get settings")
 		return
 	}
 	// ADR-015 §I9 — provider keys never leak in off mode.
@@ -61,13 +62,13 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 		s.AIProviderConfig = nil
 		s.AIFeaturesArchived = nil
 	}
-	writeJSON(w, http.StatusOK, s)
+	httpx.WriteJSON(w, http.StatusOK, s)
 }
 
 func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	var s systemmodel.Settings
 	if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	validUnitsLen := map[string]bool{"km": true, "mi": true}
@@ -76,58 +77,58 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	validRange := map[string]bool{"ideal": true, "rated": true}
 
 	if s.UnitOfLength != "" && !validUnitsLen[s.UnitOfLength] {
-		writeError(w, http.StatusBadRequest, "unit_of_length must be 'km' or 'mi'")
+		httpx.WriteError(w, http.StatusBadRequest, "unit_of_length must be 'km' or 'mi'")
 		return
 	}
 	if s.UnitOfTemp != "" && !validUnitsTemp[s.UnitOfTemp] {
-		writeError(w, http.StatusBadRequest, "unit_of_temp must be 'C' or 'F'")
+		httpx.WriteError(w, http.StatusBadRequest, "unit_of_temp must be 'C' or 'F'")
 		return
 	}
 	if s.UnitOfPressure != "" && !validUnitsPressure[s.UnitOfPressure] {
-		writeError(w, http.StatusBadRequest, "unit_of_pressure must be 'bar' or 'psi'")
+		httpx.WriteError(w, http.StatusBadRequest, "unit_of_pressure must be 'bar' or 'psi'")
 		return
 	}
 	if s.PreferredRange != "" && !validRange[s.PreferredRange] {
-		writeError(w, http.StatusBadRequest, "preferred_range must be 'ideal' or 'rated'")
+		httpx.WriteError(w, http.StatusBadRequest, "preferred_range must be 'ideal' or 'rated'")
 		return
 	}
 	if s.BaseCostPerKWh < 0 || s.BaseCostPerKWh > 10 {
-		writeError(w, http.StatusBadRequest, "base_cost_per_kwh must be between 0 and 10")
+		httpx.WriteError(w, http.StatusBadRequest, "base_cost_per_kwh must be between 0 and 10")
 		return
 	}
 	if len(s.Language) > 10 {
-		writeError(w, http.StatusBadRequest, "language must be 10 characters or less")
+		httpx.WriteError(w, http.StatusBadRequest, "language must be 10 characters or less")
 		return
 	}
 	if len(s.CurrencySymbol) > 8 {
-		writeError(w, http.StatusBadRequest, "currency_symbol must be 8 characters or less")
+		httpx.WriteError(w, http.StatusBadRequest, "currency_symbol must be 8 characters or less")
 		return
 	}
 	if s.Locale != "" && !isValidBCP47(s.Locale) {
-		writeError(w, http.StatusBadRequest, "locale must be a BCP-47 tag (e.g. 'en-US', 'de-DE')")
+		httpx.WriteError(w, http.StatusBadRequest, "locale must be a BCP-47 tag (e.g. 'en-US', 'de-DE')")
 		return
 	}
 	if s.TzDisplayDefault != "" && !isValidTzDisplayMode(s.TzDisplayDefault) {
-		writeError(w, http.StatusBadRequest, "tz_display_default must be 'vehicle', 'user', or 'utc'")
+		httpx.WriteError(w, http.StatusBadRequest, "tz_display_default must be 'vehicle', 'user', or 'utc'")
 		return
 	}
 	if s.TimezoneUser != "" && !isValidIANATimezone(s.TimezoneUser) {
-		writeError(w, http.StatusBadRequest, "timezone_user must be a valid IANA timezone (e.g. 'America/Los_Angeles')")
+		httpx.WriteError(w, http.StatusBadRequest, "timezone_user must be a valid IANA timezone (e.g. 'America/Los_Angeles')")
 		return
 	}
 	validUIDensity := map[string]bool{"compact": true, "comfortable": true, "spacious": true}
 	if s.UIDensity != "" && !validUIDensity[s.UIDensity] {
-		writeError(w, http.StatusBadRequest, "ui_density must be 'compact', 'comfortable', or 'spacious'")
+		httpx.WriteError(w, http.StatusBadRequest, "ui_density must be 'compact', 'comfortable', or 'spacious'")
 		return
 	}
 	validTimeFormat := map[string]bool{"relative": true, "absolute": true}
 	if s.TimeFormatDefault != "" && !validTimeFormat[s.TimeFormatDefault] {
-		writeError(w, http.StatusBadRequest, "time_format_default must be 'relative' or 'absolute'")
+		httpx.WriteError(w, http.StatusBadRequest, "time_format_default must be 'relative' or 'absolute'")
 		return
 	}
 	validChartPalette := map[string]bool{"cb_safe": true, "neon": true}
 	if s.ChartPalette != "" && !validChartPalette[s.ChartPalette] {
-		writeError(w, http.StatusBadRequest, "chart_palette must be 'cb_safe' or 'neon'")
+		httpx.WriteError(w, http.StatusBadRequest, "chart_palette must be 'cb_safe' or 'neon'")
 		return
 	}
 	// ADR-015 §I2 — three modes, one flag. Validate so a typo in
@@ -135,11 +136,11 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 	// flip the user out of the off-by-default state.
 	validAIMode := map[string]bool{"off": true, "local": true, "cloud": true}
 	if s.AIMode != "" && !validAIMode[s.AIMode] {
-		writeError(w, http.StatusBadRequest, "ai_mode must be 'off', 'local', or 'cloud'")
+		httpx.WriteError(w, http.StatusBadRequest, "ai_mode must be 'off', 'local', or 'cloud'")
 		return
 	}
 	if s.AICostCapCents < 0 {
-		writeError(w, http.StatusBadRequest, "ai_cost_cap_cents must be >= 0")
+		httpx.WriteError(w, http.StatusBadRequest, "ai_cost_cap_cents must be >= 0")
 		return
 	}
 
@@ -207,10 +208,10 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.settingsRepo.Upsert(r.Context(), &s); err != nil {
 		log.Error().Err(err).Msg("failed to update settings")
-		writeError(w, http.StatusInternalServerError, "failed to update settings")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to update settings")
 		return
 	}
-	writeJSON(w, http.StatusOK, s)
+	httpx.WriteJSON(w, http.StatusOK, s)
 }
 
 // ToggleAPISuspend toggles the api_suspended flag. POST /api/v1/settings/suspend-api
@@ -219,26 +220,26 @@ func (h *SettingsHandler) ToggleAPISuspend(w http.ResponseWriter, r *http.Reques
 		Suspended bool `json:"suspended"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	s, err := h.settingsRepo.Get(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get settings for suspend toggle")
-		writeError(w, http.StatusInternalServerError, "failed to get settings")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get settings")
 		return
 	}
 	s.APISuspended = body.Suspended
 
 	if err := h.settingsRepo.Upsert(r.Context(), s); err != nil {
 		log.Error().Err(err).Msg("failed to toggle api_suspended")
-		writeError(w, http.StatusInternalServerError, "failed to update api_suspended")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to update api_suspended")
 		return
 	}
 
 	log.Info().Bool("api_suspended", body.Suspended).Msg("Tesla API suspension toggled")
-	writeJSON(w, http.StatusOK, map[string]bool{"api_suspended": body.Suspended})
+	httpx.WriteJSON(w, http.StatusOK, map[string]bool{"api_suspended": body.Suspended})
 }
 
 // GetPollingConfig returns the current polling endpoint configuration.
@@ -247,7 +248,7 @@ func (h *SettingsHandler) ToggleAPISuspend(w http.ResponseWriter, r *http.Reques
 // all endpoints enabled (default safe state).
 func (h *SettingsHandler) GetPollingConfig(w http.ResponseWriter, r *http.Request) {
 	pc := settingsmodel.DefaultPollingConfig()
-	writeJSON(w, http.StatusOK, pc)
+	httpx.WriteJSON(w, http.StatusOK, pc)
 }
 
 // UpdatePollingConfig accepts a polling configuration update.
@@ -256,13 +257,13 @@ func (h *SettingsHandler) GetPollingConfig(w http.ResponseWriter, r *http.Reques
 func (h *SettingsHandler) UpdatePollingConfig(w http.ResponseWriter, r *http.Request) {
 	var pc settingsmodel.LegacyPollingConfig
 	if err := json.NewDecoder(r.Body).Decode(&pc); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	log.Info().Interface("polling_config", pc).Msg("polling config updated (legacy no-op)")
 
-	writeJSON(w, http.StatusOK, pc)
+	httpx.WriteJSON(w, http.StatusOK, pc)
 }
 
 // dashboardLayoutsResponse is the JSON envelope for dashboard layout persistence.
@@ -280,11 +281,11 @@ func (h *SettingsHandler) GetDashboardLayouts(w http.ResponseWriter, r *http.Req
 	raw, err := h.settingsRepo.GetDashboardLayouts(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get dashboard layouts")
-		writeError(w, http.StatusInternalServerError, "failed to get dashboard layouts")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get dashboard layouts")
 		return
 	}
 	if raw == "" {
-		writeJSON(w, http.StatusOK, dashboardLayoutsResponse{
+		httpx.WriteJSON(w, http.StatusOK, dashboardLayoutsResponse{
 			Dashboards: json.RawMessage("[]"),
 			ActiveID:   "default",
 		})
@@ -296,13 +297,13 @@ func (h *SettingsHandler) GetDashboardLayouts(w http.ResponseWriter, r *http.Req
 	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
 		// Corrupted data — return empty default rather than 500.
 		log.Warn().Err(err).Msg("corrupted dashboard_layouts in settings, returning defaults")
-		writeJSON(w, http.StatusOK, dashboardLayoutsResponse{
+		httpx.WriteJSON(w, http.StatusOK, dashboardLayoutsResponse{
 			Dashboards: json.RawMessage("[]"),
 			ActiveID:   "default",
 		})
 		return
 	}
-	writeJSON(w, http.StatusOK, stored)
+	httpx.WriteJSON(w, http.StatusOK, stored)
 }
 
 // UpdateDashboardLayouts persists dashboard layout data.
@@ -310,18 +311,18 @@ func (h *SettingsHandler) GetDashboardLayouts(w http.ResponseWriter, r *http.Req
 func (h *SettingsHandler) UpdateDashboardLayouts(w http.ResponseWriter, r *http.Request) {
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxDashboardLayoutSize+1))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "failed to read request body")
+		httpx.WriteError(w, http.StatusBadRequest, "failed to read request body")
 		return
 	}
 	if len(body) > maxDashboardLayoutSize {
-		writeError(w, http.StatusRequestEntityTooLarge, "dashboard layouts payload exceeds 1 MB limit")
+		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "dashboard layouts payload exceeds 1 MB limit")
 		return
 	}
 
 	// Validate JSON structure
 	var payload dashboardLayoutsResponse
 	if err := json.Unmarshal(body, &payload); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	if payload.ActiveID == "" {
@@ -329,24 +330,24 @@ func (h *SettingsHandler) UpdateDashboardLayouts(w http.ResponseWriter, r *http.
 	}
 	// Validate that dashboards is a JSON array
 	if len(payload.Dashboards) == 0 || payload.Dashboards[0] != '[' {
-		writeError(w, http.StatusBadRequest, "dashboards must be a JSON array")
+		httpx.WriteError(w, http.StatusBadRequest, "dashboards must be a JSON array")
 		return
 	}
 
 	// Re-marshal the validated payload for storage
 	canonical, err := json.Marshal(payload)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to serialize dashboard layouts")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to serialize dashboard layouts")
 		return
 	}
 
 	if err := h.settingsRepo.UpsertDashboardLayouts(r.Context(), string(canonical)); err != nil {
 		log.Error().Err(err).Msg("failed to persist dashboard layouts")
-		writeError(w, http.StatusInternalServerError, "failed to persist dashboard layouts")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to persist dashboard layouts")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, payload)
+	httpx.WriteJSON(w, http.StatusOK, payload)
 }
 
 // bcp47Pattern is a deliberately conservative subset of BCP-47 — it covers
