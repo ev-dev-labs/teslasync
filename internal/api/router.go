@@ -28,6 +28,7 @@ import (
 	aicostfcst "github.com/ev-dev-labs/teslasync/internal/api/aicostfcst"
 	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
 	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
+	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -1045,21 +1046,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// the nl-drive-search-replay strategy. Same ordering rule as
 	// the other slice tools above: must be registered before the
 	// handler constructor below so the strategy's allowedTools
-	// resolve at boot. The Hydrator is the in-package adapter
-	// aiDriveSearchHydrator, which delegates per-source-type
+	// resolve at boot. The Hydrator is the aidrivesearch adapter,
+	// which delegates per-source-type
 	// lookups to the existing canonical pgSearcher — same code
 	// path the typed GET /api/v1/search baseline uses (ADR-015 §I3
 	// baseline-intact: no duplicate read path is introduced by
 	// this slice).
 	trip.RegisterDriveSearchTools(aiToolRegistry, trip.DriveSearchSources{
 		Retriever: aiDriveSearchRetriever,
-		Hydrator:  newAIDriveSearchHydrator(apisearch.NewPGSearcher(db)),
+		Hydrator:  aidrivesearch.NewHydrator(apisearch.NewPGSearcher(db)),
 	})
 	// Natural-language drive search and replay handler. One per
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiDriveSearchHandler := NewAIDriveSearchHandler(
+	aiDriveSearchHandler := aidrivesearch.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nldrivesearchreplay.New(),

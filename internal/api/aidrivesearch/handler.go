@@ -1,4 +1,4 @@
-package api
+package aidrivesearch
 
 // Phase-50 / 0021 — D1 Natural-language drive search and replay.
 //
@@ -55,6 +55,7 @@ package api
 //     is added or modified by this slice.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -68,6 +69,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -86,13 +88,13 @@ const aiDriveSearchMaxIterations = 6
 // any plausible legitimate use.
 const aiDriveSearchMaxPromptChars = 4096
 
-// AIDriveSearchHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/drives/search.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIDriveSearchHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -100,7 +102,7 @@ type AIDriveSearchHandler struct {
 	maxIters   int
 }
 
-// NewAIDriveSearchHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -112,21 +114,21 @@ type AIDriveSearchHandler struct {
 //
 // strat:      the nl-drive-search-replay Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIDriveSearchHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIDriveSearchHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIDriveSearchHandler: nil provider.Registry")
+		panic("aidrivesearch: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIDriveSearchHandler: nil tools.Registry")
+		panic("aidrivesearch: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIDriveSearchHandler: nil strategy.Strategy")
+		panic("aidrivesearch: NewHandler: nil strategy.Strategy")
 	}
-	return &AIDriveSearchHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -154,20 +156,20 @@ type aiDriveSearchRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIDriveSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
 	var body aiDriveSearchRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	prompt := strings.TrimSpace(body.Prompt)
 	if prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
+		httpx.WriteError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
 	if len(prompt) > aiDriveSearchMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiDriveSearchMaxPromptChars))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiDriveSearchMaxPromptChars))
 		return
 	}
 
@@ -177,7 +179,7 @@ func (h *AIDriveSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), nldrivesearchreplay.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai drive search: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -193,7 +195,7 @@ func (h *AIDriveSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nldrivesearchreplay.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai drive search: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -249,5 +251,10 @@ func (h *AIDriveSearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// Compile-time assertion: AIDriveSearchHandler satisfies http.Handler.
-var _ http.Handler = (*AIDriveSearchHandler)(nil)
+// denyAllConfirm is the dispatch confirm hook for this read-only AI surface.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)

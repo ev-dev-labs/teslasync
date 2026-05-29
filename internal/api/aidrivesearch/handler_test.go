@@ -10,7 +10,7 @@
 // F6 eval harness (`go run ./cmd/ai-eval -feature nl-drive-search-replay`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aidrivesearch
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	"github.com/ev-dev-labs/teslasync/internal/api/search/searchtest"
 
@@ -32,6 +33,19 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestNLDriveSearchReplayAIOff404 is the load-bearing off-mode
 // contract proof for slice 0021. It mounts the AI drive search
@@ -85,23 +99,23 @@ func TestNLDriveSearchReplayAIOff404(t *testing.T) {
 	}
 }
 
-// TestAIDriveSearchHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIDriveSearchHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIDriveSearchHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIDriveSearchHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -109,12 +123,12 @@ func TestAIDriveSearchHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIDriveSearchHandler_RejectsBadInput asserts the handler
+// TestHandler_RejectsBadInput asserts the handler
 // validates the request body BEFORE opening the SSE stream — a
 // missing prompt, whitespace prompt, or oversized prompt must
 // surface as a JSON 400, not a half-opened stream that confuses
 // the frontend.
-func TestAIDriveSearchHandler_RejectsBadInput(t *testing.T) {
+func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -140,10 +154,10 @@ func TestAIDriveSearchHandler_RejectsBadInput(t *testing.T) {
 	}
 }
 
-// TestAIDriveSearchHandler_AcceptsCanonicalInput proves the
+// TestHandler_AcceptsCanonicalInput proves the
 // validator does NOT bounce the happy-path shapes — a normal-length
 // prompt and a prompt at the size boundary.
-func TestAIDriveSearchHandler_AcceptsCanonicalInput(t *testing.T) {
+func TestHandler_AcceptsCanonicalInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []string{
@@ -163,13 +177,13 @@ func TestAIDriveSearchHandler_AcceptsCanonicalInput(t *testing.T) {
 	}
 }
 
-// TestAIDriveSearchHydrator_DelegatesToSearcher proves the
+// TestHydrator_DelegatesToSearcher proves the
 // production hydrator translates a (sourceType, sourceID) tuple
 // into a SearchDrives call against the canonical Searcher and
 // returns a HydratedDriveReplay shaped from the matching
 // apisearch.SearchHit. The ReplayURL is derived by appending "/replay" to
 // the apisearch.SearchHit URL so the SPA path stays in one source of truth.
-func TestAIDriveSearchHydrator_DelegatesToSearcher(t *testing.T) {
+func TestHydrator_DelegatesToSearcher(t *testing.T) {
 	t.Parallel()
 	when := time.Date(2025, 1, 4, 14, 32, 0, 0, time.UTC)
 	fake := searchtest.NewFakeSearcher()
@@ -178,7 +192,7 @@ func TestAIDriveSearchHydrator_DelegatesToSearcher(t *testing.T) {
 		Title: "Drive #101", Subtitle: "12.4 km, 18 min",
 		URL: "/drives/101", Score: 5, When: &when,
 	}}
-	h := newAIDriveSearchHydrator(fake)
+	h := newHydrator(fake)
 
 	got, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "101")
 	if err != nil {
@@ -205,10 +219,10 @@ func TestAIDriveSearchHydrator_DelegatesToSearcher(t *testing.T) {
 	}
 }
 
-// TestAIDriveSearchHydrator_ReplayURLFromEmptyURLIsEmpty proves the
+// TestHydrator_ReplayURLFromEmptyURLIsEmpty proves the
 // appendReplay helper does NOT produce the misleading "/replay"
 // string when the underlying URL is empty.
-func TestAIDriveSearchHydrator_ReplayURLFromEmptyURLIsEmpty(t *testing.T) {
+func TestHydrator_ReplayURLFromEmptyURLIsEmpty(t *testing.T) {
 	t.Parallel()
 	fake := searchtest.NewFakeSearcher()
 	fake.Hits[apisearch.SearchTypeDrive] = []apisearch.SearchHit{{
@@ -216,7 +230,7 @@ func TestAIDriveSearchHydrator_ReplayURLFromEmptyURLIsEmpty(t *testing.T) {
 		Title: "Drive #7",
 		URL:   "", // empty URL — search renderer left it blank
 	}}
-	h := newAIDriveSearchHydrator(fake)
+	h := newHydrator(fake)
 	got, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "7")
 	if err != nil {
 		t.Fatalf("HydrateOne err = %v", err)
@@ -226,14 +240,14 @@ func TestAIDriveSearchHydrator_ReplayURLFromEmptyURLIsEmpty(t *testing.T) {
 	}
 }
 
-// TestAIDriveSearchHydrator_NotFoundOnNonNumericID proves a
+// TestHydrator_NotFoundOnNonNumericID proves a
 // non-numeric source_id surfaces as ErrDriveReplayHydratorNotFound
 // rather than a tool error — the AI tool then surfaces this as a
 // status="not_found" envelope so the LLM can adapt without
 // retrying.
-func TestAIDriveSearchHydrator_NotFoundOnNonNumericID(t *testing.T) {
+func TestHydrator_NotFoundOnNonNumericID(t *testing.T) {
 	t.Parallel()
-	h := newAIDriveSearchHydrator(searchtest.NewFakeSearcher())
+	h := newHydrator(searchtest.NewFakeSearcher())
 	_, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "drive-101")
 	if err == nil {
 		t.Fatalf("HydrateOne err = nil, want ErrDriveReplayHydratorNotFound")
@@ -243,29 +257,29 @@ func TestAIDriveSearchHydrator_NotFoundOnNonNumericID(t *testing.T) {
 	}
 }
 
-// TestAIDriveSearchHydrator_NotFoundOnNoMatch proves the hydrator
+// TestHydrator_NotFoundOnNoMatch proves the hydrator
 // surfaces an empty searcher result as
 // ErrDriveReplayHydratorNotFound rather than fabricating a
 // HydratedDriveReplay.
-func TestAIDriveSearchHydrator_NotFoundOnNoMatch(t *testing.T) {
+func TestHydrator_NotFoundOnNoMatch(t *testing.T) {
 	t.Parallel()
 	fake := searchtest.NewFakeSearcher()
 	fake.Hits[apisearch.SearchTypeDrive] = nil // empty result
-	h := newAIDriveSearchHydrator(fake)
+	h := newHydrator(fake)
 	_, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "999")
 	if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
 		t.Errorf("HydrateOne err = %v, want ErrDriveReplayHydratorNotFound", err)
 	}
 }
 
-// TestAIDriveSearchHydrator_NotFoundOnForwardCompatSourceTypes
+// TestHydrator_NotFoundOnForwardCompatSourceTypes
 // proves route_segment and location_summary surface as not_found
 // today — they are forward-compat reservations per the slice
 // prompt. A future indexer slice that lights up these sources
 // should add per-type cases to the hydrator.
-func TestAIDriveSearchHydrator_NotFoundOnForwardCompatSourceTypes(t *testing.T) {
+func TestHydrator_NotFoundOnForwardCompatSourceTypes(t *testing.T) {
 	t.Parallel()
-	h := newAIDriveSearchHydrator(searchtest.NewFakeSearcher())
+	h := newHydrator(searchtest.NewFakeSearcher())
 	for _, st := range []string{"route_segment", "location_summary"} {
 		_, err := h.HydrateOne(context.Background(), "alice", st, "1")
 		if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
@@ -274,49 +288,49 @@ func TestAIDriveSearchHydrator_NotFoundOnForwardCompatSourceTypes(t *testing.T) 
 	}
 }
 
-// TestAIDriveSearchHydrator_NotFoundOnUnknownSourceType proves the
+// TestHydrator_NotFoundOnUnknownSourceType proves the
 // default-case surfaces an unknown source type as not_found
 // (defence in depth — the tool's Validate already rejects unknown
 // source types upstream).
-func TestAIDriveSearchHydrator_NotFoundOnUnknownSourceType(t *testing.T) {
+func TestHydrator_NotFoundOnUnknownSourceType(t *testing.T) {
 	t.Parallel()
-	h := newAIDriveSearchHydrator(searchtest.NewFakeSearcher())
+	h := newHydrator(searchtest.NewFakeSearcher())
 	_, err := h.HydrateOne(context.Background(), "alice", "unknown_corpus", "1")
 	if !errors.Is(err, trip.ErrDriveReplayHydratorNotFound) {
 		t.Errorf("HydrateOne err = %v, want ErrDriveReplayHydratorNotFound", err)
 	}
 }
 
-// TestAIDriveSearchHydrator_PanicsOnNilSearcher proves the
+// TestHydrator_PanicsOnNilSearcher proves the
 // constructor guard fires at boot for a nil searcher rather than
 // at first request.
-func TestAIDriveSearchHydrator_PanicsOnNilSearcher(t *testing.T) {
+func TestHydrator_PanicsOnNilSearcher(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("newAIDriveSearchHydrator(nil) did not panic")
+			t.Errorf("newHydrator(nil) did not panic")
 		}
 	}()
-	_ = newAIDriveSearchHydrator(nil)
+	_ = newHydrator(nil)
 }
 
 // validateDriveSearchOnly mirrors the pre-stream validator branch
-// of AIDriveSearchHandler.ServeHTTP. Kept as a same-package helper
+// of Handler.ServeHTTP. Kept as a same-package helper
 // so the test does not need to construct a full handler with stub
 // deps.
 func validateDriveSearchOnly(w http.ResponseWriter, r *http.Request) {
 	var body aiDriveSearchRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	prompt := strings.TrimSpace(body.Prompt)
 	if prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
+		httpx.WriteError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
 	if len(prompt) > aiDriveSearchMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiDriveSearchMaxPromptChars))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiDriveSearchMaxPromptChars))
 		return
 	}
 	w.WriteHeader(http.StatusOK)

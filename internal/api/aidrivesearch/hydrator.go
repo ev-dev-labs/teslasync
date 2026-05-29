@@ -1,4 +1,4 @@
-package api
+package aidrivesearch
 
 // Phase-50 / 0021 — D1 Natural-language drive search and replay.
 //
@@ -51,7 +51,6 @@ package api
 
 import (
 	"context"
-	"errors"
 	"strconv"
 
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
@@ -60,22 +59,27 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
 )
 
-// aiDriveSearchHydrator is the production
+// hydrator is the production
 // trip.DriveReplayHydrator implementation. One per process;
 // stateless beyond the apisearch.Searcher port. Safe for concurrent use
 // across requests.
-type aiDriveSearchHydrator struct {
+type hydrator struct {
 	s apisearch.Searcher
 }
 
-// newAIDriveSearchHydrator constructs the production hydrator. The
-// constructor panics on a nil apisearch.Searcher so a wiring bug surfaces at
-// boot, not at the first AI drive-search request.
-func newAIDriveSearchHydrator(s apisearch.Searcher) *aiDriveSearchHydrator {
+// NewHydrator constructs the production hydrator for router wiring.
+func NewHydrator(s apisearch.Searcher) trip.DriveReplayHydrator {
+	return newHydrator(s)
+}
+
+// newHydrator constructs the production hydrator. The constructor panics on a
+// nil apisearch.Searcher so a wiring bug surfaces at boot, not at the first AI
+// drive-search request.
+func newHydrator(s apisearch.Searcher) *hydrator {
 	if s == nil {
-		panic("api: newAIDriveSearchHydrator: nil apisearch.Searcher")
+		panic("aidrivesearch: newHydrator: nil apisearch.Searcher")
 	}
-	return &aiDriveSearchHydrator{s: s}
+	return &hydrator{s: s}
 }
 
 // HydrateOne implements [trip.DriveReplayHydrator]. Delegates to
@@ -88,7 +92,7 @@ func newAIDriveSearchHydrator(s apisearch.Searcher) *aiDriveSearchHydrator {
 // matches the (subject, type, id) tuple — the AI tool surfaces
 // this as a status="not_found" envelope so the LLM can adapt its
 // narration without retrying.
-func (h *aiDriveSearchHydrator) HydrateOne(ctx context.Context, _userSubject, sourceType, sourceID string) (*trip.HydratedDriveReplay, error) {
+func (h *hydrator) HydrateOne(ctx context.Context, _userSubject, sourceType, sourceID string) (*trip.HydratedDriveReplay, error) {
 	// route_segment and location_summary are forward-compat
 	// reservations per the slice prompt — no canonical replay
 	// surface today. Surface as not_found so the LLM can adapt
@@ -154,12 +158,6 @@ func appendReplay(url string) string {
 	return url + "/replay"
 }
 
-// Compile-time assertion: aiDriveSearchHydrator satisfies
+// Compile-time assertion: hydrator satisfies
 // trip.DriveReplayHydrator.
-var _ trip.DriveReplayHydrator = (*aiDriveSearchHydrator)(nil)
-
-// _ is a compile-time guard against the package-private errors
-// import drifting. The import is genuinely required (future
-// additions may rely on errors.New / errors.Is). Pinning prevents
-// goimports from removing it during a future refactor.
-var _ = errors.New
+var _ trip.DriveReplayHydrator = (*hydrator)(nil)
