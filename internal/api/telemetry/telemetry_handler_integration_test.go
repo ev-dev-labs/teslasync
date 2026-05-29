@@ -1,7 +1,7 @@
 //go:build integration
 // +build integration
 
-package api_test
+package telemetry_test
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 
 	"github.com/rs/zerolog"
 
-	"github.com/ev-dev-labs/teslasync/internal/api"
+	telemetry "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	platformdb "github.com/ev-dev-labs/teslasync/internal/platform/database"
@@ -78,7 +78,7 @@ func TestTelemetryReplay(t *testing.T) {
 	ctx := context.Background()
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			batch := loadBatch(t, filepath.Join("testdata", "telemetry_batches", c.fixture))
+			batch := loadBatch(t, filepath.Join("..", "testdata", "telemetry_batches", c.fixture))
 			if batch.VIN == "" {
 				t.Fatalf("fixture %s missing top-level vin", c.fixture)
 			}
@@ -249,7 +249,7 @@ func setupFreshDB(t *testing.T, cfg config.DatabaseConfig) *database.DB {
 // pipeline is constructed with the same 12-writer set as cmd/teslasync's
 // production wiring (no observers — the integration test only asserts on
 // row counts in typed tables, which writers populate directly).
-func buildHandler(t *testing.T, db *database.DB) *api.TelemetryHandler {
+func buildHandler(t *testing.T, db *database.DB) *telemetry.Handler {
 	t.Helper()
 
 	pipelineWriters := map[router.Destination]router.Writer{
@@ -278,7 +278,7 @@ func buildHandler(t *testing.T, db *database.DB) *api.TelemetryHandler {
 	logger := zerolog.Nop()
 	pipeline := normalize.New(unitRepo, pipelineRouter, logger)
 
-	h := api.NewTelemetryHandler(db, nil, nil, time.Minute, nil)
+	h := telemetry.NewHandler(db, nil, nil, time.Minute, nil)
 	h.SetPipeline(pipeline)
 	return h
 }

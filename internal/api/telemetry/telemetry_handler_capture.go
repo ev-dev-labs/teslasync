@@ -1,10 +1,11 @@
-package api
+package telemetry
 
 import (
 	"encoding/json"
 	"net/http"
 	"strconv"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 )
 
@@ -12,9 +13,9 @@ import (
 
 // CaptureList returns captured raw telemetry signals, paginated.
 // Query params: ?vin=, ?limit=, ?offset=
-func (h *TelemetryHandler) CaptureList(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CaptureList(w http.ResponseWriter, r *http.Request) {
 	if h.rawTelemetryRepo == nil {
-		writeError(w, http.StatusServiceUnavailable, "MongoDB not configured ╬ô├ç├╢ telemetry capture unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "MongoDB not configured ╬ô├ç├╢ telemetry capture unavailable")
 		return
 	}
 
@@ -42,16 +43,16 @@ func (h *TelemetryHandler) CaptureList(w http.ResponseWriter, r *http.Request) {
 		results, err = h.rawTelemetryRepo.GetAll(r.Context(), limit, offset)
 	}
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to query captured signals")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query captured signals")
 		return
 	}
-	writeJSON(w, http.StatusOK, results)
+	httpx.WriteJSON(w, http.StatusOK, results)
 }
 
 // CaptureStats returns aggregate statistics about captured signals.
-func (h *TelemetryHandler) CaptureStats(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CaptureStats(w http.ResponseWriter, r *http.Request) {
 	if h.rawTelemetryRepo == nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"mongodb_enabled": false,
 			"capture_enabled": h.captureEnabled.Load(),
 			"total_documents": 0,
@@ -62,10 +63,10 @@ func (h *TelemetryHandler) CaptureStats(w http.ResponseWriter, r *http.Request) 
 
 	stats, err := h.rawTelemetryRepo.Stats(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to get capture stats")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get capture stats")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"mongodb_enabled": true,
 		"capture_enabled": h.captureEnabled.Load(),
 		"total_documents": stats.TotalDocuments,
@@ -74,29 +75,29 @@ func (h *TelemetryHandler) CaptureStats(w http.ResponseWriter, r *http.Request) 
 }
 
 // CaptureDrop deletes all captured telemetry data.
-func (h *TelemetryHandler) CaptureDrop(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CaptureDrop(w http.ResponseWriter, r *http.Request) {
 	if h.rawTelemetryRepo == nil {
-		writeError(w, http.StatusServiceUnavailable, "MongoDB not configured ╬ô├ç├╢ telemetry capture unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "MongoDB not configured ╬ô├ç├╢ telemetry capture unavailable")
 		return
 	}
 
 	if err := h.rawTelemetryRepo.Drop(r.Context()); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to drop captured signals")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to drop captured signals")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "dropped"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "dropped"})
 }
 
 // CaptureExport streams all captured signals as a JSONL download.
-func (h *TelemetryHandler) CaptureExport(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) CaptureExport(w http.ResponseWriter, r *http.Request) {
 	if h.rawTelemetryRepo == nil {
-		writeError(w, http.StatusServiceUnavailable, "MongoDB not configured ╬ô├ç├╢ telemetry capture unavailable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "MongoDB not configured ╬ô├ç├╢ telemetry capture unavailable")
 		return
 	}
 
 	cursor, err := h.rawTelemetryRepo.StreamAll(r.Context())
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to export captured signals")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to export captured signals")
 		return
 	}
 	defer cursor.Close(r.Context())

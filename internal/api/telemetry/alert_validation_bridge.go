@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"

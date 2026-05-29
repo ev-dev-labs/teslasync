@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
@@ -17,12 +18,13 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 
+	"github.com/rs/zerolog/log"
+
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	telemetryfsm "github.com/ev-dev-labs/teslasync/internal/fsm/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
-	"github.com/rs/zerolog/log"
 )
 
 // sseRedisPubsubTracerName is the OpenTelemetry tracer name for the SSE
@@ -36,7 +38,7 @@ const sseRedisPubsubTracerName = "signal"
 // pipeline error (return 500).
 var errPipelineNotWired = errors.New("telemetry: normalize pipeline not wired (call SetPipeline before ProcessBatch)")
 
-func (h *TelemetryHandler) liveStoreForTelemetry() signal.LiveSignalStore {
+func (h *Handler) liveStoreForTelemetry() signal.LiveSignalStore {
 	if h.liveSignalStore != nil {
 		return h.liveSignalStore
 	}
@@ -51,7 +53,7 @@ func (h *TelemetryHandler) liveStoreForTelemetry() signal.LiveSignalStore {
 	return liveStore
 }
 
-func (h *TelemetryHandler) updateLiveSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+func (h *Handler) updateLiveSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	liveStore := h.liveStoreForTelemetry()
 	if liveStore == nil {
 		return
@@ -104,12 +106,12 @@ type telemetryPayload struct {
 // Postgres signal_history, FSM dispatch, session+alert evaluation, and
 // SSE broadcast. The HTTP webhook adapter does NOT replicate those
 // effects — they happen exactly once via the pipeline.
-func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
 	start := time.Now().UTC()
 	var payload telemetryPayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid telemetry payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid telemetry payload")
 		return
 	}
 
@@ -127,7 +129,7 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 	veh, vehErr := h.vehicleRepo.GetByVIN(r.Context(), payload.VIN)
 	if vehErr != nil || veh == nil {
 		log.Warn().Err(vehErr).Str("vin", payload.VIN).Msg("TelemetryIngest: vehicle not found; dropping batch")
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"status":  "dropped",
 			"reason":  "vehicle not registered",
 			"signals": len(payload.Signals),
@@ -231,11 +233,11 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 	if err := h.ProcessBatch(r.Context(), payload.VIN, atomics); err != nil {
 		if errors.Is(err, errPipelineNotWired) {
 			log.Error().Err(err).Str("vin", payload.VIN).Msg("TelemetryIngest: pipeline not wired; ingest unavailable")
-			writeError(w, http.StatusServiceUnavailable, "telemetry pipeline not wired")
+			httpx.WriteError(w, http.StatusServiceUnavailable, "telemetry pipeline not wired")
 			return
 		}
 		log.Error().Err(err).Str("vin", payload.VIN).Msg("TelemetryIngest: ProcessBatch failed")
-		writeError(w, http.StatusInternalServerError, "telemetry ingest failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "telemetry ingest failed")
 		return
 	}
 
@@ -257,7 +259,7 @@ func (h *TelemetryHandler) TelemetryIngest(w http.ResponseWriter, r *http.Reques
 		_ = h.logRepo.Create(r.Context(), logEntry)
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"status":  "accepted",
 		"signals": len(signals),
 		"vin":     payload.VIN,
@@ -302,7 +304,7 @@ func parseSignalTimestamp(raw string, fallback time.Time) time.Time {
 // /telemetry/status. Extracted from the legacy ProcessSignals spine so the
 // HTTP TelemetryIngest can keep the contract intact post-Phase-42a/0060
 // without depending on the deprecated spine.
-func (h *TelemetryHandler) recordStreamingHealth(vin string, signalCount int, signals map[string]interface{}) {
+func (h *Handler) recordStreamingHealth(vin string, signalCount int, signals map[string]interface{}) {
 	h.mu.Lock()
 	state, ok := h.streamingState[vin]
 	if !ok {
@@ -331,7 +333,7 @@ func (h *TelemetryHandler) recordStreamingHealth(vin string, signalCount int, si
 // batches despite telemetry flowing into signal_log + drives. Empty VIN
 // or zero atomics are no-ops — the codec drop branch is handled upstream
 // and never reaches RecordStream.
-func (h *TelemetryHandler) RecordStream(vin string, atomics []codec.Atomic) {
+func (h *Handler) RecordStream(vin string, atomics []codec.Atomic) {
 	if vin == "" || len(atomics) == 0 {
 		return
 	}
@@ -355,7 +357,7 @@ func (h *TelemetryHandler) RecordStream(vin string, atomics []codec.Atomic) {
 // the legacy ProcessSignals spine. Skipped when no MQTT client is wired.
 // Intentionally NOT called from the MQTT ingest path — that would create
 // a publish loop.
-func (h *TelemetryHandler) republishToMQTT(vin string, signals map[string]interface{}) {
+func (h *Handler) republishToMQTT(vin string, signals map[string]interface{}) {
 	if h.mqttClient == nil {
 		return
 	}
@@ -405,7 +407,7 @@ func (h *TelemetryHandler) republishToMQTT(vin string, signals map[string]interf
 // Unit normalization, position writes, and SSE broadcast are now owned by
 // the pipeline (positions_writer + SideEffectsObserver). The fsmHandler
 // dispatch is also owned by SideEffectsObserver.
-func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded []codec.Atomic) error {
+func (h *Handler) ProcessBatch(ctx context.Context, vin string, decoded []codec.Atomic) error {
 	startedAt := time.Now()
 
 	// Resolve vehicle by VIN up-front so the connFSM update and the
@@ -419,7 +421,7 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 	vehicleID := veh.ID
 
 	// Connection FSM: per-vehicle health/staleness tracker. Lookup is
-	// guarded by connFSMMu; the map is initialised in NewTelemetryHandler
+	// guarded by connFSMMu; the map is initialised in NewHandler
 	// (e516fef nil-map regression guard). Records the batch BEFORE
 	// pipeline dispatch so per-batch arrival accounting is preserved
 	// even if the pipeline returns an error on a transient failure.
@@ -472,7 +474,7 @@ func (h *TelemetryHandler) ProcessBatch(ctx context.Context, vin string, decoded
 // span) chains under the caller's trace. Callers from the MQTT telemetry
 // pipeline pass the normalize.Pipeline.ProcessAtomics ctx so SSE delivery
 // becomes a true descendant of the original MQTT consume span.
-func (h *TelemetryHandler) broadcastSSE(ctx context.Context, payload map[string]any) {
+func (h *Handler) broadcastSSE(ctx context.Context, payload map[string]any) {
 	if h.eventHub == nil {
 		return
 	}

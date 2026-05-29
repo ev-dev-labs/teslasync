@@ -5,6 +5,7 @@ import (
 
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
+	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	apiwhrx "github.com/ev-dev-labs/teslasync/internal/api/webhookreceiver"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
@@ -29,7 +30,7 @@ import (
 type RouterOptions struct {
 	AppVersion       string
 	Encryptor        *crypto.Encryptor
-	TelemetryHandler *TelemetryHandler        // If set, reuses existing handler (for hybrid mode wiring)
+	TelemetryHandler *apitelem.Handler        // If set, reuses existing handler (for hybrid mode wiring)
 	GasPriceWorker   *worker.GasPriceWorker   // If set, enables gas price management endpoints
 	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
 	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint

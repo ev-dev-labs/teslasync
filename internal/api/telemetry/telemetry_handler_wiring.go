@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	"context"
@@ -23,8 +23,8 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
-// NewTelemetryHandler creates a handler for fleet telemetry ingestion.
-func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *sse.EventHub, staleTimeout time.Duration, geocoder geocoding.Geocoder) *TelemetryHandler {
+// NewHandler creates a handler for fleet telemetry ingestion.
+func NewHandler(db *database.DB, mc *mqtt.Client, hub *sse.EventHub, staleTimeout time.Duration, geocoder geocoding.Geocoder) *Handler {
 	var eventBus *events.Bus
 	if mc != nil {
 		eventBus = events.NewBus(mc.Underlying())
@@ -35,7 +35,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *sse.EventHub, st
 		staleTimeout = 5 * time.Minute
 	}
 	bgCtx, bgCancel := context.WithCancel(context.Background())
-	return &TelemetryHandler{
+	return &Handler{
 		db:             db,
 		posRepo:        positiondb.NewPositionRepo(db),
 		vehicleRepo:    vehicledb.NewVehicleRepo(db),
@@ -66,13 +66,13 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *sse.EventHub, st
 }
 
 // SetRawTelemetryRepo enables raw telemetry signal capture to MongoDB.
-func (h *TelemetryHandler) SetRawTelemetryRepo(repo *telemetrydb.RawTelemetryRepo) {
+func (h *Handler) SetRawTelemetryRepo(repo *telemetrydb.RawTelemetryRepo) {
 	h.rawTelemetryRepo = repo
 }
 
 // SetTimings overrides default telemetry processing intervals.
 // Zero values are ignored (defaults are kept).
-func (h *TelemetryHandler) SetTimings(snapshotWrite, cleanup, staleSession time.Duration) {
+func (h *Handler) SetTimings(snapshotWrite, cleanup, staleSession time.Duration) {
 	if snapshotWrite > 0 {
 		h.snapshotWriteInterval = snapshotWrite
 	}
@@ -85,7 +85,7 @@ func (h *TelemetryHandler) SetTimings(snapshotWrite, cleanup, staleSession time.
 }
 
 // SetSignalStore sets the in-memory signal store for real-time state tracking.
-func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
+func (h *Handler) SetSignalStore(store *signal.Store) {
 	h.signalStore = store
 	if h.sessionTracker != nil {
 		h.sessionTracker.localSignals = store
@@ -96,13 +96,13 @@ func (h *TelemetryHandler) SetSignalStore(store *signal.Store) {
 }
 
 // SetLiveSignalStore sets the live signal boundary used by telemetry ingestion.
-func (h *TelemetryHandler) SetLiveSignalStore(store signal.LiveSignalStore) {
+func (h *Handler) SetLiveSignalStore(store signal.LiveSignalStore) {
 	h.liveSignalStore = store
 }
 
 // SetRedisCache sets the Redis cache used by SSE Pub/Sub and startup recovery.
 // Live-state writes are routed through LiveSignalStore to avoid duplicate HSETs.
-func (h *TelemetryHandler) SetRedisCache(cache *signal.RedisSignalCache) {
+func (h *Handler) SetRedisCache(cache *signal.RedisSignalCache) {
 	h.redisCache = cache
 	if h.signalStore != nil {
 		h.signalStore.SetRedisCache(cache)
@@ -110,7 +110,7 @@ func (h *TelemetryHandler) SetRedisCache(cache *signal.RedisSignalCache) {
 }
 
 // SetEventHub sets the SSE event hub for real-time browser updates.
-func (h *TelemetryHandler) SetEventHub(hub *sse.EventHub) {
+func (h *Handler) SetEventHub(hub *sse.EventHub) {
 	h.eventHub = hub
 }
 
@@ -119,7 +119,7 @@ func (h *TelemetryHandler) SetEventHub(hub *sse.EventHub) {
 // EventHub fallback otherwise). Exposed as a public accessor so the
 // phase-42a/0050 cutover wiring in cmd/teslasync can register the
 // teslapipeline.SideEffectsObserver's BroadcastSSEFunc against the
-// canonical TelemetryHandler implementation without duplicating the
+// canonical Handler implementation without duplicating the
 // pub/sub-with-fallback branching logic.
 //
 // Mirrors the existing FSMHandler / SessionTracker / AlertEvaluator
@@ -131,61 +131,71 @@ func (h *TelemetryHandler) SetEventHub(hub *sse.EventHub) {
 // Takes a ctx so the resulting sse.broadcast / sse.redis_fanout spans
 // nest under the caller's trace (typically a normalize.Pipeline
 // ProcessAtomics span from MQTT telemetry consumer).
-func (h *TelemetryHandler) BroadcastSSE(ctx context.Context, payload map[string]any) {
+func (h *Handler) BroadcastSSE(ctx context.Context, payload map[string]any) {
 	h.broadcastSSE(ctx, payload)
 }
 
 // GetSignalStore returns the signal store (for use by other handlers).
-func (h *TelemetryHandler) GetSignalStore() *signal.Store {
+func (h *Handler) GetSignalStore() *signal.Store {
 	return h.signalStore
 }
 
 // GetLiveSignalStore returns the live-signal boundary for cross-pod API reads.
-func (h *TelemetryHandler) GetLiveSignalStore() signal.LiveSignalStore {
+func (h *Handler) GetLiveSignalStore() signal.LiveSignalStore {
 	return h.liveSignalStore
 }
 
 // SessionTracker returns the underlying session tracker for backfill tasks.
-func (h *TelemetryHandler) SessionTracker() *TelemetrySessionTracker {
+func (h *Handler) SessionTracker() *TelemetrySessionTracker {
 	return h.sessionTracker
 }
 
 // AlertEvaluator returns the underlying alert evaluator for state recovery.
-func (h *TelemetryHandler) AlertEvaluator() *TelemetryAlertEvaluator {
+func (h *Handler) AlertEvaluator() *TelemetryAlertEvaluator {
 	return h.alertEvaluator
 }
 
 // SetSignalLogRepo enables per-signal logging to MongoDB.
-func (h *TelemetryHandler) SetSignalLogRepo(repo *signaldb.SignalLogRepo) {
+func (h *Handler) SetSignalLogRepo(repo *signaldb.SignalLogRepo) {
 	h.signalLogRepo = repo
 }
 
 // SetSignalHistoryWriter enables per-signal history logging to Postgres.
-func (h *TelemetryHandler) SetSignalHistoryWriter(w *signaldb.SignalHistoryWriter) {
+func (h *Handler) SetSignalHistoryWriter(w *signaldb.SignalHistoryWriter) {
 	h.signalHistoryWriter = w
 	if h.sessionTracker != nil {
 		h.sessionTracker.signalHistoryWriter = w
 	}
 }
 
+// SignalLogRepo returns the optional MongoDB-backed signal-log repository, or nil.
+func (h *Handler) SignalLogRepo() *signaldb.SignalLogRepo {
+	return h.signalLogRepo
+}
+
+// SignalHistoryWriter returns the Postgres-backed signal history writer, or nil.
+func (h *Handler) SignalHistoryWriter() *signaldb.SignalHistoryWriter {
+	return h.signalHistoryWriter
+}
+
 // FSMHandler returns the FSM handler for status/stats queries.
-func (h *TelemetryHandler) FSMHandler() *vehiclefsm.Handler {
+func (h *Handler) FSMHandler() *vehiclefsm.Handler {
 	return h.fsmHandler
 }
 
 // SetCaptureEnabled toggles raw telemetry capture on or off.
-func (h *TelemetryHandler) SetCaptureEnabled(enabled bool) {
+func (h *Handler) SetCaptureEnabled(enabled bool) {
 	h.captureEnabled.Store(enabled)
 }
 
 // IsCaptureEnabled returns whether raw telemetry capture is currently active.
-func (h *TelemetryHandler) IsCaptureEnabled() bool {
+func (h *Handler) IsCaptureEnabled() bool {
 	return h.captureEnabled.Load()
 }
 
 // StartCleanup runs periodic cleanup of stale streaming state entries
 // and stale drive/charge sessions. Call this once at startup; it stops when ctx is cancelled.
-func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
+func (h *Handler) StartCleanup(ctx context.Context) {
 	// Run cleanup immediately on startup to close orphaned DB sessions
 	if h.sessionTracker != nil {
 		h.sessionTracker.CleanupStaleSessions(ctx, 2*h.staleSessionTimeout)
@@ -224,7 +234,7 @@ func (h *TelemetryHandler) StartCleanup(ctx context.Context) {
 }
 
 // checkConnFSMTimeouts copies FSM pointers under lock, then checks timeouts unlocked.
-func (h *TelemetryHandler) checkConnFSMTimeouts() {
+func (h *Handler) checkConnFSMTimeouts() {
 	h.connFSMMu.Lock()
 	fsms := make([]*telemetryfsm.ConnectionFSM, 0, len(h.connFSMs))
 	for _, cfsm := range h.connFSMs {
@@ -237,7 +247,7 @@ func (h *TelemetryHandler) checkConnFSMTimeouts() {
 	}
 }
 
-func (h *TelemetryHandler) cleanupStaleEntries() {
+func (h *Handler) cleanupStaleEntries() {
 	now := time.Now().UTC()
 	cutoff := 3 * h.staleTimeout // remove entries 3x past stale timeout
 
@@ -302,6 +312,6 @@ func (h *TelemetryHandler) cleanupStaleEntries() {
 }
 
 // Shutdown cancels all background goroutines spawned by the handler.
-func (h *TelemetryHandler) Shutdown() {
+func (h *Handler) Shutdown() {
 	h.bgCancel()
 }

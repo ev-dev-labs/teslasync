@@ -14,6 +14,7 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+
 	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
@@ -165,6 +166,7 @@ import (
 	apiauthmode "github.com/ev-dev-labs/teslasync/internal/api/sysauthmode"
 	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
+	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/api/tempimpact"
 	apiteslachargehist "github.com/ev-dev-labs/teslasync/internal/api/teslachargehist"
 	apiteslachargesess "github.com/ev-dev-labs/teslasync/internal/api/teslachargesess"
@@ -225,7 +227,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
 
-	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
@@ -233,6 +234,8 @@ import (
 	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
@@ -2035,7 +2038,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	telemetryHandler := opt.TelemetryHandler
 	if telemetryHandler == nil {
-		telemetryHandler = NewTelemetryHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
+		telemetryHandler = apitelem.NewHandler(db, mqttClient, eventHub, 5*time.Minute, geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	} else {
 		// Reusing handler from main ╬ô├ç├╢ wire the eventHub created by the router
 		telemetryHandler.SetEventHub(eventHub)
@@ -4147,8 +4150,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Signal History (Postgres-backed — always available)
-		if telemetryHandler != nil && telemetryHandler.signalHistoryWriter != nil {
-			shw := telemetryHandler.signalHistoryWriter
+		if telemetryHandler != nil && telemetryHandler.SignalHistoryWriter() != nil {
+			shw := telemetryHandler.SignalHistoryWriter()
 			r.Route("/signals/history", func(r chi.Router) {
 				// GET /api/v1/signals/history?vehicle_id=1&signals=BatteryLevel,Gear&from=...&to=...&page=1&per_page=50
 				r.Get("/", func(w http.ResponseWriter, req *http.Request) {
@@ -4242,15 +4245,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Signal History (Postgres primary, MongoDB optional fallback)
 			if telemetryHandler != nil {
 				var mongoRepo *signaldb.SignalLogRepo
-				if telemetryHandler.signalLogRepo != nil {
-					mongoRepo = telemetryHandler.signalLogRepo
+				if telemetryHandler.SignalLogRepo() != nil {
+					mongoRepo = telemetryHandler.SignalLogRepo()
 				}
 				signalHandler := apisignal.NewHandler(mongoRepo)
 				if db != nil {
 					signalHandler.WithDB(db)
 				}
-				if telemetryHandler.signalHistoryWriter != nil {
-					signalHandler.WithSignalHistory(telemetryHandler.signalHistoryWriter)
+				if telemetryHandler.SignalHistoryWriter() != nil {
+					signalHandler.WithSignalHistory(telemetryHandler.SignalHistoryWriter())
 				}
 				if opt.CacheStore != nil {
 					if rdb := opt.CacheStore.Underlying(); rdb != nil {

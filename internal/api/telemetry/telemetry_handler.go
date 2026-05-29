@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/api/sse"
 	"github.com/ev-dev-labs/teslasync/internal/api/vehiclefsm"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
@@ -26,7 +27,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
 )
 
-// pipelineDispatcher is the interface seam through which TelemetryHandler
+// pipelineDispatcher is the interface seam through which Handler
 // dispatches pre-decoded telemetry batches to the unified normalize.Pipeline.
 // Production wiring substitutes the concrete *normalize.Pipeline (which
 // satisfies this interface via its public ProcessAtomics method, added in
@@ -40,14 +41,14 @@ type pipelineDispatcher interface {
 	ProcessAtomics(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) error
 }
 
-// Compile-time guard: TelemetryHandler must satisfy mqtt.StreamingHealthRecorder
+// Compile-time guard: Handler must satisfy mqtt.StreamingHealthRecorder
 // so the PipelineSubscriber can notify the MQTT Inspector of per-VIN
 // streaming activity (Phase-48 fix — pre-fix the inspector silently
 // zeroed out after the per-field MQTT cutover).
-var _ mqtt.StreamingHealthRecorder = (*TelemetryHandler)(nil)
+var _ mqtt.StreamingHealthRecorder = (*Handler)(nil)
 
-// TelemetryHandler receives and processes Tesla Fleet Telemetry data.
-type TelemetryHandler struct {
+// Handler receives and processes Tesla Fleet Telemetry data.
+type Handler struct {
 	db                    *database.DB
 	posRepo               *positiondb.PositionRepo
 	vehicleRepo           *vehicledb.VehicleRepo
@@ -125,7 +126,7 @@ type TelemetryHandler struct {
 // nil clears the dispatcher, which causes subsequent ProcessBatch
 // calls to fail with "pipeline not wired" — useful for shutdown
 // drains where new batches must be rejected.
-func (h *TelemetryHandler) SetPipeline(p *normalize.Pipeline) {
+func (h *Handler) SetPipeline(p *normalize.Pipeline) {
 	if p == nil {
 		h.pipeline = nil
 		return
@@ -149,7 +150,7 @@ type VehicleStreamState struct {
 }
 
 // GetStreamingState returns streaming health for all vehicles with computed metrics.
-func (h *TelemetryHandler) GetStreamingState() map[string]*VehicleStreamState {
+func (h *Handler) GetStreamingState() map[string]*VehicleStreamState {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	now := time.Now().UTC()
@@ -176,7 +177,7 @@ func (h *TelemetryHandler) GetStreamingState() map[string]*VehicleStreamState {
 }
 
 // IsVehicleStreaming returns true if a vehicle has received telemetry within the stale timeout.
-func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
+func (h *Handler) IsVehicleStreaming(vin string) bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	state, ok := h.streamingState[vin]
@@ -189,7 +190,7 @@ func (h *TelemetryHandler) IsVehicleStreaming(vin string) bool {
 // trackTirePressure stores tire pressure snapshots when TPMS signals arrive.
 
 // StreamingVINs returns the set of VINs currently receiving live telemetry data.
-func (h *TelemetryHandler) StreamingVINs() map[string]bool {
+func (h *Handler) StreamingVINs() map[string]bool {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	result := make(map[string]bool, len(h.streamingState))
@@ -204,7 +205,7 @@ func (h *TelemetryHandler) StreamingVINs() map[string]bool {
 // GetStaleVINs returns VINs that were previously streaming but have not received
 // any telemetry signals within the stale timeout. These vehicles should be polled
 // via the Tesla Fleet API as a fallback.
-func (h *TelemetryHandler) GetStaleVINs() []string {
+func (h *Handler) GetStaleVINs() []string {
 	h.mu.RLock()
 	defer h.mu.RUnlock()
 	var stale []string
@@ -217,7 +218,7 @@ func (h *TelemetryHandler) GetStaleVINs() []string {
 }
 
 // TelemetryStatus returns the telemetry endpoint configuration and streaming health.
-func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
 	streamingVehicles := h.GetStreamingState()
 	connected := h.mqttClient != nil && h.mqttClient.IsConnected()
 
@@ -273,7 +274,7 @@ func (h *TelemetryHandler) TelemetryStatus(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"enabled":            true,
 		"connected":          connected,
 		"broker":             broker,

@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	"context"
@@ -9,11 +9,12 @@ import (
 
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
-	"github.com/jackc/pgx/v5"
-	"github.com/rs/zerolog/log"
 )
 
 // recoveryStateBundle pairs the cold-path signal.StateReader installed via

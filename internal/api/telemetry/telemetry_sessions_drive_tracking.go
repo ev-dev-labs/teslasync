@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	"context"
@@ -8,14 +8,15 @@ import (
 
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
+
 	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
-	"github.com/jackc/pgx/v5"
-	"github.com/rs/zerolog/log"
 )
 
 // driveStateRegistry holds the per-tracker signal.StateReader injected by
@@ -393,7 +394,7 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 	}
 
 	t.activeDrives[vehicleID] = sd
-	DriveSessionsActive.Inc()
+	metrics.DriveSessionsActive.Inc()
 
 	// Accumulate first batch and write immediately
 	sd.accumulatedSignals = accumulateSignals(sd.accumulatedSignals, signals)
@@ -1264,12 +1265,12 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 
 	delete(t.activeDrives, vehicleID)
-	DriveSessionsActive.Dec()
-	DriveSessionsCompleted.Inc()
-	TotalDrives.Inc()
+	metrics.DriveSessionsActive.Dec()
+	metrics.DriveSessionsCompleted.Inc()
+	metrics.TotalDrives.Inc()
 	if distanceMeters > 0 {
-		// TotalDistanceKm is reported in km; convert from SI meters.
-		TotalDistanceKm.Add(distanceMeters / 1000.0)
+		// metrics.TotalDistanceKm is reported in km; convert from SI meters.
+		metrics.TotalDistanceKm.Add(distanceMeters / 1000.0)
 	}
 }
 
@@ -1356,7 +1357,7 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	// 1. Check geofences first (user-defined names like "Home", "Office")
 	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
 		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: geofences[0].Name})
-		GeocodingTotal.WithLabelValues("geofence").Inc()
+		metrics.GeocodingTotal.WithLabelValues("geofence").Inc()
 		return
 	}
 
@@ -1364,20 +1365,20 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	if cached, err := t.placesCache.FindNearby(ctx, lat, lon, 50); err == nil && cached != nil {
 		_ = t.placesCache.IncrementHitCount(ctx, cached.ID)
 		_ = t.driveRepo.PartialUpdate(ctx, driveID, map[string]interface{}{field: cached.DisplayName})
-		GeocodingTotal.WithLabelValues("cached").Inc()
+		metrics.GeocodingTotal.WithLabelValues("cached").Inc()
 		return
 	}
 
 	// 3. Reverse geocode via Nominatim (or Google when configured)
 	geocodeStart := time.Now()
 	result, err := t.geocoder.ReverseGeocode(ctx, lat, lon)
-	metrics.ObserveDurationWithExemplar(ctx, GeocodingDuration, time.Since(geocodeStart).Seconds())
+	metrics.ObserveDurationWithExemplar(ctx, metrics.GeocodingDuration, time.Since(geocodeStart).Seconds())
 	if err != nil {
-		GeocodingTotal.WithLabelValues("failure").Inc()
+		metrics.GeocodingTotal.WithLabelValues("failure").Inc()
 		log.Warn().Err(err).Float64("lat", lat).Float64("lon", lon).Msg("telemetry: reverse geocode failed")
 		return
 	}
-	GeocodingTotal.WithLabelValues("success").Inc()
+	metrics.GeocodingTotal.WithLabelValues("success").Inc()
 
 	name := result.ShortName()
 
@@ -1410,7 +1411,7 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 		return
 	}
 	log.Info().Int("count", len(drives)).Msg("backfill: geocoding drives with missing addresses")
-	AddressBackfillRemaining.Set(float64(len(drives)))
+	metrics.AddressBackfillRemaining.Set(float64(len(drives)))
 
 	filled := 0
 	for _, d := range drives {
@@ -1425,8 +1426,8 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 		if needStart {
 			t.resolveAndUpdateAddress(d.ID, *d.StartLat, *d.StartLon, true)
 			filled++
-			AddressBackfillCompleted.Inc()
-			AddressBackfillRemaining.Dec()
+			metrics.AddressBackfillCompleted.Inc()
+			metrics.AddressBackfillRemaining.Dec()
 			// Rate-limit to avoid hammering the geocoder (Nominatim 1 req/sec policy)
 			time.Sleep(1100 * time.Millisecond)
 		}
@@ -1436,8 +1437,8 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 			}
 			t.resolveAndUpdateAddress(d.ID, *d.EndLat, *d.EndLon, false)
 			filled++
-			AddressBackfillCompleted.Inc()
-			AddressBackfillRemaining.Dec()
+			metrics.AddressBackfillCompleted.Inc()
+			metrics.AddressBackfillRemaining.Dec()
 			time.Sleep(1100 * time.Millisecond)
 		}
 	}
@@ -1532,7 +1533,7 @@ func (t *TelemetrySessionTracker) tryMergeDriveLocked(ctx context.Context, vehic
 	sd.LastElevation = floatPtr(elevation)
 
 	t.activeDrives[vehicleID] = sd
-	DriveSessionsActive.Inc()
+	metrics.DriveSessionsActive.Inc()
 
 	// Accumulate this batch and flush so the resumed leg's first telemetry sample lands.
 	sd.accumulatedSignals = accumulateSignals(sd.accumulatedSignals, signals)

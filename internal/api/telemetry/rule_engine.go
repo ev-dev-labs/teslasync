@@ -1,5 +1,5 @@
 // Package api provides alert rule evaluation against real-time telemetry signals.
-package api
+package telemetry
 
 import (
 	"context"
@@ -13,9 +13,10 @@ import (
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
+	"github.com/rs/zerolog/log"
+
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
-	"github.com/rs/zerolog/log"
 )
 
 // RuleStateStore is the persistence seam for alert latch + fire state. It

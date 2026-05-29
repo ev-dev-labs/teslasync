@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 // Constants shared by legacy parent-package analytics handlers that still
 // query SI-canonical drives rows while the DriveHandler has moved to

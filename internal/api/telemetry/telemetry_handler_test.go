@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	"context"
@@ -18,7 +18,7 @@ func TestTelemetryHandlerUpdateLiveSignalsUpdatesL1WithoutRedis(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
 	}
-	handler := &TelemetryHandler{
+	handler := &Handler{
 		signalStore:     local,
 		liveSignalStore: liveStore,
 	}
@@ -34,7 +34,7 @@ func TestTelemetryHandlerUpdateLiveSignalsUpdatesL1WithoutRedis(t *testing.T) {
 func TestTelemetryHandlerUpdateLiveSignalsUsesLiveStoreOnceForRedisMirror(t *testing.T) {
 	ctx := context.Background()
 	liveStore := &recordingLiveSignalStore{}
-	handler := &TelemetryHandler{liveSignalStore: liveStore}
+	handler := &Handler{liveSignalStore: liveStore}
 	signals := map[string]interface{}{"BatteryLevel": 72.0}
 
 	handler.updateLiveSignals(ctx, 102, signals)
@@ -57,7 +57,7 @@ func TestTelemetryHandlerUpdateLiveSignalsLogsRedisFailureAfterL1Update(t *testi
 		local: local,
 		err:   errRecordingRedisFailure,
 	}
-	handler := &TelemetryHandler{
+	handler := &Handler{
 		signalStore:     local,
 		liveSignalStore: liveStore,
 	}
@@ -163,14 +163,14 @@ func (f *fakePipelineDispatcher) ProcessAtomics(_ context.Context, atomics []cod
 // — which is fine because vehicleRepo.GetByVIN with a nil receiver would
 // panic. Instead we manually set h.pipeline=nil on a handler that ALSO
 // has no vehicleRepo and bypasses the lookup by setting vehicleID
-// directly via a struct-level shortcut. Since TelemetryHandler doesn't
+// directly via a struct-level shortcut. Since Handler doesn't
 // expose such a shortcut, this test verifies the contract by checking
 // the error path that fires when ProcessBatch is called on a handler
 // with nil pipeline AND a nil vehicleRepo: the nil vehicleRepo panic
 // is caught here too. The cleanest assertion: build a handler with a
 // recording vehicleRepo stub and assert errPipelineNotWired propagates.
 //
-// Implementation note: TelemetryHandler.vehicleRepo is *vehicledb.VehicleRepo
+// Implementation note: Handler.vehicleRepo is *vehicledb.VehicleRepo
 // — a concrete struct, not an interface — so this test cannot stub it
 // without an interface seam. We test the nil-pipeline contract via the
 // post-vehicleRepo-success path: see TestProcessBatch_DispatchesToPipeline
@@ -217,7 +217,7 @@ func wrapPipelineNotWired() error {
 // telemetry_handler_integration_test.go.
 func TestProcessBatch_DispatchesToPipelineDirectly(t *testing.T) {
 	dispatcher := &fakePipelineDispatcher{}
-	handler := &TelemetryHandler{pipeline: dispatcher}
+	handler := &Handler{pipeline: dispatcher}
 
 	atomics := []codec.Atomic{{Field: "VehicleSpeed", Value: 0.0}}
 	// SetPipeline only accepts *normalize.Pipeline so we set the
@@ -282,8 +282,8 @@ func TestNormalizeFleetUnitsRegression(t *testing.T) {
 		"func " + "flattenCompound" + "MapValue",
 		"func " + "flattenCompound" + "TimeValue",
 		"func " + "extractCompound" + "TimeField",
-		"func (h *TelemetryHandler) " + "ProcessSignals" + "(",
-		"func (h *TelemetryHandler) " + "processSignalsLegacy" + "Deprecated(",
+		"func (h *Handler) " + "ProcessSignals" + "(",
+		"func (h *Handler) " + "processSignalsLegacy" + "Deprecated(",
 	}
 	for _, token := range forbidden {
 		if strings.Contains(src, token) {

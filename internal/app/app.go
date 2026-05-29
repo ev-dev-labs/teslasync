@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
 	"github.com/ev-dev-labs/teslasync/internal/config"
@@ -84,7 +85,7 @@ type App struct {
 	OutboundAPILogSink httputil.APICallSink
 
 	// Telemetry pipeline (set only when cfg.FleetTelemetry.Enabled)
-	TelemetryHandler    *api.TelemetryHandler
+	TelemetryHandler    *apitelem.Handler
 	SignalStore         *sigsvc.Store
 	SignalHistoryWriter *signaldb.SignalHistoryWriter
 	StateReader         *sigsvc.LogStateReader

@@ -1,18 +1,20 @@
-package api
+package telemetry
 
 import (
 	"context"
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 
 	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
-	"github.com/jackc/pgx/v5"
-	"github.com/rs/zerolog/log"
 )
 
 // chargeStateRegistry holds the per-tracker signal.StateReader injected by
@@ -196,7 +198,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		}
 
 		t.activeCharges[vehicleID] = sc
-		ChargeSessionsActive.Inc()
+		metrics.ChargeSessionsActive.Inc()
 
 		// Accumulate and flush first reading immediately
 		sc.accumulatedSignals = accumulateSignals(sc.accumulatedSignals, signals)
@@ -653,11 +655,11 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	}
 
 	delete(t.activeCharges, vehicleID)
-	ChargeSessionsActive.Dec()
-	ChargeSessionsCompleted.Inc()
-	TotalCharges.Inc()
+	metrics.ChargeSessionsActive.Dec()
+	metrics.ChargeSessionsCompleted.Inc()
+	metrics.TotalCharges.Inc()
 	if active.EnergyAdded > 0 {
-		TotalEnergyKwh.Add(active.EnergyAdded / 1000)
+		metrics.TotalEnergyKwh.Add(active.EnergyAdded / 1000)
 	}
 
 	// Backfill missing start/end values from nearest position data (async)

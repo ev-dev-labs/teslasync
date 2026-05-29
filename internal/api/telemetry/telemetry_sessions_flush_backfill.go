@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	"context"
@@ -7,8 +7,9 @@ import (
 
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 
-	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	"github.com/rs/zerolog/log"
+
+	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 )
 
 // StartBufferDrains is retained for caller compatibility (main.go). Telemetry

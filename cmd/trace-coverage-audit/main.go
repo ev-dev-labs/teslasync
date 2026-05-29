@@ -232,7 +232,7 @@ var flows = []flow{
 			"internal/tesla_pipeline/side_effects_observer.go",
 			"internal/signal/redis_cache.go",
 			"internal/signal/state_reader_log.go",
-			"internal/api/telemetry_handler_ingest.go",
+			"internal/api/telemetry/telemetry_handler_ingest.go",
 		},
 		MinSpanFiles: 14,
 		RequiredFiles: []string{
@@ -250,7 +250,7 @@ var flows = []flow{
 			"internal/tesla_pipeline/side_effects_observer.go",
 			"internal/signal/redis_cache.go",
 			"internal/signal/state_reader_log.go",
-			"internal/api/telemetry_handler_ingest.go",
+			"internal/api/telemetry/telemetry_handler_ingest.go",
 		},
 	},
 }

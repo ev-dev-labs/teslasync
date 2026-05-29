@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
+	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
@@ -658,7 +659,7 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		return nil
 	}
 
-	a.TelemetryHandler = api.NewTelemetryHandler(
+	a.TelemetryHandler = apitelem.NewHandler(
 		a.DB,
 		a.MQTT,
 		nil,

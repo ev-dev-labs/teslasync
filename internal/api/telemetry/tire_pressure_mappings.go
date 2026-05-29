@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import "github.com/ev-dev-labs/teslasync/internal/signal"
 

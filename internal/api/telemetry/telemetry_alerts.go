@@ -1,4 +1,4 @@
-package api
+package telemetry
 
 import (
 	"context"
@@ -8,6 +8,8 @@ import (
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/rs/zerolog/log"
+
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
 	"github.com/ev-dev-labs/teslasync/internal/api/sse"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -18,7 +20,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
-	"github.com/rs/zerolog/log"
 )
 
 // TelemetryAlertEvaluator runs alert rules against incoming streaming signals.
