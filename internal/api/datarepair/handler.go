@@ -1,17 +1,17 @@
-package api
+package datarepair
 
 import (
 	"encoding/json"
 	"net/http"
 	"time"
 
-	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
-
-	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 	"github.com/rs/zerolog/log"
 )
 
@@ -42,14 +42,14 @@ func (h *DataRepairHandler) GetStaleSessions(w http.ResponseWriter, r *http.Requ
 	charging, err := h.chargingRepo.GetStale(ctx, cutoff)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get stale charging sessions")
-		writeError(w, http.StatusInternalServerError, "failed to get stale charging sessions")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get stale charging sessions")
 		return
 	}
 
 	drives, err := h.driveRepo.GetStale(ctx, cutoff)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get stale drives")
-		writeError(w, http.StatusInternalServerError, "failed to get stale drives")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get stale drives")
 		return
 	}
 
@@ -60,7 +60,7 @@ func (h *DataRepairHandler) GetStaleSessions(w http.ResponseWriter, r *http.Requ
 		drives = make([]*drivemodel.Drive, 0)
 	}
 
-	writeJSON(w, http.StatusOK, StaleSessionsResponse{
+	httpx.WriteJSON(w, http.StatusOK, StaleSessionsResponse{
 		StaleCharging: charging,
 		StaleDrives:   drives,
 	})
@@ -68,9 +68,9 @@ func (h *DataRepairHandler) GetStaleSessions(w http.ResponseWriter, r *http.Requ
 
 // UpdateCharging partially updates a charging session with user-provided values.
 func (h *DataRepairHandler) UpdateCharging(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid charging session ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid charging session ID")
 		return
 	}
 
@@ -78,40 +78,40 @@ func (h *DataRepairHandler) UpdateCharging(w http.ResponseWriter, r *http.Reques
 	existing, err := h.chargingRepo.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get charging session")
-		writeError(w, http.StatusInternalServerError, "failed to get charging session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging session")
 		return
 	}
 	if existing == nil {
-		writeError(w, http.StatusNotFound, "charging session not found")
+		httpx.WriteError(w, http.StatusNotFound, "charging session not found")
 		return
 	}
 
 	var patch map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
 	if err := h.chargingRepo.PartialUpdate(ctx, id, patch); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to update charging session")
-		writeError(w, http.StatusInternalServerError, "failed to update charging session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to update charging session")
 		return
 	}
 
 	updated, err := h.chargingRepo.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get updated charging session")
-		writeError(w, http.StatusInternalServerError, "failed to get updated session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get updated session")
 		return
 	}
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 // UpdateDrive partially updates a drive with user-provided values.
 func (h *DataRepairHandler) UpdateDrive(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid drive ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
@@ -119,40 +119,40 @@ func (h *DataRepairHandler) UpdateDrive(w http.ResponseWriter, r *http.Request) 
 	existing, err := h.driveRepo.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get drive")
-		writeError(w, http.StatusInternalServerError, "failed to get drive")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get drive")
 		return
 	}
 	if existing == nil {
-		writeError(w, http.StatusNotFound, "drive not found")
+		httpx.WriteError(w, http.StatusNotFound, "drive not found")
 		return
 	}
 
 	var patch map[string]interface{}
 	if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 
 	if err := h.driveRepo.PartialUpdate(ctx, id, patch); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to update drive")
-		writeError(w, http.StatusInternalServerError, "failed to update drive")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to update drive")
 		return
 	}
 
 	updated, err := h.driveRepo.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get updated drive")
-		writeError(w, http.StatusInternalServerError, "failed to get updated drive")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get updated drive")
 		return
 	}
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 // CloseCharging sets end_ts=NOW() and calculates duration from start_ts.
 func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid charging session ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid charging session ID")
 		return
 	}
 
@@ -160,11 +160,11 @@ func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request
 	session, err := h.chargingRepo.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get charging session")
-		writeError(w, http.StatusInternalServerError, "failed to get charging session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging session")
 		return
 	}
 	if session == nil {
-		writeError(w, http.StatusNotFound, "charging session not found")
+		httpx.WriteError(w, http.StatusNotFound, "charging session not found")
 		return
 	}
 
@@ -174,17 +174,17 @@ func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request
 	}
 	if err := h.chargingRepo.PartialUpdate(ctx, id, patch); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to close charging session")
-		writeError(w, http.StatusInternalServerError, "failed to close charging session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to close charging session")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "closed"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "closed"})
 }
 
 // CloseDrive sets end_ts=NOW() and calculates duration from start_ts.
 func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid drive ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
@@ -192,11 +192,11 @@ func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 	drive, err := h.driveRepo.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get drive")
-		writeError(w, http.StatusInternalServerError, "failed to get drive")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get drive")
 		return
 	}
 	if drive == nil {
-		writeError(w, http.StatusNotFound, "drive not found")
+		httpx.WriteError(w, http.StatusNotFound, "drive not found")
 		return
 	}
 
@@ -209,17 +209,17 @@ func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.driveRepo.PartialUpdate(ctx, id, patch); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to close drive")
-		writeError(w, http.StatusInternalServerError, "failed to close drive")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to close drive")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"status": "closed"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "closed"})
 }
 
 // DeleteCharging removes a stale charging session.
 func (h *DataRepairHandler) DeleteCharging(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid charging session ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid charging session ID")
 		return
 	}
 
@@ -227,17 +227,17 @@ func (h *DataRepairHandler) DeleteCharging(w http.ResponseWriter, r *http.Reques
 	existing, err := h.chargingRepo.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get charging session")
-		writeError(w, http.StatusInternalServerError, "failed to get charging session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging session")
 		return
 	}
 	if existing == nil {
-		writeError(w, http.StatusNotFound, "charging session not found")
+		httpx.WriteError(w, http.StatusNotFound, "charging session not found")
 		return
 	}
 
 	if err := h.chargingRepo.Delete(ctx, id); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to delete charging session")
-		writeError(w, http.StatusInternalServerError, "failed to delete charging session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete charging session")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
@@ -245,9 +245,9 @@ func (h *DataRepairHandler) DeleteCharging(w http.ResponseWriter, r *http.Reques
 
 // DeleteDrive removes a stale drive.
 func (h *DataRepairHandler) DeleteDrive(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "id")
+	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid drive ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
@@ -255,17 +255,17 @@ func (h *DataRepairHandler) DeleteDrive(w http.ResponseWriter, r *http.Request) 
 	existing, err := h.driveRepo.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get drive")
-		writeError(w, http.StatusInternalServerError, "failed to get drive")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get drive")
 		return
 	}
 	if existing == nil {
-		writeError(w, http.StatusNotFound, "drive not found")
+		httpx.WriteError(w, http.StatusNotFound, "drive not found")
 		return
 	}
 
 	if err := h.driveRepo.Delete(ctx, id); err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to delete drive")
-		writeError(w, http.StatusInternalServerError, "failed to delete drive")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete drive")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

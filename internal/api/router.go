@@ -34,6 +34,7 @@ import (
 	apicommand "github.com/ev-dev-labs/teslasync/internal/api/command"
 	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
+	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
 	apidiag "github.com/ev-dev-labs/teslasync/internal/api/diagnostic"
 	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
 	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
@@ -761,7 +762,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// authoritative catalog/observation surface.
 	chargingHeatmapHandler := apichargeheatmap.NewChargingHeatmapHandler(db)
 	speedProfileHandler := NewSpeedProfileHandler(db)
-	dataRepairHandler := NewDataRepairHandler(db)
+	dataRepairHandler := apidatarepair.NewDataRepairHandler(db)
 	tempImpactHandler := NewTempImpactHandler(db)
 	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
 	batteryCellsHandler := NewBatteryCellsHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
