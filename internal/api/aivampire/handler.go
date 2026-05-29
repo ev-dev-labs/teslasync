@@ -1,8 +1,8 @@
-package api
+package aivampire
 
 // Phase-50 / 0030 — C5 Vampire-drain explanation.
 //
-// ai_vampire_drain_handler.go implements the LLM-backed handler at
+// handler.go implements the LLM-backed handler at
 // POST /api/v1/ai/charging/vampire-drain/explain. The flow mirrors
 // ai_cost_forecast_narration_handler.go (same dispatch+stream loop,
 // no persistence — one-shot read-only narration):
@@ -62,50 +62,51 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
-// aiVampireDrainMaxIterations bounds the dispatcher's tool-loop.
+// maxIterations bounds the dispatcher's tool-loop.
 // The strategy is at most query_vampire_drain_windows →
 // (optional) retrieve_idle_drain_chunks → answer (with optional
 // retries). A hard ceiling of 8 is generous, matching
 // aiCostForecastNarrationMaxIterations /
 // aiBatteryHealthMaxIterations.
-const aiVampireDrainMaxIterations = 8
+const maxIterations = 8
 
-// aiVampireDrainDefaultLookbackDays is the default lookback when
+// defaultLookbackDays is the default lookback when
 // the request body omits the lookback_days field. Mirrors the
 // canonical /vampire-drain/stats handler's
 // vampireDrainStatsWindowDays constant (90 days). Kept as a named
 // constant so a future tuning lives in one place rather than
 // duplicated across the parser + the tool's Execute default.
-const aiVampireDrainDefaultLookbackDays = 90
+const defaultLookbackDays = 90
 
-// aiVampireDrainMaxLookbackDays is the upper bound on the
+// maxLookbackDays is the upper bound on the
 // lookback_days parameter. Mirrors the canonical handler's
 // per-feature 365-day ceiling; requests outside this window land
 // as a 400 before any SQL runs.
-const aiVampireDrainMaxLookbackDays = 365
+const maxLookbackDays = 365
 
-// aiVampireDrainRequest is the JSON body shape this handler
+// request is the JSON body shape this handler
 // accepts. The shape mirrors the /api/v1/vampire-drain?vehicle_id=
 // query-string contract — vehicle_id is required, lookback_days is
 // optional — kept as a JSON body so the SPA can post from the same
 // form state the vampire-drain page already uses.
-type aiVampireDrainRequest struct {
+type request struct {
 	VehicleID    int64 `json:"vehicle_id"`
 	LookbackDays int   `json:"lookback_days,omitempty"`
 }
 
-// AIVampireDrainHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/charging/vampire-drain/explain.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AIVampireDrainHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -113,7 +114,7 @@ type AIVampireDrainHandler struct {
 	maxIters   int
 }
 
-// NewAIVampireDrainHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -126,64 +127,72 @@ type AIVampireDrainHandler struct {
 //
 // strat:      the vampire-drain-explanation Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIVampireDrainHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIVampireDrainHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIVampireDrainHandler: nil provider.Registry")
+		panic("aivampire: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIVampireDrainHandler: nil tools.Registry")
+		panic("aivampire: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIVampireDrainHandler: nil strategy.Strategy")
+		panic("aivampire: NewHandler: nil strategy.Strategy")
 	}
-	return &AIVampireDrainHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiVampireDrainMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseVampireDrainBody decodes + validates the JSON body. Pulled
+// parseBody decodes + validates the JSON body. Pulled
 // out so the validator-only test can exercise the same parsing
 // without constructing a full handler with stub deps. The function
 // writes a 400 on failure and returns the (req, ok) pair so the
 // caller can early-return.
 //
 // The lookback_days field defaults to
-// aiVampireDrainDefaultLookbackDays when omitted (or zero) and is
-// bounded to [1, aiVampireDrainMaxLookbackDays] so an out-of-range
+// defaultLookbackDays when omitted (or zero) and is
+// bounded to [1, maxLookbackDays] so an out-of-range
 // value lands as a 400 before any SSE stream is opened.
-func parseVampireDrainBody(w http.ResponseWriter, r *http.Request) (*aiVampireDrainRequest, bool) {
+func parseBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "request body is required")
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiVampireDrainRequest
+	var req request
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return nil, false
 	}
 	if req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be > 0")
 		return nil, false
 	}
 	if req.LookbackDays == 0 {
-		req.LookbackDays = aiVampireDrainDefaultLookbackDays
+		req.LookbackDays = defaultLookbackDays
 	}
-	if req.LookbackDays < 1 || req.LookbackDays > aiVampireDrainMaxLookbackDays {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("lookback_days must be between 1 and %d", aiVampireDrainMaxLookbackDays))
+	if req.LookbackDays < 1 || req.LookbackDays > maxLookbackDays {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("lookback_days must be between 1 and %d", maxLookbackDays))
 		return nil, false
 	}
 	return &req, true
+}
+
+// denyAllConfirm is the dispatcher's user-confirm hook. The vampire-drain
+// explanation strategy declares zero mutating tools, so this is never called
+// in practice. If a future edit accidentally adds a mutating tool to the
+// allowlist, the dispatcher rejects it instead of mutating fleet state.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
 // ServeHTTP implements [http.Handler]. The body is decoded, the
@@ -191,9 +200,9 @@ func parseVampireDrainBody(w http.ResponseWriter, r *http.Request) (*aiVampireDr
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has
 // been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIVampireDrainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
-	body, ok := parseVampireDrainBody(w, r)
+	body, ok := parseBody(w, r)
 	if !ok {
 		return
 	}
@@ -205,7 +214,7 @@ func (h *AIVampireDrainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	// frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), vampiredrainexplanation.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai vampire-drain-explanation: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -218,7 +227,7 @@ func (h *AIVampireDrainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(vampiredrainexplanation.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai vampire-drain-explanation: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -275,8 +284,8 @@ func (h *AIVampireDrainHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// Compile-time assertion: AIVampireDrainHandler satisfies http.Handler.
-var _ http.Handler = (*AIVampireDrainHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -286,7 +295,7 @@ var _ http.Handler = (*AIVampireDrainHandler)(nil)
 // pattern.
 // ---------------------------------------------------------------------
 
-// AIVampireDrainSource is the production lifetime.VampireDrainSource.
+// Source is the production lifetime.VampireDrainSource.
 // It delegates to the SHARED *drivedb.VampireDrainRepo that also
 // backs the canonical baseline GET /vampire-drain + GET
 // /vampire-drain/stats handlers so the AI narration is grounded in
@@ -295,18 +304,18 @@ var _ http.Handler = (*AIVampireDrainHandler)(nil)
 //
 // The struct holds *drivedb.VampireDrainRepo; the constructor
 // panics on a nil so a wiring bug surfaces at boot.
-type AIVampireDrainSource struct {
+type Source struct {
 	repo *drivedb.VampireDrainRepo
 }
 
-// NewAIVampireDrainSource constructs the adapter. Panics on a nil
+// NewSource constructs the adapter. Panics on a nil
 // *drivedb.VampireDrainRepo so a wiring mistake surfaces at boot
 // rather than as a nil-deref on first AI request.
-func NewAIVampireDrainSource(repo *drivedb.VampireDrainRepo) *AIVampireDrainSource {
+func NewSource(repo *drivedb.VampireDrainRepo) *Source {
 	if repo == nil {
-		panic("api: NewAIVampireDrainSource: nil *drivedb.VampireDrainRepo")
+		panic("aivampire: NewSource: nil *drivedb.VampireDrainRepo")
 	}
-	return &AIVampireDrainSource{repo: repo}
+	return &Source{repo: repo}
 }
 
 // Events implements lifetime.VampireDrainSource. Composes the SAME
@@ -318,7 +327,7 @@ func NewAIVampireDrainSource(repo *drivedb.VampireDrainRepo) *AIVampireDrainSour
 //
 // The function does NOT recompute or override anything the
 // canonical handler computes; it merely re-uses the repo method.
-func (a *AIVampireDrainSource) Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]drivedb.VampireDrainEvent, error) {
+func (a *Source) Events(ctx context.Context, vehicleID int64, windowStart time.Time, limit int) ([]drivedb.VampireDrainEvent, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai vampire-drain-explanation: vehicle_id must be > 0")
 	}
@@ -336,7 +345,7 @@ func (a *AIVampireDrainSource) Events(ctx context.Context, vehicleID int64, wind
 // *drivedb.VampireDrainRepo.Stats the canonical
 // VampireDrainHandler.Stats handler uses so the returned rollup is
 // numerically identical to what GET /vampire-drain/stats produces.
-func (a *AIVampireDrainSource) Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (drivedb.VampireDrainStats, error) {
+func (a *Source) Stats(ctx context.Context, vehicleID int64, windowStart time.Time, sampleWindowDays, limit int) (drivedb.VampireDrainStats, error) {
 	if vehicleID <= 0 {
 		return drivedb.VampireDrainStats{}, errors.New("api ai vampire-drain-explanation: vehicle_id must be > 0")
 	}
@@ -350,6 +359,6 @@ func (a *AIVampireDrainSource) Stats(ctx context.Context, vehicleID int64, windo
 	return out, nil
 }
 
-// Compile-time assertion: AIVampireDrainSource satisfies
+// Compile-time assertion: Source satisfies
 // lifetime.VampireDrainSource.
-var _ lifetime.VampireDrainSource = (*AIVampireDrainSource)(nil)
+var _ lifetime.VampireDrainSource = (*Source)(nil)

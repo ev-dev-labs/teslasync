@@ -298,7 +298,7 @@ const vampireDrainWindowsStatsLimit = 1000
 
 // VampireDrainSource is the narrow port the
 // query_vampire_drain_windows tool delegates to. In production it is
-// satisfied by *api.AIVampireDrainSource (which composes
+// satisfied by *aivampire.Source (which composes
 // *drivedb.VampireDrainRepo); in tests we substitute deterministic
 // fakes so the tool unit tests stay hermetic.
 //

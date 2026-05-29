@@ -37,6 +37,7 @@ import (
 	aitempimpact "github.com/ev-dev-labs/teslasync/internal/api/aitempimpact"
 	aitirepress "github.com/ev-dev-labs/teslasync/internal/api/aitirepress"
 	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
+	aivampire "github.com/ev-dev-labs/teslasync/internal/api/aivampire"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -1616,13 +1617,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// this slice.
 	lifetime.RegisterVampireDrainExplanationTools(aiToolRegistry, lifetime.VampireDrainExplanationSources{
 		Retriever: aiIdleDrainRetriever,
-		Drains:    NewAIVampireDrainSource(drivedb.NewVampireDrainRepo(db.Pool)),
+		Drains:    aivampire.NewSource(drivedb.NewVampireDrainRepo(db.Pool)),
 	})
 	// vampire-drain-explanation handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiVampireDrainExplanationHandler := NewAIVampireDrainHandler(
+	aiVampireDrainExplanationHandler := aivampire.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		vampiredrainexplanation.New(),

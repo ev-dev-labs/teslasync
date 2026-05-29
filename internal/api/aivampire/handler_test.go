@@ -15,10 +15,11 @@
 // (`go run ./cmd/ai-eval -feature vampire-drain-explanation`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aivampire
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,6 +29,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestVampireDrainExplanationAIOffShowsMetricsOnly is the
 // load-bearing off-mode contract proof for slice 0030. It mounts
@@ -148,23 +167,23 @@ func TestVampireDrainExplanationAIOffShowsMetricsOnly(t *testing.T) {
 	}
 }
 
-// TestAIVampireDrainHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIVampireDrainHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIVampireDrainHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIVampireDrainHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -172,11 +191,11 @@ func TestAIVampireDrainHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIVampireDrainHandler_RejectsBadBody asserts the handler
+// TestHandler_RejectsBadBody asserts the handler
 // validates the JSON body BEFORE opening the SSE stream — a
 // missing, unparseable, or out-of-range body must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAIVampireDrainHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -198,8 +217,8 @@ func TestAIVampireDrainHandler_RejectsBadBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/charging/vampire-drain/explain", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			if body, ok := parseVampireDrainBody(rec, req); ok {
-				t.Fatalf("parseVampireDrainBody returned ok=true for %q (body=%+v)", tc.name, body)
+			if body, ok := parseBody(rec, req); ok {
+				t.Fatalf("parseBody returned ok=true for %q (body=%+v)", tc.name, body)
 			}
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400 (body=%q)", rec.Code, rec.Body.String())
@@ -208,11 +227,11 @@ func TestAIVampireDrainHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAIVampireDrainHandler_AcceptsCanonicalBody proves the
+// TestHandler_AcceptsCanonicalBody proves the
 // parser does NOT bounce the happy-path shapes. Includes a
 // vehicle-id-only shape (lookback default applied) AND
 // vehicle-id+lookback explicit, AND the full 365-day upper-bound.
-func TestAIVampireDrainHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -232,12 +251,12 @@ func TestAIVampireDrainHandler_AcceptsCanonicalBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/charging/vampire-drain/explain", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			body, ok := parseVampireDrainBody(rec, req)
+			body, ok := parseBody(rec, req)
 			if !ok {
-				t.Fatalf("parseVampireDrainBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
+				t.Fatalf("parseBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
 			}
 			if body == nil {
-				t.Fatalf("parseVampireDrainBody returned ok=true but nil body for %q", tc.name)
+				t.Fatalf("parseBody returned ok=true but nil body for %q", tc.name)
 			}
 			if body.LookbackDays != tc.wantLookback {
 				t.Errorf("body.LookbackDays = %d, want %d", body.LookbackDays, tc.wantLookback)
@@ -246,16 +265,16 @@ func TestAIVampireDrainHandler_AcceptsCanonicalBody(t *testing.T) {
 	}
 }
 
-// TestAIVampireDrainSource_PanicsOnNilRepo asserts the production
+// TestSource_PanicsOnNilRepo asserts the production
 // adapter constructor refuses a nil *drivedb.VampireDrainRepo —
 // a wiring bug at boot must surface as a panic, not as a nil-deref
 // on first AI request.
-func TestAIVampireDrainSource_PanicsOnNilRepo(t *testing.T) {
+func TestSource_PanicsOnNilRepo(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatalf("NewAIVampireDrainSource(nil) did not panic")
+			t.Fatalf("NewSource(nil) did not panic")
 		}
 	}()
-	NewAIVampireDrainSource(nil)
+	NewSource(nil)
 }
