@@ -1,4 +1,4 @@
-package api
+package ainlsql
 
 // Phase-50 / 0057 — PU1 Natural-language SQL playground.
 //
@@ -89,6 +89,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -111,10 +112,10 @@ const aiNLSqlPlaygroundMaxBodyBytes = 16 * 1024
 // the window.
 const aiNLSqlPlaygroundMaxPromptChars = 1200
 
-// AINLSQLSchemaCatalogSource is the narrow read interface the
+// SchemaCatalogSource is the narrow read interface the
 // handler consumes to load the curated install-wide schema
 // catalog. Production wiring satisfies it via
-// AINLSQLSchemaCatalogSourceImpl, which returns a hardcoded
+// SchemaCatalogSourceImpl, which returns a hardcoded
 // whitelist of safe read-only tables (drives, charging_sessions,
 // vehicles, alerts, signal_log_view) so the AI can never propose
 // a query against tables outside the curated set.
@@ -122,21 +123,21 @@ const aiNLSqlPlaygroundMaxPromptChars = 1200
 // The interface is intentionally narrow (one method) so test
 // fakes stay small and the production implementation cannot
 // accidentally widen the surface.
-type AINLSQLSchemaCatalogSource interface {
+type SchemaCatalogSource interface {
 	// SchemaCatalog returns the curated install-wide schema
 	// catalog as a list of (name, description, columns) entries
 	// at the time of the call. The returned slice MUST be safe
 	// for the caller to retain.
-	SchemaCatalog(ctx context.Context) ([]AINLSQLSchemaCatalogEntry, error)
+	SchemaCatalog(ctx context.Context) ([]SchemaCatalogEntry, error)
 }
 
-// AINLSQLSchemaCatalogEntry describes one curated table the LLM
+// SchemaCatalogEntry describes one curated table the LLM
 // is allowed to reference in a draft. Name + Columns are
 // authoritative; Description is human-readable hint copy that
 // steers the LLM toward the right table for the user's prompt
 // (e.g. "trips a vehicle has driven, including distance and
 // energy used").
-type AINLSQLSchemaCatalogEntry struct {
+type SchemaCatalogEntry struct {
 	// Name is the canonical table name as it appears in the
 	// physical schema. Lower-case to match Postgres folding.
 	Name string
@@ -147,12 +148,12 @@ type AINLSQLSchemaCatalogEntry struct {
 	// Columns is the ordered list of column definitions exposed
 	// to the LLM. Order is the canonical column-list order the
 	// schema documentation uses.
-	Columns []AINLSQLSchemaColumn
+	Columns []SchemaColumn
 }
 
-// AINLSQLSchemaColumn is one column definition inside an
-// AINLSQLSchemaCatalogEntry.
-type AINLSQLSchemaColumn struct {
+// SchemaColumn is one column definition inside an
+// SchemaCatalogEntry.
+type SchemaColumn struct {
 	// Name is the column name as it appears in the physical
 	// schema (lower_snake_case to match Postgres folding).
 	Name string
@@ -175,23 +176,23 @@ type aiNLSqlPlaygroundRequest struct {
 	Prompt string `json:"prompt"`
 }
 
-// AINLSQLPlaygroundHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/power/sql/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AINLSQLPlaygroundHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     AINLSQLSchemaCatalogSource
+	source     SchemaCatalogSource
 	headerName string
 	maxIters   int
 }
 
-// NewAINLSQLPlaygroundHandler constructs the handler. All non-
+// NewHandler constructs the handler. All non-
 // pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -206,31 +207,31 @@ type AINLSQLPlaygroundHandler struct {
 //	in router.go).
 //
 // strat:      the nl-sql-playground Strategy (one per process).
-// source:     the production AINLSQLSchemaCatalogSource
+// source:     the production SchemaCatalogSource
 //
-//	(AINLSQLSchemaCatalogSourceImpl in router.go).
+//	(SchemaCatalogSourceImpl in router.go).
 //
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAINLSQLPlaygroundHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source AINLSQLSchemaCatalogSource,
+	source SchemaCatalogSource,
 	headerName string,
-) *AINLSQLPlaygroundHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAINLSQLPlaygroundHandler: nil provider.Registry")
+		panic("ainlsql: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAINLSQLPlaygroundHandler: nil tools.Registry")
+		panic("ainlsql: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAINLSQLPlaygroundHandler: nil strategy.Strategy")
+		panic("ainlsql: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAINLSQLPlaygroundHandler: nil AINLSQLSchemaCatalogSource")
+		panic("ainlsql: NewHandler: nil SchemaCatalogSource")
 	}
-	return &AINLSQLPlaygroundHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -247,32 +248,32 @@ func NewAINLSQLPlaygroundHandler(
 func parseNLSqlPlaygroundRequest(w http.ResponseWriter, r *http.Request) (aiNLSqlPlaygroundRequest, bool) {
 	var req aiNLSqlPlaygroundRequest
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "missing body")
+		httpx.WriteError(w, http.StatusBadRequest, "missing body")
 		return req, false
 	}
 	defer r.Body.Close()
 	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiNLSqlPlaygroundMaxBodyBytes))
 	if readErr != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
 	if len(bytesTrim(bodyBytes)) == 0 {
-		writeError(w, http.StatusBadRequest, "empty body")
+		httpx.WriteError(w, http.StatusBadRequest, "empty body")
 		return req, false
 	}
 	dec := json.NewDecoder(strings.NewReader(string(bodyBytes)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return req, false
 	}
 	prompt := strings.TrimSpace(req.Prompt)
 	if prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
+		httpx.WriteError(w, http.StatusBadRequest, "prompt is required")
 		return req, false
 	}
 	if len(prompt) > aiNLSqlPlaygroundMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt exceeds %d characters", aiNLSqlPlaygroundMaxPromptChars))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("prompt exceeds %d characters", aiNLSqlPlaygroundMaxPromptChars))
 		return req, false
 	}
 	req.Prompt = prompt
@@ -285,7 +286,7 @@ func parseNLSqlPlaygroundRequest(w http.ResponseWriter, r *http.Request) (aiNLSq
 // Every error path either writes a structured frame onto the SSE
 // stream (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
-func (h *AINLSQLPlaygroundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseNLSqlPlaygroundRequest(w, r)
 	if !ok {
@@ -299,7 +300,7 @@ func (h *AINLSQLPlaygroundHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	// back gracefully.
 	if _, err := h.registry.For(r.Context(), nlsqlplayground.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai nl-sql-playground: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -310,11 +311,11 @@ func (h *AINLSQLPlaygroundHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	catalog, err := h.source.SchemaCatalog(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("ai nl-sql-playground: source.SchemaCatalog failed")
-		writeError(w, http.StatusInternalServerError, "failed to load schema catalog")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load schema catalog")
 		return
 	}
 	if catalog == nil {
-		catalog = make([]AINLSQLSchemaCatalogEntry, 0)
+		catalog = make([]SchemaCatalogEntry, 0)
 	}
 
 	// Defensive: empty catalog is a degenerate but legal state.
@@ -339,7 +340,7 @@ func (h *AINLSQLPlaygroundHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nlsqlplayground.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai nl-sql-playground: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -391,7 +392,7 @@ func (h *AINLSQLPlaygroundHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 // Exported as `BuildNLSqlPlaygroundUserMessage` would only be
 // useful for tests; instead the test calls the unexported helper
 // directly from the same package.
-func buildNLSqlPlaygroundUserMessage(prompt string, catalog []AINLSQLSchemaCatalogEntry) string {
+func buildNLSqlPlaygroundUserMessage(prompt string, catalog []SchemaCatalogEntry) string {
 	var b strings.Builder
 
 	b.WriteString("Suggest a single typed ReadonlySQLDraft that satisfies the user's request below. ")
@@ -403,7 +404,7 @@ func buildNLSqlPlaygroundUserMessage(prompt string, catalog []AINLSQLSchemaCatal
 	b.WriteString("Do NOT claim the query was executed — the user reviews the proposal in the AI side panel and clicks the Apply to editor button to copy the draft into the manual SQL editor on /power/sql, then clicks the Run button to execute.")
 
 	// Sort catalog by name for deterministic prompt hashing.
-	sorted := append([]AINLSQLSchemaCatalogEntry(nil), catalog...)
+	sorted := append([]SchemaCatalogEntry(nil), catalog...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Name < sorted[j].Name })
 	if len(sorted) == 0 {
 		b.WriteString("\n\nIn-scope curated schema catalog: NONE.\n")
@@ -414,7 +415,7 @@ func buildNLSqlPlaygroundUserMessage(prompt string, catalog []AINLSQLSchemaCatal
 			fmt.Fprintf(&b, "  - table=%s — %s\n", e.Name, e.Description)
 			// Sort columns deterministically too — matches the
 			// goldens-canned reply expectations.
-			cols := append([]AINLSQLSchemaColumn(nil), e.Columns...)
+			cols := append([]SchemaColumn(nil), e.Columns...)
 			sort.Slice(cols, func(i, j int) bool { return cols[i].Name < cols[j].Name })
 			for _, c := range cols {
 				fmt.Fprintf(&b, "      - column=%s type=%s — %s\n", c.Name, c.Type, c.Description)
@@ -429,9 +430,9 @@ func buildNLSqlPlaygroundUserMessage(prompt string, catalog []AINLSQLSchemaCatal
 	return b.String()
 }
 
-// Compile-time assertion: AINLSQLPlaygroundHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AINLSQLPlaygroundHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the source + validator interfaces declared by
@@ -469,11 +470,11 @@ var _ http.Handler = (*AINLSQLPlaygroundHandler)(nil)
 // reviewable in the same file as the handler that consumes it,
 // and so a registry-renaming refactor cannot silently desync the
 // catalog from the handler.
-var nlSqlPlaygroundCuratedCatalog = []AINLSQLSchemaCatalogEntry{
+var nlSqlPlaygroundCuratedCatalog = []SchemaCatalogEntry{
 	{
 		Name:        "drives",
 		Description: "Per-trip aggregates for completed drives (one row per trip)",
-		Columns: []AINLSQLSchemaColumn{
+		Columns: []SchemaColumn{
 			{Name: "id", Type: "bigint", Description: "primary key"},
 			{Name: "vehicle_id", Type: "bigint", Description: "vehicle this drive belongs to"},
 			{Name: "started_at", Type: "timestamptz", Description: "drive start timestamp UTC"},
@@ -489,7 +490,7 @@ var nlSqlPlaygroundCuratedCatalog = []AINLSQLSchemaCatalogEntry{
 	{
 		Name:        "charging_sessions",
 		Description: "Per-charge aggregates for completed charging sessions (one row per session)",
-		Columns: []AINLSQLSchemaColumn{
+		Columns: []SchemaColumn{
 			{Name: "id", Type: "bigint", Description: "primary key"},
 			{Name: "vehicle_id", Type: "bigint", Description: "vehicle being charged"},
 			{Name: "started_at", Type: "timestamptz", Description: "session start timestamp UTC"},
@@ -503,7 +504,7 @@ var nlSqlPlaygroundCuratedCatalog = []AINLSQLSchemaCatalogEntry{
 	{
 		Name:        "vehicles",
 		Description: "Vehicle metadata (one row per vehicle)",
-		Columns: []AINLSQLSchemaColumn{
+		Columns: []SchemaColumn{
 			{Name: "id", Type: "bigint", Description: "primary key"},
 			{Name: "vin", Type: "text", Description: "Tesla VIN (PII — redacted from any LLM transcript)"},
 			{Name: "display_name", Type: "text", Description: "user-chosen display name (PII — redacted)"},
@@ -514,7 +515,7 @@ var nlSqlPlaygroundCuratedCatalog = []AINLSQLSchemaCatalogEntry{
 	{
 		Name:        "alerts",
 		Description: "User-defined alerts that have fired (one row per fire event)",
-		Columns: []AINLSQLSchemaColumn{
+		Columns: []SchemaColumn{
 			{Name: "id", Type: "bigint", Description: "primary key"},
 			{Name: "vehicle_id", Type: "bigint", Description: "vehicle the alert fired for"},
 			{Name: "alert_rule_id", Type: "bigint", Description: "the alert rule that fired"},
@@ -525,7 +526,7 @@ var nlSqlPlaygroundCuratedCatalog = []AINLSQLSchemaCatalogEntry{
 	{
 		Name:        "signal_log_view",
 		Description: "Telemetry signal history exposed as a stable view (no raw hypertable internals)",
-		Columns: []AINLSQLSchemaColumn{
+		Columns: []SchemaColumn{
 			{Name: "vehicle_id", Type: "bigint", Description: "vehicle the signal belongs to"},
 			{Name: "signal_name", Type: "text", Description: "canonical signal name (e.g. VehicleSpeed, BatteryLevel)"},
 			{Name: "ts", Type: "timestamptz", Description: "sample timestamp UTC"},
@@ -535,48 +536,53 @@ var nlSqlPlaygroundCuratedCatalog = []AINLSQLSchemaCatalogEntry{
 	},
 }
 
-// AINLSQLSchemaCatalogSourceImpl is the production
-// AINLSQLSchemaCatalogSource. It returns the hardcoded
+// CuratedCatalog returns the install-wide curated read-only table catalog.
+func CuratedCatalog() []SchemaCatalogEntry {
+	out := make([]SchemaCatalogEntry, len(nlSqlPlaygroundCuratedCatalog))
+	for i, e := range nlSqlPlaygroundCuratedCatalog {
+		cols := make([]SchemaColumn, len(e.Columns))
+		copy(cols, e.Columns)
+		out[i] = SchemaCatalogEntry{
+			Name:        e.Name,
+			Description: e.Description,
+			Columns:     cols,
+		}
+	}
+	return out
+}
+
+// SchemaCatalogSourceImpl is the production
+// SchemaCatalogSource. It returns the hardcoded
 // nlSqlPlaygroundCuratedCatalog whitelist so the AI can never
 // propose a query against tables outside the curated set.
 //
 // No DB query — the catalog is hand-maintained. A future slice
 // that needs per-tenant catalog gating can swap this out without
 // churning the handler.
-type AINLSQLSchemaCatalogSourceImpl struct{}
+type SchemaCatalogSourceImpl struct{}
 
-// NewAINLSQLSchemaCatalogSource constructs the adapter. No deps.
+// NewSchemaCatalogSource constructs the adapter. No deps.
 // Returned by-pointer for symmetry with the other AI* source
 // types.
-func NewAINLSQLSchemaCatalogSource() *AINLSQLSchemaCatalogSourceImpl {
-	return &AINLSQLSchemaCatalogSourceImpl{}
+func NewSchemaCatalogSource() *SchemaCatalogSourceImpl {
+	return &SchemaCatalogSourceImpl{}
 }
 
-// SchemaCatalog implements AINLSQLSchemaCatalogSource. Returns a
+// SchemaCatalog implements SchemaCatalogSource. Returns a
 // defensive copy of the curated catalog so a caller cannot
 // retroactively mutate the source-of-truth slice.
-func (a *AINLSQLSchemaCatalogSourceImpl) SchemaCatalog(_ context.Context) ([]AINLSQLSchemaCatalogEntry, error) {
-	out := make([]AINLSQLSchemaCatalogEntry, len(nlSqlPlaygroundCuratedCatalog))
-	for i, e := range nlSqlPlaygroundCuratedCatalog {
-		cols := make([]AINLSQLSchemaColumn, len(e.Columns))
-		copy(cols, e.Columns)
-		out[i] = AINLSQLSchemaCatalogEntry{
-			Name:        e.Name,
-			Description: e.Description,
-			Columns:     cols,
-		}
-	}
-	return out, nil
+func (a *SchemaCatalogSourceImpl) SchemaCatalog(_ context.Context) ([]SchemaCatalogEntry, error) {
+	return CuratedCatalog(), nil
 }
 
 // Compile-time assertion.
-var _ AINLSQLSchemaCatalogSource = (*AINLSQLSchemaCatalogSourceImpl)(nil)
+var _ SchemaCatalogSource = (*SchemaCatalogSourceImpl)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the nlq.ReadonlySQLValidator interface.
 // ---------------------------------------------------------------------
 
-// AINLSQLValidator is the production nlq.ReadonlySQLValidator.
+// Validator is the production nlq.ReadonlySQLValidator.
 // The shape checks (SELECT/WITH prefix, no-semicolon, no-DML/DDL
 // keyword scan, in-scope catalog table check) are already
 // enforced by the tool's checkReadonlySQLScopeAndShape before
@@ -596,13 +602,13 @@ var _ AINLSQLSchemaCatalogSource = (*AINLSQLSchemaCatalogSourceImpl)(nil)
 // reviews the typed proposal before clicking Run.
 //
 // Stateless. Held by value; safe for concurrent use.
-type AINLSQLValidator struct{}
+type Validator struct{}
 
-// NewAINLSQLValidator constructs the validator. No deps.
+// NewValidator constructs the validator. No deps.
 // Returned by-pointer for symmetry with the other AI* validator
 // types.
-func NewAINLSQLValidator() *AINLSQLValidator {
-	return &AINLSQLValidator{}
+func NewValidator() *Validator {
+	return &Validator{}
 }
 
 // ValidateReadonlySQL implements nlq.ReadonlySQLValidator.
@@ -611,12 +617,28 @@ func NewAINLSQLValidator() *AINLSQLValidator {
 // slices need them. Keeping the body intentionally minimal so
 // the slice's mandate ("propose-only, no semantic surprises")
 // is locally legible.
-func (v *AINLSQLValidator) ValidateReadonlySQL(draft *nlq.ReadonlySQLDraft) error {
+func (v *Validator) ValidateReadonlySQL(draft *nlq.ReadonlySQLDraft) error {
 	if draft == nil {
-		return errors.New("api ai nl-sql-playground: nil ReadonlySQLDraft")
+		return errors.New("ainlsql nl-sql-playground: nil ReadonlySQLDraft")
 	}
 	return nil
 }
 
 // Compile-time assertion.
-var _ nlq.ReadonlySQLValidator = (*AINLSQLValidator)(nil)
+var _ nlq.ReadonlySQLValidator = (*Validator)(nil)
+
+// bytesTrim is a defensive ASCII whitespace trimmer used only by
+// the body-empty check. Avoids importing bytes for one call.
+func bytesTrim(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] == '\r' || b[0] == '\n') {
+		b = b[1:]
+	}
+	for len(b) > 0 && (b[len(b)-1] == ' ' || b[len(b)-1] == '\t' || b[len(b)-1] == '\r' || b[len(b)-1] == '\n') {
+		b = b[:len(b)-1]
+	}
+	return b
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}

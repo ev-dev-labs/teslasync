@@ -13,7 +13,7 @@
 // nl-sql-playground`); duplicating that here would require a live
 // database fixture.
 
-package api
+package ainlsql
 
 import (
 	"bytes"
@@ -136,23 +136,23 @@ func TestNLSQLPlaygroundAIOffManualSQLWorks(t *testing.T) {
 	}
 }
 
-// TestAINLSQLPlaygroundHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAINLSQLPlaygroundHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAINLSQLPlaygroundHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAINLSQLPlaygroundHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -160,11 +160,11 @@ func TestAINLSQLPlaygroundHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAINLSQLPlaygroundHandler_RejectsBadBody asserts the handler
+// TestHandler_RejectsBadBody asserts the handler
 // validates the body BEFORE doing anything else — a body that
 // fails to decode as JSON object MUST surface as a JSON 400, not
 // a half-opened stream that confuses the frontend.
-func TestAINLSQLPlaygroundHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -205,11 +205,11 @@ func TestAINLSQLPlaygroundHandler_RejectsBadBody(t *testing.T) {
 // catch it before the goldens silently drift.
 func TestBuildNLSqlPlaygroundUserMessage_DeterministicShape(t *testing.T) {
 	t.Parallel()
-	catalog := []AINLSQLSchemaCatalogEntry{
+	catalog := []SchemaCatalogEntry{
 		{
 			Name:        "vehicles",
 			Description: "vehicle metadata",
-			Columns: []AINLSQLSchemaColumn{
+			Columns: []SchemaColumn{
 				{Name: "id", Type: "bigint", Description: "primary key"},
 				{Name: "model", Type: "text", Description: "model code"},
 			},
@@ -217,7 +217,7 @@ func TestBuildNLSqlPlaygroundUserMessage_DeterministicShape(t *testing.T) {
 		{
 			Name:        "drives",
 			Description: "per-trip aggregates",
-			Columns: []AINLSQLSchemaColumn{
+			Columns: []SchemaColumn{
 				{Name: "id", Type: "bigint", Description: "primary key"},
 				{Name: "started_at", Type: "timestamptz", Description: "drive start"},
 			},
@@ -268,12 +268,12 @@ func TestBuildNLSqlPlaygroundUserMessage_EmptyCatalog(t *testing.T) {
 	}
 }
 
-// TestAINLSQLValidator_AcceptsValidDraft pins the validator's
+// TestValidator_AcceptsValidDraft pins the validator's
 // accept path: a well-formed ReadonlySQLDraft returns nil. Future
 // slices that add semantic checks will need to update this test.
-func TestAINLSQLValidator_AcceptsValidDraft(t *testing.T) {
+func TestValidator_AcceptsValidDraft(t *testing.T) {
 	t.Parallel()
-	v := NewAINLSQLValidator()
+	v := NewValidator()
 	drafts := []*nlq.ReadonlySQLDraft{
 		{
 			Prompt:    "how many drives last week",
@@ -293,23 +293,23 @@ func TestAINLSQLValidator_AcceptsValidDraft(t *testing.T) {
 	}
 }
 
-// TestAINLSQLValidator_RejectsNil pins the defensive nil check.
-func TestAINLSQLValidator_RejectsNil(t *testing.T) {
+// TestValidator_RejectsNil pins the defensive nil check.
+func TestValidator_RejectsNil(t *testing.T) {
 	t.Parallel()
-	v := NewAINLSQLValidator()
+	v := NewValidator()
 	if err := v.ValidateReadonlySQL(nil); err == nil {
 		t.Error("ValidateReadonlySQL(nil) err = nil, want error")
 	}
 }
 
-// TestAINLSQLSchemaCatalogSourceImpl_ReturnsCuratedCatalog proves
+// TestSchemaCatalogSourceImpl_ReturnsCuratedCatalog proves
 // the production source returns the hardcoded curated catalog
 // with non-empty Name + at least one Column per entry. The
 // catalog MUST include `drives`, `charging_sessions`, `vehicles`,
 // `alerts`, and `signal_log_view` so the goldens stay valid.
-func TestAINLSQLSchemaCatalogSourceImpl_ReturnsCuratedCatalog(t *testing.T) {
+func TestSchemaCatalogSourceImpl_ReturnsCuratedCatalog(t *testing.T) {
 	t.Parallel()
-	src := NewAINLSQLSchemaCatalogSource()
+	src := NewSchemaCatalogSource()
 	got, err := src.SchemaCatalog(context.Background())
 	if err != nil {
 		t.Fatalf("SchemaCatalog err = %v, want nil", err)
@@ -335,14 +335,14 @@ func TestAINLSQLSchemaCatalogSourceImpl_ReturnsCuratedCatalog(t *testing.T) {
 	}
 }
 
-// TestAINLSQLSchemaCatalogSourceImpl_ReturnsDefensiveCopy proves
+// TestSchemaCatalogSourceImpl_ReturnsDefensiveCopy proves
 // the production source returns a defensive copy — a caller that
 // mutates the returned slice does NOT leak the mutation back into
 // the source-of-truth catalog. Subsequent calls return the
 // original entries.
-func TestAINLSQLSchemaCatalogSourceImpl_ReturnsDefensiveCopy(t *testing.T) {
+func TestSchemaCatalogSourceImpl_ReturnsDefensiveCopy(t *testing.T) {
 	t.Parallel()
-	src := NewAINLSQLSchemaCatalogSource()
+	src := NewSchemaCatalogSource()
 	got, _ := src.SchemaCatalog(context.Background())
 	if len(got) == 0 {
 		t.Fatal("SchemaCatalog returned empty list")

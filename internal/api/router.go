@@ -47,6 +47,7 @@ import (
 	aimqttsse "github.com/ev-dev-labs/teslasync/internal/api/aimqttsse"
 	ainldash "github.com/ev-dev-labs/teslasync/internal/api/ainldash"
 	ainlgrafana "github.com/ev-dev-labs/teslasync/internal/api/ainlgrafana"
+	ainlsql "github.com/ev-dev-labs/teslasync/internal/api/ainlsql"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2618,14 +2619,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// editor; the AI never executes SQL itself. The curated
 	// install-wide schema catalog (drives, charging_sessions,
 	// vehicles, alerts, signal_log_view) is hardcoded in
-	// AINLSQLSchemaCatalogSourceImpl — adding a table is a
+	// ainlsql.SchemaCatalogSourceImpl — adding a table is a
 	// deliberate per-prompt decision, not a default. NO new SQL
 	// is written by this slice; the executor remains the
 	// canonical baseline manual editor + the user's Run button.
 	// Registered AFTER the slice 0056 tools above so the
 	// registry's Names list grows deterministically.
-	aiNLSqlPlaygroundCatalogSource := NewAINLSQLSchemaCatalogSource()
-	aiNLSqlPlaygroundValidator := NewAINLSQLValidator()
+	aiNLSqlPlaygroundCatalogSource := ainlsql.NewSchemaCatalogSource()
+	aiNLSqlPlaygroundValidator := ainlsql.NewValidator()
 	nlq.RegisterNLSqlPlaygroundTools(aiToolRegistry, nlq.NLSqlPlaygroundSources{
 		Validator: aiNLSqlPlaygroundValidator,
 	})
@@ -2633,7 +2634,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiNLSqlPlaygroundHandler := NewAINLSQLPlaygroundHandler(
+	aiNLSqlPlaygroundHandler := ainlsql.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlsqlplayground.New(),
