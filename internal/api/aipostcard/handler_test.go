@@ -14,10 +14,11 @@
 // trip-postcard-share-card-image-generation`); duplicating that
 // here would require a live trips_detail fixture.
 
-package api
+package aipostcard
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,6 +28,21 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// prove off-mode routing without a live settings repo.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestTripPostcardAIOffStaticShareCardOnly is the load-bearing
 // off-mode contract proof for slice 0060. It mounts the AI
@@ -153,23 +169,23 @@ func TestTripPostcardAIOffStaticShareCardOnly(t *testing.T) {
 	}
 }
 
-// TestAITripPostcardShareCardImageGenerationHandler_PanicsOnNilWiring
+// TestHandler_PanicsOnNilWiring
 // asserts the handler constructor refuses zero-valued dependencies.
 // A wiring bug at boot must surface as a panic, not as a nil-deref
 // on first request.
-func TestAITripPostcardShareCardImageGenerationHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAITripPostcardShareCardImageGenerationHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAITripPostcardShareCardImageGenerationHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -177,12 +193,12 @@ func TestAITripPostcardShareCardImageGenerationHandler_PanicsOnNilWiring(t *test
 	}
 }
 
-// TestAITripPostcardShareCardImageGenerationHandler_RejectsBadBody
+// TestHandler_RejectsBadBody
 // asserts the handler validates the body BEFORE opening the SSE
 // stream — a missing, unparseable, or out-of-range field must
 // surface as a JSON 400, not a half-opened stream that confuses
 // the frontend.
-func TestAITripPostcardShareCardImageGenerationHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -207,7 +223,7 @@ func TestAITripPostcardShareCardImageGenerationHandler_RejectsBadBody(t *testing
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/share-cards/trip-image/draft", strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			_, ok := parseAITripPostcardShareCardImageGenerationBody(rec, req)
+			_, ok := parseBody(rec, req)
 			if ok != tc.wantOK {
 				t.Errorf("ok = %v, want %v (body=%q, status=%d, response=%q)", ok, tc.wantOK, tc.body, rec.Code, rec.Body.String())
 			}
@@ -218,20 +234,20 @@ func TestAITripPostcardShareCardImageGenerationHandler_RejectsBadBody(t *testing
 	}
 }
 
-// TestAITripPostcardShareCardImageGenerationHandler_RejectsOversizedBody
+// TestHandler_RejectsOversizedBody
 // asserts the 16 KiB body cap is enforced before any further
 // parsing. A request body that exceeds the cap surfaces as 413.
-func TestAITripPostcardShareCardImageGenerationHandler_RejectsOversizedBody(t *testing.T) {
+func TestHandler_RejectsOversizedBody(t *testing.T) {
 	t.Parallel()
 
 	// Build a body whose serialized length exceeds the 16 KiB cap.
 	// 17 KiB of style_hint padding is enough.
-	huge := `{"trip_id":101,"style_hint":"` + strings.Repeat("X", aiTripPostcardShareCardImageGenerationMaxBodyBytes+128) + `"}`
+	huge := `{"trip_id":101,"style_hint":"` + strings.Repeat("X", maxBodyBytes+128) + `"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/share-cards/trip-image/draft", strings.NewReader(huge))
 	req.Header.Set("Content-Type", "application/json")
 
-	_, ok := parseAITripPostcardShareCardImageGenerationBody(rec, req)
+	_, ok := parseBody(rec, req)
 	if ok {
 		t.Fatal("ok = true; want false for oversized body")
 	}

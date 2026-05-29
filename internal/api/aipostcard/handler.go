@@ -1,9 +1,9 @@
-package api
+package aipostcard
 
 // Phase-50 / 0060 — GEN1 Trip postcard and share-card image generation.
 //
-// ai_trip_postcard_share_card_image_handler.go implements the
-// LLM-backed handler at POST /api/v1/ai/share-cards/trip-image/draft.
+// handler.go implements the LLM-backed handler at
+// POST /api/v1/ai/share-cards/trip-image/draft.
 // The flow mirrors the auto-trip-naming / route-efficiency-
 // suggestions / drive-coaching narration handlers — same
 // dispatch+stream loop, no persistence (one-shot proposal; no
@@ -49,6 +49,7 @@ package api
 //     is added or modified by this slice.
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -63,38 +64,39 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiTripPostcardShareCardImageGenerationMaxIterations bounds the
+// maxIterations bounds the
 // dispatcher's tool-loop. The strategy is at most draft-then-
 // render-then-answer (with optional retries on validator
 // rejection) — a hard ceiling of 6 is generous and matches the
 // aiAutoTripNamingMaxIterations precedent.
-const aiTripPostcardShareCardImageGenerationMaxIterations = 6
+const maxIterations = 6
 
-// aiTripPostcardShareCardImageGenerationMaxBodyBytes is the hard
+// maxBodyBytes is the hard
 // cap on the request body. 16 KiB is generous for a typed JSON
 // envelope of {trip_id, style_hint} and defends against
 // amplification or accidental payload bombs.
-const aiTripPostcardShareCardImageGenerationMaxBodyBytes = 16 * 1024
+const maxBodyBytes = 16 * 1024
 
-// aiTripPostcardShareCardImageGenerationRequest is the JSON body
+// request is the JSON body
 // shape the handler accepts. TripID is required (positive int64).
 // StyleHint is optional free-text the LLM may quote when seeding
 // the draft_image_prompt tool.
-type aiTripPostcardShareCardImageGenerationRequest struct {
+type request struct {
 	TripID    int64  `json:"trip_id"`
 	StyleHint string `json:"style_hint,omitempty"`
 }
 
-// AITripPostcardShareCardImageGenerationHandler is the HTTP handler
+// Handler is the HTTP handler
 // for POST /api/v1/ai/share-cards/trip-image/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AITripPostcardShareCardImageGenerationHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -102,7 +104,7 @@ type AITripPostcardShareCardImageGenerationHandler struct {
 	maxIters   int
 }
 
-// NewAITripPostcardShareCardImageGenerationHandler constructs the
+// NewHandler constructs the
 // handler. All non-pointer arguments are required; the constructor
 // panics on a nil so the wiring bug surfaces at boot, not at first
 // request.
@@ -119,30 +121,30 @@ type AITripPostcardShareCardImageGenerationHandler struct {
 //	Strategy (one per process).
 //
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAITripPostcardShareCardImageGenerationHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AITripPostcardShareCardImageGenerationHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAITripPostcardShareCardImageGenerationHandler: nil provider.Registry")
+		panic("aipostcard: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAITripPostcardShareCardImageGenerationHandler: nil tools.Registry")
+		panic("aipostcard: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAITripPostcardShareCardImageGenerationHandler: nil strategy.Strategy")
+		panic("aipostcard: NewHandler: nil strategy.Strategy")
 	}
-	return &AITripPostcardShareCardImageGenerationHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiTripPostcardShareCardImageGenerationMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseAITripPostcardShareCardImageGenerationBody extracts and
+// parseBody extracts and
 // validates the request JSON body. Pulled out so the unit tests can
 // exercise the parser without constructing a full handler. The
 // function writes a 4xx on failure and returns (request, true) on
@@ -151,35 +153,43 @@ func NewAITripPostcardShareCardImageGenerationHandler(
 // TripID MUST be a positive integer; zero or negative values are
 // rejected with a 400. StyleHint is bounded to 80 chars to match
 // the tool's input schema.
-func parseAITripPostcardShareCardImageGenerationBody(w http.ResponseWriter, r *http.Request) (aiTripPostcardShareCardImageGenerationRequest, bool) {
-	var req aiTripPostcardShareCardImageGenerationRequest
-	limited := io.LimitReader(r.Body, aiTripPostcardShareCardImageGenerationMaxBodyBytes+1)
+func parseBody(w http.ResponseWriter, r *http.Request) (request, bool) {
+	var req request
+	limited := io.LimitReader(r.Body, maxBodyBytes+1)
 	body, err := io.ReadAll(limited)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read request body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read request body: %v", err))
 		return req, false
 	}
-	if int64(len(body)) > aiTripPostcardShareCardImageGenerationMaxBodyBytes {
-		writeError(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("request body exceeds %d byte cap", aiTripPostcardShareCardImageGenerationMaxBodyBytes))
+	if int64(len(body)) > maxBodyBytes {
+		httpx.WriteError(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("request body exceeds %d byte cap", maxBodyBytes))
 		return req, false
 	}
 	if len(body) == 0 {
-		writeError(w, http.StatusBadRequest, "request body required (expected {\"trip_id\": <int>, \"style_hint\": <string?>})")
+		httpx.WriteError(w, http.StatusBadRequest, "request body required (expected {\"trip_id\": <int>, \"style_hint\": <string?>})")
 		return req, false
 	}
 	if err := json.Unmarshal(body, &req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return req, false
 	}
 	if req.TripID <= 0 {
-		writeError(w, http.StatusBadRequest, "trip_id must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "trip_id must be > 0")
 		return req, false
 	}
 	if len([]rune(req.StyleHint)) > 80 {
-		writeError(w, http.StatusBadRequest, "style_hint must be at most 80 characters")
+		httpx.WriteError(w, http.StatusBadRequest, "style_hint must be at most 80 characters")
 		return req, false
 	}
 	return req, true
+}
+
+// denyAllConfirm is the dispatcher's user-confirm hook. Trip postcard
+// image drafting declares only propose-only tools, so this should never
+// be called; if a future edit accidentally adds a mutating tool, fail
+// closed instead of mutating fleet state.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
 // ServeHTTP implements [http.Handler]. The request body is parsed,
@@ -187,9 +197,9 @@ func parseAITripPostcardShareCardImageGenerationBody(w http.ResponseWriter, r *h
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AITripPostcardShareCardImageGenerationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate request body.
-	req, ok := parseAITripPostcardShareCardImageGenerationBody(w, r)
+	req, ok := parseBody(w, r)
 	if !ok {
 		return
 	}
@@ -201,7 +211,7 @@ func (h *AITripPostcardShareCardImageGenerationHandler) ServeHTTP(w http.Respons
 	// gracefully.
 	if _, err := h.registry.For(r.Context(), trippostcardsharecardimagegeneration.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai trip-postcard: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -214,7 +224,7 @@ func (h *AITripPostcardShareCardImageGenerationHandler) ServeHTTP(w http.Respons
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(trippostcardsharecardimagegeneration.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai trip-postcard: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -268,6 +278,6 @@ func (h *AITripPostcardShareCardImageGenerationHandler) ServeHTTP(w http.Respons
 	}
 }
 
-// Compile-time assertion: AITripPostcardShareCardImageGenerationHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AITripPostcardShareCardImageGenerationHandler)(nil)
+var _ http.Handler = (*Handler)(nil)

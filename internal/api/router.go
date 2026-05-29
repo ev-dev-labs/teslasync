@@ -50,6 +50,7 @@ import (
 	ainlsql "github.com/ev-dev-labs/teslasync/internal/api/ainlsql"
 	aiperiodcmp "github.com/ev-dev-labs/teslasync/internal/api/aiperiodcmp"
 	aipiiredact "github.com/ev-dev-labs/teslasync/internal/api/aipiiredact"
+	aipostcard "github.com/ev-dev-labs/teslasync/internal/api/aipostcard"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2724,7 +2725,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiTripPostcardShareCardImageGenerationHandler := NewAITripPostcardShareCardImageGenerationHandler(
+	aiTripPostcardShareCardImageGenerationHandler := aipostcard.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		trippostcardsharecardimagegeneration.New(),
