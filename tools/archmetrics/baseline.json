@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-29T08:06:40Z",
+  "generated_at": "2026-05-29T08:11:12Z",
   "go_version": "go1.26.1",
-  "commit_sha": "d28c62b95a4568f248349dd1c4b7b05fb48def0b",
+  "commit_sha": "1265f0bc0a0afd8e42938f1f6b8ee2a6bf50352f",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 44,
+      "go_files": 41,
       "test_files": 30,
-      "loc": 20647,
+      "loc": 20075,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2789,6 +2789,7 @@
         "internal/api/vehicle",
         "internal/api/vehicleaccess",
         "internal/api/vehicleconfig",
+        "internal/api/vehiclefsm",
         "internal/api/vehicleinfo",
         "internal/api/vehiclephoto",
         "internal/api/vehiclesettings",
@@ -2843,9 +2844,6 @@
         "internal/enums",
         "internal/events",
         "internal/flags",
-        "internal/fsm",
-        "internal/fsm/charge",
-        "internal/fsm/drive",
         "internal/fsm/telemetry",
         "internal/geocoding",
         "internal/handler/middleware",
@@ -2920,9 +2918,6 @@
         "error_tracker_test.go",
         "errors.go",
         "forward_auth_middleware.go",
-        "fsm_handler.go",
-        "fsm_handler_dtos.go",
-        "fsm_handler_query.go",
         "handlers_test.go",
         "health.go",
         "health_test.go",
@@ -6751,6 +6746,30 @@
         "doc.go",
         "handler.go",
         "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/vehiclefsm",
+      "go_files": 4,
+      "test_files": 0,
+      "loc": 585,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database/observability",
+        "internal/database/vehicle",
+        "internal/fsm",
+        "internal/fsm/charge",
+        "internal/fsm/drive",
+        "internal/metrics",
+        "internal/signal"
+      ],
+      "files": [
+        "doc.go",
+        "dtos.go",
+        "handler.go",
+        "query.go"
       ]
     },
     {
@@ -10677,9 +10696,6 @@
       "error_tracker.go",
       "errors.go",
       "forward_auth_middleware.go",
-      "fsm_handler.go",
-      "fsm_handler_dtos.go",
-      "fsm_handler_query.go",
       "health.go",
       "helpers.go",
       "metrics.go",
@@ -11466,6 +11482,12 @@
     "internal/api/vehicleconfig": [
       "doc.go",
       "handler.go"
+    ],
+    "internal/api/vehiclefsm": [
+      "doc.go",
+      "dtos.go",
+      "handler.go",
+      "query.go"
     ],
     "internal/api/vehicleinfo": [
       "doc.go",
@@ -12622,7 +12644,7 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 44,
+      "flat_parent_go_files": 41,
       "flat_parent_test_files": 30,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
