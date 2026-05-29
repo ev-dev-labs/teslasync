@@ -1,4 +1,4 @@
-package api
+package tripplanner
 
 // ── Request / Response types ────────────────────────────────────────────
 
@@ -78,3 +78,12 @@ type tripPlanResponse struct {
 	WeatherImpact tripWeatherImpact `json:"weather_impact"`
 	SOCCurve      []tripSOCPoint    `json:"soc_curve"`
 }
+
+// Exported aliases keep the deterministic planner's typed compute surface
+// available to the parent api package while the HTTP handler lives here.
+type TripPlanLocation = tripPlanLocation
+type TripPlanPreferences = tripPlanPreferences
+type TripPlanRequest = tripPlanRequest
+type TripPlanRoute = tripPlanRoute
+type TripPlanLeg = tripPlanLeg
+type TripPlanResponse = tripPlanResponse

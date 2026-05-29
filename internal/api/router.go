@@ -92,6 +92,7 @@ import (
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
 	apitotp "github.com/ev-dev-labs/teslasync/internal/api/totp"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
+	apitripplanner "github.com/ev-dev-labs/teslasync/internal/api/tripplanner"
 	apitripsd "github.com/ev-dev-labs/teslasync/internal/api/tripsdetail"
 	apivamp "github.com/ev-dev-labs/teslasync/internal/api/vampiredrain"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
@@ -1160,14 +1161,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaUserProfileHandler := apitup.NewHandler(teslaClient, db)
 	vehicleAccessHandler := apivehaccess.NewHandler(teslaClient, db)
 	vehicleInfoHandler := apivehinfo.NewHandler(teslaClient, db)
-	tripPlannerHandler := NewTripPlannerHandler(db, opt.CacheStore, stateReader)
+	tripPlannerHandler := apitripplanner.NewTripPlannerHandler(db, opt.CacheStore, stateReader)
 
 	// trip-planner-llm-agent tools (Phase-50 / D5, slice 0025).
 	// Adds `query_chargers_along_route`, `query_user_charge_dwells`,
 	// and `draft_trip_plan` to the shared tool registry. All three
 	// are PROPOSE-only / READ-only — the first two read the existing
 	// charging_sessions table via the shared ChargeSource port; the
-	// third delegates to the canonical TripPlannerHandler.computePlan
+	// third delegates to the canonical tripplanner ComputePlan
 	// path via a narrow TripPlanComputer port satisfied by
 	// AITripPlanComputer. The dispatcher's deny-all confirm gate is
 	// therefore never triggered; the actual trip-plan persistence
