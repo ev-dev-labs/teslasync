@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
@@ -532,3 +534,147 @@ func avgCostPerKwh(months []historicalMonth) float64 {
 
 func round1(v float64) float64 { return math.Round(v*10) / 10 }
 func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
+
+const defaultCostForecastMonths = 6
+
+// ---------------------------------------------------------------------
+// Production wiring for the tool interface declared by
+// internal/ai/tools/cost_forecast.go. Kept in package api so it can
+// reuse the canonical ComputeCostForecast helper without introducing
+// an import cycle; mirrors the battery-health-forecast-narrative
+// slice's AIBatteryHealthForecaster pattern.
+// ---------------------------------------------------------------------
+
+// AICostForecaster is the production forecast.CostForecaster. It
+// delegates to the SHARED api.ComputeCostForecast helper that
+// also backs the canonical GET /api/v1/analytics/cost-forecast
+// handler so the AI narration is grounded in the SAME
+// deterministic forecast model the chart on /cost-analysis
+// renders. No new SQL is added by this slice.
+//
+// Refactoring the existing CostForecastHandler.GetForecast to
+// pull its core into the package-level ComputeCostForecast helper
+// (and having both call sites use it) was the deliberate choice
+// over duplicating the SQL/math here — the slice 0029 rubber-duck
+// critique flagged duplicated SQL as a blocking issue.
+//
+// The struct holds *database.DB; the constructor panics on a
+// nil so a wiring bug surfaces at boot.
+type AICostForecaster struct {
+	db *database.DB
+}
+
+// NewAICostForecaster constructs the adapter. Panics on a nil
+// *database.DB so a wiring mistake surfaces at boot rather than
+// as a nil-deref on first AI request.
+func NewAICostForecaster(db *database.DB) *AICostForecaster {
+	if db == nil {
+		panic("api: NewAICostForecaster: nil *database.DB")
+	}
+	return &AICostForecaster{db: db}
+}
+
+// ForecastCosts implements forecast.CostForecaster. Composes the
+// SAME api.ComputeCostForecast helper *CostForecastHandler.GetForecast
+// uses so the returned envelope is numerically identical (modulo
+// rounding) to what GET /api/v1/analytics/cost-forecast produces
+// — the AI surface is grounded in the SAME deterministic model
+// the chart renders.
+//
+// The function does NOT recompute or override anything the
+// canonical handler computes; it only reshapes the existing
+// output into the typed [forecast.CostForecast] envelope the LLM
+// can quote.
+//
+// Currency is left empty for now: the existing baseline response
+// does not surface a currency code, and Phase-48's SI-canonical
+// migration left cost_currency on charging_sessions but the
+// aggregated `cost_decimal` already mixes currencies at the row
+// level. Surfacing a single currency for the aggregate would
+// require a separate query + assumption layer that lives outside
+// this slice. The narrator's system prompt does not assume any
+// currency code; it quotes raw dollar figures consistent with
+// the chart.
+func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, months int) (*forecast.CostForecast, error) {
+	if vehicleID <= 0 {
+		return nil, errors.New("api ai cost-forecast-narration: vehicle_id must be > 0")
+	}
+	if months <= 0 {
+		months = defaultCostForecastMonths
+	}
+
+	resp, meta, err := ComputeCostForecast(ctx, a.db, vehicleID, months)
+	if err != nil {
+		return nil, fmt.Errorf("api ai cost-forecast-narration: ComputeCostForecast: %w", err)
+	}
+
+	// Reshape the wire-shape response + metadata into the
+	// typed AI envelope. Field-by-field copy keeps the AI
+	// envelope decoupled from any future widening of the
+	// internal historicalMonth / forecastMonth structs (the
+	// narrator should remain pinned to a stable shape).
+	historical := make([]forecast.CostForecastHistoricalMonth, 0, len(resp.Historical))
+	for _, m := range resp.Historical {
+		historical = append(historical, forecast.CostForecastHistoricalMonth{
+			Month:      m.Month,
+			Cost:       m.Cost,
+			KWh:        m.KWh,
+			Sessions:   m.Sessions,
+			CostPerKWh: m.CostPerKWh,
+		})
+	}
+	forecastMonths := make([]forecast.CostForecastFutureMonth, 0, len(resp.Forecast))
+	for _, m := range resp.Forecast {
+		forecastMonths = append(forecastMonths, forecast.CostForecastFutureMonth{
+			Month:    m.Month,
+			Cost:     m.Cost,
+			CostLow:  m.CostLow,
+			CostHigh: m.CostHigh,
+			KWh:      m.KWh,
+		})
+	}
+
+	insights := append([]string(nil), resp.Insights...)
+	assumptions := append([]string(nil), meta.Assumptions...)
+
+	return &forecast.CostForecast{
+		VehicleID:            vehicleID,
+		Currency:             "", // see method-level doc comment
+		HistoricalMonthCount: meta.HistoricalMonthCount,
+		MinRequiredMonths:    meta.MinRequiredMonths,
+		HasEnoughData:        meta.HasEnoughData,
+		DataThroughMonth:     meta.DataThroughMonth,
+		ForecastMonths:       meta.ForecastMonths,
+		ForecastMethod:       meta.ForecastMethod,
+		UncertaintyMethod:    meta.UncertaintyMethod,
+		UncertaintyLevel:     meta.UncertaintyLevel,
+		Assumptions:          assumptions,
+		Historical:           historical,
+		Forecast:             forecastMonths,
+		Breakdown: forecast.CostForecastBreakdown{
+			Home: forecast.CostForecastChargerCategory{
+				Pct:           resp.Breakdown.Home.Pct,
+				AvgCostPerKWh: resp.Breakdown.Home.AvgCostPerKWh,
+				MonthlyAvg:    resp.Breakdown.Home.MonthlyAvg,
+			},
+			Supercharger: forecast.CostForecastChargerCategory{
+				Pct:           resp.Breakdown.Supercharger.Pct,
+				AvgCostPerKWh: resp.Breakdown.Supercharger.AvgCostPerKWh,
+				MonthlyAvg:    resp.Breakdown.Supercharger.MonthlyAvg,
+			},
+		},
+		GasComparison: forecast.CostForecastGasComparison{
+			AvgKmPerMonth:   resp.GasComparison.AvgKmPerMonth,
+			GasCostPerMonth: resp.GasComparison.GasCostPerMonth,
+			EvCostPerMonth:  resp.GasComparison.EvCostPerMonth,
+			MonthlySavings:  resp.GasComparison.MonthlySavings,
+			AnnualSavings:   resp.GasComparison.AnnualSavings,
+			LifetimeSavings: resp.GasComparison.LifetimeSavings,
+		},
+		Insights: insights,
+	}, nil
+}
+
+// Compile-time assertion: AICostForecaster satisfies
+// forecast.CostForecaster.
+var _ forecast.CostForecaster = (*AICostForecaster)(nil)

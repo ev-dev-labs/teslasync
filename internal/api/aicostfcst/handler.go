@@ -1,4 +1,4 @@
-package api
+package aicostfcst
 
 // Phase-50 / 0029 — C4 Cost forecast narration.
 //
@@ -50,7 +50,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 
@@ -62,52 +61,51 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
-	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// aiCostForecastNarrationMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most query_cost_forecast → answer
 // (with optional retries). A hard ceiling of 8 is generous,
 // matching aiBatteryHealthMaxIterations /
 // aiSmartChargeScheduleMaxIterations.
-const aiCostForecastNarrationMaxIterations = 8
+const maxIterations = 8
 
-// aiCostForecastNarrationDefaultMonths is the default forecast
+// defaultMonths is the default forecast
 // horizon when the request body omits the months field. Mirrors
 // the canonical GET /api/v1/analytics/cost-forecast?months=
 // default. Kept as a named constant so a future tuning lives in
 // one place rather than duplicated across the parser + the tool's
 // Execute default.
-const aiCostForecastNarrationDefaultMonths = 6
+const defaultMonths = 6
 
-// aiCostForecastNarrationMaxMonths is the upper bound on the
+// maxMonths is the upper bound on the
 // months horizon. Mirrors the canonical handler's parameter
 // validation in cost_forecast_handler.go (months > 0 && months <=
 // 24); requests outside this window land as a 400 before any SQL
 // runs.
-const aiCostForecastNarrationMaxMonths = 24
+const maxMonths = 24
 
-// aiCostForecastNarrationRequest is the JSON body shape this
+// request is the JSON body shape this
 // handler accepts. The shape mirrors the
 // /api/v1/analytics/cost-forecast?vehicle_id=&months= query-
 // string contract — vehicle_id is required, months is optional —
 // kept as a JSON body so the SPA can post from the same form
 // state the cost-analysis page already uses.
-type aiCostForecastNarrationRequest struct {
+type request struct {
 	VehicleID int64 `json:"vehicle_id"`
 	Months    int   `json:"months,omitempty"`
 }
 
-// AICostForecastNarrationHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/charging/costs/forecast/narrate.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AICostForecastNarrationHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -115,7 +113,7 @@ type AICostForecastNarrationHandler struct {
 	maxIters   int
 }
 
-// NewAICostForecastNarrationHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -127,47 +125,47 @@ type AICostForecastNarrationHandler struct {
 //
 // strat:      the cost-forecast-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAICostForecastNarrationHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AICostForecastNarrationHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAICostForecastNarrationHandler: nil provider.Registry")
+		panic("aicostfcst: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAICostForecastNarrationHandler: nil tools.Registry")
+		panic("aicostfcst: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAICostForecastNarrationHandler: nil strategy.Strategy")
+		panic("aicostfcst: NewHandler: nil strategy.Strategy")
 	}
-	return &AICostForecastNarrationHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiCostForecastNarrationMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseCostForecastNarrationBody decodes + validates the JSON
+// parseBody decodes + validates the JSON
 // body. Pulled out so the validator-only test can exercise the
 // same parsing without constructing a full handler with stub
 // deps. The function writes a 400 on failure and returns the
 // (req, ok) pair so the caller can early-return.
 //
 // The months field defaults to
-// aiCostForecastNarrationDefaultMonths when omitted (or zero) and
-// is bounded to [1, aiCostForecastNarrationMaxMonths] so an
+// defaultMonths when omitted (or zero) and
+// is bounded to [1, maxMonths] so an
 // out-of-range value lands as a 400 before any SSE stream is
 // opened.
-func parseCostForecastNarrationBody(w http.ResponseWriter, r *http.Request) (*aiCostForecastNarrationRequest, bool) {
+func parseBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 	if r.Body == nil {
 		writeError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiCostForecastNarrationRequest
+	var req request
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
@@ -179,10 +177,10 @@ func parseCostForecastNarrationBody(w http.ResponseWriter, r *http.Request) (*ai
 		return nil, false
 	}
 	if req.Months == 0 {
-		req.Months = aiCostForecastNarrationDefaultMonths
+		req.Months = defaultMonths
 	}
-	if req.Months < 1 || req.Months > aiCostForecastNarrationMaxMonths {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("months must be between 1 and %d", aiCostForecastNarrationMaxMonths))
+	if req.Months < 1 || req.Months > maxMonths {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("months must be between 1 and %d", maxMonths))
 		return nil, false
 	}
 	return &req, true
@@ -193,9 +191,9 @@ func parseCostForecastNarrationBody(w http.ResponseWriter, r *http.Request) (*ai
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has
 // been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AICostForecastNarrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
-	body, ok := parseCostForecastNarrationBody(w, r)
+	body, ok := parseBody(w, r)
 	if !ok {
 		return
 	}
@@ -271,148 +269,14 @@ func (h *AICostForecastNarrationHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	}
 }
 
-// Compile-time assertion: AICostForecastNarrationHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AICostForecastNarrationHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
-// ---------------------------------------------------------------------
-// Production wiring for the tool interface declared by
-// internal/ai/tools/cost_forecast.go. Kept in the same file as
-// the handler so the wiring intent is local to the slice;
-// mirrors the battery-health-forecast-narrative slice's
-// AIBatteryHealthForecaster pattern.
-// ---------------------------------------------------------------------
-
-// AICostForecaster is the production forecast.CostForecaster. It
-// delegates to the SHARED api.ComputeCostForecast helper that
-// also backs the canonical GET /api/v1/analytics/cost-forecast
-// handler so the AI narration is grounded in the SAME
-// deterministic forecast model the chart on /cost-analysis
-// renders. No new SQL is added by this slice.
-//
-// Refactoring the existing CostForecastHandler.GetForecast to
-// pull its core into the package-level ComputeCostForecast helper
-// (and having both call sites use it) was the deliberate choice
-// over duplicating the SQL/math here — the slice 0029 rubber-duck
-// critique flagged duplicated SQL as a blocking issue.
-//
-// The struct holds *database.DB; the constructor panics on a
-// nil so a wiring bug surfaces at boot.
-type AICostForecaster struct {
-	db *database.DB
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
-// NewAICostForecaster constructs the adapter. Panics on a nil
-// *database.DB so a wiring mistake surfaces at boot rather than
-// as a nil-deref on first AI request.
-func NewAICostForecaster(db *database.DB) *AICostForecaster {
-	if db == nil {
-		panic("api: NewAICostForecaster: nil *database.DB")
-	}
-	return &AICostForecaster{db: db}
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
 }
-
-// ForecastCosts implements forecast.CostForecaster. Composes the
-// SAME api.ComputeCostForecast helper *CostForecastHandler.GetForecast
-// uses so the returned envelope is numerically identical (modulo
-// rounding) to what GET /api/v1/analytics/cost-forecast produces
-// — the AI surface is grounded in the SAME deterministic model
-// the chart renders.
-//
-// The function does NOT recompute or override anything the
-// canonical handler computes; it only reshapes the existing
-// output into the typed [forecast.CostForecast] envelope the LLM
-// can quote.
-//
-// Currency is left empty for now: the existing baseline response
-// does not surface a currency code, and Phase-48's SI-canonical
-// migration left cost_currency on charging_sessions but the
-// aggregated `cost_decimal` already mixes currencies at the row
-// level. Surfacing a single currency for the aggregate would
-// require a separate query + assumption layer that lives outside
-// this slice. The narrator's system prompt does not assume any
-// currency code; it quotes raw dollar figures consistent with
-// the chart.
-func (a *AICostForecaster) ForecastCosts(ctx context.Context, vehicleID int64, months int) (*forecast.CostForecast, error) {
-	if vehicleID <= 0 {
-		return nil, errors.New("api ai cost-forecast-narration: vehicle_id must be > 0")
-	}
-	if months <= 0 {
-		months = aiCostForecastNarrationDefaultMonths
-	}
-
-	resp, meta, err := ComputeCostForecast(ctx, a.db, vehicleID, months)
-	if err != nil {
-		return nil, fmt.Errorf("api ai cost-forecast-narration: ComputeCostForecast: %w", err)
-	}
-
-	// Reshape the wire-shape response + metadata into the
-	// typed AI envelope. Field-by-field copy keeps the AI
-	// envelope decoupled from any future widening of the
-	// internal historicalMonth / forecastMonth structs (the
-	// narrator should remain pinned to a stable shape).
-	historical := make([]forecast.CostForecastHistoricalMonth, 0, len(resp.Historical))
-	for _, m := range resp.Historical {
-		historical = append(historical, forecast.CostForecastHistoricalMonth{
-			Month:      m.Month,
-			Cost:       m.Cost,
-			KWh:        m.KWh,
-			Sessions:   m.Sessions,
-			CostPerKWh: m.CostPerKWh,
-		})
-	}
-	forecastMonths := make([]forecast.CostForecastFutureMonth, 0, len(resp.Forecast))
-	for _, m := range resp.Forecast {
-		forecastMonths = append(forecastMonths, forecast.CostForecastFutureMonth{
-			Month:    m.Month,
-			Cost:     m.Cost,
-			CostLow:  m.CostLow,
-			CostHigh: m.CostHigh,
-			KWh:      m.KWh,
-		})
-	}
-
-	insights := append([]string(nil), resp.Insights...)
-	assumptions := append([]string(nil), meta.Assumptions...)
-
-	return &forecast.CostForecast{
-		VehicleID:            vehicleID,
-		Currency:             "", // see method-level doc comment
-		HistoricalMonthCount: meta.HistoricalMonthCount,
-		MinRequiredMonths:    meta.MinRequiredMonths,
-		HasEnoughData:        meta.HasEnoughData,
-		DataThroughMonth:     meta.DataThroughMonth,
-		ForecastMonths:       meta.ForecastMonths,
-		ForecastMethod:       meta.ForecastMethod,
-		UncertaintyMethod:    meta.UncertaintyMethod,
-		UncertaintyLevel:     meta.UncertaintyLevel,
-		Assumptions:          assumptions,
-		Historical:           historical,
-		Forecast:             forecastMonths,
-		Breakdown: forecast.CostForecastBreakdown{
-			Home: forecast.CostForecastChargerCategory{
-				Pct:           resp.Breakdown.Home.Pct,
-				AvgCostPerKWh: resp.Breakdown.Home.AvgCostPerKWh,
-				MonthlyAvg:    resp.Breakdown.Home.MonthlyAvg,
-			},
-			Supercharger: forecast.CostForecastChargerCategory{
-				Pct:           resp.Breakdown.Supercharger.Pct,
-				AvgCostPerKWh: resp.Breakdown.Supercharger.AvgCostPerKWh,
-				MonthlyAvg:    resp.Breakdown.Supercharger.MonthlyAvg,
-			},
-		},
-		GasComparison: forecast.CostForecastGasComparison{
-			AvgKmPerMonth:   resp.GasComparison.AvgKmPerMonth,
-			GasCostPerMonth: resp.GasComparison.GasCostPerMonth,
-			EvCostPerMonth:  resp.GasComparison.EvCostPerMonth,
-			MonthlySavings:  resp.GasComparison.MonthlySavings,
-			AnnualSavings:   resp.GasComparison.AnnualSavings,
-			LifetimeSavings: resp.GasComparison.LifetimeSavings,
-		},
-		Insights: insights,
-	}, nil
-}
-
-// Compile-time assertion: AICostForecaster satisfies
-// forecast.CostForecaster.
-var _ forecast.CostForecaster = (*AICostForecaster)(nil)

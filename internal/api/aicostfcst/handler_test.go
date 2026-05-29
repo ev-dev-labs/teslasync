@@ -15,10 +15,11 @@
 // (`go run ./cmd/ai-eval -feature cost-forecast-narration`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aicostfcst
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,8 +28,25 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestCostForecastNarrationAIOffShowsDeterministicForecast is the
 // load-bearing off-mode contract proof for slice 0029. It mounts
@@ -129,23 +147,23 @@ func TestCostForecastNarrationAIOffShowsDeterministicForecast(t *testing.T) {
 	}
 }
 
-// TestAICostForecastNarrationHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAICostForecastNarrationHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAICostForecastNarrationHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAICostForecastNarrationHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -153,12 +171,12 @@ func TestAICostForecastNarrationHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAICostForecastNarrationHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the JSON body BEFORE opening the SSE stream
 // — a missing, unparseable, or out-of-range body must surface as
 // a JSON 400, not a half-opened stream that confuses the
 // frontend.
-func TestAICostForecastNarrationHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -180,8 +198,8 @@ func TestAICostForecastNarrationHandler_RejectsBadBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/charging/costs/forecast/narrate", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			if body, ok := parseCostForecastNarrationBody(rec, req); ok {
-				t.Fatalf("parseCostForecastNarrationBody returned ok=true for %q (body=%+v)", tc.name, body)
+			if body, ok := parseBody(rec, req); ok {
+				t.Fatalf("parseBody returned ok=true for %q (body=%+v)", tc.name, body)
 			}
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400 (body=%q)", rec.Code, rec.Body.String())
@@ -190,11 +208,11 @@ func TestAICostForecastNarrationHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAICostForecastNarrationHandler_AcceptsCanonicalBody proves
+// TestHandler_AcceptsCanonicalBody proves
 // the parser does NOT bounce the happy-path shapes. Includes a
 // vehicle-id-only shape (months default applied) AND
 // vehicle-id+months explicit, AND the full 24-month upper-bound.
-func TestAICostForecastNarrationHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -214,44 +232,16 @@ func TestAICostForecastNarrationHandler_AcceptsCanonicalBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/charging/costs/forecast/narrate", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			body, ok := parseCostForecastNarrationBody(rec, req)
+			body, ok := parseBody(rec, req)
 			if !ok {
-				t.Fatalf("parseCostForecastNarrationBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
+				t.Fatalf("parseBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
 			}
 			if body == nil {
-				t.Fatalf("parseCostForecastNarrationBody returned ok=true but nil body for %q", tc.name)
+				t.Fatalf("parseBody returned ok=true but nil body for %q", tc.name)
 			}
 			if body.Months != tc.wantMonths {
 				t.Errorf("body.Months = %d, want %d", body.Months, tc.wantMonths)
 			}
 		})
-	}
-}
-
-// TestAICostForecaster_PanicsOnNilDB asserts the production
-// adapter constructor refuses a nil *database.DB — a wiring bug
-// at boot must surface as a panic, not as a nil-deref on first
-// AI request.
-func TestAICostForecaster_PanicsOnNilDB(t *testing.T) {
-	t.Parallel()
-	defer func() {
-		if r := recover(); r == nil {
-			t.Fatalf("NewAICostForecaster(nil db) did not panic")
-		}
-	}()
-	NewAICostForecaster(nil)
-}
-
-// TestAICostForecaster_SatisfiesInterface is a compile-time +
-// runtime assertion that the production adapter implements
-// forecast.CostForecaster. The compile-time `var _` line in the
-// handler file gives the same guarantee, but this test fails with
-// a clear message if a future refactor accidentally narrows the
-// interface contract.
-func TestAICostForecaster_SatisfiesInterface(t *testing.T) {
-	t.Parallel()
-	var iface forecast.CostForecaster = (*AICostForecaster)(nil)
-	if iface == nil {
-		t.Logf("AICostForecaster satisfies forecast.CostForecaster (nil cast)")
 	}
 }
