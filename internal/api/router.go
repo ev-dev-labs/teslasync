@@ -855,7 +855,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupRestoreHandler := apibackup.NewRestoreHandler(db)
 	regenHandler := apiregen.NewRegenHandler(db)
 	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader, signalLogReader)
-	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
+	auditHandler := apiaudit.NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	maskedRevealHandler := apiaudit.NewMaskedRevealHandler(auditRepo, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := apicalllog.NewHandler(db)
 	apiKeyHandler := apikeyh.NewHandler(db, cfg.Auth.ForwardAuthHeader, apikeyh.WithAuditFunc(
