@@ -1,4 +1,4 @@
-package api
+package aiautotripname
 
 // Phase-50 / 0024 — D4 Auto trip naming.
 //
@@ -63,24 +63,25 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/trip"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// aiAutoTripNamingMaxIterations bounds the dispatcher's tool-loop.
+// maxIterations bounds the dispatcher's tool-loop.
 // The strategy is at most draft-then-validate-then-answer (with
 // optional retries) — a hard ceiling of 6 is generous. Mirrors
 // aiRouteEfficiencySuggestionsMaxIterations.
-const aiAutoTripNamingMaxIterations = 6
+const maxIterations = 6
 
-// AIAutoTripNameHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/trips/{tripID}/name/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIAutoTripNameHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -88,7 +89,7 @@ type AIAutoTripNameHandler struct {
 	maxIters   int
 }
 
-// NewAIAutoTripNameHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -100,30 +101,30 @@ type AIAutoTripNameHandler struct {
 //
 // strat:      the auto-trip-naming Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIAutoTripNameHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIAutoTripNameHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIAutoTripNameHandler: nil provider.Registry")
+		panic("aiautotripname: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIAutoTripNameHandler: nil tools.Registry")
+		panic("aiautotripname: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIAutoTripNameHandler: nil strategy.Strategy")
+		panic("aiautotripname: NewHandler: nil strategy.Strategy")
 	}
-	return &AIAutoTripNameHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiAutoTripNamingMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseAutoTripNameURL extracts and validates the tripID URL
+// parseURL extracts and validates the tripID URL
 // parameter. Pulled out so the off-mode test and the validator-only
 // test can exercise the same parsing without constructing a full
 // handler with stub deps. The function writes a 400 on failure and
@@ -131,22 +132,30 @@ func NewAIAutoTripNameHandler(
 //
 // tripID MUST be a positive integer; zero or negative values are
 // rejected with a 400.
-func parseAutoTripNameURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
+func parseURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "tripID")
 	if raw == "" {
-		writeError(w, http.StatusBadRequest, "tripID URL parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "tripID URL parameter is required")
 		return 0, false
 	}
 	id, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("tripID must be a positive integer (got %q)", raw))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("tripID must be a positive integer (got %q)", raw))
 		return 0, false
 	}
 	if id <= 0 {
-		writeError(w, http.StatusBadRequest, "tripID must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "tripID must be > 0")
 		return 0, false
 	}
 	return id, true
+}
+
+// denyAllConfirm is the dispatcher's user-confirm hook. Auto trip
+// naming declares only propose-only tools, so this should never be
+// called; if a future edit accidentally adds a mutating tool, fail
+// closed instead of mutating fleet state.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
 // ServeHTTP implements [http.Handler]. The tripID is parsed from the
@@ -154,10 +163,10 @@ func parseAutoTripNameURL(w http.ResponseWriter, r *http.Request) (int64, bool) 
 // the dispatcher's deferred WriteDone. Every error path either
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIAutoTripNameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate URL parameters. Body is intentionally
 	// ignored; this endpoint takes its only input from the URL.
-	tripID, ok := parseAutoTripNameURL(w, r)
+	tripID, ok := parseURL(w, r)
 	if !ok {
 		return
 	}
@@ -169,7 +178,7 @@ func (h *AIAutoTripNameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	// gracefully.
 	if _, err := h.registry.For(r.Context(), autotripnaming.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai auto-trip-naming: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -182,7 +191,7 @@ func (h *AIAutoTripNameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(autotripnaming.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai auto-trip-naming: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -225,8 +234,8 @@ func (h *AIAutoTripNameHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// Compile-time assertion: AIAutoTripNameHandler satisfies http.Handler.
-var _ http.Handler = (*AIAutoTripNameHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interfaces declared by
@@ -235,10 +244,10 @@ var _ http.Handler = (*AIAutoTripNameHandler)(nil)
 // nl-alert-builder slice's AIAlertRuleValidator pattern.
 // ---------------------------------------------------------------------
 
-// autoTripNameMaxNameLen mirrors the cap enforced by
+// maxNameLen mirrors the cap enforced by
 // tools.validateTripNameShape so the production wrapper's verdict is
 // byte-equivalent. Pinned by tests on both sides.
-const autoTripNameMaxNameLen = 200
+const maxNameLen = 200
 
 // AITripNameValidator is the production trip.TripNameValidator. It
 // enforces the same trimming + length + control-character rules that
@@ -279,7 +288,7 @@ func (v *AITripNameValidator) ValidateTripName(_ *models.Trip, proposed string) 
 		return errors.New("trip name must not have leading or trailing whitespace")
 	}
 	runes := []rune(proposed)
-	if len(runes) > autoTripNameMaxNameLen {
+	if len(runes) > maxNameLen {
 		return errors.New("trip name must be at most 200 characters")
 	}
 	for _, r := range runes {
@@ -308,7 +317,7 @@ type AITripSourceAdapter struct {
 // wiring mistake surfaces at boot.
 func NewAITripSourceAdapter(details *tripdb.TripsDetailRepo) *AITripSourceAdapter {
 	if details == nil {
-		panic("api: NewAITripSourceAdapter: nil *tripdb.TripsDetailRepo")
+		panic("aiautotripname: NewAITripSourceAdapter: nil *tripdb.TripsDetailRepo")
 	}
 	return &AITripSourceAdapter{details: details}
 }

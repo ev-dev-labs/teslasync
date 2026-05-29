@@ -21,6 +21,7 @@ import (
 	aialerttune "github.com/ev-dev-labs/teslasync/internal/api/aialerttune"
 	aianomaly "github.com/ev-dev-labs/teslasync/internal/api/aianomaly"
 	aiautomation "github.com/ev-dev-labs/teslasync/internal/api/aiautomation"
+	aiautotripname "github.com/ev-dev-labs/teslasync/internal/api/aiautotripname"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -1148,15 +1149,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// an explicit user confirmation in the TripDetailPage UI
 	// (out of scope for this slice).
 	trip.RegisterAutoTripNamingTools(aiToolRegistry, trip.AutoTripNamingSources{
-		Trips:     NewAITripSourceAdapter(aiAutoTripNamingDetailRepo),
+		Trips:     aiautotripname.NewAITripSourceAdapter(aiAutoTripNamingDetailRepo),
 		Details:   aiAutoTripNamingDetailRepo,
-		Validator: NewAITripNameValidator(),
+		Validator: aiautotripname.NewAITripNameValidator(),
 	})
 	// Auto-trip-naming handler. One per process; stateless beyond
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiAutoTripNameHandler := NewAIAutoTripNameHandler(
+	aiAutoTripNameHandler := aiautotripname.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		autotripnaming.New(),

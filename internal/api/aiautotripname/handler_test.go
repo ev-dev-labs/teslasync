@@ -14,7 +14,7 @@
 // (`go run ./cmd/ai-eval -feature auto-trip-naming`); duplicating
 // that here would require a live database fixture.
 
-package api
+package aiautotripname
 
 import (
 	"context"
@@ -28,6 +28,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestAutoTripNamingAIOffHidesSuggestionButton is the load-bearing
 // off-mode contract proof for slice 0024. It mounts the AI
@@ -125,23 +143,23 @@ func TestAutoTripNamingAIOffHidesSuggestionButton(t *testing.T) {
 	}
 }
 
-// TestAIAutoTripNameHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIAutoTripNameHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIAutoTripNameHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIAutoTripNameHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -149,11 +167,11 @@ func TestAIAutoTripNameHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIAutoTripNameHandler_RejectsBadTripID asserts the handler
+// TestHandler_RejectsBadTripID asserts the handler
 // validates the URL path parameter BEFORE opening the SSE stream —
 // a missing, non-numeric, zero, or negative tripID must surface as
 // a JSON 400, not a half-opened stream that confuses the frontend.
-func TestAIAutoTripNameHandler_RejectsBadTripID(t *testing.T) {
+func TestHandler_RejectsBadTripID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -176,8 +194,8 @@ func TestAIAutoTripNameHandler_RejectsBadTripID(t *testing.T) {
 			rctx.URLParams.Add("tripID", tc.tripID)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
-			if id, ok := parseAutoTripNameURL(rec, req); ok {
-				t.Fatalf("parseAutoTripNameURL returned ok=true for %q (id=%d)", tc.tripID, id)
+			if id, ok := parseURL(rec, req); ok {
+				t.Fatalf("parseURL returned ok=true for %q (id=%d)", tc.tripID, id)
 			}
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400 (body=%q)", rec.Code, rec.Body.String())
@@ -186,10 +204,10 @@ func TestAIAutoTripNameHandler_RejectsBadTripID(t *testing.T) {
 	}
 }
 
-// TestAIAutoTripNameHandler_AcceptsCanonicalTripID proves the
+// TestHandler_AcceptsCanonicalTripID proves the
 // parser does NOT bounce the happy-path shapes — small int, large
 // int, max int64.
-func TestAIAutoTripNameHandler_AcceptsCanonicalTripID(t *testing.T) {
+func TestHandler_AcceptsCanonicalTripID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -210,9 +228,9 @@ func TestAIAutoTripNameHandler_AcceptsCanonicalTripID(t *testing.T) {
 			rctx.URLParams.Add("tripID", tc.tripID)
 			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 
-			id, ok := parseAutoTripNameURL(rec, req)
+			id, ok := parseURL(rec, req)
 			if !ok {
-				t.Fatalf("parseAutoTripNameURL returned ok=false for %q (status=%d, body=%q)", tc.tripID, rec.Code, rec.Body.String())
+				t.Fatalf("parseURL returned ok=false for %q (status=%d, body=%q)", tc.tripID, rec.Code, rec.Body.String())
 			}
 			if id != tc.want {
 				t.Errorf("id = %d, want %d", id, tc.want)
