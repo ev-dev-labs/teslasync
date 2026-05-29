@@ -1,4 +1,4 @@
-package api
+package fleettelemetry
 
 import (
 	"net/http"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	teslaconfig "github.com/ev-dev-labs/teslasync/internal/tesla/config"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
@@ -56,7 +57,7 @@ func (h *FleetTelemetryHandler) CurrentSubscription(w http.ResponseWriter, r *ht
 	body, err := builder.BuildSubscription()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to build fleet telemetry subscription")
-		writeError(w, http.StatusInternalServerError, "failed to build subscription")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to build subscription")
 		return
 	}
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -119,7 +120,7 @@ func (h *FleetTelemetryHandler) Coverage(w http.ResponseWriter, r *http.Request)
 	routes, err := router.LoadMap()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to load routing map")
-		writeError(w, http.StatusInternalServerError, "failed to load routing map")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load routing map")
 		return
 	}
 
@@ -210,7 +211,7 @@ func (h *FleetTelemetryHandler) Coverage(w http.ResponseWriter, r *http.Request)
 	sort.Slice(cats, func(i, j int) bool { return cats[i].Category < cats[j].Category })
 	sort.Strings(orphans)
 
-	writeJSON(w, http.StatusOK, coverageResponse{
+	httpx.WriteJSON(w, http.StatusOK, coverageResponse{
 		Categories:        cats,
 		DestinationTotals: destTotals,
 		OrphanFields:      orphans,

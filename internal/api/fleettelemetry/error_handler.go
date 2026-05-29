@@ -1,4 +1,4 @@
-package api
+package fleettelemetry
 
 import (
 	"encoding/json"
@@ -12,6 +12,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -49,20 +50,20 @@ func (h *FleetTelemetryErrorHandler) ErrorVINs(w http.ResponseWriter, r *http.Re
 	vins, err := h.repo.GetActiveErrorVINs(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list fleet telemetry error vins")
-		writeError(w, http.StatusInternalServerError, "failed to list error vins")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list error vins")
 		return
 	}
 	if vins == nil {
 		vins = []*telemetrymodel.TeslaFleetTelemetryErrorVIN{}
 	}
-	writeJSON(w, http.StatusOK, vins)
+	httpx.WriteJSON(w, http.StatusOK, vins)
 }
 
 // RefreshErrorVINs fetches error VINs from Tesla partner API, upserts to DB, and returns fresh data.
 // POST /api/v1/tesla/fleet-telemetry/error-vins/refresh
 func (h *FleetTelemetryErrorHandler) RefreshErrorVINs(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -71,12 +72,12 @@ func (h *FleetTelemetryErrorHandler) RefreshErrorVINs(w http.ResponseWriter, r *
 	body, status, err := h.teslaClient.GetFleetTelemetryErrorVINs(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("tesla fleet telemetry error vins API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch error VINs from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch error VINs from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla error vins non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
@@ -89,7 +90,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrorVINs(w http.ResponseWriter, r *
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		log.Error().Err(err).Msg("failed to parse error vins response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
@@ -100,7 +101,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrorVINs(w http.ResponseWriter, r *
 
 	if err := h.repo.ReplaceErrorVINs(r.Context(), vins); err != nil {
 		log.Error().Err(err).Msg("failed to save fleet telemetry error vins")
-		writeError(w, http.StatusInternalServerError, "failed to save error VINs")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save error VINs")
 		return
 	}
 
@@ -108,7 +109,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrorVINs(w http.ResponseWriter, r *
 	stored, err := h.repo.GetActiveErrorVINs(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list error vins after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to list error vins")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list error vins")
 		return
 	}
 	if stored == nil {
@@ -116,7 +117,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrorVINs(w http.ResponseWriter, r *
 	}
 
 	log.Info().Int("count", len(stored)).Msg("fleet telemetry error VINs refresh complete")
-	writeJSON(w, http.StatusOK, stored)
+	httpx.WriteJSON(w, http.StatusOK, stored)
 }
 
 // Errors returns stored error logs from DB, optionally filtered by VIN.
@@ -129,20 +130,20 @@ func (h *FleetTelemetryErrorHandler) Errors(w http.ResponseWriter, r *http.Reque
 	errors, err := h.repo.GetErrors(r.Context(), vin, limit, offset)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list fleet telemetry errors")
-		writeError(w, http.StatusInternalServerError, "failed to list errors")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list errors")
 		return
 	}
 	if errors == nil {
 		errors = []*telemetrymodel.TeslaFleetTelemetryError{}
 	}
-	writeJSON(w, http.StatusOK, errors)
+	httpx.WriteJSON(w, http.StatusOK, errors)
 }
 
 // RefreshErrors fetches error details from Tesla partner API, upserts to DB, and returns fresh data.
 // POST /api/v1/tesla/fleet-telemetry/errors/refresh
 func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -151,12 +152,12 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 	body, status, err := h.teslaClient.GetPartnerFleetTelemetryErrors(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("tesla fleet telemetry errors API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch errors from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch errors from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla fleet errors non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
@@ -174,7 +175,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		log.Error().Err(err).Msg("failed to parse fleet telemetry errors response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
@@ -216,7 +217,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 	inserted, err := h.repo.UpsertErrors(r.Context(), modelErrors)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to save fleet telemetry errors")
-		writeError(w, http.StatusInternalServerError, "failed to save errors")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save errors")
 		return
 	}
 
@@ -224,7 +225,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 	stored, err := h.repo.GetErrors(r.Context(), "", 100, 0)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list errors after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to list errors")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list errors")
 		return
 	}
 	if stored == nil {
@@ -232,7 +233,7 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 	}
 
 	log.Info().Int("upserted", inserted).Int("total", len(stored)).Msg("fleet telemetry errors refresh complete")
-	writeJSON(w, http.StatusOK, stored)
+	httpx.WriteJSON(w, http.StatusOK, stored)
 }
 
 // missingUnitDropsResponse describes the
@@ -265,7 +266,7 @@ func (h *FleetTelemetryErrorHandler) MissingUnitDrops(w http.ResponseWriter, r *
 	families, err := prometheus.DefaultGatherer.Gather()
 	if err != nil {
 		log.Error().Err(err).Msg("failed to gather prometheus metrics for missing-unit drops")
-		writeError(w, http.StatusInternalServerError, "failed to gather metrics")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to gather metrics")
 		return
 	}
 	out := missingUnitDropsResponse{ByField: map[string]float64{}}
@@ -289,5 +290,13 @@ func (h *FleetTelemetryErrorHandler) MissingUnitDrops(w http.ResponseWriter, r *
 			}
 		}
 	}
-	writeJSON(w, http.StatusOK, out)
+	httpx.WriteJSON(w, http.StatusOK, out)
+}
+
+// truncateBody returns the first 500 bytes of a response body for logging.
+func truncateBody(b []byte) string {
+	if len(b) > 500 {
+		return string(b[:500])
+	}
+	return string(b)
 }
