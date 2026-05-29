@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-29T08:11:12Z",
+  "generated_at": "2026-05-29T08:17:45Z",
   "go_version": "go1.26.1",
-  "commit_sha": "1265f0bc0a0afd8e42938f1f6b8ee2a6bf50352f",
+  "commit_sha": "8a2a2e6d2449655db2f15072c62e0edc8a8a5bbb",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 41,
-      "test_files": 30,
-      "loc": 20075,
+      "go_files": 40,
+      "test_files": 29,
+      "loc": 19641,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2766,6 +2766,7 @@
         "internal/api/slo",
         "internal/api/softwareupdate",
         "internal/api/speedprofile",
+        "internal/api/sse",
         "internal/api/status",
         "internal/api/synthetic",
         "internal/api/sysauthmode",
@@ -2878,7 +2879,6 @@
         "internal/tesla",
         "internal/tesla/codec",
         "internal/tesla/normalize",
-        "internal/tesla/protomodel",
         "internal/tesla/router",
         "internal/tesla/router/writers",
         "internal/tesla/unit_history",
@@ -2935,8 +2935,6 @@
         "safe.go",
         "security_validation_test.go",
         "signal_at_call_record_test.go",
-        "sse_handler.go",
-        "sse_handler_tracing_test.go",
         "state_call_record_test.go",
         "state_reader_test.go",
         "sudo_middleware.go",
@@ -6294,6 +6292,25 @@
       "files": [
         "doc.go",
         "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/sse",
+      "go_files": 2,
+      "test_files": 2,
+      "loc": 455,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/metrics",
+        "internal/signal",
+        "internal/tesla/protomodel"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "hub_test.go",
+        "tracing_test.go"
       ]
     },
     {
@@ -10706,7 +10723,6 @@
       "router_routes_telemetry.go",
       "rule_engine.go",
       "safe.go",
-      "sse_handler.go",
       "sudo_middleware.go",
       "telemetry_alerts.go",
       "telemetry_handler.go",
@@ -11378,6 +11394,10 @@
       "handler.go"
     ],
     "internal/api/speedprofile": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/sse": [
       "doc.go",
       "handler.go"
     ],
@@ -12644,11 +12664,12 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 41,
-      "flat_parent_test_files": 30,
+      "flat_parent_go_files": 40,
+      "flat_parent_test_files": 29,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "system",
+        "sse",
         "openapi",
         "devtools",
         "analytics",
@@ -12686,7 +12707,6 @@
       ],
       "missing_subpkgs": [
         "health",
-        "sse",
         "observability",
         "speed",
         "signal",
