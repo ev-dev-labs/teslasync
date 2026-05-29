@@ -159,6 +159,7 @@ import (
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apiauthmode "github.com/ev-dev-labs/teslasync/internal/api/sysauthmode"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
+	"github.com/ev-dev-labs/teslasync/internal/api/tempimpact"
 	apiteslachargehist "github.com/ev-dev-labs/teslasync/internal/api/teslachargehist"
 	apiteslachargesess "github.com/ev-dev-labs/teslasync/internal/api/teslachargesess"
 	apiteslaenergyhist "github.com/ev-dev-labs/teslasync/internal/api/teslaenergyhist"
@@ -859,7 +860,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	chargingHeatmapHandler := apichargeheatmap.NewChargingHeatmapHandler(db)
 	speedProfileHandler := apispeedprof.NewSpeedProfileHandler(db)
 	dataRepairHandler := apidatarepair.NewDataRepairHandler(db)
-	tempImpactHandler := NewTempImpactHandler(db)
+	tempImpactHandler := tempimpact.NewHandler(db)
 	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
 	batteryCellsHandler := batterycells.NewHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
 	rangeProjectionHandler := apirangeproj.NewRangeProjectionHandler(db, stateReader)
@@ -1700,7 +1701,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// tool registry so the dispatcher can resolve the strategy's
 	// allowedTools at boot. The AITemperatureImpactSource adapter
 	// runs the SAME bucket / monthly-trend SQL the canonical
-	// TempImpactHandler.Get already runs — no parallel write
+	// tempImpactHandler.Get already runs — no parallel write
 	// path; the LLM never persists.
 	forecast.RegisterCabinTemperatureImpactNarrativeTools(aiToolRegistry, forecast.CabinTemperatureImpactNarrativeSources{
 		Source: aitempimpact.NewAITemperatureImpactSource(db),

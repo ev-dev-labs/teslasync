@@ -1,20 +1,31 @@
-package api
+package tempimpact
 
 import (
 	"math"
 	"net/http"
+	"strconv"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
 )
 
-// TempImpactHandler serves temperature-impact analytics.
-type TempImpactHandler struct {
+const (
+	driveStatsMetersPerMile  = 1609.344
+	driveStatsTwoMilesMeters = 2.0 * driveStatsMetersPerMile
+)
+
+// Handler serves temperature-impact analytics.
+type Handler struct {
 	db *database.DB
 }
 
-func NewTempImpactHandler(db *database.DB) *TempImpactHandler {
-	return &TempImpactHandler{db: db}
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{db: db}
+}
+
+func parseInt64(s string) (int64, error) {
+	return strconv.ParseInt(s, 10, 64)
 }
 
 type tempEfficiencyBucket struct {
@@ -40,15 +51,15 @@ type monthlyTempTrend struct {
 	TotalDistance float64 `json:"total_distance"`
 }
 
-func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
 	vehicleID, err := parseInt64(vehicleIDStr)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -81,7 +92,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		ORDER BY MIN(ambient_temp_c_avg)`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query efficiency buckets")
-		writeError(w, http.StatusInternalServerError, "failed to query temperature efficiency")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query temperature efficiency")
 		return
 	}
 	defer effRows.Close()
@@ -92,7 +103,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		var avgDist, avgDur, avgBat, avgTemp *float64
 		if err := effRows.Scan(&b.TempBucket, &b.DriveCount, &avgDist, &avgDur, &avgBat, &avgTemp); err != nil {
 			log.Error().Err(err).Msg("temp impact: scan efficiency row")
-			writeError(w, http.StatusInternalServerError, "failed to scan temperature efficiency")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan temperature efficiency")
 			return
 		}
 		if avgDist != nil {
@@ -111,7 +122,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := effRows.Err(); err != nil {
 		log.Error().Err(err).Msg("temp impact: efficiency rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read temperature efficiency")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read temperature efficiency")
 		return
 	}
 
@@ -139,7 +150,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		ORDER BY month`, vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("temp impact: failed to query monthly trend")
-		writeError(w, http.StatusInternalServerError, "failed to query monthly trend")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query monthly trend")
 		return
 	}
 	defer trendRows.Close()
@@ -151,7 +162,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		var avgTemp, avgEff, totalDist *float64
 		if err := trendRows.Scan(&monthTime, &avgTemp, &avgEff, &t.DriveCount, &totalDist); err != nil {
 			log.Error().Err(err).Msg("temp impact: scan monthly trend row")
-			writeError(w, http.StatusInternalServerError, "failed to scan monthly trend")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan monthly trend")
 			return
 		}
 		// DATE_TRUNC returns a time.Time; format to "2006-01"
@@ -171,7 +182,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := trendRows.Err(); err != nil {
 		log.Error().Err(err).Msg("temp impact: monthly trend rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read monthly trend")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read monthly trend")
 		return
 	}
 
@@ -238,7 +249,7 @@ func (h *TempImpactHandler) Get(w http.ResponseWriter, r *http.Request) {
 		points = []drivePoint{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"points":        points,
 		"efficiency":    efficiency,
 		"vampire_drain": vampireDrain,
