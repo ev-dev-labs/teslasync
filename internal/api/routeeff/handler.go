@@ -1,12 +1,20 @@
-package api
+package routeeff
 
 import (
 	"math"
 	"net/http"
+	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	routeEffMetersPerMile = 1609.344
+	routeEffMpsPerMph     = 0.44704
 )
 
 // RouteEfficiencyHandler serves route-efficiency analytics.
@@ -56,16 +64,16 @@ type routeDriveDetail struct {
 func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
-	vehicleID, err := parseInt64(vehicleIDStr)
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
-	startTime, endTime := parseDateRange(r)
+	startTime, endTime := apiparams.ParseDateRange(r)
 	hasRange := !startTime.IsZero() && !endTime.IsZero()
 
 	ctx := r.Context()
@@ -124,11 +132,11 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 		HAVING COUNT(*) >= 1
 		ORDER BY COUNT(*) DESC
 		LIMIT 15`,
-		vehicleID, driveStatsMetersPerMile, driveStatsMpsPerMph, driveStatsMetersPerMile,
-		nullableTime(hasRange, startTime), nullableTime(hasRange, endTime))
+		vehicleID, routeEffMetersPerMile, routeEffMpsPerMph, routeEffMetersPerMile,
+		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime))
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("route efficiency: failed to query routes")
-		writeError(w, http.StatusInternalServerError, "failed to query route efficiency")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query route efficiency")
 		return
 	}
 	defer rows.Close()
@@ -140,7 +148,7 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 		if err := rows.Scan(&rs.StartLocation, &rs.EndLocation, &rs.TripCount,
 			&avgDist, &avgDur, &avgEff, &bestEff, &worstEff, &avgSpd, &avgTemp); err != nil {
 			log.Error().Err(err).Msg("route efficiency: scan route row")
-			writeError(w, http.StatusInternalServerError, "failed to scan route data")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan route data")
 			return
 		}
 		if avgDist != nil {
@@ -168,7 +176,7 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := rows.Err(); err != nil {
 		log.Error().Err(err).Msg("route efficiency: routes rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read route data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read route data")
 		return
 	}
 
@@ -176,7 +184,7 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 		routes = []routeSummary{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"routes": routes,
 	})
 }
@@ -185,19 +193,19 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *RouteEfficiencyHandler) Detail(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
-	vehicleID, err := parseInt64(vehicleIDStr)
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
 	startAddr := r.URL.Query().Get("start")
 	endAddr := r.URL.Query().Get("end")
 	if startAddr == "" || endAddr == "" {
-		writeError(w, http.StatusBadRequest, "start and end query parameters required")
+		httpx.WriteError(w, http.StatusBadRequest, "start and end query parameters required")
 		return
 	}
 
@@ -234,12 +242,12 @@ func (h *RouteEfficiencyHandler) Detail(w http.ResponseWriter, r *http.Request) 
 		FROM labeled
 		WHERE start_label = $3 AND end_label = $4
 		ORDER BY started_at DESC
-		LIMIT 20`, vehicleID, driveStatsMetersPerMile, startAddr, endAddr)
+		LIMIT 20`, vehicleID, routeEffMetersPerMile, startAddr, endAddr)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).
 			Str("start", startAddr).Str("end", endAddr).
 			Msg("route efficiency: failed to query route detail")
-		writeError(w, http.StatusInternalServerError, "failed to query route detail")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query route detail")
 		return
 	}
 	defer rows.Close()
@@ -253,7 +261,7 @@ func (h *RouteEfficiencyHandler) Detail(w http.ResponseWriter, r *http.Request) 
 		if err := rows.Scan(&d.ID, &startDate, &d.Distance, &d.DurationS,
 			&spdAvgMps, &startSoc, &endSoc, &tempAvg, &eff); err != nil {
 			log.Error().Err(err).Msg("route efficiency: scan detail row")
-			writeError(w, http.StatusInternalServerError, "failed to scan route detail")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan route detail")
 			return
 		}
 		d.StartDate = startDate.Format(time.RFC3339)
@@ -278,7 +286,7 @@ func (h *RouteEfficiencyHandler) Detail(w http.ResponseWriter, r *http.Request) 
 	}
 	if err := rows.Err(); err != nil {
 		log.Error().Err(err).Msg("route efficiency: detail rows iteration")
-		writeError(w, http.StatusInternalServerError, "failed to read route detail")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read route detail")
 		return
 	}
 
@@ -286,7 +294,7 @@ func (h *RouteEfficiencyHandler) Detail(w http.ResponseWriter, r *http.Request) 
 		drives = []routeDriveDetail{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"drives": drives,
 	})
 }
