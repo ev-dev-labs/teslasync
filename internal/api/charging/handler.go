@@ -1,16 +1,18 @@
-package api
+package charging
 
 import (
 	"context"
 	"fmt"
+	"math"
 	"net/http"
+	"strconv"
 	"time"
 
-	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
@@ -85,22 +87,22 @@ var chargeTelemetryFieldMappings = []signal.FieldMapping{
 func (h *ChargingHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
 
-	vehicleID, err := parseInt64(vehicleIDStr)
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
-	limit, offset := pagination(r)
-	startTime, endTime := parseDateRange(r)
+	limit, offset := apiparams.Pagination(r)
+	startTime, endTime := apiparams.ParseDateRange(r)
 	sessions, err := h.chargingRepo.GetByVehicle(r.Context(), vehicleID, limit, offset, startTime, endTime)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to list charging sessions")
-		writeError(w, http.StatusInternalServerError, "failed to list charging sessions")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list charging sessions")
 		return
 	}
 	// Guarantee a JSON array response (`[]`) instead of `null` when there
@@ -109,13 +111,13 @@ func (h *ChargingHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) 
 	if sessions == nil {
 		sessions = []*chargingmodel.ChargingSession{}
 	}
-	writeJSON(w, http.StatusOK, sessions)
+	httpx.WriteJSON(w, http.StatusOK, sessions)
 }
 
 func (h *ChargingHandler) Get(w http.ResponseWriter, r *http.Request) {
-	id, err := urlParamInt64(r, "sessionID")
+	id, err := apiparams.URLParamInt64(r, "sessionID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid session ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid session ID")
 		return
 	}
 
@@ -123,11 +125,11 @@ func (h *ChargingHandler) Get(w http.ResponseWriter, r *http.Request) {
 	session, err := h.charging.GetByID(ctx, id)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("failed to get charging session")
-		writeError(w, http.StatusInternalServerError, "failed to get charging session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging session")
 		return
 	}
 	if session == nil {
-		writeError(w, http.StatusNotFound, "charging session not found")
+		httpx.WriteError(w, http.StatusNotFound, "charging session not found")
 		return
 	}
 
@@ -136,12 +138,12 @@ func (h *ChargingHandler) Get(w http.ResponseWriter, r *http.Request) {
 		live = true
 		if err := h.enrichLiveCharge(ctx, session, time.Now().UTC()); err != nil {
 			log.Error().Err(err).Int64("sessionID", id).Msg("failed to enrich live charging session")
-			writeError(w, http.StatusInternalServerError, "failed to load live charging state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load live charging state")
 			return
 		}
 	}
 
-	writeJSON(w, http.StatusOK, chargingSessionResponse(session, live))
+	httpx.WriteJSON(w, http.StatusOK, chargingSessionResponse(session, live))
 }
 
 // chargingSessionResponse builds the JSON response map for a charging session,
@@ -236,9 +238,9 @@ func (h *ChargingHandler) currentSignals(ctx context.Context, vehicleID int64) (
 }
 
 func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Request) {
-	sessionID, err := urlParamInt64(r, "sessionID")
+	sessionID, err := apiparams.URLParamInt64(r, "sessionID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid session ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid session ID")
 		return
 	}
 
@@ -246,11 +248,11 @@ func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Reque
 	session, err := h.charging.GetByID(ctx, sessionID)
 	if err != nil {
 		log.Error().Err(err).Int64("sessionID", sessionID).Msg("failed to get charging session for telemetry")
-		writeError(w, http.StatusInternalServerError, "failed to get charging session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging session")
 		return
 	}
 	if session == nil {
-		writeError(w, http.StatusNotFound, "charging session not found")
+		httpx.WriteError(w, http.StatusNotFound, "charging session not found")
 		return
 	}
 
@@ -266,7 +268,7 @@ func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Reque
 		session.VehicleID, chargeTelemetryFieldMappings, session.StartedAt, endTs, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("sessionID", sessionID).Msg("failed to get charge telemetry from signal_log")
-		writeError(w, http.StatusInternalServerError, "failed to get telemetry")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get telemetry")
 		return
 	}
 	rows := timelineRowsToFlat(timelineRows)
@@ -274,8 +276,8 @@ func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Reque
 	// DC fast-charging sessions report DCChargingPower, not ACChargingPower.
 	// Per ADR-002: if neither is present, leave power_kw as nil (not zero).
 	for _, row := range rows {
-		ac, acOk := toFloatOk(row["power_kw"])
-		dc, dcOk := toFloatOk(row["dc_power_kw"])
+		ac, acOk := signal.Float64(row["power_kw"])
+		dc, dcOk := signal.Float64(row["dc_power_kw"])
 		if dcOk && dc > 0 {
 			row["power_kw"] = dc
 		} else if !acOk || ac == 0 {
@@ -290,5 +292,45 @@ func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Reque
 			delete(row, "ts")
 		}
 	}
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
+}
+
+func safeFloat(v float64) float64 {
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return 0
+	}
+	return v
+}
+
+func signalFloat(signals map[string]interface{}, keys ...string) (float64, bool) {
+	for _, key := range keys {
+		if v, ok := signals[key]; ok {
+			return signal.Float64(v)
+		}
+	}
+	return 0, false
+}
+
+func stateToSignalMap(s signal.State) map[string]interface{} {
+	if s == nil {
+		return map[string]interface{}{}
+	}
+	out := make(map[string]interface{}, len(s))
+	for k, v := range s {
+		out[k] = v
+	}
+	return out
+}
+
+func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rows))
+	for _, tr := range rows {
+		row := make(map[string]interface{}, len(tr.Fields)+1)
+		for k, v := range tr.Fields {
+			row[k] = v
+		}
+		row["ts"] = tr.Timestamp
+		out = append(out, row)
+	}
+	return out
 }

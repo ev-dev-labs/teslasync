@@ -34,6 +34,7 @@ import (
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	apichargetelem "github.com/ev-dev-labs/teslasync/internal/api/chargetelem"
+	apicharging "github.com/ev-dev-labs/teslasync/internal/api/charging"
 	apiannot "github.com/ev-dev-labs/teslasync/internal/api/chartannotation"
 	apichatbot "github.com/ev-dev-labs/teslasync/internal/api/chatbot"
 	apiclimate "github.com/ev-dev-labs/teslasync/internal/api/climate"
@@ -418,7 +419,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Handlers
 	vehicleHandler := apiveh.NewHandler(vehicleSvc, teslaClient, stateReader)
 	driveHandler := NewDriveDetail(db, stateReader, liveStateReader)
-	chargingHandler := NewChargingHandler(db, stateReader, liveStateReader)
+	chargingHandler := apicharging.NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
 		func(r *http.Request, action string, entityID *int64, detail string) {
 			logAuditFromRequest(db, r, "", action, "geofence", entityID, detail)
