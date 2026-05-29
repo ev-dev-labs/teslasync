@@ -1,4 +1,4 @@
-package api
+package batterydegradation
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 )
 
 // newBatteryDegradationRequest builds an *http.Request with vehicle_id
-// wired onto the query string so BatteryDegradationHandler.Predict /
+// wired onto the query string so Handler.Predict /
 // .Health parse it via r.URL.Query().Get("vehicle_id"). Mirrors the
 // pattern used in battery_cells_handler_test.go for the query-param
 // driven endpoint.
@@ -65,7 +65,7 @@ func TestBatteryDegradation_AllSignalsCarryForward(t *testing.T) {
 	// nil-guarded below. signalLogReader: nil → the SignalTrace path is
 	// skipped, snapshots stay empty, and the Predict fallback enters
 	// the state.SignalAt branch under test.
-	h := &BatteryDegradationHandler{state: fake}
+	h := &Handler{state: fake}
 
 	before := time.Now()
 	rec := httptest.NewRecorder()
@@ -141,7 +141,7 @@ func TestBatteryDegradation_DegradationCalc_UsesLatestValues(t *testing.T) {
 			return nil, nil
 		},
 	}
-	h := &BatteryDegradationHandler{state: fake}
+	h := &Handler{state: fake}
 
 	rec := httptest.NewRecorder()
 	h.Predict(rec, newBatteryDegradationRequest(t, "42"))
@@ -190,7 +190,7 @@ func TestBatteryDegradation_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	h := &BatteryDegradationHandler{state: fake}
+	h := &Handler{state: fake}
 
 	rec := httptest.NewRecorder()
 	h.Predict(rec, newBatteryDegradationRequest(t, "42"))

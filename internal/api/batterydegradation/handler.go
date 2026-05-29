@@ -1,11 +1,14 @@
-package api
+package batterydegradation
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
@@ -13,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// BatteryDegradationHandler handles battery degradation prediction HTTP requests.
+// Handler handles battery degradation prediction HTTP requests.
 //
 // Phase-39 migration: the four per-signal "value as of now" lookups in
 // the Predict and Health fallback branches (EnergyRemaining and
@@ -33,25 +36,25 @@ import (
 // idle / brand-new vehicle with no signal_log history" and rendered
 // the Battery Degradation panel as "battery looks dead" even when the
 // underlying read had genuinely failed.
-type BatteryDegradationHandler struct {
+type Handler struct {
 	db              *database.DB
 	state           signal.StateReader
 	signalLogReader *signaldb.SignalLogReader
 }
 
-func NewBatteryDegradationHandler(db *database.DB, state signal.StateReader, slr *signaldb.SignalLogReader) *BatteryDegradationHandler {
-	return &BatteryDegradationHandler{db: db, state: state, signalLogReader: slr}
+func NewHandler(db *database.DB, state signal.StateReader, slr *signaldb.SignalLogReader) *Handler {
+	return &Handler{db: db, state: state, signalLogReader: slr}
 }
 
-func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -75,7 +78,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 			[]string{"BatteryLevel", "EnergyRemaining", "EstBatteryRange"}, from, to)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get battery signal trace")
-			writeError(w, http.StatusInternalServerError, "failed to get battery data")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to get battery data")
 			return
 		}
 		snapshots = synthesizeBatterySnapshots(entries, capacityWh)
@@ -151,22 +154,22 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 			val, sigErr := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", now)
 			if sigErr != nil {
 				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery degradation: failed to read signal state")
-				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
 			if val != nil {
-				if v, ok := toFloatOk(val); ok && v > 0 {
+				if v, ok := toFloatOkLocal(val); ok && v > 0 {
 					energy = &v
 				}
 			}
 			val, sigErr = h.state.SignalAt(ctx, vehicleID, "EstBatteryRange", now)
 			if sigErr != nil {
 				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery degradation: failed to read signal state")
-				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
 			if val != nil {
-				if v, ok := toFloatOk(val); ok && v > 0 {
+				if v, ok := toFloatOkLocal(val); ok && v > 0 {
 					rng = &v
 				}
 			}
@@ -250,7 +253,7 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 	riskFactors := computeRiskFactors(fastChargeRatio, highSocPct, avgTemp, cyclesPerMonth, deepDischargePct)
 	recommendations := generateRecommendations(riskFactors)
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		// Existing fields (backward compatible)
 		"vehicle_id":          vehicleID,
 		"current_health":      currentHealth,
@@ -280,15 +283,15 @@ func (h *BatteryDegradationHandler) Predict(w http.ResponseWriter, r *http.Reque
 
 // Health handles GET /analytics/battery-health?vehicle_id=X
 // Returns data shaped for the BatteryDegradationPage frontend.
-func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -323,7 +326,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 			[]string{"BatteryLevel", "EnergyRemaining", "EstBatteryRange"}, from, to)
 		if traceErr != nil {
 			log.Error().Err(traceErr).Int64("vehicleID", vehicleID).Msg("battery-health: failed to query signal_log")
-			writeError(w, http.StatusInternalServerError, "failed to get battery data")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to get battery data")
 			return
 		}
 		snaps := synthesizeBatterySnapshots(entries, capacityWh)
@@ -355,22 +358,22 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 			val, sigErr := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", now)
 			if sigErr != nil {
 				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery-health: failed to read signal state")
-				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
 			if val != nil {
-				if v, ok := toFloatOk(val); ok && v > 0 {
+				if v, ok := toFloatOkLocal(val); ok && v > 0 {
 					energy = &v
 				}
 			}
 			val, sigErr = h.state.SignalAt(ctx, vehicleID, "EstBatteryRange", now)
 			if sigErr != nil {
 				log.Error().Err(sigErr).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery-health: failed to read signal state")
-				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
 			if val != nil {
-				if v, ok := toFloatOk(val); ok && v > 0 {
+				if v, ok := toFloatOkLocal(val); ok && v > 0 {
 					rng = &v
 				}
 			}
@@ -514,7 +517,7 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		tempExposureReason = "insufficient_data"
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"current_soh":            math.Round(latestSOH*10) / 10,
 		"estimated_capacity":     math.Round(latestCapacity*10) / 10,
 		"original_capacity":      capacityWh,
@@ -532,4 +535,56 @@ func (h *BatteryDegradationHandler) Health(w http.ResponseWriter, r *http.Reques
 		"battery_capacity_wh": capacityWh,
 		"capacity_source":     capacitySource,
 	})
+}
+
+// estimateBatteryCapacityWh returns the best-effort battery capacity in Wh
+// and a source string indicating how the estimate was derived. Local copy
+// of the package-api helper (which must stay there for other callers); the
+// carve playbook duplicates small stranded helpers rather than introducing
+// an import cycle.
+func estimateBatteryCapacityWh(vin string, model string) (float64, string) {
+	if len(vin) >= 8 {
+		switch vin[7] {
+		case 'E', 'F':
+			return 60000.0, "vin_estimate"
+		case 'K', 'L', 'M':
+			return 75000.0, "vin_estimate"
+		case 'S', 'A':
+			return 100000.0, "vin_estimate"
+		case 'P':
+			return 100000.0, "vin_estimate"
+		}
+	}
+	m := strings.ToLower(model)
+	if strings.Contains(m, "model s") || strings.Contains(m, "model x") {
+		return 100000.0, "model_estimate"
+	}
+	return 75000.0, "default"
+}
+
+// lookupVehicleCapacityWh fetches VIN and model for a vehicle ID and estimates
+// battery capacity. Falls back to 75000 Wh / "default" on any lookup error.
+// Local copy of the package-api helper (see estimateBatteryCapacityWh).
+func lookupVehicleCapacityWh(ctx context.Context, db *database.DB, vehicleID int64) (float64, string) {
+	var vin string
+	var model *string
+	err := db.Pool.QueryRow(ctx,
+		`SELECT vin, model FROM vehicles WHERE id = $1`, vehicleID,
+	).Scan(&vin, &model)
+	if err != nil {
+		return 75000.0, "default"
+	}
+	m := ""
+	if model != nil {
+		m = *model
+	}
+	return estimateBatteryCapacityWh(vin, m)
+}
+
+// toFloatOkLocal parses a value to float64 and reports whether the signal
+// was present. Thin wrapper around the canonical signal.Float64 converter
+// (local copy of the package-api toFloatOk helper, which stays in package
+// api for its other callers).
+func toFloatOkLocal(v interface{}) (float64, bool) {
+	return signal.Float64(v)
 }

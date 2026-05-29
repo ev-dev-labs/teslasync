@@ -1,4 +1,4 @@
-package api
+package batterydegradation
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 )
 
-func (h *BatteryDegradationHandler) predictDegradation(snapshots []batterySnapshotData) regressionResult {
+func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regressionResult {
 	res := regressionResult{}
 	pred := &res.Prediction
 

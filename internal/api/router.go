@@ -88,6 +88,7 @@ import (
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apibattery "github.com/ev-dev-labs/teslasync/internal/api/battery"
 	"github.com/ev-dev-labs/teslasync/internal/api/batterycells"
+	"github.com/ev-dev-labs/teslasync/internal/api/batterydegradation"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	"github.com/ev-dev-labs/teslasync/internal/api/chargeplanner"
@@ -847,7 +848,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupHandler := apibackup.NewHandler(db)
 	backupRestoreHandler := apibackup.NewRestoreHandler(db)
 	regenHandler := apiregen.NewRegenHandler(db)
-	batteryDegradationHandler := NewBatteryDegradationHandler(db, stateReader, signalLogReader)
+	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader, signalLogReader)
 	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	maskedRevealHandler := apiaudit.NewMaskedRevealHandler(auditRepo, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := apicalllog.NewHandler(db)
