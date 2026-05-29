@@ -1,4 +1,4 @@
-package api
+package climate
 
 import (
 	"net/http"
@@ -7,6 +7,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -84,13 +86,13 @@ func NewClimateHandler(state signal.StateReader, live signal.LiveStateReader) *C
 func (h *ClimateHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	from := time.Now().AddDate(0, 0, -7)
 	to := time.Now()
-	if start, end := parseDateRange(r); !start.IsZero() {
+	if start, end := apiparams.ParseDateRange(r); !start.IsZero() {
 		from = start
 		if !end.IsZero() {
 			to = end
@@ -101,7 +103,7 @@ func (h *ClimateHandler) List(w http.ResponseWriter, r *http.Request) {
 		vehicleID, climateMappings, from, to, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get climate data from signal_log")
-		writeError(w, http.StatusInternalServerError, "failed to get climate data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get climate data")
 		return
 	}
 	rows := timelineRowsToFlat(timelineRows)
@@ -112,7 +114,7 @@ func (h *ClimateHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		row["id"] = i + 1
 	}
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
 // Latest returns the most recent climate values, derived from the
@@ -122,14 +124,14 @@ func (h *ClimateHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *ClimateHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest climate data")
-		writeError(w, http.StatusInternalServerError, "failed to get latest climate data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get latest climate data")
 		return
 	}
 
@@ -139,5 +141,22 @@ func (h *ClimateHandler) Latest(w http.ResponseWriter, r *http.Request) {
 			result[m.Field] = v
 		}
 	}
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+// timelineRowsToFlat converts ordered TimelineRows into the legacy
+// []map[string]interface{} flat-pivot shape ({"ts": ts, "<field>": value, ...})
+// that the climate endpoints emit. Duplicated from the parent api package
+// until the shared signal-history handlers finish their R2 carve.
+func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rows))
+	for _, tr := range rows {
+		row := make(map[string]interface{}, len(tr.Fields)+1)
+		for k, v := range tr.Fields {
+			row[k] = v
+		}
+		row["ts"] = tr.Timestamp
+		out = append(out, row)
+	}
+	return out
 }

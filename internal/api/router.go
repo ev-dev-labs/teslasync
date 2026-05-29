@@ -30,6 +30,7 @@ import (
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	apichargetelem "github.com/ev-dev-labs/teslasync/internal/api/chargetelem"
 	apiannot "github.com/ev-dev-labs/teslasync/internal/api/chartannotation"
+	apiclimate "github.com/ev-dev-labs/teslasync/internal/api/climate"
 	apicommand "github.com/ev-dev-labs/teslasync/internal/api/command"
 	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
@@ -726,7 +727,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
 	motorHandler := NewMotorHandler(stateReader, liveStateReader)
 	driveDynamicsHandler := NewDriveDynamicsHandler(stateReader, liveStateReader)
-	climateHandler := NewClimateHandler(stateReader, liveStateReader)
+	climateHandler := apiclimate.NewClimateHandler(stateReader, liveStateReader)
 	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
 	chargingTelemetryHandler := apichargetelem.NewChargingTelemetryHandler(stateReader, liveStateReader)
 	mediaHandler := apimedia.NewMediaHandler(stateReader, liveStateReader)
