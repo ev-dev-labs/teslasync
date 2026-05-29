@@ -104,6 +104,7 @@ import (
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
 	apiteslachargehist "github.com/ev-dev-labs/teslasync/internal/api/teslachargehist"
 	apiteslachargesess "github.com/ev-dev-labs/teslasync/internal/api/teslachargesess"
+	apiteslaenergyhist "github.com/ev-dev-labs/teslasync/internal/api/teslaenergyhist"
 	apitels "github.com/ev-dev-labs/teslasync/internal/api/teslaenergylivestatus"
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
@@ -1164,7 +1165,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	weeklyDigestHandler := apiweekly.NewHandler(db)
 	teslaChargingHistoryHandler := apiteslachargehist.NewTeslaChargingHistoryHandler(teslaClient, db)
 	teslaChargingSessionHandler := apiteslachargesess.NewTeslaChargingSessionHandler(teslaClient, db)
-	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)
+	teslaEnergyHistoryHandler := apiteslaenergyhist.NewTeslaEnergyHistoryHandler(teslaClient, db)
 	teslaEnergyLiveStatusHandler := apitels.NewHandler(teslaClient, db)
 	energySiteHandler := apienergysite.NewEnergySiteHandler(teslaClient, db)
 	fleetTelemetryErrorHandler := apifleettelem.NewFleetTelemetryErrorHandler(teslaClient, db)
