@@ -1,17 +1,18 @@
-package api
+package polling
 
 import (
 	"net/http"
 	"strconv"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
-	"github.com/ev-dev-labs/teslasync/internal/polling"
+	enginepolling "github.com/ev-dev-labs/teslasync/internal/polling"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // PollEngineHandlers returns HTTP handlers for the adaptive polling engine
 // dashboard endpoints.
-func PollEngineHandlers(engine *polling.PollEngine) map[string]http.HandlerFunc {
+func PollEngineHandlers(engine *enginepolling.PollEngine) map[string]http.HandlerFunc {
 	return map[string]http.HandlerFunc{
 		"status":      pollEngineStatus(engine),
 		"decisions":   pollEngineDecisions(engine),
@@ -23,10 +24,10 @@ func PollEngineHandlers(engine *polling.PollEngine) map[string]http.HandlerFunc 
 }
 
 // GET /api/v1/polling/status — per-vehicle engine state
-func pollEngineStatus(engine *polling.PollEngine) http.HandlerFunc {
+func pollEngineStatus(engine *enginepolling.PollEngine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if engine == nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"enabled":  false,
 				"vehicles": map[string]interface{}{},
 			})
@@ -47,7 +48,7 @@ func pollEngineStatus(engine *polling.PollEngine) http.HandlerFunc {
 			}
 		}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"enabled":  true,
 			"vehicles": result,
 		})
@@ -55,16 +56,16 @@ func pollEngineStatus(engine *polling.PollEngine) http.HandlerFunc {
 }
 
 // GET /api/v1/polling/decisions?vin=X&limit=50
-func pollEngineDecisions(engine *polling.PollEngine) http.HandlerFunc {
+func pollEngineDecisions(engine *enginepolling.PollEngine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if engine == nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{"decisions": []interface{}{}})
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"decisions": []interface{}{}})
 			return
 		}
 
 		vin := r.URL.Query().Get("vin")
 		if vin == "" {
-			writeError(w, http.StatusBadRequest, "vin query parameter is required")
+			httpx.WriteError(w, http.StatusBadRequest, "vin query parameter is required")
 			return
 		}
 
@@ -76,7 +77,7 @@ func pollEngineDecisions(engine *polling.PollEngine) http.HandlerFunc {
 		}
 
 		decisions := engine.GetDecisionHistory(vin, limit)
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"vin":       vin,
 			"decisions": decisions,
 		})
@@ -84,10 +85,10 @@ func pollEngineDecisions(engine *polling.PollEngine) http.HandlerFunc {
 }
 
 // GET /api/v1/polling/predictions?vin=X
-func pollEnginePredictions(engine *polling.PollEngine) http.HandlerFunc {
+func pollEnginePredictions(engine *enginepolling.PollEngine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if engine == nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{"predictions": nil})
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"predictions": nil})
 			return
 		}
 
@@ -101,13 +102,13 @@ func pollEnginePredictions(engine *polling.PollEngine) http.HandlerFunc {
 					result[v] = vs.LastDecision.Prediction
 				}
 			}
-			writeJSON(w, http.StatusOK, map[string]interface{}{"predictions": result})
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"predictions": result})
 			return
 		}
 
 		vs, ok := engine.GetVehicleState(vin)
 		if !ok {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"vin":        vin,
 				"prediction": nil,
 			})
@@ -119,7 +120,7 @@ func pollEnginePredictions(engine *polling.PollEngine) http.HandlerFunc {
 			prediction = vs.LastDecision.Prediction
 		}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"vin":        vin,
 			"prediction": prediction,
 		})
@@ -127,25 +128,25 @@ func pollEnginePredictions(engine *polling.PollEngine) http.HandlerFunc {
 }
 
 // GET /api/v1/polling/savings — cost savings breakdown
-func pollEngineSavings(engine *polling.PollEngine) http.HandlerFunc {
+func pollEngineSavings(engine *enginepolling.PollEngine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if engine == nil {
-			writeJSON(w, http.StatusOK, polling.CostSnapshot{})
+			httpx.WriteJSON(w, http.StatusOK, enginepolling.CostSnapshot{})
 			return
 		}
-		writeJSON(w, http.StatusOK, engine.CostTracker().Snapshot())
+		httpx.WriteJSON(w, http.StatusOK, engine.CostTracker().Snapshot())
 	}
 }
 
 // GET /api/v1/polling/config — current engine configuration
-func pollEngineConfig(engine *polling.PollEngine) http.HandlerFunc {
+func pollEngineConfig(engine *enginepolling.PollEngine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if engine == nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{"enabled": false})
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"enabled": false})
 			return
 		}
 		// Return the engine config (read-only view)
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"enabled": true,
 			"engine":  "adaptive_polling_v1",
 			"evaluators": []string{
@@ -157,14 +158,14 @@ func pollEngineConfig(engine *polling.PollEngine) http.HandlerFunc {
 
 // POST /api/v1/polling/demo — seeds the engine with realistic test data so
 // the dashboard can be previewed without an authenticated Tesla account.
-func pollEngineDemo(engine *polling.PollEngine) http.HandlerFunc {
+func pollEngineDemo(engine *enginepolling.PollEngine) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if engine == nil {
-			writeError(w, http.StatusBadRequest, "polling engine not enabled")
+			httpx.WriteError(w, http.StatusBadRequest, "polling engine not enabled")
 			return
 		}
 		if r.Method != http.MethodPost {
-			writeError(w, http.StatusMethodNotAllowed, "POST required")
+			httpx.WriteError(w, http.StatusMethodNotAllowed, "POST required")
 			return
 		}
 
@@ -221,7 +222,7 @@ func pollEngineDemo(engine *polling.PollEngine) http.HandlerFunc {
 			ct.RecordSkip("prediction")
 		}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"message": "demo data seeded",
 			"vin":     demoVIN,
 		})
