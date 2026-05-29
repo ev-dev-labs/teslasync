@@ -1,4 +1,4 @@
-package api
+package alerts
 
 import (
 	"context"
@@ -26,7 +26,7 @@ type AlertHandler struct {
 	alertRuleRepo     alertRuleRepository
 	bulkRuleRepo      alertRuleBulkRepository
 	notifRepo         notificationRepository
-	eventHub          *EventHub
+	eventHub          EventBroadcaster
 	mqttClient        pahomqtt.Client
 	liveSignals       signal.LiveSignalStore
 	computedEval      *ComputedMetricEvaluator
@@ -65,7 +65,7 @@ type notificationRepository interface {
 	ListLogEvents(context.Context, int64) ([]*alertmodel.NotificationLogEvent, error)
 }
 
-func NewAlertHandler(db *database.DB, hub *EventHub, mc pahomqtt.Client, store signal.LiveSignalStore) *AlertHandler {
+func NewAlertHandler(db *database.DB, hub EventBroadcaster, mc pahomqtt.Client, store signal.LiveSignalStore) *AlertHandler {
 	repo := dbalert.NewAlertRuleRepo(db)
 	return &AlertHandler{
 		db:            db,
