@@ -1,4 +1,4 @@
-package api
+package settings
 
 // Phase-46 / Prompt 36 — Settings import endpoint.
 //
@@ -33,6 +33,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
@@ -75,7 +76,7 @@ type settingsImportRequest struct {
 //   - 500 INTERNAL_ERROR on serializer / database failure
 func (h *SettingsImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 	if h.serializer == nil {
-		writeError(w, http.StatusInternalServerError, "settings import: serializer not configured")
+		httpx.WriteError(w, http.StatusInternalServerError, "settings import: serializer not configured")
 		return
 	}
 
@@ -89,19 +90,19 @@ func (h *SettingsImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 		// Surface a more actionable message for the body-too-large case.
 		var maxBytesErr *http.MaxBytesError
 		if errors.As(err, &maxBytesErr) {
-			writeError(w, http.StatusBadRequest,
+			httpx.WriteError(w, http.StatusBadRequest,
 				fmt.Sprintf("request body exceeds %d bytes", MaxSettingsImportBodyBytes))
 			return
 		}
 		if errors.Is(err, io.EOF) {
-			writeError(w, http.StatusBadRequest, "request body is empty")
+			httpx.WriteError(w, http.StatusBadRequest, "request body is empty")
 			return
 		}
-		writeError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body: "+err.Error())
 		return
 	}
 	if req.Bundle == nil {
-		writeError(w, http.StatusBadRequest, "bundle is required")
+		httpx.WriteError(w, http.StatusBadRequest, "bundle is required")
 		return
 	}
 
@@ -109,17 +110,17 @@ func (h *SettingsImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 	result, err := h.serializer.ImportSettings(r.Context(), userID, req.Bundle, req.DryRun)
 	if err != nil {
 		if errors.Is(err, settingsdb.ErrSettingsBundleUnsupportedVersion) {
-			writeError(w, http.StatusBadRequest, err.Error())
+			httpx.WriteError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		if errors.Is(err, settingsdb.ErrSettingsBundleNil) {
-			writeError(w, http.StatusBadRequest, err.Error())
+			httpx.WriteError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		log.Error().Err(err).Bool("dry_run", req.DryRun).Msg("settings import: failed")
-		writeError(w, http.StatusInternalServerError, "failed to import settings")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to import settings")
 		return
 	}
 
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
 }

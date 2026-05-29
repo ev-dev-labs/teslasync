@@ -89,6 +89,7 @@ import (
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	apisecurity "github.com/ev-dev-labs/teslasync/internal/api/security"
 	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
+	apisettings "github.com/ev-dev-labs/teslasync/internal/api/settings"
 	apisetreset "github.com/ev-dev-labs/teslasync/internal/api/settingsreset"
 	apishare "github.com/ev-dev-labs/teslasync/internal/api/share"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
@@ -501,7 +502,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	logTap := platform.NewLogSubscriberRegistry()
 	installAdminLogStreamTap(logTap)
 	logStreamHandler := apiadminls.NewAdminLogStreamHandler(logTap)
-	settingsHandler := NewSettingsHandler(db)
+	settingsHandler := apisettings.NewSettingsHandler(db)
 
 	// Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
 	//
@@ -574,8 +575,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		geofencedb.NewGeofenceRepo(db),
 		quiethoursdb.NewQuietHoursRepo(db),
 	)
-	settingsExportHandler := NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
-	settingsImportHandler := NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
+	settingsExportHandler := apisettings.NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
+	settingsImportHandler := apisettings.NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
 	// Phase-46 / Prompt 50 — per-section + global "Reset to defaults".
 	// Sudo-gated at the route below so the SPA's <ReauthDialog>
 	// always pops on the danger-zone "Reset ALL settings" button.

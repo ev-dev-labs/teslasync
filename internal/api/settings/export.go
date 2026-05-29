@@ -1,4 +1,4 @@
-package api
+package settings
 
 // Phase-46 / Prompt 36 — Settings export endpoint.
 //
@@ -21,10 +21,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
 
@@ -41,6 +43,13 @@ func NewSettingsExportHandler(serializer *settingsdb.SettingsSerializer, forward
 	return &SettingsExportHandler{serializer: serializer, authHdr: forwardAuthHeader}
 }
 
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
+}
+
 // Export builds the bundle and streams it as application/json with a
 // Content-Disposition header. Uses encoding/json's Indent encoder so
 // the file is human-diffable in the user's git repo.
@@ -51,14 +60,14 @@ func NewSettingsExportHandler(serializer *settingsdb.SettingsSerializer, forward
 //   - missing serializer (router wired wrong) → 500 INTERNAL_ERROR
 func (h *SettingsExportHandler) Export(w http.ResponseWriter, r *http.Request) {
 	if h.serializer == nil {
-		writeError(w, http.StatusInternalServerError, "settings export: serializer not configured")
+		httpx.WriteError(w, http.StatusInternalServerError, "settings export: serializer not configured")
 		return
 	}
 	userID := actorFromRequest(r, h.authHdr)
 	bundle, err := h.serializer.ExportSettings(r.Context(), userID)
 	if err != nil {
 		log.Error().Err(err).Msg("settings export: failed to assemble bundle")
-		writeError(w, http.StatusInternalServerError, "failed to export settings")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to export settings")
 		return
 	}
 
