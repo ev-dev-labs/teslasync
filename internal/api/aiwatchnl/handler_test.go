@@ -19,7 +19,7 @@
 // watch-face-nl-response`); duplicating that here would require
 // a live mock-provider stack.
 
-package api
+package aiwatchnl
 
 import (
 	"context"
@@ -36,6 +36,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestWatchFaceNLAIOffUsesFixedCardsOnly is the load-bearing
 // off-mode contract proof for slice 0056 V2. It mounts the AI
@@ -149,23 +167,23 @@ func TestWatchFaceNLAIOffUsesFixedCardsOnly(t *testing.T) {
 	}
 }
 
-// TestAIWatchFaceNLResponseHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAIWatchFaceNLResponseHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIWatchFaceNLResponseHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIWatchFaceNLResponseHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -173,44 +191,44 @@ func TestAIWatchFaceNLResponseHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIWatchFaceNLContextSource_PanicsOnNilWiring asserts the
+// TestContextSource_PanicsOnNilWiring asserts the
 // production context-source-adapter constructor refuses a nil
 // vehicle repo. A wiring bug at boot must surface as a panic,
 // not as a nil-deref on first request. (The redis cache is
 // OPTIONAL — the constructor accepts nil and the envelope's
 // live-state fields render null in that case.)
-func TestAIWatchFaceNLContextSource_PanicsOnNilWiring(t *testing.T) {
+func TestContextSource_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAIWatchFaceNLContextSource(nil, nil) did not panic")
+			t.Fatal("NewContextSource(nil, nil) did not panic")
 		}
 	}()
-	NewAIWatchFaceNLContextSource(nil, nil)
+	NewContextSource(nil, nil)
 }
 
-// TestAIWatchFaceNLAlertHistorySource_PanicsOnNilWiring asserts
+// TestAlertHistorySource_PanicsOnNilWiring asserts
 // the production alert-history-adapter constructor refuses a nil
 // notification repo. A wiring bug at boot must surface as a
 // panic, not as a nil-deref on first request.
-func TestAIWatchFaceNLAlertHistorySource_PanicsOnNilWiring(t *testing.T) {
+func TestAlertHistorySource_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAIWatchFaceNLAlertHistorySource(nil) did not panic")
+			t.Fatal("NewAlertHistorySource(nil) did not panic")
 		}
 	}()
-	NewAIWatchFaceNLAlertHistorySource(nil)
+	NewAlertHistorySource(nil)
 }
 
-// TestAIWatchFaceNLResponseHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the body BEFORE opening the SSE stream — a
 // malformed JSON, unknown field, or runaway message length must
 // surface as a JSON 400, not a half-opened stream that confuses
 // the frontend. The empty / missing message variants are
 // EXPECTED to succeed (the SPA may post {} for the default
 // "what is my watch face showing?" prompt).
-func TestAIWatchFaceNLResponseHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -222,7 +240,7 @@ func TestAIWatchFaceNLResponseHandler_RejectsBadBody(t *testing.T) {
 		{"empty_object_uses_default_prompt", `{}`, true},
 		{"empty_body_uses_default_prompt", ``, true},
 		{"whitespace_message_uses_default_prompt", `{"message":"   "}`, true},
-		{"runaway_message", `{"message":"` + strings.Repeat("x", aiWatchFaceNLResponseMaxMessageLen+1) + `"}`, false},
+		{"runaway_message", `{"message":"` + strings.Repeat("x", maxMessageLen+1) + `"}`, false},
 		{"malformed_json", `{not json`, false},
 		{"unknown_field", `{"message":"hi","foo":"bar"}`, false},
 		{"int_message", `{"message":42}`, false},
@@ -233,7 +251,7 @@ func TestAIWatchFaceNLResponseHandler_RejectsBadBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/watch/respond", strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			_, ok := parseWatchFaceNLResponseRequest(rec, req)
+			_, ok := parseRequest(rec, req)
 			if ok != tc.wantOK {
 				t.Errorf("ok = %v, want %v (body=%q, status=%d, response=%q)", ok, tc.wantOK, tc.body, rec.Code, rec.Body.String())
 			}
@@ -244,12 +262,12 @@ func TestAIWatchFaceNLResponseHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestBuildWatchFaceNLResponseUserMessage asserts the synthesised
+// TestBuildUserMessage asserts the synthesised
 // user message bundles the verbatim user transcript when present
 // AND falls back to a deterministic default prompt when the
 // transcript is empty/whitespace — the same fall-back the SPA
 // depends on for its zero-input "ask for a summary" CTA.
-func TestBuildWatchFaceNLResponseUserMessage(t *testing.T) {
+func TestBuildUserMessage(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name        string
@@ -274,17 +292,17 @@ func TestBuildWatchFaceNLResponseUserMessage(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := buildWatchFaceNLResponseUserMessage(tc.input)
+			got := buildUserMessage(tc.input)
 			for _, must := range tc.mustInclude {
 				if !strings.Contains(strings.ToLower(got), strings.ToLower(must)) {
-					t.Errorf("buildWatchFaceNLResponseUserMessage(%q) missing %q: %q", tc.input, must, got)
+					t.Errorf("buildUserMessage(%q) missing %q: %q", tc.input, must, got)
 				}
 			}
 		})
 	}
 }
 
-// TestProjectWatchContextSignals_DualUnitProjection asserts the
+// TestProjectSignals_DualUnitProjection asserts the
 // projection mirrors the canonical /watch/summary handler's
 // shape: SI canonical fields PLUS pre-computed display-unit
 // pairs (range_km + range_mi; inside/outside _c + _f) per the
@@ -292,7 +310,7 @@ func TestBuildWatchFaceNLResponseUserMessage(t *testing.T) {
 // (internal/ai/tools/drive_coaching.go). Tools MUST NOT rely on
 // the LLM to do arithmetic on temperature/range values; the
 // adapter precomputes both halves so the model just narrates.
-func TestProjectWatchContextSignals_DualUnitProjection(t *testing.T) {
+func TestProjectSignals_DualUnitProjection(t *testing.T) {
 	t.Parallel()
 
 	signals := map[string]interface{}{
@@ -307,7 +325,7 @@ func TestProjectWatchContextSignals_DualUnitProjection(t *testing.T) {
 		"HvacPower":        "On",
 	}
 	env := &nl.WatchContextEnvelope{}
-	projectWatchContextSignals(env, signals)
+	projectSignals(env, signals)
 
 	if v, ok := env.SOCPercent.(int); !ok || v != 82 {
 		t.Errorf("SOCPercent = %v (type %T), want int(82)", env.SOCPercent, env.SOCPercent)
@@ -347,17 +365,17 @@ func TestProjectWatchContextSignals_DualUnitProjection(t *testing.T) {
 	}
 }
 
-// TestProjectWatchContextSignals_AbsentFieldsStayNil asserts a
+// TestProjectSignals_AbsentFieldsStayNil asserts a
 // signals map missing every key leaves every typed-any field at
 // its zero (nil) value — which serializes as JSON null and lets
 // the LLM honestly hedge ("I don't have a current reading").
 // The strategy's system prompt depends on this honest-null
 // behaviour; a future projection bug that defaults a missing
 // SOC to 0 would silently lie to the user.
-func TestProjectWatchContextSignals_AbsentFieldsStayNil(t *testing.T) {
+func TestProjectSignals_AbsentFieldsStayNil(t *testing.T) {
 	t.Parallel()
 	env := &nl.WatchContextEnvelope{VehicleName: "TestCar"}
-	projectWatchContextSignals(env, map[string]interface{}{})
+	projectSignals(env, map[string]interface{}{})
 
 	if env.SOCPercent != nil {
 		t.Errorf("SOCPercent = %v, want nil for absent signal", env.SOCPercent)
@@ -391,29 +409,29 @@ func TestProjectWatchContextSignals_AbsentFieldsStayNil(t *testing.T) {
 	}
 }
 
-// TestProjectWatchContextSignals_NilInputs asserts the helper
+// TestProjectSignals_NilInputs asserts the helper
 // is defensive against either nil envelope or nil signals.
 // Either case must be a no-op, NEVER a panic.
-func TestProjectWatchContextSignals_NilInputs(t *testing.T) {
+func TestProjectSignals_NilInputs(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r != nil {
-			t.Fatalf("projectWatchContextSignals panicked on nil inputs: %v", r)
+			t.Fatalf("projectSignals panicked on nil inputs: %v", r)
 		}
 	}()
-	projectWatchContextSignals(nil, nil)
-	projectWatchContextSignals(nil, map[string]interface{}{"BatteryLevel": float64(50)})
-	projectWatchContextSignals(&nl.WatchContextEnvelope{}, nil)
+	projectSignals(nil, nil)
+	projectSignals(nil, map[string]interface{}{"BatteryLevel": float64(50)})
+	projectSignals(&nl.WatchContextEnvelope{}, nil)
 }
 
-// TestProjectWatchAlertEntries_InvariantsHold asserts the alert
+// TestProjectAlertEntries_InvariantsHold asserts the alert
 // projection enforces every invariant the privacy + UX contract
 // requires:
 //
 //   - critical-severity rows are EXCLUDED (life-safety events
 //     belong on the dedicated /alerts route and push channel,
 //     not a glance-style narrator),
-//   - rows older than aiWatchFaceNLResponseRecentAlertWindow
+//   - rows older than recentAlertWindow
 //     (24 h) are EXCLUDED (keeps the LLM focused on
 //     glance-relevant events),
 //   - the projection is capped at `max` entries,
@@ -424,7 +442,7 @@ func TestProjectWatchContextSignals_NilInputs(t *testing.T) {
 //     PII-bearing free-text field (Title, Message, AlertID,
 //     ChannelID, LatencyMs) is dropped on the projection
 //     boundary.
-func TestProjectWatchAlertEntries_InvariantsHold(t *testing.T) {
+func TestProjectAlertEntries_InvariantsHold(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2025, 1, 15, 14, 0, 0, 0, time.UTC)
 	rows := []*notificationmodel.NotificationLog{
@@ -443,7 +461,7 @@ func TestProjectWatchAlertEntries_InvariantsHold(t *testing.T) {
 		// Info 4 h ago — would KEEP but for cap.
 		{Severity: "info", CreatedAt: now.Add(-4 * time.Hour), Title: "irrelevant 2"},
 	}
-	got := projectWatchAlertEntries(rows, 3, now)
+	got := projectAlertEntries(rows, 3, now)
 
 	if len(got) != 3 {
 		t.Fatalf("got %d entries, want 3 (entries=%+v)", len(got), got)
@@ -466,13 +484,13 @@ func TestProjectWatchAlertEntries_InvariantsHold(t *testing.T) {
 	}
 }
 
-// TestProjectWatchAlertEntries_NoPIIFieldsExist is a compile-time
+// TestProjectAlertEntries_NoPIIFieldsExist is a compile-time
 // + runtime assertion that the WatchAlertEntry shape itself has
 // NO free-text PII-bearing fields. A future schema addition
 // (e.g. "title", "message") would need to update this test AND
 // pass the redaction review — a bare struct change cannot
 // silently leak PII.
-func TestProjectWatchAlertEntries_NoPIIFieldsExist(t *testing.T) {
+func TestProjectAlertEntries_NoPIIFieldsExist(t *testing.T) {
 	t.Parallel()
 	e := nl.WatchAlertEntry{}
 	// Read all fields by reflection — if a new free-text field
@@ -497,20 +515,20 @@ func TestProjectWatchAlertEntries_NoPIIFieldsExist(t *testing.T) {
 	}
 }
 
-// TestProjectWatchAlertEntries_EmptyAndZeroMax asserts a zero or
+// TestProjectAlertEntries_EmptyAndZeroMax asserts a zero or
 // negative `max` returns an empty slice without iterating, and
 // that nil input is a no-op.
-func TestProjectWatchAlertEntries_EmptyAndZeroMax(t *testing.T) {
+func TestProjectAlertEntries_EmptyAndZeroMax(t *testing.T) {
 	t.Parallel()
 	now := time.Now()
-	if got := projectWatchAlertEntries(nil, 5, now); len(got) != 0 {
+	if got := projectAlertEntries(nil, 5, now); len(got) != 0 {
 		t.Errorf("nil rows → %d entries, want 0", len(got))
 	}
 	rows := []*notificationmodel.NotificationLog{{Severity: "info", CreatedAt: now.Add(-time.Minute)}}
-	if got := projectWatchAlertEntries(rows, 0, now); len(got) != 0 {
+	if got := projectAlertEntries(rows, 0, now); len(got) != 0 {
 		t.Errorf("max=0 → %d entries, want 0", len(got))
 	}
-	if got := projectWatchAlertEntries(rows, -1, now); len(got) != 0 {
+	if got := projectAlertEntries(rows, -1, now); len(got) != 0 {
 		t.Errorf("max=-1 → %d entries, want 0", len(got))
 	}
 }

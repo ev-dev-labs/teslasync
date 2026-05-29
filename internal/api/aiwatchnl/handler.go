@@ -1,4 +1,4 @@
-package api
+package aiwatchnl
 
 // Phase-50 / 0056 — V2 Helix watch face natural-language response.
 //
@@ -84,6 +84,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
@@ -91,63 +92,63 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// aiWatchFaceNLResponseMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is exactly query_watch_context →
 // answer. A hard ceiling of 6 is generous for a single-tool
 // surface; the chat-style narrator handlers use 8 with two
 // tools, so 6 leaves ample headroom for retries.
-const aiWatchFaceNLResponseMaxIterations = 6
+const maxIterations = 6
 
-// aiWatchFaceNLResponseMaxBodyBytes caps the request body.
+// maxBodyBytes caps the request body.
 // The body has at most one small free-text field; bound it
 // cheaply. 16 KiB matches the other body-driven AI handlers.
-const aiWatchFaceNLResponseMaxBodyBytes = 16 * 1024
+const maxBodyBytes = 16 * 1024
 
-// aiWatchFaceNLResponseMaxMessageLen caps the optional message
+// maxMessageLen caps the optional message
 // free-text field. 1000 chars is the same bound the
 // voice-mode handler uses for its message field — half the
 // chatbot cap because watch users are typically typing on a
 // 40-45 mm screen and a runaway paste is even less likely than
 // in the desktop chatbot.
-const aiWatchFaceNLResponseMaxMessageLen = 1000
+const maxMessageLen = 1000
 
-// aiWatchFaceNLResponseRecentAlertWindow caps how far back the
+// recentAlertWindow caps how far back the
 // production alert-history adapter looks for the recent-alerts
 // projection. 24 hours is the same window the deterministic
 // alert dashboard's "today" filter uses; it keeps the LLM's
 // recall focused on glance-relevant events rather than long-
 // past noise.
-const aiWatchFaceNLResponseRecentAlertWindow = 24 * time.Hour
+const recentAlertWindow = 24 * time.Hour
 
-// aiWatchFaceNLResponseAlertLookbackRows is the upper bound on
+// alertLookbackRows is the upper bound on
 // how many notification_log rows the production adapter pulls
 // from the DB. We pull a generous superset because the adapter
 // then filters out critical-severity rows AND caps the result
 // at tools.maxWatchAlerts (5). 64 rows in 24 h is a comfortable
 // margin even for noisy installs without paginating.
-const aiWatchFaceNLResponseAlertLookbackRows = 64
+const alertLookbackRows = 64
 
-// aiWatchFaceNLResponseRequest is the typed body shape. The
+// request is the typed body shape. The
 // `message` field is optional; the handler falls back to a
 // deterministic "what is my watch face showing?" prompt when
 // absent so the SPA can POST {} for the most common case.
-type aiWatchFaceNLResponseRequest struct {
+type request struct {
 	// Message is the user's free-text question about their
 	// watch face (e.g. "how much battery do I have left?").
 	// Optional; defaults to a generic "summarise the watch
 	// face" prompt when absent. Bounded by
-	// aiWatchFaceNLResponseMaxMessageLen.
+	// maxMessageLen.
 	Message string `json:"message,omitempty"`
 }
 
-// AIWatchFaceNLResponseHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/watch/respond.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired
 // once at boot.
-type AIWatchFaceNLResponseHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -155,7 +156,7 @@ type AIWatchFaceNLResponseHandler struct {
 	maxIters   int
 }
 
-// NewAIWatchFaceNLResponseHandler constructs the handler.
+// NewHandler constructs the handler.
 // All non-pointer arguments are required; the constructor
 // panics on a nil so the wiring bug surfaces at boot, not at
 // first request.
@@ -179,64 +180,84 @@ type AIWatchFaceNLResponseHandler struct {
 //	annotations only — the watch envelope is install-
 //	scoped, so a missing subject does NOT prevent
 //	the request from running.
-func NewAIWatchFaceNLResponseHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIWatchFaceNLResponseHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIWatchFaceNLResponseHandler: nil provider.Registry")
+		panic("aiwatchnl: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIWatchFaceNLResponseHandler: nil tools.Registry")
+		panic("aiwatchnl: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIWatchFaceNLResponseHandler: nil strategy.Strategy")
+		panic("aiwatchnl: NewHandler: nil strategy.Strategy")
 	}
-	return &AIWatchFaceNLResponseHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiWatchFaceNLResponseMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseWatchFaceNLResponseRequest drains the body. The
+// denyAllConfirm is the dispatcher's user-confirm hook. The watch
+// narrator declares only read-only tools, so this should never be
+// called; if a future edit accidentally adds a mutating tool, fail
+// closed instead of mutating fleet state.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// parseRequest drains the body. The
 // field is optional; the handler falls back to a deterministic
 // "what is my watch face showing?" prompt when absent. An empty
 // body ({} or even a missing body) is acceptable. Unknown
 // fields are rejected so a future schema drift surfaces
 // explicitly. Returns (req, true) when the body is acceptable.
-func parseWatchFaceNLResponseRequest(w http.ResponseWriter, r *http.Request) (aiWatchFaceNLResponseRequest, bool) {
-	var req aiWatchFaceNLResponseRequest
+func parseRequest(w http.ResponseWriter, r *http.Request) (request, bool) {
+	var req request
 	if r.Body == nil {
 		return req, true
 	}
 	defer r.Body.Close()
-	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiWatchFaceNLResponseMaxBodyBytes))
+	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes))
 	if readErr != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
-	if len(bytesTrim(bodyBytes)) == 0 {
+	if len(trimASCIIWhitespace(bodyBytes)) == 0 {
 		return req, true
 	}
 	dec := json.NewDecoder(strings.NewReader(string(bodyBytes)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return req, false
 	}
-	if m := strings.TrimSpace(req.Message); len(m) > aiWatchFaceNLResponseMaxMessageLen {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf(
+	if m := strings.TrimSpace(req.Message); len(m) > maxMessageLen {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf(
 			"message length %d exceeds the maximum %d characters",
-			len(m), aiWatchFaceNLResponseMaxMessageLen))
+			len(m), maxMessageLen))
 		return req, false
 	} else {
 		req.Message = m
 	}
 	return req, true
+}
+
+// trimASCIIWhitespace is a defensive ASCII whitespace trimmer used
+// only by the body-empty check. Avoids importing bytes for one call.
+func trimASCIIWhitespace(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] == '\r' || b[0] == '\n') {
+		b = b[1:]
+	}
+	for len(b) > 0 && (b[len(b)-1] == ' ' || b[len(b)-1] == '\t' || b[len(b)-1] == '\r' || b[len(b)-1] == '\n') {
+		b = b[:len(b)-1]
+	}
+	return b
 }
 
 // ServeHTTP implements [http.Handler]. The body is parsed, the
@@ -245,9 +266,9 @@ func parseWatchFaceNLResponseRequest(w http.ResponseWriter, r *http.Request) (ai
 // writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
-func (h *AIWatchFaceNLResponseHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
-	req, ok := parseWatchFaceNLResponseRequest(w, r)
+	req, ok := parseRequest(w, r)
 	if !ok {
 		return
 	}
@@ -267,7 +288,7 @@ func (h *AIWatchFaceNLResponseHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	// frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), watchfacenlresponse.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai watch-face-nl-response: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -281,7 +302,7 @@ func (h *AIWatchFaceNLResponseHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(watchfacenlresponse.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai watch-face-nl-response: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -305,7 +326,7 @@ func (h *AIWatchFaceNLResponseHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	// LLM a deterministic prompt that scopes to the watch
 	// envelope and instructs the tool sequence EXACTLY:
 	// query_watch_context first, then narration.
-	userMsg := buildWatchFaceNLResponseUserMessage(req.Message)
+	userMsg := buildUserMessage(req.Message)
 
 	// 9) Run the dispatcher.
 	in := strategy.StrategyInput{
@@ -320,7 +341,7 @@ func (h *AIWatchFaceNLResponseHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	}
 }
 
-// buildWatchFaceNLResponseUserMessage synthesises the user
+// buildUserMessage synthesises the user
 // message the LLM sees. The format is deterministic so canned
 // goldens and provider prompt-hash caches stay stable across
 // boots.
@@ -330,7 +351,7 @@ func (h *AIWatchFaceNLResponseHandler) ServeHTTP(w http.ResponseWriter, r *http.
 // body's message is set, it is forwarded verbatim AFTER the
 // tool-sequence preamble so the LLM still respects the
 // query_watch_context-first directive.
-func buildWatchFaceNLResponseUserMessage(message string) string {
+func buildUserMessage(message string) string {
 	message = strings.TrimSpace(message)
 	if message == "" {
 		message = "Give me a glance summary of my watch face right now — the most relevant one or two of: battery, range, charging status, locks, and climate."
@@ -354,7 +375,7 @@ func buildWatchFaceNLResponseUserMessage(message string) string {
 // Production source adapters
 // ---------------------------------------------------------------------------
 
-// AIWatchFaceNLContextSource is the production adapter
+// ContextSource is the production adapter
 // satisfying nl.WatchContextSource. It wraps the canonical
 // *vehicledb.VehicleRepo + *signal.RedisSignalCache so the AI
 // tool reads from the SAME data sources the deterministic
@@ -365,12 +386,12 @@ func buildWatchFaceNLResponseUserMessage(message string) string {
 // RedisSignalCache.GetAll per request. Both reads are cheap;
 // the canonical /watch/summary handler runs the same two calls
 // per refresh tick.
-type AIWatchFaceNLContextSource struct {
+type ContextSource struct {
 	vehicles   *vehicledb.VehicleRepo
 	redisCache *signal.RedisSignalCache
 }
 
-// NewAIWatchFaceNLContextSource constructs the production
+// NewContextSource constructs the production
 // adapter. The vehicle repo is required; the constructor
 // panics on a nil so the wiring bug surfaces at boot, not at
 // first request. The redis cache is OPTIONAL — when nil, the
@@ -378,11 +399,11 @@ type AIWatchFaceNLContextSource struct {
 // alone (vehicle_name only; every live-state field serializes
 // as null), mirroring the deterministic /watch/summary
 // handler's degraded-mode fallback.
-func NewAIWatchFaceNLContextSource(v *vehicledb.VehicleRepo, cache *signal.RedisSignalCache) *AIWatchFaceNLContextSource {
+func NewContextSource(v *vehicledb.VehicleRepo, cache *signal.RedisSignalCache) *ContextSource {
 	if v == nil {
-		panic("api: NewAIWatchFaceNLContextSource: nil *vehicledb.VehicleRepo")
+		panic("aiwatchnl: NewContextSource: nil *vehicledb.VehicleRepo")
 	}
-	return &AIWatchFaceNLContextSource{vehicles: v, redisCache: cache}
+	return &ContextSource{vehicles: v, redisCache: cache}
 }
 
 // LoadWatchContext implements nl.WatchContextSource. Reads
@@ -394,7 +415,7 @@ func NewAIWatchFaceNLContextSource(v *vehicledb.VehicleRepo, cache *signal.Redis
 // Every absent reading serializes as JSON null (typed-nil
 // `any`) so the LLM's system prompt can honestly hedge on
 // missing data rather than fabricating a value.
-func (a *AIWatchFaceNLContextSource) LoadWatchContext(ctx context.Context) (*nl.WatchContextEnvelope, error) {
+func (a *ContextSource) LoadWatchContext(ctx context.Context) (*nl.WatchContextEnvelope, error) {
 	vehicles, err := a.vehicles.GetAll(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("ai watch-face-nl-response: list vehicles: %w", err)
@@ -431,11 +452,11 @@ func (a *AIWatchFaceNLContextSource) LoadWatchContext(ctx context.Context) (*nl.
 		log.Warn().Err(sigErr).Int64("vehicle_id", primary.ID).Msg("ai watch-face-nl-response: live signal snapshot unavailable")
 		return env, nil
 	}
-	projectWatchContextSignals(env, signals)
+	projectSignals(env, signals)
 	return env, nil
 }
 
-// projectWatchContextSignals mutates env in place, copying the
+// projectSignals mutates env in place, copying the
 // live-signal values into the typed envelope. Pulled out for
 // hermetic unit testing — the test feeds a known signals map
 // and asserts every supported field is projected with the
@@ -456,7 +477,7 @@ func (a *AIWatchFaceNLContextSource) LoadWatchContext(ctx context.Context) (*nl.
 //   - Locked       → IsLocked (bool/string/float fallback)
 //   - SentryMode   → SentryMode (bool/string/float fallback)
 //   - HvacPower    → IsClimateOn (bool/string/float fallback)
-func projectWatchContextSignals(env *nl.WatchContextEnvelope, signals map[string]interface{}) {
+func projectSignals(env *nl.WatchContextEnvelope, signals map[string]interface{}) {
 	if env == nil || signals == nil {
 		return
 	}
@@ -513,7 +534,38 @@ func projectWatchContextSignals(env *nl.WatchContextEnvelope, signals map[string
 	}
 }
 
-// AIWatchFaceNLAlertHistorySource is the production adapter
+func signalFloat(signals map[string]interface{}, keys ...string) (float64, bool) {
+	for _, key := range keys {
+		if v, ok := signals[key]; ok {
+			return signal.Float64(v)
+		}
+	}
+	return 0, false
+}
+
+func signalInt(signals map[string]interface{}, keys ...string) (int, bool) {
+	for _, key := range keys {
+		if v, ok := signals[key]; ok {
+			if f, ok := signal.Float64(v); ok {
+				return int(f), true
+			}
+		}
+	}
+	return 0, false
+}
+
+func signalStr(signals map[string]interface{}, keys ...string) (string, bool) {
+	for _, key := range keys {
+		if v, ok := signals[key]; ok {
+			if s, ok := v.(string); ok && s != "" {
+				return s, true
+			}
+		}
+	}
+	return "", false
+}
+
+// AlertHistorySource is the production adapter
 // satisfying nl.AlertHistorySource. It wraps the canonical
 // *dbnotif.NotificationRepo so the AI tool reads from the
 // SAME data source the deterministic notifications list page
@@ -524,18 +576,18 @@ func projectWatchContextSignals(env *nl.WatchContextEnvelope, signals map[string
 // exclude critical severities, exclude rows older than the
 // recent-alert window, cap at `max`, sort most-recent first,
 // project away every PII-bearing free-text field.
-type AIWatchFaceNLAlertHistorySource struct {
+type AlertHistorySource struct {
 	notifications *dbnotif.NotificationRepo
 }
 
-// NewAIWatchFaceNLAlertHistorySource constructs the production
+// NewAlertHistorySource constructs the production
 // adapter. The repo is required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAIWatchFaceNLAlertHistorySource(n *dbnotif.NotificationRepo) *AIWatchFaceNLAlertHistorySource {
+func NewAlertHistorySource(n *dbnotif.NotificationRepo) *AlertHistorySource {
 	if n == nil {
-		panic("api: NewAIWatchFaceNLAlertHistorySource: nil *dbnotif.NotificationRepo")
+		panic("aiwatchnl: NewAlertHistorySource: nil *dbnotif.NotificationRepo")
 	}
-	return &AIWatchFaceNLAlertHistorySource{notifications: n}
+	return &AlertHistorySource{notifications: n}
 }
 
 // LoadRecentAlerts implements nl.AlertHistorySource. Reads
@@ -546,7 +598,7 @@ func NewAIWatchFaceNLAlertHistorySource(n *dbnotif.NotificationRepo) *AIWatchFac
 //   - exclude critical-severity rows (those are surfaced by
 //     the dedicated /alerts route and the deterministic push
 //     channel; a watch-face NL narrator is the wrong surface),
-//   - exclude rows older than aiWatchFaceNLResponseRecentAlertWindow
+//   - exclude rows older than recentAlertWindow
 //     (24 h — keeps the LLM focused on glance-relevant events),
 //   - cap at max entries (the tool passes 5),
 //   - sort most-recent first (NotificationRepo.GetLogs
@@ -555,18 +607,18 @@ func NewAIWatchFaceNLAlertHistorySource(n *dbnotif.NotificationRepo) *AIWatchFac
 //     (Title and Message bodies may contain custom rule names
 //     / vehicle names / place names; AlertID, ChannelID,
 //     LatencyMs are irrelevant operational data).
-func (a *AIWatchFaceNLAlertHistorySource) LoadRecentAlerts(ctx context.Context, max int) ([]nl.WatchAlertEntry, error) {
+func (a *AlertHistorySource) LoadRecentAlerts(ctx context.Context, max int) ([]nl.WatchAlertEntry, error) {
 	if max <= 0 {
 		return []nl.WatchAlertEntry{}, nil
 	}
-	rows, err := a.notifications.GetLogs(ctx, aiWatchFaceNLResponseAlertLookbackRows, 0)
+	rows, err := a.notifications.GetLogs(ctx, alertLookbackRows, 0)
 	if err != nil {
 		return nil, fmt.Errorf("ai watch-face-nl-response: load notification logs: %w", err)
 	}
-	return projectWatchAlertEntries(rows, max, time.Now()), nil
+	return projectAlertEntries(rows, max, time.Now()), nil
 }
 
-// projectWatchAlertEntries projects the canonical
+// projectAlertEntries projects the canonical
 // *notificationmodel.NotificationLog rows into the narrow
 // nl.WatchAlertEntry slice. Pulled out for hermetic unit
 // testing — the test feeds a known row list and asserts the
@@ -577,7 +629,7 @@ func (a *AIWatchFaceNLAlertHistorySource) LoadRecentAlerts(ctx context.Context, 
 // `now` is injected so the tests can pin the computed
 // age_seconds to a deterministic value rather than calling
 // time.Now() inside the projection.
-func projectWatchAlertEntries(rows []*notificationmodel.NotificationLog, max int, now time.Time) []nl.WatchAlertEntry {
+func projectAlertEntries(rows []*notificationmodel.NotificationLog, max int, now time.Time) []nl.WatchAlertEntry {
 	if max <= 0 {
 		// Defensive early-return BEFORE the make below: a
 		// negative cap on make([]…, 0, max) panics, and a
@@ -601,7 +653,7 @@ func projectWatchAlertEntries(rows []*notificationmodel.NotificationLog, max int
 		// Window exclusion: only the trailing 24 h is
 		// relevant for a glance-style narrator.
 		age := now.Sub(row.CreatedAt)
-		if age < 0 || age > aiWatchFaceNLResponseRecentAlertWindow {
+		if age < 0 || age > recentAlertWindow {
 			continue
 		}
 		out = append(out, nl.WatchAlertEntry{
@@ -615,11 +667,11 @@ func projectWatchAlertEntries(rows []*notificationmodel.NotificationLog, max int
 	return out
 }
 
-// Compile-time assertions: AIWatchFaceNLResponseHandler
+// Compile-time assertions: Handler
 // satisfies http.Handler and the production source adapters
 // satisfy their respective tool ports.
 var (
-	_ http.Handler          = (*AIWatchFaceNLResponseHandler)(nil)
-	_ nl.WatchContextSource = (*AIWatchFaceNLContextSource)(nil)
-	_ nl.AlertHistorySource = (*AIWatchFaceNLAlertHistorySource)(nil)
+	_ http.Handler          = (*Handler)(nil)
+	_ nl.WatchContextSource = (*ContextSource)(nil)
+	_ nl.AlertHistorySource = (*AlertHistorySource)(nil)
 )

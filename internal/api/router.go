@@ -69,6 +69,7 @@ import (
 	aivampire "github.com/ev-dev-labs/teslasync/internal/api/aivampire"
 	"github.com/ev-dev-labs/teslasync/internal/api/aivehpaint"
 	aivoice "github.com/ev-dev-labs/teslasync/internal/api/aivoice"
+	aiwatchnl "github.com/ev-dev-labs/teslasync/internal/api/aiwatchnl"
 	aiyir "github.com/ev-dev-labs/teslasync/internal/api/aiyir"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
@@ -2602,11 +2603,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// NO new SQL is written; both adapters wrap existing
 	// readers. Registered AFTER the slice 0055 tools above so
 	// the registry's Names list grows deterministically.
-	aiWatchFaceNLContextSource := NewAIWatchFaceNLContextSource(
+	aiWatchFaceNLContextSource := aiwatchnl.NewContextSource(
 		vehicledb.NewVehicleRepo(db),
 		redisSignalCache,
 	)
-	aiWatchFaceNLAlertHistorySource := NewAIWatchFaceNLAlertHistorySource(
+	aiWatchFaceNLAlertHistorySource := aiwatchnl.NewAlertHistorySource(
 		dbnotif.NewNotificationRepo(db),
 	)
 	nl.RegisterWatchFaceNLResponseTools(aiToolRegistry, nl.WatchFaceNLResponseSources{
@@ -2617,7 +2618,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiWatchFaceNLResponseHandler := NewAIWatchFaceNLResponseHandler(
+	aiWatchFaceNLResponseHandler := aiwatchnl.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		watchfacenlresponse.New(),
