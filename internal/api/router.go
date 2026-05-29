@@ -60,6 +60,7 @@ import (
 	aisignalnl "github.com/ev-dev-labs/teslasync/internal/api/aisignalnl"
 	aismartcharge "github.com/ev-dev-labs/teslasync/internal/api/aismartcharge"
 	aispeedprof "github.com/ev-dev-labs/teslasync/internal/api/aispeedprof"
+	aisuggeo "github.com/ev-dev-labs/teslasync/internal/api/aisuggeo"
 	aitempimpact "github.com/ev-dev-labs/teslasync/internal/api/aitempimpact"
 	aitirepress "github.com/ev-dev-labs/teslasync/internal/api/aitirepress"
 	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
@@ -1833,19 +1834,21 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// *geomodel.VisitedLocation aggregate (drives-table grouped on
 	// vehicle_id + end_place), so duplicating the adapter would
 	// be a wiring smell rather than an actual decoupling.
-	// AISuggestGeofenceValidator mirrors the byte-equivalent
+	// SuggestGeofenceValidator mirrors the byte-equivalent
 	// shape rules the canonical geofence_handler.go's
 	// validateGeofence enforces (1-200 chars, no control chars,
 	// no leading/trailing whitespace, radius 50-1000 meters).
 	location.RegisterSuggestNewGeofencesTools(aiToolRegistry, location.SuggestNewGeofencesSources{
 		Locations: aiautoname.NewLocationSource(db),
+		Locations: NewAILocationSource(db),
+		Validator: aisuggeo.NewSuggestGeofenceValidator(),
 		Validator: NewAISuggestGeofenceValidator(),
 	})
 	// suggest-new-geofences handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiSuggestNewGeofencesHandler := NewAISuggestNewGeofencesHandler(
+	aiSuggestNewGeofencesHandler := aisuggeo.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		suggestnewgeofences.New(),

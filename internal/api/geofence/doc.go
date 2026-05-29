@@ -36,7 +36,7 @@
 // Out-of-scope (still in parent):
 //   - The AI-suggest-new-geofences handler cluster
 //     (ai_suggest_new_geofences_*) which has its own
-//     AISuggestGeofenceValidator that byte-equivalently mirrors
+//     aisuggeo.SuggestGeofenceValidator that byte-equivalently mirrors
 //     validateGeofence. Coupling that cluster into this subpackage
 //     would mean importing the AI cluster's signal-store + suggestion
 //     pipeline; instead the AI cluster keeps its local copy and stays

@@ -1,4 +1,4 @@
-package api
+package aisuggeo
 
 // Phase-50 / 0038 — G2 Suggest new geofences.
 //
@@ -48,6 +48,7 @@ package api
 //     slice.
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -68,6 +69,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -104,13 +106,13 @@ const (
 	suggestNewGeofencesMaxRadiusM = 1000.0
 )
 
-// AISuggestNewGeofencesHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/geofences/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AISuggestNewGeofencesHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -118,24 +120,24 @@ type AISuggestNewGeofencesHandler struct {
 	maxIters   int
 }
 
-// NewAISuggestNewGeofencesHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAISuggestNewGeofencesHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AISuggestNewGeofencesHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAISuggestNewGeofencesHandler: nil provider.Registry")
+		panic("aisuggeo: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAISuggestNewGeofencesHandler: nil tools.Registry")
+		panic("aisuggeo: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAISuggestNewGeofencesHandler: nil strategy.Strategy")
+		panic("aisuggeo: NewHandler: nil strategy.Strategy")
 	}
-	return &AISuggestNewGeofencesHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -167,36 +169,40 @@ type suggestNewGeofencesBody struct {
 // location_id; a missing field is a wiring bug, not a default.
 func parseSuggestNewGeofencesBody(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "request body is required (location_id)")
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required (location_id)")
 		return 0, false
 	}
 	defer r.Body.Close()
 	limited := io.LimitReader(r.Body, aiSuggestNewGeofencesMaxBodyBytes+1)
 	raw, err := io.ReadAll(limited)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "failed to read request body")
+		httpx.WriteError(w, http.StatusBadRequest, "failed to read request body")
 		return 0, false
 	}
 	if int64(len(raw)) > aiSuggestNewGeofencesMaxBodyBytes {
-		writeError(w, http.StatusRequestEntityTooLarge, "request body exceeds 1 KiB")
+		httpx.WriteError(w, http.StatusRequestEntityTooLarge, "request body exceeds 1 KiB")
 		return 0, false
 	}
 	if len(raw) == 0 {
-		writeError(w, http.StatusBadRequest, "request body is required (location_id)")
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required (location_id)")
 		return 0, false
 	}
 	var body suggestNewGeofencesBody
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return 0, false
 	}
 	if body.LocationID <= 0 {
-		writeError(w, http.StatusBadRequest, "location_id must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "location_id must be > 0")
 		return 0, false
 	}
 	return body.LocationID, true
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
 // ServeHTTP implements [http.Handler]. The location_id is parsed
@@ -204,7 +210,7 @@ func parseSuggestNewGeofencesBody(w http.ResponseWriter, r *http.Request) (int64
 // closed via the dispatcher's deferred WriteDone. Every error path
 // either writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AISuggestNewGeofencesHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the body. URL has no path params.
 	locationID, ok := parseSuggestNewGeofencesBody(w, r)
 	if !ok {
@@ -217,7 +223,7 @@ func (h *AISuggestNewGeofencesHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), suggestnewgeofences.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai suggest-new-geofences: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -230,7 +236,7 @@ func (h *AISuggestNewGeofencesHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(suggestnewgeofences.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai suggest-new-geofences: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -282,9 +288,9 @@ func (h *AISuggestNewGeofencesHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	}
 }
 
-// Compile-time assertion: AISuggestNewGeofencesHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AISuggestNewGeofencesHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interfaces declared by
@@ -302,7 +308,7 @@ var _ http.Handler = (*AISuggestNewGeofencesHandler)(nil)
 // data is the same.
 // ---------------------------------------------------------------------
 
-// AISuggestGeofenceValidator is the production
+// SuggestGeofenceValidator is the production
 // location.GeofenceValidator. It enforces the same trimming + length +
 // control-character + radius rules that the canonical baseline
 // geofence_handler.go's validateGeofence enforces, so a draft
@@ -313,11 +319,11 @@ var _ http.Handler = (*AISuggestNewGeofencesHandler)(nil)
 // function. The receiver is kept so the production wiring is a noun
 // ("the validator") in router.go and tests can substitute a fake by
 // satisfying the location.GeofenceValidator interface.
-type AISuggestGeofenceValidator struct{}
+type SuggestGeofenceValidator struct{}
 
-// NewAISuggestGeofenceValidator constructs the validator.
-func NewAISuggestGeofenceValidator() *AISuggestGeofenceValidator {
-	return &AISuggestGeofenceValidator{}
+// NewSuggestGeofenceValidator constructs the validator.
+func NewSuggestGeofenceValidator() *SuggestGeofenceValidator {
+	return &SuggestGeofenceValidator{}
 }
 
 // ValidateGeofence implements location.GeofenceValidator.
@@ -334,7 +340,7 @@ func NewAISuggestGeofenceValidator() *AISuggestGeofenceValidator {
 // is shape-only — but kept on the interface so a future per-location
 // rule (e.g. "name must not equal another geofence's name on the
 // same vehicle") can be added without rewiring callers.
-func (v *AISuggestGeofenceValidator) ValidateGeofence(_ *geomodel.VisitedLocation, proposed string, radiusM float64) error {
+func (v *SuggestGeofenceValidator) ValidateGeofence(_ *geomodel.VisitedLocation, proposed string, radiusM float64) error {
 	if proposed == "" {
 		return errors.New("geofence name must not be empty")
 	}
@@ -367,4 +373,4 @@ func (v *AISuggestGeofenceValidator) ValidateGeofence(_ *geomodel.VisitedLocatio
 }
 
 // Compile-time assertion: the validator satisfies the tool port.
-var _ location.GeofenceValidator = (*AISuggestGeofenceValidator)(nil)
+var _ location.GeofenceValidator = (*SuggestGeofenceValidator)(nil)

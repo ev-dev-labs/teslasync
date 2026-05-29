@@ -13,9 +13,10 @@
 // F6 eval harness (`go run ./cmd/ai-eval -feature suggest-new-geofences`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aisuggeo
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -28,6 +29,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on != nil && s.on[id], nil
+}
 
 // TestSuggestGeofencesAIOffManualGeofenceWorks is the load-bearing
 // off-mode contract proof for slice 0038. It mounts the AI
@@ -129,23 +146,23 @@ func TestSuggestGeofencesAIOffManualGeofenceWorks(t *testing.T) {
 	}
 }
 
-// TestAISuggestNewGeofencesHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAISuggestNewGeofencesHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAISuggestNewGeofencesHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAISuggestNewGeofencesHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -153,11 +170,11 @@ func TestAISuggestNewGeofencesHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAISuggestNewGeofencesHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the JSON body BEFORE opening the SSE stream — a
 // missing, malformed, or non-positive location_id must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAISuggestNewGeofencesHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -192,10 +209,10 @@ func TestAISuggestNewGeofencesHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAISuggestNewGeofencesHandler_AcceptsCanonicalBody proves the
+// TestHandler_AcceptsCanonicalBody proves the
 // parser does NOT bounce the happy-path shapes — small int, large
 // int, max int64.
-func TestAISuggestNewGeofencesHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -226,15 +243,15 @@ func TestAISuggestNewGeofencesHandler_AcceptsCanonicalBody(t *testing.T) {
 	}
 }
 
-// TestAISuggestGeofenceValidator_TableDriven pins the production
+// TestSuggestGeofenceValidator_TableDriven pins the production
 // validator wrapper's rules. Mirrors the equivalent table in
 // tools/suggest_new_geofences_test.go's
 // TestValidateGeofenceShape_TableDriven so the AI tool's verdict
 // is byte-equivalent to the validator the canonical save handler
 // will use.
-func TestAISuggestGeofenceValidator_TableDriven(t *testing.T) {
+func TestSuggestGeofenceValidator_TableDriven(t *testing.T) {
 	t.Parallel()
-	v := NewAISuggestGeofenceValidator()
+	v := NewSuggestGeofenceValidator()
 	loc := &geomodel.VisitedLocation{ID: 501, VehicleID: 7, AddressName: "47.6062,-122.3321"}
 
 	cases := []struct {
