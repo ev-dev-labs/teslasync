@@ -14,10 +14,11 @@
 // feedback-queue-triage`); duplicating that here would require a
 // live database fixture.
 
-package api
+package aifeedtri
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,6 +28,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestFeedbackTriageAIOffManualLabelsWork is the load-bearing
 // off-mode contract proof for slice 0046. It mounts the AI
@@ -140,23 +157,23 @@ func TestFeedbackTriageAIOffManualLabelsWork(t *testing.T) {
 	}
 }
 
-// TestAIFeedbackQueueTriageHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAIFeedbackQueueTriageHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIFeedbackQueueTriageHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIFeedbackQueueTriageHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -164,23 +181,23 @@ func TestAIFeedbackQueueTriageHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestNewAIFeedbackTriageSource_PanicsOnNilRepo asserts the
+// TestNewFeedbackTriageSource_PanicsOnNilRepo asserts the
 // production source adapter constructor refuses a nil repo.
-func TestNewAIFeedbackTriageSource_PanicsOnNilRepo(t *testing.T) {
+func TestNewFeedbackTriageSource_PanicsOnNilRepo(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAIFeedbackTriageSource(nil) did not panic")
+			t.Fatal("NewFeedbackTriageSource(nil) did not panic")
 		}
 	}()
-	_ = NewAIFeedbackTriageSource(nil)
+	_ = NewFeedbackTriageSource(nil)
 }
 
-// TestAIFeedbackQueueTriageHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the body BEFORE opening the SSE stream — a
 // missing, unparseable, or out-of-range field must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAIFeedbackQueueTriageHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {

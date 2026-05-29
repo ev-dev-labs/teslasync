@@ -34,6 +34,7 @@ import (
 	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
 	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
 	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
+	aifeedtri "github.com/ev-dev-labs/teslasync/internal/api/aifeedtri"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2166,9 +2167,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// other slice tools above: must be registered before the
 	// handler constructor below so the strategy's allowedTools
 	// resolve at boot. The Source is the production
-	// AIFeedbackTriageSource adapter that wraps userFeedbackRepo
+	// FeedbackTriageSource adapter that wraps userFeedbackRepo
 	// and PII-minimizes the row into a FeedbackTriageEntry.
-	aiFeedbackTriageSource := NewAIFeedbackTriageSource(userFeedbackRepo)
+	aiFeedbackTriageSource := aifeedtri.NewFeedbackTriageSource(userFeedbackRepo)
 	feedback.RegisterFeedbackQueueTriageTools(aiToolRegistry, feedback.FeedbackQueueTriageSources{
 		Source:    aiFeedbackTriageSource,
 		Retriever: aiFeedbackTriageRetriever,
@@ -2177,7 +2178,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiFeedbackQueueTriageHandler := NewAIFeedbackQueueTriageHandler(
+	aiFeedbackQueueTriageHandler := aifeedtri.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		feedbackqueuetriage.New(),

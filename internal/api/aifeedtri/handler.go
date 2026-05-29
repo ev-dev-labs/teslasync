@@ -1,8 +1,8 @@
-package api
+package aifeedtri
 
 // Phase-50 / 0046 — S5 Feedback queue triage.
 //
-// ai_feedback_triage_handler.go implements the LLM-backed handler
+// handler.go implements the LLM-backed handler
 // at POST /api/v1/ai/feedback/triage/draft. The flow mirrors
 // ai_log_trace_summarization_handler.go (body-driven, scope-bound,
 // no persistence — one-shot read-then-propose):
@@ -68,6 +68,7 @@ package api
 //     persistence path.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -85,6 +86,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/feedback"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
@@ -109,6 +111,10 @@ const aiFeedbackTriageMaxBodyBytes = 16 * 1024
 // excerpt is always a strict subset of the persisted column.
 const aiFeedbackTriageBodyExcerptMaxChars = 4096
 
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
 // aiFeedbackTriageRequest is the typed body shape. feedback_id is
 // the only required field.
 type aiFeedbackTriageRequest struct {
@@ -117,13 +123,13 @@ type aiFeedbackTriageRequest struct {
 	FeedbackID int64 `json:"feedback_id"`
 }
 
-// AIFeedbackQueueTriageHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/feedback/triage/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIFeedbackQueueTriageHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -132,7 +138,7 @@ type AIFeedbackQueueTriageHandler struct {
 	maxIters   int
 }
 
-// NewAIFeedbackQueueTriageHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -155,24 +161,24 @@ type AIFeedbackQueueTriageHandler struct {
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAIFeedbackQueueTriageHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	source feedback.FeedbackTriageSource,
 	headerName string,
-) *AIFeedbackQueueTriageHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIFeedbackQueueTriageHandler: nil provider.Registry")
+		panic("aifeedtri: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIFeedbackQueueTriageHandler: nil tools.Registry")
+		panic("aifeedtri: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIFeedbackQueueTriageHandler: nil strategy.Strategy")
+		panic("aifeedtri: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAIFeedbackQueueTriageHandler: nil feedback.FeedbackTriageSource")
+		panic("aifeedtri: NewHandler: nil feedback.FeedbackTriageSource")
 	}
-	return &AIFeedbackQueueTriageHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -189,27 +195,27 @@ func NewAIFeedbackQueueTriageHandler(
 func parseFeedbackTriageRequest(w http.ResponseWriter, r *http.Request) (aiFeedbackTriageRequest, bool) {
 	var req aiFeedbackTriageRequest
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "missing body")
+		httpx.WriteError(w, http.StatusBadRequest, "missing body")
 		return req, false
 	}
 	defer r.Body.Close()
 	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiFeedbackTriageMaxBodyBytes))
 	if readErr != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
-	if len(bytesTrim(bodyBytes)) == 0 {
-		writeError(w, http.StatusBadRequest, "empty body")
+	if len(bytes.TrimSpace(bodyBytes)) == 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "empty body")
 		return req, false
 	}
 	dec := json.NewDecoder(strings.NewReader(string(bodyBytes)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return req, false
 	}
 	if req.FeedbackID <= 0 {
-		writeError(w, http.StatusBadRequest, "feedback_id must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "feedback_id must be > 0")
 		return req, false
 	}
 	return req, true
@@ -220,7 +226,7 @@ func parseFeedbackTriageRequest(w http.ResponseWriter, r *http.Request) (aiFeedb
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIFeedbackQueueTriageHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseFeedbackTriageRequest(w, r)
 	if !ok {
@@ -233,7 +239,7 @@ func (h *AIFeedbackQueueTriageHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), feedbackqueuetriage.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai feedback-queue-triage: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -251,7 +257,7 @@ func (h *AIFeedbackQueueTriageHandler) ServeHTTP(w http.ResponseWriter, r *http.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(feedbackqueuetriage.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai feedback-queue-triage: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -314,9 +320,9 @@ func synthesizeFeedbackTriageUserMessage(feedbackID int64) string {
 	)
 }
 
-// Compile-time assertion: AIFeedbackQueueTriageHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AIFeedbackQueueTriageHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -325,7 +331,7 @@ var _ http.Handler = (*AIFeedbackQueueTriageHandler)(nil)
 // the log-trace-summarization slice's AILogTraceWindowSource pattern.
 // ---------------------------------------------------------------------
 
-// AIFeedbackTriageSource is the production
+// FeedbackTriageSource is the production
 // feedback.FeedbackTriageSource. It wraps the canonical
 // *dbuser.UserFeedbackRepo.Get and PII-minimizes the row into a
 // FeedbackTriageEntry: only id / created_at / category / title /
@@ -334,18 +340,18 @@ var _ http.Handler = (*AIFeedbackQueueTriageHandler)(nil)
 // submitter_subject, submitter_ip, recent_errors, and console_tail
 // are NOT forwarded — defence in depth on top of
 // PolicyAlertBuilder's deny-by-default redaction.
-type AIFeedbackTriageSource struct {
+type FeedbackTriageSource struct {
 	repo *dbuser.UserFeedbackRepo
 }
 
-// NewAIFeedbackTriageSource constructs the production source
+// NewFeedbackTriageSource constructs the production source
 // adapter. Panics on a nil repo so the wiring bug surfaces at boot,
 // not at first request.
-func NewAIFeedbackTriageSource(repo *dbuser.UserFeedbackRepo) *AIFeedbackTriageSource {
+func NewFeedbackTriageSource(repo *dbuser.UserFeedbackRepo) *FeedbackTriageSource {
 	if repo == nil {
-		panic("api: NewAIFeedbackTriageSource: nil *dbuser.UserFeedbackRepo")
+		panic("aifeedtri: NewFeedbackTriageSource: nil *dbuser.UserFeedbackRepo")
 	}
-	return &AIFeedbackTriageSource{repo: repo}
+	return &FeedbackTriageSource{repo: repo}
 }
 
 // LoadFeedback implements feedback.FeedbackTriageSource. Returns
@@ -357,7 +363,7 @@ func NewAIFeedbackTriageSource(repo *dbuser.UserFeedbackRepo) *AIFeedbackTriageS
 // The body is truncated to aiFeedbackTriageBodyExcerptMaxChars to
 // bound the prompt-token budget; the canonical body is preserved
 // in the database column unchanged.
-func (a *AIFeedbackTriageSource) LoadFeedback(ctx context.Context, feedbackID int64) (*feedback.FeedbackTriageEntry, error) {
+func (a *FeedbackTriageSource) LoadFeedback(ctx context.Context, feedbackID int64) (*feedback.FeedbackTriageEntry, error) {
 	row, err := a.repo.Get(ctx, feedbackID)
 	if err != nil {
 		if errors.Is(err, dbuser.ErrFeedbackNotFound) {
@@ -382,6 +388,6 @@ func (a *AIFeedbackTriageSource) LoadFeedback(ctx context.Context, feedbackID in
 	}, nil
 }
 
-// Compile-time assertion: AIFeedbackTriageSource satisfies
+// Compile-time assertion: FeedbackTriageSource satisfies
 // feedback.FeedbackTriageSource.
-var _ feedback.FeedbackTriageSource = (*AIFeedbackTriageSource)(nil)
+var _ feedback.FeedbackTriageSource = (*FeedbackTriageSource)(nil)
