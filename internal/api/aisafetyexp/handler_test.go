@@ -17,9 +17,10 @@
 // safety-setting-explainer`); duplicating that here would
 // require a live mock-provider stack.
 
-package api
+package aisafetyexp
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -32,6 +33,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestSafetySettingExplainerAIOffShowsStaticHelpOnly is the
 // load-bearing off-mode contract proof for slice 0054. It
@@ -156,23 +175,22 @@ func TestSafetySettingExplainerAIOffShowsStaticHelpOnly(t *testing.T) {
 	}
 }
 
-// TestAISafetySettingExplainerHandler_PanicsOnNilWiring asserts
-// the handler constructor refuses zero-valued dependencies. A
-// wiring bug at boot must surface as a panic, not as a nil-deref
-// on first request.
-func TestAISafetySettingExplainerHandler_PanicsOnNilWiring(t *testing.T) {
+// TestHandler_PanicsOnNilWiring asserts the handler constructor refuses
+// zero-valued dependencies. A wiring bug at boot must surface as a panic,
+// not as a nil-deref on first request.
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAISafetySettingExplainerHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAISafetySettingExplainerHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -180,30 +198,29 @@ func TestAISafetySettingExplainerHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAISafetySettingExplainerSource_PanicsOnNilWiring asserts
+// TestSource_PanicsOnNilWiring asserts
 // the production source-adapter constructor refuses
 // zero-valued dependencies. A wiring bug at boot must surface
 // as a panic, not as a nil-deref on first request.
-func TestAISafetySettingExplainerSource_PanicsOnNilWiring(t *testing.T) {
+func TestSource_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAISafetySettingExplainerSource(nil) did not panic")
+			t.Fatal("NewSource(nil) did not panic")
 		}
 	}()
-	NewAISafetySettingExplainerSource(nil)
+	NewSource(nil)
 }
 
-// TestAISafetySettingExplainerHandler_RejectsBadBody asserts
-// the handler validates the body BEFORE opening the SSE stream
-// — a malformed JSON, unknown field, or runaway question
-// length must surface as a JSON 400, not a half-opened stream
-// that confuses the frontend.
+// TestHandler_RejectsBadBody asserts the handler validates the body BEFORE
+// opening the SSE stream — a malformed JSON, unknown field, or runaway
+// question length must surface as a JSON 400, not a half-opened stream that
+// confuses the frontend.
 //
-// Note: an empty body and "{}" are both ACCEPTED — the handler
-// applies a deterministic default question so the SPA can post
-// {} for the most common case.
-func TestAISafetySettingExplainerHandler_RejectsBadBody(t *testing.T) {
+// Note: an empty body and "{}" are both ACCEPTED — the handler applies a
+// deterministic default question so the SPA can post {} for the most common
+// case.
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -371,8 +388,8 @@ func TestProjectSafetySettingsEnvelope_NilSettings(t *testing.T) {
 	}
 }
 
-// Compile-time assertion: AISafetySettingExplainerSource
+// Compile-time assertion: Source
 // satisfies the tool's narrow port. Mirrors the same assertion
 // in the production handler file so the test build also pins
 // the contract.
-var _ safety.SafetySettingsSource = (*AISafetySettingExplainerSource)(nil)
+var _ safety.SafetySettingsSource = (*Source)(nil)

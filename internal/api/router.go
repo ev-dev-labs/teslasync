@@ -55,6 +55,7 @@ import (
 	aiquiethrs "github.com/ev-dev-labs/teslasync/internal/api/aiquiethrs"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
+	aisafetyexp "github.com/ev-dev-labs/teslasync/internal/api/aisafetyexp"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
 	aismartcharge "github.com/ev-dev-labs/teslasync/internal/api/aismartcharge"
 	aispeedprof "github.com/ev-dev-labs/teslasync/internal/api/aispeedprof"
@@ -2518,7 +2519,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// never touches the existing handlers. Registered AFTER
 	// the slice 0053 tools above so the registry's Names
 	// list grows deterministically.
-	aiSafetySettingExplainerSource := NewAISafetySettingExplainerSource(aiSettingsRepo)
+	aiSafetySettingExplainerSource := aisafetyexp.NewSource(aiSettingsRepo)
 	safety.RegisterSafetySettingExplainerTools(aiToolRegistry, safety.SafetySettingExplainerSources{
 		Source: aiSafetySettingExplainerSource,
 	})
@@ -2527,7 +2528,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at
 	// boot.
-	aiSafetySettingExplainerHandler := NewAISafetySettingExplainerHandler(
+	aiSafetySettingExplainerHandler := aisafetyexp.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		safetysettingexplainer.New(),

@@ -1,4 +1,4 @@
-package api
+package aisafetyexp
 
 // Phase-50 / 0054 — P3 Helix safety setting explainer.
 //
@@ -59,6 +59,7 @@ package api
 //     slice.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -77,6 +78,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/safety"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 )
@@ -86,6 +88,14 @@ import (
 // (optional retrieve_docs) → answer. A hard ceiling of 8 is
 // generous, matching the other narrator handlers.
 const aiSafetySettingExplainerMaxIterations = 8
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
 
 // aiSafetySettingExplainerMaxBodyBytes caps the request body.
 // The body has at most one small free-text field; bound it
@@ -113,14 +123,14 @@ type aiSafetySettingExplainerRequest struct {
 	Question string `json:"question,omitempty"`
 }
 
-// AISafetySettingExplainerHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/settings/safety/explain.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired
 // once at boot.
-type AISafetySettingExplainerHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -128,7 +138,7 @@ type AISafetySettingExplainerHandler struct {
 	maxIters   int
 }
 
-// NewAISafetySettingExplainerHandler constructs the handler.
+// NewHandler constructs the handler.
 // All non-pointer arguments are required; the constructor
 // panics on a nil so the wiring bug surfaces at boot, not at
 // first request.
@@ -153,21 +163,21 @@ type AISafetySettingExplainerHandler struct {
 //	annotations only — the safety envelope is global,
 //	so a missing subject does NOT prevent the
 //	request from running.
-func NewAISafetySettingExplainerHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AISafetySettingExplainerHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAISafetySettingExplainerHandler: nil provider.Registry")
+		panic("aisafetyexp: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAISafetySettingExplainerHandler: nil tools.Registry")
+		panic("aisafetyexp: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAISafetySettingExplainerHandler: nil strategy.Strategy")
+		panic("aisafetyexp: NewHandler: nil strategy.Strategy")
 	}
-	return &AISafetySettingExplainerHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -193,7 +203,7 @@ func parseSafetySettingExplainerRequest(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
-	if len(bytesTrim(bodyBytes)) == 0 {
+	if len(bytes.TrimSpace(bodyBytes)) == 0 {
 		return req, true
 	}
 	dec := json.NewDecoder(strings.NewReader(string(bodyBytes)))
@@ -219,7 +229,7 @@ func parseSafetySettingExplainerRequest(w http.ResponseWriter, r *http.Request) 
 // writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
-func (h *AISafetySettingExplainerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseSafetySettingExplainerRequest(w, r)
 	if !ok {
@@ -330,10 +340,10 @@ func buildSafetySettingExplainerUserMessage(question string) string {
 }
 
 // ---------------------------------------------------------------------------
-// Production source adapter: AISafetySettingExplainerSource
+// Production source adapter: Source
 // ---------------------------------------------------------------------------
 
-// AISafetySettingExplainerSource is the production adapter
+// Source is the production adapter
 // satisfying safety.SafetySettingsSource. It wraps the canonical
 // *settingsdb.SettingsRepo so the AI tool reads from the SAME
 // data source the deterministic Settings UI already does — no
@@ -343,18 +353,18 @@ func buildSafetySettingExplainerUserMessage(question string) string {
 // request. The read is cheap: the canonical Settings struct is
 // already a single hydrated value the rest of the API surface
 // reuses.
-type AISafetySettingExplainerSource struct {
+type Source struct {
 	settings *settingsdb.SettingsRepo
 }
 
-// NewAISafetySettingExplainerSource constructs the production
+// NewSource constructs the production
 // adapter. The repo is required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAISafetySettingExplainerSource(s *settingsdb.SettingsRepo) *AISafetySettingExplainerSource {
+func NewSource(s *settingsdb.SettingsRepo) *Source {
 	if s == nil {
-		panic("api: NewAISafetySettingExplainerSource: nil settings *settingsdb.SettingsRepo")
+		panic("aisafetyexp: NewSource: nil settings *settingsdb.SettingsRepo")
 	}
-	return &AISafetySettingExplainerSource{settings: s}
+	return &Source{settings: s}
 }
 
 // LoadSafetySettings implements safety.SafetySettingsSource.
@@ -369,7 +379,7 @@ func NewAISafetySettingExplainerSource(s *settingsdb.SettingsRepo) *AISafetySett
 // so the descriptor table below hard-codes the same default
 // values as a deliberate cross-check — a divergence between
 // the two surfaces in code review).
-func (a *AISafetySettingExplainerSource) LoadSafetySettings(ctx context.Context) (*safety.SafetySettingsEnvelope, error) {
+func (a *Source) LoadSafetySettings(ctx context.Context) (*safety.SafetySettingsEnvelope, error) {
 	cur, err := a.settings.Get(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("ai safety-setting-explainer: load settings: %w", err)
@@ -457,10 +467,10 @@ func projectSafetySettingsEnvelope(cur *systemmodel.Settings) *safety.SafetySett
 	return out
 }
 
-// Compile-time assertions: AISafetySettingExplainerHandler
-// satisfies http.Handler and AISafetySettingExplainerSource
+// Compile-time assertions: Handler
+// satisfies http.Handler and Source
 // satisfies safety.SafetySettingsSource.
 var (
-	_ http.Handler                = (*AISafetySettingExplainerHandler)(nil)
-	_ safety.SafetySettingsSource = (*AISafetySettingExplainerSource)(nil)
+	_ http.Handler                = (*Handler)(nil)
+	_ safety.SafetySettingsSource = (*Source)(nil)
 )
