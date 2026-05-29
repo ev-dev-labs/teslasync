@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 69 — Touch-target audit explicit waivers (WCAG 2.5.5).
+ * Touch-target audit explicit waivers (WCAG 2.5.5).
  *
  * Each entry exempts a specific clickable element from the
  * `audit:touch-target` minimum-hit-area check. Allowlisting should be a

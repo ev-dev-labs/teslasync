@@ -7,8 +7,6 @@ import { GlassPanel } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 
 /**
- * NoVehicleSelected — Phase 40 / Prompt 18.
- *
  * Defensive empty state for pages that require a selected vehicle.
  *
  * Even with the global <OnboardingGate> active, edge cases can leave

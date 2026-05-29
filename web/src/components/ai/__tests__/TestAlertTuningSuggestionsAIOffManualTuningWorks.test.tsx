@@ -1,12 +1,12 @@
-// Phase-50 / 0034 — A1 Alert tuning suggestions.
-//
+// Alert tuning suggestions.
+
 // `TestAlertTuningSuggestionsAIOffManualTuningWorks` (the Vitest
-// sibling to the Go test of the same name) is the slice's
+// sibling to the Go test of the same name) verifies the
 // load-bearing AI-OFF contract proof on the React side. It mounts
 // the AIAlertTuningSuggestions component with ai_mode='off' (plus
 // the per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
-//
+
 //   1. The AI section's rooted test ID is absent from the DOM.
 //   2. The wrapper renders no children (empty container).
 //   3. With ai_mode='cloud' AND alert-tuning-suggestions=true,
@@ -14,28 +14,28 @@
 //      This is the positive control that proves the gate
 //      actually works (otherwise the "absent in off mode"
 //      assertion is trivially true).
-//
-// W1 inline wiring — also asserts the on-mode wiring contract:
-//   - clicking "Suggest tuning" POSTs exactly one request to
+
+// Inline wiring — also asserts the on-mode wiring contract:
+//   clicking "Suggest tuning" POSTs exactly one request to
 //     `/api/v1/ai/alerts/rules/{ruleID}/tune/draft`.
-//   - the first delta event's text renders inside the gated
+//   the first delta event's text renders inside the gated
 //     wrapper.
-//   - a second click while streaming is a no-op (double-submit
+//   a second click while streaming is a no-op (double-submit
 //     guard).
-//   - the proposal preview renders after a tool_result frame and
+//   the proposal preview renders after a tool_result frame and
 //     the "Apply to form" button calls onApplyDraft with the
 //     extracted patch (proves the typed draft → baseline form
 //     copy path; the AI panel never persists state directly).
-//
+
 // The HTTP /api/v1/ai/alerts/rules/{ruleID}/tune/draft
-// 404-in-off-mode invariant is proven by the Go-side
+// In-off-mode invariant is proven by the Go-side
 // TestAlertTuningSuggestionsAIOffManualTuningWorks in
 // internal/api/ai_alert_tuning_handler_test.go — the network
 // layer does not exist in the React unit-test scope.
-//
+
 // File name MUST stay
-// `TestAlertTuningSuggestionsAIOffManualTuningWorks.test.tsx` —
-// the slice prompt's verification command runs
+// `TestAlertTuningSuggestionsAIOffManualTuningWorks.test.tsx`
+// The verification command runs
 // `vitest --run TestAlertTuningSuggestionsAIOffManualTuningWorks`,
 // where the positional pattern is matched against the file
 // PATH.

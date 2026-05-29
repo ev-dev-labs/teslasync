@@ -8,7 +8,7 @@ import {
 } from '@/api/hooks/useImpersonation'
 
 /**
- * Phase-46 / Prompt 46 — Admin impersonation banner.
+ * Admin impersonation banner.
  *
  * Persistent yellow sticky bar that surfaces whenever the calling
  * browser carries a valid impersonation cookie. The banner shows the

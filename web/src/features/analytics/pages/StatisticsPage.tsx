@@ -63,7 +63,6 @@ const STATE_COLORS: Record<string, string> = {
  * Mirrors the StatisticsPage layout while data loads:
  * 5 period-stat cards → 3 averages → 1 battery-health panel →
  * 2 side-by-side panels (state + mileage) → 1 vehicle-comparison chart.
- * Phase-45 / Prompt 18.
  */
 function StatisticsSkeleton() {
   return (
@@ -118,12 +117,11 @@ export default function StatisticsPage() {
   const [endDate] = useUrlString('to', defaultEnd);
   const setRangeBatch = useUrlBatch();
 
-  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  // Reactive chart palette: color-blind safe or neon per user preference.
   const palette = useChartPalette();
 
-  // Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
-  // multi-vehicle distance/energy bar chart so users can isolate one
-  // metric across the fleet.
+  // Persist hidden series in the URL so users can isolate one fleet
+  // metric across the multi-vehicle distance/energy bar chart.
   const fleetCompareHidden = useHiddenSeries('fleet-vehicle-comparison');
 
   /* ── Data hooks ────────────────────────────────────────────────── */

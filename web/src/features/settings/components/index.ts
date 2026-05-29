@@ -9,8 +9,8 @@ export { QuietHoursPanel } from './QuietHoursPanel'
 export { AppearanceSettings } from './AppearanceSettings'
 export { SettingsSearch } from './SettingsSearch'
 export { AdvancedSettings } from './AdvancedSettings'
-// Phase-50 / 0003 — F2 Settings UI for AI. The AISettings panel is
-// the only place AI ever turns on (ADR-015 §I7 / §I9). Sub-components
-// (AIProviderSection, AIFeatureToggleList, AIRestorePanel,
-// AIUsageCard) stay un-exported because they are owned by AISettings.
+// AISettings is the only place AI can be enabled (ADR-015 §I7 / §I9).
+// Sub-components (AIProviderSection, AIFeatureToggleList,
+// AIRestorePanel, AIUsageCard) stay un-exported because they are
+// owned by AISettings.
 export { AISettings } from './AISettings'

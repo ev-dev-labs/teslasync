@@ -3,8 +3,8 @@
  * primary vehicle as a Health row. Renders nothing when there are no
  * anomalies in the last 24h or no vehicles to query.
  *
- * Phase 2 inline anomaly detection: we don't poll all vehicles
- * (would be N requests). For a self-hosted single-operator instance the
+ * We don't poll all vehicles (would be N requests). For a self-hosted
+ * single-operator instance the
  * common case is one or two vehicles; we use the first one as a sample.
  * Click-through routes to the dedicated /anomaly-detection page where
  * the operator can pick a vehicle.

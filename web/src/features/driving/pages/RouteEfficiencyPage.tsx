@@ -188,10 +188,9 @@ export default function RouteEfficiencyPage() {
       </FadeIn>
 
       {/*
-        Phase-50 / 0023 — AI route-efficiency suggestions.
-        Hidden by withAiFeature when ai_mode='off' OR the
-        per-feature toggle is off. Rendered above the comparison
-        chart so the narrative sits next to the figures it's
+        AI route-efficiency suggestions are hidden by withAiFeature when
+        ai_mode='off' or the per-feature toggle is off. Rendered above the
+        comparison chart so the narrative sits next to the figures it's
         narrating, not below the fold.
       */}
       <AIRouteEfficiencySuggestions vehicleId={vehicleIdStr} />

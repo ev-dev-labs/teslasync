@@ -115,7 +115,7 @@ export default function VampireDrainPage() {
         </div>
       }
     >
-      {/* Phase-50 / 0030 — C5 Vampire-drain explanation.
+      {/* Vampire-drain explanation.
           The AI narrator section is rendered conditionally via
           withAiFeature('vampire-drain-explanation', …) in
           AIVampireDrainExplanation: when ai_mode='off' OR the

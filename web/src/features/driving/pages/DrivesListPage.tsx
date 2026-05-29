@@ -56,7 +56,7 @@ import {
 } from '@/lib/drivesAggregation';
 
 /* ------------------------------------------------------------------ */
-/*  DriveCard                                                         */
+/* DriveCard */
 /* ------------------------------------------------------------------ */
 
 interface DriveCardProps {
@@ -73,7 +73,7 @@ interface DriveCardProps {
   /** IANA timezone for time-of-day rendering. Defaults to browser local. */
   tz?: string;
   /** When true, render an inline `⚠ Low efficiency` badge to mark this row
-   *  as the one called out in the page-level anomaly summary. */
+ * as the one called out in the page-level anomaly summary. */
   isAnomaly?: boolean;
 }
 
@@ -197,7 +197,7 @@ function DriveCardImpl({
  * comparison would never short-circuit; here we only consider the
  * row-shaping inputs that actually affect the rendered output.
  *
- * Phase-46 / Prompt 18.
+ * .
  */
 const DriveCard = memo(DriveCardImpl, (prev, next) =>
   prev.drive === next.drive &&
@@ -210,7 +210,7 @@ const DriveCard = memo(DriveCardImpl, (prev, next) =>
   prev.onToggleSelect === next.onToggleSelect, );
 
 /* ------------------------------------------------------------------ */
-/*  DrivesListPage                                                    */
+/* DrivesListPage */
 /* ------------------------------------------------------------------ */
 
 const COLLECTIONS = ['all', 'anomalies', 'notable', 'commutes', 'tagged'] as const;
@@ -229,10 +229,10 @@ export default function DrivesListPage() {
   const { data: drives, isLoading: isDrivesLoading, error: drivesError, refetch: refetchDrives } = drivesQuery;
 
   /* Active vehicle's IANA timezone — every "what day is this drive?"
-   * decision on this page must use this rather than the browser's local
-   * zone, otherwise late-night drives appear under the wrong day in the
-   * grouped list, the chart shows ghost bars on the next UTC day, and
-   * the period stats undercount/overcount drives near the boundary. */
+ * decision on this page must use this rather than the browser's local
+ * zone, otherwise late-night drives appear under the wrong day in the
+ * grouped list, the chart shows ghost bars on the next UTC day, and
+ * the period stats undercount/overcount drives near the boundary. */
   const tz = useTimezone('vehicle');
 
   /* Unit conversion */
@@ -273,7 +273,7 @@ export default function DrivesListPage() {
   const setUrlBatch = useUrlBatch();
 
   /* ---- Date filter — bucket each drive by its vehicle-tz day so the
-   * filter result matches the date the user sees in the row's header. */
+ * filter result matches the date the user sees in the row's header. */
   const dateFilteredDrives = useMemo(() => {
     if (!drives) return [];
     return drives.filter((d) => {
@@ -303,8 +303,8 @@ export default function DrivesListPage() {
     () => detectAnomalies(dateFilteredDrives), [dateFilteredDrives],
   );
   /** Set of anomalous drive ids — used to render an inline `⚠ Low efficiency`
-   *  badge on the matching row so the page-level anomaly callout connects
-   *  to a specific drive instead of leaving the user to hunt for it. */
+ * badge on the matching row so the page-level anomaly callout connects
+ * to a specific drive instead of leaving the user to hunt for it. */
   const anomalyDriveIds = useMemo(
     () => new Set(anomalyDrives.map((d) => d.id)), [anomalyDrives],
   );
@@ -328,11 +328,11 @@ export default function DrivesListPage() {
   }, [collection, dateFilteredDrives, anomalyDrives, notableDrives, commuteDrives]);
 
   /* ---- Search filter — supports `score:X`, `from:Mon`, `distance:>N`
-   *      plus bare substring (addresses + numbers). The structured
-   *      parser short-circuits when the query is empty, so the pre-
-   *      existing free-text behaviour stays unchanged for users who
-   *      type a single word. ---- */
-  // Phase-46 / Prompt 18 — defer the search query so the input stays
+ * plus bare substring (addresses + numbers). The structured
+ * parser short-circuits when the query is empty, so the pre-
+ * existing free-text behaviour stays unchanged for users who
+ * type a single word. ---- */
+  // defer the search query so the input stays
   // responsive while the heavy downstream chain re-renders at non-urgent priority.
   const deferredSearch = useDeferredValue(search);
   const isSearchPending = !Object.is(search, deferredSearch);
@@ -452,8 +452,8 @@ export default function DrivesListPage() {
   ], [t, toDistanceDisplay, toEfficiencyDisplay, distanceUnit, efficiencyUnit, costPerKwh, formatCurrency]);
 
   /** X-axis tick formatter for the trend chart — render `2026-04-24` as
-   *  "Apr 24" using the vehicle's tz so the axis label matches the row
-   *  date headers below. */
+ * "Apr 24" using the vehicle's tz so the axis label matches the row
+ * date headers below. */
   const formatChartXTick = useCallback(
     (key: string) => formatDayKey(key, { style: 'short' }),
     [],
@@ -516,12 +516,12 @@ export default function DrivesListPage() {
     ? `${datePresetLabel} · ${formattedRange}`
     : formattedRange;
   // Comparison label rules:
-  //   - If the prior period has data, show "vs <range>" so the user knows
-  //     the deltas on each metric tile compare against that window.
-  //   - If the prior period is empty, render an explicit "No drives in
-  //     prior period: …" message instead of silently hiding the slot —
-  //     better to communicate "no baseline" than to leave the user
-  //     wondering why there's no comparison.
+  // - If the prior period has data, show "vs <range>" so the user knows
+  // the deltas on each metric tile compare against that window.
+  // - If the prior period is empty, render an explicit "No drives in
+  // prior period: …" message instead of silently hiding the slot —
+  // better to communicate "no baseline" than to leave the user
+  // wondering why there's no comparison.
   // Prior range never gets a preset name (the prior window isn't user
   // selected) — full date range with years on both ends keeps it clear.
   const priorHasData = priorStats != null && priorStats.count > 0;
@@ -664,7 +664,7 @@ export default function DrivesListPage() {
           {stickySummary}
         </PageHeaderSticky>
 
-        {/* AI: opt-in natural-language drive search (Phase-50 / 0021).
+        {/* Opt-in natural-language drive search.
             Hidden when ai_mode='off' or the nl-drive-search-replay toggle
             is off — the typed SearchInput + FilterBar below remain the
             canonical baseline. */}

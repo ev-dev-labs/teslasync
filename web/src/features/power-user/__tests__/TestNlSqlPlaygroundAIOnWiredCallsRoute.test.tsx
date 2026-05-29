@@ -1,11 +1,9 @@
-// Phase-50 / 0057 — PU1 Natural-language SQL playground.
-// Phase-50 / W1 inline wiring (per slice prompt 0057) — on-mode
-// wiring test proving the "Draft SQL" button opens an SSE stream
+// Natural-language SQL playground.
+// On-mode wiring test proving the "Draft SQL" button opens an SSE stream
 // against the registered backend route
 // POST /api/v1/ai/power/sql/draft.
 //
-// `TestNlSqlPlaygroundAIOnWiredCallsRoute` is the load-bearing
-// positive wiring proof for slice 0057's W1 inline addendum. It
+// `TestNlSqlPlaygroundAIOnWiredCallsRoute` is the positive wiring proof. It
 // mounts the AINLSqlPlayground component with ai_mode='cloud' +
 // the per-feature toggle on, stubs global fetch with a
 // deterministic SSE byte stream, types a prompt, clicks the
@@ -24,8 +22,8 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
-//      from canDraft). This proves W1 Rule A — the disabled prop
-//      is a computed expression that reacts to state.
+//      from canDraft). This proves the disabled prop is a computed
+//      expression that reacts to state.
 //   4. After a typed `tool_result` for `draft_readonly_sql`
 //      lands, the "Apply to editor" button enables and clicking
 //      it invokes the `onApply` prop with the parsed
@@ -40,7 +38,7 @@
 //      runner.
 //
 // The test name MUST stay `TestNlSqlPlaygroundAIOnWiredCallsRoute`
-// per the W1 inline addendum naming contract.
+// so targeted test filters continue to match it.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';

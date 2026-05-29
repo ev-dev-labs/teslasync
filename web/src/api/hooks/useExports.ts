@@ -10,14 +10,13 @@ export const exportKeys = {
   detail: (id: string) => ['exports', id] as const,
   jobs: ['export-jobs'] as const,
   job: (id: string) => ['export-jobs', id] as const,
-  /** Phase-46/62 — column-picker catalog cache key, keyed by export type so
-   *  switching the wizard between drives/charging triggers a separate
-   *  fetch instead of stale-flashing the previous catalog. */
+  /** Column-picker catalog cache key, keyed by export type so switching the
+   *  wizard between drives/charging fetches a separate catalog instead of
+   *  stale-flashing the previous one. */
   columns: (type: string) => ['export-columns', type] as const,
-  /** Phase-46/65 — recurring "scheduled exports" cache key. The list
-   *  is per-user (server enforces by FORWARD_AUTH_HEADER), so the key
-   *  is identity-free; refetch on auth change is the consumer's job
-   *  via TanStack Query's standard invalidation. */
+  /** Recurring scheduled-exports cache key. The server scopes the list by
+   *  FORWARD_AUTH_HEADER, so the key is identity-free; consumers must refetch
+   *  on auth changes via standard TanStack Query invalidation. */
   scheduled: ['scheduled-exports'] as const,
 };
 
@@ -97,11 +96,10 @@ export interface CreateExportPayload {
   vehicle_id?: number;
   start?: string;
   end?: string;
-  /** Phase-46/62 — caller-supplied column allowlist. When omitted the
-   *  backend writes every catalog column (legacy behaviour). When present
-   *  the backend validates each entry against the catalog for `type`,
-   *  silently re-prepends always-included columns, and emits the data
-   *  in the caller-supplied order. */
+  /** Caller-supplied column allowlist. When omitted, the backend writes every
+   *  catalog column. When present, the backend validates each entry against
+   *  the export type, re-prepends always-included columns, and emits data in
+   *  the caller-supplied order. */
   columns?: string[];
 }
 
@@ -169,10 +167,8 @@ export interface ExportBulkResult {
 }
 
 /**
- * useBulkExportsDelete — POST /export/jobs/bulk
- * Phase-45 / Prompt 32. Deletes a batch of export-job UUIDs and refreshes
- * the jobs list + legacy /exports cache. Returns the server's report so
- * callers can surface partial-success counts.
+ * Delete a batch of export-job UUIDs, refresh the jobs list and legacy
+ * /exports cache, and return the server report for partial-success UI.
  */
 export function useBulkExportsDelete() {
   const qc = useQueryClient();
@@ -194,7 +190,7 @@ export function useBulkExportsDelete() {
 }
 
 // ---------------------------------------------------------------------------
-// Phase-46 / Prompt 62 — column-selector catalog
+// Column-selector catalog
 // ---------------------------------------------------------------------------
 
 /** Wire shape of a single column entry as returned by GET /exports/columns. */
@@ -232,7 +228,7 @@ export function useExportColumns(type: string | undefined) {
 }
 
 // ---------------------------------------------------------------------------
-// Phase-46 / Prompt 65 — recurring scheduled exports
+// Recurring scheduled exports
 // ---------------------------------------------------------------------------
 
 /** Delivery dispatcher attached to a schedule. Mirrors the typed JSONB
@@ -289,7 +285,7 @@ export interface ScheduledExportInput {
  *  array when the user has none, NOT undefined; consumers can iterate
  *  without a null guard. Polls every 60s in the foreground so a
  *  freshly fired schedule's last_run_at lands without manual refresh.
- *  Background polling stays paused per Phase-46/53 contract. */
+ *  Background polling stays paused. */
 export function useScheduledExports() {
   return useQuery({
     queryKey: exportKeys.scheduled,

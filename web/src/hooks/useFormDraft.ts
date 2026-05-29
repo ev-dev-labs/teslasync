@@ -56,14 +56,14 @@ export interface FormDraftOptions<T> {
   /** Maximum age in ms before the draft is treated as expired (default 7 days). */
   maxAgeMs?: number
   /**
-   * Phase-46 / Prompt 47 — opt-in to the global crash-recovery prompt.
+   * Opt in to the global crash-recovery prompt.
    *
    * When provided, every successful persist also writes an entry into
    * the {@link import('@/lib/draftIndex').DraftEntry draft index} keyed
    * by this hook's `localStorage` key, and broadcasts
    * `formDraft.acquired` / `formDraft.released` so other tabs can avoid
    * double-prompting. When omitted, the hook behaves identically to
-   * its pre-Prompt-47 contract — no extra storage writes, no broadcasts.
+   * its previous contract — no extra storage writes, no broadcasts.
    *
    * Existing callers that haven't migrated are still surfaced by the
    * recovery prompt via fallback rules in `draftIndex.ts`; passing
@@ -244,8 +244,8 @@ export function useFormDraft<T>(
   // storage, churning savedAt for no reason.
   const dirtyRef = useRef(false)
 
-  // Phase-46 / Prompt 47 — recovery metadata refs. Held in refs so
-  // callbacks (`persist`, `discardDraft`) stay stable across renders even
+  // Recovery metadata lives in refs so callbacks (`persist`, `discardDraft`)
+  // stay stable across renders even
   // as the caller's `recover.label` / `recover.route` change.
   const recoverRef = useRef(recover)
   const recoverKeyRef = useRef(key)
@@ -288,8 +288,8 @@ export function useFormDraft<T>(
     const written = writeDraft(storageRef.current, fullKeyRef.current, v, versionRef.current)
     if (written) {
       setState(s => ({ ...s, savedAt: written, hasDraft: true }))
-      // Phase-46 / Prompt 47 — opt-in: enrich the global recovery index
-      // and signal sibling tabs that this draft is being actively edited.
+      // Opt-in recovery enriches the global index and signals sibling tabs
+      // that this draft is being actively edited.
       const rec = recoverRef.current
       if (rec) {
         const route = resolveRecoverRoute(rec.route)
@@ -339,8 +339,8 @@ export function useFormDraft<T>(
     } catch {
       // best-effort
     }
-    // Phase-46 / Prompt 47 — keep the recovery index in sync with the
-    // envelope deletion. Broadcast `released` so a sibling tab's prompt
+    // Keep the recovery index in sync with envelope deletion. Broadcast
+    // `released` so a sibling tab's prompt
     // doesn't keep listing this draft as active.
     if (recoverRef.current) {
       unregisterDraft(fullKeyRef.current)
@@ -389,7 +389,7 @@ export function useFormDraft<T>(
   // stateRef.current holds the latest value.
   useEffect(() => () => { flush() }, [flush])
 
-  // Phase-46 / Prompt 47 — recovery surface integration (opt-in).
+  // Recovery surface integration (opt-in).
   //
   // When the caller opted in via `recover`, we:
   //   1. Re-register the index entry on hydration of an existing draft so
@@ -402,8 +402,8 @@ export function useFormDraft<T>(
   //      sibling tabs immediately re-evaluate their suppression set.
   //
   // The whole effect is a no-op when `recover` is undefined — preserves
-  // the pre-Prompt-47 behavioural contract (no extra storage writes, no
-  // bus traffic) for callers that haven't migrated.
+  // the previous behavioural contract (no extra storage writes, no bus
+  // traffic) for callers that haven't migrated.
   useEffect(() => {
     const rec = recoverRef.current
     if (!rec) return

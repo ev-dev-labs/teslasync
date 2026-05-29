@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 28 — NotificationBellPopover behaviour tests.
+ * NotificationBellPopover behaviour tests.
  *
  * Validates the in-place triage panel that opens from the header bell:
  *   - desktop click opens a role="dialog" popover

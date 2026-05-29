@@ -1,8 +1,8 @@
 /**
- * orphan-allowlist — intentional ORPHAN hook waiver list (Phase-43a/0001).
+ * orphan-allowlist — intentional ORPHAN hook waiver list.
  *
- * The phase-43 hook coverage audit (`phase-43-0080-hook-coverage-audit.log`)
- * flags any file under `web/src/api/hooks/` whose exported `use*` symbols
+ * The hook coverage audit flags any file under `web/src/api/hooks/`
+ * whose exported `use*` symbols
  * have ZERO production consumers. By default an ORPHAN status BLOCKS the
  * audit. Files listed here are exempted: the audit treats listed entries as
  * PASS and continues without erroring.

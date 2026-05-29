@@ -66,10 +66,9 @@ type PeriodValue = (typeof PERIOD_VALUES)[number];
 const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
 
-// Phase 40 / Prompt 39 — disambiguation banner dismissal is persisted so users
-// who already understand the difference between the two compare pages don't
-// have to dismiss it on every visit. Two separate keys (period|fleet) so each
-// page tracks its own banner.
+// Disambiguation banner dismissal is persisted so users who already understand
+// the difference between compare pages do not have to dismiss it on every visit.
+// Separate keys let each compare page track its own banner.
 const BANNER_DISMISSED_KEY = 'phase40.compareBanner.dismissed.period';
 
 /* ── Component ─────────────────────────────────────────── */
@@ -85,7 +84,7 @@ export default function PeriodComparePage() {
   const [periodA, setPeriodA] = useUrlEnum<PeriodValue>('period_a', PERIOD_VALUES, '30');
   const [periodB, setPeriodB] = useUrlEnum<PeriodValue>('period_b', PERIOD_VALUES, '90');
 
-  // Phase-45/23 — reactive chart palette (CB-safe / neon per user pref).
+  // Reactive chart palette (color-blind-safe or neon, per user preference).
   const palette = useChartPalette();
 
   // Disambiguation banner — defaults to visible, persists dismissal.
@@ -331,7 +330,7 @@ export default function PeriodComparePage() {
         </GlassPanel>
       </FadeIn>
 
-      {/* AI period-compare narration (Phase-50 / 0040) — opt-in, hidden when ai_mode='off' */}
+      {/* AI period-compare narration; opt-in and hidden when ai_mode='off'. */}
       <FadeIn delay={0.025}>
         <div className="mb-6">
           <AIPeriodCompareNarration

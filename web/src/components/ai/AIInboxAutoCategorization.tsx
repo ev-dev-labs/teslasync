@@ -1,24 +1,14 @@
-// Phase-50 / 0035 — A2 Inbox auto-categorization.
+// Inbox auto-categorization AI panel.
 //
-// W1 inline wiring (P11/P12):
-//   - useAiStream targets POST /ai/alerts/inbox/categorize (the
-//     backend path after stripping the /api/v1 prefix).
-//   - The primary action button is disabled via a COMPUTED
-//     expression
-//     (`stream.state === 'streaming' || stream.state === 'paused-confirm'`),
-//     never a literal `disabled` or `disabled={true}` (Rule W1-A).
-//   - tool_result frames carrying a typed CategoryProposal are
-//     captured in component state; clicking "Apply categories as
-//     filter" invokes the parent's onApplyCategories callback with
-//     the proposed rule_id list. The AI panel NEVER persists state
-//     directly — the baseline NotificationFilterBar URL state is
-//     the sole filter-write path (ADR-015 §I3 + §I8 propose-only
-//     contract).
-//   - cancel() runs on unmount AND when vehicleId / windowDays /
-//     severities change (dedicated useEffect with explicit deps).
-//   - Component is wrapped with withAiFeature so it is ABSENT
-//     (returns null) when ai_mode='off' or the per-feature toggle
-//     is off (ADR-015 §I5 hidden UI).
+// Wiring contract:
+//   - useAiStream targets POST /ai/alerts/inbox/categorize.
+//   - The primary action button is disabled from stream state, never by a
+//     literal `disabled` or `disabled={true}`.
+//   - tool_result frames are captured in component state; "Apply categories as
+//     filter" only calls the parent with proposed rule_ids. The AI panel never
+//     persists state directly.
+//   - cancel() runs on unmount and whenever the inbox scope changes.
+//   - withAiFeature hides the component when AI mode or the feature toggle is off.
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -178,7 +168,7 @@ function InnerSection({
   // Cancel + reset whenever the inbox scope changes so a stale
   // stream from a previous filter cannot bleed proposals into the
   // current view. Dedicated effect so the cleanup deps stay
-  // explicit (Rule of Hooks / W1 §6).
+  // explicit and easy to audit.
   useEffect(() => {
     return () => {
       cancelStream()

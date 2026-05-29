@@ -35,8 +35,8 @@ export interface LayoutSwitcherProps {
  * Save-As prompts for a name and creates a duplicate of the current layout via
  * `onCreate`. Reset routes through a `<ConfirmDialog>` from `useConfirm()`.
  *
- * Phase 40 / Prompt 30 — replaces the legacy header tab strip for the primary
- * layout-selection affordance. The full `<LayoutManager>` remains available for
+ * Replaces the legacy header tab strip as the primary layout-selection
+ * affordance. The full `<LayoutManager>` remains available for
  * reordering / renaming via its context menu.
  */
 export function LayoutSwitcher({

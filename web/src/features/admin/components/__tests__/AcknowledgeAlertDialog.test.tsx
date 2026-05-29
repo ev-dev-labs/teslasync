@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 20 — AcknowledgeAlertDialog tests.
+ * AcknowledgeAlertDialog tests.
  *
  * Verifies the modal lifecycle:
  *   1. Renders title + textarea + Submit/Cancel

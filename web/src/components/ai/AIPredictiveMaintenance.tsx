@@ -1,12 +1,8 @@
-// Phase-50 / 0049 — M1 Predictive maintenance.
-// Phase-50 / W1 inline wiring (per slice prompt 0049) — wired the
-// "Predict maintenance" button to POST /api/v1/ai/maintenance/predict
-// via the canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring;
-// this component lands both in one commit so the on-mode wiring
-// test (TestPredictiveMaintenanceAIOnWiredCallsRoute) can prove
-// the button actually opens an SSE stream against the registered
-// backend route.
+// Predictive maintenance.
+// The "Predict maintenance" button POSTs to /api/v1/ai/maintenance/predict
+// via useAiStream. Keep the visual affordance and SSE wiring together so
+// the on-mode wiring test proves the button opens a stream against the
+// registered backend route.
 //
 // AIPredictiveMaintenance is the visible AI surface for the
 // MaintenancePage. It is rendered conditionally via

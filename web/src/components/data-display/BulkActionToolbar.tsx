@@ -1,18 +1,15 @@
 /**
- * BulkActionToolbar — Phase-45 / Prompt 32
+ * BulkActionToolbar.
  *
- * Singular-name alias of the existing `BulkActionsToolbar` (Phase-40 /
- * Prompt 51). Phase-45 / 32 standardised on `BulkActionToolbar` (no
- * trailing s) so the new bulk hooks `useBulkSelection` / `BulkAction`
- * read consistently in feature pages. Re-exporting keeps the existing
- * adopters compiling while the new pages can use the singular name.
+ * Singular-name alias of the existing `BulkActionsToolbar`. `BulkActionToolbar`
+ * (no trailing s) reads consistently with the bulk hooks `useBulkSelection` /
+ * `BulkAction`. Re-exporting keeps the existing adopters compiling while new
+ * pages can use the singular name.
  *
  * Why a thin alias and not a fresh implementation:
- *   - The Phase-40 component already covers everything the prompt's
- *     design specifies: count + total label, Action buttons (with
- *     loading), Clear button, optional ConfirmDialog routing, role=region
- *     a11y. Re-implementing would duplicate the confirm-dialog wiring
- *     introduced by Phase-45 / 04 and silenced by Phase-45 / 29.
+ *   - The existing component already covers count + total label, Action buttons
+ *     with loading, Clear button, optional ConfirmDialog routing, and role=region
+ *     a11y. Re-implementing would duplicate the confirm-dialog wiring.
  *   - Both names continue to work, so partial migrations don't break.
  */
 

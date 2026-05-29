@@ -6,8 +6,8 @@ import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type { PushSubscribeBody, PushSubscriptionRow } from '../types';
 
 /**
- * Phase 40 / Prompt 52 — TanStack Query hooks for the push_subscriptions
- * API. The actual `subscribe()` / `unsubscribe()` lifecycle (talking to
+ * TanStack Query hooks for the push_subscriptions API. The actual
+ * `subscribe()` / `unsubscribe()` lifecycle (talking to
  * the browser's PushManager + service worker) lives in
  * `web/src/hooks/useWebPush.ts`; the hooks below only deal with the
  * server side of the contract (POST/GET/DELETE /push/subscribe and

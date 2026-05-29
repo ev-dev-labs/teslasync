@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 54 — Vehicle photo upload hook.
+// Vehicle photo upload hook.
 //
 // Surfaces three React-Query primitives for the SPA's
 // <VehiclePhotoUpload> + <VehicleHeroCard>:

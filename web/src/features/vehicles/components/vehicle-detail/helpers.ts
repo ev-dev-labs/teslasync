@@ -14,7 +14,7 @@ export function batteryColor(level: number): string {
 }
 
 /**
- * Phase-43 / Prompt 0020 — backend tire-pressure SI baseline is Pascals
+ * Backend tire-pressure SI baseline is Pascals
  * (UnitKindPressure ToSI). All comparisons live in Pa to keep one
  * canonical source of truth shared by `TirePressurePanel` and
  * `TirePressureSection`. Display conversion to kPa (frontend SI floor)

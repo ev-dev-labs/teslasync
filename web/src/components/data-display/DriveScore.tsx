@@ -23,7 +23,7 @@ type DriveLike = {
 }
 
 export function computeDriveScore(drive: DriveLike): { total: number; efficiency: number; speed: number; range: number; trip: number } {
-  // Phase-48 Slice 1: Drive fields are SI canonical (meters, seconds, m/s).
+  // Drive fields are SI canonical: meters, seconds, and m/s.
   const distanceM = drive.distance_m ?? drive.distanceM ?? 0
   const distanceKm = distanceM / 1000
   const durationS = drive.duration_s ?? drive.durationS ?? 0

@@ -80,8 +80,8 @@ export function DataTableResizer({
   useEffect(() => () => setDragging(false), [])
 
   return (
-    // Phase-45 / Prompt 13 — disabled jsx-a11y rules: this resizer follows
-    // WAI-ARIA Authoring Practices' "Window Splitter Pattern" which uses
+    // This resizer follows WAI-ARIA Authoring Practices'
+    // "Window Splitter Pattern" which uses
     // role="separator" with aria-valuenow/min/max + tabIndex={0} so
     // keyboard users can pick the splitter and arrow-key resize it. The
     // jsx-a11y rule treats `separator` as non-interactive by default, but

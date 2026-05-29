@@ -171,8 +171,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
     onClose()
   }
 
-  // Phase-45 / Prompt 04: migrated from a hand-rolled full-viewport overlay
-  // to the shared <Modal>, which enforces viewport-bound sizing
+  // The shared <Modal> enforces viewport-bound sizing
   // (max-h-[90vh] desktop / max-h-[100dvh] mobile) so the dialog never escapes
   // the screen. Master controls + footer are positioned `sticky` so they remain
   // visible while the signal list scrolls.

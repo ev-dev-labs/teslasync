@@ -129,7 +129,7 @@ export default function AnomalyDashboardPage() {
         </StaggerContainer>
       </FadeIn>
 
-      {/* ── Phase-50 / U4: opt-in AI anomaly explanation ──── */}
+      {/* Opt-in AI anomaly explanation. */}
       {/* Renders only when ai_mode != 'off' AND the              */}
       {/* anomaly-explanations toggle is on. The withAiFeature    */}
       {/* HOC inside AIAnomalyExplanations enforces the gate;     */}
@@ -139,7 +139,7 @@ export default function AnomalyDashboardPage() {
         <AIAnomalyExplanations vehicleId={selectedId ?? undefined} />
       </FadeIn>
 
-      {/* ── Phase-50 / 0062 (ML1): opt-in learned per-vehicle ── */}
+      {/* Opt-in learned per-vehicle anomaly baselines. */}
       {/* anomaly baselines. Renders only when ai_mode != 'off'   */}
       {/* AND the learned-per-vehicle-anomaly-baselines toggle is */}
       {/* on. The withAiFeature HOC inside                        */}
@@ -148,7 +148,7 @@ export default function AnomalyDashboardPage() {
       {/* canonical baseline in off mode AND is the per-signal    */}
       {/* fallback for the learned trainer when fewer than 30     */}
       {/* samples exist for a signal in the lookback window       */}
-      {/* (ADR-015 §I3 + slice-0062 trainer fallback contract).   */}
+      {/* (ADR-015 §I3 trainer fallback contract).                */}
       <FadeIn delay={0.045}>
         <AILearnedAnomalyBaselines vehicleId={selectedId ?? undefined} />
       </FadeIn>

@@ -1,12 +1,9 @@
-// Phase-50 / 0032 — T2 Cabin temperature impact narrative.
-// Phase-50 / W1 inline wiring (per slice prompt 0032) — on-mode
-// wiring test proving the Narrate button opens an SSE stream
+// On-mode wiring test proving the Narrate button opens an SSE stream
 // against the registered backend route POST
 // /api/v1/ai/climate/temperature-impact/narrate.
 //
 // `TestCabinTemperatureNarrativeAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0032's W1 inline
-// addendum. It mounts the AICabinTemperatureImpactNarrative
+// positive wiring proof. It mounts the AICabinTemperatureImpactNarrative
 // component with ai_mode='cloud' + the per-feature toggle on, stubs
 // global fetch with a deterministic SSE byte stream, clicks the
 // Narrate button, and asserts:
@@ -24,8 +21,8 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
-//      from canGenerate). This proves W1 Rule A — the disabled
-//      prop is a computed expression that reacts to state.
+//      from canGenerate). This proves the disabled prop is a
+//      computed expression that reacts to state.
 //   4. The off-mode invariant test
 //      (`TestCabinTemperatureNarrativeAIOffShowsChartsOnly`)
 //      continues to pass unchanged — wiring MUST NOT regress the
@@ -34,8 +31,8 @@
 //      runner.
 //
 // The test name MUST stay
-// `TestCabinTemperatureNarrativeAIOnWiredCallsRoute` per the W1
-// inline addendum naming contract.
+// `TestCabinTemperatureNarrativeAIOnWiredCallsRoute` because
+// external verification references it by name.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';

@@ -1,8 +1,8 @@
 /**
  * @module teslaAuthRecovery
  *
- * Phase-45 / Prompt 30 — Best-effort queue + replay for mutations that
- * failed because the user's third-party Tesla refresh token expired.
+ * Best-effort queue and replay for mutations that failed because the
+ * user's third-party Tesla refresh token expired.
  *
  * When a Tesla-bound mutation throws {@link TeslaAuthExpiredError},
  * mutation hooks call {@link queueTeslaMutation} with a closure that

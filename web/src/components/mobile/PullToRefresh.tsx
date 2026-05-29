@@ -1,15 +1,15 @@
 /**
- * Phase-46 / Prompt 10 — Pull-to-refresh primitive.
+ * Pull-to-refresh primitive.
  *
  * Native-feel pull-to-refresh wrapper for mobile lists. Mirrors the iOS
  * Mail / Slack interaction:
- *   1. User starts a touch at the very top of the scroll container.
- *   2. User drags down — a small spinner / arc grows with the pull.
- *   3. Past the threshold (default 80 px) the bar locks into the
- *      "release to refresh" state.
- *   4. On release past threshold we fire `onRefresh()` and show the
- *      "Refreshing…" label until the returned promise resolves.
- *   5. On release below threshold we snap back without firing.
+ * 1. User starts a touch at the very top of the scroll container.
+ * 2. User drags down — a small spinner / arc grows with the pull.
+ * 3. Past the threshold (default 80 px) the bar locks into the
+ * "release to refresh" state.
+ * 4. On release past threshold we fire `onRefresh()` and show the
+ * "Refreshing…" label until the returned promise resolves.
+ * 5. On release below threshold we snap back without firing.
  *
  * Touch-only by default: `enabled` defaults to `useIsCoarsePointer()` so
  * desktop / mouse users never see the indicator and never have their
@@ -39,18 +39,18 @@ import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 export interface PullToRefreshProps {
   /**
-   * Callback fired when the user releases past the pull threshold. The
-   * "Refreshing…" indicator stays visible until the returned promise
-   * settles (resolves OR rejects — we never leave the indicator stuck).
-   */
+ * Callback fired when the user releases past the pull threshold. The
+ * "Refreshing…" indicator stays visible until the returned promise
+ * settles (resolves OR rejects — we never leave the indicator stuck).
+ */
   onRefresh: () => Promise<unknown>;
   /** Pixels the user must pull before a release fires `onRefresh`. */
   threshold?: number;
   children: ReactNode;
   /**
-   * Override the touch-only default. When `undefined`, gestures opt in
-   * automatically on coarse-pointer (touch / pen) devices.
-   */
+ * Override the touch-only default. When `undefined`, gestures opt in
+ * automatically on coarse-pointer (touch / pen) devices.
+ */
   enabled?: boolean;
   className?: string;
 }

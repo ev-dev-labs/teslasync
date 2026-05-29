@@ -35,7 +35,6 @@ export function resolveChartPalette(
  * `@/lib/colors`) when you need the theme-derived gradient palette object
  * with semantic positive/negative/warning/neutral colours.
  *
- * (Phase-45 / Prompt 23.)
  */
 export function useChartPalette(): readonly string[] {
   const { data } = useSettings()

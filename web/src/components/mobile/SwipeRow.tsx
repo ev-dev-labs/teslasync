@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 10 — Swipe-to-action row primitive.
+ * Swipe-to-action row primitive.
  *
  * Native-feel swipe-to-archive / swipe-to-delete row for mobile lists.
  * Mirrors the iOS Mail / Apple Notes interaction:

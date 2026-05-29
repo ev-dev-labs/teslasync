@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 70 — cookie consent storage helper tests.
+ * Cookie consent storage helper tests.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'

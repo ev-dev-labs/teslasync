@@ -25,7 +25,7 @@ import { Icons } from '@/lib/icons';
 
 /**
  * AlertRulesPage — focused list view of every alert rule with bulk
- * enable/disable/delete. Phase-45 / Prompt 32.
+ * enable/disable/delete.
  *
  * The full CRUD studio lives at /alert-studio (`AlertStudioPage`); this
  * page is the streamlined "manage many at once" surface for power users
@@ -35,8 +35,8 @@ export default function AlertRulesPage() {
   const { t } = useTranslation();
   usePageTitle(t('alertRules.title', 'Alert rules'));
 
-  // Phase-46 / Prompt 66 — claim an edit lease so a second tab opening
-  // the same bulk-rules surface sees a banner before its renames /
+  // Claim an edit lease so a second tab opening the same bulk-rules surface
+  // sees a banner before its renames /
   // bulk-enables silently race this tab. The lease is scoped to the
   // list view itself (not per-rule) because the rename / bulk
   // affordances on this page operate across the whole rule set.

@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { useUrlState } from './useUrlState'
 
 /**
- * Phase-46 / Prompt 64 — global as-of timestamp URL state.
+ * Global as-of timestamp URL state.
  *
  * `useAsOfDate` mirrors the canonical `?as_of=` query parameter used by the
  * read-only point-in-time time-machine view. When set, SignalStore-backed

@@ -2,7 +2,7 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react'
 import { CHANGELOG, LATEST_VERSION, type ChangelogEntry } from '@/generated/changelog'
 
 /**
- * useChangelog — Phase-40 / Prompt 67.
+ * Changelog acknowledgement state.
  *
  * Tracks which changelog version the user has acknowledged via localStorage,
  * exposes the entries that have shipped since their last visit, and provides

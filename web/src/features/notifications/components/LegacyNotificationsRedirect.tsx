@@ -2,7 +2,6 @@
  * LegacyNotificationsRedirect — Smart query-aware redirect from the legacy
  * `/notifications?tab=…` route to the new top-level Notifications routes.
  * Forwards remaining search params so filter/search state survives.
- *
  *   /notifications                → /notifications/inbox
  *   /notifications?tab=inbox      → /notifications/inbox
  *   /notifications?tab=archived   → /notifications/archived

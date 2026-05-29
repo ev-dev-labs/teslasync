@@ -1,12 +1,12 @@
-// Phase-50 / 0027 — C2 Battery health forecast narrative.
-//
+// Battery health forecast narrative.
+
 // `TestBatteryHealthNarrativeAIOffShowsChartOnly` (the Vitest
-// sibling to the Go test of the same name) is the slice's
+// sibling to the Go test of the same name) verifies the
 // load-bearing AI-OFF contract proof on the React side. It mounts
 // the AIBatteryHealthForecastNarrative component with ai_mode='off'
 // (plus the per-feature toggle on, to defeat the obvious "off
 // because nothing is enabled" path) and asserts:
-//
+
 //   1. The AI section's rooted test ID is absent from the DOM.
 //   2. The wrapper renders no children (empty container).
 //   3. With ai_mode='cloud' AND
@@ -15,7 +15,7 @@
 //      positive control that proves the gate actually works
 //      (otherwise the "absent in off mode" assertion is trivially
 //      true).
-//
+
 // The HTTP POST /api/v1/ai/battery/health/narrate 404-in-off-mode
 // invariant is proven by the Go-side
 // TestBatteryHealthNarrativeAIOffShowsChartOnly in
@@ -26,10 +26,10 @@
 // Prediction chart, hero metric cards, range trend, charge level
 // distribution, insights, and recommendations regardless of this
 // AI section's visibility.
-//
+
 // File name MUST stay
-// `TestBatteryHealthNarrativeAIOffShowsChartOnly.test.tsx` —
-// the slice prompt's verification command runs
+// `TestBatteryHealthNarrativeAIOffShowsChartOnly.test.tsx`
+// the verification command runs
 // `vitest --run TestBatteryHealthNarrativeAIOffShowsChartOnly`,
 // where the positional pattern is matched against the file PATH.
 
@@ -87,7 +87,7 @@ describe('TestBatteryHealthNarrativeAIOffShowsChartOnly (battery-health-forecast
     // shortcut path "the section hides because the feature flag is
     // off". The mode='off' check MUST trump the per-feature toggle
     // (ADR-015 §I7).
-    //
+
     // The vehicleId prop is also intentionally set so the
     // absent-in-DOM assertion proves that the gate (not a missing
     // prop) is what hides the section. In production the parent
@@ -111,7 +111,7 @@ describe('TestBatteryHealthNarrativeAIOffShowsChartOnly (battery-health-forecast
   it('TestBatteryHealthNarrativeAIOffShowsChartOnly: renders nothing when ai_mode is non-off but the battery-health-forecast-narrative toggle is false', () => {
     // The other half of the gate: even with mode='cloud', a
     // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // §I7).
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

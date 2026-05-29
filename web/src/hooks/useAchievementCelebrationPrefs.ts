@@ -1,8 +1,7 @@
 import { useSyncExternalStore } from 'react'
 
 /**
- * useAchievementCelebrationPrefs — localStorage-backed user preferences for
- * the achievement-unlock celebration UX (Phase-40 / Prompt 63).
+ * localStorage-backed user preferences for achievement-unlock celebrations.
  *
  * Stored client-side (mirroring `useStatusBarPrefs`) rather than in the
  * `settings` key/value table so toggles take effect instantly without a

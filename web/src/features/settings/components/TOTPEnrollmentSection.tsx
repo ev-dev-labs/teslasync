@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 35 — TOTP enrollment UI.
+ * TOTP enrollment UI.
  *
  * Renders a single GlassPanel under <section id="security"> on the
  * Settings page with three states:
@@ -7,7 +7,7 @@
  *   1. Open mode (no forward-auth header configured upstream) — shows
  *      an inline "feature requires authenticated mode" placeholder.
  *      Mirrors the future <RequiresAuth capability="totp_enrollment">
- *      gate (prompt 57). The Enroll/Disable buttons are NOT rendered
+ *      gate. The Enroll/Disable buttons are NOT rendered
  *      in this mode so no enroll endpoint is hit.
  *
  *   2. Forward-auth + not enrolled — shows a status pill ("Not
@@ -201,8 +201,8 @@ export function TOTPEnrollmentSection() {
     )
   }
 
-  // Open-mode placeholder. Mirrors what <RequiresAuth> will render
-  // once prompt 57 ships — for now we inline the message here.
+  // Open-mode placeholder. Mirrors what <RequiresAuth> will render;
+  // inline for now because that gate is not available here.
   if (!status.data || status.data.mode === 'open') {
     return (
       <FadeIn delay={0.05}>

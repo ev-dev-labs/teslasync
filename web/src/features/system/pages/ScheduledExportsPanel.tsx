@@ -1,5 +1,4 @@
-// Phase-46 / Prompt 65 — Scheduled exports panel mounted on the
-// /data-export page.
+// Scheduled exports panel mounted on the /data-export page.
 //
 // Responsibilities
 // ----------------

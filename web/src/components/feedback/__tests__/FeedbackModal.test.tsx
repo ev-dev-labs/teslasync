@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 08 — FeedbackModal contract.
+ * FeedbackModal contract.
  *
  * Asserts the schema-driven submit flow:
  *   1. Submit is disabled until title/body meet zod's min-length rules.

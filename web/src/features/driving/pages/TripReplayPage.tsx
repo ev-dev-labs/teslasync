@@ -1,5 +1,5 @@
 /**
- * Phase-45 / Prompt 26 — TripReplayPage relocation shim.
+ * TripReplayPage relocation shim.
  *
  * The full TripReplayPage implementation moved to
  * `@/features/trips/pages/TripReplayPage` so it can sit alongside the

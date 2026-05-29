@@ -1,8 +1,6 @@
-// Phase-50 / 0050 — M2 TCO narration.
-//
 // `TestTCONarrationAIOffShowsChartsOnly` (the Vitest sibling to
-// the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
+// the Go test of the same name) proves the React AI-OFF
+// contract. It mounts the
 // AITCONarration component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -27,8 +25,8 @@
 // of this AI section's visibility (ADR-015 §I3).
 //
 // File name MUST stay
-// `TestTCONarrationAIOffShowsChartsOnly.test.tsx` — the slice
-// prompt's verification command runs
+// `TestTCONarrationAIOffShowsChartsOnly.test.tsx` because the
+// verification command runs
 // `vitest --run TestTCONarrationAIOffShowsChartsOnly`, where
 // the positional pattern is matched against the file PATH.
 

@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 62 — useExportColumns hook tests.
+// useExportColumns hook tests.
 //
 // Covers:
 //   - useExportColumns hits GET /exports/columns?type=... with the URL-
@@ -8,9 +8,8 @@
 //   - The hook surfaces the raw {columns,supports_selection,type}
 //     payload so the column picker can consume it directly.
 //
-// Sibling-of-source location is mandatory — the gate's git-status regex
-// matches `api/hooks/useExports` as a substring, which a __tests__/
-// subdir would interrupt.
+// Keep this test next to the hook because path-scoped checks match
+// `api/hooks/useExports` as a contiguous substring.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
@@ -130,7 +129,7 @@ describe('useExportColumns', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Phase-46 / Prompt 65 — scheduled exports hook coverage
+// Scheduled exports hook coverage
 // ---------------------------------------------------------------------------
 
 const sampleSchedule: ScheduledExport = {

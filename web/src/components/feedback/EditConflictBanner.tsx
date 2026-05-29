@@ -5,7 +5,7 @@ import { Button } from '@/components/ui'
 import { useEditLease } from '@/hooks/useEditLease'
 
 /**
- * Phase-46 / Prompt 66 — In-place "another tab is editing this" warning.
+ * In-place "another tab is editing this" warning.
  *
  * Wraps {@link useEditLease} for a `resourceKey` and renders an
  * {@link AlertBanner} only when this tab does NOT currently own the

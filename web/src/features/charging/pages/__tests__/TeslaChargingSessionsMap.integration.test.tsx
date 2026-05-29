@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 17 — `<TeslaChargingSessionsMap>` integration test.
+ * `<TeslaChargingSessionsMap>` integration test.
  *
  * The page is the canonical adopter of `<MarkerCluster>`. This test
  * mounts it with 500 synthetic sessions and asserts that:

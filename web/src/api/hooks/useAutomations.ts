@@ -130,9 +130,9 @@ export interface AutomationBulkResult {
 }
 
 /**
- * useBulkAutomationsUpdate — POST /automations/bulk
- * Phase-45 / Prompt 32. Issues an allowlisted bulk op against `ids`,
- * invalidates the automations list + history, and toasts on outcome.
+ * useBulkAutomationsUpdate — POST /automations/bulk.
+ * Issues an allowlisted bulk op against `ids`, invalidates the
+ * automations list + history, and toasts on outcome.
  */
 export function useBulkAutomationsUpdate() {
   const qc = useQueryClient();

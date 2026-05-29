@@ -23,7 +23,7 @@ function invertedBoolStatus(val: boolean | null | undefined): StatusCell['status
   return val ? 'inactive' : 'ok';
 }
 
-/** Maps a Phase-42a-mixed safety enum value to a StatusCell.status.
+/** Maps a safety enum value to a StatusCell.status.
  *  Accepts unknown so a stray boolean/number from the backend never
  *  crashes .toLowerCase(). See lib/safetyEnum.ts for the contract. */
 function safetyEnumStatus(val: unknown, field: SafetyEnumField): StatusCell['status'] {

@@ -1,19 +1,16 @@
 /**
- * Phase-46 / Prompt 11 — Forced-colors contract tests.
- *
+ * Forced-colors contract tests.
  * The shared critical components (Button, GlassPanel, Card, Badge,
  * Modal, Toggle, Tooltip, DataTable, Toast, ChartContainer,
  * MapLayerSwitcher) MUST carry an explicit `forced-colors:` Tailwind
  * variant on at least one of their root or boundary elements so the
  * panel/chip/dialog/button stays perceivable in Windows High Contrast /
  * Aquatic / Contrast Themes mode.
- *
  * `npm run audit:forced-colors` enforces this at lint-time by scanning
  * the same critical-component allow-list. This file is the
  * defense-in-depth equivalent — it re-runs the same allow-list as a
  * Vitest spec so a future refactor that strips the override out of one
  * of these files trips both gates loudly.
- *
  * The audit lives in `web/scripts/audit-forced-colors.mjs`. Keep the
  * `CRITICAL_COMPONENTS` list below in sync if you ever add or rename
  * a critical component.

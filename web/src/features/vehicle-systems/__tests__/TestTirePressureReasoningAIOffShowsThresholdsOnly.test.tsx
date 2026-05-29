@@ -1,4 +1,4 @@
-// Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
+// Tire-pressure trend reasoning.
 //
 // `TestTirePressureReasoningAIOffShowsThresholdsOnly` (the Vitest
 // sibling to the Go test of the same name) is the slice's

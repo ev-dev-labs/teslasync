@@ -1,4 +1,4 @@
-// Phase-50 / 0041 — X2 Lifetime stats Q&A.
+// Lifetime stats Q&A.
 //
 // `TestLifetimeStatsQAAIOffHidesQuestionBox` (the Vitest sibling
 // to the Go test of the same name) is the slice's load-bearing

@@ -10,15 +10,14 @@ import { useMutationToast } from './_toastHelpers';
 import type { ChatSessionInfo } from '@/api/types';
 
 /**
- * Phase 40 / Prompt 56 — TanStack Query hooks for the AI assistant.
+ * TanStack Query hooks for the AI assistant.
  *
  * The send-message and history-load paths still go through the existing
- * thin `@/api/devtools` exports (those date back to before the dedicated
- * hook split and are still consumed by ChatbotPage's own useMutation).
- * This file adds the *session-management* mutations that the polished
- * sidebar needs (rename inline, delete with confirmation), plus
- * convenience wrappers around the list/history queries so consumers
- * don't have to remember the queryKey shape.
+ * thin `@/api/devtools` exports used by ChatbotPage's own useMutation.
+ * This file adds the session-management mutations the sidebar needs
+ * (rename inline, delete with confirmation), plus convenience wrappers
+ * around list/history queries so consumers don't have to remember the
+ * queryKey shape.
  *
  * Backend wire contract: see `internal/api/chatbot_handler.go` and
  * `internal/api/chatbot_handler_dtos.go` (Sessions / RenameSession /

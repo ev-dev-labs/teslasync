@@ -17,12 +17,11 @@ import { useMotionPreference } from '@/hooks/useMotionPreference'
  * reconnect"), use `<AlertBanner>` from `@/components/feedback/AlertBanner`
  * instead — toasts are not durable and disappear on their own.
  *
- * Icon and border colors are aligned with `severityTokens` in `@/lib/tokens`
- * (Phase-40 Prompt 09) — toned-down 300-level shades on white instead of neon
- * accents — except the `error` variant which keeps the brand `tesla-red`
- * border.
+ * Icon and border colors align with `severityTokens` in `@/lib/tokens`.
+ * Toned-down 300-level shades avoid neon accents on white, except the
+ * `error` variant which keeps the brand `tesla-red` border.
  *
- * Accessibility (Phase-40 / Prompt 20):
+ * Accessibility:
  *   - Each toast renders with `role="alert"` for the `error` variant (assertive
  *     announcement) and `role="status"` for `success`/`info`/`warning` (polite
  *     announcement). Both implicitly set the appropriate `aria-live` value, so
@@ -39,12 +38,12 @@ type ToastType = 'success' | 'error' | 'info' | 'warning'
  * Two flavours, discriminated by which field is set:
  *
  *  - Navigation action: `{ label, to }` renders a React Router `<Link>`.
- *    Used by alert toasts (Phase 40 / Prompt 14) for "View" links into the
+ *    Used by alert toasts for "View" links into the
  *    relevant context page (e.g. /battery?vehicle_id=12&t=...&signal=...).
  *
  *  - Callback action: `{ label, onClick }` renders a `<button>` that fires
  *    the supplied handler then dismisses the toast. Used by undoable bulk
- *    operations (Phase 45 / Prompt 28) where clicking "Undo" must run
+ *    operations where clicking "Undo" must run
  *    arbitrary mutation code rather than navigate.
  *
  * Exactly one of `to` / `onClick` should be supplied; if both are present
@@ -174,7 +173,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 transition={reduce ? { duration: 0 } : { type: 'spring', bounce: 0.2, duration: 0.4 }}
                 className={clsx(
                   'pointer-events-auto rounded-xl border backdrop-blur-xl p-4 bg-white/[0.03]',
-                  // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+                  // Windows High Contrast / forced-colors mode.
                   // Toast borders are tinted alpha (e.g. `border-emerald-500/30`)
                   // and the box-shadow glow is suppressed entirely under
                   // `forced-colors: active`. Without an explicit system-colour

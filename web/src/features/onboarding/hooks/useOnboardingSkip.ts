@@ -2,30 +2,9 @@ import { useCallback, useEffect, useSyncExternalStore } from 'react';
 import { broadcast, subscribe as subscribeBroadcast } from '@/lib/broadcast';
 
 /**
- * useOnboardingSkip — Phase 40 follow-up.
- *
- * Lets the user bypass the OnboardingGate while setup anchors are
- * still incomplete. The flag is persisted in localStorage so it
- * survives reloads, and broadcast across tabs so a "Skip" in one
- * tab takes effect in others.
- *
- * The flag is intentionally NOT cleared when onboarding completes
- * — keeping it set is harmless (the gate also bypasses on
- * `is_complete`) and avoids re-trapping the user on /onboarding if
- * they later disconnect their Tesla account.
- *
- * Implementation: backed by a module-level subscriber list and
- * useSyncExternalStore so EVERY hook instance in the same tab
- * (OnboardingPage + OnboardingGate at the app root) sees the flip
- * synchronously when any caller invokes skip()/unskip(). The prior
- * implementation used per-component useState and only broadcast
- * cross-tab — which meant clicking "Skip for now" updated the
- * OnboardingPage's local state but the OnboardingGate kept the old
- * value, immediately re-routing the user back to /onboarding. A
- * second click after a hard refresh worked only because the gate's
- * useState initializer re-read localStorage on mount.
+ * Persists the operator's "skip wizard" choice locally so the shell can
+ * suppress onboarding before server-side onboarding state exists.
  */
-
 const STORAGE_KEY = 'teslasync:onboarding:skipped:v1';
 
 function readSkipped(): boolean {

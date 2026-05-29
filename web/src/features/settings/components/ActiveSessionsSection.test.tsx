@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 42 — ActiveSessionsSection contract.
+ * ActiveSessionsSection contract.
  *
  * Coverage:
  *   1. Open mode (status.mode='open') renders the inline placeholder

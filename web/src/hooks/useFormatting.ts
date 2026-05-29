@@ -36,7 +36,7 @@ export function useFormatting(): UseFormattingResult {
 
   /**
    * Calculate cost per user-preferred distance unit from SI meters.
-   * @since phase-48-slice-5 distanceM input changed from legacy miles to SI meters.
+   * @since SI cutover: distanceM input changed from legacy miles to SI meters.
    */
   const costPerDistanceUnit = useCallback((kwh: number, distanceM: number): number | null => {
     if (distanceM <= 0) return null
@@ -48,7 +48,7 @@ export function useFormatting(): UseFormattingResult {
   /**
    * Estimate gasoline cost for an SI-meter distance. MPG is miles-based, so
    * this one internal bridge converts meters to miles before applying mpg.
-   * @since phase-48-slice-5 distanceM input changed from legacy miles to SI meters.
+   * @since SI cutover: distanceM input changed from legacy miles to SI meters.
    */
   const estimateGasCost = useCallback((distanceM: number): number | null => {
     const mpg = settings.gas_efficiency_mpg ?? 0

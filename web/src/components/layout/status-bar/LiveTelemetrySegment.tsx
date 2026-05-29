@@ -6,7 +6,7 @@ import { useLiveConnection, type LiveConnectionStatus } from '@/hooks/useLiveCon
 import { cn } from '@/lib/cn';
 
 /**
- * LiveTelemetrySegment — Phase-40 / Prompt 59.
+ * LiveTelemetrySegment.
  *
  * Footer status-bar segment that mirrors `<LiveIndicator>` but in a denser
  * single-line form. Reflects the SSE/MQTT pipeline freshness:

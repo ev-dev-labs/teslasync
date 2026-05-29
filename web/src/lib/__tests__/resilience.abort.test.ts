@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
- * Phase-46 / Prompt 02 — AbortSignal threading through `resilientFetch`.
+ * AbortSignal threading through `resilientFetch`.
  *
  * These tests verify that:
  *   - A user-side abort propagates as `AbortError` (not converted to a

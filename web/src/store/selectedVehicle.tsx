@@ -8,7 +8,7 @@ import {
 } from 'react';
 
 /**
- * Selected-vehicle store — Phase 40 / Prompt 16.
+ * Selected-vehicle store.
  *
  * Persistent global state for "the vehicle the user is currently focused on".
  * Survives reloads via localStorage so multi-vehicle owners don't have to

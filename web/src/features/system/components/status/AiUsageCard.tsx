@@ -1,13 +1,11 @@
 /**
- * AiUsageCard — operator-grade per-call AI spend & volume detail card.
- *
- * Phase-50 / 0004 — F3 AI Call Log + Usage Card.
+ * AiUsageCard — operator-grade per-call AI spend and volume detail card.
  *
  * Mirrors the visual contract of `TeslaApiUsageCard` by feeding the
  * shared `<UsageCard>` primitive in components/data-display. The
  * interesting difference is the data source: instead of a Tesla
  * Fleet API counter, this card reads the per-call audit log written
- * by the `WithAudit` provider decorator in F3.
+ * by the `WithAudit` provider decorator.
  *
  * Off-mode behaviour (ADR-015 §I4):
  *

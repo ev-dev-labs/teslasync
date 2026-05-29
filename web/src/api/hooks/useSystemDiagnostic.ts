@@ -1,4 +1,4 @@
-// useSystemDiagnostic — Phase-46 / Prompt 33
+// useSystemDiagnostic
 //
 // Mutation hook that POSTs to /system/diagnostic and returns the
 // aggregated DiagnosticReport. Implemented as a mutation (not a query)

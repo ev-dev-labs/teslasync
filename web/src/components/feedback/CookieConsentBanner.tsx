@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 70 — Cookie / GDPR consent banner.
+ * Cookie / GDPR consent banner.
  *
  * Renders a non-blocking bottom-of-screen banner the first time a user
  * lands on the page when the deployment opts into consent collection
@@ -73,8 +73,8 @@ export function CookieConsentBanner({
   const requireConsent =
     testHookRequireConsent ?? Boolean(versionQuery.data?.require_cookie_consent)
 
-  // Phase-46 / Prompt 70 — push the deployment-wide consent flag down
-  // into the optional reporters so they gate their POSTs on the
+  // Push the deployment-wide consent flag into optional reporters so
+  // they gate their POSTs on the
   // user's stored consent. Re-pushed on every change so a mid-session
   // version-query resolve, or a Settings → Privacy reset that
   // surfaces the banner again, propagates to the reporters before

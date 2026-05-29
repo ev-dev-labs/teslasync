@@ -1,7 +1,7 @@
 import type { RouteEntry } from './routeRegistry'
 
 /**
- * Phase 40 / Prompt 38 — Closest-route suggestion engine for the 404 page.
+ * Closest-route suggestion engine for the 404 page.
  *
  * Given a typed pathname (e.g. `/vehiclees`) and the registry of known routes,
  * return up to `limit` candidates ranked by Levenshtein edit distance.

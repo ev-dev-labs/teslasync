@@ -1,19 +1,9 @@
 /**
- * Phase-50 / 0003 — F2 Settings UI for AI.
+ * AI provider configuration. Visible only when AI mode is not off.
  *
- * Provider configuration sub-section. Visible only when the parent
- * AISettings panel has a non-off mode selected. Collects provider
- * identifier, base URL (for local), API key (for cloud), model
- * name, and the daily cost cap (cloud-only).
- *
- * The "Validate" button hits the new `/settings/ai/validate-config`
- * endpoint which lives outside `/api/v1/ai/*` by design — see
- * ADR-015 §I7 commentary in the validate handler. The validate
- * call is OPTIONAL: the user can still save without validating,
- * but the local-mode validator is the only way to confirm that a
- * user-entered base URL resolves to an RFC1918 / loopback / link-
- * local / ULA address (the local validator pins the IP and
- * refuses public addresses to prevent silent egress).
+ * Validate calls `/settings/ai/validate-config`, outside `/ai/*`, so users can
+ * verify local provider URLs before saving. Local validation pins private or
+ * loopback addresses and rejects public egress targets.
  */
 
 import { useState } from 'react'
@@ -338,10 +328,8 @@ export function AIProviderSection({ value, isCloud, onChange }: Props) {
       {isCloud && (
         <>
           <Input
-            // ADR-015 §I9 — `type="password"` masks any value the
-            // user types. The parent NEVER pre-populates this field
-            // when the server's mode is off (which is also when the
-            // server itself redacts the key). Empty input on save
+            // `type="password"` masks typed values. The parent never
+            // pre-populates this field when the server redacts the key. Empty input on save
             // means "do not change the stored key".
             type="password"
             autoComplete="new-password"

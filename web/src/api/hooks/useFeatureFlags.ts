@@ -6,14 +6,14 @@
  * `internal/api/flags_handler.go`.
  *
  * Endpoint summary (router.go ~L3540):
- *   GET    /system/flags                  → FeatureFlagsListResponse
- *   GET    /system/flags/changes          → FeatureFlagChangesResponse
- *   GET    /system/flags/{key}            → FeatureFlagEntry
- *   GET    /system/flags/{key}/changes    → FeatureFlagChangesResponse
- *   PUT    /system/flags/{key}            → FeatureFlagWriteResponse (sudo)
- *   DELETE /system/flags/{key}?reason=…   → FeatureFlagWriteResponse (sudo)
+ *   GET /system/flags → FeatureFlagsListResponse
+ *   GET /system/flags/changes → FeatureFlagChangesResponse
+ *   GET /system/flags/{key} → FeatureFlagEntry
+ *   GET /system/flags/{key}/changes → FeatureFlagChangesResponse
+ *   PUT /system/flags/{key} → FeatureFlagWriteResponse (sudo)
+ *   DELETE /system/flags/{key}?reason=… → FeatureFlagWriteResponse (sudo)
  *
- * Sudo handling is fully delegated to the shared `request()` interceptor —
+ * Sudo handling is fully delegated to the shared `request` interceptor
  * `SUDO_REQUIRED` 401s reopen the mounted ReauthDialog and the mutation
  * resolves transparently on a successful step-up. User-cancel resolves as
  * SudoCanceledError and is swallowed silently in onError.

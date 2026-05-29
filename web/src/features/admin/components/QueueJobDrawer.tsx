@@ -1,5 +1,5 @@
 /**
- * QueueJobDrawer — Phase-46 / Prompt 41.
+ * QueueJobDrawer job-history panel.
  *
  * Slide-in panel that lists the most recent jobs for a single
  * worker. Reuses the shared <Drawer> primitive so focus-trap +

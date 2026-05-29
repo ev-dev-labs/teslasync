@@ -16,17 +16,14 @@ import { useDateFormat } from '@/hooks/useDateFormat';
  * `<FreshnessIndicator>` instead.
  *
  * Four states (mapped from TanStack Query):
- *   - `fresh`    — `dataUpdatedAt > 0`, no fetch in flight, data not stale
- *   - `fetching` — `isFetching === true` (animated)
- *   - `stale`    — `isStale === true` (TanStack Query past `staleTime`)
- *   - `error`    — `isError === true`
+ * - `fresh` — `dataUpdatedAt > 0`, no fetch in flight, data not stale
+ * - `fetching` — `isFetching === true` (animated)
+ * - `stale` — `isStale === true` (TanStack Query past `staleTime`)
+ * - `error` — `isError === true`
  *
  * For most callers, prefer `<DataFreshnessAuto query={query} />` which takes
  * the entire `useQuery()` result and wires every prop in one line.
- *
- * Phase-40 / Prompt 66 — promoted from `features/dashboard/components` to
- * `components/data-display` so non-dashboard surfaces can adopt it without
- * deep relative imports.
+
  */
 export interface DataFreshnessProps {
   /** When the data was last successfully fetched (ms timestamp or null) */
@@ -48,7 +45,7 @@ export type FreshnessStatus = 'fresh' | 'fetching' | 'stale' | 'error';
 /**
  * Shared color tier for the four freshness states. Other surfaces (e.g. the
  * status bar's "Live telemetry" segment) import this map so the visual
- * language stays consistent across the app. Phase-40 / Prompt 66.
+ * language stays consistent across the app.
  */
 export const FRESHNESS_COLORS = {
   fresh: { dot: 'bg-emerald-400', text: 'text-emerald-400/60' },
@@ -80,7 +77,7 @@ const STATUS_CONFIG = {
   },
 } as const;
 
-// TODO(phase-40/prompt-08): centralize this once the shared
+// Centralize this once the shared
 // `formatRelativeTime` helper in @/lib/dateFormat grows i18n plural support.
 // Today the shared helper returns hardcoded English ("just now", "5m ago"),
 // so we keep this i18n-aware variant local. Days/weeks fall-through ensures
@@ -141,7 +138,7 @@ export function DataFreshness({
   const cfg = STATUS_CONFIG[status];
   const Icon = cfg.icon;
 
-  // Phase-45 / Prompt 19 — distinguish background refetch (data on screen,
+  // Distinguish background refetch (data on screen,
   // refetching in flight) from initial load (no data yet). The dot pulses
   // gently during background refetch so users notice an update is coming
   // without yanking the eye to the chip the way the existing ping ring does.
@@ -161,7 +158,7 @@ export function DataFreshness({
     if (onRefresh && !isFetching) onRefresh();
   }, [onRefresh, isFetching]);
 
-  // Phase-45 / Prompt 19 — when the user has reduced-motion enabled we
+  // When the user has reduced-motion enabled we
   // suppress the dot pulse but still need to communicate the in-flight
   // refetch. Surface the state via the tooltip so screen-readers + hover
   // users see "Updating…" while the data lands.
@@ -184,7 +181,7 @@ export function DataFreshness({
       onClick={handleClick}
       title={title}
       role={onRefresh ? 'button' : 'status'}
-      // Phase-45 / Prompt 13 — `aria-live="polite"` so screen readers
+      // `aria-live="polite"` lets screen readers
       // announce freshness state changes (e.g. "fetching" → "fresh") on
       // dashboards/widgets without yanking focus. The `aria-atomic="true"`
       // attribute groups the dot + icon + relative-time text into one
@@ -244,18 +241,18 @@ export interface DataFreshnessAutoProps {
   /** Compact mode (icon-only, no relative time text). */
   compact?: boolean;
   /**
-   * Default `true`: clicking the indicator triggers `query.refetch()`. Set
-   * `false` for read-only displays where a manual refresh would be confusing
-   * (e.g. when the data is owned by an out-of-band poll cycle).
-   */
+ * Default `true`: clicking the indicator triggers `query.refetch()`. Set
+ * `false` for read-only displays where a manual refresh would be confusing
+ * (e.g. when the data is owned by an out-of-band poll cycle).
+ */
   refetchable?: boolean;
   /**
-   * Optional override for the staleness window in ms. When set, the chip
-   * forces the `stale` visual once `Date.now() - dataUpdatedAt` exceeds this
-   * value, even if TanStack Query's `isStale` is still `false`. Useful for
-   * caggs (continuous aggregates) with long `staleTime` — e.g. pass
-   * `6 * 60 * 60 * 1000` to flag a 6-hour-old daily cagg as amber.
-   */
+ * Optional override for the staleness window in ms. When set, the chip
+ * forces the `stale` visual once `Date.now() - dataUpdatedAt` exceeds this
+ * value, even if TanStack Query's `isStale` is still `false`. Useful for
+ * caggs (continuous aggregates) with long `staleTime` — e.g. pass
+ * `6 * 60 * 60 * 1000` to flag a 6-hour-old daily cagg as amber.
+ */
   forceStaleAfterMs?: number;
 }
 
@@ -270,7 +267,7 @@ export interface DataFreshnessAutoProps {
  * ```
  *
  * Preferred over `<DataFreshness>` for any caller that already has a
- * `useQuery()` result handy. Phase-40 / Prompt 66.
+ * `useQuery()` result handy. .
  */
 export function DataFreshnessAuto({
   query,

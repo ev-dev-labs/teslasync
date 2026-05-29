@@ -1,7 +1,6 @@
-// Phase-50 / 0045 — S4 Log and trace summarization.
+// Log and trace summarization AI-off contract test.
 //
-// `TestLogTraceSummarizationAIOffShowsRawLogsOnly` is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// `TestLogTraceSummarizationAIOffShowsRawLogsOnly` mounts
 // the AILogTraceSummarization component with ai_mode='off' (plus
 // the per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -19,8 +18,7 @@
 // In addition, this file mounts the FULL LiveLogsPage in off mode
 // and asserts the deterministic raw log surfaces still render —
 // proving the AI surface's absence does NOT regress the canonical
-// baseline (ADR-015 §I3 + the prompt's explicit "baseline
-// behaviour still works" gate). The rendered page MUST show:
+// baseline (ADR-015 §I3). The rendered page MUST show:
 //
 //   - The level / grep / vehicle filter controls.
 //   - The pause / resume / reconnect / clear / download
@@ -34,11 +32,8 @@
 // internal/api/ai_log_trace_summarization_handler_test.go — the
 // network layer does not exist in the React unit-test scope.
 //
-// File name MUST stay
-// `TestLogTraceSummarizationAIOffShowsRawLogsOnly.test.tsx`
-// — the slice prompt's verification command runs
-// `vitest --run TestLogTraceSummarizationAIOffShowsRawLogsOnly`,
-// where the positional pattern is matched against the file PATH.
+// Keep the file name aligned with the scenario name; path-based test
+// filters depend on it.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';

@@ -1,8 +1,6 @@
-// Phase-50 / 0020 — N6 RAG-backed app help.
-//
 // `TestRagHelpAIOffHidesAssistantAndDocsLinksWork` (the Vitest
-// sibling to the Go test of the same name) is the slice's load-
-// bearing AI-OFF contract proof on the React side. It mounts the
+// sibling to the Go test of the same name) proves the React-side
+// AI-off contract. It mounts the
 // AIRAGHelp component with ai_mode='off' (plus the per-feature
 // toggle on, to defeat the obvious "off because nothing is
 // enabled" path) and asserts:
@@ -16,7 +14,7 @@
 //      trivially true).
 //   4. The deterministic baseline curated docs links remain
 //      rendered AND clickable in off-mode. This is the load-
-//      bearing baseline-coexistence proof — even when the AI
+//      baseline-coexistence proof — even when the AI
 //      surface is hidden, every static help link MUST still
 //      appear (ADR-015 §I3).
 //
@@ -27,7 +25,7 @@
 //
 // File name MUST stay
 // `TestRagHelpAIOffHidesAssistantAndDocsLinksWork.test.tsx` —
-// the slice prompt's verification command runs
+// the verification command runs
 // `vitest --run TestRagHelpAIOffHidesAssistantAndDocsLinksWork`,
 // where the positional pattern is matched against the file PATH.
 

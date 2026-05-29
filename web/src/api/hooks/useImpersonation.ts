@@ -1,7 +1,7 @@
 /**
  * @module api/hooks/useImpersonation
  *
- * Phase-46 / Prompt 46 — Admin impersonation hooks.
+ * Admin impersonation hooks.
  *
  * Mirrors the layered fetch pattern used by useSessions.ts: useQuery
  * for the state + a separate useQuery for candidates + two
@@ -68,8 +68,8 @@ interface ImpersonationStatePayload {
  *   • `{ mode: 'active', original_admin, target, expires_at }` otherwise.
  *
  * Polls every 30 seconds so the banner reflects cookie expiry without
- * a full page reload. refetchIntervalInBackground:false honours the
- * Phase-46/53 pause-when-hidden contract.
+ * a full page reload. refetchIntervalInBackground:false keeps polling
+ * paused while the tab is hidden.
  */
 export function useImpersonationStatus(options?: { enabled?: boolean }) {
   return useQuery<ImpersonationStatus, ApiError>({

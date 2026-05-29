@@ -112,7 +112,7 @@ export default function ProjectedRangePage() {
   usePageTitle(t('range.title', 'Projected Range'));
   const { formatEnergy, formatTemperature, formatSpeed, formatDistance } = useUnits();
 
-  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  // Header VehiclePicker is the source of truth.
   const { vehicleId: globalVehicleId } = useSelectedVehicle();
   const activeId = globalVehicleId != null ? String(globalVehicleId) : '';
 
@@ -184,16 +184,16 @@ export default function ProjectedRangePage() {
         </StaggerContainer>
       </FadeIn>
 
-      {/* ── Phase-50 / 0063 (ML2): opt-in learned per-vehicle range ── */}
-      {/* model. Renders only when ai_mode != 'off' AND the              */}
-      {/* range-prediction-model toggle is on. The withAiFeature HOC     */}
-      {/* inside AIRangePrediction enforces the gate; the deterministic  */}
-      {/* heuristic Wh/km curve + linear projection rendered below       */}
-      {/* remains the canonical baseline in off mode AND is the          */}
-      {/* per-bucket fallback for the learned trainer when fewer than 5  */}
-      {/* qualifying drives exist for a (temp × speed) bucket in the     */}
-      {/* lookback window (ADR-015 §I3 + slice-0063 trainer fallback     */}
-      {/* contract).                                                     */}
+      {/* Opt-in learned per-vehicle range model. Renders only when       */}
+      {/* ai_mode != 'off' AND the range-prediction-model toggle is on.  */}
+      {/* withAiFeature inside AIRangePrediction enforces the gate; the   */}
+      {/* deterministic heuristic Wh/km curve + linear projection below  */}
+      {/* remains the canonical baseline in off mode AND is the fallback  */}
+      {/* for the learned trainer when fewer than 5 qualifying drives     */}
+      {/* exist for a (temp × speed) bucket in the lookback window.       */}
+      {/* The fallback keeps predictions available when model data is     */}
+      {/* sparse for a bucket.                                           */}
+      {/* Users can compare learned and deterministic ranges side by side. */}
       <FadeIn delay={0.045}>
         <AIRangePrediction vehicleId={globalVehicleId ?? undefined} />
       </FadeIn>

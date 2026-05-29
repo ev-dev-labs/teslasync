@@ -3,21 +3,13 @@ import path from 'node:path'
 import { describe, it, expect } from 'vitest'
 
 /**
- * Phase-45 / Prompt 17 — URL state adoption.
+ * `useUrlState` and friends mirror filter state into the URL so selections are
+ * bookmarkable, shareable, survive refresh, and work with browser navigation.
  *
- * `useUrlState` and friends (`useUrlString`, `useUrlBoolean`, `useUrlNumber`,
- * `useUrlEnum`, `useUrlArray`) mirror filter state into the URL so that
- * filter selections are bookmarkable, shareable, and survive a page refresh
- * (and play nicely with browser back/forward).
+ * These canonical filter-bearing pages must use a `useUrl*` helper instead of
+ * component-local `useState`, or the bookmark/share contract silently regresses.
  *
- * The pages below are the canonical filter-bearing list/explorer pages.
- * Every one of them MUST hold its filter state in the URL via one of the
- * `useUrl*` helpers — otherwise we silently regress the bookmark/share
- * contract by reverting to component-local `useState`.
- *
- * This test is a static-source guard: it grep-asserts each listed file
- * imports / calls a `useUrl*` helper. Cheap, deterministic, and
- * resilient to future refactors that don't actually break adoption.
+ * Static-source guard: each listed file must import or call a `useUrl*` helper.
  */
 const FILTER_PAGES = [
   'src/features/driving/pages/DrivesListPage.tsx',

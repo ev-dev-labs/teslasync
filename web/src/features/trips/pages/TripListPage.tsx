@@ -25,10 +25,9 @@ import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { PullToRefresh } from '@/components/mobile';
 import type { Trip } from '@/api/types';
 
-// Phase-43/0025 + 0026: Wh/km -> Wh/(display unit) conversion uses an
-// inline factor because @/lib/unitConversion does not yet expose a
-// convertEfficiencyFromSI helper. Same precedent as
-// FleetComparePage.whPerKmToDisplay.
+// Wh/km -> Wh/(display unit) conversion uses an inline factor because
+// @/lib/unitConversion does not yet expose a convertEfficiencyFromSI helper.
+// Same precedent as FleetComparePage.whPerKmToDisplay.
 const KM_PER_MILE = 1.609344;
 
 function formatDuration(startDate: string, endDate: string | null): string {

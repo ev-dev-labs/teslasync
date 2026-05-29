@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 63 — Browser compatibility detection.
+ * Browser compatibility detection.
  *
  * TeslaSync depends on a small set of modern web platform features:
  *   • BroadcastChannel — cross-tab sync (`@/lib/broadcast`).
@@ -26,7 +26,7 @@
  *
  * Design constraints:
  *   • Detection is read-only; we do NOT polyfill anything (out of
- *     scope per the prompt — `core-js` is a separate decision).
+ *     scope here; `core-js` is a separate decision).
  *   • Detection is synchronous and side-effect-free so it can run at
  *     module load. The single localStorage probe is wrapped in a
  *     try/catch because Safari ITP / private mode throws on access.

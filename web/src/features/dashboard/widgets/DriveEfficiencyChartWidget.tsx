@@ -159,7 +159,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   const isWide = size.cols >= 3;
   const tick = isWide ? axisTick : axisTickSm;
 
-  // Phase-40 / Prompt 60 — series colour follows the active theme.
+  // Series colour follows the active theme.
   const palette = useThemeChartPalette();
 
   const stats = useMemo<ChartSummaryStat[]>(() => {

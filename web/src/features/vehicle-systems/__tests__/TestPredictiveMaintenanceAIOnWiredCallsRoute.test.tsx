@@ -1,46 +1,9 @@
-// Phase-50 / 0049 — M1 Predictive maintenance.
-// Phase-50 / W1 inline wiring (per slice prompt 0049) — on-mode
-// wiring test proving the "Predict maintenance" button opens an
-// SSE stream against the registered backend route
-// POST /api/v1/ai/maintenance/predict.
+// On-mode wiring test for predictive maintenance. It proves the button opens
+// an SSE stream to /api/v1/ai/maintenance/predict, sends the current vehicle_id,
+// renders the first delta, blocks double-submit while streaming, and disables
+// when vehicleId is missing or invalid.
 //
-// `TestPredictiveMaintenanceAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0049's W1 inline
-// addendum. It mounts the AIPredictiveMaintenance component with
-// ai_mode='cloud' + the per-feature toggle on, stubs global fetch
-// with a deterministic SSE byte stream, clicks the "Predict
-// maintenance" button, and asserts:
-//
-//   1. Exactly ONE POST against the registered backend route
-//      `/api/v1/ai/maintenance/predict` is enqueued with
-//      `Content-Type: application/json` and a body containing
-//      the in-scope `vehicle_id`. The path MUST match the
-//      registry entry verbatim — a typo here is invisible to
-//      the off-mode test (which only asserts absence) and would
-//      silently 404 in production.
-//   2. The first `delta` event's text renders inside the
-//      AiOutputPanel inside the gated wrapper
-//      `data-testid="ai-feature-predictive-maintenance-root"`.
-//   3. A second click while `state === 'streaming'` is a no-op
-//      — the second fetch call is NOT enqueued (the double-
-//      submit guard inside useAiStream + the visual `disabled`
-//      mirror it from canStart). This proves W1 Rule A — the
-//      disabled prop is a computed expression that reacts to
-//      state.
-//   4. The "Predict maintenance" button is `disabled` when the
-//      vehicleId is missing OR invalid (zero, negative,
-//      non-finite) — proving W1 Rule A's computed-expression
-//      guarantee across multiple input states.
-//   5. The off-mode invariant test
-//      (`TestPredictiveMaintenanceAIOffShowsThresholdReminders`)
-//      continues to pass unchanged — wiring MUST NOT regress
-//      the off-mode absence invariant. That assertion lives in
-//      the sibling file and is exercised independently by the
-//      npm test runner.
-//
-// The test name MUST stay
-// `TestPredictiveMaintenanceAIOnWiredCallsRoute` per the W1
-// inline addendum naming contract.
+// Keep the test name stable because targeted verification matches it.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
@@ -231,10 +194,9 @@ describe('TestPredictiveMaintenanceAIOnWiredCallsRoute (predictive-maintenance o
   });
 
   it('TestPredictiveMaintenanceAIOnWiredCallsRoute: Predict maintenance button is disabled when vehicleId is missing (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a computed
-    // expression (here: `!canStart`), not a literal `disabled` /
-    // `disabled={true}`. We prove the dynamic behaviour by
+    // The primary action button's `disabled` prop must be computed
+    // (`!canStart`), not a literal `disabled` / `disabled={true}`.
+    // We prove the dynamic behavior by
     // rendering the component without a vehicleId and confirming
     // the button is disabled while the gate is open — same code
     // path, different prop input.

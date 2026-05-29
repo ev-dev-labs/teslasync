@@ -1,20 +1,20 @@
 /**
- * Phase-50 / 0003 — F2 Settings UI for AI.
+ * Settings UI contract for Helix.
  *
  * Behaviour contract for the AISettings panel.
  *
- * What this asserts (mapping to ADR-015 invariants):
- *   §I1 default-off  : a fresh load with `ai_mode='off'` shows the
+ * What this asserts:
+ *   Default-off      : a fresh load with `ai_mode='off'` shows the
  *                      OFF radio selected and hides the provider /
  *                      feature / usage sections.
- *   §I7 per-feature  : (a) feature toggles are generated from
+ *   Per-feature      : (a) feature toggles are generated from
  *                      AI_FEATURE_IDS, never hand-listed; flipping
  *                      a registry entry would surface here.
  *                      (b) the restore panel offers Confirm /
  *                      Decline with NO auto-restore.
  *                      (c) flipping mode→off clears local feature
  *                      state in the rendered DOM.
- *   §I9 key redaction: the API-key input is `type="password"`
+ *   Key redaction    : the API-key input is `type="password"`
  *                      with NO defaultValue when ai_mode='off'.
  *                      The validate-config call is exercised
  *                      end-to-end (mocked) against the server
@@ -135,7 +135,7 @@ describe('AISettings — §I1 default-off rendering', () => {
 
 describe('AISettings — §I9 API key never displayed in off mode', () => {
   it('does not pre-populate the API key field when mode flips to cloud', () => {
-    // The server (per ADR-015 §I9) redacts ai_provider_config to
+    // The server redacts ai_provider_config to
     // null when ai_mode='off'. The component must respect that:
     // even when the user picks "cloud", the API key input starts
     // empty, type="password", and the placeholder hints "leave
@@ -297,13 +297,13 @@ describe('AISettings — validate endpoint exercised end-to-end', () => {
 })
 
 describe('AISettings — F1↔F2 provider config schema (namespaced shape)', () => {
-  // Phase-50 fix: the F1 backend (ParseProviderConfig in
+  // The backend parser (ParseProviderConfig in
   // internal/ai/provider/config.go) expects ai_provider_config in
   // the namespaced shape:
   //
   //   { default: 'ollama', ollama: { base_url, model, api_key }, ... }
   //
-  // The pre-fix F2 UI wrote a flat shape which caused every AI
+  // A flat shape causes every AI
   // call to fall back to DefaultLocalBaseURL = http://localhost:11434
   // (unreachable from inside the API container). These tests pin
   // the canonical contract end-to-end.

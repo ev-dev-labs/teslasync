@@ -1,8 +1,8 @@
-// Phase-50 / 0021 — D1 Natural-language drive search and replay.
+// Natural-language drive search and replay.
 //
 // `TestNLDriveSearchReplayAIOffUsesTypedFiltersOnly` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// sibling to the Go test of the same name) is the React-side AI-OFF
+// contract proof. It mounts
 // the AINLDriveSearch component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -27,7 +27,7 @@
 //
 // File name MUST stay
 // `TestNLDriveSearchReplayAIOffUsesTypedFiltersOnly.test.tsx` —
-// the slice prompt's verification command runs
+// the verification command runs
 // `vitest --run TestNLDriveSearchReplayAIOffUsesTypedFiltersOnly`,
 // where the positional pattern is matched against the file PATH.
 

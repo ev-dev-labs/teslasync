@@ -5,7 +5,7 @@ import { useToast } from '@/components/feedback/Toast';
  * useMutationToast — i18n-aware bridge between TanStack Query mutations and
  * the in-house Toast system.
  *
- * Convention (Phase-40 Prompt 11):
+ * Mutation toast convention:
  *   - Every user-initiated mutation MUST emit either a success or error toast.
  *   - `console.error` alone is not enough — the user must see feedback.
  *   - Background / poll-driven mutations may rely on the Toast queue's natural

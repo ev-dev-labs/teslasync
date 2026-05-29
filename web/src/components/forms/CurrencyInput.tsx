@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 49 — Shared `<CurrencyInput>` primitive.
+ * Shared `<CurrencyInput>` primitive.
  *
  * A currency-aware number field that:
  *   1. Stores its value in **integer micro-units** (1 USD = 1_000_000)

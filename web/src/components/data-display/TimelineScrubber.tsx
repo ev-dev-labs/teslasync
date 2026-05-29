@@ -91,7 +91,7 @@ const SCRUB_INTERVAL_MS = 50;
 /* ------------------------------------------------------------------ */
 
 /**
- * Rich timeline scrubber for trip replay (Phase-40 / Prompt 57).
+ * Rich timeline scrubber for trip replay.
  *
  * Features beyond a basic progress bar:
  *  - Hover preview tooltip with formatted speed/power/SoC/elevation.

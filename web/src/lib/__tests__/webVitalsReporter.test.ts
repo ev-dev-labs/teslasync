@@ -178,7 +178,7 @@ describe('webVitalsReporter', () => {
     })
     document.dispatchEvent(new Event('visibilitychange'))
 
-    // Yield once for the queued microtask spawned by `void flush()`.
+    // Yield once for the queued microtask spawned by `void flush`.
     await Promise.resolve()
     expect(beacon).toHaveBeenCalledTimes(1)
   })

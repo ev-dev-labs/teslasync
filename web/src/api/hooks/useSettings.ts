@@ -326,7 +326,7 @@ interface VersionInfo {
   os: string;
   arch: string;
   endpoints: Record<string, string>;
-  // Phase-46 / Prompt 70 — server-declared GDPR / ePrivacy gate.
+  // Server-declared GDPR / ePrivacy gate.
   // When true, the SPA mounts the cookie consent banner on first
   // visit and gates optional client-side reporting (web vitals,
   // error reporter) on the user's stored consent. Default false on

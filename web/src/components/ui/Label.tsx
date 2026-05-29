@@ -1,6 +1,5 @@
 /**
- * Phase-46 / Prompt 25 — form `<label>` primitive with visible +
- * accessible required indicator.
+ * Form `<label>` primitive with visible and accessible required indicators.
  *
  * Renders an HTML `<label>` element. When `required` is set:
  *

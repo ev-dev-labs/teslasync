@@ -1,7 +1,7 @@
 /**
  * @module hooks/useSessionMonitor
  *
- * Phase-46 / Prompt 05 — ForwardAuth session monitor.
+ * ForwardAuth session monitor.
  *
  * Polls `/auth/session` on a slow cadence (5 minutes, plus on window
  * focus) so the SPA can surface the {@link SessionExpiringModal}

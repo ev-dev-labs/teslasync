@@ -1,13 +1,10 @@
-// Phase-50 / 0044 — S3 Signal explorer natural-language filter.
-// Phase-50 / W1 inline wiring (per slice prompt 0044) — on-mode
-// wiring test proving the "Draft filter" button opens an SSE
-// stream against the registered backend route
-// POST /api/v1/ai/signals/filter/draft.
+// Signal explorer natural-language filter on-mode wiring test.
+// Proves the "Draft filter" button opens an SSE stream against the registered
+// backend route POST /api/v1/ai/signals/filter/draft.
 //
-// `TestSignalExplorerNlFilterAIOnWiredCallsRoute` is the load-
-// bearing positive wiring proof for slice 0044's W1 inline
-// addendum. It mounts the AISignalExplorerNlFilter component with
-// ai_mode='cloud' + the per-feature toggle on, stubs global fetch
+// `TestSignalExplorerNlFilterAIOnWiredCallsRoute` mounts the
+// AISignalExplorerNlFilter component with ai_mode='cloud' + the per-feature
+// toggle on, stubs global fetch
 // with a deterministic SSE byte stream, types a prompt, clicks
 // the Draft filter button, and asserts:
 //

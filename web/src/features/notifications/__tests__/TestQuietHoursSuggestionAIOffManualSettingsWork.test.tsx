@@ -1,9 +1,7 @@
-// Phase-50 / 0053 — P2 Helix quiet-hours suggestion advisor.
-//
 // `TestQuietHoursSuggestionAIOffManualSettingsWork` (the
-// Vitest sibling to the Go test of the same name) is the
-// slice's load-bearing AI-OFF contract proof on the React side.
-// It mounts the AIQuietHoursSuggestion component with
+// Vitest sibling to the Go test of the same name) proves the
+// React AI-OFF contract. It mounts the AIQuietHoursSuggestion
+// component with
 // ai_mode='off' (plus the per-feature toggle on, to defeat the
 // obvious "off because nothing is enabled" path) and asserts:
 //
@@ -29,7 +27,7 @@
 //
 // File name MUST stay
 // `TestQuietHoursSuggestionAIOffManualSettingsWork.test.tsx`
-// — the slice prompt's verification command runs
+// because the verification command runs
 // `vitest --run TestQuietHoursSuggestionAIOffManualSettingsWork`,
 // where the positional pattern is matched against the file PATH.
 

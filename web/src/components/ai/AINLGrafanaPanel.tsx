@@ -1,68 +1,10 @@
-// Phase-50 / 0058 — PU2 Natural-language Grafana panel.
-// Phase-50 / W1 inline wiring (per slice prompt 0058) — wires the
-// "Draft panel" button to POST /api/v1/ai/power/grafana-panel/draft
-// via the canonical useAiStream hook. The slice methodology
-// forbids shipping the visual affordance without end-to-end SSE
-// wiring; this component lands both in one commit so the on-mode
-// wiring test (TestNlGrafanaPanelAIOnWiredCallsRoute) can prove
-// the button actually opens an SSE stream against the registered
-// backend route.
-//
-// AINLGrafanaPanel is the visible AI surface for the
-// /power/grafana page. It is rendered conditionally via
-// withAiFeature('nl-grafana-panel', …) so:
-//
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
-//   - When ai_mode is 'local'/'cloud' AND the nl-grafana-panel
-//     toggle is on, it renders an opt-in section with a free-text
-//     prompt input and a "Draft panel" button that POSTs to
-//     /api/v1/ai/power/grafana-panel/draft. The SSE response
-//     stream accumulates into the shared AiOutputPanel; when the
-//     LLM emits a `tool_result` for `draft_grafana_panel`, the
-//     typed draft is captured locally and an "Apply to editor"
-//     button appears, which copies the draft (formatted as
-//     pretty-printed JSON) into the page state via the `onApply`
-//     prop. The LLM never edits editor state directly
-//     (ADR-015 §I8 propose-only).
-//
-// The component does NOT replace the deterministic manual JSON
-// editor or curated catalog viewer on GrafanaPanelPage. That
-// baseline content remains the canonical view visible to every
-// user; this AI section is an opt-in propose-only suggestion
-// layered alongside.
-//
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
-//   - useAiStream is called unconditionally at the top of the body
-//     (Hooks-rules safe).
-//   - The Draft button's disabled prop is a COMPUTED expression
-//     (`!canDraft`), never a literal `disabled` or
-//     `disabled={true}`.
-//   - Double-submit protection: stream.start() is a no-op while
-//     state === 'streaming' (the hook coalesces; the button is
-//     also visually disabled to mirror the state machine).
-//   - The streamed text accumulates into AiOutputPanel which
-//     renders the SSE delta stream as-it-arrives.
-//   - The captured draft is applied via the `onApply` prop's
-//     callback, which the GrafanaPanelPage wires into its
-//     existing setPanelJson state setter. The component itself
-//     does no global state writes.
-//
-// ADR-015 alignment:
-//   - I3 baseline intact: this component never replaces the
-//     deterministic manual JSON editor or curated catalog viewer;
-//     it adds an opt-in proposal section alongside.
-//   - I5 hidden UI:       the withAiFeature HOC returns null when
-//     the feature is not enabled, so the section is entirely
-//     absent from the DOM in off mode.
-//   - I6 404 routes:      the backend route is guard-wrapped and
-//     returns 404 in off mode; useAiStream surfaces that as
-//     state='error' for the user, but the component is never
-//     rendered in off mode at all because of I5.
-//   - I8 propose-only:    the LLM never writes; the typed
-//     GrafanaPanelDraft it proposes is rendered here, and the
-//     user must click the "Apply to editor" button to copy it
-//     into the baseline editor's state, then explicitly click
-//     the baseline Copy to clipboard button to export.
+// Optional Helix proposal panel for the Grafana editor.
+// Contract:
+//   - Hidden entirely when ai_mode='off' or the feature toggle is disabled.
+//   - POSTs to /api/v1/ai/power/grafana-panel/draft and streams into AiOutputPanel.
+//   - Captures `draft_grafana_panel` tool results locally; the LLM never mutates editor state.
+//   - Applies drafts only through the `onApply` callback, after explicit user action.
+//   - useAiStream stays unconditional; the Draft button derives disabled state from `!canDraft`.
 
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'

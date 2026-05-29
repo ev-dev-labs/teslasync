@@ -28,7 +28,7 @@ import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
 
-/* ── Loading skeleton (Phase-45 / Prompt 18) ─────────────── */
+/* ── Loading skeleton ─────────────── */
 
 /**
  * Mirrors the VehicleListPage layout while the fleet list loads:
@@ -74,7 +74,7 @@ export default function VehicleListPage() {
   const primaryId = vehicleList[0]?.id;
   useVehicleLive(primaryId);
 
-  /* Phase 40 / Prompt 48 — pinned vehicles float to the top of the list. */
+  /* Pinned vehicles float to the top of the list. */
   const { data: vehiclePins = [] } = usePinned('vehicle');
   const sortedVehicleList = useMemo(() => {
     if (vehiclePins.length === 0) return vehicleList;

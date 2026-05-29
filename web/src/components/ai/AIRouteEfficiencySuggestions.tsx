@@ -1,9 +1,8 @@
-// Phase-50 / 0023 — D3 Route-efficiency suggestions.
-// Phase-50 / W1 (slice 0065) — wired the Generate button to
-// POST /api/v1/ai/routes/{routeID}/efficiency/suggest (empty body).
-// The {routeID} URL slot is filled with the parent page's
-// vehicleId — per slice 0023 the backend treats this as an
-// "opaque anchor", not a foreign key to a routes table.
+// Route-efficiency suggestions.
+// The Generate button posts an empty body to
+// POST /api/v1/ai/routes/{routeID}/efficiency/suggest.
+// The {routeID} slot uses the parent page's vehicleId as an
+// opaque backend anchor, not a foreign key to a routes table.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

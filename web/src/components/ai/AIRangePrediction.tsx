@@ -1,4 +1,4 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
+// ML2 Range-prediction model.
 // Wires the "Train range model" button to
 // POST /api/v1/ai/ml/range/train. The narration walks the user
 // through the per-bucket (temp_bucket × speed_bucket) learned
@@ -6,7 +6,7 @@
 // deterministic linear-fallback for any bucket with too few
 // drives), then summarises the currently-effective heuristic
 // baseline via query_range_prediction. The AI never persists state
-// — it is read-only narration over the learned envelope; the
+// it is read-only narration over the learned envelope; the
 // canonical Projected Range page at /projected-range
 // (RangeProjectionHandler at GET /api/v1/vehicles/{id}/range/projection)
 // is unchanged (ADR-015 §I3 + §I8 propose-only contract).
@@ -40,8 +40,7 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     body,
     onEvent: () => {},
   })
-  // Computed disabled — never literal-true. P12/W1-A enforces this
-  // statically at slice 0065+, but the explicit boolean expression
+  // Computed disabled — never literal-true. The explicit boolean expression
   // also keeps the on-mode wiring test honest: a regression that
   // pins the button as always-disabled would silently falsify the
   // double-submit guard test.

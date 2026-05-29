@@ -1,5 +1,5 @@
 /**
- * Schema Drift Page — Phase-45 admin observability surface.
+ * Schema Drift admin observability surface.
  *
  * Renders the current schema fingerprint vs the recorded seed
  * fingerprint, with deltas for table/column/index counts. The seed

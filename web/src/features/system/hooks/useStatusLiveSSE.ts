@@ -1,5 +1,5 @@
 /**
- * useStatusLiveSSE — subscribes to GET /api/v1/status/live (Phase-2).
+ * Subscribes to GET /api/v1/status/live.
  *
  * The backend pushes a `status` SSE event every 30s carrying the full
  * status snapshot. This hook owns the connection lifecycle and surfaces

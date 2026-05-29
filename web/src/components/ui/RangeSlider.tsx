@@ -66,8 +66,6 @@ export interface RangeSliderProps {
  * grabbable even though the inputs overlap. The thumb closer to the
  * far end gets a higher `z-index` so it is always reachable when the
  * thumbs sit on top of each other.
- *
- * Phase-46 / Prompt 23.
  */
 export function RangeSlider({
   value,

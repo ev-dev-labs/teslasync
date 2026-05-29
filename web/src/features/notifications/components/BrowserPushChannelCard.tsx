@@ -1,5 +1,5 @@
 /**
- * BrowserPushChannelCard — Phase 40 / Prompt 52.
+ * Browser push notification channel settings card.
  *
  * Renders alongside the user-configurable notification channels in the
  * "Channels" tab. Unlike Discord/Slack/etc., browser push is a per-device

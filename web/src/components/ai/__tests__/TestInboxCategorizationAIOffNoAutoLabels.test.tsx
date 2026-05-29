@@ -1,8 +1,7 @@
-// Phase-50 / 0035 — A2 Inbox auto-categorization.
+// Inbox auto-categorization AI-off contract test.
 //
-// `TestInboxCategorizationAIOffNoAutoLabels` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
+// `TestInboxCategorizationAIOffNoAutoLabels` is the React-side companion
+// to the Go test of the same name. It mounts the
 // AIInboxAutoCategorization component with ai_mode='off' (plus
 // the per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -15,7 +14,7 @@
 //      actually works (otherwise the "absent in off mode"
 //      assertion is trivially true).
 //
-// W1 inline wiring — also asserts the on-mode wiring contract:
+// Also asserts the on-mode wiring contract:
 //   - clicking "Suggest categories" POSTs exactly one request to
 //     `/api/v1/ai/alerts/inbox/categorize`.
 //   - the first delta event's text renders inside the gated
@@ -35,10 +34,9 @@
 // network layer does not exist in the React unit-test scope.
 //
 // File name MUST stay
-// `TestInboxCategorizationAIOffNoAutoLabels.test.tsx` — the slice
-// prompt's verification command runs
-// `vitest --run TestInboxCategorizationAIOffNoAutoLabels`, where
-// the positional pattern is matched against the file PATH.
+// `TestInboxCategorizationAIOffNoAutoLabels.test.tsx` because
+// `vitest --run TestInboxCategorizationAIOffNoAutoLabels` matches the
+// positional pattern against the file path.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'

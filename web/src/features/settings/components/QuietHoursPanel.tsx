@@ -21,7 +21,7 @@ import {
 } from '@/api/hooks/useNotifications'
 import type { QuietHoursWindow, QuietHoursWindowInput } from '@/api/hooks/useNotifications'
 
-// Phase-46 / Prompt 19 — Quiet hours / Do-Not-Disturb settings panel.
+// Quiet hours / Do-Not-Disturb settings panel.
 //
 // CRUD over /api/v1/notifications/quiet-hours. Per-user; uses the
 // caller's ForwardAuth subject server-side. Each row defines a local-
@@ -209,9 +209,8 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   // QuietHoursWindowInput through `seedDraft`; the panel copies
   // the typed scalars into local form state so the user can
   // tweak the proposed values and then press the canonical Save
-  // button. The Save button is the SOLE write path — the AI
-  // surface never persists state directly (ADR-015 §I3 + §I8
-  // propose-only contract).
+  // button. The Save button is the sole write path; the AI
+  // surface never persists state directly.
   const lastConsumedSeed = useRef<QuietHoursWindowInput | null>(null)
   useEffect(() => {
     if (!seedDraft) return

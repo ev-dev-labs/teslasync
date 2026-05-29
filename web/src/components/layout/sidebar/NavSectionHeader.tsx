@@ -14,7 +14,7 @@ export interface NavSectionHeaderProps {
 /**
  * Sidebar section header — a quiet, label-weight title used to group nav items.
  *
- * Visual rules (Phase-45 / Prompt 07):
+ * Visual rules:
  *   - 10px font, weight 600, uppercase, 0.14em tracking
  *   - text color: text-[var(--text-muted)]
  *   - padding: px-3 py-1, no extra mb-* (the parent container handles vertical

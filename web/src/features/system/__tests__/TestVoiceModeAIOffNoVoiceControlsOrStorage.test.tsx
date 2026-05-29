@@ -1,21 +1,20 @@
-// Phase-50 / 0055 — V1 Helix voice mode.
+// Helix voice mode AI-off contract test.
 //
-// `TestVoiceModeAIOffNoVoiceControlsOrStorage` is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// `TestVoiceModeAIOffNoVoiceControlsOrStorage` mounts
 // the AIVoiceMode panel with `ai_mode='off'` (plus the per-feature
 // toggle on, to defeat the trivial path) and asserts:
 //
 //   1. The opt-in AI section's rooted test ID
 //      `ai-feature-voice-mode-root` is ABSENT from the DOM
-//      (ADR-015 §I5 hidden UI).
+//      when AI mode is off.
 //   2. The button rendered by AIFeatureCard is also absent —
 //      the per-feature verb "Speak to Helix" must not surface
 //      in any role-button accessible name in off mode.
 //   3. NO microphone control is mounted (defence in depth — the
 //      whole subtree is unmounted, not just the panel header).
 //   4. The localStorage key `ai.voiceMode.transcriptDraft` is
-//      NEVER written when the section is absent (ADR-015 §I12
-//      — no client storage artifacts in off mode).
+//      NEVER written when the section is absent; off mode must not
+//      leave client storage artifacts.
 //   5. Positive control: with `ai_mode='cloud'` AND the
 //      `voice-mode` toggle on, the section IS present and
 //      carries the registered test ID. Without this, the
@@ -29,7 +28,7 @@
 // layer does not exist in the React unit-test scope.
 //
 // The "baseline behaviour still works" half of the contract is
-// covered by the long-standing chatbot page tests; this slice
+// covered by the long-standing chatbot page tests; this change
 // does not alter the typed chatbot's input/send/transcript paths
 // (AIVoiceMode is mounted ABOVE the conversation grid, never
 // inside it). We deliberately mount AIVoiceMode in isolation
@@ -38,11 +37,9 @@
 // chat-history mocks; that surface is already proven by other
 // suites.
 //
-// File name MUST stay
-// `TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx` —
-// the slice prompt's verification command runs
-// `vitest --run TestVoiceModeAIOffNoVoiceControlsOrStorage`,
-// where the positional pattern is matched against the file PATH.
+// File name MUST stay `TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx`
+// because external test selection matches the positional pattern against the
+// file path.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
@@ -105,7 +102,7 @@ describe('TestVoiceModeAIOffNoVoiceControlsOrStorage (voice-mode AI-off contract
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag
     // is off". The mode='off' check MUST trump the per-feature
-    // toggle (ADR-015 §I7).
+    // toggle.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'off',
@@ -117,14 +114,13 @@ describe('TestVoiceModeAIOffNoVoiceControlsOrStorage (voice-mode AI-off contract
     // never writes the transcript-draft key in off mode. The
     // production code only writes from within the wrapped
     // subtree, so a "never called with our key" assertion is
-    // a direct proof of ADR-015 §I12 (no client storage
-    // artifacts in off mode).
+    // a direct proof that off mode leaves no client storage artifacts.
     const setItemSpy = vi.spyOn(window.localStorage, 'setItem')
 
     render(<AIVoiceMode />)
 
     // 1) The opt-in AI section is ABSENT — the wrapping
-    // withAiFeature HOC returns null in off mode (ADR-015 §I5).
+    // withAiFeature HOC returns null in off mode.
     expect(
       screen.queryByTestId('ai-feature-voice-mode-root'),
     ).not.toBeInTheDocument()
@@ -132,7 +128,7 @@ describe('TestVoiceModeAIOffNoVoiceControlsOrStorage (voice-mode AI-off contract
     // 2) The per-feature CTA does not surface either. The
     // accessible name composed by AIFeatureCard would be
     // "Ask Helix · Speak to Helix" if the section were mounted;
-    // we use an unanchored regex per the HX addendum.
+    // we use an unanchored regex.
     expect(
       screen.queryByRole('button', { name: /Speak to Helix/i }),
     ).not.toBeInTheDocument()
@@ -155,7 +151,7 @@ describe('TestVoiceModeAIOffNoVoiceControlsOrStorage (voice-mode AI-off contract
     // 4) The transcript-draft localStorage key is NEVER written
     // in off mode. Production code only writes from within the
     // wrapped (hidden in off mode) subtree, so this is a direct
-    // proof of ADR-015 §I12.
+    // proof that off mode leaves no client storage artifacts.
     const draftWrites = setItemSpy.mock.calls.filter(
       ([key]) => key === TRANSCRIPT_DRAFT_KEY,
     )
@@ -165,8 +161,7 @@ describe('TestVoiceModeAIOffNoVoiceControlsOrStorage (voice-mode AI-off contract
 
   it('TestVoiceModeAIOffNoVoiceControlsOrStorage: renders nothing and writes no transcript draft when ai_mode is non-off but the voice-mode toggle is false', () => {
     // The other half of the gate: even with mode='cloud', a
-    // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // toggle=false MUST hide the surface because each feature is opt-in.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',
@@ -211,8 +206,8 @@ describe('TestVoiceModeAIOffNoVoiceControlsOrStorage (voice-mode AI-off contract
     expect(root).toHaveAttribute('data-ai-feature', 'voice-mode')
 
     // The per-feature CTA is present, locatable via UNANCHORED
-    // role-name regex per the HX addendum (the accessible name
-    // is "Ask Helix · Speak to Helix").
+    // role-name regex (the accessible name is
+    // "Ask Helix · Speak to Helix").
     expect(
       screen.getByRole('button', { name: /Speak to Helix/i }),
     ).toBeInTheDocument()

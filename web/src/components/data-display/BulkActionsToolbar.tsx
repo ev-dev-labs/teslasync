@@ -4,12 +4,12 @@ import { Button, ConfirmDialog, GlassPanel } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
 
 /**
- * Phase-40 / Prompt 51 — shared bulk-action toolbar.
+ * Shared bulk-action toolbar.
  *
  * Renders a sticky bar at the top of a list-page content area when one or
  * more rows/cards are selected. Each `BulkAction` may declare a
  * `confirm` payload that routes its onClick through the shared
- * `<ConfirmDialog>` (Prompt 12) before mutating, satisfying the
+ * `<ConfirmDialog>` before mutating, satisfying the
  * destructive-action contract.
  *
  * Per-action loading state is local to the toolbar so the page does not
@@ -17,7 +17,7 @@ import { useConfirm } from '@/hooks/useConfirm';
  * returns a `Promise` from `onClick`.
  *
  * Keyboard:
- *   - `Escape` clears the selection (handled by the consumer).
+ *   `Escape` clears the selection (handled by the consumer).
  *
  * The toolbar renders nothing when `selectedIds.length === 0` so consumers
  * can always mount it unconditionally.

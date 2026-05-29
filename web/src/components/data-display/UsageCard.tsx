@@ -1,19 +1,15 @@
 /**
  * UsageCard — shared visual primitive for "spend / volume" cards.
- *
- * Phase-50 / 0004 — F3 AI Call Log + Usage Card.
- *
- * Two consumers ship in this slice:
+ * AI call log usage card.
+ * Two consumers share this primitive:
  *   - TeslaApiUsageCard (existing, refactored to feed this primitive).
  *   - AiUsageCard       (new, for the AI provider audit log).
- *
  * The DRY win: both cards have the same skeleton — optional budget
  * bar, three at-a-glance bands, a key/value detail grid, optional
  * top-list breakdowns, optional banner, optional footer links. By
  * separating that skeleton from each consumer's data derivation, we
  * keep the visual contract in one file and let the consumers focus
  * on "what numbers do I have" rather than "how do I render them".
- *
  * Pure presentational: no hooks, no API calls, no derived state.
  * Every dynamic value comes in via props so the card stays trivially
  * testable + Storybook-friendly without mounting a query client.

@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useUrlArray } from './useUrlState';
 
 /**
- * Phase-46 / Prompt 67 — URL-persisted hidden-series state for a chart.
+ * URL-persisted hidden-series state for a chart.
  *
  * Tracks which `dataKey`s of a named chart are currently hidden, persisting
  * to URL state so deep-links carry the toggle. Pair with `<ChartContainer

@@ -1,8 +1,7 @@
-// Phase-50 / 0023 — D3 Route-efficiency suggestions.
+// Route-efficiency suggestions AI-off contract tests.
 //
-// `TestRouteEfficiencySuggestionsAIOffShowsMetricsOnly` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// `TestRouteEfficiencySuggestionsAIOffShowsMetricsOnly` is the
+// React-side AI-off contract proof. It mounts
 // the AIRouteEfficiencySuggestions component with ai_mode='off'
 // (plus the per-feature toggle on, to defeat the obvious "off
 // because nothing is enabled" path) and asserts:
@@ -26,7 +25,7 @@
 //
 // File name MUST stay
 // `TestRouteEfficiencySuggestionsAIOffShowsMetricsOnly.test.tsx`
-// — the slice prompt's verification command runs
+// — the verification command runs
 // `vitest --run TestRouteEfficiencySuggestionsAIOffShowsMetricsOnly`,
 // where the positional pattern is matched against the file PATH.
 

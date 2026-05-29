@@ -69,7 +69,7 @@ function defaultValueFormatter(
  * recognise the floating panel as an information popup; recharts itself
  * positions and toggles visibility based on cursor / focus events.
  *
- * Phase 40 / Prompt 26: now locale-aware (numbers via `fmtNumber`) and
+ * now locale-aware (numbers via `fmtNumber`) and
  * TZ-aware (ISO labels via `formatDateTime`). Accepts `valueFormatter` and
  * `labelFormatter` props for chart-specific overrides while staying the single
  * source of truth for tooltip styling app-wide.

@@ -9,7 +9,7 @@ import { cn } from '@/lib/cn';
 import { openChangelogModal, useChangelog } from '@/hooks/useChangelog';
 
 /**
- * VersionSegment — Phase-40 / Prompt 59.
+ * VersionSegment.
  *
  * Footer status-bar segment that surfaces the running app version + git
  * SHA. Click opens a modal with full version provenance and (when

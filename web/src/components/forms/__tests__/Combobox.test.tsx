@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 14 — Combobox unit tests.
+ * Combobox unit tests.
  *
  * Covers the WAI-ARIA contract, keyboard navigation, async-fetch
  * abort-on-keystroke, free-text commit, disabled / loading states.

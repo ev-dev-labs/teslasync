@@ -1,12 +1,8 @@
-// Phase-50 / 0041 — X2 Lifetime stats Q&A.
-// Phase-50 / W1 inline wiring (per slice prompt 0041) — wired the
-// Ask button to POST /api/v1/ai/analytics/lifetime/qa via the
-// canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring;
-// this component lands both in one commit so the on-mode wiring
-// test (TestLifetimeStatsQaAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered
-// backend route.
+// Lifetime stats Q&A.
+// The Ask button POSTs to /api/v1/ai/analytics/lifetime/qa via the
+// canonical useAiStream hook. Keep the visual affordance and SSE
+// wiring together so the on-mode wiring test can prove the button
+// opens a stream against the registered backend route.
 //
 // AILifetimeStatsQA is the visible AI surface for the Lifetime
 // Stats page. It is rendered conditionally via
@@ -26,7 +22,7 @@
 // view visible to every user; this AI section is opt-in read-only
 // Q&A layered alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The Ask button's disabled prop is a COMPUTED expression

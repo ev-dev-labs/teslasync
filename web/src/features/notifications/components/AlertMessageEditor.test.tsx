@@ -1,5 +1,5 @@
 /**
- * AlertMessageEditor tests — Phase-50 / ADR-014.
+ * AlertMessageEditor tests.
  *
  * Smoke-level coverage of the four invariants that matter for the
  * editor UX:

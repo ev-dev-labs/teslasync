@@ -1,54 +1,16 @@
-// Phase-50 / 0058 — PU2 Natural-language Grafana panel.
+// Manual Grafana panel JSON editor for /power/grafana.
+// The page keeps the deterministic textarea, curated catalog, and
+// Copy-to-clipboard workflow visible for every user. The optional Helix
+// drafter is rendered alongside, hidden when the feature is off, and
+// propose-only: users must explicitly apply a draft to the editor and then
+// copy it into Grafana themselves. The browser never pushes panels to
+// Grafana directly.
 //
-// GrafanaPanelPage is the manual Grafana panel JSON editor surface
-// mounted at /power/grafana. The page is the deterministic
-// baseline for the Phase-50 / 0058 nl-grafana-panel slice: a
-// manual JSON textarea + curated panel-builder catalog viewer +
-// Copy-to-clipboard target. The optional AI drafter section
-// (AINLGrafanaPanel) is rendered alongside via withAiFeature so
-// it is entirely absent in off-mode (ADR-015 §I5 + §I6) and
-// propose-only in on-mode (the user must explicitly click the
-// canonical Apply to editor button to copy the LLM's proposal
-// into the textarea, then must explicitly click the canonical
-// Copy to clipboard button to paste it into their Grafana
-// dashboard).
-//
-// The page does NOT push the panel to Grafana from the browser —
-// adding a Grafana API integration is out of scope per the
-// Phase-50 / 0058 "Allowed files" list. The Copy to clipboard
-// button uses the standard navigator.clipboard.writeText API and
-// surfaces a deterministic confirmation message; the user then
-// pastes into their Grafana dashboard editor manually. A future
-// slice that ships a typed Grafana-API push handler can swap that
-// branch in without churning this page's structure or the AI
-// drafter's contract.
-//
-// State persistence: the JSON textarea contents are persisted to
-// localStorage under the canonical 'ai.grafanaPanel.draft' key
-// the slice prompt's "Client storage keys" section names. That
-// key is the only client-side storage artifact the slice adds.
-//
-// Visual layout:
-//   - Page header (title + AI drafter section conditionally
-//     mounted via withAiFeature)
-//   - Manual JSON editor (Textarea + Copy to clipboard button +
-//     Clear button)
-//   - Curated panel-builder catalog viewer (panel types +
-//     datasource types + table-by-table column metadata so the
-//     user can build a panel deterministically without consulting
-//     external docs)
-//
-// ADR-015 alignment:
-//   - I3 baseline intact: this page renders the manual JSON
-//     editor + curated catalog regardless of the AI feature
-//     toggle's state. The AI drafter section is opt-in
-//     propose-only suggestion layered alongside.
-//   - I5 hidden UI:       AINLGrafanaPanel is wrapped by
-//     withAiFeature so the entire AI section is absent from the
-//     DOM in off-mode.
-//   - I8 propose-only:    the page never auto-pushes the LLM's
-//     proposal to Grafana. The user must explicitly click Apply
-//     to editor and then explicitly click Copy to clipboard.
+// The JSON textarea persists to localStorage under
+// 'ai.grafanaPanel.draft' so accidental navigation does not discard a
+// long draft. The curated catalogs are static because they are the same
+// for every install; a future API-backed catalog can replace them without
+// changing this page's render tree.
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -61,9 +23,8 @@ import { Stack } from '@/components/layout';
 import { Button, GlassPanel, PageTitle, PanelTitle, Textarea } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
-// GRAFANA_PANEL_DRAFT_KEY is the canonical localStorage key the
-// Phase-50 / 0058 slice declared in its "Client storage keys"
-// section. Persisted across navigation so a user editing a long
+// GRAFANA_PANEL_DRAFT_KEY is the canonical localStorage key for the
+// editor draft. Persisted across navigation so a user editing a long
 // JSON envelope doesn't lose progress on accidental reload.
 const GRAFANA_PANEL_DRAFT_KEY = 'ai.grafanaPanel.draft';
 
@@ -77,10 +38,9 @@ const GRAFANA_PANEL_DRAFT_KEY = 'ai.grafanaPanel.draft';
 //   1. The catalogs are install-wide-static — they do not vary
 //      per user / per vehicle / per tenant. Fetching them would
 //      add a round-trip without any actual dynamism.
-//   2. Phase-50 / 0058's "Allowed files" list does not include a
-//      new API hook file. A future slice that adds dynamic
-//      catalog gating can swap the static arrays for hook
-//      responses without churning this page's render tree.
+//   2. No API hook exists for these catalogs today. A future dynamic
+//      catalog can swap the static arrays for hook responses without
+//      churning this page's render tree.
 interface CuratedPanelType {
   name: string;
   description: string;

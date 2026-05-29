@@ -1,11 +1,8 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+// Learned per-vehicle anomaly baselines AI-off contract test.
 //
-// `TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
-// the AILearnedAnomalyBaselines component with ai_mode='off' (plus
-// the per-feature toggle on, to defeat the obvious "off because
-// nothing is enabled" path) and asserts:
+// `TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly` is the React-side
+// AI-off contract proof. It mounts AILearnedAnomalyBaselines with
+// ai_mode='off' plus the per-feature toggle on, then asserts:
 //
 //   1. The AI section's rooted test ID is absent from the DOM.
 //   2. The wrapper renders no children (empty container).
@@ -22,10 +19,8 @@
 // layer does not exist in the React unit-test scope.
 //
 // File name MUST stay
-// `TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly.test.tsx` —
-// the slice prompt's verification command runs
-// `vitest --run TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly`,
-// where the positional pattern is matched against the file PATH.
+// `TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly.test.tsx` because
+// Vitest's positional pattern is matched against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';

@@ -1,8 +1,8 @@
 /**
  * @module api/hooks/useOperatorConfidence
  *
- * TanStack Query bindings for the Phase-45 operator-confidence admin
- * surfaces mounted under `/api/v1/admin/*`. Backed by Go handlers in
+ * TanStack Query bindings for operator-confidence admin surfaces mounted
+ * under `/api/v1/admin/*`. Backed by Go handlers in
  * `internal/handler/v1/admin_observability_handler.go`,
  * `internal/handler/v1/admin_audit_handler.go`, and
  * `internal/handler/v1/gdpr_export_handler.go`.

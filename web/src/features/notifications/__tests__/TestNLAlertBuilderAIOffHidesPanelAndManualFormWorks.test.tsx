@@ -1,28 +1,27 @@
-// Phase-50 / 0015 — N1 Natural-language alert builder.
-//
-// `TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// Natural-language alert builder.
+
+// `TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks` is the React-side
+// AI-off contract test. It mounts
 // the AINLAlertBuilder component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because nothing
 // is enabled" path) and asserts:
-//
-//   1. The AI section's rooted test ID is absent from the DOM.
-//   2. The wrapper renders no children (empty container).
-//   3. With ai_mode='cloud' AND nl-alert-builder=true, the section
-//      IS present + carries the expected test ID. This is the
-//      positive control that proves the gate actually works
-//      (otherwise the "absent in off mode" assertion is trivially
-//      true).
-//
+
+// 1. The AI section's rooted test ID is absent from the DOM.
+// 2. The wrapper renders no children (empty container).
+// 3. With ai_mode='cloud' AND nl-alert-builder=true, the section
+// IS present + carries the expected test ID. This is the
+// positive control that proves the gate actually works
+// (otherwise the "absent in off mode" assertion is trivially
+// true).
+
 // The HTTP /api/v1/ai/alerts/rules/draft 404-in-off-mode invariant
 // is proven by the Go-side
 // TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks in
 // internal/api/ai_alert_handler_test.go — the network layer does
 // not exist in the React unit-test scope.
-//
-// File name MUST stay `TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks.test.tsx`
-// — the slice prompt's verification command runs
+
+// File name must stay `TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks.test.tsx`
+// because targeted test runs use
 // `vitest --run TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks`,
 // where the positional pattern is matched against the file PATH.
 
@@ -78,7 +77,7 @@ describe('TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks (nl-alert-builder 
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag
     // is off". The mode='off' check MUST trump the per-feature
-    // toggle (ADR-015 §I7).
+    // toggle.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'off',

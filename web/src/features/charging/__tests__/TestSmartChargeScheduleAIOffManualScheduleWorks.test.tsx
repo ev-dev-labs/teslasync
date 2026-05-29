@@ -1,4 +1,4 @@
-// Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
+// Smart-charge schedule suggestion.
 //
 // `TestSmartChargeScheduleAIOffManualScheduleWorks` (the Vitest
 // sibling to the Go test of the same name) is the slice's

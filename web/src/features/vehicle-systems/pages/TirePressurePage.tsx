@@ -62,8 +62,8 @@ function hasTpmsWarning(val: string | null | undefined): boolean {
 }
 
 // Thresholds in Pascals (SI). Backend `signal_log` stores TpmsPressure
-// values in Pa after Phase-42 normalization (units.ToSI converts both
-// bar and psi inputs to Pa per `internal/tesla/units/units.go`).
+// values in Pa; units.ToSI converts both bar and psi inputs to Pa per
+// `internal/tesla/units/units.go`.
 // 1 bar = 100_000 Pa, 1 psi ≈ 6894.757 Pa.
 const NORMAL_MIN_PA = 250_000; // 2.5 bar
 const NORMAL_MAX_PA = 350_000; // 3.5 bar
@@ -75,18 +75,15 @@ const GAUGE_MAX_PA = 500_000; // 5.0 bar
  * Interim adapter that coerces a raw TPMS value to Pa.
  *
  * Background: when `vehicle_unit_history` lacks a row for a vehicle, the
- * Phase-42 codec cannot run `units.ToSI` on TpmsPressure* atomics — the
- * raw codec value (bar for metric vehicles, psi for imperial) lands in
- * `signal.Store` and the `/tire-pressure/latest` handler echoes it back
- * verbatim. Pre-Phase-42 the bug surfaced as gauges showing ~0 with all-
- * critical badges, which reads as "vehicle is broken" rather than
- * "vehicle unit context is missing".
+ * codec cannot run `units.ToSI` on TpmsPressure* atomics. The raw codec
+ * value (bar for metric vehicles, psi for imperial) lands in `signal.Store`,
+ * and the `/tire-pressure/latest` handler echoes it back verbatim. The bug
+ * surfaced as gauges showing ~0 with all-critical badges, which reads as
+ * "vehicle is broken" rather than "vehicle unit context is missing".
  *
- * Until the cross-cutting fix lands (see ui_audit
- * `vd-tire-pressure-units-wrong`, blocked on user decision Option A/B/C
- * — re-seed unit history vs. FE band-aid vs. codec-side SI emission),
- * this helper detects the three plausible source units by value range
- * and normalises to Pa so the page renders accurate readings today.
+ * Until the source-unit gap is fixed, this helper detects the three
+ * plausible source units by value range and normalises to Pa so the page
+ * renders accurate readings today.
  *
  * Ranges (typical passenger car tire pressures):
  *   - Pa     : 150_000–500_000   → return as-is
@@ -195,13 +192,13 @@ export default function TirePressurePage() {
 
   // Backend `front_left`/`front_right`/`rear_left`/`rear_right` arrive
   // in Pa (SI). `convertPressureFromSI` expects kPa, so divide by 1000
-  // at the boundary (precedent: Phase-43/0022 useDriveDetailData).
+  // at the boundary.
   const pressureDisplayValue = (pa: number) =>
     convertPressureFromSI(pa / 1000, unitPrefs.pressure);
 
   const gaugeMax = pressureDisplayValue(GAUGE_MAX_PA);
 
-  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  // Header VehiclePicker is the source of truth.
   const { vehicleId: activeVehicleId } = useSelectedVehicle();
   const { start, end, setRange } = useRangeState({
     persistKey: 'tire-pressure.range',

@@ -1,14 +1,6 @@
-// Sidebar — Phase-46 / Prompt 33
-//
-// The actual sidebar markup lives in `Layout.tsx` (outside the
-// allowed-files regex for this prompt). This module exports a typed
-// "nav entry" shape plus the diagnostic entry so a follow-up prompt
-// can splice it into the Layout's "Settings & Admin" section without
-// re-deriving the icon import or the i18n key path.
-//
-// Treating the nav entries as data (rather than JSX) also lets the
-// command palette and the admin index page consume the same source
-// of truth in the future.
+// Sidebar navigation entries consumed by Layout and other navigation surfaces.
+// Keeping entries as data lets the command palette and admin index share the
+// same source of truth.
 
 import type { ComponentType, SVGProps } from 'react';
 import { Activity, ScrollText, ShieldCheck } from 'lucide-react';
@@ -35,10 +27,7 @@ export interface SidebarNavEntry {
   section: 'admin' | 'infrastructure' | 'tools';
 }
 
-/**
- * The diagnostic entry. Imported by a future Layout.tsx splice —
- * for this prompt we ship the data only.
- */
+/** Diagnostic route entry for infrastructure navigation. */
 export const DIAGNOSTIC_NAV_ENTRY: SidebarNavEntry = {
   to: '/diagnostic',
   i18nKey: 'diagnostic.title',
@@ -47,11 +36,7 @@ export const DIAGNOSTIC_NAV_ENTRY: SidebarNavEntry = {
   section: 'infrastructure',
 };
 
-/**
- * Live log tail viewer (Phase-46 / Prompt 34). SSE-backed admin
- * surface that streams structured zerolog events with grep + level
- * filters. Lives under "Infrastructure" alongside the diagnostic.
- */
+/** SSE-backed live log viewer with grep and level filters. */
 export const LIVE_LOGS_NAV_ENTRY: SidebarNavEntry = {
   to: '/live-logs',
   i18nKey: 'liveLogs.title',
@@ -60,11 +45,7 @@ export const LIVE_LOGS_NAV_ENTRY: SidebarNavEntry = {
   section: 'infrastructure',
 };
 
-/**
- * RBAC matrix admin (Phase-46 / Prompt 44). Provider-agnostic
- * "who can do what" page; only meaningful in forward-auth mode (the
- * page itself renders an inline placeholder in open mode).
- */
+/** RBAC matrix admin entry; the page explains open-auth mode limitations. */
 export const RBAC_NAV_ENTRY: SidebarNavEntry = {
   to: '/admin/rbac',
   i18nKey: 'rbac.title',
@@ -73,10 +54,7 @@ export const RBAC_NAV_ENTRY: SidebarNavEntry = {
   section: 'admin',
 };
 
-/**
- * All sidebar nav entries this prompt contributes. Kept as an array
- * so future prompts can append without changing the call signature.
- */
+/** Sidebar nav entries exported as a shared registry. */
 export const SIDEBAR_NAV_ENTRIES: readonly SidebarNavEntry[] = [
   DIAGNOSTIC_NAV_ENTRY,
   LIVE_LOGS_NAV_ENTRY,

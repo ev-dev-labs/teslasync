@@ -12,8 +12,8 @@
  * counting `lazy(()` occurrences in the source file.
  *
  * Background: the production "L is not defined" crash on `/live` and
- * `/drives` (Phase-45 / Prompt 05) slipped past tsc, eslint, and unit
- * tests because the lazy chunks were never imported during tests. The
+ * `/drives` slipped past tsc, eslint, and unit tests because the lazy
+ * chunks were never imported during tests. The
  * leaflet-plugin chunk threw at module-eval time, before any React
  * component rendered. Importing each chunk here exercises that path.
  */
@@ -162,7 +162,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'SharedDrive', load: () => import('../features/sharing/pages/SharedDrivePage') },
   { name: 'WatchFace', load: () => import('../features/watch/pages/WatchFacePage') },
 
-  // Phase-47+ additions — kept in App.tsx order so the parity counter stays honest.
+  // Additional routes — kept in App.tsx order so the parity counter stays honest.
   { name: 'LegacyAlertsRedirect', load: () => import('../features/notifications/components/LegacyAlertsRedirect') },
   { name: 'LegacyNotificationsRedirect', load: () => import('../features/notifications/components/LegacyNotificationsRedirect') },
   { name: 'LegacyAlertRulesRedirect', load: () => import('../features/notifications/components/LegacyAlertRulesRedirect') },

@@ -18,16 +18,16 @@ export interface AchievementUnlockedEvent {
 /**
  * useAchievementUnlocks — subscribes to the realtime `achievement_unlocked`
  * SSE stream and exposes an in-memory queue of unlocks received during the
- * current browser session (Phase-40 / Prompt 63).
+ * current browser session.
  *
  * The list:
- * - is newest-first
- * - is bounded (MAX_RECENT) to avoid runaway memory if the backend ever fires
+ * is newest-first
+ * is bounded (MAX_RECENT) to avoid runaway memory if the backend ever fires
  *   a burst (e.g. seed data on first run)
- * - de-dupes by `achievement.id` so a re-broadcast (rare but possible if
+ * de-dupes by `achievement.id` so a re-broadcast (rare but possible if
  *   multiple SSE pods receive the Redis Pub/Sub fan-out) does not double-fire
  *   the celebration toast
- * - is purely transient — refreshing the page clears the list. Persistent
+ * is purely transient — refreshing the page clears the list. Persistent
  *   surfacing is the dashboard widget, which queries the canonical
  *   `unlocked_at` from the lifetime stats response.
  *

@@ -9,7 +9,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
 
 /**
- * ActiveVehicleSegment — Phase-40 / Prompt 59.
+ * ActiveVehicleSegment.
  *
  * Footer status-bar segment showing the currently selected vehicle. Click
  * opens a small popover with a list of all vehicles — picking one routes
@@ -34,8 +34,8 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
   // The full-vehicle state hook is shared via TanStack Query dedup with any
   // page-tier consumer, so this just lengthens the safety-net interval.
   const { data: stateData } = useVehicleState(vehicleId ?? 0, { refetchInterval: 60_000 });
-  /* Phase-43 SI-floor: state.rated_range arrives in METERS, not miles. The
-   * legacy useSettings.toDistanceDisplay() expected miles-in / user-unit-out and
+  /* state.rated_range arrives in meters, not miles. The legacy
+   * useSettings.toDistanceDisplay() expected miles-in / user-unit-out and
    * blew up by 1000× on SI input. Use the SI-aware converter + label from
    * useUnits() so the value tracks the user's distance preference. */
   const { unitPrefs } = useUnits();

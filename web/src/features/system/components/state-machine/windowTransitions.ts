@@ -1,8 +1,7 @@
 import type { FSMTransition } from '@/types/fsm';
 
 /**
- * Phase 45 / Prompt 35 — single source of truth for windowing FSM
- * transitions in the State Machine debugger.
+ * Single source of truth for windowing FSM transitions in the State Machine debugger.
  *
  * The page fetches a wide range (typically the last 24 h) so the user can
  * scroll back through history with `Step ← / →`, but the toolbar's

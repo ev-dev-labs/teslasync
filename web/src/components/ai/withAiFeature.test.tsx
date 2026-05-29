@@ -1,4 +1,4 @@
-// Phase-50 / 0001 — F0 AI-Off Contract.
+// AI-off contract tests.
 //
 // Unit tests for `withAiFeature`. Verifies:
 //

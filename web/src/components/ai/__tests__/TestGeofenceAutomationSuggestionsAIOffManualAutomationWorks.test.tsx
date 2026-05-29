@@ -1,8 +1,6 @@
-// Phase-50 / 0039 — G3 Geofence-aware automation suggestions.
-//
 // `TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks` (the
-// Vitest sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// Vitest sibling to the Go test of the same name) proves the
+// React AI-OFF contract. It mounts
 // the AIGeofenceAwareAutomationSuggestions component with
 // ai_mode='off' (plus the per-feature toggle on, to defeat the
 // obvious "off because nothing is enabled" path) and asserts:
@@ -15,7 +13,7 @@
 //      control that proves the gate actually works (otherwise the
 //      "absent in off mode" assertion is trivially true).
 //
-// W1 inline wiring — also asserts the on-mode wiring contract:
+// Also asserts the on-mode wiring contract:
 //   - clicking "Suggest automation" POSTs exactly one request to
 //     `/api/v1/ai/geofences/automations/draft` with
 //     `{"vehicle_id": 7, "prompt": "..."}`.
@@ -38,7 +36,7 @@
 //
 // File name MUST stay
 // `TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks.test.tsx`
-// — the slice prompt's verification command runs
+// because the verification command runs
 // `vitest --run TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks`,
 // where the positional pattern is matched against the file PATH.
 

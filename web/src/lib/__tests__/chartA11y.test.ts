@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 13 — chartA11y helper tests.
+ * chartA11y helper tests.
  *
  * Covers the projection rules `chartRowsFromTimeseries` applies to a
  * typed time-series array before `<ChartContainer>` consumes it as

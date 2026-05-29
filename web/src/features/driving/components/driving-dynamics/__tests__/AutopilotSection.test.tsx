@@ -1,6 +1,5 @@
 /**
  * AutopilotSection — unit-conversion + enum-decoding regression.
- *
  * Pre-fix (this commit):
  *   1. The component treated `vehicleState.speed` and `CruiseSetSpeed`
  *      observations as km/h (`value / 1.609344` then `toSpeedDisplay`).
@@ -13,7 +12,6 @@
  *   2. Follow distance was read with `latestNumeric` even though Tesla
  *      emits CruiseFollowDistance as a proto enum (ValueKindEnum, e.g.
  *      "FollowDistance7"). Result: the field rendered "—" forever.
- *
  * Post-fix:
  *   - Both speeds go directly through `toSpeedDisplay` (m/s → display).
  *   - Follow distance is read via `latestText` with a numeric fallback,

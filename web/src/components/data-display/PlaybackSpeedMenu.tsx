@@ -37,8 +37,6 @@ export interface PlaybackSpeedMenuProps {
  * Compact playback-speed control. Click cycles to the next speed; right-click
  * cycles backwards. Used by `<PlaybackControls>` and any other surface that
  * exposes scrub-speed selection.
- *
- * Phase-40 / Prompt 57.
  */
 export function PlaybackSpeedMenu({ speed, onChange, className }: PlaybackSpeedMenuProps) {
   const { t } = useTranslation();

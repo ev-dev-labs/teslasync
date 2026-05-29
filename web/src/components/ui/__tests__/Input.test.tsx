@@ -1,15 +1,6 @@
 /**
- * Phase-46 / Prompt 25 — Input required-indicator integration tests.
- *
- * Locks in:
- *   1. <Input label=… required /> auto-renders the paired Label with
- *      visible "*" and sr-only "required".
- *   2. The <input> element carries `aria-required="true"` AND the
- *      native `required` HTML attribute.
- *   3. The accessible name of the textbox includes the visible label
- *      ("Email") AND the sr-only "required" suffix, but NOT the
- *      aria-hidden "*".
- *   4. When `required` is unset, no asterisk and no aria-required.
+ * Input required-indicator integration tests. Locks down the visible marker,
+ * screen-reader text, native required attribute, and accessible name.
  */
 
 import { render, screen } from '@testing-library/react';

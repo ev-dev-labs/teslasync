@@ -1,13 +1,12 @@
-// Phase-46 / Prompt 40 — Rate-limit status feed.
+// Rate-limit status feed.
 //
 // Mirrors GET /api/v1/system/rate-limits. Lives in its own file
 // because /system has no other React-Query hook today; future sibling
 // system endpoints can land here without crowding useAdmin.ts.
 //
 // The hook auto-refreshes every 30 seconds and yields when the tab is
-// hidden (refetchIntervalInBackground:false) — TanStack's built-in
-// hook for the "pause polling when hidden" contract that Phase-46 /
-// Prompt 53 codified.
+// hidden (refetchIntervalInBackground:false), using TanStack's built-in
+// pause-on-hidden behavior.
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 

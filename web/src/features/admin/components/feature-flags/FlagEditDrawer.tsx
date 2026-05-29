@@ -1,15 +1,12 @@
 /**
  * Feature Flags — edit / create drawer.
- *
  * Single component that powers BOTH "edit existing flag" (when
  * `initialKey` is provided + read-only) AND "create new flag" (when
  * `initialKey` is null). The split lives in the parent page; this
  * drawer just renders the form.
- *
  * Value editing is a free-form JSON textarea — the backend accepts any
  * JSON value (object, array, scalar). Invalid JSON disables the Save
  * button and surfaces a parse-error helper text.
- *
  * `reason` is required by the backend audit row and rejected if empty.
  */
 import { useEffect, useMemo, useState } from 'react';

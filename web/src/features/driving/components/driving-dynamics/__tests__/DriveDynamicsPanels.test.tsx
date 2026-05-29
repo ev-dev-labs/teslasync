@@ -1,10 +1,10 @@
 /**
- * GForcePanel + PedalUsage contract — Phase-42a follow-up.
+ * GForcePanel + PedalUsage regression contract.
  *
  * Pre-fix:
  *   Both panels called the deprecated `useSignalObservations` hook,
  *   which targeted the long-deleted `/signals/observations` route
- *   (the `signal_observations` table was dropped in Phase-42 / 0077).
+ *   (the `signal_observations` table no longer exists).
  *   The hook 404'd silently, the components received no data, and
  *   the user saw a permanent "No telemetry received yet" empty state
  *   even when the per-field MQTT pipeline had freshly observed all

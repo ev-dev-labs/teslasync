@@ -205,7 +205,7 @@ function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
 export default function NavigationRoutePage() {
   const { t } = useTranslation();
   usePageTitle(t('nav.pageTitle', 'Navigation & Route'));
-  /* Phase-43/0027: SI-floor display.
+  /* SI-floor display.
      /location-snapshots emits speed_mph (m/s SI alias) and miles_to_arrival
      (meters SI) — the legacy field names are kept for backward compat but
      values are SI canonical. Pre-existing legacy bug: useSettings.toDistanceDisplay
@@ -214,7 +214,7 @@ export default function NavigationRoutePage() {
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
 
-  /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
+  /* ---- vehicle selector — header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
 
   const {

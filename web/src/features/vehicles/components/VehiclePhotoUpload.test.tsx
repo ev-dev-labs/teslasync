@@ -1,8 +1,4 @@
-// Phase-46 / Prompt 54 — VehiclePhotoUpload unit tests.
-//
-// Co-located alongside the component (NOT under __tests__/) so the
-// gate's allowed-files regex 'features/vehicles/components/
-// VehiclePhotoUpload' covers it via substring match.
+// VehiclePhotoUpload unit tests.
 //
 // Coverage:
 //   1. Renders dropzone with the choose-photo button when no photo

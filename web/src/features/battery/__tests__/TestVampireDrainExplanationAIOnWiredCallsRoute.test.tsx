@@ -1,12 +1,10 @@
-// Phase-50 / 0030 — C5 Vampire-drain explanation.
-// Phase-50 / W1 inline wiring (per slice prompt 0030) — on-mode
-// wiring test proving the Narrate button opens an SSE stream
-// against the registered backend route POST
-// /api/v1/ai/charging/vampire-drain/explain.
+// Vampire-drain explanation on-mode wiring test.
 //
-// `TestVampireDrainExplanationAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0030's W1 inline
-// addendum. It mounts the AIVampireDrainExplanation component
+// Proves the Narrate button opens an SSE stream against
+// POST /api/v1/ai/charging/vampire-drain/explain.
+//
+// `TestVampireDrainExplanationAIOnWiredCallsRoute` mounts the
+// AIVampireDrainExplanation component
 // with ai_mode='cloud' + the per-feature toggle on, stubs global
 // fetch with a deterministic SSE byte stream, clicks the Narrate
 // button, and asserts:
@@ -24,8 +22,8 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
-//      from canGenerate). This proves W1 Rule A — the disabled
-//      prop is a computed expression that reacts to state.
+//      from canGenerate). This proves the disabled prop is a computed
+//      expression that reacts to state.
 //   4. The off-mode invariant test
 //      (`TestVampireDrainExplanationAIOffShowsMetricsOnly`)
 //      continues to pass unchanged — wiring MUST NOT regress the
@@ -34,8 +32,8 @@
 //      test runner.
 //
 // The test name MUST stay
-// `TestVampireDrainExplanationAIOnWiredCallsRoute` per the W1
-// inline addendum naming contract.
+// `TestVampireDrainExplanationAIOnWiredCallsRoute` because external
+// test filters match this file name.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
@@ -264,9 +262,8 @@ describe('TestVampireDrainExplanationAIOnWiredCallsRoute (vampire-drain-explanat
   });
 
   it('TestVampireDrainExplanationAIOnWiredCallsRoute: Narrate button is disabled when no vehicleId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a computed
-    // expression (here: `!canGenerate`), not a literal
+    // This test ensures the primary action button's `disabled` prop is a
+    // computed expression (here: `!canGenerate`), not a literal
     // `disabled` / `disabled={true}`. We prove the dynamic
     // behaviour by rendering the component without a vehicleId
     // and confirming the button is disabled while the gate is

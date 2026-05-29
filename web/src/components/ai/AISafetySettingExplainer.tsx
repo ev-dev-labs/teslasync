@@ -1,48 +1,47 @@
-// Phase-50 / 0054 — P3 Helix safety setting explainer.
-//
-// W1 inline wiring (P11/P12):
-//   - useAiStream targets POST /ai/settings/safety/explain
-//     (the backend path after stripping the /api/v1 prefix).
-//   - The primary action button is disabled via a COMPUTED
-//     expression
-//     (`stream.state === 'streaming' || stream.state === 'paused-confirm'`),
-//     never a literal `disabled` or `disabled={true}` (Rule W1-A).
-//   - The render contract is NARRATIVE (not proposal): the LLM
-//     EXPLAINS the user's existing safety-related settings —
-//     it never proposes a different value, never claims to have
-//     changed a setting, and never offers an "Apply to form"
-//     handoff. The streaming text is rendered via the shared
-//     AiOutputPanel inside the AIFeatureCard scaffold.
-//   - cancel() runs on unmount (dedicated useEffect with
-//     explicit cancelStream dep so internal stream ticks do
-//     not wipe in-flight narration mid-stream).
-//   - Component is wrapped with withAiFeature so it is ABSENT
-//     (returns null) when ai_mode='off' or the per-feature
-//     toggle is off (ADR-015 §I5 hidden UI).
-//
-// HX (Helix UX) contract:
-//   - The surface renders through the shared AIFeatureCard
-//     scaffold — NOT a bespoke GlassPanel + Button +
-//     AiOutputPanel composition.
-//   - The per-feature verb "Explain my settings" is passed via
-//     `buttonLabel`. The card composes the accessible name as
-//     "Ask Helix · Explain my settings".
-//   - User-visible i18n keys say "Helix", not "AI" (per the HX
-//     addendum).
-//
-// ADR-015 alignment:
-//   - I3 baseline intact: this component never replaces the
-//     deterministic listing of safety settings in the
-//     /settings/safety page; it adds an opt-in narrator panel
-//     above the list. The list itself is rendered from
-//     useSettings() and is fully usable when AI is off.
-//   - I5 hidden UI:       the withAiFeature HOC returns null
-//     when the feature is not enabled, so the section is
-//     entirely absent from the DOM in off mode.
-//   - I6 404 routes:      the backend route is guard-wrapped
-//     and returns 404 in off mode; useAiStream surfaces that
-//     as state='error' for the user, but the component is
-//     never rendered in off mode at all because of I5.
+// Helix safety setting explainer.
+
+// Wiring contract:
+// - useAiStream targets POST /ai/settings/safety/explain
+// (the backend path after stripping the /api/v1 prefix).
+// - The primary action button is disabled via a COMPUTED
+// expression
+// (`stream.state === 'streaming' || stream.state === 'paused-confirm'`),
+// never a literal `disabled` or `disabled={true}` (the wiring rule).
+// - The render contract is NARRATIVE (not proposal): the LLM
+// EXPLAINS the user's existing safety-related settings —
+// it never proposes a different value, never claims to have
+// changed a setting, and never offers an "Apply to form"
+// handoff. The streaming text is rendered via the shared
+// AiOutputPanel inside the AIFeatureCard scaffold.
+// - cancel() runs on unmount (dedicated useEffect with
+// explicit cancelStream dep so internal stream ticks do
+// not wipe in-flight narration mid-stream).
+// - Component is wrapped with withAiFeature so it is ABSENT
+// (returns null) when ai_mode='off' or the per-feature
+// toggle is off.
+
+// Helix UX contract:
+// - The surface renders through the shared AIFeatureCard
+// scaffold — NOT a bespoke GlassPanel + Button +
+// AiOutputPanel composition.
+// - The per-feature verb "Explain my settings" is passed via
+// `buttonLabel`. The card composes the accessible name as
+// "Ask Helix · Explain my settings".
+// - User-visible i18n keys say "Helix", not "AI".
+
+// Safety alignment:
+// - Baseline intact: this component never replaces the
+// deterministic listing of safety settings in the
+// /settings/safety page; it adds an opt-in narrator panel
+// above the list. The list itself is rendered from
+// useSettings() and is fully usable when AI is off.
+// - Hidden UI: the withAiFeature HOC returns null
+// when the feature is not enabled, so the section is
+// entirely absent from the DOM in off mode.
+// - Guarded route: the backend route is guard-wrapped
+// and returns 404 in off mode; useAiStream surfaces that
+// as state='error' for the user, but the component is
+// never rendered in off mode.
 
 import { useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -61,7 +60,7 @@ function InnerSection() {
   // setting question textbox; for now an empty body matches
   // the most common case (one click → one short summary of
   // the install's current safety toggle state).
-  //
+  
   // useMemo so useAiStream's deps are stable across renders.
   const body = useMemo(() => ({}), [])
 
@@ -91,7 +90,7 @@ function InnerSection() {
 
   // Cancel on unmount so a stale stream cannot bleed into a
   // subsequent mount of the panel. Dedicated effect so the
-  // cleanup deps stay explicit (Rule of Hooks / W1 §6).
+  // Cleanup deps stay explicit so stream ticks do not cancel narration.
   useEffect(() => {
     return () => {
       cancelStream()

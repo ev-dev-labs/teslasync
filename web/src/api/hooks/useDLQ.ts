@@ -1,7 +1,7 @@
 /**
  * @module api/hooks/useDLQ
  *
- * TanStack Query bindings for the Phase-tracing DLQ inspector routes
+ * TanStack Query bindings for the dead-letter queue inspector routes
  * mounted under `/api/v1/system/dlq*`. Backed by Go handlers in
  * `internal/api/dlq_handler.go`.
  *

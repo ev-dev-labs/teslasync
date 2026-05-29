@@ -26,8 +26,8 @@ const UNKNOWN_DOORS: DoorStates = {
 /**
  * Parses the compound DoorState signal from Tesla telemetry.
  * Handles JSON objects, simple enum strings, and descriptive values.
- * Accepts `unknown` because the post-Phase-42 backend serializes raw
- * `signal.SignalValue` directly — a nominally-string field may arrive as
+ * Accepts `unknown` because the backend serializes raw `signal.SignalValue`
+ * directly — a nominally-string field may arrive as
  * a boolean / number / object / null. Returns null for each unknown
  * field rather than defaulting to closed.
  */
@@ -106,8 +106,8 @@ export type WindowState = 'open' | 'closed' | 'partial' | null;
 /**
  * Normalizes Tesla window enum values to display state.
  * Uses the centralized parseWindowEnum from parseEnums.ts.
- * Accepts `unknown` since post-Phase-42 the field can arrive as bool/null
- * for some signals; non-strings yield `null`.
+ * Accepts `unknown` because the field can arrive as bool/null for some
+ * signals; non-strings yield `null`.
  */
 export function parseWindowState(state: unknown): WindowState {
   const raw = asNonEmptyString(state);
@@ -272,8 +272,8 @@ export function mapLiveToTwinState(live: VehicleLiveState): VehicleTwinState {
 }
 
 /** Adapt camelCase SecurityEvent (from @/types/admin) into VehicleTwinState.
- *  All string-enum fields accept `unknown` because post Phase-42a the
- *  backend may emit them as string OR boolean depending on the protomodel
+ *  All string-enum fields accept `unknown` because the backend may emit
+ *  them as string OR boolean depending on the protomodel
  *  emission for that signal. Inner parsers narrow defensively. */
 export function buildTwinStateFromAdmin(
   ev: {

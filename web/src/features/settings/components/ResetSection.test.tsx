@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 50 — ResetSection adoption tests.
+// ResetSection adoption tests.
 //
 // The component talks to the backend via two hooks
 // (`useResetSection` / `useResetAllSettings`) which both round-trip

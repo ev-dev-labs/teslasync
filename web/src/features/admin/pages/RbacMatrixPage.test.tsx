@@ -1,5 +1,5 @@
 /**
- * RbacMatrixPage — Phase-46 / Prompt 44 contract tests.
+ * RbacMatrixPage contract tests.
  *
  * Covers:
  *   1. AUTH_MODE_OPEN renders the inline placeholder.

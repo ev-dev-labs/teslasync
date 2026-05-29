@@ -9,7 +9,6 @@ import { useSettings } from '@/api/hooks/useSettings';
  *
  * Falls back to `'relative'` when settings have not yet loaded, when the
  * field is missing, or when the value isn't one of the two known modes.
- * (Phase-45 / Prompt 22.)
  */
 export function useTimeFormatPreference(): 'relative' | 'absolute' {
   const { data } = useSettings();

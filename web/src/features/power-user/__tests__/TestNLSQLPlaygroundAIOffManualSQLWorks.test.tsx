@@ -1,7 +1,6 @@
-// Phase-50 / 0057 — PU1 Natural-language SQL playground.
+// Natural-language SQL playground tests.
 //
-// `TestNLSQLPlaygroundAIOffManualSQLWorks` is the slice's load-
-// bearing AI-OFF contract proof on the React side. It mounts the
+// `TestNLSQLPlaygroundAIOffManualSQLWorks` mounts the
 // AINLSqlPlayground component with ai_mode='off' (plus the per-
 // feature toggle on, to defeat the obvious "off because nothing
 // is enabled" path) and asserts:
@@ -14,14 +13,13 @@
 //      (otherwise the "absent in off mode" assertion is trivially
 //      true).
 //   4. The mode='cloud' path with toggle=false also hides the
-//      section — per-feature opt-in (ADR-015 §I7).
+//      section.
 //
 // In addition, this file mounts the FULL SqlPlaygroundPage in
 // off mode and asserts the deterministic manual SQL editor +
 // curated catalog + Run button still render — proving the AI
-// surface's absence does NOT regress the canonical baseline
-// (ADR-015 §I3 + the prompt's explicit "baseline behaviour still
-// works" gate). The rendered page MUST show:
+// surface's absence does NOT regress the canonical baseline. The
+// rendered page MUST show:
 //
 //   - The page title (SQL Playground).
 //   - The manual SQL editor textarea + Run button.
@@ -35,9 +33,7 @@
 // network layer does not exist in the React unit-test scope.
 //
 // File name MUST stay `TestNLSQLPlaygroundAIOffManualSQLWorks.test.tsx`
-// — the slice prompt's verification command runs
-// `vitest --run TestNLSQLPlaygroundAIOffManualSQLWorks`,
-// where the positional pattern is matched against the file PATH.
+// because Vitest's positional pattern is matched against the file path.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -134,8 +130,7 @@ describe('TestNLSQLPlaygroundAIOffManualSQLWorks (nl-sql-playground AI-off contr
   it('TestNLSQLPlaygroundAIOffManualSQLWorks: AINLSqlPlayground renders nothing when ai_mode=off even with the nl-sql-playground toggle on', () => {
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag is
-    // off". The mode='off' check MUST trump the per-feature toggle
-    // (ADR-015 §I7).
+    // off". The mode='off' check MUST trump the per-feature toggle.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'off',
@@ -155,8 +150,7 @@ describe('TestNLSQLPlaygroundAIOffManualSQLWorks (nl-sql-playground AI-off contr
 
   it('TestNLSQLPlaygroundAIOffManualSQLWorks: AINLSqlPlayground renders nothing when ai_mode is non-off but the nl-sql-playground toggle is false', () => {
     // The other half of the gate: even with mode='cloud', a
-    // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // toggle=false MUST hide the surface.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',
@@ -191,13 +185,12 @@ describe('TestNLSQLPlaygroundAIOffManualSQLWorks (nl-sql-playground AI-off contr
   });
 
   it('TestNLSQLPlaygroundAIOffManualSQLWorks: SqlPlaygroundPage in off mode shows the deterministic manual SQL editor + curated catalog (baseline intact, ADR-015 §I3)', async () => {
-    // The slice's load-bearing baseline-coexistence proof: with
-    // ai_mode='off', the canonical SqlPlaygroundPage MUST continue
+    // Baseline-coexistence proof: with ai_mode='off', the canonical
+    // SqlPlaygroundPage MUST continue
     // to render every deterministic surface — page title, manual
     // SQL editor, Run button, curated catalog table list — exactly
     // as it would without the AI feature ever existing. The AI
-    // drafter section MUST be absent from the DOM (ADR-015 §I5 +
-    // §I6).
+    // drafter section MUST be absent from the DOM.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'off',
@@ -237,7 +230,7 @@ describe('TestNLSQLPlaygroundAIOffManualSQLWorks (nl-sql-playground AI-off contr
     }
 
     // 5) The AI natural-language drafter surface MUST be absent
-    //    from the DOM (ADR-015 §I5). This is the load-bearing
+    //    from the DOM. This is the load-bearing
     //    baseline-intact assertion: even though the AI component
     //    is mounted by the page, the off-mode gate MUST hide it.
     expect(

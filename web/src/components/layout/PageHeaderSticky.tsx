@@ -34,7 +34,6 @@ export interface PageHeaderStickyProps {
  * appears once the page hero scrolls out of view. Renders provided
  * content (typically a compressed summary) and optionally turns the
  * whole bar into a click-to-scroll-top affordance.
- *
  * Usage:
  * ```tsx
  * <KpiOverviewCard id="drives-overview" {...} />
@@ -42,7 +41,6 @@ export interface PageHeaderStickyProps {
  *   🚗 Test Model Y · 📅 Last 30 days · ●All · 4 drives · avg 🅑
  * </PageHeaderSticky>
  * ```
- *
  * Hidden by default until the target element scrolls past the top of
  * the viewport — uses `IntersectionObserver` with a top rootMargin
  * matching `topOffset` so the bar appears *exactly* when the hero

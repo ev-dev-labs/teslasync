@@ -1,14 +1,11 @@
 /**
- * IncidentsCard — Phase-2 active-incidents block on /system-status.
- *
+ * Active-incidents block on /system-status.
  * Renders above the chip bar when one or more incidents are active.
  * Each row is a compact summary; clicking opens the post-mortem
  * timeline page at /system-status/incidents/:id.
- *
  * Empty state: when no active incidents, the card collapses entirely
  * (returns null). Past incidents live in the History accordion below
  * the chip bar.
- *
  * "Log incident" CTA opens the IncidentForm dialog so operators can
  * record manual incidents (e.g., "Wall connector restart at 14:00").
  */

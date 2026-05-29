@@ -13,7 +13,7 @@ export interface EventFeedItem {
   color: string;
   severity?: 'info' | 'warning' | 'critical';
   /** Optional navigation target. When set, the entire row becomes a `<Link>`
-   *  to this href (used by alert drill-through — Phase 40 / Prompt 14). */
+   *  to this href for drill-through navigation. */
   href?: string;
 }
 

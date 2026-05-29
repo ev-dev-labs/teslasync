@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 48 — i18n direction primitives.
+ * i18n direction primitives.
  *
  * Provides:
  *   - {@link RTL_LANGS}                — frozen set of RTL ISO-639-1 codes.

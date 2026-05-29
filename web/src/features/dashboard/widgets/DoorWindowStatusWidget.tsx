@@ -24,7 +24,7 @@ function toValueLabel(state: DoorWindowState, t: (key: string, fallback: string)
 }
 
 function parseWindowState(val: unknown): DoorWindowState {
-  // Native bool — Phase-42a backend may emit window state as boolean.
+  // Backend may emit window state as a native boolean.
   if (typeof val === 'boolean') return val ? 'open' : 'closed';
   const raw = asNonEmptyString(val);
   if (!raw) return 'unknown';
@@ -41,7 +41,7 @@ function parseDoorStates(doorState: unknown): Record<string, DoorWindowState> {
     rl: 'unknown',
     rr: 'unknown',
   };
-  // Native bool — backend may emit DoorState as boolean (Phase-42a typed values).
+  // Backend may emit DoorState as a native boolean.
   if (typeof doorState === 'boolean') {
     return doorState
       ? { fl: 'open', fr: 'open', rl: 'open', rr: 'open' }

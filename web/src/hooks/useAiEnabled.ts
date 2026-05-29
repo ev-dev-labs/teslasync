@@ -2,7 +2,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { AI_FEATURES, type AiFeatureId } from '@/ai/features'
 
 /**
- * Phase-50 / F0 — AI-Off Contract (ADR-015).
+ * AI-Off Contract (ADR-015).
  *
  * Returns `true` iff the current Settings indicate the requested
  * feature is enabled end-to-end:

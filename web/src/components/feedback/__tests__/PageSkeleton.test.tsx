@@ -8,7 +8,7 @@ import {
 } from '../PageSkeleton';
 
 /**
- * Phase-45 / Prompt 18 — Page-skeleton building blocks.
+ * Page-skeleton building blocks.
  *
  * Each shaped-skeleton primitive must:
  *  - Render without crashing

@@ -1,27 +1,12 @@
-// Phase-50 / 0003 — F2 Settings UI for AI.
-//
 // Mutation hooks for the Settings → AI panel.
-//
-//   - useSaveAiSettings : convenience PUT /settings wrapper. The
-//     settings endpoint is single-document and transactional (the
-//     backend upserts every typed key in one shot), so this hook
-//     reads the latest cached AppSettings, deep-merges the supplied
-//     AI patch on top, and re-submits the full blob. Callers stay
-//     focused on the AI sub-tree without threading the entire
-//     settings document through their components.
-//
-//   - useValidateAiProvider : POST /settings/ai/validate-config —
-//     pre-flight provider URL validation. Returns a discriminated
-//     `ValidateAiProviderResult` so the SPA can render inline
-//     feedback (success: pinned IP banner, failure: structured
-//     reason chip). The validate route lives outside `/api/v1/ai/*`
-//     by design (ADR-015 §I7): a user opting IN must reach the
-//     validator while AI is still off, so gating it behind aiGuard
-//     would deadlock.
-//
-// Both hooks live alongside the existing `useSaveSettings` (they
-// would feel at home in `useSettings.ts`, but the prompt's allowed-
-// files list scopes AI work to this file so churn stays bounded).
+
+// - useSaveAiSettings: PUT /settings wrapper that deep-merges an AI
+//   settings patch into the latest cached AppSettings and resubmits the
+//   full document because the settings endpoint is full-replace.
+
+// - useValidateAiProvider: POST /settings/ai/validate-config preflight
+//   validation. The route must remain reachable while AI is off so users
+//   can validate a provider before enabling it.
 
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { request, ApiError, isApiError } from '../client'
@@ -80,29 +65,29 @@ export interface ValidateAiProviderSuccess {
  *
  * Known reasons (mirror constants in
  * `internal/api/ai_settings_validate_handler.go`):
- *   - `not_local`         — base URL resolved to a public address.
- *   - `invalid`           — malformed URL, DNS failure, or other
- *                           generic rejection from the local
- *                           validator.
- *   - `bad_mode`          — request body had `mode='off'` or
- *                           unknown mode.
- *   - `bad_request`       — body was malformed JSON.
- *   - `unknown_provider`  — cloud probe hit a provider name with
- *                           no registered adapter.
- *   - `missing_api_key`   — cloud probe needs an API key (request
- *                           omitted it AND no saved key fallback).
- *   - `missing_base_url`  — Azure flavor needs a resource endpoint.
- *   - `missing_deployment`— Azure OpenAI Service flavor needs a
- *                           deployment name (or model) to route to.
- *   - `unauthorized`      — provider returned 401/403 (bad key).
- *   - `not_found`         — provider returned 404 (bad URL or
- *                           deployment slug).
- *   - `upstream_error`    — provider returned 5xx, 429, or transport
- *                           failure (provider-side problem, not the
- *                           user's config).
- *   - `timeout`           — probe exceeded the 30s budget.
- *   - `unknown`           — fallback when the server omitted the
- *                           code.
+ * - `not_local` — base URL resolved to a public address.
+ * - `invalid` — malformed URL, DNS failure, or other
+ * generic rejection from the local
+ * validator.
+ * - `bad_mode` — request body had `mode='off'` or
+ * unknown mode.
+ * - `bad_request` — body was malformed JSON.
+ * - `unknown_provider` — cloud probe hit a provider name with
+ * no registered adapter.
+ * - `missing_api_key` — cloud probe needs an API key (request
+ * omitted it AND no saved key fallback).
+ * - `missing_base_url` — Azure flavor needs a resource endpoint.
+ * - `missing_deployment`— Azure OpenAI Service flavor needs a
+ * deployment name (or model) to route to.
+ * - `unauthorized` — provider returned 401/403 (bad key).
+ * - `not_found` — provider returned 404 (bad URL or
+ * deployment slug).
+ * - `upstream_error` — provider returned 5xx, 429, or transport
+ * failure (provider-side problem, not the
+ * user's config).
+ * - `timeout` — probe exceeded the 30s budget.
+ * - `unknown` — fallback when the server omitted the
+ * code.
  */
 export type ValidateAiProviderReason =
   | 'not_local'
@@ -137,11 +122,11 @@ export type ValidateAiProviderResult =
  * safe because /settings is single-document; non-AI fields stay at
  * their last-known values.
  *
- * The backend re-applies ADR-015 invariants on the round-trip:
- *   - mode→off transitions clear `ai_features` and archive them
- *     into `ai_features_archived`;
- *   - off-mode GETs redact `ai_provider_config` and
- *     `ai_features_archived` so the next render is always safe.
+ * The backend re-applies AI safety invariants on the round-trip:
+ * - mode→off transitions clear `ai_features` and archive them
+ * into `ai_features_archived`;
+ * - off-mode GETs redact `ai_provider_config` and
+ * `ai_features_archived` so the next render is always safe.
  */
 export function useSaveAiSettings() {
   const qc = useQueryClient()

@@ -1,18 +1,14 @@
 /**
  * Command-palette prefix parsing.
- *
  * Power-user shortcut: typing a single recognized character at the start of
  * the search box locks the palette to one scope (commands, pages, vehicles,
  * settings) — matches the muscle memory of VS Code / Raycast / Linear.
- *
  *   `>` → commands       (e.g. `> wake`        → only Wake Up Vehicle)
  *   `/` → pages          (e.g. `/ drives`      → only the Drives page)
  *   `@` → vehicles       (e.g. `@ model y`     → only vehicle-switch entries)
  *   `:` → settings       (e.g. `: theme dark`  → only registry/theme actions)
- *
  * The prefix must be the very first character. A single optional space after
  * the prefix is consumed so `> wake` and `>wake` both work.
- *
  * Pure module — no React, no DOM, fully unit-tested.
  */
 
@@ -66,7 +62,6 @@ export interface ParsedPrefix {
 
 /**
  * Parse a raw palette input into `{ scope, term }`.
- *
  * Rules:
  *  - The prefix MUST be the very first character of the (un-trimmed) input.
  *    Mid-string `>` or `/` are NOT treated as prefixes — they're search text.

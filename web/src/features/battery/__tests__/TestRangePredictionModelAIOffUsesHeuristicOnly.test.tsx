@@ -1,11 +1,8 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
+// Range-prediction model AI-off contract test.
 //
-// `TestRangePredictionModelAIOffUsesHeuristicOnly` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
-// the AIRangePrediction component with ai_mode='off' (plus the
-// per-feature toggle on, to defeat the obvious "off because
-// nothing is enabled" path) and asserts:
+// `TestRangePredictionModelAIOffUsesHeuristicOnly` is the React-side
+// AI-off contract proof. It mounts AIRangePrediction with
+// ai_mode='off' plus the per-feature toggle on, then asserts:
 //
 //   1. The AI section's rooted test ID is absent from the DOM.
 //   2. The wrapper renders no children (empty container).
@@ -21,10 +18,8 @@
 // does not exist in the React unit-test scope.
 //
 // File name MUST stay
-// `TestRangePredictionModelAIOffUsesHeuristicOnly.test.tsx` —
-// the slice prompt's verification command runs
-// `vitest --run TestRangePredictionModelAIOffUsesHeuristicOnly`,
-// where the positional pattern is matched against the file PATH.
+// `TestRangePredictionModelAIOffUsesHeuristicOnly.test.tsx` because
+// Vitest's positional pattern is matched against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';

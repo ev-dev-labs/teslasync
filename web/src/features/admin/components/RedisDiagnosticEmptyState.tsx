@@ -14,8 +14,8 @@ import {
 } from '@/api/devtools'
 
 /**
- * Discriminated union for the error-aware props. Phase-46 / Prompt 59:
- * the banner now also speaks for the upstream useQuery — when the page
+ * Discriminated union for the error-aware props. The banner also speaks for
+ * the upstream useQuery — when the page
  * hit a 503 or a network failure, the banner takes precedence over the
  * meta-driven empty-state branches. Three legal shapes:
  *   - no error          → both undefined / false
@@ -45,10 +45,9 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
  * TTL-expired, never-streamed, fall-through) so engineers see a specific
  * next step instead of a black box.
  *
- * Phase-46 / Prompt 59 — also surfaces upstream request failures (503 cache
- * not wired, 503 unreachable, generic 5xx, network error) before the
- * meta-driven branches so a backend outage is never disguised as an
- * empty cache. Error branches always win over meta branches.
+ * Upstream request failures (503 cache not wired, 503 unreachable, generic
+ * 5xx, network error) take precedence so a backend outage is never disguised
+ * as an empty cache. Error branches always win over meta branches.
  */
 export function RedisDiagnosticEmptyState({
   vehicleId,

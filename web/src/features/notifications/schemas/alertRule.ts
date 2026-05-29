@@ -64,15 +64,15 @@ export const alertRuleSchema = z
     enabled: z.boolean().optional(),
     vehicle_id: z.number().int().positive().optional().nullable(),
     /**
-     * Phase-49 / Slice 0005 — sticky-all flag. When `true`, rule
+     * Sticky-all flag. When `true`, rule
      * applies to every fleet vehicle including ones added later.
      * Mutually exclusive with a non-empty `vehicle_ids` array
      * (server-side returns 422 on conflict).
      */
     all_vehicles: z.boolean().optional(),
     /**
-     * Phase-49 / Slice 0005 — explicit subset of vehicle IDs.
-     * Sorted + deduped before submit per slice 0006 / Decision D14.
+     * Explicit subset of vehicle IDs.
+     * Sorted and deduped before submit.
      */
     vehicle_ids: z.array(z.number().int().positive()).optional(),
     signal_name: z
@@ -100,7 +100,6 @@ export const alertRuleSchema = z
      * emit between falling-edge resets. NULL = unlimited (legacy).
      * Once-mode rules accept the field but the backend latch caps them
      * at 1 per resolution regardless of the value.
-     * Phase-49 / Slice 0003 / Decision D5.
      */
     max_fires_per_resolution: z
       .number()
@@ -109,12 +108,11 @@ export const alertRuleSchema = z
       .nullable()
       .optional(),
     /**
-     * Phase-49 / Slice 0009 — escalation pair (mutual presence).
+     * Escalation pair; both fields must be present together or both null.
      * Repeat-mode rules whose underlying condition stays unresolved
      * for at least `escalation_after_min` minutes will start firing
-     * at `escalation_severity` instead of the base `severity`. Both
-     * fields MUST be present together or both null. The escalated
-     * severity MUST rank strictly higher than the base severity under
+     * at `escalation_severity` instead of the base `severity`. The
+     * escalated severity MUST rank strictly higher than the base severity under
      * info < warn < critical. Once-mode rules ignore these fields
      * (the latch caps them at 1 fire per resolution).
      */
@@ -132,7 +130,7 @@ export const alertRuleSchema = z
     metric_threshold: z.number().finite().optional().nullable(),
     metric_op: z.enum(COMPUTED_METRIC_OPS).optional().nullable(),
     /**
-     * Phase-50 / ADR-014 — per-rule notification body template.
+     * Per-rule notification body template.
      * `null` (or omission) means "use the op-aware default rendered
      * by internal/alertmsg". A whitespace-only string is normalised
      * to null by the backend. Max 1024 chars; transports cap it
@@ -144,14 +142,14 @@ export const alertRuleSchema = z
       .optional()
       .nullable(),
     /**
-     * Phase-50 / ADR-014 — when FALSE, transports that render a
+     * When FALSE, transports that render a
      * separate title field (Discord/Slack/Telegram/ntfy/webhook)
      * deliver body-only notifications. Defaults to TRUE.
      */
     include_title: z.boolean().optional(),
   })
   .superRefine((data, ctx) => {
-    // Phase-49 / Slice 0009 — escalation pair invariants. Run first
+    // Run escalation pair invariants first
     // so the user gets the clearest error before kind-specific checks.
     const afterPresent = data.escalation_after_min != null
     const sevPresent = data.escalation_severity != null

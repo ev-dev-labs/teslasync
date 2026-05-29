@@ -297,7 +297,7 @@ describe('TreeSelect', () => {
   });
 
   // ── Regression tests for the "checkbox doesn't work" UX bug ───
-  // Phase-51: clicking on the visual checkbox inside a leaf row
+  // clicking on the visual checkbox inside a leaf row
   // previously fired the leaf checkbox's `onChange` AND bubbled to the
   // row's `onClick`, producing two toggles per click that cancelled
   // each other. Fix: the leaf checkbox is now wrapped with

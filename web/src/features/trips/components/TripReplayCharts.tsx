@@ -24,7 +24,7 @@ import {
 import { EmptyState } from '@/components/feedback';
 
 /* ------------------------------------------------------------------ */
-/*  Phase-45 / Prompt 26 — Trip-replay charts (with cursor sync)      */
+/*  Trip-replay charts with cursor sync                              */
 /* ------------------------------------------------------------------ */
 
 export interface TripReplayChartPoint {
@@ -57,7 +57,7 @@ export interface TripReplayChartsProps {
 }
 
 /**
- * Phase-45 / Prompt 26 — wraps the trip-replay timeline chart in a
+ * Wraps the trip-replay timeline chart in a
  * `<ChartTimeRangeProvider>` and bridges the persistent cursor-sync
  * store to the parent's `onSeekToIndex` callback.
  *

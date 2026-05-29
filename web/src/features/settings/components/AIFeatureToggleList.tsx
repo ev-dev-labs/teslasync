@@ -1,10 +1,10 @@
 /**
- * Phase-50 / 0003 — F2 Settings UI for AI.
+ * Settings UI for AI feature toggles.
  *
  * Per-feature opt-in toggles. **Generated** by mapping over
  * `AI_FEATURE_IDS` from the canonical TS registry — never
- * hand-listed. Per the prompt: "Adding a feature in F0's registry
- * automatically adds the toggle here."
+ * hand-listed. Adding a feature to the registry automatically adds
+ * the toggle here.
  *
  * i18n: each toggle's copy lives at
  *   `ai.settings.feature.<id>.label`

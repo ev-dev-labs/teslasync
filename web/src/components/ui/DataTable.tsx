@@ -38,7 +38,7 @@ export interface Column<T> {
   render: (row: T) => ReactNode
   sortable?: boolean
   className?: string
-  // Phase-40 / Prompt 25 additions:
+  // Column display options:
   /** Default visible column? Defaults to true. Hidden columns appear in the
    *  column-visibility menu so users can re-show them. */
   defaultVisible?: boolean
@@ -72,7 +72,7 @@ interface DataTableProps<T> {
   className?: string
   /**
    * Legacy boolean density toggle. Equivalent to `density='compact'`.
-   * Preserved for back-compat with pre-Phase-40-44 callers; new code
+   * Preserved for older callers; new code
    * should pass `density` directly.
    */
   compact?: boolean
@@ -89,7 +89,6 @@ interface DataTableProps<T> {
    * preference flows through every default-styled table). Pass an
    * explicit value when a specific table should look identical to all
    * users regardless of preference (e.g. data-dense log viewers).
-   * (Phase 40 / Prompt 44.)
    */
   density?: 'compact' | 'comfortable' | 'spacious' | 'auto'
   pagination?: boolean | PaginationConfig
@@ -113,13 +112,13 @@ interface DataTableProps<T> {
    */
   mobileColumns?: string[]
 
-  // ── Phase-40 / Prompt 25 additions ────────────────────────────────────
+  // ── Persistent table controls ─────────────────────────────────────────
   /** Stable identifier used to persist column visibility & widths in
    *  localStorage. Required when using `selectable`, `resizable`, or
    *  the column-visibility menu.
    *
-   *  As of Phase-46 / Prompt 03 every `<DataTable>` caller under
-   *  `web/src/features/**` MUST set `tableId`. The
+   *  Every `<DataTable>` caller under `web/src/features/**` MUST set
+   *  `tableId`. The
    *  `audit:datatable-tableid` script (chained from `npm run lint`) fails
    *  the build if a new caller forgets it. Without `tableId`, column
    *  visibility / widths / sort / page-size silently reset on every
@@ -180,7 +179,7 @@ interface DataTableProps<T> {
    *    pass `columnVisibility` so the intent is explicit. */
   showColumnsMenu?: boolean
 
-  // ── Phase-46 / Prompt 45 — column reorder + visibility ────────────────
+  // ── Column reorder + visibility ───────────────────────────────────────
   /** Render the combined Columns popover (visibility checklist). Persists
    *  in localStorage[`teslasync.table.${tableId}.columns`]. Requires
    *  `tableId`. Equivalent to (and replaces) `showColumnsMenu`. */
@@ -191,7 +190,7 @@ interface DataTableProps<T> {
    *  `tableId`. Implies `columnVisibility` (the same popover hosts both). */
   columnReorder?: boolean
 
-  // ── Phase-40 / Prompt 31 — per-table CSV export ───────────────────────
+  // ── Per-table CSV export ───────────────────────────────────────────────
   /** Show a "Download CSV" button in the table toolbar. The CSV is generated
    *  from the currently visible columns and the currently sorted/filtered
    *  data the table has been given. */
@@ -207,7 +206,7 @@ interface DataTableProps<T> {
    *  whatever's currently visible. */
   exportAll?: () => Promise<T[]>
 
-  // ── Phase-40 / Prompt 37 — row virtualization ─────────────────────────
+  // ── Row virtualization ─────────────────────────────────────────────────
   /** Opt-in row virtualization for high-volume tables (1000+ rows).
    *  Mounts only the rows currently in the viewport (plus `overscan`),
    *  which keeps the DOM small and scrolling at 60fps regardless of how
@@ -232,7 +231,7 @@ interface DataTableProps<T> {
    *  the cost of slightly more DOM. */
   overscan?: number
 
-  // ── Phase-46 / Prompt 30 — per-row right-click context menu ───────────
+  // ── Per-row right-click context menu ───────────────────────────────────
   /** Optional builder that returns a list of `ContextMenuItem`s to show
    *  when the user right-clicks a body row. Returning an empty array (or
    *  omitting this prop entirely) leaves the browser's native context
@@ -275,7 +274,7 @@ function alignClass(align?: 'left' | 'center' | 'right'): string {
  *  per-column resize.
  *
  *  All advanced props are optional — passing only `columns` + `data` gives the
- *  same lightweight behavior callers had before Phase-40 / Prompt 25. */
+ *  same lightweight behavior as the base table. */
 export function DataTable<T>({
   columns,
   data,
@@ -315,13 +314,13 @@ export function DataTable<T>({
   rowContextMenu,
 }: DataTableProps<T>) {
   const { t } = useTranslation()
-  // Phase-46 / Prompt 30 — shared context menu host. We call this once per
+  // Shared context menu host. We call this once per
   // table render so the imperative `openMenu` reference stays stable
   // across row renders.
   const { openMenu } = useContextMenu()
   // Resolve effective density. Explicit `density` wins; otherwise the
   // legacy `compact` boolean maps to 'compact'; otherwise default to
-  // 'auto' so the global setting flows through. Phase 40 / Prompt 44.
+  // 'auto' so the global setting flows through.
   const effectiveDensity: 'compact' | 'comfortable' | 'spacious' | 'auto' =
     density ?? (compact ? 'compact' : 'auto')
   // Static density modes use the historical fixed paddings (32 / 44 /
@@ -364,7 +363,7 @@ export function DataTable<T>({
   useEffect(() => { setPage(1) }, [data.length])
 
   // ── Column layout (order + hidden, persisted by tableId) ───────────────
-  // Phase-46 / Prompt 45 unified the legacy `visibleKeys` state with a
+  // The legacy `visibleKeys` state is unified with a
   // richer `{ order, hidden }` layout that also captures column position.
   // The legacy `.visible` key is read once on mount as a one-shot
   // migration so existing users don't lose their visibility prefs.
@@ -397,7 +396,7 @@ export function DataTable<T>({
       if (tableId) {
         setColumnLayout(tableId, next)
         // Mirror the visible-keys list to the legacy `.visible` storage key so
-        // any pre-Phase-46 reader (and the legacy assertion in
+        // any legacy reader (and the legacy assertion in
         // DataTable.test.tsx) continues to work without modification.
         const visibleKeys = applyColumnLayout(columns, next).map((c) => c.key)
         writeLegacyVisibleArray(tableId, visibleKeys)
@@ -584,7 +583,7 @@ export function DataTable<T>({
   const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
   const totalCols = leadingColCount + visibleColumns.length
 
-  // ── Virtualization (Phase-40 / Prompt 37) ─────────────────────────────
+  // ── Virtualization ─────────────────────────────────────────────────────
   // Only enabled when explicitly opted in AND there's no `expandable` slot
   // (variable row heights are out of scope). When the user passes both, we
   // gracefully fall back to non-virtualized rendering with a dev warning.
@@ -795,7 +794,7 @@ export function DataTable<T>({
   const headRowClass = cn(
     tableTokens.head,
     effectiveStickyHeader && tableTokens.stickyHead,
-    // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+    // Windows High Contrast / forced-colors mode.
     // The default `border-b border-white/[0.06]` from `tableTokens.head`
     // collapses to invisible against the OS Canvas background, leaving
     // table headers indistinguishable from the body. Pin the bottom edge
@@ -804,7 +803,7 @@ export function DataTable<T>({
     'forced-colors:border-b forced-colors:border-[CanvasText]',
   )
 
-  // Phase-46 / Prompt 45 — `showColumnsMenu` is the back-compat alias for
+  // `showColumnsMenu` is the back-compat alias for
   // `columnVisibility`. When EITHER is true (or `columnReorder` is true,
   // since reorder always implies the menu), we surface the new combined
   // `<DataTableColumnMenu>` popover.

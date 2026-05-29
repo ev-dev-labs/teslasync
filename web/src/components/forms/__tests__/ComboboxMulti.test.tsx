@@ -1,7 +1,3 @@
-/**
- * Phase-46 / Prompt 14 — ComboboxMulti unit tests.
- */
-
 import {
   fireEvent,
   render,

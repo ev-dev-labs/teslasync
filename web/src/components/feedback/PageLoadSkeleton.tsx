@@ -10,8 +10,7 @@ interface PageLoadSkeletonProps {
 /**
  * Layout-shaped Suspense fallback used while a lazy-loaded route chunk is being
  * fetched. Mirrors the typical PageContainer layout (heading bar + a few panels)
- * so the UI doesn't reflow when the real page mounts. This is what the
- * performance budget (Phase 40 / Prompt 35) targets — keeping CLS low while
+ * so the UI doesn't reflow when the real page mounts, keeping CLS low while
  * route chunks stream in.
  */
 export function PageLoadSkeleton({ panels = 3, className }: PageLoadSkeletonProps) {

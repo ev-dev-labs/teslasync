@@ -1,5 +1,5 @@
 /**
- * LiveStatusPill — Phase-2 connection-state badge.
+ * LiveStatusPill connection-state badge.
  *
  * Mounted next to the Refresh button on /system-status. Reflects the
  * SSE pump in useStatusLiveSSE:

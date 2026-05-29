@@ -11,7 +11,7 @@ import {
 } from '../globalProgress'
 
 /**
- * Phase-46 / Prompt 07 — globalProgress controller contract.
+ * globalProgress controller contract.
  *
  * Verifies the activeCount stack, idempotent stop, asymptotic trickle
  * behaviour, and listener subscribe/unsubscribe semantics. These

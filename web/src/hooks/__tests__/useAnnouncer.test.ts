@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 12 — useAnnouncer module tests.
+ * useAnnouncer module tests.
  *
  * Validates the module-level pub/sub mechanics WITHOUT rendering the
  * AnnouncerRegion component (those integration tests live next to

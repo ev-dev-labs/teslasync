@@ -1,25 +1,23 @@
-// Phase-50 / 0036 — A3 Cross-rule conflict detection.
+// Cross-rule conflict detection.
 //
-// W1 inline wiring (P11/P12):
+// Wiring contract:
 //   - useAiStream targets POST /ai/alerts/rules/conflicts
 //     (the backend path after stripping the /api/v1 prefix).
 //   - The primary action button is disabled via a COMPUTED expression
 //     (`stream.state === 'streaming' || stream.state === 'paused-confirm' || ruleIds.length < 2`),
-//     never a literal `disabled` or `disabled={true}` (Rule W1-A).
+//     never a literal `disabled` or `disabled={true}`.
 //   - tool_result frames carrying a typed RuleConflictEnvelope are
 //     captured in component state; clicking "Review rule" on a
 //     conflict navigates the parent page to the offending rule via
 //     the onSelectRule callback. The AI panel NEVER persists state
 //     directly — the baseline AlertStudio editor's existing Save
-//     button remains the sole write path (ADR-015 §I3 + §I8
-//     propose-only contract).
+//     button remains the sole write path.
 //   - cancel() runs on unmount AND on ruleIds change (dedicated
 //     useEffect with explicit deps).
 //   - Component is wrapped with withAiFeature so it is ABSENT (returns
-//     null) when ai_mode='off' or the per-feature toggle is off
-//     (ADR-015 §I5 hidden UI).
+//     null) when ai_mode='off' or the per-feature toggle is off.
 //
-// Phase-50 / refactor — switched the surrounding scaffold (header,
+// The surrounding scaffold (header,
 // AI badge, action button, AiOutputPanel) to AIFeatureCard for
 // visual + behavioural consistency with the other 37 AI features.
 // The conflicts list is rendered through AIFeatureCard's `children`

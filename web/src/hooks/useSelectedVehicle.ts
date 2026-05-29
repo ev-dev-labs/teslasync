@@ -5,13 +5,11 @@ import { useSelectedVehicleStore } from '@/store/selectedVehicle';
 import type { Vehicle } from '@/types/vehicle';
 
 /**
- * useSelectedVehicle — Phase 40 / Prompt 16.
- *
  * Returns the user's currently selected vehicle, with a precedence order
  * tuned for multi-vehicle owners:
  *
  *   1. Path param  `/vehicles/:id` (and `/vehicles/:id/access`)
- *   2. Query param `?vehicle_id=N` (alert drillthrough — Prompt 14)
+ *   2. Query param `?vehicle_id=N` (alert drillthrough)
  *   3. Persisted store value (last header-picker selection)
  *   4. First vehicle in the fleet (sensible default for fresh installs)
  *

@@ -6,7 +6,6 @@ export interface CardProps extends HTMLAttributes<HTMLDivElement> {
    * Padding scale. Defaults to `'md'`. Pass `'auto'` to follow the user's
    * `ui_density` setting via the density-aware Tailwind utilities
    * (`px-d-pad-x py-d-pad-y`); see `useDensitySync` and `index.css`.
-   * (Phase 40 / Prompt 44.)
    */
   padding?: 'none' | 'sm' | 'md' | 'lg' | 'auto';
   hover?: boolean;
@@ -26,7 +25,7 @@ export const Card = forwardRef<HTMLDivElement, CardProps>(
         ref={ref}
         className={cn(
           'rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-sm',
-          // Phase-46 / Prompt 11 — forced-colors mode: the glass-border
+          // In forced-colors mode, the glass-border
           // alpha collapses to invisible against OS Canvas, and box-shadow
           // is suppressed entirely. Pin the boundary to a system color so
           // cards remain perceivable in Windows High Contrast.

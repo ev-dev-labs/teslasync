@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 39 — `<Lightbox>` contract tests.
+ * `<Lightbox>` contract tests.
  *
  * Verifies the headline behaviours called out in the prompt:
  *   - Open at index 2, ← navigates to index 1.

@@ -1,4 +1,4 @@
-// Phase-50 / W1 (slice 0065) — shared streaming-output renderer.
+// Shared streaming-output renderer.
 //
 // Every AI feature whose primary render contract is a piece of
 // streamed narrative or proposal text (delta-accumulated via

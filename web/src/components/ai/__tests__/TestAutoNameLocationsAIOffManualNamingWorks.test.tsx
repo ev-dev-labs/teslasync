@@ -1,11 +1,8 @@
-// Phase-50 / 0037 — G1 Auto-name unnamed locations.
+// Auto-name unnamed locations AI-off contract test.
 //
-// `TestAutoNameLocationsAIOffManualNamingWorks` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
-// AIAutoNameUnnamedLocations component with ai_mode='off' (plus
-// the per-feature toggle on, to defeat the obvious "off because
-// nothing is enabled" path) and asserts:
+// `TestAutoNameLocationsAIOffManualNamingWorks` is the React-side
+// AI-off contract proof. It mounts AIAutoNameUnnamedLocations with
+// ai_mode='off' plus the per-feature toggle on, then asserts:
 //
 //   1. The AI section's rooted test ID is absent from the DOM.
 //   2. The wrapper renders no children (empty container).
@@ -15,7 +12,7 @@
 //      actually works (otherwise the "absent in off mode"
 //      assertion is trivially true).
 //
-// W1 inline wiring — also asserts the on-mode wiring contract:
+// Also asserts the on-mode wiring contract:
 //   - clicking "Suggest name" POSTs exactly one request to
 //     `/api/v1/ai/locations/501/name/draft`.
 //   - the first delta event's text renders inside the gated
@@ -34,10 +31,8 @@
 // the network layer does not exist in the React unit-test scope.
 //
 // File name MUST stay
-// `TestAutoNameLocationsAIOffManualNamingWorks.test.tsx` — the
-// slice prompt's verification command runs
-// `vitest --run TestAutoNameLocationsAIOffManualNamingWorks`,
-// where the positional pattern is matched against the file PATH.
+// `TestAutoNameLocationsAIOffManualNamingWorks.test.tsx` because
+// Vitest's positional pattern is matched against the file path.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'

@@ -23,7 +23,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { formatBytes } from '@/lib/numberFormat';
 
 /**
- * ExportsPage — list of past export jobs with bulk delete. Phase-45 / 32.
+ * ExportsPage — list of past export jobs with bulk delete.
  *
  * Export jobs accumulate quickly (50+ stale rows is common) and the
  * existing system/data-export page only allows deleting one at a time.

@@ -8,7 +8,7 @@ import type { LazyExoticComponent, ComponentType } from 'react';
  * translated; `text` is supported for legacy/static strings. `learnMore`
  * adds a "Learn more" link in the tooltip body that opens in a new tab.
  *
- * Phase-40 / Prompt 47.
+ * Dashboard widget registry types.
  */
 export interface WidgetHelp {
   text?: string;
@@ -66,9 +66,8 @@ export interface WidgetDef {
   maxSize: WidgetSize;
   component: LazyExoticComponent<ComponentType<WidgetProps>>;
   /**
-   * Optional help metadata. When set, the registry's recommendation is to
-   * forward this to `WidgetShell`'s `help` prop so a "?" tooltip appears
-   * next to the widget title. Phase-40 / Prompt 47.
+   * Optional help metadata. When set, forward this to `WidgetShell`'s `help`
+   * prop so a "?" tooltip appears next to the widget title.
    */
   help?: WidgetHelp;
 }
@@ -123,7 +122,7 @@ export interface SavedDashboard {
   name: string;
   icon?: string;
   /**
-   * Optional per-vehicle scope (Phase 40 / Prompt 30).
+   * Optional per-vehicle scope.
    *   undefined / null → applies to ALL vehicles ("user-global").
    *   number           → pinned to that vehicle id; switcher hides this
    *                      layout when a different vehicle is selected.

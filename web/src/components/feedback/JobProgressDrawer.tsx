@@ -23,8 +23,6 @@ import {
 } from '@/api/hooks/useExports';
 
 /**
- * Phase 40 / Prompt 31 — JobProgressDrawer
- *
  * Floating, minimizable widget that surfaces in-flight + recently-finished
  * export jobs. Auto-shows when there is at least one queued/processing job
  * and stays open until the user dismisses it. Once minimized, a small badge

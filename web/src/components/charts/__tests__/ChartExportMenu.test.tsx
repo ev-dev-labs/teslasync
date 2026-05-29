@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 16 — ChartExportMenu surface.
+ * ChartExportMenu surface.
  *
  * Tests the menu wiring: clicking each item invokes the right handler,
  * the menu closes on selection / outside click / Escape, and the toast

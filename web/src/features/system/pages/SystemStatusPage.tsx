@@ -6,8 +6,8 @@
  *   2. If not, what's broken?            — Health rows + Action items
  *   3. What do I need to do?             — ActionItemsPanel CTAs
  *
- * Phase 1.5: Pulls live data from existing backend endpoints so every
- *   accordion shows real values (DB size, vehicle count, worker
+ * Pulls live data from existing backend endpoints so every accordion
+ *   shows real values (DB size, vehicle count, worker
  *   health, Tesla API spend, error counts, backup recency) instead of
  *   the generic "Operational" stub the first cut shipped with.
  *
@@ -95,8 +95,8 @@ export default function SystemStatusPage() {
     dataUpdatedAt,
   } = useSystemHealth()
 
-  // Phase-2: SSE subscription. Drops polling cost when the connection
-  // is up; falls back to the existing useQuery polling when offline.
+  // SSE drops polling cost when connected; useQuery polling remains the
+  // offline fallback.
   const { state: liveState, lastUpdateAt: liveLastUpdate, reconnect: liveReconnect } = useStatusLiveSSE()
 
   const { data: extHealth } = useQuery({
@@ -181,7 +181,7 @@ export default function SystemStatusPage() {
     liveReconnect()
   }, [refetchHealth, qc, liveReconnect])
 
-  // Phase-2 / #19 — keyboard shortcuts.
+  // Keyboard shortcuts.
   // R = refresh, ? = help, J/K = jump to next/previous chip section.
   // Ignored when the user is typing in an input.
   useEffect(() => {
@@ -374,7 +374,7 @@ export default function SystemStatusPage() {
     return rows
   }, [extHealth, version, backupStats, totalRows, positionCount, workers])
 
-  // ── 30-day uptime heatmap (synthesised in Phase 1) ─────────────
+  // ── 30-day uptime heatmap ───────────────────────────────────────
   const uptimeDays: UptimeDay[] = useMemo(() => {
     const days: UptimeDay[] = []
     const day = 24 * 60 * 60 * 1000
@@ -920,22 +920,22 @@ export default function SystemStatusPage() {
           />
         </section>
 
-        {/* 16 ─ SLO tracking (Phase 2) ────────────────────────── */}
+        {/* 16 ─ SLO tracking ──────────────────────────────────── */}
         <section id="slo" aria-label="Personal SLO tracking">
           <SLOTrackingCard />
         </section>
 
-        {/* 17 ─ Scheduled maintenance (Phase 2) ───────────────── */}
+        {/* 17 ─ Scheduled maintenance ─────────────────────────── */}
         <section id="maintenance" aria-label="Scheduled maintenance">
           <ScheduledMaintenanceCard now={now} />
         </section>
 
-        {/* 18 ─ Subscribe / discover channels (Phase 2) ───────── */}
+        {/* 18 ─ Subscribe / discover channels ─────────────────── */}
         <section id="subscribe" aria-label="Notification channels">
           <SubscribeCard />
         </section>
 
-        {/* 19 ─ Status API docs link (Phase 2) ────────────────── */}
+        {/* 19 ─ Status API docs link ──────────────────────────── */}
         <section id="api-docs" aria-label="Status API">
           <div className="flex justify-center pt-1 pb-4 text-xs text-[var(--text-muted)]" data-status-print-hide>
             <Link
@@ -1050,5 +1050,5 @@ function SystemInfoRows({
   return <DefList rows={rows} />
 }
 
-// Reserved for the Phase-2 unified Tesla auth banner.
+// Reserved for the unified Tesla auth banner.
 void Zap

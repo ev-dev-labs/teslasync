@@ -6,7 +6,7 @@ import { Button } from '@/components/ui'
 import { drainQueuedTeslaMutations } from '@/lib/teslaAuthRecovery'
 
 /**
- * Phase-45 / Prompt 30 — Tesla third-party OAuth grant recovery banner.
+ * Tesla third-party OAuth grant recovery banner.
  *
  * The Tesla refresh token has a hard 8-week TTL. When it expires, every
  * Tesla-backed call starts returning 401 with `code: TESLA_TOKEN_EXPIRED`,

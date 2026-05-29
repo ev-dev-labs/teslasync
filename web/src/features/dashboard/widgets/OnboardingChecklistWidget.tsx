@@ -26,14 +26,11 @@ import type { WidgetProps } from './types'
 
 /**
  * OnboardingChecklistWidget — first-run setup checklist surface
- * (Phase-40 / Prompt 68).
- *
  * Lists the handful of configuration steps that meaningfully change how
  * useful TeslaSync is — connecting Tesla, picking a theme, creating an
  * alert rule, configuring a notification channel, discovering the command
  * palette, and enabling browser push. Each row auto-completes the moment
  * its underlying state flips (no manual marking needed).
- *
  * Visibility:
  *   - Renders the full checklist while at least one task is incomplete.
  *   - Renders a celebratory "all set" state for 24h after 100 % complete

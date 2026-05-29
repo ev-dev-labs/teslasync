@@ -1,35 +1,34 @@
-// Phase-50 / 0053 — P2 Helix quiet-hours suggestion advisor.
+// Helix quiet-hours suggestion advisor.
 //
-// W1 inline wiring (P11/P12):
+// Wiring contract:
 //   - useAiStream targets POST /ai/settings/quiet-hours/draft
 //     (the backend path after stripping the /api/v1 prefix).
 //   - The primary action button is disabled via a COMPUTED expression
 //     (`stream.state === 'streaming' || stream.state === 'paused-confirm'`),
-//     never a literal `disabled` or `disabled={true}` (Rule W1-A).
+//     never a literal `disabled` or `disabled={true}`.
 //   - tool_result frames carrying a typed QuietHoursWindowProposal
 //     are captured in component state; clicking "Apply to form"
 //     copies the proposed scalars onto the parent form via the
 //     onApplyDraft callback. The AI panel NEVER persists state
 //     directly — the baseline QuietHoursPanel Save button remains
-//     the sole write path (ADR-015 §I3 + §I8 propose-only contract).
+//     the sole write path.
 //   - cancel() runs on unmount (dedicated useEffect with explicit
 //     cancelStream dep so internal stream ticks do not wipe the
 //     captured proposal mid-stream).
 //   - Component is wrapped with withAiFeature so it is ABSENT
 //     (returns null) when ai_mode='off' or the per-feature toggle
-//     is off (ADR-015 §I5 hidden UI).
+//     is off.
 //
-// HX (Helix UX) contract:
+// Helix UX contract:
 //   - The surface renders through the shared AIFeatureCard
 //     scaffold — NOT a bespoke GlassPanel + Button + AiOutputPanel
 //     composition.
 //   - The per-feature verb "Suggest quiet hours" is passed via
 //     `buttonLabel`. The card composes the accessible name as
 //     "Ask Helix · Suggest quiet hours".
-//   - User-visible i18n keys say "Helix", not "AI" (per the HX
-//     addendum).
+//   - User-visible i18n keys say "Helix", not "AI".
 //
-// ADR-015 alignment:
+// AI safety alignment:
 //   - I3 baseline intact: this component never replaces the
 //     deterministic QuietHoursPanel; it adds an opt-in proposal
 //     section above it whose only mutation path is "Apply to
@@ -155,8 +154,7 @@ function InnerSection({ onApplyDraft }: AIQuietHoursSuggestionProps) {
 
   // Cancel + reset on unmount so a stale stream cannot bleed
   // proposals into a subsequent mount of the panel. Dedicated
-  // effect so the cleanup deps stay explicit (Rule of Hooks /
-  // W1 §6).
+  // effect so the cleanup deps stay explicit and Rules-of-Hooks safe.
   useEffect(() => {
     return () => {
       cancelStream()

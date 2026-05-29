@@ -1,5 +1,5 @@
 /**
- * Phase-45 / Prompt 25 — AddWidgetButton (floating + button) tests.
+ * AddWidgetButton floating-action tests.
  *
  * Verifies:
  *   - Hidden when the dashboard is in edit mode (the existing header

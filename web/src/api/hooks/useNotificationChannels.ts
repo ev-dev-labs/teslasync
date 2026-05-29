@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 37 — webhook channel hooks.
+ * Webhook channel hooks.
  *
  * Re-exports the generic notification-channel CRUD hooks from
  * `@/api/hooks/useNotifications` so the new Settings webhook section

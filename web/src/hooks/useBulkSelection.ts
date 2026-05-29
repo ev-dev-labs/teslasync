@@ -1,11 +1,7 @@
 /**
- * useBulkSelection — Phase-45 / Prompt 32
- *
- * Generic selection-state primitive shared across every list page that
- * supports bulk actions. Extracted from the per-page state that was
- * hand-rolled in NotificationsPage (Phase-45 / 28) so new adopters
- * (alert rules, automations, geofences, exports) don't re-implement the
- * same toggle / select-all / master-checkbox bookkeeping.
+ * Generic selection-state primitive shared across list pages with bulk actions.
+ * Keeps alert rules, automations, geofences, exports, and similar views from
+ * re-implementing toggle / select-all / master-checkbox bookkeeping.
  *
  * Behaviour:
  *  - `selectedIds` is a Set<T> for O(1) membership checks.

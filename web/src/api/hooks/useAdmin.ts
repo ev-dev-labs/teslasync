@@ -123,7 +123,7 @@ export function useSystemHealth() {
 }
 
 /**
- * Persisted maintenance/degraded-mode state (Phase 46 / Prompt 04).
+ * Persisted maintenance/degraded-mode state.
  *
  * GET /api/v1/admin/maintenance returns the current system_state row
  * plus a `source` marker indicating whether an env override is
@@ -178,7 +178,7 @@ export function useAuditLogs() {
 }
 
 /**
- * Last-hour rolling summary of frontend error reports (Phase 46 / Prompt 01).
+ * Last-hour rolling summary of frontend error reports.
  *
  * Reads from the same WebErrorHandler instance that ingests reports via
  * `POST /api/v1/web-errors`, so the count reflects what the SPA has

@@ -1,11 +1,11 @@
-// Phase-50 / 0027 — C2 Battery health forecast narrative.
-// Phase-50 / W1 inline wiring (per slice prompt 0027) — on-mode
-// wiring test proving the Narrate button opens an SSE stream
-// against the registered backend route POST /api/v1/ai/battery/health/narrate.
+// Battery health forecast narrative.
+// On-mode wiring test proving the Narrate button opens an SSE stream
+// against the registered backend route POST
+// /api/v1/ai/battery/health/narrate.
 //
 // `TestBatteryHealthForecastNarrativeAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0027's W1 inline
-// addendum. It mounts the AIBatteryHealthForecastNarrative
+// positive wiring proof for the narration flow. It mounts the
+// AIBatteryHealthForecastNarrative
 // component with ai_mode='cloud' + the per-feature toggle on, stubs
 // global fetch with a deterministic SSE byte stream, clicks the
 // Narrate button, and asserts:

@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { LAZY_ROUTE_IMPORTS } from './lazyRoutes.list'
 
 /**
- * Phase-45 / Prompt 05 — Lazy-route bundle smoke test.
+ * Lazy-route bundle smoke test.
  *
  * Walks every lazy chunk wired into `App.tsx` (mirrored in
  * `lazyRoutes.list.ts`) and dynamically imports it. The intent is to

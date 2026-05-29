@@ -1,5 +1,5 @@
 /**
- * Tests for the Phase 43 Prompt 0012 sanctioned SSE consumer
+ * Tests for the typed SSE consumer
  * (`web/src/api/sseClient.ts`). Verifies:
  *
  *   - parseEnvelope happy paths for number / string / bool variants

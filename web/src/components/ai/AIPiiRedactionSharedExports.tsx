@@ -1,13 +1,9 @@
-// Phase-50 / 0052 — P1 PII redaction in shared exports.
-// Phase-50 / W1 inline wiring (per slice prompt 0052) — wired the
-// "Suggest redactions" button to
+// Wires the "Suggest redactions" button to
 // POST /api/v1/ai/exports/redaction/draft via the canonical
-// useAiStream hook. The slice methodology forbids shipping the
-// visual affordance without end-to-end SSE wiring; this component
-// lands both in one commit so the on-mode wiring test
-// (TestPiiRedactionSharedExportsAIOnWiredCallsRoute) can prove
-// the button actually opens an SSE stream against the registered
-// backend route.
+// useAiStream hook. The on-mode wiring test
+// (TestPiiRedactionSharedExportsAIOnWiredCallsRoute) proves
+// the button opens an SSE stream against the registered backend
+// route.
 //
 // AIPiiRedactionSharedExports is the visible AI surface for the
 // ExportsPage (/exports). It is rendered conditionally via
@@ -27,7 +23,7 @@
 // panels remain the canonical view for every user; this AI
 // section is opt-in read-only narration layered alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The button's disabled prop is a COMPUTED expression

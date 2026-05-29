@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 45 — DataTable column reorder + visibility
+ * DataTable column reorder + visibility persistence.
  *
  * Persistent store for per-table column layout (order + hidden set), keyed
  * by `tableId` in localStorage. Supersedes the legacy
@@ -74,7 +74,7 @@ export function setColumnLayout(tableId: string, layout: ColumnLayout): void {
 
 /** Mirror the user's currently-visible column keys to the legacy
  *  `teslasync.table.${tableId}.visible` storage key. The new layout (`.columns`)
- *  is the source of truth post-Phase-46 / Prompt 45, but we keep the legacy
+ *  is the source of truth, but we keep the legacy
  *  array in lock-step so any external readers (or the prior storage shape's
  *  tests) continue to work without modification. */
 export function writeLegacyVisibleArray(

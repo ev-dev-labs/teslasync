@@ -9,7 +9,7 @@ import { HelpSegment } from './status-bar/HelpSegment';
 import { cn } from '@/lib/cn';
 
 /**
- * StatusBar — Phase-40 / Prompt 59.
+ * StatusBar.
  *
  * Always-on 28px footer pinned to the bottom of the viewport with five
  * consolidated status segments:
@@ -55,8 +55,8 @@ export function StatusBar({ compact = false, className }: StatusBarProps) {
   const iconOnly = compact || prefs.iconOnly || isNarrow;
 
   return (
-    // Phase-45 / Prompt 13 — `<footer>` exposes a `contentinfo` landmark so
-    // screen-reader landmark navigation (e.g. JAWS Insert+F7) lists the
+    // `<footer>` exposes a `contentinfo` landmark so screen-reader
+    // landmark navigation (e.g. JAWS Insert+F7) lists the
     // status bar alongside <header>/<aside>/<main>. The `role="status"`
     // override + `aria-live="polite"` still announce live updates
     // (connection drops, vehicle changes) without losing the landmark

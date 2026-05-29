@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 17 — `<MarkerCluster>` deterministic-scale test.
+ * `<MarkerCluster>` deterministic-scale test.
  *
  * Asserts that the component can mount 1000 points without throwing,
  * routes every point through a single `addLayers` call (the leaflet

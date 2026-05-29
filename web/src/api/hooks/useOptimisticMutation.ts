@@ -8,14 +8,11 @@ import {
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 
 /**
- * Phase-45 / Prompt 15 — Shared optimistic-mutation helper.
- *
+ * Shared optimistic-mutation helper.
  * Wraps `useMutation` with the standard TanStack Query optimistic-update
  * lifecycle so individual hooks don't have to reinvent the snapshot /
  * rollback dance and so the rules stay uniform across the codebase.
- *
  * Lifecycle managed by this helper:
- *
  *   1. `onMutate`: cancel in-flight queries on every affected key so a
  *      stale background refetch can't clobber the optimistic write,
  *      capture a snapshot of every matching cache entry, then apply the
@@ -25,16 +22,13 @@ import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
  *   3. `onSettled`: invalidate every affected key (broadcasting across
  *      tabs when `broadcast: true`) so the server's truth eventually wins,
  *      regardless of success or error.
- *
  * The helper accepts an optional caller-supplied `onMutate` callback for
  * hook-specific side effects (analytics, haptic feedback, modal cleanup).
  * It runs AFTER the optimistic write has been applied so React state can
  * already see the new value when it fires.
- *
  * `queryKeys` may be a static array OR a function of `vars` — use the
  * function form when the affected cache keys depend on the mutation
  * payload (e.g. `['saved-views', route]` where route comes from `vars`).
- *
  * Internally the helper uses `getQueriesData` + `setQueryData` so a single
  * key prefix updates every matching child cache (e.g. one mark-read on
  * `['notification-logs']` updates every filtered list query under that

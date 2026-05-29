@@ -98,13 +98,13 @@ const PALETTE_COMMAND_CONFIGS: PaletteCommandConfig[] = [
 
 // ─── Recent commands (localStorage) ─────────────────────────────────────────
 //
-// Phase 40 / Prompt 19: persisted across reloads via localStorage so power users
-// see their workflow patterns surface to the top of the palette. Tracks every
+// Persisted across reloads via localStorage so power users see their
+// workflow patterns surface to the top of the palette. Tracks every
 // command type (vehicle, registry/action, navigation), not only vehicle
 // commands. Stored capped at 10.
 //
-// Phase-45 / Prompt 27: the empty-query "Most Used" section is now sourced
-// from `commandFrecency` instead of this LRU list. The LRU helpers below stay
+// The empty-query "Most Used" section is sourced from `commandFrecency`
+// instead of this LRU list. The LRU helpers below stay
 // exported for tests + as a backward-compatible storage primitive — every
 // recorded action still writes to BOTH localStorage keys so a future feature
 // can reuse the strict-recency view without re-instrumenting every callsite.
@@ -176,8 +176,8 @@ function getIconForConfig(cfg: PaletteCommandConfig, def: CommandDef): React.Rea
 
 // ─── Search hit helpers ─────────────────────────────────────────────────────
 //
-// Phase-40 / Prompt 41: shared between the live palette results and the
-// dedicated /search page so type icons stay consistent across surfaces.
+// Shared between the live palette results and the dedicated /search page
+// so type icons stay consistent across surfaces.
 
 function searchHitIcon(type: SearchHitType): React.ReactNode {
   switch (type) {
@@ -209,7 +209,7 @@ function searchSectionLabel(type: SearchHitType, t: TFunction): string {
   }
 }
 
-// ─── Recent-page helpers (Phase-46 / Prompt 51) ─────────────────────────────
+// ─── Recent-page helpers ────────────────────────────────────────────────────
 //
 // Pages visited via React Router are written to `lib/recentPages` by the
 // `RecentPagesRecorder` mounted in App.tsx. The palette surfaces the top
@@ -425,7 +425,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     }),
   [registryCommands, t, runRegistryCommand])
 
-  // ── Most-used items (Phase-45 / Prompt 27) ────────────────────────────────
+  // ── Most-used items ───────────────────────────────────────────────────────
   //
   // Empty-query view: surface a user's frecency-ranked top commands at the
   // top of the palette. Replaces the strict-LRU "Recent" section so a user
@@ -464,7 +464,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     }))
   }, [query, recentVersion, registryItems, vehicleSwitchItems, navItems, commandItems, t])
 
-  // ── Recent pages (Phase-46 / Prompt 51) ───────────────────────────────────
+  // ── Recent pages ──────────────────────────────────────────────────────────
   //
   // Surfaces the user's most recently visited routes when the input is
   // empty. Distinct from "Most Used" — that ranks by frecency of *actions*
@@ -517,7 +517,7 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
     })),
   [vehicleList, pendingCommand, executeCommand, t])
 
-  // ── Live entity search (Phase-40 / Prompt 41) ─────────────────────────────
+  // ── Live entity search ────────────────────────────────────────────────────
   //
   // Debounce by 200 ms so each keystroke does not fan out to the backend's
   // ~9 ILIKE sub-queries. The hook itself enforces the >= 2 char floor.
@@ -572,8 +572,8 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   // surface above the long nav list when the query matches them, and the
   // PALETTE_COMMAND_CONFIGS items stay at the bottom (long list).
   //
-  // Phase-46 / Prompt 51 — `recentPageItems` slot in directly after
-  // `mostUsedItems`. Both are empty when a query is present, so the
+  // `recentPageItems` slots in directly after `mostUsedItems`. Both are
+  // empty when a query is present, so the
   // ordering is irrelevant during search; it only matters in the empty
   // state, where the user sees Most Used → Recent → Pages → … .
 
@@ -703,8 +703,8 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
   // Focus input when opened; close sidebar on mobile
   useEffect(() => {
     if (open) {
-      // Phase-40 / Prompt 68 — first-open instrumentation: marks the
-      // "try-command-palette" onboarding-checklist task as complete the moment
+      // First-open instrumentation marks the "try-command-palette"
+      // onboarding-checklist task as complete the moment
       // the user discovers the palette. Idempotent — only writes the flag the
       // first time, so subsequent opens are a no-op.
       markCommandPaletteDiscovered()
@@ -794,8 +794,8 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             data-role="command-palette"
-            // Phase-45 / Prompt 04: NOT migrated to <Modal>.
-            // Rationale: command palette is its own keyboard-driven primitive
+            // Not migrated to <Modal>: the command palette is its own
+            // keyboard-driven primitive
             // with custom search behavior, multi-mode navigation, and a
             // distinct visual treatment (top-anchored card, not centered
             // dialog). New interactive dialogs MUST use <Modal>.

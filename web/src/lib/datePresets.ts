@@ -3,8 +3,8 @@
  *
  * `resolve(now?)` returns ISO date strings (YYYY-MM-DD) using the supplied
  * `now`'s LOCAL calendar day (not UTC) so that "Today" matches the user's
- * wall-clock day even at 23:30 local. When Prompt 22's timezone infrastructure
- * lands, swap `new Date()` for an `inTz(now, tz)` helper.
+ * wall-clock day even at 23:30 local. When timezone-aware date helpers
+ * land, swap `new Date()` for an `inTz(now, tz)` helper.
  */
 
 export interface DatePresetRange {

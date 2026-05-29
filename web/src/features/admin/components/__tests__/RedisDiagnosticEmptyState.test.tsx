@@ -1,5 +1,5 @@
 /**
- * Phase-45 / Prompt 37 — RedisDiagnosticEmptyState tests.
+ * RedisDiagnosticEmptyState tests.
  *
  * Verifies the four diagnostic branches that replace the legacy generic
  * "no signals cached" empty state on the Redis Signal Viewer page:
@@ -264,10 +264,8 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
     expect(within(banner).getByText('TESLA1234567890')).toBeInTheDocument();
   });
 
-  // ── Phase-46 / Prompt 59 — error-aware branches ───────────────────────
-  // The page now subscribes to useQuery's error/isError and threads the
-  // failure mode into this component so a 503 / network error never
-  // disguises itself as the legacy "no signals cached" black box.
+  // Error-aware branches: 503 / network errors should never masquerade as
+  // the legacy "no signals cached" empty state.
 
   it('renders the cacheNotWired banner when serverError is 503 "not available"', () => {
     const Wrapper = makeWrapper();

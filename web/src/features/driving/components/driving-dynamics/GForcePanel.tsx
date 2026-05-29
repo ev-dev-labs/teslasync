@@ -17,9 +17,9 @@ interface GForcePanelProps {
 /**
  * Acceleration G-forces (LateralAcceleration, LongitudinalAcceleration).
  *
- * Pre-Phase-42 these were stored in the `signal_observations` cold table
- * and read via the deprecated `useSignalObservations` hook. Phase-42
- * deleted both the table and the `/signals/observations` route, so
+ * These were previously stored in the `signal_observations` cold table
+ * and read via the deprecated `useSignalObservations` hook. That table
+ * and the `/signals/observations` route are gone, so
  * the old hook 404'd silently and this panel rendered a permanent
  * "No G-force telemetry received yet" empty state.
  *

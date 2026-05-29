@@ -1,12 +1,10 @@
 /**
- * Slow Queries Page — Phase-45 admin observability surface.
- *
+ * Slow Queries page for admin observability.
  * Top-N slowest queries from pg_stat_statements with sortable order
  * (mean_time / total_time / calls / max_time) and a configurable
  * limit. Each row shows the fingerprint, call count, time stats, and
  * shared-buffer cache hit/read ratio so operators can spot the
  * difference between "slow but cached" and "slow because of I/O".
- *
  * Backed by GET /api/v1/admin/observability/slow-queries
  * (internal/handler/v1/admin_observability_handler.go).
  */

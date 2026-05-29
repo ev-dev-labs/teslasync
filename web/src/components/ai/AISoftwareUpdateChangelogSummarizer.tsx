@@ -1,13 +1,7 @@
-// Phase-50 / 0051 — M3 software update changelog summarizer.
-// Phase-50 / W1 inline wiring (per slice prompt 0051) — wired the
-// "Summarize updates" button to
-// POST /api/v1/ai/software-updates/summarize via the canonical
-// useAiStream hook. The slice methodology forbids shipping the
-// visual affordance without end-to-end SSE wiring; this component
-// lands both in one commit so the on-mode wiring test
-// (TestSoftwareUpdateChangelogSummarizerAIOnWiredCallsRoute) can
-// prove the button actually opens an SSE stream against the
-// registered backend route.
+// Software update changelog summarizer.
+// The "Summarize updates" button POSTs to
+// /api/v1/ai/software-updates/summarize through useAiStream so the visible
+// affordance and SSE wiring stay coupled.
 //
 // AISoftwareUpdateChangelogSummarizer is the visible AI surface
 // for the SoftwareUpdatesPage (/software-updates and the alias
@@ -27,7 +21,7 @@
 // baseline panels remain the canonical view for every user; this
 // AI section is opt-in read-only narration layered alongside.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract: wired-or-absent, no placeholder buttons.
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The button's disabled prop is a COMPUTED expression

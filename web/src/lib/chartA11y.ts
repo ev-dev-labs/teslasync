@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 13 — chart accessibility helpers.
+ * Chart accessibility helpers.
  *
  * Builds the `data` + `dataColumns` payload `<ChartContainer>`'s
  * SR/forced-colors fallback table expects, from a generic time-series

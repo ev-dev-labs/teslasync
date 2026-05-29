@@ -340,7 +340,7 @@ describe('DataTable — column resize persistence', () => {
   })
 })
 
-// ─── Phase-40 / Prompt 37 — Virtualization ──────────────────────────────────
+// ─── Virtualization ─────────────────────────────────────────────────────────
 //
 // jsdom doesn't lay anything out (every element has 0×0 dimensions), so the
 // virtualizer can't measure the viewport and decide which rows are visible.
@@ -503,7 +503,7 @@ describe('DataTable — virtualization (Phase-40 / Prompt 37)', () => {
   })
 })
 
-// ─── Density (Phase-40 / Prompt 44) ──────────────────────────────────────────
+// ─── Density ─────────────────────────────────────────────────────────────────
 
 describe('DataTable — density', () => {
   it('density="compact" applies the tight padding class to body cells', () => {

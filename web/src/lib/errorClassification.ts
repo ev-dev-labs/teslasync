@@ -1,7 +1,6 @@
 /**
  * @module lib/errorClassification
- *
- * Phase-45 / Prompt 33 — central classifier for "transient waiting"
+ * Central classifier for "transient waiting"
  * errors (rate-limited, upstream-breaker-open). Pages and shared error
  * components consult this helper to decide whether to render the calm
  * "we're waiting it out" placeholder rather than a generic angry

@@ -1,5 +1,5 @@
 /**
- * AiUsageCard — Phase-50 / 0004 — F3 AI Call Log + Usage Card.
+ * AiUsageCard tests.
  *
  * Verifies:
  *

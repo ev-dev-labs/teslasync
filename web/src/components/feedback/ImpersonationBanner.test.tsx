@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 46 — ImpersonationBanner contract.
+ * ImpersonationBanner contract.
  *
  * Coverage:
  *   1. Open mode renders nothing (the hook returns mode='open').

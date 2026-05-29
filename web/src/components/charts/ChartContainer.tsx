@@ -24,7 +24,7 @@ import type { AnnotationCategory, AnnotationScope, DataAnnotation } from '@/type
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
 
 /**
- * Phase 40 / Prompt 43 — annotation integration helper. When `annotations` is
+ * Annotation integration helper. When `annotations` is
  * supplied, `<ChartContainer>` fetches the matching rows from the backend,
  * adds an "Add annotation" + "Hide annotations" toggle to the header, manages
  * the AddAnnotationPopover modal, and renders the AnnotationList footer. The
@@ -44,7 +44,7 @@ export interface ChartContainerRenderProps {
    *  rendering `<ReferenceLine>`s in this case. */
   hidden: boolean;
   /**
-   * Phase-46 / Prompt 67 — URL-persisted hidden-series toggle state. Only
+   * URL-persisted hidden-series toggle state. Only
    * non-null when the surrounding `<ChartContainer>` was given a
    * `chartKey` prop (which both opts the chart into URL state AND sets up
    * a `<ChartHiddenSeriesContext>` for the legend). Pages typically wire
@@ -67,56 +67,51 @@ interface ChartContainerProps {
   children: ChartContainerChildren;
   className?: string;
   /**
-   * Phase-46 / Prompt 16 — render the `<ChartExportMenu>` (PNG / SVG /
+   * Render the `<ChartExportMenu>` (PNG / SVG /
    * Copy-image, plus CSV when `exportData` is supplied) in the title-bar
    * action area.
-   *
    * Defaults to `true` because every `<ChartContainer>` ships with a
-   * mandatory `ariaLabel` (phase-46 / prompt 13), which is the same
+   * mandatory `ariaLabel`, which is the same
    * "is this chart shareable?" precondition the export menu checks.
    * Pass `exportable={false}` to explicitly opt out (e.g. for tour
    * step-throughs or print-only contexts).
-   *
    * The menu is also auto-hidden while the chart is in `loading` or
    * `empty` states because there's no captured image worth sharing yet.
    */
   exportable?: boolean;
   exportFilename?: string;
-  /** Phase-40 / Prompt 31 — when set, exposes "Download data as CSV" in the
+  /** When set, exposes "Download data as CSV" in the
    *  chart's overflow menu. The data is serialized via `objectsToCSV`. */
   exportData?: ReadonlyArray<Record<string, CsvCellValue>>;
-  /** Phase-40 / Prompt 43 — when set, the container takes ownership of the
+  /** When set, the container takes ownership of the
    *  full annotation flow (fetch, add, delete, hide). Children should be a
    *  function so they can read the visible annotations from context. */
   annotations?: ChartAnnotationsConfig;
   /**
-   * Phase-46 / Prompt 13 — REQUIRED accessible name for the chart figure.
-   *
+   * Required accessible name for the chart figure.
    * Recharts SVGs are otherwise an opaque "graphics-document" to assistive
    * tech. Pass a one-sentence description such as
    * `"Daily energy use over the last 30 days"` so a screen-reader user
    * hears one short summary instead of dozens of axis labels in series
    * order.
-   *
    * `audit:chart-a11y` (chained from `npm run lint`) fails the build if
    * any `<ChartContainer>` JSX site is missing this prop.
    */
   ariaLabel: string;
   /**
-   * Phase-46 / Prompt 13 — optional long description, e.g.
+   * Optional long description, e.g.
    * `"Battery voltage ranged 380–410 V over the last 7 days, dipping
    *  every night around 03:00."`. Wired to `aria-describedby` on the
    * figure so SR users hear the prose summary right after the title.
    */
   ariaDescription?: string;
   /**
-   * Phase-46 / Prompt 13 — series rows for the SR/forced-colors
+   * Series rows for the screen-reader/forced-colors
    * fallback `<table>`. When supplied the container renders a
    * visually-hidden table (exposed in `forced-colors:` mode and to
    * every assistive technology) carrying the same data the chart
    * displays. Combine with `dataColumns` to pick the visible columns
    * and their formatters.
-   *
    * When `data` is omitted the audit requires a
    * `// chart-a11y:no-table` comment justifying the absence (used for
    * heatmaps, scatter clouds with thousands of points, etc.).
@@ -129,14 +124,13 @@ interface ChartContainerProps {
    */
   dataColumns?: ReadonlyArray<ChartDataColumn>;
   /**
-   * Phase-46 / Prompt 56 — when `true`, a `<FullscreenButton>` is
+   * When `true`, a `<FullscreenButton>` is
    * rendered in the chart toolbar (data-html2canvas-ignore'd along
    * with the rest of the action buttons so it never bleeds into
    * exported PNGs). Click expands the entire `<figure>` to the
    * browser viewport via the standard Fullscreen API. Esc, the
    * browser's own exit button, and a second click on the toolbar
    * button all return the chart to its original size.
-   *
    * The accompanying `:fullscreen` rule in `web/src/index.css`
    * grows the inner chart canvas so axis labels stay readable on
    * a 27" monitor; Recharts auto re-measures via its built-in
@@ -144,18 +138,16 @@ interface ChartContainerProps {
    */
   fullscreen?: boolean;
   /**
-   * Phase-46 / Prompt 67 — stable identifier used for URL-persisted
+   * Stable identifier used for URL-persisted
    * legend-toggle state. When set, `<ChartContainer>` calls
    * `useHiddenSeries(chartKey)` and exposes the resulting state both
    * via the function-children render-prop (`{ hiddenSeries }`) and
    * via `<ChartHiddenSeriesContext>` so a context-aware `<ChartLegend>`
    * inside the chart can toggle series without explicit prop passing.
-   *
    * Pages typically use the render-prop form to wire `hide={…}` on
    * each `<Line>`/`<Bar>`/`<Area>` because Recharts traverses its
    * direct children synchronously and won't see hooks in arbitrary
    * wrapper components.
-   *
    * The audit script `audit:chart-legend` warns when a chart with
    * ≥ 2 line/bar/area series is missing this prop.
    */
@@ -163,7 +155,7 @@ interface ChartContainerProps {
 }
 
 /**
- * Phase-46 / Prompt 13 — row shape accepted by the fallback
+ * Row shape accepted by the fallback
  * `<table>`. Keys must match the `key`s declared in `dataColumns`.
  * Values may be `null` (rendered as the i18n empty marker) so a
  * sparse time-series doesn't hide gaps from SR users.
@@ -232,7 +224,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     const { t } = useTranslation();
     const { chartRef, exportPNG, exportSVG, copyToClipboard, exporting } =
       useChartExport(exportFilename ?? title);
-    // Phase-46 / Prompt 56 — separate ref for the figure node used
+    // Separate ref for the figure node used
     // by the optional `<FullscreenButton>`. We can't reuse
     // `chartRef` directly because `useChartExport` owns the lifecycle
     // of that ref (it's typed as private to that hook), and we'd
@@ -240,7 +232,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // implementation detail of the export hook.
     const figureRef = useRef<HTMLElement | null>(null);
 
-    // Phase-46 / Prompt 13 — stable ids for figure ↔ figcaption wiring.
+    // Stable ids for figure ↔ figcaption wiring.
     const reactId = useId();
     const titleId = `chart-title-${reactId}`;
     const fallbackId = `chart-fallback-${reactId}`;
@@ -329,7 +321,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // actually rendered with data.
     const showExportMenu = exportableResolved && !loading && !empty;
 
-    // Phase-46 / Prompt 67 — `childrenContent` is now a function of the
+    // `childrenContent` is a function of the
     // resolved `hiddenSeries` state because the function-children
     // render-prop receives it. Non-function children ignore the parameter.
     const renderChildren = (hiddenSeries: HiddenSeriesState | null) =>
@@ -337,7 +329,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         ? children({ annotations: visibleAnnotations, hidden, hiddenSeries })
         : children;
 
-    // Phase-46 / Prompt 13 — does the caller supply enough info to
+    // Does the caller supply enough info to
     // render the SR/forced-colors fallback table? When `data` is set
     // we always render `<table>`; otherwise we fall back to the
     // `ariaDescription` prose alone (or just the title).
@@ -370,7 +362,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           // doesn't shift the chart vertical rhythm.
           'm-0',
           'print:break-inside-avoid print:border-gray-300 print:bg-white',
-          // Phase-46 / Prompt 11 — Windows High Contrast / forced-colors mode.
+          // Windows High Contrast / forced-colors mode.
           // Pin the chart-container boundary to a system colour so the
           // chart frame remains perceivable when the alpha border collapses
           // to transparent. Recharts SVG strokes get their own
@@ -394,7 +386,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           </div>
           <div
             className="flex items-center gap-1"
-            // Phase-46 / Prompt 16 — exclude the title-bar action toolbar
+            // Exclude the title-bar action toolbar
             // (annotation buttons, export menu, page-supplied actions)
             // from the chart capture so the exported PNG/clipboard image
             // shows only the chart visualisation, not the buttons used
@@ -476,7 +468,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           style={{ height }}
           className={cn(
             'relative',
-            // Phase-46 / Prompt 13 — in Windows High Contrast / forced-colors
+            // In Windows High Contrast / forced-colors
             // mode the SVG strokes collapse to a small palette of system
             // colours and the multi-series chart becomes illegible. Hide
             // the SVG entirely there and rely on the `<figcaption>` table
@@ -515,7 +507,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         </div>
 
         {/*
-          Phase-46 / Prompt 13 — accessible chart fallback.
+          Accessible chart fallback.
 
           Visually hidden by default so sighted users see no change, but:
             - exposed to every assistive technology (screen readers,
@@ -629,17 +621,14 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
 );
 
 /**
- * Phase-46 / Prompt 48 — chart label-anchor hook.
- *
+ * Chart label-anchor hook.
  * Resolves the writing direction from the active i18n language and
  * returns the SVG `text-anchor` value for a Recharts axis label so
  * that consumers don't have to thread direction state through every
  * chart prop.
- *
  * Usage:
  *   const anchor = useChartLabelAnchor('y');
  *   <YAxis tick={{ textAnchor: anchor }} />
- *
  * Mirrors `textAnchorForDir` from `@/lib/i18nDir`; the bare helper
  * is also re-exported here so chart authors get both the hook (for
  * components) and the pure helper (for tests / non-React call sites)

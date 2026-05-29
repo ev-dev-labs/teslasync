@@ -1,5 +1,5 @@
 /**
- * Frontend error reporter — Phase 46 / Prompt 01.
+ * Frontend error reporter.
  *
  * Captures uncaught browser errors (`window.error`,
  * `window.unhandledrejection`), React render errors (forwarded from
@@ -8,8 +8,7 @@
  * backend as a single POST per `(name+message+route)` bucket per
  * minute.
  *
- * Mirrors the design of the Web Vitals reporter (Phase 45 / Prompt 12) —
- * telemetry is best-effort, never propagated to the user, and gracefully
+ * Telemetry is best-effort, never propagated to the user, and gracefully
  * degrades when the device is offline.
  */
 
@@ -20,7 +19,7 @@ const ENDPOINT = '/api/v1/web-errors'
 const COALESCE_WINDOW_MS = 60_000
 const MAX_BUFFER_SIZE = 20
 // How many most-recent reports we keep around for the in-app feedback
-// modal (Phase 46 / Prompt 08). Independent of the offline send buffer
+// modal. Independent of the offline send buffer
 // above so reports remain available for attachment after they have
 // successfully been POSTed.
 const FEEDBACK_RING_SIZE = 10
@@ -64,14 +63,14 @@ interface ReporterState {
   // bucketKey → epoch-ms timestamp of the most recent POST for the bucket
   buckets: Map<string, number>
   buffer: BufferedSend[]
-  // Phase-46 / Prompt 08 — most-recent reports surfaced to <FeedbackModal>
-  // so users can attach diagnostic context to a bug report. Kept
+  // Most-recent reports surface in <FeedbackModal> so users can
+  // attach diagnostic context to a bug report. Kept
   // separate from `buffer` (which exists only for offline retry) so a
   // successfully-POSTed report is still attachable.
   feedbackRing: FeedbackErrorReport[]
   enabledOverride?: boolean
-  // Phase-46 / Prompt 70 — deployment-wide GDPR / ePrivacy gate.
-  // When true, isEnabled() short-circuits unless the user has
+  // Deployment-wide GDPR / ePrivacy gate. When true,
+  // isEnabled() short-circuits unless the user has
   // explicitly accepted via the cookie consent banner.
   requireCookieConsent: boolean
 }
@@ -85,8 +84,8 @@ const state: ReporterState = {
 }
 
 /**
- * Phase-46 / Prompt 70 — push the deployment-wide consent requirement
- * down into the reporter. Called from main.tsx once the
+ * Push the deployment-wide consent requirement down into the reporter.
+ * Called from main.tsx once the
  * `/system/version` query resolves. Mid-session flips are honored on
  * the next captured error.
  */
@@ -100,8 +99,8 @@ function isEnabled(): boolean {
   // from HMR reloads, StrictMode double-invokes, or work-in-progress
   // code that hasn't been pushed yet, all of which would create noise.
   if (!import.meta.env.PROD) return false
-  // Phase-46 / Prompt 70 — when the deployment requires consent and
-  // the user has not yet accepted, suppress wire reporting. The
+  // When the deployment requires consent and the user has not yet
+  // accepted, suppress wire reporting. The
   // feedback ring buffer is unaffected because it never leaves the
   // browser; it is only consumed by the in-app feedback modal.
   if (!isReportingAllowed(state.requireCookieConsent)) return false
@@ -253,7 +252,7 @@ function pushFeedbackReport(report: FeedbackErrorReport): void {
 /**
  * Returns the most-recent {@link FeedbackErrorReport}s captured by the
  * reporter, oldest-first, capped at {@link FEEDBACK_RING_SIZE}. Used
- * by the in-app <FeedbackModal> (Phase 46 / Prompt 08) to attach
+ * by the in-app <FeedbackModal> to attach
  * diagnostic context to a user-submitted bug report.
  *
  * Returns a fresh array on every call so callers can safely mutate
@@ -303,8 +302,8 @@ export function __resetErrorReporterForTests(): void {
   state.buffer.length = 0
   state.feedbackRing.length = 0
   state.enabledOverride = undefined
-  // Phase-46 / Prompt 70 — restore the legacy "consent not required"
-  // baseline so existing errorReporter tests continue to observe the
+  // Restore the legacy "consent not required" baseline so existing
+  // errorReporter tests continue to observe the
   // unchanged behaviour. The cookie consent unit tests reset the
   // localStorage gate independently in their own beforeEach.
   state.requireCookieConsent = false

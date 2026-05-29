@@ -4,7 +4,7 @@ import { AlertTriangle, Wrench, X } from 'lucide-react'
 import { useSystemHealth } from '@/api/hooks/useAdmin'
 
 /**
- * Phase-46 / Prompt 04 — Maintenance / degraded-mode banner.
+ * Maintenance / degraded-mode banner.
  *
  * Polls /api/v1/system/health (via {@link useSystemHealth}) on the
  * standard interval and renders a sticky top-of-app banner when the

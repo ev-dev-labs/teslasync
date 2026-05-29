@@ -1,10 +1,8 @@
-// Phase-45 / Prompt 24 — Find-as-you-type settings search.
-//
+// Find-as-you-type settings search.
 // Renders a single `<Input>` with a popover dropdown of matching
 // settings. Each match deep-links to its section anchor on the same
 // page; the existing `useEffect` in `SettingsPage` listens for
 // `location.hash` and smooth-scrolls into view.
-//
 // Matching is delegated to `searchSettings` in `searchIndex.ts` and
 // covers substring + keyword + fuzzy-subsequence (e.g. "lng" → "Language").
 

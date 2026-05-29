@@ -4,15 +4,11 @@ import { useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
 
 /**
- * Hooks for the named dashboard layout library introduced in
- * Phase 40 / Prompt 30. Backed by the new `dashboard_layouts` table — see
- * `internal/api/dashboard_layout_handler.go` for the wire contract.
+ * Hooks for the named dashboard layout library backed by `dashboard_layouts`;
+ * see `internal/api/dashboard_layout_handler.go` for the wire contract.
  *
- * NOTE: This is intentionally separate from `useDashboardLayouts` /
- * `useSaveDashboardLayouts` in `useSettings.ts`. Those wrap the legacy blob
- * endpoint at `/settings/dashboard-layouts` which carries the user's active
- * in-app dashboard set. The hooks below are for the per-row library that
- * powers the new `<LayoutSwitcher>` "save as preset" / "apply preset" flow.
+ * Separate from the legacy dashboard-layout blob hooks in `useSettings.ts`;
+ * these manage per-row presets for the `<LayoutSwitcher>` flow.
  */
 
 export interface NamedDashboardLayout {
@@ -21,8 +17,7 @@ export interface NamedDashboardLayout {
   vehicle_id?: number | null;
   name: string;
   is_default: boolean;
-  /** Opaque SavedDashboard JSON blob — typed as unknown so the consuming UI
-   *  can narrow it once via the existing widget reconciler. */
+  /** Opaque SavedDashboard JSON blob; consumers narrow it via the widget reconciler. */
   layout: unknown;
   created_at: string;
   updated_at: string;
@@ -50,8 +45,8 @@ export const dashboardLayoutLibraryKeys = {
 
 /**
  * List the user's saved layouts, optionally scoped to a single vehicle.
- * The backend returns layouts pinned to the vehicle PLUS any user-global
- * layouts (vehicle_id IS NULL) so the switcher can show both in one list.
+ * The backend returns vehicle-pinned and user-global (`vehicle_id IS NULL`)
+ * layouts so the switcher can show both in one list.
  */
 export function useNamedDashboardLayouts(vehicleId?: number | null) {
   return useQuery({

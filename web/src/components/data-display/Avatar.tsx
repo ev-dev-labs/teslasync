@@ -8,7 +8,7 @@ import { CHART_COLORS_CB_SAFE } from '@/lib/colors';
 import { cn } from '@/lib/cn';
 
 /**
- * Phase-46 / Prompt 15 — shared Avatar primitive.
+ * Shared Avatar primitive.
  *
  * Renders one of three visuals, in priority order:
  *   1. `src` image (with automatic fallback to initials on load error).
@@ -193,7 +193,7 @@ export function Avatar({
     <span
       className={cn(
         'relative inline-flex shrink-0 items-center justify-center overflow-hidden font-semibold text-white select-none',
-        // Phase-46/11 — keep the avatar circle visible in Windows High
+        // Keep the avatar circle visible in Windows High
         // Contrast: a CanvasText border gives the chip a system-colour
         // outline since the bg-* colour is suppressed by forced-colors.
         'forced-colors:border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',

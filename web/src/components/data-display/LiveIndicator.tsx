@@ -31,16 +31,13 @@ interface VariantConfig {
 
 /**
  * `<LiveIndicator>` — at-a-glance health of the live-data pipeline.
- *
  * Renders the four states surfaced by `useLiveConnection`:
  *   - `connected`    → emerald `Wifi`, "Live · Xs ago"
  *   - `reconnecting` → amber spinning `Loader2`, "Reconnecting…"
  *   - `disconnected` → rose `WifiOff`, "Offline"
  *   - `unknown`      → muted `WifiOff`, "Unknown"
- *
  * NOT to be confused with `<FreshnessIndicator>` — that component reflects
  * the AGE of a single data point, this one reflects the HEALTH OF THE WIRE.
- *
  * Use `variant="dot"` in compact navigation headers and the app shell;
  * `variant="compact"` next to `<PageHeader>` actions on data-heavy pages;
  * `variant="pill"` (default) when there is room for a freshness stamp.

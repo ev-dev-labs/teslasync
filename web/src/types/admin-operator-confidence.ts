@@ -1,5 +1,5 @@
 /**
- * Phase-45 — Operator Confidence wire types.
+ * Operator Confidence wire types.
  *
  * TypeScript shapes for the 7 admin-observability routes mounted under
  * /api/v1/admin/*. Field names mirror the Go JSON tags 1:1 so the

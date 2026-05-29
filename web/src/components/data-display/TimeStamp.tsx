@@ -37,7 +37,7 @@ export interface TimeStampProps {
  * formatting both the visible body and the tooltip alternate.
  *
  * Renders the universal "—" placeholder (no tooltip) when `value` is
- * null, undefined, or an unparseable timestamp. (Phase-45 / Prompt 22.)
+ * null, undefined, or an unparseable timestamp.
  */
 export function TimeStamp({ value, format = 'auto', in: mode, className }: TimeStampProps) {
   const pref = useTimeFormatPreference();

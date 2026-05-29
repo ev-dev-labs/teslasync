@@ -13,7 +13,7 @@ import { Stepper, type OnboardingStep } from '../components/Stepper';
 import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
 
 /**
- * OnboardingPage — Phase 40 / Prompt 18.
+ * OnboardingPage.
  *
  * Dedicated first-run experience shown when any of the three setup
  * anchors are missing. Walks the user through:

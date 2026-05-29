@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn';
 import type { SignalDiffRow } from '@/api/hooks/useTelemetry';
 
 /**
- * Phase 40 / Prompt 58 — virtualized diff table for the SignalDiff page.
+ * Virtualized diff table for the SignalDiff page.
  *
  * Wraps `<DataTable virtualized>` with the columns power users asked for during
  * incidents:

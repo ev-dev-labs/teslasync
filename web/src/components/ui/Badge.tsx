@@ -13,10 +13,8 @@ const badgeSizes = {
   sm: 'px-1.5 py-0.5 text-xs',
   md: 'px-2 py-0.5 text-xs',
   lg: 'px-2.5 py-1 text-sm',
-  // Density-aware sizing follows the user's `ui_density` setting.
-  // (Phase 40 / Prompt 44.) Uses tighter padding multipliers than
-  // Button — a Badge sits inline with text, so the body size token is
-  // scaled down via text-xs for legibility.
+  // Density-aware sizing follows the user's `ui_density` setting. Badge uses
+  // tighter padding than Button because it sits inline with text.
   auto: 'px-d-pad-x py-d-pad-y text-xs',
 } as const;
 
@@ -32,13 +30,9 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
       ref={ref}
       className={cn(
         'inline-flex items-center gap-1 rounded-full font-medium',
-        // Phase-46 / Prompt 11 — forced-colors mode: badge backgrounds
-        // (e.g. `bg-emerald-100`) are remapped to the OS Canvas colour
-        // and the visual chip vanishes against panel surfaces. Add a
-        // system-colour border so the chip outline survives, regardless
-        // of variant. We do NOT use `forced-color-adjust: none` here —
-        // the user's OS palette wins for body chips; the border alone
-        // is enough to keep them perceivable.
+        // In forced-colors mode, badge backgrounds can collapse into the OS
+        // Canvas colour. Add a system-colour border so the chip outline stays
+        // visible while still respecting the user's OS palette.
         'forced-colors:border forced-colors:border-[CanvasText]',
         variants[variant],
         badgeSizes[size],

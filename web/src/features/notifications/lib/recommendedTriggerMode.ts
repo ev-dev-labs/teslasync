@@ -1,10 +1,9 @@
 /**
- * Phase-49 / Slice 0008 — Smart-defaults engine.
+ * Smart-defaults engine.
  *
  * Maps each `AlertRuleOp` to a recommended `AlertRuleTriggerMode` so the
  * Alert Studio can surface a per-operator suggestion when the user is
- * forced to choose at create time. The mapping is locked verbatim to
- * the methodology table:
+ * forced to choose at create time. The mapping is intentionally explicit:
  *
  *   '=' / '!=' / 'changed'           -> 'once'   (state-confirmation alerts)
  *   '>' / '<' / '>=' / '<=' /

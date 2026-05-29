@@ -1,11 +1,10 @@
 /**
  * @module api/sseClient
  *
- * Phase 43 Prompt 0012 — sanctioned typed-envelope SSE consumer.
+ * Sanctioned typed-envelope SSE consumer.
  *
- * Sole approved consumer of the Phase-42 typed-envelope SSE channel
- * introduced by `EventHub.BroadcastSignalChange` in
- * `internal/api/sse_handler.go` (phase-42 prompt 0072). Pages, features
+ * Sole approved consumer of the typed-envelope SSE channel introduced by
+ * `EventHub.BroadcastSignalChange` in `internal/api/sse_handler.go`. Pages, features
  * and hooks MUST go through this client; direct `EventSource`
  * construction is forbidden in `web/src/features/` and
  * `web/src/api/hooks/` per
@@ -23,12 +22,9 @@
  *   }
  *
  * served on `/api/v1/events` (router.go:1372) as the named SSE event
- * `signal_change`. The Phase 43 Prompt 0012 brief sketches a different
- * hypothetical wire shape (`{ kind, value: SIValue, ts: number }`) and a
- * hypothetical `/api/v1/signals/{vehicle_id}/stream?fields=...` endpoint;
- * neither exists in the actual backend. The prompt directs us to
- * "cross-reference the Go envelope produced by phase-42 0072", so this
- * client matches the real backend contract.
+ * `signal_change`. This client matches the real backend contract, not older
+ * design sketches that used `{ kind, value: SIValue, ts: number }` or a
+ * `/api/v1/signals/{vehicle_id}/stream?fields=...` endpoint.
  *
  * `SIValue` is exported as a discriminated-union helper layered on top
  * of the backend's flat `(kind, value)` pair so callers can narrow on
@@ -44,8 +40,8 @@ const SIGNAL_CHANGE_EVENT = 'signal_change'
 
 /**
  * Compact discriminator for a typed signal value. Mirrors the
- * `SignalKind` union in `web/src/api/types.ts` (added in phase-42
- * prompt 0072). Maps from `protomodel.ValueKind` after normalization:
+ * `SignalKind` union in `web/src/api/types.ts`. Maps from
+ * `protomodel.ValueKind` after normalization:
  *   string  ← ValueKindString
  *   bool    ← ValueKindBool
  *   int     ← ValueKindInt32 / ValueKindInt64 / ValueKindEnum
@@ -65,8 +61,8 @@ export type SignalKind =
  * Discriminated typed-primitive carried alongside `SignalEnvelope`. The
  * inner `kind` collapses the integer/float distinction into `'number'`
  * because both flow through the same JSON-decoded `number` runtime
- * type. `unit` is reserved for callers that join against the Phase-42
- * unit catalog (e.g. `LiveSignalsResponse` paired with the field's
+ * type. `unit` is reserved for callers that join against the unit catalog
+ * (e.g. `LiveSignalsResponse` paired with the field's
  * `SignalDescriptor.unit_kind`); the SSE envelope itself does not carry
  * units, so it is optional and currently undefined for `signal_change`
  * events. `'null'` represents an explicit null/missing typed column.
@@ -86,10 +82,8 @@ export type SIValue =
  * normalizers) keep working. `value` is the discriminated `SIValue`
  * helper for callers that prefer to narrow on the primitive directly.
  *
- * `ts` is RFC3339 / ISO 8601 (the backend formats `time.Time` as
- * RFC3339). The Prompt 0012 brief describes `ts: number`; the actual
- * Go envelope serialises `time.Time` as a string, so we keep it as a
- * string and let callers parse with `Date.parse(ts)` when needed.
+ * `ts` is RFC3339 / ISO 8601 because the backend serializes `time.Time` as
+ * a string. Callers can parse it with `Date.parse(ts)` when needed.
  */
 export interface SignalEnvelope {
   vehicle_id: number
@@ -230,9 +224,8 @@ export type SignalErrorHandler = (err: Error, raw?: string) => void
 
 export interface SubscribeOptions {
   /**
-   * Override the SSE endpoint. Defaults to `/api/v1/events`, the
-   * canonical typed-envelope channel from phase-42 prompt 0072. Exposed
-   * primarily for tests that swap in a mock URL.
+   * Override the SSE endpoint. Defaults to `/api/v1/events`. Exposed primarily
+   * for tests that swap in a mock URL.
    */
   endpoint?: string
 }
@@ -242,8 +235,8 @@ export interface SubscribeOptions {
  *
  * `vehicleId` and `fields` apply client-side filters: the backend's
  * `/events` endpoint multiplexes every vehicle's `signal_change` events
- * onto a single stream (per phase-42 prompt 0072 — server-side per-vehicle
- * filtering is not implemented). Pass `vehicleId <= 0` to opt out of the
+ * onto a single stream; server-side per-vehicle filtering is not implemented.
+ * Pass `vehicleId <= 0` to opt out of the
  * per-vehicle filter; pass an empty `fields` array to opt out of the
  * per-field filter.
  *

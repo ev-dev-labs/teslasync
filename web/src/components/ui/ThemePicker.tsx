@@ -8,7 +8,7 @@ import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
 
 /**
- * Phase-40 / Prompt 60 — shared theme picker.
+ * Shared theme picker.
  *
  * Single source of truth for the theme + mode + custom-colour UI. Used in
  * three places:

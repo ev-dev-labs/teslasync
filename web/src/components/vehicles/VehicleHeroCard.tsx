@@ -36,15 +36,8 @@ export interface VehicleHeroCardProps extends HTMLAttributes<HTMLDivElement> {
     state?: string;
   } | null;
   /**
-   * Phase-46 / Prompt 54 — optional URL to the user-uploaded
-   * hero photo. Built by `vehiclePhotoUrl()` from the
-   * `useVehiclePhoto` hook; passed in as a prop (rather than
-   * called inside the component) so dashboards rendering many
-   * hero cards don't trigger one query per card.
-   *
-   * When supplied AND non-null, the component renders the photo
-   * as the top banner above the gauges. When null/undefined the
-   * component falls back to the gauge-only layout.
+   * Optional URL for the user-uploaded hero photo. Passed in as a prop so
+   * dashboards rendering many hero cards do not trigger one query per card.
    */
   photoUrl?: string | null;
   className?: string;
@@ -60,11 +53,9 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
     const { unitPrefs } = useUnits();
     const vs = vehicleState;
 
-    /* Convert SI base units (meters, °C) to user's display units. The state
-     * endpoint follows the Phase-43 SI-floor convention — odometer arrives in
-     * METERS (e.g. 42 934 591 ≈ 42 934 km) and rated_range likewise. Always
-     * pull the unit suffix from `unitPrefs` so the label tracks the user's
-     * Settings preference, never a hardcoded "mi". */
+    /* Convert SI base units (meters, °C) to the user's display units. The state
+     * endpoint returns odometer and rated_range in meters; always pull the
+     * suffix from `unitPrefs` so labels track Settings, never hardcoded units. */
     const distanceLabel = unitPrefs.distance;        // 'mi' | 'km'
     const temperatureLabel = unitPrefs.temperature;  // '°F' | '°C'
 
@@ -90,9 +81,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         className={cn('p-6 space-y-6', className)}
         {...props}
       >
-        {/* Phase-46 / Prompt 54 — user-uploaded hero photo. Falls
-            back to the gauges-only layout when no photo is set so
-            existing dashboards keep their look. */}
+        {/* User-uploaded hero photo; absent photo preserves the gauges-only layout. */}
         {photoUrl ? (
           <div className="overflow-hidden rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)]">
             <img
@@ -105,7 +94,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           </div>
         ) : null}
 
-        {/* Header */}
+        {/* Vehicle identity and status summary */}
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
@@ -123,7 +112,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           </Badge>
         </div>
 
-        {/* Radial gauges */}
+        {/* Current battery, range, and temperature gauges */}
         {vs && (
           <div className="flex flex-wrap items-center justify-center gap-6">
             <RadialGauge
@@ -161,7 +150,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           </div>
         )}
 
-        {/* Detail cards */}
+        {/* Detail cards mirror the same display-unit conversions as the gauges */}
         {vs && (
           <Grid cols={{ default: 2, md: 4 }} gap={3}>
             <StatCard label={t('vehicleHero.stat.insideTemp', 'Inside Temp')} value={insideTempDisplay} unit={temperatureLabel} />
@@ -189,7 +178,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
           </Grid>
         )}
 
-        {/* Action buttons */}
+        {/* Navigation actions for the vehicle */}
         <div className="flex items-center gap-3 pt-2 border-t border-[var(--border-subtle)]">
           <Link
             to={`/vehicles/${vehicle.id}`}

@@ -10,7 +10,7 @@ import type { FSMTransition } from '@/types/fsm';
 import type { SignalSnapshotResponse } from '@/api/hooks/useTelemetry';
 
 /**
- * Phase 40 / Prompt 58 — right-rail inspector for the FSM debugger.
+ * Right-rail inspector for the FSM debugger.
  *
  * Shows the selected transition (from/to/trigger/duration) and the signal
  * snapshot at the moment of transition. Each signal value is annotated with a
@@ -20,8 +20,8 @@ import type { SignalSnapshotResponse } from '@/api/hooks/useTelemetry';
  * The "diff vs previous" toggle dims unchanged signals and highlights the
  * deltas using the visual language shared with the SignalDiffPage.
  *
- * Phase 45 / Prompt 35 — when no `transition` is selected the empty state
- * mirrors the timeline below: if the active window has zero transitions
+ * When no `transition` is selected, the empty state mirrors the timeline below:
+ * if the active window has zero transitions
  * but a `lastTransition` exists outside it, surface the same
  * "Jump to last transition" affordance instead of asking the user to pick
  * from a list that has nothing in it.

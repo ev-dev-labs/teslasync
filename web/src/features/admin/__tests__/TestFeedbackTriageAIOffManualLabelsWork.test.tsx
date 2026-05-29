@@ -1,7 +1,6 @@
-// Phase-50 / 0046 — S5 Feedback queue triage.
+// Feedback queue triage.
 //
-// `TestFeedbackTriageAIOffManualLabelsWork` is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// `TestFeedbackTriageAIOffManualLabelsWork` is the AI-off contract test on the React side. It mounts
 // the AIFeedbackQueueTriage component with ai_mode='off' (plus
 // the per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -19,8 +18,7 @@
 // In addition, this file mounts the FULL FeedbackQueuePage in off
 // mode and asserts the deterministic manual triage controls still
 // render — proving the AI surface's absence does NOT regress the
-// canonical baseline (ADR-015 §I3 + the prompt's explicit
-// "baseline behaviour still works" gate). The rendered page MUST
+// canonical baseline (ADR-015 §I3). The rendered page MUST
 // show:
 //
 //   - The status / category filter Selects on the page header.
@@ -37,7 +35,7 @@
 //
 // File name MUST stay
 // `TestFeedbackTriageAIOffManualLabelsWork.test.tsx`
-// — the slice prompt's verification command runs
+// — the targeted verification command runs
 // `vitest --run TestFeedbackTriageAIOffManualLabelsWork`,
 // where the positional pattern is matched against the file PATH.
 
@@ -240,7 +238,7 @@ describe('TestFeedbackTriageAIOffManualLabelsWork (feedback-queue-triage AI-off 
   });
 
   it('TestFeedbackTriageAIOffManualLabelsWork: FeedbackQueuePage in off mode shows the deterministic manual triage controls (baseline intact, ADR-015 §I3)', () => {
-    // The slice's load-bearing baseline-coexistence proof: with
+    // Baseline-coexistence proof: with
     // ai_mode='off', the canonical FeedbackQueuePage MUST
     // continue to render every deterministic surface — the page-
     // level filters, the row table, and the per-row manual
@@ -276,8 +274,8 @@ describe('TestFeedbackTriageAIOffManualLabelsWork (feedback-queue-triage AI-off 
     expect(screen.getByText(sampleRow.title!)).toBeInTheDocument();
 
     // 3) The AI advisor surface MUST be absent from the DOM
-    // (ADR-015 §I5). This is the load-bearing baseline-intact
-    // assertion: even though the AI component is conditionally
+    // (ADR-015 §I5). This baseline-intact assertion verifies that even
+    // though the AI component is conditionally
     // mounted by the page expansion, the off-mode gate MUST
     // hide it.
     expect(

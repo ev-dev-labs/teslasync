@@ -11,11 +11,11 @@
  *   - What's eating the budget — which service / method?
  *   - Are recent calls healthy (latency, error rate)?
  *
- * Phase-50 / 0004 — F3 refactor: the JSX skeleton (budget bar, bands,
- * detail grid, top-lists, banner, footer) is delegated to the shared
- * `<UsageCard>` primitive in components/data-display so this card
- * (and the new AiUsageCard) share one visual contract. This file's
- * sole job is now to derive the props from the two API hooks.
+ * The JSX skeleton (budget bar, bands, detail grid, top-lists,
+ * banner, footer) is delegated to the shared `<UsageCard>` primitive
+ * in components/data-display so this card and AiUsageCard share one
+ * visual contract. This file's sole job is to derive props from the
+ * two API hooks.
  */
 
 import { useMemo } from 'react'

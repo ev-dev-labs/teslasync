@@ -3,7 +3,7 @@ import { Skeleton } from './Skeleton';
 import { cn } from '@/lib/cn';
 
 /**
- * Phase-45 / Prompt 18 — Shaped page-skeleton building blocks.
+ * Shaped page-skeleton building blocks.
  *
  * These primitives mirror the *structure* of common page sections so the
  * loading UI claims the same vertical/horizontal space as the real content.

@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 59 — RedisSignalViewerPage error-aware tests.
+ * RedisSignalViewerPage error-aware tests.
  *
  * Verifies that the page no longer disguises a backend failure as
  * the legacy generic "no signals cached for this vehicle" empty
@@ -145,7 +145,7 @@ describe('RedisSignalViewerPage — Phase-46 / Prompt 59 (error states)', () => 
     expect(banner).toHaveTextContent('Redis cache is not configured');
 
     // The legacy generic copy MUST NOT appear when the request errored —
-    // that was the original symptom this prompt fixes.
+    // that was the original symptom this test guards.
     expect(
       screen.queryByText('No signals cached for this vehicle'),
     ).toBeNull();

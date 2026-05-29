@@ -1,5 +1,5 @@
 /**
- * GDPR Export Page — Phase-45 admin observability surface.
+ * GDPR Export Page — admin observability surface.
  *
  * Polls a specific export artifact by id and exposes a Download
  * button that hits the binary streaming endpoint. The id can be

@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 32 — masked-value privacy primitive helpers.
+ * Masked-value privacy primitive helpers.
  *
  * Pure functions that compute the masked display string for sensitive
  * values. Kept separate from the React component so the masking logic

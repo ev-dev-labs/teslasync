@@ -22,7 +22,7 @@ interface SendCommandParams {
  *
  * API: POST /vehicles/{vehicleId}/command  body: { command, params }
  *
- * Phase-45 / Prompt 30 — when the Tesla third-party token has expired,
+ * When the Tesla third-party token has expired,
  * the command surfaces as {@link TeslaAuthExpiredError}. We queue the
  * original args via {@link queueTeslaMutation} so the command replays
  * automatically once the user reconnects (within 5 minutes).

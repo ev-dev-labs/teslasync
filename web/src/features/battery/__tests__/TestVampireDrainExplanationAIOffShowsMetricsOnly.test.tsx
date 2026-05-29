@@ -1,8 +1,6 @@
-// Phase-50 / 0030 — C5 Vampire-drain explanation.
-//
 // `TestVampireDrainExplanationAIOffShowsMetricsOnly` (the Vitest
-// sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// sibling to the Go test of the same name) proves the React
+// AI-OFF contract. It mounts
 // the AIVampireDrainExplanation component with ai_mode='off' (plus
 // the per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -26,8 +24,8 @@
 // of this AI section's visibility.
 //
 // File name MUST stay
-// `TestVampireDrainExplanationAIOffShowsMetricsOnly.test.tsx` —
-// the slice prompt's verification command runs
+// `TestVampireDrainExplanationAIOffShowsMetricsOnly.test.tsx`
+// because the verification command runs
 // `vitest --run TestVampireDrainExplanationAIOffShowsMetricsOnly`,
 // where the positional pattern is matched against the file PATH.
 

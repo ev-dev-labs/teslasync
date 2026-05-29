@@ -1,12 +1,10 @@
-// Phase-50 / 0050 — M2 TCO narration.
-// Phase-50 / W1 inline wiring (per slice prompt 0050) — on-mode
-// wiring test proving the "Explain ownership cost" button opens
-// an SSE stream against the registered backend route POST
-// /api/v1/ai/analytics/tco/narrate.
+// TCO narration on-mode wiring test.
 //
-// `TestTcoNarrationAIOnWiredCallsRoute` is the load-bearing
-// positive wiring proof for slice 0050's W1 inline addendum. It
-// mounts the AITCONarration component with ai_mode='cloud' + the
+// Proves the "Explain ownership cost" button opens an SSE stream against
+// POST /api/v1/ai/analytics/tco/narrate.
+//
+// `TestTcoNarrationAIOnWiredCallsRoute` mounts AITCONarration with
+// ai_mode='cloud' + the
 // per-feature toggle on, stubs global fetch with a deterministic
 // SSE byte stream, clicks the action button, and asserts:
 //
@@ -22,8 +20,8 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
-//      from canStart). This proves W1 Rule A — the disabled prop
-//      is a computed expression that reacts to state.
+//      from canStart). This proves the disabled prop is a computed
+//      expression that reacts to state.
 //   4. The off-mode invariant test
 //      (`TestTCONarrationAIOffShowsChartsOnly`) continues to pass
 //      unchanged — wiring MUST NOT regress the off-mode absence
@@ -177,8 +175,7 @@ describe('TestTcoNarrationAIOnWiredCallsRoute (tco-narration on-mode SPA wiring)
     // route. fireEvent.click bypasses pointer-events behaviour;
     // @testing-library/user-event is intentionally NOT a
     // dependency of this codebase (see web/package.json), so
-    // we use fireEvent.click consistently across the slice
-    // tests.
+    // related tests use fireEvent.click consistently.
     await act(async () => {
       fireEvent.click(button);
     });
@@ -271,8 +268,7 @@ describe('TestTcoNarrationAIOnWiredCallsRoute (tco-narration on-mode SPA wiring)
   });
 
   it('TestTcoNarrationAIOnWiredCallsRoute: action button is disabled when no vehicleId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a
+    // This test ensures the primary action button's `disabled` prop is a
     // computed expression (here: `!canStart || stream.state
     // === 'streaming'`), not a literal `disabled` /
     // `disabled={true}`. We prove the dynamic behaviour by

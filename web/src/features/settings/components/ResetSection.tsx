@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 50 — Reset to defaults UI.
+ * Reset to defaults UI.
  *
  * Renders two stacked panels under <section id="reset"> on the
  * Settings page:

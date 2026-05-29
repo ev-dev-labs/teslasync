@@ -1,13 +1,9 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering
-// statistical model.
-// Phase-50 / W1 inline wiring (per slice prompt 0064) — on-mode
-// wiring test proving the Train button opens an SSE stream
-// against the registered backend route POST
-// /api/v1/ai/ml/charging-curves/cluster.
+// On-mode wiring test for the charging-curve clustering AI surface.
+// Proves the Train button opens an SSE stream against the registered
+// backend route: POST /api/v1/ai/ml/charging-curves/cluster.
 //
-// `TestMLChargingCurveClusteringAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0064's W1 inline
-// addendum. It mounts the AIMLChargingCurveClustering component
+// `TestMLChargingCurveClusteringAIOnWiredCallsRoute` mounts the
+// AIMLChargingCurveClustering component
 // with ai_mode='cloud' + the per-feature toggle on, stubs global
 // fetch with a deterministic SSE byte stream, clicks the Train
 // button, and asserts:
@@ -25,8 +21,8 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
-//      from canGenerate). This proves W1 Rule A — the disabled
-//      prop is a computed expression that reacts to state.
+//      from canGenerate). This proves the disabled prop is a
+//      computed expression that reacts to state.
 //   4. The off-mode invariant test
 //      (`TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly`)
 //      continues to pass unchanged — wiring MUST NOT regress the
@@ -34,9 +30,8 @@
 //      sibling file and is exercised independently by the npm test
 //      runner.
 //
-// The test name MUST stay
-// `TestMLChargingCurveClusteringAIOnWiredCallsRoute` per the W1
-// inline addendum naming contract in the slice prompt.
+// The test name MUST stay `TestMLChargingCurveClusteringAIOnWiredCallsRoute`
+// because external test selection relies on it.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';
@@ -171,7 +166,7 @@ describe('TestMLChargingCurveClusteringAIOnWiredCallsRoute (ml-charging-curve-cl
     // route. fireEvent.click bypasses pointer-events behaviour;
     // @testing-library/user-event is intentionally NOT a
     // dependency of this codebase (see web/package.json), so we
-    // use fireEvent.click consistently across the slice tests.
+    // use fireEvent.click consistently across these tests.
     await act(async () => {
       fireEvent.click(button);
     });
@@ -260,10 +255,9 @@ describe('TestMLChargingCurveClusteringAIOnWiredCallsRoute (ml-charging-curve-cl
   });
 
   it('TestMLChargingCurveClusteringAIOnWiredCallsRoute: Train button is disabled when no vehicleId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
-    // primary action button's `disabled` prop MUST be a computed
+    // The primary action button's `disabled` prop MUST be a computed
     // expression (here: `!canGenerate`), not a literal
-    // `disabled` / `disabled={true}`. We prove the dynamic
+    // `disabled` / `disabled={true}`. This proves the dynamic
     // behaviour by rendering the component without a vehicleId
     // and confirming the button is disabled while the gate is
     // open — same code path, different prop input.

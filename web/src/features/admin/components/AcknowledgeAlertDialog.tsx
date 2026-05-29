@@ -1,7 +1,7 @@
 /**
- * Phase-46 / Prompt 20 — AcknowledgeAlertDialog.
+ * Modal opened from the alert row's "Acknowledge" button.
  *
- * Modal opened from the alert row's "Acknowledge" button. Lets the user
+ * Lets the user
  * record an optional free-text note (≤1000 chars after trimming) before
  * firing the ack mutation. Empty/whitespace notes are accepted — the
  * backend treats them as "ack with no note" so the audit timeline still

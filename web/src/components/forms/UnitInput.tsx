@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 26 — Shared <UnitInput> primitive.
+ * Shared <UnitInput> primitive.
  *
  * A number-with-unit field that:
  *   1. Stores its value in TeslaSync's canonical metric (miles, mph,

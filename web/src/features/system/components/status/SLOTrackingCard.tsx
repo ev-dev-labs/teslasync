@@ -1,5 +1,5 @@
 /**
- * SLOTrackingCard — Phase-2 personal SLO visualisation.
+ * Personal SLO visualisation.
  *
  * Per the spec, this is a personal-goal surface for self-hosted
  * operators (no customer SLA framing). Window selector spans

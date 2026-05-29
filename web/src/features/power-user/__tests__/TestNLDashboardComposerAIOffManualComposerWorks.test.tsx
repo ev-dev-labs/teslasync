@@ -1,8 +1,8 @@
-// Phase-50 / 0059 — PU3 Natural-language dashboard composer.
+// Natural-language dashboard composer AI-off contract tests.
 //
 // `TestNLDashboardComposerAIOffManualComposerWorks` is the
-// slice's load-bearing AI-OFF contract proof on the React
-// side. It mounts the AINLDashboardComposer component with
+// React-side AI-off contract proof. It mounts the
+// AINLDashboardComposer component with
 // ai_mode='off' (plus the per-feature toggle on, to defeat
 // the obvious "off because nothing is enabled" path) and
 // asserts:
@@ -22,8 +22,7 @@
 // composer + curated panel catalog + Copy-to-clipboard
 // button still render — proving the AI surface's absence
 // does NOT regress the canonical baseline (ADR-015 §I3 +
-// the prompt's explicit "baseline behaviour still works"
-// gate). The rendered page MUST show:
+// the baseline-behaviour contract). The rendered page MUST show:
 //
 //   - The page title (Dashboard Composer).
 //   - The manual JSON editor textarea + Copy + Clear buttons.
@@ -38,7 +37,7 @@
 //
 // File name MUST stay
 // `TestNLDashboardComposerAIOffManualComposerWorks.test.tsx`
-// — the slice prompt's verification command runs
+// — the verification command runs
 // `vitest --run TestNLDashboardComposerAIOffManualComposerWorks`,
 // where the positional pattern is matched against the file
 // PATH.
@@ -195,7 +194,7 @@ describe('TestNLDashboardComposerAIOffManualComposerWorks (nl-dashboard-composer
   });
 
   it('TestNLDashboardComposerAIOffManualComposerWorks: DashboardsPage in off mode shows the deterministic manual JSON composer + curated catalog (baseline intact, ADR-015 §I3)', async () => {
-    // The slice's load-bearing baseline-coexistence proof:
+    // Baseline-coexistence proof:
     // with ai_mode='off', the canonical DashboardsPage MUST
     // continue to render every deterministic surface — page
     // title, manual JSON editor, Copy + Clear buttons,

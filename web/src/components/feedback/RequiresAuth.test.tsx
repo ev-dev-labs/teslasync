@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 57 — RequiresAuth wrapper tests.
+// RequiresAuth wrapper tests.
 //
 // Covers:
 //
@@ -19,9 +19,8 @@
 //     test-id so feature-page tests can assert "this section is
 //     gated" without mocking the hook.
 //
-// Sibling-of-source location is mandatory — the gate's git-status
-// regex matches `components/feedback/RequiresAuth` as a substring,
-// which a __tests__/ subdir would interrupt.
+// Keep this test next to the component because path-scoped checks match
+// `components/feedback/RequiresAuth` as a contiguous substring.
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';

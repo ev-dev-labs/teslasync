@@ -1,7 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 
 /**
- * Phase 40 / Prompt 62 — multi-chart cursor sync external store.
+ * External store for multi-chart cursor sync.
  *
  * Recharts' built-in `syncId` already mirrors the active hover index across
  * sibling charts, but the active cursor disappears the moment the user moves

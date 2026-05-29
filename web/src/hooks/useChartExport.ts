@@ -3,9 +3,8 @@ import { useCallback, useRef, useState } from 'react';
 /**
  * useChartExport — PNG / SVG / clipboard primitives for ChartContainer.
  *
- * Phase-46 / Prompt 16. Promoted from a single-purpose PNG helper into a
- * full export surface so `<ChartExportMenu>` can wire each item to a real
- * action without bypassing the shared snapshot logic.
+ * Full export surface for `<ChartExportMenu>`, promoted from a
+ * single-purpose PNG helper without bypassing the shared snapshot logic.
  *
  * Capture target
  * --------------

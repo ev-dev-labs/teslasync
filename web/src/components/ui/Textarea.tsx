@@ -6,17 +6,17 @@ import { HelpIcon, type HelpIconProps } from './HelpIcon';
 export interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
   label?: string;
   /**
-   * Optional `<HelpIcon>` rendered immediately after the label. The
-   * HelpIcon's `for` defaults to the textarea's resolved id so screen
-   * readers announce "Help for {{id}}" when the trigger is focused.
-   */
+ * Optional `<HelpIcon>` rendered immediately after the label. The
+ * HelpIcon's `for` defaults to the textarea's resolved id so screen
+ * readers announce "Help for {{id}}" when the trigger is focused.
+ */
   help?: Omit<HelpIconProps, 'for'> & { for?: string };
   error?: string;
   /**
-   * Sizing scale. Defaults to `'md'` for back-compat. Pass `'auto'` to
-   * follow the user's `ui_density` setting via density-aware Tailwind
-   * utilities. (Phase 40 / Prompt 44.)
-   */
+ * Sizing scale. Defaults to `'md'` for back-compat. Pass `'auto'` to
+ * follow the user's `ui_density` setting via density-aware Tailwind
+ * utilities. (.)
+ */
   size?: 'sm' | 'md' | 'lg' | 'auto';
 }
 

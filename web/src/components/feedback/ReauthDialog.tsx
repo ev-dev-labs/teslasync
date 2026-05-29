@@ -1,7 +1,7 @@
 /**
  * @module components/feedback/ReauthDialog
  *
- * Phase-46 / Prompt 31 — sudo-style step-up reauth dialog.
+ * Sudo-style step-up reauth dialog.
  *
  * The {@link ReauthDialog} is opened by the {@link request} client in
  * `web/src/api/client.ts` when the backend gates a sensitive action
@@ -50,14 +50,13 @@ export { SudoCanceledError } from '@/api/client'
 /**
  * Mode the dialog is operating in. Forward-auth installs require a
  * credential; open-mode installs only need a typed confirmation. The
- * mode is resolved per-prompt from {@link useSessionMonitor} so a
- * proxy mid-flight flip is handled cleanly.
+ * mode is resolved from {@link useSessionMonitor} so a proxy mid-flight
+ * flip is handled cleanly.
  */
 type DialogMode = 'credential' | 'confirm'
 
 interface PendingChallenge {
-  /** API path that triggered the prompt. Surfaced to the dialog so
-   * future enhancements can show "you are about to do X" context. */
+  /** API path that triggered the challenge; available for future action context. */
   path: string
   /** Resolves with the SudoCredential after a successful submission. */
   resolve: (cred: SudoCredential) => void
@@ -206,17 +205,9 @@ export function ReauthDialogRoot({ forceMode }: ReauthDialogProps = {}) {
   const mode: DialogMode =
     forceMode ?? (monitor.mode === 'open' ? 'confirm' : 'credential')
 
-  // Phase-46 / Prompt 35 — query per-user TOTP enrollment so the
-  // dialog can:
-  //   1. show/hide the TOTP tab based on whether the current subject
-  //      has actually enrolled (open-mode never reaches credential
-  //      mode anyway, so the tab gate only fires in forward-auth).
-  //   2. route TOTP submissions to the per-user /auth/totp/sudo
-  //      endpoint when enrolled, falling back to the legacy shared-
-  //      secret /auth/reauth path otherwise (some installs still rely
-  //      on TESLASYNC_SUDO_TOTP_SECRET).
-  // The query is gated on credential mode so the dialog never wakes
-  // up the network in open mode.
+  // Query per-user TOTP enrollment only in credential mode. It controls tab
+  // visibility and routes enrolled users to /auth/totp/sudo; legacy shared-secret
+  // installs continue through /auth/reauth.
   const totpStatus = useTOTPStatus({ enabled: mode === 'credential' })
   const totpEnrolled =
     totpStatus.data != null &&
@@ -273,12 +264,8 @@ export interface PureReauthDialogProps {
    * { sudo_token, expires_at, mode } shape. */
   onSubmitCredential?: (body: SudoSubmitBody) => Promise<SudoCredential>
   /**
-   * Phase-46 / Prompt 35 — controls visibility of the TOTP tab.
-   * Defaults to true so test helpers that render the pure dialog
-   * directly still get both tabs (preserving prompt-31 test
-   * coverage). Production code (ReauthDialogRoot) sets this to false
-   * when the current subject has neither per-user TOTP enrolled nor
-   * the legacy shared-secret TOTP available.
+   * Controls TOTP tab visibility. Defaults to true for direct test renders;
+   * production disables it when neither per-user nor shared-secret TOTP exists.
    */
   totpTabAvailable?: boolean
 }
@@ -294,10 +281,8 @@ interface SudoSubmitBody {
  * SUDO_REQUIRED interceptor — calling the interceptor from inside the
  * recovery flow would deadlock.
  *
- * Phase-46 / Prompt 35 — parses snake_case `sudo_token` and
- * `expires_at` (was previously reading `token` / `expiresAt` which
- * the server never sends). The cached token now lands in
- * setCachedSudoToken with a real value instead of always-undefined.
+ * Parses snake_case `sudo_token` and `expires_at`, while tolerating legacy
+ * camelCase aliases during mixed-version deployments.
  */
 async function defaultSubmitCredential(body: SudoSubmitBody): Promise<SudoCredential> {
   const res = await fetch(apiUrl('/auth/reauth'), {
@@ -342,13 +327,8 @@ async function defaultSubmitCredential(body: SudoSubmitBody): Promise<SudoCreden
 }
 
 /**
- * Phase-46 / Prompt 35 — per-user TOTP submit. Routes to
- * /auth/totp/sudo (which validates against the subject's enrolled
- * secret) instead of /auth/reauth (which validates against the
- * shared-process TESLASYNC_SUDO_TOTP_SECRET).
- *
- * Same error / response handling shape as defaultSubmitCredential so
- * the dialog can flow it through the same code path.
+ * Submits per-user TOTP to /auth/totp/sudo instead of the shared-secret
+ * /auth/reauth path. Matches defaultSubmitCredential error handling.
  */
 async function submitPerUserTotp(code: string): Promise<SudoCredential> {
   const res = await fetch(apiUrl('/auth/totp/sudo'), {

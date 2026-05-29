@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 
 /**
- * ScrollRestoration — Phase 40 / Prompt 33.
+ * ScrollRestoration for classic BrowserRouter routes.
  *
  * React Router v6 ships a `<ScrollRestoration>` component that only works
  * with the data-router (`createBrowserRouter`). TeslaSync uses the classic

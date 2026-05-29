@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
 /**
- * Phase-46 / Prompt 64 — TimeMachineBanner contract.
+ * TimeMachineBanner contract.
  *
  * The banner reads `?as_of=` via {@link useAsOfDate} and renders inside
  * the layout shell. Tests use the `testHookAsOf` and `testHookPickerOpen`

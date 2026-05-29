@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 57 — useAuthMode hook tests.
+// useAuthMode hook tests.
 //
 // Covers:
 //
@@ -15,7 +15,7 @@
 //   - useAuthSubject returns null in open mode and in forward_auth
 //     mode without a subject; returns the trimmed subject otherwise.
 //   - The hook calls request() with `/system/auth-mode` and threads
-//     the AbortSignal through (per the audit:query-signal rule).
+//     the AbortSignal through.
 //   - The hook surfaces ApiError on transport failures so consumers
 //     can render an offline state.
 //

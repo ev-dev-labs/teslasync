@@ -348,7 +348,7 @@ export function useRatePlans() {
 
 /**
  * Bulk delete charging sessions. Returns the standardized
- * BulkOperationResult envelope (Phase-40 / Prompt 51).
+ * BulkOperationResult envelope.
  */
 export function useBulkDeleteCharging() {
   const qc = useQueryClient();

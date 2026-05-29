@@ -1,7 +1,7 @@
 /**
  * Maps audit-log action strings (as written by the Go API into
  * `audit_logs.action`) to a visual + i18n key for the per-user activity
- * feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
+ * feed.
  *
  * The lookup is best-effort: many actions follow `domain.verb` or
  * `domain.entity.verb` conventions (`vehicle.command.wake`, `api_key.create`,

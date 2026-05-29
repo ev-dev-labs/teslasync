@@ -1,13 +1,6 @@
 /**
- * QueueStatusPanel — Phase-46 / Prompt 41 contract tests.
- *
- * Covers:
- *  1. Loading state spinner renders.
- *  2. Three worker cards render with severity tone classes.
- *  3. Empty workers list renders empty state.
- *  4. Error state renders with banner.
- *  5. Refresh button triggers refetch.
- *  6. Click on worker card opens drawer with the right title.
+ * QueueStatusPanel contract tests: loading, worker cards, empty/error states,
+ * refresh, and worker detail drawer behavior.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'

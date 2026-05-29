@@ -2,7 +2,7 @@ import { type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 
 /** Timeline item for activity feeds. When `href` is provided, the entire row
- *  becomes a navigable link (used by alert drill-through — Phase 40 / Prompt 14). */
+ *  becomes a navigable link for alert drill-through. */
 export function TimelineItem({ icon, title, subtitle, time, color, isLast, href }: {
   icon: ReactNode; title: string; subtitle?: string; time: string; color: string; isLast?: boolean; href?: string
 }) {

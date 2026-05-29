@@ -1,12 +1,10 @@
-// Phase-50 / 0053 — P2 Helix quiet-hours suggestion advisor.
-// Phase-50 / W1 inline wiring (per slice prompt 0053) — on-mode
-// wiring test proving the "Suggest quiet hours" button opens an
-// SSE stream against the registered backend route POST
-// /api/v1/ai/settings/quiet-hours/draft.
+// Quiet-hours suggestion on-mode wiring test.
 //
-// `TestQuietHoursSuggestionAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0053's W1 inline
-// addendum. It mounts the AIQuietHoursSuggestion component with
+// Proves the "Suggest quiet hours" button opens an SSE stream against
+// POST /api/v1/ai/settings/quiet-hours/draft.
+//
+// `TestQuietHoursSuggestionAIOnWiredCallsRoute` mounts the
+// AIQuietHoursSuggestion component with
 // ai_mode='cloud' + the per-feature toggle on, stubs global fetch
 // with a deterministic SSE byte stream, clicks the action button,
 // and asserts:
@@ -22,8 +20,8 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror
-//      it from canStart). This proves W1 Rule A — the disabled
-//      prop is a computed expression that reacts to state.
+//      it from canStart). This proves the disabled prop is a computed
+//      expression that reacts to state.
 //   4. The typed `tool_result` for `draft_quiet_hours_window` is
 //      captured in component state; clicking "Apply to form"
 //      forwards the typed scalars to the parent's

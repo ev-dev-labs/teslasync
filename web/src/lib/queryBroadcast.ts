@@ -2,7 +2,7 @@ import type { QueryClient, QueryKey } from '@tanstack/react-query'
 import { broadcast } from './broadcast'
 
 /**
- * Phase-40 / Prompt 69 — TanStack Query cross-tab invalidation.
+ * TanStack Query cross-tab invalidation.
  *
  * Wraps `queryClient.invalidateQueries` so the same cache invalidation also
  * fires across other open tabs. Other tabs receive a `queryInvalidate`

@@ -15,7 +15,7 @@ interface BreadcrumbsProps {
   /**
    * Destination of the leading Home icon link. Defaults to '/'. Override for
    * brandable / role-based homes (e.g. embedded surfaces that should anchor at
-   * a sub-route). Phase-40 / Prompt 61.
+   * a sub-route).
    */
   homeHref?: string;
   /**

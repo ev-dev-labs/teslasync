@@ -7,7 +7,7 @@ import { useOptimisticMutation } from './useOptimisticMutation';
 import type { SavedView, SavedViewCreateInput, SavedViewUpdateInput } from '../types';
 
 /**
- * Phase 40 / Prompt 50 — TanStack Query hooks for the saved-views table.
+ * TanStack Query hooks for the saved-views table.
  *
  * Each list page that wants to give the user a "save this filter combo"
  * affordance calls `useSavedViews(route)` to enumerate views for that

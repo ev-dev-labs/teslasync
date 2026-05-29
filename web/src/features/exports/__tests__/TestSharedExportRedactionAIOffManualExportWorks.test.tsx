@@ -1,36 +1,12 @@
-// Phase-50 / 0052 — P1 PII redaction in shared exports.
+// React-side AI-off contract for shared-export redaction. The test verifies
+// the AI section is absent when ai_mode='off', then uses cloud mode with the
+// feature toggle enabled as a positive control for the gate.
 //
-// `TestSharedExportRedactionAIOffManualExportWorks` (the
-// Vitest sibling to the Go test of the same name) is the
-// slice's load-bearing AI-OFF contract proof on the React side.
-// It mounts the AIPiiRedactionSharedExports component with
-// ai_mode='off' (plus the per-feature toggle on, to defeat the
-// obvious "off because nothing is enabled" path) and asserts:
+// The backend test covers the 404-off-mode route behavior; this unit test only
+// checks DOM visibility and that the manual export UI remains available without
+// the AI section.
 //
-//   1. The AI section's rooted test ID is absent from the DOM.
-//   2. The wrapper renders no children (empty container).
-//   3. With ai_mode='cloud' AND
-//      pii-redaction-shared-exports=true, the section IS
-//      present + carries the expected test ID. This is the
-//      positive control that proves the gate actually works
-//      (otherwise the "absent in off mode" assertion is
-//      trivially true).
-//
-// The HTTP POST /api/v1/ai/exports/redaction/draft
-// 404-in-off-mode invariant is proven by the Go-side
-// TestSharedExportRedactionAIOffManualExportWorks in
-// internal/api/ai_pii_redaction_shared_exports_handler_test.go
-// — the network layer does not exist in the React unit-test
-// scope. The "manual export works" semantic refers to the
-// parent ExportsPage, which keeps rendering the deterministic
-// export-jobs list, bulk-delete toolbar, and download links
-// regardless of this AI section's visibility (ADR-015 §I3).
-//
-// File name MUST stay
-// `TestSharedExportRedactionAIOffManualExportWorks.test.tsx`
-// — the slice prompt's verification command runs
-// `vitest --run TestSharedExportRedactionAIOffManualExportWorks`,
-// where the positional pattern is matched against the file PATH.
+// Keep this filename stable because targeted Vitest runs match it by path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';

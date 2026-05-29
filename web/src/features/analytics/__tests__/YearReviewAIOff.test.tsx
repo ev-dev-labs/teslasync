@@ -1,8 +1,7 @@
-// Phase-50 / 0013 — U3 Year-in-review narration.
+// Year-in-review narration AI-off contract tests.
 //
-// `TestYearInReviewAIOffUsesTemplateSlides` (the Vitest sibling to
-// the Go test of the same name) is the slice's load-bearing AI-OFF
-// contract proof on the React side. It mounts the AIYearReviewNarration
+// `TestYearInReviewAIOffUsesTemplateSlides` is the React-side AI-off
+// contract proof. It mounts the AIYearReviewNarration
 // component with ai_mode='off' (plus the per-feature toggle on, to
 // defeat the obvious "off because nothing's enabled" path) and
 // asserts:

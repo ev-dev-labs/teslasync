@@ -3,8 +3,7 @@
  * and TTFB on every real navigation and ships them to the backend so they
  * can be aggregated as Prometheus histograms.
  *
- * Phase 45 / Prompt 12. The Phase 40 reporter only logged metrics to the
- * dev console; this reporter adds the real-world ingest path that turns
+ * This reporter adds the real-world ingest path that turns
  * the engineering-guideline performance budget (FCP < 1.5s on 4G) into
  * something we can actually observe.
  *
@@ -25,8 +24,8 @@ import { isReportingAllowed } from './cookieConsent'
 const ENDPOINT = '/api/v1/web-vitals'
 const FLUSH_INTERVAL_MS = 2_000
 
-// Phase-46 / Prompt 70 — opt-in flag pushed by main.tsx after the
-// `/system/version` resolve. When `false` (the default for self-hosted
+// Opt-in flag pushed by main.tsx after the `/system/version` resolve.
+// When `false` (the default for self-hosted
 // installs), reporting flows unchanged. When `true`, every flush()
 // gates on the user's stored consent state and silently drops the
 // batch when the user has not yet accepted.
@@ -89,8 +88,8 @@ function scheduleFlush(): void {
 export async function flush(): Promise<void> {
   state.flushScheduled = false
   if (state.queue.length === 0) return
-  // Phase-46 / Prompt 70 — when the deployment requires cookie
-  // consent and the user has not yet accepted, silently drop the
+  // When the deployment requires cookie consent and the user has not yet
+  // accepted, silently drop the
   // batch. The queue is splice-emptied so a future accept doesn't
   // back-flush historical metrics that pre-date the decision —
   // GDPR's "lawful basis at time of collection" requirement.
@@ -161,8 +160,8 @@ export function __resetWebVitalsReporterForTests(): void {
   state.queue.length = 0
   state.flushScheduled = false
   state.started = false
-  // Phase-46 / Prompt 70 — clear the consent gate so existing
-  // webVitalsReporter tests (which run before any cookieConsent
+  // Clear the consent gate so existing webVitalsReporter tests (which
+  // run before any cookieConsent
   // setup) keep observing the legacy "always send" behaviour.
   requireCookieConsent = false
 }

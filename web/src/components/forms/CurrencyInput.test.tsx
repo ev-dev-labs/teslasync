@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 49 — CurrencyInput integration tests.
+ * CurrencyInput integration tests.
  *
  * Locks in:
  *   1. Renders an <input> with the localized currency symbol as adornment.

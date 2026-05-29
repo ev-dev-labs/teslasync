@@ -1,7 +1,6 @@
-// Phase-50 / 0047 — S6 MQTT and SSE inspector explanations.
+// MQTT and SSE inspector explanations.
 //
-// `TestMqttSseInspectorAIOffShowsRawInspectorOnly` is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// `TestMqttSseInspectorAIOffShowsRawInspectorOnly` is the AI-off contract test on the React side. It mounts
 // the AIMqttSseInspectorExplanations component with ai_mode='off'
 // (plus the per-feature toggle on, to defeat the obvious "off
 // because nothing is enabled" path) and asserts:
@@ -19,8 +18,7 @@
 // In addition, this file mounts the FULL MQTTInspectorPage in
 // off mode and asserts the deterministic broker-status snapshot
 // table still renders — proving the AI surface's absence does
-// NOT regress the canonical baseline (ADR-015 §I3 + the prompt's
-// explicit "baseline behaviour still works" gate). The rendered
+// NOT regress the canonical baseline (ADR-015 §I3). The rendered
 // page MUST show:
 //
 //   - The summary StatCards (Streaming Vehicles, Total Signals,
@@ -38,7 +36,7 @@
 //
 // File name MUST stay
 // `TestMqttSseInspectorAIOffShowsRawInspectorOnly.test.tsx`
-// — the slice prompt's verification command runs
+// — the targeted verification command runs
 // `vitest --run TestMqttSseInspectorAIOffShowsRawInspectorOnly`,
 // where the positional pattern is matched against the file PATH.
 
@@ -226,7 +224,7 @@ describe('TestMqttSseInspectorAIOffShowsRawInspectorOnly (mqtt-sse-inspector-exp
   });
 
   it('TestMqttSseInspectorAIOffShowsRawInspectorOnly: MQTTInspectorPage in off mode shows the deterministic broker-status snapshot (baseline intact, ADR-015 §I3)', () => {
-    // The slice's load-bearing baseline-coexistence proof: with
+    // Baseline-coexistence proof: with
     // ai_mode='off', the canonical MQTTInspectorPage MUST
     // continue to render every deterministic surface — the
     // summary StatCards, the Connection Info panel, and the
@@ -244,8 +242,7 @@ describe('TestMqttSseInspectorAIOffShowsRawInspectorOnly (mqtt-sse-inspector-exp
 
     // 1) The Connection Info panel renders broker + topic
     // values from the deterministic snapshot. These tokens are
-    // the load-bearing proof that the raw inspector is
-    // reachable to the user even when AI is off.
+    // proof that the raw inspector is reachable to the user even when AI is off.
     expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
     expect(screen.getByText('telemetry/+/v/+')).toBeInTheDocument();
 
@@ -253,13 +250,12 @@ describe('TestMqttSseInspectorAIOffShowsRawInspectorOnly (mqtt-sse-inspector-exp
     // deterministic snapshot. The DataTable is virtualized
     // (jsdom has zero-height containers so individual rows
     // don't paint), but the section header reports the row
-    // count from the snapshot — which is the load-bearing
-    // proof that the baseline table is reachable.
+    // count from the snapshot, proving that the baseline table is reachable.
     expect(screen.getByText(/1 vehicles/i)).toBeInTheDocument();
 
     // 3) The AI explainer surface MUST be absent from the DOM
-    // (ADR-015 §I5). This is the load-bearing baseline-intact
-    // assertion: even though the AI component is conditionally
+    // (ADR-015 §I5). This baseline-intact assertion verifies that even
+    // though the AI component is conditionally
     // mounted by the page below the Connection Info panel, the
     // off-mode gate MUST hide it.
     expect(

@@ -18,7 +18,7 @@ import {
 } from '@/lib/tourRegistry'
 
 /**
- * TourLauncher — Phase-40 / Prompt 65.
+ * TourLauncher.
  *
  * Modal listing every tour in the registry. Opens in response to:
  *  - The {@link TOUR_OPEN_LAUNCHER_EVENT} CustomEvent (dispatched by the

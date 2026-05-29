@@ -1,9 +1,7 @@
 /**
- * Phase-45 / Prompt 15 — Per-mutation tests for the notification mark-read
- * mutations migrated to `useOptimisticMutation`. The file is named singular
- * (`useMarkNotificationRead`) per the prompt artifact list; the suite covers
- * `useMarkNotificationsRead` (bulk) and the single-alert `useMarkAlertRead`,
- * which are the actual exported hooks the codebase ships.
+ * Per-mutation tests for notification mark-read hooks that use
+ * `useOptimisticMutation`. The singular filename is historical; this suite
+ * covers the shipped bulk notification and single-alert hooks.
  */
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';

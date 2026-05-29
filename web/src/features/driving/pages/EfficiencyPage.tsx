@@ -58,7 +58,7 @@ export default function EfficiencyPage() {
   usePageTitle(t('efficiency.title', 'Efficiency'));
   const savedView = useSavedViewUrl();
 
-  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  // The header VehiclePicker is the source of truth.
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 

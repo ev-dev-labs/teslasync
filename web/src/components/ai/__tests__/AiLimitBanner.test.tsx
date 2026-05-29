@@ -1,5 +1,3 @@
-// Phase-50 / 0010 — F9 AiLimitBanner tests.
-//
 // Pins the user-facing contract of the rate-limit / cost-cap banner:
 //   - info=null renders nothing (parent can pass unconditionally)
 //   - reason=cost_cap renders danger-style banner with the cost-cap title

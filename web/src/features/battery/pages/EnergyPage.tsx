@@ -85,8 +85,8 @@ function CostComparisonCard({
 /* ── Page ────────────────────────────────────────────────────────── */
 
 /**
- * Phase-40 / Prompt 62 — render-prop helper that subscribes the inner recharts
- * chart to the surrounding `<ChartTimeRangeProvider>`. The two daily-energy
+ * Render-prop helper that subscribes the inner recharts chart to the
+ * surrounding `<ChartTimeRangeProvider>`. The two daily-energy
  * panels share the same `daily_breakdown` dataset (matching `date` axis), so
  * they sync hover cursors and a persistent reference line through this helper.
  */
@@ -108,7 +108,6 @@ function EnergyChartSync({
  * Mirrors the EnergyPage layout while data loads:
  * page header → 4 hero radial gauges → 6-card metric strip →
  * lifetime metrics panel → 2 cost-comparison cards → 2 chart panels.
- * Phase-45 / Prompt 18.
  */
 function EnergyPageSkeleton() {
   return (
@@ -156,8 +155,8 @@ export default function EnergyPage() {
   const [endDate] = useUrlString('to', defaultEndDate);
   const setRangeBatch = useUrlBatch();
 
-  /* Phase-46 / Prompt 67 — URL-persisted hidden-series state for the
-     two-series energy/efficiency composed chart. */
+  /* URL-persisted hidden-series state for the two-series
+     energy/efficiency composed chart. */
   const energyCostHidden = useHiddenSeries('energy-cost-daily');
 
   /* ── Data fetching ────────────────────────────────────────────── */
@@ -319,7 +318,7 @@ export default function EnergyPage() {
     },
   ], [t, formatCurrency]);
 
-  /* ── Loading short-circuit (Phase-45 / Prompt 18) ─────────────── */
+  /* ── Loading short-circuit ────────────────────────────────────── */
   if (isLoading) {
     return <EnergyPageSkeleton />;
   }
@@ -474,10 +473,10 @@ export default function EnergyPage() {
       </div>
 
       {/* ── Charts Row 1: Energy & Cost Daily + Efficiency ────
-          Phase 40 / Prompt 62: both panels share the same `daily_breakdown`
-          dataset (matching `date` axis), so they're wrapped in a single
-          `<ChartTimeRangeProvider>` to mirror hover cursors and draw a
-          persistent reference line on both at the last hovered date. */}
+          Both panels share the same `daily_breakdown` dataset (matching
+          `date` axis), so they're wrapped in a single `<ChartTimeRangeProvider>`
+          to mirror hover cursors and draw a persistent reference line on both
+          at the last hovered date. */}
       <ChartTimeRangeProvider syncId="energy.daily">
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <FadeIn delay={0.1}>

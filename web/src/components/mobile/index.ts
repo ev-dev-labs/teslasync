@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 10 — Mobile gesture primitives barrel.
+ * Mobile gesture primitives barrel.
  *
  * Pull-to-refresh + swipe-to-action wrappers for native-feel touch
  * interactions on mobile lists. Both primitives are touch-only by

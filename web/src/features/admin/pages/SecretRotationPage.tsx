@@ -1,5 +1,5 @@
 /**
- * Secret Rotation Page — Phase-45 admin observability surface.
+ * Secret Rotation Page admin observability surface.
  *
  * Per-(kind, target) rotation tracker. Surfaces the age of every
  * tracked secret (Tesla refresh token, MQTT mTLS cert, DB password,

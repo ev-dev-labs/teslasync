@@ -32,9 +32,8 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
  * and Web Push (VAPID) subscriptions for out-of-tab delivery.
  *
  * The hook returns BOTH the original "in-app toast" path
- * (`sendNotification`, useful while the tab is open — Phase 40 / Prompt 14)
- * AND the new Push API path (`subscribe` / `unsubscribe`, Phase 40 /
- * Prompt 52) so existing callers keep working.
+ * (`sendNotification`, useful while the tab is open) AND the Push API path
+ * (`subscribe` / `unsubscribe`) so existing callers keep working.
  */
 export function useWebPush() {
   const [permission, setPermission] = useState<NotificationPermission>(
@@ -78,8 +77,8 @@ export function useWebPush() {
 
   /**
    * In-app notification (Notification API only — does NOT survive a
-   * closed tab). Kept for the alert-toast path in Phase 40 / Prompt 14;
-   * new code targeting closed-tab delivery should use `subscribe()`
+   * closed tab). Kept for the alert-toast path; new code targeting
+   * closed-tab delivery should use `subscribe()`
    * instead.
    *
    * @deprecated Prefer `subscribe()` for out-of-tab notifications.

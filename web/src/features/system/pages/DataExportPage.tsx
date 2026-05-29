@@ -24,7 +24,8 @@ import { useCreateAccountExport, useExportColumns } from '@/api/hooks/useExports
 import { JobProgressDrawer } from '@/components/feedback/JobProgressDrawer';
 import { RequiresAuth } from '@/components/feedback/RequiresAuth';
 import { ScheduledExportsPanel } from './ScheduledExportsPanel';
-import type { Vehicle } from '@/api/types';
+import type { Vehicle } from '@/api/types';
+
 import { Icons } from '@/lib/icons';
 
 /* ------------------------------------------------------------------ */
@@ -56,9 +57,9 @@ interface ExportSubmitPayload {
   vehicle_id?: number;
   start?: string;
   end?: string;
-  /** Phase-46/62 — caller-supplied column allowlist. Omitted when the
-   *  user kept the default selection (every column) so the backend
-   *  preserves byte-for-byte legacy behaviour. */
+  /** Caller-supplied column allowlist. Omitted when the user kept the
+   *  default selection (every column) so the backend preserves
+   *  byte-for-byte legacy behaviour. */
   columns?: string[];
 }
 
@@ -505,7 +506,7 @@ function ExportWizard({
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [useCustomRange, setUseCustomRange] = useState(false);
-  // Phase-46/62 — column allowlist state. `null` means "user has not
+  // Column allowlist state. `null` means "user has not
   // touched the picker; submit without `columns` so backend preserves
   // legacy byte-for-byte behaviour". A non-null value is the explicit
   // ordered allowlist the backend should honour.
@@ -579,7 +580,7 @@ function ExportWizard({
         <FormatSelector selected={exportFormat} onChange={setExportFormat} />
       </div>
 
-      {/* Step 2.5 (Phase-46/62): Columns — only when the catalog supports it */}
+      {/* Step 2.5: Columns — only when the catalog supports it */}
       <ColumnPickerSection
         exportType={exportType}
         selectedColumns={selectedColumns}
@@ -644,7 +645,7 @@ function ExportWizard({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Column Picker (Phase-46 / Prompt 62)                                */
+/*  Column Picker                                                     */
 /* ------------------------------------------------------------------ */
 
 /** Maps the page's export-type identifiers (`drives`, `charging`, ...) to
@@ -992,7 +993,7 @@ function ExportHistoryTable({
 }
 
 /* ------------------------------------------------------------------ */
-/*  Account Export Panel — Phase 40 / Prompt 31                        */
+/*  Account Export Panel                                             */
 /* ------------------------------------------------------------------ */
 
 interface AccountExportPanelProps {
@@ -1214,7 +1215,7 @@ export default function DataExportPage() {
         <StatsRow jobs={jobs} isLoading={jobsLoading} />
       </FadeIn>
 
-      {/* GDPR-style "Download my data" — Phase 40 / Prompt 31 */}
+      {/* GDPR-style "Download my data" */}
       <FadeIn delay={0.025}>
         <AccountExportPanel vehicles={vehicles} />
       </FadeIn>
@@ -1247,10 +1248,10 @@ export default function DataExportPage() {
         />
       </FadeIn>
 
-      {/* Phase-46 / Prompt 65 — recurring scheduled exports panel.
-          Wrapped in <RequiresAuth> because the underlying API takes
-          ownership from FORWARD_AUTH_HEADER; in open mode the
-          placeholder explains why the section can't render. */}
+      {/* Recurring scheduled exports panel. Wrapped in <RequiresAuth>
+          because the underlying API takes ownership from
+          FORWARD_AUTH_HEADER; in open mode the placeholder explains
+          why the section can't render. */}
       <FadeIn delay={0.2}>
         <RequiresAuth
           capability="session_list"

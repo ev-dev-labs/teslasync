@@ -39,8 +39,6 @@ export interface SearchInputProps {
    * Enables the recent-searches dropdown. The string is the storage scope
    * (e.g. `'drives'`, `'admin:audit'`); each scope has its own independent
    * history. Omit to keep the field history-less.
-   *
-   * (Phase-46 / Prompt 09.)
    */
   historyScope?: string;
   /**

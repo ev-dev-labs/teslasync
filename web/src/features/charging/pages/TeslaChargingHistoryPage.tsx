@@ -73,7 +73,7 @@ export default function TeslaChargingHistoryPage() {
   usePageTitle(t('tesla_charging.title', 'Tesla Charging History'));
 
   const { data: vehicles } = useVehicles();
-  // Phase 40 / Prompt 33 — VIN filter, sort, and search persist in the URL.
+  // VIN filter, sort, and search persist in the URL.
   const [selectedVin, setSelectedVin] = useUrlString('vin', '');
   const { data: response, isLoading, error } = useTeslaChargingHistory(selectedVin || undefined);
   const refreshMutation = useRefreshTeslaChargingHistory();

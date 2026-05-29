@@ -1,8 +1,6 @@
-// Phase-50 / 0029 — C4 Cost forecast narration.
-//
 // `TestCostForecastNarrationAIOffShowsDeterministicForecast` (the
-// Vitest sibling to the Go test of the same name) is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
+// Vitest sibling to the Go test of the same name) proves the
+// React-side AI-off contract. It mounts
 // the AICostForecastNarration component with ai_mode='off' (plus
 // the per-feature toggle on, to defeat the obvious "off because
 // nothing is enabled" path) and asserts:
@@ -29,7 +27,7 @@
 //
 // File name MUST stay
 // `TestCostForecastNarrationAIOffShowsDeterministicForecast.test.tsx`
-// — the slice prompt's verification command runs
+// — the verification command runs
 // `vitest --run TestCostForecastNarrationAIOffShowsDeterministicForecast`,
 // where the positional pattern is matched against the file PATH.
 

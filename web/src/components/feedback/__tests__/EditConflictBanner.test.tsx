@@ -1,18 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
-/**
- * Phase-46 / Prompt 66 — EditConflictBanner contract.
- *
- * The banner composes <AlertBanner> and reads lease state from
- * useEditLease. Tests mock the hook to deterministically simulate the
- * three states {owner, no-peer, peer-active} without driving the
- * BroadcastChannel election protocol — the protocol itself is covered
- * exhaustively in `hooks/__tests__/useEditLease.test.ts`.
- *
- * react-i18next is stubbed to echo the default value so assertions
- * match the fallback English copy directly.
- */
+/** EditConflictBanner contract tests. */
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({

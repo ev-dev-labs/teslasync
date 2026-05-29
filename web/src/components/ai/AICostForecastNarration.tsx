@@ -1,12 +1,8 @@
-// Phase-50 / 0029 — C4 Cost forecast narration.
-// Phase-50 / W1 inline wiring (per slice prompt 0029) — wired the
-// Narrate button to POST /api/v1/ai/charging/costs/forecast/narrate
-// via the canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring; this
-// component lands both in one commit so the on-mode wiring test
-// (TestCostForecastNarrationAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered
-// backend route.
+// Cost forecast narration.
+// The Narrate button POSTs to /api/v1/ai/charging/costs/forecast/narrate
+// via useAiStream. Keep the visual affordance and SSE wiring together so
+// the on-mode wiring test proves the button opens a stream against the
+// registered backend route.
 //
 // AICostForecastNarration is the visible AI surface for the
 // Cost Analysis page. It is rendered conditionally via

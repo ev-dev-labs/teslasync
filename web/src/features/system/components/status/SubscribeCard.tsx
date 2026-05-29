@@ -1,5 +1,5 @@
 /**
- * SubscribeCard — Phase-2 alert-channel discoverability on /system-status.
+ * SubscribeCard — alert-channel discoverability on /system-status.
  *
  * Self-hosted operators already configure email / Slack / Discord /
  * webhook channels via /notifications/channels, and browser push via

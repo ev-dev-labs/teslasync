@@ -6,7 +6,7 @@
  * the "live" visual treatment (red pulse, event/point counters, no
  * series animation) but the underlying chart structure is identical.
  *
- * Phase-51 adds a `chartMode` prop:
+ * The `chartMode` prop controls layout:
  *   - 'overlay' — single LineChart with all series stacked (legacy)
  *   - 'grid'    — SmallMultiplesChart, one cell per series
  *   - 'auto'    — overlay until `gridAutoThreshold` is exceeded, then grid

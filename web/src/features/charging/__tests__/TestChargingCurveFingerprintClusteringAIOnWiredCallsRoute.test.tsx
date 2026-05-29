@@ -1,12 +1,9 @@
-// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
-// Phase-50 / W1 inline wiring (per slice prompt 0028) — on-mode
-// wiring test proving the Explain button opens an SSE stream
+// On-mode wiring test proving the Explain button opens an SSE stream
 // against the registered backend route POST
 // /api/v1/ai/charging/curves/clusters/explain.
 //
 // `TestChargingCurveFingerprintClusteringAIOnWiredCallsRoute` is
-// the load-bearing positive wiring proof for slice 0028's W1
-// inline addendum. It mounts the
+// the positive wiring proof. It mounts the
 // AIChargingCurveFingerprintClustering component with
 // ai_mode='cloud' + the per-feature toggle on, stubs global fetch
 // with a deterministic SSE byte stream, clicks the Explain button,
@@ -25,8 +22,8 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
-//      from canGenerate). This proves W1 Rule A — the disabled
-//      prop is a computed expression that reacts to state.
+//      from canGenerate). This proves the disabled prop is a
+//      computed expression that reacts to state.
 //   4. The off-mode invariant test
 //      (`TestChargingCurveClusteringAIOffShowsChartsOnly`) continues
 //      to pass unchanged — wiring MUST NOT regress the off-mode
@@ -34,8 +31,8 @@
 //      and is exercised independently by the npm test runner.
 //
 // The test name MUST stay
-// `TestChargingCurveFingerprintClusteringAIOnWiredCallsRoute` per
-// the W1 inline addendum naming contract.
+// `TestChargingCurveFingerprintClusteringAIOnWiredCallsRoute` because
+// external verification targets this exact test name.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';

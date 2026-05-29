@@ -13,7 +13,7 @@ import type {
 import { cn } from '@/lib/cn'
 
 /**
- * ChangelogModal — Phase-40 / Prompt 67.
+ * Changelog modal.
  *
  * Mounts at the app root and surfaces "what's new since last visit". Two
  * activation paths:

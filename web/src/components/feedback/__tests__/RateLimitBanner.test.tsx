@@ -7,7 +7,7 @@ import '@/i18n'
 import { RateLimitBanner } from '../RateLimitBanner'
 
 /**
- * Phase-45 / Prompt 33 — RateLimitBanner contract.
+ * RateLimitBanner contract.
  *
  * The banner reacts to two document-level CustomEvents:
  *   • teslasync:rate-limited  — fired by resilientFetch on 429.

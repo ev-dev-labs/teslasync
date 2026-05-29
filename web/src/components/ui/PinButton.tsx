@@ -7,7 +7,7 @@ import type { PinnedItemType } from '@/api/types';
 import { Tooltip } from './Tooltip';
 
 /**
- * Phase 40 / Prompt 48 — shared "pin" affordance.
+ * Shared "pin" affordance.
  *
  * Renders a focusable icon-only button that toggles the user's pin state for
  * a single item. It composes the unified `usePinned` query so any open

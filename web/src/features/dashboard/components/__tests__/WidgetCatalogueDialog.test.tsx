@@ -1,5 +1,5 @@
 /**
- * Phase-45 / Prompt 25 — WidgetCatalogueDialog tests.
+ * WidgetCatalogueDialog tests.
  *
  * Verifies:
  *   - Renders nothing when closed.

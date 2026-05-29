@@ -7,7 +7,7 @@ import { Button, type ButtonProps } from './Button'
  * PrintButton — opens the browser print dialog (`window.print()`) for the
  * current page.
  *
- * Pairs with the `@media print` block in `index.css` (Phase-40 / Prompt 54).
+ * Pairs with the `@media print` block in `index.css`.
  * Pages render this in their `PageContainer` `actions` slot. The button
  * itself carries `data-print-hide` so it doesn't show on the printed page —
  * the print stylesheet hides it regardless of how the print dialog was

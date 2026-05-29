@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 36 — Settings export/import shared schema.
+// Settings export/import shared schema.
 //
 // Mirrors the Go `database.SettingsBundle` wire shape so the SPA can
 // validate uploaded files BEFORE shipping them to the import endpoint

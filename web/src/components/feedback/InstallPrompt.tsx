@@ -82,7 +82,7 @@ export default function InstallPrompt() {
     broadcast({ type: 'install.dismissed' })
   }, [])
 
-  // Phase-40 / Prompt 69 — when another tab dismisses the install prompt,
+  // When another tab dismisses the install prompt,
   // hide it here too so the user doesn't have to dismiss it on every tab.
   useEffect(() => {
     return subscribe((m) => {

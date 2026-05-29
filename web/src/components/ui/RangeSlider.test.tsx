@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 23 — `<RangeSlider>` primitive.
+ * `<RangeSlider>` primitive coverage.
  *
  * Validates dual-thumb behaviour: each thumb is independently labelled
  * and announced via aria-valuetext, the change handler always receives

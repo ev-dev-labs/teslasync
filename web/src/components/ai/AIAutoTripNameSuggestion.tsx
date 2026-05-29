@@ -1,6 +1,5 @@
-// Phase-50 / 0024 — D4 Auto trip naming.
-// Phase-50 / W1 (slice 0065) — wired the Suggest button to
-// POST /api/v1/ai/trips/{tripID}/name/draft (empty body).
+// Auto trip-name suggestions.
+// The Suggest button posts an empty body to /api/v1/ai/trips/{tripID}/name/draft.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

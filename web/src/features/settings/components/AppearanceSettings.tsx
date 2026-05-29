@@ -30,31 +30,31 @@ export function AppearanceSettings() {
   // Density picker. Reads/writes the same `ui_density` server-side setting
   // that `useDensitySync` applies to `body[data-density]`. We use the
   // partial-merge pattern (`{ ...settings, ui_density }`) because the
-  // PUT /settings endpoint is full-replace, not patch. (Phase 40 / Prompt 44.)
+  // PUT /settings endpoint is full-replace, not patch. (.)
   const { data: settings } = useSettings()
   const saveSettings = useSaveSettings()
   const density: DensityId =
     (settings?.ui_density as DensityId | undefined) ?? 'comfortable'
 
-  // Time format default (Phase-45 / Prompt 22). Drives `<TimeStamp>`'s
+  // Time format default (). Drives `<TimeStamp>`'s
   // visible body when no explicit `format` prop is set, and the alternate
   // value always lives in its hover tooltip.
   const timeFormat: TimeFormatId =
     (settings?.time_format_default as TimeFormatId | undefined) ?? 'relative'
 
-  // Chart palette default (Phase-45 / Prompt 23). Drives the reactive
+  // Chart palette default (). Drives the reactive
   // `useChartPalette()` hook so consumers re-render with the new colours
   // when the user toggles between the CB-safe Okabe-Ito default and the
   // stylistic neon palette.
   const chartPalette: ChartPaletteId =
     (settings?.chart_palette as ChartPaletteId | undefined) ?? 'cb_safe'
 
-  // Footer status bar prefs (Phase-40 / Prompt 59). Persisted to
+  // Footer status bar prefs (). Persisted to
   // localStorage rather than the server so toggling is instant and works
   // offline; cross-tab sync is handled inside useStatusBarPrefs.
   const statusBarPrefs = useStatusBarPrefs()
 
-  // Celebration prefs (Phase-40 / Prompt 63). Same localStorage pattern as
+  // Celebration prefs (). Same localStorage pattern as
   // the status-bar prefs above so toggling the celebration toast / sound is
   // instant and survives offline + cross-tab.
   const celebrationPrefs = useAchievementCelebrationPrefs()
@@ -155,9 +155,8 @@ export function AppearanceSettings() {
           </div>
         </div>
 
-        {/* Phase-40 / Prompt 60 — extracted shared <ThemePicker>. The settings
-            page renders the full UI (mode + accent + custom-color builder); the
-            top-bar quick-switcher renders a compact variant of the same. */}
+        {/* Shared <ThemePicker>: the settings page renders the full UI, while
+            the top-bar quick-switcher renders a compact variant. */}
         <ThemePicker showMode showCustom />
 
         {/* Density (information density) */}
@@ -230,7 +229,7 @@ export function AppearanceSettings() {
           </p>
 
           {/* Live preview — uses density Tailwind utilities so it reflows
-              instantly when the body[data-density] attribute changes. */}
+            instantly when the body[data-density] attribute changes. */}
           <div className="mt-4 rounded-lg border border-[var(--glass-border)] bg-[var(--surface-2)] overflow-hidden">
             <div className="border-b border-[var(--glass-border)] bg-[var(--surface-3)] px-d-pad-x py-d-pad-y">
               <p className="text-d-base font-medium text-[var(--text-secondary)]">
@@ -304,7 +303,7 @@ export function AppearanceSettings() {
           </p>
         </div>
 
-        {/* Time format default (Phase-45 / Prompt 22) */}
+        {/* Time format default */}
         <div data-tour="settings-time-format">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
@@ -348,7 +347,7 @@ export function AppearanceSettings() {
           </p>
         </div>
 
-        {/* Chart palette (Phase-45 / Prompt 23) */}
+        {/* Chart palette */}
         <div data-tour="settings-chart-palette">
           <div className="flex items-center gap-2 mb-3">
             <Eye className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
@@ -410,7 +409,7 @@ export function AppearanceSettings() {
           </p>
         </div>
 
-        {/* Footer status bar (Phase-40 / Prompt 59) */}
+        {/* Footer status bar */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <PanelBottom className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
@@ -458,7 +457,7 @@ export function AppearanceSettings() {
           </div>
         </div>
 
-        {/* Achievement celebrations (Phase-40 / Prompt 63) */}
+        {/* Achievement celebrations */}
         <div>
           <div className="flex items-center gap-2 mb-3">
             <Trophy className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
@@ -526,7 +525,7 @@ export function AppearanceSettings() {
           </div>
         </div>
 
-        {/* Product tours (Phase-46 / Prompt 61) — replay or reset onboarding tours */}
+        {/* Product tours — replay or reset onboarding tours */}
         <div data-tour="settings-product-tours" data-testid="product-tours-section">
           <div className="flex items-center gap-2 mb-3">
             <PlayCircle className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />

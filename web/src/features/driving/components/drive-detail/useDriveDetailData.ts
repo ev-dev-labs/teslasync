@@ -13,8 +13,8 @@ import { fmtNumber } from '@/lib/numberFormat';
 import type { LatLngExpression } from '@/components/maps';
 import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
 
-// Speed-segment colour thresholds for the route map. Phase-43 / Prompt 0022
-// re-expresses them in SI (m/s) so the routeSource can stay in raw SI units
+// Speed-segment colour thresholds for the route map are expressed in SI
+// (m/s) so the routeSource can stay in raw SI units
 // and the colours remain meaningful for users on either mph or km/h. The
 // thresholds correspond to 100 / 60 / 30 mph (= 44.704 / 26.8224 / 13.4112 m/s).
 const SPEED_SEGMENT_HIGH_MPS = 100 * 0.44704;
@@ -24,10 +24,8 @@ const SPEED_SEGMENT_LOW_MPS = 30 * 0.44704;
 export function useDriveDetailData(id: string) {
   const { data: drive, isLoading, error } = useDrive(id);
   const { data: vehicle } = useVehicle(String(drive?.vehicleId ?? ''));
-  // Drive aggregate fields (distanceM, maxSpeedMps, avgSpeedMps) stay on the
-  // legacy useSettings surface — same locked-policy continuation as Phase-43 /
-  // Prompt 0020 Drive.distance_m (genuine miles after the SQL adapter
-  // boundary in internal/database/drive_repo.go).
+  // Drive aggregate fields use the SI display path; the SQL adapter already
+  // exposes canonical values at the repository boundary.
   const { unitPrefs } = useUnits();
   const { formatTime } = useDateFormat();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);

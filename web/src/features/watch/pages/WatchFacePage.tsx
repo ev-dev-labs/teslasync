@@ -23,7 +23,7 @@ import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
  * - Auto-refresh every 30s
  * EXCEPTION: watch/PWA route is chrome-less to fit 40-45mm wearable displays.
  *
- * Phase-50 / 0056 V2 — opt-in Helix narrator:
+ * Opt-in Helix narrator:
  *   The deterministic <WatchShell> + fixed cards + tap commands
  *   above are the canonical baseline visible to every user
  *   (the ONLY view when AI is off — the wearable contract). When
@@ -62,10 +62,9 @@ export default function WatchFacePage() {
       </p>
     );
   } else {
-    // SI boundary: backend `range_km` is in km (not meters per the
-    // Phase-42 SI convention) — derived in watch_handler.go as
-    // RatedRange*1.60934. Multiply by 1000 to feed convertDistanceFromSI,
-    // mirroring the Phase-43/0023 BatteryHandler.Report fromKm pattern.
+    // SI boundary: backend `range_km` is in km, derived in
+    // watch_handler.go as RatedRange*1.60934. Multiply by 1000 before
+    // passing it to convertDistanceFromSI.
     const displayRange = convertDistanceFromSI(
       data.range_km * 1000,
       unitPrefs.distance,
@@ -147,8 +146,8 @@ export default function WatchFacePage() {
     <>
       <WatchShell>{watchContent}</WatchShell>
       {/*
-        Phase-50 / 0056 V2 — opt-in Helix narrator. Rendered as a
-        sibling AFTER <WatchShell> so the chrome-less wearable
+        Opt-in Helix narrator. Rendered as a sibling AFTER <WatchShell>
+        so the chrome-less wearable
         layout above is unaffected. withAiFeature returns null
         when ai_mode='off' or the per-feature toggle is off,
         keeping the wearable invariant ("single screen, no

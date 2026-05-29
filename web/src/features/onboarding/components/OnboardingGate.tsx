@@ -4,22 +4,18 @@ import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
 import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
 
 /**
- * OnboardingGate — Phase 40 / Prompt 18.
- *
+ * Onboarding gate.
  * First-run redirect guard. While the install has not completed all
  * three onboarding anchors (tesla_connected + vehicle_count > 0 +
  * data_flowing), this component routes the user to /onboarding so
  * they're not dropped into a dashboard that can only render empty
  * states.
- *
  * Allow-listed paths bypass the gate so the user can reach the
  * Tesla account setup page, public share links, the watch face,
  * and onboarding itself.
- *
  * The user can also click "Skip for now" on the onboarding page,
  * which sets a localStorage flag (see useOnboardingSkip) that the
  * gate honours across reloads and tabs.
- *
  * The gate is intentionally non-blocking: it renders nothing
  * (`return null`) and only triggers redirects via effects, so the
  * surrounding <Routes> can render normally for already-onboarded

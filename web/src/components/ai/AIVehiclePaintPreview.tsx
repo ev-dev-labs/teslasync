@@ -1,68 +1,10 @@
-// Phase-50 / 0061 — GEN2 vehicle paint preview.
-// Phase-50 / W1 inline wiring (per slice prompt 0061) — wired the
-// "Preview paint color" button to
-// POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft via the
-// canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring;
-// this component lands both in one commit so the on-mode wiring
-// test (TestVehiclePaintPreviewAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered
-// backend route.
-//
-// AIVehiclePaintPreview is the visible AI surface for the
-// VehicleDetailPage (/vehicles/:vehicleId). It is rendered
-// conditionally via withAiFeature('vehicle-paint-preview', …) so:
-//
-//   - When ai_mode='off' it does not render at all (ADR-015 §I5 + §I6).
-//   - When ai_mode is 'local'/'cloud' AND the
-//     vehicle-paint-preview toggle is on, it renders an opt-in
-//     section with a "Preview paint color" button that POSTs to
-//     /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft. The
-//     SSE response stream accumulates into the shared
-//     AiOutputPanel inside AIFeatureCard.
-//
-// The component does NOT replace the deterministic
-// VehicleConfigSection (model, trim, current exterior color, etc.)
-// or the manual theme/appearance settings on the same page. Those
-// baseline surfaces remain the canonical way to view and update
-// the vehicle's paint color; this AI section is opt-in
-// propose-only image-prompt drafting layered alongside.
-//
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
-//   - useAiStream is called unconditionally at the top of the body
-//     (Hooks-rules safe).
-//   - The button's disabled prop is a COMPUTED expression
-//     (`!haveInputs || stream.state === 'streaming'` via the
-//     `canStart` prop on AIFeatureCard), never a literal
-//     `disabled` or `disabled={true}`.
-//   - Double-submit protection: stream.start() is a no-op while
-//     state === 'streaming' (the hook coalesces; the button is
-//     also visually disabled to mirror the state machine).
-//   - The streamed text accumulates into AiOutputPanel which
-//     renders the SSE delta stream as-it-arrives.
-//
-// HX (Helix UX) contract:
-//   - The surface renders through the shared AIFeatureCard
-//     scaffold — NOT a bespoke GlassPanel + Button + AiOutputPanel
-//     composition.
-//   - The per-feature verb "Preview paint color" is passed via
-//     `buttonLabel`. The card composes the accessible name as
-//     "Ask Helix · Preview paint color".
-//   - User-visible i18n keys say "Helix", not "AI" (per the HX
-//     addendum).
-//
-// ADR-015 alignment:
-//   - I3 baseline intact: this component never replaces the
-//     deterministic VehicleConfigSection / VehiclePhotoGallery /
-//     manual theme surface; it adds an opt-in propose-only draft
-//     section alongside.
-//   - I5 hidden UI:       the withAiFeature HOC returns null when
-//     the feature is not enabled, so the section is entirely
-//     absent from the DOM in off mode.
-//   - I6 404 routes:      the backend route is guard-wrapped and
-//     returns 404 in off mode; useAiStream surfaces that as
-//     state='error' for the user, but the component is never
-//     rendered in off mode at all because of I5.
+// Optional Helix paint-preview proposal for VehicleDetailPage.
+// Contract:
+//   - Hidden entirely when ai_mode='off' or the feature toggle is disabled.
+//   - POSTs to /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft and streams into AiOutputPanel.
+//   - Never replaces deterministic vehicle configuration or manual appearance controls.
+//   - Renders through shared AIFeatureCard and keeps user-facing copy branded as Helix.
+//   - useAiStream stays unconditional; AIFeatureCard derives start availability from `canStart`.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -97,7 +39,6 @@ interface InnerSectionProps {
  * vehicle-paint-preview card. The surrounding {@link withAiFeature}
  * HOC handles the visibility gate; this component only describes
  * the surface's appearance.
- *
  * Visual contract:
  *   - One AIFeatureCard sized to sit beneath the deterministic
  *     VehicleConfigSection on VehicleDetailPage.

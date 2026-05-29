@@ -224,7 +224,7 @@ describe('CommandPalette search', () => {
     expect(await screen.findByText(/Refresh data/)).toBeInTheDocument()
   })
 
-  // Regression for the post phase-40/45 scoring bug where each keyword was
+  // Regression for a scoring bug where each keyword was
   // re-scored as if it were the label, giving keyword startsWith the same
   // score as label startsWith. That made "State Machine" (matches keyword
   // "debugger" → "d") tie with "Drives" (matches label "Drives" → "d") and
@@ -257,7 +257,7 @@ describe('CommandPalette search', () => {
   })
 })
 
-// ─── Most-used surfacing (Phase-45 / Prompt 27) ─────────────────────────────
+// ─── Most-used surfacing ────────────────────────────────────────────────────
 //
 // Replaces the previous LRU "Recent" section with a frecency-ranked
 // "Most Used" section. The strict-recency LRU storage (addRecentCommand /

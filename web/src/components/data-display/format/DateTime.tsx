@@ -37,7 +37,7 @@ interface DateTimeProps {
  * Locale-aware datetime renderer that hovers the canonical ISO string for
  * unambiguous timestamps. Wraps the pure helpers in `@/lib/dateFormat`.
  *
- * Phase 40 / Prompt 22: when `in` or `showTz` is set, renders via the
+ * When `in` or `showTz` is set, renders via the
  * provider-aware variant `<DateTimeWithTz>`. The default no-prop path
  * stays pure to keep render cost low across table-heavy pages.
  */

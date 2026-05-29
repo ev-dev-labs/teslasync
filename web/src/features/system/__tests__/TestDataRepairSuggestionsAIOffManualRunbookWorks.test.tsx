@@ -1,10 +1,9 @@
-// Phase-50 / 0043 — S2 Data repair suggestions.
+// Data repair suggestions AI-off contract proof for React.
 //
-// `TestDataRepairSuggestionsAIOffManualRunbookWorks` is the
-// slice's load-bearing AI-OFF contract proof on the React side. It
-// mounts the AIDataRepairSuggestions component with ai_mode='off'
-// (plus the per-feature toggle on, to defeat the obvious "off
-// because nothing is enabled" path) and asserts:
+// `TestDataRepairSuggestionsAIOffManualRunbookWorks` mounts the
+// AIDataRepairSuggestions component with ai_mode='off' plus the per-feature
+// toggle on, to avoid the trivial "off because nothing is enabled" path, and
+// asserts:
 //
 //   1. The AI section's rooted test ID is absent from the DOM.
 //   2. The wrapper renders no children (empty container).
@@ -19,8 +18,7 @@
 // In addition, this file mounts the FULL DataRepairPage in off
 // mode and asserts the deterministic stale-session list still
 // renders — proving the AI surface's absence does NOT regress the
-// canonical baseline (ADR-015 §I3 + the prompt's explicit
-// "baseline behaviour still works" gate). The rendered page MUST
+// canonical baseline (ADR-015 §I3). The rendered page MUST
 // show:
 //
 //   - The page title (Data Repair).
@@ -36,10 +34,9 @@
 // does not exist in the React unit-test scope.
 //
 // File name MUST stay
-// `TestDataRepairSuggestionsAIOffManualRunbookWorks.test.tsx`
-// — the slice prompt's verification command runs
-// `vitest --run TestDataRepairSuggestionsAIOffManualRunbookWorks`,
-// where the positional pattern is matched against the file PATH.
+// `TestDataRepairSuggestionsAIOffManualRunbookWorks.test.tsx` because
+// `vitest --run TestDataRepairSuggestionsAIOffManualRunbookWorks` matches the
+// positional pattern against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
@@ -175,11 +172,10 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
   });
 
   it('TestDataRepairSuggestionsAIOffManualRunbookWorks: DataRepairPage in off mode shows the deterministic stale-session manual-runbook surface (baseline intact, ADR-015 §I3)', async () => {
-    // The slice's load-bearing baseline-coexistence proof: with
-    // ai_mode='off', the canonical DataRepairPage MUST continue to
-    // render every deterministic surface — page title, metric
-    // cards, tab buttons — exactly as it would without the AI
-    // feature ever existing. The AI suggestions section MUST be
+    // Baseline-coexistence proof: with ai_mode='off', DataRepairPage MUST
+    // continue to render every deterministic surface — page title, metric
+    // cards, tab buttons — exactly as it would without the AI feature. The AI
+    // suggestions section MUST be
     // absent from the DOM (ADR-015 §I5 + §I6).
     mockUseSettings.mockReturnValue(
       settingsPayload({

@@ -1,7 +1,7 @@
 /**
  * @module api/hooks/useSessions
  *
- * Phase-46 / Prompt 42 — Active sessions / device management hooks.
+ * Active sessions and device-management hooks.
  *
  * Mirrors the layered fetch pattern used by useTOTP.ts: a single
  * useQuery for the list + two useMutation hooks that invalidate the

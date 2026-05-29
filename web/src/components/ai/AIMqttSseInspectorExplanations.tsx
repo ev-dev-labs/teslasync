@@ -1,12 +1,8 @@
-// Phase-50 / 0047 — S6 MQTT and SSE inspector explanations.
-// Phase-50 / W1 inline wiring (per slice prompt 0047) — wired the
-// "Explain streams" button to POST /api/v1/ai/system/streams/explain
-// via the canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring;
-// this component lands both in one commit so the on-mode wiring
-// test (TestMqttSseInspectorExplanationsAIOnWiredCallsRoute) can
-// prove the button actually opens an SSE stream against the
-// registered backend route.
+// MQTT and SSE inspector explanations.
+// The "Explain streams" button POSTs to
+// /api/v1/ai/system/streams/explain via useAiStream. The UI and
+// SSE wiring ship together so the button cannot appear without a
+// registered backend stream.
 //
 // AIMqttSseInspectorExplanations is the visible AI surface for the
 // MQTTInspectorPage. It is rendered conditionally via
@@ -27,7 +23,7 @@
 // the deterministic /api/v1/admin/mqtt/status panel above for raw
 // inspection. ADR-015 §I3 baseline intact.
 //
-// Render contract (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Render contract:
 //   - useAiStream is called unconditionally at the top of the body
 //     (Hooks-rules safe).
 //   - The "Explain streams" button's disabled prop is a COMPUTED

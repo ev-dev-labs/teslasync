@@ -5,7 +5,7 @@ import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { globalProgress } from '@/lib/globalProgress'
 
 /**
- * Phase-46 / Prompt 07 — top-of-viewport progress bar.
+ * Top-of-viewport progress bar.
  *
  * Subscribes to {@link globalProgress} and renders a slim 2 px strip
  * along the very top of the viewport while at least one consumer

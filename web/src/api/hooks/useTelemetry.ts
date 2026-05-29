@@ -34,8 +34,8 @@ export interface VehicleLiveSignalsResponse {
 /**
  * useSignals — list of available signal NAMES for a vehicle.
  *
- * Backend (post Phase-42 / per-field MQTT cutover) returns the rich
- * catalog shape `{ signals: AvailableSignal[] }` where each entry is
+ * Backend returns the rich catalog shape `{ signals: AvailableSignal[] }`
+ * where each entry is
  * `{ name, category, value_kind, unit_kind, is_compound, is_setting_unit }`.
  * This hook normalizes that response down to `string[]` of signal names
  * because every consumer (SignalLogViewerPage, SignalExplorerPage,
@@ -45,7 +45,7 @@ export interface VehicleLiveSignalsResponse {
  * For the typed/rich catalog (with value_kind / unit_kind discriminators)
  * use `useAvailableSignals` from `@/api/hooks/useSignals` instead.
  *
- * Legacy fallback: pre-Phase-42 deployments returned bare `string[]` or
+ * Legacy fallback: older deployments returned bare `string[]` or
  * `{ signals: string[] }`. Both shapes are still accepted; malformed
  * entries (non-string, missing `name`) are dropped silently.
  */
@@ -151,7 +151,7 @@ export function useSignalDiff(vehicleId: number, signal: string, from: string, t
   });
 }
 
-// ─── Phase-40 / Prompt 58 — server-side diff & point-in-time snapshot ─────
+// ─── Server-side diff & point-in-time snapshot ────────────────────────────
 
 export type SignalSourceLayer = 'l1' | 'l2' | 'log' | 'stale' | 'unknown';
 
@@ -189,8 +189,8 @@ export interface SignalDiffServerResponse {
 }
 
 /**
- * Phase-40 / Prompt 58 — fetch a point-in-time signal snapshot. Pass
- * `at=''` to read live state. Supplying a CSV of signal names narrows the
+ * Fetch a point-in-time signal snapshot. Pass `at=''` to read live state.
+ * Supplying a CSV of signal names narrows the
  * server-side response so dense vehicles don't ship 200+ values per call.
  */
 export function useSignalSnapshot(
@@ -216,8 +216,8 @@ export function useSignalSnapshot(
 }
 
 /**
- * Phase-40 / Prompt 58 — fetch the server-side diff between two snapshots.
- * Unchanged signals are filtered out by the backend so the response stays
+ * Fetch the server-side diff between two snapshots. Unchanged signals are
+ * filtered out by the backend so the response stays
  * compact.
  */
 export function useSignalDiffServer(
@@ -286,11 +286,11 @@ export function useMQTTStatus() {
   });
 }
 
-// ─── Typed Signal Hooks (Phase 6 endpoints) ──────────────────────────────────
+// ─── Typed Signal Hooks ──────────────────────────────────────────────────────
 
 /**
- * Phase-42 / Prompt 0077 — DEPRECATED. The backend `/signals/catalog`
- * route was deleted alongside `signal_catalog_handler.go`; the typed
+ * DEPRECATED. The backend `/signals/catalog` route was deleted alongside
+ * `signal_catalog_handler.go`; the typed
  * `signal_log` pipeline (migrations 000167+) plus
  * `internal/api/signal_handler.go`'s `/signals/{vehicleID}/available`
  * endpoint are now the authoritative catalog surface. This hook will
@@ -309,10 +309,10 @@ export function useSignalCatalog() {
 }
 
 /**
- * Phase-43a / Prompt 0007 — RESTORED. The backend `/signals/observations`
- * route is back, but with a modern enveloped contract that does NOT match
- * the legacy `signal_observations` table the hook was originally written
- * against (deleted in Phase-42 / 0077). Specifically, the new backend:
+ * RESTORED. The backend `/signals/observations` route is back, but with
+ * a modern enveloped contract that does NOT match the legacy
+ * `signal_observations` table the hook was originally written against.
+ * Specifically, the new backend:
  *   - filters by `field=` (not `signal_name=`),
  *   - returns `{count, total, observations: [{vehicle_id, ts, field,
  *     value_kind, value}]}` (not a bare array),
@@ -361,8 +361,8 @@ export function useSignalObservations(
   });
 }
 
-// Wire shape returned by the modern Phase-43a /signals/observations
-// endpoint. Both snake_case (`value_kind`) and camelCase (`valueKind`)
+// Wire shape returned by the modern /signals/observations endpoint.
+// Both snake_case (`value_kind`) and camelCase (`valueKind`)
 // shapes are tolerated because some `request` middleware variants in
 // the codebase camelCase response keys; production uses snake_case but
 // keeping both branches makes the adapter forward-compatible and keeps

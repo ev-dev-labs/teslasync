@@ -1,6 +1,6 @@
 /**
  * RecentActivityFeed — chronological list of audit_logs entries scoped to a
- * single user. Used by `MyActivityPage` (Phase-40 / Prompt 49) and reusable
+ * single user. Used by `MyActivityPage` and reusable
  * for any future widget that needs to surface per-user activity.
  *
  * Each entry maps to:
@@ -110,7 +110,7 @@ export function RecentActivityFeed({ entries, className, emptyMessage }: RecentA
     };
   });
 
-  // Timeline now accepts ReactNode for title/subtitle (widened in this prompt
-  // so we can embed click-through links without losing type safety).
+  // Timeline accepts ReactNode for title/subtitle so click-through links keep
+  // type safety.
   return <Timeline items={items} className={className} />;
 }

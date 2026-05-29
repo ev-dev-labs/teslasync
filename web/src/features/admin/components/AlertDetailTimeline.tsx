@@ -1,11 +1,9 @@
 /**
- * Phase-46 / Prompt 20 — AlertDetailTimeline.
- *
+ * Alert detail timeline.
  * Renders the audit timeline of an alert (created → acknowledged →
  * commented → reopened → ...) using the shared `<Timeline>` primitive from
  * `@/components/data-display`. Pure presentational component — the parent
  * supplies the loaded `AlertEvent[]` from `useAlertDetail`.
- *
  * The synthetic `created` entry is always present (server-side fabricated
  * from `notification_logs.created_at`); persisted events come from
  * `notification_log_events`.

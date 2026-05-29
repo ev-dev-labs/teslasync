@@ -5,8 +5,8 @@ import { severityTokens, normalizeSeverity, type Severity } from '@/lib/tokens';
  * TimeMarker — vertical reference line on a time-series chart marking the
  * timestamp of an alert (or any other point-in-time event).
  *
- * Phase 40 / Prompt 14. Used by pages that opt-in to alert drill-through
- * (`useAlertContext()`): when the user clicks an alert and lands on
+ * Used by pages that opt in to alert drill-through (`useAlertContext()`):
+ * when the user clicks an alert and lands on
  * `/battery?t=...` the matching chart shows a vertical marker at that time.
  *
  * Since recharts renders `ReferenceLine` based on the chart's `dataKey`

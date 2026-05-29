@@ -6,24 +6,24 @@ import { useSessionMonitor } from '@/hooks/useSessionMonitor'
 import { navigateToReauth } from '@/lib/resilience'
 
 /**
- * Phase-46 / Prompt 05 — SessionExpiringModal.
+ * SessionExpiringModal.
  *
  * Pops up ~60 seconds before the upstream ForwardAuth cookie expires
  * with a live countdown and two affordances:
- *   • "Stay signed in" → calls the session-monitor's refresh(), which
- *     simply re-polls /auth/session. Sliding-session proxies (the
- *     common case for oauth2-proxy / authentik / authelia) renew the
- *     cookie on every authenticated request, so the GET of
- *     /auth/session is itself the renewal — no separate /refresh
- *     round-trip is needed and we avoid the Tesla-token-only
- *     POST /auth/refresh path.
- *   • "Sign out now" → reloads to / so the proxy redirects to its
- *     login page; saves the current URL so post-login we can resume.
+ * • "Stay signed in" → calls the session-monitor's refresh(), which
+ * simply re-polls /auth/session. Sliding-session proxies (the
+ * common case for oauth2-proxy / authentik / authelia) renew the
+ * cookie on every authenticated request, so the GET of
+ * /auth/session is itself the renewal — no separate /refresh
+ * round-trip is needed and we avoid the Tesla-token-only
+ * POST /auth/refresh path.
+ * • "Sign out now" → reloads to / so the proxy redirects to its
+ * login page; saves the current URL so post-login we can resume.
  *
  * If the user has unsaved drafts (registered by useFormDraft into
  * `localStorage` under `teslasync:draft:v*:*`), the modal lists them
  * so the user knows what would be lost on a forced sign-out. This
- * cross-cuts with phase-45 / 16 (form-draft persistence).
+ * cross-cuts with (form-draft persistence).
  *
  * **Open mode**: when there is no auth provider configured the hook
  * reports `mode === 'open'` and this component renders nothing.

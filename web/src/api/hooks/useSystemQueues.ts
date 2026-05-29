@@ -1,14 +1,11 @@
-// Phase-46 / Prompt 41 — Job queue status hooks.
+// Job queue status hooks.
 //
-// Two read-only hooks live here:
+// useQueueStatus() polls /system/queues every 30s.
+// useQueueJobs(worker, { enabled }) fetches /system/queues/{worker}/jobs.
 //
-//   useQueueStatus()                     polls /system/queues every 30s
-//   useQueueJobs(worker, { enabled })    fetches /system/queues/{worker}/jobs
-//
-// Both follow the Prompt-53 "pause polling when hidden" contract via
-// TanStack's built-in refetchIntervalInBackground:false. The drawer
-// hook accepts an `enabled` flag so the per-worker job list only
-// fetches when the drawer is open.
+// Polling pauses while the tab is hidden via TanStack Query's
+// refetchIntervalInBackground:false. The drawer hook accepts an `enabled` flag
+// so per-worker jobs only fetch when the drawer is open.
 
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 

@@ -1,5 +1,5 @@
 /**
- * useDeferredFilter — Phase-46 / Prompt 18 unit tests.
+ * useDeferredFilter unit tests.
  *
  * Validates the hook contract: setValue updates `value` synchronously,
  * `deferred` catches up after React commits, the setter is reference-

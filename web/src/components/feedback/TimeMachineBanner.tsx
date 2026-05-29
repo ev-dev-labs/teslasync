@@ -7,7 +7,7 @@ import { useAsOfDate } from '@/hooks/useAsOfDate'
 import { formatDateTime, toLocalDatetimeStr } from '@/lib/dateFormat'
 
 /**
- * Phase-46 / Prompt 64 — global "viewing data as of …" banner.
+ * Global "viewing data as of …" banner.
  *
  * Visible whenever the SPA is operating in time-machine mode (ie. the
  * `?as_of=` URL query parameter is set to a valid RFC 3339 timestamp).

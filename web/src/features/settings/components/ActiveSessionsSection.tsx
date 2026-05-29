@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 42 — Active sessions / device management.
+ * Active sessions / device management.
  *
  * Renders a single GlassPanel under <section id="security"> on the
  * Settings page (mounted right after TOTPEnrollmentSection — both are
@@ -7,14 +7,14 @@
  *
  * Three render branches:
  *
- *   1. **Loading**   — spinner placeholder while the list query is in
+ *   1. **Loading** — spinner placeholder while the list query is in
  *      flight on first mount. We deliberately render the placeholder
  *      INSIDE the panel chrome (rather than hiding it) so the layout
  *      doesn't reflow when data arrives.
  *
  *   2. **Open mode** — backend returned 501 AUTH_MODE_OPEN. Mirrors
  *      what <RequiresAuth capability="session_list"> will render once
- *      prompt 57 ships; for now we inline the placeholder so the
+ *      the capability wrapper ships; for now we inline the placeholder so the
  *      Settings page works without it.
  *
  *   3. **Forward-auth** — DataTable of sessions plus per-row
@@ -123,7 +123,7 @@ export function ActiveSessionsSection() {
   // ── Open mode placeholder ───────────────────────────────────────
   // Mirrors the inline placeholder TOTPEnrollmentSection renders;
   // both will collapse to <RequiresAuth capability="..."> once
-  // prompt 57 ships.
+  // the capability wrapper ships.
   if (!sessions.data || sessions.data.mode === 'open') {
     return (
       <FadeIn delay={0.05}>

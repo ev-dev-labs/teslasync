@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 47 — Draft index for crash recovery.
+ * Draft index for crash recovery.
  *
  * Tracks every active `useFormDraft` envelope so that {@link
  * DraftRestorePrompt} can surface unsaved work after a tab close, browser
@@ -42,9 +42,8 @@
  * valuable whether the page is migrated or not. {@link getDrafts} therefore
  * also scans `localStorage` for any envelope matching the
  * `teslasync:draft:v*:*` prefix and synthesises an entry for unregistered
- * envelopes via {@link FALLBACK_RULES}. This mirrors the Blocked Path in
- * the prompt spec — "ship a parallel registry from inside DraftRestorePrompt
- * that tails localStorage keys matching a known prefix".
+ * envelopes via {@link FALLBACK_RULES}. This keeps recovery working by
+ * tailing localStorage keys that match the known draft prefix.
  */
 
 /** Versioned localStorage slot for the index. Bump to invalidate cleanly. */
@@ -307,8 +306,7 @@ export function getDrafts(): DraftEntry[] {
     }
   }
 
-  // 2. Scan localStorage for unregistered envelopes (the Blocked-Path
-  //    parallel registry from inside the prompt spec).
+  // 2. Scan localStorage for unregistered envelopes.
   let total = 0
   try { total = storage.length } catch { /* ignore */ }
   for (let i = 0; i < total; i += 1) {

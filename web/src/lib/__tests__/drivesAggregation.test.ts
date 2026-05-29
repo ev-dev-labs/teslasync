@@ -50,7 +50,7 @@ function makeDrive(overrides: Partial<Drive> = {}): Drive {
 describe('getEfficiency', () => {
   it('returns Wh/km when battery delta and distance are positive', () => {
     const eff = getEfficiency(makeDrive());
-    // (4 * 0.75 * 1000) / 16 = 187.5
+    // (4 * 0.75 * 1000) = 187.5
     expect(eff).toBeCloseTo(187.5, 1);
   });
 
@@ -107,8 +107,8 @@ describe('gradeFromNumeric', () => {
 describe('avgGrade', () => {
   it('averages mixed-grade drives', () => {
     const drives = [
-      makeDrive({ id: 1, startBatteryPct: 80, endBatteryPct: 75 }), // 234 Wh/km → D
-      makeDrive({ id: 2, startBatteryPct: 80, endBatteryPct: 78 }), // 93.75  → A+
+      makeDrive({ id: 1, startBatteryPct: 80, endBatteryPct: 75 }), // Wh/km → D
+      makeDrive({ id: 2, startBatteryPct: 80, endBatteryPct: 78 }), // 93.75 → A+
     ];
     const g = avgGrade(drives);
     expect(['B', 'C']).toContain(g.label); // mid-range
@@ -141,7 +141,7 @@ describe('computePeriodStats', () => {
 
   it('reports best (lowest) efficiency', () => {
     const drives = [
-      makeDrive({ id: 1, startBatteryPct: 80, endBatteryPct: 75 }), // 234
+      makeDrive({ id: 1, startBatteryPct: 80, endBatteryPct: 75 }), 
       makeDrive({ id: 2, startBatteryPct: 80, endBatteryPct: 78 }), // 93.75
     ];
     const stats = computePeriodStats(drives);
@@ -209,7 +209,7 @@ describe('detectAnomalies', () => {
   it('finds drives with grade D', () => {
     const drives = [
       makeDrive({ id: 1, startBatteryPct: 80, endBatteryPct: 78 }), // A+
-      makeDrive({ id: 2, startBatteryPct: 80, endBatteryPct: 75 }), // D (234)
+      makeDrive({ id: 2, startBatteryPct: 80, endBatteryPct: 75 }), // D 
     ];
     const out = detectAnomalies(drives);
     expect(out).toHaveLength(1);
@@ -382,7 +382,7 @@ describe('localDayKey', () => {
   });
 
   it('respects an explicit IANA timezone override', () => {
-    // 2026-04-25 02:30 UTC → 2026-04-24 (LA) and 2026-04-25 (Tokyo).
+    // 04-25 02:30 UTC → 2026-04-24 (LA) and 2026-04-25 (Tokyo).
     // Using a `tz` arg lets the page anchor "what day is this drive?"
     // to the *vehicle's* zone instead of the browser's local zone, so
     // late-night drives don't slip into the next day on the chart.

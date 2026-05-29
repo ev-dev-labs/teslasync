@@ -1,7 +1,7 @@
-// Phase-50 / 0058 — PU2 Natural-language Grafana panel.
+// Natural-language Grafana panel.
 //
-// `TestNLGrafanaPanelAIOffManualEditorWorks` is the slice's load-
-// bearing AI-OFF contract proof on the React side. It mounts the
+// `TestNLGrafanaPanelAIOffManualEditorWorks` is the React-side AI-OFF
+// contract proof. It mounts the
 // AINLGrafanaPanel component with ai_mode='off' (plus the per-
 // feature toggle on, to defeat the obvious "off because nothing
 // is enabled" path) and asserts:
@@ -38,9 +38,8 @@
 // network layer does not exist in the React unit-test scope.
 //
 // File name MUST stay `TestNLGrafanaPanelAIOffManualEditorWorks.test.tsx`
-// — the slice prompt's verification command runs
-// `vitest --run TestNLGrafanaPanelAIOffManualEditorWorks`,
-// where the positional pattern is matched against the file PATH.
+// because `vitest --run TestNLGrafanaPanelAIOffManualEditorWorks`
+// matches the positional pattern against the file path.
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';

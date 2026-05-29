@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 56 — `<FullscreenButton>` primitive.
+ * `<FullscreenButton>` primitive.
  *
  * Wraps the browser Fullscreen API (`requestFullscreen` /
  * `exitFullscreen` / `fullscreenchange`) behind a small reusable
@@ -88,7 +88,7 @@ function readFullscreenElement(): Element | null {
 }
 
 /**
- * Phase-46 / Prompt 56 — `<FullscreenButton>`.
+ * `<FullscreenButton>`.
  *
  * Renders a single ghost icon-button that toggles the browser
  * fullscreen state on `targetRef.current`. See module doc for the

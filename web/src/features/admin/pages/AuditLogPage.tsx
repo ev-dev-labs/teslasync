@@ -1,5 +1,5 @@
 /**
- * Audit Log Page — Phase-45 admin observability surface.
+ * Audit-log browser and hash-chain verification surface.
  *
  * Filtered audit-log browser plus a "Verify chain" action that
  * re-derives the SHA-256 hash chain server-side. Filters are

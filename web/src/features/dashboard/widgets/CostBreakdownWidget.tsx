@@ -73,7 +73,7 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
 
   const isCompact = size.cols <= 1;
 
-  // Phase-40 / Prompt 60 — series colours from active theme.
+  // series colours from active theme.
   const palette = useThemeChartPalette();
 
   const monthlyEntries = useMemo(() => data?.monthly_breakdown ?? [], [data]);

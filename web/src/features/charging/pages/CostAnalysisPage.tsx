@@ -41,7 +41,7 @@ export default function CostAnalysisPage() {
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
-  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  // Header VehiclePicker is the source of truth.
   const { vehicleId } = useSelectedVehicle();
 
   // ── Filters ──────────────────────────────────────────────────────────

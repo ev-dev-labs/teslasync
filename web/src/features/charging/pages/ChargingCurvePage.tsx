@@ -144,7 +144,7 @@ export default function ChargingCurvePage() {
             </p>
           </GlassPanel>
 
-          {/* AI charging-curve fingerprint cluster narrator (Phase-50 / 0028).
+          {/* AI charging-curve fingerprint cluster narrator.
               Rendered inside the empty-data branch as well so the section is
               present whenever the per-feature toggle is on; the inner Explain
               button stays disabled until a vehicle is in scope. */}
@@ -152,9 +152,9 @@ export default function ChargingCurvePage() {
             <AIChargingCurveFingerprintClustering vehicleId={vehicleId ?? undefined} />
           </FadeIn>
 
-          {/* ML3 charging-curve clustering statistical model narrator
-              (Phase-50 / 0064). Independent per-feature toggle from the
-              C3 narrator above; both can be enabled together. The inner
+          {/* ML charging-curve clustering statistical model narrator.
+              Independent per-feature toggle from the curve narrator above;
+              both can be enabled together. The inner
               Train button stays disabled until a vehicle is in scope. */}
           <FadeIn delay={0.07}>
             <AIMLChargingCurveClustering vehicleId={vehicleId ?? undefined} />
@@ -184,17 +184,17 @@ export default function ChargingCurvePage() {
       }
     >
       <div className="space-y-6">
-        {/* AI charging-curve fingerprint cluster narrator (Phase-50 / 0028).
+        {/* AI charging-curve fingerprint cluster narrator.
             Rendered above the deterministic charts so the user sees the
             opt-in narrative section without scrolling; the deterministic
-            curves below remain the canonical view per ADR-015 §I3. */}
+            curves below remain the canonical view. */}
         <FadeIn delay={0.05}>
           <AIChargingCurveFingerprintClustering vehicleId={vehicleId ?? undefined} />
         </FadeIn>
 
-        {/* ML3 charging-curve clustering statistical model narrator
-            (Phase-50 / 0064). Sibling to the C3 narrator above with an
-            independent per-feature toggle; both can be enabled together
+        {/* ML charging-curve clustering statistical model narrator.
+            Sibling to the curve narrator above with an independent
+            per-feature toggle; both can be enabled together
             and render adjacent narrative sections without scrolling. */}
         <FadeIn delay={0.07}>
           <AIMLChargingCurveClustering vehicleId={vehicleId ?? undefined} />

@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 26 — unitInput helper tests.
+ * unitInput helper tests.
  *
  * Covers parseForUnit / formatForUnit / unitSymbol across all six
  * UnitKind values, locale-aware separator handling, suffix stripping,

@@ -1,5 +1,5 @@
 /**
- * ActiveFilterChips — Phase-46 / Prompt 06 unit tests.
+ * ActiveFilterChips unit tests.
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';

@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 26 — Unit input parser/formatter/symbol helpers.
+ * Unit input parser/formatter/symbol helpers.
  *
  * Pure helpers for the shared <UnitInput> primitive. Two directions:
  *

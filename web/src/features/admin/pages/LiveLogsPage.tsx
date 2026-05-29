@@ -1,4 +1,4 @@
-// LiveLogsPage — Phase-46 / Prompt 34
+// LiveLogsPage
 //
 // Operator-facing live log tail. Streams the API server's structured
 // zerolog events via the SSE endpoint at GET /admin/logs/stream (see

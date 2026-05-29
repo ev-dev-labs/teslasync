@@ -38,8 +38,7 @@ import type { SharedDriveData, SharedDriveDataV1 } from '@/types/sharing';
 
 // Kilometres-per-mile factor, used inline to convert Wh/km → Wh/mi for
 // users on imperial preference (no SI helper exists for energy-per-distance
-// efficiency yet — same precedent as Phase-43/0025 FleetComparePage and
-// /0027 TemperatureImpactPage).
+// efficiency yet).
 const KM_PER_MILE = 1.609344;
 
 // Metres-per-foot factor, used inline to convert SI-meter elevations to

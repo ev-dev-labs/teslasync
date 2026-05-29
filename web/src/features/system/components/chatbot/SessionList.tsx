@@ -23,11 +23,10 @@ interface SessionListProps {
  *
  * Behaviors:
  *   - "New chat" button always visible at the top.
- *   - Active session gets a highlighted surface (design-token surface from
- *     Prompt 09).
+ *   - Active session gets a highlighted surface.
  *   - Double-click a row title → inline rename (Enter saves, Esc cancels).
  *   - Delete button → ConfirmDialog before mutating.
- *   - Empty state via the shared `<EmptyState>` (Prompt 12 baseline).
+ *   - Empty state via the shared `<EmptyState>`.
  */
 export function SessionList({
   sessions,

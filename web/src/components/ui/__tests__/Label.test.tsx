@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 25 — Label primitive unit tests.
+ * Label primitive unit tests.
  *
  * Locks in the contract:
  *   1. Renders an HTML <label> with htmlFor wiring.

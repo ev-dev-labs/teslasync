@@ -1,8 +1,6 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering
-// statistical model.
+// ML charging-curve fingerprint clustering statistical model.
 //
-// `TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly` (the
-// Vitest sibling to the Go test of the same name) is the slice's
+// `TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly` is the
 // load-bearing AI-OFF contract proof on the React side. It mounts
 // the AIMLChargingCurveClustering component with ai_mode='off'
 // (plus the per-feature toggle on, to defeat the obvious "off
@@ -26,10 +24,10 @@
 // charts + rule-based session labels regardless of this AI
 // section's visibility.
 //
-// Sibling distinction: this test is INDEPENDENT of the C3
+// Sibling distinction: this test is independent of the
 // `TestChargingCurveClusteringAIOffShowsChartsOnly` test; both
-// the C3 narrator (charging-curve-fingerprint-clustering) and
-// the ML3 trainer-narrator (ml-charging-curve-clustering)
+// the charging-curve-fingerprint-clustering narrator and
+// the ml-charging-curve-clustering trainer-narrator
 // coexist on /charging/curves with independent toggles. This
 // test ONLY toggles the ML3 feature; the C3 toggle is left
 // implicitly off so a regression that conflates the two surfaces
@@ -38,7 +36,7 @@
 //
 // File name MUST stay
 // `TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly.test.tsx`
-// — the slice prompt's verification command runs
+// — the targeted verification command runs
 // `vitest --run TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly`,
 // where the positional pattern is matched against the file PATH.
 
@@ -91,7 +89,7 @@ describe('TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly (ml-charging-curv
     // The toggle is intentionally set to true to defeat the
     // shortcut path "the section hides because the feature flag is
     // off". The mode='off' check MUST trump the per-feature toggle
-    // (ADR-015 §I7).
+    // and proves that off mode wins over the per-feature toggle.
     //
     // The vehicleId prop is also intentionally set so the
     // absent-in-DOM assertion proves that the gate (not a missing
@@ -116,7 +114,7 @@ describe('TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly (ml-charging-curv
   it('TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly: renders nothing when ai_mode is non-off but the ml-charging-curve-clustering toggle is false', () => {
     // The other half of the gate: even with mode='cloud', a
     // toggle=false MUST hide the surface (per-feature opt-in,
-    // ADR-015 §I7).
+    // proving per-feature opt-in.
     mockUseSettings.mockReturnValue(
       settingsPayload({
         ai_mode: 'cloud',

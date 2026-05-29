@@ -11,7 +11,7 @@ import type { DrivePosition } from '@/types/driving';
  * the position index — the scrubber works in time space so the ticks line up
  * with the playhead even when telemetry sampling is uneven.
  *
- * Phase-40 / Prompt 57.
+ * Replay marker helpers.
  */
 export type ReplayMarkerKind =
   | 'start'

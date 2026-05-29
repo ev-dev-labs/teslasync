@@ -1,9 +1,9 @@
 /**
- * Phase-2 / Status API — incidents client + React Query hooks.
+ * Incidents client and React Query hooks.
  *
  * Backs the incidents block on /system-status and the per-incident
- * post-mortem page. Mutations invalidate the same cache key the list
- * hook reads so the UI stays consistent.
+ * post-mortem page. Mutations invalidate the list cache key so the UI stays
+ * consistent after writes.
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'

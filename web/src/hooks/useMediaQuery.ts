@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Phase-45 / Prompt 14 — Mobile responsive audit.
- *
  * Reactive `window.matchMedia()` hook. Returns the current match state for
  * a CSS media query, and re-renders whenever the match state flips
  * (e.g. the user rotates their phone, resizes the window, or attaches an

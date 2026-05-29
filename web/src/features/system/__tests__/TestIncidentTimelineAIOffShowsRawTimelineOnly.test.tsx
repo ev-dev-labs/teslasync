@@ -1,45 +1,13 @@
-// Phase-50 / 0042 — S1 Incident timeline summarizer.
+// React-side AI-off contract for the incident timeline summarizer. The test
+// verifies the AI section is absent when ai_mode='off', then uses cloud mode
+// with the feature toggle enabled as a positive control for the gate.
 //
-// `TestIncidentTimelineAIOffShowsRawTimelineOnly` is the slice's
-// load-bearing AI-OFF contract proof on the React side. It mounts
-// the AIIncidentTimelineSummarizer component with ai_mode='off'
-// (plus the per-feature toggle on, to defeat the obvious "off
-// because nothing is enabled" path) and asserts:
+// It also mounts the full IncidentTimelinePage in off mode to prove the raw
+// incident header, chronological updates, and append-update form still render
+// without the AI surface. The backend test covers the 404-off-mode route
+// behavior.
 //
-//   1. The AI section's rooted test ID is absent from the DOM.
-//   2. The wrapper renders no children (empty container).
-//   3. With ai_mode='cloud' AND incident-timeline-summarizer=true,
-//      the section IS present + carries the expected test ID. This
-//      is the positive control that proves the gate actually works
-//      (otherwise the "absent in off mode" assertion is trivially
-//      true).
-//   4. The mode='cloud' path with toggle=false also hides the
-//      section — per-feature opt-in (ADR-015 §I7).
-//
-// In addition, this file mounts the FULL IncidentTimelinePage in
-// off mode and asserts the deterministic raw timeline still
-// renders — proving the AI surface's absence does NOT regress the
-// canonical baseline (ADR-015 §I3 + the prompt's explicit
-// "baseline behaviour still works" gate). The rendered timeline
-// MUST show:
-//
-//   - The incident header (title, severity, status badge,
-//     duration).
-//   - The chronological timeline of updates with their author /
-//     status / message.
-//   - The append-update form (when the incident is open).
-//
-// The HTTP POST /api/v1/ai/system/incidents/{incidentID}/summarize
-// 404-in-off-mode invariant is proven by the Go-side
-// TestIncidentTimelineAIOffShowsRawTimelineOnly in
-// internal/api/ai_incident_timeline_summarizer_handler_test.go —
-// the network layer does not exist in the React unit-test scope.
-//
-// File name MUST stay
-// `TestIncidentTimelineAIOffShowsRawTimelineOnly.test.tsx`
-// — the slice prompt's verification command runs
-// `vitest --run TestIncidentTimelineAIOffShowsRawTimelineOnly`,
-// where the positional pattern is matched against the file PATH.
+// Keep this filename stable because targeted Vitest runs match it by path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';

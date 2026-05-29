@@ -2,21 +2,14 @@ import { createContext, useContext, type ReactNode } from 'react';
 import { useHiddenSeries, type HiddenSeriesState } from '@/hooks/useHiddenSeries';
 
 /**
- * Phase-46 / Prompt 67 — context bridge so `<ChartLegend />` and any
- * descendant component inside a `<ChartContainer chartKey="…">` can pull
- * the URL-persisted hidden-series state without prop-drilling.
+ * Context bridge for URL-persisted hidden-series state inside a
+ * `<ChartContainer chartKey="…">`, avoiding prop drilling to legends.
  *
- * Default value is `null` so consumers (e.g. `<ChartLegend />` without an
- * explicit `state` prop) can branch on "no chartKey wired" and fall back
- * to a no-op render.
+ * `null` means the chart did not opt into legend toggling.
  */
 export const ChartHiddenSeriesContext = createContext<HiddenSeriesState | null>(null);
 
-/**
- * Hook variant of {@link ChartHiddenSeriesContext} for components that
- * sit inside a `<ChartContainer chartKey="…">`. Returns `null` when the
- * surrounding container did not opt into legend toggling.
- */
+/** Reads hidden-series state from the nearest chart container, or `null`. */
 export function useChartHiddenSeries(): HiddenSeriesState | null {
   return useContext(ChartHiddenSeriesContext);
 }

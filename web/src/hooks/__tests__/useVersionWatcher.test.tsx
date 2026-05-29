@@ -2,8 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 /**
- * Phase-45 / Prompt 11 — useVersionWatcher contract.
- *
+ * useVersionWatcher contract.
  * Behaviours under test:
  *   1. On mount, captures the boot version exactly once.
  *   2. Periodic poll surfaces a divergent backend version as

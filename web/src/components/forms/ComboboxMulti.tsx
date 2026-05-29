@@ -1,18 +1,15 @@
 /**
- * Phase-46 / Prompt 14 — WAI-ARIA multi-select combobox primitive.
- *
+ * WAI-ARIA multi-select combobox primitive.
  * Variant of {@link Combobox} where the value is an array. Selected
  * options render as removable chips inside the field. The text input
  * always represents "what to filter / add next" — never an active
  * selection that hasn't been committed yet.
- *
  * a11y contract
  * -------------
  * Same as Combobox plus `aria-multiselectable="true"` on the listbox.
  * Each chip's remove button has an explicit `aria-label="Remove
  * {{label}}"`. Pressing Backspace at an empty input removes the last
  * chip — a discoverability win for keyboard-only users.
- *
  * The dropdown ALWAYS hides options that are already in `value`, so
  * the user never sees the same row twice.
  */

@@ -17,7 +17,7 @@ import type {
   FeedbackStatus,
 } from '@/api/types'
 
-// Phase-46 / Prompt 08 — admin feedback queue page.
+// admin feedback queue page.
 //
 // Lists user_feedback rows with filter (status, category) + paged.
 // Row click expands to show body + recent_errors JSON. Inline actions:
@@ -399,7 +399,7 @@ function FeedbackExpansion({ row, bridgeEnabled, onUpdate, updating }: FeedbackE
         )}
       </div>
 
-      {/* Phase-50 / 0046 — S5 Feedback queue triage AI advisor.
+      {/* Feedback queue triage AI advisor.
           Renders only when ai_mode is on AND the feedback-queue-triage
           toggle is enabled. Propose-only: never persists; the manual
           controls above remain the sole write path (ADR-015 §I3 + §I8). */}

@@ -1,10 +1,8 @@
 /**
  * LiveSignalTail — scrolling DataTable of incoming SSE signal events.
- *
  * Pure-render component. The underlying state (entries, paused, rate) is
  * owned by `useLiveSignalStream` so callers can place the tail anywhere
  * without coupling the SSE subscription to the panel.
- *
  * Used by:
  *   - LiveSignalMonitorPage  (full-page tail)
  *   - SignalsWorkspacePage   (tail under the chart in Live mode)

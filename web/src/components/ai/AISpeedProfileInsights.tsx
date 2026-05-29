@@ -1,5 +1,5 @@
-// Phase-50 / 0022 — D2 Speed-profile insights.
-// Phase-50 / W1 (slice 0065) — wired the Generate button to
+// Speed-profile insights.
+// Wires the Generate button to
 // POST /api/v1/ai/drives/{driveID}/speed-profile/insights.
 
 import { useMemo } from 'react'

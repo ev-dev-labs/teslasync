@@ -25,9 +25,9 @@ import { FormatterPrefsBridge } from '@/components/FormatterPrefsBridge'
 import { invalidateAndBroadcast, __flushQueryBroadcastForTests } from '@/lib/queryBroadcast'
 
 /**
- * Phase-45 / Prompt 06 — broadcast propagation contract.
+ * Settings broadcast propagation contract.
  *
- * The prompt's user-facing bug ("had to refresh the page after changing
+ * The user-facing bug ("had to refresh the page after changing
  * the car color") is rooted in the fact that mutating settings on one
  * tab did not propagate to:
  *   1. dependent queries on the SAME tab (now handled by

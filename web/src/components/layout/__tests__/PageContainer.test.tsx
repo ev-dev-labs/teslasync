@@ -59,7 +59,7 @@ describe('PageContainer', () => {
     expect(screen.getByText('body')).toBeInTheDocument();
   });
 
-  // ── Phase-45 / Prompt 19 — page-tier DataFreshnessAuto wiring ───────
+  // ── page-tier DataFreshnessAuto wiring ───────
 
   it('mounts <DataFreshnessAuto> in the header when a query prop is provided', () => {
     const query = makeQuery();

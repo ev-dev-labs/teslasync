@@ -75,18 +75,15 @@ export const notificationKeys = {
   logs: ['notification-logs'] as const,
   logsFiltered: (filters?: NotificationFilters) =>
     ['notification-logs', 'filtered', filters ?? {}] as const,
-  // Phase-46 / Prompt 27 — grouped/threaded inbox. Sibling of `logsFiltered`
-  // so a same-filter swap between flat and grouped views doesn't fight the
-  // cache. Members of a single group reuse `logsFiltered` keyed on
-  // `{ group_key }` so the expand-row payload is automatically deduped
-  // with any concurrent flat-list query that targeted the same group.
+  // Grouped/threaded inbox cache sits beside `logsFiltered` so a
+  // same-filter swap between flat and grouped views doesn't fight the cache.
+  // Members of a single group reuse `logsFiltered` keyed on `{ group_key }`
+  // so expand-row payloads dedupe with matching flat-list queries.
   groups: (filters?: NotificationFilters) =>
     ['notification-logs', 'groups', filters ?? {}] as const,
-  // Phase-46 / Prompt 28 — header bell popover preview list. Sibling
-  // of `logsFiltered` keyed only by `limit` so every Layout mount on
-  // every page reuses the same cache entry. Sits under the
-  // `notification-logs` prefix so the bulk mark-read invalidation in
-  // `invalidateLogsAndUnread` cascades into it without bespoke wiring.
+  // Bell preview cache is keyed only by `limit` so every Layout mount
+  // reuses the same entry. It sits under the `notification-logs` prefix so
+  // bulk mark-read invalidation cascades into it without bespoke wiring.
   bellUnread: (limit: number) => ['notification-logs', 'bell-unread', limit] as const,
   unreadCount: ['notification-logs', 'unread-count'] as const,
   stats: ['notification-stats'] as const,
@@ -106,9 +103,8 @@ export interface NotificationFilters {
   read?: boolean;
   archived?: boolean;
   q?: string;
-  // Phase-46 / Prompt 27 — when set, restricts the flat list to members
-  // of a single notification thread. The backend validates this is a
-  // 64-char lower-hex sha256 and 400s otherwise.
+  // Restricts the flat list to one notification thread. The backend
+  // validates this as a 64-char lower-hex sha256 and returns 400 otherwise.
   group_key?: string;
   limit?: number;
   offset?: number;
@@ -168,7 +164,7 @@ export function useMarkAlertRead() {
   });
 }
 
-// ─── Phase-46 / Prompt 20 — alert ack + audit timeline ──────────────────────
+// Alert acknowledgement and audit timeline.
 
 /**
  * useAlertDetail fetches a single alert with its full event timeline. Used by
@@ -430,8 +426,8 @@ export function useToggleAlertRule() {
 }
 
 /**
- * Bulk enable alert rules. Phase-40 / Prompt 51 — accepts a list of rule
- * ids and returns the standardized BulkOperationResult envelope.
+ * Bulk enable alert rules. Accepts rule ids and returns the standardized
+ * BulkOperationResult envelope.
  */
 export function useBulkEnableRules() {
   const qc = useQueryClient();
@@ -540,7 +536,7 @@ export function useNotificationLogs(
 }
 
 /**
- * Phase-46 / Prompt 27 — fetch the inbox in grouped/threaded form.
+ * Fetches the inbox in grouped/threaded form.
  *
  * Server returns one row per `(alert_rule_id, severity)` thread plus one
  * row per "singleton" (notifications without a derivable group_key). The
@@ -570,7 +566,7 @@ export function useNotificationGroups(
 }
 
 /**
- * Phase-46 / Prompt 27 — fetch the members of a single thread on expand.
+ * Fetches the members of a single thread on expand.
  *
  * Reuses the flat list endpoint with `?group_key=…` so the response shape
  * matches `useNotificationLogs` exactly and inline-render code paths can
@@ -612,13 +608,12 @@ export function useUnreadCount() {
 }
 
 /**
- * Phase-46 / Prompt 28 — header bell popover preview list.
+ * Header bell popover preview list.
  *
  * Returns the latest N unread, non-archived notifications for the bell
  * popover's in-place triage panel. Backend filters via
- * `read=false&archived=false` — there is NO `unread_only=true` flag in
- * `parseNotificationLogFilters`, that name was a doc-level shorthand
- * in the prompt that doesn't match the actual route surface.
+ * `read=false&archived=false`; there is NO `unread_only=true` flag in
+ * `parseNotificationLogFilters`.
  *
  * Cache key sits under the shared `notification-logs` prefix so the
  * post-mutation invalidations in `invalidateLogsAndUnread` (and the
@@ -692,13 +687,13 @@ export function useMarkNotificationsRead() {
 }
 
 /**
- * Phase-45 / 28 — bulk-mark-read with optional whole-inbox flag.
+ * Bulk mark-read with optional whole-inbox or thread flags.
  *
  * Variants accepted (mirrors the relaxed backend contract; mutually exclusive):
  *
  *   { ids: number[] }       → mark exactly those rows as read.
  *   { all: true }           → mark every currently-unread, non-archived row as read.
- *   { group_key: string }   → (Phase-46/27) mark every member of a thread as read.
+ *   { group_key: string }   → mark every member of a thread as read.
  *
  * Differs from `useMarkNotificationsRead` in three ways:
  *   1. Accepts `{ ids? | all? | group_key? }` — needed so the page can wire one
@@ -971,7 +966,7 @@ export function useTestChannel() {
   });
 }
 
-// === Phase-46 / Prompt 19 — Quiet hours / DND ===========================
+// Quiet hours / DND.
 //
 // Server-backed CRUD for per-user Do-Not-Disturb windows. The dispatcher
 // consults the active windows on every notification and defers anything

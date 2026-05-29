@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { broadcast, subscribe, type BroadcastMessage } from './broadcast'
 
 /**
- * Phase-40 / Prompt 69 — small reusable hook for the §7 pattern:
+ * Reusable hook for cross-tab localStorage sync:
  *
  *   "feature writes a localStorage value, broadcasts a one-line message,
  *    other tabs subscribe to the message and re-read the value"

@@ -1,5 +1,5 @@
 /**
- * Phase-45 / Prompt 28 — useBulkMarkRead hook tests.
+ * useBulkMarkRead hook tests.
  *
  * Covers the relaxed `{ ids?, all? }` contract:
  *   1. Calling with `ids` posts to /notifications/mark-read with the id list.

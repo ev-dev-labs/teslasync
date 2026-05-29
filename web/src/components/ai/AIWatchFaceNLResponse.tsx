@@ -1,4 +1,4 @@
-// Phase-50 / 0056 — V2 Helix watch face natural-language response.
+// Watch-face natural-language response AI surface.
 //
 // AIWatchFaceNLResponse is the visible AI surface for the /watch
 // page. It is rendered conditionally via
@@ -21,17 +21,16 @@
 // when AI is off); this Helix panel is opt-in read-only
 // narration layered alongside.
 //
-// W1 inline wiring (P11/P12 — Wired-or-absent, No-placeholder-buttons):
+// Wiring contract:
 //   - useAiStream targets POST /ai/watch/respond (the backend
 //     path after stripping the /api/v1 prefix; the hook
-//     prepends it). Slice 0056 V2 registers POST
-//     /api/v1/ai/watch/respond in the feature registry; the
-//     route is guard-wrapped by
+//     prepends it). POST /api/v1/ai/watch/respond is registered
+//     in the feature registry and guard-wrapped by
 //     guard.Wrap('watch-face-nl-response') in
 //     internal/api/ai_routes.go.
 //   - The Ask button's disabled prop is a COMPUTED expression
 //     (`!canStart || streaming || paused-confirm`), never a
-//     literal `disabled` or `disabled={true}` (Rule W1-A).
+//     literal `disabled` or `disabled={true}`.
 //   - Render contract is NARRATIVE: the strategy emits delta
 //     events that the shared AiOutputPanel (rendered by
 //     AIFeatureCard) appends to the displayed output. There is
@@ -45,7 +44,7 @@
 //     machine.
 //   - cancel() runs on unmount via a dedicated useEffect so an
 //     in-flight stream does not bleed into a subsequent mount
-//     of the panel (Rule of Hooks / W1 §6).
+//     of the panel.
 //
 // HX (Helix UX) contract:
 //   - The surface renders through the shared AIFeatureCard

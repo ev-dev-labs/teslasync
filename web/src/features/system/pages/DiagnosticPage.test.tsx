@@ -1,5 +1,5 @@
 /**
- * DiagnosticPage — Phase-46 / Prompt 33 contract tests.
+ * DiagnosticPage contract tests.
  *
  * Covers:
  *   1. Empty state on first mount; "Run diagnostic" button is wired.

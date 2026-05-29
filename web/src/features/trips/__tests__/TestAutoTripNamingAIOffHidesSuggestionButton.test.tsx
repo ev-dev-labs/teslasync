@@ -1,8 +1,8 @@
-// Phase-50 / 0024 — D4 Auto trip naming.
+// Auto trip naming AI-off contract tests.
 //
 // `TestAutoTripNamingAIOffHidesSuggestionButton` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
+// to the Go test of the same name) is the React-side AI-off
+// contract proof. It mounts the
 // AIAutoTripNameSuggestion component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because nothing
 // is enabled" path) and asserts:

@@ -1,6 +1,3 @@
-// Phase-50 / 0011 — U1 Chatbot LLM upgrade.
-// Phase-50 / W1 (slice 0065) — wiring contract finalized.
-//
 // AIChatbotIndicator is the visible AI surface for the chatbot page.
 // It is rendered conditionally via withAiFeature('chatbot-llm', …) so:
 //

@@ -7,7 +7,7 @@ import {
 } from '@/lib/broadcast'
 
 /**
- * Phase-46 / Prompt 66 — Two-tab edit conflict detection.
+ * Two-tab edit conflict detection.
  *
  * `useEditLease` coordinates "I am editing X" between browser tabs of the
  * same origin so that a tab opening a stale view of a shared resource can

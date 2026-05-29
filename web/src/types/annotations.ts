@@ -25,7 +25,7 @@ export type AnnotationCategory =
   | 'custom';
 
 /**
- * Phase 40 / Prompt 43 — annotations are now scoped to chart "buckets" so the
+ * Annotations are scoped to chart "buckets" so the
  * same row can appear on every chart that opts into a bucket. Keep this union
  * in sync with `validScopeBuckets` in
  * `internal/api/chart_annotation_handler.go`.

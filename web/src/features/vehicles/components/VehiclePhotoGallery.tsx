@@ -1,25 +1,13 @@
 /**
- * Phase-46 / Prompt 39 — Vehicle photo gallery + Lightbox adoption.
+ * Thin wrapper around the shared Lightbox component while upload support is
+ * pending. Fleet image records (`image_url`, `angle`) are normalized here for
+ * the shared lightbox.
  *
- * The TeslaSync data model does not yet ship per-vehicle photos
- * (the schema is targeted by a future prompt — see "Out of scope"
- * in phase-46/39). This component is the integration surface that
- * proves the shared `<Lightbox>` primitive composes cleanly:
- *
- *   - When `photos` is empty, render a placeholder card prompting
- *     the user to upload images later. The placeholder is a regular
- *     visual region (not an `<EmptyState>`) so the empty-state-CTA
- *     audit doesn't demand an action prop here — uploads are
- *     deferred to the manual-upload prompt.
- *   - When photos are present, render a responsive thumbnail grid.
- *     Each thumbnail is a button; clicking opens the Lightbox with
- *     the corresponding initial index.
- *
- * Mounting on `VehicleDetailPage` is intentionally NOT done in this
- * prompt — that page is outside the prompt's allowed-files regex.
- * Wiring will land alongside the photo-upload backend slice.
+ * Contract:
+ *   - Empty photos render a placeholder card, not a blank box.
+ *   - Existing photos render a hero image, angle labels, and open the lightbox.
+ *   - Upload mutations stay out of this display-only component.
  */
-
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image as ImageIcon } from 'lucide-react';

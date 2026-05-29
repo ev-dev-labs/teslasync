@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 67 — useHiddenSeries hook tests.
+ * useHiddenSeries hook tests.
  *
  * Verifies the URL-state-backed hidden-series tracker:
  *   - default empty Set when no `?hidden_…` param present

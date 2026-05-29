@@ -1,16 +1,16 @@
-// Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
-// Phase-50 / W1 inline wiring (per slice prompt 0033) — on-mode
+// Tire-pressure trend reasoning.
+// Inline wiring — on-mode
 // wiring test proving the Narrate button opens an SSE stream
 // against the registered backend route POST
 // /api/v1/ai/tire-pressure/trends/explain.
-//
+
 // `TestTirePressureTrendReasoningAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0033's W1 inline
+// load-bearing positive wiring proof for the inline
 // addendum. It mounts the AITirePressureTrendReasoning component
 // with ai_mode='cloud' + the per-feature toggle on, stubs global
 // fetch with a deterministic SSE byte stream, clicks the Narrate
 // button, and asserts:
-//
+
 //   1. Exactly ONE POST against the registered backend route
 //      `${getApiBase()}/api/v1/ai/tire-pressure/trends/explain` is
 //      enqueued with `Content-Type: application/json` and a body
@@ -21,7 +21,7 @@
 //   2. The first `delta` event's text renders inside the
 //      AiOutputPanel inside the gated wrapper
 //      `data-testid="ai-feature-tire-pressure-trend-reasoning-root"`.
-//   3. A second click while `state === 'streaming'` is a no-op —
+//   3. A second click while `state === 'streaming'` is a no-op
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
 //      from canGenerate). This proves W1 Rule A — the disabled
@@ -32,7 +32,7 @@
 //      off-mode absence invariant. That assertion lives in the
 //      sibling file and is exercised independently by the npm
 //      test runner.
-//
+
 // The test name MUST stay
 // `TestTirePressureTrendReasoningAIOnWiredCallsRoute` per the W1
 // inline addendum naming contract.
@@ -149,7 +149,7 @@ describe('TestTirePressureTrendReasoningAIOnWiredCallsRoute (tire-pressure-trend
     render(<AITirePressureTrendReasoning vehicleId={42} />);
 
     // 1) The gated wrapper renders with the registered test ID
-    // — proves the on-mode positive control path.
+    // proves the on-mode positive control path.
     const root = screen.getByTestId('ai-feature-tire-pressure-trend-reasoning-root');
     expect(root).toBeInTheDocument();
     expect(root).toHaveAttribute('data-ai-feature', 'tire-pressure-trend-reasoning');
@@ -167,7 +167,7 @@ describe('TestTirePressureTrendReasoningAIOnWiredCallsRoute (tire-pressure-trend
     // route. fireEvent.click bypasses pointer-events behaviour;
     // @testing-library/user-event is intentionally NOT a
     // dependency of this codebase (see web/package.json), so we
-    // use fireEvent.click consistently across the slice tests.
+    // use fireEvent.click consistently across the related tests.
     await act(async () => {
       fireEvent.click(button);
     });
@@ -258,7 +258,7 @@ describe('TestTirePressureTrendReasoningAIOnWiredCallsRoute (tire-pressure-trend
   });
 
   it('TestTirePressureTrendReasoningAIOnWiredCallsRoute: Narrate button is disabled when no vehicleId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
+    // This test guards the wiring rule: the
     // primary action button's `disabled` prop MUST be a
     // computed expression (here: `!canGenerate`), not a literal
     // `disabled` / `disabled={true}`. We prove the dynamic

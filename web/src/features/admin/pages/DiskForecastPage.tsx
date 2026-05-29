@@ -1,5 +1,5 @@
 /**
- * Disk Forecast Page — Phase-45 admin observability surface.
+ * Disk Forecast page.
  *
  * Per-hypertable disk usage with compressed/uncompressed split,
  * growth rate (bytes/day), and an estimate of days-to-quota when the

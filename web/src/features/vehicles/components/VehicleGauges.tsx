@@ -21,8 +21,8 @@ const COLOR = {
 }
 
 /**
- * Phase-43 / Prompt 0020 — gauge upper bounds expressed in SI so the
- * RadialGauge percent fill reflects the same physical quantity regardless of
+ * Gauge upper bounds are expressed in SI so the RadialGauge percent fill
+ * reflects the same physical quantity regardless of
  * the user's display preference (km/h vs mph, km vs mi).
  *   600 mi  ≈ 965_606 m         — practical upper bound for rated range
  *   250 mph ≈ 111.76 m/s        — practical upper bound for vehicle speed

@@ -25,7 +25,7 @@ import {
 import type { SavedView } from '@/api/types';
 
 /**
- * Phase 40 / Prompt 50 — list-page affordance for "save this filter combo
+ * List-page affordance for "save this filter combo
  * and recall it later".
  *
  * Renders THREE coordinated UI elements as one piece:
@@ -40,10 +40,10 @@ import type { SavedView } from '@/api/types';
  *      unfiltered route.
  *
  * Behaviour notes:
- *   - On mount, when the URL has no querystring AND a default view exists
+ *   On mount, when the URL has no querystring AND a default view exists
  *     for this route, the default is auto-applied exactly once. A ref
  *     guards against re-applying after the user clears it manually.
- *   - The popover closes on outside click, on Escape, and after every
+ *   The popover closes on outside click, on Escape, and after every
  *     successful action (pin / set-default / rename / delete) so the
  *     menu doesn't linger after a destructive choice.
  */
@@ -86,7 +86,7 @@ export function SavedViewMenu({
   );
   const defaultView = useMemo(() => views.find((v) => v.is_default) ?? null, [views]);
 
-  // --- Auto-apply default on first mount when URL has no querystring ---
+  // -- Auto-apply default on first mount when URL has no querystring --
   // The ref guard ensures back-navigation that clears the URL doesn't
   // re-trigger the auto-apply (which would create an infinite loop with
   // the user's "clear filters" intent).
@@ -104,7 +104,7 @@ export function SavedViewMenu({
     onApply(defaultView.query);
   }, [defaultView, currentQuery, onApply]);
 
-  // --- Popover state ---
+  // -- Popover state --
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -124,13 +124,13 @@ export function SavedViewMenu({
     };
   }, [open]);
 
-  // --- Save / rename / delete dialogs ---
+  // -- Save / rename / delete dialogs --
   const [saveOpen, setSaveOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<SavedView | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<SavedView | null>(null);
 
-  // --- Handlers ---
+  // -- Handlers --
   const { announce } = useAnnouncer();
   const handleApply = (view: SavedView) => {
     onApply(view.query);

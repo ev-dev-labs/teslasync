@@ -16,10 +16,8 @@ interface PedalUsageProps {
 /**
  * Pedal telemetry (PedalPosition, BrakePedalPos, BrakePedal).
  *
- * Pre-Phase-42 these were stored in the `signal_observations` cold table
- * and read via the deprecated `useSignalObservations` hook. Phase-42
- * deleted both the table and the `/signals/observations` route, so
- * the old hook 404'd silently and this panel rendered a permanent
+ * These signals used to come from the removed `signal_observations` route;
+ * stale callers 404'd silently and left this panel in a permanent
  * "No pedal telemetry received yet" empty state.
  *
  * Today all 3 signals flow through per-field MQTT to the L1 live cache

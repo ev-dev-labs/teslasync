@@ -9,8 +9,7 @@
  * (i18n'd label, optional value formatter, the remover callback). The
  * hook drops empty / default values and returns descriptors in the same
  * iteration order as `config`.
- *
- * Phase-46 / Prompt 06.
+
  */
 
 import { useMemo } from 'react';

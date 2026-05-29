@@ -3,8 +3,8 @@ import { Button, Tooltip } from '@/components/ui';
 import { Icons } from '@/lib/icons';
 
 /**
- * Phase-45 / Prompt 25 — floating "+" button that opens the widget catalogue
- * dialog from any view of the dashboard.
+ * Floating "+" button that opens the widget catalogue dialog from any
+ * dashboard view.
  *
  * Visibility:
  * - Hidden when the dashboard is in edit mode (the existing `Add Widget`

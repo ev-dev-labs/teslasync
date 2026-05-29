@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 36 — Settings export/import hooks.
+// Settings export/import hooks.
 //
 // Three thin wrappers around `request()` that drive the
 // SettingsExportImport component:

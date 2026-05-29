@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 36 — SettingsExportImport tests.
+ * SettingsExportImport tests.
  *
  * Mocks `request` from @/api/client so we can assert the SPA hits the
  * correct endpoints with the correct payloads on each user action,

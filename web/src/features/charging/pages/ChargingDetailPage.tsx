@@ -63,7 +63,7 @@ function synthesizeCurve(session: ChargingSession): { soc: number; power: number
   return points;
 }
 
-/* ─── loading skeleton (Phase-45 / Prompt 18) ──────────────────── */
+/* ─── loading skeleton ──────────────────────────────────────────── */
 
 /**
  * Mirrors the ChargingDetailPage layout while session telemetry loads:
@@ -87,8 +87,8 @@ function LoadingSkeleton() {
 /* ─── synced cursor render-prop helper ─────────────────────────── */
 
 /**
- * Phase-40 / Prompt 62 — render-prop helper that subscribes the inner
- * recharts chart to the surrounding `<ChartTimeRangeProvider>` so the active
+ * Render-prop helper that subscribes the inner recharts chart to the surrounding
+ * `<ChartTimeRangeProvider>` so the active
  * cursor and persistent reference line stay in lockstep across the three
  * time-axis charts on this page (SoC/energy/range, temperature, voltage &
  * current). Each chart filters telemetry rows differently so we sync by value
@@ -114,11 +114,9 @@ export default function ChargingDetailPage() {
   const { id } = useParams<{ id: string }>();
   const sessionId = Number(id);
 
-  // ChargingSession distance delta (genuine miles after charging_repo.go SQL adapter
-  // boundary) and live ChargingTelemetry.{battery_range_mi, range_added_meters_per_hour, // range_added_meters_per_hour} (suffix-named misleading fields whose values are SI per
-  // Phase-43/0020 PREFLIGHT) stay on legacy useSettings.toDistanceDisplay per the
-  // locked-policy deferral. ChargeTelemetryReading.{rated_range, ...} similarly
-  // keep toDistanceDisplay until backend populates SI.
+  // ChargingSession distance delta comes through the repo adapter as miles. Live
+  // ChargingTelemetry fields with misleading suffixes are SI values. Keep these
+  // conversions at the display boundary until the backend fields are renamed.
   const { unitPrefs } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
@@ -281,7 +279,6 @@ export default function ChargingDetailPage() {
         </div>
 
         {/*
-          Phase-50 / N5 0019 — Charging diagnosis AI surface.
           The withAiFeature HOC inside AIChargingDiagnosis renders
           this section ONLY when ai_mode='local'|'cloud' AND the
           charging-diagnosis toggle is on (ADR-015 §I5 + §I6). When
@@ -593,8 +590,8 @@ export default function ChargingDetailPage() {
         </GlassPanel>
 
         {/* ── 8/9/10. Synced time-axis charts ─────────────────────
-              Phase 40 / Prompt 62: the SoC/energy/range, temperature, and
-              voltage/current panels all live on the same charge-session time
+              The SoC/energy/range, temperature, and voltage/current panels all
+              live on the same charge-session time
               axis but use different filtered telemetry rows. Wrapping them in
               a `<ChartTimeRangeProvider>` with `syncMethod="value"` makes
               recharts mirror the active hover cursor across all three, and

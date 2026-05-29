@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { request, ApiError } from '@/api/client'
 
 /**
- * Phase-45 / Prompt 11 — Proactive new-deploy detection.
+ * Proactive new-deploy detection.
  *
  * Polls the backend `/system/version` endpoint at a fixed cadence and
  * compares the returned `app_version` against the version captured when

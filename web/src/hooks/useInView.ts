@@ -3,9 +3,9 @@
  * built on IntersectionObserver.
  *
  * Use cases:
- *   - Lazy-mount expensive subtrees (charts, maps, iframes) only once
+ *   Lazy-mount expensive subtrees (charts, maps, iframes) only once
  *     they enter the viewport.
- *   - Trigger animations on first scroll-in.
+ *   Trigger animations on first scroll-in.
  *
  * Returns a ref to attach to the target element and a boolean. By default
  * the boolean stays `true` once the element has been seen at least once

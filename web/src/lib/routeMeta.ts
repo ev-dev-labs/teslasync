@@ -1,12 +1,12 @@
-// Phase-40 / Prompt 61 — Breadcrumb dedupe & app-wide adoption.
-//
+// Breadcrumb dedupe & app-wide adoption.
+
 // Single source of truth for breadcrumb hierarchy. Every entry in
 // `routeRegistry.ts` MUST have a matching entry here (enforced by the unit
 // test in `__tests__/routeMeta.test.ts`). Most top-level pages have NO
 // `parent` — their breadcrumb chain is a single item, so `<Breadcrumbs>`
 // suppresses itself (length <= 1). Only nested / detail routes declare a
 // parent; those produce a >=2-item chain that actually renders.
-//
+
 // Pages can supply per-render label overrides (e.g. "Drive #4421" → "Trip to
 // office") via the `breadcrumbLabels` prop on `<PageContainer>`, which
 // flows through `useBreadcrumbs`.
@@ -17,14 +17,14 @@ export interface RouteMeta {
   /** i18n key for the human-readable label (falls back to `defaultLabel`). */
   i18nKey: string;
   /**
-   * Stable English label used as the i18n fallback so pages still render
-   * sensibly when a translation is missing.
-   */
+ * Stable English label used as the i18n fallback so pages still render
+ * sensibly when a translation is missing.
+ */
   defaultLabel: string;
   /**
-   * Parent route pattern. The breadcrumb hook walks this chain to compose
-   * the trail. Omit for top-level routes (no breadcrumb is rendered).
-   */
+ * Parent route pattern. The breadcrumb hook walks this chain to compose
+ * the trail. Omit for top-level routes (no breadcrumb is rendered).
+ */
   parent?: string;
 }
 

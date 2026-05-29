@@ -1,8 +1,8 @@
-// Phase-50 / 0022 — D2 Speed-profile insights.
+// Speed-profile insights.
 //
 // `TestSpeedProfileInsightsAIOffRendersChartOnly` (the Vitest sibling
-// to the Go test of the same name) is the slice's load-bearing
-// AI-OFF contract proof on the React side. It mounts the
+// to the Go test of the same name) is the React-side AI-OFF contract
+// proof. It mounts the
 // AISpeedProfileInsights component with ai_mode='off' (plus the
 // per-feature toggle on, to defeat the obvious "off because nothing
 // is enabled" path) and asserts:
@@ -25,10 +25,9 @@
 // this AI section's visibility.
 //
 // File name MUST stay
-// `TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx` — the
-// slice prompt's verification command runs
-// `vitest --run TestSpeedProfileInsightsAIOffRendersChartOnly`,
-// where the positional pattern is matched against the file PATH.
+// `TestSpeedProfileInsightsAIOffRendersChartOnly.test.tsx` because
+// `vitest --run TestSpeedProfileInsightsAIOffRendersChartOnly`
+// matches the positional pattern against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';

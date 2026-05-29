@@ -18,8 +18,7 @@ import { fmtInt } from '@/lib/numberFormat';
 // ── Event type → visual mapping ──────────────────────────────────────
 
 // Lookup-with-fallback so unknown backend event types render with a
-// neutral icon instead of crashing or rendering as `undefined`. Phase-43a
-// added 'locked', 'sentry_mode', 'valet_mode_enabled'; legacy alert
+// neutral icon instead of crashing or rendering as `undefined`. Legacy alert
 // shapes are preserved so historic rows still resolve.
 const EVENT_TYPE_MAP: Record<
   string,

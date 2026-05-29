@@ -105,8 +105,8 @@ function colorForDelta(direction: Direction, signedDelta: number): string {
 /**
  * `<Delta>` — direction-aware change indicator with a unified arrow and colour.
  *
- * Phase-40 / Prompt 45. See `web/src/lib/metricSemantics.ts` for the registry of
- * metric ids. Pass an inline `{ direction, unit? }` for one-off metrics.
+ * See `web/src/lib/metricSemantics.ts` for the registry of metric ids. Pass
+ * an inline `{ direction, unit? }` for one-off metrics.
  *
  * Behaviour:
  *   - `previous == null`              → renders an em-dash with no colour.

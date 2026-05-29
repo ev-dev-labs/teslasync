@@ -13,17 +13,16 @@ import {
 import { UserImpersonateButton } from '../components/UserImpersonateButton'
 
 /**
- * Phase-46 / Prompt 46 — Admin Subjects page.
+ * Admin Subjects page.
  *
  * Minimal list of distinct subjects that have an active session in
  * `auth_sessions`. This is the admin counterpart to the missing
  * UsersPage — TeslaSync has no `users` table, so the impersonation
  * target is a subject value selected from the auth-session telemetry
- * (a stand-in for the future `auth_subjects` table from prompt 57).
+ * (a stand-in for a future `auth_subjects` table).
  *
- * Per the prompt's "Blocked Path" guidance: this page ships
- * unrouted because routeRegistry.ts is OUTSIDE the gate's allowed
- * files. A follow-up prompt will register the route. For now the
+ * This page ships unrouted because routeRegistry.ts is outside the allowed
+ * files. A follow-up change will register the route. For now the
  * page is reachable only by directly importing UsersPage from
  * another bootstrap point, which keeps the impersonation feature
  * deliverable without pulling routeRegistry into a security-

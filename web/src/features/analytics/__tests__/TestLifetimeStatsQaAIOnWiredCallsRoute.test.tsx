@@ -1,15 +1,15 @@
-// Phase-50 / 0041 — X2 Lifetime stats Q&A.
-// Phase-50 / W1 inline wiring (per slice prompt 0041) — on-mode
+// Lifetime stats Q&A.
+// Inline wiring — on-mode
 // wiring test proving the Ask button opens an SSE stream against
 // the registered backend route POST /api/v1/ai/analytics/lifetime/qa.
-//
+
 // `TestLifetimeStatsQaAIOnWiredCallsRoute` is the load-bearing
-// positive wiring proof for slice 0041's W1 inline addendum. It
+// positive wiring proof for the inline addendum. It
 // mounts the AILifetimeStatsQA component with ai_mode='cloud' +
 // the per-feature toggle on, stubs global fetch with a
 // deterministic SSE byte stream, types a question, clicks the
 // Ask button, and asserts:
-//
+
 //   1. Exactly ONE POST against the registered backend route
 //      `/api/v1/ai/analytics/lifetime/qa` is enqueued with
 //      `Content-Type: application/json` and a body containing the
@@ -20,7 +20,7 @@
 //   2. The first `delta` event's text renders inside the
 //      AiOutputPanel inside the gated wrapper
 //      `data-testid="ai-feature-lifetime-stats-qa-root"`.
-//   3. A second click while `state === 'streaming'` is a no-op —
+//   3. A second click while `state === 'streaming'` is a no-op
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
 //      from canAsk). This proves W1 Rule A — the disabled prop is
@@ -30,7 +30,7 @@
 //      to pass unchanged — wiring MUST NOT regress the off-mode
 //      absence invariant. That assertion lives in the sibling file
 //      and is exercised independently by the npm test runner.
-//
+
 // The test name MUST stay
 // `TestLifetimeStatsQaAIOnWiredCallsRoute` per the W1 inline
 // addendum naming contract.
@@ -241,7 +241,7 @@ describe('TestLifetimeStatsQaAIOnWiredCallsRoute (lifetime-stats-qa on-mode SPA 
   });
 
   it('TestLifetimeStatsQaAIOnWiredCallsRoute: Ask button is disabled when no vehicleId is available (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
+    // This test guards the wiring rule: the
     // primary action button's `disabled` prop MUST be a computed
     // expression (here: `!canAsk`), not a literal
     // `disabled` / `disabled={true}`. We prove the dynamic

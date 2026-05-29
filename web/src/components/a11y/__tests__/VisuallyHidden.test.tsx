@@ -1,5 +1,5 @@
 /**
- * Phase-46 / Prompt 12 — VisuallyHidden + AnnouncerRegion contract.
+ * VisuallyHidden + AnnouncerRegion contract tests.
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';

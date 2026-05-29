@@ -1,16 +1,10 @@
-// Phase-50 / 0052 — P1 PII redaction in shared exports.
-// Phase-50 / W1 inline wiring (per slice prompt 0052) — on-mode
-// wiring test proving the "Suggest redactions" button opens an
-// SSE stream against the registered backend route POST
-// /api/v1/ai/exports/redaction/draft.
-//
-// `TestPiiRedactionSharedExportsAIOnWiredCallsRoute` is the
-// load-bearing positive wiring proof for slice 0052's W1 inline
-// addendum. It mounts the AIPiiRedactionSharedExports component
+// PII redaction in shared exports.
+// Verifies that the "Suggest redactions" button opens an SSE stream
+// against POST /api/v1/ai/exports/redaction/draft.
+// This is the positive wiring proof for AIPiiRedactionSharedExports: it mounts the component
 // with ai_mode='cloud' + the per-feature toggle on, stubs global
 // fetch with a deterministic SSE byte stream, picks an export
 // type, clicks the action button, and asserts:
-//
 //   1. Exactly ONE POST against the registered backend route
 //      `/api/v1/ai/exports/redaction/draft` is enqueued with
 //      `Content-Type: application/json` and a body containing
@@ -32,7 +26,6 @@
 //      off-mode absence invariant. That assertion lives in the
 //      sibling file and is exercised independently by the npm
 //      test runner.
-//
 // HX (Helix UX) addendum compliance:
 //   - The CTA is located via `getByRole('button', { name:
 //     /Suggest redactions/i })` — UNANCHORED regex because
@@ -191,8 +184,8 @@ describe('TestPiiRedactionSharedExportsAIOnWiredCallsRoute (pii-redaction-shared
     // route. fireEvent.click bypasses pointer-events behaviour;
     // @testing-library/user-event is intentionally NOT a
     // dependency of this codebase (see web/package.json), so
-    // we use fireEvent.click consistently across the slice
-    // tests.
+    // we use fireEvent.click consistently across these
+    // wiring tests.
     await act(async () => {
       fireEvent.click(button);
     });
@@ -291,7 +284,7 @@ describe('TestPiiRedactionSharedExportsAIOnWiredCallsRoute (pii-redaction-shared
   });
 
   it('TestPiiRedactionSharedExportsAIOnWiredCallsRoute: action button is disabled when no export_type has been picked (computed, not literal)', () => {
-    // This test guards W1 Rule A from the slice prompt: the
+    // Guard the routing contract: the
     // primary action button's `disabled` prop MUST be a
     // computed expression (here: `!canStart || stream.state
     // === 'streaming'`), not a literal `disabled` /

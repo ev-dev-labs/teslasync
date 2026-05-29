@@ -1,6 +1,5 @@
-// Phase-50 / 0025 — D5 Trip planner LLM agent.
-// Phase-50 / W1 (slice 0065) — wired the Draft button to
-// POST /api/v1/ai/trips/plan/draft.
+// Trip planner LLM agent.
+// The Draft button streams from POST /api/v1/ai/trips/plan/draft.
 
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'

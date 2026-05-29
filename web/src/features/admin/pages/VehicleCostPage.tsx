@@ -1,5 +1,5 @@
 /**
- * Vehicle Cost Page — Phase-45 admin observability surface.
+ * Vehicle Cost page.
  *
  * Per-vehicle ingest cost report: signal_log row count, estimated
  * byte cost, ingest rate over the last 24 h, and DLQ failures. Shows

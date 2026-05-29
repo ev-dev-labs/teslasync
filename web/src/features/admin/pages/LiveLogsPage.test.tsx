@@ -1,5 +1,5 @@
 /**
- * LiveLogsPage — Phase-46 / Prompt 34 contract tests.
+ * LiveLogsPage contract tests.
  *
  * Covers:
  *   1. Empty state on first mount.

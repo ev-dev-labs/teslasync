@@ -1,5 +1,5 @@
 /**
- * Phase-40 / Prompt 68 — First-run onboarding checklist.
+ * First-run onboarding checklist.
  *
  * Tracks whether the user has actually configured the things that make
  * TeslaSync useful. Distinct from `OnboardingWizard` (one-shot intro slides)
@@ -33,8 +33,8 @@ export const CP_DISCOVERED_KEY = 'teslasync:cp-discovered'
 export const CHECKLIST_DISMISSED_KEY = 'teslasync:checklist:dismissed'
 export const CHECKLIST_COMPLETED_AT_KEY = 'teslasync:checklist:completed-at'
 /**
- * Phase-45 / Prompt 25 — flips to '1' once the user adds their first widget
- * via the dashboard widget catalogue. Drives the `customize-dashboard`
+ * Flips to '1' once the user adds their first widget via the dashboard
+ * widget catalogue. Drives the `customize-dashboard`
  * checklist task. Stored client-side because there's no backend signal that
  * differentiates "user added a widget" from "user accepted the seeded
  * default layout".
@@ -93,8 +93,6 @@ export function isCommandPaletteDiscovered(): boolean {
 /**
  * Record that the user has added at least one widget through the dashboard
  * widget catalogue. Idempotent — only writes the first time.
- *
- * Phase-45 / Prompt 25.
  */
 export function markCustomizeDashboardCompleted(): void {
   if (safeRead(CUSTOMIZE_DASHBOARD_KEY)) return
@@ -335,7 +333,7 @@ export function useChecklistTasks(): ChecklistState {
         icon: BellPlus,
       },
       {
-        // Phase-45 / Prompt 25 — surface dashboard widget customization.
+        // Surface dashboard widget customization.
         // Completes when the user adds their first widget through the
         // catalogue dialog (which calls `markCustomizeDashboardCompleted`).
         // CTA links to the dashboard so the user can immediately spot the

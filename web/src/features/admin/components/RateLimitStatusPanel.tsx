@@ -1,5 +1,5 @@
 /**
- * RateLimitStatusPanel — Phase-46 / Prompt 40.
+ * Rate-limit status panel.
  *
  * Admin status panel that renders one MetricBar per ScopeBudget the
  * backend reports under GET /api/v1/system/rate-limits. Bars climb as

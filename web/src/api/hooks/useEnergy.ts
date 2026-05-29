@@ -35,8 +35,8 @@ export function useEnergyStats(vehicleId: string | null, days = 30) {
 
 export function useBatteryHealth(vehicleId: string | null) {
   const { asOf } = useAsOfDate()
-  // Phase-46 / Prompt 64 — propagate the global as-of timestamp so the
-  // backend reroutes per-signal SignalAt lookups through signal_log.
+  // Propagate the global as-of timestamp so the backend reroutes
+  // per-signal SignalAt lookups through signal_log.
   // The query key includes asOf so live and historical reads cache
   // independently and switching between them does not show stale data.
   const path = asOf
@@ -87,7 +87,7 @@ export function useEnergyFlow(vehicleId: string | null) {
 }
 
 /**
- * Phase-42 / Prompt 0077 — DEPRECATED. The backend `/vampire-drain/stats`
+ * DEPRECATED. The backend `/vampire-drain/stats`
  * route was deleted alongside the `vampire_drain_events` table; this hook
  * will reliably 404 in production. Kept (not removed) because the
  * `features/dashboard` VampireDrainWidget and the legacy VampireDrainPage
@@ -105,7 +105,7 @@ export function useVampireDrainStats(vehicleId: string | null) {
 }
 
 /**
- * Phase-42 / Prompt 0077 — DEPRECATED. See `useVampireDrainStats` for the
+ * DEPRECATED. See `useVampireDrainStats` for the
  * deletion rationale and migration plan. Returns 404 from the backend.
  */
 export function useVampireDrainEvents(vehicleId: string | null, limit = 50) {

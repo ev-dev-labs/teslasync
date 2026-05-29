@@ -1,8 +1,6 @@
 /**
- * useAiUsage — TanStack Query bindings for the F3 AI usage handler
+ * useAiUsage — TanStack Query bindings for the AI usage handler
  * (`/ai/usage/today`, `/ai/usage/by-feature`, `/ai/usage/recent`).
- *
- * Phase-50 / 0004 — F3 AI Call Log + Usage Card.
  *
  * The `__usage__` feature ID is special-cased server-side to gate
  * only on `ai_mode != 'off'` (no per-feature toggle). These hooks

@@ -1,5 +1,5 @@
 /**
- * AlertMessageEditor — Phase-50 / ADR-014.
+ * AlertMessageEditor.
  *
  * State-of-the-art editor for per-rule notification message templates.
  * Composes:

@@ -1,12 +1,6 @@
-// Phase-50 / 0030 — C5 Vampire-drain explanation.
-// Phase-50 / W1 inline wiring (per slice prompt 0030) — wired the
-// Narrate button to POST /api/v1/ai/charging/vampire-drain/explain
-// via the canonical useAiStream hook. The slice methodology forbids
-// shipping the visual affordance without end-to-end SSE wiring; this
-// component lands both in one commit so the on-mode wiring test
-// (TestVampireDrainExplanationAIOnWiredCallsRoute) can prove the
-// button actually opens an SSE stream against the registered
-// backend route.
+// Vampire-drain explanation.
+// The Narrate button posts to /api/v1/ai/charging/vampire-drain/explain
+// via useAiStream, so the visible AI affordance and SSE wiring stay in sync.
 //
 // AIVampireDrainExplanation is the visible AI surface for the
 // VampireDrainPage. It is rendered conditionally via

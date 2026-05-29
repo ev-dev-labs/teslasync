@@ -1,28 +1,19 @@
-// Phase-50 / 0057 — PU1 Natural-language SQL playground.
+// Manual SQL editor surface mounted at /power/sql.
 //
-// SqlPlaygroundPage is the manual SQL editor surface mounted at
-// /power/sql. The page is the deterministic baseline for the
-// Phase-50 / 0057 nl-sql-playground slice: a manual SQL textarea +
-// curated schema catalog viewer + Apply target. The optional AI
-// drafter section (AINLSqlPlayground) is rendered alongside via
-// withAiFeature so it is entirely absent in off-mode (ADR-015 §I5
-// + §I6) and propose-only in on-mode (the user must explicitly
-// click the canonical Apply to editor button to copy the LLM's
-// proposal into the textarea, then must explicitly click the
-// canonical Run button to execute).
+// The baseline UI is a manual SQL textarea, curated schema catalog viewer,
+// and Apply target. The optional AI drafter (AINLSqlPlayground) is rendered
+// alongside via withAiFeature, so it is absent in off-mode and propose-only
+// in on-mode. The user must explicitly click Apply to editor to copy the
+// LLM proposal into the textarea, then explicitly click Run.
 //
-// The page does NOT expose an actual SQL execution endpoint in
-// this slice — adding one is out of scope per the Phase-50 / 0057
-// "Allowed files" list. The Run button surfaces a deterministic
-// help message instructing the user to copy the query into their
-// preferred DB tool. A future slice that ships a typed read-only
-// SQL execution endpoint can swap that handler in without churning
-// this page's structure or the AI drafter's contract.
+// This page does NOT expose a SQL execution endpoint. The Run button shows a
+// deterministic help message instructing the user to copy the query into a
+// read-only DB tool. A future typed read-only execution endpoint can replace
+// that handler without changing this page's structure or the AI drafter's
+// contract.
 //
-// State persistence: the SQL textarea contents are persisted to
-// localStorage under the canonical 'ai.sqlPlayground.draft' key
-// the slice prompt's "Client storage keys" section names. That
-// key is the only client-side storage artifact the slice adds.
+// State persistence: SQL textarea contents are persisted to localStorage under
+// the canonical 'ai.sqlPlayground.draft' key.
 //
 // Visual layout:
 //   - Page header (title + AI drafter section conditionally
@@ -55,10 +46,8 @@ import { Stack } from '@/components/layout';
 import { Button, GlassPanel, PageTitle, PanelTitle, Textarea } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
-// SQL_PLAYGROUND_DRAFT_KEY is the canonical localStorage key the
-// Phase-50 / 0057 slice declared in its "Client storage keys"
-// section. Persisted across navigation so a user typing a long
-// query doesn't lose progress on accidental reload.
+// Canonical localStorage key for the SQL draft. Persisted across navigation
+// so a user typing a long query doesn't lose progress on accidental reload.
 const SQL_PLAYGROUND_DRAFT_KEY = 'ai.sqlPlayground.draft';
 
 // CuratedTable is a static descriptor mirroring the Go-side
@@ -70,10 +59,8 @@ const SQL_PLAYGROUND_DRAFT_KEY = 'ai.sqlPlayground.draft';
 //   1. The catalog is install-wide-static — it does not vary per
 //      user / per vehicle / per tenant. Fetching it would add a
 //      round-trip without any actual dynamism.
-//   2. Phase-50 / 0057's "Allowed files" list does not include a
-//      new API hook file. A future slice that adds dynamic
-//      catalog gating can swap the static array for a hook
-//      response without churning this page's render tree.
+//   2. A future dynamic catalog can swap the static array for a hook response
+//      without churning this page's render tree.
 interface CuratedColumn {
   name: string;
   type: string;
@@ -208,12 +195,9 @@ export default function SqlPlaygroundPage() {
       );
       return;
     }
-    // Phase-50 / 0057 scope decision: the slice does NOT add a
-    // backend SQL execution endpoint (out of "Allowed files").
-    // Surface a deterministic instruction directing the user to
-    // their preferred read-only DB tool. A future slice that
-    // ships a typed read-only execution endpoint can swap this
-    // branch for an actual fetch.
+    // There is no backend SQL execution endpoint yet. Surface a deterministic
+    // instruction directing the user to a read-only DB tool. A future typed
+    // read-only execution endpoint can swap this branch for an actual fetch.
     setRunMessage(
       t(
         'powerSql.editor.runUnavailable',

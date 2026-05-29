@@ -2,7 +2,7 @@ import type { TourDefinition } from '@/lib/tourRegistry'
 import type { TourStep } from '@/hooks/useTour'
 
 /**
- * Main onboarding tour — Phase-40 / Prompt 65.
+ * Main onboarding tour.
  *
  * The dashboard-focused walkthrough that auto-starts the first time a user
  * lands on `/dashboard` with at least one vehicle linked. Bumping the

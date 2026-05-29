@@ -1,11 +1,9 @@
-// Phase-50 / 0058 — PU2 Natural-language Grafana panel.
-// Phase-50 / W1 inline wiring (per slice prompt 0058) — on-mode
-// wiring test proving the "Draft panel" button opens an SSE stream
-// against the registered backend route
+// Natural-language Grafana panel AI wiring test.
+// Proves the "Draft panel" button opens an SSE stream against
 // POST /api/v1/ai/power/grafana-panel/draft.
 //
 // `TestNlGrafanaPanelAIOnWiredCallsRoute` is the load-bearing
-// positive wiring proof for slice 0058's W1 inline addendum. It
+// positive wiring proof. It
 // mounts the AINLGrafanaPanel component with ai_mode='cloud' +
 // the per-feature toggle on, stubs global fetch with a
 // deterministic SSE byte stream, types a prompt, clicks the
@@ -24,8 +22,7 @@
 //   3. A second click while `state === 'streaming'` is a no-op —
 //      the second fetch call is NOT enqueued (the double-submit
 //      guard inside useAiStream + the visual `disabled` mirror it
-//      from canDraft). This proves W1 Rule A — the disabled prop
-//      is a computed expression that reacts to state.
+//      from canDraft).
 //   4. After a typed `tool_result` for `draft_grafana_panel`
 //      lands, the "Apply to editor" button enables and clicking
 //      it invokes the `onApply` prop with the parsed
@@ -39,8 +36,7 @@
 //      file and is exercised independently by the npm test
 //      runner.
 //
-// The test name MUST stay `TestNlGrafanaPanelAIOnWiredCallsRoute`
-// per the W1 inline addendum naming contract.
+// The test name is part of the cross-stack wiring contract.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react';

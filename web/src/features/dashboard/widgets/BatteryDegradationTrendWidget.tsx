@@ -41,7 +41,7 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
   const degradationRate = data?.degradation_rate_pct_per_month ?? null;
   const totalCycles = data?.current_cycles ?? null;
 
-  // Phase-40 / Prompt 60 — series colour from active theme.
+  // Series colour follows the active theme.
   const palette = useThemeChartPalette();
 
   const stats = useMemo<ChartSummaryStat[]>(() => {

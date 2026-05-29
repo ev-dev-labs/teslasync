@@ -11,7 +11,7 @@ import type { AchievementUnlockedEvent } from '@/api/hooks/useAchievementUnlocks
 
 /**
  * AchievementUnlockedToast — a wider-than-normal toast that celebrates a
- * locked → unlocked transition (Phase-40 / Prompt 63).
+ * locked → unlocked transition.
  *
  * Layout:
  *   [ AchievementBadge size="md" ] [ name + description + View link ] [ × ]

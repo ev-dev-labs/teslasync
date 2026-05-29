@@ -1,17 +1,16 @@
-// Phase-50 / 0001 — F0 AI-Off Contract.
-//
+// AI-Off Contract.
+
 // Off-mode invariant suite. ADR-015 §I5 says: "When ai_mode='off',
 // no AI surface renders into the DOM." The most direct way to prove
 // it is: walk every feature in the registry, mount the smallest
 // realistic AI component for each, and assert nothing carrying its
 // `data-ai-feature` attribute is in the rendered tree.
-//
-// Slice F0 only seeds `chatbot-llm`; later slices add their own
-// entries to `internal/ai/features/registry.go` (and, via aigen,
-// `web/src/ai/features.ts`). The loop below iterates the generated
-// registry, so future slices automatically get coverage here without
-// editing this file — provided each slice ships its component as the
-// return value of `withAiFeature(...)` (enforced by the
+
+// The registry starts with `chatbot-llm`; new AI features add entries
+// to `internal/ai/features/registry.go` and, via aigen,
+// `web/src/ai/features.ts`. The loop below iterates the generated
+// registry, so new features automatically get coverage here when their
+// component returns `withAiFeature(...)` (enforced by the
 // `teslasync/ai-component-must-be-wrapped` ESLint rule and by
 // `tools/aivet`).
 

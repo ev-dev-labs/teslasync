@@ -1,12 +1,12 @@
-// Phase-50 / 0055 — V1 Helix voice mode.
-// Phase-50 / W1 inline wiring (per slice prompt 0055) — on-mode
-// wiring test proving the "Speak to Helix" button opens an SSE
-// stream against the registered backend route POST
+// Helix voice mode.
+// On-mode wiring test.
+// Proves the "Speak to Helix" button opens an SSE stream
+// against the registered backend route POST
 // /api/v1/ai/voice/chat.
 //
-// `TestVoiceModeAIOnWiredCallsRoute` is the load-bearing
-// positive wiring proof for slice 0055's W1 inline addendum. It
-// mounts the AIVoiceMode component with ai_mode='cloud' + the
+// `TestVoiceModeAIOnWiredCallsRoute` is the positive wiring proof for
+// the voice chat flow.
+// It mounts the AIVoiceMode component with ai_mode='cloud' + the
 // per-feature toggle on, stubs the browser SpeechRecognition API
 // with a deterministic transcript producer, stubs global fetch
 // with a deterministic SSE byte stream, simulates a transcript

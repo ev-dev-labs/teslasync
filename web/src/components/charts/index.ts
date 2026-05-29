@@ -15,8 +15,8 @@ export { AddAnnotationPopover } from './AddAnnotationPopover';
 export { AnnotationList } from './AnnotationList';
 export { AREA_DEFAULTS, areaGradient } from './chartDefaults';
 export { TimeMarker, type TimeMarkerProps } from './TimeMarker';
-// Phase 40 / Prompt 26 — shared brush/sync/legend/tooltip primitives.
-// Phase 40 / Prompt 62 — persistent cursor sync on top of recharts' syncId.
+// Shared brush, sync, legend, and tooltip primitives.
+// Persistent cursor sync builds on recharts' syncId.
 export {
   ChartTimeRangeProvider,
   useChartSync,

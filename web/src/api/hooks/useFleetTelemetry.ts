@@ -1,7 +1,7 @@
 /**
  * @module api/hooks/useFleetTelemetry
  *
- * Phase-42 Prompt 0068 introduced the package-derived
+ * introduced the package-derived
  * `/tesla/fleet-telemetry/coverage` endpoint that replaces the legacy
  * `fleet_telemetry_subscriptions` table query with a routing-layer
  * snapshot built from `router.LoadMap()` + `teslaconfig.Builder`.

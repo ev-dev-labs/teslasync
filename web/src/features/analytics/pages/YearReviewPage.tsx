@@ -196,12 +196,11 @@ export default function YearReviewPage() {
       </div>
 
       {/*
-        Phase-50 / 0013 — U3 yir-narration AI surface.
         Renders nothing when ai_mode='off' or the yir-narration toggle
         is off (the withAiFeature HOC returns null), so the baseline
-        slide deck is visually unchanged for off-mode users
-        (ADR-015 §I3 + §I5). On-mode users see an opt-in narration
-        affordance overlaid above the slide counter.
+        slide deck is visually unchanged for off-mode users. On-mode
+        users see an opt-in narration affordance overlaid above the
+        slide counter.
       */}
       <div className="absolute bottom-12 start-1/2 -translate-x-1/2 z-20 w-full max-w-md px-4 sm:px-0">
         <AIYearReviewNarration

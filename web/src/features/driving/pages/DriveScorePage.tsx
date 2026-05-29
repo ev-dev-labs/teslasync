@@ -396,7 +396,7 @@ export default function DriveScorePage() {
   const { t } = useTranslation();
   usePageTitle(t('driveScore.title', 'Drive Score'));
 
-  /* ---- vehicle selector — Phase 40 / Prompt 16: header VehiclePicker is the source of truth ---- */
+  /* ---- vehicle selector: header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 

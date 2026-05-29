@@ -64,7 +64,7 @@ export default function ChargingHeatmapPage() {
   usePageTitle(t('charging.heatmap.title', 'Charging Patterns'));
   useSettings();
 
-  // Phase 40 / Prompt 16: header VehiclePicker is the source of truth.
+  // header VehiclePicker is the source of truth.
   const { vehicleId } = useSelectedVehicle();
 
   const { start, end, setRange } = useRangeState({
