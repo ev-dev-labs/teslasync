@@ -1,4 +1,4 @@
-package api
+package aialert
 
 // Phase-50 / 0015 — N1 Natural-language alert builder.
 //
@@ -31,7 +31,7 @@ package api
 //     clicks Save in the AlertStudioPage UI.
 //   - The deterministic AlertStudioPage form +
 //     validateAlertRule validator at
-//     `internal/api/alert_handler_rules.go` remain the canonical
+//     `internal/api/alerts/alert_rules.go` remain the canonical
 //     baseline for any user with `ai_mode='off'`. The save path
 //     is unchanged.
 //
@@ -52,6 +52,7 @@ package api
 //                         by this slice.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -67,32 +68,42 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiAlertBuilderMaxIterations bounds the dispatcher's tool-loop. The
+// builderMaxIterations bounds the dispatcher's tool-loop. The
 // nl-alert-builder strategy is a two-tool sequence (draft, then
 // validate), with at most one retry if validate rejects the first
 // draft — a hard ceiling of 6 is generous for an LLM that
 // occasionally re-drafts twice before settling. Mirrors
 // aiAnomalyMaxIterations from slice 0014 in spirit (small,
 // per-feature cap rather than the dispatcher's DefaultMaxIterations).
-const aiAlertBuilderMaxIterations = 6
+const builderMaxIterations = 6
 
-// aiAlertBuilderMaxPromptChars bounds the user-supplied
+// builderMaxPromptChars bounds the user-supplied
 // natural-language prompt at the HTTP boundary. Generous for a
 // multi-sentence rule description; defensive against an enormous
 // payload that would inflate the LLM's context window cost without
 // any plausible legitimate use.
-const aiAlertBuilderMaxPromptChars = 4096
+const builderMaxPromptChars = 4096
 
-// AIAlertHandler is the HTTP handler for
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Handler is the HTTP handler for
 // POST /api/v1/ai/alerts/rules/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIAlertHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -100,7 +111,7 @@ type AIAlertHandler struct {
 	maxIters   int
 }
 
-// NewAIAlertHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -112,37 +123,37 @@ type AIAlertHandler struct {
 //
 // strat:      the nl-alert-builder Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIAlertHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIAlertHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIAlertHandler: nil provider.Registry")
+		panic("aialert: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIAlertHandler: nil tools.Registry")
+		panic("aialert: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIAlertHandler: nil strategy.Strategy")
+		panic("aialert: NewHandler: nil strategy.Strategy")
 	}
-	return &AIAlertHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiAlertBuilderMaxIterations,
+		maxIters:   builderMaxIterations,
 	}
 }
 
-// aiAlertBuilderRequest is the wire shape for
+// builderRequest is the wire shape for
 // POST /api/v1/ai/alerts/rules/draft.
 //
 // VehicleID is required and must be > 0 — the AI handler scopes the
 // drafting to a single vehicle. Prompt is the user's plain-language
 // description of the rule they want, capped at
-// aiAlertBuilderMaxPromptChars.
-type aiAlertBuilderRequest struct {
+// builderMaxPromptChars.
+type builderRequest struct {
 	VehicleID int64  `json:"vehicle_id"`
 	Prompt    string `json:"prompt"`
 }
@@ -152,9 +163,9 @@ type aiAlertBuilderRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIAlertHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
-	var body aiAlertBuilderRequest
+	var body builderRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -168,8 +179,8 @@ func (h *AIAlertHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
-	if len(prompt) > aiAlertBuilderMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiAlertBuilderMaxPromptChars))
+	if len(prompt) > builderMaxPromptChars {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", builderMaxPromptChars))
 		return
 	}
 
@@ -255,29 +266,27 @@ func (h *AIAlertHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: AIAlertHandler satisfies http.Handler.
-var _ http.Handler = (*AIAlertHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
-// AIAlertRuleValidator is the production implementation of
-// alert.AlertRuleValidator. It is a thin wrapper around the
-// unexported validateAlertRule function in alert_handler_rules.go,
-// kept in this file so the AI tool registration path can wire the
-// canonical validator without exposing the unexported function to
-// the rest of the codebase.
+// RuleValidator is the production implementation of
+// alert.AlertRuleValidator. It delegates to the canonical validation
+// function exported by the non-AI alerts subpackage so the AI tool
+// registration path uses the same validation as the typed handler.
 //
 // One per process; stateless.
-type AIAlertRuleValidator struct{}
+type RuleValidator struct{}
 
-// NewAIAlertRuleValidator returns a ready-to-use validator wrapper.
+// NewRuleValidator returns a ready-to-use validator wrapper.
 // Exists as a constructor (rather than a value) so a future change
 // that adds wiring (e.g. a custom signal allowlist) does not force
 // every call site to update.
-func NewAIAlertRuleValidator() *AIAlertRuleValidator { return &AIAlertRuleValidator{} }
+func NewRuleValidator() *RuleValidator { return &RuleValidator{} }
 
 // ValidateAlertRule implements [alert.AlertRuleValidator]. Delegates
-// to the canonical validateAlertRule function — same code path the
+// to the canonical alerts validation path — same code path the
 // POST /api/v1/alerts/rules handler runs, so a draft accepted here
 // is byte-equivalent to a draft accepted by the canonical handler.
-func (v *AIAlertRuleValidator) ValidateAlertRule(rule *alertmodel.AlertRule) error {
-	return validateAlertRule(rule)
+func (v *RuleValidator) ValidateAlertRule(rule *alertmodel.AlertRule) error {
+	return apialerts.ValidateAlertRule(rule)
 }

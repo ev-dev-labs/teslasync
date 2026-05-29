@@ -17,6 +17,7 @@ import (
 	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
+	aialert "github.com/ev-dev-labs/teslasync/internal/api/aialert"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -841,16 +842,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// RegisterAnomalyTools so the registry's alphabetical Names
 	// list grows deterministically.
 	//
-	// AIAlertRuleValidator is a thin wrapper around the unexported
-	// validateAlertRule function in alert_handler_rules.go — same
-	// code path the canonical POST /api/v1/alerts/rules handler
-	// uses. Drafts accepted by the AI tool are byte-equivalent to
-	// drafts accepted by the canonical handler (ADR-015 §I3
-	// baseline-intact).
+	// aialert.RuleValidator delegates to the canonical validation path in
+	// the non-AI alerts subpackage. Drafts accepted by the AI tool are
+	// byte-equivalent to drafts accepted by the canonical handler (ADR-015
+	// §I3 baseline-intact).
 	alert.RegisterAlertBuilderTools(aiToolRegistry, alert.AlertBuilderSources{
-		Validator: NewAIAlertRuleValidator(),
+		Validator: aialert.NewRuleValidator(),
 	})
-	aiAlertHandler := NewAIAlertHandler(
+	aiAlertHandler := aialert.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlalertbuilder.New(),

@@ -12,9 +12,10 @@
 // F6 eval harness (`go run ./cmd/ai-eval --feature nl-alert-builder`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aialert
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -28,6 +29,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks is the
 // load-bearing off-mode contract proof for slice 0015. It mounts the
@@ -127,22 +144,22 @@ func TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks(t *testing.T) {
 	}
 }
 
-// TestAIAlertHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at boot
 // must surface as a panic, not as a nil-deref on first request.
-func TestAIAlertHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIAlertHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIAlertHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -150,16 +167,16 @@ func TestAIAlertHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIAlertHandler_RejectsBadInput asserts the handler validates
+// TestHandler_RejectsBadInput asserts the handler validates
 // the request body BEFORE opening the SSE stream — a missing
 // vehicle_id, missing prompt, or oversized prompt must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAIAlertHandler_RejectsBadInput(t *testing.T) {
+func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
 
 	// We mount the validator branch directly (mirrors slice 0014's
 	// approach) so the test does not need to construct a full
-	// handler with stub deps. NewAIAlertHandler panics on nil
+	// handler with stub deps. NewHandler panics on nil
 	// deps, and the validator runs BEFORE touching any of them, so
 	// we can inline the validator without losing coverage.
 	cases := []struct {
@@ -174,7 +191,7 @@ func TestAIAlertHandler_RejectsBadInput(t *testing.T) {
 		{"missing prompt", `{"vehicle_id":1}`},
 		{"empty prompt", `{"vehicle_id":1,"prompt":""}`},
 		{"whitespace prompt", `{"vehicle_id":1,"prompt":"   "}`},
-		{"prompt too large", fmt.Sprintf(`{"vehicle_id":1,"prompt":%q}`, strings.Repeat("a", aiAlertBuilderMaxPromptChars+1))},
+		{"prompt too large", fmt.Sprintf(`{"vehicle_id":1,"prompt":%q}`, strings.Repeat("a", builderMaxPromptChars+1))},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -188,16 +205,16 @@ func TestAIAlertHandler_RejectsBadInput(t *testing.T) {
 	}
 }
 
-// TestAIAlertHandler_AcceptsCanonicalInput proves the validator does
+// TestHandler_AcceptsCanonicalInput proves the validator does
 // NOT bounce the happy-path shapes — vehicle_id + a normal-length
 // prompt, plus a prompt at the size boundary.
-func TestAIAlertHandler_AcceptsCanonicalInput(t *testing.T) {
+func TestHandler_AcceptsCanonicalInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []string{
 		`{"vehicle_id":1,"prompt":"alert me when battery drops below 20"}`,
 		`{"vehicle_id":1,"prompt":"a"}`,
-		fmt.Sprintf(`{"vehicle_id":1,"prompt":%q}`, strings.Repeat("a", aiAlertBuilderMaxPromptChars)),
+		fmt.Sprintf(`{"vehicle_id":1,"prompt":%q}`, strings.Repeat("a", builderMaxPromptChars)),
 	}
 	for _, body := range cases {
 		t.Run(body[:min(len(body), 60)], func(t *testing.T) {
@@ -211,16 +228,16 @@ func TestAIAlertHandler_AcceptsCanonicalInput(t *testing.T) {
 	}
 }
 
-// TestAIAlertRuleValidator_DelegatesToCanonical asserts the
+// TestRuleValidator_DelegatesToCanonical asserts the
 // production wrapper delegates to the canonical validateAlertRule
 // function — same code path the typed handler uses, so a draft
 // accepted by the AI tool is byte-equivalent to a draft accepted by
 // the canonical handler. We pass an obviously-bad rule and confirm
 // the wrapper surfaces the canonical layer's diagnostic; we then
 // pass a known-good rule and confirm acceptance.
-func TestAIAlertRuleValidator_DelegatesToCanonical(t *testing.T) {
+func TestRuleValidator_DelegatesToCanonical(t *testing.T) {
 	t.Parallel()
-	v := NewAIAlertRuleValidator()
+	v := NewRuleValidator()
 
 	bad := &alertmodel.AlertRule{} // empty: missing name, signal_name, etc.
 	if err := v.ValidateAlertRule(bad); err == nil {
@@ -247,10 +264,10 @@ func TestAIAlertRuleValidator_DelegatesToCanonical(t *testing.T) {
 }
 
 // validateAlertBuilderOnly mirrors the pre-stream validator branch of
-// AIAlertHandler.ServeHTTP. Kept as a same-package helper so the test
+// Handler.ServeHTTP. Kept as a same-package helper so the test
 // does not need to construct a full handler with stub deps.
 func validateAlertBuilderOnly(w http.ResponseWriter, r *http.Request) {
-	var body aiAlertBuilderRequest
+	var body builderRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -264,8 +281,8 @@ func validateAlertBuilderOnly(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
-	if len(prompt) > aiAlertBuilderMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiAlertBuilderMaxPromptChars))
+	if len(prompt) > builderMaxPromptChars {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", builderMaxPromptChars))
 		return
 	}
 	w.WriteHeader(http.StatusOK)
