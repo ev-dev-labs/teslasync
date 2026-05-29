@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-29T07:49:21Z, Go go1.26.1, commit a46da7f356cffe6c79b7596229c1d9f7cfc0c09b_
+_Generated 2026-05-29T07:55:21Z, Go go1.26.1, commit 04ffc0a83bd53d49a6dc1d9b072595b9b1e5d5b0_
 
 ## Summary
 
-- Packages: 473
+- Packages: 474
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 383079
+- Total non-blank LOC under cmd/+internal/+tools/: 383183
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-29T07:49:21Z, Go go1.26.1, commit a46da7f356cffe6c79b7596229c
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 49 | 33 | 22923 | yes | handler |
+| internal/api | 46 | 32 | 21856 | yes | handler |
 | internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
 | internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
 | internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
@@ -248,6 +248,7 @@ _Generated 2026-05-29T07:49:21Z, Go go1.26.1, commit a46da7f356cffe6c79b7596229c
 | internal/api/backup | 3 | 1 | 530 | yes | handler |
 | internal/api/battery | 2 | 1 | 418 | yes | handler |
 | internal/api/batterycells | 2 | 1 | 459 | yes | handler |
+| internal/api/batterydegradation | 4 | 2 | 1171 | yes | handler |
 | internal/api/chargeheatmap | 2 | 0 | 161 | yes | handler |
 | internal/api/chargeopt | 4 | 0 | 578 | yes | handler |
 | internal/api/chargeplanner | 5 | 3 | 996 | yes | handler |
@@ -529,7 +530,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 49 / 33 | 59 | 34 | 25 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 46 / 32 | 59 | 34 | 25 |
 
 ### `internal/models` detail
 

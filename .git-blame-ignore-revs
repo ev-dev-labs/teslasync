@@ -399,3 +399,6 @@ ce1bd32de3a75f0a863758b6a885819b87a35b7c # refactor(R2d.169): carve internal/api
 
 # R2d.170 batch 13 — aisettingsvalidate carve
 a46da7f356cffe6c79b7596229c1d9f7cfc0c09b # refactor(R2d.170): carve internal/api/aisettingsvalidate subpackage
+
+# R2d.171 batterydegradation carve
+04ffc0a83bd53d49a6dc1d9b072595b9b1e5d5b0

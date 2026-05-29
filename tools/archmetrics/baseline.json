@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-29T07:49:20Z",
+  "generated_at": "2026-05-29T07:55:20Z",
   "go_version": "go1.26.1",
-  "commit_sha": "a46da7f356cffe6c79b7596229c1d9f7cfc0c09b",
+  "commit_sha": "04ffc0a83bd53d49a6dc1d9b072595b9b1e5d5b0",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 49,
-      "test_files": 33,
-      "loc": 22923,
+      "go_files": 46,
+      "test_files": 32,
+      "loc": 21856,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2694,6 +2694,7 @@
         "internal/api/backup",
         "internal/api/battery",
         "internal/api/batterycells",
+        "internal/api/batterydegradation",
         "internal/api/chargeheatmap",
         "internal/api/chargeopt",
         "internal/api/chargeplanner",
@@ -2903,10 +2904,6 @@
         "apperror_bridge_test.go",
         "audit.go",
         "audit_test.go",
-        "battery_degradation_handler.go",
-        "battery_degradation_handler_calculations.go",
-        "battery_degradation_handler_dtos.go",
-        "battery_degradation_handler_test.go",
         "bulk_handlers_phase45_test.go",
         "bulk_handlers_test.go",
         "bulk_helpers.go",
@@ -4844,6 +4841,28 @@
         "doc.go",
         "handler.go",
         "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/batterydegradation",
+      "go_files": 4,
+      "test_files": 2,
+      "loc": 1171,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/signal",
+        "internal/signal"
+      ],
+      "files": [
+        "calculations.go",
+        "doc.go",
+        "dtos.go",
+        "handler.go",
+        "handler_test.go",
+        "testhelpers_test.go"
       ]
     },
     {
@@ -10610,9 +10629,6 @@
       "api_call_log_middleware.go",
       "apikey_middleware.go",
       "audit.go",
-      "battery_degradation_handler.go",
-      "battery_degradation_handler_calculations.go",
-      "battery_degradation_handler_dtos.go",
       "bulk_helpers.go",
       "charge_planner_handler_compute.go",
       "charge_planner_handler_dtos.go",
@@ -10981,6 +10997,12 @@
     ],
     "internal/api/batterycells": [
       "doc.go",
+      "handler.go"
+    ],
+    "internal/api/batterydegradation": [
+      "calculations.go",
+      "doc.go",
+      "dtos.go",
       "handler.go"
     ],
     "internal/api/chargeheatmap": [
@@ -12557,8 +12579,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 49,
-      "flat_parent_test_files": 33,
+      "flat_parent_go_files": 46,
+      "flat_parent_test_files": 32,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",
