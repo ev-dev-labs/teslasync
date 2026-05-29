@@ -1,4 +1,4 @@
-package api
+package aialerttune
 
 // Phase-50 / 0034 — A1 Alert tuning suggestions.
 //
@@ -54,10 +54,6 @@ import (
 	"strconv"
 	"time"
 
-	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
-
-	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
@@ -68,27 +64,30 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/alert"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 )
 
-// aiAlertTuningMaxIterations bounds the dispatcher's tool-loop.
+// maxIterations bounds the dispatcher's tool-loop.
 // The strategy is at most draft_alert_rule_patch ->
 // validate_alert_rule -> answer (with optional retries). A hard
 // ceiling of 8 is generous and matches the other A-tier
 // propose-only handlers (drive-coach, charging-diagnosis).
-const aiAlertTuningMaxIterations = 8
+const maxIterations = 8
 
-// aiAlertTuningWindowDays is the trailing-window length the
+// windowDays is the trailing-window length the
 // production AlertTuningSource adapter projects across when
 // reading the recent firing history from notification_logs.
 // 30 days mirrors the slice prompt's "recent firing window"
 // framing AND the deterministic analytics dashboard's default
 // preset on AlertStudioPage.
-const aiAlertTuningWindowDays = 30
+const windowDays = 30
 
-// aiAlertTuningMinFires is the minimum total firing-event count
+// minFires is the minimum total firing-event count
 // (across the trailing window) the adapter requires before it
 // lets the narrator quote a "would have fired N times after
 // patch" projection. Below this threshold has_enough_history
@@ -96,25 +95,25 @@ const aiAlertTuningWindowDays = 30
 // minimum sample for a meaningful descriptive replay — the
 // SOlder the sample the more sensitive the projection becomes
 // to a single outlier.
-const aiAlertTuningMinFires = 5
+const minFires = 5
 
-// aiAlertTuningRequest is the JSON body shape this handler
+// request is the JSON body shape this handler
 // accepts. Body is OPTIONAL (an empty body is accepted; the
 // handler resolves vehicle scope from the alert rule itself when
 // vehicle_id is absent). Mirrors how the AlertStudio's typed PUT
 // handler handles the same field.
-type aiAlertTuningRequest struct {
+type request struct {
 	VehicleID *int64 `json:"vehicle_id,omitempty"`
 }
 
-// AIAlertTuningHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AIAlertTuningHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -122,7 +121,7 @@ type AIAlertTuningHandler struct {
 	maxIters   int
 }
 
-// NewAIAlertTuningHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -138,27 +137,31 @@ type AIAlertTuningHandler struct {
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAIAlertTuningHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIAlertTuningHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIAlertTuningHandler: nil provider.Registry")
+		panic("aialerttune: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIAlertTuningHandler: nil tools.Registry")
+		panic("aialerttune: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIAlertTuningHandler: nil strategy.Strategy")
+		panic("aialerttune: NewHandler: nil strategy.Strategy")
 	}
-	return &AIAlertTuningHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiAlertTuningMaxIterations,
+		maxIters:   maxIterations,
 	}
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
 // parseAlertTuningURL extracts and validates the ruleID URL
@@ -174,16 +177,16 @@ func NewAIAlertTuningHandler(
 func parseAlertTuningURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "ruleID")
 	if raw == "" {
-		writeError(w, http.StatusBadRequest, "ruleID URL parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "ruleID URL parameter is required")
 		return 0, false
 	}
 	id, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("ruleID must be a positive integer (got %q)", raw))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("ruleID must be a positive integer (got %q)", raw))
 		return 0, false
 	}
 	if id <= 0 {
-		writeError(w, http.StatusBadRequest, "ruleID must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "ruleID must be > 0")
 		return 0, false
 	}
 	return id, true
@@ -194,8 +197,8 @@ func parseAlertTuningURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 // out so the validator-only test can exercise the same parsing.
 // Returns (req, ok); on parse failure writes a 400 and returns
 // (nil, false).
-func parseAlertTuningBody(w http.ResponseWriter, r *http.Request) (*aiAlertTuningRequest, bool) {
-	req := &aiAlertTuningRequest{}
+func parseAlertTuningBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
+	req := &request{}
 	if r.Body == nil {
 		return req, true
 	}
@@ -208,11 +211,11 @@ func parseAlertTuningBody(w http.ResponseWriter, r *http.Request) (*aiAlertTunin
 		if errors.Is(err, io.EOF) {
 			return req, true
 		}
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return nil, false
 	}
 	if req.VehicleID != nil && *req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be > 0 when provided")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be > 0 when provided")
 		return nil, false
 	}
 	return req, true
@@ -224,7 +227,7 @@ func parseAlertTuningBody(w http.ResponseWriter, r *http.Request) (*aiAlertTunin
 // deferred WriteDone. Every error path either writes a structured
 // frame onto the SSE stream (when the writer has been opened) or
 // a plain JSON 4xx/5xx (before it has).
-func (h *AIAlertTuningHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate URL parameters. Body is decoded next;
 	//    a malformed body fails fast with a JSON 400.
 	ruleID, ok := parseAlertTuningURL(w, r)
@@ -243,7 +246,7 @@ func (h *AIAlertTuningHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	//    frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), alerttuningsuggestions.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai alert-tuning-suggestions: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -260,7 +263,7 @@ func (h *AIAlertTuningHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(alerttuningsuggestions.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai alert-tuning-suggestions: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -325,9 +328,9 @@ func (h *AIAlertTuningHandler) ServeHTTP(w http.ResponseWriter, r *http.Request)
 	}
 }
 
-// Compile-time assertion: AIAlertTuningHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AIAlertTuningHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the AlertTuningSource port declared by
@@ -355,10 +358,10 @@ type AIAlertTuningSource struct {
 // nil-deref on first AI request.
 func NewAIAlertTuningSource(rules *dbalert.AlertRuleRepo, notifications *dbnotif.NotificationRepo) *AIAlertTuningSource {
 	if rules == nil {
-		panic("api: NewAIAlertTuningSource: nil *dbalert.AlertRuleRepo")
+		panic("aialerttune: NewAIAlertTuningSource: nil *dbalert.AlertRuleRepo")
 	}
 	if notifications == nil {
-		panic("api: NewAIAlertTuningSource: nil *dbnotif.NotificationRepo")
+		panic("aialerttune: NewAIAlertTuningSource: nil *dbnotif.NotificationRepo")
 	}
 	return &AIAlertTuningSource{rules: rules, notifications: notifications}
 }
@@ -403,7 +406,7 @@ func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int6
 		return nil, errors.New("api ai alert-tuning-suggestions: rule_id must be > 0")
 	}
 	now := time.Now().UTC()
-	from := now.AddDate(0, 0, -aiAlertTuningWindowDays)
+	from := now.AddDate(0, 0, -windowDays)
 
 	logs, err := a.notifications.GetLogsFiltered(ctx, dbnotif.NotificationLogFilters{
 		RuleIDs: []int64{ruleID},
@@ -457,10 +460,10 @@ func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int6
 	}
 
 	return &alert.AlertRuleFiringHistory{
-		WindowDays:                  aiAlertTuningWindowDays,
-		MinRequiredEvents:           aiAlertTuningMinFires,
+		WindowDays:                  windowDays,
+		MinRequiredEvents:           minFires,
 		SampleSize:                  total30d,
-		HasEnoughHistory:            total30d >= aiAlertTuningMinFires,
+		HasEnoughHistory:            total30d >= minFires,
 		TotalFires7d:                total7d,
 		TotalFires30d:               total30d,
 		AvgFiresPerDay7d:            avg7d,

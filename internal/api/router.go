@@ -18,6 +18,7 @@ import (
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
 	aialert "github.com/ev-dev-labs/teslasync/internal/api/aialert"
+	aialerttune "github.com/ev-dev-labs/teslasync/internal/api/aialerttune"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -1692,13 +1693,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// reads the SAME rows the manual AlertStudio path reads —
 	// no parallel write path; the LLM never persists.
 	alert.RegisterAlertTuningSuggestionsTools(aiToolRegistry, alert.AlertTuningSuggestionsSources{
-		Source: NewAIAlertTuningSource(dbalert.NewAlertRuleRepo(db), dbnotif.NewNotificationRepo(db)),
+		Source: aialerttune.NewAIAlertTuningSource(dbalert.NewAlertRuleRepo(db), dbnotif.NewNotificationRepo(db)),
 	})
 	// alert-tuning-suggestions handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiAlertTuningHandler := NewAIAlertTuningHandler(
+	aiAlertTuningHandler := aialerttune.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		alerttuningsuggestions.New(),

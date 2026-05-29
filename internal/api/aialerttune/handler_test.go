@@ -15,7 +15,7 @@
 // (`go run ./cmd/ai-eval --feature alert-tuning-suggestions`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aialerttune
 
 import (
 	"context"
@@ -28,6 +28,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestAlertTuningSuggestionsAIOffManualTuningWorks is the
 // load-bearing off-mode contract proof for slice 0034. It mounts
@@ -137,23 +155,23 @@ func TestAlertTuningSuggestionsAIOffManualTuningWorks(t *testing.T) {
 	}
 }
 
-// TestAIAlertTuningHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIAlertTuningHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIAlertTuningHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIAlertTuningHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -183,7 +201,7 @@ func TestAIAlertTuningSource_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIAlertTuningHandler_RejectsBadRuleID asserts the handler
+// TestHandler_RejectsBadRuleID asserts the handler
 // validates the URL path parameter BEFORE opening the SSE stream
 // — a missing, non-numeric, zero, or negative ruleID must
 // surface as a JSON 400, not a half-opened stream that confuses
@@ -191,10 +209,10 @@ func TestAIAlertTuningSource_PanicsOnNilWiring(t *testing.T) {
 //
 // We mount the parser branch directly via parseAlertTuningURL so
 // the test does not need to construct a full handler with stub
-// deps. NewAIAlertTuningHandler panics on nil deps, and the
+// deps. NewHandler panics on nil deps, and the
 // parser runs BEFORE touching any of them, so we can inline the
 // parser without losing coverage.
-func TestAIAlertTuningHandler_RejectsBadRuleID(t *testing.T) {
+func TestHandler_RejectsBadRuleID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -227,10 +245,10 @@ func TestAIAlertTuningHandler_RejectsBadRuleID(t *testing.T) {
 	}
 }
 
-// TestAIAlertTuningHandler_AcceptsCanonicalRuleID proves the
+// TestHandler_AcceptsCanonicalRuleID proves the
 // parser does NOT bounce the happy-path shapes — small int,
 // large int, max int64.
-func TestAIAlertTuningHandler_AcceptsCanonicalRuleID(t *testing.T) {
+func TestHandler_AcceptsCanonicalRuleID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -262,11 +280,11 @@ func TestAIAlertTuningHandler_AcceptsCanonicalRuleID(t *testing.T) {
 	}
 }
 
-// TestAIAlertTuningHandler_BodyParser_AcceptsEmpty proves an
+// TestHandler_BodyParser_AcceptsEmpty proves an
 // empty body is allowed (vehicle_id is optional). The
 // AlertStudio's frontend POSTs the AI draft request without a
 // body when no vehicle scope is selected.
-func TestAIAlertTuningHandler_BodyParser_AcceptsEmpty(t *testing.T) {
+func TestHandler_BodyParser_AcceptsEmpty(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/alerts/rules/42/tune/draft", nil)
@@ -282,9 +300,9 @@ func TestAIAlertTuningHandler_BodyParser_AcceptsEmpty(t *testing.T) {
 	}
 }
 
-// TestAIAlertTuningHandler_BodyParser_AcceptsVehicleID proves a
+// TestHandler_BodyParser_AcceptsVehicleID proves a
 // body with a valid vehicle_id surfaces the value to the handler.
-func TestAIAlertTuningHandler_BodyParser_AcceptsVehicleID(t *testing.T) {
+func TestHandler_BodyParser_AcceptsVehicleID(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/alerts/rules/42/tune/draft", strings.NewReader(`{"vehicle_id":7}`))
@@ -298,10 +316,10 @@ func TestAIAlertTuningHandler_BodyParser_AcceptsVehicleID(t *testing.T) {
 	}
 }
 
-// TestAIAlertTuningHandler_BodyParser_RejectsBadVehicleID proves
+// TestHandler_BodyParser_RejectsBadVehicleID proves
 // a body with a non-positive vehicle_id is rejected with a 400
 // (preserves the canonical "vehicle_id > 0" invariant).
-func TestAIAlertTuningHandler_BodyParser_RejectsBadVehicleID(t *testing.T) {
+func TestHandler_BodyParser_RejectsBadVehicleID(t *testing.T) {
 	t.Parallel()
 	cases := []string{
 		`{"vehicle_id":0}`,
@@ -322,10 +340,10 @@ func TestAIAlertTuningHandler_BodyParser_RejectsBadVehicleID(t *testing.T) {
 	}
 }
 
-// TestAIAlertTuningHandler_BodyParser_RejectsBadJSON proves a
+// TestHandler_BodyParser_RejectsBadJSON proves a
 // malformed body is rejected with a 400 instead of a half-opened
 // stream.
-func TestAIAlertTuningHandler_BodyParser_RejectsBadJSON(t *testing.T) {
+func TestHandler_BodyParser_RejectsBadJSON(t *testing.T) {
 	t.Parallel()
 	cases := []string{
 		`{not json`,
