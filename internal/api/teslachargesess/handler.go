@@ -1,4 +1,4 @@
-package api
+package teslachargesess
 
 import (
 	"encoding/json"
@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -31,19 +32,19 @@ func NewTeslaChargingSessionHandler(tc *tesla.Client, db *database.DB) *TeslaCha
 // List returns stored fleet charging sessions from DB with pagination and server-side summary.
 func (h *TeslaChargingSessionHandler) List(w http.ResponseWriter, r *http.Request) {
 	vin := r.URL.Query().Get("vin")
-	limit, offset := pagination(r)
+	limit, offset := apiparams.Pagination(r)
 
 	sessions, err := h.repo.GetAll(r.Context(), vin, limit, offset)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list tesla charging sessions")
-		writeError(w, http.StatusInternalServerError, "failed to list charging sessions")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list charging sessions")
 		return
 	}
 
 	summary, err := h.repo.GetSummary(r.Context(), vin)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get tesla charging session summary")
-		writeError(w, http.StatusInternalServerError, "failed to get charging session summary")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging session summary")
 		return
 	}
 
@@ -51,7 +52,7 @@ func (h *TeslaChargingSessionHandler) List(w http.ResponseWriter, r *http.Reques
 		sessions = []*teslamodel.TeslaChargingSession{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"sessions": sessions,
 		"summary":  summary,
 	})
@@ -82,27 +83,27 @@ func (h *TeslaChargingSessionHandler) Refresh(w http.ResponseWriter, r *http.Req
 		body, status, err := h.teslaClient.GetChargingSessions(r.Context(), vin, dateFrom, dateTo, limit, offset)
 		if err != nil {
 			log.Error().Err(err).Int("offset", offset).Msg("tesla charging sessions API error")
-			writeError(w, http.StatusBadGateway, "failed to fetch charging sessions from Tesla")
+			httpx.WriteError(w, http.StatusBadGateway, "failed to fetch charging sessions from Tesla")
 			return
 		}
 
 		// Graceful 403 handling for non-business accounts
 		if status == http.StatusForbidden {
 			log.Warn().Msg("tesla charging sessions returned 403 — business account required")
-			writeError(w, http.StatusForbidden, "Fleet charging sessions require a Tesla business account")
+			httpx.WriteError(w, http.StatusForbidden, "Fleet charging sessions require a Tesla business account")
 			return
 		}
 
 		if status < 200 || status >= 300 {
 			log.Error().Int("status", status).Str("body", string(body)).Msg("tesla charging sessions non-2xx response")
-			writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+			httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 			return
 		}
 
 		var resp teslaChargingSessionsResponse
 		if err := json.Unmarshal(body, &resp); err != nil {
 			log.Error().Err(err).Msg("failed to parse tesla charging sessions response")
-			writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 			return
 		}
 
@@ -125,25 +126,25 @@ func (h *TeslaChargingSessionHandler) Refresh(w http.ResponseWriter, r *http.Req
 	upserted, err := h.repo.UpsertBatch(r.Context(), allSessions)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to upsert tesla charging sessions")
-		writeError(w, http.StatusInternalServerError, "failed to save charging sessions")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save charging sessions")
 		return
 	}
 
 	log.Info().Int("fetched", len(allSessions)).Int("upserted", upserted).Msg("tesla charging sessions refresh complete")
 
 	// Return fresh data
-	dbLimit, dbOffset := pagination(r)
+	dbLimit, dbOffset := apiparams.Pagination(r)
 	sessions, err := h.repo.GetAll(r.Context(), vin, dbLimit, dbOffset)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list tesla charging sessions after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to list charging sessions")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list charging sessions")
 		return
 	}
 
 	summary, err := h.repo.GetSummary(r.Context(), vin)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get summary after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to get charging session summary")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging session summary")
 		return
 	}
 
@@ -151,7 +152,7 @@ func (h *TeslaChargingSessionHandler) Refresh(w http.ResponseWriter, r *http.Req
 		sessions = []*teslamodel.TeslaChargingSession{}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"sessions": sessions,
 		"summary":  summary,
 		"upserted": upserted,
