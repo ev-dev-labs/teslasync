@@ -29,6 +29,7 @@ import (
 	aichatbot "github.com/ev-dev-labs/teslasync/internal/api/aichatbot"
 	aiclimate "github.com/ev-dev-labs/teslasync/internal/api/aiclimate"
 	aicostfcst "github.com/ev-dev-labs/teslasync/internal/api/aicostfcst"
+	aicrossrule "github.com/ev-dev-labs/teslasync/internal/api/aicrossrule"
 	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
 	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
 	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
@@ -1752,7 +1753,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// `query_alert_rules` + `detect_rule_conflicts` are
 	// registered on the process-wide tool registry so the
 	// dispatcher can resolve the strategy's allowedTools at
-	// boot. AICrossRuleConflictSource adapts the canonical
+	// boot. aicrossrule.Source adapts the canonical
 	// AlertRuleRepo so the LLM reads the SAME rows the manual
 	// AlertStudio path reads — no parallel write path; the
 	// LLM never persists. The pure-functional structural
@@ -1760,13 +1761,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// (DetectRuleConflicts) and is exercised in unit tests
 	// without IO.
 	diagnostic.RegisterCrossRuleConflictDetectionTools(aiToolRegistry, diagnostic.CrossRuleConflictDetectionSources{
-		Source: NewAICrossRuleConflictSource(dbalert.NewAlertRuleRepo(db)),
+		Source: aicrossrule.NewSource(dbalert.NewAlertRuleRepo(db)),
 	})
 	// cross-rule-conflict-detection handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiCrossRuleConflictHandler := NewAICrossRuleConflictHandler(
+	aiCrossRuleConflictHandler := aicrossrule.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		crossruleconflictdetection.New(),

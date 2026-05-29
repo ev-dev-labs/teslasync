@@ -1,4 +1,4 @@
-package api
+package aicrossrule
 
 // Phase-50 / 0036 — A3 Cross-rule conflict detection.
 //
@@ -73,6 +73,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 )
@@ -122,14 +123,14 @@ type aiCrossRuleConflictRequest struct {
 	Limit *int `json:"limit,omitempty"`
 }
 
-// AICrossRuleConflictHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/alerts/rules/conflicts.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired
 // once at boot.
-type AICrossRuleConflictHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -137,25 +138,25 @@ type AICrossRuleConflictHandler struct {
 	maxIters   int
 }
 
-// NewAICrossRuleConflictHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics
 // on a nil so the wiring bug surfaces at boot, not at first
 // request.
-func NewAICrossRuleConflictHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AICrossRuleConflictHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAICrossRuleConflictHandler: nil provider.Registry")
+		panic("aicrossrule: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAICrossRuleConflictHandler: nil tools.Registry")
+		panic("aicrossrule: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAICrossRuleConflictHandler: nil strategy.Strategy")
+		panic("aicrossrule: NewHandler: nil strategy.Strategy")
 	}
-	return &AICrossRuleConflictHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -217,7 +218,7 @@ func parseCrossRuleConflictBody(w http.ResponseWriter, r *http.Request) (*aiCros
 // path either writes a structured frame onto the SSE stream
 // (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
-func (h *AICrossRuleConflictHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	body, ok := parseCrossRuleConflictBody(w, r)
 	if !ok {
 		return
@@ -303,9 +304,17 @@ func (h *AICrossRuleConflictHandler) ServeHTTP(w http.ResponseWriter, r *http.Re
 	}
 }
 
-// Compile-time assertion: AICrossRuleConflictHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AICrossRuleConflictHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
 
 // ---------------------------------------------------------------------
 // Production wiring for the CrossRuleConflictSource port declared by
@@ -314,7 +323,7 @@ var _ http.Handler = (*AICrossRuleConflictHandler)(nil)
 // AIInboxCategorizationSource pattern from slice 0035.
 // ---------------------------------------------------------------------
 
-// AICrossRuleConflictSource is the production
+// Source is the production
 // diagnostic.CrossRuleConflictSource. It composes the canonical
 // AlertRuleRepo (read-only) so the AI projection is grounded
 // in the SAME alert_rules rows the deterministic AlertStudio
@@ -322,18 +331,18 @@ var _ http.Handler = (*AICrossRuleConflictHandler)(nil)
 //
 // The struct holds one narrow read interface; the constructor
 // panics on a nil so a wiring bug surfaces at boot.
-type AICrossRuleConflictSource struct {
+type Source struct {
 	rules *dbalert.AlertRuleRepo
 }
 
-// NewAICrossRuleConflictSource constructs the adapter. Panics
+// NewSource constructs the adapter. Panics
 // on a nil repo so a wiring mistake surfaces at boot rather
 // than as a nil-deref on first AI request.
-func NewAICrossRuleConflictSource(rules *dbalert.AlertRuleRepo) *AICrossRuleConflictSource {
+func NewSource(rules *dbalert.AlertRuleRepo) *Source {
 	if rules == nil {
-		panic("api: NewAICrossRuleConflictSource: nil *dbalert.AlertRuleRepo")
+		panic("aicrossrule: NewSource: nil *dbalert.AlertRuleRepo")
 	}
-	return &AICrossRuleConflictSource{rules: rules}
+	return &Source{rules: rules}
 }
 
 // LoadRules implements diagnostic.CrossRuleConflictSource. Reads the
@@ -348,7 +357,7 @@ func NewAICrossRuleConflictSource(rules *dbalert.AlertRuleRepo) *AICrossRuleConf
 //
 // The Limit field caps the returned slice so a runaway request
 // cannot blow past the canonical 500-row cap.
-func (a *AICrossRuleConflictSource) LoadRules(ctx context.Context, f diagnostic.CrossRuleConflictFilters) ([]*alertmodel.AlertRule, error) {
+func (a *Source) LoadRules(ctx context.Context, f diagnostic.CrossRuleConflictFilters) ([]*alertmodel.AlertRule, error) {
 	limit := f.Limit
 	if limit <= 0 || limit > aiCrossRuleConflictMaxLimit {
 		limit = aiCrossRuleConflictDefaultLimit

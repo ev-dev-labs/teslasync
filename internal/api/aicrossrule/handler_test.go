@@ -15,9 +15,10 @@
 // (`go run ./cmd/ai-eval --feature cross-rule-conflict-detection`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aicrossrule
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,6 +28,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestCrossRuleConflictAIOffHidesConflictPanel is the load-
 // bearing off-mode contract proof for slice 0036. It mounts
@@ -157,13 +174,13 @@ func TestAICrossRuleConflictHandler_PanicsOnNilWiring(t *testing.T) {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAICrossRuleConflictHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAICrossRuleConflictHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -177,10 +194,10 @@ func TestAICrossRuleConflictSource_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAICrossRuleConflictSource(nil) did not panic")
+			t.Fatal("NewSource(nil) did not panic")
 		}
 	}()
-	NewAICrossRuleConflictSource(nil)
+	NewSource(nil)
 }
 
 // TestAICrossRuleConflictHandler_BodyParser_AcceptsEmpty
