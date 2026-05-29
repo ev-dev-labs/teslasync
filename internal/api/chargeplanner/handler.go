@@ -1,4 +1,4 @@
-package api
+package chargeplanner
 
 import (
 	"context"
@@ -14,6 +14,8 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
@@ -23,7 +25,7 @@ import (
 )
 
 // chargePlannerCommandTimeout caps each Tesla SendCommand invocation
-// issued by ChargePlannerHandler.Apply. Project rule: external Tesla API
+// issued by Handler.Apply. Project rule: external Tesla API
 // calls must wrap with context.WithTimeout (Tesla API: 30s). Without a
 // per-call deadline a stalled Tesla API hangs the request goroutine for
 // as long as the inbound HTTP client is willing to wait (forever, by
@@ -35,7 +37,7 @@ import (
 // deterministically without sleeping for 30 seconds.
 var chargePlannerCommandTimeout = 30 * time.Second
 
-// ChargePlannerHandler provides smart charge scheduling optimization.
+// Handler provides smart charge scheduling optimization.
 //
 // Phase-39 migration: the current-SOC lookup that seeds the optimizer
 // (BatteryLevel as of now) now resolves through the canonical
@@ -50,54 +52,54 @@ var chargePlannerCommandTimeout = 30 * time.Second
 // optimize request appear to need a full charge from empty — masking
 // real signal-store / pgx outages behind plausible-looking (but wrong)
 // charge windows and inflated cost estimates.
-type ChargePlannerHandler struct {
+type Handler struct {
 	db          *database.DB
 	teslaClient *tesla.Client
 	cfg         *config.Config
 	state       signal.StateReader
 }
 
-// NewChargePlannerHandler creates a new ChargePlannerHandler.
-func NewChargePlannerHandler(db *database.DB, teslaClient *tesla.Client, cfg *config.Config, state signal.StateReader) *ChargePlannerHandler {
-	return &ChargePlannerHandler{db: db, teslaClient: teslaClient, cfg: cfg, state: state}
+// NewHandler creates a new Handler.
+func NewHandler(db *database.DB, teslaClient *tesla.Client, cfg *config.Config, state signal.StateReader) *Handler {
+	return &Handler{db: db, teslaClient: teslaClient, cfg: cfg, state: state}
 }
 
 // ── Optimize Endpoint ────────────────────────────────────────
 
 // Optimize handles POST /charge-planner/optimize
-func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Optimize(w http.ResponseWriter, r *http.Request) {
 	var req optimizeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	// Validate required fields
 	if req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	if req.TargetSOC < 1 || req.TargetSOC > 100 {
-		writeError(w, http.StatusBadRequest, "target_soc must be 1-100")
+		httpx.WriteError(w, http.StatusBadRequest, "target_soc must be 1-100")
 		return
 	}
 	if req.RatePlanID == "" {
-		writeError(w, http.StatusBadRequest, "rate_plan_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "rate_plan_id is required")
 		return
 	}
 
 	if _, ok := ratePlans[req.RatePlanID]; !ok {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("unknown rate plan: %s", req.RatePlanID))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("unknown rate plan: %s", req.RatePlanID))
 		return
 	}
 
 	departBy, err := time.Parse(time.RFC3339, req.DepartBy)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "depart_by must be RFC3339 format")
+		httpx.WriteError(w, http.StatusBadRequest, "depart_by must be RFC3339 format")
 		return
 	}
 	if departBy.Before(time.Now().UTC()) {
-		writeError(w, http.StatusBadRequest, "depart_by must be in the future")
+		httpx.WriteError(w, http.StatusBadRequest, "depart_by must be in the future")
 		return
 	}
 
@@ -110,7 +112,7 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		val, err := h.state.SignalAt(ctx, req.VehicleID, "BatteryLevel", time.Now())
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Str("signal", "BatteryLevel").Msg("charge planner: failed to read current SOC")
-			writeError(w, http.StatusInternalServerError, "failed to read current battery state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read current battery state")
 			return
 		}
 		if val != nil {
@@ -128,7 +130,7 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 	// + fills in PlanID).
 	resp, err := h.computeSchedule(ctx, req, departBy, currentSOC, time.Now().UTC())
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -155,7 +157,7 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 	}
 	if err := planRepo.Create(ctx, dbPlan); err != nil {
 		log.Error().Err(err).Msg("failed to create charge plan")
-		writeError(w, http.StatusInternalServerError, "failed to save plan")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save plan")
 		return
 	}
 	resp.PlanID = dbPlan.ID
@@ -170,7 +172,7 @@ func (h *ChargePlannerHandler) Optimize(w http.ResponseWriter, r *http.Request) 
 		Float64("savings", resp.Comparison.Savings).
 		Msg("charge plan optimized")
 
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // applyOptimizeRequestDefaults populates the optional charger / battery
@@ -209,7 +211,7 @@ func applyOptimizeRequestDefaults(req *optimizeRequest) {
 // problems (already-at-target SOC, not-enough-time, no-valid-window)
 // and are intended to map to 400 Bad Request at the HTTP boundary.
 // Persistence and signal-store errors stay in the caller.
-func (h *ChargePlannerHandler) computeSchedule(_ context.Context, req optimizeRequest, departBy time.Time, currentSOC int, now time.Time) (*optimizeResponse, error) {
+func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, departBy time.Time, currentSOC int, now time.Time) (*optimizeResponse, error) {
 	plan, ok := ratePlans[req.RatePlanID]
 	if !ok {
 		return nil, fmt.Errorf("unknown rate plan: %s", req.RatePlanID)
@@ -367,14 +369,14 @@ func (h *ChargePlannerHandler) computeSchedule(_ context.Context, req optimizeRe
 // ── Apply Endpoint ───────────────────────────────────────────
 
 // Apply handles POST /charge-planner/apply
-func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Apply(w http.ResponseWriter, r *http.Request) {
 	var req applyRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if req.PlanID <= 0 {
-		writeError(w, http.StatusBadRequest, "plan_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "plan_id is required")
 		return
 	}
 
@@ -384,15 +386,15 @@ func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	plan, err := planRepo.GetByID(ctx, req.PlanID)
 	if err != nil {
 		log.Error().Err(err).Int64("plan_id", req.PlanID).Msg("failed to fetch charge plan")
-		writeError(w, http.StatusInternalServerError, "failed to fetch plan")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch plan")
 		return
 	}
 	if plan == nil {
-		writeError(w, http.StatusNotFound, "charge plan not found")
+		httpx.WriteError(w, http.StatusNotFound, "charge plan not found")
 		return
 	}
 	if plan.Status != "draft" {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("plan already %s", plan.Status))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("plan already %s", plan.Status))
 		return
 	}
 
@@ -400,7 +402,7 @@ func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 	vehicleRepo := vehicledb.NewVehicleRepo(h.db)
 	vehicle, err := vehicleRepo.GetByID(ctx, plan.VehicleID)
 	if err != nil || vehicle == nil {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
@@ -414,11 +416,11 @@ func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		log.Error().Err(err).Str("vin", vehicle.VIN).Str("command", failedCmd).Msg("failed to apply charge schedule")
 		switch failedCmd {
 		case "set_charge_limit":
-			writeError(w, http.StatusInternalServerError, "failed to set charge limit")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to set charge limit")
 		case "set_scheduled_charging":
-			writeError(w, http.StatusInternalServerError, "failed to set scheduled charging")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to set scheduled charging")
 		default:
-			writeError(w, http.StatusInternalServerError, "failed to apply charge schedule")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to apply charge schedule")
 		}
 		return
 	}
@@ -436,7 +438,7 @@ func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 		Int("target_soc", plan.TargetSOC).
 		Msg("charge schedule applied to vehicle")
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"status":  "scheduled",
 		"plan_id": plan.ID,
 		"message": fmt.Sprintf("Charging scheduled at %s", plan.ScheduledStart.Format("15:04")),
@@ -454,7 +456,7 @@ func (h *ChargePlannerHandler) Apply(w http.ResponseWriter, r *http.Request) {
 // alongside the underlying error so the caller can map it to the
 // appropriate user-facing error message and structured log field
 // without re-parsing wrapped error strings.
-func (h *ChargePlannerHandler) applyChargeScheduleToVehicle(parent context.Context, vin string, targetSOC, startMinutes int) (string, error) {
+func (h *Handler) applyChargeScheduleToVehicle(parent context.Context, vin string, targetSOC, startMinutes int) (string, error) {
 	limitCtx, limitCancel := context.WithTimeout(parent, chargePlannerCommandTimeout)
 	limitErr := h.teslaClient.SendCommand(limitCtx, vin, "set_charge_limit", map[string]interface{}{
 		"percent": targetSOC,
@@ -480,25 +482,25 @@ func (h *ChargePlannerHandler) applyChargeScheduleToVehicle(parent context.Conte
 // ── History Endpoint ─────────────────────────────────────────
 
 // ListPlans handles GET /charge-planner/history?vehicle_id=X
-func (h *ChargePlannerHandler) ListPlans(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListPlans(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil || vehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
-	limit, offset := pagination(r)
+	limit, offset := apiparams.Pagination(r)
 
 	planRepo := chargingdb.NewChargePlanRepo(h.db)
 	plans, err := planRepo.ListByVehicle(r.Context(), vehicleID, limit, offset)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to list charge plans")
-		writeError(w, http.StatusInternalServerError, "failed to list charge plans")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list charge plans")
 		return
 	}
 
@@ -506,13 +508,13 @@ func (h *ChargePlannerHandler) ListPlans(w http.ResponseWriter, r *http.Request)
 		plans = []*chargingdb.ChargePlan{}
 	}
 
-	writeJSON(w, http.StatusOK, plans)
+	httpx.WriteJSON(w, http.StatusOK, plans)
 }
 
 // ── Rate Plans Endpoint ──────────────────────────────────────
 
 // ListRatePlans handles GET /charge-planner/rate-plans
-func (h *ChargePlannerHandler) ListRatePlans(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ListRatePlans(w http.ResponseWriter, r *http.Request) {
 	type ratePlanInfo struct {
 		ID      string `json:"id"`
 		Name    string `json:"name"`
@@ -523,12 +525,12 @@ func (h *ChargePlannerHandler) ListRatePlans(w http.ResponseWriter, r *http.Requ
 		plans = append(plans, ratePlanInfo{ID: p.ID, Name: p.Name, Utility: p.Utility})
 	}
 	sort.Slice(plans, func(i, j int) bool { return plans[i].ID < plans[j].ID })
-	writeJSON(w, http.StatusOK, plans)
+	httpx.WriteJSON(w, http.StatusOK, plans)
 }
 
 // ComputeChargeSchedule implements schedule.ChargeScheduleComputer by delegating
 // to the canonical charge-planner compute path without persisting a plan.
-func (h *ChargePlannerHandler) ComputeChargeSchedule(ctx context.Context, req schedule.ChargeScheduleComputeRequest) (*schedule.ChargeScheduleComputeResult, error) {
+func (h *Handler) ComputeChargeSchedule(ctx context.Context, req schedule.ChargeScheduleComputeRequest) (*schedule.ChargeScheduleComputeResult, error) {
 	if h == nil {
 		return nil, errors.New("charge planner: nil handler")
 	}
@@ -595,4 +597,4 @@ func (h *ChargePlannerHandler) ComputeChargeSchedule(ctx context.Context, req sc
 	return out, nil
 }
 
-var _ schedule.ChargeScheduleComputer = (*ChargePlannerHandler)(nil)
+var _ schedule.ChargeScheduleComputer = (*Handler)(nil)

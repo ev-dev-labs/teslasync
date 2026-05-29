@@ -88,6 +88,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/batterycells"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
+	"github.com/ev-dev-labs/teslasync/internal/api/chargeplanner"
 	apichargetelem "github.com/ev-dev-labs/teslasync/internal/api/chargetelem"
 	apicharging "github.com/ev-dev-labs/teslasync/internal/api/charging"
 	apiannot "github.com/ev-dev-labs/teslasync/internal/api/chartannotation"
@@ -1213,7 +1214,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	lifetimeHandler := apilifetime.NewHandler(db, eventHub)
 	yearReviewHandler := NewYearReviewHandler(db)
-	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
+	chargePlannerHandler := chargeplanner.NewHandler(db, teslaClient, cfg, stateReader)
 	energyFlowHandler := apienergyflow.NewEnergyFlowHandler(db, stateReader, liveStateReader)
 	weeklyDigestHandler := apiweekly.NewHandler(db)
 	teslaChargingHistoryHandler := apiteslachargehist.NewTeslaChargingHistoryHandler(teslaClient, db)

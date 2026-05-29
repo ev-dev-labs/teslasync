@@ -1,4 +1,4 @@
-package api
+package chargeplanner
 
 import (
 	"bytes"
@@ -28,7 +28,7 @@ func newChargePlannerOptimizeRequest(t *testing.T, body any) *http.Request {
 	return httptest.NewRequest(http.MethodPost, "/charge-planner/optimize", bytes.NewReader(buf))
 }
 
-// TestChargePlanner_UsesCurrentSOC verifies that ChargePlannerHandler.Optimize
+// TestChargePlanner_UsesCurrentSOC verifies that Handler.Optimize
 // resolves the seeding "current SOC" via signal.StateReader.SignalAt with
 // signal name "BatteryLevel" anchored at time.Now() — the lookup that
 // determines how much energy the optimizer must schedule. A future
@@ -42,7 +42,7 @@ func newChargePlannerOptimizeRequest(t *testing.T, body any) *http.Request {
 // The test seeds the fake reader with currentSOC = 60 and requests
 // target_soc = 50, which exercises the early-return path
 //
-//	if currentSOC >= req.TargetSOC { writeError(... 400 ...) }
+//	if currentSOC >= req.TargetSOC { httpx.WriteError(... 400 ...) }
 //
 // — that branch fires only when the SignalAt-derived currentSOC was
 // actually plumbed into the comparison, so the 400 + the message text
@@ -71,7 +71,7 @@ func TestChargePlanner_UsesCurrentSOC(t *testing.T) {
 	// "current SOC already meets target" branch before any
 	// chargingdb.NewChargePlanRepo call. teslaClient/cfg: nil for the
 	// same reason.
-	h := &ChargePlannerHandler{state: fake}
+	h := &Handler{state: fake}
 
 	body := optimizeRequest{
 		VehicleID:  vid,
@@ -131,7 +131,7 @@ func TestChargePlanner_PropagatesError(t *testing.T) {
 			return nil, wantErr
 		},
 	}
-	h := &ChargePlannerHandler{state: fake}
+	h := &Handler{state: fake}
 
 	body := optimizeRequest{
 		VehicleID:  42,
@@ -149,7 +149,7 @@ func TestChargePlanner_PropagatesError(t *testing.T) {
 }
 
 // TestChargePlanner_ApplyWrapsSendCommandWithTimeout verifies that
-// ChargePlannerHandler.applyChargeScheduleToVehicle wraps each Tesla
+// Handler.applyChargeScheduleToVehicle wraps each Tesla
 // SendCommand call in its own context.WithTimeout — the project rule
 // for external Tesla API calls (Tesla API: 30s). Without a per-call
 // deadline a stalled Tesla API would hang the request goroutine for as
@@ -214,7 +214,7 @@ func TestChargePlanner_ApplyWrapsSendCommandWithTimeout(t *testing.T) {
 	chargePlannerCommandTimeout = 50 * time.Millisecond
 	defer func() { chargePlannerCommandTimeout = prevTimeout }()
 
-	h := &ChargePlannerHandler{teslaClient: client}
+	h := &Handler{teslaClient: client}
 
 	// Parent context with NO deadline — the timeout MUST come from
 	// the helper's own context.WithTimeout, never from the caller.
