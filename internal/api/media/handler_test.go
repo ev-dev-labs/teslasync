@@ -1,4 +1,4 @@
-package api
+package media
 
 import (
 	"context"
@@ -65,7 +65,7 @@ func newTestLiveStateReader(state signal.StateReader) signal.LiveStateReader {
 
 // canonicalMediaKeys is the 11-key media response shape that BOTH List rows
 // and Latest envelopes carry. Keep this list in sync with mediaMappings in
-// media_handler.go.
+// handler.go.
 var canonicalMediaKeys = []string{
 	"playback_status",
 	"now_playing_title",

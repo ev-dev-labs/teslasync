@@ -1,4 +1,4 @@
-package api
+package media
 
 import (
 	"net/http"
@@ -7,6 +7,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -61,13 +63,13 @@ func NewMediaHandler(state signal.StateReader, live signal.LiveStateReader) *Med
 func (h *MediaHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	from := time.Now().AddDate(0, 0, -7)
 	to := time.Now()
-	if start, end := parseDateRange(r); !start.IsZero() {
+	if start, end := apiparams.ParseDateRange(r); !start.IsZero() {
 		from = start
 		if !end.IsZero() {
 			to = end
@@ -79,7 +81,7 @@ func (h *MediaHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get media data from signal_log")
-		writeError(w, http.StatusInternalServerError, "failed to get media data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get media data")
 		return
 	}
 
@@ -94,7 +96,7 @@ func (h *MediaHandler) List(w http.ResponseWriter, r *http.Request) {
 		m["id"] = i + 1
 		result = append(result, m)
 	}
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
 // Latest returns the most-recent media values as of now, derived from
@@ -105,14 +107,14 @@ func (h *MediaHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *MediaHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest media data")
-		writeError(w, http.StatusInternalServerError, "failed to get latest media data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get latest media data")
 		return
 	}
 
@@ -124,5 +126,5 @@ func (h *MediaHandler) Latest(w http.ResponseWriter, r *http.Request) {
 			result[m.Field] = nil
 		}
 	}
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
 }

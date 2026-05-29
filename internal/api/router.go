@@ -40,6 +40,7 @@ import (
 	apiimpers "github.com/ev-dev-labs/teslasync/internal/api/impersonate"
 	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
+	apimedia "github.com/ev-dev-labs/teslasync/internal/api/media"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apimileage "github.com/ev-dev-labs/teslasync/internal/api/mileage"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
@@ -722,7 +723,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	climateHandler := NewClimateHandler(stateReader, liveStateReader)
 	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
 	chargingTelemetryHandler := NewChargingTelemetryHandler(stateReader, liveStateReader)
-	mediaHandler := NewMediaHandler(stateReader, liveStateReader)
+	mediaHandler := apimedia.NewMediaHandler(stateReader, liveStateReader)
 	vehicleConfigHandler := apivehconfig.NewHandler(stateReader, liveStateReader)
 	locationSnapshotHandler := NewLocationSnapshotHandler(stateReader, liveStateReader)
 	safetyHandler := NewSafetyHandler(stateReader, liveStateReader)
