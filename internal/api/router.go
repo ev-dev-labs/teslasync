@@ -181,6 +181,7 @@ import (
 	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
 	apivehstates "github.com/ev-dev-labs/teslasync/internal/api/vehiclestates"
 	apivisloc "github.com/ev-dev-labs/teslasync/internal/api/visitedlocation"
+	"github.com/ev-dev-labs/teslasync/internal/api/watch"
 	apiwerr "github.com/ev-dev-labs/teslasync/internal/api/weberrors"
 	apiwhrx "github.com/ev-dev-labs/teslasync/internal/api/webhookreceiver"
 	apivitals "github.com/ev-dev-labs/teslasync/internal/api/webvitals"
@@ -1956,7 +1957,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	geocodeHandler := apigeocode.NewHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
 	shareHandler := apishare.NewShareHandler(db)
-	watchHandler := NewWatchHandler(db, teslaClient)
+	watchHandler := watch.NewHandler(db, teslaClient)
 	onboardingHandler := apionboard.NewHandler(db, opt.Encryptor)
 	searchHandler := apisearch.NewHandler(db)
 

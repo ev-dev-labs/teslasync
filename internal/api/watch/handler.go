@@ -1,4 +1,4 @@
-package api
+package watch
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
@@ -43,8 +44,8 @@ type WatchComplication struct {
 	Charging bool   `json:"charging"`
 }
 
-// WatchHandler handles lightweight watch-optimized endpoints.
-type WatchHandler struct {
+// Handler handles lightweight watch-optimized endpoints.
+type Handler struct {
 	db           *database.DB
 	vehicleRepo  *vehicledb.VehicleRepo
 	settingsRepo *settingsdb.SettingsRepo
@@ -52,9 +53,9 @@ type WatchHandler struct {
 	redisCache   *signal.RedisSignalCache
 }
 
-// NewWatchHandler creates a new WatchHandler.
-func NewWatchHandler(db *database.DB, tc *tesla.Client) *WatchHandler {
-	return &WatchHandler{
+// NewHandler creates a new Handler.
+func NewHandler(db *database.DB, tc *tesla.Client) *Handler {
+	return &Handler{
 		db:           db,
 		vehicleRepo:  vehicledb.NewVehicleRepo(db),
 		settingsRepo: settingsdb.NewSettingsRepo(db),
@@ -63,7 +64,7 @@ func NewWatchHandler(db *database.DB, tc *tesla.Client) *WatchHandler {
 }
 
 // WithRedisCache sets the Redis signal cache for reading live vehicle state.
-func (h *WatchHandler) WithRedisCache(cache *signal.RedisSignalCache) *WatchHandler {
+func (h *Handler) WithRedisCache(cache *signal.RedisSignalCache) *Handler {
 	h.redisCache = cache
 	return h
 }
@@ -81,16 +82,16 @@ var watchCommands = map[string]bool{
 }
 
 // Summary returns a minimal vehicle summary optimized for watch displays.
-func (h *WatchHandler) Summary(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := resolveWatchVehicleID(r, h.vehicleRepo)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	vehicle, err := h.vehicleRepo.GetByID(r.Context(), vehicleID)
 	if err != nil || vehicle == nil {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
@@ -98,7 +99,7 @@ func (h *WatchHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("no live state for watch summary")
 		// Return basic info from vehicle record when no live state exists
-		writeJSON(w, http.StatusOK, WatchSummary{
+		httpx.WriteJSON(w, http.StatusOK, WatchSummary{
 			VehicleName: vehicle.DisplayName,
 			State:       "unknown",
 			IsLocked:    true,
@@ -109,14 +110,14 @@ func (h *WatchHandler) Summary(w http.ResponseWriter, r *http.Request) {
 
 	summary.VehicleName = vehicle.DisplayName
 
-	writeJSON(w, http.StatusOK, summary)
+	httpx.WriteJSON(w, http.StatusOK, summary)
 }
 
 // Complication returns the absolute minimum data for Apple Watch complications.
-func (h *WatchHandler) Complication(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Complication(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := resolveWatchVehicleID(r, h.vehicleRepo)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -125,10 +126,10 @@ func (h *WatchHandler) Complication(w http.ResponseWriter, r *http.Request) {
 		// Fallback: get basic vehicle info
 		vehicle, vErr := h.vehicleRepo.GetByID(r.Context(), vehicleID)
 		if vErr != nil || vehicle == nil {
-			writeError(w, http.StatusNotFound, "vehicle not found")
+			httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 			return
 		}
-		writeJSON(w, http.StatusOK, WatchComplication{
+		httpx.WriteJSON(w, http.StatusOK, WatchComplication{
 			Battery:  "—",
 			Range:    "—",
 			State:    stateEmoji("unknown"),
@@ -138,7 +139,7 @@ func (h *WatchHandler) Complication(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rangeStr := strconv.Itoa(int(summary.RangeKm)) + "km"
-	writeJSON(w, http.StatusOK, WatchComplication{
+	httpx.WriteJSON(w, http.StatusOK, WatchComplication{
 		Battery:  strconv.Itoa(summary.BatteryLevel) + "%",
 		Range:    rangeStr,
 		State:    stateEmoji(summary.State),
@@ -147,17 +148,17 @@ func (h *WatchHandler) Complication(w http.ResponseWriter, r *http.Request) {
 }
 
 // Command executes a simplified vehicle command from a watch.
-func (h *WatchHandler) Command(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Command(w http.ResponseWriter, r *http.Request) {
 	// Check API key permissions — commands require read-write or admin
 	perms, _ := r.Context().Value(apiKeyPermCtxKey{}).(string)
 	if perms != "read-write" && perms != "admin" {
-		writeError(w, http.StatusForbidden, "API key requires read-write or admin permissions for commands")
+		httpx.WriteError(w, http.StatusForbidden, "API key requires read-write or admin permissions for commands")
 		return
 	}
 
 	// Check if API is suspended
 	if suspended, _ := h.settingsRepo.IsAPISuspended(r.Context()); suspended {
-		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
+		httpx.WriteError(w, http.StatusConflict, "Tesla API calls are suspended")
 		return
 	}
 
@@ -166,17 +167,17 @@ func (h *WatchHandler) Command(w http.ResponseWriter, r *http.Request) {
 		Command   string `json:"command"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if body.Command == "" {
-		writeError(w, http.StatusBadRequest, "command is required")
+		httpx.WriteError(w, http.StatusBadRequest, "command is required")
 		return
 	}
 
 	if !watchCommands[body.Command] {
-		writeError(w, http.StatusBadRequest, "unsupported watch command: "+body.Command)
+		httpx.WriteError(w, http.StatusBadRequest, "unsupported watch command: "+body.Command)
 		return
 	}
 
@@ -185,7 +186,7 @@ func (h *WatchHandler) Command(w http.ResponseWriter, r *http.Request) {
 		// Try to resolve default vehicle
 		vehicles, err := h.vehicleRepo.GetAll(r.Context())
 		if err != nil || len(vehicles) == 0 {
-			writeError(w, http.StatusBadRequest, "vehicle_id is required")
+			httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 			return
 		}
 		vehicleID = vehicles[0].ID
@@ -193,12 +194,12 @@ func (h *WatchHandler) Command(w http.ResponseWriter, r *http.Request) {
 
 	vehicle, err := h.vehicleRepo.GetByID(r.Context(), vehicleID)
 	if err != nil || vehicle == nil {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -208,7 +209,7 @@ func (h *WatchHandler) Command(w http.ResponseWriter, r *http.Request) {
 			Str("command", body.Command).
 			Int64("vehicle_id", vehicleID).
 			Msg("watch command failed")
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"success": false,
 			"message": "Command failed: " + cmdErr.Error(),
 		})
@@ -220,7 +221,7 @@ func (h *WatchHandler) Command(w http.ResponseWriter, r *http.Request) {
 		Int64("vehicle_id", vehicleID).
 		Msg("watch command sent")
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"message": "Command sent successfully",
 	})
@@ -228,7 +229,7 @@ func (h *WatchHandler) Command(w http.ResponseWriter, r *http.Request) {
 
 // queryWatchSummary reads only the fields needed for a watch display
 // from the Redis signal cache.
-func (h *WatchHandler) queryWatchSummary(ctx context.Context, vehicleID int64) (*WatchSummary, error) {
+func (h *Handler) queryWatchSummary(ctx context.Context, vehicleID int64) (*WatchSummary, error) {
 	if h.redisCache == nil {
 		return nil, fmt.Errorf("redis signal cache not available")
 	}
@@ -344,4 +345,42 @@ func stateEmoji(state string) string {
 	default:
 		return "⚫"
 	}
+}
+
+// apiKeyPermCtxKey mirrors the API key permission context key used by the parent API middleware.
+type apiKeyPermCtxKey struct{}
+
+func signalFloat(signals map[string]interface{}, keys ...string) (float64, bool) {
+	for _, key := range keys {
+		if v, ok := signals[key]; ok {
+			return toFloatOk(v)
+		}
+	}
+	return 0, false
+}
+
+func signalInt(signals map[string]interface{}, keys ...string) (int, bool) {
+	for _, key := range keys {
+		if v, ok := signals[key]; ok {
+			if f, fok := toFloatOk(v); fok {
+				return int(f), true
+			}
+		}
+	}
+	return 0, false
+}
+
+func signalStr(signals map[string]interface{}, keys ...string) (string, bool) {
+	for _, key := range keys {
+		if v, ok := signals[key]; ok {
+			if s, ok2 := v.(string); ok2 && s != "" {
+				return s, true
+			}
+		}
+	}
+	return "", false
+}
+
+func toFloatOk(v interface{}) (float64, bool) {
+	return signal.Float64(v)
 }
