@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-29T07:39:00Z, Go go1.26.1, commit b26fab2c8f0c3a2c417b1df94827822191006492_
+_Generated 2026-05-29T07:44:00Z, Go go1.26.1, commit ce1bd32de3a75f0a863758b6a885819b87a35b7c_
 
 ## Summary
 
-- Packages: 471
+- Packages: 472
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 383052
+- Total non-blank LOC under cmd/+internal/+tools/: 383059
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-29T07:39:00Z, Go go1.26.1, commit b26fab2c8f0c3a2c417b1df9482
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 52 | 35 | 24488 | yes | handler |
+| internal/api | 50 | 33 | 23735 | yes | handler |
 | internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
 | internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
 | internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
@@ -223,6 +223,7 @@ _Generated 2026-05-29T07:39:00Z, Go go1.26.1, commit b26fab2c8f0c3a2c417b1df9482
 | internal/api/aitempimpact | 2 | 1 | 793 | yes | handler |
 | internal/api/aitirepress | 2 | 1 | 1223 | yes | handler |
 | internal/api/aitripplanllm | 2 | 1 | 654 | yes | handler |
+| internal/api/aiusage | 3 | 2 | 760 | yes | handler |
 | internal/api/aivampire | 2 | 1 | 599 | yes | handler |
 | internal/api/aivehpaint | 2 | 1 | 547 | yes | handler |
 | internal/api/aivoice | 2 | 1 | 1078 | yes | handler |
@@ -527,7 +528,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 52 / 35 | 59 | 34 | 25 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 50 / 33 | 59 | 34 | 25 |
 
 ### `internal/models` detail
 

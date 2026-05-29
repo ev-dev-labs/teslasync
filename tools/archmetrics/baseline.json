@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-29T07:38:59Z",
+  "generated_at": "2026-05-29T07:43:59Z",
   "go_version": "go1.26.1",
-  "commit_sha": "b26fab2c8f0c3a2c417b1df94827822191006492",
+  "commit_sha": "ce1bd32de3a75f0a863758b6a885819b87a35b7c",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 52,
-      "test_files": 35,
-      "loc": 24488,
+      "go_files": 50,
+      "test_files": 33,
+      "loc": 23735,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2669,6 +2669,7 @@
         "internal/api/aitempimpact",
         "internal/api/aitirepress",
         "internal/api/aitripplanllm",
+        "internal/api/aiusage",
         "internal/api/aivampire",
         "internal/api/aivehpaint",
         "internal/api/aivoice",
@@ -2886,8 +2887,6 @@
       ],
       "files": [
         "acceptance_test.go",
-        "ai_admin_handler.go",
-        "ai_admin_handler_test.go",
         "ai_cost_forecast_forecaster_test.go",
         "ai_internal_handler.go",
         "ai_ml_charging_curve_parity_test.go",
@@ -2896,8 +2895,6 @@
         "ai_settings_validate_handler.go",
         "ai_settings_validate_handler_test.go",
         "ai_test_helpers_test.go",
-        "ai_usage_handler.go",
-        "ai_usage_handler_test.go",
         "alert_validation_bridge.go",
         "api_call_log_middleware.go",
         "api_call_log_middleware_test.go",
@@ -4300,6 +4297,27 @@
         "doc.go",
         "handler.go",
         "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/aiusage",
+      "go_files": 3,
+      "test_files": 2,
+      "loc": 760,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/ai/guard",
+        "internal/api/httpx",
+        "internal/auth",
+        "internal/database/ai"
+      ],
+      "files": [
+        "admin.go",
+        "admin_test.go",
+        "doc.go",
+        "usage.go",
+        "usage_test.go"
       ]
     },
     {
@@ -10569,11 +10587,9 @@
       "presets.go"
     ],
     "internal/api": [
-      "ai_admin_handler.go",
       "ai_internal_handler.go",
       "ai_routes.go",
       "ai_settings_validate_handler.go",
-      "ai_usage_handler.go",
       "alert_validation_bridge.go",
       "api_call_log_middleware.go",
       "apikey_middleware.go",
@@ -10831,6 +10847,11 @@
     "internal/api/aitripplanllm": [
       "doc.go",
       "handler.go"
+    ],
+    "internal/api/aiusage": [
+      "admin.go",
+      "doc.go",
+      "usage.go"
     ],
     "internal/api/aivampire": [
       "doc.go",
@@ -12516,8 +12537,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 52,
-      "flat_parent_test_files": 35,
+      "flat_parent_go_files": 50,
+      "flat_parent_test_files": 33,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",

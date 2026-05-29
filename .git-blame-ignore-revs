@@ -393,3 +393,6 @@ f3b158d22a2cf596c9b13587fdd5abdcfd6e2ccb # fix(R2d): resolve cross-carve conflic
 9270cecd692cee20a9eec3fc84863c1fc5af8bc9 # refactor(R2d.167): carve internal/api/yearreview subpackage
 3d108eb0fae845223d4cca8cc0d7cdf1e81de408 # refactor(R2d.168): carve internal/api/tempimpact subpackage
 b26fab2c8f0c3a2c417b1df94827822191006492 # fix(R2d): resolve duplicate wiring lines from batch 12 cherry-pick (chargeplanner/yearreview)
+
+# R2d.169 batch 13 — aiusage carve (ai_usage + ai_admin)
+ce1bd32de3a75f0a863758b6a885819b87a35b7c # refactor(R2d.169): carve internal/api/aiusage subpackage (ai_usage + ai_admin)
