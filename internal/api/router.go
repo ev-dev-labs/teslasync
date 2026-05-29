@@ -47,6 +47,7 @@ import (
 	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
 	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
 	apidrivedyn "github.com/ev-dev-labs/teslasync/internal/api/drivedyn"
+	apidrives "github.com/ev-dev-labs/teslasync/internal/api/drives"
 	apidrivetrain "github.com/ev-dev-labs/teslasync/internal/api/drivetrain"
 	apidrivingcoach "github.com/ev-dev-labs/teslasync/internal/api/drivingcoach"
 	apienergyflow "github.com/ev-dev-labs/teslasync/internal/api/energyflow"
@@ -418,7 +419,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// Handlers
 	vehicleHandler := apiveh.NewHandler(vehicleSvc, teslaClient, stateReader)
-	driveHandler := NewDriveDetail(db, stateReader, liveStateReader)
+	driveHandler := apidrives.NewDriveDetail(db, stateReader, liveStateReader)
 	chargingHandler := apicharging.NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
 		func(r *http.Request, action string, entityID *int64, detail string) {
