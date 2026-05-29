@@ -1,4 +1,4 @@
-package api
+package teslaenergyhist
 
 import (
 	"encoding/json"

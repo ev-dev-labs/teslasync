@@ -1,4 +1,4 @@
-package api
+package teslaenergyhist
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -47,7 +48,7 @@ func NewTeslaEnergyHistoryHandler(tc *tesla.Client, db *database.DB) *TeslaEnerg
 func (h *TeslaEnergyHistoryHandler) EnergyHistory(w http.ResponseWriter, r *http.Request) {
 	siteID, err := parseSiteID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid site_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid site_id")
 		return
 	}
 
@@ -56,7 +57,7 @@ func (h *TeslaEnergyHistoryHandler) EnergyHistory(w http.ResponseWriter, r *http
 		period = "day"
 	}
 	if !validEnergyPeriods[period] {
-		writeError(w, http.StatusBadRequest, "period must be day, week, month, or year")
+		httpx.WriteError(w, http.StatusBadRequest, "period must be day, week, month, or year")
 		return
 	}
 
@@ -66,13 +67,13 @@ func (h *TeslaEnergyHistoryHandler) EnergyHistory(w http.ResponseWriter, r *http
 	entries, err := h.energyRepo.GetByRange(r.Context(), siteID, period, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to query energy history")
-		writeError(w, http.StatusInternalServerError, "failed to query energy history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query energy history")
 		return
 	}
 	if entries == nil {
 		entries = []*teslamodel.TeslaEnergyHistory{}
 	}
-	writeJSON(w, http.StatusOK, entries)
+	httpx.WriteJSON(w, http.StatusOK, entries)
 }
 
 // RefreshEnergyHistory fetches energy history from Tesla, upserts to DB, and returns data.
@@ -80,7 +81,7 @@ func (h *TeslaEnergyHistoryHandler) EnergyHistory(w http.ResponseWriter, r *http
 func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, r *http.Request) {
 	siteID, err := parseSiteID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid site_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid site_id")
 		return
 	}
 
@@ -89,7 +90,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 		period = "day"
 	}
 	if !validEnergyPeriods[period] {
-		writeError(w, http.StatusBadRequest, "period must be day, week, month, or year")
+		httpx.WriteError(w, http.StatusBadRequest, "period must be day, week, month, or year")
 		return
 	}
 
@@ -100,26 +101,26 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 	body, status, err := h.teslaClient.GetEnergySiteCalendarHistory(r.Context(), siteID, "energy", startDate, endDate, period, tz)
 	if err != nil {
 		log.Error().Err(err).Msg("tesla energy history API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch energy history from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch energy history from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla energy history non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
 	entries, err := parseEnergyHistoryResponse(body, siteID, period)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to parse energy history response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
 	upserted, err := h.energyRepo.UpsertBatch(r.Context(), entries)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to upsert energy history")
-		writeError(w, http.StatusInternalServerError, "failed to save energy history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save energy history")
 		return
 	}
 
@@ -131,13 +132,13 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 	stored, err := h.energyRepo.GetByRange(r.Context(), siteID, period, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to query energy history after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to query energy history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query energy history")
 		return
 	}
 	if stored == nil {
 		stored = []*teslamodel.TeslaEnergyHistory{}
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"entries":  stored,
 		"upserted": upserted,
 	})
@@ -151,7 +152,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 func (h *TeslaEnergyHistoryHandler) BackupHistory(w http.ResponseWriter, r *http.Request) {
 	siteID, err := parseSiteID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid site_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid site_id")
 		return
 	}
 
@@ -161,20 +162,20 @@ func (h *TeslaEnergyHistoryHandler) BackupHistory(w http.ResponseWriter, r *http
 	entries, err := h.backupRepo.GetByRange(r.Context(), siteID, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to query backup history")
-		writeError(w, http.StatusInternalServerError, "failed to query backup history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query backup history")
 		return
 	}
 	if entries == nil {
 		entries = []*teslamodel.TeslaEnergyBackupEvent{}
 	}
-	writeJSON(w, http.StatusOK, entries)
+	httpx.WriteJSON(w, http.StatusOK, entries)
 }
 
 // RefreshBackupHistory fetches backup events from Tesla and upserts to DB.
 func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, r *http.Request) {
 	siteID, err := parseSiteID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid site_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid site_id")
 		return
 	}
 
@@ -183,7 +184,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, 
 		period = "day"
 	}
 	if !validEnergyPeriods[period] {
-		writeError(w, http.StatusBadRequest, "period must be day, week, month, or year")
+		httpx.WriteError(w, http.StatusBadRequest, "period must be day, week, month, or year")
 		return
 	}
 
@@ -194,26 +195,26 @@ func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, 
 	body, status, err := h.teslaClient.GetEnergySiteCalendarHistory(r.Context(), siteID, "backup", startDate, endDate, period, tz)
 	if err != nil {
 		log.Error().Err(err).Msg("tesla backup history API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch backup history from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch backup history from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla backup history non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
 	entries, err := parseBackupHistoryResponse(body, siteID, period)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to parse backup history response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
 	upserted, err := h.backupRepo.UpsertBatch(r.Context(), entries)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to upsert backup history")
-		writeError(w, http.StatusInternalServerError, "failed to save backup history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save backup history")
 		return
 	}
 
@@ -224,13 +225,13 @@ func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, 
 	stored, err := h.backupRepo.GetByRange(r.Context(), siteID, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to query backup history after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to query backup history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query backup history")
 		return
 	}
 	if stored == nil {
 		stored = []*teslamodel.TeslaEnergyBackupEvent{}
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"entries":  stored,
 		"upserted": upserted,
 	})
@@ -244,7 +245,7 @@ func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, 
 func (h *TeslaEnergyHistoryHandler) ChargingHistory(w http.ResponseWriter, r *http.Request) {
 	siteID, err := parseSiteID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid site_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid site_id")
 		return
 	}
 
@@ -254,20 +255,20 @@ func (h *TeslaEnergyHistoryHandler) ChargingHistory(w http.ResponseWriter, r *ht
 	entries, err := h.wcRepo.GetByRange(r.Context(), siteID, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to query wc charging history")
-		writeError(w, http.StatusInternalServerError, "failed to query charging history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query charging history")
 		return
 	}
 	if entries == nil {
 		entries = []*teslamodel.TeslaEnergyWCCharging{}
 	}
-	writeJSON(w, http.StatusOK, entries)
+	httpx.WriteJSON(w, http.StatusOK, entries)
 }
 
 // RefreshChargingHistory fetches WC charging from Tesla and upserts to DB.
 func (h *TeslaEnergyHistoryHandler) RefreshChargingHistory(w http.ResponseWriter, r *http.Request) {
 	siteID, err := parseSiteID(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid site_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid site_id")
 		return
 	}
 
@@ -278,26 +279,26 @@ func (h *TeslaEnergyHistoryHandler) RefreshChargingHistory(w http.ResponseWriter
 	body, status, err := h.teslaClient.GetEnergySiteTelemetryHistory(r.Context(), siteID, "charge", startDate, endDate, tz)
 	if err != nil {
 		log.Error().Err(err).Msg("tesla wc charging history API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch charging history from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch charging history from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla wc charging history non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
 	entries, err := parseWCChargingResponse(body, siteID)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to parse wc charging history response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
 	upserted, err := h.wcRepo.UpsertBatch(r.Context(), entries)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to upsert wc charging history")
-		writeError(w, http.StatusInternalServerError, "failed to save charging history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save charging history")
 		return
 	}
 
@@ -308,13 +309,13 @@ func (h *TeslaEnergyHistoryHandler) RefreshChargingHistory(w http.ResponseWriter
 	stored, err := h.wcRepo.GetByRange(r.Context(), siteID, since, until, limit)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to query wc charging history after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to query charging history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to query charging history")
 		return
 	}
 	if stored == nil {
 		stored = []*teslamodel.TeslaEnergyWCCharging{}
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"entries":  stored,
 		"upserted": upserted,
 	})
