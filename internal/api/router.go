@@ -35,6 +35,7 @@ import (
 	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
 	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
 	aifeedtri "github.com/ev-dev-labs/teslasync/internal/api/aifeedtri"
+	aifsmnar "github.com/ev-dev-labs/teslasync/internal/api/aifsmnar"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2268,11 +2269,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// ordering rule as the other slice tools above: must be
 	// registered before the handler constructor below so the
 	// strategy's allowedTools resolve at boot. The Source is the
-	// production AIFSMTraceSource adapter that returns a
+	// production FSMTraceSource adapter that returns a
 	// deterministic empty envelope describing the bound tuple;
 	// the canonical baseline /api/v1/fsm/transitions surface
 	// remains reachable to the operator at all times.
-	aiFSMTraceSource := NewAIFSMTraceSource()
+	aiFSMTraceSource := aifsmnar.NewFSMTraceSource()
 	summary.RegisterStateMachineDebuggerNarratorTools(aiToolRegistry, summary.StateMachineDebuggerNarratorSources{
 		Retriever: aiStateMachineDebuggerNarratorRetriever,
 		FSMTrace:  aiFSMTraceSource,
@@ -2281,7 +2282,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiStateMachineDebuggerNarratorHandler := NewAIStateMachineDebuggerNarratorHandler(
+	aiStateMachineDebuggerNarratorHandler := aifsmnar.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		statemachinedebuggernarrator.New(),

@@ -14,10 +14,11 @@
 // state-machine-debugger-narrator`); duplicating that here would
 // require a live FSM-transition fixture.
 
-package api
+package aifsmnar
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,6 +28,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestStateMachineNarratorAIOffShowsDebuggerOnly is the
 // load-bearing off-mode contract proof for slice 0048. It mounts
@@ -139,23 +156,23 @@ func TestStateMachineNarratorAIOffShowsDebuggerOnly(t *testing.T) {
 	}
 }
 
-// TestAIStateMachineDebuggerNarratorHandler_PanicsOnNilWiring
+// TestHandler_PanicsOnNilWiring
 // asserts the handler constructor refuses zero-valued
 // dependencies. A wiring bug at boot must surface as a panic,
 // not as a nil-deref on first request.
-func TestAIStateMachineDebuggerNarratorHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIStateMachineDebuggerNarratorHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIStateMachineDebuggerNarratorHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -163,12 +180,12 @@ func TestAIStateMachineDebuggerNarratorHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIStateMachineDebuggerNarratorHandler_RejectsBadBody
+// TestHandler_RejectsBadBody
 // asserts the handler validates the body BEFORE opening the SSE
 // stream — a missing, unparseable, or out-of-range field must
 // surface as a JSON 400, not a half-opened stream that confuses
 // the frontend.
-func TestAIStateMachineDebuggerNarratorHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -237,15 +254,15 @@ func TestBuildStateMachineDebuggerNarratorUserMessage(t *testing.T) {
 	}
 }
 
-// TestAIFSMTraceSource_ReturnsDeterministicEmptyEnvelope pins the
+// TestFSMTraceSource_ReturnsDeterministicEmptyEnvelope pins the
 // production source adapter contract: the canonical baseline
 // /api/v1/fsm/transitions surface remains the only live FSM
 // transition reader; the AI source returns a deterministic empty
 // envelope so the strategy's zero-data goldens stay in sync with
 // the runtime.
-func TestAIFSMTraceSource_ReturnsDeterministicEmptyEnvelope(t *testing.T) {
+func TestFSMTraceSource_ReturnsDeterministicEmptyEnvelope(t *testing.T) {
 	t.Parallel()
-	src := NewAIFSMTraceSource()
+	src := NewFSMTraceSource()
 	env, err := src.FSMTrace(nil, 42, 1700000000, 1700001800)
 	if err != nil {
 		t.Fatalf("FSMTrace err = %v", err)
@@ -277,11 +294,11 @@ func TestAIFSMTraceSource_ReturnsDeterministicEmptyEnvelope(t *testing.T) {
 	}
 }
 
-// TestAIFSMTraceSource_RejectsInvalidWindow pins the adapter's
+// TestFSMTraceSource_RejectsInvalidWindow pins the adapter's
 // argument validation contract.
-func TestAIFSMTraceSource_RejectsInvalidWindow(t *testing.T) {
+func TestFSMTraceSource_RejectsInvalidWindow(t *testing.T) {
 	t.Parallel()
-	src := NewAIFSMTraceSource()
+	src := NewFSMTraceSource()
 	cases := []struct {
 		name                        string
 		vehicleID, fromUnix, toUnix int64

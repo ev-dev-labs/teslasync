@@ -1,4 +1,4 @@
-package api
+package aifsmnar
 
 // Phase-50 / 0048 — S7 State-machine debugger narrator.
 //
@@ -90,6 +90,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -138,14 +139,34 @@ type aiStateMachineDebuggerNarratorRequest struct {
 	ToUnix int64 `json:"to_unix"`
 }
 
-// AIStateMachineDebuggerNarratorHandler is the HTTP handler for
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// bytesTrim is a defensive ASCII whitespace trimmer used only by
+// the body-empty check. Avoids importing bytes for one call.
+func bytesTrim(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] == '\r' || b[0] == '\n') {
+		b = b[1:]
+	}
+	for len(b) > 0 && (b[len(b)-1] == ' ' || b[len(b)-1] == '\t' || b[len(b)-1] == '\r' || b[len(b)-1] == '\n') {
+		b = b[:len(b)-1]
+	}
+	return b
+}
+
+// Handler is the HTTP handler for
 // POST /api/v1/ai/system/fsm/narrate.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AIStateMachineDebuggerNarratorHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -154,7 +175,7 @@ type AIStateMachineDebuggerNarratorHandler struct {
 	maxIters   int
 }
 
-// NewAIStateMachineDebuggerNarratorHandler constructs the
+// NewHandler constructs the
 // handler. All non-pointer arguments are required; the
 // constructor panics on a nil so the wiring bug surfaces at
 // boot, not at first request.
@@ -175,7 +196,7 @@ type AIStateMachineDebuggerNarratorHandler struct {
 //
 // source:     the production summary.FSMTraceSource (currently
 //
-//	AIFSMTraceSource — a deterministic empty adapter;
+//	FSMTraceSource — a deterministic empty adapter;
 //	the canonical baseline /api/v1/fsm/transitions
 //	surface remains reachable to the operator at all
 //	times).
@@ -183,24 +204,24 @@ type AIStateMachineDebuggerNarratorHandler struct {
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAIStateMachineDebuggerNarratorHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	source summary.FSMTraceSource,
 	headerName string,
-) *AIStateMachineDebuggerNarratorHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIStateMachineDebuggerNarratorHandler: nil provider.Registry")
+		panic("aifsmnar: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIStateMachineDebuggerNarratorHandler: nil tools.Registry")
+		panic("aifsmnar: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIStateMachineDebuggerNarratorHandler: nil strategy.Strategy")
+		panic("aifsmnar: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAIStateMachineDebuggerNarratorHandler: nil summary.FSMTraceSource")
+		panic("aifsmnar: NewHandler: nil summary.FSMTraceSource")
 	}
-	return &AIStateMachineDebuggerNarratorHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -265,7 +286,7 @@ func parseStateMachineDebuggerNarratorRequest(w http.ResponseWriter, r *http.Req
 // writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
-func (h *AIStateMachineDebuggerNarratorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseStateMachineDebuggerNarratorRequest(w, r)
 	if !ok {
@@ -368,9 +389,9 @@ func buildStateMachineDebuggerNarratorUserMessage(vehicleID, fromUnix, toUnix in
 	)
 }
 
-// Compile-time assertion: AIStateMachineDebuggerNarratorHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AIStateMachineDebuggerNarratorHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -380,7 +401,7 @@ var _ http.Handler = (*AIStateMachineDebuggerNarratorHandler)(nil)
 // AIStreamInspectorSource pattern.
 // ---------------------------------------------------------------------
 
-// AIFSMTraceSource is the production summary.FSMTraceSource. The
+// FSMTraceSource is the production summary.FSMTraceSource. The
 // canonical baseline /api/v1/fsm/transitions surface remains
 // reachable to the operator at all times — this adapter
 // intentionally returns a deterministic empty envelope describing
@@ -395,13 +416,13 @@ var _ http.Handler = (*AIStateMachineDebuggerNarratorHandler)(nil)
 // FromUnix / ToUnix values the handler installed and stringifies
 // the times so the LLM sees a recognisable window without having
 // to format Unix seconds itself.
-type AIFSMTraceSource struct{}
+type FSMTraceSource struct{}
 
-// NewAIFSMTraceSource constructs the deterministic empty adapter.
+// NewFSMTraceSource constructs the deterministic empty adapter.
 // No deps. Returned by-pointer for symmetry with the other AI*
 // source types.
-func NewAIFSMTraceSource() *AIFSMTraceSource {
-	return &AIFSMTraceSource{}
+func NewFSMTraceSource() *FSMTraceSource {
+	return &FSMTraceSource{}
 }
 
 // FSMTrace implements summary.FSMTraceSource. Returns a
@@ -411,7 +432,7 @@ func NewAIFSMTraceSource() *AIFSMTraceSource {
 // The envelope's slices are non-nil (empty-but-allocated) so
 // JSON marshalling renders [] rather than null — keeping the
 // LLM's tool-reply parsing predictable.
-func (a *AIFSMTraceSource) FSMTrace(_ context.Context, vehicleID, fromUnix, toUnix int64) (*summary.FSMTraceEnvelope, error) {
+func (a *FSMTraceSource) FSMTrace(_ context.Context, vehicleID, fromUnix, toUnix int64) (*summary.FSMTraceEnvelope, error) {
 	if vehicleID <= 0 {
 		return nil, fmt.Errorf("api ai state-machine-debugger-narrator: vehicle_id must be > 0")
 	}
@@ -435,6 +456,6 @@ func (a *AIFSMTraceSource) FSMTrace(_ context.Context, vehicleID, fromUnix, toUn
 	}, nil
 }
 
-// Compile-time assertion: AIFSMTraceSource satisfies
+// Compile-time assertion: FSMTraceSource satisfies
 // summary.FSMTraceSource.
-var _ summary.FSMTraceSource = (*AIFSMTraceSource)(nil)
+var _ summary.FSMTraceSource = (*FSMTraceSource)(nil)
