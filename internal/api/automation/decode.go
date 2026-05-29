@@ -1,4 +1,4 @@
-package api
+package automation
 
 import (
 	"bytes"
@@ -39,6 +39,12 @@ func automationFieldSet(names []string) map[string]struct{} {
 		fields[name] = struct{}{}
 	}
 	return fields
+}
+
+// ValidateAutomationInput validates the typed automation create/update payload.
+func ValidateAutomationInput(body io.Reader) error {
+	_, err := decodeAutomationInputDTO(body)
+	return err
 }
 
 func decodeAutomationInputDTO(body io.Reader) (*createAutomationRequest, error) {
