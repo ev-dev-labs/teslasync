@@ -38,6 +38,7 @@ import (
 	aitirepress "github.com/ev-dev-labs/teslasync/internal/api/aitirepress"
 	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
 	aivampire "github.com/ev-dev-labs/teslasync/internal/api/aivampire"
+	aiyir "github.com/ev-dev-labs/teslasync/internal/api/aiyir"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -776,7 +777,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	// Phase-50 / U3 (slice 0013) — Year-in-review narration handler.
 	// One per process; stateless beyond constructor inputs.
-	aiYIRHandler := NewAIYearReviewHandler(
+	aiYIRHandler := aiyir.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		yirnarration.New(),

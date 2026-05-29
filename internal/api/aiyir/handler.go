@@ -1,8 +1,8 @@
-package api
+package aiyir
 
 // Phase-50 / 0013 — U3 Year-in-review narration.
 //
-// ai_year_review_handler.go implements the LLM-backed handler at
+// handler.go implements the LLM-backed handler at
 // POST /api/v1/ai/analytics/year-in-review/narrate. The flow is the
 // same dispatch+stream loop the chatbot/digest handlers use, minus
 // any persistence (a year-in-review narration is one-shot — there's
@@ -50,22 +50,23 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiYearReviewMaxIterations bounds the dispatcher's tool-loop. YIR
+// maxIterations bounds the dispatcher's tool-loop. YIR
 // narration is one-tool-call-then-answer; a hard ceiling of 4 is
 // generous for a model that occasionally retries the tool call once
 // before settling. Mirrors aiDigestMaxIterations from slice 0012.
-const aiYearReviewMaxIterations = 4
+const maxIterations = 4
 
-// AIYearReviewHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/analytics/year-in-review/narrate.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIYearReviewHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -73,7 +74,7 @@ type AIYearReviewHandler struct {
 	maxIters   int
 }
 
-// NewAIYearReviewHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -85,36 +86,36 @@ type AIYearReviewHandler struct {
 //
 // strat:      the yir-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIYearReviewHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIYearReviewHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIYearReviewHandler: nil provider.Registry")
+		panic("aiyir: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIYearReviewHandler: nil tools.Registry")
+		panic("aiyir: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIYearReviewHandler: nil strategy.Strategy")
+		panic("aiyir: NewHandler: nil strategy.Strategy")
 	}
-	return &AIYearReviewHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiYearReviewMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// aiYearReviewRequest is the wire shape for
+// request is the wire shape for
 // POST /api/v1/ai/analytics/year-in-review/narrate.
 //
 // VehicleID is required and must be > 0. Year is required and bounded
 // to 2010..2100 to mirror the baseline YearReviewHandler's existing
 // validation.
-type aiYearReviewRequest struct {
+type request struct {
 	VehicleID int64 `json:"vehicle_id"`
 	Year      int   `json:"year"`
 }
@@ -124,19 +125,19 @@ type aiYearReviewRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIYearReviewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
-	var body aiYearReviewRequest
+	var body request
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if body.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
 		return
 	}
 	if body.Year < 2010 || body.Year > 2100 {
-		writeError(w, http.StatusBadRequest, "year is required and must be in 2010..2100")
+		httpx.WriteError(w, http.StatusBadRequest, "year is required and must be in 2010..2100")
 		return
 	}
 
@@ -146,7 +147,7 @@ func (h *AIYearReviewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), yirnarration.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai year-review: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -166,7 +167,7 @@ func (h *AIYearReviewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		// Non-flushable response writer (test recorder, etc.).
 		// Emit a plain JSON 500 — the SSE headers were not sent.
 		log.Error().Err(err).Msg("ai year-review: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -215,13 +216,12 @@ func (h *AIYearReviewHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// Compile-time assertion: AIYearReviewHandler satisfies http.Handler.
-var _ http.Handler = (*AIYearReviewHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
-// _ is a compile-time reference to the package's denyAllConfirm
-// (defined in ai_chatbot_handler.go) so a renamed identifier surfaces
-// here at build time. dispatch.ConfirmFn is a function type so we
-// can't assert its identity directly.
-var _ = func(ctx context.Context, req dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
-	return denyAllConfirm(ctx, req)
+// denyAllConfirm is the dispatcher's user-confirm hook. The YIR strategy
+// declares only read-only tools, so this is never called in practice; if a
+// future edit adds a mutating tool, the dispatcher rejects it.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
