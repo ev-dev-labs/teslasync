@@ -1,4 +1,4 @@
-package api
+package analytics
 
 import (
 	"math"
@@ -8,6 +8,9 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
@@ -44,7 +47,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	vehicles, err := h.vehicleRepo.GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get vehicles for analytics")
-		writeError(w, http.StatusInternalServerError, "failed to get analytics")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get analytics")
 		return
 	}
 
@@ -118,7 +121,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		if snapErr != nil {
 			log.Error().Err(snapErr).Int64("vehicleID", v.ID).Msg("analytics: failed to get latest signal snapshot")
 		} else if snap != nil {
-			if bl, ok := toFloatOk(snap["BatteryLevel"]); ok && bl > 0 {
+			if bl, ok := signal.Float64(snap["BatteryLevel"]); ok && bl > 0 {
 				const nomCap = 75000.0
 				const nomRange = 531.0
 				batteryTrend = append(batteryTrend, batteryPoint{
@@ -565,7 +568,7 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// === Build total response ===
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		// Core fleet stats (existing)
 		"period_days":             periodDays,
 		"total_vehicles":          len(vehicles),
