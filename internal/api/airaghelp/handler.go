@@ -1,4 +1,4 @@
-package api
+package airaghelp
 
 // Phase-50 / 0020 — N6 RAG-backed app help.
 //
@@ -59,6 +59,7 @@ package api
 //                         by this slice.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -72,32 +73,33 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiRagHelpMaxIterations bounds the dispatcher's tool-loop. The
+// maxIterations bounds the dispatcher's tool-loop. The
 // rag-help strategy is typically a 1-3 step sequence (one
 // retrieve_docs call, then 0-2 cite_help_chunk calls for the
 // chunks the model decides to cite, then narrate). A hard ceiling
 // of 6 is generous for an LLM that occasionally cites several
 // chunks before settling. Mirrors aiSearchMaxIterations.
-const aiRagHelpMaxIterations = 6
+const maxIterations = 6
 
-// aiRagHelpMaxPromptChars bounds the user-supplied natural-
+// maxPromptChars bounds the user-supplied natural-
 // language query at the HTTP boundary. Generous for a multi-
 // sentence help question; defensive against an enormous payload
 // that would inflate the LLM's context window cost without any
 // plausible legitimate use. Matches the per-tool query cap so the
 // boundaries align.
-const aiRagHelpMaxPromptChars = 4096
+const maxPromptChars = 4096
 
-// AIRAGHelpHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/help/query.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIRAGHelpHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -105,7 +107,7 @@ type AIRAGHelpHandler struct {
 	maxIters   int
 }
 
-// NewAIRAGHelpHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -117,39 +119,39 @@ type AIRAGHelpHandler struct {
 //
 // strat:      the rag-help Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIRAGHelpHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIRAGHelpHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIRAGHelpHandler: nil provider.Registry")
+		panic("airaghelp: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIRAGHelpHandler: nil tools.Registry")
+		panic("airaghelp: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIRAGHelpHandler: nil strategy.Strategy")
+		panic("airaghelp: NewHandler: nil strategy.Strategy")
 	}
-	return &AIRAGHelpHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiRagHelpMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// aiRagHelpRequest is the wire shape for
+// request is the wire shape for
 // POST /api/v1/ai/help/query.
 //
 // Prompt is the user's plain-language help question, capped at
-// aiRagHelpMaxPromptChars. The slice deliberately does NOT accept
+// maxPromptChars. The slice deliberately does NOT accept
 // a vehicle_id or any user-scoped filter — the help corpus is
 // GLOBAL (docs/runbooks/i18n carry no PII per the slice prompt's
 // evidence section) so per-vehicle scoping would create a UI
 // affordance we cannot enforce server-side.
-type aiRagHelpRequest struct {
+type request struct {
 	Prompt string `json:"prompt"`
 }
 
@@ -158,20 +160,20 @@ type aiRagHelpRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has
 // been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIRAGHelpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
-	var body aiRagHelpRequest
+	var body request
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	prompt := strings.TrimSpace(body.Prompt)
 	if prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
+		httpx.WriteError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
-	if len(prompt) > aiRagHelpMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiRagHelpMaxPromptChars))
+	if len(prompt) > maxPromptChars {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", maxPromptChars))
 		return
 	}
 
@@ -181,7 +183,7 @@ func (h *AIRAGHelpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), raghelp.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai rag-help: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -205,7 +207,7 @@ func (h *AIRAGHelpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Non-flushable response writer (test recorder, etc.).
 		// Emit a plain JSON 500 — the SSE headers were not sent.
 		log.Error().Err(err).Msg("ai rag-help: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -261,5 +263,11 @@ func (h *AIRAGHelpHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: AIRAGHelpHandler satisfies http.Handler.
-var _ http.Handler = (*AIRAGHelpHandler)(nil)
+// denyAllConfirm rejects any accidental mutating tool call. The rag-help
+// strategy is read-only, but keeping the hook fail-closed protects future edits.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)

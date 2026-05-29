@@ -29,6 +29,7 @@ import (
 	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
 	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
 	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
+	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -1004,7 +1005,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiRagHelpHandler := NewAIRAGHelpHandler(
+	aiRagHelpHandler := airaghelp.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		raghelp.New(),

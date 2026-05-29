@@ -12,9 +12,10 @@
 // the F6 eval harness (`go run ./cmd/ai-eval --feature rag-help`);
 // duplicating that here would require a live database fixture.
 
-package api
+package airaghelp
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -25,7 +26,26 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestRagHelpAIOffHidesAssistantAndDocsLinksWork is the load-
 // bearing off-mode contract proof for slice 0020. It mounts the AI
@@ -126,23 +146,23 @@ func TestRagHelpAIOffHidesAssistantAndDocsLinksWork(t *testing.T) {
 	}
 }
 
-// TestAIRAGHelpHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIRAGHelpHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIRAGHelpHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIRAGHelpHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -150,11 +170,11 @@ func TestAIRAGHelpHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIRAGHelpHandler_RejectsBadInput asserts the handler validates
+// TestHandler_RejectsBadInput asserts the handler validates
 // the request body BEFORE opening the SSE stream — a missing
 // prompt, whitespace prompt, or oversized prompt must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAIRAGHelpHandler_RejectsBadInput(t *testing.T) {
+func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -166,7 +186,7 @@ func TestAIRAGHelpHandler_RejectsBadInput(t *testing.T) {
 		{"missing prompt", `{}`},
 		{"empty prompt", `{"prompt":""}`},
 		{"whitespace prompt", `{"prompt":"   "}`},
-		{"prompt too large", fmt.Sprintf(`{"prompt":%q}`, strings.Repeat("a", aiRagHelpMaxPromptChars+1))},
+		{"prompt too large", fmt.Sprintf(`{"prompt":%q}`, strings.Repeat("a", maxPromptChars+1))},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -180,16 +200,16 @@ func TestAIRAGHelpHandler_RejectsBadInput(t *testing.T) {
 	}
 }
 
-// TestAIRAGHelpHandler_AcceptsCanonicalInput proves the validator
+// TestHandler_AcceptsCanonicalInput proves the validator
 // does NOT bounce the happy-path shapes — a normal-length prompt
 // and a prompt at the size boundary.
-func TestAIRAGHelpHandler_AcceptsCanonicalInput(t *testing.T) {
+func TestHandler_AcceptsCanonicalInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []string{
 		`{"prompt":"how do I enable web push notifications"}`,
 		`{"prompt":"a"}`,
-		fmt.Sprintf(`{"prompt":%q}`, strings.Repeat("a", aiRagHelpMaxPromptChars)),
+		fmt.Sprintf(`{"prompt":%q}`, strings.Repeat("a", maxPromptChars)),
 	}
 	for _, body := range cases {
 		t.Run(body[:min(len(body), 60)], func(t *testing.T) {
@@ -204,21 +224,21 @@ func TestAIRAGHelpHandler_AcceptsCanonicalInput(t *testing.T) {
 }
 
 // validateRagHelpOnly mirrors the pre-stream validator branch of
-// AIRAGHelpHandler.ServeHTTP. Kept as a same-package helper so the
+// Handler.ServeHTTP. Kept as a same-package helper so the
 // test does not need to construct a full handler with stub deps.
 func validateRagHelpOnly(w http.ResponseWriter, r *http.Request) {
-	var body aiRagHelpRequest
+	var body request
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	prompt := strings.TrimSpace(body.Prompt)
 	if prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
+		httpx.WriteError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
-	if len(prompt) > aiRagHelpMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiRagHelpMaxPromptChars))
+	if len(prompt) > maxPromptChars {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", maxPromptChars))
 		return
 	}
 	w.WriteHeader(http.StatusOK)
