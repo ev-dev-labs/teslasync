@@ -1217,8 +1217,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	lifetimeHandler := apilifetime.NewHandler(db, eventHub)
 	chargePlannerHandler := chargeplanner.NewHandler(db, teslaClient, cfg, stateReader)
-	chargePlannerHandler := NewChargePlannerHandler(db, teslaClient, cfg, stateReader)
-	yearReviewHandler := NewYearReviewHandler(db)
 	yearReviewHandler := yearreview.NewHandler(db)
 	energyFlowHandler := apienergyflow.NewEnergyFlowHandler(db, stateReader, liveStateReader)
 	weeklyDigestHandler := apiweekly.NewHandler(db)
