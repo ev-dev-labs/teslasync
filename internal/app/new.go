@@ -15,6 +15,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
+	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
@@ -610,7 +611,7 @@ func (a *App) initOutboundSinks() {
 		Msg("outbound api_call_logs sink ready")
 	var _ httputil.APICallSink = a.OutboundAPILogSink
 
-	api.SetOutboundSink(a.OutboundAPILogSink)
+	apisystem.SetOutboundSink(a.OutboundAPILogSink)
 	notification.SetSink(a.OutboundAPILogSink)
 	geocoding.SetSink(a.OutboundAPILogSink)
 	tesla.SetAuthSink(a.OutboundAPILogSink, a.Cfg.Tesla.Timeout)

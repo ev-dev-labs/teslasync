@@ -1,4 +1,4 @@
-package api
+package system
 
 import (
 	"encoding/json"
@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
@@ -26,7 +27,7 @@ import (
 // http.HandlerFunc factories, so the sink lives here as package-level
 // state. cmd/teslasync/main.go calls SetOutboundSink once at startup; per-
 // call construction in each handler reads the current value via
-// currentOutboundSink() when constructing httputil.NewClient.
+// CurrentOutboundSink() when constructing httputil.NewClient.
 //
 // Disabled mode (cfg.APILogs.Enabled=false) installs a nil sink, which
 // httputil.LoggedTransport tolerates — the call still flows zerolog logs.
@@ -52,10 +53,10 @@ func SetOutboundSink(sink httputil.APICallSink) {
 	apiOutboundSinkMu.Unlock()
 }
 
-// currentOutboundSink returns the most recently installed sink under the
+// CurrentOutboundSink returns the most recently installed sink under the
 // shared RWMutex so per-call helpers in sibling handler files build their
 // httputil.NewClient with the latest wiring.
-func currentOutboundSink() httputil.APICallSink {
+func CurrentOutboundSink() httputil.APICallSink {
 	apiOutboundSinkMu.RLock()
 	defer apiOutboundSinkMu.RUnlock()
 	return apiOutboundSink
@@ -99,7 +100,7 @@ func VersionHandler(appVersion string, cfg *config.Config) http.HandlerFunc {
 		endpoints["tesla_api"] = cfg.Tesla.BaseURL
 		resp["endpoints"] = endpoints
 
-		writeJSON(w, http.StatusOK, resp)
+		httpx.WriteJSON(w, http.StatusOK, resp)
 	}
 }
 
@@ -115,7 +116,7 @@ func UpdateCheckHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		currentChart := os.Getenv("HELM_CHART_VERSION")
 		if currentChart == "" {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"current":          "unknown",
 				"latest":           "unknown",
 				"update_available": false,
@@ -126,7 +127,7 @@ func UpdateCheckHandler() http.HandlerFunc {
 
 		// Cache for 1 hour to avoid hammering GitHub API
 		if cache != nil && time.Since(cache.checkedAt) < time.Hour {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"current":          currentChart,
 				"latest":           cache.latest,
 				"update_available": cache.latest != currentChart && cache.latest != "",
@@ -139,12 +140,12 @@ func UpdateCheckHandler() http.HandlerFunc {
 		client := httputil.NewClient(httputil.ClientConfig{
 			Name:          "github-releases",
 			Timeout:       5 * time.Second,
-			Sink:          currentOutboundSink(),
+			Sink:          CurrentOutboundSink(),
 			EnableLogging: true,
 		})
 		resp, err := client.Get("https://api.github.com/repos/ev-dev-labs/teslasync/releases/latest")
 		if err != nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"current":          currentChart,
 				"latest":           "unknown",
 				"update_available": false,
@@ -158,7 +159,7 @@ func UpdateCheckHandler() http.HandlerFunc {
 			TagName string `json:"tag_name"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"current":          currentChart,
 				"latest":           "unknown",
 				"update_available": false,
@@ -175,7 +176,7 @@ func UpdateCheckHandler() http.HandlerFunc {
 
 		cache = &updateCache{latest: latestClean, checkedAt: time.Now()}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"current":          currentChart,
 			"latest":           latestClean,
 			"update_available": latestClean != currentChart && latestClean != "",
@@ -191,14 +192,14 @@ func MigrationStatus(db *database.DB) http.HandlerFunc {
 		var dirty bool
 		err := db.Pool.QueryRow(r.Context(), "SELECT version, dirty FROM schema_migrations LIMIT 1").Scan(&version, &dirty)
 		if err != nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
+			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"version": 0,
 				"dirty":   false,
 				"error":   err.Error(),
 			})
 			return
 		}
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"version": version,
 			"dirty":   dirty,
 		})
@@ -218,7 +219,7 @@ func ConfigValidation(cfg *config.Config) http.HandlerFunc {
 		if cfg.Database.Host == "" {
 			issues = append(issues, "DATABASE_HOST not set")
 		}
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"valid":  len(issues) == 0,
 			"issues": issues,
 		})
@@ -229,7 +230,7 @@ func ConfigValidation(cfg *config.Config) http.HandlerFunc {
 func HealthHistoryHandler(health *resilience.HealthMonitor) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		history := health.GetHealthHistory()
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"history": history,
 			"count":   len(history),
 		})
@@ -241,7 +242,7 @@ func DegradedStatusHandler(health *resilience.HealthMonitor) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		degraded := health.IsDegraded()
 		overall := health.OverallStatus()
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"degraded": degraded,
 			"overall":  overall.String(),
 		})
@@ -353,7 +354,7 @@ func WorkersHealthHandler() http.HandlerFunc {
 		client := httputil.NewClient(httputil.ClientConfig{
 			Name:          "system-dns-check",
 			Timeout:       3 * time.Second,
-			Sink:          currentOutboundSink(),
+			Sink:          CurrentOutboundSink(),
 			EnableLogging: true,
 		})
 		results := make([]workerStatus, len(probes))
@@ -385,7 +386,7 @@ func WorkersHealthHandler() http.HandlerFunc {
 			}
 		}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"workers":       results,
 			"total":         len(results),
 			"healthy_count": healthy,
@@ -408,7 +409,7 @@ func MapConfigHandler(cfg *config.Config) http.HandlerFunc {
 			apiKey = cfg.AzureMaps.APIKey
 		}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"provider": provider,
 			"api_key":  apiKey,
 		})

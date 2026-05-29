@@ -162,6 +162,7 @@ import (
 	apistatus "github.com/ev-dev-labs/teslasync/internal/api/status"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apiauthmode "github.com/ev-dev-labs/teslasync/internal/api/sysauthmode"
+	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
 	"github.com/ev-dev-labs/teslasync/internal/api/tempimpact"
 	apiteslachargehist "github.com/ev-dev-labs/teslasync/internal/api/teslachargehist"
@@ -752,8 +753,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// Wire the dynamic outbound-sink lookup into carved subpackages so
 	// notification adapters and devtools probes keep recording to api_call_logs
 	// through SetOutboundSink hot-reloads.
-	apinotif.SinkProvider = currentOutboundSink
-	apidevtools.SinkProvider = currentOutboundSink
+	apinotif.SinkProvider = apisystem.CurrentOutboundSink
+	apidevtools.SinkProvider = apisystem.CurrentOutboundSink
 	quietHoursHandler := apiquiet.NewHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := apichatbot.NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 
@@ -3734,20 +3735,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/compression-stats", CompressionStatsHandler(db))
 			r.Get("/backup", backupHandler.ExportData)
 			r.Get("/backup/stats", backupHandler.BackupStats)
-			r.Get("/config-validation", ConfigValidation(cfg))
+			r.Get("/config-validation", apisystem.ConfigValidation(cfg))
 			r.Get("/audit", auditHandler.List)
 			r.Get("/errors/stats", ErrorStatsHandler(errorTracker))
 			r.Get("/errors/catalog", ErrorCatalogHandler())
-			r.Get("/map-config", MapConfigHandler(cfg))
+			r.Get("/map-config", apisystem.MapConfigHandler(cfg))
 
 			// Version & update endpoints
 			ver := opt.AppVersion
 			if ver == "" {
 				ver = "dev"
 			}
-			r.Get("/version", VersionHandler(ver, cfg))
-			r.Get("/update-check", UpdateCheckHandler())
-			r.Get("/workers", WorkersHealthHandler())
+			r.Get("/version", apisystem.VersionHandler(ver, cfg))
+			r.Get("/update-check", apisystem.UpdateCheckHandler())
+			r.Get("/workers", apisystem.WorkersHealthHandler())
 			r.Get("/metrics-catalog", MetricsCatalogHandler())
 			r.Get("/openapi", apiopenapi.Handler())
 
