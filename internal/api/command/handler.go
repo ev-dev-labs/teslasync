@@ -1,4 +1,4 @@
-package api
+package command
 
 import (
 	"encoding/json"
@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -141,13 +143,13 @@ var allowedCommands = map[string]bool{
 
 func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 	if suspended, _ := h.settingsRepo.IsAPISuspended(r.Context()); suspended {
-		writeError(w, http.StatusConflict, "Tesla API calls are suspended")
+		httpx.WriteError(w, http.StatusConflict, "Tesla API calls are suspended")
 		return
 	}
 
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
@@ -156,28 +158,28 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		Params  map[string]interface{} `json:"params"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
 	if body.Command == "" {
-		writeError(w, http.StatusBadRequest, "command is required")
+		httpx.WriteError(w, http.StatusBadRequest, "command is required")
 		return
 	}
 
 	if !allowedCommands[body.Command] {
-		writeError(w, http.StatusBadRequest, "unknown command: "+body.Command)
+		httpx.WriteError(w, http.StatusBadRequest, "unknown command: "+body.Command)
 		return
 	}
 
 	vehicle, err := h.vehicleRepo.GetByID(r.Context(), vehicleID)
 	if err != nil || vehicle == nil {
-		writeError(w, http.StatusNotFound, "vehicle not found")
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		return
 	}
 
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -222,7 +224,7 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Warn().Int64("vehicle_id", vehicleID).Str("command", body.Command).
 			Msg("Tesla command rejected: third-party token expired")
-		writeTeslaTokenExpired(w)
+		httpx.WriteTeslaTokenExpired(w)
 		return
 	}
 
@@ -262,14 +264,14 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 
 	if cmdErr != nil {
 		log.Error().Err(cmdErr).Str("command", body.Command).Int64("vehicleID", vehicleID).Msg("command failed")
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"success": false,
 			"error":   errMsg,
 		})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"success": true,
 		"result":  status,
 	})
@@ -277,29 +279,29 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 
 // LatestCommands returns the most recent command per command name for a vehicle.
 func (h *CommandHandler) LatestCommands(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
 	items, err := h.commandRepo.GetLatestByVehicle(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest commands")
-		writeError(w, http.StatusInternalServerError, "failed to fetch command history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch command history")
 		return
 	}
 	if items == nil {
 		items = []*vehiclemodel.CommandLog{}
 	}
-	writeJSON(w, http.StatusOK, items)
+	httpx.WriteJSON(w, http.StatusOK, items)
 }
 
 // CommandHistory returns recent command logs for a vehicle.
 func (h *CommandHandler) CommandHistory(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
@@ -313,11 +315,11 @@ func (h *CommandHandler) CommandHistory(w http.ResponseWriter, r *http.Request) 
 	items, err := h.commandRepo.GetHistoryByVehicle(r.Context(), vehicleID, limit)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get command history")
-		writeError(w, http.StatusInternalServerError, "failed to fetch command history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch command history")
 		return
 	}
 	if items == nil {
 		items = []*vehiclemodel.CommandLog{}
 	}
-	writeJSON(w, http.StatusOK, items)
+	httpx.WriteJSON(w, http.StatusOK, items)
 }
