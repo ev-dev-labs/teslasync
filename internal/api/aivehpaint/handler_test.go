@@ -15,10 +15,11 @@
 // vehicle-paint-preview`); duplicating that here would require a
 // live vehicles fixture.
 
-package api
+package aivehpaint
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,6 +29,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestVehiclePaintPreviewAIOffHidesPreviewTool is the load-bearing
 // off-mode contract proof for slice 0061. It mounts the AI
@@ -147,23 +166,23 @@ func TestVehiclePaintPreviewAIOffHidesPreviewTool(t *testing.T) {
 	}
 }
 
-// TestAIVehiclePaintPreviewHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIVehiclePaintPreviewHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIVehiclePaintPreviewHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIVehiclePaintPreviewHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -171,19 +190,19 @@ func TestAIVehiclePaintPreviewHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIVehiclePaintPreviewHandler_RejectsBadVehicleID asserts the
+// TestHandler_RejectsBadVehicleID asserts the
 // URL parser refuses non-positive / non-numeric vehicleID values
 // BEFORE opening the SSE stream — a malformed URL must surface as
 // a JSON 400, not a half-opened stream that confuses the frontend.
-func TestAIVehiclePaintPreviewHandler_RejectsBadVehicleID(t *testing.T) {
+func TestHandler_RejectsBadVehicleID(t *testing.T) {
 	t.Parallel()
 
 	router := chi.NewRouter()
 	// Mount the URL parser through a minimal handler so chi's
-	// URLParam plumbing is in scope (parseAIVehiclePaintPreviewURL
+	// URLParam plumbing is in scope (parseURL
 	// calls chi.URLParam, which requires the route to be mounted).
 	router.Post("/api/v1/ai/vehicles/{vehicleID}/paint-preview/draft", func(w http.ResponseWriter, r *http.Request) {
-		_, _ = parseAIVehiclePaintPreviewURL(w, r)
+		_, _ = parseURL(w, r)
 	})
 
 	cases := []struct {
@@ -210,11 +229,11 @@ func TestAIVehiclePaintPreviewHandler_RejectsBadVehicleID(t *testing.T) {
 	}
 }
 
-// TestAIVehiclePaintPreviewHandler_RejectsBadBody asserts the body
+// TestHandler_RejectsBadBody asserts the body
 // parser validates the optional body BEFORE opening the SSE stream.
 // Empty body is allowed; malformed JSON or oversized style_hint
 // surfaces as a JSON 4xx.
-func TestAIVehiclePaintPreviewHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -236,7 +255,7 @@ func TestAIVehiclePaintPreviewHandler_RejectsBadBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/vehicles/7/paint-preview/draft", strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			_, ok := parseAIVehiclePaintPreviewBody(rec, req)
+			_, ok := parseBody(rec, req)
 			if ok != tc.wantOK {
 				t.Errorf("ok = %v, want %v (body=%q, status=%d, response=%q)", ok, tc.wantOK, tc.body, rec.Code, rec.Body.String())
 			}
@@ -247,18 +266,18 @@ func TestAIVehiclePaintPreviewHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAIVehiclePaintPreviewHandler_RejectsOversizedBody asserts the
+// TestHandler_RejectsOversizedBody asserts the
 // 16 KiB body cap is enforced before any further parsing. A request
 // body that exceeds the cap surfaces as 413.
-func TestAIVehiclePaintPreviewHandler_RejectsOversizedBody(t *testing.T) {
+func TestHandler_RejectsOversizedBody(t *testing.T) {
 	t.Parallel()
 
-	huge := `{"style_hint":"` + strings.Repeat("X", aiVehiclePaintPreviewMaxBodyBytes+128) + `"}`
+	huge := `{"style_hint":"` + strings.Repeat("X", maxBodyBytes+128) + `"}`
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/vehicles/7/paint-preview/draft", strings.NewReader(huge))
 	req.Header.Set("Content-Type", "application/json")
 
-	_, ok := parseAIVehiclePaintPreviewBody(rec, req)
+	_, ok := parseBody(rec, req)
 	if ok {
 		t.Fatal("ok = true; want false for oversized body")
 	}

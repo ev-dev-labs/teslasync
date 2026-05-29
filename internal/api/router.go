@@ -67,6 +67,7 @@ import (
 	aitirepress "github.com/ev-dev-labs/teslasync/internal/api/aitirepress"
 	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
 	aivampire "github.com/ev-dev-labs/teslasync/internal/api/aivampire"
+	"github.com/ev-dev-labs/teslasync/internal/api/aivehpaint"
 	aiyir "github.com/ev-dev-labs/teslasync/internal/api/aiyir"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
@@ -2755,7 +2756,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiVehiclePaintPreviewHandler := NewAIVehiclePaintPreviewHandler(
+	aiVehiclePaintPreviewHandler := aivehpaint.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		vehiclepaintpreview.New(),
