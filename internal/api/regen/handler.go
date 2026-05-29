@@ -1,11 +1,15 @@
-package api
+package regen
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
@@ -20,15 +24,25 @@ func NewRegenHandler(db *database.DB) *RegenHandler {
 	return &RegenHandler{db: db}
 }
 
+const (
+	metersPerMile      = 1609.344
+	mpsPerMph          = 0.44704
+	wattsPerKilowatt   = 1000.0
+	twoMilesMeters     = 2.0 * metersPerMile
+	defaultCapacityWh  = 75000.0
+	standardCapacityWh = 60000.0
+	largeCapacityWh    = 100000.0
+)
+
 func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -37,7 +51,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	// lifetime cagg totals) are scoped to the same window so the picker
 	// controls the entire response uniformly. When omitted: full history,
 	// no trailing-window fallback.
-	startTime, endTime := parseDateRange(r)
+	startTime, endTime := apiparams.ParseDateRange(r)
 	hasRange := !startTime.IsZero() && !endTime.IsZero()
 
 	ctx := r.Context()
@@ -76,11 +90,11 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		WHERE vehicle_id = $1 AND distance_m > $3
 			AND ($4::timestamptz IS NULL OR started_at BETWEEN $4 AND $5)
 		ORDER BY started_at DESC`,
-		vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters,
-		nullableTime(hasRange, startTime), nullableTime(hasRange, endTime))
+		vehicleID, metersPerMile, twoMilesMeters,
+		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime))
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get regen drive data")
-		writeError(w, http.StatusInternalServerError, "failed to get regen data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get regen data")
 		return
 	}
 	defer driveRows.Close()
@@ -97,7 +111,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		}
 		// Distance reported in miles (legacy "distance" field semantics preserved).
 		if distM != nil {
-			d.Distance = *distM / driveStatsMetersPerMile
+			d.Distance = *distM / metersPerMile
 		}
 		if durS != nil {
 			d.DurationS = float64(*durS)
@@ -108,7 +122,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 			speedFactor := 1.0
 			if d.SpeedAvgMps != nil && *d.SpeedAvgMps > 0 {
 				// Preserves the legacy ratio shape (kW / mph * 10).
-				speedFactor = (regenW / driveStatsKilo) / (*d.SpeedAvgMps / driveStatsMpsPerMph) * 10
+				speedFactor = (regenW / wattsPerKilowatt) / (*d.SpeedAvgMps / mpsPerMph) * 10
 			}
 			d.RegenScore = math.Min(math.Round(speedFactor*10)/10, 100)
 		}
@@ -141,11 +155,11 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		WHERE vehicle_id = $1 AND distance_m > $3
 			AND ($4::timestamptz IS NULL OR started_at BETWEEN $4 AND $5)
 		GROUP BY month ORDER BY month`,
-		vehicleID, driveStatsMetersPerMile, driveStatsTwoMilesMeters,
-		nullableTime(hasRange, startTime), nullableTime(hasRange, endTime))
+		vehicleID, metersPerMile, twoMilesMeters,
+		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime))
 	if err != nil {
 		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get monthly regen data")
-		writeError(w, http.StatusInternalServerError, "failed to get regen data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get regen data")
 		return
 	}
 	defer monthRows.Close()
@@ -164,7 +178,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 			m.AvgRegenPower = math.Round(*avgPowerW*10) / 10
 		}
 		if avgSpeedMps != nil {
-			m.AvgSpeed = math.Round((*avgSpeedMps/driveStatsMpsPerMph)*10) / 10
+			m.AvgSpeed = math.Round((*avgSpeedMps/mpsPerMph)*10) / 10
 		}
 		if avgEff != nil {
 			m.AvgEfficiency = math.Round(*avgEff*10) / 10
@@ -188,7 +202,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		WHERE vehicle_id = $1
 			AND ($2::date IS NULL OR day BETWEEN $2::date AND $3::date)`,
 		vehicleID,
-		nullableTime(hasRange, startTime), nullableTime(hasRange, endTime),
+		apiparams.NullableTime(hasRange, startTime), apiparams.NullableTime(hasRange, endTime),
 	).Scan(&totalRegenWh, &totalDriveWh); err != nil && err != pgx.ErrNoRows {
 		log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("regen: cagg_fleet_stats query failed")
 	}
@@ -213,7 +227,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		freeCharges = math.Round(totalRegenWh/capacityWh*10) / 10
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":        vehicleID,
 		"total_regen_wh":    math.Round(totalRegenWh*100) / 100,
 		"total_drive_wh":    math.Round(totalDriveWh*100) / 100,
@@ -226,4 +240,38 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		"battery_capacity_wh": capacityWh,
 		"capacity_source":     capacitySource,
 	})
+}
+
+func lookupVehicleCapacityWh(ctx context.Context, db *database.DB, vehicleID int64) (float64, string) {
+	var vin string
+	var model *string
+	err := db.Pool.QueryRow(ctx,
+		`SELECT vin, model FROM vehicles WHERE id = $1`, vehicleID,
+	).Scan(&vin, &model)
+	if err != nil {
+		return defaultCapacityWh, "default"
+	}
+	m := ""
+	if model != nil {
+		m = *model
+	}
+	return estimateBatteryCapacityWh(vin, m)
+}
+
+func estimateBatteryCapacityWh(vin string, model string) (float64, string) {
+	if len(vin) >= 8 {
+		switch vin[7] {
+		case 'E', 'F':
+			return standardCapacityWh, "vin_estimate"
+		case 'K', 'L', 'M':
+			return defaultCapacityWh, "vin_estimate"
+		case 'S', 'A', 'P':
+			return largeCapacityWh, "vin_estimate"
+		}
+	}
+	m := strings.ToLower(model)
+	if strings.Contains(m, "model s") || strings.Contains(m, "model x") {
+		return largeCapacityWh, "model_estimate"
+	}
+	return defaultCapacityWh, "default"
 }

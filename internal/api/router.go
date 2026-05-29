@@ -69,6 +69,7 @@ import (
 	apirangeproj "github.com/ev-dev-labs/teslasync/internal/api/rangeproj"
 	apiratelim "github.com/ev-dev-labs/teslasync/internal/api/ratelimit"
 	apirbac "github.com/ev-dev-labs/teslasync/internal/api/rbac"
+	apiregen "github.com/ev-dev-labs/teslasync/internal/api/regen"
 	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
 	apischedexp "github.com/ev-dev-labs/teslasync/internal/api/scheduledexports"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
@@ -757,7 +758,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// current state is sourced from fsm_transitions / signal.StateReader.
 	backupHandler := apibackup.NewHandler(db)
 	backupRestoreHandler := apibackup.NewRestoreHandler(db)
-	regenHandler := NewRegenHandler(db)
+	regenHandler := apiregen.NewRegenHandler(db)
 	batteryDegradationHandler := NewBatteryDegradationHandler(db, stateReader, signalLogReader)
 	auditHandler := NewAuditHandler(db, cfg.Auth.ForwardAuthHeader)
 	apiCallLogHandler := apicalllog.NewHandler(db)
