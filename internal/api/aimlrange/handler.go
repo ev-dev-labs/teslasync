@@ -1,8 +1,8 @@
-package api
+package aimlrange
 
 // Phase-50 / 0063 — ML2 Range-prediction model.
 //
-// ai_ml_range_handler.go implements the LLM-backed handler at
+// handler.go implements the LLM-backed handler at
 // POST /api/v1/ai/ml/range/train. The flow mirrors the
 // learned-per-vehicle-anomaly-baselines handler from slice 0062 —
 // same dispatch+stream loop, no persistence (one-shot narration; no
@@ -55,36 +55,37 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 )
 
-// aiRangeMaxIterations bounds the dispatcher's tool-loop. Range
+// maxIterations bounds the dispatcher's tool-loop. Range
 // narration is two-tool-calls-then-answer (train_range_model FIRST,
 // then query_range_prediction); a hard ceiling of 6 is generous for
 // a model that occasionally retries a tool call once before
 // settling. Mirrors aiLearnedAnomalyMaxIterations from slice 0062.
-const aiRangeMaxIterations = 6
+const maxIterations = 6
 
-// aiRangeDefaultDays mirrors mlrange.DefaultDays. Kept as a separate
+// defaultDays mirrors mlrange.DefaultDays. Kept as a separate
 // const so the HTTP-input default is independently readable from the
 // trainer default — a future change that shifts the trainer window
 // won't silently shift the AI-handler window.
-const aiRangeDefaultDays = 14
+const defaultDays = 14
 
-// aiRangeMaxDays is the upper bound that mirrors the tool's validate
+// maxDays is the upper bound that mirrors the tool's validate
 // tag (lte=30) and mlrange.MaxDays. HTTP-side validation bounces
 // obvious bad input (e.g. days=365) before we ever invoke the LLM.
-const aiRangeMaxDays = 30
+const maxDays = 30
 
-// AIRangePredictionHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/ml/range/train.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIRangePredictionHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -92,7 +93,7 @@ type AIRangePredictionHandler struct {
 	maxIters   int
 }
 
-// NewAIRangePredictionHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -104,39 +105,64 @@ type AIRangePredictionHandler struct {
 //
 // strat:      the range-prediction-model Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIRangePredictionHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIRangePredictionHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIRangePredictionHandler: nil provider.Registry")
+		panic("aimlrange: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIRangePredictionHandler: nil tools.Registry")
+		panic("aimlrange: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIRangePredictionHandler: nil strategy.Strategy")
+		panic("aimlrange: NewHandler: nil strategy.Strategy")
 	}
-	return &AIRangePredictionHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiRangeMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// aiRangeRequest is the wire shape for
+// rangeRequest is the wire shape for
 // POST /api/v1/ai/ml/range/train.
 //
 // VehicleID is required and must be > 0. Days is optional; when
-// absent or zero, defaults to aiRangeDefaultDays. Days must be in
-// 1..aiRangeMaxDays when explicitly set, mirroring the
+// absent or zero, defaults to defaultDays. Days must be in
+// 1..maxDays when explicitly set, mirroring the
 // train_range_model tool's validate tag.
-type aiRangeRequest struct {
+type rangeRequest struct {
 	VehicleID int64 `json:"vehicle_id"`
 	Days      int   `json:"days,omitempty"`
+}
+
+// parseRangeRequest decodes + validates the JSON body and returns
+// the effective training lookback days. The parser writes a JSON 400
+// on failure and returns ok=false so callers can exit before opening
+// the SSE stream or resolving a provider.
+func parseRangeRequest(w http.ResponseWriter, r *http.Request) (*rangeRequest, int, bool) {
+	var body rangeRequest
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return nil, 0, false
+	}
+	if body.VehicleID <= 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
+		return nil, 0, false
+	}
+	if body.Days < 0 || body.Days > maxDays {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("days must be in 0..%d (0 = default)", maxDays))
+		return nil, 0, false
+	}
+	days := body.Days
+	if days == 0 {
+		days = defaultDays
+	}
+	return &body, days, true
 }
 
 // ServeHTTP implements [http.Handler]. The request is parsed, the
@@ -144,24 +170,11 @@ type aiRangeRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIRangePredictionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
-	var body aiRangeRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	body, days, ok := parseRangeRequest(w, r)
+	if !ok {
 		return
-	}
-	if body.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
-		return
-	}
-	if body.Days < 0 || body.Days > aiRangeMaxDays {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("days must be in 0..%d (0 = default)", aiRangeMaxDays))
-		return
-	}
-	days := body.Days
-	if days == 0 {
-		days = aiRangeDefaultDays
 	}
 
 	// 2) Resolve provider via the registry. Per-request resolution
@@ -170,7 +183,7 @@ func (h *AIRangePredictionHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), rangepredictionmodel.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai range-prediction: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -190,7 +203,7 @@ func (h *AIRangePredictionHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 		// Non-flushable response writer (test recorder, etc.).
 		// Emit a plain JSON 500 — the SSE headers were not sent.
 		log.Error().Err(err).Msg("ai range-prediction: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -239,10 +252,16 @@ func (h *AIRangePredictionHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// Compile-time assertion: AIRangePredictionHandler satisfies http.Handler.
-var _ http.Handler = (*AIRangePredictionHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
-// AIDriveStatsSource is the production *database.DB-backed adapter
+// denyAllConfirm rejects every mutating tool as defence-in-depth for
+// this read-only range-prediction narration surface.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// DriveStatsSource is the production *database.DB-backed adapter
 // that satisfies mlrange.DriveStatsSource. It runs ONE pgx query
 // scoped to the requested vehicle and lookback cutoff; rows are
 // converted in-memory into the DriveSample slice the trainer
@@ -251,17 +270,17 @@ var _ http.Handler = (*AIRangePredictionHandler)(nil)
 // internal/api/range_projection_handler.go already reads
 // (distance_m, energy_used_wh, avg_speed_mps, ambient_temp_c_avg
 // per migration 000185).
-type AIDriveStatsSource struct {
+type DriveStatsSource struct {
 	db *database.DB
 }
 
-// NewAIDriveStatsSource constructs the adapter. Panics on a nil DB
+// NewDriveStatsSource constructs the adapter. Panics on a nil DB
 // so the wiring bug surfaces at boot, not at first request.
-func NewAIDriveStatsSource(db *database.DB) *AIDriveStatsSource {
+func NewDriveStatsSource(db *database.DB) *DriveStatsSource {
 	if db == nil {
-		panic("api: NewAIDriveStatsSource: nil *database.DB")
+		panic("aimlrange: NewDriveStatsSource: nil *database.DB")
 	}
-	return &AIDriveStatsSource{db: db}
+	return &DriveStatsSource{db: db}
 }
 
 // SamplesForVehicle implements mlrange.DriveStatsSource. Returns
@@ -287,7 +306,7 @@ func NewAIDriveStatsSource(db *database.DB) *AIDriveStatsSource {
 //   - The cutoff time is computed by the trainer (Go-side
 //     `time.Now().UTC() - days*24h`); we pass it through verbatim
 //     so the test fake's deterministic clock seam stays tight.
-func (s *AIDriveStatsSource) SamplesForVehicle(ctx context.Context, vehicleID int64, cutoff time.Time) ([]mlrange.DriveSample, error) {
+func (s *DriveStatsSource) SamplesForVehicle(ctx context.Context, vehicleID int64, cutoff time.Time) ([]mlrange.DriveSample, error) {
 	if vehicleID <= 0 {
 		return []mlrange.DriveSample{}, nil
 	}
@@ -303,14 +322,14 @@ func (s *AIDriveStatsSource) SamplesForVehicle(ctx context.Context, vehicleID in
 		  AND ambient_temp_c_avg IS NOT NULL`,
 		vehicleID, cutoff)
 	if err != nil {
-		return nil, fmt.Errorf("AIDriveStatsSource: vehicle %d cutoff %s: %w", vehicleID, cutoff.Format(time.RFC3339), err)
+		return nil, fmt.Errorf("DriveStatsSource: vehicle %d cutoff %s: %w", vehicleID, cutoff.Format(time.RFC3339), err)
 	}
 	defer rows.Close()
 	out := make([]mlrange.DriveSample, 0, 32)
 	for rows.Next() {
 		var energyWh, distanceM, avgSpeedMps, ambientC float64
 		if err := rows.Scan(&energyWh, &distanceM, &avgSpeedMps, &ambientC); err != nil {
-			return nil, fmt.Errorf("AIDriveStatsSource: scan: %w", err)
+			return nil, fmt.Errorf("DriveStatsSource: scan: %w", err)
 		}
 		if distanceM <= 0 {
 			// Defence: the WHERE clause already filters
@@ -327,10 +346,10 @@ func (s *AIDriveStatsSource) SamplesForVehicle(ctx context.Context, vehicleID in
 		})
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("AIDriveStatsSource: rows.Err: %w", err)
+		return nil, fmt.Errorf("DriveStatsSource: rows.Err: %w", err)
 	}
 	return out, nil
 }
 
-// Compile-time assertion: AIDriveStatsSource satisfies mlrange.DriveStatsSource.
-var _ mlrange.DriveStatsSource = (*AIDriveStatsSource)(nil)
+// Compile-time assertion: DriveStatsSource satisfies mlrange.DriveStatsSource.
+var _ mlrange.DriveStatsSource = (*DriveStatsSource)(nil)

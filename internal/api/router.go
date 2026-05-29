@@ -43,6 +43,7 @@ import (
 	ailifetime "github.com/ev-dev-labs/teslasync/internal/api/ailifetime"
 	aimlanom "github.com/ev-dev-labs/teslasync/internal/api/aimlanom"
 	aimlchargcv "github.com/ev-dev-labs/teslasync/internal/api/aimlchargcv"
+	aimlrange "github.com/ev-dev-labs/teslasync/internal/api/aimlrange"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -1884,7 +1885,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// range-prediction-model (Phase-50 / ML2, slice 0063) tools —
 	// train_range_model + query_range_prediction. Both READ-only;
-	// the trainer reads the `drives` table via the AIDriveStatsSource
+	// the trainer reads the `drives` table via the aimlrange DriveStatsSource
 	// adapter (SI columns: distance_m, energy_used_wh, avg_speed_mps,
 	// ambient_temp_c_avg per migration 000185) and returns a
 	// per-bucket learned envelope (mean Wh/km plus stddev / p5 / p95)
@@ -1894,12 +1895,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// handler is constructed so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
 	predict.RegisterRangePredictorTools(aiToolRegistry, predict.RangePredictorSources{
-		Trainer: mlrange.NewTrainer(NewAIDriveStatsSource(db)),
+		Trainer: mlrange.NewTrainer(aimlrange.NewDriveStatsSource(db)),
 	})
 	// range-prediction-model handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the tool
 	// registration above.
-	aiRangePredictionHandler := NewAIRangePredictionHandler(
+	aiRangePredictionHandler := aimlrange.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		rangepredictionmodel.New(),

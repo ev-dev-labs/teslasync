@@ -17,10 +17,10 @@
 // range-prediction-model`); duplicating that here would require a
 // live database fixture.
 
-package api
+package aimlrange
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,6 +30,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestRangePredictionModelAIOffUsesHeuristicOnly is the load-bearing
 // off-mode contract proof for slice 0063. It mounts the AI
@@ -121,26 +139,26 @@ func TestRangePredictionModelAIOffUsesHeuristicOnly(t *testing.T) {
 	}
 }
 
-// TestAIRangePredictionHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at boot
 // must surface as a panic, not as a nil-deref on first request.
-func TestAIRangePredictionHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAIRangePredictionHandler(nil,nil,nil,\"\") did not panic")
+			t.Fatal("NewHandler(nil,nil,nil,\"\") did not panic")
 		}
 	}()
-	NewAIRangePredictionHandler(nil, nil, nil, "")
+	NewHandler(nil, nil, nil, "")
 }
 
-// TestAIRangePredictionHandler_RejectsBadRequestBodies pins the
+// TestHandler_RejectsBadRequestBodies pins the
 // request-validation contract: missing vehicle_id, non-positive
 // vehicle_id, and out-of-range days must surface as 4xx BEFORE the
 // dispatcher is reached (so a confused caller cannot waste a
 // provider call). The baseline-coexistence test above already
 // proves the off-mode 404; this test pins the on-mode validator.
-func TestAIRangePredictionHandler_RejectsBadRequestBodies(t *testing.T) {
+func TestHandler_RejectsBadRequestBodies(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
@@ -157,14 +175,9 @@ func TestAIRangePredictionHandler_RejectsBadRequestBodies(t *testing.T) {
 		{"days exactly max+1", `{"vehicle_id":1,"days":31}`, http.StatusBadRequest},
 	}
 
-	// We invoke the handler's ServeHTTP directly — but we cannot
-	// construct a real handler without a provider.Registry +
-	// tools.Registry + strategy.Strategy at hand. Instead, exercise
-	// the validator by stripping the request body through the same
-	// JSON-decode + validation steps via a thin per-request stub:
-	// a zero-args helper that mirrors ServeHTTP's pre-dispatch
-	// validation block. This keeps the test hermetic (no DB, no
-	// provider).
+	// Exercise the same parser ServeHTTP uses before opening the SSE
+	// stream or resolving a provider. This keeps the test hermetic (no
+	// DB, no provider) while pinning the real validation path.
 	for _, tc := range cases {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
@@ -172,32 +185,13 @@ func TestAIRangePredictionHandler_RejectsBadRequestBodies(t *testing.T) {
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/ml/range/train",
 				strings.NewReader(tc.body))
-			validateRangeRequest(rec, req)
+			_, _, ok := parseRangeRequest(rec, req)
+			if ok {
+				t.Fatalf("parseRangeRequest returned ok=true for %q", tc.name)
+			}
 			if rec.Code != tc.want {
 				t.Fatalf("status = %d, want %d (body=%q)", rec.Code, tc.want, rec.Body.String())
 			}
 		})
 	}
-}
-
-// validateRangeRequest mirrors the pre-dispatch validation block in
-// (*AIRangePredictionHandler).ServeHTTP. Kept in the test file (not
-// exported from the production handler) so a future change to
-// ServeHTTP's validation must update both — surfacing the divergence
-// rather than letting it drift.
-func validateRangeRequest(w http.ResponseWriter, r *http.Request) {
-	var body aiRangeRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-	if body.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
-		return
-	}
-	if body.Days < 0 || body.Days > aiRangeMaxDays {
-		writeError(w, http.StatusBadRequest, "days must be in 0..30 (0 = default)")
-		return
-	}
-	w.WriteHeader(http.StatusOK)
 }
