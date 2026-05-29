@@ -1,4 +1,4 @@
-package api
+package chargeopt
 
 import (
 	"fmt"
@@ -444,3 +444,6 @@ func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healt
 
 	return recs
 }
+
+func round2(v float64) float64 { return math.Round(v*100) / 100 }
+func round3(v float64) float64 { return math.Round(v*1000) / 1000 }

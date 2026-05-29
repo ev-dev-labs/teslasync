@@ -1,12 +1,12 @@
-package api
+package chargeopt
 
 import (
 	"net/http"
 	"strconv"
 
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
 )
 
 // ChargingOptimizerHandler analyses charging habits and recommends schedule optimizations.
@@ -24,12 +24,12 @@ func NewChargingOptimizerHandler(db *database.DB) *ChargingOptimizerHandler {
 func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -50,7 +50,7 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 		ORDER BY started_at DESC`, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("charging-optimizer: query failed")
-		writeError(w, http.StatusInternalServerError, "failed to get charging data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging data")
 		return
 	}
 	defer rows.Close()
@@ -67,7 +67,7 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 	}
 
 	if len(sessions) == 0 {
-		writeJSON(w, http.StatusOK, optimizerResponse{
+		httpx.WriteJSON(w, http.StatusOK, optimizerResponse{
 			CurrentSchedule: currentSchedule{},
 			CostAnalysis:    costAnalysis{PeakHours: []int{}, OffpeakHours: []int{}},
 			Recommendations: []optimizerRec{},
@@ -143,7 +143,7 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 	healthScore := computeBatteryHealthScore(sessions)
 	recs := buildOptimizerRecommendations(schedule, ca, healthScore, sessions)
 
-	writeJSON(w, http.StatusOK, optimizerResponse{
+	httpx.WriteJSON(w, http.StatusOK, optimizerResponse{
 		CurrentSchedule:    schedule,
 		CostAnalysis:       ca,
 		BatteryHealthScore: healthScore,

@@ -27,6 +27,7 @@ import (
 	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
+	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	apiannot "github.com/ev-dev-labs/teslasync/internal/api/chartannotation"
 	apicommand "github.com/ev-dev-labs/teslasync/internal/api/command"
 	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
@@ -768,7 +769,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	periodStatsHandler := apiperiod.NewHandler(db)
 	drivingCoachHandler := NewDrivingCoachHandler(db)
 	costForecastHandler := NewCostForecastHandler(db)
-	chargingOptimizerHandler := NewChargingOptimizerHandler(db)
+	chargingOptimizerHandler := apichargeopt.NewChargingOptimizerHandler(db)
 	anomalyHandler := apianomaly.NewHandler(db)
 	// Phase-50 / U4 (slice 0014) — register the anomaly-explanations
 	// slice's read-only tool on the SAME process-wide registry so
