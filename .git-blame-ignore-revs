@@ -351,3 +351,36 @@ f2b7ff8c1123c125a9d6739335c0b8fe421bc76d # refactor(R2d.130): carve internal/api
 b07f1211ba62b7d639cd30014bf0c90a46041fb2 # refactor(R2d.123): carve internal/api/aitripplanllm subpackage
 dfcfd2a1bc957876219f2ae796c54e6309586adc # refactor(R2d.128): carve internal/api/aivampire subpackage
 b8c4a690f0b59f4545ca8c7021efbb414c125264 # refactor(R2d.111): carve internal/api/aiyir subpackage
+
+# R2d.133-162 batch 11 — 30 AI handler subpackage carves + cross-carve conflict resolution
+fbabf0e07fad66249c7f483807359cf03b5c89a1 # refactor(R2d.136): carve internal/api/aiautoname subpackage
+46360ffed1594d22a7fd82171b0b6f183330cf73 # refactor(R2d.135): carve internal/api/aicrossrule subpackage
+6588cfa2a6680e9de5f1347f8f309f59a39a7820 # refactor(R2d.134): carve internal/api/aidatarep subpackage
+4ee1f016c08567f677a40370c4863d3c6d9e7f2e # refactor(R2d.133): carve internal/api/aifeedtri subpackage
+0e9dc507f2f3566fd83c7961ae3e404e7ee9e397 # refactor(R2d.153): carve internal/api/aifsmnar subpackage
+71d31c083d737ed46ee79a01dc83ea7d47a02a05 # refactor(R2d.151): carve internal/api/aigeofautom subpackage
+17508bff96d7008da69f844ace2112e6891ed5a0 # refactor(R2d.149): carve internal/api/aiincident subpackage
+03ba315c7b0f67f5d0184c94c6f441b2bff605a8 # refactor(R2d.150): carve internal/api/aiinboxcat subpackage
+a7a035cb9e7bc6a724d3804d8e78ce140833a403 # refactor(R2d.148): carve internal/api/ailifetime subpackage
+fdcf1c7341e94ae074c27fe00714e2b016dc4a09 # refactor(R2d.147): carve internal/api/ailogtrace subpackage
+37b6aebf237d9f11a4ae7c29ecae6a665779559c # refactor(R2d.146): carve internal/api/aimlanom subpackage
+85750b335d98bcd0adcc7853eac3c6c338f3013f # refactor(R2d.145): carve internal/api/aimlchargcv subpackage
+d646c1073d0472ed05be29108d9f2e07e89a7b02 # refactor(R2d.144): carve internal/api/aimlrange subpackage
+71f4cda733438762603aac954fc863fc58e84085 # refactor(R2d.143): carve internal/api/aimqttsse subpackage
+4283fd7eb9a9312770a5c851593dcd4711ac0118 # refactor(R2d.142): carve internal/api/ainldash subpackage
+a4e76d9669524bdd628e5de4d4c103bdce802c97 # refactor(R2d.141): carve internal/api/ainlgrafana subpackage
+55ffc6a36b3e2b8e35c99c46e2cf10c9b09df366 # refactor(R2d.140): carve internal/api/ainlsql subpackage
+1e61f2283ec3f14da4e93110f96aafb50d2cf13b # refactor(R2d.139): carve internal/api/aiperiodcmp subpackage
+208590c9851bbe922677d9874bc9a9b044062aaa # refactor(R2d.138): carve internal/api/aipiiredact subpackage
+b7ee7ee9239c92dc19903e172c4c89f1a180c8a2 # refactor(R2d.159): carve internal/api/aipostcard subpackage
+c1c7e0c399153301c79ff863ab91f49183a8ba87 # refactor(R2d.137): carve internal/api/aipredmaint subpackage
+0d16bef776953ce78d1ebf1ba873424590e8c7da # refactor(R2d.157): carve internal/api/aiquiethrs subpackage
+41c71846b4eed987a418319b89c1ddacecbf2613 # refactor(R2d.156): carve internal/api/aisafetyexp subpackage
+1462c5ad30362be61748bada23aa4a1e2b49f846 # refactor(R2d.155): carve internal/api/aisignalnl subpackage
+8de412ffe16fa56279faa3fd9dc03e9285316aa3 # refactor(R2d.152): carve internal/api/aisuggeo subpackage
+0199fdb027cbe59ba236237498006a667ec6abe1 # refactor(R2d.154): carve internal/api/aiswupd subpackage
+af332539326a7a9e5c8caf1ff87032cac17560ec # refactor(R2d.160): carve internal/api/aitconar subpackage
+4935ee53c158b0c8c0753395e5bc084e67b05263 # refactor(R2d.158): carve internal/api/aivehpaint subpackage
+6cfc001bf1436d9d51bc25caa504bfda31c497aa # refactor(R2d.162): carve internal/api/aivoice subpackage
+bb7f75962d208bca7f6c6fa81be5c76321bc31d7 # refactor(R2d.161): carve internal/api/aiwatchnl subpackage
+f3b158d22a2cf596c9b13587fdd5abdcfd6e2ccb # fix(R2d): resolve cross-carve conflicts (ainlgrafana/ainlsql, aiautoname/aisuggeo)
