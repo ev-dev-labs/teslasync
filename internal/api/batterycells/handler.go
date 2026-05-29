@@ -1,14 +1,16 @@
-package api
+package batterycells
 
 import (
 	"context"
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
@@ -16,7 +18,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// BatteryCellsHandler serves battery cell analytics derived from signal store
+// Handler serves battery cell analytics derived from signal store
 // (real-time) and signal_log hypertable (historical).
 //
 // Phase-39 migration: the per-signal "value as of now" lookups in
@@ -35,15 +37,15 @@ import (
 // indistinguishable on the frontend from "vehicle truly idle / no brick
 // voltage history" and rendered the Battery Cells panel empty even when
 // the underlying read had genuinely failed.
-type BatteryCellsHandler struct {
+type Handler struct {
 	db              *database.DB
 	liveSignals     signal.LiveSignalStore
 	state           signal.StateReader
 	signalLogReader *signaldb.SignalLogReader
 }
 
-func NewBatteryCellsHandler(db *database.DB, liveStore signal.LiveSignalStore, state signal.StateReader, slr *signaldb.SignalLogReader) *BatteryCellsHandler {
-	return &BatteryCellsHandler{db: db, liveSignals: liveStore, state: state, signalLogReader: slr}
+func NewHandler(db *database.DB, liveStore signal.LiveSignalStore, state signal.StateReader, slr *signaldb.SignalLogReader) *Handler {
+	return &Handler{db: db, liveSignals: liveStore, state: state, signalLogReader: slr}
 }
 
 type cellReading struct {
@@ -62,15 +64,15 @@ type historyPoint struct {
 }
 
 // Get handles GET /analytics/battery-cells?vehicle_id=X
-func (h *BatteryCellsHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
 	vehicleID, err := parseInt64(vehicleIDStr)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -83,7 +85,7 @@ func (h *BatteryCellsHandler) Get(w http.ResponseWriter, r *http.Request) {
 		v, ok, err := h.getLatestSignal(ctx, vehicleID, name)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", name).Msg("battery cells: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read battery cell state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery cell state")
 			return 0, false, false
 		}
 		return v, ok, true
@@ -121,7 +123,7 @@ func (h *BatteryCellsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// No brick voltage data — return empty response with status indicator
 	if !hasBrickMax && !hasBrickMin {
 		log.Debug().Int64("vehicle_id", vehicleID).Msg("battery cells: no brick voltage data")
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"status":          "no_data",
 			"total_cells":     0,
 			"avg_voltage":     0,
@@ -194,7 +196,7 @@ func (h *BatteryCellsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// Query historical brick voltage data from signal_log
 	history := h.getHistory(ctx, vehicleID)
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"total_cells":     totalCells,
 		"avg_voltage":     round4(avgVoltage),
 		"min_voltage":     round4(brickMin),
@@ -214,7 +216,7 @@ func (h *BatteryCellsHandler) Get(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetByVehicle handles GET /vehicles/{vehicleID}/battery/cells — reads vehicleID from path.
-func (h *BatteryCellsHandler) GetByVehicle(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) GetByVehicle(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	q.Set("vehicle_id", urlParamVehicleID(r))
 	r.URL.RawQuery = q.Encode()
@@ -233,13 +235,21 @@ func round4(v float64) float64 {
 	return math.Round(v*10000) / 10000
 }
 
+func parseInt64(s string) (int64, error) {
+	return strconv.ParseInt(s, 10, 64)
+}
+
+func toFloatOk(v interface{}) (float64, bool) {
+	return signal.Float64(v)
+}
+
 // getLatestSignal reads a fresh live signal first, falling back to the
 // canonical signal.StateReader (ADR-002 / phase-39). The boolean return
 // distinguishes "signal never emitted" (false) from "signal emitted with
 // value 0" (true, 0). A non-nil error indicates a StateReader transport
 // failure (e.g. pgx connection drop) that callers MUST propagate as a 500
 // rather than silently fold into a no-data payload.
-func (h *BatteryCellsHandler) getLatestSignal(ctx context.Context, vehicleID int64, signalName string) (float64, bool, error) {
+func (h *Handler) getLatestSignal(ctx context.Context, vehicleID int64, signalName string) (float64, bool, error) {
 	if h.liveSignals != nil {
 		value, err := h.liveSignals.GetSignal(ctx, vehicleID, signalName, signal.LiveSignalReadDistributed)
 		if err == nil && value != nil {
@@ -265,7 +275,7 @@ func (h *BatteryCellsHandler) getLatestSignal(ctx context.Context, vehicleID int
 }
 
 // getHistory queries signal_log for hourly brick voltage buckets over the past 7 days.
-func (h *BatteryCellsHandler) getHistory(ctx context.Context, vehicleID int64) []historyPoint {
+func (h *Handler) getHistory(ctx context.Context, vehicleID int64) []historyPoint {
 	if h.signalLogReader == nil {
 		return []historyPoint{}
 	}

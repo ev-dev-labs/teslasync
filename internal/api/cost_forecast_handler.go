@@ -533,6 +533,7 @@ func avgCostPerKwh(months []historicalMonth) float64 {
 }
 
 func round1(v float64) float64 { return math.Round(v*10) / 10 }
+func round2(v float64) float64 { return math.Round(v*100) / 100 }
 func round3(v float64) float64 { return math.Round(v*1000) / 1000 }
 
 const defaultCostForecastMonths = 6
