@@ -36,6 +36,7 @@ import (
 	aispeedprof "github.com/ev-dev-labs/teslasync/internal/api/aispeedprof"
 	aitempimpact "github.com/ev-dev-labs/teslasync/internal/api/aitempimpact"
 	aitirepress "github.com/ev-dev-labs/teslasync/internal/api/aitirepress"
+	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -1212,13 +1213,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// TripPlannerPage UI (unchanged baseline).
 	tripplantool.RegisterTripPlannerLLMAgentTools(aiToolRegistry, tripplantool.TripPlannerLLMAgentSources{
 		Chargers: chargingdb.NewChargingRepo(db),
-		Planner:  NewAITripPlanComputer(tripPlannerHandler),
+		Planner:  aitripplanllm.NewAITripPlanComputer(tripPlannerHandler),
 	})
 	// trip-planner-llm-agent handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiTripPlannerLLMHandler := NewAITripPlannerLLMHandler(
+	aiTripPlannerLLMHandler := aitripplanllm.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		tripplannerllmagent.New(),

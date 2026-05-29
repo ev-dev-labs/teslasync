@@ -1,4 +1,4 @@
-package api
+package aitripplanllm
 
 // Phase-50 / 0025 — D5 Trip planner LLM agent.
 //
@@ -57,50 +57,51 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	tripplantool "github.com/ev-dev-labs/teslasync/internal/ai/tools/tripplan"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	apitripplanner "github.com/ev-dev-labs/teslasync/internal/api/tripplanner"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiTripPlannerLLMAgentMaxIterations bounds the dispatcher's
+// agentMaxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most
 // query_chargers_along_route → query_user_charge_dwells →
 // draft_trip_plan → answer (with optional retries). A hard ceiling
 // of 8 is generous. Mirrors aiAutoTripNamingMaxIterations.
-const aiTripPlannerLLMAgentMaxIterations = 8
+const agentMaxIterations = 8
 
-// aiTripPlannerLLMDraftRequest is the JSON body shape this handler
+// draftRequest is the JSON body shape this handler
 // accepts. SI-canonical fields throughout — current_soc /
 // charge_limit_soc / min_arrival_soc are 0..100 percent; the
 // origin/destination are (lat, lng) doubles plus an optional
 // human-readable name. The shape mirrors the *typed* surface area
 // of POST /api/v1/trip-planner/plan so a SPA call site can construct
 // the AI draft request from the same form state.
-type aiTripPlannerLLMDraftRequest struct {
-	VehicleID      int64                         `json:"vehicle_id"`
-	Origin         aiTripPlannerLLMDraftLocation `json:"origin"`
-	Destination    aiTripPlannerLLMDraftLocation `json:"destination"`
-	CurrentSOC     float64                       `json:"current_soc"`
-	ChargeLimitSOC float64                       `json:"charge_limit_soc,omitempty"`
-	MinArrivalSOC  float64                       `json:"min_arrival_soc,omitempty"`
-	SpeedFactor    float64                       `json:"speed_factor,omitempty"`
+type draftRequest struct {
+	VehicleID      int64         `json:"vehicle_id"`
+	Origin         draftLocation `json:"origin"`
+	Destination    draftLocation `json:"destination"`
+	CurrentSOC     float64       `json:"current_soc"`
+	ChargeLimitSOC float64       `json:"charge_limit_soc,omitempty"`
+	MinArrivalSOC  float64       `json:"min_arrival_soc,omitempty"`
+	SpeedFactor    float64       `json:"speed_factor,omitempty"`
 }
 
-// aiTripPlannerLLMDraftLocation mirrors tripplanner.TripPlanLocation (the
+// draftLocation mirrors tripplanner.TripPlanLocation (the
 // canonical baseline shape) so the SPA can post the same form-state
 // payload to the AI endpoint.
-type aiTripPlannerLLMDraftLocation struct {
+type draftLocation struct {
 	Lat  float64 `json:"lat"`
 	Lng  float64 `json:"lng"`
 	Name string  `json:"name,omitempty"`
 }
 
-// AITripPlannerLLMHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/trips/plan/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AITripPlannerLLMHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -108,7 +109,7 @@ type AITripPlannerLLMHandler struct {
 	maxIters   int
 }
 
-// NewAITripPlannerLLMHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -121,84 +122,91 @@ type AITripPlannerLLMHandler struct {
 //
 // strat:      the trip-planner-llm-agent Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAITripPlannerLLMHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AITripPlannerLLMHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAITripPlannerLLMHandler: nil provider.Registry")
+		panic("aitripplanllm: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAITripPlannerLLMHandler: nil tools.Registry")
+		panic("aitripplanllm: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAITripPlannerLLMHandler: nil strategy.Strategy")
+		panic("aitripplanllm: NewHandler: nil strategy.Strategy")
 	}
-	return &AITripPlannerLLMHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiTripPlannerLLMAgentMaxIterations,
+		maxIters:   agentMaxIterations,
 	}
 }
 
-// parseTripPlannerLLMDraftBody decodes + validates the JSON body.
+// parseDraftBody decodes + validates the JSON body.
 // Pulled out so the validator-only test can exercise the same
 // parsing without constructing a full handler with stub deps. The
 // function writes a 400 on failure and returns the (req, ok) pair so
 // the caller can early-return.
-func parseTripPlannerLLMDraftBody(w http.ResponseWriter, r *http.Request) (*aiTripPlannerLLMDraftRequest, bool) {
+func parseDraftBody(w http.ResponseWriter, r *http.Request) (*draftRequest, bool) {
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "request body is required")
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiTripPlannerLLMDraftRequest
+	var req draftRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return nil, false
 	}
 	if req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be > 0")
 		return nil, false
 	}
 	if req.Origin.Lat < -90 || req.Origin.Lat > 90 {
-		writeError(w, http.StatusBadRequest, "origin.lat must be in [-90, 90]")
+		httpx.WriteError(w, http.StatusBadRequest, "origin.lat must be in [-90, 90]")
 		return nil, false
 	}
 	if req.Origin.Lng < -180 || req.Origin.Lng > 180 {
-		writeError(w, http.StatusBadRequest, "origin.lng must be in [-180, 180]")
+		httpx.WriteError(w, http.StatusBadRequest, "origin.lng must be in [-180, 180]")
 		return nil, false
 	}
 	if req.Destination.Lat < -90 || req.Destination.Lat > 90 {
-		writeError(w, http.StatusBadRequest, "destination.lat must be in [-90, 90]")
+		httpx.WriteError(w, http.StatusBadRequest, "destination.lat must be in [-90, 90]")
 		return nil, false
 	}
 	if req.Destination.Lng < -180 || req.Destination.Lng > 180 {
-		writeError(w, http.StatusBadRequest, "destination.lng must be in [-180, 180]")
+		httpx.WriteError(w, http.StatusBadRequest, "destination.lng must be in [-180, 180]")
 		return nil, false
 	}
 	if req.CurrentSOC < 0 || req.CurrentSOC > 100 {
-		writeError(w, http.StatusBadRequest, "current_soc must be in [0, 100]")
+		httpx.WriteError(w, http.StatusBadRequest, "current_soc must be in [0, 100]")
 		return nil, false
 	}
 	if req.ChargeLimitSOC < 0 || req.ChargeLimitSOC > 100 {
-		writeError(w, http.StatusBadRequest, "charge_limit_soc must be in [0, 100]")
+		httpx.WriteError(w, http.StatusBadRequest, "charge_limit_soc must be in [0, 100]")
 		return nil, false
 	}
 	if req.MinArrivalSOC < 0 || req.MinArrivalSOC > 100 {
-		writeError(w, http.StatusBadRequest, "min_arrival_soc must be in [0, 100]")
+		httpx.WriteError(w, http.StatusBadRequest, "min_arrival_soc must be in [0, 100]")
 		return nil, false
 	}
 	if req.SpeedFactor < 0 || req.SpeedFactor > 3 {
-		writeError(w, http.StatusBadRequest, "speed_factor must be in [0, 3]")
+		httpx.WriteError(w, http.StatusBadRequest, "speed_factor must be in [0, 3]")
 		return nil, false
 	}
 	return &req, true
+}
+
+// denyAllConfirm is the dispatcher's user-confirm hook. Trip-planner LLM
+// tools are propose-only, but deny by default if a future edit adds a
+// mutating tool to the strategy allowlist.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }
 
 // ServeHTTP implements [http.Handler]. The body is decoded, the
@@ -206,9 +214,9 @@ func parseTripPlannerLLMDraftBody(w http.ResponseWriter, r *http.Request) (*aiTr
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AITripPlannerLLMHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
-	body, ok := parseTripPlannerLLMDraftBody(w, r)
+	body, ok := parseDraftBody(w, r)
 	if !ok {
 		return
 	}
@@ -219,7 +227,7 @@ func (h *AITripPlannerLLMHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), tripplannerllmagent.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai trip-planner-llm-agent: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -232,7 +240,7 @@ func (h *AITripPlannerLLMHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(tripplannerllmagent.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai trip-planner-llm-agent: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -285,8 +293,8 @@ func (h *AITripPlannerLLMHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	}
 }
 
-// Compile-time assertion: AITripPlannerLLMHandler satisfies http.Handler.
-var _ http.Handler = (*AITripPlannerLLMHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -310,7 +318,7 @@ type AITripPlanComputer struct {
 // wiring mistake surfaces at boot.
 func NewAITripPlanComputer(planner *apitripplanner.TripPlannerHandler) *AITripPlanComputer {
 	if planner == nil {
-		panic("api: NewAITripPlanComputer: nil *tripplanner.TripPlannerHandler")
+		panic("aitripplanllm: NewAITripPlanComputer: nil *tripplanner.TripPlannerHandler")
 	}
 	return &AITripPlanComputer{planner: planner}
 }

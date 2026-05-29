@@ -15,7 +15,7 @@
 // duplicating that here would require a live database + signal
 // store fixture.
 
-package api
+package aitripplanllm
 
 import (
 	"bytes"
@@ -30,6 +30,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	tripplantool "github.com/ev-dev-labs/teslasync/internal/ai/tools/tripplan"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestTripPlannerAIOffUsesHeuristicPlanner is the load-bearing
 // off-mode contract proof for slice 0025. It mounts the AI
@@ -128,23 +146,23 @@ func TestTripPlannerAIOffUsesHeuristicPlanner(t *testing.T) {
 	}
 }
 
-// TestAITripPlannerLLMHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAITripPlannerLLMHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAITripPlannerLLMHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAITripPlannerLLMHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -152,11 +170,11 @@ func TestAITripPlannerLLMHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAITripPlannerLLMHandler_RejectsBadBody asserts the handler
+// TestHandler_RejectsBadBody asserts the handler
 // validates the JSON body BEFORE opening the SSE stream — a missing,
 // unparseable, or out-of-range body must surface as a JSON 400, not
 // a half-opened stream that confuses the frontend.
-func TestAITripPlannerLLMHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -184,8 +202,8 @@ func TestAITripPlannerLLMHandler_RejectsBadBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/trips/plan/draft", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			if body, ok := parseTripPlannerLLMDraftBody(rec, req); ok {
-				t.Fatalf("parseTripPlannerLLMDraftBody returned ok=true for %q (body=%+v)", tc.name, body)
+			if body, ok := parseDraftBody(rec, req); ok {
+				t.Fatalf("parseDraftBody returned ok=true for %q (body=%+v)", tc.name, body)
 			}
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400 (body=%q)", rec.Code, rec.Body.String())
@@ -194,9 +212,9 @@ func TestAITripPlannerLLMHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAITripPlannerLLMHandler_AcceptsCanonicalBody proves the parser
+// TestHandler_AcceptsCanonicalBody proves the parser
 // does NOT bounce the happy-path shapes.
-func TestAITripPlannerLLMHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -215,12 +233,12 @@ func TestAITripPlannerLLMHandler_AcceptsCanonicalBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/trips/plan/draft", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			body, ok := parseTripPlannerLLMDraftBody(rec, req)
+			body, ok := parseDraftBody(rec, req)
 			if !ok {
-				t.Fatalf("parseTripPlannerLLMDraftBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
+				t.Fatalf("parseDraftBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
 			}
 			if body == nil {
-				t.Fatalf("parseTripPlannerLLMDraftBody returned ok=true but nil body for %q", tc.name)
+				t.Fatalf("parseDraftBody returned ok=true but nil body for %q", tc.name)
 			}
 		})
 	}
@@ -258,7 +276,3 @@ func TestAITripPlanComputer_SatisfiesInterface(t *testing.T) {
 		t.Logf("AITripPlanComputer satisfies tripplantool.TripPlanComputer (nil cast)")
 	}
 }
-
-// Unused import guard: keep context imported so the file compiles
-// when a future test variant needs ctx wiring.
-var _ = context.Background
