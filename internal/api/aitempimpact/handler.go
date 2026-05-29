@@ -1,8 +1,8 @@
-package api
+package aitempimpact
 
 // Phase-50 / 0032 — T2 Cabin temperature impact narrative.
 //
-// ai_temperature_impact_handler.go implements the LLM-backed
+// handler.go implements the LLM-backed
 // handler at POST /api/v1/ai/climate/temperature-impact/narrate.
 // The flow mirrors ai_cost_forecast_narration_handler.go (same
 // dispatch+stream loop, no persistence — one-shot read-only
@@ -65,44 +65,50 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// aiCabinTemperatureImpactMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most query_temperature_impact →
 // answer (with optional retries). A hard ceiling of 8 is
 // generous, matching aiCostForecastNarrationMaxIterations /
 // aiBatteryHealthMaxIterations.
-const aiCabinTemperatureImpactMaxIterations = 8
+const maxIterations = 8
 
-// aiCabinTemperatureImpactMinDrives is the minimum drive count
+// minDrives is the minimum drive count
 // (across all temperature buckets) the deterministic aggregator
 // needs to produce a meaningful temperature-impact narrative.
 // Below this threshold has_enough_data flips false and the
 // narrator says so plainly. The bound mirrors the chart's
 // implicit threshold — fewer than ~10 drives produces noisy
 // buckets where best/worst flip on a single outlier.
-const aiCabinTemperatureImpactMinDrives = 10
+const minDrives = 10
 
-// aiCabinTemperatureImpactRequest is the JSON body shape this
+const (
+	driveStatsMetersPerMile  = 1609.344
+	driveStatsTwoMilesMeters = 2.0 * driveStatsMetersPerMile
+)
+
+// request is the JSON body shape this
 // handler accepts. The shape mirrors the
 // /api/v1/analytics/temperature-impact?vehicle_id= query-string
 // contract — vehicle_id is required, no other params — kept as a
 // JSON body so the SPA can post from the same form state the
 // temperature-impact page already uses.
-type aiCabinTemperatureImpactRequest struct {
+type request struct {
 	VehicleID int64 `json:"vehicle_id"`
 }
 
-// AICabinTemperatureImpactHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/climate/temperature-impact/narrate.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AICabinTemperatureImpactHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -110,29 +116,29 @@ type AICabinTemperatureImpactHandler struct {
 	maxIters   int
 }
 
-// NewAICabinTemperatureImpactHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAICabinTemperatureImpactHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AICabinTemperatureImpactHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAICabinTemperatureImpactHandler: nil provider.Registry")
+		panic("aitempimpact: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAICabinTemperatureImpactHandler: nil tools.Registry")
+		panic("aitempimpact: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAICabinTemperatureImpactHandler: nil strategy.Strategy")
+		panic("aitempimpact: NewHandler: nil strategy.Strategy")
 	}
-	return &AICabinTemperatureImpactHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiCabinTemperatureImpactMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -141,21 +147,21 @@ func NewAICabinTemperatureImpactHandler(
 // same parsing without constructing a full handler with stub
 // deps. The function writes a 400 on failure and returns the
 // (req, ok) pair so the caller can early-return.
-func parseCabinTemperatureImpactBody(w http.ResponseWriter, r *http.Request) (*aiCabinTemperatureImpactRequest, bool) {
+func parseCabinTemperatureImpactBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "request body is required")
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiCabinTemperatureImpactRequest
+	var req request
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return nil, false
 	}
 	if req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be > 0")
 		return nil, false
 	}
 	return &req, true
@@ -166,7 +172,7 @@ func parseCabinTemperatureImpactBody(w http.ResponseWriter, r *http.Request) (*a
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has
 // been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AICabinTemperatureImpactHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	body, ok := parseCabinTemperatureImpactBody(w, r)
 	if !ok {
 		return
@@ -175,7 +181,7 @@ func (h *AICabinTemperatureImpactHandler) ServeHTTP(w http.ResponseWriter, r *ht
 	// Resolve provider via the registry (pre-stream check).
 	if _, err := h.registry.For(r.Context(), cabintemperatureimpactnarrative.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai cabin-temperature-impact-narrative: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -188,7 +194,7 @@ func (h *AICabinTemperatureImpactHandler) ServeHTTP(w http.ResponseWriter, r *ht
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(cabintemperatureimpactnarrative.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai cabin-temperature-impact-narrative: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -238,9 +244,13 @@ func (h *AICabinTemperatureImpactHandler) ServeHTTP(w http.ResponseWriter, r *ht
 	}
 }
 
-// Compile-time assertion: AICabinTemperatureImpactHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AICabinTemperatureImpactHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -268,7 +278,7 @@ type AITemperatureImpactSource struct {
 // than as a nil-deref on first AI request.
 func NewAITemperatureImpactSource(db *database.DB) *AITemperatureImpactSource {
 	if db == nil {
-		panic("api: NewAITemperatureImpactSource: nil *database.DB")
+		panic("aitempimpact: NewAITemperatureImpactSource: nil *database.DB")
 	}
 	return &AITemperatureImpactSource{db: db}
 }
@@ -296,12 +306,12 @@ func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, 
 
 	envelope := &forecast.TemperatureImpact{
 		VehicleID:         vehicleID,
-		MinRequiredDrives: aiCabinTemperatureImpactMinDrives,
+		MinRequiredDrives: minDrives,
 		Method:            "Bucket aggregate of recent drives grouped by ambient cabin temperature; rolling 12-month seasonal trend",
 		Assumptions: []string{
 			"Buckets are descriptive aggregates of recent drives grouped by ambient temperature (Below 0°C, 0-10°C, 10-20°C, 20-30°C, Above 30°C); they are NOT a forecast or a regression model.",
 			"Monthly trend is a rolling 12-month average of avg_temp_c paired with avg_efficiency.",
-			fmt.Sprintf("Minimum sample size for a meaningful narrative is %d drives across all buckets; below this threshold has_enough_data is false.", aiCabinTemperatureImpactMinDrives),
+			fmt.Sprintf("Minimum sample size for a meaningful narrative is %d drives across all buckets; below this threshold has_enough_data is false.", minDrives),
 		},
 		Buckets:      []forecast.TemperatureImpactBucket{},
 		MonthlyTrend: []forecast.TemperatureImpactMonth{},
@@ -363,7 +373,7 @@ func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, 
 	}
 
 	envelope.SampleSize = totalDrives
-	envelope.HasEnoughData = totalDrives >= aiCabinTemperatureImpactMinDrives
+	envelope.HasEnoughData = totalDrives >= minDrives
 
 	// Seasonal monthly trend (rolling 12 months). Mirrors the
 	// SQL in TempImpactHandler.Get.

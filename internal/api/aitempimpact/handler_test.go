@@ -15,10 +15,11 @@
 // (`go run ./cmd/ai-eval -feature cabin-temperature-impact-narrative`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aitempimpact
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -29,6 +30,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestCabinTemperatureNarrativeAIOffShowsChartsOnly is the
 // load-bearing off-mode contract proof for slice 0032. It mounts
@@ -129,23 +148,23 @@ func TestCabinTemperatureNarrativeAIOffShowsChartsOnly(t *testing.T) {
 	}
 }
 
-// TestAICabinTemperatureImpactHandler_PanicsOnNilWiring asserts
+// TestHandler_PanicsOnNilWiring asserts
 // the handler constructor refuses zero-valued dependencies. A
 // wiring bug at boot must surface as a panic, not as a nil-deref
 // on first request.
-func TestAICabinTemperatureImpactHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAICabinTemperatureImpactHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAICabinTemperatureImpactHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -153,11 +172,11 @@ func TestAICabinTemperatureImpactHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAICabinTemperatureImpactHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the JSON body BEFORE opening the SSE stream
 // — a missing or unparseable body must surface as a JSON 400, not
 // a half-opened stream that confuses the frontend.
-func TestAICabinTemperatureImpactHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -187,9 +206,9 @@ func TestAICabinTemperatureImpactHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAICabinTemperatureImpactHandler_AcceptsCanonicalBody proves
+// TestHandler_AcceptsCanonicalBody proves
 // the parser does NOT bounce the happy-path shapes.
-func TestAICabinTemperatureImpactHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {

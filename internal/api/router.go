@@ -34,6 +34,7 @@ import (
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
 	aismartcharge "github.com/ev-dev-labs/teslasync/internal/api/aismartcharge"
 	aispeedprof "github.com/ev-dev-labs/teslasync/internal/api/aispeedprof"
+	aitempimpact "github.com/ev-dev-labs/teslasync/internal/api/aitempimpact"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -1659,13 +1660,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// TempImpactHandler.Get already runs — no parallel write
 	// path; the LLM never persists.
 	forecast.RegisterCabinTemperatureImpactNarrativeTools(aiToolRegistry, forecast.CabinTemperatureImpactNarrativeSources{
-		Source: NewAITemperatureImpactSource(db),
+		Source: aitempimpact.NewAITemperatureImpactSource(db),
 	})
 	// cabin-temperature-impact-narrative handler. One per
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiCabinTemperatureImpactNarrativeHandler := NewAICabinTemperatureImpactHandler(
+	aiCabinTemperatureImpactNarrativeHandler := aitempimpact.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		cabintemperatureimpactnarrative.New(),
