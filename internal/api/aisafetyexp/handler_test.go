@@ -1,9 +1,9 @@
-// Phase-50 / 0054 — P3 Helix safety setting explainer.
+// Safety setting explainer tests.
 //
 // Off-mode + baseline-coexistence tests for the AI
 // safety-setting-explainer handler. The off-mode test
 // (TestSafetySettingExplainerAIOffShowsStaticHelpOnly) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that
+// load-bearing AI-OFF contract proof: it asserts that
 // the AI route returns 404 when settings.ai_mode='off' even
 // when the per-feature toggle is on, AND that the
 // deterministic /api/v1/settings canonical READ surface remains
@@ -70,12 +70,8 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 //     static-help surface (ADR-015 §I3).
 //
 // The test name MUST stay
-// TestSafetySettingExplainerAIOffShowsStaticHelpOnly — the
-// slice prompt's verification command runs `go test … -run
-// TestSafetySettingExplainerAIOffShowsStaticHelpOnly` AND `npm
-// test -- --run TestSafetySettingExplainerAIOffShowsStaticHelpOnly`,
-// so both the Go and React off-mode proofs answer to the same
-// test-name pattern.
+// TestSafetySettingExplainerAIOffShowsStaticHelpOnly so both the Go and
+// React off-mode proofs answer to the same test-name pattern.
 func TestSafetySettingExplainerAIOffShowsStaticHelpOnly(t *testing.T) {
 	t.Parallel()
 

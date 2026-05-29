@@ -1,4 +1,4 @@
-// Phase-50 / 0050 — M2 TCO narration.
+// TCO narration tests.
 //
 // Off-mode + baseline-coexistence tests for the AI tco-narration
 // handler. The off-mode test

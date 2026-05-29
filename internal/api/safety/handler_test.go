@@ -22,7 +22,7 @@ func newSafetyRequest(vehicleID, target string) *http.Request {
 }
 
 // TestSafetyHandler_History_CarriesForwardEnableFlags is the wire-up +
-// carry-forward proof for the phase-39 safety-handler migration.
+// carry-forward proof for the safety handler migration.
 //
 // ADAS / Autopilot enable flags (AutomaticEmergencyBrakingOff,
 // LaneDepartureAvoidance, ForwardCollisionWarning, PinToDriveEnabled, …)

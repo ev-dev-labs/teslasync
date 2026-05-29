@@ -1,4 +1,4 @@
-// Phase-50 / 0040 — X1 Period compare narration.
+// Tests for period compare narration.
 //
 // Off-mode tests prove the AI route fails closed while deterministic period-stats cards stay available.
 // Streaming coverage lives in the F6 eval harness; duplicating it here would require a live DB fixture.

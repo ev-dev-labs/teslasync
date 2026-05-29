@@ -1,5 +1,5 @@
-// Handler restores the global signal catalog and observations endpoints from routing.yaml plus signal_log.
-// Response shapes stay prompt-locked so frontend hook updates can happen separately.
+// Handler serves the global signal catalog and observations endpoints from routing.yaml plus signal_log.
+// Response shapes stay stable so frontend hook updates can happen separately.
 package signalscatalog
 
 import (
@@ -22,9 +22,8 @@ import (
 
 // signalsCatalogRepository is the minimal repo surface
 // Handler needs. Defined as an interface so the handler
-// tests can supply a fake without spinning up a database — the codebase
-// has no pgxmock harness (see repo memories from earlier phase-43a
-// prompts).
+// tests can supply a fake without spinning up a database; the codebase
+// has no pgxmock harness for this package.
 type signalsCatalogRepository interface {
 	CatalogAggregates(ctx context.Context) (map[string]signaldb.CatalogAggregate, error)
 	ObservationsCount(ctx context.Context, params signaldb.ObservationsParams) (int64, error)
@@ -48,8 +47,8 @@ type Handler struct {
 }
 
 // NewHandler binds the handler to a repo and parses the
-// embedded routing.yaml via router.Load(). Panics on parse failure
-// because every other consumer of router.Load() does the same — a
+// embedded routing.yaml via router.Load. Panics on parse failure
+// because every other consumer of router.Load does the same — a
 // malformed embedded YAML is a compile-equivalent bug, not a runtime
 // condition.
 func NewHandler(repo *signaldb.SignalsCatalogRepo) *Handler {
@@ -160,12 +159,12 @@ func (h *Handler) Catalog(w http.ResponseWriter, r *http.Request) {
 //
 // Filters (all optional, snake_case):
 //
-//	vehicle_id   comma-separated bigints
-//	field        comma-separated field names
-//	since        RFC3339 lower bound on ts (inclusive)
-//	until        RFC3339 upper bound on ts (inclusive)
-//	limit        default 100, max 1000
-//	offset       default 0
+//	vehicle_id comma-separated bigints
+//	field comma-separated field names
+//	since RFC3339 lower bound on ts (inclusive)
+//	until RFC3339 upper bound on ts (inclusive)
+//	limit default 100, max 1000
+//	offset default 0
 //
 // Returns 200 with {count, total, observations: [...]}.
 func (h *Handler) Observations(w http.ResponseWriter, r *http.Request) {

@@ -1,8 +1,8 @@
-// Phase-50 / 0014 — U4 anomaly explanation narration.
+// Tests for natural-language anomaly explanation narration.
 //
 // These tests pin ADR-015 off-mode behavior: the AI route fails closed while
 // the deterministic /api/v1/analytics/anomalies baseline remains reachable.
-// Streaming coverage lives in the F6 eval harness, which requires live data.
+// Streaming coverage lives in the AI eval harness, which requires live data.
 
 package aianomaly
 
@@ -39,9 +39,9 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestAnomalyDashboardAIOffUsesStaticExplanation is the load-bearing off-mode
-// contract for slice 0014: guard returns 404 without leaking feature metadata,
-// and the deterministic anomaly route still works. The name is referenced by
-// the slice prompt's verification command.
+// contract: guard returns 404 without leaking feature metadata, and the
+// deterministic anomaly route still works. The name is selected by external
+// verification commands.
 func TestAnomalyDashboardAIOffUsesStaticExplanation(t *testing.T) {
 	t.Parallel()
 
@@ -99,8 +99,8 @@ func TestAnomalyDashboardAIOffUsesStaticExplanation(t *testing.T) {
 
 	// 2) Probe the baseline anomaly route — MUST return 200 +
 	// deterministic content, regardless of the AI guard's state.
-	// This is the load-bearing proof that the slice did NOT
-	// replace the Z-score detector / safe-range explanation.
+	// This proves the AI route did not replace the Z-score detector
+	// or safe-range explanation.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodGet, "/api/v1/analytics/anomalies?vehicle_id=1&days=7", nil)
 	router.ServeHTTP(recBaseline, reqBaseline)
@@ -146,8 +146,8 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
 
-	// We mount the validator branch directly (mirrors slice 0013's
-	// approach) so the test does not need to construct a full
+	// We mount the validator branch directly, matching the companion
+	// validator tests, so this test does not need to construct a full
 	// handler with stub deps. NewHandler panics on nil
 	// deps, and the validator runs BEFORE touching any of them, so
 	// we can inline the validator without losing coverage.

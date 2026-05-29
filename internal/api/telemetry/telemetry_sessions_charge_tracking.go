@@ -18,10 +18,8 @@ import (
 )
 
 // chargeStateRegistry holds the per-tracker signal.StateReader injected by
-// router.go at startup (phase-39 / ADR-002). The tracker struct itself is
-// defined in telemetry_sessions.go and intentionally not modified by this
-// migration prompt (the prompt's allowed-files boundary is scoped to
-// telemetry_sessions_charge_tracking.go), so this side table provides the
+// router.go at startup. The tracker struct itself is
+// defined in telemetry_sessions.go, so this side table provides the
 // wiring seam without altering the shared struct definition. The setter and
 // accessor below live in this file because the snapshot read sites that
 // consume the reader are exclusively in this file.
@@ -38,7 +36,7 @@ var (
 // SetChargeStateReader injects the cold-path signal.StateReader used to
 // reconstruct charging start/end snapshots at session completion. Replaces
 // the legacy *signaldb.SignalLogReader.SnapshotAt /
-// *signaldb.SignalHistoryWriter.SnapshotAt calls that this prompt removed.
+// *signaldb.SignalHistoryWriter.SnapshotAt calls.
 // Passing nil clears any previously installed reader.
 func (t *TelemetrySessionTracker) SetChargeStateReader(s signal.StateReader) {
 	chargeStateRegistryMu.Lock()
@@ -154,7 +152,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		lat, lon, hasLoc := t.resolveLatLon(vehicleID, signals, accumulatedSignals)
 		startRange, _ := t.resolveFloat(vehicleID, signals, accumulatedSignals, "RatedRange")
 
-		// Phase-42a/0030.bis: prefer the charge-state field's
+		// prefer the charge-state field's
 		// EmittedAt for the start timestamp; fall back to payloadTs
 		// (batch high-water) then wall-clock.
 		startTs := time.Time{}
@@ -329,7 +327,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	}
 	active.Completing = true
 
-	// Phase-42a/0030.bis: end timestamp resolved from payloadTs
+	// end timestamp resolved from payloadTs
 	// (batch high-water EmittedAt) with wall-clock fallback for legacy
 	// callers (recovery / flush paths that pass time.Time{}).
 	endTs := eventTimeOrNow(payloadTs)
@@ -354,10 +352,10 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		duration = 0
 	}
 
-	// Phase-42 (prompt 0077): the legacy charge-telemetry MAX-rollup
+	//: the legacy charge-telemetry MAX-rollup
 	// backfill block was removed. The StateReader path immediately below is
 	// the SI replacement — it reconstructs full signal state at a point in
-	// time using last-known values (ADR-002 / phase-39).
+	// time using last-known values (ADR-002).
 
 	// Estimate energy from battery% diff if direct energy signal unavailable
 	if active.EnergyAdded == 0 && active.StartBatteryLevel > 0 && endBattery > active.StartBatteryLevel {
@@ -373,7 +371,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	// point in time using last-known values, compensating for Tesla's delta
 	// encoding (signals not sent unless changed). Replaces the legacy
 	// *signaldb.SignalLogReader.SnapshotAt and
-	// *signaldb.SignalHistoryWriter.SnapshotAt code paths (phase-39 / ADR-002).
+	// *signaldb.SignalHistoryWriter.SnapshotAt code paths.
 	//
 	// The tracker's signalLogReader *signaldb.SignalLogReader field
 	// (declared in telemetry_sessions.go) is INTENTIONALLY retained because
@@ -386,11 +384,11 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	// first branch still consumes signalLogReader for the ChargeAggregates
 	// rollup (max/avg power) which has no StateReader equivalent, and the
 	// second branch is preserved as the legacy degradation path when only
-	// the writer-side reader is wired. State() errors are logged-and-swallowed
+	// the writer-side reader is wired. State errors are logged-and-swallowed
 	// so a transient signal_log query failure does not abort charge-session
 	// completion (the unenriched `charging_sessions` row is still committed).
 	if t.signalLogReader != nil {
-		// endTs already computed at function entry (Phase-42a/0030.bis).
+		// endTs already computed at function entry.
 		var startSnap, endSnap map[string]interface{}
 		if active.state != nil {
 			s, startErr := active.state.State(ctx, vehicleID, active.StartTime)
@@ -434,7 +432,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		}
 
 		// Location from snapshots (for geocoding — not written to DB).
-		// Dual-key tolerance — Phase-42 codec emits LocationLatitude.
+		// Dual-key tolerance — the migration codec emits LocationLatitude.
 		if active.Latitude == nil {
 			if lat, ok := snapFloat(endSnap, "LocationLatitude", "Latitude"); ok {
 				active.Latitude = floatPtr(lat)
@@ -469,7 +467,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	} else if t.signalHistoryWriter != nil {
 		// Legacy fallback path: signalHistoryWriter is wired but signalLogReader
 		// is not. Both legs still go through active.state because StateReader
-		// is the canonical cold-path read API post-phase-39; the writer-side
+		// is the canonical cold-path read API post-merge; the writer-side
 		// gating is preserved purely as a degradation hint that cold reads may
 		// not be backed by the primary reader. Only the geocoding lat/lng
 		// recovery is performed here — the per-field enrichment above requires
@@ -488,7 +486,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			} else {
 				endSnapshot := stateToLegacyMap(endSnap)
 				// Fill missing location (for geocoding — not written to DB).
-				// Dual-key tolerance — Phase-42 codec emits LocationLatitude.
+				// Dual-key tolerance — the migration codec emits LocationLatitude.
 				if active.Latitude == nil {
 					for _, k := range []string{"LocationLatitude", "Latitude"} {
 						if v, ok := endSnapshot[k]; ok {

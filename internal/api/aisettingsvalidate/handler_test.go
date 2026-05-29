@@ -1,7 +1,7 @@
 package aisettingsvalidate
 
-// Phase-50 / 0003 — F2 Settings UI for AI.
-// Phase-50 / Azure adapter — extended for cloud-probe validation.
+// Settings UI AI validation tests.
+// Azure adapter coverage extends validation to cloud probes.
 //
 // Backend test coverage for the validate handler:
 //

@@ -14,8 +14,8 @@ import (
 // /system/version endpoint surfaces require_cookie_consent=false when
 // the env knob is unset (the default for self-hosted installs).
 //
-// Phase-46 / Prompt 70 — guards against accidental flips of the default
-// that would force every existing deployment to render a consent banner
+// Guards against accidental flips of the default that would force every
+// existing deployment to render a consent banner
 // on next reload.
 func TestVersionHandler_RequireCookieConsentDefaultsFalse(t *testing.T) {
 	cfg := &config.Config{}

@@ -13,11 +13,10 @@ import (
 )
 
 // Handler serves vehicle config endpoints backed by the
-// signal-log change feed via signal.StateReader (ADR-002 / phase-39).
+// signal-log change feed via signal.StateReader (ADR-002).
 //
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (raw pivot +
-// snapshot helpers) has been replaced with the canonical
-// signal.StateReader.
+// The legacy *signaldb.SignalLogReader raw pivot and snapshot helpers have
+// been replaced with the canonical signal.StateReader.
 //
 // VehicleConfig is a COMPOUND signal — its payload is a JSON object with
 // car_type, trim_badging, exterior_color, wheel_type, and (optionally)

@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 44 — RBAC matrix admin handler.
+// RBAC matrix admin handler.
 //
 // The matrix is TeslaSync-local: roles come from forwarded proxy groups and
 // local bindings, never from the upstream IdP admin API. Open mode returns

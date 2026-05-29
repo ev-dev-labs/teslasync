@@ -13,7 +13,7 @@ import (
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
-// Phase-46 / Prompt 31 — middleware + reauth-handler unit tests.
+// Middleware and reauth-handler unit tests.
 //
 // The fixtures here only exercise the in-process pieces (token store,
 // HTTP handler shape, header binding, error envelope). Frontend-driven

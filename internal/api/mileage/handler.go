@@ -1,18 +1,16 @@
-// Phase-43a / Prompt 0004 — Handler restores the
-// /mileage/monthly + /mileage/stats endpoints deleted by Phase-42
-// prompt 0077 (which dropped the daily_mileage table). Both shapes are
-// now derived live from the SI-canonical drives table (mig 000185).
+// Handler restores the /mileage/monthly and /mileage/stats endpoints after
+// daily_mileage was dropped. Both shapes are now derived live from the
+// SI-canonical drives table (mig 000185).
 //
 // Frontend hooks (still pointed at these URLs, currently 404ing):
 //
 //   - useMonthlyMileage (web/src/api/hooks/useAnalytics.ts)
 //   - useMileageStats   (web/src/api/hooks/useAnalytics.ts)
 //
-// Response shapes follow the prompt-locked Decisions #1 + #2 (snake_case
-// JSON keys). The legacy frontend types in web/src/types/analytics.ts
-// (camelCase totalDistance / avgDaily / etc.) belong to the deleted
-// handler and need a follow-up update outside this prompt's allowed-
-// files boundary.
+// Response shapes use snake_case JSON keys. The legacy frontend types in
+// web/src/types/analytics.ts (camelCase totalDistance / avgDaily / etc.)
+// belong to the deleted handler and need a follow-up update outside this
+// file set.
 package mileage
 
 import (
@@ -30,8 +28,7 @@ import (
 
 // mileageRepository is the minimal repo surface Handler needs.
 // Defined as an interface so the handler tests can supply a fake
-// without spinning up a database — the codebase has no pgxmock harness
-// (see repo memories from earlier phases).
+// without spinning up a database; the codebase has no pgxmock harness.
 type mileageRepository interface {
 	VehicleExists(ctx context.Context, vehicleID int64) (bool, error)
 	Monthly(ctx context.Context, vehicleID int64, windowStart time.Time) ([]drivedb.MileageMonthlyRow, error)
@@ -56,15 +53,15 @@ func NewHandler(repo *drivedb.MileageRepo) *Handler {
 }
 
 const (
-	// mileageDefaultMonths mirrors Decision #3 default (24 months).
+	// mileageDefaultMonths is the default monthly window.
 	mileageDefaultMonths = 24
-	// mileageMaxMonths caps the monthly window per Decision #3 (120
-	// months = 10 years). drives is a regular table (not a hypertable)
+	// mileageMaxMonths caps the monthly window at 10 years. drives is a regular
+	// table (not a hypertable)
 	// with one row per trip, so 10 years of monthly aggregation is
 	// bounded by trip frequency rather than telemetry tick rate.
 	mileageMaxMonths = 120
-	// mileageDefaultDays is the default per-day window for /mileage/daily
-	// (Phase-43a / Prompt 0009 — fix/misc-fixes). MileagePage.tsx today
+	// mileageDefaultDays is the default per-day window for /mileage/daily.
+	// MileagePage.tsx today
 	// requests limit=90; 90 daily buckets renders cleanly on the
 	// Odometer Over Time area chart and Daily Distance bar chart.
 	mileageDefaultDays = 90
@@ -276,9 +273,8 @@ func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 // /mileage/daily. Returns ok=false after writing the appropriate 4xx
 // response so the caller can early-return.
 //
-// Phase-43a / Prompt 0009 (fix/misc-fixes). Mirrors parseMonthlyParams
-// but with the days cap (Decision #3 of Prompt 0004 generalised to
-// daily granularity).
+// Mirrors parseMonthlyParams but with the days cap generalized to daily
+// granularity.
 func (h *Handler) parseDailyParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, days int, ok bool) {
 	q := r.URL.Query()
 
@@ -416,8 +412,7 @@ func monthsAgo(now time.Time, months int) time.Time {
 // midnight so the earliest bucket includes drives from the start of
 // that day rather than from `now.Hour()` of that day (which would clip
 // the earliest bucket exactly like monthsAgo's month-snap does).
-//
-// Phase-43a / Prompt 0009 (fix/misc-fixes).
+
 func daysAgo(now time.Time, days int) time.Time {
 	t := now.AddDate(0, 0, -days)
 	return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)

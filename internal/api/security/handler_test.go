@@ -63,7 +63,7 @@ func newSecurityRequest(vehicleID, target string) *http.Request {
 }
 
 // TestSecurityHandler_History_CarriesForwardLockState is the wire-up +
-// carry-forward proof for the phase-39 security-handler migration.
+// carry-forward proof for the security handler.
 //
 // Lock state, sentry mode, valet mode, service mode, guest mode and the
 // per-door / per-window position flags are user-controlled or

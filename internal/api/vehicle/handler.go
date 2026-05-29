@@ -21,7 +21,7 @@ import (
 // Business logic (state assembly, Tesla sync) is delegated to
 // VehicleService; the handler focuses on HTTP concerns.
 //
-// state is the signal-log-backed cold-path reader (ADR-002 / phase-39)
+// state is the signal-log-backed cold-path reader (ADR-002)
 // used by Positions to derive a chart-mode timeline of GPS samples by
 // forward-folding the change feed; every emission becomes a row, even
 // when the projected fields are unchanged from the previous emission.
@@ -36,7 +36,7 @@ type Handler struct {
 // Position JSON shape consumed by the frontend. Field names match the
 // legacy Position model JSON tags so the wire contract is unchanged.
 //
-// Phase-42 codec uses LocationLatitude / LocationLongitude (compound
+// The codec uses LocationLatitude / LocationLongitude (compound
 // flatten — see codec/flatten.go); Elevation is intentionally absent
 // because Tesla Fleet Telemetry does not emit it.
 var vehiclePositionMappings = []signal.FieldMapping{
@@ -215,7 +215,7 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	}
 	span.SetAttributes(attribute.String("vehicle.vin", vehicle.VIN))
 
-	// Phase-46 / Prompt 64 — point-in-time time-machine view.
+	// Point-in-time time-machine view.
 	// When the caller passes a valid `?as_of=` query parameter we
 	// reconstruct vehicle state from signal_log at that timestamp
 	// instead of returning live signal data. The branch is read-only:

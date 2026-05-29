@@ -57,8 +57,7 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 (000184_charging_si): SI canonical columns. We convert
-	// total_energy_added_wh and peak_power_w are already SI canonical; the
+	// Charging heatmap uses SI canonical energy and power columns; the
 	// frontend display boundary formats them with user preferences.
 	// Heatmap data: hour of day × day of week
 	heatmapRows, err := h.db.Pool.Query(ctx, `
@@ -96,8 +95,8 @@ func (h *ChargingHeatmapHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Location breakdown — Phase-42 replaces the legacy charger-location text
-	// column with the geocoded start_place column captured at session start.
+	// Location breakdown uses the geocoded start_place column captured at
+	// session start.
 	locRows, err := h.db.Pool.Query(ctx, `
 		SELECT COALESCE(start_place, 'Unknown')                  AS location,
 		       COUNT(*)                                          AS count,

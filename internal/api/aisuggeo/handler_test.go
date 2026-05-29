@@ -1,8 +1,8 @@
-// Phase-50 / 0038 — G2 suggest new geofences.
+// Tests for AI-suggested geofences.
 //
 // These tests pin ADR-015 off-mode behavior: the AI draft route fails closed
 // while deterministic geofence CRUD remains reachable. Streaming coverage lives
-// in the F6 eval harness, which requires live data.
+// in the AI eval harness, which requires live data.
 
 package aisuggeo
 

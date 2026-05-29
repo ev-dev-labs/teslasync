@@ -15,8 +15,7 @@ import (
 // {method,path,status} series declared in internal/metrics. Mutually
 // exclusive with Metrics (RED) at the data layer — both are chained today
 // during the migration window because both metric families are scraped
-// by existing Grafana dashboards. See
-// docs/runbooks/phase-44-metrics-conventions.md.
+// by existing Grafana dashboards. See the metrics conventions runbook.
 func Prometheus(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

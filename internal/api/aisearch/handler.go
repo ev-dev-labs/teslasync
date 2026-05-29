@@ -1,6 +1,6 @@
 package aisearch
 
-// Phase-50 / 0017 — N3 natural-language search.
+// Natural-language search handler.
 //
 // Serves the opt-in SSE search narrator using read-only RAG retrieval and
 // hydration tools. The AI guard fails closed before this handler runs, and
@@ -78,12 +78,10 @@ func NewHandler(
 // POST /api/v1/ai/search/query.
 //
 // Prompt is the user's plain-language search query, capped at
-// maxPromptChars. The slice deliberately does NOT accept a
-// vehicle_id — the F7 retriever scopes by user_subject (the
-// authenticated principal) and has no per-vehicle filter; adding a
-// vehicle_id field to the wire shape would create a UI affordance
-// we cannot enforce server-side. See the rubber-duck critique in
-// the slice plan for the full rationale.
+// maxPromptChars. The request deliberately does NOT accept a
+// vehicle_id — retrieval scopes by user_subject (the authenticated
+// principal) and has no per-vehicle filter; adding a vehicle_id
+// field would create a UI affordance we cannot enforce server-side.
 type queryRequest struct {
 	Prompt string `json:"prompt"`
 }

@@ -1,6 +1,6 @@
 package chatbot
 
-// Phase-50 / 0011 — U1 chatbot LLM upgrade.
+// Chatbot responder with opt-in LLM support.
 //
 // ChatResponder keeps the heuristic baseline route separate from the AI-only
 // dispatch path, preserving ADR-015's off-mode baseline contract.

@@ -1,8 +1,8 @@
-// Phase-50 / 0041 — X2 Lifetime stats Q&A.
+// Lifetime stats Q&A tests.
 //
 // These tests pin the AI-off contract: guarded Q&A returns 404 while the
 // deterministic lifetime-stats endpoint remains reachable. Full streaming
-// coverage lives in the F6 eval harness because it needs a database fixture.
+// coverage lives in the AI eval harness because it needs a database fixture.
 
 package ailifetime
 
@@ -38,7 +38,7 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestLifetimeStatsQAAIOffHidesQuestionBox is the load-bearing
-// off-mode contract proof for slice 0041. It mounts the AI
+// off-mode contract proof. It mounts the AI
 // lifetime-stats-qa route through the guard with ai_mode='off' and
 // proves:
 //

@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 42 — Active sessions / device management endpoints.
+// Active sessions and device management endpoints.
 //
 // Implements three endpoints the SPA's <ActiveSessionsSection> uses to
 // list and revoke TeslaSync's per-device session bindings:
@@ -13,7 +13,7 @@
 //
 // Auth-mode awareness. In open mode (no FORWARD_AUTH_HEADER configured)
 // every endpoint returns 501 with code `AUTH_MODE_OPEN` so the SPA's
-// `useSessions` hook can render the inline placeholder placeholder
+// `useSessions` hook can render the inline placeholder
 // without a noisy 401 loop. The DELETE routes are wrapped in
 // RequireSudo upstream — that middleware is itself a passthrough in
 // open mode, so the open-mode check below intentionally fires before

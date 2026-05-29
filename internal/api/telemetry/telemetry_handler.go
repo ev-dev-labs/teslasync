@@ -35,8 +35,8 @@ type pipelineDispatcher interface {
 
 // Compile-time guard: Handler must satisfy mqtt.StreamingHealthRecorder
 // so the PipelineSubscriber can notify the MQTT Inspector of per-VIN
-// streaming activity (Phase-48 fix — pre-fix the inspector silently
-// zeroed out after the per-field MQTT cutover).
+// streaming activity instead of silently zeroing out after the per-field
+// MQTT cutover.
 var _ mqtt.StreamingHealthRecorder = (*Handler)(nil)
 
 // Handler receives and processes Tesla Fleet Telemetry data.
@@ -102,14 +102,11 @@ type Handler struct {
 	pipeline pipelineDispatcher
 }
 
-// SetPipeline wires the unified ingest dispatcher used by ProcessBatch
-// (Phase-42a/0060). Accepting *normalize.Pipeline (rather than the
-// internal pipelineDispatcher interface) on the public seam preserves
-// Decision #1 of the prompt: only the canonical normalize.Pipeline is
-// allowed to satisfy the field on the production wire path. Passing
-// nil clears the dispatcher, which causes subsequent ProcessBatch
-// calls to fail with "pipeline not wired" — useful for shutdown
-// drains where new batches must be rejected.
+// SetPipeline wires the unified ingest dispatcher used by ProcessBatch.
+// Accepting *normalize.Pipeline rather than the internal pipelineDispatcher
+// interface keeps only the canonical normalize.Pipeline on the production wire
+// path. Passing nil clears the dispatcher, causing subsequent ProcessBatch
+// calls to fail with "pipeline not wired" during shutdown drains.
 func (h *Handler) SetPipeline(p *normalize.Pipeline) {
 	if p == nil {
 		h.pipeline = nil

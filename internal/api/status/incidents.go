@@ -1,4 +1,4 @@
-// Phase-2 / Status API — incidents handler.
+// Incidents handler for the status API.
 //
 // CRUD + timeline-append endpoints for /api/v1/status/incidents. The
 // list endpoint is the same one referenced by /api/v1/status (active

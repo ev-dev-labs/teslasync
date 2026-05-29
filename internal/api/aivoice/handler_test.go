@@ -1,4 +1,4 @@
-// Phase-50 / 0055 - V1 Helix voice mode.
+// Tests for Helix voice mode.
 // These tests pin AI-off guard behavior, baseline coexistence, and voice-mode adapter contracts.
 
 package aivoice
@@ -36,8 +36,8 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestVoiceModeAIOffNoVoiceControlsOrStorage is the
-// load-bearing off-mode contract proof for slice 0055. It
-// mounts the AI voice-mode route through the guard with
+// load-bearing off-mode contract proof. It mounts the AI
+// voice-mode route through the guard with
 // ai_mode='off' and proves:
 //
 //   - The /api/v1/ai/voice/chat route returns 404 (the guard
@@ -47,13 +47,13 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 //   - The baseline POST /api/v1/chatbot route serving the
 //     deterministic text-only chat experience (which the
 //     /chatbot SPA page renders even when AI is off) remains
-//     reachable under the same router — proof that the slice
-//     does NOT replace the deterministic text-chat surface
+//     reachable under the same router, proving the AI route
+//     does not replace the deterministic text-chat surface
 //     (ADR-015 §I3).
 //
 // The test name MUST stay
-// TestVoiceModeAIOffNoVoiceControlsOrStorage — the slice
-// prompt's verification command runs `go test … -run
+// TestVoiceModeAIOffNoVoiceControlsOrStorage because external
+// verification commands run `go test … -run
 // TestVoiceModeAIOffNoVoiceControlsOrStorage` AND `npm test --
 // --run TestVoiceModeAIOffNoVoiceControlsOrStorage`, so both
 // the Go and React off-mode proofs answer to the same test-

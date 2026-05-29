@@ -1,6 +1,6 @@
 package aiwatchnl
 
-// Phase-50 / 0056 — V2 Helix watch face natural-language response.
+// Helix watch face natural-language response handler.
 //
 // This is the opt-in LLM narration layer for POST /api/v1/ai/watch/respond.
 // The guard returns 404 before this handler runs when AI or the feature is disabled (ADR-015 §I6).

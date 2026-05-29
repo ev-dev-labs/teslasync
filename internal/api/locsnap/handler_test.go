@@ -62,8 +62,8 @@ func newLocationRequest(vehicleID, target string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, target, nil)
 }
 
-// TestLocationSnapshot_History_ChartMode is the wire-up + chart-mode
-// proof for the phase-39 location-snapshot-handler migration.
+// TestLocationSnapshot_History_ChartMode proves the location snapshot
+// handler's wire-up and chart-mode behavior.
 //
 // The location history view drives the dashboard's GPS trail / route
 // chart, where every emission of Latitude / Longitude / GpsHeading /
@@ -203,7 +203,7 @@ func TestLocationSnapshot_History_ChartMode(t *testing.T) {
 //  4. Verifies that compound-unpacked destination/origin coordinates
 //     (DestinationLatitude / DestinationLongitude / OriginLatitude /
 //     OriginLongitude — produced by the StateReader implementation
-//     unpacking Tesla's Location compound, per Prompt 05) project
+//     unpacking Tesla's Location compound) project
 //     under their mapped Field names if present.
 //  5. Confirms unmapped raw signal names do NOT leak into the
 //     response — only the projected Field names.
@@ -219,7 +219,7 @@ func TestLocationSnapshot_Latest_ReturnsParkedPosition(t *testing.T) {
 			return signal.State{
 				// Stable parked coordinates forward-folded from an
 				// emission hours ago — the canonical reason this
-				// migration matters. Phase-42 codec emits the compound
+				// migration matters. The telemetry codec emits the compound
 				// flatten names LocationLatitude / LocationLongitude
 				// (codec/flatten.go); legacy ingest path emits the bare
 				// names — both are projected to the same JSON field.
@@ -228,8 +228,7 @@ func TestLocationSnapshot_Latest_ReturnsParkedPosition(t *testing.T) {
 				"GpsHeading":        90.0,
 				"GpsState":          "Stopped",
 				"VehicleSpeed":      0.0,
-				// Compound-unpacked destination coordinates (Prompt 05
-				// unpacks Tesla's Location compound into these scalars).
+				// Compound-unpacked destination coordinates from Tesla's Location compound.
 				"DestinationLatitude":  40.7128,
 				"DestinationLongitude": -74.0060,
 				"DestinationName":      "New York, NY",

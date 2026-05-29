@@ -27,10 +27,9 @@ func NewHandler(db *database.DB) *Handler {
 // unit (km, kWh, Wh/km, kg) for parity with the chart on the
 // PeriodComparePage that already renders this exact shape.
 //
-// Phase-50 / 0040 — extracted from the inline handler so the AI
-// tool adapter can compose the SAME deterministic helper that
-// backs the canonical baseline; no new SQL is written by the AI
-// slice.
+// Extracted from the inline handler so the AI tool adapter can compose the
+// same deterministic helper that backs the canonical baseline; no new SQL is
+// written by the AI path.
 type PeriodStats struct {
 	TotalDistance float64 `json:"total_distance"` // km
 	TotalDrives   int     `json:"total_drives"`
@@ -60,8 +59,8 @@ func ComputePeriodStats(ctx context.Context, db *database.DB, vehicleID int64, d
 		dateFilter = " AND started_at > NOW() - interval '" + strconv.Itoa(days) + " days'"
 	}
 
-	// Total distance & drives. Phase-42 SI canonical drives (000185):
-	// distance_m / duration_s. Convert to km/min at JSON-populate site.
+	// Total distance and drives use SI canonical distance_m / duration_s.
+	// Convert to km/min at the JSON-populate site.
 	var totalDistM, totalDurS *float64
 	var totalDrives int
 	err := db.Pool.QueryRow(ctx,
@@ -72,8 +71,8 @@ func ComputePeriodStats(ctx context.Context, db *database.DB, vehicleID int64, d
 		return PeriodStats{}, err
 	}
 
-	// Energy & cost from charging sessions. Phase-42 SI canonical
-	// charging_sessions (000184): total_energy_added_wh, cost_decimal.
+	// Energy and cost from charging sessions use SI canonical
+	// total_energy_added_wh and cost_decimal columns.
 	var energyAddedWh, totalCost *float64
 	err = db.Pool.QueryRow(ctx,
 		`SELECT COALESCE(SUM(total_energy_added_wh), 0), COALESCE(SUM(cost_decimal::float8), 0)

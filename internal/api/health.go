@@ -86,7 +86,7 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 // tesla.NewClient — i.e. how long the breaker stays open before it tries
 // a half-open probe. Held here as a constant so /system/status can
 // surface an accurate breaker_reset_at without modifying the tesla
-// client. Keep in sync with internal/tesla/client.go (Phase-45 / Prompt 33).
+// client. Keep in sync with internal/tesla/client.go.
 const teslaBreakerTimeout = 60 * time.Second
 
 // teslaBreakerObserver tracks the last open transition time of the Tesla
@@ -132,7 +132,6 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 
 	// Tracks the Tesla circuit breaker's last open transition so the
 	// /system/status response can advertise breaker_reset_at to the SPA.
-	// Phase-45 / Prompt 33.
 	var teslaBreakerObs teslaBreakerObserver
 
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -192,8 +191,8 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 			LastError   string `json:"last_error,omitempty"`
 		}
 
-		// Phase-45 / Prompt 33 — surface breaker state + reset window
-		// inside tesla_api so the SPA's <RateLimitBanner> can show an
+		// Surface breaker state and the reset window inside tesla_api so
+		// the SPA's <RateLimitBanner> can show an
 		// accurate countdown without polling a separate endpoint. The
 		// existing top-level `circuit_breaker` block is kept for
 		// backwards compatibility with consumers that already read it.
@@ -249,7 +248,7 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 }
 
 // ExtendedHealthCheck returns component latency, pool stats, and system metadata.
-// Optional providers add telemetry buffer stats and the Phase-46 service-mode block
+// Optional providers add telemetry buffer stats and the service-mode block
 // so the SPA can render MaintenanceBanner without another round-trip.
 func ExtendedHealthCheck(db *database.DB, health *resilience.HealthMonitor, bufferStats func() (int, int), systemState func(context.Context) MaintenanceView) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

@@ -27,13 +27,13 @@ type tripsDetailRepository interface {
 // (Authentik ForwardAuth + bearer-token fallback) for caller identity;
 // no per-vehicle ownership check is performed at this layer to mirror
 // the existing /drives/{driveID} endpoint behaviour (Decision #5
-// in the prompt).
+// in the request).
 type Handler struct {
 	repo tripsDetailRepository
 }
 
 // NewHandler panics on a nil repo (fail-fast at startup,
-// mirrors Phase-43a/0007 NewSignalsCatalogHandler precedent).
+// mirrors the migration NewSignalsCatalogHandler precedent).
 func NewHandler(repo tripsDetailRepository) *Handler {
 	if repo == nil {
 		panic("tripsdetail: NewHandler requires non-nil repo")
@@ -57,23 +57,23 @@ type tripDriveSummaryDTO struct {
 
 // tripDetailResponse is the wire DTO. SUPERSET shape per Decision D2:
 //
-//   - frontend Trip interface fields:
-//     id, vehicle_id, name, start_date, end_date,
-//     total_distance_m, total_energy_wh, total_cost,
-//     drive_count, charge_count, created_at
-//   - prompt Decision #3 fields:
-//     started_at, ended_at, total_duration_s,
-//     energy_used_wh (alias), drives:[...]
+// - frontend Trip interface fields:
+// id, vehicle_id, name, start_date, end_date,
+// total_distance_m, total_energy_wh, total_cost,
+// drive_count, charge_count, created_at
+// - prompt Decision #3 fields:
+// started_at, ended_at, total_duration_s,
+// energy_used_wh (alias), drives:[...]
 //
 // Notes:
-//   - created_at is derived from started_at because the SI trips
-//     table intentionally has no audit column (rubber-duck issue #4).
-//   - end_date and ended_at remain JSON null while a trip is open
-//     (rubber-duck issue #7); the SQL window-effective-end is only
-//     used inside the repo aggregation, never rendered.
-//   - route_polyline from prompt Decision #3 is intentionally OMITTED
-//     because the schema has no per-trip polyline source
-//     (rubber-duck issue #11).
+// - created_at is derived from started_at because the SI trips
+// table intentionally has no audit column (rubber-duck issue #4).
+// - end_date and ended_at remain JSON null while a trip is open
+// (rubber-duck issue #7); the SQL window-effective-end is only
+// used inside the repo aggregation, never rendered.
+// - route_polyline from prompt Decision #3 is intentionally OMITTED
+// because the schema has no per-trip polyline source
+// (rubber-duck issue #11).
 type tripDetailResponse struct {
 	ID             int64                 `json:"id"`
 	VehicleID      int64                 `json:"vehicle_id"`

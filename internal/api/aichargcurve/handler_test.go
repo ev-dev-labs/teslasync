@@ -1,18 +1,12 @@
-// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
+// Tests for AI charging-curve fingerprint clustering.
 //
-// Off-mode + baseline-coexistence tests for the AI
-// charging-curve-fingerprint-clustering handler. The off-mode test
-// (TestChargingCurveClusteringAIOffShowsChartsOnly) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, AND that the deterministic charging-curve aggregate
-// served at the canonical GET /api/v1/charging route remains the
-// unconditional baseline path (ADR-015 §I3, §I6).
+// Off-mode and baseline-coexistence tests assert that the AI route returns
+// 404 when settings.ai_mode='off' even when the per-feature toggle is on,
+// and that the deterministic charging aggregate at GET /api/v1/charging
+// remains the unconditional baseline path (ADR-015 §I3, §I6).
 //
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness
-// (`go run ./cmd/ai-eval -feature charging-curve-fingerprint-clustering`);
-// duplicating that here would require a live database + signal
+// The on-path streaming integration is exercised end-to-end by the eval
+// harness; duplicating that here would require a live database and signal
 // store fixture.
 
 package aichargcurve

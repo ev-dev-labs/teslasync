@@ -4,13 +4,13 @@
 //
 // Layer: handler
 //
-// FROZEN per ADR-009 (.github/ARCHITECTURE.md, phase-47/06):
+// FROZEN per ADR-009 (.github/ARCHITECTURE.md):
 //   - No new .go files may be added to this directory.
 //   - Existing files may be edited (bug fixes, dependency updates).
 //   - New endpoints belong in internal/handler/v1.
 //   - Test files (_test.go) for existing sources remain permitted —
 //     tests must live in the same Go package as the code under test.
 //
-// Migration of these 223 files to internal/handler/v1 is tracked under
-// phase-48+ and is explicitly out of scope of phase-47.
+// Migration of these 223 files to internal/handler/v1 is tracked separately
+// and is explicitly out of scope here.
 package api

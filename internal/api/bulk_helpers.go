@@ -4,7 +4,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 )
 
-// This file is the parent-side bridge to internal/api/apibulk (Phase R2.0f).
+// This file is the parent-side bridge to internal/api/apibulk.
 // It keeps legacy parent bulk handlers compiling during the resource-package
 // carve; new or moved handlers must import apibulk directly. Delete this bridge
 // once every bulk handler lives in a resource subpackage.

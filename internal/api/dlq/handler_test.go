@@ -1,4 +1,4 @@
-// Phase-44 / observability-batch / Prompt F4 — DLQ handler integration tests.
+// DLQ handler integration tests.
 //
 // These tests exercise the HTTP layer end-to-end through chi, using a
 // fake DLQInspector that satisfies the public Snapshot/Get/Replay

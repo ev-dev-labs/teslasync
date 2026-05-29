@@ -533,7 +533,7 @@ func TestUnreadCountStoreError(t *testing.T) {
 	}
 }
 
-// --- Phase-45 / 28 — bulk mark-all-read ---
+// --- Bulk mark-all-read ---
 
 // markBody is a small helper that marshals the relaxed mark-read body shape
 // (`{ids?, all?}`) used by the all-flag tests below.
@@ -643,7 +643,7 @@ func TestNotificationsBulkMarkAllStillSupportsIDsPath(t *testing.T) {
 	}
 }
 
-// --- Phase-46 / 27 — notification grouping / threading ---
+// --- Notification grouping / threading ---
 
 // validGroupKey returns a 64-char lower-hex sha256-derived string that
 // passes IsValidNotificationGroupKey. Reused by the threading tests.

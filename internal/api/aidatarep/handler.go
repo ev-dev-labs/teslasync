@@ -1,6 +1,6 @@
 package aidatarep
 
-// Phase-50 / 0043 — S2 data repair suggestions.
+// Handler for data repair suggestions.
 //
 // This opt-in AI handler drafts repair patches from the same stale-session
 // inventory shown by /system/data-repair, but never writes or calls PUT repair.

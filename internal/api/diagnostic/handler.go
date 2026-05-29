@@ -1,6 +1,6 @@
 package diagnostic
 
-// Phase-46 / Prompt 33 — Aggregated self-test / diagnostic endpoint.
+// Aggregated self-test / diagnostic endpoint.
 //
 // POST /api/v1/system/diagnostic returns a single DiagnosticReport
 // covering the ~10 health signals operators currently have to correlate
@@ -12,7 +12,7 @@ package diagnostic
 // The report's overall_status is the worst of any individual check's
 // status with the standard severity ladder ok < warn < fail. Individual
 // checks are run concurrently with a per-check timeout so a single hung
-// dependency cannot stall the whole report past the prompt's 5 s budget.
+// dependency cannot stall the whole report past the 5 s page budget.
 
 import (
 	"context"
@@ -52,8 +52,8 @@ const (
 )
 
 // defaultDiagnosticPerCheckTimeout caps each check's wall time. Picked so
-// 10 checks running concurrently can collectively beat the prompt's 5 s
-// page budget even if one stalls — wg.Wait() returns the moment all
+// 10 checks running concurrently can collectively beat the 5 s page
+// budget even if one stalls — wg.Wait() returns the moment all
 // checks finish OR all per-check timeouts fire.
 const defaultDiagnosticPerCheckTimeout = 4 * time.Second
 

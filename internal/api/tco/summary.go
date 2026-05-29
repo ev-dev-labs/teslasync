@@ -1,6 +1,6 @@
 package tco
 
-// Phase-50 / 0050 — M2 TCO narration.
+// TCO narration.
 // The deterministic TCO math lives here so the HTTP chart endpoint and AI
 // narration use one SQL/computation path. Keep the JSON wire shape byte-stable;
 // summary_test.go::TestComputeTCOSummary_StructFieldsPinWireShape pins it.

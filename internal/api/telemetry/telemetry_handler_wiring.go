@@ -117,7 +117,7 @@ func (h *Handler) SetEventHub(hub *sse.EventHub) {
 // BroadcastSSE forwards a vehicle_update SSE payload through the
 // handler's existing fanout (Redis Pub/Sub when configured, in-process
 // EventHub fallback otherwise). Exposed as a public accessor so the
-// phase-42a/0050 cutover wiring in cmd/teslasync can register the
+// cutover wiring in cmd/teslasync can register the
 // teslapipeline.SideEffectsObserver's BroadcastSSEFunc against the
 // canonical Handler implementation without duplicating the
 // pub/sub-with-fallback branching logic.

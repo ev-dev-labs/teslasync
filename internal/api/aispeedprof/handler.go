@@ -1,6 +1,6 @@
 package aispeedprof
 
-// Phase-50 AI handler.
+// AI speed-profile insights handler.
 //
 // This endpoint runs an opt-in, guarded dispatch+SSE flow without persistence.
 // ADR-015 baseline routes remain canonical when AI is off or disabled.

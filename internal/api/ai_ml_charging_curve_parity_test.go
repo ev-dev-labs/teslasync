@@ -1,7 +1,7 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering statistical model.
+// Charging-curve fingerprint clustering parity tests.
 //
-// This parity test pins ml/chargingcurves.ClassifyChargingPowerTier to the C3
-// tool's sibling classifier so their narrations cannot drift. The duplication
+// This parity test pins ml/chargingcurves.ClassifyChargingPowerTier to the
+// tool sibling classifier so their narrations cannot drift. The duplication
 // is intentional because the packages have different dependency directions.
 
 package api
@@ -14,12 +14,12 @@ import (
 
 // TestChargingCurveClusterParity_MLvsTools covers nil/invalid inputs plus
 // values around the L1/L2/DC tier boundaries. A failure means the ML classifier,
-// the C3 sibling classifier, or their boundary constants drifted; update both
+// the tool sibling classifier, or their boundary constants drifted; update both
 // classifiers in the same commit.
 func TestChargingCurveClusterParity_MLvsTools(t *testing.T) {
 	t.Parallel()
 
-	// Pin constants to the C3 tool's unexported chargeCurvePower* boundaries.
+	// Pin constants to the tool's unexported chargeCurvePower* boundaries.
 	const (
 		expectedPowerL1MaxW = 1920.0
 		expectedPowerL2MaxW = 19200.0

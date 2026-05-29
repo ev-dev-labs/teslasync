@@ -21,8 +21,7 @@ func newMotorRequest(vehicleID, target string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, target, nil)
 }
 
-// TestMotorHandler_History_ChartMode is the wire-up + carry-forward proof
-// for the phase-39 motor-handler migration.
+// TestMotorHandler_History_ChartMode proves chart-mode wiring and carry-forward behavior.
 //
 // Drive-state signals (DiStateF/R, Gear) emit only on transition; for a
 // parked vehicle they may not re-emit for hours, leaving the legacy
@@ -493,8 +492,7 @@ func TestMotorHandler_Latest_DerivesPower(t *testing.T) {
 // derivation also runs per row in the List path. This is the chart's
 // data path — every row must carry its own derived power_kw /
 // regen_kw so the area chart plots a real time-series instead of the
-// blank canvas it has been showing since Phase-39 deleted
-// motor_snapshots.power_kw.
+// blank canvas caused by missing motor_snapshots.power_kw.
 func TestMotorHandler_List_DerivesPowerPerRow(t *testing.T) {
 	t0 := time.Date(2026, 4, 30, 9, 0, 0, 0, time.UTC)
 	folded := []signal.TimelineRow{

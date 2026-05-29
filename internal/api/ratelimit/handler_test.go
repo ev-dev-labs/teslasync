@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 40 — Rate-limit status endpoint tests.
+// Rate-limit status endpoint tests.
 //
 // The handler is exercised against the production WindowCounter (no
 // fakes — the platform package is in-process and cheap to drive) and

@@ -1,6 +1,6 @@
 package ainlgrafana
 
-// Phase-50 / 0058 — PU2 Natural-language Grafana panel.
+// Handler for natural-language Grafana panel drafts.
 //
 // Implements POST /api/v1/ai/power/grafana-panel/draft as a propose-only SSE handler.
 // The route is guard-wrapped for ADR-015 off-mode behavior; /power/grafana remains the deterministic baseline.

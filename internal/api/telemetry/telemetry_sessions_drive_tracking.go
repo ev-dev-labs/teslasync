@@ -20,19 +20,17 @@ import (
 )
 
 // driveStateRegistry holds the per-tracker signal.StateReader injected by
-// router.go at startup (phase-39 / ADR-002). The tracker struct itself is
-// defined in telemetry_sessions.go and intentionally not modified by this
-// migration prompt (the prompt's allowed-files boundary is scoped to
-// telemetry_sessions_drive_tracking.go), so this side table provides the
-// wiring seam without altering the shared struct definition. The setter and
-// accessor below live in this file because the snapshot read sites that
+// router.go at startup (ADR-002). The tracker struct itself is defined in
+// telemetry_sessions.go, so this side table provides the wiring seam without
+// altering the shared struct definition. The setter and accessor below live
+// in this file because the snapshot read sites that
 // consume the reader are exclusively in this file.
 //
 // A nil entry (or missing key) means no StateReader has been installed for
 // that tracker — completion-time enrichment falls back to the unenriched
 // code path (empty snapshot maps), preserving the behavior of the legacy
 // fallback when both signalLogReader and signalHistoryWriter were nil. The
-// gear/location-carry-forward bug this prompt fixes manifests when a drive
+// gear/location-carry-forward bug manifests when a drive
 // boundary lands between Tesla's delta-encoded re-emissions: the previous
 // SignalLogReader.SnapshotAt path queried only the snapshot tables and so
 // missed signals that had not changed across the boundary. The StateReader
@@ -46,7 +44,7 @@ var (
 // SetDriveStateReader injects the cold-path signal.StateReader used to
 // reconstruct drive start/end snapshots at session completion. Replaces
 // the legacy *signaldb.SignalLogReader.SnapshotAt /
-// *signaldb.SignalHistoryWriter.SnapshotAt calls that this prompt removed.
+// *signaldb.SignalHistoryWriter.SnapshotAt calls.
 // Passing nil clears any previously installed reader.
 func (t *TelemetrySessionTracker) SetDriveStateReader(s signal.StateReader) {
 	driveStateRegistryMu.Lock()
@@ -256,8 +254,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 // EmittedAt map. The drive's StartTs/StartTime are stamped using the Gear
 // field's EmittedAt when available (gear-based drives) or VehicleSpeed's
 // EmittedAt (speed-fallback drives), falling back to payloadTs, then
-// wall-clock if neither is set. Phase-42a/0030.bis (commit C2 of v3.4
-// prod-replay accuracy fix).
+// wall-clock if neither is set.
 func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, speed float64, gearBased bool, payloadTs time.Time, fieldTs map[string]time.Time) {
 	batteryLevel, hasBat := t.resolveInt(vehicleID, signals, accumulatedSignals, "BatteryLevel", "Soc")
 	odometer, hasOdo := t.resolveFloat(vehicleID, signals, accumulatedSignals, "Odometer")
@@ -288,7 +285,6 @@ func (t *TelemetrySessionTracker) startDriveLocked(ctx context.Context, vehicleI
 	}
 	startTs = eventTimeOrNow(startTs)
 
-	// C3 (v3.4 prod-replay accuracy fix): drive-merge.
 	// Before creating a new drive row, look up the most recent ended drive
 	// for this vehicle whose ended_at is within driveMergeWindow of the
 	// candidate startTs. If found, RESUME that drive (clear ended_at) and
@@ -437,8 +433,8 @@ func (t *TelemetrySessionTracker) updateActiveDriveLocked(ctx context.Context, a
 		if odo, ok := signalFloat(signals, "Odometer"); ok {
 			active.StartOdometer = floatPtr(odo)
 			active.LastOdometer = floatPtr(odo)
-			// C7 (Phase-41 v3.4): persist SI-canonical start odometer to
-			// the drives row so the boundary value survives even if the
+			// Persist SI-canonical start odometer to the drives row so the
+			// boundary value survives even if the
 			// snapshot path can't recover it at completion time. Mirrors
 			// the start_battery_pct / start_lat backfill pattern below.
 			startBackfill["start_odometer_m"] = odo
@@ -743,8 +739,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 	active.Completing = true
 
-	// Resolve end timestamp from event-time first (Phase-42a/0030.bis):
-	// prefer Gear=P / Gear=N's EmittedAt for gear-based ends, then
+	// Resolve end timestamp from event-time first: prefer Gear=P /
+	// Gear=N's EmittedAt for gear-based ends, then
 	// VehicleSpeed for speed-fallback ends, then payloadTs (batch
 	// high-water), then wall-clock. Without this, replaying a 24-min
 	// historical batch produces an end timestamp at the replay clock
@@ -788,13 +784,12 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 
 	// Compute distance from odometer.
 	//
-	// Post-Phase-42 the codec emits Odometer in SI canonical meters (after
-	// normalize.toSI applies the unit-history distance unit). The in-memory
+	// The codec emits Odometer in SI canonical meters after normalize.toSI
+	// applies the unit-history distance unit. The in-memory
 	// active.{Start,Last}Odometer are populated from
 	// `signalFloat(signals, "Odometer")` and `signals` are the post-toSI
-	// atomics, so the subtraction yields METERS. Phase-48 drops the
-	// back-conversion to miles — completeDriveLocked feeds distanceMeters
-	// straight to the SI-direct CompleteWithTx signature.
+	// atomics, so the subtraction yields meters. completeDriveLocked feeds
+	// distanceMeters straight to the SI-direct CompleteWithTx signature.
 	// distanceMeters carries the SI value across the enhancedFields
 	// init point (line ~826) where it can be inserted into the map.
 	var distanceMeters float64
@@ -813,7 +808,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 
 	// Fallback: estimate distance from avg speed × duration when odometer
-	// unavailable. speedAvg is m/s post-Phase-42 codec, duration is minutes,
+	// unavailable. speedAvg is m/s, duration is minutes,
 	// so meters = mps × seconds = mps × duration × 60.
 	if distanceMeters == 0 && speedAvg != nil && duration > 0 {
 		distanceMeters = (*speedAvg) * duration * 60.0
@@ -843,19 +838,19 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 
 	// Build enhanced fields map (only columns in drivePartialAllowed)
 	enhancedFields := map[string]interface{}{}
-	// C6 (Phase-41 v3.4): forward SI-canonical odometer-derived distance
-	// in meters through the partial-update path (drivePartialAllowed
+	// Forward SI-canonical odometer-derived distance in meters through
+	// the partial-update path (drivePartialAllowed
 	// permits distance_m as direct passthrough). PartialUpdateWithTx
 	// runs INSIDE the same tx after CompleteWithTx so the SI value
 	// authoritatively overwrites the back-converted distance from
 	// completeArgsToSI(distance_mi). Snapshot-odometer (line ~898) and
-	// C5 integration fallback (line ~927) further overwrite this when
-	// they yield a positive value.
+	// signal_log integration fallback further overwrite this when they
+	// yield a positive value.
 	if distanceMeters > 0 {
 		enhancedFields["distance_m"] = distanceMeters
 	}
-	// C7 (Phase-41 v3.4): persist SI-canonical drive boundary odometer
-	// (meters) when known. drivePartialAllowed now passes start_odometer_m
+	// Persist SI-canonical drive boundary odometer (meters) when known.
+	// drivePartialAllowed passes start_odometer_m
 	// and end_odometer_m through translatePartialFieldsToSI without
 	// conversion. Snapshot path below may overwrite with more accurate
 	// boundary values reconstructed from signal_log.
@@ -866,8 +861,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		enhancedFields["end_odometer_m"] = *active.LastOdometer
 	}
 	if speedAvg != nil {
-		// C7 (Phase-41 v3.4): speedAvg is m/s post-Phase-42 codec. Writing
-		// to avg_speed_mph would trigger translatePartialFieldsToSI to
+		// speedAvg is m/s. Writing to avg_speed_mph would trigger
+		// translatePartialFieldsToSI to
 		// multiply by mpsPerMph (0.44704) producing a 0.44× understatement.
 		// Write SI-direct via avg_speed_mps which the SI passthrough in
 		// translate now permits. signal_log-derived avg below (~line 1050)
@@ -893,7 +888,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// point in time using last-known values, compensating for Tesla's delta
 	// encoding (signals not sent unless changed). Replaces the legacy
 	// *signaldb.SignalLogReader.SnapshotAt and
-	// *signaldb.SignalHistoryWriter.SnapshotAt code paths (phase-39 / ADR-002).
+	// *signaldb.SignalHistoryWriter.SnapshotAt code paths (ADR-002).
 	//
 	// The tracker's signalLogReader *signaldb.SignalLogReader field
 	// (declared in telemetry_sessions.go) is INTENTIONALLY retained because
@@ -914,7 +909,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// completion (the unenriched `drives` row is still committed).
 	if t.signalLogReader != nil {
 		// endTs already computed at function entry from per-field
-		// EmittedAt + payloadTs fallback (Phase-42a/0030.bis).
+		// EmittedAt + payloadTs fallback.
 		var startSnap, endSnap map[string]interface{}
 		if active.state != nil {
 			s, startErr := active.state.State(ctx, vehicleID, active.StartTime)
@@ -939,21 +934,20 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		}
 
 		// Unit preferences at start and end (may differ if user changed mid-drive).
-		// startDistUnit dropped per C6: snapshot Odometer is now SI meters
-		// (post-Phase-42 normalize.toSI) so no per-snapshot unit lookup is
+		// startDistUnit is unnecessary: snapshot Odometer is SI meters
+		// after normalize.toSI, so no per-snapshot unit lookup is
 		// needed for the odometer-difference path.
-		// endDistUnit dropped per C7: signal_log stores SI m/s so the speed
+		// endDistUnit is unnecessary: signal_log stores SI m/s, so the speed
 		// aggregates are written SI-direct via avg_speed_mps/max_speed_mps
 		// and need no per-snapshot unit lookup either.
 		endTempUnit := units.GetUnitFromSnapshot(endSnap, "SettingTemperatureUnit")
 
 		// Distance from snapshot odometer.
 		//
-		// Post-Phase-42 the codec emits Odometer in SI canonical meters via
-		// normalize.toSI; signal_log stores SI; the state.State() snapshot
-		// reconstructs from signal_log so snapFloat(snap, "Odometer") returns
-		// METERS. Phase-48 forwards the SI value straight to
-		// enhancedFields["distance_m"] with no back-derivation.
+		// The codec emits Odometer in SI canonical meters via normalize.toSI;
+		// signal_log stores SI; the state.State() snapshot reconstructs from
+		// signal_log so snapFloat(snap, "Odometer") returns meters. The SI
+		// value goes straight to enhancedFields["distance_m"] with no back-derivation.
 		if startOdoRaw, ok := snapFloat(startSnap, "Odometer"); ok {
 			if endOdoRaw, ok := snapFloat(endSnap, "Odometer"); ok {
 				sDistMeters := endOdoRaw - startOdoRaw
@@ -1002,7 +996,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		}
 
 		// Position from snapshots (fill if missing).
-		// Dual-key tolerance: Phase-42 codec emits LocationLatitude /
+		// Dual-key tolerance: the codec emits LocationLatitude /
 		// LocationLongitude (codec/flatten.go:18-22); legacy JSON ingest
 		// still emits "Latitude" / "Longitude". snapFloat accepts both.
 		if _, exists := enhancedFields["start_lat"]; !exists {
@@ -1027,8 +1021,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		}
 
 		// Temperature (unit-aware, normalized to °C). The drives table only
-		// has ambient_temp_c_avg (mig 000185 dropped the inside cabin temp
-		// column). Inside cabin temp is captured for the local insideAvg
+		// has ambient_temp_c_avg; the inside cabin temp column was dropped.
+		// Inside cabin temp is captured for the local insideAvg
 		// pointer used downstream, but not persisted.
 		if temp, ok := snapFloat(endSnap, "OutsideTemp"); ok {
 			normalized := units.NormalizeTemp(temp, endTempUnit)
@@ -1036,7 +1030,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			outsideAvg = &normalized
 		}
 		if temp, ok := snapFloat(endSnap, "InsideTemp"); ok {
-			//nolint:ineffassign,staticcheck // insideAvg is dead post-mig 000185 but retained until the persistence rewrite lands.
+			//nolint:ineffassign,staticcheck // insideAvg is dead but retained until the persistence rewrite lands.
 			normalized := units.NormalizeTemp(temp, endTempUnit)
 			insideAvg = &normalized
 			_ = insideAvg
@@ -1055,8 +1049,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 
 		// Aggregates from signal_log during the drive window
 		slAvgSpeed, slMaxSpeed, slAvgPower := t.signalLogReader.DriveAggregates(ctx, vehicleID, active.StartTime, endTs)
-		// C7 (Phase-41 v3.4): signal_log stores SI (m/s) post-Phase-42
-		// codec. Writing to *_mph would trigger translatePartialFieldsToSI
+		// signal_log stores SI (m/s). Writing to *_mph would trigger
+		// translatePartialFieldsToSI
 		// to multiply by mpsPerMph (0.44704) producing a 0.44× understatement
 		// of both avg and max speed. Write SI-direct via *_mps which the
 		// SI passthrough in translate now permits. endDistUnit is no longer
@@ -1086,7 +1080,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	} else if t.signalHistoryWriter != nil {
 		// Legacy fallback path: signalHistoryWriter is wired but signalLogReader
 		// is not. Both legs still go through active.state because StateReader
-		// is the canonical cold-path read API post-phase-39; the writer-side
+		// is the canonical cold-path read API; the writer-side
 		// gating is preserved purely as a degradation hint that cold reads may
 		// not be backed by the primary reader. The lat/lng + temp recovery
 		// below is the residual enrichment performed in this degraded mode.
@@ -1113,8 +1107,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			endSnapshot = map[string]interface{}{}
 		}
 
-		// Fill missing start position. Dual-key tolerance — see
-		// codec/flatten.go for the Phase-42 LocationLatitude name.
+		// Fill missing start position. Dual-key tolerance accepts the codec's
+		// LocationLatitude name and the legacy Latitude name.
 		if _, exists := enhancedFields["start_lat"]; !exists {
 			for _, k := range []string{"LocationLatitude", "Latitude"} {
 				if v, ok := startSnapshot[k]; ok {
@@ -1159,7 +1153,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		}
 
 		// Fill missing temperature (single-point fallback when no temp signals during drive).
-		// Inside cabin temp has no persistent column post-mig 000185; only ambient is stored.
+		// Inside cabin temp has no persistent column; only ambient is stored.
 		if outsideAvg == nil {
 			if v, ok := startSnapshot["OutsideTemp"]; ok {
 				if temp, fOk := v.(float64); fOk {
@@ -1171,7 +1165,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		if insideAvg == nil {
 			if v, ok := startSnapshot["InsideTemp"]; ok {
 				if temp, fOk := v.(float64); fOk {
-					//nolint:ineffassign,staticcheck // insideAvg is dead post-mig 000185 but retained until the persistence rewrite lands.
+					//nolint:ineffassign,staticcheck // insideAvg is dead but retained until the persistence rewrite lands.
 					insideAvg = &temp
 					_ = insideAvg
 				}
@@ -1181,8 +1175,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 
 	// Compute durationS in SI seconds for downstream completion call.
 	durationS := int64(duration*60.0 + 0.5)
-	// active.MaxSpeed is captured in m/s (post-Phase-42 codec emits VehicleSpeed
-	// in SI). active.PowerMax is captured in kW (signalPowerKW returns
+	// active.MaxSpeed is captured in m/s because VehicleSpeed is SI.
+	// active.PowerMax is captured in kW (signalPowerKW returns
 	// V*A/1000); convert to SI W for the avg_power_w write below.
 	maxSpeedMps := active.MaxSpeed
 	var powerMaxW *float64
@@ -1200,8 +1194,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 			distanceMeters, durationS, endBatteryPct, &maxSpeedMps, powerMaxW, outsideAvg); err != nil {
 			return err
 		}
-		// C4 (Phase-41 v3.4): attach unattributed drive_telemetry rows to
-		// this drive in the same tx as the completion update. Window is
+		// Attach unattributed drive_telemetry rows to this drive in the same
+		// tx as the completion update. Window is
 		// [active.StartTime, endTs] which already accounts for drive-merge
 		// (active.StartTime equals the original leg-1 start when merged via
 		// tryMergeDriveLocked). Failure inside this call rolls back the
@@ -1310,8 +1304,8 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 		}
 		if active.LastOdometer == nil && endPos.Odometer > 0 {
 			// Recompute distance if we now have both start and end odometer.
-			// Post-Phase-42 the positions writer supplies SI canonical
-			// odometer in meters; the subtraction yields meters which goes
+			// The positions writer supplies SI canonical odometer in meters;
+			// the subtraction yields meters which goes
 			// straight into the SI-canonical distance_m partial-update field.
 			startOdo := 0.0
 			if active.StartOdometer != nil {
@@ -1343,9 +1337,9 @@ func (t *TelemetrySessionTracker) resolveAndUpdateAddress(driveID int64, lat, lo
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
-	// SI canonical column names (Phase-48 — migration 000185_drives_si
-	// renamed start_address / end_address -> start_place / end_place).
-	// drivePartialAllowed gates writes to these exact keys; before this
+	// SI canonical column names use start_place / end_place instead of
+	// start_address / end_address. drivePartialAllowed gates writes to these
+	// exact keys; before this
 	// rename, every geocode call silently no-op'd because buildPartialUpdate
 	// skips fields not in the allowlist, leaving end_place permanently NULL
 	// and the Visited Locations page empty.
@@ -1447,8 +1441,8 @@ func (t *TelemetrySessionTracker) BackfillAddresses(ctx context.Context) {
 
 // driveMergeWindow is the maximum gap between an ended drive's ended_at and
 // a new candidate drive's startTs that triggers a merge instead of a new
-// drive row. C3 (v3.4 prod-replay accuracy fix). MUST stay smaller than
-// fsm.StateConfirmDuration (30s) plus a small grace so two genuinely
+// drive row. MUST stay smaller than fsm.StateConfirmDuration (30s) plus
+// a small grace so two genuinely
 // separate trips made minutes apart never get merged.
 const driveMergeWindow = 90 * time.Second
 

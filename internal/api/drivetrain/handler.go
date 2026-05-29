@@ -84,8 +84,8 @@ func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Get peak motor power from recent drives as a proxy for motor health.
-	// Phase-42 SI canonical drives schema (migration 000185): avg_power_w
-	// (Watts), started_at, ended_at. powerMaxW is currently unused by the
+	// The drives schema stores avg_power_w (Watts), started_at, and ended_at.
+	// powerMaxW is currently unused by the
 	// response; kept on the SELECT so the row count and the aggregate share
 	// a single round-trip.
 	var powerMaxW *float64

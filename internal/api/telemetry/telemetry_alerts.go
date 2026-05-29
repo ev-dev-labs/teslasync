@@ -38,8 +38,8 @@ type TelemetryAlertEvaluator struct {
 func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *sse.EventHub, mqttClient pahomqtt.Client) *TelemetryAlertEvaluator {
 	engine := NewRuleEngine()
 	// Wire the persistent latch/fire-state repo so once-mode latches
-	// survive pod restarts. Phase-49 / Slice 0002. The hydration call
-	// itself is invoked from internal/app/new.go after the evaluator is
+	// survive pod restarts. The hydration call is invoked from
+	// internal/app/new.go after the evaluator is
 	// constructed, before MQTT subscribers start dispatching telemetry.
 	engine.SetStateRepo(dbalert.NewAlertRuleStateRepo(db))
 	return &TelemetryAlertEvaluator{
@@ -77,8 +77,8 @@ func (e *TelemetryAlertEvaluator) RuleEngine() *RuleEngine {
 // accumulatedSignals is supplied by the telemetry path for callers that need
 // last-known context; the typed rule engine keeps its own transition baseline.
 //
-// Phase-49 / Slice 0004: the second-stage CooldownFSM gate that previously
-// stacked on top of the rule-engine result has been removed. The rule
+// The second-stage CooldownFSM gate that previously stacked on top of the
+// rule-engine result has been removed. The rule
 // engine is now the SINGLE place that decides whether a matched rule
 // should fire — it owns cooldown, once-mode latch, max-fires-per-resolution,
 // and the engine-level hourly safety cap (formerly CooldownFSM.MaxFiresPerHour).
@@ -112,14 +112,14 @@ func (e *TelemetryAlertEvaluator) Evaluate(ctx context.Context, vehicleID int64,
 
 // fireAlert broadcasts via SSE and dispatches to notification channels.
 // `effectiveSeverity` is the severity returned by the engine, which may
-// differ from `rule.Severity` when the Phase-49 / Slice 0009 escalation
-// gate fired. It is the SOURCE OF TRUTH for every downstream consumer
+// differ from `rule.Severity` when the escalation gate fires. It is the
+// SOURCE OF TRUTH for every downstream consumer
 // (SSE, event bus, metrics, quiet-hours suppression, notification
 // dispatch). An empty `effectiveSeverity` falls back to the rule's
 // declared severity so legacy callers (none today) keep working.
 //
-// Phase-50 / ADR-005: `evalContext` is the merged-signals map returned
-// from RuleEngine.Evaluate. We build the canonical title/body via the
+// `evalContext` is the merged-signals map returned from RuleEngine.Evaluate.
+// We build the canonical title/body via the
 // internal/alertmsg package so every dispatch path (telemetry, computed
 // metric, preview) renders identically. The rule's IncludeTitle flag is
 // passed through to notification.Request.SuppressTransportTitle — the
@@ -239,8 +239,8 @@ func (e *TelemetryAlertEvaluator) fireAlert(ctx context.Context, rule *alertmode
 // The worker handles delivery, retry, rate limiting, and metrics — fully decoupled.
 // Falls back to direct send if MQTT is unavailable.
 //
-// Phase-50 / ADR-005: `suppressTransportTitle` is forwarded to the
-// per-transport sender so Discord/Slack/Telegram/ntfy/webhook deliver
+// `suppressTransportTitle` is forwarded to the per-transport sender so
+// Discord/Slack/Telegram/ntfy/webhook deliver
 // body-only output when the rule has IncludeTitle=false. Transports
 // that REQUIRE a title (WebPush, email Subject, Pushover) ignore the
 // flag and use the canonical title regardless.

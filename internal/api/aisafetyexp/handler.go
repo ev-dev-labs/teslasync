@@ -1,62 +1,14 @@
 package aisafetyexp
 
-// Phase-50 / 0054 — P3 Helix safety setting explainer.
+// Handler for AI-assisted safety setting explanations.
 //
-// ai_safety_setting_explainer_handler.go implements the LLM-
-// backed handler at POST /api/v1/ai/settings/safety/explain. The
-// flow mirrors ai_quiet_hours_suggestion_handler.go (the
-// immediate predecessor slice — body-driven, one-shot read-only
-// explanation, no persistence):
-//
-//	URL  /api/v1/ai/settings/safety/explain
-//	  ↓
-//	read JSON body (optional field: question string [<=2000 char]) —
-//	  the field falls back to a deterministic "explain my safety
-//	  settings" prompt so the SPA can post {} for the most common
-//	  case
-//	  ↓
-//	resolve provider via *provider.Registry.For("safety-setting-explainer")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	synthesise the user-message that scopes the question to the
-//	  safety envelope and instructs the tool sequence
-//	  (query_safety_settings → optional retrieve_docs → narrate)
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("safety-setting-explainer", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE
-// this handler ever sees the request (ADR-015 §I6).
-//
-// No per-request scope binding is needed: the safety settings
-// are GLOBAL to the install (one row per setting in the
-// canonical `settings` table — not per-user). The handler still
-// reads the forward-auth subject for audit/rate-limit
-// annotations, but the tool reads no per-user data so a
-// missing subject does NOT prevent the request from running
-// (the strategy + tool surface no per-user state).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /api/v1/settings
-//     handler + the existing Settings UI are unchanged. This
-//     handler is an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("safety-setting-explainer").
-//   - I9 redaction:       PolicyChatbot (Allow=nil, Mode=
-//     ModeRedactedTags — every PII class round-tripped) is
-//     installed by dispatch.Run from the strategy and applied
-//     to EVERY message (including the synthesised user message
-//     and tool outputs) by the redact decorator at the provider
-//     boundary. The typed envelope the tool returns is PII-free
-//     by construction (scalar setting values only); this
-//     policy is defence-in-depth.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     /api/v1/settings JSON shape is added or modified by this
-//     slice.
+// The endpoint reads an optional question, falls back to a deterministic
+// explanation prompt, streams the provider response over SSE, and remains gated
+// by guard.Wrap("safety-setting-explainer") so disabled AI returns 404 first.
+// Safety settings are global installation state, so the tool reads no per-user
+// data; forward-auth subject data is only used for audit and rate-limit metadata.
+// ADR-015 keeps the baseline /api/v1/settings shape unchanged, gates this route
+// per feature, and applies redaction at the provider boundary.
 
 import (
 	"bytes"

@@ -1,6 +1,6 @@
 package aigeofautom
 
-// Phase-50 / 0039 — G3 Geofence-aware automation suggestions.
+// Handler for geofence-aware automation suggestions.
 //
 // POST /api/v1/ai/geofences/automations/draft mirrors the propose-only
 // automation flow, but injects a deterministic geofence catalog so the LLM must

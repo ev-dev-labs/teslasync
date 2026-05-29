@@ -1,10 +1,10 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
+// Range-prediction fallback parity tests.
 //
 // fallback parity test: pins
 // internal/api/rangeproj.defaultEfficiency <-> internal/ml/range.HeuristicWhPerKm
 // at representative bucket points. The two formulas MUST stay
 // mathematically equivalent at the (temp_bucket × speed_bucket)
-// midpoints for the lifetime of the slice; if a future change
+// midpoints for the lifetime of the shared fallback; if a future change
 // updates one but not the other, the learned-baseline fallback would
 // silently disagree with the deterministic Projected Range page and
 // the off-mode contract (ADR-015 §I3) would regress without anyone

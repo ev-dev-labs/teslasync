@@ -21,8 +21,7 @@ const maxAlertRequestBodyBytes = 1 << 20
 //
 // Each endpoint accepts the same rule-shaped query/body the editor
 // already builds for createAlertRuleRequest, so the frontend can call
-// them with the draft rule the user is editing — no special "preview"
-// DTO. Phase-50 / ADR-005.
+// them with the draft rule the user is editing — no special preview DTO is needed.
 type AlertMessageHandler struct{}
 
 // NewAlertMessageHandler returns a stateless handler. Endpoints only

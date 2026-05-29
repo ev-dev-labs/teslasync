@@ -16,9 +16,9 @@ import (
 
 // BatteryHandler handles battery health HTTP requests.
 //
-// Phase-39 migration: the legacy signaldb.SignalLogReader's per-signal
+// The legacy signaldb.SignalLogReader's per-signal
 // helper has been replaced with the canonical signal.StateReader
-// (ADR-002 / phase-39). The four per-signal lookups (EnergyRemaining,
+// (ADR-002). The four per-signal lookups (EnergyRemaining,
 // EstBatteryRange, ModuleTempMax, ModuleTempMin) all resolve "value as
 // of now" — a forward-folded read at time.Now() — so they map 1:1 onto
 // StateReader.SignalAt with identical semantics. We intentionally
@@ -43,7 +43,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Phase-46 / Prompt 64 — point-in-time time-machine view.
+	// Point-in-time time-machine view.
 	// `?as_of=` reroutes the per-signal lookups to a historical anchor
 	// instead of time.Now(). Validation, lookback bounds, and RFC 3339
 	// parsing live in signal.ParseAsOf so every handler that gains the
@@ -119,7 +119,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100).
-		// Phase-42 (000184_charging_si): use SI columns start_soc_pct/end_soc_pct
+		// Use SI columns start_soc_pct/end_soc_pct
 		// (DOUBLE PRECISION) instead of legacy smallint battery percent columns.
 		// The new schema also stores the server-computed delta_soc_pct directly,
 		// but we sum GREATEST(end-start, 0) inline to keep the same semantics
@@ -210,7 +210,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		// Echo the parsed timestamp back so the SPA can confirm the
 		// server honored the requested point-in-time anchor and can
 		// surface the same value to the user via the time-machine
-		// banner. Phase-46 / Prompt 64.
+		// banner.
 		resp["as_of"] = queryTime.Format(time.RFC3339)
 	}
 	httpx.WriteJSON(w, http.StatusOK, resp)

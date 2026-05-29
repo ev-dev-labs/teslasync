@@ -17,7 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/models"
 )
 
-// Phase-46 / Prompt 19 — per-user notification quiet-hours / DND CRUD.
+// Per-user notification quiet-hours and DND CRUD endpoints.
 //
 // Endpoints (mounted under /api/v1/notifications/quiet-hours by router.go):
 //   GET    /                  list windows owned by the caller

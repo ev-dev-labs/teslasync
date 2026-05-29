@@ -21,9 +21,7 @@ func newVehicleConfigRequest(vehicleID, target string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, target, nil)
 }
 
-// TestVehicleConfig_History_CarriesForwardModel is the carry-forward
-// proof for the phase-39 vehicle_config_handler migration's List
-// endpoint.
+// TestVehicleConfig_History_CarriesForwardModel proves carry-forward behavior for the List endpoint.
 //
 // VehicleConfig is a COMPOUND JSON signal (car_type, trim_badging,
 // exterior_color, wheel_type, ...) emitted by Tesla Fleet Telemetry

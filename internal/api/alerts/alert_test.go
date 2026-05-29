@@ -18,10 +18,9 @@ import (
 )
 
 func TestAlertRuleContractRejectsForbiddenFields(t *testing.T) {
-	// Phase-50 / ADR-005: msg_template was RESTORED as a typed TEXT
-	// column on alert_rules, so it is no longer in this rejection
-	// list. The remaining entries are the other legacy CEP fields
-	// retired by ADR-001 (Phase-3 typed alert rule migration).
+	// msg_template was restored as a typed TEXT column on alert_rules,
+	// so it is no longer in this rejection list. The remaining entries
+	// are the other legacy CEP fields retired by ADR-001.
 	forbiddenFields := []struct {
 		name  string
 		value string
@@ -278,7 +277,7 @@ func TestAlertTestContract(t *testing.T) {
 	}
 }
 
-// ─── Phase 40 / Prompt 06: trigger_mode + snooze contract tests ────────────
+// ─── trigger_mode + snooze contract tests ──────────────────────────────────
 
 func TestCreateRule_DefaultTriggerMode(t *testing.T) {
 	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
@@ -634,7 +633,7 @@ func cloneAlertRuleForTest(rule *alertmodel.AlertRule) *alertmodel.AlertRule {
 type fakeNotificationRepo struct {
 	logs []*notificationmodel.NotificationLog
 
-	// Phase-46 / Prompt 20 — alert ack + audit timeline state.
+	// Alert ack and audit timeline state.
 	logsByID    map[int64]*notificationmodel.NotificationLog
 	eventsByID  map[int64][]*alertmodel.NotificationLogEvent
 	nextEventID int64
@@ -811,7 +810,7 @@ func nilOrPtrString(s string) *string {
 	return &s
 }
 
-// ─── Adapter tests (Phase 40 / Prompt 04) ───────────────────────────────────
+// ─── Adapter tests ──────────────────────────────────────────────────────────
 
 func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	ruleCritID := int64(11)
@@ -878,7 +877,7 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	if resp[0].IsRead {
 		t.Errorf("resp[0].IsRead = true, want false")
 	}
-	// Drill-through metadata (Phase 40 / Prompt 14).
+	// Drill-through metadata.
 	if resp[0].RuleID == nil || *resp[0].RuleID != ruleCritID {
 		t.Errorf("resp[0].RuleID = %v, want pointer to %d", resp[0].RuleID, ruleCritID)
 	}

@@ -30,7 +30,7 @@ func newChargePlannerOptimizeRequest(t *testing.T, body any) *http.Request {
 
 // TestChargePlanner_UsesCurrentSOC verifies that Handler.Optimize
 // resolves the seeding "current SOC" via signal.StateReader.SignalAt with
-// signal name "BatteryLevel" anchored at time.Now() — the lookup that
+// signal name "BatteryLevel" anchored at time.Now — the lookup that
 // determines how much energy the optimizer must schedule. A future
 // regression that re-points the lookup at the deleted
 // signaldb.SignalLogReader.SignalAt helper, drops the "BatteryLevel"
@@ -120,7 +120,7 @@ func TestChargePlanner_UsesCurrentSOC(t *testing.T) {
 // 0 — which made every optimize request appear to need a full charge
 // from empty, masking real signal-store / pgx outages behind plausible-
 // looking (but wrong) charge windows and inflated cost estimates. This
-// phase-39 migration tightens error handling so the frontend can surface
+// test locks in stricter error handling so the frontend can surface
 // the failure rather than silently rendering a "charge from 0%" plan. A
 // future regression that reverts to the silent-swallow behavior is
 // caught here.
@@ -168,22 +168,22 @@ func TestChargePlanner_PropagatesError(t *testing.T) {
 // promptly (well under any reasonable production wait) with
 // failedCmd="set_charge_limit" — proving the FIRST SendCommand call's
 // context honored its private 50ms deadline rather than the parent's
-// indefinite one. The parent context.Background() carries no deadline,
+// indefinite one. The parent context.Background carries no deadline,
 // so any timeout that fires comes from the helper's own
 // context.WithTimeout call.
 func TestChargePlanner_ApplyWrapsSendCommandWithTimeout(t *testing.T) {
 	// release unblocks any in-flight handler at test teardown so
-	// httptest.Server.Close() can drain its handler WaitGroup even if
+	// httptest.Server.Close can drain its handler WaitGroup even if
 	// the server-side detection of the client context cancellation
 	// has not yet propagated. Without this backstop the test process
-	// would hang in server.Close() after the assertions pass.
+	// would hang in server.Close after the assertions pass.
 	release := make(chan struct{})
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Block until EITHER the request's own context cancels —
 		// which, with the per-call WithTimeout in place, fires
 		// after chargePlannerCommandTimeout — or the test releases
 		// us at teardown. The handler MUST drain on
-		// r.Context().Done() rather than time.Sleep — otherwise a
+		// r.Context.Done rather than time.Sleep — otherwise a
 		// missing per-call timeout would not surface as a test
 		// failure (the inbound conn would stay open until Sleep
 		// elapses, masking the bug).

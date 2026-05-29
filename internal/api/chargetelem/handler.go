@@ -13,9 +13,9 @@ import (
 )
 
 // ChargingTelemetryHandler serves charging telemetry endpoints backed by the
-// signal-log change feed via signal.StateReader (ADR-002 / phase-39).
+// signal-log change feed via signal.StateReader (ADR-002).
 //
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (the old pivot +
+// The legacy *signaldb.SignalLogReader (the old pivot +
 // snapshot helpers) has been replaced with the canonical signal.StateReader.
 // The /charging-telemetry history endpoint feeds a stepped-line chart on the
 // frontend, so List uses Timeline in CHART MODE (empty CollapseBy) — every

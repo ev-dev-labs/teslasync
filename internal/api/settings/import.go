@@ -1,6 +1,6 @@
 package settings
 
-// Phase-46 / Prompt 36 — settings import endpoint.
+// Settings import endpoint.
 // Imports are additive: omitted sections and missing items are left untouched.
 // RequireSudo gates dry-run and apply so the same step-up token covers review
 // and confirmation.

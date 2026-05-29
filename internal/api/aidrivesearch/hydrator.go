@@ -1,6 +1,6 @@
 package aidrivesearch
 
-// Phase-50 / 0021 — D1 natural-language drive search and replay.
+// Natural-language drive search and replay hydrator.
 //
 // This hydrator reuses the canonical search renderer so AI drive citations match
 // typed /search results and inherit route changes. route_segment and

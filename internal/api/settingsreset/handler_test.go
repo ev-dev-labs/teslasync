@@ -1,6 +1,6 @@
 package settingsreset
 
-// Phase-46 / Prompt 50 — handler tests for POST /settings/reset.
+// Handler tests for POST /settings/reset.
 //
 // The orchestrator is fully covered by internal/database/settings_reset_test.go;
 // these tests focus on the HTTP boundary:

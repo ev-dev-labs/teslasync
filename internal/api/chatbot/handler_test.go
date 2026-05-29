@@ -45,8 +45,8 @@ func newTestLiveStateReader(state signal.StateReader) signal.LiveStateReader {
 	return signal.MustNewLiveStateReader(signal.NewNoopLiveSignalStore(), state)
 }
 
-// TestChatbot_LocationLookup_UsesForwardFoldedState is the wire-up proof
-// for the phase-39 chatbot-handler migration.
+// TestChatbot_LocationLookup_UsesForwardFoldedState proves the chatbot
+// uses the layered live-state contract for location lookups.
 //
 // The chatbot's "where is my car?" answer is the user-facing surface for
 // the layered live-state contract: Tesla Fleet Telemetry only emits a
@@ -117,7 +117,7 @@ func TestChatbot_LocationLookup_UsesForwardFoldedState(t *testing.T) {
 }
 
 // TestChatbot_NoRawPositionsQuery is an anchored meta-test that locks in
-// the phase-39 invariant: handler.go must NEVER again contain a
+// the invariant: handler.go must NEVER again contain a
 // raw `FROM positions` query, because that would resurrect the
 // snapshot-table bug class fixed by routing location reads through
 // signal.StateReader. If a future refactor reintroduces a direct

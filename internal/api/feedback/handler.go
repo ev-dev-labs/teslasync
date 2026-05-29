@@ -16,7 +16,7 @@ import (
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
 
-// Phase-46 / Prompt 08 — public in-app feedback ingest handler.
+// Public in-app feedback ingest handler.
 //
 // POST /api/v1/feedback accepts a single FeedbackEntry payload from the
 // SPA's <FeedbackModal> (sidebar button + Cmd+K command palette entry)

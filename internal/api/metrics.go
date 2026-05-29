@@ -8,7 +8,7 @@ import (
 // import internal/metrics directly.
 //
 // PrometheusMiddleware and normalizePath were carved out to
-// internal/api/middleware in R2.0d.
+// internal/api/middleware.
 var (
 	// Telemetry
 	TelemetrySignalsProcessed   = metrics.TelemetrySignalsProcessed

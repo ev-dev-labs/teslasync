@@ -1,16 +1,16 @@
-// Phase-50 / 0042 — S1 Incident timeline summarizer.
+// Tests for the AI incident timeline summarizer.
 //
 // Off-mode + baseline-coexistence tests for the AI
 // incident-timeline-summarizer handler. The off-mode test
-// (TestIncidentTimelineAIOffShowsRawTimelineOnly) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
+// (TestIncidentTimelineAIOffShowsRawTimelineOnly) is the load-bearing
+// AI-OFF contract proof: it asserts that the AI route
 // returns 404 when settings.ai_mode='off' even when the per-feature
 // toggle is on, AND that the deterministic incident-timeline served
 // at the canonical GET /api/v1/status/incidents/{id} handler remains
 // the unconditional baseline path (ADR-015 §I3, §I6).
 //
 // The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval -feature
+// AI eval harness (`go run ./cmd/ai-eval -feature
 // incident-timeline-summarizer`); duplicating that here would
 // require a live database fixture.
 

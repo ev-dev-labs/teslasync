@@ -1,8 +1,8 @@
-// Phase-50 / 0048 — S7 State-machine debugger narrator.
+// Tests for the state-machine debugger narrator.
 //
 // These tests pin the AI-off contract: guarded narration returns 404 while the
 // deterministic FSM transition snapshot remains reachable. Full streaming
-// coverage lives in the F6 eval harness because it needs FSM fixtures.
+// coverage lives in the eval harness because it needs FSM fixtures.
 
 package aifsmnar
 

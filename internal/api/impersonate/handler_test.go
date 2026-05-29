@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 46 — Tests for the impersonation HTTP handler.
+// Tests for the impersonation HTTP handler.
 //
 // Covers:
 //   - Open mode (no FORWARD_AUTH_HEADER) → 501 AUTH_MODE_OPEN on every

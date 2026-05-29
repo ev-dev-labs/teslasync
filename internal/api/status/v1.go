@@ -1,4 +1,4 @@
-// Phase-2 / Status API — Operator-grade /api/v1/status/* endpoints.
+// Status API endpoints for operators.
 //
 // Purpose
 // -------

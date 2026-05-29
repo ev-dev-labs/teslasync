@@ -1,6 +1,6 @@
 package settingsreset
 
-// Phase-46 / Prompt 50 — Settings reset endpoint.
+// Settings reset endpoint.
 //
 // POST /api/v1/settings/reset resets either every whitelisted section or one named section.
 // The route is sudo-gated, leaves per-vehicle settings to their own endpoint, and returns ImportResult-shaped JSON.

@@ -21,7 +21,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 )
 
-// Phase-46 / Prompt 08 — admin feedback queue handler.
+// Admin feedback queue handler.
 //
 // GET  /api/v1/admin/feedback        list (status/category filters, paged)
 // GET  /api/v1/admin/feedback/{id}   single row
@@ -31,7 +31,7 @@ import (
 // AUTHZ NOTE: TeslaSync is provider-agnostic — there is no "admin role"
 // concept beyond ForwardAuth presence. Any authenticated caller can
 // hit these endpoints; the audit_logs row is the accountability
-// surface. A future RBAC layer (prompt 44) can wrap the route without
+// surface. A future RBAC layer can wrap the route without
 // changing the response shape. The existing /admin/maintenance and
 // /admin/web-errors handlers follow the same convention.
 

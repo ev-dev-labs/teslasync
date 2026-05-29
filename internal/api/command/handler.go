@@ -197,8 +197,8 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 
 	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VIN, body.Command, body.Params)
 
-	// Phase-45 / Prompt 30 — propagate Tesla third-party token expiry as a
-	// distinct error code so the frontend can surface the reauth banner and
+	// Propagate Tesla third-party token expiry as a distinct error code so the
+	// frontend can surface the reauth banner and
 	// queue the failed mutation for replay after reconnect. Logged + counted
 	// as a normal command failure so the metrics path stays consistent.
 	if cmdErr != nil && errors.Is(cmdErr, tesla.ErrUnauthorized) {

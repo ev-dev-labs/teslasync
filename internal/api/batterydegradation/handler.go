@@ -85,7 +85,7 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 
 	var habits chargingHabits
 	if h.db != nil {
-		// Phase-42 SI charging_sessions (migration 000184): peak_power_w
+		// SI charging_sessions schema (migration 000184): peak_power_w
 		// (Watts; >50000W == DC fast charging), total_energy_added_wh
 		// (Watt-hours), start_soc_pct/end_soc_pct (DOUBLE PRECISION).
 		// Convert energy back to kWh at the response boundary so the
@@ -165,7 +165,7 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		if rng != nil {
 			currentRange = *rng
 		}
-		// Cycle count from charge sessions (Phase-42 SI: start_soc_pct/end_soc_pct).
+		// Cycle count from SI charge session SOC deltas.
 		if h.db != nil {
 			var delta *float64
 			_ = h.db.Pool.QueryRow(ctx,
@@ -379,7 +379,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Phase-42 SI schema: peak_power_w is W; start/end SOC are percentages.
+	// SI schema: peak_power_w is W; start/end SOC are percentages.
 	var fastCount, slowCount, deepDischarge, fullCharge int
 	if h.db != nil {
 		_ = h.db.Pool.QueryRow(ctx, `
@@ -430,7 +430,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		degradationRate = (100 - latestSOH) / (float64(ageMonths) / 12)
 	}
 
-	// Avg depth of discharge — Phase-42 SI drives (000185): start_soc_pct/end_soc_pct.
+	// Average depth of discharge from SI drive SOC deltas (migration 000185).
 	var avgDoD *float64
 	if h.db != nil {
 		_ = h.db.Pool.QueryRow(ctx,

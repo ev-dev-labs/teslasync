@@ -1,4 +1,4 @@
-// Phase-50 / 0053 — P2 Helix quiet-hours suggestion advisor.
+// Quiet-hours suggestion advisor tests.
 //
 // Covers the AI-off contract and proves the deterministic quiet-hours CRUD
 // route remains reachable (ADR-015 §I3, §I6). Streaming coverage lives in the

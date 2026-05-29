@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 57 — handler unit tests.
+// Handler unit tests.
 //
 // Covers open mode, forward-auth with and without a subject header, provider
 // hints, constructor trimming, and the always-200 contract the SPA relies on.

@@ -10,7 +10,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
-// Phase-46 / Prompt 05 — ForwardAuth session-info endpoint.
+// ForwardAuth session-info endpoint.
 //
 // GET /api/v1/auth/session is polled by the SPA (every 5 minutes) so it
 // can surface the SessionExpiringModal countdown ~60s before expiry and

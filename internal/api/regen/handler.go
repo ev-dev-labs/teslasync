@@ -58,7 +58,7 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	capacityWh, capacitySource := lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 
-	// Per-drive regen stats. Phase-42 SI canonical drives schema (migration
+	// Per-drive regen stats use the SI canonical drives schema (migration
 	// 000185): distance_m, duration_s, avg_speed_mps, avg_power_w,
 	// start_soc_pct, end_soc_pct, started_at. JSON shape kept (now-SI-suffixed
 	// names: duration_s, avg_speed_mps, avg_power_w, start_soc_pct,

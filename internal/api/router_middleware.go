@@ -37,20 +37,20 @@ type RouterOptions struct {
 	WebhookTrigger   apiwhrx.WebhookProcessor // If set, enables public webhook receiver endpoint
 	CacheStore       *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
 
-	// Phase-44 / observability-batch / Prompt F4. DLQInspector + replay
-	// audit repo enable /system/dlq{,/{id},/{id}/replay} when set.
+	// DLQInspector and the replay audit repo enable
+	// /system/dlq{,/{id},/{id}/replay} when set.
 	// Constructed by internal/app once the production paho client is
 	// connected (see internal/app/new.go::initFleetTelemetryPipeline).
 	DLQInspector       *mqtt.DLQInspector
 	DLQReplayAuditRepo *auditdb.DLQReplayAuditRepo
 
-	// Phase-44 / observability-batch / Prompt F8. FlagStore +
-	// changes-audit repo enable /system/flags{,/{key},/changes} when set.
+	// FlagStore and the changes-audit repo enable
+	// /system/flags{,/{key},/changes} when set.
 	FlagStore              *flags.Store
 	FeatureFlagChangesRepo *auditdb.FeatureFlagChangesRepo
 
-	// Phase-45 — Operator confidence subsystems. Each pointer is
-	// optional; when nil the corresponding admin handler returns 503
+	// Operator confidence subsystems are optional. When nil, the corresponding
+	// admin handler returns 503
 	// with the SUBSYSTEM_NOT_CONFIGURED code so the SPA can render
 	// a clean "not available on this deployment" panel.
 	AuditRecorder         *audit.Recorder
@@ -62,14 +62,14 @@ type RouterOptions struct {
 	RotationTracker       *rotation.Tracker
 	SchemaSeed            schemacheck.Fingerprint
 
-	// Phase-46 SOTA observability batch. Each pointer is optional —
-	// nil flips the corresponding admin endpoint to 503
+	// Observability subsystems are optional. Nil flips the corresponding admin
+	// endpoint to 503
 	// SUBSYSTEM_NOT_CONFIGURED so the SPA can render a clean
 	// "not enabled on this deployment" panel instead of crashing.
 	//
-	//   SLOCatalog + SLOTracker:    p46-slo,        /admin/observability/slo
-	//   DataQualityScorer:          p46-dq-lineage, /admin/observability/data-quality
-	//   SyntheticRunner:            p46-synthetic,  /admin/observability/synthetic
+	//   SLOCatalog + SLOTracker:    /admin/observability/slo
+	//   DataQualityScorer:          /admin/observability/data-quality
+	//   SyntheticRunner:            /admin/observability/synthetic
 	//
 	// Lineage (/admin/observability/lineage) is always-on because it
 	// reads the embedded routing.yaml — no runtime dependency.

@@ -39,9 +39,9 @@ var chargePlannerCommandTimeout = 30 * time.Second
 
 // Handler provides smart charge scheduling optimization.
 //
-// Phase-39 migration: the current-SOC lookup that seeds the optimizer
-// (BatteryLevel as of now) now resolves through the canonical
-// signal.StateReader (ADR-002 / phase-39) instead of the legacy
+// The current-SOC lookup that seeds the optimizer (BatteryLevel as
+// of now) resolves through the canonical signal.StateReader
+// (ADR-002) instead of the legacy
 // signaldb.SignalLogReader's per-signal helper. The lookup is a "value
 // as of now" forward-folded read, which maps 1:1 onto
 // StateReader.SignalAt with identical semantics.
@@ -122,8 +122,8 @@ func (h *Handler) Optimize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Delegate the pure-functional planning to computeSchedule so the
-	// Phase-50 AI smart-charge-schedule slice's draft_charge_schedule
-	// tool can call exactly the same code path. computeSchedule returns
+	// AI smart-charge-schedule draft_charge_schedule tool can call
+	// exactly the same code path. computeSchedule returns
 	// either a typed user-facing error (mapped to 400) or a fully
 	// populated *optimizeResponse with PlanID=0 (the caller persists
 	// + fills in PlanID).
@@ -202,8 +202,8 @@ func applyOptimizeRequestDefaults(req *optimizeRequest) {
 // computeSchedule does NOT persist anything and does NOT touch the
 // state reader. Its only side effect is allocating the response
 // envelope. The Optimize HTTP handler is the only caller that
-// persists the result; the Phase-50 smart-charge-schedule-suggestion
-// AI tool path calls computeSchedule via the AIChargeScheduleComputer
+// persists the result; the smart-charge-schedule-suggestion AI tool
+// path calls computeSchedule via the AIChargeScheduleComputer
 // adapter and never persists.
 //
 // Errors returned here represent user-input / planning-feasibility

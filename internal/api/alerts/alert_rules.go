@@ -45,17 +45,15 @@ var forbiddenAlertRuleFields = map[string]struct{}{
 	"rule_def":        {},
 }
 
-// forbiddenAlertTestFields used to reject `msg_template` along with
-// the other legacy CEP fields. Phase-50 / ADR-005 RESTORED
-// `msg_template` as a typed TEXT column on `alert_rules`, so the
-// alertTestRequest now accepts it (and `include_title`) and the
-// rejection list collapses to just the other obsolete CEP keys.
+// forbiddenAlertTestFields used to reject `msg_template` with the other
+// legacy CEP fields. ADR-005 restored `msg_template` as a typed TEXT column
+// on `alert_rules`, so alertTestRequest now accepts it and `include_title`.
 var forbiddenAlertTestFields = map[string]struct{}{
 	"notify_channels": {},
 }
 
 // vehicleSelectionField names every JSON key the handler treats as part
-// of the multi-select coalesce decision. Phase-49 / Slice 0005.
+// of the multi-select coalesce decision.
 const (
 	vehicleSelectionFieldVehicleID   = "vehicle_id"
 	vehicleSelectionFieldAllVehicles = "all_vehicles"
@@ -64,7 +62,7 @@ const (
 
 // coalesceVehicleSelection resolves the three legal vehicle-selection
 // spellings (`vehicle_id`, `all_vehicles`, `vehicle_ids`) into a
-// canonical (allVehicles, vehicleIDs) pair. Phase-49 / Slice 0005.
+// canonical (allVehicles, vehicleIDs) pair.
 //
 // `present` reports whether any of the three keys appeared in the JSON
 // payload — callers use this on Update to decide between "preserve
@@ -298,16 +296,16 @@ func (h *AlertHandler) UpdateRule(w http.ResponseWriter, r *http.Request) {
 	if fieldPresent(fields, "max_fires_per_resolution") {
 		existing.MaxFiresPerResolution = body.MaxFiresPerResolution
 	}
-	// Phase-49 / Slice 0009 — escalation pair. fieldPresent on EITHER
-	// key replaces both so the user can clear escalation by sending
+	// Escalation updates replace both fields when either key is present,
+	// so the user can clear escalation by sending
 	// `{"escalation_after_min": null, "escalation_severity": null}`.
 	if fieldPresent(fields, "escalation_after_min") || fieldPresent(fields, "escalation_severity") {
 		existing.EscalationAfterMin = body.EscalationAfterMin
 		existing.EscalationSeverity = body.EscalationSeverity
 	}
 
-	// Phase-50 / ADR-005 — per-rule message template + include-title
-	// toggle. An explicit `null` or whitespace-only `msg_template`
+	// Per-rule message template and include-title toggle. An explicit
+	// `null` or whitespace-only `msg_template`
 	// clears the override (router falls back to the op-aware default).
 	// `include_title` is a bool, so we just copy through whatever the
 	// client sent.
@@ -451,9 +449,8 @@ func (h *AlertHandler) CreateRule(w http.ResponseWriter, r *http.Request) {
 		MaxFiresPerResolution: body.MaxFiresPerResolution,
 		EscalationAfterMin:    body.EscalationAfterMin,
 		EscalationSeverity:    body.EscalationSeverity,
-		// Phase-50 / ADR-005 — IncludeTitle defaults to TRUE when the
-		// client omits the key so legacy create-rule payloads keep the
-		// pre-Phase-50 behaviour (transports include the bold header).
+		// IncludeTitle defaults to true when the client omits the key,
+		// so legacy create-rule payloads keep transport title headers.
 		IncludeTitle: body.IncludeTitle == nil || *body.IncludeTitle,
 	}
 	normalizedTmpl, err := normalizeMsgTemplate(body.MsgTemplate)
@@ -587,9 +584,9 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 	if message == "" {
 		message = "This is a test notification from Alert Studio"
 	}
-	// Phase-50 / ADR-005: when the editor sends a draft `msg_template`,
-	// preview against IT instead of the legacy free-form `message`.
-	// This lets the "Send Test" button on the Alert Studio form render
+	// When the editor sends a draft `msg_template`, preview against it
+	// instead of the legacy free-form `message`. This lets the "Send Test"
+	// button on the Alert Studio form render
 	// the actual template the user typed, including `{{...}}`
 	// substitutions against live signals (handled below).
 	if body.MsgTemplate != nil {
@@ -621,8 +618,8 @@ func (h *AlertHandler) TestRule(w http.ResponseWriter, r *http.Request) {
 
 	const severity = "info"
 	title := "[TEST] Test Rule"
-	// Phase-50 / ADR-005: include_title=false suppresses the transport
-	// bold-header but keeps the canonical title for notification_logs
+	// include_title=false suppresses the transport bold-header but keeps
+	// the canonical title for notification_logs
 	// + the SSE toast, matching the production dispatch path.
 	suppressTransportTitle := body.IncludeTitle != nil && !*body.IncludeTitle
 
@@ -779,7 +776,7 @@ func validateUpdateAlertSeverity(severity string) (string, error) {
 }
 
 // normalizeMsgTemplate canonicalises a raw client-supplied msg_template
-// value before it is persisted. The contract (Phase-50 / ADR-005):
+// value before it is persisted. The contract:
 //
 //   - nil pointer        -> nil (no template; renderer uses defaults)
 //   - whitespace-only    -> nil (treat as "clear the override")
@@ -817,7 +814,7 @@ func validateAlertSeverity(severity string) (string, error) {
 }
 
 // validateAlertRuleEscalation enforces the four invariants on the
-// Phase-49 / Slice 0009 escalation pair:
+// escalation pair:
 //  1. mutual presence — both nil or both set
 //  2. positive duration when set
 //  3. valid severity literal when set

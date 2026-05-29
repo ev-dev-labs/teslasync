@@ -1,9 +1,9 @@
-// Phase-50 / 0052 — P1 PII redaction in shared exports.
+// PII redaction tests for shared exports.
 //
 // Off-mode + baseline-coexistence tests for the AI
 // pii-redaction-shared-exports handler. The off-mode test
 // (TestSharedExportRedactionAIOffManualExportWorks) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that
+// load-bearing AI-OFF contract proof: it asserts that
 // the AI route returns 404 when settings.ai_mode='off' even
 // when the per-feature toggle is on, AND that the
 // deterministic export-job creation surface served at the
@@ -64,12 +64,8 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 //     export-creation surface (ADR-015 §I3).
 //
 // The test name MUST stay
-// TestSharedExportRedactionAIOffManualExportWorks — the slice
-// prompt's verification command runs `go test … -run
-// TestSharedExportRedactionAIOffManualExportWorks` AND `npm
-// test -- --run TestSharedExportRedactionAIOffManualExportWorks`,
-// so both the Go and React off-mode proofs answer to the same
-// test-name pattern.
+// TestSharedExportRedactionAIOffManualExportWorks so both the Go and
+// React off-mode proofs answer to the same test-name pattern.
 func TestSharedExportRedactionAIOffManualExportWorks(t *testing.T) {
 	t.Parallel()
 

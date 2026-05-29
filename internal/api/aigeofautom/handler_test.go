@@ -1,9 +1,9 @@
-// Phase-50 / 0039 — G3 Geofence-aware automation suggestions.
+// Tests for geofence-aware automation suggestions.
 //
 // Off-mode + baseline-coexistence tests for the AI
 // geofence-aware-automation-suggestions handler. The off-mode test
 // (TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks) is
-// the slice's load-bearing AI-OFF contract proof: it asserts that
+// the load-bearing AI-OFF contract proof: it asserts that
 // the AI route returns 404 when settings.ai_mode='off' even when
 // the per-feature toggle is on, AND that the deterministic
 // automation CRUD surface served at the canonical
@@ -11,7 +11,7 @@
 // path (ADR-015 §I3, §I6).
 //
 // The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness
+// AI eval harness
 // (`go run ./cmd/ai-eval -feature geofence-aware-automation-suggestions`);
 // duplicating that here would require a live database fixture.
 
@@ -50,8 +50,8 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks is
-// the load-bearing off-mode contract proof for slice 0039. It
-// mounts the AI geofence-aware-automation-suggestions route through
+// the load-bearing off-mode contract proof. It mounts the AI
+// geofence-aware-automation-suggestions route through
 // the guard with ai_mode='off' and proves:
 //
 //   - The /api/v1/ai/geofences/automations/draft route returns 404
@@ -61,12 +61,12 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 //     identifiers.
 //   - A baseline /api/v1/automations route serving the
 //     deterministic automation list remains reachable under the
-//     same router — proof that the slice does NOT replace the
+//     same router, proving the AI route does not replace the
 //     canonical automation CRUD path (ADR-015 §I3).
 //
 // The test name MUST stay
-// TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks — the
-// slice prompt's verification command runs
+// TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks because
+// external verification commands run
 // `go test … -run TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks`
 // AND
 // `npm test -- --run TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks`,
@@ -133,9 +133,8 @@ func TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks(t *testing.T) {
 
 	// 2) Probe the baseline automation CRUD route — MUST return
 	// 200 + deterministic automation-list-shape content,
-	// regardless of the AI guard's state. This is the
-	// load-bearing proof that the slice did NOT replace the
-	// canonical automation CRUD path.
+	// regardless of the AI guard's state. This proves the AI route
+	// did not replace the canonical automation CRUD path.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodGet, "/api/v1/automations", nil)
 	router.ServeHTTP(recBaseline, reqBaseline)

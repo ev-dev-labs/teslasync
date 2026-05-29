@@ -1,6 +1,6 @@
 package aichargdiag
 
-// Phase-50 / 0019 — N5 Per-charging-session diagnosis.
+// Handler for per-charging-session diagnosis.
 //
 // This LLM-backed one-shot SSE handler adds POST
 // /api/v1/ai/charging/{sessionID}/diagnose without changing the deterministic

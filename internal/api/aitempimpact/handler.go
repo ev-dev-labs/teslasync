@@ -1,6 +1,6 @@
 package aitempimpact
 
-// Phase-50 / 0032 — T2 cabin temperature impact narrative.
+// Handler for cabin temperature impact narration.
 //
 // This opt-in AI handler streams a read-only narration over the same
 // deterministic aggregates rendered by /temperature-impact. The body is

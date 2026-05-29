@@ -1,6 +1,6 @@
 package diagnostic
 
-// Phase-46 / Prompt 33 — Aggregated self-test endpoint tests.
+// Aggregated self-test endpoint tests.
 //
 // The runner is exercised against deterministic stub checks so the
 // tests don't need a live DB / MQTT / Redis. The production check

@@ -1,4 +1,4 @@
-// Phase-50 / 0044 - S3 Signal explorer NL filter.
+// Tests for the signal explorer natural-language filter.
 // These tests pin AI-off guard behavior, baseline coexistence, and catalog-scoped prompt contracts.
 
 package aisignalnl

@@ -19,8 +19,8 @@ import (
 
 // ChargingHandler handles charging session HTTP requests.
 //
-// Phase-39 migration (ADR-002): the legacy *signaldb.SignalLogReader has been
-// replaced with the canonical signal.StateReader. Live-charge enrichment now
+// The legacy *signaldb.SignalLogReader has been
+// replaced with the canonical signal.StateReader (ADR-002). Live-charge enrichment now
 // reads start-of-session and current state via StateReader.State, and the
 // telemetry chart is built from StateReader.Timeline (chart mode — empty
 // CollapseBy so every change-feed emission becomes a row). The chargingRepo

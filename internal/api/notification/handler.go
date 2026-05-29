@@ -329,7 +329,7 @@ func (h *Handler) GetLogs(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	// Phase-46 / Prompt 27 — ?grouped=true switches the response shape
+	// ?grouped=true switches the response shape
 	// from a flat NotificationLog list to a list of NotificationLogGroup
 	// (latest member + count + unread + vehicle ids). Mutually exclusive
 	// with ?group_key=... because asking for the members of a single
@@ -433,7 +433,7 @@ func parseNotificationLogFilters(r *http.Request) (dbnotif.NotificationLogFilter
 		f.Query = s
 	}
 	if s := strings.TrimSpace(q.Get("group_key")); s != "" {
-		// Phase-46 / Prompt 27 — accept the lower-hex sha256 derived
+		// Accept the lower-hex sha256 derived
 		// in the repo. We validate strictly (length + alphabet) so a
 		// stray garbage value can't trigger an unbounded scan; the
 		// caller just gets a 400.
@@ -497,7 +497,7 @@ func parseBoolish(s string) (bool, error) {
 // When set to `true`, the handler delegates to the repo's whole-inbox path
 // instead of requiring an id list.
 //
-// `GroupKey` (Phase-46 / Prompt 27) is also honoured only by mark-read and
+// `GroupKey` is also honoured only by mark-read and
 // is mutually exclusive with both `IDs` and `All`. When supplied, the
 // handler delegates to BulkSetReadByGroupKey to mark every member of a
 // thread as read in one round-trip.
@@ -576,11 +576,11 @@ func decodeMarkReadBody(r *http.Request) (ids []int64, all bool, groupKey string
 //	{"all":true}                  → mark every non-archived, currently-unread row as read.
 //	{"group_key":"<sha256-hex>"}  → mark every member of that thread as read.
 //
-// Phase-45 / 28 added the all-flag to power the "Mark all read" header
-// action without forcing the client to enumerate every visible id (which
-// could exceed the 1000-id cap on busy inboxes). Phase-46 / 27 added the
-// group_key path so the threaded inbox's "Mark group read" action can
-// flip an entire thread without expanding it client-side.
+// The all flag powers the "Mark all read" header action without forcing
+// the client to enumerate every visible id, which could exceed the 1000-id
+// cap on busy inboxes. The group_key path lets the threaded inbox's
+// "Mark group read" action flip an entire thread without expanding it
+// client-side.
 func (h *Handler) MarkRead(w http.ResponseWriter, r *http.Request) {
 	ids, all, groupKey, err := decodeMarkReadBody(r)
 	if err != nil {
@@ -677,7 +677,7 @@ func (h *Handler) DeleteBulk(w http.ResponseWriter, r *http.Request) {
 }
 
 // UnreadCount returns the number of non-archived, non-read notification rows.
-// Powers the header bell badge and the favicon badge (Prompt 32 hand-off).
+// Powers the header bell badge and the favicon badge.
 func (h *Handler) UnreadCount(w http.ResponseWriter, r *http.Request) {
 	n, err := h.inbox.GetUnreadCount(r.Context())
 	if err != nil {

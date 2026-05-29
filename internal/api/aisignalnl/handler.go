@@ -425,8 +425,7 @@ func NewSignalFilterValidator() *SignalFilterValidator {
 // would be too large to chart") without churning the tool
 // interface.
 //
-// For Phase-50 / 0044 the validator is intentionally permissive:
-// every filter with a valid shape is accepted. The per-request
+// The validator is intentionally permissive: every filter with a valid shape is accepted. The per-request
 // scope binding already prevented out-of-catalog signals; the
 // canonical enumeration already prevented bad range presets and
 // page sizes. There is nothing else for the AI surface to enforce

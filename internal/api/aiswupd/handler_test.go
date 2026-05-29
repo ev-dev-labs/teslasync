@@ -1,7 +1,7 @@
-// Phase-50 / 0051 — M3 Software update changelog summarizer.
+// Software update changelog summarizer tests.
 //
 // Off-mode tests prove the AI route fails closed while raw firmware history stays available.
-// Streaming coverage lives in the F6 eval harness; duplicating it here would require a live fixture.
+// Streaming coverage lives in the AI eval harness; duplicating it here would require a live fixture.
 
 package aiswupd
 
@@ -37,7 +37,7 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on[id], nil
 }
 
-// TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly is the slice 0051 off-mode contract proof.
+// TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly is the off-mode contract proof.
 // The name is pinned by Go and React verification commands, so keep it stable.
 func TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly(t *testing.T) {
 	t.Parallel()

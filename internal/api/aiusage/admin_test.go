@@ -1,13 +1,13 @@
 package aiusage
 
-// Phase-50 / 0009 — F8 AI Admin Handler tests.
+// Tests for the AI admin usage handler.
 //
 // Pure handler-layer coverage that mirrors ai_usage_handler_test.go's
 // structure: fake settings + parseAdminSince validators, no DB.
 //
 // What we DON'T test here:
 //   - Repo SQL (covered by ai_call_log_repo_test.go).
-//   - guard.Wrap behaviour (covered by internal/ai/guard tests in F0).
+//   - guard.Wrap behaviour (covered by internal/ai/guard tests).
 // What we DO test here:
 //   - adminGuardSettings carve-out: __redaction_bypass__ tracks AIMode;
 //     everything else passes through to the inner Settings.

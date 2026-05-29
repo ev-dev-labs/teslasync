@@ -1,4 +1,4 @@
-// Phase-45 / Prompt 37 — Tests for the enriched dev-tools redis-signals
+// Tests for the enriched dev-tools redis-signals
 // endpoint and the new redis-signals/keys companion. These exercise the
 // branches the Redis Signal Viewer's structured empty-state diagnostic
 // depends on (mode-local, hybrid+L1-only, hybrid+populated, missing

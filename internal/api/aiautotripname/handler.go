@@ -248,7 +248,7 @@ func (v *AITripNameValidator) ValidateTripName(_ *models.Trip, proposed string) 
 // and projects the *tripdb.TripDetail header onto a *models.Trip.
 //
 // Kept as a thin adapter rather than adding a method to TripRepo
-// because Phase-48's SI canonical guidance steers new reads through
+// because SI-canonical guidance steers new reads through
 // existing repos; mirroring the detail repo here keeps the AI
 // surface dependency on a single trip read path.
 type AITripSourceAdapter struct {

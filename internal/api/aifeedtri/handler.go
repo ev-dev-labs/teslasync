@@ -1,6 +1,6 @@
 package aifeedtri
 
-// Phase-50 / 0046 — S5 Feedback queue triage.
+// Feedback queue triage.
 //
 // LLM-backed POST /api/v1/ai/feedback/triage/draft. The guard in ai_routes.go
 // fails closed before this handler when AI mode or the feature toggle is off

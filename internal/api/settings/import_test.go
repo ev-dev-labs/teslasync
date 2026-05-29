@@ -1,6 +1,6 @@
 package settings
 
-// Phase-46 / Prompt 36 — settings import handler tests.
+// Settings import handler tests.
 
 import (
 	"bytes"

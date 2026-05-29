@@ -1,4 +1,4 @@
-// Phase-50 / 0022 — D2 Speed-profile insights.
+// Speed-profile insights tests.
 //
 // Off-mode + baseline-coexistence tests for the AI speed-profile
 // insights handler. The off-mode test

@@ -1,4 +1,4 @@
-// Phase-44 / observability-batch / Prompt F6 — Ingest X-Ray handler tests.
+// Ingest X-Ray handler tests.
 //
 // Exercises the HTTP layer end-to-end through chi using a fake repo
 // implementing ingestXRayRepo. Verifies:

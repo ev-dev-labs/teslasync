@@ -14,9 +14,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
 
-// Phase-43a / Prompt 0007 — HTTP tests for Handler.
+// HTTP tests for Handler.
 //
-// Coverage map vs Decision #7:
+// Coverage map:
 //   (a) Catalog includes routed-but-unobserved fields (last_seen_at NULL)
 //        -> TestSignalsCatalog_IncludesRoutedButUnobserved
 //   (b) Catalog includes observed fields with counts

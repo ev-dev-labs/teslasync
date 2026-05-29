@@ -1,4 +1,4 @@
-// Phase-44b — runtime smoke tests for SSE BroadcastWithContext span emission.
+// Runtime smoke tests for SSE BroadcastWithContext span emission.
 // These pin per-broadcast attributes, parent linkage, and deprecated Broadcast root-span behavior.
 // tracetest.SpanRecorder keeps the checks in-memory and restores the global provider via t.Cleanup.
 

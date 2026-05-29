@@ -1,4 +1,4 @@
-// Phase-50 / 0043 — S2 data repair suggestions.
+// Tests for AI data repair suggestions.
 //
 // These tests pin ADR-015 edges: AI off-mode hides the route, baseline repair
 // remains reachable, bad bodies fail before SSE, and prompt shape is stable.

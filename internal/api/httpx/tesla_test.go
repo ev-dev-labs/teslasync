@@ -12,7 +12,7 @@ import (
 
 // TestWriteTeslaTokenExpired_PropagatesCode verifies the contract
 // between this canonical 401 response and the frontend's distinct
-// TeslaAuthExpiredError surface (Phase-45 / Prompt 30).
+// TeslaAuthExpiredError surface.
 //
 // The SPA distinguishes "Tesla third-party OAuth grant expired" from
 // "Authentik session expired" purely by the JSON body's `code` field

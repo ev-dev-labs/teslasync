@@ -13,7 +13,7 @@ import (
 )
 
 // MediaHandler serves media playback endpoints backed by the signal-log
-// change feed via signal.StateReader (ADR-002 / phase-39). The reader
+// change feed via signal.StateReader (ADR-002). The reader
 // forward-folds emissions, so consecutive rows always carry the most
 // recently observed value for every projected signal — eliminating the
 // "Spotify vanishing" phantom-empty-row regression on /media/playback-history.

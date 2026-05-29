@@ -8,7 +8,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 )
 
-// Pagination tests were relocated from parent api tests in Phase R2.0c.
+// Pagination tests were relocated from parent API tests.
 
 func TestPagination_DefaultsAndBounds(t *testing.T) {
 	tests := []struct {
@@ -96,7 +96,7 @@ func TestPagination_BoundaryAtMax(t *testing.T) {
 	}
 }
 
-// ParseDateRange tests were relocated from parent api tests in Phase R2.0c.
+// ParseDateRange tests were relocated from parent API tests.
 
 func TestParseDateRange_Partial(t *testing.T) {
 	r := httptest.NewRequest("GET", "/test?start=2024-06-15", nil)

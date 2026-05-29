@@ -312,7 +312,7 @@ func TestRangeProjection_NoSignalSkipped(t *testing.T) {
 // handler silently swallowed SignalAt errors and returned a partial
 // payload with zero / default-valued range and degradation, which is
 // indistinguishable on the frontend from "vehicle truly idle / brand-new
-// vehicle with no signal_log history". This phase-39 migration tightens
+// vehicle with no signal_log history". The StateReader-backed handler tightens
 // error handling so the frontend can surface the failure rather than
 // silently rendering a "range looks dead" panel. A future regression that
 // reverts to the silent-swallow behavior is caught here.

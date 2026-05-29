@@ -1,16 +1,16 @@
-// Phase-50 / 0037 — G1 Auto-name unnamed locations.
+// Tests for the AI auto-name-unnamed-locations handler.
 //
 // Off-mode + baseline-coexistence tests for the AI auto-name-
 // unnamed-locations handler. The off-mode test
-// (TestAutoNameLocationsAIOffManualNamingWorks) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
+// (TestAutoNameLocationsAIOffManualNamingWorks) is the load-bearing
+// AI-OFF contract proof: it asserts that the AI route
 // returns 404 when settings.ai_mode='off' even when the per-feature
 // toggle is on, AND that the deterministic visited-location list
 // served at the canonical GET /api/v1/locations handler remains the
 // unconditional baseline path (ADR-015 §I3, §I6).
 //
 // The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness
+// AI eval harness
 // (`go run ./cmd/ai-eval -feature auto-name-unnamed-locations`);
 // duplicating that here would require a live database fixture.
 

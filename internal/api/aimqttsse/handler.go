@@ -1,6 +1,6 @@
 package aimqttsse
 
-// Phase-50 / 0047 — S6 MQTT and SSE inspector explanations.
+// MQTT and SSE inspector explanation handler.
 //
 // ai_mqtt_sse_inspector_explanations_handler.go implements the
 // LLM-backed handler at POST /api/v1/ai/system/streams/explain.

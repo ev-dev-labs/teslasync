@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 54 — Vehicle photo handler tests.
+// Vehicle photo handler tests.
 //
 // Tests the four photo endpoints in isolation using:
 //
@@ -7,10 +7,8 @@
 //   - a real on-disk root under t.TempDir() so the encode / write
 //     / read pipeline actually exercises filesystem code
 //   - a locally-declared fakePhotoVehicleExistenceChecker for the
-//     404-on-unknown-id path (formerly shared with vehicle_settings,
-//     duplicated here after R2c.5 carved that sibling into its own
-//     subpackage; this duplicate vanishes at R2c.6 when the photo
-//     handler also moves out)
+//     404-on-unknown-id path, duplicated here because Go forbids
+//     importing sibling _test packages
 //
 // Coverage matrix:
 //
@@ -62,9 +60,8 @@ import (
 // ─── Fakes ──────────────────────────────────────────────────────
 
 // fakeVehicleExistenceChecker is a minimal local duplicate of the
-// vehiclesettings test fixture — kept here transitionally so the
-// photo handler compiles without depending on a sibling subpkg's
-// _test.go (Go forbids importing _test packages). Vanishes at R2c.6.
+// vehiclesettings test fixture so the photo handler compiles without
+// depending on a sibling package's _test.go.
 type fakeVehicleExistenceChecker struct {
 	exists bool
 	err    error

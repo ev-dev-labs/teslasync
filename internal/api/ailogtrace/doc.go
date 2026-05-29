@@ -6,7 +6,7 @@
 //
 // # Why a subpackage
 //
-// Carved in Phase R2d.147 from the flat internal/api parent to isolate the
+// Split from the flat internal/api parent to isolate the
 // log-trace-summarization HTTP surface. The package depends only on AI
 // orchestration primitives and shared API infrastructure; it MUST NOT import its
 // parent api package.

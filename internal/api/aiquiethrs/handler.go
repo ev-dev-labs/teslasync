@@ -1,6 +1,6 @@
 package aiquiethrs
 
-// Phase-50 / 0053 — P2 Helix quiet-hours suggestion advisor.
+// Handler for quiet-hours suggestion drafts.
 //
 // Serves the opt-in SSE advisor at POST /api/v1/ai/settings/quiet-hours/draft.
 // The route stays behind guard.Wrap("quiet-hours-suggestion") so off-mode users

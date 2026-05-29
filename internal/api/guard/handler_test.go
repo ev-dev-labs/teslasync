@@ -18,7 +18,7 @@ import (
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 )
 
-// Phase-43a / Prompt 0006 — HTTP tests for GuardHandler.
+// HTTP tests for GuardHandler.
 //
 // These tests pin Decision #7 coverage: status, event ordering/limit clamping,
 // acknowledge behavior, unconfigured panic handling, validation, error paths,

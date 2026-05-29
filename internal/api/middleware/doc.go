@@ -25,7 +25,7 @@
 //     backwards-compatible Grafana dashboards during the RED migration window.
 //     Mutually exclusive with Metrics at the data layer (two histograms ≠ one
 //     ground truth), but BOTH are chained today because both metric families
-//     are scraped. See docs/runbooks/phase-44-metrics-conventions.md.
+//     are scraped. See the metrics conventions runbook.
 //
 // All exports drop the redundant "Middleware" suffix, matching chi's own
 // convention (chi.middleware.Logger, chi.middleware.Recoverer). Call sites

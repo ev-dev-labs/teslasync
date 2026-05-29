@@ -1,4 +1,4 @@
-// Phase-50 / 0047 — S6 MQTT and SSE inspector explanations.
+// S6 MQTT and SSE inspector explanations.
 //
 // Off-mode + baseline-coexistence tests for the AI mqtt-sse-
 // inspector-explanations handler. The off-mode test
@@ -43,20 +43,20 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestMqttSseInspectorAIOffShowsRawInspectorOnly is the
-// load-bearing off-mode contract proof for slice 0047. It mounts
+// load-bearing off-mode contract proof for tool group. It mounts
 // the AI mqtt-sse-inspector-explanations route through the guard
 // with ai_mode='off' and proves:
 //
-//   - The /api/v1/ai/system/streams/explain route returns 404
-//     (the guard fails closed even when the per-feature toggle
-//     is on).
-//   - The 404 body does not leak feature metadata or route
-//     identifiers.
-//   - A baseline GET /api/v1/admin/mqtt/status route serving the
-//     deterministic MQTT broker-status snapshot remains
-//     reachable under the same router — proof that the slice
-//     does NOT replace the deterministic MQTTInspectorPage
-//     surface (ADR-015 §I3).
+// - The /api/v1/ai/system/streams/explain route returns 404
+// (the guard fails closed even when the per-feature toggle
+// is on).
+// - The 404 body does not leak feature metadata or route
+// identifiers.
+// - A baseline GET /api/v1/admin/mqtt/status route serving the
+// deterministic MQTT broker-status snapshot remains
+// reachable under the same router — proof that the slice
+// does NOT replace the deterministic MQTTInspectorPage
+// surface (ADR-015 §I3).
 //
 // The test name MUST stay
 // TestMqttSseInspectorAIOffShowsRawInspectorOnly — the slice
@@ -67,7 +67,6 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 // test-name pattern.
 func TestMqttSseInspectorAIOffShowsRawInspectorOnly(t *testing.T) {
 	t.Parallel()
-
 	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
@@ -186,7 +185,6 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 // the frontend.
 func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
-
 	cases := []struct {
 		name   string
 		body   string

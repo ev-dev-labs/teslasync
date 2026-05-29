@@ -138,8 +138,8 @@ func TestDrivetrainHealth_AllSignalsCarryForward(t *testing.T) {
 	}
 }
 
-// TestDrivetrainHealth_PropagatesError pins the phase-39 change from silently
-// swallowing SignalAt transport errors to surfacing a 500, avoiding misleading
+// TestDrivetrainHealth_PropagatesError pins SignalAt transport errors surfacing
+// as a 500 instead of being silently swallowed, avoiding misleading
 // zero-temperature health panels.
 func TestDrivetrainHealth_PropagatesError(t *testing.T) {
 	wantErr := errors.New("simulated pgx connection lost")

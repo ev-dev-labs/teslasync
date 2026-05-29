@@ -1,6 +1,6 @@
 package aiincident
 
-// Phase-50 / 0042 — S1 Incident timeline summarizer.
+// S1 Incident timeline summarizer.
 //
 // This LLM-backed one-shot SSE handler adds POST
 // /api/v1/ai/system/incidents/{incidentID}/summarize without changing the
@@ -58,14 +58,14 @@ type Handler struct {
 // All non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first request.
 //
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
+// registry: AI provider registry (decorator chain already applied).
+// toolReg: process-wide tool registry. MUST contain
 //
 //	query_incident_timeline AND retrieve_system_chunks
 //	(registered by summary.RegisterIncidentTimelineSummarizerTools
 //	in router.go).
 //
-// strat:      the incident-timeline-summarizer Strategy (one per
+// strat: the incident-timeline-summarizer Strategy (one per
 //
 //	process).
 //

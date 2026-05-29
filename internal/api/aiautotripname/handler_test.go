@@ -1,4 +1,4 @@
-// Phase-50 / 0024 - D4 Auto trip naming.
+// Auto trip naming tests.
 // These tests pin AI-off guard behavior, baseline coexistence, and local validation seams.
 // The streaming path remains covered by `go run ./cmd/ai-eval -feature auto-trip-naming`.
 
@@ -36,7 +36,7 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestAutoTripNamingAIOffHidesSuggestionButton is the load-bearing
-// off-mode contract proof for slice 0024. It mounts the AI
+// off-mode contract proof. It mounts the AI
 // auto-trip-naming route through the guard with ai_mode='off' and
 // proves:
 //

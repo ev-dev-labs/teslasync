@@ -1,4 +1,4 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering statistical model.
+// Tests for the charging-curve fingerprint clustering statistical model.
 //
 // Off-mode + baseline-coexistence + validation tests for the AI
 // ml-charging-curve-clustering narrator at

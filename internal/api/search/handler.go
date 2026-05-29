@@ -385,7 +385,7 @@ func (p *PGSearcher) SearchVehicles(ctx context.Context, q string, idHint int64,
 }
 
 func (p *PGSearcher) SearchDrives(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
-	// Phase-42 (Prompt 0076): SI canonical drives schema (migration 000185).
+	// SI canonical drives schema (migration 000185):
 	// start_address/end_address → start_place/end_place. start_ts → started_at.
 	// distance_mi → distance_m / 1609.344 (display still in miles).
 	const sql = `
@@ -432,8 +432,8 @@ func (p *PGSearcher) SearchDrives(ctx context.Context, q string, idHint int64, l
 }
 
 func (p *PGSearcher) SearchCharging(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
-	// Phase-42 (Prompt 0076): SI canonical charging_sessions schema
-	// (migration 000184). charger_location → start_place. start_ts → started_at.
+	// SI canonical charging_sessions schema (migration 000184):
+	// charger_location → start_place. start_ts → started_at.
 	const sql = `
 		SELECT id, vehicle_id, started_at, COALESCE(start_place, ''), COALESCE(charger_type, ''),
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END
@@ -627,8 +627,7 @@ func (p *PGSearcher) SearchAutomations(ctx context.Context, q string, idHint int
 }
 
 func (p *PGSearcher) SearchLocations(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
-	// Phase-42 (Prompt 0076 covenant #11): the visited_locations and addresses
-	// tables are dropped without a recreate. Locations are now derived from
+	// visited_locations and addresses no longer exist. Locations are derived from
 	// drives by grouping on end_place. Synthetic IDs come from MIN(id) so a
 	// /locations?id=N URL still resolves to a real underlying drive row.
 	const sql = `
@@ -682,8 +681,8 @@ func (p *PGSearcher) SearchLocations(ctx context.Context, q string, idHint int64
 }
 
 func (p *PGSearcher) SearchTrips(ctx context.Context, q string, idHint int64, limit int) ([]SearchHit, error) {
-	// Phase-42 (Prompt 0076): trips description column was renamed to notes
-	// (migration 000185). start_ts → started_at.
+	// trips.description was renamed to notes (migration 000185).
+	// start_ts → started_at.
 	const sql = `
 		SELECT id, name, COALESCE(notes, ''), started_at,
 		       (CASE WHEN id = $4 THEN 1.0 ELSE 0.0 END

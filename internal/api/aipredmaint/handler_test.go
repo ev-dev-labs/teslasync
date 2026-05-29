@@ -1,4 +1,4 @@
-// Phase-50 / 0049 - M1 Predictive maintenance.
+// Predictive maintenance handler tests.
 // These tests pin AI-off guard behavior, baseline coexistence, and local adapter contracts.
 // The streaming path remains covered by `go run ./cmd/ai-eval -feature predictive-maintenance`.
 
@@ -34,7 +34,7 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestPredictiveMaintenanceAIOffShowsThresholdReminders is the
-// load-bearing off-mode contract proof for slice 0049. It
+// load-bearing off-mode contract proof. It
 // mounts the AI predictive-maintenance route through the guard
 // with ai_mode='off' and proves:
 //
@@ -46,18 +46,13 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 //   - A baseline GET /api/v1/maintenance route serving the
 //     deterministic maintenance items (the threshold reminders
 //     the operator sees on the MaintenancePage) remains
-//     reachable under the same router — proof that the slice
+//     reachable under the same router — proof that the AI route
 //     does NOT replace the deterministic MaintenancePage
 //     surface (ADR-015 §I3).
 //
 // The test name MUST stay
 // TestPredictiveMaintenanceAIOffShowsThresholdReminders — the
-// slice prompt's verification command runs `go test … -run
-// TestPredictiveMaintenanceAIOffShowsThresholdReminders` AND
-// `npm test -- --run
-// TestPredictiveMaintenanceAIOffShowsThresholdReminders`, so
-// both the Go and React off-mode proofs answer to the same
-// test-name pattern.
+// Go and React off-mode proofs use this same test-name pattern.
 func TestPredictiveMaintenanceAIOffShowsThresholdReminders(t *testing.T) {
 	t.Parallel()
 
@@ -125,7 +120,7 @@ func TestPredictiveMaintenanceAIOffShowsThresholdReminders(t *testing.T) {
 	// 2) Probe the baseline maintenance-items route — MUST
 	// return 200 + deterministic baseline content, regardless
 	// of the AI guard's state. This is the load-bearing proof
-	// that the slice did NOT replace the deterministic
+	// that the AI route did NOT replace the deterministic
 	// MaintenancePage threshold-reminders surface. The
 	// response MUST include the maintenance item field-set the
 	// MaintenancePage renders (id, category, name, status,

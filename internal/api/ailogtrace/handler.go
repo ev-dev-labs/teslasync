@@ -1,6 +1,6 @@
 package ailogtrace
 
-// Phase-50 / 0045 — S4 Log and trace summarization.
+// Handler for LLM-backed log and trace summarization.
 //
 // LLM-backed POST /api/v1/ai/system/logs/summarize. The guard in ai_routes.go
 // fails closed before this handler when AI mode or the feature toggle is off

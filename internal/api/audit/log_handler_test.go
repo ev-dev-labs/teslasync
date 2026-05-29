@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// TestUserActivity_RequiresForwardAuthHeader documents the privacy guarantee
-// from Phase-40 / Prompt 49: the per-user activity endpoint refuses to serve
+// TestUserActivity_RequiresForwardAuthHeader documents the privacy guarantee:
+// the per-user activity endpoint refuses to serve
 // when the deployment isn't running behind a ForwardAuth identity provider,
 // rather than silently collapsing every "anonymous" caller into one shared
 // feed.

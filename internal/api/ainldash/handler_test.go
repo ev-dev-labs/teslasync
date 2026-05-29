@@ -1,9 +1,9 @@
-// Phase-50 / 0059 — PU3 Natural-language dashboard composer.
+// Natural-language dashboard composer tests.
 //
 // Off-mode + baseline-coexistence tests for the AI
 // nl-dashboard-composer handler. The off-mode test
 // (TestNLDashboardComposerAIOffManualComposerWorks) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that
+// load-bearing AI-OFF contract proof: it asserts that
 // the AI route returns 404 when settings.ai_mode='off' even
 // when the per-feature toggle is on, AND that the deterministic
 // /power/dashboards page (manual dashboard layout composer +
@@ -48,7 +48,7 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestNLDashboardComposerAIOffManualComposerWorks is the
-// load-bearing off-mode contract proof for slice 0059. It
+// load-bearing off-mode contract proof. It
 // mounts the AI nl-dashboard-composer route through the guard
 // with ai_mode='off' and proves:
 //
@@ -60,16 +60,12 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 //   - A baseline /power/dashboards backplane (the curated
 //     panel catalog viewer the SPA renders alongside the
 //     manual JSON dashboard composer) is reachable in off
-//     mode through a non-AI route — proof that the slice does
+//     mode through a non-AI route — proof that the AI route does
 //     NOT replace the deterministic manual JSON composer flow
 //     on /power/dashboards (ADR-015 §I3).
 //
-// The test name MUST stay TestNLDashboardComposerAIOffManualComposerWorks
-// — the slice prompt's verification command runs
-// `go test … -run TestNLDashboardComposerAIOffManualComposerWorks`
-// AND `npm test -- --run TestNLDashboardComposerAIOffManualComposerWorks`,
-// so both the Go and React off-mode proofs answer to the same
-// test-name pattern.
+// The test name stays stable so Go and React off-mode proofs
+// can use the same test-name pattern.
 func TestNLDashboardComposerAIOffManualComposerWorks(t *testing.T) {
 	t.Parallel()
 
@@ -130,7 +126,7 @@ func TestNLDashboardComposerAIOffManualComposerWorks(t *testing.T) {
 
 	// 2) Probe the baseline catalog endpoint — MUST return 200 +
 	// deterministic baseline content, regardless of the AI guard's
-	// state. This is the load-bearing proof that the slice did NOT
+	// state. This is the load-bearing proof that the AI route did NOT
 	// replace the deterministic manual JSON composer flow on
 	// /power/dashboards.
 	recBaseline := httptest.NewRecorder()
@@ -286,7 +282,7 @@ func TestBuildNLDashboardComposerUserMessage_EmptyCatalog(t *testing.T) {
 
 // TestValidator_AcceptsValidDraft pins the
 // validator's accept path: a well-formed DashboardLayoutDraft
-// returns nil. Future slices that add semantic checks will need
+// returns nil. Future semantic checks will need
 // to update this test.
 func TestValidator_AcceptsValidDraft(t *testing.T) {
 	t.Parallel()

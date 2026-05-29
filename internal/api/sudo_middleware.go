@@ -14,7 +14,7 @@ import (
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 )
 
-// Phase-46 / Prompt 31 — sudo-style step-up reauth.
+// Sudo-style step-up reauth.
 //
 // Sensitive admin endpoints (revoke API key, delete vehicle, drop a
 // data-repair table, restore a backup, rotate the Tesla token) MUST be
@@ -126,7 +126,7 @@ type SudoHandler struct {
 // NewSudoHandler builds the handler bundle. verifier may be nil; in
 // that case the TOTP path returns 503 REAUTH_NOT_CONFIGURED even when
 // a TOTP secret is configured (production wires a real verifier from
-// the OTP library landed in prompt 35).
+// the configured OTP verifier).
 func NewSudoHandler(cfg SudoConfig, store *dbauth.SudoTokenStore, verifier TOTPVerifier) *SudoHandler {
 	return &SudoHandler{cfg: cfg, store: store, verifier: verifier}
 }

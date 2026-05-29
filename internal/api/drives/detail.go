@@ -14,11 +14,11 @@ import (
 )
 
 // driveDetailHandler wraps the legacy *DriveHandler with a signal.StateReader
-// for the migrated Get / Positions / TelemetryReadings paths (ADR-002,
-// phase-39). Embedding preserves the listing / stats / score routes
+// for the migrated Get / Positions / TelemetryReadings paths (ADR-002).
+// Embedding preserves the listing / stats / score routes
 // (drive_handler_listing.go) and the WithRedisCache fluent setter
-// (drive_handler.go) via Go method promotion, so those files do not need to
-// change in this prompt. The state field is the cold-path StateReader used
+// (drive_handler.go) via Go method promotion. The state field is the
+// cold-path StateReader used
 // by the three migrated handlers; the drives field is a narrow interface
 // over driveRepo.GetByID so handler tests can inject a fake without
 // reaching into the database layer.
@@ -64,7 +64,7 @@ func NewDriveDetail(db *database.DB, state signal.StateReader, live signal.LiveS
 //
 // Latitude/Longitude use the codec's compound-flatten names
 // (LocationLatitude / LocationLongitude). The bare "Latitude" / "Longitude"
-// names from the legacy ingest path no longer flow through the Phase-42
+// names from the legacy ingest path no longer flow through the telemetry
 // pipeline (see internal/tesla/codec/flatten.go:11-23 — flattenLocation
 // emits "{fieldName}Latitude" prefixed with the source field, and the
 // Location compound's source field is "Location").
@@ -117,8 +117,8 @@ func derivePowerKw(rows []map[string]interface{}) {
 // the source field name, and the Location compound's source field is
 // "Location"). VehicleSpeed and Elevation are kept here as the legacy
 // position projection contract — speed populates Position.SpeedMph (the
-// position track's per-fix speed); Elevation is currently a no-op in
-// Phase-42 (no codec atomic emits it) but remains in the mapping so a
+// position track's per-fix speed); Elevation is currently a no-op
+// because no codec atomic emits it, but remains in the mapping so a
 // future Elevation source (e.g. derived from positions writer's GPS
 // fix) can populate it without changing the handler.
 var drivePositionFieldMappings = []signal.FieldMapping{
@@ -265,8 +265,8 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 // snapshot lookup fails — the caller should respond 500 because the live
 // derivation depends on it (distance/battery deltas need a baseline).
 //
-// Inputs are SI canonical post-Phase-42 (Odometer in meters, VehicleSpeed
-// in m/s, PackVoltage*PackCurrent in Watts), so values are written
+// Inputs are SI canonical (Odometer in meters, VehicleSpeed in m/s,
+// PackVoltage*PackCurrent in Watts), so values are written
 // directly to the SI-canonical Drive fields with no unit conversion.
 func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *drivemodel.Drive, now time.Time) error {
 	startState, err := h.state.State(ctx, drive.VehicleID, drive.StartTs)
@@ -312,9 +312,9 @@ func (h *driveDetailHandler) enrichLiveDrive(ctx context.Context, drive *drivemo
 	}
 
 	// Current position as end position.
-	// LocationLatitude / LocationLongitude are the codec's compound-
-	// flatten names (Phase-42); the legacy "Latitude" / "Longitude"
-	// reads no longer match what the L1 signal store carries because
+	// LocationLatitude / LocationLongitude are the codec's compound-flatten
+	// names; the legacy "Latitude" / "Longitude" reads no longer match
+	// what the L1 signal store carries because
 	// codec/flatten.go:18-22 emits the prefixed names.
 	if lat, ok := signalFloat(currentSnap, "LocationLatitude"); ok {
 		drive.EndLat = &lat

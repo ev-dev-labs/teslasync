@@ -1,7 +1,7 @@
-// Phase-43a / Prompt 0005 — VampireDrainHandler restores /vampire-drain and
+// VampireDrainHandler restores /vampire-drain and
 // /vampire-drain/stats after the vampire_drain_events table was dropped.
 // Events and rollups are derived from fsm_transitions plus signal_log; frontend
-// hook shape fixes remain outside this prompt's allowed-files boundary.
+// hook shape fixes remain outside this file's boundary.
 package vampiredrain
 
 import (
@@ -44,9 +44,9 @@ func NewVampireDrainHandler(repo *drivedb.VampireDrainRepo) *VampireDrainHandler
 }
 
 const (
-	// vampireDrainDefaultLimit mirrors Decision #2 default (50 events).
+	// vampireDrainDefaultLimit sets the default page size (50 events).
 	vampireDrainDefaultLimit = 50
-	// vampireDrainMaxLimit caps Decision #2 (500 events). The repo SQL
+	// vampireDrainMaxLimit caps the page size (500 events). The repo SQL
 	// is bounded by parked-window count (typically a few per day) so
 	// 500 corresponds to ~6 months of typical use — enough headroom
 	// for any realistic UI without inviting unbounded scans.
@@ -57,7 +57,7 @@ const (
 	// the limit cap anyway.
 	vampireDrainEventsWindowDays = 365
 	// vampireDrainStatsWindowDays is the lookback for the stats
-	// endpoint per Decision #3 (sample_window_days field). 90 days
+	// endpoint (sample_window_days field). 90 days
 	// matches the project-wide default for "recent behavior" rollups
 	// (analogue: vehicleStatesMaxDays = 90).
 	vampireDrainStatsWindowDays = 90
@@ -97,7 +97,7 @@ func (h *VampireDrainHandler) parseEventsParams(w http.ResponseWriter, r *http.R
 			return 0, 0, false
 		}
 		if v > vampireDrainMaxLimit {
-			// Hand-write JSON to include the Decision #2 max field.
+			// Hand-write JSON to include the max field.
 			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "limit exceeds maximum",
 				"max":   vampireDrainMaxLimit,
@@ -111,8 +111,8 @@ func (h *VampireDrainHandler) parseEventsParams(w http.ResponseWriter, r *http.R
 }
 
 // parseStatsParams extracts and validates vehicle_id only —
-// /vampire-drain/stats has no client-tunable window per Decision #3
-// (sample_window_days is fixed at 90 in the response).
+// /vampire-drain/stats has no client-tunable window;
+// sample_window_days is fixed at 90 in the response.
 func (h *VampireDrainHandler) parseStatsParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, ok bool) {
 	q := r.URL.Query()
 	vidStr := q.Get("vehicle_id")
@@ -129,7 +129,7 @@ func (h *VampireDrainHandler) parseStatsParams(w http.ResponseWriter, r *http.Re
 }
 
 // VampireDrainEventsResponse is the envelope returned by Events. The
-// envelope shape (rather than a bare array) matches Decision #2 and
+// envelope shape (rather than a bare array) matches
 // the precedent set by /vehicle-states/timeline.
 type VampireDrainEventsResponse struct {
 	VehicleID int64                       `json:"vehicle_id"`

@@ -1,6 +1,6 @@
 package ailifetime
 
-// Phase-50 / 0041 — X2 Lifetime stats Q&A.
+// Lifetime stats Q&A handler.
 //
 // POST /api/v1/ai/analytics/lifetime/qa streams one-shot read-only Q&A
 // grounded in deterministic lifetime stats. The body is validated before

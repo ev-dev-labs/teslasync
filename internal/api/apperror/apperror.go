@@ -5,8 +5,8 @@ import "net/http"
 // Machine-readable error codes that are exposed in JSON error bodies and
 // consumed by the frontend to drive recovery flows.
 //
-// Phase-46 / Prompt 57 — AUTH_MODE_OPEN is the canonical signal returned
-// by every endpoint that has no sensible behaviour without an upstream
+// AUTH_MODE_OPEN is the canonical signal returned by every endpoint
+// that has no sensible behaviour without an upstream
 // identity provider configured. The SPA's auth-coupled hooks
 // (useAuthMode, useTOTP, useSessions, useImpersonation, useRbacMatrix,
 // …) match this exact string to decide whether to render the inline
@@ -14,8 +14,8 @@ import "net/http"
 // internal/auth.AuthModeOpenCode for handlers that live outside the
 // api package.
 //
-// Phase R2.0a (2026-05-28) — ErrCodeTeslaTokenExpired lives in
-// internal/api/httpx alongside WriteTeslaTokenExpired (the only
+// ErrCodeTeslaTokenExpired lives in internal/api/httpx alongside
+// WriteTeslaTokenExpired (the only
 // helper that uses it). See httpx.ErrCodeTeslaTokenExpired.
 const (
 	ErrCodeAuthModeOpen = "AUTH_MODE_OPEN"

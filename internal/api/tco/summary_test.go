@@ -1,4 +1,4 @@
-// Phase-50 / 0050 — M2 TCO narration.
+// TCO narration wire-shape tests.
 //
 // Wire-shape contract test for the canonical
 // /api/v1/analytics/tco endpoint. Locks the JSON field list +
@@ -13,10 +13,9 @@
 // hand-rolled fixture JSON) but would break the production
 // chart.
 //
-// Why this test lives in the AI slice: phase-50 / 0050 extracted
-// the math into the package-level [ComputeTCOSummary] helper to
-// share with the AI tool. The contract test pins the OUTPUT of
-// the handler so the refactor cannot silently change the wire
+// This test lives with the AI code because [ComputeTCOSummary]
+// is shared with the AI tool. It pins the OUTPUT of the handler
+// so the refactor cannot silently change the wire
 // shape — the AI envelope is allowed to grow, but the legacy
 // chart contract is not allowed to shrink.
 

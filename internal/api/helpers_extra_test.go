@@ -7,14 +7,13 @@ import (
 
 // Tests that complement the existing api_test.go coverage.
 //
-// Phase R2.0a (2026-05-28): TestWriteJSONContentType,
-// TestWriteErrorAllStatusCodes, and TestHttpStatusCodeMapping were
+// TestWriteJSONContentType, TestWriteErrorAllStatusCodes, and
+// TestHttpStatusCodeMapping were
 // relocated to internal/api/httpx/json_test.go alongside the
 // canonical exported helpers they exercise.
 //
-// Phase R2.0c (2026-05-28): TestPaginationBoundary +
-// TestParseDateRangePartial/Invalid/RFC3339/RFC3339IncludesPSTEvening/
-// LegacyEndOfDay were relocated to internal/api/apiparams/params_test.go
+// TestPaginationBoundary, TestParseDateRangePartial/Invalid/RFC3339/
+// RFC3339IncludesPSTEvening/LegacyEndOfDay were relocated to internal/api/apiparams/params_test.go
 // alongside the canonical exported helpers (Pagination, ParseDateRange).
 //
 // The single remaining test in this file is a sanity check that the

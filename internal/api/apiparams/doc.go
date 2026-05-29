@@ -5,13 +5,11 @@
 //
 // # Why this subpackage exists
 //
-// Before Phase R2.0c (2026-05-28) these helpers lived as unexported
-// lowercase functions in internal/api/helpers.go (pagination /
-// urlParamInt64 / parseDateRange / nullableTime). With 156 caller
-// sites across ~70 files (urlParamInt64 alone: 83), and with the
-// R2a-R2e waves about to extract ~20 handler subpackages that will
-// each parse the same query params + URL params + date ranges, we
-// promoted them to a shared subpackage with exported names BEFORE
+// These helpers once lived as unexported lowercase functions in
+// internal/api/helpers.go (pagination / urlParamInt64 / parseDateRange /
+// nullableTime). With many caller sites and handler subpackages parsing
+// the same query params, URL params, and date ranges, we promoted them
+// to a shared subpackage with exported names BEFORE
 // the waves begin. Each wave subpkg imports
 //
 //	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
@@ -19,13 +17,13 @@
 // and calls apiparams.Pagination(r), apiparams.URLParamInt64(r,"id"),
 // apiparams.ParseDateRange(r), apiparams.NullableTime(use, t).
 //
-// # Wrapper transition (same pattern as httpx in R2.0a)
+// # Wrapper transition
 //
 // The parent internal/api retains lowercase 1-line wrappers
 // (pagination / urlParamInt64 / parseDateRange / nullableTime) that
 // delegate to apiparams.* so the existing 156 call sites keep
-// compiling. Wrappers are drained naturally as each R2a-R2e wave
-// migrates handlers into subpackages — the migrated handler code
+// compiling. Wrappers are drained naturally as handlers migrate into
+// subpackages — the migrated handler code
 // calls apiparams.* directly. After Phase D when internal/api is
 // drained, the wrappers become dead code and are deleted in one
 // sweep.

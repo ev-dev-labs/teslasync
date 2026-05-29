@@ -64,7 +64,7 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 SI canonical drives schema (migration 000185): distance in
+	// SI canonical drives schema (migration 000185): distance in
 	// meters, duration in seconds, speeds in m/s, power in W. Convert to
 	// the legacy display units (mi, min, mph, kW) in Go before populating
 	// the response so the JSON shape consumed by the frontend is preserved.
@@ -85,9 +85,9 @@ func (h *DriveHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Convert selected SI aggregates only where existing non-Phase-48 fields
-	// intentionally remain outside this slice. Duration and regen are exposed
-	// in SI canonical fields.
+	// Convert selected SI aggregates only where existing compatibility fields
+	// intentionally remain unchanged. Duration and regen are exposed in SI
+	// canonical fields.
 	totalDistMi := scaleNullable(totalDistMeters, 1.0/driveStatsMetersPerMile)
 	avgSpeedMph := scaleNullable(avgSpeedMpsVal, 1.0/driveStatsMpsPerMph)
 	topSpeedMph := scaleNullable(topSpeedMpsVal, 1.0/driveStatsMpsPerMph)
@@ -192,7 +192,7 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Aggregate stats for completed drives. Phase-42 SI columns: distance_m,
+	// Aggregate stats for completed drives. SI columns: distance_m,
 	// start/end_soc_pct, avg_power_w. Convert power Watts → kW in Go (the
 	// downstream Smoothness math expects the prior kW magnitudes).
 	var totalDrives int
@@ -230,7 +230,7 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Speed discipline: fraction of drives with max speed under ~130 mph
-	// (Phase-42 SI: max_speed_mps < 130*mpsPerMph m/s).
+	// (SI: max_speed_mps < 130*mpsPerMph m/s).
 	var disciplinedCount int
 	err = h.db.Pool.QueryRow(ctx, `
 		SELECT COUNT(*)
@@ -400,7 +400,7 @@ func (h *DriveHandler) Dynamics(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 SI columns: max_speed_mps, distance_m, duration_s, avg_power_w.
+	// SI columns: max_speed_mps, distance_m, duration_s, avg_power_w.
 	// Convert to legacy units (mph, kW) in Go so the downstream G-force math
 	// (which uses km/h → m/s and kW → W intermediate steps) keeps the same
 	// expression structure and the same numeric answer.

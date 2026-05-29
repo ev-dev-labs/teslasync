@@ -1,6 +1,6 @@
 package aitripplanllm
 
-// Phase-50 / 0025 — D5 Trip planner LLM agent.
+// Trip planner LLM agent handler.
 //
 // This LLM-backed one-shot SSE handler drafts trip plans without changing the
 // deterministic /trip-planner flow. The JSON body is validated before opening

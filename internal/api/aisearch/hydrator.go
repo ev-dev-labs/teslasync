@@ -1,10 +1,9 @@
 package aisearch
 
-// Phase-50 / 0017 — N3 Natural-language search across drives, charges,
-// and alerts.
+// Natural-language search hydrator across drives, charges, and alerts.
 //
 // hydrator.go implements tools.Hydrator using the existing
-// canonical pgSearcher backend. The slice's Hydrator port resolves a
+// canonical pgSearcher backend. The Hydrator port resolves a
 // (sourceType, sourceID) reference from a RAG chunk into a human-
 // friendly envelope (title, subtitle, url, when) suitable for citation
 // in the LLM's narration.
@@ -80,7 +79,7 @@ func (h *hydrator) HydrateOne(ctx context.Context, _userSubject, sourceType, sou
 	idHint, err := strconv.ParseInt(sourceID, 10, 64)
 	if err != nil {
 		// Non-numeric source_id is impossible for the three corpora
-		// in the slice's allowlist (drive_summary, charge_session,
+		// in the allowed corpora (drive_summary, charge_session,
 		// alert_history all use numeric IDs). Surface as
 		// not_found rather than a tool error so the LLM can adapt.
 		return nil, tools.ErrHydratorNotFound

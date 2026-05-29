@@ -2,8 +2,8 @@ package api
 
 import "github.com/ev-dev-labs/teslasync/internal/api/apperror"
 
-// Phase R2.0e (2026-05-28) — the AppError catalog now lives in
-// internal/api/apperror. This bridge keeps legacy api.Err*/api.AppError callers
+// The AppError catalog now lives in internal/api/apperror. This bridge
+// keeps legacy api.Err*/api.AppError callers
 // compiling while subpackaged handlers import the canonical package directly.
 // Treat var bridges as read-only: tests pin them to the canonical pointers.
 

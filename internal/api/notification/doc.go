@@ -2,19 +2,17 @@
 // CRUD, channel test delivery, inbox bulk operations, webhook signature
 // preview/test, and scheduled notifications.
 //
-// Carved out of internal/api by phase-R2d.3. The package owns three
-// handler types, all wired from the parent router:
+// This package owns three handler types, all wired from the parent router:
 //
 //   - Handler: channel CRUD, /channels test delivery, inbox bulk
 //     (mark-read/archive/delete), unread-count, stats. Owns the legacy
 //     non-HMAC outbound adapters (sendDiscord/sendSlack/sendTelegram/
 //     sendWebhook/sendNtfy/sendPushover/postJSON) routed through
 //     notifyOutboundClient + httputil.
-//   - ChannelHandler: HMAC-aware webhook test + signature preview
-//     introduced by Phase-46 / Prompt 37. Uses notifier.Send for the
-//     signed path.
-//   - ScheduleHandler: scheduled notifications + per-channel preferences
-//     + analytics.
+//   - ChannelHandler: HMAC-aware webhook test + signature preview.
+//     Uses notifier.Send for the signed path.
+//   - ScheduleHandler: scheduled notifications, per-channel preferences,
+//     and analytics.
 //
 // # Outbound API call sink
 //

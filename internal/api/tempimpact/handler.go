@@ -65,7 +65,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 stores drives in SI; SQL converts only the legacy km response fields.
+	// Drives are stored in SI; SQL converts only the legacy km response fields.
 	effRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
@@ -122,7 +122,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// vampire_drain_events was removed in Phase-42; keep the response key empty until signal_log reconstruction exists.
+	// vampire_drain_events no longer exists; keep the response key empty until signal_log reconstruction exists.
 	vampireDrain := make([]vampireDrainBucket, 0)
 
 	// SQL returns distance in km to preserve the legacy total_distance response semantics.

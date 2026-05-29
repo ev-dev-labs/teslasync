@@ -1,6 +1,6 @@
 package aimlchargcv
 
-// Phase-50 / 0064 — ML charging-curve clustering narration.
+// Handler for ML charging-curve clustering narration.
 // This opt-in AI handler streams one-shot cluster narration for the charging
 // curves page; guard.Wrap enforces ADR-015 off-mode and per-feature gating before
 // any provider or trainer path runs.

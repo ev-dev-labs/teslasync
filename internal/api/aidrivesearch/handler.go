@@ -1,6 +1,6 @@
 package aidrivesearch
 
-// Phase-50 / 0021 — D1 natural-language drive search and replay.
+// Natural-language drive search and replay handler.
 //
 // This AI route is read-only: it retrieves drive chunks, hydrates replay links,
 // and streams narration without replacing the typed /drives and /drives/:id/replay
@@ -87,12 +87,11 @@ func NewHandler(
 // POST /api/v1/ai/drives/search.
 //
 // Prompt is the user's plain-language drive search query, capped at
-// aiDriveSearchMaxPromptChars. The slice deliberately does NOT
-// accept a vehicle_id — the F7 retriever scopes by user_subject
-// (the authenticated principal) and has no per-vehicle filter;
-// adding a vehicle_id field to the wire shape would create a UI
-// affordance we cannot enforce server-side (same rationale as
-// nl-search).
+// aiDriveSearchMaxPromptChars. The request deliberately does NOT
+// accept a vehicle_id — retrieval scopes by user_subject (the
+// authenticated principal) and has no per-vehicle filter; adding a
+// vehicle_id field would create a UI affordance we cannot enforce
+// server-side (same rationale as nl-search).
 type aiDriveSearchRequest struct {
 	Prompt string `json:"prompt"`
 }

@@ -1,4 +1,4 @@
-// Phase-50 / 0016 — N2 Natural-language automation builder.
+// Natural-language automation builder tests.
 //
 // Off-mode + baseline-coexistence tests for the AI automation
 // builder. The off-mode test

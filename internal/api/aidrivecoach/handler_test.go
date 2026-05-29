@@ -1,4 +1,4 @@
-// Phase-50 / 0018 — N4 Per-drive coaching narrative.
+// Per-drive coaching narrative tests.
 //
 // Off-mode tests prove TestDriveCoachingAIOffShowsOnlyBaselineStats keeps AI hidden while
 // GET /api/v1/drives/{driveID} remains the deterministic baseline (ADR-015 §I3, §I6).

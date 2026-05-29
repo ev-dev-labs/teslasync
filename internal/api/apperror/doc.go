@@ -5,11 +5,10 @@
 //
 // # Why this subpackage exists
 //
-// Before Phase R2.0e (2026-05-28) AppError + the 50+ pre-constructed Err*
-// vars + ErrorCatalog() + writeAppError lived inside the flat
-// internal/api parent. That worked when every handler was a top-level
-// function in internal/api, but the R2a–R2e wave migrations need each
-// resource handler (backup, geofence, vehicles, …) to live in its own
+// AppError, the pre-constructed Err* vars, ErrorCatalog, and the
+// writeAppError helper used to live inside the flat internal/api parent.
+// That worked when every handler was top-level, but resource handlers now
+// live in subpackages such as backup, geofence, and vehicles. Each
 // subpackage. Those subpackages cannot import internal/api (the parent
 // imports them to construct routes — that would be a cycle), so the
 // AppError catalog has to move into a sibling subpackage that BOTH the

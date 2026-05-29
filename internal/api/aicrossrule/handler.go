@@ -1,6 +1,6 @@
 package aicrossrule
 
-// Phase-50 / 0036 — A3 cross-rule conflict detection.
+// Cross-rule conflict detection.
 // This opt-in AI handler streams propose-only conflict analysis for the current
 // AlertStudio rule scope; guard.Wrap enforces ADR-015 off-mode and per-feature
 // gating before provider resolution.

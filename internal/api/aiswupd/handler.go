@@ -1,6 +1,6 @@
 package aiswupd
 
-// Phase-50 / 0051 — M3 Software update changelog summarizer.
+// Software update changelog summarizer handler.
 //
 // Implements POST /api/v1/ai/software-updates/summarize as a read-only SSE summarizer.
 // The route is guard-wrapped for ADR-015 off-mode behavior; the baseline software-updates endpoint remains reachable.
@@ -253,7 +253,7 @@ var _ http.Handler = (*Handler)(nil)
 // Production wiring for the tool interface declared by
 // internal/ai/tools/software_update_summary.go. Kept in the
 // same file as the handler so the wiring intent is local to
-// the slice; mirrors the predictive-maintenance slice's
+// this feature; mirrors the predictive-maintenance
 // AIPredictiveMaintenanceContextSource pattern.
 // ---------------------------------------------------------------------
 

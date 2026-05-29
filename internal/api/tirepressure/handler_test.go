@@ -21,8 +21,8 @@ func newTirePressureRequest(vehicleID, target string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, target, nil)
 }
 
-// TestTirePressure_History_CarriesForwardPressures is the headline
-// bug-fix proof for the phase-39 tire-pressure migration.
+// TestTirePressure_History_CarriesForwardPressures proves the tire-pressure
+// history carries pressure values forward.
 //
 // TPMS pressures change VERY rarely — Tesla Fleet Telemetry typically
 // re-emits TpmsPressureFl/Fr/Rl/Rr only once per week, sometimes longer

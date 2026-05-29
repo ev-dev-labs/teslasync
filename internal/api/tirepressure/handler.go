@@ -13,9 +13,9 @@ import (
 )
 
 // TirePressureHandler serves TPMS endpoints backed by the signal-log change
-// feed via signal.StateReader (ADR-002 / phase-39).
+// feed via signal.StateReader (ADR-002).
 //
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (the old pivot +
+// The legacy *signaldb.SignalLogReader (the old pivot +
 // snapshot helpers) has been replaced with the canonical signal.StateReader.
 //
 // Tire pressure (TpmsPressureFl/Fr/Rl/Rr) and the matching
@@ -121,7 +121,7 @@ func (h *TirePressureHandler) Latest(w http.ResponseWriter, r *http.Request) {
 // timelineRowsToFlat converts ordered TimelineRows into the legacy
 // []map[string]interface{} flat-pivot shape ({"ts": ts, "<field>": value, ...})
 // that the tire-pressure endpoint emits. Duplicated until the shared
-// signal-history handlers finish their R2 carve.
+// signal-history handlers finish moving to their final packages.
 func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(rows))
 	for _, tr := range rows {

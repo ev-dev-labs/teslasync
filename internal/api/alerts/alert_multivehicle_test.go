@@ -14,7 +14,6 @@ import (
 // contract from the prompt's resolution table: a legacy client that
 // sends only `vehicle_id: 5` is interpreted as
 // `all_vehicles=false, vehicle_ids=[5]` server-side.
-// Phase-49 / Slice 0005 / Acceptance criterion 5.
 func TestCreateAlert_AcceptsLegacyVehicleIDOnly(t *testing.T) {
 	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
 	handler := newAlertHandlerForTestWithRepo(repo)
@@ -40,7 +39,7 @@ func TestCreateAlert_AcceptsLegacyVehicleIDOnly(t *testing.T) {
 
 // TestCreateAlert_AcceptsNewShapeOnly pins the new canonical write
 // path: explicit `all_vehicles: false` + `vehicle_ids: [1, 2]` round
-// trips into the model unchanged. Phase-49 / Slice 0005.
+// trips into the model unchanged.
 func TestCreateAlert_AcceptsNewShapeOnly(t *testing.T) {
 	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
 	handler := newAlertHandlerForTestWithRepo(repo)
@@ -66,7 +65,7 @@ func TestCreateAlert_AcceptsNewShapeOnly(t *testing.T) {
 
 // TestCreateAlert_AcceptsStickyAllByDefault pins the default-for-new-rules
 // behaviour: a request body with no vehicle keys at all defaults to
-// `all_vehicles=true, vehicle_ids=[]`. Phase-49 / Slice 0005 / Decision D9.
+// `all_vehicles=true, vehicle_ids=[]`.
 func TestCreateAlert_AcceptsStickyAllByDefault(t *testing.T) {
 	repo := &fakeAlertRuleRepo{existing: validAlertRuleForTest()}
 	handler := newAlertHandlerForTestWithRepo(repo)
@@ -90,7 +89,6 @@ func TestCreateAlert_AcceptsStickyAllByDefault(t *testing.T) {
 // TestCreateAlert_RejectsBothSpellingsConflict pins the validation rule
 // from the prompt's resolution table: `all_vehicles=true` paired with
 // any non-empty `vehicle_ids` is a 422 conflict.
-// Phase-49 / Slice 0005 / Acceptance criterion 7.
 func TestCreateAlert_RejectsBothSpellingsConflict(t *testing.T) {
 	cases := []struct {
 		name string
@@ -135,7 +133,6 @@ func TestCreateAlert_RejectsBothSpellingsConflict(t *testing.T) {
 // AllVehicles flag or VehicleIDs subset. Without this guarantee, every
 // non-vehicle update would silently delete junction rows because
 // existing.VehicleIDs would be nil from a hypothetical un-hydrated read.
-// Phase-49 / Slice 0005 / Decision D8.
 func TestUpdateRule_PreservesVehicleAssignment_OnNonVehiclePatch(t *testing.T) {
 	existing := validAlertRuleForTest()
 	existing.AllVehicles = false
@@ -167,7 +164,6 @@ func TestUpdateRule_PreservesVehicleAssignment_OnNonVehiclePatch(t *testing.T) {
 
 // TestUpdateRule_SwitchAllToSpecific pins the canonical "switch from
 // sticky-all to explicit subset" path used by the multi-select UI.
-// Phase-49 / Slice 0005.
 func TestUpdateRule_SwitchAllToSpecific(t *testing.T) {
 	existing := validAlertRuleForTest()
 	existing.AllVehicles = true
@@ -193,7 +189,6 @@ func TestUpdateRule_SwitchAllToSpecific(t *testing.T) {
 
 // TestUpdateRule_SwitchSpecificToAll pins the inverse: switching back
 // to sticky-all clears the junction (resolved VehicleIDs is empty).
-// Phase-49 / Slice 0005.
 func TestUpdateRule_SwitchSpecificToAll(t *testing.T) {
 	existing := validAlertRuleForTest()
 	existing.AllVehicles = false
@@ -221,7 +216,7 @@ func TestUpdateRule_SwitchSpecificToAll(t *testing.T) {
 // shape contract from the prompt's "Server response" table: every
 // rule response includes `all_vehicles`, `vehicle_ids` (always an
 // array, never null), AND the legacy `vehicle_id` (mirrored from the
-// subset for backward compat). Phase-49 / Slice 0005.
+// subset for backward compatibility).
 func TestGetAlertRule_EmitsLegacyAndNewVehicleFields(t *testing.T) {
 	cases := []struct {
 		name           string

@@ -21,8 +21,8 @@ import (
 
 // RuleStateStore is the persistence seam for alert latch + fire state. It
 // is satisfied by *dbalert.AlertRuleStateRepo in production and by a
-// small in-memory fake in unit tests. See migration 000193 and Phase-49
-// Slice 0002 for the design rationale.
+// small in-memory fake in unit tests. See migration 000193 for the
+// persistence design rationale.
 //
 // All methods are safe to call from a concurrent context — the SQL
 // implementation uses a race-safe ON CONFLICT upsert (see
@@ -62,11 +62,11 @@ type ruleState struct {
 	OnceLatched bool
 	// FireCountSinceReset mirrors alert_rule_state.fire_count_since_reset.
 	// Compared against rule.MaxFiresPerResolution to enforce the per-rule
-	// cap added in Phase-49 / Slice 0003 / Decision D5. Reset to 0 on the
+	// cap. Reset to 0 on the
 	// falling edge by ClearLatch (both DB and cache).
 	FireCountSinceReset int
 	// HourWindowStart and FireCountHour back the engine-level hourly safety
-	// cap merged in from CooldownFSM in Phase-49 / Slice 0004. The window
+	// cap merged in from CooldownFSM. The window
 	// rolls over lazily on the next fire after time.Hour has elapsed; the
 	// counter is intentionally NOT reset on the falling edge so that a
 	// signal flapping repeatedly within an hour still gets suppressed once
@@ -77,8 +77,8 @@ type ruleState struct {
 	// ConditionStartedAt records when the underlying condition was first
 	// observed as TRUE in the current resolution (the fire that bumped
 	// FireCountSinceReset from 0 → 1). Cleared on the falling edge by
-	// ClearLatch. Read by the escalation gate (Phase-49 / Slice 0009 /
-	// Decision D8) to compute "minutes the condition has stayed
+	// ClearLatch. Read by the escalation gate to compute
+	// "minutes the condition has stayed
 	// unresolved." Pure in-memory (no DB persistence) — pod restart
 	// resets the escalation timer, same trade-off as HourWindowStart.
 	ConditionStartedAt *time.Time
@@ -158,8 +158,7 @@ type EvalResult struct {
 	Message string
 	// Severity is the EFFECTIVE severity for this fire — it equals the
 	// rule's base severity in the common case, and the rule's
-	// `EscalationSeverity` when the escalation timer fired (Phase-49 /
-	// Slice 0009 / Decision D8). Empty string when the rule did not
+	// `EscalationSeverity` when the escalation timer fires. Empty string when the rule did not
 	// trigger; callers MUST fall back to `rule.Severity` defensively if
 	// they ever see an empty severity on a Triggered=true result.
 	Severity string
@@ -167,7 +166,6 @@ type EvalResult struct {
 	// engine evaluated against, exposed so the dispatch layer can build
 	// a notification body via alertmsg.RenderBody / alertmsg.Substitute
 	// without re-cloning state. Nil when Triggered is false.
-	// Phase-50 / ADR-005.
 	Context map[string]any
 }
 
@@ -245,8 +243,8 @@ func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signa
 				st.LastFiredAt = nil
 			}
 			st.FireCountSinceReset = 0
-			// Phase-49 / Slice 0009 — clear the escalation onset on the
-			// falling edge so the next rising edge starts a fresh
+			// Clear the escalation onset on the falling edge so the next
+			// rising edge starts a fresh
 			// escalation timer. Mirrors FireCountSinceReset reset.
 			st.ConditionStartedAt = nil
 		}
@@ -280,7 +278,7 @@ func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signa
 		return EvalResult{}
 	}
 
-	// Per-rule max-fires-per-resolution cap (Phase-49 / Slice 0003 / D5).
+	// Per-rule max-fires-per-resolution cap.
 	// Once-mode rules are exempt — the latch already caps them at 1, and
 	// applying the cap on top would just be a redundant guard. The
 	// counter resets to 0 on the falling edge (handled above), so a
@@ -293,8 +291,8 @@ func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signa
 		return EvalResult{}
 	}
 
-	// Engine-level hourly fire cap (Phase-49 / Slice 0004 — replaces
-	// CooldownFSM.MaxFiresPerHour). Computed against an in-memory rolling
+	// Engine-level hourly fire cap replacing CooldownFSM.MaxFiresPerHour.
+	// Computed against an in-memory rolling
 	// 1h window per (rule, vehicle). Once-mode rules are exempt because
 	// the latch already caps them at 1 per resolution. The window is
 	// rolled lazily during MarkFired bookkeeping below; here we only
@@ -349,8 +347,8 @@ func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signa
 	}
 
 	e.mu.Lock()
-	// Phase-49 / Slice 0009 — stamp ConditionStartedAt on the FIRST fire
-	// of this resolution (the one that bumps fire_count_since_reset 0→1).
+	// Stamp ConditionStartedAt on the first fire of this resolution
+	// (the one that bumps fire_count_since_reset 0→1).
 	// Subsequent fires within the same resolution leave it alone so the
 	// escalation timer measures from "condition first observed true."
 	// Cleared by the falling-edge branch above (and by ClearLatch on
@@ -392,7 +390,7 @@ func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signa
 	conditionStartedAtLocal := st.ConditionStartedAt
 	e.mu.Unlock()
 
-	// Phase-49 / Slice 0009 — escalation severity gate. Only meaningful
+	// Escalation severity gate. Only meaningful
 	// for repeat-mode rules (DB CHECK constraint enforces that, defence
 	// in depth here too). When the rule has both escalation knobs set
 	// AND the condition has stayed unresolved for at least
@@ -423,7 +421,7 @@ func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signa
 	// with callers that haven't yet been routed through alertmsg. The
 	// new dispatch path (telemetry_alerts.fireAlert / preview endpoint)
 	// ignores this and re-renders via alertmsg.RenderBody using
-	// EvalResult.Context. Phase-50 / ADR-005.
+	// EvalResult.Context.
 	defaultTmpl := rule.Name + ": {{" + rule.SignalName + "}}"
 	message := renderTemplate(defaultTmpl, mergedSignals)
 	if len(message) < 1 {
@@ -488,7 +486,7 @@ func (e *RuleEngine) SetLastFired(ruleID, vehicleID int64, t time.Time) {
 // LastFiredAt is now tracked in-memory only; this method initializes state entries
 // for rules scoped to specific vehicles so cooldown tracking begins immediately.
 //
-// Phase-49 / Slice 0005: iterates `rule.VehicleIDs` for multi-select rules
+// LoadCooldownFromDB iterates `rule.VehicleIDs` for multi-select rules
 // instead of the deprecated single `rule.VehicleID`. Sticky-all rules
 // (`rule.AllVehicles=true`) get a single fleet-baseline entry keyed on
 // vehicleID=0; per-vehicle state rows materialise organically as fires
@@ -509,7 +507,7 @@ func (e *RuleEngine) LoadCooldownFromDB(ctx context.Context, rules []*alertmodel
 
 // vehicleIDsForState returns the set of vehicle IDs to seed in the rule
 // state map. Sticky-all rules use the fleet-baseline key (vehicleID=0);
-// explicit-subset rules use each junction entry. Phase-49 / Slice 0005.
+// explicit-subset rules use each junction entry.
 func vehicleIDsForState(rule *alertmodel.AlertRule) []int64 {
 	if rule == nil {
 		return nil

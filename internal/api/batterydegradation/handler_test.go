@@ -27,7 +27,7 @@ func newBatteryDegradationRequest(t *testing.T, vehicleID string) *http.Request 
 // resolves both EnergyRemaining and EstBatteryRange via
 // signal.StateReader.SignalAt at time.Now(), and that those carried-
 // forward values flow into the JSON response as current_capacity /
-// current_range. Phase-39 migrated this handler off the legacy
+// current_range. The handler no longer uses the legacy
 // signaldb.SignalLogReader.SignalAt helper. The fake returns last-known
 // values for every signal name — emulating StateReader's forward-fold
 // semantics where unchanged signals carry their prior emitted value
@@ -179,8 +179,8 @@ func TestBatteryDegradation_DegradationCalc_UsesLatestValues(t *testing.T) {
 // indistinguishable on the frontend from "vehicle truly idle / brand-
 // new vehicle with no signal_log history" and rendered the Battery
 // Degradation panel as "battery looks dead" even when the underlying
-// read had genuinely failed. This phase-39 migration tightens error
-// handling so the frontend can surface the failure rather than silently
+// read had genuinely failed. The stricter error handling lets the
+// frontend surface the failure rather than silently
 // rendering a dead-battery panel. A future regression that reverts to
 // the silent-swallow behavior is caught here.
 func TestBatteryDegradation_PropagatesError(t *testing.T) {

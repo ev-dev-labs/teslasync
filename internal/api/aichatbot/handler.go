@@ -1,6 +1,6 @@
 package aichatbot
 
-// Phase-50 / 0011 — U1 Chatbot LLM upgrade.
+// Chatbot LLM handler.
 //
 // POST /api/v1/ai/chatbot persists the user turn, streams the LLM
 // response over SSE, and stores the completed assistant reply. ADR-015

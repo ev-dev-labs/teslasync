@@ -16,8 +16,6 @@ import (
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 )
 
-// Phase-46 / Prompt 04 — admin maintenance handler.
-//
 // Authenticated operators can update the service-mode banner; the audit row is
 // the accountability surface until a future RBAC layer exists. Env system-mode
 // settings shadow the DB row in effective health/status responses, so admin

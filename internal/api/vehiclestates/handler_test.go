@@ -13,9 +13,9 @@ import (
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 )
 
-// Phase-43a / Prompt 0003 — HTTP tests for Handler.
+// HTTP tests for Handler.
 //
-// Coverage map vs Decision #8:
+// Coverage map:
 //   (a) Timeline ordering ASC          -> TestVehicleStates_Timeline_OrderingASC
 //   (b) Days clamp 7/30/90/91 -> 400   -> TestVehicleStates_Timeline_DaysClamp
 //   (c) Summary % sum 100 ± 0.01       -> TestVehicleStates_Summary_PercentageSumsTo100
@@ -114,7 +114,7 @@ func TestVehicleStates_Timeline_DaysClamp(t *testing.T) {
 		wantStatus int
 		wantDays   int
 		wantErrTxt string // substring match in body
-		wantMax    bool   // requires Decision #4 max:90 payload
+		wantMax    bool   // requires max:90 payload
 	}{
 		{"default_when_absent", "vehicle_id=42", http.StatusOK, 7, "", false},
 		{"days_7", "vehicle_id=42&days=7", http.StatusOK, 7, "", false},

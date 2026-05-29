@@ -1,6 +1,6 @@
 package aitirepress
 
-// Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
+// Handler for tire-pressure trend reasoning.
 //
 // LLM-backed POST /api/v1/ai/tire-pressure/trends/explain. The guard in
 // ai_routes.go fails closed before this handler when AI mode or the feature

@@ -1,4 +1,4 @@
-// Phase-50 / 0061 — GEN2 Vehicle paint preview.
+// Tests for the vehicle paint preview.
 //
 // Covers the AI-off contract and proves the deterministic vehicle-config route
 // remains reachable (ADR-015 §I3, §I6). Streaming coverage lives in the F6 eval

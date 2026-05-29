@@ -1,4 +1,4 @@
-// Phase-50 / 0015 — N1 Natural-language alert builder.
+// Natural-language alert builder tests.
 //
 // Off-mode + baseline-coexistence tests for the AI alert builder.
 // The off-mode test (TestNLAlertBuilderAIOffHidesPanelAndManualFormWorks)

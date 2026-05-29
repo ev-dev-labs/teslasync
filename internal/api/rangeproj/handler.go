@@ -57,8 +57,8 @@ func lookupVehicleCapacityWh(ctx context.Context, db *database.DB, vehicleID int
 
 // RangeProjectionHandler serves projected range analytics.
 //
-// Phase-39 migration: the legacy *signaldb.SignalLogReader has been replaced
-// with the canonical signal.StateReader (ADR-002 / phase-39). All 9 per-signal
+// The legacy *signaldb.SignalLogReader has been replaced
+// with the canonical signal.StateReader (ADR-002). All 9 per-signal
 // reads across Get and GetByVehicle resolve "value as of now" — a forward-
 // folded read at time.Now() — so they map 1:1 onto StateReader.SignalAt with
 // identical semantics.
@@ -175,11 +175,11 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Recent driving efficiency. Phase-42 SI canonical drives (000185):
+	// Recent driving efficiency uses SI drive columns:
 	// energy_used_wh (Watt-hours), distance_m (meters), avg_speed_mps,
-	// ambient_temp_c_avg. avgEffWhKm is computed as Wh / km. Phase-42:
-	// the legacy "AVG() ORDER BY LIMIT 30" pattern was invalid SQL — fixed
-	// here by selecting the most-recent 30 drives in a CTE first, then
+	// ambient_temp_c_avg. avgEffWhKm is computed as Wh / km.
+	// The legacy "AVG() ORDER BY LIMIT 30" pattern was invalid SQL, so this
+	// selects the most-recent 30 drives in a CTE first, then
 	// averaging. avgSpeedKmh is averaged in mps and converted to km/h at
 	// the response boundary so downstream buildRangeFactors keeps its
 	// km/h-input contract.
@@ -312,7 +312,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 	teslaEstKm := adjustedRange
 	yourEstKm := projectedRange
 
-	// Sample count. Phase-42 SI: distance_m / start_soc_pct / end_soc_pct.
+	// Sample count uses SI columns distance_m / start_soc_pct / end_soc_pct.
 	// `> 5 miles` becomes `> 8046.72 m` (5 * driveStatsMetersPerMile).
 	var totalDrives int
 	var firstDrive *time.Time
@@ -363,7 +363,7 @@ func (h *RangeProjectionHandler) Get(w http.ResponseWriter, r *http.Request) {
 // ── Efficiency matrix ────────────────────────────────────────
 
 func (h *RangeProjectionHandler) buildEfficiencyMatrix(ctx context.Context, vehicleID int64, capacityWh float64) []efficiencyBucket {
-	// Phase-42 SI canonical drives. Speed buckets translated from mph to mps:
+	// Speed buckets are translated from mph to mps:
 	// 50/90 mph -> 22.352 / 40.2336 mps. The Wh/km formula preserves the
 	// legacy "delta_pct * capacity * 10 / distance" shape — even
 	// though the column is aliased wh_per_km, it has historically returned
@@ -628,7 +628,7 @@ func (h *RangeProjectionHandler) GetByVehicle(w http.ResponseWriter, r *http.Req
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("range-projection: charging cycle count query failed")
 		}
 
-		// Avg daily km. Phase-42 SI: distance_m / 1000 == km. Legacy emitted
+		// Avg daily km: distance_m / 1000 == km. Legacy emitted
 		// the per-mile sum as `daily_km` (mislabeled mi-as-km); the SI
 		// rewrite preserves the same numeric output by emitting miles via
 		// `distance_m / $2`.

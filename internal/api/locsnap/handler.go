@@ -13,7 +13,7 @@ import (
 )
 
 // LocationSnapshotHandler serves location endpoints via the canonical
-// StateReader/live-state stack (ADR-002 / phase-39). Forward-folding is required
+// StateReader/live-state stack (ADR-002). Forward-folding is required
 // because parked vehicles may not re-emit stable coordinates for hours, yet the
 // dashboard map and geofence checks still need the last-known position.
 type LocationSnapshotHandler struct {
@@ -26,7 +26,7 @@ type LocationSnapshotHandler struct {
 // (snake_case; the frontend camelCaseKeys transform produces matching
 // camelCase keys on the wire).
 var locationMappings = []signal.FieldMapping{
-	// Position & GPS — Phase-42 codec compound-flatten names. Elevation
+	// Position & GPS — codec compound-flatten names. Elevation
 	// is intentionally absent (Tesla Fleet Telemetry does not emit it).
 	{Signal: "LocationLatitude", Field: "latitude"},
 	{Signal: "LocationLongitude", Field: "longitude"},
@@ -41,7 +41,7 @@ var locationMappings = []signal.FieldMapping{
 	{Signal: "RouteLastUpdated", Field: "route_last_updated"},
 	// Destination / origin coordinates. The Tesla Location compound
 	// (lat,lng pair) is unpacked into these scalar signal names by the
-	// StateReader implementation (Prompt 05), so the handler can
+	// StateReader implementation, so the handler can
 	// project them as ordinary scalar fields.
 	{Signal: "DestinationLatitude", Field: "destination_lat"},
 	{Signal: "DestinationLongitude", Field: "destination_lon"},

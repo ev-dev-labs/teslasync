@@ -18,7 +18,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Phase-46 / Prompt 20 — Alert acknowledgement with optional note.
+// Alert acknowledgement with optional note.
 //
 // `{alertID}` in every route below is the `notification_logs.id` value
 // surfaced as `Alert.id` by AlertHandler.List (see alert_handler.go), NOT

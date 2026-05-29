@@ -1,8 +1,6 @@
-// Phase-50 / 0014 — U4 Anomaly explanation narration.
+// Wire-shape and refactor-safety tests for the baseline anomaly handler.
 //
-// Wire-shape / refactor-safety tests for the baseline anomaly handler.
-//
-// The Phase-50/0014 refactor extracted the detector code from
+// The refactor extracted the detector code from
 // Handler.GetAnomalies into the public Handler.DetectAnomalies
 // method so the AI tool query_anomaly_context can reuse it. The HTTP
 // handler is now a thin wrapper that calls DetectAnomalies + writes
@@ -27,7 +25,7 @@ import (
 )
 
 // TestGetAnomalies_WireShapeUnchanged is the load-bearing wire-shape
-// proof for the slice 0014 refactor. It feeds anomalyContextResultToResponse
+// proof for the detector extraction. It feeds anomalyContextResultToResponse
 // realistic inputs and pins:
 //
 //   - Empty-anomalies result MUST marshal `"anomalies":[]`, not `null`.

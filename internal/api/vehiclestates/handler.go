@@ -1,7 +1,6 @@
-// Phase-43a / Prompt 0003 — Handler restores the
-// /vehicle-states/timeline + /vehicle-states/summary endpoints deleted
-// by Phase-42 prompt 0077, backed by fsm_transitions (mig 000187)
-// instead of the dropped vehicle_states snapshot table.
+// Handler restores the /vehicle-states/timeline and /vehicle-states/summary
+// endpoints, backed by fsm_transitions (mig 000187) instead of the dropped
+// vehicle_states snapshot table.
 //
 // Frontend hooks (still pointed at these URLs, currently 404ing):
 //

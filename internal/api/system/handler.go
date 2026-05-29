@@ -18,7 +18,7 @@ import (
 )
 
 // ---------------------------------------------------------------------------
-// Outbound api_call_logs sink registry (Phase 38 / Prompt 13)
+// Outbound api_call_logs sink registry
 //
 // Several handlers in package api (system_handler, notification_handler,
 // devtools_handler) need to make outbound HTTP calls that should be
@@ -27,7 +27,7 @@ import (
 // http.HandlerFunc factories, so the sink lives here as package-level
 // state. cmd/teslasync/main.go calls SetOutboundSink once at startup; per-
 // call construction in each handler reads the current value via
-// CurrentOutboundSink() when constructing httputil.NewClient.
+// CurrentOutboundSink when constructing httputil.NewClient.
 //
 // Disabled mode (cfg.APILogs.Enabled=false) installs a nil sink, which
 // httputil.LoggedTransport tolerates — the call still flows zerolog logs.
@@ -78,7 +78,7 @@ func VersionHandler(appVersion string, cfg *config.Config) http.HandlerFunc {
 			"arch":           runtime.GOARCH,
 			"uptime_seconds": time.Since(bootTime).Seconds(),
 			"goroutines":     runtime.NumGoroutine(),
-			// Phase-46 / Prompt 70 — surface the GDPR / ePrivacy
+			// surface the GDPR / ePrivacy
 			// cookie-consent flag so the SPA knows whether to mount
 			// its consent banner and whether to gate optional
 			// reporters (web vitals, error reporter) on user
@@ -253,13 +253,13 @@ func DegradedStatusHandler(health *resilience.HealthMonitor) http.HandlerFunc {
 // Each worker (notification, export, automation) can be horizontally
 // scaled. The handler discovers per-instance hosts in this order:
 //
-//  1. *_HOSTS (plural, comma-separated) — explicit list of hostnames.
-//     Example: NOTIFICATION_WORKER_HOSTS="nw-1,nw-2,nw-3".
-//  2. *_HOST (singular, comma-separated also accepted) — backward
-//     compatible with single-host deployments. A comma-separated value
-//     is split here too so operators can extend without renaming.
-//  3. Built-in default (single hostname matching the docker-compose
-//     service name).
+// 1. *_HOSTS (plural, comma-separated) — explicit list of hostnames.
+// Example: NOTIFICATION_WORKER_HOSTS="nw-1,nw-2,nw-3".
+// 2. *_HOST (singular, comma-separated also accepted) — backward
+// compatible with single-host deployments. A comma-separated value
+// is split here too so operators can extend without renaming.
+// 3. Built-in default (single hostname matching the docker-compose
+// service name).
 //
 // Each instance is probed independently and emitted as its own
 // WorkerStatus row sharing the worker name. The frontend groups by
@@ -345,7 +345,7 @@ func WorkersHealthHandler() http.HandlerFunc {
 				"AUTOMATION_WORKER_HOSTS", "AUTOMATION_WORKER_HOST", "automation-worker",
 				"AUTOMATION_WORKER_PORT", "8083")...)
 
-		// system-dns-check is the prompt-mandated service name for this
+		// system-dns-check is the request-mandated service name for this
 		// per-call worker /healthz probe. The 3s timeout matches the
 		// historical bare-client budget.
 		client := httputil.NewClient(httputil.ClientConfig{

@@ -1,6 +1,4 @@
-// Phase-50 / 0020 — N6 RAG-backed app help.
-//
-// Off-mode + baseline-coexistence tests for the AI rag-help handler.
+// Off-mode and baseline-coexistence tests for the RAG-backed app help handler.
 // The off-mode test (TestRagHelpAIOffHidesAssistantAndDocsLinksWork)
 // is the slice's load-bearing AI-OFF contract proof: it asserts
 // that the AI route returns 404 when settings.ai_mode='off' even

@@ -1,10 +1,10 @@
 package tco
 
-// Phase-50 / 0050 — M2 TCO narration.
+// TCO narration handler.
 //
 // The deterministic Total-Cost-of-Ownership math previously inlined
 // inside (*Handler).GetTCO has been extracted to the package-level
-// pure helper [ComputeTCOSummary] in summary.go so the new AI
+// pure helper [ComputeTCOSummary] in summary.go so the AI
 // surface (POST /api/v1/ai/analytics/tco/narrate via the
 // [lifetime.TCOSummarizer] adapter) shares the SAME numbers the chart
 // renders. This file therefore parses + validates the request and

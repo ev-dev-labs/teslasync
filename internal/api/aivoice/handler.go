@@ -574,7 +574,7 @@ func coerceVoiceModeIntPercent(raw any) (int, bool) {
 // reads fractional miles awkwardly. NEVER includes street
 // names, GPS coordinates, or destination labels.
 //
-// SI canonicalisation note: Phase-48 stored distance in meters
+// SI canonicalisation note: distance is stored in meters
 // (DistanceM). The voice-mode tool envelope's
 // last_drive_summary is the ONE place the backend renders a
 // display-unit value before the LLM consumes it — this matches

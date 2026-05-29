@@ -1,6 +1,6 @@
 package aiautoname
 
-// Phase-50 / 0037 — G1 Auto-name unnamed locations.
+// G1 Auto-name unnamed locations.
 //
 // POST /api/v1/ai/locations/{locationID}/name/draft streams a propose-only location-name draft. The AI-gated route validates locationID before opening SSE, never persists changes, and leaves the deterministic /locations baseline untouched.
 
@@ -56,14 +56,14 @@ type Handler struct {
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
+// registry: AI provider registry (decorator chain already applied).
+// toolReg: process-wide tool registry. MUST contain
 //
 //	draft_location_name AND validate_location_name (both
 //	registered by location.RegisterAutoNameUnnamedLocationsTools
 //	in router.go).
 //
-// strat:      the auto-name-unnamed-locations Strategy (one per process).
+// strat: the auto-name-unnamed-locations Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
 func NewHandler(
 	registry *provider.Registry,
@@ -227,9 +227,9 @@ func NewLocationNameValidator() *LocationNameValidator {
 // ValidateLocationName implements location.LocationNameValidator.
 // Rules:
 //
-//   - rune-trimmed name must be 1-200 chars;
-//   - no control characters (Unicode category Cc) anywhere;
-//   - leading / trailing whitespace is rejected.
+// - rune-trimmed name must be 1-200 chars;
+// - no control characters (Unicode category Cc) anywhere;
+// - leading / trailing whitespace is rejected.
 //
 // The loc argument is currently unused by the validator — the rule
 // is shape-only — but kept on the interface so a future per-location
@@ -259,7 +259,7 @@ func (v *LocationNameValidator) ValidateLocationName(_ *geomodel.VisitedLocation
 }
 
 // LocationSource reads the same derived drives aggregate served by /api/v1/locations; no write path is invoked.
-// Since Phase-42 dropped visited_locations, the synthetic locationID is the MIN(d.id) for each (vehicle_id, end_place) group, matching the list rows the SPA already carries.
+// visited_locations no longer exists, so the synthetic locationID is the MIN(d.id) for each (vehicle_id, end_place) group, matching the list rows the SPA already carries.
 // The constructor panics on nil DB so wiring bugs fail at boot.
 type LocationSource struct {
 	db *database.DB

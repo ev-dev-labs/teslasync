@@ -1,6 +1,6 @@
 package aivehpaint
 
-// Phase-50 / 0061 — GEN2 Vehicle paint preview.
+// Handler for vehicle paint preview drafts.
 //
 // Serves the opt-in SSE draft route at
 // POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft. The route stays

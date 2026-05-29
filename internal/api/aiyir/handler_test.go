@@ -1,4 +1,4 @@
-// Phase-50 / 0013 — U3 Year-in-review narration.
+// Tests for AI year-in-review narration.
 //
 // Off-mode + baseline-coexistence tests for the AI year-in-review
 // narrator. The off-mode test (TestYearInReviewAIOffUsesTemplateSlides)
@@ -9,7 +9,7 @@
 // the unconditional baseline path (ADR-015 §I3, §I6).
 //
 // The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval --feature yir-narration`);
+// AI eval harness (`go run ./cmd/ai-eval --feature yir-narration`);
 // duplicating that here would require a live database fixture.
 
 package aiyir

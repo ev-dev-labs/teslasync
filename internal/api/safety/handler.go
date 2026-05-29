@@ -13,7 +13,7 @@ import (
 )
 
 // SafetyHandler serves safety / ADAS endpoints via the canonical StateReader
-// stack (ADR-002 / phase-39). Forward-folding is required because stable ADAS
+// stack (ADR-002). Forward-folding is required because stable ADAS
 // toggles rarely re-emit, but absence of a recent emission must not mean disabled.
 type SafetyHandler struct {
 	state signal.StateReader

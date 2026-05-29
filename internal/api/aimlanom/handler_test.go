@@ -1,6 +1,6 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+// Off-mode tests for learned per-vehicle anomaly baselines.
 //
-// Off-mode tests prove TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly keeps AI hidden while
+// TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly keeps AI hidden while
 // GET /api/v1/analytics/anomalies remains the deterministic baseline (ADR-015 §I3, §I6).
 // Streaming coverage stays in the F6 eval harness because it needs a live fixture.
 

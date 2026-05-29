@@ -78,7 +78,7 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 drive metrics are SI canonical. When reverse geocoding lags,
+	// Drive metrics are SI canonical. When reverse geocoding lags,
 	// rounded coordinates keep routes visible instead of silently dropping them
 	// from the summary.
 	rows, err := h.db.Pool.Query(ctx, `

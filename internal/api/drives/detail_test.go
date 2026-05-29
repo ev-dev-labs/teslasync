@@ -225,7 +225,7 @@ func TestDriveDetail_Positions_ReturnsRowsForDriveWindow(t *testing.T) {
 	}
 }
 
-// stateCallRecord captures one State() invocation's vehicleID + at so tests
+// stateCallRecord captures one State invocation's vehicleID + at so tests
 // can assert the at parameter passed by enrichLiveDrive / currentSignals.
 type stateCallRecord struct {
 	vehicleID int64
@@ -234,7 +234,7 @@ type stateCallRecord struct {
 
 // TestDriveDetail_StartSnapshot_UsesDriveStartTime verifies that
 // enrichLiveDrive resolves the start-of-drive baseline by calling
-// StateReader.State with the drive's StartTs (NOT time.Now() and NOT a
+// StateReader.State with the drive's StartTs (NOT time.Now and NOT a
 // recent rolling window). Distance and battery deltas depend on this
 // baseline being anchored to the actual drive start.
 func TestDriveDetail_StartSnapshot_UsesDriveStartTime(t *testing.T) {
@@ -264,7 +264,7 @@ func TestDriveDetail_StartSnapshot_UsesDriveStartTime(t *testing.T) {
 }
 
 // TestDriveDetail_CurrentSnapshot_UsesNow verifies that currentSignals
-// falls back to StateReader.State(time.Now().UTC()) when no Redis cache is
+// falls back to StateReader.State(time.Now.UTC) when no Redis cache is
 // configured. The "now" anchor matters because in-progress drive metrics
 // (current battery, current speed, current location) all derive from this
 // snapshot.
@@ -285,7 +285,7 @@ func TestDriveDetail_CurrentSnapshot_UsesNow(t *testing.T) {
 		t.Fatalf("enrichLiveDrive: %v", err)
 	}
 	after := time.Now().UTC()
-	// enrichLiveDrive issues two State() calls: [0] start snapshot, [1] current.
+	// enrichLiveDrive issues two State calls: [0] start snapshot, [1] current.
 	if len(calls) < 2 {
 		t.Fatalf("State call count = %d, want at least 2 (start + current)", len(calls))
 	}
@@ -349,11 +349,10 @@ func TestDriveDetail_StartSnapshot_PropagatesError(t *testing.T) {
 }
 
 // TestDriveDetail_Get_EmbeddedPositions_AliasFields locks in that the
-// `positions` array embedded in the Get() response uses the legacy frontend
+// `positions` array embedded in the Get response uses the legacy frontend
 // contract (created_at + speed) rather than the raw signal_log column names
 // (ts + speed_mph). Without the alias, the TripReplay duration formatter
-// can't parse a timestamp on each row and renders "NaN:NaN" — see
-// aliasPositionFields() and the Phase-40 post-merge bug fix.
+// can't parse a timestamp on each row and renders "NaN:NaN".
 func TestDriveDetail_Get_EmbeddedPositions_AliasFields(t *testing.T) {
 	t0 := time.Date(2026, 4, 30, 10, 0, 0, 0, time.UTC)
 	t1 := t0.Add(15 * time.Minute)
@@ -462,7 +461,7 @@ func TestDriveDetail_Telemetry_DerivesPowerKw(t *testing.T) {
 // driver/passenger temperature panels render blank even though the drive
 // has valid telemetry.
 //
-// Phase-42 / PA package note: "elevation" intentionally NOT required —
+// / PA package note: "elevation" intentionally NOT required —
 // Tesla Fleet Telemetry does not emit elevation; the codec has no
 // Elevation field. The Drive Detail page tolerates its absence.
 func TestDriveDetail_Telemetry_FieldMappingsCoverPageFields(t *testing.T) {

@@ -20,16 +20,16 @@ import (
 
 // RED metrics (Rate / Errors / Duration) emitted exactly once per HTTP request
 // by Metrics. Label vocabulary:
-//   - method:       HTTP verb (GET/POST/...)
-//   - route:        canonical chi route pattern (e.g. "/api/v1/drives/{driveID}")
-//     falls back to URL path when chi has no match (404 / unrouted).
-//   - status_class: "2xx" | "3xx" | "4xx" | "5xx" | "1xx"
+// - method: HTTP verb (GET/POST/...)
+// - route: canonical chi route pattern (e.g. "/api/v1/drives/{driveID}")
+// falls back to URL path when chi has no match (404 / unrouted).
+// - status_class: "2xx" | "3xx" | "4xx" | "5xx" | "1xx"
 //
 // Names intentionally use the "red_" prefix so they coexist with the legacy
 // HTTPRequestsTotal/HTTPRequestDuration counters declared in
 // internal/metrics/metrics.go (which use {method,path,status} and remain to
 // preserve backwards-compatible Grafana queries during the migration window).
-// See docs/runbooks/phase-44-metrics-conventions.md for the full vocabulary.
+// See the metrics conventions runbook for the full vocabulary.
 var (
 	redHTTPRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "teslasync",
@@ -74,7 +74,7 @@ func statusClass(status int) string {
 // routeLabel returns the chi route pattern for the request (e.g.
 // "/api/v1/drives/{driveID}") so high-cardinality URL paths collapse to a
 // bounded set. When chi has no match (e.g. 404 before routing), it falls back
-// to the existing normalizePath() helper to keep cardinality bounded for
+// to the existing normalizePath helper to keep cardinality bounded for
 // unrouted traffic too.
 func routeLabel(r *http.Request) string {
 	if rc := chi.RouteContext(r.Context()); rc != nil {
@@ -87,12 +87,12 @@ func routeLabel(r *http.Request) string {
 
 // Metrics records the three RED metrics for every HTTP request:
 //
-//   - http_requests_total{method,route,status_class} — counter
-//   - http_request_errors_total{method,route,status_class} — counter (5xx only)
-//   - http_request_duration_seconds{method,route} — histogram
+// - http_requests_total{method,route,status_class} — counter
+// - http_request_errors_total{method,route,status_class} — counter (5xx only)
+// - http_request_duration_seconds{method,route} — histogram
 //
 // Wire this AFTER chi's RequestID/RealIP and AFTER any routing context
-// initialisation so RoutePattern() resolves. It is mutually exclusive with
+// initialisation so RoutePattern resolves. It is mutually exclusive with
 // the legacy Prometheus middleware: chain only one to avoid double counting.
 func Metrics(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -118,12 +118,12 @@ func Metrics(next http.Handler) http.Handler {
 // observeDurationWithExemplar records a duration sample on the RED latency
 // histogram and, when the active OTel span is sampled, attaches the trace ID
 // as a Prometheus exemplar so operators can jump from a slow histogram bucket
-// straight to the trace in Tempo/Jaeger. Falls back to a plain Observe() when
+// straight to the trace in Tempo/Jaeger. Falls back to a plain Observe when
 // no sampled span context is present.
 //
 // Requires Prometheus to be started with --enable-feature=exemplar-storage so
-// the server retains exemplars in the TSDB and exposes them on /api/v1/query
-// (see docs/runbooks/phase-44-metrics-conventions.md).
+// the server retains exemplars in the TSDB and exposes them on /api/v1/query;
+// see the metrics conventions runbook.
 func observeDurationWithExemplar(ctx context.Context, method, route string, duration float64) {
 	obs, err := redHTTPRequestDurationSeconds.GetMetricWithLabelValues(method, route)
 	if err != nil {
@@ -143,12 +143,12 @@ func observeDurationWithExemplar(ctx context.Context, method, route string, dura
 }
 
 // Observability contract:
-//   - Inbound API requests are traced once at the global chi middleware boundary
-//     by Tracing middleware via otelhttp.NewHandler.
-//   - Outbound HTTP clients must wrap their RoundTripper with
-//     otelhttp.NewTransport. Exceptions must be documented at the call site and
-//     are limited to non-request operational probes such as local healthchecks
-//     and Prometheus scrape clients.
+// - Inbound API requests are traced once at the global chi middleware boundary
+// by Tracing middleware via otelhttp.NewHandler.
+// - Outbound HTTP clients must wrap their RoundTripper with
+// otelhttp.NewTransport. Exceptions must be documented at the call site and
+// are limited to non-request operational probes such as local healthchecks
+// and Prometheus scrape clients.
 
 // Logger logs HTTP requests using zerolog.
 func Logger(next http.Handler) http.Handler {

@@ -13,9 +13,9 @@ import (
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
-// Phase-43a / Prompt 0005 — HTTP tests for VampireDrainHandler.
+// HTTP tests for VampireDrainHandler.
 //
-// Coverage map vs Decision #8:
+// Coverage map:
 //   (a) Window pairing correctness        -> vampire_drain_repo_test.go
 //                                              (TestComputeDrainEvents_WorkedExample)
 //   (b) Charging-window exclusion         -> vampire_drain_repo_test.go
@@ -29,11 +29,11 @@ import (
 // Plus extras:
 //   - vehicle_id missing / non-numeric / zero / negative
 //   - VehicleExists runs FIRST (defends against dangling rows after
-//     vehicle deletion — no FK on fsm_transitions.vehicle_id per
-//     mig 000187, no FK on signal_log.vehicle_id per mig 000186)
+//     vehicle deletion — neither fsm_transitions.vehicle_id nor
+//     signal_log.vehicle_id has a foreign key)
 //   - Repo error -> 500
-//   - JSON shape pin (snake_case keys, envelope shape matches Decision #2)
-//   - 90-day window for stats endpoint (Decision #3 sample_window_days)
+//   - JSON shape pin (snake_case keys, envelope shape)
+//   - 90-day window for stats endpoint (sample_window_days)
 //   - 365-day window for events endpoint (lookback for pagination)
 
 // ---------- fake repo ----------
@@ -358,7 +358,7 @@ func TestVampireDrain_Events_HappyPath_PayloadShape(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode: %v\nbody=%s", err, rec.Body.String())
 	}
-	// JSON shape: snake_case keys per Decision #2.
+	// JSON shape: snake_case keys.
 	wantKeys := []string{"vehicle_id", "events"}
 	for _, k := range wantKeys {
 		if _, ok := body[k]; !ok {
@@ -407,7 +407,7 @@ func TestVampireDrain_Stats_HappyPath_PayloadShape(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("decode: %v\nbody=%s", err, rec.Body.String())
 	}
-	// JSON shape: snake_case keys per Decision #3.
+	// JSON shape: snake_case keys.
 	wantKeys := []string{
 		"vehicle_id", "event_count", "total_observed_hours",
 		"avg_drain_pct_per_day", "median_drain_pct_per_day",

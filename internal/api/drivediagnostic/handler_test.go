@@ -1,4 +1,4 @@
-// Phase-44 / observability-batch / Prompt F10 — Drive diagnostic handler tests.
+// Drive diagnostic handler tests.
 //
 // Verifies:
 //   - 503 when driveRepo or diagRepo nil

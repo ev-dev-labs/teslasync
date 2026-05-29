@@ -16,9 +16,9 @@ import (
 // EnergyFlowHandler returns the real-time per-vehicle energy flow snapshot
 // (charging power, pack voltage / current, energy remaining, charge state)
 // derived from the signal-log change feed via signal.StateReader
-// (ADR-002 / phase-39).
+// (ADR-002).
 //
-// Phase-39 migration: the legacy *signaldb.SignalLogReader.SnapshotAt
+// The legacy *signaldb.SignalLogReader.SnapshotAt
 // helper has been replaced with the canonical signal.StateReader. The
 // /vehicles/{vehicleID}/energy/flow endpoint is a "current values" view —
 // it always renders forward-folded state at time.Now() — so it maps

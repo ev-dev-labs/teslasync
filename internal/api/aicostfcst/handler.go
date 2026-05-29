@@ -1,6 +1,6 @@
 package aicostfcst
 
-// Phase-50 / 0029 — C4 Cost forecast narration.
+// Cost forecast narration handler.
 //
 // This is the opt-in LLM narration layer for POST /api/v1/ai/charging/costs/forecast/narrate.
 // The guard returns 404 before this handler runs when AI or the feature is disabled (ADR-015 §I6).

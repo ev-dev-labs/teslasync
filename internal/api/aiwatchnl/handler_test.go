@@ -1,4 +1,4 @@
-// Phase-50 / 0056 — V2 Helix watch face natural-language response.
+// Watch face natural-language response tests.
 //
 // Off-mode tests prove TestWatchFaceNLAIOffUsesFixedCardsOnly keeps AI hidden while
 // GET /api/v1/watch/summary remains the deterministic baseline (ADR-015 §I3, §I6).

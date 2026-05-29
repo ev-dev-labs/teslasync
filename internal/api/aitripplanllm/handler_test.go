@@ -1,4 +1,4 @@
-// Phase-50 / 0025 — D5 Trip planner LLM agent.
+// Trip planner LLM agent tests.
 //
 // Off-mode + baseline-coexistence tests for the AI trip-planner-
 // llm-agent handler. The off-mode test

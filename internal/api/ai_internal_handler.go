@@ -1,6 +1,6 @@
 package api
 
-// Phase-50 / 0002 — F1 Provider Abstraction.
+// F1 Provider Abstraction.
 //
 // Ops-only provider diagnostics are gated by ADR-015's AI guard,
 // RequireSudo, and the registry's disabled-mode checks. The endpoint

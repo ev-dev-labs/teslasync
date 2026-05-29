@@ -1,11 +1,11 @@
 package airaghelp
 
-// Phase-50 / 0020 — N6 RAG-backed app help.
+// Handler for RAG-backed app help.
 //
 // ai_rag_help_handler.go implements the LLM-backed handler at
 // POST /api/v1/ai/help/query. The flow mirrors the nl-search
-// handler from slice 0017 — same dispatch+stream loop, same
-// propose-only-via-read-only-tools contract, no persistence
+// handler: same dispatch+stream loop, same propose-only-via-read-only-tools
+// contract, no persistence
 // (one-shot help question; no conversation to record):
 //
 //   request JSON {prompt}
@@ -21,12 +21,12 @@ package airaghelp
 // feature toggle is off the guard returns 404 BEFORE this handler
 // ever sees the request (ADR-015 §I6).
 //
-// READ-only contract (slice prompt + ADR-015 §I3):
+// READ-only contract (ADR-015 §I3):
 //
 //   - Both tools the strategy declares (retrieve_docs,
-//     cite_help_chunk) are READ-only ports — the F7 rag.Retriever
+//     cite_help_chunk) are READ-only ports — the rag.Retriever
 //     scoped to the GLOBAL help corpus (user_subject="" rows the
-//     F7 docs_indexer writes), and a pure formatter with no
+//     docs_indexer writes), and a pure formatter with no
 //     external dependencies. Neither writes any state.
 //   - The deterministic /help baseline served by the SPA's
 //     HelpPage at web/src/features/system/pages/HelpPage.tsx
@@ -36,7 +36,7 @@ package airaghelp
 //     `ai_mode='off'`.
 //   - The cited entities link back to the same SPA pages the
 //     deterministic baseline already exposes — no new entity-
-//     detail surface is introduced by this slice.
+//     detail surface is introduced by this handler.
 //
 // ADR-015 alignment:
 //
@@ -56,7 +56,7 @@ package airaghelp
 //   - I10 type system:    the AI surface lives entirely under
 //                         /api/v1/ai/*; no field on the existing
 //                         baseline JSON shape is added or modified
-//                         by this slice.
+//                         by this handler.
 
 import (
 	"context"
@@ -146,10 +146,10 @@ func NewHandler(
 // POST /api/v1/ai/help/query.
 //
 // Prompt is the user's plain-language help question, capped at
-// maxPromptChars. The slice deliberately does NOT accept
+// maxPromptChars. The handler deliberately does NOT accept
 // a vehicle_id or any user-scoped filter — the help corpus is
-// GLOBAL (docs/runbooks/i18n carry no PII per the slice prompt's
-// evidence section) so per-vehicle scoping would create a UI
+// GLOBAL (docs/runbooks/i18n carry no PII), so per-vehicle scoping
+// would create a UI
 // affordance we cannot enforce server-side.
 type request struct {
 	Prompt string `json:"prompt"`

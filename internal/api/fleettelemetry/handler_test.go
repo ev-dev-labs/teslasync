@@ -9,7 +9,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
-// Phase-43a / 0002 — tests for the Fleet Telemetry Coverage handler.
+// Tests for the Fleet Telemetry Coverage handler.
 //
 // The handler is package-derived (router.LoadMap + protomodel.Signals +
 // teslaconfig.Builder) and DB-free, so these tests do NOT require a
@@ -91,7 +91,7 @@ func TestFleetTelemetryCoverage_HappyPath(t *testing.T) {
 
 // TestFleetTelemetryCoverage_DestinationTotalsCount verifies that
 // destination_totals reflects the actual routing.yaml fan-out — at a
-// minimum, the signal_log destination must appear because phase-42
+// minimum, the signal_log destination must appear because current
 // routing covers >100 fields routed there. A regression here would
 // surface as a frontend "destinations: { signal_log: 0 }" stat.
 func TestFleetTelemetryCoverage_DestinationTotalsCount(t *testing.T) {

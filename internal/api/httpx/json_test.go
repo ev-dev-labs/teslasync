@@ -60,8 +60,7 @@ func TestWriteJSON_CustomStatus(t *testing.T) {
 }
 
 // TestWriteJSON_ContentTypeExactSpelling pins the Content-Type to the
-// exact byte sequence the SPA matches on. Phase R2.0a relocated this
-// assertion from internal/api/helpers_extra_test.go.
+// exact byte sequence the SPA matches on.
 func TestWriteJSON_ContentTypeExactSpelling(t *testing.T) {
 	rec := httptest.NewRecorder()
 	httpx.WriteJSON(rec, http.StatusOK, map[string]string{"k": "v"})

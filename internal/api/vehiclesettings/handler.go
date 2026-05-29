@@ -1,26 +1,26 @@
-// Phase-46 / Prompt 43 — Per-vehicle settings handler.
+// Per-vehicle settings handler.
 //
 // Three endpoints back the SPA's <VehicleSettingsTab>:
 //
-//	GET    /api/v1/vehicles/{vehicleID}/settings
-//	    → { settings: [{key,value,source}, ...] }   resolver output
-//	PUT    /api/v1/vehicles/{vehicleID}/settings/{key}
-//	    body: { value: <json> }
-//	    upserts the override row; 204 No Content on success.
+//	GET /api/v1/vehicles/{vehicleID}/settings
+//	 → { settings: [{key,value,source}, ...] } resolver output
+//	PUT /api/v1/vehicles/{vehicleID}/settings/{key}
+//	 body: { value: <json> }
+//	 upserts the override row; 204 No Content on success.
 //	DELETE /api/v1/vehicles/{vehicleID}/settings/{key}
-//	    deletes the override row (idempotent — 204 even when absent).
+//	 deletes the override row (idempotent — 204 even when absent).
 //
 // The handler validates the (vehicleID, key) tuple before touching
 // the repo:
 //
-//   - vehicleID exists in the vehicles table (404 if not)
-//   - key is in the Phase-1 whitelist (400 INVALID_KEY if not)
-//   - body decodes against the per-key kind (400 INVALID_VALUE)
+// - vehicleID exists in the vehicles table (404 if not)
+// - key is in the settings whitelist (400 INVALID_KEY if not)
+// - body decodes against the per-key kind (400 INVALID_VALUE)
 //
 // All three endpoints are scoped to /api/v1/vehicles/{vehicleID}/...,
 // so the chi URLParam("vehicleID") path is the same as every other
-// handler in this group; the prompt does NOT add subject-level
-// authorisation (that's prompt-57's job — see ARCHITECTURE.md ADR-013).
+// handler in this group; subject-level authorization is handled elsewhere
+// (see ARCHITECTURE.md ADR-013).
 package vehiclesettings
 
 import (
@@ -101,7 +101,7 @@ func NewHandler(
 }
 
 // vehicleSettingsListResponse is the GET payload. Settings always
-// covers the full Phase-1 whitelist in canonical iteration order so
+// covers the full the migration whitelist in canonical iteration order so
 // the SPA can render rows without checking presence.
 type vehicleSettingsListResponse struct {
 	Settings []settingsdb.EffectiveSetting `json:"settings"`
@@ -255,7 +255,7 @@ func (h *Handler) requireVehicleExists(ctx context.Context, w http.ResponseWrite
 // INVALID_VALUE.
 //
 // The dispatch table here MUST stay in lockstep with vehicleSettingDefs
-// in the database package — see VehicleSettingDefs() for the canonical
+// in the database package — see VehicleSettingDefs for the canonical
 // list. The handler test asserts the symmetry.
 func decodeValueForKey(key string, raw json.RawMessage) (any, error) {
 	defs := settingsdb.VehicleSettingDefs()

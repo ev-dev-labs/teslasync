@@ -10,8 +10,8 @@
 // so the original `fakeSearcher` declared inside
 // internal/api/search/handler_test.go (and previously shared with
 // AI search/drive-search tests by package-internal access) became
-// invisible to those tests when R2d.1 carved search/ out of the
-// flat internal/api parent. searchtest is the smallest-blast-radius
+// invisible to those tests when search/ moved out of the flat
+// internal/api parent. searchtest is the smallest-blast-radius
 // fix: a tiny non-_test subpackage exporting the same fake under a
 // capitalised name, importable by any consumer test in
 // internal/api/* (or any other module that wants a real

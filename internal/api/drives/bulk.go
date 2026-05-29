@@ -41,9 +41,7 @@ func (h *DriveHandler) driveBulkRepo() driveBulkStore {
 
 // BulkDelete removes multiple drives in a single transaction.
 //
-// Phase-40 / Prompt 51 — standardized bulk-action endpoint.
-//
-// Contract:
+// Standardized bulk-action endpoint contract:
 //   - Body: {"ids":[1,2,3]}, capped at apibulk.MaxIDs (500). Empty or oversized → 400.
 //   - Response: {"deleted": <int>, "failed": [{"id": <int>, "reason": "not_found"}]}.
 //   - Pre-validates which IDs exist via FilterExistingIDs so the caller can

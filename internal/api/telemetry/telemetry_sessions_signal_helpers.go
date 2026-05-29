@@ -3,8 +3,7 @@ package telemetry
 import "time"
 
 // eventTimeOrNow returns ts if non-zero (in UTC), else falls back to
-// wall-clock time.Now().UTC(). Phase-42a/0030.bis (commit C2 of v3.4
-// prod-replay accuracy fix): drive/charge session helpers thread a
+// wall-clock time.Now().UTC(). Drive/charge session helpers thread
 // payloadTs from the AtomicsObserver pipeline so start/end timestamps
 // reflect the originating signal event-time. Callers without
 // event-time (legacy ProcessSignals wrapper, recovery / flush paths,
@@ -62,7 +61,7 @@ func (t *TelemetrySessionTracker) resolveLatLon(vehicleID int64, signals, accum 
 		return lat, lon, true
 	}
 	if t.localSignals != nil {
-		// Phase-42 codec emits LocationLatitude / LocationLongitude;
+		// The codec emits LocationLatitude / LocationLongitude;
 		// legacy JSON ingest still uses bare "Latitude" / "Longitude".
 		// Try the codec name first, then fall back. GetFloat is single-
 		// key so the dual-read is explicit.
@@ -93,8 +92,8 @@ func signalFloat(signals map[string]interface{}, keys ...string) (float64, bool)
 // signalLatLon extracts latitude and longitude from the signals map.
 // Tesla Fleet Telemetry sends Location as a JSON object {"latitude": N, "longitude": N},
 // while the REST API may send separate Latitude/Longitude signals.
-// Phase-42 codec emits "LocationLatitude" / "LocationLongitude" as flattened
-// atomics (codec/flatten.go:18-22) — we accept both name styles for forward
+// The codec emits "LocationLatitude" / "LocationLongitude" as flattened
+// atomics (codec/flatten.go:18-22), so we accept both name styles for forward
 // compatibility with codec-emitted signals AND the legacy ingest path.
 func signalLatLon(signals map[string]interface{}) (lat, lon float64, ok bool) {
 	// Fleet Telemetry (legacy JSON path): Location is a map with latitude/longitude keys
@@ -105,7 +104,7 @@ func signalLatLon(signals map[string]interface{}) (lat, lon float64, ok bool) {
 			return la, lo, true
 		}
 	}
-	// Phase-42 codec compound-flatten names + REST API fallback (legacy
+	// Try codec compound-flatten names first, then REST API fallback (legacy
 	// bare names). signalFloat tries each in order and returns the first
 	// hit.
 	la, laOk := signalFloat(signals, "LocationLatitude", "Latitude")
@@ -167,7 +166,7 @@ func derefFloatAsInt(p *float64) int {
 
 // snapFloat extracts a float64 from a signal snapshot map (returned by SnapshotAt).
 // Accepts one or more keys and returns the first that resolves to a numeric
-// value. Used for dual-key tolerance during the Phase-42 migration where
+// value. Supports dual-key tolerance where
 // the codec emits compound-flatten names (e.g. "LocationLatitude") but the
 // legacy JSON ingest path still emits the bare names (e.g. "Latitude") into
 // the same signal.Store. Returns (0, false) if no key matches.

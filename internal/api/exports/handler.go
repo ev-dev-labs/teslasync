@@ -86,7 +86,7 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 		req.Format = "zip"
 	}
 
-	// Phase-46/62 — validate columns allowlist up-front so the caller
+	// validate columns allowlist up-front so the caller
 	// learns about a typo synchronously instead of through a failed job.
 	// Account exports skip strict per-type validation: their column set
 	// is dynamic per-table and the writer applies a per-table

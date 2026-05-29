@@ -1,6 +1,6 @@
 package airouteeff
 
-// Phase-50 / 0023 — D3 Route-efficiency suggestions.
+// Handler for route-efficiency suggestions.
 //
 // POST /api/v1/ai/routes/{routeID}/efficiency/suggest streams a one-shot
 // narration without persistence. routeID is only an opaque positive anchor: the

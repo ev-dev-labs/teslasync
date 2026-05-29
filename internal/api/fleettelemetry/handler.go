@@ -21,12 +21,10 @@ import (
 // generator the production subscription path uses) and the routing view
 // comes from router.LoadMap() (the embedded routing.yaml).
 //
-// Phase-42 prompt 0068 introduced this handler to replace the legacy
-// fleet_telemetry_subscriptions table query with package-derived state
-// (per ADR-004 #2 — the routing layer is the single source of truth for
-// "what's actively ingested"). The handler is registered into the chi
-// router by a follow-on wiring prompt; this file only owns the methods
-// and their JSON contracts.
+// This handler replaces the legacy fleet_telemetry_subscriptions table
+// query with package-derived state (per ADR-004 #2 — the routing layer is
+// the single source of truth for "what's actively ingested"). This file
+// owns only the methods and their JSON contracts.
 type FleetTelemetryHandler struct {
 	cfg *config.Config
 }
@@ -41,7 +39,7 @@ func NewFleetTelemetryHandler(cfg *config.Config) *FleetTelemetryHandler {
 // CurrentSubscription returns the canonical Fleet Telemetry subscription
 // body the API would currently push to Tesla, sourced from
 // teslaconfig.Builder. No DB access — replaces the legacy
-// fleet_telemetry_subscriptions table query (phase-42 ADR-004 #2).
+// fleet_telemetry_subscriptions table query (ADR-004 #2).
 //
 // GET /api/v1/tesla/fleet-telemetry/subscription
 func (h *FleetTelemetryHandler) CurrentSubscription(w http.ResponseWriter, r *http.Request) {

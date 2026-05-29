@@ -24,18 +24,18 @@ type Handler struct {
 	vehicleRepo *vehicledb.VehicleRepo
 	transRepo   *dbobs.FSMTransitionRepo
 
-	localSignals  *signal.Store // set by SetSignalStore() — prompt 02b
+	localSignals  *signal.Store // set by SetSignalStore()
 	reconcileStop chan struct{}
 	lastProcessed map[int64]time.Time
 }
 
 // NewHandler creates an authoritative FSM handler.
 //
-// Phase-42 (prompt 0077): the legacy *database.VehicleStateRepo dependency
-// was removed. Vehicle current state is now sourced from the in-memory FSM
+// The legacy *database.VehicleStateRepo dependency was removed. Vehicle
+// current state is now sourced from the in-memory FSM
 // (machines map) populated by ProcessSignals + the periodic reconciler;
-// transitions are durably logged via transRepo.Insert into fsm_transitions
-// (000187 schema). Cold-start initial state defaults to fsm.Online and
+// transitions are durably logged via transRepo.Insert into fsm_transitions.
+// Cold-start initial state defaults to fsm.Online and
 // converges to the correct state within seconds of incoming telemetry.
 func NewHandler(vehicleRepo *vehicledb.VehicleRepo, transRepo *dbobs.FSMTransitionRepo) *Handler {
 	return &Handler{
@@ -58,8 +58,8 @@ func (h *Handler) SetSignalStore(store *signal.Store) {
 
 // fsmAction handles all side effects of a vehicle state transition:
 // updates vehicles table and logs to fsm_transitions, and manages
-// drive/charge sub-FSM lifecycle. Phase-42 (prompt 0077) dropped the
-// legacy snapshot-row writer (vehicle_states table) — durable transition
+// drive/charge sub-FSM lifecycle. The legacy snapshot-row writer
+// (vehicle_states table) was dropped — durable transition
 // history now lives only in fsm_transitions, and the per-vehicle current
 // state is derived from the in-memory FSM.
 type fsmAction struct {
@@ -70,8 +70,8 @@ type fsmAction struct {
 
 func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.State, sctx *fsm.SignalContext) error {
 	// Best-effort writes; collect the first error so the FSM can decide whether to
-	// roll back its in-memory transition. Phase-42 (prompt 0077): the legacy
-	// vehicle_states snapshot-row writes were removed — fsm_transitions is now
+	// roll back its in-memory transition. The legacy vehicle_states snapshot-row
+	// writes were removed — fsm_transitions is now
 	// the sole durable record of the transition.
 	var firstErr error
 	keep := func(err error) {
@@ -191,8 +191,8 @@ func (h *Handler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehicle
 		return m
 	}
 
-	// Phase-42 (prompt 0077): the legacy *VehicleStateRepo.GetCurrentState
-	// lookup that hydrated initial FSM state from the dropped vehicle_states
+	// The legacy *VehicleStateRepo.GetCurrentState lookup that hydrated
+	// initial FSM state from the dropped vehicle_states
 	// table is gone. Cold start defaults to fsm.Online; the periodic
 	// reconciler (reconcileVehicle) corrects it within ~15s once telemetry
 	// arrives. Restart-time precision is acceptable here because the
@@ -229,7 +229,7 @@ func (h *Handler) ProcessSignals(ctx context.Context, vehicleID int64, signals m
 // behavior — required for the reconciler tick at line 427 below
 // which fires from a wall-clock timer with no signal payload.
 //
-// Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix).
+// Uses payload timestamps for production replay accuracy.
 func (h *Handler) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]interface{}, payloadTs time.Time, _ map[string]time.Time) {
 	signalNames := make([]string, 0, len(signals))
 	for k := range signals {

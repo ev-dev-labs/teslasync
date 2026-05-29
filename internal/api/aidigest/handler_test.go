@@ -1,4 +1,4 @@
-// Phase-50 / 0012 — U2 weekly digest narration.
+// Tests for weekly digest narration.
 //
 // These tests pin ADR-015 edges: off-mode hides AI while baseline digest stays
 // reachable, and bad bodies fail before SSE opens.

@@ -1,4 +1,4 @@
-// Phase-50 / 0045 — S4 Log and trace summarization.
+// Log and trace summarization tests.
 //
 // Off-mode and baseline-coexistence tests. The off-mode test is the
 // load-bearing proof that AI mode off hides the AI route while the raw log tail

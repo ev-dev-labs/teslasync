@@ -7,10 +7,10 @@ type createAlertRuleRequest struct {
 	Description *string `json:"description"`
 	Enabled     *bool   `json:"enabled"`
 	VehicleID   *int64  `json:"vehicle_id"`
-	// AllVehicles + VehicleIDs are the new canonical multi-select shape
-	// (Phase-49 / Slice 0005). On write the handler coalesces all three
-	// spellings via coalesceVehicleSelection. Legacy clients that only
-	// send `vehicle_id` continue to work for one release per Decision D7.
+	// AllVehicles + VehicleIDs are the canonical multi-select shape.
+	// On write, the handler coalesces all three spellings via
+	// coalesceVehicleSelection. Legacy clients that only send
+	// `vehicle_id` continue to work for one release.
 	AllVehicles  *bool      `json:"all_vehicles"`
 	VehicleIDs   []int64    `json:"vehicle_ids"`
 	SignalName   *string    `json:"signal_name"`
@@ -36,20 +36,18 @@ type createAlertRuleRequest struct {
 	// emits between successive falling-edge resets. NULL = unlimited
 	// (legacy behaviour). Once-mode rules ignore this field — the latch
 	// already caps them at 1 per resolution.
-	// Phase-49 / Slice 0003 / Decision D5.
 	MaxFiresPerResolution *int `json:"max_fires_per_resolution"`
 
-	// EscalationAfterMin + EscalationSeverity together configure the
-	// repeat-mode two-tier severity escalation introduced in Phase-49 /
-	// Slice 0009 / Decision D8. Both must be NULL together (no
+	// EscalationAfterMin + EscalationSeverity configure repeat-mode
+	// two-tier severity escalation. Both must be NULL together (no
 	// escalation, default) or both set together. The handler enforces
 	// mutual presence + repeat-only + strict severity ordering before
 	// the row reaches the DB.
 	EscalationAfterMin *int    `json:"escalation_after_min"`
 	EscalationSeverity *string `json:"escalation_severity"`
 
-	// MsgTemplate is the per-rule notification body template
-	// (Phase-50 / ADR-005). NULL means "use the op-aware default
+	// MsgTemplate is the per-rule notification body template. NULL
+	// means "use the op-aware default
 	// rendered by internal/alertmsg". An empty string is normalised
 	// to NULL on Create; on Update, the handler distinguishes the two
 	// via field-presence fingerprinting in the same shape as the
@@ -69,7 +67,7 @@ type updateAlertRuleRequest struct {
 	// AllVehicles + VehicleIDs — see createAlertRuleRequest. Update
 	// semantics: omitting all three vehicle keys preserves the existing
 	// rule's vehicle assignment; sending any of them switches the rule
-	// to the resolved selection. Phase-49 / Slice 0005.
+	// to the resolved selection.
 	AllVehicles  *bool      `json:"all_vehicles"`
 	VehicleIDs   []int64    `json:"vehicle_ids"`
 	SignalName   *string    `json:"signal_name"`
@@ -112,7 +110,7 @@ type updateAlertRuleRequest struct {
 	EscalationSeverity *string `json:"escalation_severity"`
 
 	// MsgTemplate + IncludeTitle — see createAlertRuleRequest.
-	// Phase-50 / ADR-005. Omission preserves the existing template /
+	// Omission preserves the existing template /
 	// toggle; an explicit empty string for MsgTemplate is normalised
 	// to NULL by the handler (clears the template).
 	MsgTemplate  *string `json:"msg_template"`
@@ -141,7 +139,7 @@ type alertTestRequest struct {
 	MetricOp        *string  `json:"metric_op"`
 	VehicleID       *int64   `json:"vehicle_id"`
 
-	// Phase-50 / ADR-005: the Test Message form lets the user preview
+	// The Test Message form lets the user preview
 	// a custom template + toggle BEFORE saving the rule. When set, the
 	// handler renders Title/Body via internal/alertmsg using these
 	// fields instead of the legacy Message string. MsgTemplate is

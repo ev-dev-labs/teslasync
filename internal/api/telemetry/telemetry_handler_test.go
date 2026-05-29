@@ -130,8 +130,8 @@ func (s *recordingLiveSignalStore) record(vehicleID int64, signals map[string]in
 }
 
 // fakePipelineDispatcher is the test substitute for the production
-// *normalize.Pipeline. Phase-42a/0060: ProcessBatch dispatches to the
-// unified pipeline via the unexported pipelineDispatcher interface; this
+// *normalize.Pipeline. ProcessBatch dispatches to the unified pipeline via
+// the unexported pipelineDispatcher interface; this
 // fake records each call so tests can assert the (vehicleID, atomics)
 // pair without standing up the full Pipeline + Router + writers chain.
 type fakePipelineDispatcher struct {
@@ -152,7 +152,7 @@ func (f *fakePipelineDispatcher) ProcessAtomics(_ context.Context, atomics []cod
 }
 
 // TestProcessBatch_ReturnsErrorWhenPipelineNotWired pins the production
-// behaviour added by Phase-42a/0060: ProcessBatch must return the typed
+// behavior: ProcessBatch must return the typed
 // errPipelineNotWired sentinel when SetPipeline has not been called, so
 // TelemetryIngest can map it to a 503 and a misconfigured deployment
 // fails loud rather than silently swallowing batches.
@@ -257,8 +257,8 @@ func TestProcessBatch_PipelineErrorPropagates(t *testing.T) {
 // TestNormalizeFleetUnitsRegression is the Decision #7 grep-style
 // regression test that fails the build if a future commit reintroduces
 // the legacy unit-normalization helper into telemetry_handler_ingest.go.
-// Per Phase-42a/0060 Decision #4 the function and its 3 call sites were
-// deleted; per the prompt's gate this test catches a copy-paste revert
+// The legacy function and its 3 call sites were deleted; this test
+// catches a copy-paste revert
 // at the source level (the gate's grep catches it at the file level too,
 // but a unit test fires earlier in CI and produces a clearer error).
 //

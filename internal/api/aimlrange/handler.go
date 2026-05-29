@@ -1,6 +1,6 @@
 package aimlrange
 
-// Phase-50 / 0063 — ML2 range-prediction model.
+// Handler for AI-assisted range-prediction modeling.
 //
 // This LLM-backed SSE handler trains and narrates a one-shot range model
 // without changing the deterministic projected-range baseline. guard.Wrap

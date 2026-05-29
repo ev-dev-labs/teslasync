@@ -38,9 +38,8 @@ type AutomationHandler struct {
 	presetRegistry *presets.Registry         // built-in preset templates
 	mqttPublisher  AutomationMQTTPublisher   // optional, notifies worker on config changes
 
-	// bulkRepo is the typed concrete repo used by the bulk endpoint
-	// (Phase-45 / Prompt 32). Always populated by NewAutomationHandler in
-	// production wiring.
+	// bulkRepo is the typed concrete repo used by the bulk endpoint. It is
+	// always populated by NewAutomationHandler in production wiring.
 	bulkRepo automationBulkStore
 	// bulkOverride lets tests substitute the bulk store without standing
 	// up a real *dbauto.AutomationRepo. Always nil in production.

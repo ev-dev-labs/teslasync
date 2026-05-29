@@ -1,6 +1,6 @@
 package aifsmnar
 
-// Phase-50 / 0048 — S7 State-machine debugger narrator.
+// Handler for state-machine debugger narration.
 //
 // POST /api/v1/ai/system/fsm/narrate streams one-shot FSM narration for
 // a body-scoped (vehicle_id, from_unix, to_unix) window. The scoped window

@@ -1,4 +1,4 @@
-// Phase-50 / 0021 — D1 Natural-language drive search and replay.
+// D1 Natural-language drive search and replay.
 //
 // Off-mode + baseline-coexistence tests for the AI drive search
 // handler. The off-mode test (TestNLDriveSearchReplayAIOff404) is
@@ -48,12 +48,12 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestNLDriveSearchReplayAIOff404 is the load-bearing off-mode
-// contract proof for slice 0021. It mounts the AI drive search
+// contract proof for tool group. It mounts the AI drive search
 // route through the guard with ai_mode='off' and proves:
 //
-//   - The /api/v1/ai/drives/search route returns 404 (the guard
-//     fails closed even when the per-feature toggle is on).
-//   - The 404 body does not leak feature metadata.
+// - The /api/v1/ai/drives/search route returns 404 (the guard
+// fails closed even when the per-feature toggle is on).
+// - The 404 body does not leak feature metadata.
 //
 // The companion frontend test
 // TestNLDriveSearchReplayAIOffUsesTypedFiltersOnly proves the
@@ -61,7 +61,6 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 // web/src/features/driving/__tests__/.
 func TestNLDriveSearchReplayAIOff404(t *testing.T) {
 	t.Parallel()
-
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"nl-drive-search-replay": true}, // toggle on; mode trumps it
@@ -130,7 +129,6 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 // the frontend.
 func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
-
 	cases := []struct {
 		name string
 		body string
@@ -159,7 +157,6 @@ func TestHandler_RejectsBadInput(t *testing.T) {
 // prompt and a prompt at the size boundary.
 func TestHandler_AcceptsCanonicalInput(t *testing.T) {
 	t.Parallel()
-
 	cases := []string{
 		`{"prompt":"find drives last weekend"}`,
 		`{"prompt":"a"}`,

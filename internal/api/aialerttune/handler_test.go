@@ -1,7 +1,7 @@
-// Phase-50 / 0034 — A1 Alert tuning suggestions.
+// Tests for AI alert tuning suggestions.
 //
 // Off-mode tests prove the AI route fails closed while the deterministic AlertStudio tuning path stays available.
-// Streaming coverage lives in the F6 eval harness; duplicating it here would require a live DB fixture.
+// Streaming coverage lives in the eval harness; duplicating it here would require a live DB fixture.
 
 package aialerttune
 

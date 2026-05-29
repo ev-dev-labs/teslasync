@@ -9,13 +9,13 @@ import (
 )
 
 // BulkEnableRules sets enabled=TRUE for every rule in the request body's
-// `ids` array. Phase-40 / Prompt 51 standardized bulk-action endpoint.
+// `ids` array.
 func (h *AlertHandler) BulkEnableRules(w http.ResponseWriter, r *http.Request) {
 	h.bulkSetRulesEnabled(w, r, true)
 }
 
 // BulkDisableRules sets enabled=FALSE for every rule in the request body's
-// `ids` array. Phase-40 / Prompt 51 standardized bulk-action endpoint.
+// `ids` array.
 func (h *AlertHandler) BulkDisableRules(w http.ResponseWriter, r *http.Request) {
 	h.bulkSetRulesEnabled(w, r, false)
 }

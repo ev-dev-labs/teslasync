@@ -1,10 +1,10 @@
-// Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
+// Tests for tire-pressure trend reasoning.
 //
 // Off-mode and baseline-coexistence tests. The off-mode test is the
 // load-bearing proof that AI mode off hides the AI route while deterministic
 // tire-pressure thresholds stay reachable (ADR-015 §I3, §I6).
 //
-// Streaming coverage lives in the F6 eval harness because it needs a live
+// Streaming coverage lives in the AI eval harness because it needs a live
 // database fixture.
 
 package aitirepress
@@ -42,8 +42,8 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestTirePressureReasoningAIOffShowsThresholdsOnly is the
-// load-bearing off-mode contract proof for slice 0033. It mounts
-// the AI tire-pressure-trend-reasoning route through the guard
+// load-bearing off-mode contract proof. It mounts the AI
+// tire-pressure-trend-reasoning route through the guard
 // with ai_mode='off' and proves:
 //
 //   - The /api/v1/ai/tire-pressure/trends/explain route returns
@@ -53,13 +53,13 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 //     identifiers.
 //   - A baseline GET /api/v1/tire-pressure route serving the
 //     deterministic aggregate remains reachable under the same
-//     router — proof that the slice does NOT replace the
+//     router, proving the AI route does not replace the
 //     deterministic gauges + thresholds on /tire-pressure
 //     (TirePressurePage) (ADR-015 §I3).
 //
 // The test name MUST stay
-// TestTirePressureReasoningAIOffShowsThresholdsOnly — the slice
-// prompt's verification command runs
+// TestTirePressureReasoningAIOffShowsThresholdsOnly because external
+// verification commands run
 // `go test … -run TestTirePressureReasoningAIOffShowsThresholdsOnly`
 // AND `npm test -- --run TestTirePressureReasoningAIOffShowsThresholdsOnly`,
 // so both the Go and React off-mode proofs answer to the same
@@ -123,8 +123,8 @@ func TestTirePressureReasoningAIOffShowsThresholdsOnly(t *testing.T) {
 
 	// 2) Probe the baseline tire-pressure route — MUST return
 	// 200 + deterministic baseline content, regardless of the
-	// AI guard's state. This is the load-bearing proof that
-	// the slice did NOT replace the deterministic gauges.
+	// AI guard's state. This proves the AI route did not replace
+	// the deterministic gauges.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodGet, "/api/v1/tire-pressure?vehicle_id=42", nil)
 	router.ServeHTTP(recBaseline, reqBaseline)

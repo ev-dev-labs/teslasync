@@ -6,7 +6,7 @@ import "net/http"
 // TeslaSync SPA matches on to drive its <TeslaReauthBanner> recovery
 // UI when the user's third-party Tesla refresh token has expired and
 // the backend can no longer act on their behalf without a fresh
-// OAuth grant (Phase-45 / Prompt 30).
+// OAuth grant.
 //
 // This string value is part of the frontend wire contract:
 // web/src/lib/resilience.ts matches it byte-for-byte. Renaming

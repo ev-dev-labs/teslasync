@@ -1,4 +1,4 @@
-// Phase-50 / 0036 — A3 Cross-rule conflict detection.
+// Cross-rule conflict detection tests.
 //
 // Off-mode + baseline-coexistence tests for the AI cross-rule
 // conflict-detection handler. The off-mode test

@@ -996,7 +996,7 @@ func errStringOrDefault(err error, def string) string {
 // redisSignalsMeta is the diagnostic block returned alongside RedisSignals.
 // Each field maps to one of the five empty-state root causes the viewer
 // page needs to distinguish (mode-local, mirror-failed, TTL-expired,
-// never-streamed, VIN-mismatch). See phase-45/37 prompt.
+// never-streamed, VIN-mismatch).
 type redisSignalsMeta struct {
 	LiveSignalStoreMode string     `json:"live_signal_store_mode"`
 	RedisKey            string     `json:"redis_key"`

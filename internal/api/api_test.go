@@ -25,13 +25,10 @@ func setupTestRouter() http.Handler {
 	return mux
 }
 
-// Phase R2.0b (2026-05-28): doRequest / assertStatus / assertJSON /
-// assertContentType were promoted to internal/api/apitest with
-// exported names so R2a-R2e wave subpackages can import them. Call
-// sites below use apitest.DoRequest / apitest.AssertStatus /
-// apitest.AssertJSON / apitest.AssertContentType directly — no
-// parent wrappers were retained (only 40 call sites in 2 files, so
-// the mass-rewrite was preferable to drained-wrapper dead code).
+// Test helpers were promoted to internal/api/apitest with exported names
+// so subpackages can import them. Call sites below use apitest.DoRequest,
+// apitest.AssertStatus, apitest.AssertJSON, and apitest.AssertContentType
+// directly; no parent wrappers were retained.
 
 func TestHealthz_ReturnsOK(t *testing.T) {
 	handler := setupTestRouter()
@@ -134,22 +131,3 @@ func TestRecoveryMiddleware_CatchesPanic(t *testing.T) {
 		t.Errorf("expected error 'internal server error', got %v", body["error"])
 	}
 }
-
-//
-// Phase R2.0a (2026-05-28): TestWriteJSON, TestWriteJSON_NilData,
-// TestWriteJSON_CustomStatus, TestWriteError, TestWriteError_AllCodes,
-// TestWriteErrorCode were relocated to internal/api/httpx/json_test.go
-// alongside the canonical exported helpers they exercise.
-//
-// Phase R2.0c (2026-05-28): TestPagination_Defaults / CustomValues /
-// InvalidValues / ExceedsMax / ZeroLimit relocated to
-// internal/api/apiparams/params_test.go alongside the canonical
-// exported apiparams.Pagination helper.
-//
-// Phase R2.0c (2026-05-28): TestParseDateRange_ValidDates / NoDates /
-// InvalidFormat relocated to internal/api/apiparams/params_test.go
-// alongside the canonical exported apiparams.ParseDateRange helper.
-//
-// Phase R2d.175 (2026-05-29): TestEventHub_SubscribeAndBroadcast /
-// Unsubscribe / MultipleClients relocated to internal/api/sse/hub_test.go
-// alongside the carved-out EventHub type.

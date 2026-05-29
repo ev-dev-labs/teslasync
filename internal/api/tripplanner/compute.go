@@ -256,8 +256,8 @@ func estimateChargeTime(startSOC, endSOC, capacityKWh, maxPowerKW float64) float
 
 // vehicleEfficiency returns the distance-weighted average Wh/km for the vehicle.
 //
-// Phase-42 (Prompt 0076): rewritten against the SI canonical drives schema
-// (migration 000185). distance_m and energy_used_wh are native units; the
+// Rewritten against the SI canonical drives schema (migration 000185).
+// distance_m and energy_used_wh are native units; the
 // /1000 division is folded out and the result is naturally Wh/km because
 // SUM(energy_used_wh) / SUM(distance_m) gives Wh/m, which we then * 1000.
 // start_battery_pct / end_battery_pct are renamed to start_soc_pct /
@@ -285,11 +285,9 @@ func (h *TripPlannerHandler) vehicleEfficiency(ctx context.Context, vehicleID in
 // batteryCapacity returns the usable battery capacity for the vehicle.
 func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int64) float64 {
 	// Try capacity from signal_log (EnergyRemaining = current usable kWh).
-	// Phase-39 / ADR-002: this lookup now goes through the canonical
-	// signal.StateReader.SignalAt instead of the legacy
-	// *signaldb.SignalLogReader.SignalAt that this prompt deletes from
-	// internal/database/signal_log_reader_query.go. Identical forward-
-	// folded semantics anchored at time.Now().
+	// This lookup uses the canonical signal.StateReader.SignalAt instead
+	// of the legacy signal-log reader while preserving forward-folded
+	// semantics anchored at time.Now().
 	if h.state != nil {
 		val, err := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", time.Now())
 		if err == nil && val != nil {
@@ -315,9 +313,8 @@ func (h *TripPlannerHandler) batteryCapacity(ctx context.Context, vehicleID int6
 
 // estimateWeatherImpact returns a weather adjustment factor based on recent driving data.
 //
-// Phase-42 (Prompt 0076): renamed outside_temp_avg_c → ambient_temp_c_avg
-// (the canonical SI name on the drives schema after migration 000185) and
-// start_ts → started_at.
+// The SI drives schema uses ambient_temp_c_avg and started_at after
+// migration 000185.
 func (h *TripPlannerHandler) estimateWeatherImpact(ctx context.Context, vehicleID int64) tripWeatherImpact {
 	var avgTempC *float64
 	_ = h.db.Pool.QueryRow(ctx, `

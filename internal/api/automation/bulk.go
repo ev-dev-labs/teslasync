@@ -96,4 +96,4 @@ func (h *AutomationHandler) BulkUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 // decodeAutomationBulkBody now lives in internal/api/bulk_helpers.go as
-// a bridge to apibulk.DecodeOpBody (Phase R2.0f).
+// a bridge to apibulk.DecodeOpBody.

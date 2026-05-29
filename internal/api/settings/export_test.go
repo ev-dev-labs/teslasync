@@ -1,6 +1,6 @@
 package settings
 
-// Phase-46 / Prompt 36 — settings export handler tests.
+// Settings export handler tests.
 //
 // Exercises the GET /settings/export response shape using fake repos
 // that satisfy the SettingsSerializer interfaces. No live database is

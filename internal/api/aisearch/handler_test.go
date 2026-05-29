@@ -1,4 +1,4 @@
-// Phase-50 / 0017 — N3 Natural-language search across drives, charges,
+// N3 Natural-language search across drives, charges,
 // and alerts.
 //
 // Off-mode + baseline-coexistence tests for the AI search handler.
@@ -55,23 +55,22 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestNLSearchAIOffFallsBackToTypedFilters is the load-bearing
-// off-mode contract proof for slice 0017. It mounts the AI search
+// off-mode contract proof for tool group. It mounts the AI search
 // route through the guard with ai_mode='off' and proves:
 //
-//   - The /api/v1/ai/search/query route returns 404 (the guard
-//     fails closed even when the per-feature toggle is on).
-//   - The 404 body does not leak feature metadata.
-//   - The typed GET /api/v1/search baseline route remains reachable
-//     under the same router and returns its deterministic typed-
-//     filter response — proof that the slice does NOT replace the
-//     canonical SearchHandler.Search path (ADR-015 §I3).
+// - The /api/v1/ai/search/query route returns 404 (the guard
+// fails closed even when the per-feature toggle is on).
+// - The 404 body does not leak feature metadata.
+// - The typed GET /api/v1/search baseline route remains reachable
+// under the same router and returns its deterministic typed-
+// filter response — proof that the slice does NOT replace the
+// canonical SearchHandler.Search path (ADR-015 §I3).
 //
 // The test name MUST stay TestNLSearchAIOffFallsBackToTypedFilters —
-// the slice prompt's verification command runs
+// the request's verification command runs
 // `go test … -run TestNLSearchAIOffFallsBackToTypedFilters`.
 func TestNLSearchAIOffFallsBackToTypedFilters(t *testing.T) {
 	t.Parallel()
-
 	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
@@ -179,7 +178,6 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 // not a half-opened stream that confuses the frontend.
 func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
-
 	cases := []struct {
 		name string
 		body string
@@ -208,7 +206,6 @@ func TestHandler_RejectsBadInput(t *testing.T) {
 // prompt at the size boundary.
 func TestHandler_AcceptsCanonicalInput(t *testing.T) {
 	t.Parallel()
-
 	cases := []string{
 		`{"prompt":"find drives last weekend"}`,
 		`{"prompt":"a"}`,

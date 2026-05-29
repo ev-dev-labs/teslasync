@@ -16,7 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-// Phase-46 / Prompt 20 — alert acknowledgement handler tests.
+// Alert acknowledgement handler tests.
 
 func newAckTestHandler(logs ...*notificationmodel.NotificationLog) (*AlertHandler, *fakeNotificationRepo, *fakeAlertRuleRepo) {
 	ruleID := int64(11)

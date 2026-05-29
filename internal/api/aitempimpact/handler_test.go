@@ -1,4 +1,4 @@
-// Phase-50 / 0032 — T2 cabin temperature impact narrative.
+// Tests for the cabin temperature impact narrative.
 //
 // These tests pin ADR-015 edges: off-mode hides AI, baseline analytics stay
 // reachable, bad bodies fail before SSE, and bucket selection stays stable.

@@ -1,6 +1,6 @@
 package aiclimate
 
-// Phase-50 / 0031 — T1 Preheat and precool recommender.
+// T1 Preheat and precool recommender.
 //
 // LLM-backed POST /api/v1/ai/climate/schedule/draft. The guard in
 // ai_routes.go fails closed before this handler when AI mode or the feature
@@ -80,8 +80,8 @@ const climateTargetMinC = 10.0
 const climateTargetMaxC = 32.0
 
 // draftRequest is the JSON body shape this
-// handler accepts. Temperatures are Celsius (SI canonical —
-// Phase-48); time fields are RFC3339. The shape mirrors the
+// handler accepts. Temperatures are Celsius (SI canonical);
+// time fields are RFC3339. The shape mirrors the
 // *typed* surface area of the existing manual climate-controls
 // form so a SPA call site can construct the AI draft request from
 // the same form state.
@@ -112,14 +112,14 @@ type Handler struct {
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
+// registry: AI provider registry (decorator chain already applied).
+// toolReg: process-wide tool registry. MUST contain
 //
 //	draft_climate_schedule AND validate_climate_schedule (both
 //	registered by schedule.RegisterPreheatPrecoolRecommenderTools
 //	in router.go).
 //
-// strat:      the preheat-precool-recommender Strategy (one per process).
+// strat: the preheat-precool-recommender Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
 func NewHandler(
 	registry *provider.Registry,
@@ -283,7 +283,7 @@ var _ http.Handler = (*Handler)(nil)
 //
 // The advisor is a PURE-GO deterministic departure heuristic — it
 // does not touch the database, does not call Tesla Fleet API, and
-// does not consume any signal_log row. The slice prompt's
+// does not consume any signal_log row. The request's
 // "Selection mechanism: ClimateScheduleAdvisor is selected by
 // ai_mode plus preheat-precool-recommender toggle; manual schedule
 // remains baseline" mandate is satisfied by the absence of any
@@ -298,11 +298,11 @@ var _ http.Handler = (*Handler)(nil)
 //
 // Wall clock is injected via the Now field so tests can pin a
 // stable timestamp without monkey-patching time.Now. Production
-// uses time.Now().UTC() implicitly via the zero-value sentinel
-// (Now.IsZero() ⇒ time.Now().UTC()).
+// uses time.Now.UTC implicitly via the zero-value sentinel
+// (Now.IsZero ⇒ time.Now.UTC).
 type Advisor struct {
 	// Now is the wall-clock function. Defaults to
-	// time.Now().UTC() when nil; tests inject a stable clock.
+	// time.Now.UTC when nil; tests inject a stable clock.
 	Now func() time.Time
 }
 
@@ -317,14 +317,14 @@ func NewAdvisor() *Advisor {
 //
 // The deterministic heuristic:
 //
-//  1. Compute Δ = target_cabin_temp_c - current_cabin_temp_c.
-//     |Δ| < 0.5°C ⇒ no schedule needed (return invalid envelope).
-//  2. Mode = "preheat" iff Δ > 0; "precool" iff Δ < 0.
-//  3. Window-minutes = ceil(|Δ| / rate(mode)) clamped to
-//     [climateScheduleMinWindowMinutes, climateScheduleMaxWindowMinutes].
-//  4. End-time = depart_by; start-time = end-time - window.
-//  5. start-time MUST be >= now; otherwise the schedule is in the
-//     past — return invalid envelope.
+// 1. Compute Δ = target_cabin_temp_c - current_cabin_temp_c.
+// |Δ| < 0.5°C ⇒ no schedule needed (return invalid envelope).
+// 2. Mode = "preheat" iff Δ > 0; "precool" iff Δ < 0.
+// 3. Window-minutes = ceil(|Δ| / rate(mode)) clamped to
+// [climateScheduleMinWindowMinutes, climateScheduleMaxWindowMinutes].
+// 4. End-time = depart_by; start-time = end-time - window.
+// 5. start-time MUST be >= now; otherwise the schedule is in the
+// past — return invalid envelope.
 //
 // Errors are returned as Go errors; the tool wraps them into the
 // {status: "invalid"} envelope.

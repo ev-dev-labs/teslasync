@@ -21,7 +21,7 @@ type BulkStore interface {
 
 // BulkUpdate runs an allowlisted bulk operation across multiple geofences.
 //
-// Phase-45 / Prompt 32 — bulk-actions framework. Currently only `op=delete`
+// Bulk-actions framework. Currently only `op=delete`
 // is supported; future ops (e.g. category re-tag) plug into the same switch
 // without changing the request shape.
 //

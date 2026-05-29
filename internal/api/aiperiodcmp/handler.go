@@ -1,6 +1,6 @@
 package aiperiodcmp
 
-// Phase-50 / 0040 — X1 Period compare narration.
+// Handler for period compare narration.
 //
 // Implements POST /api/v1/ai/analytics/period-compare/narrate as a read-only SSE narrator.
 // The route is guard-wrapped for ADR-015 off-mode behavior; the deterministic period-stats endpoint remains the baseline.

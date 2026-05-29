@@ -1,4 +1,4 @@
-// Phase-50 / 0058 — PU2 Natural-language Grafana panel.
+// Natural-language Grafana panel tests.
 //
 // Off-mode tests prove the AI route fails closed while the deterministic Grafana editor catalog stays available.
 // Streaming coverage lives in the F6 eval harness; duplicating it here would require a live DB fixture.

@@ -3,6 +3,7 @@ package notification
 import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -31,8 +32,7 @@ type notificationChannelWebhookConfigStore interface {
 // production this is bound to [notifier.Send].
 type webhookSender func(ctx context.Context, opts notifier.Options) (notifier.Result, error)
 
-// ChannelHandler hosts the webhook-channel-specific
-// endpoints introduced by Phase-46 / Prompt 37.
+// ChannelHandler hosts the webhook-channel-specific endpoints.
 //
 // It deliberately does NOT cover generic channel CRUD — that path is
 // owned by [NotificationHandler] and reused via the existing
@@ -100,9 +100,8 @@ type webhookTestResponse struct {
 // WebhookTest fires a single test webhook request through the new
 // HMAC-aware delivery path and returns the structured result.
 //
-// The test event is a fixed JSON envelope (per the Blocked Path on
-// Phase-46 / Prompt 37 — body templating is intentionally out of
-// scope). When the channel has a secret configured, the request is
+// The test event is a fixed JSON envelope; body templating is
+// intentionally out of scope. When the channel has a secret configured, the request is
 // signed with HMAC SHA-256 and the digest is echoed back in the
 // response so the user can confirm the receiver validated against the
 // same input.

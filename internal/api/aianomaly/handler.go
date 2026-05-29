@@ -1,6 +1,6 @@
 package aianomaly
 
-// Phase-50 / 0014 — U4 anomaly explanation narration.
+// Handler for natural-language anomaly explanation narration.
 //
 // This opt-in POST /api/v1/ai/anomalies/explain surface streams a one-shot
 // LLM explanation through the shared dispatcher. The guard in ai_routes.go

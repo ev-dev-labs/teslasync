@@ -33,7 +33,7 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 
 	ctx := r.Context()
 
-	// Phase-42 (000184_charging_si): SI canonical columns. Convert
+	// SI canonical charging columns store Wh and W. Convert
 	// total_energy_added_wh -> kWh and peak_power_w -> kW at the SQL boundary
 	// to keep sessionRow.kwh / .power semantics. cost reads from cost_decimal.
 	rows, err := h.db.Pool.Query(ctx, `
@@ -75,7 +75,7 @@ func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *htt
 	}
 
 	// Enrich sessions with lat/lon/temp from signal_log (single set-based query).
-	// Phase-42: signal_log canonical schema — `field`, `ts`, and split typed value
+	// The canonical signal_log schema uses `field`, `ts`, and split typed value
 	// columns (float_value/int_value/...). Numeric reads use COALESCE so signals
 	// stored as int (e.g., temperatures sent as °F whole numbers) still resolve.
 	locRows, err := h.db.Pool.Query(ctx, `

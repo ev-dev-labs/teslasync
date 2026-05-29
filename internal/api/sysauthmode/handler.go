@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 57 — Auth-mode contract endpoint.
+// Auth-mode contract endpoint.
 //
 // Exposes the deployment auth mode, subject header, optional subject, provider
 // hint, and capability matrix the SPA needs to mount auth-coupled sections.
@@ -143,10 +143,9 @@ func forwardAuthCapabilities() AuthModeCapabilities {
 // edited display_name back; the recorder only needs the side-effect
 // + error so we drop the row here.
 //
-// Lives in this package (rather than router.go) because (a) the
-// auth-mode handler is the canonical Phase-46/57 module the rest of
-// the auth-mode contract hangs off and (b) keeping the adapter next
-// to the handler makes the contract's complete server surface
+// Lives in this package (rather than router.go) because the auth-mode
+// handler is the canonical module for the contract, and keeping the
+// adapter next to the handler makes the complete server surface
 // reviewable in one package.
 type authSubjectsStoreAdapter struct {
 	repo *dbauth.AuthSubjectsRepo

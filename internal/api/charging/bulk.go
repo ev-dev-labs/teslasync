@@ -30,8 +30,6 @@ func (h *ChargingHandler) chargingBulkRepo() chargingBulkStore {
 
 // BulkDelete removes multiple charging sessions in a single transaction.
 //
-// Phase-40 / Prompt 51 — standardized bulk-action endpoint.
-//
 // Contract:
 //   - Body: {"ids":[1,2,3]}, capped at MaxBulkIDs (500). Empty or oversized → 400.
 //   - Response: {"deleted": <int>, "failed": [{"id": <int>, "reason": "not_found"}]}.

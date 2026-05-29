@@ -1,6 +1,6 @@
 package aivampire
 
-// Phase-50 / 0030 — C5 vampire-drain explanation.
+// Vampire-drain explanation.
 //
 // Serves the opt-in SSE narrator for vampire-drain windows. The guard returns
 // 404 before this handler runs when AI is off, and body validation happens

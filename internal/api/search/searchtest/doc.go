@@ -11,7 +11,7 @@
 //
 // Go forbids importing a *_test.go file from outside its package.
 // Once internal/api/search was carved out of the flat internal/api
-// parent in Phase R2d.1, the original `fakeSearcher` declared
+// parent, the original `fakeSearcher` declared
 // inside search/handler_test.go was no longer reachable from the
 // AI hydrator tests still in internal/api/. searchtest is the
 // smallest-blast-radius fix: a tiny non-_test subpackage that

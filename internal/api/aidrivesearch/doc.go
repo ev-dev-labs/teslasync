@@ -6,8 +6,8 @@
 //
 // # Why a subpackage
 //
-// Carved in Phase R2d.119 from the flat internal/api parent to isolate the
-// nl-drive-search-replay HTTP surface and its drive replay hydrator. The package
+// This package isolates the nl-drive-search-replay HTTP surface and its drive
+// replay hydrator from the flat internal/api parent. The package
 // depends only on AI orchestration primitives, shared API infrastructure, and the
 // search subpackage; it MUST NOT import its parent api package.
 //

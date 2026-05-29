@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 54 — Vehicle photo handler.
+// Vehicle photo handler.
 //
 // Endpoints back the SPA's <VehiclePhotoUpload> + <VehicleHeroCard>:
 //
@@ -78,8 +78,8 @@ const (
 	PhotoSizeFull   = "full"
 )
 
-// PhotoMaxDimByName drives the resize ladder. Mirrors the prompt's
-// "thumb 256 / medium 1024 / full 2048" specification.
+// PhotoMaxDimByName drives the resize ladder for thumb, medium, and full
+// photo variants.
 var PhotoMaxDimByName = map[string]int{
 	PhotoSizeThumb:  256,
 	PhotoSizeMedium: 1024,

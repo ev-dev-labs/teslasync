@@ -14,7 +14,7 @@ import (
 // ChatbotHandler answers heuristic fleet questions.
 //
 // Location questions use StateProvider's folded live state, not raw position
-// tables or signal_log scans, preserving the phase-42 live-state contract.
+// tables or signal_log scans, preserving the live-state contract.
 type ChatbotHandler struct {
 	chat       *dbnotif.ChatRepo
 	db         *database.DB
@@ -43,8 +43,8 @@ func (h *ChatbotHandler) vehicleLocationLine(ctx context.Context, vehicleID int6
 	if err != nil {
 		return "", err
 	}
-	// Phase-42 codec emits LocationLatitude / LocationLongitude
-	// (codec/flatten.go); legacy ingest path uses bare names. Try the
+	// The codec emits LocationLatitude / LocationLongitude
+	// (codec/flatten.go); the legacy ingest path uses bare names. Try the
 	// codec name first and fall back so both paths work during the
 	// migration.
 	lat, latOk := toFloat64(snap["LocationLatitude"])

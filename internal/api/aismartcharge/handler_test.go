@@ -1,8 +1,8 @@
-// Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
+// Tests for smart-charge schedule suggestions.
 //
 // Off-mode + baseline-coexistence tests for the AI
 // smart-charge-schedule-suggestion handler. The off-mode test
-// (TestSmartChargeScheduleAIOffManualScheduleWorks) is the slice's
+// (TestSmartChargeScheduleAIOffManualScheduleWorks) is the
 // load-bearing AI-OFF contract proof: it asserts that the AI route
 // returns 404 when settings.ai_mode='off' even when the per-feature
 // toggle is on, AND that the deterministic charge-planner aggregate
@@ -11,7 +11,7 @@
 // §I6).
 //
 // The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness
+// AI eval harness
 // (`go run ./cmd/ai-eval -feature smart-charge-schedule-suggestion`);
 // duplicating that here would require a live database + signal
 // store fixture.
@@ -51,8 +51,8 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestSmartChargeScheduleAIOffManualScheduleWorks is the
-// load-bearing off-mode contract proof for slice 0026. It mounts
-// the AI smart-charge-schedule-suggestion route through the guard
+// load-bearing off-mode contract proof. It mounts the AI
+// smart-charge-schedule-suggestion route through the guard
 // with ai_mode='off' and proves:
 //
 //   - The /api/v1/ai/charging/schedule/draft route returns 404 (the
@@ -61,12 +61,12 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 //     identifiers.
 //   - A baseline POST /api/v1/charge-planner/optimize route serving
 //     the deterministic heuristic schedule remains reachable under
-//     the same router — proof that the slice does NOT replace the
+//     the same router, proving the AI route does not replace the
 //     heuristic charge-planner path (ADR-015 §I3).
 //
 // The test name MUST stay
-// TestSmartChargeScheduleAIOffManualScheduleWorks — the slice
-// prompt's verification command runs
+// TestSmartChargeScheduleAIOffManualScheduleWorks because external
+// verification commands run
 // `go test … -run TestSmartChargeScheduleAIOffManualScheduleWorks`
 // AND `npm test -- --run TestSmartChargeScheduleAIOffManualScheduleWorks`,
 // so both the Go and React off-mode proofs must answer to the same
@@ -130,9 +130,8 @@ func TestSmartChargeScheduleAIOffManualScheduleWorks(t *testing.T) {
 
 	// 2) Probe the baseline charge-planner route — MUST return
 	// 200 + deterministic heuristic-shape content, regardless of
-	// the AI guard's state. This is the load-bearing proof that
-	// the slice did NOT replace the heuristic charge-planner
-	// path.
+	// the AI guard's state. This proves the AI route did not replace
+	// the heuristic charge-planner path.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodPost, "/api/v1/charge-planner/optimize", bytes.NewReader(body))
 	reqBaseline.Header.Set("Content-Type", "application/json")

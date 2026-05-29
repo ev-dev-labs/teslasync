@@ -1,4 +1,4 @@
-// Phase-50 / 0011 — U1 Chatbot LLM upgrade.
+// Chatbot LLM upgrade tests.
 //
 // These tests pin the AI-off contract: guarded AI routes return 404 while the
 // BaselineResponder seam keeps the heuristic chatbot reachable. Full streaming
@@ -94,8 +94,8 @@ func TestChatbotAIOffUsesBaselineAndAiRoute404(t *testing.T) {
 
 	// The unconditional baseline route at POST /chatbot is wired in
 	// router.go to ChatbotHandler.Chat → processQuery (the heuristic).
-	// The Phase-50 ChatResponder seam adds BaselineResponder as a
-	// type-safe wrapper around that heuristic. Asserting the seam
+	// The ChatResponder seam adds BaselineResponder as a type-safe
+	// wrapper around that heuristic. Asserting the seam
 	// compiles + is non-nil-aware is sufficient at unit-test scope:
 	// the heuristic itself is exercised by the existing
 	// chatbot_handler tests; we just prove the wrapper preserves the

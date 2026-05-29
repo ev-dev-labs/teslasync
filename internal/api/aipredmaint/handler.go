@@ -331,13 +331,10 @@ func (a *ContextSource) MaintenanceContext(ctx context.Context, vehicleID int64)
 	}
 	raw := defaultItems(vehicleID, od)
 
-	// Translate the map[string]interface{} default-items shape
-	// (legacy pre-Phase-48 baseline; the existing operator
-	// surface reads these field names verbatim) into the typed
-	// envelope. We preserve the field names because (a) the
-	// frontend already reads them as-is from /api/v1/maintenance,
-	// (b) the Phase-48 instruction forbids touching the
-	// existing SI-canonicalization mapping in this slice.
+	// Translate the map[string]interface{} default-items shape into the typed
+	// envelope. Preserve the field names because the existing operator surface
+	// and frontend already read them as-is from /api/v1/maintenance, and this
+	// code must not alter the existing SI-canonicalization mapping.
 	items := make([]maintenance.MaintenancePredictionItem, 0, len(raw))
 	summary := maintenance.MaintenancePredictionSummary{}
 	for _, m := range raw {

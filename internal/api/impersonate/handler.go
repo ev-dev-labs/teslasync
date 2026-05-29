@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 46 — admin impersonation handler.
+// Admin impersonation handler.
 //
 // The endpoints expose current state, start, end, and candidate lookup for the
 // SPA banner. Open-mode installs return AUTH_MODE_OPEN before DB work; successful
@@ -109,7 +109,7 @@ type impersonationCandidatesResponse struct {
 
 // impersonationCandidate is one row in the candidates list. Subject
 // is the opaque proxy-issued identity; the SPA renders it verbatim
-// because the future prompt 57 may add a display-name column without
+// because a future display-name column may be added without
 // changing this contract.
 type impersonationCandidate struct {
 	Subject string `json:"subject"`

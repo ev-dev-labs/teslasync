@@ -1,7 +1,7 @@
 // Package exportcolumns serves GET /api/v1/exports/columns which returns
 // the publishable column metadata for each export job type so the
 // frontend column picker can render checkboxes without hard-coding the
-// catalog (Phase-46 / Prompt 62).
+// catalog.
 //
 // The catalog lives statically in internal/export. Two key concepts the
 // frontend relies on:

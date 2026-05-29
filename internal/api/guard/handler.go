@@ -1,5 +1,4 @@
-// Phase-43a / Prompt 0006 — GuardHandler restores the guard route family
-// removed during Phase-42: status, events, acknowledge, and panic.
+// GuardHandler serves guard status, events, acknowledge, and panic routes.
 //
 // Sentry status intentionally reads security_events because SentryMode is
 // routed there by routing.yaml, and acknowledge returns generic 404s to avoid
@@ -66,9 +65,9 @@ type GuardHandler struct {
 // NewGuardHandler wires GuardHandler against production dependencies.
 //
 // commandProxyConfigured is sourced from cfg.Tesla.CommandProxyURL at
-// construction (rather than re-read on every Panic request) so the
-// 501-vs-attempt decision is stable for the lifetime of the router and
-// can be tested without mutating shared config state.
+// construction (rather than re-read on every Panic request) so the choice
+// between returning 501 and attempting the command is stable for the
+// lifetime of the router and can be tested without mutating shared config state.
 func NewGuardHandler(
 	repo *systemdb.GuardRepo,
 	vehicles *vehicledb.VehicleRepo,
@@ -190,9 +189,8 @@ func (h *GuardHandler) Events(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if v > guardEventsMaxLimit {
-			// Decision #2 max-cap envelope mirrors the Phase-43a /
-			// Prompt 0003+0004+0005 precedent — writeError can't add
-			// the `max` field, so we hand-write the JSON.
+			// writeError can't add the `max` field, so hand-write the
+			// max-cap envelope JSON.
 			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "limit exceeds maximum",
 				"max":   guardEventsMaxLimit,

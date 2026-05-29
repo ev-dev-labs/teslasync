@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 40 — Rate-limit status endpoint.
+// Rate-limit status endpoint.
 //
 // GET /api/v1/system/rate-limits returns cheap, process-local ScopeBudget rows
 // for the admin status panel. Fleet Telemetry RPS remains out of scope here; the

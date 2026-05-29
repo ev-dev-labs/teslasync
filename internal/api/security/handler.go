@@ -13,11 +13,10 @@ import (
 )
 
 // SecurityHandler serves security / access endpoints backed by the
-// signal-log change feed via signal.StateReader (ADR-002 / phase-39).
+// signal-log change feed via signal.StateReader (ADR-002).
 //
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (the old pivot
-// + snapshot helpers) has been replaced with the canonical
-// signal.StateReader.
+// The legacy *signaldb.SignalLogReader pivot and snapshot helpers have been
+// replaced with the canonical signal.StateReader.
 //
 // Lock state, sentry mode, valet mode, service mode, guest mode and the
 // per-door / per-window position flags are user-controlled or

@@ -1,6 +1,6 @@
 package aialerttune
 
-// Phase-50 / 0034 — A1 Alert tuning suggestions.
+// Handler for AI alert tuning draft suggestions.
 //
 // Implements POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft as a propose-only SSE handler.
 // The route is guard-wrapped for ADR-015 off-mode behavior; AlertStudio's deterministic PUT path remains the baseline.

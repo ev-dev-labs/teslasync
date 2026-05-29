@@ -551,8 +551,8 @@ func (h *Handler) GetLifetimeStats(w http.ResponseWriter, r *http.Request) {
 // broadcast failures are logged but do not surface as errors so the lifetime
 // stats response is never blocked by celebration plumbing.
 func (h *Handler) evaluateAchievements(ctx context.Context, vehicleID int64, fieldValues map[string]float64) []Achievement {
-	// Phase-40 / Prompt 63: load already-persisted unlocks for this vehicle
-	// scope so we can (a) populate `unlocked_at` from the canonical store and
+	// Load already-persisted unlocks for this vehicle scope so we can
+	// (a) populate `unlocked_at` from the canonical store and
 	// (b) detect locked → unlocked transitions to broadcast as SSE events.
 	// vehicle_id = 0 represents the fleet-wide bucket (no vehicle filter).
 	persistedUnlocks := map[string]time.Time{}

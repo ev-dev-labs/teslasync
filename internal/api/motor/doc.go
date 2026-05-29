@@ -3,6 +3,6 @@
 //
 // Layer: handler
 //
-// Carved in Phase R2d.77, this package depends only on shared API helpers and
+// This package depends only on shared API helpers and
 // core signal interfaces; it must not import its parent package.
 package motor

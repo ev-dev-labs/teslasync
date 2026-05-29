@@ -1,6 +1,6 @@
 package aialert
 
-// Phase-50 / 0015 — N1 natural-language alert builder.
+// Natural-language alert builder.
 //
 // This read-only AI route drafts alert rules through propose-only tools; the
 // existing POST /api/v1/alerts/rules path remains the only persistence path.

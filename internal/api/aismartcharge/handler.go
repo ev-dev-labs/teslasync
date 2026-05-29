@@ -1,6 +1,6 @@
 package aismartcharge
 
-// Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
+// Handler for smart-charge schedule suggestions.
 //
 // POST /api/v1/ai/charging/schedule/draft streams a propose-only schedule draft grounded in the canonical charge planner. The AI-gated route validates the form-shaped JSON body before opening SSE, never persists changes, and leaves the deterministic /smart-charge flow unchanged.
 

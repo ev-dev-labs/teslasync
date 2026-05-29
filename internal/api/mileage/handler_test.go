@@ -13,9 +13,9 @@ import (
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
-// Phase-43a / Prompt 0004 — HTTP tests for Handler.
+// HTTP tests for Handler.
 //
-// These pin Decision #7 coverage plus key edge cases: vehicle_id validation,
+// These pin key edge cases: vehicle_id validation,
 // VehicleExists before repo reads, repo failures, snake_case JSON, YYYY-MM
 // buckets, and nil first/last drive timestamps.
 
@@ -199,7 +199,7 @@ func TestMileage_BadVehicleID(t *testing.T) {
 	}
 }
 
-// ---------- 404 vs 200 disambiguation (Decision #6) ----------
+// ---------- 404 vs 200 disambiguation ----------
 
 func TestMileage_Monthly_UnknownVehicle_404(t *testing.T) {
 	t.Parallel()
@@ -369,7 +369,7 @@ func TestMileage_Monthly_GroupingPassThrough(t *testing.T) {
 		}
 	}
 
-	// Decision #1 — oldest first, ASC
+	// Oldest first, ASC.
 	for i := 1; i < len(body.Months); i++ {
 		if body.Months[i-1].YearMonth >= body.Months[i].YearMonth {
 			t.Errorf("not in ASC order: [%d]=%s >= [%d]=%s", i-1, body.Months[i-1].YearMonth, i, body.Months[i].YearMonth)
@@ -396,7 +396,7 @@ func TestMileage_Monthly_GroupingPassThrough(t *testing.T) {
 	}
 }
 
-// TestMileage_Monthly_DefaultWindowIs24Months locks Decision #3 default.
+// TestMileage_Monthly_DefaultWindowIs24Months locks the default 24-month window.
 func TestMileage_Monthly_DefaultWindowIs24Months(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
@@ -422,7 +422,7 @@ func TestMileage_Monthly_DefaultWindowIs24Months(t *testing.T) {
 
 // ---------- (c) Stats lifetime = sum of monthly ----------
 
-// Decision #7(c) — using a fake repo we set lifetime to the literal sum
+// Using a fake repo, set lifetime to the literal sum
 // of the monthly buckets and confirm the handler does not mutate it
 // (the repo is the source of truth; the handler is a pass-through).
 // This pins the contract that future repo authors must preserve.
@@ -647,7 +647,7 @@ func TestMonthsAgo_SnapsToFirstOfMonth(t *testing.T) {
 }
 
 // ============================================================================
-// Phase-43a / Prompt 0009 — /mileage/daily tests
+// /mileage/daily tests
 // ============================================================================
 //
 // Coverage matches the Monthly + Stats matrix:

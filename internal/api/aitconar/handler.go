@@ -1,6 +1,6 @@
 package aitconar
 
-// Phase-50 / 0050 — M2 TCO narration.
+// TCO narration.
 // This opt-in AI handler streams narration over the deterministic TCO summary;
 // guard.Wrap enforces ADR-015 off-mode and per-feature gating before provider
 // resolution.

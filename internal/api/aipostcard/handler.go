@@ -1,6 +1,6 @@
 package aipostcard
 
-// Phase-50 / 0060 — GEN1 Trip postcard and share-card image generation.
+// Trip postcard and share-card image generation handler.
 //
 // POST /api/v1/ai/share-cards/trip-image/draft streams a propose-only title and image-prompt draft for an existing trip. The AI-gated route validates the small JSON body before opening SSE, never saves or publishes anything, and leaves static share-card routes unchanged.
 

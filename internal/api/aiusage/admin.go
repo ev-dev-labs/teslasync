@@ -1,6 +1,6 @@
 package aiusage
 
-// Phase-50 / 0009 — F8 AI Admin Handler.
+// F8 AI Admin Handler.
 //
 // /api/v1/ai/admin/redaction-bypass reports redaction bypasses across tenants for
 // operators. The __redaction_bypass__ meta-feature mirrors __usage__: off-mode
@@ -41,10 +41,10 @@ const adminDefaultBypassWindow = 7 * 24 * time.Hour
 // gating.
 //
 // Why a wrapper instead of editing guard.go:
-//   - guard.go is NOT in this slice's allowed-files list (per the
-//     same constraint that motivated the __usage__ wrapper).
-//   - The wrapper isolates the meta-feature carve-out at the call
-//     site so future readers see the special case in context.
+// - guard.go is NOT in this slice's allowed-files list (per the
+// same constraint that motivated the __usage__ wrapper).
+// - The wrapper isolates the meta-feature carve-out at the call
+// site so future readers see the special case in context.
 type adminGuardSettings struct {
 	inner guard.Settings
 }

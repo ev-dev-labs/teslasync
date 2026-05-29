@@ -242,8 +242,8 @@ func setupFreshDB(t *testing.T, cfg config.DatabaseConfig) *database.DB {
 // buildHandler constructs a TelemetryHandler with no MQTT / no SSE hub — the
 // integration test exercises only the persistence pipeline.
 //
-// Phase-42a/0060: HTTP webhook ingest now dispatches through normalize.Pipeline,
-// so the handler MUST be wired with a pipeline via SetPipeline; otherwise
+// HTTP webhook ingest dispatches through normalize.Pipeline, so the handler
+// MUST be wired with a pipeline via SetPipeline; otherwise
 // ProcessBatch returns errPipelineNotWired and the test would receive an
 // HTTP 503 from the ingest path instead of writing to typed columns. The
 // pipeline is constructed with the same 12-writer set as cmd/teslasync's

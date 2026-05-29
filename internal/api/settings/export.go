@@ -1,6 +1,6 @@
 package settings
 
-// Phase-46 / Prompt 36 — settings export endpoint.
+// Settings export endpoint.
 // Exports only user-discoverable preferences; credentials, tokens, and webhook
 // secrets are deliberately excluded by the serializer contract. The attachment
 // filename includes a UTC date so repeated downloads remain distinguishable.

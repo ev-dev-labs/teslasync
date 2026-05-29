@@ -373,7 +373,7 @@ func TestIsTransitionRule(t *testing.T) {
 	}
 }
 
-// ─── Phase 40 / Prompt 06: trigger_mode + snooze engine tests ──────────────
+// ─── trigger_mode + snooze engine tests ────────────────────────────────────
 
 func TestRuleEngine_TriggerMode_Repeat_FiresEveryCooldown(t *testing.T) {
 	engine := NewRuleEngine()
@@ -560,7 +560,7 @@ func TestRuleEngine_Snooze_ExpiredAllowsOnceFire(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------
-// Phase-49 / Slice 0002 — persistent latch + race-safe MarkFired tests.
+// Persistent latch and race-safe MarkFired tests.
 //
 // fakeRuleStateStore is an in-memory implementation of RuleStateStore
 // satisfying the same interface that *dbalert.AlertRuleStateRepo
@@ -816,7 +816,7 @@ func TestRuleEngine_NilStateRepo_FallsBackToInMemory(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------
-// Phase-49 / Slice 0003 — max-fires-per-resolution cap (Decision D5).
+// Max-fires-per-resolution cap tests.
 //
 // A repeat-mode rule with a non-NULL MaxFiresPerResolution stops firing
 // after N fires until the underlying condition resolves (falling edge
@@ -989,11 +989,11 @@ func TestEvaluate_MaxFiresCap_OnceMode_NoEffect(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------
-// Phase-49 / Slice 0004 — Cooldown unification (Path C "merge").
+// Cooldown unification tests.
 // The legacy CooldownFSM was a second-stage gate stacked on top of
 // RuleEngine.Evaluate in telemetry_alerts.go. Slice 0004 deleted the
 // FSM and merged its only unique feature — the hourly safety cap — into
-// the engine. These tests pin the new behaviour:
+// the engine. These tests pin the behavior:
 //   * the per-(rule, vehicle) hourly window suppresses fires once the
 //     cap (engine-level, default 4, overridable via SetMaxFiresPerHour)
 //     is reached;
@@ -1184,7 +1184,7 @@ func TestEvaluate_FiresAfterCooldown_NoStackedFSM(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------
-// Phase-49 / Slice 0009 — escalation tier (Decision D8).
+// Escalation tier tests.
 //
 // repeatRuleWithEscalation builds a numeric repeat-mode rule with both
 // escalation knobs set. The base severity is intentionally `warn` so

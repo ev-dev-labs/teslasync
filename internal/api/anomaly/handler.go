@@ -18,7 +18,7 @@ import (
 
 // Handler detects unusual signal values and produces health alerts.
 //
-// Phase-50 / 0014 — U4 Anomaly explanation narration.
+// U4 Anomaly explanation narration.
 //
 // The detector logic (Z-score outliers, range violations, trend deltas) was
 // previously embedded inside [GetAnomalies]. It has been extracted into the
@@ -45,7 +45,7 @@ var _ aitools.AnomalySource = (*Handler)(nil)
 // ── Response types ───────────────────────────────────────────
 
 // anomalyResponse is the JSON wire shape served by GetAnomalies. The
-// shape is preserved byte-for-byte across the Phase-50/0014 refactor —
+// shape is preserved byte-for-byte across the refactor —
 // the frontend hook (web/src/api/hooks/useAnomalies.ts) and any
 // downstream consumers continue to see exactly the same field names,
 // types, and ordering as before.
@@ -133,7 +133,7 @@ var signalDisplayName = map[string]string{
 
 // GetAnomalies handles GET /analytics/anomalies?vehicle_id=X&days=7
 //
-// Phase-50/0014: this method is now a thin wrapper around the public
+// this method is now a thin wrapper around the public
 // [Handler.DetectAnomalies] detector. The detector returns the
 // AI-shared result type, which we translate back into the legacy
 // anomalyResponse wire shape (no field renames, no semantic changes).
@@ -221,24 +221,24 @@ func anomalyContextResultToResponse(r *aitools.AnomalyContextResult) anomalyResp
 // AND the AI tool `query_anomaly_context` (internal/ai/tools/anomaly/anomaly.go)
 // both call into — there is exactly ONE detector, period.
 //
-// Behavioural contract preserved across the Phase-50/0014 refactor:
+// Behavioural contract preserved across the refactor:
 //
-//   - `days` is NOT validated here; the HTTP handler clamps to [1,30]
-//     and the AI tool's input schema does the same. Passing 0 or a
-//     negative value yields whatever Postgres returns for an empty
-//     window (no anomalies).
-//   - Per-stage query failures are LOGGED via zerolog and SWALLOWED;
-//     the method always returns a non-nil result with a nil error.
-//     This mirrors the pre-refactor handler's graceful-degradation
-//     posture: a flaky DB connection should produce an "everything
-//     looks normal" answer, not a 500. The HTTP handler relies on
-//     this contract to stay 200-OK in degraded conditions.
-//   - The output `Anomalies` slice is non-nil even when empty (the
-//     legacy handler relied on this for `json:"anomalies":[]` not
-//     `null`; preserved here so the JSON shape is byte-identical).
-//   - HealthSummary always includes the five canonical category keys
-//     (battery, tires, motors, hvac, charging) seeded to "normal" so
-//     the frontend can render the health grid without nil checks.
+// - `days` is NOT validated here; the HTTP handler clamps to [1,30]
+// and the AI tool's input schema does the same. Passing 0 or a
+// negative value yields whatever Postgres returns for an empty
+// window (no anomalies).
+// - Per-stage query failures are LOGGED via zerolog and SWALLOWED;
+// the method always returns a non-nil result with a nil error.
+// This mirrors the pre-refactor handler's graceful-degradation
+// posture: a flaky DB connection should produce an "everything
+// looks normal" answer, not a 500. The HTTP handler relies on
+// this contract to stay 200-OK in degraded conditions.
+// - The output `Anomalies` slice is non-nil even when empty (the
+// legacy handler relied on this for `json:"anomalies":[]` not
+// `null`; preserved here so the JSON shape is byte-identical).
+// - HealthSummary always includes the five canonical category keys
+// (battery, tires, motors, hvac, charging) seeded to "normal" so
+// the frontend can render the health grid without nil checks.
 func (h *Handler) DetectAnomalies(ctx context.Context, vehicleID int64, days int) (*aitools.AnomalyContextResult, error) {
 	since := time.Now().AddDate(0, 0, -days)
 

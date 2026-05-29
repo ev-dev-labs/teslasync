@@ -1,7 +1,7 @@
 // Package vehicleconfig hosts the HTTP handlers for the
 // /api/v1/vehicle-config resource — vehicle configuration history
 // (List) + most-recent flattened configuration (Latest), both backed by
-// the signal-log change feed (ADR-002 / phase-39).
+// the ADR-002 signal-log change feed.
 //
 // # Layer
 //
@@ -9,10 +9,9 @@
 //
 // # Why a subpackage
 //
-// Carved in Phase R2c.3 — third VehicleHandler-sibling micro-carve
-// after R2c.1 (vehicleaccess) + R2c.2 (vehicleinfo). Same precedent as
-// R2a/R2b/R2c family: one resource cluster per subpackage, depends only
-// on shared infrastructure (apperror, httpx, apiparams) and external
+// This resource cluster lives in its own subpackage and follows the same
+// resource-per-package precedent as its siblings. It depends only on shared
+// infrastructure (apperror, httpx, apiparams) and external
 // core packages (internal/signal). MUST NOT import its parent.
 //
 // # Scope

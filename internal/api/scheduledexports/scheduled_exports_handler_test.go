@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 65 — scheduled exports HTTP handler tests.
+// Scheduled exports HTTP handler tests.
 //
 // These pin AUTH_GUARD_CHECK's boundary: owner_subject comes only from the
 // configured ForwardAuth header, and body-supplied owner_subject is rejected

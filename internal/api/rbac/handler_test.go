@@ -1,4 +1,4 @@
-// Phase-46 / Prompt 44 — RBACHandler unit tests.
+// RBACHandler unit tests.
 //
 // These handler-level tests isolate open-mode behavior, local matrix assembly,
 // batch validation, repository calls, and current-user permission projection.

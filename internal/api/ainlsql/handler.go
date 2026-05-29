@@ -1,6 +1,6 @@
 package ainlsql
 
-// Phase-50 / 0057 — PU1 Natural-language SQL playground.
+// Handler for the natural-language SQL playground.
 //
 // POST /api/v1/ai/power/sql/draft streams an LLM-proposed read-only SQL draft for the manual SQL playground. Before dispatch, the handler binds a curated install-wide schema snapshot into context so tools reject any table outside the whitelist, even if prompt injection asks for it.
 //
@@ -487,8 +487,8 @@ var _ SchemaCatalogSource = (*SchemaCatalogSourceImpl)(nil)
 // suggest a narrower time filter") without churning the tool
 // interface.
 //
-// For Phase-50 / 0057 the validator is intentionally permissive:
-// every draft with a valid shape is accepted. The per-request
+// The validator is intentionally permissive: every draft with a
+// valid shape is accepted. The per-request
 // scope binding already prevented out-of-catalog tables; the
 // keyword scan already prevented DML/DDL; the prefix check
 // already prevented non-read statements. There is nothing else

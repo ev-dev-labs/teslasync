@@ -1,6 +1,6 @@
 package aisuggeo
 
-// Phase-50 / 0038 — G2 suggest new geofences.
+// G2 suggest new geofences.
 //
 // This opt-in POST /api/v1/ai/geofences/draft surface streams one-shot
 // geofence drafts for a body-supplied location_id. The guard in ai_routes.go
@@ -224,7 +224,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 var _ http.Handler = (*Handler)(nil)
 
 // Production wiring stays next to the handler so the slice's tool-port intent
-// is local. router.go reuses the slice-0037 LocationSource because both
+// is local. router.go reuses the shared LocationSource because both
 // strategies consume the same VisitedLocation aggregate.
 
 // SuggestGeofenceValidator enforces the same shape rules as the baseline

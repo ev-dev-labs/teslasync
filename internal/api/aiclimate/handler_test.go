@@ -1,10 +1,10 @@
-// Phase-50 / 0031 — T1 Preheat and precool recommender.
+// Tests for the AI preheat and precool recommender.
 //
 // Off-mode, body-parser, and advisor tests. The off-mode test is the
 // load-bearing proof that AI mode off hides the AI route while the baseline
 // manual climate path stays reachable (ADR-015 §I3, §I6).
 //
-// Streaming coverage lives in the F6 eval harness because it needs live DB and
+// Streaming coverage lives in the AI eval harness because it needs live DB and
 // signal-store fixtures.
 
 package aiclimate

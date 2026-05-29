@@ -54,8 +54,8 @@ var (
 
 // BulkUpdate runs an allowlisted bulk operation across multiple export jobs.
 //
-// Phase-45 / Prompt 32 — bulk-actions framework. Currently only `op=delete`
-// is supported; the switch is left open so future ops (e.g. archive,
+// Currently only `op=delete` is supported; the switch is left open so future
+// ops (e.g. archive,
 // re-process) plug in without changing the request shape.
 //
 // Contract:

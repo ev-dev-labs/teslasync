@@ -21,9 +21,8 @@ import (
 // Handler serves battery cell analytics derived from signal store
 // (real-time) and signal_log hypertable (historical).
 //
-// Phase-39 migration: the per-signal "value as of now" lookups in
-// getLatestSignal now resolve through the canonical signal.StateReader
-// (ADR-002 / phase-39) instead of the legacy
+// The per-signal "value as of now" lookups in getLatestSignal resolve
+// through the canonical signal.StateReader (ADR-002) instead of the legacy
 // signaldb.SignalLogReader's per-signal helper. Both readers are
 // intentionally retained side-by-side because the historical
 // hourly-bucket aggregation in getHistory
@@ -244,7 +243,7 @@ func toFloatOk(v interface{}) (float64, bool) {
 }
 
 // getLatestSignal reads a fresh live signal first, falling back to the
-// canonical signal.StateReader (ADR-002 / phase-39). The boolean return
+// canonical signal.StateReader (ADR-002). The boolean return
 // distinguishes "signal never emitted" (false) from "signal emitted with
 // value 0" (true, 0). A non-nil error indicates a StateReader transport
 // failure (e.g. pgx connection drop) that callers MUST propagate as a 500

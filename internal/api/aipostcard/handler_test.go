@@ -1,4 +1,4 @@
-// Phase-50 / 0060 — GEN1 Trip postcard and share-card image generation.
+// GEN1 Trip postcard and share-card image generation.
 //
 // Off-mode + baseline-coexistence tests for the AI trip-postcard-
 // share-card-image-generation handler. The off-mode test
@@ -45,29 +45,28 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestTripPostcardAIOffStaticShareCardOnly is the load-bearing
-// off-mode contract proof for slice 0060. It mounts the AI
+// off-mode contract proof for tool group. It mounts the AI
 // trip-postcard-share-card-image-generation route through the
 // guard with ai_mode='off' and proves:
 //
-//   - The /api/v1/ai/share-cards/trip-image/draft route returns
-//     404 (the guard fails closed even when the per-feature
-//     toggle is on).
-//   - The 404 body does not leak feature metadata or route
-//     identifiers (ADR-015 §I9).
-//   - A baseline GET /api/v1/shared/{token} route serving the
-//     deterministic static shared-drive envelope remains
-//     reachable under the same router — proof that the slice
-//     does NOT replace the deterministic static-share-card
-//     surface (ADR-015 §I3).
+// - The /api/v1/ai/share-cards/trip-image/draft route returns
+// 404 (the guard fails closed even when the per-feature
+// toggle is on).
+// - The 404 body does not leak feature metadata or route
+// identifiers (ADR-015 §I9).
+// - A baseline GET /api/v1/shared/{token} route serving the
+// deterministic static shared-drive envelope remains
+// reachable under the same router — proof that the slice
+// does NOT replace the deterministic static-share-card
+// surface (ADR-015 §I3).
 //
 // The test name MUST stay
-// TestTripPostcardAIOffStaticShareCardOnly — the slice prompt's
+// TestTripPostcardAIOffStaticShareCardOnly — the request's
 // verification command runs `npm test -- --run
 // TestTripPostcardAIOffStaticShareCardOnly`, so both the Go and
 // React off-mode proofs answer to the same test-name pattern.
 func TestTripPostcardAIOffStaticShareCardOnly(t *testing.T) {
 	t.Parallel()
-
 	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
@@ -200,7 +199,6 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 // the frontend.
 func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
-
 	cases := []struct {
 		name   string
 		body   string
@@ -239,7 +237,6 @@ func TestHandler_RejectsBadBody(t *testing.T) {
 // parsing. A request body that exceeds the cap surfaces as 413.
 func TestHandler_RejectsOversizedBody(t *testing.T) {
 	t.Parallel()
-
 	// Build a body whose serialized length exceeds the 16 KiB cap.
 	// 17 KiB of style_hint padding is enough.
 	huge := `{"trip_id":101,"style_hint":"` + strings.Repeat("X", maxBodyBytes+128) + `"}`

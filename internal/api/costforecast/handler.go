@@ -335,8 +335,8 @@ func (h *Handler) computeBreakdown(ctx context.Context, vehicleID int64, histori
 	var homeCost, homekWh, scCost, sckWh float64
 	var homeCount, scCount int
 
-	// Phase-42 (000184_charging_si): SI canonical columns. The home/supercharger
-	// split previously bucketed by the legacy max-kW power column <= 22 (kW); under SI
+	// SI canonical charging columns: the home/supercharger split previously
+	// bucketed by the legacy max-kW power column <= 22 (kW); under SI
 	// the same threshold becomes peak_power_w <= 22000 (W). Energy converted
 	// from total_energy_added_wh -> kWh at SQL boundary so home/sc kWh
 	// totals match the legacy units consumed by chargerCategory.AvgCostPerKWh.
@@ -397,7 +397,7 @@ func (h *Handler) computeGasComparison(ctx context.Context, vehicleID int64, his
 	const defaultConsumption = 0.085 // L/km (gas car)
 
 	// Average km/month from drives
-	// Phase-42 (000185_drives_si): drives.distance_m and drives.started_at replace the legacy mileage and timestamp columns.
+	// drives.distance_m and drives.started_at replace the legacy mileage and timestamp columns.
 	// Pre-existing bug preserved: the variable is named totalKm but treats the
 	// numeric value as miles downstream (defaultConsumption is L/km but is
 	// multiplied by mileage in miles). To keep the JSON output (avgKmPerMonth)
@@ -566,8 +566,8 @@ func NewAICostForecaster(db *database.DB) *AICostForecaster {
 // can quote.
 //
 // Currency is left empty for now: the existing baseline response
-// does not surface a currency code, and Phase-48's SI-canonical
-// migration left cost_currency on charging_sessions but the
+// does not surface a currency code, and the SI-canonical migration
+// left cost_currency on charging_sessions while the
 // aggregated `cost_decimal` already mixes currencies at the row
 // level. Surfacing a single currency for the aggregate would
 // require a separate query + assumption layer that lives outside

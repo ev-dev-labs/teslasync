@@ -198,7 +198,7 @@ func TestTripPlanner_UsesCurrentSOCAndLocation(t *testing.T) {
 // could be obtained — which is indistinguishable on the frontend from
 // "client really wants the default 80% / really forgot to pass an
 // origin" and would route every plan from the wrong starting state
-// during a signal-store outage. This phase-39 migration tightens error
+// during a signal-store outage. This path tightens error
 // handling so the frontend can surface the failure rather than silently
 // rendering a wrong-but-plausible plan. A future regression that
 // reverts to the silent-swallow behavior is caught here.

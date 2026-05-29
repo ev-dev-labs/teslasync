@@ -7,9 +7,6 @@ import (
 	"testing"
 )
 
-// Phase R2d.67 (2026-05-28): TestCommandWhitelistCovers relocated to
-// internal/api/command/handler_test.go alongside the command whitelist.
-
 func TestWriteErrorResponse(t *testing.T) {
 	w := httptest.NewRecorder()
 	writeError(w, http.StatusBadRequest, "test error")

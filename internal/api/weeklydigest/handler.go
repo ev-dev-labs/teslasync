@@ -45,8 +45,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	query := func(start, end time.Time) weekStats {
 		var s weekStats
-		// Phase-42 SI canonical drives (000185): distance_m, energy_used_wh,
-		// started_at. Convert to km / kWh in the SELECT so JSON populate code
+		// SI canonical drives columns: distance_m, energy_used_wh, and started_at.
+		// Convert to km / kWh in the SELECT so JSON populate code
 		// keeps the legacy shape (distance_km / energy_kwh / cost / efficiency).
 		// The 0.14 USD/kWh multiplier is applied to energy_kwh.
 		var distM, energyWh, costEnergyWh float64

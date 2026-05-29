@@ -9,7 +9,7 @@ import (
 
 // Handler exposes the publishable column metadata for each export job
 // type so the frontend column picker can render checkboxes without
-// hard-coding the catalog. Phase-46 / Prompt 62.
+// hard-coding the catalog.
 type Handler struct{}
 
 // NewHandler returns a handler with no dependencies; the catalog lives

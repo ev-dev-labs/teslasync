@@ -1,9 +1,9 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+// Learned per-vehicle anomaly baseline parity tests.
 //
 // safe-range parity test: pins
 // internal/api/anomaly.safeRanges <-> internal/ml/anomaly.StaticEnvelope()
-// byte-for-byte. The two maps MUST stay identical for the lifetime
-// of the slice; if a future change updates one but not the other,
+// byte-for-byte. The two maps MUST stay identical; if a future change
+// updates one but not the other,
 // learned-baseline fallback would silently disagree with the
 // deterministic detector and the off-mode contract (ADR-015 §I3)
 // would regress without anyone noticing.

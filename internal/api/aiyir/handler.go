@@ -1,6 +1,6 @@
 package aiyir
 
-// Phase-50 AI handler.
+// Year-in-review narration AI handler.
 //
 // This endpoint runs an opt-in, guarded dispatch+SSE flow without persistence.
 // ADR-015 baseline routes remain canonical when AI is off or disabled.
@@ -25,7 +25,7 @@ import (
 // maxIterations bounds the dispatcher's tool-loop. YIR
 // narration is one-tool-call-then-answer; a hard ceiling of 4 is
 // generous for a model that occasionally retries the tool call once
-// before settling. Mirrors aiDigestMaxIterations from slice 0012.
+// before settling. Mirrors aiDigestMaxIterations.
 const maxIterations = 4
 
 // Handler is the HTTP handler for
@@ -46,13 +46,13 @@ type Handler struct {
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
+// registry: AI provider registry (decorator chain already applied).
+// toolReg: process-wide tool registry. MUST contain
 //
 //	query_year_in_review_context (registered by
 //	yir.RegisterYearReviewTools in router.go).
 //
-// strat:      the yir-narration Strategy (one per process).
+// strat: the yir-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
 func NewHandler(
 	registry *provider.Registry,

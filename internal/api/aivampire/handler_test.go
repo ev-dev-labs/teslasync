@@ -1,4 +1,4 @@
-// Phase-50 / 0030 — C5 Vampire-drain explanation.
+// Vampire-drain explanation tests.
 //
 // Off-mode + baseline-coexistence tests for the AI
 // vampire-drain-explanation handler. The off-mode test

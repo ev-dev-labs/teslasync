@@ -18,8 +18,8 @@ import (
 
 // SleepHandler handles sleep efficiency analytics requests.
 //
-// Phase-42 (prompt 0077): vehicle_states and vampire_drain_events were
-// dropped without SI replacement. Vehicle-state distribution is now
+// vehicle_states and vampire_drain_events were dropped without SI
+// replacement. Vehicle-state distribution is now
 // derived from fsm_transitions (000187); the sentry-vs-vampire drain
 // comparison is preserved as zero-valued JSON keys so the frontend
 // contract is unchanged. The drain field is absent from typed signal_log
@@ -119,8 +119,8 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 		sleepEfficiencyPct = (sleepMinutes / totalMinutesAll) * 100
 	}
 
-	// Phase-42 (prompt 0077): sentry-vs-vampire drain comparison removed
-	// (vampire_drain_events table dropped). Frontend keys are preserved
+	// Sentry-vs-vampire drain comparison is unavailable because
+	// vampire_drain_events was dropped. Frontend keys are preserved
 	// with empty/zero values to avoid breaking the contract.
 	type sentryGroup struct {
 		SentryMode     bool    `json:"sentry_mode"`
@@ -173,10 +173,9 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	extraMonthlyKWh := extraDrainRate / 100 * (batteryCapacityWh / 1000.0) * hoursPerMonth
 	extraMonthlyCost := extraMonthlyKWh * baseCostPerKWh
 
-	// Phase-42 (prompt 0077): the avg-time-to-sleep query against
-	// vehicle_states is gone; the value is preserved at 0 until a
-	// follow-on prompt re-derives it from fsm_transitions Online→Asleep
-	// pairing.
+	// The avg-time-to-sleep query against vehicle_states is gone;
+	// the value is preserved at 0 until it can be re-derived from
+	// fsm_transitions Online→Asleep pairing.
 	var timeToSleepAvg float64
 
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{

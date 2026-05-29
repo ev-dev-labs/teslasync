@@ -1,7 +1,7 @@
-// Phase-46 / Prompt 35 — TOTP enrollment handler.
+// TOTP enrollment handler.
 //
 // Adds per-subject TOTP enrollment / verification on top of the
-// in-memory sudo step-up store from prompt 31. The handler is auth-mode
+// in-memory sudo step-up store. The handler is auth-mode
 // aware: in open mode (no FORWARD_AUTH_HEADER configured) every endpoint
 // returns 501 with code AUTH_MODE_OPEN so the SPA can render an inline
 // "feature requires login" placeholder without a noisy 401 loop.
@@ -10,8 +10,8 @@
 // may carry their own TOTP factor at the proxy edge — that protects the
 // initial login but cannot rate-limit destructive admin actions inside
 // TeslaSync. This handler implements TeslaSync's own RFC 6238 layer so
-// the sudo step-up dialog (prompt 31) can require a second factor for
-// destructive operations regardless of the upstream provider.
+// the sudo step-up dialog can require a second factor for destructive
+// operations regardless of the upstream provider.
 package totp
 
 import (
@@ -108,8 +108,8 @@ type TOTPStore interface {
 // SudoMinter is the narrow seam the TOTP handler uses to mint a sudo
 // token after a successful per-user TOTP step-up. Implemented by
 // *dbauth.SudoTokenStore so the production wiring just passes the
-// existing store from prompt 31 — no second token store, no shared
-// secret duplication.
+// existing store, so there is no second token store or shared secret
+// duplication.
 type SudoMinter interface {
 	Mint(subject string) (string, time.Time, error)
 }
@@ -419,8 +419,8 @@ func (h *TOTPHandler) Verify(w http.ResponseWriter, r *http.Request) {
 // VerifySudo implements POST /auth/totp/sudo.
 //
 // Body: { code } OR { backup_code }. On success, mints a sudo token
-// (same TTL as the password path in prompt 31) and returns it so the
-// SPA's reauth interceptor can replay the original gated request.
+// using the same TTL as the password path and returns it so the SPA's
+// reauth interceptor can replay the original gated request.
 //
 // This is the per-user equivalent of SudoHandler.Reauth's TOTP branch
 // — that branch validates against the SHARED TESLASYNC_SUDO_TOTP_SECRET

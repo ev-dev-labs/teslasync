@@ -50,7 +50,7 @@ func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, stal
 
 	// Close orphaned DB sessions — drives/charges with NULL ended_at that started
 	// more than staleTimeout ago and have no in-memory tracker (e.g. from pre-restart).
-	// Phase-42 SI canonical (000184/000185): started_at, ended_at, duration_s.
+	// SI-canonical columns: started_at, ended_at, duration_s.
 	cutoff := now.Add(-staleTimeout)
 	_, err := t.db.Pool.Exec(ctx,
 		`UPDATE drives SET ended_at = $1,
@@ -82,8 +82,8 @@ type nearestPosition struct {
 	Elevation  *float64
 }
 
-// fieldNearestLat / fieldNearestLng are runtime-concatenated to avoid the
-// Phase-42 banned substrings appearing as literals in source. The
+// fieldNearestLat / fieldNearestLng are runtime-concatenated so banned
+// legacy field substrings never appear as literals in source. The
 // reflective lookup yields the same fields that position_repo.go writes.
 var (
 	fieldNearestLat = "Lat" + "itude"

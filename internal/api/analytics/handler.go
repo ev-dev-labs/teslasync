@@ -38,13 +38,10 @@ type chargingByVehicleFetcher interface {
 
 // AnalyticsHandler handles fleet analytics HTTP requests.
 //
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (raw pivot +
-// snapshot helpers) has been replaced with the canonical
-// signal.StateReader for the per-vehicle current-battery snapshot the
-// Fleet endpoint folds into the fleet battery_trend response. The
-// underlying repo dependencies are typed as small fetcher interfaces so
-// the migrated handler is unit-testable without a real Postgres pool.
-// See ADR-002.
+// It uses signal.StateReader for the per-vehicle current-battery snapshot
+// that the Fleet endpoint folds into the fleet battery_trend response. Repo
+// dependencies are small fetcher interfaces so the handler is unit-testable
+// without a real Postgres pool. See ADR-002.
 type AnalyticsHandler struct {
 	vehicleRepo  vehicleListFetcher
 	driveRepo    driveByVehicleFetcher

@@ -1,6 +1,6 @@
 package aichargcurve
 
-// Phase-50 / 0028 — C3 charging-curve fingerprint clustering.
+// Handler for charging-curve fingerprint clustering.
 //
 // Serves the opt-in SSE narrator for charging-curve clusters. The guard
 // returns 404 before this handler runs when AI mode or this feature is off;

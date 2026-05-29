@@ -1,6 +1,6 @@
 package aiusage
 
-// Phase-50 / 0004 — F3 AI Usage Handler tests.
+// AI usage handler tests.
 //
 // Pure handler-layer coverage: fake settings + fake repo so the tests
 // run without a database. The "wired through guard" path is exercised
@@ -9,7 +9,7 @@ package aiusage
 //
 // What we DON'T test here:
 //   - Repo SQL (covered by ai_call_log_repo_test.go).
-//   - guard.Wrap behaviour (covered by internal/ai/guard tests in F0).
+//   - guard.Wrap behaviour (covered by internal/ai/guard tests).
 // What we DO test here:
 //   - usageGuardSettings carve-out: __usage__ tracks AIMode; everything
 //     else passes through to the inner Settings.

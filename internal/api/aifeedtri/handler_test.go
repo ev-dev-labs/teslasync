@@ -1,4 +1,4 @@
-// Phase-50 / 0046 — S5 Feedback queue triage.
+// Feedback queue triage tests.
 //
 // Off-mode and baseline-coexistence tests. The off-mode test is the
 // load-bearing proof that AI mode off hides the AI route while deterministic

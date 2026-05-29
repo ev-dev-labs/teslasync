@@ -1,6 +1,6 @@
 package aidrivecoach
 
-// Phase-50 / 0018 — N4 Per-drive coaching narrative.
+// Per-drive coaching narrative handler.
 //
 // This is the opt-in LLM narration layer for POST /api/v1/ai/drives/{driveID}/coach.
 // The guard returns 404 before this handler runs when AI or the feature is disabled (ADR-015 §I6).

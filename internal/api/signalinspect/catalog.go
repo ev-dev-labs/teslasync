@@ -59,9 +59,9 @@ func AvailableSignals() []AvailableSignal {
 // process start so the list cannot drift from the vendored proto. The
 // /system/status health response surfaces it as `supported_signals`.
 //
-// Forward-only / Phase-42: replaces the hand-curated static list that
-// used to live in this file. The static list shipped pre-Phase-42 and
-// would silently fall behind whenever the proto bumped; deriving from
+// Forward-only: replaces the hand-curated static list that used to live
+// in this file. The old static list could silently fall behind whenever
+// the proto bumped; deriving from
 // protomodel makes a proto bump automatically refresh the catalog.
 var SubscribedSignals = subscribedSignalsFromProtomodel()
 

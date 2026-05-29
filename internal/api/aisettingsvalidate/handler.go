@@ -1,7 +1,6 @@
 package aisettingsvalidate
 
-// Phase-50 / 0003 — F2 Settings UI for AI.
-// Phase-50 / Azure adapter — extended for cloud-probe validation.
+// AI settings validation.
 //
 // Mounts POST /api/v1/settings/ai/validate-config outside /api/v1/ai/* so users
 // can validate while opting in and tools/aivet can keep the invariant that all

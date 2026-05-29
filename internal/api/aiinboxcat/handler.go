@@ -1,6 +1,6 @@
 package aiinboxcat
 
-// Phase-50 / 0035 — A2 Inbox auto-categorization.
+// Inbox auto-categorization handler.
 //
 // ai_inbox_categorization_handler.go implements the LLM-backed
 // handler at POST /api/v1/ai/alerts/inbox/categorize. The flow
@@ -78,11 +78,10 @@ import (
 // other A-tier propose-only handlers.
 const maxIterations = 8
 
-// defaultWindowDays is the trailing-window
-// length the production InboxCategorizationSource adapter
-// projects across when reading the recent notification_logs.
-// 7 mirrors the canonical "recent" window used elsewhere in
-// Phase-50.
+// defaultWindowDays is the trailing-window length the production
+// InboxCategorizationSource adapter projects across when reading
+// recent notification_logs. Seven days mirrors the canonical
+// "recent" window used elsewhere.
 const defaultWindowDays = 7
 
 // minEvents is the minimum total

@@ -60,7 +60,7 @@ func newBatteryCellsRequest(t *testing.T, vehicleID string) *http.Request {
 // resolves BrickVoltageMax / BrickVoltageMin / NumBrickVoltageMax /
 // NumBrickVoltageMin / PackVoltage / ModuleTempMax / ModuleTempMin via
 // signal.StateReader.SignalAt at time.Now() and that those values flow
-// into the JSON response. Phase-39 migrated this handler off the legacy
+// into the JSON response. This handler no longer uses the legacy
 // signaldb.SignalLogReader.SignalAt helper; a future regression that
 // re-points the per-signal lookups at signalLogReader (which would
 // reintroduce the deleted helper) or anchors them to a stale "at" would
@@ -168,8 +168,8 @@ func TestBatteryCells_LatestVoltage_UsesSignalAt(t *testing.T) {
 // swallowed SignalAt errors and returned a "no_data" payload, which is
 // indistinguishable on the frontend from "vehicle truly idle / no brick
 // voltage history" and rendered the Battery Cells panel empty even when
-// the underlying read had genuinely failed. This phase-39 migration
-// tightens error handling so the frontend can surface the failure
+// the underlying read had genuinely failed. Current error handling
+// lets the frontend surface the failure
 // rather than silently rendering a "battery looks dead" panel. A future
 // regression that reverts to the silent-swallow behavior is caught here.
 func TestBatteryCells_PropagatesError(t *testing.T) {

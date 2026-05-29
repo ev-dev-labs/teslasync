@@ -227,7 +227,7 @@ func keysOf(m map[string]any) []string {
 
 func TestSentinelMessages_AreStableAndDistinct(t *testing.T) {
 	// Pin the human-readable messages because the frontend may dispatch on
-	// substring match for telemetry classification (Phase-40 / Prompt 51).
+	// substring matches for telemetry classification.
 	cases := []struct {
 		err  error
 		want string

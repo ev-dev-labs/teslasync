@@ -1,6 +1,6 @@
-// Phase-50 / 0057 — PU1 Natural-language SQL playground.
+// Off-mode and baseline-coexistence tests for the natural-language SQL playground.
 //
-// Off-mode + baseline-coexistence tests for the AI nl-sql-playground
+// These tests cover the AI nl-sql-playground
 // handler. The off-mode test (TestNLSQLPlaygroundAIOffManualSQLWorks)
 // is the slice's load-bearing AI-OFF contract proof: it asserts that
 // the AI route returns 404 when settings.ai_mode='off' even when the

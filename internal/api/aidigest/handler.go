@@ -1,6 +1,6 @@
 package aidigest
 
-// Phase-50 / 0012 — U2 weekly digest narration.
+// Handler for weekly digest narration.
 //
 // This LLM-backed SSE handler is an opt-in AI surface; the deterministic
 // weekly digest endpoint remains the baseline path when AI is disabled.

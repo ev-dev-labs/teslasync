@@ -42,10 +42,9 @@ type alertRuleRepository interface {
 	SetSnooze(context.Context, int64, *time.Time) error
 }
 
-// alertRuleBulkRepository carries the bulk operations introduced by
-// Phase-40 / Prompt 51. Kept as a separate interface so existing
-// alertRuleRepository implementers (including the test fakes) don't need
-// to opt in unless they provide bulk semantics.
+// alertRuleBulkRepository carries optional bulk operations. Kept as a
+// separate interface so existing alertRuleRepository implementers (including
+// the test fakes) don't need to opt in unless they provide bulk semantics.
 type alertRuleBulkRepository interface {
 	FilterExistingIDs(context.Context, []int64) ([]int64, error)
 	BulkSetEnabled(context.Context, []int64, bool) (int64, error)
@@ -57,7 +56,7 @@ type notificationRepository interface {
 	GetChannel(context.Context, int64) (*notificationmodel.NotificationChannel, error)
 	GetAllChannels(context.Context) ([]*notificationmodel.NotificationChannel, error)
 
-	// Phase-46 / Prompt 20 — alert acknowledgement + audit timeline.
+	// Alert acknowledgement and audit timeline operations.
 	GetLog(context.Context, int64) (*notificationmodel.NotificationLog, error)
 	AcknowledgeLog(context.Context, int64, string, string) (*notificationmodel.NotificationLog, bool, error)
 	ReopenLog(context.Context, int64, string) (*notificationmodel.NotificationLog, bool, error)
@@ -115,8 +114,8 @@ func (h *AlertHandler) List(w http.ResponseWriter, r *http.Request) {
 // frontend `Alert` interface in web/src/api/types.ts. Built from
 // notification_logs joined to alert_rules per ADR-010 Option B.
 //
-// RuleID, RuleSignal, and RuleSeverity (Phase 40 / Prompt 14) carry the
-// owning alert rule's identity through to the frontend so it can build a
+// RuleID, RuleSignal, and RuleSeverity carry the owning alert rule's
+// identity through to the frontend so it can build a
 // "drill-through" URL — e.g. an alert on `BatteryLevel` deep-links to
 // `/battery?vehicle_id=N&t=...&signal=BatteryLevel`. They are nil when the
 // notification log has no `alert_id` (e.g. a one-off test notification) or
@@ -131,8 +130,8 @@ type AlertResponse struct {
 	IsRead    bool      `json:"is_read"`
 	CreatedAt time.Time `json:"created_at"`
 
-	// Drill-through metadata (Phase 40 / Prompt 14). Populated when the
-	// notification log links to a still-existing alert rule.
+	// Drill-through metadata populated when the notification log links to a
+	// still-existing alert rule.
 	RuleID       *int64  `json:"rule_id,omitempty"`
 	RuleSignal   *string `json:"rule_signal,omitempty"`   // e.g., "BatteryLevel"
 	RuleSeverity *string `json:"rule_severity,omitempty"` // raw rule severity: "info" | "warn" | "critical"
@@ -227,8 +226,7 @@ func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs [
 				if rule.VehicleID != nil {
 					resp.VehicleID = *rule.VehicleID
 				}
-				// Drill-through metadata (Phase 40 / Prompt 14). Carry the
-				// owning rule's identity so the frontend can deep-link from
+				// Carry the owning rule's identity so the frontend can deep-link from
 				// the alert to the relevant context page (e.g. /battery,
 				// /charging) with the alert's signal + timestamp preselected.
 				ruleID := rule.ID

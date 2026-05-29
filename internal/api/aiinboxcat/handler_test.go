@@ -1,4 +1,4 @@
-// Phase-50 / 0035 — A2 Inbox auto-categorization.
+// Inbox auto-categorization tests.
 //
 // Off-mode + baseline-coexistence tests for the AI inbox
 // categorization handler. The off-mode test

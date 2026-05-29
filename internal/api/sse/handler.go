@@ -24,7 +24,7 @@ const sseTracerName = "internal/api/sse"
 
 func sseTracer() oteltrace.Tracer { return otel.Tracer(sseTracerName) }
 
-// SignalChangeEvent is the Phase-42 typed-envelope SSE payload emitted by
+// SignalChangeEvent is the typed-envelope SSE payload emitted by
 // BroadcastSignalChange for a single live-signal update. Wire shape:
 //
 //	{ "vehicle_id": <int64>, "field": <proto-name>, "kind": <ValueKind>,
@@ -143,7 +143,7 @@ func (h *EventHub) ClientCount() int {
 }
 
 // BroadcastSignalChange emits a "signal_change" SSE event for a single
-// live-signal update using the Phase-42 typed envelope. The signal.Value
+// live-signal update using the typed envelope. The signal.Value
 // is forwarded directly: its Raw becomes the typed `value` field and its
 // Timestamp becomes `ts`. The ValueKind is resolved from
 // protomodel.SignalsByName[field] so the frontend can switch on it without

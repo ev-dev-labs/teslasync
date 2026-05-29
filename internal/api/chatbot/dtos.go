@@ -33,9 +33,8 @@ func (h *ChatbotHandler) History(w http.ResponseWriter, r *http.Request) {
 
 // Sessions lists recent chat sessions with rich per-session metadata
 // (title, message count, timestamps, first-message preview). Replaces the
-// pre-Phase-40 behavior of returning a bare []string of session ids — the
-// frontend sidebar (Phase 40 / Prompt 56) needs the title and timestamps
-// to render and order entries.
+// old bare []string response because the frontend sidebar needs titles and
+// timestamps to render and order entries.
 func (h *ChatbotHandler) Sessions(w http.ResponseWriter, r *http.Request) {
 	sessions, err := h.chat.ListSessions(r.Context(), 50)
 	if err != nil {

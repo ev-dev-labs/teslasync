@@ -240,25 +240,25 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/automation"
 	"github.com/ev-dev-labs/teslasync/internal/automation/action"
 
-	// Phase-50 / 0001 — F0 AI-Off Contract (ADR-015). The guard
+	// F0 AI-Off Contract (ADR-015). The guard
 	// package is the only sanctioned mount point for /api/v1/ai/*
 	// routes; tools/aivet refuses to merge a router change that
 	// introduces an AI route via a bare HandlerFunc.
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/feedback"
 
-	// Phase-50 / 0009 — F8 Redaction Layer. The decorator is the
+	// F8 Redaction Layer. The decorator is the
 	// innermost wire-side wrap so every cloud call is sanitized
 	// before audit/trace see the post-redaction text. PolicyFromContext
 	// is the resolver — dispatcher.Run installs the strategy's
-	// RedactionPolicy() into ctx via the redactadapter bridge.
+	// RedactionPolicy into ctx via the redactadapter bridge.
 	"github.com/ev-dev-labs/teslasync/internal/ai/redact"
 
-	// Phase-50 / 0002 — F1 Provider Abstraction. The registry +
+	// F1 Provider Abstraction. The registry +
 	// adapters live behind the same hexagonal port so feature code
 	// imports only "internal/ai/provider", never the concrete
 	// adapter packages. The four concrete adapter imports below are
-	// the package-init equivalents — Register() is called explicitly
+	// the package-init equivalents — Register is called explicitly
 	// in NewRouter so a fresh build cannot accidentally enable a
 	// provider by virtue of an unintended import.
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
@@ -268,7 +268,7 @@ import (
 	aiollama "github.com/ev-dev-labs/teslasync/internal/ai/provider/ollama"
 	aiopenai "github.com/ev-dev-labs/teslasync/internal/ai/provider/openai"
 
-	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. The chatbot strategy +
+	// U1 Chatbot LLM upgrade. The chatbot strategy +
 	// the shared tool registry are constructed at boot and shared with
 	// the AI chatbot HTTP handler.
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
@@ -377,18 +377,15 @@ import (
 // a static file server for the SPA frontend. It wires up handler dependencies
 // and returns the ready-to-serve http.Handler.
 //
-// stateReader is the new signal-log-backed cold-path reader (ADR-002 / phase-39).
-// It is threaded through here so that handler migrations in phases 10–36 can
-// take it as a constructor dependency one file at a time. The legacy
-// *signaldb.SignalLogReader (signalLogReader below) is intentionally preserved
-// alongside it during the migration window so the build stays green between
-// prompts; both readers will coexist until the deletion prompts (phases 37–40).
+// stateReader is the signal-log-backed cold-path reader (ADR-002).
+// It is threaded through here so handlers can adopt it one file at a time.
+// The legacy *signaldb.SignalLogReader (signalLogReader below) is preserved
+// alongside it during the migration window so the build stays green.
 func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Client, cfg *config.Config, health *resilience.HealthMonitor, stateReader signal.StateReader, opts ...RouterOptions) http.Handler {
 	r := chi.NewRouter()
-	// stateReader is intentionally not wired into individual handlers in this
-	// prompt — handler-migration prompts (phases 10–36) consume it one file at
-	// a time. The reference below keeps it visible to readers and lets static
-	// analyzers see it as a live dependency rather than a dead parameter.
+	// stateReader is intentionally not wired into individual handlers here.
+	// Handlers adopt it one file at a time; the reference below keeps it visible
+	// to readers and lets static analyzers see it as a live dependency.
 	_ = stateReader
 
 	var opt RouterOptions
@@ -412,7 +409,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Use(apimw.Metrics)                         // RED metrics: http_requests_total / http_request_errors_total / http_request_duration_seconds with status_class
 	// Conditionally apply chi's Compress middleware. We MUST bypass it for
 	// Server-Sent Events: chi v5.0.12's compressor wraps the response writer
-	// and calls .Flush() on its internal encoder. When the response Content-
+	// and calls .Flush on its internal encoder. When the response Content-
 	// Type is text/event-stream the encoder is never engaged (per chi's
 	// default content-type allowlist), but the wrapper still dereferences
 	// the nil encoder on Flush, triggering a nil-pointer panic in the
@@ -474,12 +471,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// L1 signal.Store + L2 Redis HSET (LiveSignalStore) with the cold-path
 	// signal_log StateReader as fallback. /latest handlers and any "current
 	// state" code path MUST go through this boundary so that:
-	//   * fields routed to typed snapshot tables (climate, motor, tire
-	//     pressure, media, security, vehicle_config, safety, etc.) are
-	//     served from L1+L2 instead of returning empty maps from
-	//     signal_log; and
-	//   * infrequent fields like Latitude / Longitude on a parked vehicle
-	//     still surface from signal_log when L1+L2 has no entry.
+	// * fields routed to typed snapshot tables (climate, motor, tire
+	// pressure, media, security, vehicle_config, safety, etc.) are
+	// served from L1+L2 instead of returning empty maps from
+	// signal_log; and
+	// * infrequent fields like Latitude / Longitude on a parked vehicle
+	// still surface from signal_log when L1+L2 has no entry.
 	// When TelemetryHandler is nil (test wiring), a NoopLiveSignalStore is
 	// used so the StateReader fallback alone serves the request.
 	var liveSignalStore signal.LiveSignalStore
@@ -499,7 +496,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		},
 	))
 	authHandler := apiauth.NewHandler(db, teslaClient, opt.Encryptor)
-	// Phase-46 / Prompt 31 — Sudo step-up. Construct the in-memory
+	// Sudo step-up. Construct the in-memory
 	// token store and the reauth HTTP handler once and share them
 	// across the route table. The store is the source of truth for
 	// step-up authorisation; the middleware reads from it on every
@@ -507,7 +504,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// /auth/reauth.
 	sudoCfg := LoadSudoConfig(cfg)
 	sudoStore := dbauth.NewSudoTokenStore(sudoCfg.TTL)
-	// Phase-46 / Prompt 35 — wire the real RFC 6238 verifier so the
+	// wire the real RFC 6238 verifier so the
 	// shared TESLASYNC_SUDO_TOTP_SECRET path validates for real (and
 	// not just NULL-on-arrival as it did before). We pass a thin
 	// closure rather than a bare totp.Validate reference so any future
@@ -521,14 +518,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	sudoHandler := NewSudoHandler(sudoCfg, sudoStore, sudoTOTPVerifier)
 
-	// Phase-46 / Prompt 35 — per-user TOTP enrollment. Owns its own
+	// per-user TOTP enrollment. Owns its own
 	// pending/active tables; mints sudo tokens via the shared sudoStore
-	// from prompt 31 so a successful per-user TOTP step-up is
-	// indistinguishable downstream from a successful password step-up.
+	// so a successful per-user TOTP step-up is indistinguishable downstream
+	// from a successful password step-up.
 	totpRepo := dbauth.NewTOTPRepo(db)
 	totpHandler := apitotp.NewTOTPHandler(totpRepo, opt.Encryptor, sudoStore, cfg.Auth.ForwardAuthHeader)
 
-	// Phase-46 / Prompt 42 — active sessions / device management.
+	// active sessions / device management.
 	// TeslaSync mints its OWN per-device cookie on the first
 	// authenticated request from a browser (auth.Middleware below)
 	// and persists the (subject, cookie hash) tuple here so the
@@ -540,7 +537,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	authSessionsRepo := dbauth.NewAuthSessionsRepo(db)
 	sessionHandler := apisess.NewSessionHandler(authSessionsRepo, cfg.Auth.ForwardAuthHeader)
 
-	// Phase-46 / Prompt 57 — Auth-mode contract.
+	// Auth-mode contract.
 	//
 	// The auth_subjects materialisation table is the single source
 	// of truth for "every distinct subject this deployment has ever
@@ -560,7 +557,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	systemAuthModeHandler := apiauthmode.NewHandler(cfg.Auth.ForwardAuthHeader, cfg.Auth.ProviderHint)
 	_ = authSubjectsRepo // referenced via subjectRecorder; held for future per-user tables.
 
-	// Phase-46 / Prompt 34 — Live log tail. Build a process-wide
+	// Live log tail. Build a process-wide
 	// pub/sub registry for zerolog events and tee the global logger
 	// through it so every Info/Warn/Error/etc. fans out to any
 	// connected SSE subscriber. The tee is idempotent: installAdminLogStreamTap
@@ -571,7 +568,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	logStreamHandler := apiadminls.NewAdminLogStreamHandler(logTap)
 	settingsHandler := apisettings.NewSettingsHandler(db)
 
-	// Phase-50 / 0001 — F0 AI-Off Contract (ADR-015).
+	// F0 AI-Off Contract (ADR-015).
 	//
 	// The guard is built once here and shared across every
 	// /api/v1/ai/* route so the per-request feature-gate logic
@@ -582,20 +579,20 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	aiSettingsRepo := settingsdb.NewSettingsRepo(db)
 	aiGuard := guard.New(aiSettingsRepo)
 
-	// Phase-50 / 0002 — F1 Provider Abstraction.
+	// F1 Provider Abstraction.
 	// The registry composes adapter factories with decorators and rereads settings
-	// on each For() call so saves take effect without restart. aiSettingsReader
+	// on each For call so saves take effect without restart. aiSettingsReader
 	// adapts SettingsRepo without widening the repo surface; F3 adds async audit.
 	aiCallLogRepo := aidb.NewAICallLogRepo(db)
 	aiAuditWriter := provider.NewAsyncAuditWriter(context.Background(), aiCallLogRepo, 1024)
 	aiRegistry := provider.NewRegistry(
 		aiSettingsReader{repo: aiSettingsRepo},
-		// Phase-50 / 0009 — F8 redaction sits INNERMOST in the
+		// F8 redaction sits INNERMOST in the
 		// chain: WithRedaction is applied first so audit/trace
 		// (above it in source order, outer at runtime) observe
 		// the post-redaction request text. The resolver
 		// (redact.PolicyFromContext) reads the per-request policy
-		// installed by dispatch.Run from Strategy.RedactionPolicy().
+		// installed by dispatch.Run from Strategy.RedactionPolicy.
 		// A missing policy means deny-all — see redact.DefaultPolicy.
 		provider.WithRedaction(redact.PolicyFromContext),
 		provider.WithAudit(aiAuditWriter),
@@ -614,7 +611,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			Tools: true, Streaming: true, Embeddings: true, MaxContext: 4096,
 		}), nil
 	})
-	// Phase-46 / Prompt 36 — settings export/import. The serializer
+	// settings export/import. The serializer
 	// fans out across four repos (settings, alert_rules, geofences,
 	// notification_quiet_hours); construct it once + share between
 	// the export + import handlers so future repos can be added in a
@@ -628,12 +625,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	settingsExportHandler := apisettings.NewSettingsExportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
 	settingsImportHandler := apisettings.NewSettingsImportHandler(settingsSerializer, cfg.Auth.ForwardAuthHeader)
-	// Phase-46 / Prompt 50 — per-section + global "Reset to defaults".
+	// per-section + global "Reset to defaults".
 	// Sudo-gated at the route below so the SPA's <ReauthDialog>
 	// always pops on the danger-zone "Reset ALL settings" button.
 	settingsResetRepo := settingsdb.NewSettingsResetRepo(db)
 	settingsResetHandler := apisetreset.NewSettingsResetHandler(settingsResetRepo, cfg.Auth.ForwardAuthHeader)
-	// Phase-46 / Prompt 65 — recurring scheduled exports.
+	// recurring scheduled exports.
 	//
 	// Owner identity comes from the configured FORWARD_AUTH_HEADER on
 	// every read/write — the handler NEVER trusts owner_subject in the
@@ -641,7 +638,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// by (id, owner_subject) so cross-user mutations collapse to 404.
 	scheduledExportRepo := exportdb.NewScheduledExportRepo(db)
 	scheduledExportsHandler := apischedexp.NewScheduledExportsHandler(scheduledExportRepo, cfg.Auth.ForwardAuthHeader, nil)
-	// Phase-46 / Prompt 43 — per-vehicle settings layer.
+	// per-vehicle settings layer.
 	//
 	// The resolver layers vehicle-scoped overrides on top of the
 	// existing install-global SettingsRepo and the vehicles base
@@ -661,7 +658,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		apivehsettings.NewVehicleExistenceChecker(vehicleSettingsRepoForRouter),
 	)
 
-	// Phase-46 / Prompt 54 — vehicle photo upload. The handler
+	// vehicle photo upload. The handler
 	// owns the on-disk write/read pipeline plus the per-vehicle
 	// upload mutex; the repo is a thin SQL facade that persists
 	// the rendered paths in vehicle_photos.
@@ -672,7 +669,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.VehiclePhotoDir,
 	)
 
-	// Phase-46 / Prompt 44 — RBAC matrix admin handler.
+	// RBAC matrix admin handler.
 	// Matrix bindings live in role_permissions; permissions are a
 	// hand-maintained catalog in internal/auth. The handler is
 	// auth-mode aware (501 AUTH_MODE_OPEN in open mode) and the PUT
@@ -680,7 +677,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	rolePermissionsRepo := dbauth.NewRolePermissionsRepo(db)
 	rbacHandler := apirbac.NewRBACHandler(rolePermissionsRepo, cfg.Auth.ForwardAuthHeader)
 
-	// Phase-46 / Prompt 46 — admin impersonation. The store mints
+	// admin impersonation. The store mints
 	// HMAC-signed cookies (15-min TTL) carrying the original-admin /
 	// target pair; the middleware mounted further down rewrites the
 	// principal header so downstream handlers see the impersonation
@@ -736,7 +733,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	quietHoursHandler := apiquiet.NewHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := apichatbot.NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 
-	// Phase-50 / 0011 — U1 Chatbot LLM upgrade.
+	// U1 Chatbot LLM upgrade.
 	// The tool registry is process-wide; the chatbot strategy is per-feature and
 	// paired with its dispatcher in the handler. aiToolsStateAdapter bridges the
 	// SignalAt return type without leaking signal types into ai/tools.
@@ -751,7 +748,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Geofences:     geofencedb.NewGeofenceRepo(db),
 		Efficiency:    drivedb.NewDriveRepo(db),
 	})
-	// Phase-50 / U2 (slice 0012) — register the digest-narration
+	// register the digest-narration
 	// slice's read-only tool on the SAME process-wide registry so
 	// the dispatcher can resolve `query_weekly_digest_context` for
 	// the digest-narration strategy. Register12Builtins must run
@@ -762,7 +759,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		Drives:  drivedb.NewDriveRepo(db),
 		Charges: chargingdb.NewChargingRepo(db),
 	})
-	// Phase-50 / U3 (slice 0013) — register the yir-narration
+	// register the yir-narration
 	// slice's read-only tool on the SAME process-wide registry so
 	// the dispatcher can resolve `query_year_in_review_context`
 	// for the yir-narration strategy. Same ordering rule: the
@@ -779,7 +776,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		chatbotllm.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / U2 (slice 0012) — Weekly digest narration handler.
+	// Weekly digest narration handler.
 	// One per process; stateless beyond constructor inputs.
 	aiDigestHandler := aidigest.NewHandler(
 		aiRegistry,
@@ -787,7 +784,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		digestnarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / U3 (slice 0013) — Year-in-review narration handler.
+	// Year-in-review narration handler.
 	// One per process; stateless beyond constructor inputs.
 	aiYIRHandler := aiyir.NewHandler(
 		aiRegistry,
@@ -809,12 +806,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	softwareUpdateHandler := apisoftupd.NewHandler(db)
 	tcoHandler := apitco.NewHandler(db)
 	sleepHandler := apisleep.NewSleepHandler(db)
-	// Phase-42 (prompt 0077): VampireDrainHandler deleted (vampire_drain_events).
+	//: VampireDrainHandler deleted (vampire_drain_events).
 	visitedLocationHandler := apivisloc.NewHandler(db)
-	// Phase-42 (prompt 0077): legacy mileage handler deleted (daily_mileage); TCO derives
+	//: legacy mileage handler deleted (daily_mileage); TCO derives
 	// distance via SUM(distance_m) FROM drives.
 	tripHandler := apitrip.NewHandler(db)
-	// Phase-42 (prompt 0077): VehicleStateHandler deleted (vehicle_states);
+	//: VehicleStateHandler deleted (vehicle_states);
 	// current state is sourced from fsm_transitions / signal.StateReader.
 	backupHandler := apibackup.NewHandler(db)
 	backupRestoreHandler := apibackup.NewRestoreHandler(db)
@@ -828,7 +825,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			logAuditFromRequest(db, r, headerName, action, resource, entityID, detail)
 		},
 	))
-	// Phase-42 (prompt 0077): SignalCatalogHandler deleted (signal_catalog +
+	//: SignalCatalogHandler deleted (signal_catalog +
 	// signal_observations); the typed signal_log pipeline (000167+) is the
 	// authoritative catalog/observation surface.
 	chargingHeatmapHandler := apichargeheatmap.NewChargingHeatmapHandler(db)
@@ -845,7 +842,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	costForecastHandler := costforecast.NewHandler(db)
 	chargingOptimizerHandler := apichargeopt.NewChargingOptimizerHandler(db)
 	anomalyHandler := apianomaly.NewHandler(db)
-	// Phase-50 / U4 (slice 0014) — register the anomaly-explanations
+	// register the anomaly-explanations
 	// slice's read-only tool on the SAME process-wide registry so
 	// the dispatcher can resolve `query_anomaly_context` for the
 	// anomaly-explanations strategy. Must register AFTER
@@ -857,7 +854,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	anomalytool.RegisterAnomalyTools(aiToolRegistry, anomalytool.AnomalySources{
 		Anomaly: anomalyHandler,
 	})
-	// Phase-50 / U4 (slice 0014) — Anomaly explanation handler.
+	// Anomaly explanation handler.
 	// One per process; stateless beyond constructor inputs. Must
 	// be constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
@@ -867,7 +864,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		anomalyexplanations.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N1 (slice 0015) — Natural-language alert builder.
+	// Natural-language alert builder.
 	// Register the slice's PROPOSE-only typed tools on the SAME
 	// process-wide registry so the dispatcher can resolve
 	// `draft_alert_rule` + `validate_alert_rule` for the
@@ -888,7 +885,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		nlalertbuilder.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N2 (slice 0016) nl-automation-builder. Mirrors the
+	// Natural-language automation-builder wiring mirrors the
 	// alert-builder wiring above. aiautomation.GraphValidator is a
 	// thin wrapper around the automation subpackage validator in
 	// internal/api/automation/decode.go — same code path the canonical
@@ -904,7 +901,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		nlautomationbuilder.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N3 (slice 0017) nl-search. Mirrors the
+	// Natural-language search wiring mirrors the
 	// alert-builder / automation-builder wiring above. The
 	// retriever is constructed via rag.New (the F7 single
 	// retrieval entry point) which fail-closes to NoopRetriever
@@ -939,7 +936,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		nlsearch.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N4 (slice 0018) — Per-drive coaching narrative.
+	// Per-drive coaching narrative.
 	// Register the slice's read-only tool on the SAME process-wide
 	// registry so the dispatcher can resolve
 	// `query_drive_telemetry_summary` for the drive-coaching
@@ -962,7 +959,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		drivecoaching.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// charging-diagnosis tools (Phase-50 / N5, slice 0019). Adds
+	// charging-diagnosis tools. Adds
 	// `query_charge_session` + `query_charging_aggregation` to the
 	// shared tool registry so the dispatcher can resolve them for
 	// the charging-diagnosis strategy. Same ordering rule as the
@@ -982,7 +979,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		chargingdiagnosis.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / N6 (slice 0020) — RAG-backed app help.
+	// RAG-backed app help.
 	//
 	// Reuse the F7 retriever pattern from nl-search: rag.New
 	// returns a NoopRetriever when ai_mode='off' so retrieve_docs
@@ -1010,7 +1007,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai rag-help: rag.New failed during boot wiring")
 	}
-	// rag-help tools (Phase-50 / N6, slice 0020). Adds
+	// rag-help tools. Adds
 	// `retrieve_docs` + `cite_help_chunk` to the shared tool
 	// registry so the dispatcher can resolve them for the rag-help
 	// strategy. Same ordering rule as the other slice tools above:
@@ -1029,7 +1026,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		raghelp.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / D1 (slice 0021) — Natural-language drive search and
+	// Natural-language drive search and
 	// replay.
 	//
 	// Reuse the F7 retriever pattern from nl-search / rag-help:
@@ -1045,7 +1042,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// retriever scopes by user_subject at the SQL boundary). The
 	// drive_summary corpus is populated today; route_segment +
 	// location_summary are forward-compat reservations per the
-	// slice prompt — the gated background job `ai_drive_indexer`
+	// request — the gated background job `ai_drive_indexer`
 	// is the future fan-out point and is registered in
 	// features.Registry as a fail-closed gate stub today.
 	aiDriveSearchRetriever, err := rag.New(
@@ -1059,7 +1056,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai drive search: rag.New failed during boot wiring")
 	}
-	// nl-drive-search-replay tools (Phase-50 / D1, slice 0021).
+	// nl-drive-search-replay tools.
 	// Adds `retrieve_drive_chunks` + `hydrate_drive_replay` to the
 	// shared tool registry so the dispatcher can resolve them for
 	// the nl-drive-search-replay strategy. Same ordering rule as
@@ -1085,7 +1082,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		nldrivesearchreplay.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / D2 (slice 0022) — Speed-profile insights.
+	// Speed-profile insights.
 	// Register the slice's two read-only tools on the SAME
 	// process-wide registry so the dispatcher can resolve
 	// `query_speed_profile` + `query_drive_context` for the
@@ -1108,7 +1105,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		speedprofileinsights.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / D3 (slice 0023) — Route-efficiency suggestions.
+	// Route-efficiency suggestions.
 	// Build the per-feature F7 retriever scoped to the
 	// route-efficiency-suggestions feature id. The retriever
 	// embeds queries with the local nomic-embed-text model and
@@ -1116,7 +1113,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// (the embedding store; the retriever scopes by user_subject
 	// at the SQL boundary). Only the drive_summary corpus is
 	// populated today; route_efficiency + weather_context are
-	// forward-compat reservations per the slice prompt — the
+	// forward-compat reservations per the request — the
 	// gated background job `ai_route_indexer` is the future
 	// fan-out point and is registered in features.Registry as a
 	// fail-closed gate stub today.
@@ -1131,7 +1128,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai route-efficiency suggestions: rag.New failed during boot wiring")
 	}
-	// route-efficiency-suggestions tools (Phase-50 / D3, slice 0023).
+	// route-efficiency-suggestions tools.
 	// Adds `retrieve_route_chunks` + `query_route_efficiency` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the route-efficiency-suggestions strategy. Same ordering
@@ -1157,7 +1154,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / D4 (slice 0024) — Auto trip naming.
+	// Auto trip naming.
 	// Construct the shared TripsDetailRepo once so both the
 	// auto-trip-naming AI tool path and (eventually) the
 	// canonical /api/v1/trips/{trip_id} handler share a single
@@ -1166,7 +1163,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// mount point; the duplicate is intentional and short-lived —
 	// a future cleanup slice can consolidate.
 	aiAutoTripNamingDetailRepo := tripdb.NewTripsDetailRepo(db.Pool)
-	// auto-trip-naming tools (Phase-50 / D4, slice 0024).
+	// auto-trip-naming tools.
 	// Adds `draft_trip_name` + `validate_trip_name` to the shared
 	// tool registry. Both tools are PROPOSE-only — they construct
 	// or validate trip-name DTOs but do NOT touch the database;
@@ -1200,10 +1197,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaEnergyLiveStatusHandler := apitels.NewHandler(teslaClient, db)
 	energySiteHandler := apienergysite.NewEnergySiteHandler(teslaClient, db)
 	fleetTelemetryErrorHandler := apifleettelem.NewFleetTelemetryErrorHandler(teslaClient, db)
-	// Phase-43a/0002 — wire the package-derived Fleet Telemetry coverage
-	// handler authored by Phase-42 prompt 0068. It is intentionally
-	// DB-free: the routing snapshot comes from the embedded routing.yaml
-	// via router.LoadMap() and the subscription view comes from
+	// Wire the package-derived Fleet Telemetry coverage handler.
+	// It is intentionally DB-free: the routing snapshot comes from the embedded routing.yaml
+	// via router.LoadMap and the subscription view comes from
 	// teslaconfig.Builder. The handler is mounted inside the existing
 	// /tesla/fleet-telemetry route block below.
 	fleetTelemetryHandler := apifleettelem.NewFleetTelemetryHandler(cfg)
@@ -1214,7 +1210,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleInfoHandler := apivehinfo.NewHandler(teslaClient, db)
 	tripPlannerHandler := apitripplanner.NewTripPlannerHandler(db, opt.CacheStore, stateReader)
 
-	// trip-planner-llm-agent tools (Phase-50 / D5, slice 0025).
+	// trip-planner-llm-agent tools.
 	// Adds `query_chargers_along_route`, `query_user_charge_dwells`,
 	// and `draft_trip_plan` to the shared tool registry. All three
 	// are PROPOSE-only / READ-only — the first two read the existing
@@ -1240,8 +1236,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// smart-charge-schedule-suggestion tools (Phase-50 / C1, slice
-	// 0026). Adds `draft_charge_schedule` and
+	// smart-charge-schedule-suggestion tools
+	// Adds `draft_charge_schedule` and
 	// `validate_charge_schedule` to the shared tool registry. Both
 	// are PROPOSE-only / READ-only — draft_charge_schedule delegates
 	// to the canonical ChargePlannerHandler.computeSchedule path
@@ -1265,8 +1261,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		smartchargeschedulesuggestion.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// battery-health-forecast-narrative (Phase-50 / C2, slice
-	// 0027). Registers `query_battery_health_forecast` to the
+	// battery-health-forecast-narrative
+	// Registers `query_battery_health_forecast` to the
 	// shared tool registry. The tool is READ-only — it composes
 	// the same package-level helpers (synthesizeBatterySnapshots,
 	// predictDegradation, computeRiskFactors,
@@ -1292,8 +1288,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// charging-curve-fingerprint-clustering (Phase-50 / C3, slice
-	// 0028). The shared rag.Retriever is constructed per-feature
+	// charging-curve-fingerprint-clustering
+	// The shared rag.Retriever is constructed per-feature
 	// so the rate-limit + cost-cap decorators on the embedding
 	// provider apply per-strategy. The retriever uses the same
 	// nomic-embed-text 768-dim physical table as the other RAG
@@ -1315,19 +1311,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai charging-curve-fingerprint-clustering: rag.New failed during boot wiring")
 	}
-	// charging-curve-fingerprint-clustering tools (Phase-50 / C3,
-	// slice 0028). Adds `retrieve_charge_curve_chunks` +
+	// charging-curve-fingerprint-clustering tools.
+	// Adds `retrieve_charge_curve_chunks` +
 	// `query_charge_curve_features` to the shared tool registry so
 	// the dispatcher can resolve them for the
-	// charging-curve-fingerprint-clustering strategy. Same
-	// ordering rule as the other slice tools above: must be
+	// charging-curve-fingerprint-clustering strategy. Must be
 	// registered before the handler constructor below so the
 	// strategy's allowedTools resolve at boot.
 	// query_charge_curve_features calls ChargingRepo.GetByVehicle
 	// and derives the per-cluster fingerprint envelope in-memory
 	// mirroring the deterministic L1/L2/DC bucketing the SPA's
-	// helpers.ts already applies — no new SQL is written by this
-	// slice.
+	// helpers.ts already applies — no new SQL is written.
 	curve.RegisterChargingCurveFingerprintClusteringTools(aiToolRegistry, curve.ChargingCurveFingerprintClusteringSources{
 		Retriever: aiChargeCurveRetriever,
 		Charges:   chargingdb.NewChargingRepo(db),
@@ -1343,8 +1337,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// cost-forecast-narration tools (Phase-50 / C4, slice
-	// 0029). Adds `query_cost_forecast` to the shared tool
+	// cost-forecast-narration tools
+	// Adds `query_cost_forecast` to the shared tool
 	// registry so the dispatcher can resolve it for the
 	// cost-forecast-narration strategy. Same ordering rule as
 	// the other slice tools above: must be registered before the
@@ -1369,8 +1363,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// period-compare-narration tools (Phase-50 / X1, slice
-	// 0040). Adds `query_period_compare` to the shared tool
+	// period-compare-narration tools
+	// Adds `query_period_compare` to the shared tool
 	// registry so the dispatcher can resolve it for the
 	// period-compare-narration strategy. Must be registered
 	// before the handler constructor below so the strategy's
@@ -1395,7 +1389,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// lifetime-stats-qa (Phase-50 / X2, slice 0041).
+	// lifetime-stats-qa.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1417,7 +1411,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai lifetime-stats-qa: rag.New failed during boot wiring")
 	}
-	// lifetime-stats-qa tools (Phase-50 / X2, slice 0041).
+	// lifetime-stats-qa tools.
 	// Adds `query_lifetime_stats` + `retrieve_analytics_chunks` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the lifetime-stats-qa strategy. Same ordering rule as
@@ -1442,7 +1436,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// incident-timeline-summarizer (Phase-50 / S1, slice 0042).
+	// incident-timeline-summarizer.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1463,7 +1457,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai incident-timeline-summarizer: rag.New failed during boot wiring")
 	}
-	// incident-timeline-summarizer tools (Phase-50 / S1, slice 0042).
+	// incident-timeline-summarizer tools.
 	// Adds `query_incident_timeline` + `retrieve_system_chunks` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the incident-timeline-summarizer strategy. Same ordering
@@ -1488,7 +1482,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// data-repair-suggestions (Phase-50 / S2, slice 0043).
+	// data-repair-suggestions.
 	// Adds `draft_data_repair_plan` + `validate_data_repair_plan`
 	// to the shared tool registry so the dispatcher can resolve
 	// them for the data-repair-suggestions strategy. Same
@@ -1517,7 +1511,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// signal-explorer-nl-filter (Phase-50 / S3, slice 0044).
+	// signal-explorer-nl-filter.
 	// Adds `draft_signal_filter` + `validate_signal_filter` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the signal-explorer-nl-filter strategy. Same ordering
@@ -1545,7 +1539,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// log-trace-summarization (Phase-50 / S4, slice 0045).
+	// log-trace-summarization.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1567,7 +1561,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai log-trace-summarization: rag.New failed during boot wiring")
 	}
-	// log-trace-summarization tools (Phase-50 / S4, slice 0045).
+	// log-trace-summarization tools.
 	// Adds `query_trace_window` + `retrieve_log_chunks` to the
 	// shared tool registry so the dispatcher can resolve them for
 	// the log-trace-summarization strategy. Same ordering rule as
@@ -1593,7 +1587,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// vampire-drain-explanation (Phase-50 / C5, slice 0030).
+	// vampire-drain-explanation.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -1616,7 +1610,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai vampire-drain-explanation: rag.New failed during boot wiring")
 	}
-	// vampire-drain-explanation tools (Phase-50 / C5, slice 0030).
+	// vampire-drain-explanation tools.
 	// Adds `retrieve_idle_drain_chunks` + `query_vampire_drain_windows`
 	// to the shared tool registry so the dispatcher can resolve
 	// them for the vampire-drain-explanation strategy. Same
@@ -1642,7 +1636,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		vampiredrainexplanation.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// preheat-precool-recommender tools (Phase-50 / T1, slice 0031).
+	// preheat-precool-recommender tools.
 	// Adds `draft_climate_schedule` + `validate_climate_schedule`
 	// to the shared tool registry so the dispatcher can resolve
 	// them for the preheat-precool-recommender strategy. Same
@@ -1667,7 +1661,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / 0032 — T2 cabin-temperature-impact-narrative
+	// T2 cabin-temperature-impact-narrative
 	// tool registration. The single read-only tool
 	// `query_temperature_impact` is registered on the process-wide
 	// tool registry so the dispatcher can resolve the strategy's
@@ -1688,7 +1682,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cabintemperatureimpactnarrative.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0033 — T3 tire-pressure-trend-reasoning tool
+	// T3 tire-pressure-trend-reasoning tool
 	// registration. The single read-only tool
 	// `query_tire_pressure_trend` is registered on the
 	// process-wide tool registry so the dispatcher can resolve
@@ -1710,13 +1704,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		tirepressuretrendreasoning.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0034 — A1 alert-tuning-suggestions tool
+	// A1 alert-tuning-suggestions tool
 	// registration. The single read-only tool
 	// `draft_alert_rule_patch` is registered on the
 	// process-wide tool registry so the dispatcher can resolve
 	// the strategy's allowedTools at boot. The `validate_alert_rule`
 	// tool used by this strategy was already registered by N1
-	// (slice 0015) above; the dispatcher resolves both at boot
+	// (tool group) above; the dispatcher resolves both at boot
 	// from the SAME registry. AIAlertTuningSource adapts the
 	// canonical AlertRuleRepo + NotificationRepo so the LLM
 	// reads the SAME rows the manual AlertStudio path reads —
@@ -1734,7 +1728,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		alerttuningsuggestions.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0035 — A2 inbox-auto-categorization tool
+	// A2 inbox-auto-categorization tool
 	// registration. The two read-only tools
 	// `draft_alert_categories` + `validate_alert_category`
 	// are registered on the process-wide tool registry so
@@ -1756,7 +1750,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		inboxautocategorization.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0036 — A3 cross-rule-conflict-detection tool
+	// A3 cross-rule-conflict-detection tool
 	// registration. The two read-only tools
 	// `query_alert_rules` + `detect_rule_conflicts` are
 	// registered on the process-wide tool registry so the
@@ -1781,16 +1775,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		crossruleconflictdetection.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	// Phase-50 / 0037 — G1 auto-name-unnamed-locations tool
+	// G1 auto-name-unnamed-locations tool
 	// registration. The two propose-only tools
 	// `draft_location_name` + `validate_location_name` are
 	// registered on the process-wide tool registry so the
 	// dispatcher can resolve the strategy's allowedTools at
 	// boot. aiautoname.LocationSource derives the visited-location
 	// aggregate from the SI canonical drives table (the legacy
-	// visited_locations table was dropped in Phase-42 / Prompt
-	// 0076; visited-location aggregates are derived on demand)
-	// so the LLM reads the SAME aggregate the canonical
+	// visited_locations table no longer exists; visited-location
+	// aggregates are derived on demand) so the LLM reads the SAME aggregate the canonical
 	// VisitedLocationRepo emits. aiautoname.LocationNameValidator
 	// mirrors the byte-equivalent shape rules the canonical
 	// save handler will enforce (1-200 chars, no control chars,
@@ -1810,11 +1803,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / 0038 — G2 suggest-new-geofences tool registration.
+	// G2 suggest-new-geofences tool registration.
 	// The two propose-only tools `draft_geofence` +
 	// `validate_geofence` are registered on the process-wide tool
 	// registry so the dispatcher can resolve the strategy's
-	// allowedTools at boot. We REUSE the slice-0037
+	// allowedTools at boot. We REUSE the shared
 	// aiautoname.LocationSource adapter — both strategies grok the same
 	// *geomodel.VisitedLocation aggregate (drives-table grouped on
 	// vehicle_id + end_place), so duplicating the adapter would
@@ -1838,8 +1831,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / 0039 — G3 geofence-aware automation suggestions.
-	// Reuse the slice-0016 automation tools because re-registering duplicate names
+	// G3 geofence-aware automation suggestions.
+	// Reuse the shared automation tools because re-registering duplicate names
 	// would panic. The handler injects only deterministic geofence id/name/category;
 	// lat/lon stays out of LLM context by policy.
 	aiGeofenceAwareAutomationHandler := aigeofautom.NewHandler(
@@ -1850,7 +1843,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// learned-per-vehicle-anomaly-baselines (Phase-50 / ML1, slice
+	// learned-per-vehicle-anomaly-baselines
 	// 0062) tools — train_anomaly_baseline + query_anomaly_baseline.
 	// Both READ-only; the trainer reads signal_log via the
 	// SignalSampleSource adapter and returns a per-signal learned
@@ -1873,7 +1866,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// range-prediction-model (Phase-50 / ML2, slice 0063) tools —
+	// range-prediction-model tools —
 	// train_range_model + query_range_prediction. Both READ-only;
 	// the trainer reads the `drives` table via the aimlrange DriveStatsSource
 	// adapter (SI columns: distance_m, energy_used_wh, avg_speed_mps,
@@ -1897,7 +1890,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// ml-charging-curve-clustering (Phase-50 / ML3, slice 0064) tools —
+	// ml-charging-curve-clustering tools —
 	// train_charge_curve_clusters + query_charge_curve_clusters.
 	// Both READ-only; the trainer reads the `charging_sessions`
 	// table via the aimlchargcv.ChargingSessionSource adapter (SI columns
@@ -1939,7 +1932,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// projection short-cuts, signal-key listing) and keep the legacy
 	// fluent setter until they migrate to LiveStateReader.
 	//
-	// redisSignalCache is also consumed by the Phase-50 / 0056 V2
+	// redisSignalCache is also consumed by the migration V2
 	// AIWatchFaceNLContextSource adapter below; declaring it at this
 	// outer scope lets the adapter reuse the same instance the
 	// watchHandler already does (one cache per router). The variable
@@ -1959,7 +1952,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 
 	// Wire ForwardAuth header into handlers that audit-log mutations
-	// (Phase-40 / Prompt 51 — bulk action endpoints).
+	//.
 	driveHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
 	chargingHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
 	alertHandler.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader)
@@ -2001,7 +1994,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Reusing handler from main ╬ô├ç├╢ wire the eventHub created by the router
 		telemetryHandler.SetEventHub(eventHub)
 	}
-	// Phase-39 / ADR-002: install the cold-path signal.StateReader on the
+	// install the cold-path signal.StateReader on the
 	// session tracker so charge-completion and drive-completion enrichment
 	// use the canonical state-read API instead of the legacy
 	// *signaldb.SignalLogReader.SnapshotAt /
@@ -2058,7 +2051,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(60, 1*time.Minute),
 	).Get("/api/v1/share/{token}", shareHandler.GetPublicShare)
 
-	// Public: Web Vitals ingest (Phase 45 / Prompt 12). Anonymous browsers
+	// Public: Web Vitals ingest. Anonymous browsers
 	// POST batches of LCP/INP/CLS/FCP/TTFB samples here. Mounted outside
 	// the /api/v1 ForwardAuth subrouter so logged-out clients can still
 	// report — the body carries no PII and the handler caps batch size +
@@ -2068,7 +2061,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(120, 1*time.Minute),
 	).Post("/api/v1/web-vitals", webVitalsHandler.Ingest)
 
-	// Public: Web error reports (Phase 46 / Prompt 01). The SPA's global
+	// Public: Web error reports. The SPA's global
 	// error reporter POSTs uncaught exceptions, unhandled promise
 	// rejections, React render errors, and TanStack Query failures here.
 	// Mounted OUTSIDE the /api/v1 ForwardAuth subrouter so we can
@@ -2083,7 +2076,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(50, 1*time.Minute),
 	).Post("/api/v1/web-errors", webErrorHandler.Ingest)
 
-	// Public: Auth session-info endpoint (Phase 46 / Prompt 05). The
+	// Public: Auth session-info endpoint. The
 	// SPA polls this every 5 minutes so it can surface the
 	// SessionExpiringModal countdown ~60s before the upstream
 	// ForwardAuth cookie expires, and the SessionExpiredModal hard-
@@ -2098,7 +2091,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		httprate.LimitByIP(60, 1*time.Minute),
 	).Get("/api/v1/auth/session", authSessionHandler.Session)
 
-	// System state (Phase 46 / Prompt 04): single-row maintenance/degraded-mode
+	// System state: single-row maintenance/degraded-mode
 	// banner state. Repo + handler + maintenance provider are constructed
 	// once here so the GET /system/health closure and the admin POST share
 	// the same store and env-vs-DB resolver semantics.
@@ -2112,7 +2105,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	maintenanceProvider := apiadminmnt.BuildMaintenanceProvider(systemStateRepo, cfg)
 
-	// Phase 46 / Prompt 08: in-app feedback widget. Repo is shared
+	// in-app feedback widget. Repo is shared
 	// between the public POST ingest endpoint (rate-limited per
 	// submitter) and the admin queue endpoints (list + patch + optional
 	// GitHub Issues bridge). The bridge is wired at construction time
@@ -2131,7 +2124,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	adminFeedbackHandler := apiadminfb.NewAdminFeedbackHandler(userFeedbackRepo, cfg, db, githubBridge)
 
-	// feedback-queue-triage (Phase-50 / S5, slice 0046).
+	// feedback-queue-triage.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -2154,7 +2147,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai feedback-queue-triage: rag.New failed during boot wiring")
 	}
-	// feedback-queue-triage tools (Phase-50 / S5, slice 0046).
+	// feedback-queue-triage tools.
 	// Adds `draft_feedback_triage` + `validate_feedback_triage` +
 	// `retrieve_feedback_chunks` to the shared tool registry so
 	// the dispatcher can resolve them for the
@@ -2181,7 +2174,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// mqtt-sse-inspector-explanations (Phase-50 / S6, slice 0047).
+	// mqtt-sse-inspector-explanations.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -2204,8 +2197,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai mqtt-sse-inspector-explanations: rag.New failed during boot wiring")
 	}
-	// mqtt-sse-inspector-explanations tools (Phase-50 / S6, slice
-	// 0047). Adds `query_stream_inspector` +
+	// mqtt-sse-inspector-explanations tools
+	// Adds `query_stream_inspector` +
 	// `retrieve_stream_chunks` to the shared tool registry so the
 	// dispatcher can resolve them for the
 	// mqtt-sse-inspector-explanations strategy. Same ordering
@@ -2233,7 +2226,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// state-machine-debugger-narrator (Phase-50 / S7, slice 0048).
+	// state-machine-debugger-narrator.
 	// The shared rag.Retriever is constructed per-feature so the
 	// rate-limit + cost-cap decorators on the embedding provider
 	// apply per-strategy. The retriever uses the same
@@ -2256,8 +2249,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai state-machine-debugger-narrator: rag.New failed during boot wiring")
 	}
-	// state-machine-debugger-narrator tools (Phase-50 / S7, slice
-	// 0048). Adds `query_fsm_trace` + `retrieve_fsm_chunks` to
+	// state-machine-debugger-narrator tools
+	// Adds `query_fsm_trace` + `retrieve_fsm_chunks` to
 	// the shared tool registry so the dispatcher can resolve them
 	// for the state-machine-debugger-narrator strategy. Same
 	// ordering rule as the other slice tools above: must be
@@ -2284,8 +2277,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// predictive-maintenance retriever (Phase-50 / M1, slice
-	// 0049). The strategy's retrieve_maintenance_chunks tool
+	// predictive-maintenance retriever
+	// The strategy's retrieve_maintenance_chunks tool
 	// composes a thin wrapper around this rag.Retriever
 	// scoped to {maintenance_event, vehicle_state, ml_anomaly}
 	// source types — the allowlist is enforced at the tool
@@ -2306,7 +2299,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai predictive-maintenance: rag.New failed during boot wiring")
 	}
-	// predictive-maintenance tools (Phase-50 / M1, slice 0049).
+	// predictive-maintenance tools.
 	// Adds `query_maintenance_context` + `retrieve_maintenance_chunks`
 	// to the shared tool registry so the dispatcher can resolve
 	// them for the predictive-maintenance strategy. Same ordering
@@ -2347,7 +2340,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// tco-narration tools (Phase-50 / M2, slice 0050). Adds
+	// tco-narration tools. Adds
 	// `query_tco_summary` to the shared tool registry so the
 	// dispatcher can resolve it for the tco-narration
 	// strategy. Must be registered before the handler
@@ -2371,8 +2364,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// software-update-changelog-summarizer retriever (Phase-50
-	// / M3, slice 0051). The strategy's retrieve_update_notes
+	// software-update-changelog-summarizer retriever.
+	// The strategy's retrieve_update_notes
 	// tool composes a thin wrapper around this rag.Retriever
 	// scoped to {software_update, docs} source types — the
 	// allowlist is enforced at the tool boundary by
@@ -2394,8 +2387,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if err != nil {
 		log.Fatal().Err(err).Msg("ai software-update-changelog-summarizer: rag.New failed during boot wiring")
 	}
-	// software-update-changelog-summarizer tools (Phase-50 /
-	// M3, slice 0051). Adds `query_vehicle_software` +
+	// software-update-changelog-summarizer tools.
+	// Adds `query_vehicle_software` +
 	// `retrieve_update_notes` to the shared tool registry so
 	// the dispatcher can resolve them for the
 	// software-update-changelog-summarizer strategy. Same
@@ -2425,8 +2418,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// pii-redaction-shared-exports tools (Phase-50 / P1, slice
-	// 0052). Adds `draft_export_redaction_plan` +
+	// pii-redaction-shared-exports tools
+	// Adds `draft_export_redaction_plan` +
 	// `validate_export_redaction_plan` to the shared tool
 	// registry so the dispatcher can resolve them for the
 	// pii-redaction-shared-exports strategy. Both tools wrap a
@@ -2435,7 +2428,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deterministic GET/POST /api/v1/export/jobs endpoints
 	// remain the canonical baseline export pipeline; this
 	// slice's tools never trigger an export and never touch the
-	// existing handlers. Registered AFTER the slice 0051 tools
+	// existing handlers. Registered AFTER the tool group tools
 	// above so the registry's Names list grows deterministically.
 	export.RegisterPiiRedactionSharedExportsTools(aiToolRegistry)
 	// pii-redaction-shared-exports handler. One per process;
@@ -2449,8 +2442,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// quiet-hours-suggestion tools (Phase-50 / P2, slice
-	// 0053). Adds `draft_quiet_hours_window` +
+	// quiet-hours-suggestion tools
+	// Adds `draft_quiet_hours_window` +
 	// `validate_quiet_hours_window` to the shared tool
 	// registry so the dispatcher can resolve them for the
 	// quiet-hours-suggestion strategy. The draft tool wraps
@@ -2462,7 +2455,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// /api/v1/notifications/quiet-hours endpoints remain the
 	// canonical baseline write path; this slice's tools never
 	// trigger a save and never touch the existing handlers.
-	// Registered AFTER the slice 0052 tools above so the
+	// Registered AFTER the tool group tools above so the
 	// registry's Names list grows deterministically.
 	aiQuietHoursSuggestionSource := aiquiethrs.NewSource(
 		dbnotif.NewNotificationRepo(db),
@@ -2482,7 +2475,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// safety-setting-explainer (Phase-50 / 0054 P3) source.
+	// safety-setting-explainer source.
 	// Wraps the canonical SettingsRepo so the AI tool reads
 	// the SAME settings row the deterministic Settings UI
 	// already does — no new SQL, no duplicate read paths.
@@ -2493,7 +2486,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// never invents a setting that does not exist. Tool
 	// produces NO mutations and never triggers a save and
 	// never touches the existing handlers. Registered AFTER
-	// the slice 0053 tools above so the registry's Names
+	// the tool group tools above so the registry's Names
 	// list grows deterministically.
 	aiSafetySettingExplainerSource := aisafetyexp.NewSource(aiSettingsRepo)
 	safety.RegisterSafetySettingExplainerTools(aiToolRegistry, safety.SafetySettingExplainerSources{
@@ -2511,24 +2504,24 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// voice-mode (Phase-50 / 0055 V1) sources.
+	// voice-mode sources.
 	// The voice-mode AI surface layers an opt-in browser
 	// STT/TTS conversational overlay on top of the existing
 	// /chatbot text panel. Its single read-only tool
 	// stream_chatbot_response bundles:
 	//
-	//   - the recent chat history for the in-scope session
-	//     (read via the canonical *dbnotif.ChatRepo — the
-	//     SAME repo the deterministic /chatbot endpoint uses)
-	//   - the install-wide vehicle snapshot (VIN, display_name,
-	//     soc_percent, charging_state, last_drive_summary —
-	//     projected from VehicleRepo + LiveStateReader +
-	//     DriveRepo so the LLM reads the SAME values the rest
-	//     of the API surface already does; GPS / street names
-	//     are deliberately omitted)
+	// - the recent chat history for the in-scope session
+	// (read via the canonical *dbnotif.ChatRepo — the
+	// SAME repo the deterministic /chatbot endpoint uses)
+	// - the install-wide vehicle snapshot (VIN, display_name,
+	// soc_percent, charging_state, last_drive_summary —
+	// projected from VehicleRepo + LiveStateReader +
+	// DriveRepo so the LLM reads the SAME values the rest
+	// of the API surface already does; GPS / street names
+	// are deliberately omitted)
 	//
 	// NO new SQL is written; both adapters wrap existing
-	// readers. Registered AFTER the slice 0054 tools above so
+	// readers. Registered AFTER the tool group tools above so
 	// the registry's Names list grows deterministically.
 	aiVoiceModeChatSource := aivoice.NewChatContextSource(dbnotif.NewChatRepo(db))
 	aiVoiceModeVehicleSource := aivoice.NewVehicleSnapshotSource(
@@ -2552,23 +2545,23 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// watch-face-nl-response (Phase-50 / 0056 V2) sources.
+	// watch-face-nl-response sources.
 	// The watch-face-nl-response AI surface layers an opt-in
 	// Helix narrator on top of the existing /watch deterministic
 	// surface. Its single read-only tool query_watch_context
 	// bundles:
 	//
-	//   - the primary-vehicle snapshot (vehicle_name from
-	//     VehicleRepo + scalar live-state from the canonical
-	//     RedisSignalCache — the SAME two readers the
-	//     deterministic /watch/summary handler uses)
-	//   - the trailing-24h non-critical recent-alert list,
-	//     projected to {severity, age_seconds} pairs only (no
-	//     title, no message body, no PII) — read via the
-	//     canonical NotificationRepo.
+	// - the primary-vehicle snapshot (vehicle_name from
+	// VehicleRepo + scalar live-state from the canonical
+	// RedisSignalCache — the SAME two readers the
+	// deterministic /watch/summary handler uses)
+	// - the trailing-24h non-critical recent-alert list,
+	// projected to {severity, age_seconds} pairs only (no
+	// title, no message body, no PII) — read via the
+	// canonical NotificationRepo.
 	//
 	// NO new SQL is written; both adapters wrap existing
-	// readers. Registered AFTER the slice 0055 tools above so
+	// readers. Registered AFTER the tool group tools above so
 	// the registry's Names list grows deterministically.
 	aiWatchFaceNLContextSource := aiwatchnl.NewContextSource(
 		vehicledb.NewVehicleRepo(db),
@@ -2592,7 +2585,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// nl-sql-playground (Phase-50 / 0057 PU1) sources.
+	// nl-sql-playground sources.
 	// The nl-sql-playground AI surface layers an opt-in Helix
 	// translator on top of the manual SQL editor at /power/sql.
 	// Its two propose-only tools (draft_readonly_sql +
@@ -2605,7 +2598,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// deliberate per-prompt decision, not a default. NO new SQL
 	// is written by this slice; the executor remains the
 	// canonical baseline manual editor + the user's Run button.
-	// Registered AFTER the slice 0056 tools above so the
+	// Registered AFTER the tool group tools above so the
 	// registry's Names list grows deterministically.
 	aiNLSqlPlaygroundCatalogSource := ainlsql.NewSchemaCatalogSource()
 	aiNLSqlPlaygroundValidator := ainlsql.NewValidator()
@@ -2624,7 +2617,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// nl-grafana-panel (Phase-50 / 0058 PU2) sources.
+	// nl-grafana-panel sources.
 	// The nl-grafana-panel AI surface layers an opt-in Helix
 	// translator on top of the manual Grafana panel JSON editor
 	// at /power/grafana. Its two propose-only tools
@@ -2637,7 +2630,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// any of these is a deliberate per-prompt decision, not a
 	// default. The table catalog is shared with nl-sql-playground
 	// so the two slices stay in lock-step. Registered AFTER the
-	// slice 0057 tools above so the registry's Names list grows
+	// tool group tools above so the registry's Names list grows
 	// deterministically.
 	aiNLGrafanaPanelCatalogSource := ainlgrafana.NewNLGrafanaPanelCatalogSource()
 	aiNLGrafanaPanelValidator := ainlgrafana.NewNLGrafanaValidator()
@@ -2656,7 +2649,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / 0059 — nl-dashboard-composer (PU3). Registers
+	// nl-dashboard-composer (PU3). Registers
 	// the two propose-only typed tools (draft_dashboard_layout +
 	// validate_dashboard_layout) with the same shared
 	// install-wide tool registry so the dispatcher can resolve
@@ -2689,7 +2682,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// trip-postcard-share-card-image-generation (Phase-50 / 0060,
+	// trip-postcard-share-card-image-generation (the migration,
 	// GEN1 slice). Registers the propose-only draft_image_prompt
 	// + render_share_card_preview tools on the shared registry so
 	// the dispatcher can resolve them when the strategy runs;
@@ -2711,7 +2704,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// vehicle-paint-preview (Phase-50 / 0061, GEN2 slice). Registers
+	// vehicle-paint-preview. Registers
 	// the propose-only draft_paint_preview_prompt tool on the shared
 	// registry so the dispatcher can resolve it when the strategy
 	// runs; production wiring reuses *vehicledb.VehicleRepo (the same
@@ -2732,7 +2725,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-46 / Prompt 40 — rate-limit status counters. Construct two
+	// rate-limit status counters. Construct two
 	// sliding-window observers (one for every /api/v1 request, one
 	// scoped to writes only) and a handler that joins them with the
 	// Tesla client's bucket snapshot. Counters are attached as plain
@@ -2746,7 +2739,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		WriteCounter: apiWriteCounter,
 	})
 
-	// Phase-46 / Prompt 41 — worker heartbeat store powering the
+	// worker heartbeat store powering the
 	// /system/queues panel. Backed by Redis when available so
 	// every worker process can write its heartbeat to the same
 	// snapshot the API server reads. Falls back to an in-memory
@@ -2764,7 +2757,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		queueHeartbeatStore = workerdb.NewMemoryWorkerStatusStore()
 	}
 	r.Route("/api/v1", func(r chi.Router) {
-		// Phase-46 / Prompt 40 — count every /api/v1 request and every
+		// count every /api/v1 request and every
 		// write-method request before any rate-limit middleware so the
 		// status panel reflects raw load even when downstream limiters
 		// are rejecting traffic. Mounted BEFORE APICallLog so a panic
@@ -2777,7 +2770,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// ForwardAuthMiddleware so 401 responses from the auth layer are
 		// also captured. Skip predicate excludes streaming/health/metrics
 		// and the api-logs admin UI itself (feedback loop). The admin
-		// live log stream (phase-46/34) is also excluded so the
+		// live log stream is also excluded so the
 		// SSE viewer doesn't recursively log itself.
 		r.Use(APICallLogMiddleware(GetAPICallLogger(), cfg.APILogs.CaptureBodies, func(p string) bool {
 			if p == apiadminls.AdminLogStreamPath {
@@ -2790,7 +2783,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
 
-		// Phase-46 / Prompt 57 — Subject recorder. MUST run AFTER
+		// Subject recorder. MUST run AFTER
 		// ForwardAuthMiddleware (so the principal header is the
 		// authoritative one for this request) and BEFORE both the
 		// session tracker and the impersonation rewrite (so the
@@ -2800,7 +2793,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// who has touched the API). Open mode is a passthrough.
 		r.Use(tsauth.SubjectRecorderMiddleware(cfg.Auth.ForwardAuthHeader, subjectRecorder))
 
-		// Phase-46 / Prompt 42 — Session tracker. MUST run AFTER
+		// Session tracker. MUST run AFTER
 		// ForwardAuthMiddleware so the principal header is guaranteed
 		// present. Mints + binds a TeslaSync-issued cookie on the first
 		// authenticated request, validates it on every subsequent one,
@@ -2808,7 +2801,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// (no FORWARD_AUTH_HEADER configured) is a passthrough.
 		r.Use(tsauth.Middleware(cfg.Auth.ForwardAuthHeader, authSessionsRepo, tsauth.SessionTrackerOptions{}))
 
-		// Phase-46 / Prompt 46 — Impersonation middleware. MUST run
+		// Impersonation middleware. MUST run
 		// AFTER the session tracker so the tracker pins the cookie to
 		// the actual admin identity (not the rewritten target). The
 		// middleware verifies the HMAC-signed impersonation cookie,
@@ -2828,33 +2821,33 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/callback", authHandler.Callback)
 			r.Post("/refresh", authHandler.Refresh)
 			r.Get("/status", authHandler.Status)
-			// Phase-46 / Prompt 31 — destructive: revokes Tesla
+			// destructive: revokes Tesla
 			// refresh token and clears credentials. Sudo gated.
-			// Phase-46 / Prompt 46 — Blocked during impersonation so
+			// Blocked during impersonation so
 			// an admin cannot accidentally disconnect the target's
 			// Tesla account; the original admin must end impersonation
 			// first.
 			r.With(tsauth.RequireNotImpersonating(), RequireSudo(sudoStore, sudoCfg)).Post("/disconnect", authHandler.Disconnect)
-			// Phase-46 / Prompt 31 — Sudo step-up reauth. POST a
+			// Sudo step-up reauth. POST a
 			// password OR totp_code to mint a 5-minute X-Sudo-Token
 			// the SPA echoes on subsequent destructive requests. In
 			// open mode this returns 200 mode="open" without minting
 			// anything; the dialog falls back to typed-confirmation.
-			// Phase-46 / Prompt 46 — Blocked during impersonation so
+			// Blocked during impersonation so
 			// no fresh sudo tokens can be minted under the target's
 			// rewritten principal. Existing tokens won't validate
 			// either (token subject != rewritten subject), so this is
 			// belt-and-suspenders.
 			r.With(tsauth.RequireNotImpersonating()).Post("/reauth", sudoHandler.Reauth)
-			// Phase-46 / Prompt 35 — per-user TOTP enrollment.
-			// /totp                              GET    status pill backing
-			// /totp/enroll                       POST   start enrollment
-			// /totp/verify                       POST   confirm enrollment
-			// /totp/sudo                         POST   mint sudo token via per-user TOTP
-			// /totp                              DELETE revoke (sudo-gated)
-			// /totp/backup-codes/regenerate      POST   rotate backup codes (sudo-gated)
+			// per-user TOTP enrollment.
+			// /totp GET status pill backing
+			// /totp/enroll POST start enrollment
+			// /totp/verify POST confirm enrollment
+			// /totp/sudo POST mint sudo token via per-user TOTP
+			// /totp DELETE revoke (sudo-gated)
+			// /totp/backup-codes/regenerate POST rotate backup codes (sudo-gated)
 			//
-			// Phase-46 / Prompt 46 — The entire /totp subtree is
+			// The entire /totp subtree is
 			// blocked during impersonation. Enrollment, verification,
 			// and sudo-token mints all read the principal from the
 			// (rewritten) header and would otherwise act as the target.
@@ -2867,13 +2860,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", totpHandler.Revoke)
 				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/backup-codes/regenerate", totpHandler.RegenerateBackupCodes)
 			})
-			// Phase-46 / Prompt 42 — Active sessions / device
+			// Active sessions / device
 			// management. List is read-only; both DELETE routes are
 			// sudo-gated (RequireSudo is a passthrough in open mode,
 			// so the handler's own AUTH_MODE_OPEN check is what
 			// guards the resource semantics there).
 			//
-			// Phase-46 / Prompt 46 — DELETEs are blocked during
+			// DELETEs are blocked during
 			// impersonation so an admin cannot revoke the target's
 			// real sessions. List is allowed because it's read-only
 			// and reflects what the target sees, which is exactly the
@@ -2887,7 +2880,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// Onboarding (Phase 40 / Prompt 18): first-run gate status.
+		// Onboarding: first-run gate status.
 		// Reports whether the install has connected a Tesla account,
 		// has any vehicles, and has received recent telemetry. The
 		// frontend polls this endpoint and routes the user to
@@ -2898,7 +2891,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
 			r.Route("/{vehicleID}", func(r chi.Router) {
 				r.Get("/", vehicleHandler.Get)
-				// Phase-46 / Prompt 31 — destructive: requires sudo.
+				// destructive: requires sudo.
 				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", vehicleHandler.Delete)
 				r.Get("/positions", vehicleHandler.Positions)
 				r.Get("/state", vehicleHandler.CurrentState)
@@ -2940,7 +2933,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/upgrades", vehicleInfoHandler.UpgradeEligibility)
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/upgrades/refresh", vehicleInfoHandler.RefreshUpgradeEligibility)
 
-				// Phase-43a / Prompt 0006 — /guard endpoints restored.
+				// /guard endpoints restored.
 				// Status + Events are read-only and rate-limit-free
 				// (the SPA polls these from the dashboard). Acknowledge
 				// is a soft mark-read with per-IP rate-limit at 60/min
@@ -2964,7 +2957,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 					fh.HandleDebug(w, req)
 				})
 
-				// Phase-46 / Prompt 43 — per-vehicle settings.
+				// per-vehicle settings.
 				// GET is read-only and unguarded; PUT/DELETE are
 				// rate-limited by IP at 60/min — the SPA only fires
 				// these on user save/reset clicks, but the guard
@@ -2974,7 +2967,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.With(httprate.LimitByIP(60, 1*time.Minute)).Put("/settings/{key}", vehicleSettingsHandler.Put)
 				r.With(httprate.LimitByIP(60, 1*time.Minute)).Delete("/settings/{key}", vehicleSettingsHandler.Delete)
 
-				// Phase-46 / Prompt 54 — vehicle hero photo. POST
+				// vehicle hero photo. POST
 				// + DELETE are rate-limited at 5/min (uploads are
 				// expensive and the SPA only fires them on
 				// explicit user action). GET routes are unguarded
@@ -2991,7 +2984,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/score", driveHandler.Score)
 			r.Get("/dynamics", driveHandler.Dynamics)
 			r.Get("/acceleration-distribution", driveHandler.AccelerationDistribution)
-			// Bulk delete (Phase-40 / Prompt 51)
+			// Bulk delete
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", driveHandler.BulkDelete)
 			r.Route("/{driveID}", func(r chi.Router) {
 				r.Get("/", driveHandler.Get)
@@ -3000,7 +2993,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				// Share link management
 				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.Create)
 				r.Get("/shares", shareHandler.List)
-				// Phase-44 / observability-batch / Prompt F10 —
+				//
 				// Drive-end diagnostic. Returns the fsm_transitions
 				// + signal_window centered on the drive's end_ts
 				// (or NOW for in-progress drives), explaining WHY
@@ -3024,7 +3017,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 		r.Route("/charging", func(r chi.Router) {
 			r.Get("/", chargingHandler.ListByVehicle)
-			// Bulk delete (Phase-40 / Prompt 51)
+			// Bulk delete
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", chargingHandler.BulkDelete)
 			r.Route("/{sessionID}", func(r chi.Router) {
 				r.Get("/", chargingHandler.Get)
@@ -3078,12 +3071,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/error-vins/refresh", fleetTelemetryErrorHandler.RefreshErrorVINs)
 			r.Get("/errors", fleetTelemetryErrorHandler.Errors)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/errors/refresh", fleetTelemetryErrorHandler.RefreshErrors)
-			// Phase-43a/0002 — package-derived routing snapshot for the
+			// package-derived routing snapshot for the
 			// admin Fleet Telemetry Coverage page. Read-only, DB-free.
 			// Rate limiting matches the admin /system endpoints' 60/min
 			// ceiling. The sibling /subscription endpoint owned by the
 			// same handler is intentionally NOT mounted here — no
-			// frontend caller exists today and the prompt allows only
+			// frontend caller exists today and the request allows only
 			// one new route.
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/coverage", fleetTelemetryHandler.Coverage)
 		})
@@ -3108,7 +3101,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/geofences", func(r chi.Router) {
 			r.Get("/", geofenceHandler.List)
 			r.Post("/", geofenceHandler.Create)
-			// Bulk operations (Phase-45 / Prompt 32) — kept ahead of the
+			// Bulk operations — kept ahead of the
 			// {geofenceID} subrouter so chi matches the static path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", geofenceHandler.BulkUpdate)
 			r.Route("/{geofenceID}", func(r chi.Router) {
@@ -3128,7 +3121,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/settings/polling-config", settingsHandler.UpdatePollingConfig)
 			r.Get("/settings/dashboard-layouts", settingsHandler.GetDashboardLayouts)
 			r.Put("/settings/dashboard-layouts", settingsHandler.UpdateDashboardLayouts)
-			// Phase-50 / 0003 / F2 — pre-flight provider config
+			// pre-flight provider config
 			// validation for the Settings → AI form. Lives on the
 			// settings sub-tree (NOT under /api/v1/ai/*) because
 			// users call it WHILE opting in (ai_mode='off' at the
@@ -3137,14 +3130,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// because the worst-case write the call enables is
 			// the same one /settings allows already.
 			r.Post("/settings/ai/validate-config", aisettingsvalidate.Handler(aiRegistry, aiSettingsReader{repo: aiSettingsRepo}))
-			// Phase-46 / Prompt 36 — JSON bundle export + import.
+			// JSON bundle export + import.
 			// Export is read-only; import is sudo-gated because a
 			// large alert-rule replay or bulk geofence rewrite is a
 			// destructive action that should always carry a fresh
 			// credential. Both routes carry the parent rate limit.
 			r.Get("/settings/export", settingsExportHandler.Export)
 			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/import", settingsImportHandler.Import)
-			// Phase-46 / Prompt 50 — POST /settings/reset.
+			// POST /settings/reset.
 			// Sudo-gated for the same reason as /settings/import: every
 			// reset is destructive (wipes alert rules, geofences, or
 			// the entire user-discoverable preference surface) and
@@ -3152,7 +3145,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/settings/reset", settingsResetHandler.Reset)
 		})
 
-		// Named dashboard layout library (Phase 40 / Prompt 30).
+		// Named dashboard layout library.
 		// Coexists with /settings/dashboard-layouts above — that endpoint
 		// holds the active in-app blob, this is the per-row "save as
 		// preset" library scoped per-vehicle.
@@ -3165,7 +3158,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/{id}/apply", dashboardLayoutHandler.Apply)
 		})
 
-		// Chart annotations (Phase 40 / Prompt 43) — durable storage for the
+		// Chart annotations — durable storage for the
 		// user-authored event markers rendered on time-series charts. Replaces
 		// the previous localStorage-only store so annotations survive a device
 		// swap or fresh browser profile.
@@ -3177,7 +3170,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Delete("/{id}", chartAnnotationHandler.Delete)
 		})
 
-		// Pinned items (Phase 40 / Prompt 48) — unified per-user "pin" storage
+		// Pinned items — unified per-user "pin" storage
 		// powering pinned-first ordering across vehicles, dashboard widgets,
 		// alert rules, geofences, automations, and commands.
 		r.Route("/pinned", func(r chi.Router) {
@@ -3188,7 +3181,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Delete("/{id}", pinnedHandler.Delete)
 		})
 
-		// Saved views (Phase 40 / Prompt 50) — durable named URL querystrings
+		// Saved views — durable named URL querystrings
 		// for list pages (filters, sort, pagination). Each row is a snapshot
 		// the user can recall later from the SavedViewMenu component; one
 		// view per (user, route) may be marked default and auto-applies on
@@ -3201,7 +3194,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Delete("/{id}", savedViewsHandler.Delete)
 		})
 
-		// Web Push (VAPID) — Phase 40 / Prompt 52. Browser subscription
+		// Web Push (VAPID). Browser subscription
 		// registration + listing + removal. The VAPID public key is also
 		// served unauthenticated (it is, by spec, public) — but rate
 		// limiting still applies via the parent router. Push delivery
@@ -3236,11 +3229,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Put("/rules/{ruleID}", alertHandler.UpdateRule)
 			r.Delete("/rules/{ruleID}", alertHandler.DeleteRule)
 			r.Post("/rules/{ruleID}/snooze", alertHandler.SnoozeRule)
-			// Bulk enable/disable (Phase-40 / Prompt 51)
+			// Bulk enable/disable
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/enable", alertHandler.BulkEnableRules)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/rules/bulk/disable", alertHandler.BulkDisableRules)
 			r.Post("/test", alertHandler.TestRule)
-			// Phase-50 / ADR-005 — alert message template helpers.
+			// alert message template helpers.
 			// These are static read paths registered BEFORE the
 			// catch-all `/{alertID}` route below so chi resolves them
 			// correctly. They are intentionally unauthenticated only
@@ -3250,7 +3243,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/message-presets", alertMessageHandler.MessagePresets)
 			r.Get("/message-placeholders", alertMessageHandler.MessagePlaceholders)
 			r.Post("/message-preview", alertMessageHandler.MessagePreview)
-			// Phase-46 / Prompt 20 — alert acknowledgement + audit timeline.
+			// alert acknowledgement + audit timeline.
 			// Registered AFTER the static `/rules`, `/metrics`, `/test` routes
 			// above so chi's static-first matching routes them correctly.
 			r.Get("/{alertID}", alertHandler.GetAlert)
@@ -3264,7 +3257,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", automationHandler.List)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/", automationHandler.Create)
 
-			// Bulk operations (Phase-45 / Prompt 32) — registered before the
+			// Bulk operations — registered before the
 			// {id} subrouter so chi matches the static `/bulk` path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", automationHandler.BulkUpdate)
 
@@ -3363,7 +3356,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Post("/", notifScheduleHandler.CreateSchedule)
 				r.Delete("/{scheduleID}", notifScheduleHandler.DeleteSchedule)
 			})
-			// Phase-46 / Prompt 19 — Do-Not-Disturb windows. Mounted
+			// Do-Not-Disturb windows. Mounted
 			// before /{channelID} so chi's path matcher does not treat
 			// "quiet-hours" as a channel id.
 			r.Route("/quiet-hours", func(r chi.Router) {
@@ -3372,7 +3365,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Patch("/{id}", quietHoursHandler.Patch)
 				r.Delete("/{id}", quietHoursHandler.Delete)
 			})
-			// Phase-46 / Prompt 37 — webhook signature preview is a
+			// webhook signature preview is a
 			// pure utility (no DB touch, no outbound call); rate-limited
 			// because it computes HMAC SHA-256 on caller-supplied input.
 			// Mounted before /{channelID} for the same reason as
@@ -3386,7 +3379,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Delete("/", notificationHandler.DeleteChannel)
 				r.Post("/toggle", notificationHandler.ToggleChannel)
 				r.Post("/test", notificationHandler.TestChannel)
-				// Phase-46 / Prompt 37 — HMAC-aware webhook test. Sibling
+				// HMAC-aware webhook test. Sibling
 				// of /test so the legacy generic test stays available;
 				// this endpoint exists solely for webhook-kind channels
 				// and 404s on any other kind.
@@ -3476,15 +3469,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Software Updates
 		r.Get("/software-updates", softwareUpdateHandler.List)
 
-		// Phase-43a / Prompt 0005: /vampire-drain + /vampire-drain/stats
-		// restored after Phase-42 prompt 0077 removed them with the
-		// vampire_drain_events table. The two endpoints are now derived
-		// live from fsm_transitions (mig 000187) — parked windows from
-		// fsm_name='vehicle' transitions into 'parked' — paired with
+		// /vampire-drain + /vampire-drain/stats are derived
+		// live from fsm_transitions because vampire_drain_events no longer exists.
+		// Parked windows come from
+		// fsm_transitions (mig 000187) where fsm_name='vehicle' transitions into 'parked' — paired with
 		// signal_log.field='BatteryLevel' for the SOC endpoints, with
 		// charging windows excluded via signal_log.field='ChargeState'
 		// (int_value > 1). Same admin-style rate limit as /mileage and
-		// /vehicle-states (Phase-43a precedent).
+		// /vehicle-states.
 		vampireDrainHandler := apivamp.NewVampireDrainHandler(drivedb.NewVampireDrainRepo(db.Pool))
 		r.Route("/vampire-drain", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
@@ -3495,46 +3487,41 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Visited Locations
 		r.Get("/locations", visitedLocationHandler.List)
 
-		// Phase-43a / Prompt 0004: /mileage/{monthly,stats} restored after
-		// Phase-42 prompt 0077 removed them with the daily_mileage table.
-		// Both shapes are now derived live from the SI-canonical drives
-		// table (mig 000185) — distance_m / 1000 → km, energy_used_wh /
+		// /mileage/{monthly,stats} are derived live from the SI-canonical drives
+		// table because daily_mileage no longer exists.
+		// Shapes use distance_m / 1000 → km and energy_used_wh /
 		// 1000 → kWh. Frontend hooks useMonthlyMileage / useMileageStats
 		// stop returning 404. Same admin-style rate limit as
-		// /vehicle-states (Phase-43a / Prompt 0003 precedent).
+		// /vehicle-states.
 		mileageHandler := apimileage.NewHandler(drivedb.NewMileageRepo(db.Pool))
 		r.Route("/mileage", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/monthly", mileageHandler.Monthly)
 			r.Get("/stats", mileageHandler.Stats)
-			// Phase-43a / Prompt 0009 (fix/misc-fixes): per-day buckets
-			// for MileagePage.tsx's "Odometer Over Time" + "Daily
-			// Distance" charts. Page was 404ing since Phase-42/0077
-			// deleted the legacy daily_mileage handler.
+			// Per-day buckets for MileagePage.tsx's "Odometer Over Time" +
+			// "Daily Distance" charts, derived without the legacy daily_mileage handler.
 			r.Get("/daily", mileageHandler.Daily)
 		})
 
 		// Trips
 		r.Get("/trips", tripHandler.List)
 
-		// Phase-43a / Prompt 0008: GET /trips/{trip_id} restores the
+		// GET /trips/{trip_id} restores the
 		// per-trip detail endpoint that the frontend useTrip hook
 		// (web/src/api/hooks/useTrips.ts) calls to populate
 		// TripDetailPage. Aggregates the trip header + constituent
 		// drives (via trip_drives) + a vehicle-scoped time-window
 		// charging_sessions overlap to surface drive_count /
-		// charge_count / total_cost. Same admin-style rate limit
-		// (60/min) as the rest of the Phase-43a admin reads.
+		// charge_count / total_cost. Uses the same admin-style rate limit
+		// (60/min) as related admin reads.
 		tripsDetailHandler := apitripsd.NewHandler(tripdb.NewTripsDetailRepo(db.Pool))
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/trips/{trip_id}", tripsDetailHandler.Get)
 
-		// Phase-43a / Prompt 0003: /vehicle-states/{timeline,summary} restored
-		// after Phase-42 prompt 0077 removed them with the vehicle_states
-		// snapshot table. The two endpoints are now derived from
-		// fsm_transitions (mig 000187) filtered to fsm_name='vehicle' so
+		// /vehicle-states/{timeline,summary} are derived from
+		// fsm_transitions because the vehicle_states snapshot table no longer exists.
+		// The query filters mig 000187 rows to fsm_name='vehicle' so
 		// frontend hooks useStateTimeline / useTimeline / useStateSummary
-		// stop returning 404. Same admin-style rate limit as /system/queues
-		// (Phase-46 / Prompt 41 precedent).
+		// stop returning 404. Same admin-style rate limit as /system/queues.
 		vehicleStatesHandler := apivehstates.NewHandler(vehicledb.NewVehicleStatesRepo(db.Pool))
 		r.Route("/vehicle-states", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
@@ -3646,7 +3633,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Real-time SSE stream — protected by ForwardAuthMiddleware on the parent /api/v1 group
 		r.Get("/events", sse.SSEHandler(eventHub))
-		// Backward-compat stub: frontend still calls fetchSSEToken() until it is removed
+		// Backward-compat stub: frontend still calls fetchSSEToken until it is removed
 		r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"token": ""})
 		})
@@ -3665,7 +3652,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			}
 			r.Get("/health", ExtendedHealthCheck(db, health, bufferStats, maintenanceProvider))
 
-			// Phase-46 / Prompt 57 — Auth-mode contract endpoint.
+			// Auth-mode contract endpoint.
 			// Always reachable; deliberately NOT sudo-gated and NOT
 			// wrapped in RequireSubjectMiddleware because the SPA's
 			// session-monitor + RequiresAuth components rely on this
@@ -3698,7 +3685,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/metrics-catalog", MetricsCatalogHandler())
 			r.Get("/openapi", apiopenapi.Handler())
 
-			// Phase-46 / Prompt 33 — Aggregated self-test endpoint.
+			// Aggregated self-test endpoint.
 			// Single click runs ~10 checks (DB, MQTT, Redis, Tesla
 			// token + breaker, signal_log freshness, migrations,
 			// runtime, health monitor) and returns a structured
@@ -3709,14 +3696,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).
 				Post("/diagnostic", diagnosticHandler.ServeHTTP)
 
-			// Phase-46 / Prompt 40 — Rate-limit status panel feed.
+			// Rate-limit status panel feed.
 			// Read-only; cheap (no DB / no Redis); polled every 30s
 			// by the admin status panel. Per-IP throttle still
 			// applies in case a misconfigured client busy-loops it.
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/rate-limits", rateLimitHandler.ServeHTTP)
 
-			// Phase-46 / Prompt 41 — Job queue status feed.
+			// Job queue status feed.
 			// Aggregates pending / in-progress / 24h success-fail
 			// counts across notification, export, automation
 			// workers, plus latest heartbeat (Redis). Both routes
@@ -3732,7 +3719,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(60, 1*time.Minute)).
 				Get("/queues/{worker}/jobs", queueStatusHandler.ServeJobs)
 
-			// Phase-44 / observability-batch / Prompt F4 — DLQ
+			// DLQ
 			// Inspector. List + per-entry GET are read-only and
 			// per-IP throttled at 60/min. Replay is gated by
 			// sudo-token (RequireSudo) AND by DLQ_REPLAY_ENABLED
@@ -3760,7 +3747,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				RequireSudo(sudoStore, sudoCfg),
 			).Post("/dlq/{id}/replay", dlqHandler.Replay)
 
-			// Phase-44 / observability-batch / Prompt F8 — Feature
+			// Feature
 			// Flags. List + GET + audit are read-only (60/min).
 			// PUT + DELETE are sudo-gated + audited via the
 			// feature_flag_changes table; the dynamic
@@ -3790,7 +3777,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				RequireSudo(sudoStore, sudoCfg),
 			).Delete("/flags/{key}", flagsHandler.Delete)
 
-			// Phase-44 / observability-batch / Prompt F6 —
+			//
 			// Per-vehicle ingest X-Ray. Returns per-field
 			// sample counts + last-seen + time-bucket histogram
 			// over a configurable window. Read-only, 60/min IP
@@ -3803,7 +3790,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				Get("/ingest-xray/{vehicleID}", ingestXRayHandler.Get)
 		})
 
-		// Phase-2 / Status API — operator-grade /api/v1/status/* endpoints.
+		// / Status API: operator-grade /api/v1/status/* endpoints.
 		// Stable contract for external integrations (Grafana, Uptime Kuma,
 		// Home Assistant, etc.). The SPA's System Status page also subscribes
 		// to /status/live (SSE) so it can drop polling. Inherits the parent
@@ -3842,7 +3829,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// Phase-45 — Operator confidence admin surface. Five
+		// Operator confidence admin surface. Five
 		// read-only observability routes + audit viewer + GDPR
 		// export download. Each backing repo can be nil; the
 		// handler returns 503 SUBSYSTEM_NOT_CONFIGURED instead of
@@ -3887,7 +3874,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			v1AdminAudit.Register(r)
 			v1GDPRExport.Register(r)
 
-			// Phase-46 SOTA observability batch (p46-slo, p46-dq-lineage,
+			// SOTA observability batch (p46: slo, p46-dq-lineage,
 			// p46-synthetic). Each handler degrades to 503 SUBSYSTEM_NOT_CONFIGURED
 			// when its backing subsystem wasn't wired in opt — see
 			// RouterOptions for the optionality contract.
@@ -3902,7 +3889,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/admin/observability/synthetic", syntheticHandler.Snapshot)
 		})
 
-		// Per-user activity feed (Phase-40 / Prompt 49 — Recent Activity Discoverability).
+		// Per-user activity feed.
 		// Returns the requesting caller's audit_logs entries scoped by the
 		// configured ForwardAuth header value. Sibling to /system/audit, which
 		// remains the admin-wide view.
@@ -3932,13 +3919,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/", apiKeyHandler.List)
 			r.Post("/", apiKeyHandler.Create)
 			r.Route("/{id}", func(r chi.Router) {
-				// Phase-46 / Prompt 31 — destructive: requires sudo.
+				// destructive: requires sudo.
 				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", apiKeyHandler.Delete)
 				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/revoke", apiKeyHandler.Revoke)
 			})
 		})
 
-		// Admin: frontend error reporting summary (Phase 46 / Prompt 01).
+		// Admin: frontend error reporting summary.
 		// Last-hour rolling counts read from the same web error handler
 		// instance that the public /api/v1/web-errors POST endpoint
 		// writes to, so the summary stays in sync without going through
@@ -3949,7 +3936,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Admin: operator-controlled maintenance/degraded banner
-		// (Phase 46 / Prompt 04). GET returns the persisted DB row
+		//. GET returns the persisted DB row
 		// plus an env-override marker; POST validates and writes the
 		// row, audits the change via logAuditFromRequest, and rate-
 		// limits per IP because state-change endpoints are otherwise
@@ -3963,11 +3950,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/", adminMaintenanceHandler.Set)
 		})
 
-		// In-app feedback / report-bug widget (Phase 46 / Prompt 08).
+		// In-app feedback / report-bug widget.
 		// POST /feedback is the public ingest path used by the SPA's
 		// <FeedbackModal> (sidebar button + Cmd+K command palette
 		// entry). Mounted INSIDE this ForwardAuth subrouter so anonymous
-		// spam is bounded (per the prompt's Out-of-scope: "Anonymous
+		// spam is bounded (per the request's Out-of-scope: "Anonymous
 		// feedback (must be authenticated to prevent spam)"). Per-row
 		// rate limit (3/hour) is enforced inside the handler against
 		// user_feedback so it survives pod restarts; a tighter per-IP
@@ -3975,7 +3962,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// the DB lookup fails open.
 		r.With(httprate.LimitByIP(20, 1*time.Hour)).Post("/feedback", feedbackHandler.Submit)
 
-		// Admin feedback queue (Phase 46 / Prompt 08): list / get /
+		// Admin feedback queue: list / get /
 		// patch the user_feedback rows. PATCH optionally forwards the
 		// row to GitHub Issues when cfg.GitHub is configured. Any
 		// authenticated caller can read/write — audit_logs is the
@@ -3989,7 +3976,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		})
 
-		// Phase-46 / Prompt 44 — RBAC matrix admin endpoints.
+		// RBAC matrix admin endpoints.
 		// GET is unguarded so any authenticated caller can render
 		// the page; PUT is sudo-gated since it changes the
 		// authorisation matrix the install runs under. In open mode
@@ -4002,7 +3989,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(RequireSudo(sudoStore, sudoCfg)).Put("/matrix", rbacHandler.UpsertMatrix)
 		})
 
-		// Phase-46 / Prompt 46 — Admin impersonation endpoints.
+		// Admin impersonation endpoints.
 		// GET state + GET candidates are read-only and unguarded so
 		// the SPA can poll them to render the banner. POST start is
 		// sudo-gated AND blocked while already impersonating so a
@@ -4020,7 +4007,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/end", impersonationHandler.End)
 		})
 
-		// Admin: live log tail stream (Phase-46 / Prompt 34).
+		// Admin: live log tail stream.
 		// SSE endpoint that fans out structured zerolog events to
 		// any authenticated browser. Read-only, idempotent — kept
 		// behind the parent /api/v1 ForwardAuth gate but
@@ -4028,7 +4015,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// uses fetch+ReadableStream (NOT EventSource) so it could
 		// send X-Sudo-Token, but the stream itself triggers no side
 		// effects so step-up is reserved for destructive admin
-		// actions per Prompt 31's intent. httprate caps reconnect
+		// actions per the request's intent. httprate caps reconnect
 		// storms to 10/min/IP.
 		r.Route("/admin/logs", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(10, 1*time.Minute))
@@ -4168,14 +4155,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			})
 		}
 
-		// Phase-43a / Prompt 0007: /signals/catalog and /signals/observations
-		// restored after Phase-42 prompt 0077 deleted the legacy
+		// /signals/catalog and /signals/observations
+		// restored after the migration deleted the legacy
 		// signal_catalog_handler.go. The catalog spine is parsed from
 		// routing.yaml (router.Load) at handler construction; aggregates
 		// + observations come from signal_log (mig 000186). Frontend hooks
 		// useSignalCatalog / useSignalObservations stop returning 404. Same
 		// admin-style rate limit as /vehicle-states + /system/queues
-		// (Phase-43a / Prompt 0003 + Phase-46 / Prompt 41 precedent).
+		//.
 		// Mounted BEFORE /signals/{vehicleID} so the static paths take
 		// precedence under chi v5's longest-static-prefix matching.
 		signalsCatalogHandler := apisigcat.NewHandler(signaldb.NewSignalsCatalogRepo(db.Pool))
@@ -4235,7 +4222,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/data-repair", func(r chi.Router) {
 			r.Use(httprate.LimitByIP(20, 1*time.Minute))
 			// GET stays read-only and unguarded; every mutating route
-			// below threads through RequireSudo (Phase-46 / Prompt 31).
+			// below threads through RequireSudo.
 			r.Get("/stale-sessions", dataRepairHandler.GetStaleSessions)
 			r.Route("/charging/{id}", func(r chi.Router) {
 				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateCharging)
@@ -4255,7 +4242,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/configs", backupRestoreHandler.CreateConfig)
 			r.Get("/configs/{configID}", backupRestoreHandler.GetConfig)
 			r.Put("/configs/{configID}", backupRestoreHandler.UpdateConfig)
-			// Phase-46 / Prompt 31 — destructive: requires sudo.
+			// destructive: requires sudo.
 			r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/configs/{configID}", backupRestoreHandler.DeleteConfig)
 			r.Post("/configs/{configID}/trigger", backupRestoreHandler.TriggerBackup)
 			r.Post("/quick", backupRestoreHandler.TriggerQuickBackup)
@@ -4276,17 +4263,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		}
 		exportJobHandler := apiexports.NewExportJobHandler(db, pahoClient)
 		exportColumnsHandler := apiexpcol.NewHandler()
-		// Phase-46 / Prompt 62 — column-selector UI fetches the publishable
+		// column-selector UI fetches the publishable
 		// column catalog for the active export type. Read-only and cheap;
 		// rate-limited to soak up accidental SPA loops.
 		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/exports/columns", exportColumnsHandler.ListColumns)
 		r.Route("/export/jobs", func(r chi.Router) {
 			r.Post("/", exportJobHandler.SubmitJob)
 			r.Post("/account", exportJobHandler.SubmitAccountJob)
-			// Phase-46 / Prompt 31 — destructive: a settings import
+			// destructive: a settings import
 			// can overwrite live config; gate on sudo.
 			r.With(RequireSudo(sudoStore, sudoCfg)).Post("/import", exportJobHandler.SubmitImportJob)
-			// Bulk operations (Phase-45 / Prompt 32) — registered before
+			// Bulk operations — registered before
 			// /{jobID} so chi matches the static `/bulk` path first.
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/bulk", exportJobHandler.BulkUpdate)
 			r.Get("/", exportJobHandler.ListJobs)
@@ -4294,7 +4281,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/{jobID}/download", exportJobHandler.DownloadJob)
 		})
 
-		// Phase-46 / Prompt 65 — recurring scheduled exports.
+		// recurring scheduled exports.
 		// Five routes mounted as a separate /scheduled-exports
 		// subtree (NOT /export/jobs/scheduled) because they
 		// describe schedule rows, not one-shot job rows. Owner
@@ -4329,7 +4316,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		exportSvc := exportsvc.New(exportRepo, fsmHistoryRepo, nil)
 		dashboardSvc := dashboardsvc.New(vehicleRepo, chargingRepo, tripRepo)
 
-		// Wire OTel FSM tracers so every Fire() emits a span. The fsm.Tracer
+		// Wire OTel FSM tracers so every Fire emits a span. The fsm.Tracer
 		// port is implemented by tracing.NewFSMTracer (the OTel adapter); the
 		// svc layer depends only on the port (ADR-006: zero-deps domain).
 		// Each tracer name surfaces as the instrumentation scope in Tempo, so
@@ -4356,7 +4343,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		_ = vehicleSvc
 		_ = v1VehicleHandler
 
-		// Phase-50 / 0001 — F0 AI-Off Contract.
+		// F0 AI-Off Contract.
 		//
 		// Mount every /api/v1/ai/* route through the guard. The
 		// guard returns 404 unless ai_mode is non-off AND the
@@ -4420,7 +4407,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			VehiclePaintPreview:                  aiVehiclePaintPreviewHandler,
 		})
 
-		// Phase-50 / 0004 — F3 AI Usage Card endpoints.
+		// F3 AI Usage Card endpoints.
 		//
 		// /api/v1/ai/usage/{today,by-feature,recent} surface the
 		// audit log written by the audit decorator above. The
@@ -4430,7 +4417,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// mountAIUsageRoutes carves out the exception precisely.
 		aiusage.MountUsageRoutes(r, aiSettingsRepo, aiCallLogRepo, cfg.Auth.ForwardAuthHeader)
 
-		// Phase-50 / 0009 — F8 AI Admin endpoints (redaction-bypass report).
+		// F8 AI Admin endpoints (redaction-bypass report).
 		//
 		// /api/v1/ai/admin/redaction-bypass surfaces the
 		// per-(feature, provider) bypass summary written by the
@@ -4591,7 +4578,7 @@ func installAdminLogStreamTap(reg *platform.LogSubscriberRegistry) {
 // provider.SettingsReader port. The repo natively exposes
 // AIMode + AIFeatureEnabled (cheap single-row PK lookups). The
 // AIProviderConfig accessor is implemented here by calling
-// the existing typed Get() and pulling out the AIProviderConfig
+// the existing typed Get and pulling out the AIProviderConfig
 // JSONB field — keeping the repo single-purpose (R5 mitigation)
 // and avoiding a settings-repo migration in slice F1.
 type aiSettingsReader struct {

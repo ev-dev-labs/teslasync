@@ -1,4 +1,4 @@
-// Phase-44 / observability-batch / Prompt F8 — Flags handler tests.
+// Flags handler tests.
 //
 // Exercises the HTTP layer with a real *flags.Store backed by a
 // miniredis instance. This is the cleanest way to validate the

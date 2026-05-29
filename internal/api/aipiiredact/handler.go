@@ -1,7 +1,5 @@
 package aipiiredact
 
-// Phase-50 AI handler.
-//
 // This guarded, body-driven endpoint streams a one-shot redaction recommendation
 // without persistence. The export_type is bound into context before dispatch so
 // tools reject prompt-injected attempts to switch scope.

@@ -1,6 +1,6 @@
 package aiusage
 
-// Phase-50 / 0004 — F3 AI Usage Handler.
+// AI usage handler.
 //
 // /api/v1/ai/usage/* exposes the per-call audit log through the same guarded
 // middleware stack as other AI routes. The __usage__ meta-feature opens whenever
@@ -46,7 +46,6 @@ const usageDefaultRecentLimit = 50
 // real AI features continues to enforce the per-feature toggle.
 //
 // Why a wrapper instead of editing guard.go:
-//   - guard.go is NOT in this slice's allowed-files list.
 //   - The wrapper isolates the meta-feature carve-out at the call
 //     site (this file) so future readers see the special case in
 //     context rather than buried in the guard package.

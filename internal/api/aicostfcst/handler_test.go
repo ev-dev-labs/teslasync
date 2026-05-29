@@ -1,8 +1,8 @@
-// Phase-50 / 0029 — C4 Cost forecast narration.
+// Cost forecast narration off-mode tests.
 //
 // Off-mode tests prove TestCostForecastNarrationAIOffShowsDeterministicForecast keeps AI hidden while
 // GET /api/v1/analytics/cost-forecast remains the deterministic baseline (ADR-015 §I3, §I6).
-// Streaming coverage stays in the F6 eval harness because it needs a live fixture.
+// Streaming coverage stays in the AI eval harness because it needs a live fixture.
 
 package aicostfcst
 
@@ -38,7 +38,7 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestCostForecastNarrationAIOffShowsDeterministicForecast is the
-// load-bearing off-mode contract proof for slice 0029. It mounts
+// load-bearing off-mode contract proof. It mounts
 // the AI cost-forecast-narration route through the guard with
 // ai_mode='off' and proves:
 //

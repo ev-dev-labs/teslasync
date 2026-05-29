@@ -10,7 +10,7 @@ import (
 // TestUpstreamBreaker_ResetAt_TracksOpenTransition asserts that the
 // observer pins the open timestamp on the first call where the breaker
 // transitions into the "open" state, and computes breaker_reset_at as
-// openedAt + timeout. Phase-45 / Prompt 33.
+// openedAt + timeout.
 func TestUpstreamBreaker_ResetAt_TracksOpenTransition(t *testing.T) {
 	o := &teslaBreakerObserver{}
 	now := time.Date(2026, 5, 3, 12, 0, 0, 0, time.UTC)

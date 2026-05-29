@@ -12,19 +12,12 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// ClimateHandler serves climate/HVAC endpoints backed by the signal-log
-// change feed via signal.StateReader (ADR-002 / phase-39).
+// ClimateHandler serves climate/HVAC endpoints backed by signal.StateReader.
 //
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (the old pivot +
-// snapshot helpers) has been replaced with the canonical signal.StateReader.
 // Climate fields (cabin temp, HVAC state, seat heaters) change rarely once
-// set — many emissions occur once per day. The legacy raw-pivot
-// implementation rendered later rows as having NULL for every signal that
-// did not re-emit inside the bucket, so the climate history chart on the
-// frontend showed sawtooth gaps. With StateReader.Timeline forward-folding
-// (chart mode — empty CollapseBy so every emission becomes one row), every
-// row carries the most recently observed value of every projected signal,
-// fixing the "blank cabin temp" rendering bug across long stable runs.
+// set. StateReader.Timeline forward-folds chart rows so every projected
+// signal carries its most recently observed value, avoiding sawtooth gaps
+// when a signal does not re-emit inside a bucket. See ADR-002.
 type ClimateHandler struct {
 	state signal.StateReader
 	live  signal.LiveStateReader
@@ -147,7 +140,7 @@ func (h *ClimateHandler) Latest(w http.ResponseWriter, r *http.Request) {
 // timelineRowsToFlat converts ordered TimelineRows into the legacy
 // []map[string]interface{} flat-pivot shape ({"ts": ts, "<field>": value, ...})
 // that the climate endpoints emit. Duplicated from the parent api package
-// until the shared signal-history handlers finish their R2 carve.
+// until the shared signal-history handlers move into a reusable package.
 func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(rows))
 	for _, tr := range rows {

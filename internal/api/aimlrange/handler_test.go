@@ -1,4 +1,4 @@
-// Phase-50 / 0063 — ML2 range-prediction model.
+// Range-prediction model tests.
 //
 // These tests pin ADR-015 edges: off-mode hides AI, baseline projected range
 // remains reachable, bad bodies fail before SSE, and tool inputs stay stable.

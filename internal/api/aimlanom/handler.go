@@ -1,6 +1,6 @@
 package aimlanom
 
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+// Handler for learned per-vehicle anomaly baseline narration.
 //
 // This is the opt-in LLM narration layer for POST /api/v1/ai/ml/anomaly-baselines/train.
 // The guard returns 404 before this handler runs when AI or the feature is disabled (ADR-015 §I6).
@@ -32,7 +32,7 @@ import (
 // (train_anomaly_baseline FIRST, then query_anomaly_baseline); a
 // hard ceiling of 6 is generous for a model that occasionally
 // retries a tool call once before settling. Mirrors aiAnomalyMaxIterations
-// from slice 0014 with a +2 budget for the second tool call.
+// with extra budget for the second tool call.
 const aiLearnedAnomalyMaxIterations = 6
 
 // aiLearnedAnomalyDefaultDays mirrors anomaly.DefaultDays. Kept as a

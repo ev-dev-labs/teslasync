@@ -11,7 +11,7 @@ import (
 // toFloatOk parses a value to float64 and returns whether the signal was present.
 // This distinguishes missing signals (ok=false) from actual zero values (ok=true, val=0).
 //
-// Phase-46 (signals-rewrite): this is now a thin wrapper around the
+// Signals rewrite: this is now a thin wrapper around the
 // canonical signal.Float64 converter. Any new conversion logic belongs
 // in internal/signal/coerce.go so we keep ONE definition of "any → float64"
 // across the entire codebase.

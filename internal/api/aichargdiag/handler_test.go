@@ -1,9 +1,9 @@
-// Phase-50 / 0019 — N5 Per-charging-session diagnosis.
+// Tests for per-charging-session AI diagnosis.
 //
 // Off-mode + baseline-coexistence tests for the AI charging
 // diagnosis. The off-mode test
 // (TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that
+// load-bearing AI-OFF contract proof: it asserts that
 // the AI route returns 404 when settings.ai_mode='off' even when
 // the per-feature toggle is on, AND that the deterministic
 // per-charging-session aggregation flag badges served at the
@@ -11,7 +11,7 @@
 // the unconditional baseline path (ADR-015 §I3, §I6).
 //
 // The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness
+// the AI eval harness
 // (`go run ./cmd/ai-eval --feature charging-diagnosis`);
 // duplicating that here would require a live database fixture.
 
@@ -48,21 +48,21 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 }
 
 // TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags is the
-// load-bearing off-mode contract proof for slice 0019. It mounts
-// the AI charging diagnosis route through the guard with
+// load-bearing off-mode contract proof. It mounts the AI charging
+// diagnosis route through the guard with
 // ai_mode='off' and proves:
 //
 //   - The /api/v1/ai/charging/{sessionID}/diagnose route returns 404
 //     (the guard fails closed even when the per-feature toggle is on).
 //   - The 404 body does not leak feature metadata or session identifiers.
 //   - A baseline charging route serving deterministic flag-badge
-//     content remains reachable under the same router — proof that
-//     the slice does NOT replace the deterministic per-charging-session
+//     content remains reachable under the same router, proving the AI
+//     route does not replace the deterministic per-charging-session
 //     aggregation flags path (ADR-015 §I3).
 //
 // The test name MUST stay
-// TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags — the slice
-// prompt's verification command runs
+// TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags because external
+// verification commands run
 // `go test … -run TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags`
 // AND
 // `npm test -- --run TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags`,

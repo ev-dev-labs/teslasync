@@ -1,4 +1,4 @@
-// Phase-50 / 0027 — C2 Battery health forecast narrative.
+// Battery health forecast narrative tests.
 //
 // Covers the AI-off contract and proves the deterministic battery-degradation
 // route remains reachable (ADR-015 §I3, §I6). Streaming coverage lives in the

@@ -21,8 +21,8 @@ func newClimateRequest(vehicleID, target string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, target, nil)
 }
 
-// TestClimateHandler_History_CarriesForwardCabinTemp is the bug-fix proof
-// for the phase-39 climate migration.
+// TestClimateHandler_History_CarriesForwardCabinTemp proves the
+// climate history carry-forward bug fix.
 //
 // Climate signals (cabin temp, HVAC mode, seat heaters) re-emit rarely —
 // often once per day. The legacy raw-pivot implementation rendered every

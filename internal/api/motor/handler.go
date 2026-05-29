@@ -12,12 +12,10 @@ import (
 )
 
 // MotorHandler serves motor / drive-inverter / powertrain endpoints backed
-// by the signal-log change feed via signal.StateReader (ADR-002 /
-// phase-39).
+// by the signal-log change feed via signal.StateReader (ADR-002).
 //
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (the old pivot
-// + snapshot helpers) has been replaced with the canonical
-// signal.StateReader.
+// The legacy *signaldb.SignalLogReader pivot and snapshot helpers have
+// been replaced with the canonical signal.StateReader.
 //
 // Drive-inverter signals (DiTorqueActualF/R, DiAxleSpeedF/R, DiStatorTempF/R,
 // DiInverterTF/R, DiHeatsinkTF/R, DiVBatF/R, DiStateF/R, Gear, …) emit at
@@ -102,8 +100,8 @@ func asFloat64(v interface{}) (float64, bool) {
 // trims; just one of the pair on RWD/single-motor trims). Power is
 // the product. The legacy motor_snapshots table never had a
 // power_kw column either; the historical UI computed it client-side
-// from the same V × I product. After the Phase-39 motor_snapshots →
-// signal_log rewrite, no layer was deriving power, so the
+// from the same V × I product. After the motor_snapshots → signal_log
+// rewrite, no layer was deriving power, so the
 // "Motor Power Over Time" chart and the SpeedGearPanel power figure
 // rendered as permanently empty / "—" even when V and I were
 // flowing at ~1 Hz through the per-field MQTT pipeline. Computing

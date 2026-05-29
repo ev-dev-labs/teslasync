@@ -96,7 +96,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Phase-42 SI canonical drives (000185): distance_m, duration_s,
+	// SI canonical drives (migration 000185): distance_m, duration_s,
 	// max_speed_mps, ambient_temp_c_avg, started_at / ended_at. Convert at
 	// the SELECT boundary so the in-memory totals carry display units.
 	var totalDrives int
@@ -123,7 +123,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Average efficiency (Wh/km) — Phase-42 SI columns: energy_used_wh,
+	// Average efficiency (Wh/km) from SI columns: energy_used_wh,
 	// distance_m. Wh/km = energy_used_wh / (distance_m / 1000). Filter
 	// distance_m > 1609.344 (1 mile, matching the previous threshold).
 	var avgEffWhKm float64
@@ -143,7 +143,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: failed to get efficiency")
 	}
 
-	// Phase-42 SI canonical charging_sessions (000184): total_energy_added_wh,
+	// SI canonical charging_sessions (migration 000184): total_energy_added_wh,
 	// cost_decimal NUMERIC, started_at / ended_at.
 	var totalChargeSessions int
 	var totalEnergyKwh, totalChargingCost float64
@@ -219,7 +219,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		return &dh
 	}
 
-	// Phase-42 SI canonical drives (000185): start_place / end_place replace
+	// SI canonical drives (migration 000185): start_place / end_place replace
 	// legacy address columns; distance_m / duration_s replace legacy units;
 	// started_at / ended_at replace legacy timestamps.
 	highlightBase := `
@@ -343,7 +343,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		avgDistPerDrive = totalDistKm / float64(totalDrives)
 	}
 
-	// Phase-42 SI canonical charging_sessions has charger_type only (no
+	// SI canonical charging_sessions has charger_type only (no
 	// fast_charger_brand). Supercharger detection uses charger_type ILIKE
 	// 'Tesla%'; dc_fast = any other non-NULL charger_type; ac_other = NULL.
 	var superchargerCnt, dcFastCnt, acOtherCnt int
@@ -389,7 +389,7 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		acOtherPct = float64(acOtherCnt) / float64(totalChargeForPct) * 100
 	}
 
-	// Average charge start SOC — Phase-42 SI: start_soc_pct (REAL).
+	// Average charge start SOC from SI column start_soc_pct (REAL).
 	var avgChargeStartSOC float64
 	_ = h.db.Pool.QueryRow(ctx, `
 		SELECT COALESCE(AVG(start_soc_pct), 0)

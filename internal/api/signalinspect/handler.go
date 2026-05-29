@@ -21,7 +21,7 @@ import (
 // Handler serves the per-vehicle signal-inspector endpoints
 // (/available, /live, /{signalName}/history, /snapshot, /diff, /stats).
 //
-// Phase-42 / Prompt 0069 — typed envelope rewrite:
+// Typed envelope rewrite:
 //   - /available is sourced from protomodel.Signals (the vendored proto
 //     is the catalog source of truth).
 //   - /live returns each signal as the typed `{kind, value, ts}` envelope
@@ -33,12 +33,11 @@ import (
 //     (vehicle_id, ts, field, value_kind, str_value, bool_value,
 //     int_value, float_value, time_value) directly via *database.DB so
 //     it does not depend on the legacy SignalHistoryWriter (which still
-//     reads the pre-Phase-42 column layout).
+//     reads the legacy column layout).
 //
-// The /snapshot, /diff, and /stats endpoints are out of scope for
-// Prompt 0069 and continue to use SignalHistoryWriter. They are wired
-// here only so the chi route registration in router.go keeps the same
-// shape.
+// The /snapshot, /diff, and /stats endpoints continue to use
+// SignalHistoryWriter. They are wired here only so the chi route
+// registration in router.go keeps the same shape.
 type Handler struct {
 	signalLogRepo       *signaldb.SignalLogRepo       // legacy MongoDB (optional fallback)
 	signalHistoryWriter *signaldb.SignalHistoryWriter // legacy Postgres writer (snapshot/diff/stats only)
@@ -62,8 +61,8 @@ func (h *Handler) WithDB(db *database.DB) *Handler {
 }
 
 // WithSignalHistory adds the legacy SignalHistoryWriter. Used only by
-// the snapshot/diff/stats endpoints (out of Prompt 0069 scope). The
-// typed /history endpoint queries signal_log directly via h.db.Pool.
+// snapshot/diff/stats; the typed /history endpoint queries signal_log
+// directly via h.db.Pool.
 func (h *Handler) WithSignalHistory(w *signaldb.SignalHistoryWriter) *Handler {
 	h.signalHistoryWriter = w
 	return h
@@ -163,7 +162,7 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 }
 
 // queryHistory executes the typed signal_log query and decodes each row
-// per the row's value_kind. Forward-only Phase-42 schema:
+// per the row's value_kind. Forward-only typed signal_log schema:
 //
 //	signal_log(vehicle_id, ts, field, value_kind,
 //	           str_value, bool_value, int_value, float_value, time_value)
@@ -312,8 +311,8 @@ func (h *Handler) AvailableSignals(w http.ResponseWriter, r *http.Request) {
 // Stats returns signal log row counts and date range for a vehicle.
 // GET /api/v1/signals/{vehicleID}/stats
 //
-// Out of Prompt 0069 scope — kept compiling against SignalHistoryWriter
-// for backwards compatibility with existing route wiring.
+// Kept compiling against SignalHistoryWriter for backwards compatibility
+// with existing route wiring.
 func (h *Handler) Stats(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
 	if err != nil {
@@ -400,9 +399,9 @@ func (h *Handler) LiveState(w http.ResponseWriter, r *http.Request) {
 // rewrite ship without touching any existing test:
 //
 //	{
-//	  "kind":      "ValueKindFloat",         // typed (Phase-42)
-//	  "value":     73.0,                     // typed (Phase-42)
-//	  "ts":        "2024-01-01T00:00:00Z",   // typed (Phase-42)
+//	  "kind":      "ValueKindFloat",         // typed
+//	  "value":     73.0,                     // typed
+//	  "ts":        "2024-01-01T00:00:00Z",   // typed
 //	  "timestamp": "2024-01-01T00:00:00Z",   // legacy (FSM debugger)
 //	  "source":    "l1",                     // legacy (FSM debugger)
 //	  "age_ms":    1234                      // legacy (FSM debugger)
@@ -475,7 +474,7 @@ func classifyLiveSource(v *signal.Value, now time.Time) string {
 // Snapshot returns a point-in-time signal snapshot. When `at` is
 // omitted (or equals "now"), the response mirrors LiveState. When `at`
 // is in the past, the handler reconstructs the snapshot from the
-// legacy SignalHistoryWriter (out of Prompt 0069 scope).
+// legacy SignalHistoryWriter.
 //
 // GET /api/v1/signals/{vehicleID}/snapshot?at=...&signals=BatteryLevel,Gear
 func (h *Handler) Snapshot(w http.ResponseWriter, r *http.Request) {
@@ -641,8 +640,8 @@ func signalSet(names []string) map[string]struct{} {
 }
 
 // Diff returns one row per signal that changed between two snapshots.
-// Both snapshots use the same point-in-time logic as Snapshot. Out of
-// Prompt 0069 scope — kept compiling against the existing helpers.
+// Both snapshots use the same point-in-time logic as Snapshot and continue
+// compiling against the existing helpers.
 //
 // GET /api/v1/signals/{vehicleID}/diff?at_a=...&at_b=...&signals=...
 type signalDiffRow struct {
@@ -855,10 +854,10 @@ func signalToFloat(v interface{}) (float64, bool) {
 // {name -> raw} map. Used by alert_handler_rules.go and
 // vehicle_handler.go for template rendering and BuildStateFromSignalStore
 // hydration; preserved here so the typed rewrite does not require
-// touching files outside the Prompt 0069 allowed-files list.
+// touching those callers.
 //
-// Exported by phase-R2d.4 so the parent api package can call into the
-// subpackage after the carve.
+// Exported so the parent api package can call into the subpackage after
+// the package split.
 func LiveSignalValuesToRaw(values map[string]*signal.Value) map[string]interface{} {
 	raw := make(map[string]interface{}, len(values))
 	for name, value := range values {

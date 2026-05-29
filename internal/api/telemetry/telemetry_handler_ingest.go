@@ -28,8 +28,8 @@ import (
 )
 
 // sseRedisPubsubTracerName is the OpenTelemetry tracer name for the SSE
-// Redis Pub/Sub publish goroutine span. The Phase-10 trace-coverage
-// audit greps for this exact constant.
+// Redis Pub/Sub publish goroutine span. The trace-coverage audit greps
+// for this exact constant.
 const sseRedisPubsubTracerName = "signal"
 
 // errPipelineNotWired is returned by ProcessBatch when SetPipeline has not yet
@@ -77,7 +77,7 @@ type telemetryPayload struct {
 }
 
 // TelemetryIngest receives Fleet Telemetry data via HTTP POST and dispatches
-// it through the unified normalize.Pipeline (Phase-42a/0060). The ingest
+// it through the unified normalize.Pipeline. The ingest
 // flow is:
 //
 //  1. Decode the JSON payload (telemetryPayload).
@@ -302,8 +302,8 @@ func parseSignalTimestamp(raw string, fallback time.Time) time.Time {
 
 // recordStreamingHealth updates the per-VIN streaming health record read by
 // /telemetry/status. Extracted from the legacy ProcessSignals spine so the
-// HTTP TelemetryIngest can keep the contract intact post-Phase-42a/0060
-// without depending on the deprecated spine.
+// HTTP TelemetryIngest can keep the contract intact without depending
+// on the deprecated spine.
 func (h *Handler) recordStreamingHealth(vin string, signalCount int, signals map[string]interface{}) {
 	h.mu.Lock()
 	state, ok := h.streamingState[vin]
@@ -327,7 +327,7 @@ func (h *Handler) recordStreamingHealth(vin string, signalCount int, signals map
 // RecordStream implements mqtt.StreamingHealthRecorder. The MQTT
 // PipelineSubscriber invokes this once per successfully dispatched
 // per-field message so the /telemetry status endpoint (MQTT Inspector
-// page) sees live streaming activity. Pre-Phase-42 only the HTTP
+// page) sees live streaming activity. Previously only the HTTP
 // TelemetryIngest path updated streamingState; after the per-field MQTT
 // cutover the Inspector silently showed 0 vehicles / 0 signals / 0
 // batches despite telemetry flowing into signal_log + drives. Empty VIN
@@ -385,7 +385,7 @@ func (h *Handler) republishToMQTT(vin string, signals map[string]interface{}) {
 }
 
 // ProcessBatch is the HTTP webhook adapter that dispatches a pre-decoded
-// []codec.Atomic batch through the unified normalize.Pipeline (Phase-42a/0060).
+// []codec.Atomic batch through the unified normalize.Pipeline.
 // Per ADR-004 #2 the HTTP webhook and MQTT subscriber both terminate at
 // (*normalize.Pipeline).ProcessAtomics so every value is visited exactly
 // once by the same pipeline.
@@ -402,8 +402,8 @@ func (h *Handler) republishToMQTT(vin string, signals map[string]interface{}) {
 //     if SetPipeline has not been called (TelemetryIngest maps this to
 //     a 503 so a misconfigured deployment fails loud).
 //
-// Phase-42a/0060: the legacy in-line unit-normalization / extractPosition
-// / posRepo.BulkInsert / buildSSEPayload / broadcastSSE were deleted.
+// The legacy in-line unit-normalization / extractPosition / posRepo.BulkInsert
+// / buildSSEPayload / broadcastSSE were deleted.
 // Unit normalization, position writes, and SSE broadcast are now owned by
 // the pipeline (positions_writer + SideEffectsObserver). The fsmHandler
 // dispatch is also owned by SideEffectsObserver.
@@ -490,7 +490,7 @@ func (h *Handler) broadcastSSE(ctx context.Context, payload map[string]any) {
 			return
 		}
 		msg := fmt.Appendf(nil, "event: vehicle_update\ndata: %s\n\n", jsonData)
-		// Phase-10: trace.continuity=false is set explicitly because the
+		// trace.continuity=false is set explicitly because the
 		// publish goroutine intentionally detaches from the caller ctx
 		// via context.Background()+2s timeout — the 2s ceiling is a
 		// liveness/back-pressure guarantee and the detach is by design,
@@ -524,23 +524,20 @@ func (h *Handler) broadcastSSE(ctx context.Context, payload map[string]any) {
 	h.eventHub.BroadcastWithContext(ctx, "vehicle_update", payload)
 }
 
-// Phase-42 (prompt 0079a): the buildHotRow / bucketAtomics / bucketResult
-// helpers and the cold-residue routing they implemented were removed
-// alongside internal/telemetry. Hot-table fan-out is now narrowed to
-// `positions` (the only surviving destination after prompt 0078); cold
-// signals flow through the typed signal_log pipeline (000167+) downstream
-// of this file.
+// The buildHotRow / bucketAtomics / bucketResult helpers and the cold-residue
+// routing they implemented were removed alongside internal/telemetry. Hot-table
+// fan-out is now narrowed to `positions`; cold signals flow through the typed
+// signal_log pipeline downstream of this file.
 //
-// Phase-42a/0090: positionToHotRow was removed alongside the deprecated
-// processSignalsLegacyDeprecated spine — its only caller. The new
-// pipeline persists positions through internal/tesla/router/writers/positions_writer.go
+// positionToHotRow was removed alongside the deprecated
+// processSignalsLegacyDeprecated spine — its only caller. The new pipeline
+// persists positions through internal/tesla/router/writers/positions_writer.go
 // and SideEffectsObserver broadcasts SSE in the {vehicle_id, ts, signals}
-// shape (per Phase-42a/0030 Decision #8), so no per-table hot-row folding
-// is required at this layer any more.
+// shape, so no per-table hot-row folding is required at this layer any more.
 
-// Phase-42a/0060: the legacy unit-normalization helper, the compound-map
-// flattener, the compound-time flattener, and the time-field extractor
-// Decisions #4 and #5. Unit normalization is owned by normalize.toSI on
+// The legacy unit-normalization helper, the compound-map flattener, the
+// compound-time flattener, and the time-field extractor were deleted per design
+// decisions #4 and #5. Unit normalization is owned by normalize.toSI on
 // the new pipeline; compound flattening is owned by codec.Decode (proto
 // path) per ADR-004 #3. The new HTTP webhook adapter feeds raw JSON-decoded
 // values directly to (*normalize.Pipeline).ProcessAtomics — JSON-decoded

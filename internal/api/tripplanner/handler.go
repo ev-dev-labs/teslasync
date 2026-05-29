@@ -28,14 +28,14 @@ const (
 // TripPlannerHandler provides trip planning with range estimation and
 // charging stop optimization.
 //
-// Phase-39 migration (ADR-002 / phase-39): all signal_log reads — current
-// SOC (BatteryLevel) and current Location at the request boundary, plus
-// EnergyRemaining and BatteryLevel inside batteryCapacity — now resolve
-// through the canonical signal.StateReader instead of the legacy
-// *signaldb.SignalLogReader. Each lookup maps 1:1 onto StateReader.SignalAt
-// with identical semantics (forward-folded read at time.Now()).
+// All signal_log reads — current SOC (BatteryLevel) and current Location at
+// the request boundary, plus EnergyRemaining and BatteryLevel inside
+// batteryCapacity — resolve through the canonical signal.StateReader instead
+// of the legacy *signaldb.SignalLogReader. Each lookup maps 1:1 onto
+// StateReader.SignalAt with identical semantics (forward-folded read at
+// time.Now()).
 //
-// As part of this migration, transport errors from state.SignalAt at the
+// Transport errors from state.SignalAt at the
 // request boundary now propagate to the caller as a 500 instead of being
 // silently swallowed behind hardcoded defaults (CurrentSOC = 80, "origin
 // is required" 400). The legacy silent-default behavior was indistinguishable

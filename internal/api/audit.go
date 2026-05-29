@@ -12,7 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// auditEntry is the canonical write-shape for audit_logs (Phase-40 / Prompt 49).
+// auditEntry is the canonical write-shape for audit_logs.
 // All inserts route through insertAuditLog so that the new ip/user_agent
 // columns added by migration 000163 are populated consistently.
 type auditEntry struct {

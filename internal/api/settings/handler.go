@@ -143,7 +143,7 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Phase-50 / F2: switching AI off clears active toggles but archives the prior
+	// Switching AI off clears active toggles but archives the prior
 	// enabled set so a later restore is explicit, not automatic.
 	if s.AIMode == "off" {
 		existing, err := h.settingsRepo.Get(r.Context())
@@ -348,7 +348,7 @@ func isValidIANATimezone(s string) bool {
 	return err == nil
 }
 
-// applyAIArchiveOnModeFlip enforces the Phase-50 / F2 off-mode transition.
+// applyAIArchiveOnModeFlip enforces the AI off-mode transition.
 // It clears active features whenever incoming.AIMode is "off" and, on a fresh
 // non-off→off transition, stores a true-only clone of the prior feature map.
 func applyAIArchiveOnModeFlip(existing, incoming *systemmodel.Settings) {

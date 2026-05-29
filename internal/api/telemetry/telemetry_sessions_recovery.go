@@ -150,7 +150,7 @@ const staleSessionThreshold = 5 * time.Minute
 // Sessions with recent signals (< 5 min) are left open — the vehicle is likely
 // still active and will be picked up by normal tracking.
 //
-// Phase-39 / ADR-002: snapshot reconstruction at the recovery start/end
+// ADR-002: snapshot reconstruction at the recovery start/end
 // anchors goes through signal.StateReader (driveR.state / chargeR.state)
 // instead of the legacy *signaldb.SignalLogReader snapshot tables. The
 // StateReader forward-folds signal_log so signals that have not been
@@ -322,8 +322,8 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 // signal_log snapshots to populate end values. Best-effort: if snapshots are
 // empty the session is still closed with whatever data is available.
 //
-// Phase-48: all signal values are SI canonical post-Phase-42 (Odometer in
-// meters, VehicleSpeed in m/s, PackVoltage*PackCurrent in Watts), so the
+// All signal values are SI canonical after telemetry normalization (Odometer
+// in meters, VehicleSpeed in m/s, PackVoltage*PackCurrent in Watts), so the
 // values flow directly through to SI-canonical Drive fields with no unit
 // normalisation. The legacy units.NormalizeDistance/NormalizeSpeed calls
 // would have actively corrupted SI values by treating meters as miles or
@@ -368,8 +368,8 @@ func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, dr
 		endBattery = int(bl)
 	}
 
-	// Position from snapshots. Dual-key tolerance for Phase-42
-	// codec ("LocationLatitude") + legacy ingest ("Latitude").
+	// Position from snapshots. Dual-key tolerance for the codec
+	// ("LocationLatitude") + legacy ingest ("Latitude").
 	if lat, ok := snapFloat(startSnap, "LocationLatitude", "Latitude"); ok {
 		enhancedFields["start_lat"] = lat
 	}

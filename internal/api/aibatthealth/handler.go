@@ -1,6 +1,6 @@
 package aibatthealth
 
-// Phase-50 / 0027 — C2 Battery health forecast narrative.
+// Battery health forecast narrative.
 //
 // Serves the opt-in SSE narrator at POST /api/v1/ai/battery/health/narrate.
 // The route stays behind guard.Wrap("battery-health-forecast-narrative") so
@@ -353,8 +353,8 @@ func (a *AIBatteryHealthForecaster) ForecastBatteryHealth(ctx context.Context, v
 		}
 	}
 
-	// Charging habits — same SQL the canonical Predict handler
-	// runs (Phase-42 SI charging_sessions, migration 000184).
+	// Charging habits use the same SQL the canonical Predict handler runs
+	// against the SI charging_sessions schema.
 	habits := predict.BatteryHealthChargingHabits{}
 	if a.db != nil {
 		var avgEnergyWh float64

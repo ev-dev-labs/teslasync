@@ -25,10 +25,10 @@ func NewSpeedProfileHandler(db *database.DB) *SpeedProfileHandler {
 	return &SpeedProfileHandler{db: db}
 }
 
-// speedBucket fields are SI-canonical per phase-42 migration 000185
-// (avg_power averaged in Watts at the SQL boundary). The frontend SpeedBucket
+// speedBucket fields are SI-canonical; avg_power is averaged in Watts
+// at the SQL boundary. The frontend SpeedBucket
 // type currently reads the legacy kilowatt key; consumers will migrate to
-// avg_power_w in a follow-up frontend prompt — the typed widget falls back
+// avg_power_w in follow-up frontend work — the typed widget falls back
 // to 0 in the interim, which is the documented graceful-degradation path.
 type speedBucket struct {
 	SpeedBucket string  `json:"speed_bucket"`
@@ -74,7 +74,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 SI canonical drives. Speed buckets are expressed in mps
+	// SI-canonical drives use speed buckets expressed in mps
 	// (1 mph = 0.44704 mps) so the bucket boundary literals 6.7056, 13.4112,
 	// 20.1168, 26.8224, 33.528 correspond to 15/30/45/60/75 mph. avg_power
 	// is averaged in Watts.
@@ -144,7 +144,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Phase-42 SI: avg_speed_mps thresholds for City/Suburban/Highway/HighSpeed
+	// SI thresholds: avg_speed_mps for City/Suburban/Highway/HighSpeed
 	// (30/60/90 mph -> 13.4112 / 26.8224 / 40.2336 mps). avg_speed reported
 	// in km/h via distance_m / duration_s * 3.6 (preserves the previous
 	// "speed in metric" semantics returned by the legacy
@@ -216,7 +216,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Phase-42 SI: scan distance in meters, return distance in miles to keep
+	// Scan distance in meters and return distance in miles to keep
 	// the legacy `distance` semantics; avg_speed_mps emitted directly.
 	// When start/end are supplied we narrow the scatter window to match
 	// the distribution/categories windows so the picker controls all three
@@ -285,7 +285,7 @@ func (h *SpeedProfileHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	// Hero-gauge aggregates (avg / peak / optimal). SpeedProfilePage's
 	// three RadialGauges read these via toSpeedDisplay = convertSpeedFromSI
-	// which expects SI m/s — so we emit SI canonical (_mps) per Phase-48
+	// which expects SI m/s, so we emit the SI-canonical (_mps) shape
 	// rather than the old _kmh shape (the gauges were unwired entirely
 	// before this fix and rendered as 0 mph). Optimal = midpoint of the
 	// speed bucket with the lowest mean Wh/km — same six 15-mph buckets

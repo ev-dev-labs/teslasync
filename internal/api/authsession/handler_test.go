@@ -11,7 +11,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 )
 
-// Phase-46 / Prompt 05 — Handler unit tests.
+// Handler unit tests.
 
 func decodeAuthSessionBody(t *testing.T, body []byte) authSessionResponse {
 	t.Helper()

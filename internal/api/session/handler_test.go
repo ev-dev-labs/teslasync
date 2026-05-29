@@ -1,16 +1,16 @@
-// Phase-46 / Prompt 42 — SessionHandler unit tests.
+// SessionHandler unit tests.
 //
 // Covers:
 //
-//   - Open mode (no FORWARD_AUTH_HEADER) → 501 AUTH_MODE_OPEN on every
-//     endpoint, no store calls.
-//   - Forward-auth + missing header → 401 MISSING_IDENTITY.
-//   - GET /auth/sessions returns rows + flags Current correctly.
-//   - DELETE /auth/sessions/{id} validates uuid + idempotent on
-//     ErrAuthSessionNotFound.
-//   - DELETE /auth/sessions/all-others propagates the revoked count.
-//   - No call to any provider-specific URL appears anywhere — the
-//     handler talks only to its injected SessionListStore.
+// - Open mode (no FORWARD_AUTH_HEADER) → 501 AUTH_MODE_OPEN on every
+// endpoint, no store calls.
+// - Forward-auth + missing header → 401 MISSING_IDENTITY.
+// - GET /auth/sessions returns rows + flags Current correctly.
+// - DELETE /auth/sessions/{id} validates uuid + idempotent on
+// ErrAuthSessionNotFound.
+// - DELETE /auth/sessions/all-others propagates the revoked count.
+// - No call to any provider-specific URL appears anywhere — the
+// handler talks only to its injected SessionListStore.
 
 package session
 

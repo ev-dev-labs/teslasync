@@ -1,6 +1,6 @@
 package ainldash
 
-// Phase-50 / 0059 — PU3 Natural-language dashboard composer.
+// Natural-language dashboard composer.
 //
 // This LLM-backed SSE handler drafts dashboard layouts from a curated
 // install-wide panel catalog. The catalog snapshot is bound into context before
@@ -392,8 +392,8 @@ var _ CatalogSource = (*CatalogSourceImpl)(nil)
 // 50-row practical ceiling") without churning the tool
 // interface.
 //
-// For Phase-50 / 0059 the validator is intentionally
-// permissive: every draft with a valid shape is accepted. The
+// The validator is intentionally permissive: every draft with a valid
+// shape is accepted. The
 // per-request scope binding already prevented out-of-catalog
 // panel names; the layout bounds + overlap detector already
 // prevented placement violations. There is nothing else for the
