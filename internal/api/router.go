@@ -34,6 +34,7 @@ import (
 	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
 	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
 	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
+	"github.com/ev-dev-labs/teslasync/internal/api/ailogtrace"
 	aifeedtri "github.com/ev-dev-labs/teslasync/internal/api/aifeedtri"
 	aifsmnar "github.com/ev-dev-labs/teslasync/internal/api/aifsmnar"
 	aigeofautom "github.com/ev-dev-labs/teslasync/internal/api/aigeofautom"
@@ -1578,17 +1579,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// goldens cover the zero-data path.
 	summary.RegisterLogTraceSummarizerTools(aiToolRegistry, summary.LogTraceSummarizerSources{
 		Retriever:   aiLogTraceRetriever,
-		TraceWindow: NewAILogTraceWindowSource(),
+		TraceWindow: ailogtrace.NewTraceWindowSource(),
 	})
 	// log-trace-summarization handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiLogTraceSummarizationHandler := NewAILogTraceSummarizationHandler(
+	aiLogTraceSummarizationHandler := ailogtrace.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		logtracesummarization.New(),
-		NewAILogTraceWindowSource(),
+		ailogtrace.NewTraceWindowSource(),
 		cfg.Auth.ForwardAuthHeader,
 	)
 

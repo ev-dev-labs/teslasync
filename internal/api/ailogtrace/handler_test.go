@@ -14,7 +14,7 @@
 // log-trace-summarization`); duplicating that here would require
 // a live database fixture.
 
-package api
+package ailogtrace
 
 import (
 	"bytes"
@@ -29,6 +29,19 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestLogTraceSummarizationAIOffShowsRawLogsOnly is the
 // load-bearing off-mode contract proof for slice 0045. It mounts
@@ -138,23 +151,23 @@ func TestLogTraceSummarizationAIOffShowsRawLogsOnly(t *testing.T) {
 	}
 }
 
-// TestAILogTraceSummarizationHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAILogTraceSummarizationHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAILogTraceSummarizationHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAILogTraceSummarizationHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -162,11 +175,11 @@ func TestAILogTraceSummarizationHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAILogTraceSummarizationHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the body BEFORE opening the SSE stream — a
 // missing, unparseable, or out-of-range field must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAILogTraceSummarizationHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -193,7 +206,7 @@ func TestAILogTraceSummarizationHandler_RejectsBadBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/system/logs/summarize", strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			_, ok := parseLogTraceSummarizationRequest(rec, req)
+			_, ok := parseRequest(rec, req)
 			if ok != tc.wantOK {
 				t.Errorf("ok = %v, want %v (body=%q, status=%d, response=%q)", ok, tc.wantOK, tc.body, rec.Code, rec.Body.String())
 			}
@@ -204,17 +217,17 @@ func TestAILogTraceSummarizationHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestNewAILogTraceWindowSource_ContractCheck asserts the
+// TestNewTraceWindowSource_ContractCheck asserts the
 // production source adapter returns a deterministic empty
 // envelope for a valid window and refuses a clearly invalid one.
 // The adapter is a placeholder for a future log-history reader
 // slice, so the contract test here is intentionally narrow.
-func TestNewAILogTraceWindowSource_ContractCheck(t *testing.T) {
+func TestNewTraceWindowSource_ContractCheck(t *testing.T) {
 	t.Parallel()
 
-	src := NewAILogTraceWindowSource()
+	src := NewTraceWindowSource()
 	if src == nil {
-		t.Fatal("NewAILogTraceWindowSource() returned nil")
+		t.Fatal("NewTraceWindowSource() returned nil")
 	}
 
 	// Happy path.

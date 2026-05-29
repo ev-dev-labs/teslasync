@@ -1,4 +1,4 @@
-package api
+package ailogtrace
 
 // Phase-50 / 0045 — S4 Log and trace summarization.
 //
@@ -89,35 +89,36 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiLogTraceSummarizationMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most query_trace_window →
 // (optional) retrieve_log_chunks → answer (with optional retries
 // on transient tool error). A hard ceiling of 8 is generous,
 // matching the other narrator handlers.
-const aiLogTraceSummarizationMaxIterations = 8
+const maxIterations = 8
 
-// aiLogTraceSummarizationMaxBodyBytes caps the request body. The
+// maxBodyBytes caps the request body. The
 // body is small (3 numeric fields); bound it cheaply. 16 KiB
 // matches the other body-driven AI handlers.
-const aiLogTraceSummarizationMaxBodyBytes = 16 * 1024
+const maxBodyBytes = 16 * 1024
 
-// aiLogTraceSummarizationMaxWindowSeconds caps the window the
+// maxWindowSeconds caps the window the
 // caller may request. 24 hours is generous for an operator log-
 // triage workflow and bounds the size of the envelope the source
 // has to compute.
-const aiLogTraceSummarizationMaxWindowSeconds = 24 * 60 * 60
+const maxWindowSeconds = 24 * 60 * 60
 
-// aiLogTraceSummarizationMaxFromUnix is a sanity upper bound on
+// maxFromUnix is a sanity upper bound on
 // from_unix to reject obvious garbage (e.g. epoch year 9999). Set
 // to year 2100 in Unix seconds.
-const aiLogTraceSummarizationMaxFromUnix = int64(4102444800)
+const maxFromUnix = int64(4102444800)
 
-// aiLogTraceSummarizationRequest is the typed body shape. Only
+// summarizationRequest is the typed body shape. Only
 // from_unix / to_unix are required; vehicle_id is optional.
-type aiLogTraceSummarizationRequest struct {
+type summarizationRequest struct {
 	// FromUnix is the inclusive start of the window in Unix
 	// seconds. Required + positive.
 	FromUnix int64 `json:"from_unix"`
@@ -133,13 +134,13 @@ type aiLogTraceSummarizationRequest struct {
 	VehicleID int64 `json:"vehicle_id,omitempty"`
 }
 
-// AILogTraceSummarizationHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/system/logs/summarize.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AILogTraceSummarizationHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -148,7 +149,7 @@ type AILogTraceSummarizationHandler struct {
 	maxIters   int
 }
 
-// NewAILogTraceSummarizationHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -168,88 +169,98 @@ type AILogTraceSummarizationHandler struct {
 //
 // source:     the production summary.TraceWindowSource (currently
 //
-//	AILogTraceWindowSource — a deterministic empty
+//	TraceWindowSource — a deterministic empty
 //	adapter; the operator-facing log surface is
 //	stream-only and has no historical reader yet).
 //
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAILogTraceSummarizationHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	source summary.TraceWindowSource,
 	headerName string,
-) *AILogTraceSummarizationHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAILogTraceSummarizationHandler: nil provider.Registry")
+		panic("ailogtrace: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAILogTraceSummarizationHandler: nil tools.Registry")
+		panic("ailogtrace: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAILogTraceSummarizationHandler: nil strategy.Strategy")
+		panic("ailogtrace: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAILogTraceSummarizationHandler: nil summary.TraceWindowSource")
+		panic("ailogtrace: NewHandler: nil summary.TraceWindowSource")
 	}
-	return &AILogTraceSummarizationHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		source:     source,
 		headerName: headerName,
-		maxIters:   aiLogTraceSummarizationMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parseLogTraceSummarizationRequest drains the body. Both
+// parseRequest drains the body. Both
 // from_unix / to_unix are required; vehicle_id is optional.
 // Absence or invalid values surface as JSON 400 with a stable
 // error key the SPA can localise. Returns (req, true) when the
 // body is acceptable.
-func parseLogTraceSummarizationRequest(w http.ResponseWriter, r *http.Request) (aiLogTraceSummarizationRequest, bool) {
-	var req aiLogTraceSummarizationRequest
+func parseRequest(w http.ResponseWriter, r *http.Request) (summarizationRequest, bool) {
+	var req summarizationRequest
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "missing body")
+		httpx.WriteError(w, http.StatusBadRequest, "missing body")
 		return req, false
 	}
 	defer r.Body.Close()
-	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiLogTraceSummarizationMaxBodyBytes))
+	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes))
 	if readErr != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
-	if len(bytesTrim(bodyBytes)) == 0 {
-		writeError(w, http.StatusBadRequest, "empty body")
+	if len(trimSpace(bodyBytes)) == 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "empty body")
 		return req, false
 	}
 	dec := json.NewDecoder(strings.NewReader(string(bodyBytes)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return req, false
 	}
 	if req.FromUnix <= 0 {
-		writeError(w, http.StatusBadRequest, "from_unix must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "from_unix must be > 0")
 		return req, false
 	}
-	if req.FromUnix > aiLogTraceSummarizationMaxFromUnix {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("from_unix exceeds upper bound %d", aiLogTraceSummarizationMaxFromUnix))
+	if req.FromUnix > maxFromUnix {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("from_unix exceeds upper bound %d", maxFromUnix))
 		return req, false
 	}
 	if req.ToUnix <= req.FromUnix {
-		writeError(w, http.StatusBadRequest, "to_unix must be > from_unix")
+		httpx.WriteError(w, http.StatusBadRequest, "to_unix must be > from_unix")
 		return req, false
 	}
-	if req.ToUnix-req.FromUnix > aiLogTraceSummarizationMaxWindowSeconds {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("window (%d s) exceeds cap %d s", req.ToUnix-req.FromUnix, aiLogTraceSummarizationMaxWindowSeconds))
+	if req.ToUnix-req.FromUnix > maxWindowSeconds {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("window (%d s) exceeds cap %d s", req.ToUnix-req.FromUnix, maxWindowSeconds))
 		return req, false
 	}
 	if req.VehicleID < 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be >= 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be >= 0")
 		return req, false
 	}
 	return req, true
+}
+
+func trimSpace(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] == '\r' || b[0] == '\n') {
+		b = b[1:]
+	}
+	for len(b) > 0 && (b[len(b)-1] == ' ' || b[len(b)-1] == '\t' || b[len(b)-1] == '\r' || b[len(b)-1] == '\n') {
+		b = b[:len(b)-1]
+	}
+	return b
 }
 
 // ServeHTTP implements [http.Handler]. The body is parsed, the
@@ -257,9 +268,9 @@ func parseLogTraceSummarizationRequest(w http.ResponseWriter, r *http.Request) (
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has
 // been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AILogTraceSummarizationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
-	req, ok := parseLogTraceSummarizationRequest(w, r)
+	req, ok := parseRequest(w, r)
 	if !ok {
 		return
 	}
@@ -270,7 +281,7 @@ func (h *AILogTraceSummarizationHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), logtracesummarization.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai log-trace-summarization: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -290,7 +301,7 @@ func (h *AILogTraceSummarizationHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(logtracesummarization.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai log-trace-summarization: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -314,7 +325,7 @@ func (h *AILogTraceSummarizationHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	// window and instructs the tool sequence EXACTLY:
 	// query_trace_window first, then OPTIONALLY
 	// retrieve_log_chunks, then summary.
-	userMsg := buildLogTraceSummarizationUserMessage(req.FromUnix, req.ToUnix, req.VehicleID)
+	userMsg := buildUserMessage(req.FromUnix, req.ToUnix, req.VehicleID)
 
 	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
@@ -330,11 +341,11 @@ func (h *AILogTraceSummarizationHandler) ServeHTTP(w http.ResponseWriter, r *htt
 	}
 }
 
-// buildLogTraceSummarizationUserMessage synthesises the window-
+// buildUserMessage synthesises the window-
 // scoped user message the LLM sees. The format is deterministic
 // (RFC3339 UTC time strings) so canned goldens and provider
 // prompt-hash caches stay stable across boots.
-func buildLogTraceSummarizationUserMessage(fromUnix, toUnix, vehicleID int64) string {
+func buildUserMessage(fromUnix, toUnix, vehicleID int64) string {
 	fromStr := time.Unix(fromUnix, 0).UTC().Format(time.RFC3339)
 	toStr := time.Unix(toUnix, 0).UTC().Format(time.RFC3339)
 	var vehicleClause string
@@ -362,9 +373,14 @@ func buildLogTraceSummarizationUserMessage(fromUnix, toUnix, vehicleID int64) st
 	)
 }
 
-// Compile-time assertion: AILogTraceSummarizationHandler satisfies
+// denyAllConfirm is the dispatch confirm hook for this read-only AI surface.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AILogTraceSummarizationHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -374,7 +390,7 @@ var _ http.Handler = (*AILogTraceSummarizationHandler)(nil)
 // pattern.
 // ---------------------------------------------------------------------
 
-// AILogTraceWindowSource is the production
+// TraceWindowSource is the production
 // summary.TraceWindowSource. The operator-facing log surface is
 // stream-only — there is NO historical log persistence beyond
 // zerolog's stdout — so this adapter intentionally returns a
@@ -388,13 +404,13 @@ var _ http.Handler = (*AILogTraceSummarizationHandler)(nil)
 // handler installed and stringifies them so the LLM sees a
 // recognisable window without having to format Unix seconds
 // itself.
-type AILogTraceWindowSource struct{}
+type TraceWindowSource struct{}
 
-// NewAILogTraceWindowSource constructs the deterministic empty
+// NewTraceWindowSource constructs the deterministic empty
 // adapter. No deps. Returned by-pointer for symmetry with the
 // other AI* source types.
-func NewAILogTraceWindowSource() *AILogTraceWindowSource {
-	return &AILogTraceWindowSource{}
+func NewTraceWindowSource() *TraceWindowSource {
+	return &TraceWindowSource{}
 }
 
 // TraceWindow implements summary.TraceWindowSource. Returns a
@@ -404,7 +420,7 @@ func NewAILogTraceWindowSource() *AILogTraceWindowSource {
 // The envelope's slices are non-nil (empty-but-allocated) so JSON
 // marshalling renders [] rather than null — keeping the LLM's
 // tool-reply parsing predictable.
-func (a *AILogTraceWindowSource) TraceWindow(_ context.Context, fromUnix, toUnix, vehicleID int64) (*summary.TraceWindowEnvelope, error) {
+func (a *TraceWindowSource) TraceWindow(_ context.Context, fromUnix, toUnix, vehicleID int64) (*summary.TraceWindowEnvelope, error) {
 	if fromUnix <= 0 {
 		return nil, fmt.Errorf("api ai log-trace-summarization: from_unix must be > 0")
 	}
@@ -428,6 +444,6 @@ func (a *AILogTraceWindowSource) TraceWindow(_ context.Context, fromUnix, toUnix
 	}, nil
 }
 
-// Compile-time assertion: AILogTraceWindowSource satisfies
+// Compile-time assertion: TraceWindowSource satisfies
 // summary.TraceWindowSource.
-var _ summary.TraceWindowSource = (*AILogTraceWindowSource)(nil)
+var _ summary.TraceWindowSource = (*TraceWindowSource)(nil)
