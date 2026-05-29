@@ -46,6 +46,7 @@ import (
 	aimlrange "github.com/ev-dev-labs/teslasync/internal/api/aimlrange"
 	aimqttsse "github.com/ev-dev-labs/teslasync/internal/api/aimqttsse"
 	ainldash "github.com/ev-dev-labs/teslasync/internal/api/ainldash"
+	ainlgrafana "github.com/ev-dev-labs/teslasync/internal/api/ainlgrafana"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2649,14 +2650,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// into the existing manual JSON editor; the AI never pushes
 	// to Grafana itself. The three curated install-wide
 	// catalogs (panel-types, datasource-types, tables) are
-	// hardcoded in AINLGrafanaPanelCatalogSourceImpl — adding
+	// hardcoded in ainlgrafana.NLGrafanaPanelCatalogSourceImpl — adding
 	// any of these is a deliberate per-prompt decision, not a
 	// default. The table catalog is shared with nl-sql-playground
 	// so the two slices stay in lock-step. Registered AFTER the
 	// slice 0057 tools above so the registry's Names list grows
 	// deterministically.
-	aiNLGrafanaPanelCatalogSource := NewAINLGrafanaPanelCatalogSource()
-	aiNLGrafanaPanelValidator := NewAINLGrafanaValidator()
+	aiNLGrafanaPanelCatalogSource := ainlgrafana.NewNLGrafanaPanelCatalogSource()
+	aiNLGrafanaPanelValidator := ainlgrafana.NewNLGrafanaValidator()
 	nlq.RegisterNLGrafanaPanelTools(aiToolRegistry, nlq.NLGrafanaPanelSources{
 		Validator: aiNLGrafanaPanelValidator,
 	})
@@ -2664,7 +2665,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiNLGrafanaPanelHandler := NewAINLGrafanaPanelHandler(
+	aiNLGrafanaPanelHandler := ainlgrafana.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlgrafanapanel.New(),

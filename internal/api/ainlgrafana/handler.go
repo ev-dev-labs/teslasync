@@ -1,4 +1,4 @@
-package api
+package ainlgrafana
 
 // Phase-50 / 0058 — PU2 Natural-language Grafana panel.
 //
@@ -70,6 +70,7 @@ package api
 //     surface is added or modified by this slice.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -88,6 +89,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -108,49 +110,49 @@ const aiNLGrafanaPanelMaxBodyBytes = 16 * 1024
 // window.
 const aiNLGrafanaPanelMaxPromptChars = 1200
 
-// AINLGrafanaPanelCatalogSource is the narrow read interface the
+// NLGrafanaPanelCatalogSource is the narrow read interface the
 // handler consumes to load the curated install-wide panel-builder
 // catalog. Production wiring satisfies it via
-// AINLGrafanaPanelCatalogSourceImpl, which returns hardcoded
+// NLGrafanaPanelCatalogSourceImpl, which returns hardcoded
 // whitelists (panel-types, datasource-types, tables) so the AI
 // can never propose a panel outside the curated set.
 //
 // The interface is intentionally narrow (one method) so test
 // fakes stay small and the production implementation cannot
 // accidentally widen the surface.
-type AINLGrafanaPanelCatalogSource interface {
+type NLGrafanaPanelCatalogSource interface {
 	// PanelBuilderCatalog returns the curated install-wide
 	// catalog at the time of the call. The returned struct's
 	// slices MUST be safe for the caller to retain.
-	PanelBuilderCatalog(ctx context.Context) (AINLGrafanaPanelCatalog, error)
+	PanelBuilderCatalog(ctx context.Context) (NLGrafanaPanelCatalog, error)
 }
 
-// AINLGrafanaPanelCatalog is the bundle of in-scope catalogs the
+// NLGrafanaPanelCatalog is the bundle of in-scope catalogs the
 // AI is allowed to draw from. A single struct lets the handler
 // load all three with one source call and pass them to the user
 // message + scope binding atomically.
-type AINLGrafanaPanelCatalog struct {
+type NLGrafanaPanelCatalog struct {
 	// PanelTypes is the curated whitelist of Grafana panel types
 	// the AI may propose. Each entry carries a one-line hint so
 	// the LLM picks the right type for the user's prompt.
-	PanelTypes []AINLGrafanaPanelTypeEntry
+	PanelTypes []NLGrafanaPanelTypeEntry
 
 	// DatasourceTypes is the curated whitelist of Grafana
 	// datasource types the AI may propose. Each entry carries a
 	// short hint and the canonical UID the install ships with so
 	// the LLM emits a usable {type, uid} reference.
-	DatasourceTypes []AINLGrafanaDatasourceTypeEntry
+	DatasourceTypes []NLGrafanaDatasourceTypeEntry
 
 	// Tables is the curated whitelist of postgres tables the AI
 	// may reference inside a postgres-target rawSql. Same shape
 	// as nl-sql-playground's catalog so the validator + scope
 	// regexes are interchangeable.
-	Tables []AINLSQLSchemaCatalogEntry
+	Tables []NLSQLSchemaCatalogEntry
 }
 
-// AINLGrafanaPanelTypeEntry describes one curated Grafana panel
+// NLGrafanaPanelTypeEntry describes one curated Grafana panel
 // type the LLM is allowed to propose.
-type AINLGrafanaPanelTypeEntry struct {
+type NLGrafanaPanelTypeEntry struct {
 	// Name is the canonical panel-type slug as it appears in
 	// Grafana's panel-type registry (e.g. "timeseries", "stat").
 	// Lower-case to match Grafana folding.
@@ -161,9 +163,9 @@ type AINLGrafanaPanelTypeEntry struct {
 	Description string
 }
 
-// AINLGrafanaDatasourceTypeEntry describes one curated Grafana
+// NLGrafanaDatasourceTypeEntry describes one curated Grafana
 // datasource type the LLM is allowed to propose.
-type AINLGrafanaDatasourceTypeEntry struct {
+type NLGrafanaDatasourceTypeEntry struct {
 	// Name is the canonical datasource-type slug as it appears
 	// in Grafana's plugin registry (e.g. "postgres",
 	// "prometheus"). Lower-case to match Grafana folding.
@@ -179,6 +181,35 @@ type AINLGrafanaDatasourceTypeEntry struct {
 	Description string
 }
 
+// NLSQLSchemaCatalogEntry describes one curated table the LLM is
+// allowed to reference in a draft.
+type NLSQLSchemaCatalogEntry struct {
+	// Name is the canonical table name as it appears in the
+	// physical schema. Lower-case to match Postgres folding.
+	Name string
+
+	// Description is one-line human-readable hint copy.
+	Description string
+
+	// Columns is the ordered list of column definitions exposed
+	// to the LLM.
+	Columns []NLSQLSchemaColumn
+}
+
+// NLSQLSchemaColumn is one column definition inside an
+// NLSQLSchemaCatalogEntry.
+type NLSQLSchemaColumn struct {
+	// Name is the column name as it appears in the physical
+	// schema.
+	Name string
+
+	// Type is the canonical SQL type label.
+	Type string
+
+	// Description is one-line human-readable hint copy.
+	Description string
+}
+
 // aiNLGrafanaPanelRequest is the typed body shape. The single
 // required field is the user's natural-language prompt.
 type aiNLGrafanaPanelRequest struct {
@@ -188,23 +219,23 @@ type aiNLGrafanaPanelRequest struct {
 	Prompt string `json:"prompt"`
 }
 
-// AINLGrafanaPanelHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/power/grafana-panel/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AINLGrafanaPanelHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     AINLGrafanaPanelCatalogSource
+	source     NLGrafanaPanelCatalogSource
 	headerName string
 	maxIters   int
 }
 
-// NewAINLGrafanaPanelHandler constructs the handler. All non-
+// NewHandler constructs the handler. All non-
 // pointer arguments are required; the constructor panics on a nil
 // so the wiring bug surfaces at boot, not at first request.
 //
@@ -219,31 +250,31 @@ type AINLGrafanaPanelHandler struct {
 //	in router.go).
 //
 // strat:      the nl-grafana-panel Strategy (one per process).
-// source:     the production AINLGrafanaPanelCatalogSource
+// source:     the production NLGrafanaPanelCatalogSource
 //
-//	(AINLGrafanaPanelCatalogSourceImpl in router.go).
+//	(NLGrafanaPanelCatalogSourceImpl in router.go).
 //
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAINLGrafanaPanelHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source AINLGrafanaPanelCatalogSource,
+	source NLGrafanaPanelCatalogSource,
 	headerName string,
-) *AINLGrafanaPanelHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAINLGrafanaPanelHandler: nil provider.Registry")
+		panic("api: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAINLGrafanaPanelHandler: nil tools.Registry")
+		panic("api: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAINLGrafanaPanelHandler: nil strategy.Strategy")
+		panic("api: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAINLGrafanaPanelHandler: nil AINLGrafanaPanelCatalogSource")
+		panic("api: NewHandler: nil NLGrafanaPanelCatalogSource")
 	}
-	return &AINLGrafanaPanelHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -260,32 +291,32 @@ func NewAINLGrafanaPanelHandler(
 func parseNLGrafanaPanelRequest(w http.ResponseWriter, r *http.Request) (aiNLGrafanaPanelRequest, bool) {
 	var req aiNLGrafanaPanelRequest
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "missing body")
+		httpx.WriteError(w, http.StatusBadRequest, "missing body")
 		return req, false
 	}
 	defer r.Body.Close()
 	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiNLGrafanaPanelMaxBodyBytes))
 	if readErr != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
-	if len(bytesTrim(bodyBytes)) == 0 {
-		writeError(w, http.StatusBadRequest, "empty body")
+	if len(bytes.TrimSpace(bodyBytes)) == 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "empty body")
 		return req, false
 	}
 	dec := json.NewDecoder(strings.NewReader(string(bodyBytes)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return req, false
 	}
 	prompt := strings.TrimSpace(req.Prompt)
 	if prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
+		httpx.WriteError(w, http.StatusBadRequest, "prompt is required")
 		return req, false
 	}
 	if len(prompt) > aiNLGrafanaPanelMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt exceeds %d characters", aiNLGrafanaPanelMaxPromptChars))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("prompt exceeds %d characters", aiNLGrafanaPanelMaxPromptChars))
 		return req, false
 	}
 	req.Prompt = prompt
@@ -298,7 +329,7 @@ func parseNLGrafanaPanelRequest(w http.ResponseWriter, r *http.Request) (aiNLGra
 // Every error path either writes a structured frame onto the SSE
 // stream (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
-func (h *AINLGrafanaPanelHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseNLGrafanaPanelRequest(w, r)
 	if !ok {
@@ -311,7 +342,7 @@ func (h *AINLGrafanaPanelHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), nlgrafanapanel.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai nl-grafana-panel: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -322,7 +353,7 @@ func (h *AINLGrafanaPanelHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	catalog, err := h.source.PanelBuilderCatalog(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("ai nl-grafana-panel: source.PanelBuilderCatalog failed")
-		writeError(w, http.StatusInternalServerError, "failed to load panel-builder catalog")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load panel-builder catalog")
 		return
 	}
 
@@ -361,7 +392,7 @@ func (h *AINLGrafanaPanelHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nlgrafanapanel.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai nl-grafana-panel: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -411,7 +442,7 @@ func (h *AINLGrafanaPanelHandler) ServeHTTP(w http.ResponseWriter, r *http.Reque
 // any PII anyway, but emitting only the bare ground-truth metadata
 // keeps the transcript volume minimal AND makes the goldens
 // stable across catalog churn.
-func buildNLGrafanaPanelUserMessage(prompt string, catalog AINLGrafanaPanelCatalog) string {
+func buildNLGrafanaPanelUserMessage(prompt string, catalog NLGrafanaPanelCatalog) string {
 	var b strings.Builder
 
 	b.WriteString("Suggest a single typed GrafanaPanelDraft that satisfies the user's request below. ")
@@ -423,7 +454,7 @@ func buildNLGrafanaPanelUserMessage(prompt string, catalog AINLGrafanaPanelCatal
 	b.WriteString("Do NOT claim the panel was created, applied, exported, or pushed — the user reviews the proposal in the AI side panel and clicks the Apply to editor button to copy the draft into the manual Grafana panel JSON editor on /power/grafana, then clicks Copy to clipboard to paste it into their existing Grafana dashboard editor.")
 
 	// Sort panel types by name for deterministic prompt hashing.
-	panelTypes := append([]AINLGrafanaPanelTypeEntry(nil), catalog.PanelTypes...)
+	panelTypes := append([]NLGrafanaPanelTypeEntry(nil), catalog.PanelTypes...)
 	sort.Slice(panelTypes, func(i, j int) bool { return panelTypes[i].Name < panelTypes[j].Name })
 	if len(panelTypes) == 0 {
 		b.WriteString("\n\nIn-scope curated panel-type catalog: NONE.\n")
@@ -436,7 +467,7 @@ func buildNLGrafanaPanelUserMessage(prompt string, catalog AINLGrafanaPanelCatal
 
 	// Sort datasource types by name for deterministic prompt
 	// hashing.
-	dsTypes := append([]AINLGrafanaDatasourceTypeEntry(nil), catalog.DatasourceTypes...)
+	dsTypes := append([]NLGrafanaDatasourceTypeEntry(nil), catalog.DatasourceTypes...)
 	sort.Slice(dsTypes, func(i, j int) bool { return dsTypes[i].Name < dsTypes[j].Name })
 	if len(dsTypes) == 0 {
 		b.WriteString("\nIn-scope curated datasource-type catalog: NONE.\n")
@@ -448,7 +479,7 @@ func buildNLGrafanaPanelUserMessage(prompt string, catalog AINLGrafanaPanelCatal
 	}
 
 	// Sort table catalog by name for deterministic prompt hashing.
-	tables := append([]AINLSQLSchemaCatalogEntry(nil), catalog.Tables...)
+	tables := append([]NLSQLSchemaCatalogEntry(nil), catalog.Tables...)
 	sort.Slice(tables, func(i, j int) bool { return tables[i].Name < tables[j].Name })
 	if len(tables) == 0 {
 		b.WriteString("\nIn-scope curated table catalog (for postgres targets): NONE.\n")
@@ -457,7 +488,7 @@ func buildNLGrafanaPanelUserMessage(prompt string, catalog AINLGrafanaPanelCatal
 		b.WriteString("\nIn-scope curated table catalog (for postgres targets, table → columns):\n")
 		for _, e := range tables {
 			fmt.Fprintf(&b, "  - table=%s — %s\n", e.Name, e.Description)
-			cols := append([]AINLSQLSchemaColumn(nil), e.Columns...)
+			cols := append([]NLSQLSchemaColumn(nil), e.Columns...)
 			sort.Slice(cols, func(i, j int) bool { return cols[i].Name < cols[j].Name })
 			for _, c := range cols {
 				fmt.Fprintf(&b, "      - column=%s type=%s — %s\n", c.Name, c.Type, c.Description)
@@ -472,9 +503,14 @@ func buildNLGrafanaPanelUserMessage(prompt string, catalog AINLGrafanaPanelCatal
 	return b.String()
 }
 
-// Compile-time assertion: AINLGrafanaPanelHandler satisfies
+// denyAllConfirm rejects all mutating AI tool confirmations for this read-only surface.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AINLGrafanaPanelHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the source + validator interfaces declared
@@ -491,7 +527,7 @@ var _ http.Handler = (*AINLGrafanaPanelHandler)(nil)
 // Adding a panel type here is a deliberate per-prompt decision,
 // not a default. A future slice that needs to add a new panel
 // type MUST extend this list AND update the strategy goldens.
-var nlGrafanaPanelCuratedPanelTypes = []AINLGrafanaPanelTypeEntry{
+var nlGrafanaPanelCuratedPanelTypes = []NLGrafanaPanelTypeEntry{
 	{Name: "timeseries", Description: "time-series chart (default for any time-vs-value query)"},
 	{Name: "stat", Description: "single-value big-number stat panel (latest sample of one metric)"},
 	{Name: "gauge", Description: "single-value gauge with min/max bounds"},
@@ -512,7 +548,7 @@ var nlGrafanaPanelCuratedPanelTypes = []AINLGrafanaPanelTypeEntry{
 // the UID when pasting into Grafana if needed; the validator
 // allows any non-empty UID, and the SPA renders the proposal
 // for review before any paste.
-var nlGrafanaPanelCuratedDatasourceTypes = []AINLGrafanaDatasourceTypeEntry{
+var nlGrafanaPanelCuratedDatasourceTypes = []NLGrafanaDatasourceTypeEntry{
 	{
 		Name:        "postgres",
 		UID:         "tesla-postgres",
@@ -531,47 +567,111 @@ var nlGrafanaPanelCuratedDatasourceTypes = []AINLGrafanaDatasourceTypeEntry{
 // counts as an in-scope table for postgres targets, and means a
 // future schema-catalog refactor only has one source of truth to
 // update.
-var nlGrafanaPanelCuratedTables = nlSqlPlaygroundCuratedCatalog
+var nlGrafanaPanelCuratedTables = []NLSQLSchemaCatalogEntry{
+	{
+		Name:        "drives",
+		Description: "Per-trip aggregates for completed drives (one row per trip)",
+		Columns: []NLSQLSchemaColumn{
+			{Name: "id", Type: "bigint", Description: "primary key"},
+			{Name: "vehicle_id", Type: "bigint", Description: "vehicle this drive belongs to"},
+			{Name: "started_at", Type: "timestamptz", Description: "drive start timestamp UTC"},
+			{Name: "ended_at", Type: "timestamptz", Description: "drive end timestamp UTC"},
+			{Name: "distance_m", Type: "double precision", Description: "total distance in meters (SI canonical)"},
+			{Name: "duration_s", Type: "double precision", Description: "total duration in seconds (SI canonical)"},
+			{Name: "energy_used_wh", Type: "double precision", Description: "total energy consumed in watt-hours (SI canonical)"},
+			{Name: "regen_wh", Type: "double precision", Description: "total regenerative energy recovered in watt-hours"},
+			{Name: "avg_speed_mps", Type: "double precision", Description: "average speed in meters per second (SI canonical)"},
+			{Name: "max_speed_mps", Type: "double precision", Description: "maximum speed in meters per second"},
+		},
+	},
+	{
+		Name:        "charging_sessions",
+		Description: "Per-charge aggregates for completed charging sessions (one row per session)",
+		Columns: []NLSQLSchemaColumn{
+			{Name: "id", Type: "bigint", Description: "primary key"},
+			{Name: "vehicle_id", Type: "bigint", Description: "vehicle being charged"},
+			{Name: "started_at", Type: "timestamptz", Description: "session start timestamp UTC"},
+			{Name: "ended_at", Type: "timestamptz", Description: "session end timestamp UTC"},
+			{Name: "energy_added_wh", Type: "double precision", Description: "total energy added in watt-hours (SI canonical)"},
+			{Name: "cost_cents", Type: "bigint", Description: "session cost in user-currency cents"},
+			{Name: "charger_kind", Type: "text", Description: "charger family (home, supercharger, third_party)"},
+			{Name: "max_power_w", Type: "double precision", Description: "peak power draw in watts"},
+		},
+	},
+	{
+		Name:        "vehicles",
+		Description: "Vehicle metadata (one row per vehicle)",
+		Columns: []NLSQLSchemaColumn{
+			{Name: "id", Type: "bigint", Description: "primary key"},
+			{Name: "vin", Type: "text", Description: "Tesla VIN (PII — redacted from any LLM transcript)"},
+			{Name: "display_name", Type: "text", Description: "user-chosen display name (PII — redacted)"},
+			{Name: "model", Type: "text", Description: "model code (3, Y, S, X, ...)"},
+			{Name: "color", Type: "text", Description: "exterior color slug"},
+		},
+	},
+	{
+		Name:        "alerts",
+		Description: "User-defined alerts that have fired (one row per fire event)",
+		Columns: []NLSQLSchemaColumn{
+			{Name: "id", Type: "bigint", Description: "primary key"},
+			{Name: "vehicle_id", Type: "bigint", Description: "vehicle the alert fired for"},
+			{Name: "alert_rule_id", Type: "bigint", Description: "the alert rule that fired"},
+			{Name: "fired_at", Type: "timestamptz", Description: "fire timestamp UTC"},
+			{Name: "level", Type: "text", Description: "severity (info, warn, critical)"},
+		},
+	},
+	{
+		Name:        "signal_log_view",
+		Description: "Telemetry signal history exposed as a stable view (no raw hypertable internals)",
+		Columns: []NLSQLSchemaColumn{
+			{Name: "vehicle_id", Type: "bigint", Description: "vehicle the signal belongs to"},
+			{Name: "signal_name", Type: "text", Description: "canonical signal name (e.g. VehicleSpeed, BatteryLevel)"},
+			{Name: "ts", Type: "timestamptz", Description: "sample timestamp UTC"},
+			{Name: "num_value", Type: "double precision", Description: "numeric value (SI canonical) — null when the signal is non-numeric"},
+			{Name: "str_value", Type: "text", Description: "string value — null when the signal is numeric"},
+		},
+	},
+}
 
-// AINLGrafanaPanelCatalogSourceImpl is the production
-// AINLGrafanaPanelCatalogSource. It returns the three hardcoded
+// NLGrafanaPanelCatalogSourceImpl is the production
+// NLGrafanaPanelCatalogSource. It returns the three hardcoded
 // curated whitelists so the AI can never propose a panel outside
 // the curated set.
 //
 // No DB query — the catalogs are hand-maintained. A future slice
 // that needs per-tenant catalog gating can swap this out without
 // churning the handler.
-type AINLGrafanaPanelCatalogSourceImpl struct{}
+type NLGrafanaPanelCatalogSourceImpl struct{}
 
-// NewAINLGrafanaPanelCatalogSource constructs the adapter. No
+// NewNLGrafanaPanelCatalogSource constructs the adapter. No
 // deps. Returned by-pointer for symmetry with the other AI*
 // source types.
-func NewAINLGrafanaPanelCatalogSource() *AINLGrafanaPanelCatalogSourceImpl {
-	return &AINLGrafanaPanelCatalogSourceImpl{}
+func NewNLGrafanaPanelCatalogSource() *NLGrafanaPanelCatalogSourceImpl {
+	return &NLGrafanaPanelCatalogSourceImpl{}
 }
 
-// PanelBuilderCatalog implements AINLGrafanaPanelCatalogSource.
+// PanelBuilderCatalog implements NLGrafanaPanelCatalogSource.
 // Returns defensive copies of the three curated whitelists so a
 // caller cannot retroactively mutate the source-of-truth slices.
-func (a *AINLGrafanaPanelCatalogSourceImpl) PanelBuilderCatalog(_ context.Context) (AINLGrafanaPanelCatalog, error) {
-	panelTypes := make([]AINLGrafanaPanelTypeEntry, len(nlGrafanaPanelCuratedPanelTypes))
+func (a *NLGrafanaPanelCatalogSourceImpl) PanelBuilderCatalog(_ context.Context) (NLGrafanaPanelCatalog, error) {
+	panelTypes := make([]NLGrafanaPanelTypeEntry, len(nlGrafanaPanelCuratedPanelTypes))
 	copy(panelTypes, nlGrafanaPanelCuratedPanelTypes)
 
-	dsTypes := make([]AINLGrafanaDatasourceTypeEntry, len(nlGrafanaPanelCuratedDatasourceTypes))
+	dsTypes := make([]NLGrafanaDatasourceTypeEntry, len(nlGrafanaPanelCuratedDatasourceTypes))
 	copy(dsTypes, nlGrafanaPanelCuratedDatasourceTypes)
 
-	tables := make([]AINLSQLSchemaCatalogEntry, len(nlGrafanaPanelCuratedTables))
+	tables := make([]NLSQLSchemaCatalogEntry, len(nlGrafanaPanelCuratedTables))
 	for i, e := range nlGrafanaPanelCuratedTables {
-		cols := make([]AINLSQLSchemaColumn, len(e.Columns))
+		cols := make([]NLSQLSchemaColumn, len(e.Columns))
 		copy(cols, e.Columns)
-		tables[i] = AINLSQLSchemaCatalogEntry{
+		tables[i] = NLSQLSchemaCatalogEntry{
 			Name:        e.Name,
 			Description: e.Description,
 			Columns:     cols,
 		}
 	}
 
-	return AINLGrafanaPanelCatalog{
+	return NLGrafanaPanelCatalog{
 		PanelTypes:      panelTypes,
 		DatasourceTypes: dsTypes,
 		Tables:          tables,
@@ -579,13 +679,13 @@ func (a *AINLGrafanaPanelCatalogSourceImpl) PanelBuilderCatalog(_ context.Contex
 }
 
 // Compile-time assertion.
-var _ AINLGrafanaPanelCatalogSource = (*AINLGrafanaPanelCatalogSourceImpl)(nil)
+var _ NLGrafanaPanelCatalogSource = (*NLGrafanaPanelCatalogSourceImpl)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the nlq.GrafanaPanelValidator interface.
 // ---------------------------------------------------------------------
 
-// AINLGrafanaValidator is the production nlq.GrafanaPanelValidator.
+// NLGrafanaValidator is the production nlq.GrafanaPanelValidator.
 // The shape checks (panel-type catalog, datasource-type catalog,
 // per-target shape, postgres rawSql contract, prometheus expr
 // contract, gridPos bounds) are already enforced by the tool's
@@ -605,13 +705,13 @@ var _ AINLGrafanaPanelCatalogSource = (*AINLGrafanaPanelCatalogSourceImpl)(nil)
 // and the user reviews the typed proposal before clicking Apply.
 //
 // Stateless. Held by value; safe for concurrent use.
-type AINLGrafanaValidator struct{}
+type NLGrafanaValidator struct{}
 
-// NewAINLGrafanaValidator constructs the validator. No deps.
+// NewNLGrafanaValidator constructs the validator. No deps.
 // Returned by-pointer for symmetry with the other AI* validator
 // types.
-func NewAINLGrafanaValidator() *AINLGrafanaValidator {
-	return &AINLGrafanaValidator{}
+func NewNLGrafanaValidator() *NLGrafanaValidator {
+	return &NLGrafanaValidator{}
 }
 
 // ValidateGrafanaPanel implements nlq.GrafanaPanelValidator.
@@ -620,7 +720,7 @@ func NewAINLGrafanaValidator() *AINLGrafanaValidator {
 // need them. Keeping the body intentionally minimal so the
 // slice's mandate ("propose-only, no semantic surprises") is
 // locally legible.
-func (v *AINLGrafanaValidator) ValidateGrafanaPanel(draft *nlq.GrafanaPanelDraft) error {
+func (v *NLGrafanaValidator) ValidateGrafanaPanel(draft *nlq.GrafanaPanelDraft) error {
 	if draft == nil {
 		return errors.New("api ai nl-grafana-panel: nil GrafanaPanelDraft")
 	}
@@ -628,4 +728,4 @@ func (v *AINLGrafanaValidator) ValidateGrafanaPanel(draft *nlq.GrafanaPanelDraft
 }
 
 // Compile-time assertion.
-var _ nlq.GrafanaPanelValidator = (*AINLGrafanaValidator)(nil)
+var _ nlq.GrafanaPanelValidator = (*NLGrafanaValidator)(nil)

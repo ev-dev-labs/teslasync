@@ -15,7 +15,7 @@
 // nl-grafana-panel`); duplicating that here would require a live
 // database fixture.
 
-package api
+package ainlgrafana
 
 import (
 	"bytes"
@@ -30,6 +30,22 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	if s.on == nil {
+		return false, nil
+	}
+	return s.on[id], nil
+}
 
 // TestNLGrafanaPanelAIOffManualEditorWorks is the load-bearing
 // off-mode contract proof for slice 0058. It mounts the AI
@@ -147,23 +163,23 @@ func TestNLGrafanaPanelAIOffManualEditorWorks(t *testing.T) {
 	}
 }
 
-// TestAINLGrafanaPanelHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAINLGrafanaPanelHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAINLGrafanaPanelHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAINLGrafanaPanelHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -171,11 +187,11 @@ func TestAINLGrafanaPanelHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAINLGrafanaPanelHandler_RejectsBadBody asserts the handler
+// TestHandler_RejectsBadBody asserts the handler
 // validates the body BEFORE doing anything else — a body that fails
 // to decode as JSON object MUST surface as a JSON 400, not a
 // half-opened stream that confuses the frontend.
-func TestAINLGrafanaPanelHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -217,20 +233,20 @@ func TestAINLGrafanaPanelHandler_RejectsBadBody(t *testing.T) {
 // the goldens silently drift.
 func TestBuildNLGrafanaPanelUserMessage_DeterministicShape(t *testing.T) {
 	t.Parallel()
-	catalog := AINLGrafanaPanelCatalog{
-		PanelTypes: []AINLGrafanaPanelTypeEntry{
+	catalog := NLGrafanaPanelCatalog{
+		PanelTypes: []NLGrafanaPanelTypeEntry{
 			{Name: "stat", Description: "single-value big-number"},
 			{Name: "timeseries", Description: "time-series chart"},
 		},
-		DatasourceTypes: []AINLGrafanaDatasourceTypeEntry{
+		DatasourceTypes: []NLGrafanaDatasourceTypeEntry{
 			{Name: "prometheus", UID: "tesla-prometheus", Description: "metrics"},
 			{Name: "postgres", UID: "tesla-postgres", Description: "timescaledb"},
 		},
-		Tables: []AINLSQLSchemaCatalogEntry{
+		Tables: []NLSQLSchemaCatalogEntry{
 			{
 				Name:        "vehicles",
 				Description: "vehicle metadata",
-				Columns: []AINLSQLSchemaColumn{
+				Columns: []NLSQLSchemaColumn{
 					{Name: "id", Type: "bigint", Description: "primary key"},
 					{Name: "model", Type: "text", Description: "model code"},
 				},
@@ -238,7 +254,7 @@ func TestBuildNLGrafanaPanelUserMessage_DeterministicShape(t *testing.T) {
 			{
 				Name:        "drives",
 				Description: "per-trip aggregates",
-				Columns: []AINLSQLSchemaColumn{
+				Columns: []NLSQLSchemaColumn{
 					{Name: "id", Type: "bigint", Description: "primary key"},
 					{Name: "started_at", Type: "timestamptz", Description: "drive start"},
 				},
@@ -288,7 +304,7 @@ func TestBuildNLGrafanaPanelUserMessage_DeterministicShape(t *testing.T) {
 // is empty (the most common no-op state for the panel-builder).
 func TestBuildNLGrafanaPanelUserMessage_EmptyCatalogs(t *testing.T) {
 	t.Parallel()
-	got := buildNLGrafanaPanelUserMessage("daily drives", AINLGrafanaPanelCatalog{})
+	got := buildNLGrafanaPanelUserMessage("daily drives", NLGrafanaPanelCatalog{})
 	for _, must := range []string{
 		"In-scope curated panel-type catalog: NONE.",
 		"In-scope curated datasource-type catalog: NONE.",
@@ -302,12 +318,12 @@ func TestBuildNLGrafanaPanelUserMessage_EmptyCatalogs(t *testing.T) {
 	}
 }
 
-// TestAINLGrafanaValidator_AcceptsValidDraft pins the validator's
+// TestNLGrafanaValidator_AcceptsValidDraft pins the validator's
 // accept path: a well-formed GrafanaPanelDraft returns nil. Future
 // slices that add semantic checks will need to update this test.
-func TestAINLGrafanaValidator_AcceptsValidDraft(t *testing.T) {
+func TestNLGrafanaValidator_AcceptsValidDraft(t *testing.T) {
 	t.Parallel()
-	v := NewAINLGrafanaValidator()
+	v := NewNLGrafanaValidator()
 	drafts := []*nlq.GrafanaPanelDraft{
 		{
 			Prompt: "daily drives this month",
@@ -337,24 +353,24 @@ func TestAINLGrafanaValidator_AcceptsValidDraft(t *testing.T) {
 	}
 }
 
-// TestAINLGrafanaValidator_RejectsNil pins the defensive nil check.
-func TestAINLGrafanaValidator_RejectsNil(t *testing.T) {
+// TestNLGrafanaValidator_RejectsNil pins the defensive nil check.
+func TestNLGrafanaValidator_RejectsNil(t *testing.T) {
 	t.Parallel()
-	v := NewAINLGrafanaValidator()
+	v := NewNLGrafanaValidator()
 	if err := v.ValidateGrafanaPanel(nil); err == nil {
 		t.Error("ValidateGrafanaPanel(nil) err = nil, want error")
 	}
 }
 
-// TestAINLGrafanaPanelCatalogSourceImpl_ReturnsCuratedCatalog
+// TestNLGrafanaPanelCatalogSourceImpl_ReturnsCuratedCatalog
 // proves the production source returns the hardcoded curated
 // catalogs with non-empty Name per entry. The catalog MUST include
 // at least the canonical 8 panel types, the 2 datasource types,
 // and the same 5 tables nl-sql-playground exposes so the goldens
 // stay valid.
-func TestAINLGrafanaPanelCatalogSourceImpl_ReturnsCuratedCatalog(t *testing.T) {
+func TestNLGrafanaPanelCatalogSourceImpl_ReturnsCuratedCatalog(t *testing.T) {
 	t.Parallel()
-	src := NewAINLGrafanaPanelCatalogSource()
+	src := NewNLGrafanaPanelCatalogSource()
 	got, err := src.PanelBuilderCatalog(context.Background())
 	if err != nil {
 		t.Fatalf("PanelBuilderCatalog err = %v, want nil", err)
@@ -418,14 +434,14 @@ func TestAINLGrafanaPanelCatalogSourceImpl_ReturnsCuratedCatalog(t *testing.T) {
 	}
 }
 
-// TestAINLGrafanaPanelCatalogSourceImpl_ReturnsDefensiveCopy proves
+// TestNLGrafanaPanelCatalogSourceImpl_ReturnsDefensiveCopy proves
 // the production source returns defensive copies — a caller that
 // mutates the returned slices does NOT leak the mutation back into
 // the source-of-truth catalogs. Subsequent calls return the
 // original entries.
-func TestAINLGrafanaPanelCatalogSourceImpl_ReturnsDefensiveCopy(t *testing.T) {
+func TestNLGrafanaPanelCatalogSourceImpl_ReturnsDefensiveCopy(t *testing.T) {
 	t.Parallel()
-	src := NewAINLGrafanaPanelCatalogSource()
+	src := NewNLGrafanaPanelCatalogSource()
 	got, _ := src.PanelBuilderCatalog(context.Background())
 	if len(got.Tables) == 0 {
 		t.Fatal("PanelBuilderCatalog returned empty Tables list")
