@@ -68,6 +68,7 @@ import (
 	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
 	aivampire "github.com/ev-dev-labs/teslasync/internal/api/aivampire"
 	"github.com/ev-dev-labs/teslasync/internal/api/aivehpaint"
+	aivoice "github.com/ev-dev-labs/teslasync/internal/api/aivoice"
 	aiyir "github.com/ev-dev-labs/teslasync/internal/api/aiyir"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
@@ -2561,8 +2562,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// NO new SQL is written; both adapters wrap existing
 	// readers. Registered AFTER the slice 0054 tools above so
 	// the registry's Names list grows deterministically.
-	aiVoiceModeChatSource := NewAIVoiceModeChatContextSource(dbnotif.NewChatRepo(db))
-	aiVoiceModeVehicleSource := NewAIVoiceModeVehicleSnapshotSource(
+	aiVoiceModeChatSource := aivoice.NewChatContextSource(dbnotif.NewChatRepo(db))
+	aiVoiceModeVehicleSource := aivoice.NewVehicleSnapshotSource(
 		vehicledb.NewVehicleRepo(db),
 		drivedb.NewDriveRepo(db),
 		liveStateReader,
@@ -2575,7 +2576,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiVoiceModeHandler := NewAIVoiceModeHandler(
+	aiVoiceModeHandler := aivoice.NewHandler(
 		dbnotif.NewChatRepo(db),
 		aiRegistry,
 		aiToolRegistry,

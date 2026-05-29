@@ -1,4 +1,4 @@
-package api
+package aivoice
 
 // Phase-50 / 0055 — V1 Helix voice mode.
 //
@@ -82,12 +82,6 @@ import (
 	"strings"
 	"time"
 
-	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
-
-	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
-
-	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
-
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
@@ -97,10 +91,14 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -154,14 +152,14 @@ type aiVoiceModeRequest struct {
 	SessionID string `json:"session_id"`
 }
 
-// AIVoiceModeHandler is the HTTP handler for POST
+// Handler is the HTTP handler for POST
 // /api/v1/ai/voice/chat.
 //
 // Construction is in router.go (so the dispatcher's tool
 // registry + provider registry are wired once at boot). The
 // handler itself is stateless beyond its constructor inputs and
 // is safe for concurrent use across requests.
-type AIVoiceModeHandler struct {
+type Handler struct {
 	chat       *dbnotif.ChatRepo
 	registry   *provider.Registry
 	tools      *tools.Registry
@@ -171,7 +169,7 @@ type AIVoiceModeHandler struct {
 	historyN   int
 }
 
-// NewAIVoiceModeHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so
 // the wiring bug surfaces at boot, not at first request.
 //
@@ -189,24 +187,24 @@ type AIVoiceModeHandler struct {
 // headerName: forward-auth header name; used to extract
 //
 //	subject for audit.
-func NewAIVoiceModeHandler(
+func NewHandler(
 	chat *dbnotif.ChatRepo,
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIVoiceModeHandler {
+) *Handler {
 	switch {
 	case chat == nil:
-		panic("api: NewAIVoiceModeHandler: nil ChatRepo")
+		panic("aivoice: NewHandler: nil ChatRepo")
 	case registry == nil:
-		panic("api: NewAIVoiceModeHandler: nil provider.Registry")
+		panic("aivoice: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIVoiceModeHandler: nil tools.Registry")
+		panic("aivoice: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIVoiceModeHandler: nil strategy.Strategy")
+		panic("aivoice: NewHandler: nil strategy.Strategy")
 	}
-	return &AIVoiceModeHandler{
+	return &Handler{
 		chat:       chat,
 		registry:   registry,
 		tools:      toolReg,
@@ -217,6 +215,77 @@ func NewAIVoiceModeHandler(
 	}
 }
 
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+func historyToProviderMessages(rows []*chatbotmodel.ChatMessage, currentUserMessage string) []provider.Message {
+	if len(rows) == 0 {
+		return nil
+	}
+	out := make([]provider.Message, 0, len(rows))
+	for i, m := range rows {
+		if m == nil {
+			continue
+		}
+		if i == len(rows)-1 && m.Role == "user" && m.Content == currentUserMessage {
+			continue
+		}
+		out = append(out, provider.Message{
+			Role:    m.Role,
+			Content: m.Content,
+		})
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+type recordingStreamWriter struct {
+	inner *stream.Writer
+	buf   strings.Builder
+}
+
+func (r *recordingStreamWriter) WriteDelta(s string) error {
+	r.buf.WriteString(s)
+	return r.inner.WriteDelta(s)
+}
+
+func (r *recordingStreamWriter) WriteToolCall(call provider.ToolCall) error {
+	return r.inner.WriteToolCall(call)
+}
+
+func (r *recordingStreamWriter) WriteToolResult(name string, result json.RawMessage) error {
+	return r.inner.WriteToolResult(name, result)
+}
+
+func (r *recordingStreamWriter) WriteToolError(name string, err error) error {
+	return r.inner.WriteToolError(name, err)
+}
+
+func (r *recordingStreamWriter) WriteDone() error {
+	return r.inner.WriteDone()
+}
+
+func (r *recordingStreamWriter) EmitLimitError(message, reason string, retryAfterS int, bannerLevel string, baselineAvailable bool) error {
+	return r.inner.WriteLimitError(message, stream.LimitDecisionPayload{
+		Reason:            reason,
+		RetryAfterS:       retryAfterS,
+		BannerLevel:       bannerLevel,
+		BaselineAvailable: baselineAvailable,
+	})
+}
+
+func (r *recordingStreamWriter) text() string {
+	return r.buf.String()
+}
+
+var (
+	_ dispatch.StreamWriter      = (*recordingStreamWriter)(nil)
+	_ dispatch.LimitErrorEmitter = (*recordingStreamWriter)(nil)
+)
+
 // parseVoiceModeRequest drains the body, enforces the size cap
 // + the per-field length cap, and rejects unknown fields so a
 // future schema drift surfaces explicitly. Returns (req, true)
@@ -224,32 +293,32 @@ func NewAIVoiceModeHandler(
 func parseVoiceModeRequest(w http.ResponseWriter, r *http.Request) (aiVoiceModeRequest, bool) {
 	var req aiVoiceModeRequest
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "request body is required")
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
 		return req, false
 	}
 	defer r.Body.Close()
 	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiVoiceModeMaxBodyBytes))
 	if readErr != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
-	if len(bytesTrim(bodyBytes)) == 0 {
-		writeError(w, http.StatusBadRequest, "request body is required")
+	if strings.TrimSpace(string(bodyBytes)) == "" {
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
 		return req, false
 	}
 	dec := json.NewDecoder(strings.NewReader(string(bodyBytes)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return req, false
 	}
 	req.Message = strings.TrimSpace(req.Message)
 	if req.Message == "" {
-		writeError(w, http.StatusBadRequest, "message is required")
+		httpx.WriteError(w, http.StatusBadRequest, "message is required")
 		return req, false
 	}
 	if len(req.Message) > aiVoiceModeMaxMessageLen {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf(
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf(
 			"message length %d exceeds the maximum %d characters",
 			len(req.Message), aiVoiceModeMaxMessageLen))
 		return req, false
@@ -271,7 +340,7 @@ func parseVoiceModeRequest(w http.ResponseWriter, r *http.Request) (aiVoiceModeR
 // persisted after the SSE stream closes. Every error path either
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
 	req, ok := parseVoiceModeRequest(w, r)
 	if !ok {
@@ -312,7 +381,7 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), voicemode.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai voice-mode: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -342,7 +411,7 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(voicemode.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai voice-mode: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -400,10 +469,10 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 // ---------------------------------------------------------------------------
-// Production source adapter: AIVoiceModeChatContextSource
+// Production source adapter: ChatContextSource
 // ---------------------------------------------------------------------------
 
-// AIVoiceModeChatContextSource is the production adapter
+// ChatContextSource is the production adapter
 // satisfying voice.ChatContextSource. It wraps the canonical
 // *dbnotif.ChatRepo so the AI tool reads from the SAME data
 // source the deterministic Settings UI's chat history endpoint
@@ -412,18 +481,18 @@ func (h *AIVoiceModeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // The adapter performs ONE call against ChatRepo.GetHistory per
 // tool invocation. The read is cheap: the canonical table is
 // indexed on (session_id, created_at).
-type AIVoiceModeChatContextSource struct {
+type ChatContextSource struct {
 	chat *dbnotif.ChatRepo
 }
 
-// NewAIVoiceModeChatContextSource constructs the production
+// NewChatContextSource constructs the production
 // adapter. The repo is required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAIVoiceModeChatContextSource(c *dbnotif.ChatRepo) *AIVoiceModeChatContextSource {
+func NewChatContextSource(c *dbnotif.ChatRepo) *ChatContextSource {
 	if c == nil {
-		panic("api: NewAIVoiceModeChatContextSource: nil chat *dbnotif.ChatRepo")
+		panic("aivoice: NewChatContextSource: nil chat *dbnotif.ChatRepo")
 	}
-	return &AIVoiceModeChatContextSource{chat: c}
+	return &ChatContextSource{chat: c}
 }
 
 // LoadRecentTurns implements voice.ChatContextSource. Reads the
@@ -438,7 +507,7 @@ func NewAIVoiceModeChatContextSource(c *dbnotif.ChatRepo) *AIVoiceModeChatContex
 // should NOT leak into the LLM's context (the strategy's
 // deterministic SystemPrompt is the only system message the
 // dispatcher injects).
-func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sessionID string, limit int) ([]voice.VoiceModeChatTurn, error) {
+func (a *ChatContextSource) LoadRecentTurns(ctx context.Context, sessionID string, limit int) ([]voice.VoiceModeChatTurn, error) {
 	rows, err := a.chat.GetHistory(ctx, sessionID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("ai voice-mode: load chat history: %w", err)
@@ -460,10 +529,10 @@ func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sess
 }
 
 // ---------------------------------------------------------------------------
-// Production source adapter: AIVoiceModeVehicleSnapshotSource
+// Production source adapter: VehicleSnapshotSource
 // ---------------------------------------------------------------------------
 
-// AIVoiceModeVehicleSnapshotSource is the production adapter
+// VehicleSnapshotSource is the production adapter
 // satisfying voice.VehicleSnapshotSource. It wraps the canonical
 // *vehicledb.VehicleRepo + *drivedb.DriveRepo +
 // signal.LiveStateReader so the AI tool reads from the SAME
@@ -483,31 +552,31 @@ func (a *AIVoiceModeChatContextSource) LoadRecentTurns(ctx context.Context, sess
 // ABSENT from the projection — voice mode is hands-free, the
 // LLM has no reason to surface them, and a leaked transcript
 // should not contain them.
-type AIVoiceModeVehicleSnapshotSource struct {
+type VehicleSnapshotSource struct {
 	vehicles  *vehicledb.VehicleRepo
 	drives    *drivedb.DriveRepo
 	liveState signal.LiveStateReader
 }
 
-// NewAIVoiceModeVehicleSnapshotSource constructs the production
+// NewVehicleSnapshotSource constructs the production
 // adapter. The repos are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 // liveState may be nil in test builds — when absent, the
 // snapshot's soc_percent + charging_state fields render empty
 // and the system prompt's "no current data" branch handles it
 // gracefully.
-func NewAIVoiceModeVehicleSnapshotSource(
+func NewVehicleSnapshotSource(
 	v *vehicledb.VehicleRepo,
 	d *drivedb.DriveRepo,
 	live signal.LiveStateReader,
-) *AIVoiceModeVehicleSnapshotSource {
+) *VehicleSnapshotSource {
 	switch {
 	case v == nil:
-		panic("api: NewAIVoiceModeVehicleSnapshotSource: nil vehicles *vehicledb.VehicleRepo")
+		panic("aivoice: NewVehicleSnapshotSource: nil vehicles *vehicledb.VehicleRepo")
 	case d == nil:
-		panic("api: NewAIVoiceModeVehicleSnapshotSource: nil drives *drivedb.DriveRepo")
+		panic("aivoice: NewVehicleSnapshotSource: nil drives *drivedb.DriveRepo")
 	}
-	return &AIVoiceModeVehicleSnapshotSource{
+	return &VehicleSnapshotSource{
 		vehicles:  v,
 		drives:    d,
 		liveState: live,
@@ -533,7 +602,7 @@ func NewAIVoiceModeVehicleSnapshotSource(
 // the partial snapshot so the LLM can still answer with what
 // IS available. The strategy's system prompt explicitly handles
 // the "I don't have that data" case.
-func (a *AIVoiceModeVehicleSnapshotSource) LoadVehicleSnapshot(ctx context.Context) (voice.VoiceModeVehicleSnapshot, error) {
+func (a *VehicleSnapshotSource) LoadVehicleSnapshot(ctx context.Context) (voice.VoiceModeVehicleSnapshot, error) {
 	out := voice.VoiceModeVehicleSnapshot{}
 
 	vehicles, err := a.vehicles.GetAll(ctx)

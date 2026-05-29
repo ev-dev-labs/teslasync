@@ -20,7 +20,7 @@
 // voice-mode`); duplicating that here would require a live
 // mock-provider stack.
 
-package api
+package aivoice
 
 import (
 	"context"
@@ -30,15 +30,29 @@ import (
 	"testing"
 	"time"
 
-	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
-
-	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
-
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/voice"
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	if s.on == nil {
+		return false, nil
+	}
+	return s.on[id], nil
+}
 
 // TestVoiceModeAIOffNoVoiceControlsOrStorage is the
 // load-bearing off-mode contract proof for slice 0055. It
@@ -163,13 +177,13 @@ func TestAIVoiceModeHandler_PanicsOnNilWiring(t *testing.T) {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIVoiceModeHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIVoiceModeHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -185,10 +199,10 @@ func TestAIVoiceModeChatContextSource_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAIVoiceModeChatContextSource(nil) did not panic")
+			t.Fatal("NewChatContextSource(nil) did not panic")
 		}
 	}()
-	NewAIVoiceModeChatContextSource(nil)
+	NewChatContextSource(nil)
 }
 
 // TestAIVoiceModeVehicleSnapshotSource_PanicsOnNilWiring
@@ -204,13 +218,13 @@ func TestAIVoiceModeVehicleSnapshotSource_PanicsOnNilWiring(t *testing.T) {
 		name string
 		fn   func()
 	}{
-		{"nil vehicles", func() { NewAIVoiceModeVehicleSnapshotSource(nil, nil, nil) }},
+		{"nil vehicles", func() { NewVehicleSnapshotSource(nil, nil, nil) }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIVoiceModeVehicleSnapshotSource(%s) did not panic", tc.name)
+					t.Fatalf("NewVehicleSnapshotSource(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
