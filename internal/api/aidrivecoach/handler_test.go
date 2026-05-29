@@ -13,7 +13,7 @@
 // F6 eval harness (`go run ./cmd/ai-eval --feature drive-coaching`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aidrivecoach
 
 import (
 	"context"
@@ -26,6 +26,19 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestDriveCoachingAIOffShowsOnlyBaselineStats is the load-bearing
 // off-mode contract proof for slice 0018. It mounts the AI drive
@@ -119,22 +132,22 @@ func TestDriveCoachingAIOffShowsOnlyBaselineStats(t *testing.T) {
 	}
 }
 
-// TestAIDriveCoachHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at boot
 // must surface as a panic, not as a nil-deref on first request.
-func TestAIDriveCoachHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIDriveCoachHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIDriveCoachHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -142,17 +155,17 @@ func TestAIDriveCoachHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIDriveCoachHandler_RejectsBadDriveID asserts the handler
+// TestHandler_RejectsBadDriveID asserts the handler
 // validates the URL path parameter BEFORE opening the SSE stream — a
 // missing, non-numeric, zero, or negative driveID must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
 //
 // We mount the parser branch directly via parseDriveCoachURL so the
 // test does not need to construct a full handler with stub deps.
-// NewAIDriveCoachHandler panics on nil deps, and the parser runs
+// NewHandler panics on nil deps, and the parser runs
 // BEFORE touching any of them, so we can inline the parser without
 // losing coverage.
-func TestAIDriveCoachHandler_RejectsBadDriveID(t *testing.T) {
+func TestHandler_RejectsBadDriveID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -189,10 +202,10 @@ func TestAIDriveCoachHandler_RejectsBadDriveID(t *testing.T) {
 	}
 }
 
-// TestAIDriveCoachHandler_AcceptsCanonicalDriveID proves the parser
+// TestHandler_AcceptsCanonicalDriveID proves the parser
 // does NOT bounce the happy-path shapes — small int, large int, max
 // int64.
-func TestAIDriveCoachHandler_AcceptsCanonicalDriveID(t *testing.T) {
+func TestHandler_AcceptsCanonicalDriveID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {

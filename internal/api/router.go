@@ -27,6 +27,7 @@ import (
 	aichatbot "github.com/ev-dev-labs/teslasync/internal/api/aichatbot"
 	aicostfcst "github.com/ev-dev-labs/teslasync/internal/api/aicostfcst"
 	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
+	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -935,7 +936,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiDriveCoachHandler := NewAIDriveCoachHandler(
+	aiDriveCoachHandler := aidrivecoach.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		drivecoaching.New(),

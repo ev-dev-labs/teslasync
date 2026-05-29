@@ -1,8 +1,8 @@
-package api
+package aidrivecoach
 
 // Phase-50 / 0018 — N4 Per-drive coaching narrative.
 //
-// ai_drive_coach_handler.go implements the LLM-backed handler at
+// handler.go implements the LLM-backed handler at
 // POST /api/v1/ai/drives/{driveID}/coach. The flow mirrors the YIR
 // / digest / anomaly narration handlers — same dispatch+stream
 // loop, no persistence (one-shot narration; no conversation to
@@ -44,6 +44,7 @@ package api
 //     JSON shape is added or modified by this slice.
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -57,24 +58,25 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiDriveCoachMaxIterations bounds the dispatcher's tool-loop. Drive
+// maxIterations bounds the dispatcher's tool-loop. Drive
 // coaching is at most two-tool-calls-then-answer; a hard ceiling of
 // 6 is generous for a model that occasionally retries one of the
 // tool calls before settling. Mirrors aiAnomalyMaxIterations from
 // slice 0014 with extra headroom because this strategy uses two
 // tools rather than one.
-const aiDriveCoachMaxIterations = 6
+const maxIterations = 6
 
-// AIDriveCoachHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/drives/{driveID}/coach.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIDriveCoachHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -82,7 +84,7 @@ type AIDriveCoachHandler struct {
 	maxIters   int
 }
 
-// NewAIDriveCoachHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -95,26 +97,26 @@ type AIDriveCoachHandler struct {
 //
 // strat:      the drive-coaching Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIDriveCoachHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIDriveCoachHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIDriveCoachHandler: nil provider.Registry")
+		panic("aidrivecoach: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIDriveCoachHandler: nil tools.Registry")
+		panic("aidrivecoach: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIDriveCoachHandler: nil strategy.Strategy")
+		panic("aidrivecoach: NewHandler: nil strategy.Strategy")
 	}
-	return &AIDriveCoachHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiDriveCoachMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -130,16 +132,16 @@ func NewAIDriveCoachHandler(
 func parseDriveCoachURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "driveID")
 	if raw == "" {
-		writeError(w, http.StatusBadRequest, "driveID URL parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "driveID URL parameter is required")
 		return 0, false
 	}
 	id, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("driveID must be a positive integer (got %q)", raw))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("driveID must be a positive integer (got %q)", raw))
 		return 0, false
 	}
 	if id <= 0 {
-		writeError(w, http.StatusBadRequest, "driveID must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "driveID must be > 0")
 		return 0, false
 	}
 	return id, true
@@ -150,7 +152,7 @@ func parseDriveCoachURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 // via the dispatcher's deferred WriteDone. Every error path either
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIDriveCoachHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate URL parameters. Body is intentionally
 	// ignored; this endpoint takes its only input from the URL.
 	driveID, ok := parseDriveCoachURL(w, r)
@@ -164,7 +166,7 @@ func (h *AIDriveCoachHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), drivecoaching.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai drive coach: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -184,7 +186,7 @@ func (h *AIDriveCoachHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		// Non-flushable response writer (test recorder, etc.).
 		// Emit a plain JSON 500 — the SSE headers were not sent.
 		log.Error().Err(err).Msg("ai drive coach: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -238,5 +240,10 @@ func (h *AIDriveCoachHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// Compile-time assertion: AIDriveCoachHandler satisfies http.Handler.
-var _ http.Handler = (*AIDriveCoachHandler)(nil)
+// denyAllConfirm rejects all mutating AI tool confirmations for this read-only surface.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
