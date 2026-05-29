@@ -30,6 +30,7 @@ import (
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	apichargetelem "github.com/ev-dev-labs/teslasync/internal/api/chargetelem"
 	apiannot "github.com/ev-dev-labs/teslasync/internal/api/chartannotation"
+	apichatbot "github.com/ev-dev-labs/teslasync/internal/api/chatbot"
 	apiclimate "github.com/ev-dev-labs/teslasync/internal/api/climate"
 	apicommand "github.com/ev-dev-labs/teslasync/internal/api/command"
 	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
@@ -669,7 +670,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	apinotif.SinkProvider = currentOutboundSink
 	apidevtools.SinkProvider = currentOutboundSink
 	quietHoursHandler := apiquiet.NewHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
-	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
+	chatbotHandler := apichatbot.NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 
 	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. Construct the
 	// shared tool registry + the chatbot strategy + the AI HTTP

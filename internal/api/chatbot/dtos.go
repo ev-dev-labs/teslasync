@@ -1,10 +1,11 @@
-package api
+package chatbot
 
 import (
 	"encoding/json"
 	"net/http"
 	"strings"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 
 	"github.com/go-chi/chi/v5"
@@ -15,19 +16,19 @@ import (
 func (h *ChatbotHandler) History(w http.ResponseWriter, r *http.Request) {
 	sessionID := r.URL.Query().Get("session_id")
 	if sessionID == "" {
-		writeError(w, http.StatusBadRequest, "session_id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "session_id is required")
 		return
 	}
 	msgs, err := h.chat.GetHistory(r.Context(), sessionID, 100)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get chat history")
-		writeError(w, http.StatusInternalServerError, "failed to get history")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get history")
 		return
 	}
 	if msgs == nil {
 		msgs = []*chatbotmodel.ChatMessage{}
 	}
-	writeJSON(w, http.StatusOK, msgs)
+	httpx.WriteJSON(w, http.StatusOK, msgs)
 }
 
 // Sessions lists recent chat sessions with rich per-session metadata
@@ -39,13 +40,13 @@ func (h *ChatbotHandler) Sessions(w http.ResponseWriter, r *http.Request) {
 	sessions, err := h.chat.ListSessions(r.Context(), 50)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get chat sessions")
-		writeError(w, http.StatusInternalServerError, "failed to get sessions")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get sessions")
 		return
 	}
 	if sessions == nil {
 		sessions = []*chatbotmodel.ChatSessionInfo{}
 	}
-	writeJSON(w, http.StatusOK, sessions)
+	httpx.WriteJSON(w, http.StatusOK, sessions)
 }
 
 // RenameSession sets (or clears) the human-readable title for a session.
@@ -55,22 +56,22 @@ func (h *ChatbotHandler) Sessions(w http.ResponseWriter, r *http.Request) {
 func (h *ChatbotHandler) RenameSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	if strings.TrimSpace(sessionID) == "" {
-		writeError(w, http.StatusBadRequest, "session id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "session id is required")
 		return
 	}
 	var body struct {
 		Title string `json:"title"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if err := h.chat.RenameSession(r.Context(), sessionID, body.Title); err != nil {
 		log.Error().Err(err).Str("session_id", sessionID).Msg("failed to rename chat session")
-		writeError(w, http.StatusInternalServerError, "failed to rename session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to rename session")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"id": sessionID, "title": strings.TrimSpace(body.Title)})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"id": sessionID, "title": strings.TrimSpace(body.Title)})
 }
 
 // DeleteSession removes a chat session entirely, including all messages
@@ -78,12 +79,12 @@ func (h *ChatbotHandler) RenameSession(w http.ResponseWriter, r *http.Request) {
 func (h *ChatbotHandler) DeleteSession(w http.ResponseWriter, r *http.Request) {
 	sessionID := chi.URLParam(r, "id")
 	if strings.TrimSpace(sessionID) == "" {
-		writeError(w, http.StatusBadRequest, "session id is required")
+		httpx.WriteError(w, http.StatusBadRequest, "session id is required")
 		return
 	}
 	if err := h.chat.DeleteSession(r.Context(), sessionID); err != nil {
 		log.Error().Err(err).Str("session_id", sessionID).Msg("failed to delete chat session")
-		writeError(w, http.StatusInternalServerError, "failed to delete session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete session")
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)

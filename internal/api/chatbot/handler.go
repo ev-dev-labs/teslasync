@@ -1,4 +1,4 @@
-package api
+package chatbot
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// ChatbotHandler handles AI chatbot queries against fleet data.
+// ChatbotHandler handles heuristic chatbot queries against fleet data.
 //
 // Phase-39 migration: ChatbotHandler now depends on signal.StateReader so
 // "where is my car?" / location-style questions read forward-folded values

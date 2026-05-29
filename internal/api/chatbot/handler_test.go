@@ -1,4 +1,4 @@
-package api
+package chatbot
 
 import (
 	"context"
@@ -10,6 +10,40 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
+
+// fakeStateReader is a hand-rolled signal.StateReader for chatbot handler tests.
+type fakeStateReader struct {
+	stateFn    func(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error)
+	signalAtFn func(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error)
+	timelineFn func(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error)
+}
+
+func (f *fakeStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error) {
+	if f.stateFn == nil {
+		return signal.State{}, nil
+	}
+	return f.stateFn(ctx, vehicleID, at)
+}
+
+func (f *fakeStateReader) SignalAt(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error) {
+	if f.signalAtFn == nil {
+		return nil, nil
+	}
+	return f.signalAtFn(ctx, vehicleID, name, at)
+}
+
+func (f *fakeStateReader) Timeline(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error) {
+	if f.timelineFn == nil {
+		return nil, nil
+	}
+	return f.timelineFn(ctx, vehicleID, fields, from, to, opts)
+}
+
+var _ signal.StateReader = (*fakeStateReader)(nil)
+
+func newTestLiveStateReader(state signal.StateReader) signal.LiveStateReader {
+	return signal.MustNewLiveStateReader(signal.NewNoopLiveSignalStore(), state)
+}
 
 // TestChatbot_LocationLookup_UsesForwardFoldedState is the wire-up proof
 // for the phase-39 chatbot-handler migration.
@@ -83,19 +117,19 @@ func TestChatbot_LocationLookup_UsesForwardFoldedState(t *testing.T) {
 }
 
 // TestChatbot_NoRawPositionsQuery is an anchored meta-test that locks in
-// the phase-39 invariant: chatbot_handler.go must NEVER again contain a
+// the phase-39 invariant: handler.go must NEVER again contain a
 // raw `FROM positions` query, because that would resurrect the
 // snapshot-table bug class fixed by routing location reads through
 // signal.StateReader. If a future refactor reintroduces a direct
 // positions read this test fails BEFORE the bug ships, and the failure
 // message points the author at the layered live-state contract.
 func TestChatbot_NoRawPositionsQuery(t *testing.T) {
-	body, err := os.ReadFile("chatbot_handler.go")
+	body, err := os.ReadFile("handler.go")
 	if err != nil {
-		t.Fatalf("read chatbot_handler.go: %v", err)
+		t.Fatalf("read handler.go: %v", err)
 	}
 	if strings.Contains(string(body), "FROM positions") {
-		t.Fatalf("chatbot_handler.go contains forbidden 'FROM positions' query — " +
+		t.Fatalf("handler.go contains forbidden 'FROM positions' query — " +
 			"location reads MUST go through signal.StateReader.State per ADR-002")
 	}
 }

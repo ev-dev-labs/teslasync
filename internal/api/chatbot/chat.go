@@ -1,4 +1,4 @@
-package api
+package chatbot
 
 import (
 	"context"
@@ -11,23 +11,23 @@ import (
 	"strings"
 	"time"
 
-	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
+	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 )
 
-// Chat processes a user message and returns an AI-generated response.
+// Chat processes a user message and returns a heuristic response.
 func (h *ChatbotHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		Message   string `json:"message"`
 		SessionID string `json:"session_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if strings.TrimSpace(body.Message) == "" {
-		writeError(w, http.StatusBadRequest, "message is required")
+		httpx.WriteError(w, http.StatusBadRequest, "message is required")
 		return
 	}
 	if body.SessionID == "" {
@@ -45,7 +45,7 @@ func (h *ChatbotHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	assistantMsg := &chatbotmodel.ChatMessage{SessionID: body.SessionID, Role: "assistant", Content: response}
 	_ = h.chat.SaveMessage(r.Context(), assistantMsg)
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"response":   response,
 		"session_id": body.SessionID,
 	})
