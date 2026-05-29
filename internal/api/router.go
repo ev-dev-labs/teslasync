@@ -26,6 +26,7 @@ import (
 	aichargdiag "github.com/ev-dev-labs/teslasync/internal/api/aichargdiag"
 	aichatbot "github.com/ev-dev-labs/teslasync/internal/api/aichatbot"
 	aicostfcst "github.com/ev-dev-labs/teslasync/internal/api/aicostfcst"
+	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -756,7 +757,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	// Phase-50 / U2 (slice 0012) — Weekly digest narration handler.
 	// One per process; stateless beyond constructor inputs.
-	aiDigestHandler := NewAIDigestHandler(
+	aiDigestHandler := aidigest.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		digestnarration.New(),

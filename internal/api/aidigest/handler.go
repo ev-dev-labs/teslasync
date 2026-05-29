@@ -1,4 +1,4 @@
-package api
+package aidigest
 
 // Phase-50 / 0012 — U2 Weekly digest narration.
 //
@@ -46,22 +46,23 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiDigestMaxIterations bounds the dispatcher's tool-loop. Digest
+// maxIterations bounds the dispatcher's tool-loop. Digest
 // narration is one-tool-call-then-answer; a hard ceiling of 4 is
 // generous for a model that occasionally retries the tool call once
-// before settling. Tested in TestAIDigestHandler_OnPathDispatches.
-const aiDigestMaxIterations = 4
+// before settling. Tested by the digest handler integration coverage.
+const maxIterations = 4
 
-// AIDigestHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/digests/weekly/narrate.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIDigestHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -69,7 +70,7 @@ type AIDigestHandler struct {
 	maxIters   int
 }
 
-// NewAIDigestHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -81,36 +82,36 @@ type AIDigestHandler struct {
 //
 // strat:      the digest-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIDigestHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIDigestHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIDigestHandler: nil provider.Registry")
+		panic("aidigest: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIDigestHandler: nil tools.Registry")
+		panic("aidigest: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIDigestHandler: nil strategy.Strategy")
+		panic("aidigest: NewHandler: nil strategy.Strategy")
 	}
-	return &AIDigestHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiDigestMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// aiDigestRequest is the wire shape for
+// narrationRequest is the wire shape for
 // POST /api/v1/ai/digests/weekly/narrate.
 //
 // VehicleID is required and must be > 0. WeekOffsetWeeks defaults to
 // 0 (the current ISO week) when omitted; the tool's own validator
 // enforces the [-12, 0] range.
-type aiDigestRequest struct {
+type narrationRequest struct {
 	VehicleID       int64 `json:"vehicle_id"`
 	WeekOffsetWeeks int   `json:"week_offset_weeks"`
 }
@@ -120,15 +121,15 @@ type aiDigestRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIDigestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
-	var body aiDigestRequest
+	var body narrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if body.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
 		return
 	}
 
@@ -138,7 +139,7 @@ func (h *AIDigestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), digestnarration.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai digest: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -158,7 +159,7 @@ func (h *AIDigestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Non-flushable response writer (test recorder, etc.).
 		// Emit a plain JSON 500 — the SSE headers were not sent.
 		log.Error().Err(err).Msg("ai digest: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -204,13 +205,12 @@ func (h *AIDigestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: AIDigestHandler satisfies http.Handler.
-var _ http.Handler = (*AIDigestHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
-// _ is a compile-time reference to the package's denyAllConfirm
-// (defined in ai_chatbot_handler.go) so a renamed identifier surfaces
-// here at build time. dispatch.ConfirmFn is a function type so we
-// can't assert its identity directly.
-var _ = func(ctx context.Context, req dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
-	return denyAllConfirm(ctx, req)
+// denyAllConfirm is the dispatcher's user-confirm hook. Digest narration
+// declares only a read-only tool, so this is defence-in-depth against future
+// strategy edits accidentally adding a mutating tool.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
 }

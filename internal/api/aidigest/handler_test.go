@@ -12,7 +12,7 @@
 // F6 eval harness (`go run ./cmd/ai-eval --feature digest-narration`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aidigest
 
 import (
 	"encoding/json"
@@ -24,6 +24,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
 // TestWeeklyDigestAIOffUsesTemplateNarrator is the load-bearing
@@ -114,22 +115,22 @@ func TestWeeklyDigestAIOffUsesTemplateNarrator(t *testing.T) {
 	}
 }
 
-// TestAIDigestHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at boot
 // must surface as a panic, not as a nil-deref on first request.
-func TestAIDigestHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIDigestHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIDigestHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -137,11 +138,11 @@ func TestAIDigestHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIDigestHandler_RejectsBadInput asserts the handler validates
+// TestHandler_RejectsBadInput asserts the handler validates
 // the request body BEFORE opening the SSE stream — a missing or
 // non-positive vehicle_id must surface as a JSON 400, not a half-
 // opened stream that confuses the frontend.
-func TestAIDigestHandler_RejectsBadInput(t *testing.T) {
+func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
 
 	// We mount the handler WITHOUT the guard so the validator runs.
@@ -150,7 +151,7 @@ func TestAIDigestHandler_RejectsBadInput(t *testing.T) {
 	//
 	// We don't need a real provider/tools/strategy for the malformed-
 	// body case because the validator returns BEFORE touching them.
-	// But NewAIDigestHandler panics on nil deps — so we mount the
+	// But NewHandler panics on nil deps — so we mount the
 	// handler indirectly through a thin shim that calls the validator
 	// path directly via httptest.
 	cases := []struct {
@@ -178,16 +179,16 @@ func TestAIDigestHandler_RejectsBadInput(t *testing.T) {
 }
 
 // validateOnly mirrors the pre-stream validator branch of
-// AIDigestHandler.ServeHTTP. Kept as a same-package helper so the
+// Handler.ServeHTTP. Kept as a same-package helper so the
 // test does not need to construct a full handler with stub deps.
 func validateOnly(w http.ResponseWriter, r *http.Request) {
-	var body aiDigestRequest
+	var body narrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if body.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
 		return
 	}
 	w.WriteHeader(http.StatusOK)
