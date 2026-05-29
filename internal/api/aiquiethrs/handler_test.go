@@ -14,9 +14,10 @@
 // quiet-hours-suggestion`); duplicating that here would
 // require a live mock-provider stack.
 
-package api
+package aiquiethrs
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,6 +27,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestQuietHoursSuggestionAIOffManualSettingsWork is the
 // load-bearing off-mode contract proof for slice 0053. It
@@ -151,23 +168,23 @@ func TestQuietHoursSuggestionAIOffManualSettingsWork(t *testing.T) {
 	}
 }
 
-// TestAIQuietHoursSuggestionHandler_PanicsOnNilWiring asserts
+// TestHandler_PanicsOnNilWiring asserts
 // the handler constructor refuses zero-valued dependencies. A
 // wiring bug at boot must surface as a panic, not as a nil-deref
 // on first request.
-func TestAIQuietHoursSuggestionHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIQuietHoursSuggestionHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIQuietHoursSuggestionHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -175,23 +192,23 @@ func TestAIQuietHoursSuggestionHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIQuietHoursSuggestionSource_PanicsOnNilWiring asserts
+// TestSource_PanicsOnNilWiring asserts
 // the production source-adapter constructor refuses zero-valued
 // dependencies. A wiring bug at boot must surface as a panic,
 // not as a nil-deref on first request.
-func TestAIQuietHoursSuggestionSource_PanicsOnNilWiring(t *testing.T) {
+func TestSource_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIQuietHoursSuggestionSource(nil, nil) }},
+		{"all nil", func() { NewSource(nil, nil) }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIQuietHoursSuggestionSource(%s) did not panic", tc.name)
+					t.Fatalf("NewSource(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -199,7 +216,7 @@ func TestAIQuietHoursSuggestionSource_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIQuietHoursSuggestionHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the body BEFORE opening the SSE stream —
 // an invalid timezone, out-of-range window_days, malformed
 // JSON, or unknown field must surface as a JSON 400, not a
@@ -208,7 +225,7 @@ func TestAIQuietHoursSuggestionSource_PanicsOnNilWiring(t *testing.T) {
 // Note: an empty body and "{}" are both ACCEPTED — the handler
 // applies deterministic defaults so the SPA can post {} for
 // the most common case.
-func TestAIQuietHoursSuggestionHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {

@@ -1,4 +1,4 @@
-package api
+package aiquiethrs
 
 // Phase-50 / 0053 — P2 Helix quiet-hours suggestion advisor.
 //
@@ -74,6 +74,7 @@ package api
 //     modified by this slice.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -91,48 +92,49 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 )
 
-// aiQuietHoursSuggestionMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is exactly draft_quiet_hours_window →
 // validate_quiet_hours_window → answer (with one optional retry
 // on a transient validator rejection that the LLM repairs by
 // tweaking the candidate). A hard ceiling of 8 is generous,
 // matching the other narrator handlers.
-const aiQuietHoursSuggestionMaxIterations = 8
+const maxIterations = 8
 
-// aiQuietHoursSuggestionMaxBodyBytes caps the request body. The
+// maxBodyBytes caps the request body. The
 // body has at most two small fields; bound it cheaply. 16 KiB
 // matches the other body-driven AI handlers.
-const aiQuietHoursSuggestionMaxBodyBytes = 16 * 1024
+const maxBodyBytes = 16 * 1024
 
-// aiQuietHoursSuggestionDefaultTimezone is the IANA timezone
+// defaultTimezone is the IANA timezone
 // installed in the scope when the body does not set one. UTC is
 // the safest universal default — the validator + tool refuse
 // invalid timezones, and the SPA can always POST a more
 // appropriate one (e.g. the browser's
 // Intl.DateTimeFormat().resolvedOptions().timeZone).
-const aiQuietHoursSuggestionDefaultTimezone = "UTC"
+const defaultTimezone = "UTC"
 
-// aiQuietHoursSuggestionDefaultWindowDays is how many trailing
+// defaultWindowDays is how many trailing
 // days of notification_logs the candidate-finder aggregates by
 // default. 30d is a sensible balance between data availability
 // (enough events to find a pattern) and recency (the user's
 // current usage, not last quarter's).
-const aiQuietHoursSuggestionDefaultWindowDays = 30
+const defaultWindowDays = 30
 
-// aiQuietHoursSuggestionMinWindowDays / MaxWindowDays bound the
+// minWindowDays / MaxWindowDays bound the
 // trailing window. < 7 is too short to find a weekly pattern;
 // > 90 is too long to remain "recent".
 const (
-	aiQuietHoursSuggestionMinWindowDays = 7
-	aiQuietHoursSuggestionMaxWindowDays = 90
+	minWindowDays = 7
+	maxWindowDays = 90
 )
 
-// aiQuietHoursSuggestionMinRequiredEvents is the
+// minRequiredEvents is the
 // HasEnoughHistory threshold. Below this the candidate-finder
 // returns the conservative default (22:00-07:00) and the LLM
 // MUST disclose that the candidate is a default, not a
@@ -140,12 +142,12 @@ const (
 // across a 30-day window" — small enough to be hit on most
 // production installs, large enough to avoid pathological
 // candidates from a 1-event sample.
-const aiQuietHoursSuggestionMinRequiredEvents = 14
+const minRequiredEvents = 14
 
-// aiQuietHoursSuggestionRequest is the typed body shape. Both
+// request is the typed body shape. Both
 // fields are optional; the handler falls back to deterministic
 // defaults so the SPA can POST {} for the most common case.
-type aiQuietHoursSuggestionRequest struct {
+type request struct {
 	// Timezone is the IANA name the candidate-finder
 	// bucketizes per-hour counts in. Optional; defaults to
 	// UTC when absent. The SPA typically posts the browser's
@@ -158,14 +160,22 @@ type aiQuietHoursSuggestionRequest struct {
 	WindowDays int `json:"window_days,omitempty"`
 }
 
-// AIQuietHoursSuggestionHandler is the HTTP handler for
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Handler is the HTTP handler for
 // POST /api/v1/ai/settings/quiet-hours/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AIQuietHoursSuggestionHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -173,7 +183,7 @@ type AIQuietHoursSuggestionHandler struct {
 	maxIters   int
 }
 
-// NewAIQuietHoursSuggestionHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first
 // request.
@@ -198,26 +208,26 @@ type AIQuietHoursSuggestionHandler struct {
 //	for audit AND for the per-request user scope
 //	binding (the candidate-finder reads only this
 //	user's notification_logs).
-func NewAIQuietHoursSuggestionHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIQuietHoursSuggestionHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIQuietHoursSuggestionHandler: nil provider.Registry")
+		panic("aiquiethrs: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIQuietHoursSuggestionHandler: nil tools.Registry")
+		panic("aiquiethrs: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIQuietHoursSuggestionHandler: nil strategy.Strategy")
+		panic("aiquiethrs: NewHandler: nil strategy.Strategy")
 	}
-	return &AIQuietHoursSuggestionHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiQuietHoursSuggestionMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -227,19 +237,19 @@ func NewAIQuietHoursSuggestionHandler(
 // acceptable. Unknown fields are rejected so a future schema
 // drift surfaces explicitly. Returns (req, true) when the body
 // is acceptable.
-func parseQuietHoursSuggestionRequest(w http.ResponseWriter, r *http.Request) (aiQuietHoursSuggestionRequest, bool) {
-	var req aiQuietHoursSuggestionRequest
+func parseQuietHoursSuggestionRequest(w http.ResponseWriter, r *http.Request) (request, bool) {
+	var req request
 	if r.Body == nil {
 		// Missing body is the same as "{}" — apply defaults.
 		return req, true
 	}
 	defer r.Body.Close()
-	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiQuietHoursSuggestionMaxBodyBytes))
+	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes))
 	if readErr != nil {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
-	if len(bytesTrim(bodyBytes)) == 0 {
+	if len(bytes.TrimSpace(bodyBytes)) == 0 {
 		// Empty body is the same as "{}" — apply defaults.
 		return req, true
 	}
@@ -257,10 +267,10 @@ func parseQuietHoursSuggestionRequest(w http.ResponseWriter, r *http.Request) (a
 		req.Timezone = tz
 	}
 	if req.WindowDays != 0 {
-		if req.WindowDays < aiQuietHoursSuggestionMinWindowDays || req.WindowDays > aiQuietHoursSuggestionMaxWindowDays {
+		if req.WindowDays < minWindowDays || req.WindowDays > maxWindowDays {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf(
 				"window_days %d is out of range [%d,%d]",
-				req.WindowDays, aiQuietHoursSuggestionMinWindowDays, aiQuietHoursSuggestionMaxWindowDays))
+				req.WindowDays, minWindowDays, maxWindowDays))
 			return req, false
 		}
 	}
@@ -273,7 +283,7 @@ func parseQuietHoursSuggestionRequest(w http.ResponseWriter, r *http.Request) (a
 // writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
-func (h *AIQuietHoursSuggestionHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseQuietHoursSuggestionRequest(w, r)
 	if !ok {
@@ -292,11 +302,11 @@ func (h *AIQuietHoursSuggestionHandler) ServeHTTP(w http.ResponseWriter, r *http
 	// 3) Apply defaults to the body fields.
 	tz := req.Timezone
 	if tz == "" {
-		tz = aiQuietHoursSuggestionDefaultTimezone
+		tz = defaultTimezone
 	}
 	windowDays := req.WindowDays
 	if windowDays == 0 {
-		windowDays = aiQuietHoursSuggestionDefaultWindowDays
+		windowDays = defaultWindowDays
 	}
 
 	// 4) Resolve provider via the registry. Per-request
@@ -390,10 +400,10 @@ func buildQuietHoursSuggestionUserMessage(userID, timezone string, windowDays in
 }
 
 // ---------------------------------------------------------------------------
-// Production source adapter: AIQuietHoursSuggestionSource
+// Production source adapter: Source
 // ---------------------------------------------------------------------------
 
-// AIQuietHoursSuggestionSource is the production adapter
+// Source is the production adapter
 // satisfying schedule.QuietHoursSuggestionSource. It composes the
 // canonical NotificationRepo + QuietHoursRepo aggregations so
 // the AI tool reads from the SAME data source the deterministic
@@ -403,29 +413,29 @@ func buildQuietHoursSuggestionUserMessage(userID, timezone string, windowDays in
 // The adapter performs ONE query against notification_logs +
 // ONE query against notification_quiet_hours per request. Both
 // are read-only.
-type AIQuietHoursSuggestionSource struct {
+type Source struct {
 	notifs      *dbnotif.NotificationRepo
 	quietHours  *quiethoursdb.QuietHoursRepo
 	minRequired int
 }
 
-// NewAIQuietHoursSuggestionSource constructs the production
+// NewSource constructs the production
 // adapter. Both repos are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAIQuietHoursSuggestionSource(
+func NewSource(
 	notifs *dbnotif.NotificationRepo,
 	quietHours *quiethoursdb.QuietHoursRepo,
-) *AIQuietHoursSuggestionSource {
+) *Source {
 	switch {
 	case notifs == nil:
-		panic("api: NewAIQuietHoursSuggestionSource: nil notifs *dbnotif.NotificationRepo")
+		panic("aiquiethrs: NewSource: nil notifs *dbnotif.NotificationRepo")
 	case quietHours == nil:
-		panic("api: NewAIQuietHoursSuggestionSource: nil quietHours *quiethoursdb.QuietHoursRepo")
+		panic("aiquiethrs: NewSource: nil quietHours *quiethoursdb.QuietHoursRepo")
 	}
-	return &AIQuietHoursSuggestionSource{
+	return &Source{
 		notifs:      notifs,
 		quietHours:  quietHours,
-		minRequired: aiQuietHoursSuggestionMinRequiredEvents,
+		minRequired: minRequiredEvents,
 	}
 }
 
@@ -453,7 +463,7 @@ func NewAIQuietHoursSuggestionSource(
 // notification_channels table; this slice does NOT modify
 // the canonical reader's signature to avoid widening the
 // repo surface for an OPT-IN AI feature.
-func (a *AIQuietHoursSuggestionSource) LoadHistory(
+func (a *Source) LoadHistory(
 	ctx context.Context,
 	userID string,
 	timezone string,
@@ -511,7 +521,7 @@ func (a *AIQuietHoursSuggestionSource) LoadHistory(
 // individual windows are NOT surfaced to the LLM — only the
 // count. The narrator may say "you already have N quiet-hours
 // windows" without ever quoting one of them.
-func (a *AIQuietHoursSuggestionSource) CountExistingWindows(ctx context.Context, userID string) (int, error) {
+func (a *Source) CountExistingWindows(ctx context.Context, userID string) (int, error) {
 	if strings.TrimSpace(userID) == "" {
 		return 0, nil
 	}
@@ -522,10 +532,10 @@ func (a *AIQuietHoursSuggestionSource) CountExistingWindows(ctx context.Context,
 	return len(rows), nil
 }
 
-// Compile-time assertions: AIQuietHoursSuggestionHandler
-// satisfies http.Handler and AIQuietHoursSuggestionSource
+// Compile-time assertions: Handler
+// satisfies http.Handler and Source
 // satisfies schedule.QuietHoursSuggestionSource.
 var (
-	_ http.Handler                        = (*AIQuietHoursSuggestionHandler)(nil)
-	_ schedule.QuietHoursSuggestionSource = (*AIQuietHoursSuggestionSource)(nil)
+	_ http.Handler                        = (*Handler)(nil)
+	_ schedule.QuietHoursSuggestionSource = (*Source)(nil)
 )

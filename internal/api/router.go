@@ -52,6 +52,7 @@ import (
 	aipiiredact "github.com/ev-dev-labs/teslasync/internal/api/aipiiredact"
 	aipostcard "github.com/ev-dev-labs/teslasync/internal/api/aipostcard"
 	aipredmaint "github.com/ev-dev-labs/teslasync/internal/api/aipredmaint"
+	aiquiethrs "github.com/ev-dev-labs/teslasync/internal/api/aiquiethrs"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2486,7 +2487,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// trigger a save and never touch the existing handlers.
 	// Registered AFTER the slice 0052 tools above so the
 	// registry's Names list grows deterministically.
-	aiQuietHoursSuggestionSource := NewAIQuietHoursSuggestionSource(
+	aiQuietHoursSuggestionSource := aiquiethrs.NewSource(
 		dbnotif.NewNotificationRepo(db),
 		quiethoursdb.NewQuietHoursRepo(db),
 	)
@@ -2497,7 +2498,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiQuietHoursSuggestionHandler := NewAIQuietHoursSuggestionHandler(
+	aiQuietHoursSuggestionHandler := aiquiethrs.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		quiethourssuggestion.New(),
