@@ -1,4 +1,4 @@
-package api
+package sse
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/rs/zerolog/log"
@@ -62,15 +63,15 @@ func (h *EventHub) Subscribe(id string) (<-chan []byte, func()) {
 	h.mu.Lock()
 	h.clients[id] = ch
 	h.mu.Unlock()
-	SSEConnectionsActive.Inc()
-	SSEConnectionsTotal.Inc()
+	metrics.SSEConnectionsActive.Inc()
+	metrics.SSEConnectionsTotal.Inc()
 
 	return ch, func() {
 		h.mu.Lock()
 		delete(h.clients, id)
 		close(ch)
 		h.mu.Unlock()
-		SSEConnectionsActive.Dec()
+		metrics.SSEConnectionsActive.Dec()
 	}
 }
 
@@ -115,17 +116,17 @@ func (h *EventHub) BroadcastWithContext(ctx context.Context, eventType string, d
 	for id, ch := range h.clients {
 		select {
 		case ch <- msg:
-			SSEEventsSent.WithLabelValues(eventType).Inc()
-			SSEBytesSent.Add(msgLen)
+			metrics.SSEEventsSent.WithLabelValues(eventType).Inc()
+			metrics.SSEBytesSent.Add(msgLen)
 			delivered++
 		default:
-			SSEEventsDropped.WithLabelValues(eventType).Inc()
+			metrics.SSEEventsDropped.WithLabelValues(eventType).Inc()
 			dropped++
 			log.Warn().Str("client", id).Msg("SSE client buffer full, dropping event")
 		}
 	}
 	h.mu.RUnlock()
-	SSEBroadcastDuration.Observe(time.Since(start).Seconds())
+	metrics.SSEBroadcastDuration.Observe(time.Since(start).Seconds())
 	span.SetAttributes(
 		attribute.Int("sse.client_count", clientCount),
 		attribute.Int("sse.delivered_count", delivered),
@@ -221,11 +222,11 @@ func (h *EventHub) SubscribeRedis(ctx context.Context, redisCache *signal.RedisS
 			for id, c := range h.clients {
 				select {
 				case c <- msg:
-					SSEEventsSent.WithLabelValues("vehicle_update").Inc()
-					SSEBytesSent.Add(float64(len(msg)))
+					metrics.SSEEventsSent.WithLabelValues("vehicle_update").Inc()
+					metrics.SSEBytesSent.Add(float64(len(msg)))
 					delivered++
 				default:
-					SSEEventsDropped.WithLabelValues("vehicle_update").Inc()
+					metrics.SSEEventsDropped.WithLabelValues("vehicle_update").Inc()
 					dropped++
 					log.Warn().Str("client", id).Msg("SSE client buffer full (redis), dropping event")
 				}

@@ -10,7 +10,7 @@
 // Uses tracetest.SpanRecorder to capture spans in-memory without requiring
 // an OTel collector. Each test restores the global TracerProvider via
 // t.Cleanup so suites running in parallel don't leak state.
-package api
+package sse
 
 import (
 	"context"

@@ -11,6 +11,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/sse"
 	"github.com/ev-dev-labs/teslasync/internal/api/vehiclefsm"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
@@ -53,7 +54,7 @@ type TelemetryHandler struct {
 	swUpdateRepo          *systemdb.SoftwareUpdateRepo
 	mqttClient            *mqtt.Client
 	logRepo               *systemdb.APICallLogRepo
-	eventHub              *EventHub
+	eventHub              *sse.EventHub
 	sessionTracker        *TelemetrySessionTracker
 	alertEvaluator        *TelemetryAlertEvaluator
 	staleTimeout          time.Duration

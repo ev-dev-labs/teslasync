@@ -159,6 +159,7 @@ import (
 	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
 	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
 	apispeedprof "github.com/ev-dev-labs/teslasync/internal/api/speedprofile"
+	"github.com/ev-dev-labs/teslasync/internal/api/sse"
 	apistatus "github.com/ev-dev-labs/teslasync/internal/api/status"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apiauthmode "github.com/ev-dev-labs/teslasync/internal/api/sysauthmode"
@@ -393,7 +394,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 
 	// SSE event hub for real-time updates
-	eventHub := NewEventHub()
+	eventHub := sse.NewEventHub()
 
 	// Error tracker for centralized error aggregation. apperror.Write
 	// (and the writeAppError parent wrapper) routes structured errors
@@ -2012,7 +2013,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 
 	// SSE event hub for automation real-time events
-	automationEventHub := NewEventHub()
+	automationEventHub := sse.NewEventHub()
 	automationPublisher := apiautomation.NewAutomationEventPublisher(automationEventHub)
 
 	// Wire MQTT publisher for automation config change notifications
@@ -3324,7 +3325,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 			// SSE stream for real-time automation events (static route before {id} param)
 			// Protected by ForwardAuthMiddleware on the parent /api/v1 group
-			r.Get("/events", SSEHandler(automationEventHub))
+			r.Get("/events", sse.SSEHandler(automationEventHub))
 
 			// Import/Export (static routes before {id} param)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
@@ -3699,7 +3700,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Real-time SSE stream — protected by ForwardAuthMiddleware on the parent /api/v1 group
-		r.Get("/events", SSEHandler(eventHub))
+		r.Get("/events", sse.SSEHandler(eventHub))
 		// Backward-compat stub: frontend still calls fetchSSEToken() until it is removed
 		r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"token": ""})

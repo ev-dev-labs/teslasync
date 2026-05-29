@@ -9,6 +9,7 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
+	"github.com/ev-dev-labs/teslasync/internal/api/sse"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
@@ -27,13 +28,13 @@ type TelemetryAlertEvaluator struct {
 	settingsRepo  *settingsdb.SettingsRepo
 	vehicleRepo   *vehicledb.VehicleRepo
 	eventBus      *events.Bus
-	eventHub      *EventHub
+	eventHub      *sse.EventHub
 	ruleEngine    *RuleEngine
 	mqttClient    pahomqtt.Client
 }
 
 // NewTelemetryAlertEvaluator creates an alert evaluator for streaming data.
-func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *EventHub, mqttClient pahomqtt.Client) *TelemetryAlertEvaluator {
+func NewTelemetryAlertEvaluator(db *database.DB, eventBus *events.Bus, hub *sse.EventHub, mqttClient pahomqtt.Client) *TelemetryAlertEvaluator {
 	engine := NewRuleEngine()
 	// Wire the persistent latch/fire-state repo so once-mode latches
 	// survive pod restarts. Phase-49 / Slice 0002. The hydration call

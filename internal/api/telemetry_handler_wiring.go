@@ -6,6 +6,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/sse"
 	"github.com/ev-dev-labs/teslasync/internal/api/vehiclefsm"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
@@ -23,7 +24,7 @@ import (
 )
 
 // NewTelemetryHandler creates a handler for fleet telemetry ingestion.
-func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleTimeout time.Duration, geocoder geocoding.Geocoder) *TelemetryHandler {
+func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *sse.EventHub, staleTimeout time.Duration, geocoder geocoding.Geocoder) *TelemetryHandler {
 	var eventBus *events.Bus
 	if mc != nil {
 		eventBus = events.NewBus(mc.Underlying())
@@ -109,7 +110,7 @@ func (h *TelemetryHandler) SetRedisCache(cache *signal.RedisSignalCache) {
 }
 
 // SetEventHub sets the SSE event hub for real-time browser updates.
-func (h *TelemetryHandler) SetEventHub(hub *EventHub) {
+func (h *TelemetryHandler) SetEventHub(hub *sse.EventHub) {
 	h.eventHub = hub
 }
 
