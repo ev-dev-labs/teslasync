@@ -74,6 +74,7 @@ import (
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
 	apipinned "github.com/ev-dev-labs/teslasync/internal/api/pinned"
+	apipolling "github.com/ev-dev-labs/teslasync/internal/api/polling"
 	apipush "github.com/ev-dev-labs/teslasync/internal/api/push"
 	apiqueue "github.com/ev-dev-labs/teslasync/internal/api/queuestatus"
 	apiquiet "github.com/ev-dev-labs/teslasync/internal/api/quiethours"
@@ -3900,7 +3901,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Adaptive Polling Engine
 		if opt.PollEngine != nil {
-			handlers := PollEngineHandlers(opt.PollEngine)
+			handlers := apipolling.PollEngineHandlers(opt.PollEngine)
 			r.Route("/polling", func(r chi.Router) {
 				r.Get("/status", handlers["status"])
 				r.Get("/decisions", handlers["decisions"])
