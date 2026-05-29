@@ -1,4 +1,4 @@
-package api
+package aipiiredact
 
 // Phase-50 / 0052 — P1 Helix export redaction advisor.
 //
@@ -75,6 +75,7 @@ package api
 //     this slice.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -91,26 +92,27 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/export"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiPiiRedactionSharedExportsMaxIterations bounds the
+// maxIterations bounds the
 // dispatcher's tool-loop. The strategy is exactly
 // draft_export_redaction_plan → validate_export_redaction_plan →
 // answer (with one optional retry on a transient validator
 // rejection that the LLM repairs by tweaking the plan). A hard
 // ceiling of 8 is generous, matching the other narrator
 // handlers.
-const aiPiiRedactionSharedExportsMaxIterations = 8
+const maxIterations = 8
 
-// aiPiiRedactionSharedExportsMaxBodyBytes caps the request
+// maxBodyBytes caps the request
 // body. The body is small (1 string field); bound it cheaply.
 // 16 KiB matches the other body-driven AI handlers.
-const aiPiiRedactionSharedExportsMaxBodyBytes = 16 * 1024
+const maxBodyBytes = 16 * 1024
 
-// aiPiiRedactionSharedExportsRequest is the typed body shape.
+// request is the typed body shape.
 // The required field is export_type; there are no other fields.
-type aiPiiRedactionSharedExportsRequest struct {
+type request struct {
 	// ExportType identifies the export the recommendation
 	// covers. Required, must be one of the values in
 	// export.SharedExportTypes() ({account, analytics, backup,
@@ -118,14 +120,14 @@ type aiPiiRedactionSharedExportsRequest struct {
 	ExportType string `json:"export_type"`
 }
 
-// AIPiiRedactionSharedExportsHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/exports/redaction/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AIPiiRedactionSharedExportsHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -133,7 +135,7 @@ type AIPiiRedactionSharedExportsHandler struct {
 	maxIters   int
 }
 
-// NewAIPiiRedactionSharedExportsHandler constructs the handler.
+// NewHandler constructs the handler.
 // All non-pointer arguments are required; the constructor panics
 // on a nil so the wiring bug surfaces at boot, not at first
 // request.
@@ -156,68 +158,80 @@ type AIPiiRedactionSharedExportsHandler struct {
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAIPiiRedactionSharedExportsHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIPiiRedactionSharedExportsHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIPiiRedactionSharedExportsHandler: nil provider.Registry")
+		panic("api/aipiiredact: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIPiiRedactionSharedExportsHandler: nil tools.Registry")
+		panic("api/aipiiredact: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIPiiRedactionSharedExportsHandler: nil strategy.Strategy")
+		panic("api/aipiiredact: NewHandler: nil strategy.Strategy")
 	}
-	return &AIPiiRedactionSharedExportsHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiPiiRedactionSharedExportsMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// parsePiiRedactionSharedExportsRequest drains the body.
+// parseRequest drains the body.
 // export_type is required and must appear in the canonical
 // allow-set export.SharedExportTypes() — the validator catches an
 // unknown value before the dispatcher is invoked. Absence /
 // invalid values surface as JSON 400 with a stable error key the
 // SPA can localise. Returns (req, true) when the body is
 // acceptable.
-func parsePiiRedactionSharedExportsRequest(w http.ResponseWriter, r *http.Request) (aiPiiRedactionSharedExportsRequest, bool) {
-	var req aiPiiRedactionSharedExportsRequest
+func parseRequest(w http.ResponseWriter, r *http.Request) (request, bool) {
+	var req request
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "missing body")
+		httpx.WriteError(w, http.StatusBadRequest, "missing body")
 		return req, false
 	}
 	defer r.Body.Close()
-	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiPiiRedactionSharedExportsMaxBodyBytes))
+	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, maxBodyBytes))
 	if readErr != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
 	if len(bytesTrim(bodyBytes)) == 0 {
-		writeError(w, http.StatusBadRequest, "empty body")
+		httpx.WriteError(w, http.StatusBadRequest, "empty body")
 		return req, false
 	}
 	dec := json.NewDecoder(strings.NewReader(string(bodyBytes)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return req, false
 	}
 	if req.ExportType == "" {
-		writeError(w, http.StatusBadRequest, "export_type is required")
+		httpx.WriteError(w, http.StatusBadRequest, "export_type is required")
 		return req, false
 	}
 	allowed := export.SharedExportTypes()
 	if !slices.Contains(allowed, req.ExportType) {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("export_type must be one of %s", strings.Join(allowed, ", ")))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("export_type must be one of %s", strings.Join(allowed, ", ")))
 		return req, false
 	}
 	return req, true
+}
+
+// bytesTrim is a defensive ASCII whitespace trimmer used only by
+// the body-empty check. Avoids importing bytes for one call.
+func bytesTrim(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] == '\r' || b[0] == '\n') {
+		b = b[1:]
+	}
+	for len(b) > 0 && (b[len(b)-1] == ' ' || b[len(b)-1] == '\t' || b[len(b)-1] == '\r' || b[len(b)-1] == '\n') {
+		b = b[:len(b)-1]
+	}
+	return b
 }
 
 // ServeHTTP implements [http.Handler]. The body is parsed, the
@@ -226,9 +240,9 @@ func parsePiiRedactionSharedExportsRequest(w http.ResponseWriter, r *http.Reques
 // writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
-func (h *AIPiiRedactionSharedExportsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
-	req, ok := parsePiiRedactionSharedExportsRequest(w, r)
+	req, ok := parseRequest(w, r)
 	if !ok {
 		return
 	}
@@ -240,7 +254,7 @@ func (h *AIPiiRedactionSharedExportsHandler) ServeHTTP(w http.ResponseWriter, r 
 	// falls back gracefully.
 	if _, err := h.registry.For(r.Context(), piiredactionsharedexports.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai pii-redaction-shared-exports: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -258,7 +272,7 @@ func (h *AIPiiRedactionSharedExportsHandler) ServeHTTP(w http.ResponseWriter, r 
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(piiredactionsharedexports.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai pii-redaction-shared-exports: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -283,7 +297,7 @@ func (h *AIPiiRedactionSharedExportsHandler) ServeHTTP(w http.ResponseWriter, r 
 	// export_type and instructs the tool sequence EXACTLY:
 	// draft_export_redaction_plan first, then
 	// validate_export_redaction_plan, then narration.
-	userMsg := buildPiiRedactionSharedExportsUserMessage(req.ExportType)
+	userMsg := buildUserMessage(req.ExportType)
 
 	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
@@ -297,11 +311,11 @@ func (h *AIPiiRedactionSharedExportsHandler) ServeHTTP(w http.ResponseWriter, r 
 	}
 }
 
-// buildPiiRedactionSharedExportsUserMessage synthesises the
+// buildUserMessage synthesises the
 // export_type-scoped user message the LLM sees. The format is
 // deterministic so canned goldens and provider prompt-hash
 // caches stay stable across boots.
-func buildPiiRedactionSharedExportsUserMessage(exportType string) string {
+func buildUserMessage(exportType string) string {
 	return fmt.Sprintf(
 		"Recommend PII redactions for the %q export I'm about to share. "+
 			"Follow the tool sequence EXACTLY: "+
@@ -322,9 +336,10 @@ func buildPiiRedactionSharedExportsUserMessage(exportType string) string {
 	)
 }
 
-// containsString is provided by impersonate_handler.go in the
-// same package; reuse it rather than redeclare.
+// denyAllConfirm rejects mutating tool calls for this read-only strategy.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
 
-// Compile-time assertion: AIPiiRedactionSharedExportsHandler
-// satisfies http.Handler.
-var _ http.Handler = (*AIPiiRedactionSharedExportsHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)

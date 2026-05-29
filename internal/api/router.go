@@ -49,6 +49,7 @@ import (
 	ainlgrafana "github.com/ev-dev-labs/teslasync/internal/api/ainlgrafana"
 	ainlsql "github.com/ev-dev-labs/teslasync/internal/api/ainlsql"
 	aiperiodcmp "github.com/ev-dev-labs/teslasync/internal/api/aiperiodcmp"
+	aipiiredact "github.com/ev-dev-labs/teslasync/internal/api/aipiiredact"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2461,7 +2462,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiPiiRedactionSharedExportsHandler := NewAIPiiRedactionSharedExportsHandler(
+	aiPiiRedactionSharedExportsHandler := aipiiredact.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		piiredactionsharedexports.New(),
