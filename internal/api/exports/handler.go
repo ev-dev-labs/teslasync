@@ -1,4 +1,4 @@
-package api
+package exports
 
 import (
 	"encoding/csv"
@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	exportmodel "github.com/ev-dev-labs/teslasync/internal/models/export"
 
 	"github.com/go-chi/chi/v5"
@@ -554,4 +556,20 @@ func ptrFloat(p *float64) float64 {
 		return *p
 	}
 	return 0
+}
+
+func writeJSON(w http.ResponseWriter, status int, data interface{}) {
+	httpx.WriteJSON(w, status, data)
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func pagination(r *http.Request) (limit, offset int) {
+	return apiparams.Pagination(r)
+}
+
+func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
+	return apiparams.ParseDateRange(r)
 }
