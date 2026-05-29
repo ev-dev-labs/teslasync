@@ -1,4 +1,4 @@
-package api
+package aimlanom
 
 // Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
 //
@@ -55,6 +55,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/ml/anomaly"
@@ -80,13 +81,13 @@ const aiLearnedAnomalyDefaultDays = 7
 // the LLM.
 const aiLearnedAnomalyMaxDays = 30
 
-// AILearnedAnomalyBaselineHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/ml/anomaly-baselines/train.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AILearnedAnomalyBaselineHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -94,7 +95,7 @@ type AILearnedAnomalyBaselineHandler struct {
 	maxIters   int
 }
 
-// NewAILearnedAnomalyBaselineHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -110,21 +111,21 @@ type AILearnedAnomalyBaselineHandler struct {
 //	(one per process).
 //
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAILearnedAnomalyBaselineHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AILearnedAnomalyBaselineHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAILearnedAnomalyBaselineHandler: nil provider.Registry")
+		panic("aimlanom: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAILearnedAnomalyBaselineHandler: nil tools.Registry")
+		panic("aimlanom: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAILearnedAnomalyBaselineHandler: nil strategy.Strategy")
+		panic("aimlanom: NewHandler: nil strategy.Strategy")
 	}
-	return &AILearnedAnomalyBaselineHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -150,7 +151,7 @@ type aiLearnedAnomalyRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AILearnedAnomalyBaselineHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
 	var body aiLearnedAnomalyRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
@@ -245,27 +246,27 @@ func (h *AILearnedAnomalyBaselineHandler) ServeHTTP(w http.ResponseWriter, r *ht
 	}
 }
 
-// Compile-time assertion: AILearnedAnomalyBaselineHandler satisfies http.Handler.
-var _ http.Handler = (*AILearnedAnomalyBaselineHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
-// AISignalSampleSource is the production *database.DB-backed adapter
+// SignalSampleSource is the production *database.DB-backed adapter
 // that satisfies anomaly.SignalSampleSource. It runs ONE pgx query
 // scoped to the requested vehicle, lookback days, and signal
 // allowlist; rows are bucketed in-memory into the per-signal
 // observation slices the trainer expects. No new SQL semantics —
 // the same signal_log columns the deterministic detector at
 // internal/api/anomaly_handler.go already reads.
-type AISignalSampleSource struct {
+type SignalSampleSource struct {
 	db *database.DB
 }
 
-// NewAISignalSampleSource constructs the adapter. Panics on a nil
+// NewSignalSampleSource constructs the adapter. Panics on a nil
 // DB so the wiring bug surfaces at boot, not at first request.
-func NewAISignalSampleSource(db *database.DB) *AISignalSampleSource {
+func NewSignalSampleSource(db *database.DB) *SignalSampleSource {
 	if db == nil {
-		panic("api: NewAISignalSampleSource: nil *database.DB")
+		panic("aimlanom: NewSignalSampleSource: nil *database.DB")
 	}
-	return &AISignalSampleSource{db: db}
+	return &SignalSampleSource{db: db}
 }
 
 // SamplesForVehicle implements anomaly.SignalSampleSource. Returns
@@ -277,7 +278,7 @@ func NewAISignalSampleSource(db *database.DB) *AISignalSampleSource {
 // signal_log hypertable's primary index is (vehicle_id, ts), so
 // the selectivity comes from the time predicate; the field
 // allowlist is a final-stage filter.
-func (s *AISignalSampleSource) SamplesForVehicle(ctx context.Context, vehicleID int64, days int, signals []string) (map[string][]float64, error) {
+func (s *SignalSampleSource) SamplesForVehicle(ctx context.Context, vehicleID int64, days int, signals []string) (map[string][]float64, error) {
 	out := make(map[string][]float64, len(signals))
 	for _, sig := range signals {
 		out[sig] = nil
@@ -295,22 +296,30 @@ func (s *AISignalSampleSource) SamplesForVehicle(ctx context.Context, vehicleID 
 		  AND (float_value IS NOT NULL OR int_value IS NOT NULL)`,
 		vehicleID, since, signals)
 	if err != nil {
-		return nil, fmt.Errorf("AISignalSampleSource: vehicle %d days %d: %w", vehicleID, days, err)
+		return nil, fmt.Errorf("SignalSampleSource: vehicle %d days %d: %w", vehicleID, days, err)
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var field string
 		var v float64
 		if err := rows.Scan(&field, &v); err != nil {
-			return nil, fmt.Errorf("AISignalSampleSource: scan: %w", err)
+			return nil, fmt.Errorf("SignalSampleSource: scan: %w", err)
 		}
 		out[field] = append(out[field], v)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("AISignalSampleSource: rows.Err: %w", err)
+		return nil, fmt.Errorf("SignalSampleSource: rows.Err: %w", err)
 	}
 	return out, nil
 }
 
-// Compile-time assertion: AISignalSampleSource satisfies anomaly.SignalSampleSource.
-var _ anomaly.SignalSampleSource = (*AISignalSampleSource)(nil)
+// Compile-time assertion: SignalSampleSource satisfies anomaly.SignalSampleSource.
+var _ anomaly.SignalSampleSource = (*SignalSampleSource)(nil)
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}

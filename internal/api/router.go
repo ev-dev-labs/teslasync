@@ -41,6 +41,7 @@ import (
 	aiinboxcat "github.com/ev-dev-labs/teslasync/internal/api/aiinboxcat"
 	aiincident "github.com/ev-dev-labs/teslasync/internal/api/aiincident"
 	ailifetime "github.com/ev-dev-labs/teslasync/internal/api/ailifetime"
+	aimlanom "github.com/ev-dev-labs/teslasync/internal/api/aimlanom"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -1860,7 +1861,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// learned-per-vehicle-anomaly-baselines (Phase-50 / ML1, slice
 	// 0062) tools — train_anomaly_baseline + query_anomaly_baseline.
 	// Both READ-only; the trainer reads signal_log via the
-	// AISignalSampleSource adapter and returns a per-signal learned
+	// SignalSampleSource adapter and returns a per-signal learned
 	// envelope (mean / stddev / p5 / p95) clamped to the static
 	// safe-range envelope, with safe-range fallback per signal when
 	// fewer than anomaly.DefaultMinSamples observations exist in
@@ -1868,12 +1869,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// constructed so the dispatcher can resolve the strategy's
 	// allowedTools at boot.
 	predict.RegisterLearnedAnomalyBaselineTools(aiToolRegistry, predict.LearnedAnomalyBaselineSources{
-		Trainer: anomaly.NewTrainer(NewAISignalSampleSource(db)),
+		Trainer: anomaly.NewTrainer(aimlanom.NewSignalSampleSource(db)),
 	})
 	// learned-per-vehicle-anomaly-baselines handler. One per
 	// process; stateless beyond constructor inputs. Must be
 	// constructed AFTER the tool registration above.
-	aiLearnedAnomalyBaselinesHandler := NewAILearnedAnomalyBaselineHandler(
+	aiLearnedAnomalyBaselinesHandler := aimlanom.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		learnedanomalybaselines.New(),

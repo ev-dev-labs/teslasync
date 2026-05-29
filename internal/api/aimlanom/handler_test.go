@@ -17,9 +17,10 @@
 // learned-per-vehicle-anomaly-baselines`); duplicating that here
 // would require a live database fixture.
 
-package api
+package aimlanom
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -30,6 +31,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly is the
 // load-bearing off-mode contract proof for slice 0062. It mounts
@@ -123,27 +140,27 @@ func TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly(t *testing.T) {
 	}
 }
 
-// TestAILearnedAnomalyBaselineHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAILearnedAnomalyBaselineHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAILearnedAnomalyBaselineHandler(nil,nil,nil,\"\") did not panic")
+			t.Fatal("NewHandler(nil,nil,nil,\"\") did not panic")
 		}
 	}()
-	NewAILearnedAnomalyBaselineHandler(nil, nil, nil, "")
+	NewHandler(nil, nil, nil, "")
 }
 
-// TestAILearnedAnomalyBaselineHandler_RejectsBadRequestBodies pins
+// TestHandler_RejectsBadRequestBodies pins
 // the request-validation contract: missing vehicle_id, non-positive
 // vehicle_id, and out-of-range days must surface as 4xx BEFORE the
 // dispatcher is reached (so a confused caller cannot waste a
 // provider call). The baseline-coexistence test above already
 // proves the off-mode 404; this test pins the on-mode validator.
-func TestAILearnedAnomalyBaselineHandler_RejectsBadRequestBodies(t *testing.T) {
+func TestHandler_RejectsBadRequestBodies(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
@@ -184,7 +201,7 @@ func TestAILearnedAnomalyBaselineHandler_RejectsBadRequestBodies(t *testing.T) {
 }
 
 // validateLearnedAnomalyRequest mirrors the pre-dispatch validation
-// block in (*AILearnedAnomalyBaselineHandler).ServeHTTP. Kept in
+// block in (*Handler).ServeHTTP. Kept in
 // the test file (not exported from the production handler) so a
 // future change to ServeHTTP's validation must update both —
 // surfacing the divergence rather than letting it drift.
