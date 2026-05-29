@@ -34,13 +34,13 @@ import (
 	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
 	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
 	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
-	"github.com/ev-dev-labs/teslasync/internal/api/ailogtrace"
 	aifeedtri "github.com/ev-dev-labs/teslasync/internal/api/aifeedtri"
 	aifsmnar "github.com/ev-dev-labs/teslasync/internal/api/aifsmnar"
 	aigeofautom "github.com/ev-dev-labs/teslasync/internal/api/aigeofautom"
 	aiinboxcat "github.com/ev-dev-labs/teslasync/internal/api/aiinboxcat"
 	aiincident "github.com/ev-dev-labs/teslasync/internal/api/aiincident"
 	ailifetime "github.com/ev-dev-labs/teslasync/internal/api/ailifetime"
+	"github.com/ev-dev-labs/teslasync/internal/api/ailogtrace"
 	aimlanom "github.com/ev-dev-labs/teslasync/internal/api/aimlanom"
 	aimlchargcv "github.com/ev-dev-labs/teslasync/internal/api/aimlchargcv"
 	aimlrange "github.com/ev-dev-labs/teslasync/internal/api/aimlrange"
@@ -119,6 +119,7 @@ import (
 	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apilocsnap "github.com/ev-dev-labs/teslasync/internal/api/locsnap"
+	"github.com/ev-dev-labs/teslasync/internal/api/maintenance"
 	apimedia "github.com/ev-dev-labs/teslasync/internal/api/media"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apimileage "github.com/ev-dev-labs/teslasync/internal/api/mileage"
@@ -325,7 +326,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/location"
-	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
+	maintenancetool "github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nl"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/paint"
@@ -859,7 +860,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	batteryCellsHandler := NewBatteryCellsHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
 	rangeProjectionHandler := apirangeproj.NewRangeProjectionHandler(db, stateReader)
 	drivetrainHealthHandler := apidrivetrain.NewDrivetrainHealthHandler(db, stateReader)
-	maintenanceHandler := NewMaintenanceHandler(db)
+	maintenanceHandler := maintenance.NewHandler(db)
 	periodStatsHandler := apiperiod.NewHandler(db)
 	drivingCoachHandler := apidrivingcoach.NewDrivingCoachHandler(db)
 	costForecastHandler := NewCostForecastHandler(db)
@@ -1717,7 +1718,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// signal.StateReader.Timeline projection the canonical
 	// TirePressureHandler.List already runs — no parallel write
 	// path; the LLM never persists.
-	maintenance.RegisterTirePressureTrendReasoningTools(aiToolRegistry, maintenance.TirePressureTrendReasoningSources{
+	maintenancetool.RegisterTirePressureTrendReasoningTools(aiToolRegistry, maintenancetool.TirePressureTrendReasoningSources{
 		Source: aitirepress.NewAITirePressureTrendSource(stateReader),
 	})
 	// tire-pressure-trend-reasoning handler. One per process;
@@ -2362,7 +2363,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		}
 	}
 	aiPredictiveMaintenanceContextSource := aipredmaint.NewContextSource(db, aiPredictiveMaintenanceRedisCache)
-	maintenance.RegisterPredictiveMaintenanceTools(aiToolRegistry, maintenance.PredictiveMaintenanceSources{
+	maintenancetool.RegisterPredictiveMaintenanceTools(aiToolRegistry, maintenancetool.PredictiveMaintenanceSources{
 		Retriever:          aiPredictiveMaintenanceRetriever,
 		MaintenanceContext: aiPredictiveMaintenanceContextSource,
 	})

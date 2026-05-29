@@ -1,32 +1,33 @@
-package api
+package maintenance
 
 import (
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 )
 
-// MaintenanceHandler serves maintenance schedule and service record endpoints.
-type MaintenanceHandler struct {
+// Handler serves maintenance schedule and service record endpoints.
+type Handler struct {
 	db         *database.DB
 	redisCache *signal.RedisSignalCache
 }
 
-func NewMaintenanceHandler(db *database.DB) *MaintenanceHandler {
-	return &MaintenanceHandler{db: db}
+func NewHandler(db *database.DB) *Handler {
+	return &Handler{db: db}
 }
 
 // WithRedisCache sets the Redis signal cache for reading live vehicle state.
-func (h *MaintenanceHandler) WithRedisCache(cache *signal.RedisSignalCache) *MaintenanceHandler {
+func (h *Handler) WithRedisCache(cache *signal.RedisSignalCache) *Handler {
 	h.redisCache = cache
 	return h
 }
 
 // defaultMaintenanceItems returns standard Tesla EV maintenance items.
-func (h *MaintenanceHandler) defaultItems(vehicleID int64, currentOdometer float64) []map[string]interface{} {
+func (h *Handler) defaultItems(vehicleID int64, currentOdometer float64) []map[string]interface{} {
 	now := time.Now()
 	items := []map[string]interface{}{
 		{
@@ -90,7 +91,7 @@ func (h *MaintenanceHandler) defaultItems(vehicleID int64, currentOdometer float
 }
 
 // List returns maintenance items for the first vehicle (or all).
-func (h *MaintenanceHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	// Get first vehicle ID
@@ -100,7 +101,7 @@ func (h *MaintenanceHandler) List(w http.ResponseWriter, r *http.Request) {
 	).Scan(&vehicleID)
 	if err != nil {
 		log.Debug().Err(err).Msg("maintenance: no vehicle found")
-		writeJSON(w, http.StatusOK, []interface{}{})
+		httpx.WriteJSON(w, http.StatusOK, []interface{}{})
 		return
 	}
 
@@ -117,10 +118,10 @@ func (h *MaintenanceHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, h.defaultItems(vehicleID, odometer))
+	httpx.WriteJSON(w, http.StatusOK, h.defaultItems(vehicleID, odometer))
 }
 
 // Records returns service history records (empty for now — user-entered data).
-func (h *MaintenanceHandler) Records(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, []interface{}{})
+func (h *Handler) Records(w http.ResponseWriter, r *http.Request) {
+	httpx.WriteJSON(w, http.StatusOK, []interface{}{})
 }
