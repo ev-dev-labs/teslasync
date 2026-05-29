@@ -1,5 +1,4 @@
-// Package batteryhealthforecastnarrative is the Phase-50 / C2 strategy
-// for the LLM-narrated battery health forecast.
+// Package batteryhealthforecastnarrative defines the LLM-narrated battery health forecast strategy.
 //
 // The strategy declares:
 //
@@ -39,13 +38,7 @@
 // off-mode users never see the AI surface at all (ADR-015 §I3, §I5,
 // §I6).
 //
-// Service-worker chunks: this slice's frontend code is loaded under
-// the page-bundle for /battery (and the aliased /battery/health);
-// the off-mode walker validates code chunks via the `withAiFeature`
-// HOC + the AI_FEATURES map. See the slice log for the documented
-// mapping.
-//
-// ADR-015 alignment:
+// ADR-015 constraints:
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the
@@ -165,24 +158,18 @@ func (s *Strategy) Tools() []string {
 // prompt before the call, so the strategy itself contributes no
 // extra prefix messages. Returning nil is correct.
 //
-// Future work: this is where a per-vehicle "preferred forecast
-// horizon" preference snippet would be injected once
-// battery-health-forecast-narrative grows that surface. Today's
-// slice keeps Context empty so the dispatcher's behaviour is fully
-// determined by [System] + History.
+// Future work: this is where a per-vehicle forecast horizon preference can be injected.
+// Today Context stays empty so dispatcher behavior is determined by [System] and History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyBatteryHealthForecastNarrative wrapped through the F4↔F8
-// adapter so the dispatcher's per-request ctx-installation step
+// PolicyBatteryHealthForecastNarrative wrapped through the redaction adapter so the dispatcher's per-request ctx-installation step
 // (dispatch.Run installs the policy via redact.WithPolicy) sees the
 // concrete policy.
 //
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
-// battery metrics are aggregate numeric DTOs. Round-trip required:
-// yes". PolicyBatteryHealthForecastNarrative is the per-feature
+// PolicyBatteryHealthForecastNarrative is the per-feature
 // constructor with the same allow-list as PolicyDigest /
 // PolicyTripPlannerLLMAgent — kept as a distinct identifier so a
 // future per-feature change to battery-health-forecast-narrative's

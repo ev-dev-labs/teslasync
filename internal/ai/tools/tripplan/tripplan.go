@@ -1,68 +1,13 @@
-// Phase-50 / 0025 — D5 Trip planner LLM agent.
+// Package tripplan provides read-only tools for trip-planning assistance.
 //
-// trip_planner_llm_agent.go ships THREE new propose-only tools:
+// The tools project historical charging sessions onto a route corridor,
+// summarize user charging dwell patterns, and delegate draft plan computation to
+// the same TripPlannerHandler path used by POST /api/v1/trip-planner/plan.
+// They never persist plans; the user must confirm any save or route action in
+// the TripPlannerPage UI.
 //
-//   - `query_chargers_along_route` — projects the user's past
-//     charging-session start_lat / start_lng / start_place onto a
-//     haversine corridor between a caller-supplied origin and
-//     destination so the LLM has historical evidence of which
-//     chargers the user has actually used near the planned route.
-//     READ-only against the existing charging_sessions table via the
-//     shared [tools.ChargeSource] interface — no new SQL is written by
-//     this tool.
-//
-//   - `query_user_charge_dwells` — aggregates the same charging
-//     sessions by start_place and returns per-location avg dwell
-//     duration, avg delta-SOC, and visit count so the LLM can
-//     recommend charger choices that match the user's typical dwell
-//     behaviour rather than averaging across all users.
-//
-//   - `draft_trip_plan` — delegates to the canonical
-//     *TripPlannerHandler.computePlan path via a narrow
-//     [TripPlanComputer] port (production: AITripPlanComputer in
-//     internal/api/ai_trip_planner_llm_handler.go) and returns the
-//     same SI-canonical envelope the deterministic
-//     POST /api/v1/trip-planner/plan baseline already returns
-//     (total_distance_m, total_duration_s, total_energy_wh,
-//     arrival_soc, charge_stops, soc_curve). PROPOSE-only: no DB
-//     write, no persistence — the user reviews the proposed plan
-//     in the AI panel and explicitly clicks the existing canonical
-//     Plan button in the TripPlannerPage UI to save / route.
-//
-// All three tools are READ-only. The dispatcher's deny-all confirm
-// gate is therefore never reached in practice — defence in depth in
-// case a future edit accidentally adds a write tool. The actual
-// trip-plan save / route flows through an explicit user
-// confirmation in the TripPlannerPage UI (out of scope for this
-// slice — the slice prompt mandates "while requiring explicit user
-// confirmation before saving"); the LLM has no tool that writes.
-//
-// Design constraints (from the slice prompt):
-//
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → query_chargers_along_route and
-//     query_user_charge_dwells delegate to the shared tools.ChargeSource
-//     read interface satisfied at boot by *chargingdb.ChargingRepo
-//     (no new SQL). draft_trip_plan delegates to a narrow
-//     TripPlanComputer port satisfied at boot by an adapter wrapping
-//     the existing *api.TripPlannerHandler — the same code path the
-//     deterministic baseline runs.
-//
-//   - "the LLM never writes raw SQL" → tools have no DB handle. The
-//     corridor projection and per-place aggregation math is pure Go
-//     on a []*chargingmodel.ChargingSession slice.
-//
-//   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; both query tools are pure reads
-//     and draft_trip_plan reuses the canonical compute path.
-//
-//   - Privacy: the LLM is shown charger start_place strings as
-//     redaction-tagged values (the PolicyTripPlannerLLMAgent
-//     allow-list intentionally excludes ClassStreetAddr); the
-//     round-trip tags are restored only in the final SSE frame
-//     returned to the same authenticated user. This means the
-//     provider sees `<addr id='1'/>` and the user sees the real
-//     "Mountain View Supercharger" string.
+// Location names are redaction-tagged before reaching the provider and restored
+// only in the final response to the same authenticated user.
 
 package tripplan
 
@@ -655,9 +600,8 @@ type TripPlanComputeResult struct {
 // substitute deterministic fakes so the tool unit tests stay
 // hermetic.
 //
-// The interface MUST stay read-only — adding a Save / Update method
-// here would defeat the propose-only contract that ADR-015 §I3 +
-// the slice prompt mandate.
+// The interface MUST stay read-only; adding Save or Update would defeat the
+// propose-only contract required by ADR-015 §I3.
 type TripPlanComputer interface {
 	// ComputeTripPlan delegates to the canonical
 	// *TripPlannerHandler.computePlan path and returns the same
@@ -811,9 +755,7 @@ type TripPlannerLLMAgentSources struct {
 	Planner  TripPlanComputer
 }
 
-// RegisterTripPlannerLLMAgentTools installs the trip-planner-llm-agent
-// slice's tools on r. Called from router.go AFTER the previous
-// slice's tool registrations so the registry's alphabetical Names
+// RegisterTripPlannerLLMAgentTools installs the trip-planner LLM agent tools on r. Router wiring calls this after earlier tool registrations so the registry's alphabetical Names
 // list grows deterministically without disturbing earlier
 // registrations or any builtin-names pin tests.
 //

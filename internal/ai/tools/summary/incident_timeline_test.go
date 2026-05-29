@@ -1,4 +1,4 @@
-// Phase-50 / 0042 — S1 Incident timeline summarizer.
+// Incident timeline summarizer tool tests.
 //
 // Unit tests for the retrieve_system_chunks + query_incident_timeline
 // tools. Both tools wrap narrow ports (rag.Retriever /
@@ -6,8 +6,8 @@
 // the unit tests stay hermetic.
 //
 // The query_incident_timeline tool also enforces the per-request
-// scope binding the slice prompt's security model relies on
-// (defence against prompt-injection exfiltration). The scope-binding
+// scope binding as a defence against prompt-injection
+// exfiltration. The scope-binding
 // tests pin the contract: missing scope ⇒ refuse; mismatched scope
 // ⇒ refuse; matched scope ⇒ delegate. A future edit that bypasses
 // any of these gates would surface here.
@@ -56,12 +56,12 @@ func (f *fakeSystemRetriever) Retrieve(_ context.Context, subject, query string,
 	return f.out, nil
 }
 
-// Forget is a no-op for the test fake — the tools the slice
-// registers never call it. Required to satisfy [rag.Retriever].
+// Forget is a no-op for this fake; these tools never call it.
+// Required to satisfy [rag.Retriever].
 func (f *fakeSystemRetriever) Forget(_ context.Context, _, _, _ string) error { return nil }
 
-// Index is a no-op for the test fake — the tools the slice
-// registers never call it. Required to satisfy [rag.Retriever].
+// Index is a no-op for this fake; these tools never call it.
+// Required to satisfy [rag.Retriever].
 func (f *fakeSystemRetriever) Index(_ context.Context, _, _, _ string, _ []string) error {
 	return nil
 }
@@ -139,7 +139,7 @@ func TestRetrieveSystemChunks_Validate_RejectsDriveSummary(t *testing.T) {
 	// The lifetime-stats-qa allowlist has drive_summary; the
 	// incident-timeline-summarizer allowlist explicitly does NOT.
 	// This test guards against a copy-paste mistake from the
-	// sister slice that would silently widen the surface.
+	// sibling feature that would silently widen the surface.
 	tool := &retrieveSystemChunks{}
 	raw := json.RawMessage(`{"query": "hi", "source_types": ["drive_summary"]}`)
 	if _, err := tool.Validate(raw); err == nil {

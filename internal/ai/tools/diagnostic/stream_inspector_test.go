@@ -1,4 +1,4 @@
-// Phase-50 / 0047 — S6 MQTT and SSE inspector explanations.
+// MQTT and SSE inspector explanation tests.
 //
 // Unit tests for the retrieve_stream_chunks + query_stream_inspector
 // tools. Both tools wrap narrow ports (rag.Retriever /
@@ -6,7 +6,7 @@
 // the unit tests stay hermetic.
 //
 // The query_stream_inspector tool also enforces the per-request
-// scope binding the slice prompt's security model relies on
+// scope binding the feature requirements' security model relies on
 // (defence against prompt-injection exfiltration). The scope-
 // binding tests pin the contract: missing scope ⇒ refuse;
 // mismatched scope ⇒ refuse; matched scope ⇒ delegate. A future
@@ -144,7 +144,7 @@ func TestRetrieveStreamChunks_Validate_RejectsLogEvent(t *testing.T) {
 	// The log-trace-summarization allowlist has log_event; the
 	// mqtt-sse-inspector-explanations allowlist explicitly does
 	// NOT. This test guards against a copy-paste mistake from
-	// the sister slice that would silently widen the surface.
+	// a neighboring feature that would silently widen the surface.
 	tool := &retrieveStreamChunks{}
 	raw := json.RawMessage(`{"query": "hi", "source_types": ["log_event"]}`)
 	if _, err := tool.Validate(raw); err == nil {

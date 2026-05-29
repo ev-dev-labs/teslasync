@@ -32,7 +32,7 @@ func TestSPAWiringComponentsExist(t *testing.T) {
 }
 
 // TestSPAWiringIndicatorOnlyExists asserts each allowlist entry
-// points at a real file. Stale allowlist entries dilute the W1-B
+// points at a real file. Stale allowlist entries dilute the
 // enforcement signal.
 func TestSPAWiringIndicatorOnlyExists(t *testing.T) {
 	root := repoRoot(t)

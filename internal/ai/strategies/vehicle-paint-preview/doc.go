@@ -1,4 +1,4 @@
-// Package vehiclepaintpreview is part of the TeslaSync adapter layer.
+// Package vehiclepaintpreview supports AI-assisted vehicle paint previews.
 //
 // Layer: adapter
 package vehiclepaintpreview

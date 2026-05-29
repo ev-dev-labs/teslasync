@@ -1,16 +1,8 @@
-// Package tools — ptr helpers shared across carved subpackages.
+// Package tools contains pointer helpers shared by AI tool subpackages.
 //
-// These exported helpers were promoted to the parent tools package
-// during R6.25 (drive_coaching → coaching/ carve). They were originally
-// unexported in drive_coaching.go but speed_profile.go (still in parent)
-// also depends on them, so a clean carve required hoisting them to the
-// shared parent package as exported `tools.DerefFloat64Ptr` etc.
-//
-// Semantic contract preserved verbatim per ADR-015 §I12: the helpers
-// return `any` so the JSON encoder emits literal `null` for nil
-// aggregates rather than the type's zero value. CToFPtr converts
-// Celsius → Fahrenheit at the JSON boundary so small LLMs receive
-// pre-converted scalars without having to do the arithmetic.
+// These helpers return any so JSON encoding preserves nil measurements as
+// literal null values instead of replacing them with numeric zero values.
+
 package tools
 
 // CToFPtr converts a *float64 Celsius reading to a Fahrenheit float64

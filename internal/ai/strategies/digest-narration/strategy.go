@@ -1,5 +1,4 @@
-// Package digestnarration is the Phase-50 / U2 strategy for the
-// LLM-narrated weekly digest.
+// Package digestnarration provides the LLM-narrated weekly digest strategy.
 //
 // The strategy declares:
 //
@@ -8,8 +7,8 @@
 //     hallucinated metrics);
 //   - the single read-only tool the LLM is allowed to call —
 //     `query_weekly_digest_context` — which composes existing
-//     DriveSource + ChargeSource repo methods to return the week's
-//     aggregate (no new SQL written);
+//     DriveSource and ChargeSource repo methods to return the week's
+//     aggregate without adding a parallel query path;
 //   - the redaction policy (`PolicyDigest` allows ClassVehicleName so
 //     the narration can address the user's car by name; every other
 //     PII class is redacted via round-trip tags).
@@ -66,8 +65,8 @@ const SystemPrompt = `You are the TeslaSync weekly digest narrator. ` +
 // strategy that references an unknown tool.
 //
 // This slice ships zero mutating tools: digest narration only READS
-// state. A future slice that needs to mutate state (e.g. scheduling
-// the digest job) will add its own strategy with mutating tools + a
+// state. A future workflow that needs mutation, such as scheduling the
+// digest job, should use its own strategy with mutating tools and a
 // confirm hook.
 var allowedTools = []string{
 	"query_weekly_digest_context",
@@ -110,26 +109,22 @@ func (s *Strategy) Tools() []string {
 // before the call, so the strategy itself contributes no extra prefix
 // messages. Returning nil is correct.
 //
-// Future work: this is where a per-vehicle preferences snippet (e.g.
-// "user prefers metric units") would be injected once digest
-// narration grows that surface. Today's slice keeps Context empty so
-// the dispatcher's behaviour is fully determined by [System] +
-// History — the simplest path that satisfies the slice's "no hidden
-// state" requirement.
+// This is where per-vehicle preference context belongs if digest
+// narration later needs it. For now, the dispatcher's behavior is fully
+// determined by [System] and History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyDigest wrapped through the F4↔F8 adapter so the dispatcher's
-// per-request ctx-installation step (dispatch.Run installs the policy
-// via redact.WithPolicy) sees the concrete policy.
+// PolicyDigest through the redaction adapter so the dispatcher's
+// per-request policy installation sees the concrete policy.
 //
 // PolicyDigest allows ClassVehicleName because the narration's value
 // proposition includes naming the user's car ("This week, Roadie
 // drove 142 mi"). Every other PII class — VIN, lat/long, address,
 // email, etc. — is redacted to a round-trip tag like `<vin id='1'/>`;
-// the F8 redact decorator restores the original value before
+// the redaction decorator restores the original value before
 // delivering the LLM's response back to the user.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyDigest())
@@ -143,5 +138,4 @@ func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 // keeps the YAML path the single source of truth.
 func (s *Strategy) EvalGoldens() []strategy.EvalGolden { return nil }
 
-// Compile-time assertion: Strategy satisfies the port.
 var _ strategy.Strategy = (*Strategy)(nil)

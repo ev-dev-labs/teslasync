@@ -1,5 +1,3 @@
-// Phase-50 / 0041 — X2 Lifetime stats Q&A.
-//
 // Unit tests for the lifetime-stats-qa Strategy. Mirrors the shape of
 // vampire-drain-explanation's strategy_test.go (the closest precedent:
 // a tools+RAG-style narrator strategy with a deny-all redaction
@@ -94,9 +92,8 @@ func TestStrategy_Tools(t *testing.T) {
 	}
 }
 
-// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy —
-// a caller that mutates the slice does NOT leak the mutation back
-// into the strategy. Dispatcher safety relies on this.
+// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy.
+// Mutating the returned slice must not affect the strategy.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -136,7 +133,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-greeting or preferred-unit-
+// future feature that needs preferred-greeting or preferred-unit-
 // display preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -151,12 +148,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands the
-// dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
+// dispatcher PolicyChatbot through the redaction adapter.
 // PolicyChatbot is the DENY-BY-DEFAULT policy: Allow == nil so EVERY
 // PII class — VIN, lat/long, addresses, place names, AND vehicle-name
-// — is tagged round-trip. The slice prompt explicitly mandates
-// "Allowed classes: none; answers are grounded in aggregate tools
-// and round-trip tags."
+// — is tagged round-trip.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

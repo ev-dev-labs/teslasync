@@ -1,9 +1,6 @@
-// Phase-50 / 0016 — N2 Natural-language automation builder.
-//
-// Tool tests for draft_automation_graph + validate_automation_graph.
-// Both tools are pure functions over input + AutomationGraphValidator
-// interface; the tests stub the validator with a deterministic fake
-// so the tests stay hermetic (no api package import, no DB).
+// Tool tests for draft_automation_graph and validate_automation_graph.
+// Both tools are pure functions over input and AutomationGraphValidator;
+// the tests use deterministic fakes to stay hermetic.
 
 package automation
 
@@ -120,7 +117,7 @@ func TestDraftAutomationGraph_ClampsVehicleScope(t *testing.T) {
 	stub := &stubAutomationValidator{}
 	tool := &draftAutomationGraph{validator: stub}
 
-	// The slice prompt mandates the AI handler clamp the scope to
+	// The AI handler clamps the scope to
 	// the caller's vehicle. The tool's input has the caller's
 	// vehicle (vehicle_id=1) — even if the LLM hallucinated a
 	// different one, the AI handler would have overwritten it
@@ -397,8 +394,7 @@ func TestRegisterAutomationBuilderTools_RegistersBoth(t *testing.T) {
 }
 
 // TestRegisterAutomationBuilderTools_DoesNotShadowBuiltins proves
-// registration of the new tools does not collide with the
-// 12-builtin starter set or earlier slice registrations.
+// the new tools do not collide with builtins or existing registrations.
 func TestRegisterAutomationBuilderTools_DoesNotShadowBuiltins(t *testing.T) {
 	t.Parallel()
 	r := tools.NewRegistry()

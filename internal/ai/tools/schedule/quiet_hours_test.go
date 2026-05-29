@@ -1,6 +1,4 @@
-// Phase-50 / 0053 — P2 Helix quiet-hours suggestion advisor.
-//
-// Unit tests for the draft_quiet_hours_window +
+// Unit tests for the draft_quiet_hours_window and
 // validate_quiet_hours_window tools. The draft tool wraps a
 // QuietHoursSuggestionSource port (production adapter wraps
 // notification_logs + quiet_hours readers); the validator is a
@@ -10,10 +8,9 @@
 // (a fake QuietHoursSuggestionSource for the draft tool, no
 // fakes needed for the validator).
 //
-// The tools also enforce the per-request scope binding the
-// slice prompt's security model relies on (defence against
-// prompt-injection exfiltration via the LLM-supplied user_id
-// argument). The scope-binding tests pin the contract:
+// The tools also enforce per-request scope binding, which defends
+// against prompt-injection exfiltration via the LLM-supplied user_id
+// argument. The scope-binding tests pin the contract:
 // missing scope ⇒ refuse; mismatched scope ⇒ refuse; matched
 // scope ⇒ delegate. A future edit that bypasses any of these
 // gates would surface here.

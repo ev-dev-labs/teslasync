@@ -1,8 +1,7 @@
-// Package tools is the canonical tool-use surface for AI features
-// (Phase-50 / 0005, F4).
+// Package tools is the canonical tool-use surface for AI features.
 //
-// Methodology principle P2 says every state mutation an LLM proposes
-// MUST flow through a typed, validated, audit-logged tool — never raw
+// Every state mutation an LLM proposes MUST flow through a typed,
+// validated, audit-logged tool — never raw
 // SQL, never hand-rolled prompt parsing, never `db.Exec`. This package
 // is the only sanctioned implementation of that contract.
 //
@@ -23,14 +22,14 @@
 //   - [Generate] reflects a Go struct annotated with `validate:"..."`
 //     tags into a JSON-Schema document. The same struct + tags are
 //     consumed by [ValidateStruct], so the schema the LLM sees and
-//     the validator the dispatcher runs cannot drift (R2 mitigation).
+//     the validator the dispatcher runs cannot drift.
 //
 //   - The 12 built-in tools at the bottom of this package are thin
 //     wrappers over existing repository methods — no new SQL is
 //     written. They seed the dispatcher with a usable read-only set
 //     so later conversational slices have something to call. Mutating
 //     tools are deliberately NOT shipped here; they belong with the
-//     features that use them (N1, N2, etc.).
+//     features that use them.
 //
 // # Why "tools" and not "actions" / "functions"
 //

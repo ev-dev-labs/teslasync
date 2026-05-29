@@ -1,6 +1,4 @@
-// Phase-50 / 0045 — S4 Log and trace summarization.
-//
-// log_trace_summarizer.go ships TWO new read-only tools:
+// Log and trace summarization exposes two read-only tools:
 //
 //   - `query_trace_window` — typed deterministic envelope describing
 //     the in-scope log/trace window. Composes a narrow
@@ -25,10 +23,10 @@
 //
 //   - `retrieve_log_chunks` — a thin wrapper over the F7
 //     rag.Retriever scoped to the calling user_subject, restricted
-//     to the slice's per-feature source-type allowlist
+//     to the per-feature source-type allowlist
 //     {log_event, trace_span}. Both source types are reserved by
-//     string for forward-compatibility — a future slice will
-//     index per-window log-event and trace-span chunks. Until
+//     string for forward-compatibility — a future indexer will
+//     add per-window log-event and trace-span chunks. Until
 //     then, retrieve_log_chunks called with either source type
 //     simply returns zero chunks for that corpus — which is the
 //     correct behaviour: the strategy's goldens already cover the
@@ -39,10 +37,9 @@
 // is never reached in practice — defence in depth in case a future
 // edit accidentally adds a write tool.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → query_trace_window delegates to a
+//   - query_trace_window delegates to a
 //     narrow TraceWindowSource read interface satisfied at boot by
 //     a deterministic empty source (the operator-facing log surface
 //     is stream-only — there is no historical log persistence
@@ -50,13 +47,12 @@
 //     the F7 rag.Retriever (the single canonical retrieval entry
 //     point).
 //
-//   - "the LLM never writes raw SQL" → tools have no DB handle.
+//   - Tools have no DB handle.
 //     The envelope-building math is pure Go on the typed
 //     TraceWindowEnvelope struct the source returns.
 //
-//   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; both tools are pure reads. The
-//     existing log-stream surface is the only operator-facing
+//   - No save_* / update_* / delete_* tool exists; both tools are pure
+//     reads. The existing log-stream surface is the only operator-facing
 //     surface; the AI tool never touches it.
 //
 //   - Privacy: log lines are operator-authored / system-emitted
@@ -72,7 +68,7 @@
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant or arbitrary string is refused), so a
 // confused LLM that asks the assistant to search e.g. "user_note"
-// cannot accidentally expose a corpus the slice did not enumerate.
+// cannot accidentally expose a corpus this feature did not enumerate.
 
 package summary
 
@@ -88,28 +84,22 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
-// logTraceSourceLogEvent is the source-type string reserved by the
-// slice prompt for the future per-window log-event embedding
-// corpus. Intentionally NOT promoted to a rag.Source* constant
-// because adding to that package widens the global F7 contract
-// beyond this slice's mandate. When the future indexer slice
-// lands, it should promote this string to rag.SourceLogEvent in
-// one place.
+// logTraceSourceLogEvent reserves the future per-window log-event
+// embedding corpus. It is intentionally not promoted to a rag.Source*
+// constant until the indexer exists, because that would widen the
+// global F7 contract prematurely.
 const logTraceSourceLogEvent = "log_event"
 
-// logTraceSourceTraceSpan is the source-type string reserved by
-// the slice prompt for the future per-window trace-span embedding
-// corpus. Same forward-compatibility rationale as
-// logTraceSourceLogEvent.
+// logTraceSourceTraceSpan reserves the future per-window trace-span
+// embedding corpus for the same reason as logTraceSourceLogEvent.
 const logTraceSourceTraceSpan = "trace_span"
 
 // logTraceAllowedSourceTypes is the per-feature allowlist of
 // source-type strings the log-trace-summarization strategy may
 // retrieve over. Any other source type passed via the LLM's typed
-// input is refused at validation time — the slice prompt
-// explicitly enumerates these two corpora and a future slice that
-// adds a new source must add it here AND extend the strategy's
-// system prompt + goldens, not silently widen.
+// input is refused at validation time. New source types must be added
+// here and reflected in the strategy's system prompt and goldens, not
+// silently widened.
 //
 // Kept in lex order so error messages list a stable allowed-set.
 var logTraceAllowedSourceTypes = []string{
@@ -415,9 +405,8 @@ type TraceWindowEnvelope struct {
 // In tests we substitute deterministic fakes so the tool unit
 // tests stay hermetic.
 //
-// The interface MUST stay read-only — adding a Save / Update
-// method here would defeat the read-only contract that ADR-015 §I3
-// + the slice prompt mandate.
+// The interface MUST stay read-only; adding a Save or Update method
+// would defeat the ADR-015 §I3 contract.
 type TraceWindowSource interface {
 	// TraceWindow returns the deterministic envelope describing
 	// the window (fromUnix, toUnix, vehicleID). vehicleID == 0
@@ -566,12 +555,9 @@ type LogTraceSummarizerSources struct {
 	TraceWindow TraceWindowSource
 }
 
-// RegisterLogTraceSummarizerTools installs the
-// log-trace-summarization slice's tools on r. Called from
-// router.go AFTER the Phase-50 / 0044 signal-explorer-nl-filter
-// registration so the registry's alphabetical Names list continues
-// to grow deterministically without disturbing earlier
-// registrations or any builtin-names pin tests.
+// RegisterLogTraceSummarizerTools installs the log-trace-summarization tools.
+// Registration order is stable so the registry's alphabetical Names list
+// grows deterministically without disturbing existing pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first

@@ -1,5 +1,3 @@
-// Phase-50 / 0043 — S2 Data repair suggestions.
-//
 // Tool tests for draft_data_repair_plan + validate_data_repair_plan.
 // Both tools are pure functions over input + scope context +
 // DataRepairPlanValidator interface; the tests stub the validator

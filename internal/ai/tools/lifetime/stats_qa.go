@@ -1,6 +1,4 @@
-// Phase-50 / 0041 — X2 Lifetime stats Q&A.
-//
-// lifetime_stats_qa.go ships TWO new read-only tools:
+// Lifetime stats Q&A exposes two read-only tools:
 //
 //   - `query_lifetime_stats` — typed envelope derived from the
 //     SAME deterministic api.ComputeLifetimeStats helper that backs
@@ -12,13 +10,13 @@
 //     achievements with progress) is identical to what the chart
 //     and metric cards on /lifetime-stats render.
 //
-//   - `retrieve_analytics_chunks` — a thin wrapper over the F7
+//   - `retrieve_analytics_chunks` — a thin wrapper over the RAG
 //     rag.Retriever scoped to the calling user_subject, restricted
-//     to the slice's per-feature source-type allowlist
+//     to this feature's source-type allowlist
 //     {analytics_lifetime, drive_summary, charge_session}.
-//     drive_summary and charge_session are wired into the F7
-//     indexer today (slice 0008); analytics_lifetime is reserved
-//     by string for forward-compatibility — a future slice will
+//     drive_summary and charge_session are wired into the RAG
+//     indexer today; analytics_lifetime is reserved by string for
+//     forward-compatibility — future work will
 //     index per-vehicle lifetime-stat rollup chunks. Until then,
 //     retrieve_analytics_chunks called with analytics_lifetime in
 //     source_types simply returns zero chunks for that corpus —
@@ -31,14 +29,14 @@
 // is never reached in practice — defence in depth in case a future
 // edit accidentally adds a write tool.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → query_lifetime_stats delegates to
 //     a narrow LifetimeStatsSource read interface satisfied at boot
 //     by *api.AILifetimeStatsSource which calls the SAME shared
 //     api.ComputeLifetimeStats helper that backs the baseline
-//     handler. retrieve_analytics_chunks delegates to the F7
+//     handler. retrieve_analytics_chunks delegates to the RAG
 //     rag.Retriever (the single canonical retrieval entry point).
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle.
@@ -46,7 +44,7 @@
 //     LifetimeStatsResult struct the helper already returns.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; both tools are pure reads.
+//     tool exists here; both tools are pure reads.
 //
 //   - Privacy: lifetime stats fields are aggregate and contain NO
 //     locations, addresses, or place names (only timestamps,
@@ -59,7 +57,7 @@
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant is refused), so a confused LLM that
 // asks the assistant to search e.g. "user_note" cannot accidentally
-// expose a corpus the slice did not enumerate.
+// expose a corpus this feature did not enumerate.
 
 package lifetime
 
@@ -77,19 +75,18 @@ import (
 )
 
 // lifetimeStatsSourceAnalyticsLifetime is the source-type string
-// reserved by the slice prompt for the future per-vehicle lifetime-
+// reserved for the future per-vehicle lifetime-
 // stats rollup embedding corpus. Intentionally NOT exported as a
 // rag.Source* constant because adding to that package widens the
-// global F7 contract beyond this slice's mandate. When the future
-// indexer slice lands, it should promote this string to
+// global RAG contract beyond this feature's mandate. When the future
+// indexer lands, it should promote this string to
 // rag.SourceAnalyticsLifetime in one place.
 const lifetimeStatsSourceAnalyticsLifetime = "analytics_lifetime"
 
 // lifetimeStatsAllowedSourceTypes is the per-feature allowlist of
 // source-type strings the lifetime-stats-qa strategy may retrieve
 // over. Any other source type passed via the LLM's typed input is
-// refused at validation time — the slice prompt explicitly
-// enumerates these three corpora and a future slice that adds a
+// refused at validation time. A future feature that adds a
 // new source must add it here AND extend the strategy's system
 // prompt + goldens, not silently widen.
 //
@@ -162,7 +159,7 @@ type retrievedAnalyticsChunk struct {
 	Score      float32 `json:"score"`
 }
 
-// retrieveAnalyticsChunks is the read-only tool that calls the F7
+// retrieveAnalyticsChunks is the read-only tool that calls the RAG
 // retriever for the lifetime-stats Q&A domain. It is the OPTIONAL
 // secondary tool the LLM may call (per the strategy's system prompt)
 // after query_lifetime_stats, so the answer is grounded FIRST in
@@ -172,10 +169,8 @@ type retrieveAnalyticsChunks struct {
 	r rag.Retriever
 }
 
-// Name implements [Tool].
 func (t *retrieveAnalyticsChunks) Name() string { return "retrieve_analytics_chunks" }
 
-// Description implements [Tool].
 func (t *retrieveAnalyticsChunks) Description() string {
 	return "Find the top-k nearest chunks to a natural-language query across the calling user's " +
 		"analytics-lifetime / drive-summary / charge-session history via the F7 RAG retriever. " +
@@ -184,7 +179,6 @@ func (t *retrieveAnalyticsChunks) Description() string {
 		"Returns {chunks: [{source_type, source_id, chunk_idx, text, score}]}; an empty list means no match — DO NOT fabricate a drive or charge event to fill the void."
 }
 
-// InputSchema implements [Tool].
 func (t *retrieveAnalyticsChunks) InputSchema() json.RawMessage {
 	return tools.CachedSchema(retrieveAnalyticsChunksInput{})
 }
@@ -195,12 +189,11 @@ func (t *retrieveAnalyticsChunks) OutputSchema() json.RawMessage { return nil }
 // Mutates implements [Tool]. READ-only.
 func (t *retrieveAnalyticsChunks) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty.
 func (t *retrieveAnalyticsChunks) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator,
 // then enforces the per-feature source-type allowlist that the
-// validator's `oneof` tag cannot express for slice fields.
+// validator's `oneof` tag cannot express for slices.
 func (t *retrieveAnalyticsChunks) Validate(raw json.RawMessage) (any, error) {
 	v, err := tools.ValidateStruct[retrieveAnalyticsChunksInput](raw)
 	if err != nil {
@@ -336,9 +329,8 @@ type LifetimeStatsAchievement struct {
 // api.ComputeLifetimeStats); in tests we substitute deterministic
 // fakes so the tool unit tests stay hermetic.
 //
-// The interface MUST stay read-only — adding a Save / Update method
-// here would defeat the read-only contract that ADR-015 §I3 + the
-// slice prompt mandate.
+// The interface MUST stay read-only; adding a Save or Update method
+// here would defeat the ADR-015 §I3 contract.
 type LifetimeStatsSource interface {
 	// LifetimeStats returns the deterministic lifetime envelope
 	// for vehicleID. Implementations SHOULD call the SAME shared
@@ -362,10 +354,8 @@ type queryLifetimeStats struct {
 	src LifetimeStatsSource
 }
 
-// Name implements [Tool].
 func (t *queryLifetimeStats) Name() string { return "query_lifetime_stats" }
 
-// Description implements [Tool].
 func (t *queryLifetimeStats) Description() string {
 	return "Return the SAME deterministic lifetime-stats envelope the canonical baseline " +
 		"GET /api/v1/analytics/lifetime handler serves for ONE vehicle. " +
@@ -380,7 +370,6 @@ func (t *queryLifetimeStats) Description() string {
 		"envelope is the ground truth for any answer you produce — DO NOT recompute or contradict the figures."
 }
 
-// InputSchema implements [Tool].
 func (t *queryLifetimeStats) InputSchema() json.RawMessage {
 	return tools.CachedSchema(queryLifetimeStatsInput{})
 }
@@ -391,7 +380,6 @@ func (t *queryLifetimeStats) OutputSchema() json.RawMessage { return nil }
 // Mutates implements [Tool]. Read-only.
 func (t *queryLifetimeStats) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty.
 func (t *queryLifetimeStats) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
@@ -431,8 +419,8 @@ type LifetimeStatsQASources struct {
 	LifetimeStats LifetimeStatsSource
 }
 
-// RegisterLifetimeStatsQATools installs the lifetime-stats-qa
-// slice's tools on r. Called from router.go AFTER
+// RegisterLifetimeStatsQATools installs the lifetime-stats-qa tools
+// on r. Called from router.go after
 // RegisterPeriodCompareNarrationTools so the registry's alphabetical
 // Names list continues to grow deterministically without disturbing
 // earlier registrations or any builtin-names pin tests.

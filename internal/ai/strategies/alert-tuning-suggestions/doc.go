@@ -1,4 +1,4 @@
-// Package alerttuningsuggestions is part of the TeslaSync adapter layer.
+// Package alerttuningsuggestions implements the alert-tuning AI strategy.
 //
 // Layer: adapter
 package alerttuningsuggestions

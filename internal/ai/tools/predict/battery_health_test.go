@@ -1,5 +1,3 @@
-// Phase-50 / 0027 — C2 Battery health forecast narrative.
-//
 // Unit tests for the query_battery_health_forecast tool. The tool
 // wraps a narrow [BatteryHealthForecaster] port; tests substitute a
 // deterministic fake so the unit tests stay hermetic.
@@ -46,8 +44,8 @@ func TestQueryBatteryHealthForecast_Name(t *testing.T) {
 }
 
 // TestQueryBatteryHealthForecast_PropOnlyContract pins the
-// read-only metadata. ADR-015 §I3 + the slice prompt mandate
-// read-only for this slice.
+// read-only metadata. ADR-015 §I3 requires this tool to remain
+// read-only.
 func TestQueryBatteryHealthForecast_PropOnlyContract(t *testing.T) {
 	t.Parallel()
 	tool := &queryBatteryHealthForecast{}

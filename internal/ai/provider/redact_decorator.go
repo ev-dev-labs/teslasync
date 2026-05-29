@@ -34,7 +34,7 @@ type PolicyResolver func(ctx context.Context) (redact.Policy, bool)
 //     consumes that meta when persisting the ai_call_log row.
 //
 // nil resolver is allowed (acts as a passthrough) so a build that
-// disables F8 via wiring has zero overhead.
+// disables redaction wiring has zero overhead.
 func WithRedaction(resolver PolicyResolver) Decorator {
 	return func(p Provider) Provider {
 		if resolver == nil {

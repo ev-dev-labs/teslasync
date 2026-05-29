@@ -1,5 +1,3 @@
-// Phase-50 / 0054 — P3 Helix safety setting explainer.
-//
 // Unit tests for the query_safety_settings Tool. The tools.Tool wraps
 // a SafetySettingsSource port (production adapter wraps the
 // canonical SettingsRepo); the test substitutes a hermetic fake

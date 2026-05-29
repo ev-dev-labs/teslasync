@@ -1,11 +1,10 @@
-// Package signalexplorernlfilter is the Phase-50 / 0044 S3 strategy
-// for the LLM-backed signal-explorer-nl-filter surface.
+// Package signalexplorernlfilter defines the LLM-backed signal-explorer-nl-filter strategy.
 //
 // The strategy declares:
 //
 //   - the system prompt that frames the surface as a propose-only
 //     SignalFilter drafter: produce a typed SignalFilter DTO via
-//     the F4 tools constrained to the per-vehicle signal catalog
+//     tools constrained to the per-vehicle signal catalog
 //     the handler installs server-side; never edit URL state; never
 //     fetch history rows; refuse cross-vehicle requests; refuse to
 //     propose a signal name that is not in the in-scope catalog;
@@ -26,8 +25,7 @@
 //     draft envelope. Used by the LLM to confirm a draft is
 //     acceptable before narrating it to the user.
 //
-//   - the redaction policy (`PolicyChatbot`) which the slice
-//     prompt mandates ("Allowed classes: none; vehicle identifiers
+//   - the redaction policy (`PolicyChatbot`) which keeps vehicle identifiers
 //     flow through tools and query DTOs"): VIN, lat/long,
 //     addresses, place names, vehicle-name, AND every other PII
 //     class remain tagged via round-trip markers so a leaked
@@ -187,12 +185,12 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
+// PolicyChatbot wrapped through the strategy redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyChatbot from
+// Policy contract: "Policy: PolicyChatbot from
 // internal/ai/redact/policies.go. Allowed classes: none; vehicle
 // identifiers flow through tools and query DTOs. Round-trip
 // required: no." PolicyChatbot's deny-by-default stance keeps

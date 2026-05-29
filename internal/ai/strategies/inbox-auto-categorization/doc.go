@@ -1,4 +1,4 @@
-// Package inboxautocategorization is part of the TeslaSync adapter layer.
+// Package inboxautocategorization implements the inbox categorization AI strategy.
 //
 // Layer: adapter
 package inboxautocategorization

@@ -1,4 +1,4 @@
-// Phase-50 / 0034 — A1 Alert tuning suggestions.
+// Alert tuning suggestion tool tests.
 //
 // Tool tests for draft_alert_rule_patch. The tool is a pure
 // function over the input + AlertTuningSource port; the tests
@@ -48,10 +48,7 @@ func (s *stubAlertTuningSource) LoadFiringHistory(_ context.Context, ruleID int6
 	return s.history, s.loadHistoryErr
 }
 
-// helper — ptrFloat64 was a shared route_efficiency_test.go helper
-// in the flat-parent ai/tools package. Inlined here after R6.7 carve
-// (test helpers don't cross subpkg boundaries; tiny one-liner stays
-// local rather than promoting to internal/ai/tools/toolstest).
+// ptrFloat64 stays local because test helpers do not cross subpackage boundaries.
 func ptrFloat64(v float64) *float64 { return &v }
 func ptrInt(v int) *int             { return &v }
 
@@ -507,7 +504,7 @@ func TestDraftAlertRulePatch_ContractMetadata(t *testing.T) {
 // TestRegisterAlertTuningSuggestionsTools proves the registrar
 // installs draft_alert_rule_patch on the registry. We do NOT
 // assert the registration of validate_alert_rule — that's
-// installed by RegisterAlertBuilderTools (the N1 slice) and
+// installed by RegisterAlertBuilderTools and
 // the dispatcher resolves it from the same shared registry.
 func TestRegisterAlertTuningSuggestionsTools(t *testing.T) {
 	t.Parallel()

@@ -1,6 +1,4 @@
-// Phase-50 / 0059 — PU3 Natural-language dashboard composer.
-//
-// nl_dashboard_composer.go ships TWO new propose-only tools:
+// Natural-language dashboard composition exposes two propose-only tools:
 //
 //   - `draft_dashboard_layout`    — accept a typed
 //                                   DashboardLayoutDraft shape
@@ -39,13 +37,13 @@
 // out-of-scope panel name, the scope check refuses the call
 // before any out-of-catalog proposal can reach the SPA.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Route every mutation proposal through F4 tools and existing
-//     typed DTO validation. The LLM never writes raw SQL and never
-//     bypasses existing handlers." → both tools delegate the final
+//   - Every mutation proposal goes through typed tools and existing DTO
+//     validation. The LLM never writes raw SQL or bypasses existing
+//     handlers. Both tools delegate the final
 //     DashboardLayoutDraft shape check to a narrow
-//     [DashboardLayoutValidator] port. The tool ALSO enforces the
+//     [DashboardLayoutValidator] port. The tool also enforces the
 //     panel-name catalog scope, the slot-count bounds, and the
 //     overlap detector before any validator method runs.
 //
@@ -68,10 +66,6 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
-
-// ---------------------------------------------------------------------------
-// Per-request dashboard composer scope binding
-// ---------------------------------------------------------------------------
 
 // dashboardComposerScope is the value stored in context. Holds
 // the in-scope panel name set for the current request. A single
@@ -135,10 +129,6 @@ func DashboardComposerScopeFromContext(ctx context.Context) (panels []string, ok
 	return tableNamesSetToSortedSlice(scope.panels), true
 }
 
-// ---------------------------------------------------------------------------
-// Dashboard composer constants
-// ---------------------------------------------------------------------------
-
 // dashboardGridXMax is the rightmost x-coordinate Grafana allows
 // on a 24-column dashboard grid (x ∈ [0..23]).
 const dashboardGridXMax = 23
@@ -170,10 +160,6 @@ const dashboardMaxRationaleLen = 600
 // dashboardMaxTitleLen bounds the dashboard title length.
 const dashboardMaxTitleLen = 120
 
-// ---------------------------------------------------------------------------
-// Validator port + DashboardLayoutDraft DTO
-// ---------------------------------------------------------------------------
-
 // DashboardLayoutValidator is the narrow validation interface
 // the nl-dashboard-composer tools need. In production it is
 // satisfied by *api.AINLDashboardComposerValidator (a thin
@@ -184,7 +170,7 @@ const dashboardMaxTitleLen = 120
 //
 // The interface MUST stay validation-only — adding an Apply or
 // Execute method here would defeat the propose-only contract that
-// ADR-015 §I3 + the slice prompt mandate.
+// ADR-015 §I3 requires.
 type DashboardLayoutValidator interface {
 	// ValidateDashboardLayout reports whether the draft would be
 	// accepted by the canonical dashboard-layout contract.
@@ -246,10 +232,6 @@ type DashboardSlotGrid struct {
 	W int `json:"w"`
 	H int `json:"h"`
 }
-
-// ---------------------------------------------------------------------------
-// Typed tool input + output shapes
-// ---------------------------------------------------------------------------
 
 // dashboardLayoutInput is the typed input shape both tools
 // share. The dispatcher decodes the LLM's tool-call arguments
@@ -320,10 +302,6 @@ type dashboardLayoutOutput struct {
 	ValidationError string                `json:"validation_error,omitempty"`
 	Source          string                `json:"source"`
 }
-
-// ---------------------------------------------------------------------------
-// Shared scope + draft-shape checks
-// ---------------------------------------------------------------------------
 
 // buildDashboardLayoutDraft converts the typed input into a
 // *DashboardLayoutDraft with surface trimming + default gridPos
@@ -456,10 +434,6 @@ func rectanglesOverlap(a, b DashboardSlotGrid) bool {
 	return true
 }
 
-// ---------------------------------------------------------------------------
-// draft_dashboard_layout
-// ---------------------------------------------------------------------------
-
 // draftDashboardLayout is the propose-only tool that builds a
 // normalized + validated DashboardLayoutDraft for the dashboard
 // composer UI to render. It is the FIRST tool the LLM is
@@ -554,10 +528,6 @@ func (t *draftDashboardLayout) Execute(ctx context.Context, in any) (any, error)
 	return out, nil
 }
 
-// ---------------------------------------------------------------------------
-// validate_dashboard_layout
-// ---------------------------------------------------------------------------
-
 // validateDashboardLayoutTool is the propose-only tool that
 // runs the canonical validator over a typed DashboardLayoutDraft
 // shape and reports the verdict. It is the SECOND tool the LLM
@@ -630,10 +600,6 @@ func (t *validateDashboardLayoutTool) Execute(ctx context.Context, in any) (any,
 	return out, nil
 }
 
-// ---------------------------------------------------------------------------
-// Registration
-// ---------------------------------------------------------------------------
-
 // NLDashboardComposerSources bundles the narrow validator
 // interface RegisterNLDashboardComposerTools needs. Mirrors
 // [NLGrafanaPanelSources] but exposes only the surface the
@@ -649,8 +615,8 @@ type NLDashboardComposerSources struct {
 
 // RegisterNLDashboardComposerTools installs the
 // nl-dashboard-composer slice's tools on r. Called from
-// router.go AFTER the Phase-50 / 0058 nl-grafana-panel
-// registration so the registry's alphabetical Names list grows
+// router.go after the nl-grafana-panel registration so the registry's
+// alphabetical Names list grows
 // deterministically without disturbing earlier registrations or
 // any builtin-names pin tests.
 //

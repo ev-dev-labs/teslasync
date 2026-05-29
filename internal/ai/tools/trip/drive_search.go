@@ -1,10 +1,10 @@
-// Phase-50 / 0021 — D1 Natural-language drive search and replay.
+// Natural-language drive search and replay tools.
 //
-// drive_search.go ships TWO new read-only tools:
+// This file defines two read-only tools:
 //
 //   - `retrieve_drive_chunks` — accept a typed natural-language
 //     query + a small list of drive-domain source types and
-//     return the top-k nearest chunks via the F7 rag.Retriever
+//     return the top-k nearest chunks via rag.Retriever
 //     scoped to the calling user_subject.
 //   - `hydrate_drive_replay`  — accept a typed (source_type,
 //     source_id) reference and return a human-friendly envelope
@@ -22,11 +22,11 @@
 // narrative summary plus the replay anchor (replay_url) the
 // hydrator returns.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → retrieve_drive_chunks delegates to
-//     the F7 rag.Retriever (the single canonical retrieval entry
+//     rag.Retriever (the single canonical retrieval entry
 //     point); hydrate_drive_replay delegates to a narrow read
 //     interface satisfied at boot by an adapter wrapping the
 //     existing Drive read handler (no new SQL).
@@ -37,19 +37,18 @@
 //     HydrateOne.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; hydration is a pure read.
+//     tool exists here; hydration is a pure read.
 //
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant is refused), so a confused LLM that
 // asks the assistant to search e.g. "user_note" cannot accidentally
-// expose a corpus the slice did not enumerate.
+// expose a corpus outside the drive-search contract.
 //
-// Forward-compat note: the slice prompt enumerates three source
-// types — drive_summary, route_segment, location_summary. Only
-// drive_summary is wired into the F7 indexer today (see
+// Forward-compat note: the drive-search contract reserves three source
+// types: drive_summary, route_segment, and location_summary. Only
+// drive_summary is wired into the indexer today (see
 // internal/ai/rag/rag.go SourceDriveSummary). route_segment and
-// location_summary are reserved by string so a future indexer slice
-// can register them without re-touching the tool boundary. Until
+// location_summary are reserved by string so a future indexer can register them without re-touching the tool boundary. Until
 // that indexer ships, retrieve_drive_chunks called with
 // source_types=["route_segment"] or ["location_summary"] returns
 // zero chunks — which is the correct behaviour: the retriever
@@ -72,11 +71,9 @@ import (
 )
 
 // nlDriveSearchSourceRouteSegment / nlDriveSearchSourceLocationSummary
-// are the two source-type strings reserved by the slice prompt that
-// have no F7 indexer today. They are intentionally NOT exported as
+// are the two reserved source-type strings that have no indexer today. They are intentionally NOT exported as
 // rag.Source* constants because adding to that package widens the
-// global F7 contract beyond this slice's mandate. When a future
-// slice adds the indexer it should promote these strings to
+// global retrieval contract. When a future indexer adds support, it should promote these strings to
 // rag.SourceRouteSegment / rag.SourceLocationSummary in one place.
 const (
 	nlDriveSearchSourceRouteSegment    = "route_segment"
@@ -86,10 +83,7 @@ const (
 // nlDriveSearchAllowedSourceTypes is the per-feature allowlist of
 // source-type strings the nl-drive-search-replay strategy may
 // retrieve over. Any other source type passed via the LLM's typed
-// input is refused at validation time — the slice prompt explicitly
-// enumerates these three corpora and a future slice that adds a new
-// source must add it here AND extend the strategy's system prompt +
-// goldens, not silently widen.
+// input is refused at validation time. The drive-search contract enumerates these three corpora; new sources must update this allowlist, the strategy prompt, and goldens together.
 //
 // Kept in lex order so error messages list a stable allowed-set.
 var nlDriveSearchAllowedSourceTypes = []string{
@@ -166,8 +160,7 @@ type retrievedDriveChunk struct {
 	Score      float32 `json:"score"`
 }
 
-// retrieveDriveChunks is the read-only tool that calls the F7
-// retriever for the drive domain. It is the FIRST tool the LLM is
+// retrieveDriveChunks is the read-only tool that calls the retriever for the drive domain. It is the FIRST tool the LLM is
 // expected to call (per the strategy's system prompt).
 //
 // Execution: typed input → user_subject from ctx →
@@ -228,8 +221,7 @@ func (t *retrieveDriveChunks) Validate(raw json.RawMessage) (any, error) {
 }
 
 // Execute implements [Tool]. Resolves user_subject from the ctx the
-// AI handler installed via provider.WithSubject, then calls the F7
-// retriever. Returns a deterministic envelope with explicit JSON
+// AI handler installed via provider.WithSubject, then calls the retriever. Returns a deterministic envelope with explicit JSON
 // tags so the dispatcher's serialisation path is uniform across
 // runs.
 //
@@ -317,8 +309,7 @@ type HydratedDriveReplay struct {
 // Drive read handler. Tests substitute a deterministic fake.
 //
 // The interface MUST stay read-only — adding a Save / Update method
-// here would defeat the propose-only contract that ADR-015 §I3 + the
-// slice prompt mandate.
+// here would defeat the propose-only contract that the read-only contract mandates.
 type DriveReplayHydrator interface {
 	// HydrateOne resolves a (sourceType, sourceID) reference into
 	// a human-friendly HydratedDriveReplay. The userSubject
@@ -461,8 +452,7 @@ type DriveSearchSources struct {
 	Hydrator  DriveReplayHydrator
 }
 
-// RegisterDriveSearchTools installs the nl-drive-search-replay
-// slice's tools on r. Called from router.go AFTER RegisterHelpTools
+// RegisterDriveSearchTools installs the nl-drive-search-replay tools on r. Called from router.go AFTER RegisterHelpTools
 // so the registry's alphabetical Names list grows deterministically
 // without disturbing earlier registrations or the BuiltinNames pin
 // test.

@@ -1,4 +1,4 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering statistical model.
+// Charging-curve fingerprint clustering statistical model.
 //
 // charge_curve_clusters_test.go covers:
 //

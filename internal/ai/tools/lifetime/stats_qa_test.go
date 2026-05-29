@@ -1,4 +1,4 @@
-// Phase-50 / 0041 — X2 Lifetime stats Q&A.
+// Lifetime stats Q&A tool tests.
 //
 // Unit tests for the retrieve_analytics_chunks + query_lifetime_stats
 // tools. Both tools wrap narrow ports (rag.Retriever /
@@ -49,12 +49,12 @@ func (f *fakeAnalyticsRetriever) Retrieve(_ context.Context, subject, query stri
 	return f.out, nil
 }
 
-// Forget is a no-op for the test fake — the tools the slice
-// registers never call it. Required to satisfy [rag.Retriever].
+// Forget is a no-op for this fake; these tools never call it.
+// Required to satisfy [rag.Retriever].
 func (f *fakeAnalyticsRetriever) Forget(_ context.Context, _, _, _ string) error { return nil }
 
-// Index is a no-op for the test fake — the tools the slice
-// registers never call it. Required to satisfy [rag.Retriever].
+// Index is a no-op for this fake; these tools never call it.
+// Required to satisfy [rag.Retriever].
 func (f *fakeAnalyticsRetriever) Index(_ context.Context, _, _, _ string, _ []string) error {
 	return nil
 }

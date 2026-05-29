@@ -1,35 +1,9 @@
-// Phase-50 / 0036 — A3 Cross-rule conflict detection.
+// Unit tests cover cross-rule conflict detection and the read-only tools
+// that expose it to the AI layer.
 //
-// Unit tests for the cross-rule-conflict-detection tools and
-// the pure-functional structural conflict detector.
-//
-// Layered as:
-//
-//   1. Detector unit tests (DetectRuleConflicts) — exercise
-//      every conflict kind, every guard (skip disabled, skip
-//      different signal_name, skip non-overlapping vehicle
-//      scope, skip computed_metric kind), every metadata flag,
-//      and the canonical sort order. These run without IO and
-//      without the port; the detector is pure-functional.
-//
-//   2. vehicleScopesOverlap helper unit tests — pin the three
-//      cases (all+all, all+subset, subset+subset) explicitly so
-//      a future tweak to the helper surfaces here.
-//
-//   3. Numeric interval projection + overlap unit tests — pin
-//      the eight numeric ops (<, <=, >, >=, =, !=, between,
-//      outside) explicitly + the subsumption cases.
-//
-//   4. predicatesByteEqual unit tests — pin the nil-pointer
-//      semantics so a future edit doesn't quietly start
-//      treating nil and non-nil as equal.
-//
-//   5. queryAlertRules + detectRuleConflicts tool execution
-//      tests — exercise input validation (vehicle_id range,
-//      limit range, signal_name length, rule_ids dive),
-//      LoadRules port handoff (filters propagated end-to-end),
-//      empty result handling (status=no_rules / status=no_data
-//      / status=no_conflicts), and source attribution.
+// The suite pins detector behavior, vehicle-scope overlap, numeric interval
+// projection, nil predicate semantics, input validation, port handoff, empty
+// results, and source attribution.
 
 package diagnostic
 
@@ -221,9 +195,8 @@ func TestDetectRuleConflicts_OverlappingThresholdPartial(t *testing.T) {
 
 // TestDetectRuleConflicts_NonOverlappingNumeric pins that two
 // rules with truly disjoint numeric intervals produce ZERO
-// conflicts. `<10` vs `>20` must be clean (per the
-// rubber-duck critique's contradictory_operator cut: paired
-// boundary alerts are legitimate).
+// conflicts. `<10` vs `>20` must be clean because paired boundary alerts are
+// legitimate.
 func TestDetectRuleConflicts_NonOverlappingNumeric(t *testing.T) {
 	t.Parallel()
 	rules := []*alertmodel.AlertRule{

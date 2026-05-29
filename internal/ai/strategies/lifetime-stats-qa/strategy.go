@@ -1,6 +1,4 @@
-// Package lifetimestatsqa is the Phase-50 / 0041 X2 strategy for the
-// LLM-backed natural-language Q&A surface over a vehicle's lifetime
-// stats.
+// Package lifetimestatsqa implements natural-language Q&A over a vehicle's lifetime stats.
 //
 // The strategy declares:
 //
@@ -20,25 +18,20 @@
 //     baseline GET /api/v1/analytics/lifetime handler. The AI Q&A
 //     is grounded in the same numbers the LifetimeStatsPage chart
 //     and metric cards render; never a parallel re-implementation.
-//     No new SQL is added by this slice — refactoring the existing
-//     LifetimeHandler.GetLifetimeStats to expose the helper was a
-//     deliberate choice over duplicating the SQL/math here.
+//     The existing LifetimeHandler.GetLifetimeStats helper is reused
+//     deliberately instead of duplicating SQL or math here.
 //
-//     2. `retrieve_analytics_chunks` — F7 RAG retrieval over the
+//     2. `retrieve_analytics_chunks` — RAG retrieval over the
 //     per-feature source-type allowlist {analytics_lifetime,
 //     drive_summary, charge_session}. drive_summary and
-//     charge_session are wired by slice 0008's F7 indexer;
-//     analytics_lifetime is reserved by string for forward-
-//     compatibility (a future slice will index per-vehicle
-//     lifetime-stat rollup chunks). Until then, any source_types
-//     entry that includes analytics_lifetime simply returns zero
-//     additional chunks for that corpus — which is the correct
-//     behaviour: the strategy's goldens already cover the zero-
-//     matches narration;
+//     charge_session are indexed today; analytics_lifetime is
+//     reserved for future per-vehicle lifetime-stat rollup chunks.
+//     Until then, source_types entries that include
+//     analytics_lifetime return zero additional chunks, which the
+//     strategy's goldens already cover;
 //
-//   - the redaction policy (`PolicyChatbot`) which the slice prompt
-//     mandates ("Allowed classes: none; answers are grounded in
-//     aggregate tools and round-trip tags"): VIN, lat/long, addresses,
+//   - the redaction policy (`PolicyChatbot`), which allows no PII
+//     classes in cleartext: VIN, lat/long, addresses,
 //     place names, AND vehicle-name remain tagged via round-trip
 //     markers so a leaked transcript reveals nothing about where the
 //     user lives, works, or drives — the LLM never sees the cleartext
@@ -49,8 +42,8 @@
 // `internal/api/ai_lifetime_stats_qa_handler.go` which builds a
 // dispatcher, a stream.Writer (SSE), and runs a one-shot generation
 // loop scoped to the user's question. The non-AI baseline rendered
-// by the SPA route /lifetime-stats (and its alias /analytics/lifetime
-// added by slice 0041) — hero card, key stats grid, achievements
+// by the SPA route /lifetime-stats (and its alias /analytics/lifetime)
+// — hero card, key stats grid, achievements
 // gallery, fun-facts cards, personal-records panel, ownership
 // timeline — is unchanged. The deterministic lifetime stats model
 // remains the canonical baseline; off-mode users never see the AI
@@ -146,7 +139,7 @@ const SystemPrompt = `You are the TeslaSync lifetime-stats Q&A assistant. ` +
 // database write path. query_lifetime_stats composes the SAME
 // api.ComputeLifetimeStats helper that backs the canonical baseline
 // GET /api/v1/analytics/lifetime handler; retrieve_analytics_chunks
-// goes through the F7 retrieval entry point and only issues SELECTs
+// goes through the RAG retrieval entry point and only issues SELECTs
 // against the embeddings table. The dispatcher's deny-all confirm
 // gate is therefore never reached in practice — defence in depth in
 // case a future edit accidentally adds a write tool.
@@ -196,7 +189,7 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "preferred greeting" or
 // "preferred unit display" preference snippet could be injected.
-// Today's slice keeps Context empty so the dispatcher's behaviour
+// Context stays empty so the dispatcher's behaviour
 // is fully determined by [System] + History + the dispatcher's
 // auto-installed UserPrefs system message.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
@@ -204,19 +197,15 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
+// PolicyChatbot wrapped through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Allowed classes: none; answers are grounded
-// in aggregate tools and round-trip tags. Round-trip required:
-// yes." PolicyChatbot is the deny-by-default policy from
-// internal/ai/redact/policies.go (Allow=nil, Mode=ModeRedactedTags)
-// — the same policy the U1 chatbot-llm strategy uses. Kept by
-// reference (not duplicated as a per-feature constructor) because
-// the slice prompt's "none" allow-list IS PolicyChatbot's contract;
-// a future per-feature change would require its own constructor.
+// PolicyChatbot is the deny-by-default policy from
+// internal/ai/redact/policies.go (Allow=nil, Mode=ModeRedactedTags),
+// matching this feature's no-cleartext-PII contract. A future
+// per-feature allow-list would need its own constructor.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyChatbot())
 }

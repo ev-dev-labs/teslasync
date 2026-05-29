@@ -1,5 +1,4 @@
-// Package voicemode is the Phase-50 / 0055 V1 strategy for the
-// Helix voice-mode surface.
+// Package voicemode implements the Helix voice-mode surface.
 //
 // The strategy declares:
 //
@@ -124,9 +123,7 @@ const SystemPrompt = `You are Helix in voice mode, the TeslaSync fleet assistant
 //
 // The whitelist is intentionally NARROW — voice-mode wraps the
 // chatbot streaming surface through ONE typed tool that bundles
-// both chat history and the vehicle snapshot. The slice prompt
-// mandates this exact list: "Implement or register only the
-// tools listed for this feature: stream_chatbot_response."
+// both chat history and the vehicle snapshot.
 //
 // The tool is read-only / pure aggregator: the dispatcher's
 // deny-all confirm gate is therefore never reached in practice —
@@ -178,21 +175,16 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
+// PolicyChatbot wrapped through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyChatbot from
-// internal/ai/redact/policies.go. Allowed classes: none; voice
-// transcript follows chatbot redaction and no raw audio leaves
-// browser. Round-trip required: yes." PolicyChatbot's Allow=nil +
-// Mode=ModeRedactedTags satisfies that contract: every PII class
-// is tagged round-trip BEFORE the message reaches the provider so
-// a leaked transcript reveals nothing. The browser is the audio
-// boundary — only the transcribed TEXT crosses the network — so
-// the redaction policy operates on the same text-shaped messages
-// the text chatbot exchanges.
+// PolicyChatbot's Allow=nil + Mode=ModeRedactedTags means every PII
+// class is tagged round-trip before the message reaches the provider.
+// The browser is the audio boundary — only transcribed text crosses
+// the network — so the redaction policy operates on the same
+// text-shaped messages the text chatbot exchanges.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyChatbot())
 }

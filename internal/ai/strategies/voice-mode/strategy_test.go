@@ -1,5 +1,3 @@
-// Phase-50 / 0055 — V1 Helix voice mode.
-//
 // Unit tests for the voice-mode Strategy. The Strategy is a pure
 // value (no internal state, no IO) so the tests are tight: pin
 // the feature ID + system prompt + tool whitelist + redaction
@@ -82,9 +80,7 @@ func TestStrategy_System(t *testing.T) {
 // tools block (the eval harness loads tool names from the YAML;
 // the dispatcher loads them from here).
 //
-// The slice prompt mandates exactly one tool — "Implement or
-// register only the tools listed for this feature:
-// stream_chatbot_response." — so the whitelist length is a
+// The strategy allows exactly one tool, so the whitelist length is a
 // contract pin.
 func TestStrategy_Tools(t *testing.T) {
 	t.Parallel()
@@ -103,9 +99,8 @@ func TestStrategy_Tools(t *testing.T) {
 	}
 }
 
-// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy
-// — a caller that mutates the slice does NOT leak the mutation
-// back into the strategy. Dispatcher safety relies on this.
+// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy.
+// Mutating the returned slice must not affect the strategy.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -156,19 +151,14 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands
-// the dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
+// the dispatcher PolicyChatbot through the redaction adapter.
 // PolicyChatbot's Allow=nil deny-by-default policy means EVERY
 // PII class is tagged round-trip before the message reaches the
 // provider — voice transcripts may contain vehicle nicknames,
 // addresses, or other PII the user spoke aloud; the round-trip
 // ModeRedactedTags policy strips them before the provider sees
 // the message and restores them in the user-visible reply.
-//
-// The slice prompt explicitly mandates:
-//
-//	"Policy:              PolicyChatbot from internal/ai/redact/policies.go
-//	 Allowed classes:     none; voice transcript follows chatbot redaction and no raw audio leaves browser
-//	 Round-trip required: yes"
+
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

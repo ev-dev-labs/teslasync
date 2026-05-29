@@ -1,8 +1,6 @@
-// Package forecast carves the cost/period/temperature-impact narration tool
-// family out of the parent internal/ai/tools/ flat package per ADR-011 §3
-// (bounded-context subpackages) + ADR-015-amend (AI subsystem in scope for
-// Phase R, file-move-only). The three tools share a "compose deterministic
-// analytics → typed envelope → LLM narrates over it" pattern and a strict
+// Package forecast contains the cost, period comparison, and temperature-impact
+// narration tools. The tools share a "compose deterministic analytics → typed
+// envelope → LLM narrates over it" pattern and a strict
 // Layer: domain charter:
 //
 //	cost.go               — RegisterCostForecastNarrationTools + CostForecast*

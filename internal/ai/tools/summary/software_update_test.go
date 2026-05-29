@@ -1,18 +1,6 @@
-// Phase-50 / 0051 — M3 Software update changelog summarizer.
-//
-// Unit tests for the retrieve_update_notes +
-// query_vehicle_software tools. Both tools wrap narrow ports
-// (rag.Retriever / VehicleSoftwareSource); tests substitute
-// deterministic fakes so the unit tests stay hermetic.
-//
-// The query_vehicle_software tool also enforces the per-request
-// scope binding the slice prompt's security model relies on
-// (defence against prompt-injection exfiltration via
-// operator-authored description / version strings). The
-// scope-binding tests pin the contract: missing scope ⇒
-// refuse; mismatched scope ⇒ refuse; matched scope ⇒ delegate.
-// A future edit that bypasses any of these gates would surface
-// here.
+// Unit tests for the retrieve_update_notes and query_vehicle_software tools.
+// They use deterministic fakes for the RAG retriever and software source, and
+// pin the request-scope checks that prevent cross-vehicle exfiltration.
 
 package summary
 
@@ -110,7 +98,7 @@ func TestRetrieveUpdateNotes_InputSchemaNonEmpty(t *testing.T) {
 // security contract: the LLM cannot ask the retriever for
 // another vehicle's chunks because the tool's input shape does
 // NOT accept vehicle_id. Per-vehicle separation is handled by
-// the F7 retriever's per-subject filter (subjects scoped to
+// the retriever's per-subject filter (subjects scoped to
 // the calling operator's session). A future edit that widens
 // the input would silently expose a prompt-injection
 // exfiltration surface; this test surfaces it.
@@ -159,9 +147,8 @@ func TestRetrieveUpdateNotes_Validate_RejectsUnknownSourceType(t *testing.T) {
 }
 
 // TestRetrieveUpdateNotes_Validate_RejectsMaintenanceEvent guards
-// against a copy-paste mistake from the sister slice 0049
-// predictive-maintenance (whose allowlist includes
-// maintenance_event) silently widening this slice's surface.
+// against a copy-paste mistake from the predictive-maintenance tools (whose allowlist includes
+// maintenance_event) silently widening this feature's surface.
 func TestRetrieveUpdateNotes_Validate_RejectsMaintenanceEvent(t *testing.T) {
 	t.Parallel()
 	tool := &retrieveUpdateNotes{}

@@ -1,13 +1,6 @@
-// Phase-50 / 0050 — M2 TCO narration.
+// query_tco_summary is the read-only tool the TCO narration strategy may call.
 //
-// tco_summary.go ships ONE new read-only tool:
-// `query_tco_summary`. The tool is the single F4 surface the
-// tco-narration strategy is allowed to call (see
-// internal/ai/strategies/tco-narration/strategy.go's allowedTools
-// whitelist).
-//
-// Design constraints (from the slice prompt + slice 0050
-// rubber-duck critique):
+// Design constraints:
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL
 //     written.**" The production adapter (*api.AITCOSummarizer)
@@ -15,13 +8,11 @@
 //     existing GET /api/v1/analytics/tco handler now also calls
 //     — never a parallel re-implementation. Refactoring the
 //     canonical handler to expose the helper was a deliberate
-//     choice over duplicating the SQL/math in this slice
-//     (rubber-duck blocking finding #1, mirroring the slice 0029
-//     cost-forecast precedent).
+//     choice over duplicating the SQL/math here.
 //
 //   - The tool is a READ — Mutates() returns false. The
 //     dispatcher's deny-all confirm gate refuses anything
-//     mutating; this slice ships zero mutating tools.
+//     mutating; this package registers no mutating tools.
 //
 //   - One tool, one strategy: the tool is registered on the
 //     process-wide tools.Registry alongside the 13 builtins so a
@@ -36,12 +27,11 @@
 // because the SAME api.ComputeTCOSummary helper backs both — the
 // AI narrator quotes the SAME numbers the chart renders.
 //
-// Phase-48 SI-canonical note: the canonical /api/v1/analytics/tco
-// wire shape predates the SI-canonical migration. The legacy
-// snake_case keys (`total_wh`, `total_km`, `cost_per_km_ev`,
-// `cost_per_km_ice`, `gas_efficiency_mpg`, `base_cost_per_kwh`)
-// are mirrored here for chart-parity ONLY — this slice does NOT
-// add new legacy-unit fields beyond the existing endpoint shape.
+// The canonical /api/v1/analytics/tco wire shape predates the SI-canonical
+// migration. The legacy snake_case keys (`total_wh`, `total_km`,
+// `cost_per_km_ev`, `cost_per_km_ice`, `gas_efficiency_mpg`,
+// `base_cost_per_kwh`) are mirrored here for chart parity only; this
+// tool does not add fields beyond the existing endpoint shape.
 // The narration uses `useUnits()` on the React side for any
 // display-unit conversion the user has configured; the typed
 // envelope here keeps the snake_case keys the chart already
@@ -84,10 +74,8 @@ type TCOMonthlyEntry struct {
 // doesn't already compute (the shared api.ComputeTCOSummary
 // helper is invoked by both).
 //
-// The honest-scope fields (assumptions, currency) were added per
-// the slice 0050 rubber-duck critique so the narrator can
-// disclose the deterministic envelope's analytical limits without
-// guessing.
+// Assumptions and currency let the narrator disclose the deterministic
+// envelope's analytical limits without guessing.
 type TCOSummary struct {
 	VehicleID                  int64             `json:"vehicle_id"`
 	Currency                   string            `json:"currency,omitempty"`
@@ -125,9 +113,8 @@ type TCOSummary struct {
 // tests we substitute deterministic fakes so the tool unit tests
 // stay hermetic.
 //
-// The interface MUST stay read-only — adding a Save / Update
-// method here would defeat the read-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// The interface MUST stay read-only; adding a Save or Update method
+// would defeat the ADR-015 §I3 contract.
 type TCOSummarizer interface {
 	// SummarizeTCO runs the canonical deterministic
 	// total-cost-of-ownership aggregation for vehicleID and
@@ -244,11 +231,9 @@ type TCONarrationSources struct {
 	Summarizer TCOSummarizer
 }
 
-// RegisterTCONarrationTools installs the tco-narration slice's
-// tools on r. Called from router.go AFTER the prior tool
-// registrations so the registry's alphabetical Names list grows
-// deterministically without disturbing earlier registrations or
-// any builtin-names pin tests.
+// RegisterTCONarrationTools installs the tco-narration tools.
+// Registration order is stable so the registry's alphabetical Names
+// list grows deterministically without disturbing existing pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first

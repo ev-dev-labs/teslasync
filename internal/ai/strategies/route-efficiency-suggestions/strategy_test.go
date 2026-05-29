@@ -1,4 +1,4 @@
-// Phase-50 / 0023 — D3 Route-efficiency suggestions.
+// Route-efficiency suggestions strategy tests.
 //
 // Unit tests for the route-efficiency-suggestions Strategy. Mirrors
 // the shape of speed-profile-insights / drive-coaching /
@@ -105,8 +105,8 @@ func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 
 // TestStrategy_ToolsIncludesNoMutators asserts the whitelist is
 // READ-ONLY. Route-efficiency suggestions ship zero mutating tools
-// (per the slice prompt + ADR-015 — read-only state queries +
-// retrieval only). A future edit that accidentally adds a write
+// (ADR-015 — read-only state queries and retrieval only). A future
+// edit that accidentally adds a write
 // tool will fail this test before the dispatcher's confirm hook
 // protects the user.
 func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
@@ -125,7 +125,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs RAG-backed weather/route context ships
+// future feature that needs RAG-backed weather/route context ships
 // (today the retrieval is driven from the tool calls themselves).
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -141,12 +141,12 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyRouteEfficiencySuggestions proves the
 // strategy hands the dispatcher PolicyRouteEfficiencySuggestions
-// wrapped through the F4↔F8 adapter.
+// wrapped through the redaction adapter.
 // PolicyRouteEfficiencySuggestions allows ClassVehicleName so the
 // narration can name the user's car; every other PII class is
-// redacted to a round-trip tag. The slice prompt explicitly
-// mandates a PolicyDigest-shaped allow-list and "locations are
-// tagged and restored only to same user".
+// redacted to a round-trip tag. The strategy requires a
+// PolicyDigest-shaped allow-list, with locations restored only to
+// the same user.
 func TestStrategy_RedactionPolicyRouteEfficiencySuggestions(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -175,8 +175,8 @@ func TestStrategy_RedactionPolicyRouteEfficiencySuggestions(t *testing.T) {
 	}
 	// Defence-in-depth: the allow-list must NOT include lat/long
 	// or street addresses — the suggestions narrate the route by
-	// place name pair, not exact coordinates, and the slice prompt
-	// says "locations are tagged and restored only to same user".
+	// place name pair, not exact coordinates. Locations are tagged
+	// and restored only to the same user.
 	for _, c := range want.Allow {
 		switch c {
 		case redact.ClassLatLong, redact.ClassStreetAddr:

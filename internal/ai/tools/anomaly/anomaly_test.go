@@ -1,10 +1,8 @@
-// Phase-50 / 0014 — U4 Anomaly explanation narration.
+// Anomaly explanation narration tool tests.
 //
-// anomaly_test.go covers the new query_anomaly_context tool + the
-// RegisterAnomalyTools wiring. Mirrors the shape of year_review_test.go
-// (slice 0013) and digest_test.go (slice 0012). The fakeAnomaly source
-// is tiny; defined locally because no other tool in this package needs
-// AnomalySource.
+// These tests cover query_anomaly_context and RegisterAnomalyTools.
+// The fakeAnomaly source is local because no other tool in this package
+// needs AnomalySource.
 
 package anomaly
 

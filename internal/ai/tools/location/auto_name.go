@@ -1,6 +1,4 @@
-// Phase-50 / 0037 — G1 Auto-name unnamed locations.
-//
-// auto_name_unnamed_locations.go ships TWO new propose-only tools:
+// Auto-name unnamed locations exposes two propose-only tools:
 //
 //   - `draft_location_name`    — accept a location_id + an LLM-proposed
 //                                name and return a normalized + validated
@@ -23,10 +21,8 @@
 // case a future edit accidentally adds a write tool. The actual
 // location-name persistence flows through an explicit user
 // confirmation in the LocationsPage UI (the user reviews the draft
-// then SAVES IT THEMSELVES via the canonical baseline geofence /
-// notes form — out of scope for this slice's write surface; the
-// slice prompt mandates "explicit user confirmation"); the LLM has
-// no tool that writes.
+// then saves it via the canonical baseline geofence / notes form after
+// explicit confirmation); the LLM has no tool that writes.
 //
 // "Unnamed" interpretation: a *geomodel.VisitedLocation row is treated as
 // unnamed when its AddressName is empty, equals the literal "Unknown",
@@ -36,16 +32,12 @@
 // legitimately re-name an already-named location too (e.g. "Work" →
 // "Work — old building").
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Route every mutation proposal through F4 tools and existing
-//     typed DTO validation. The LLM never writes raw SQL and never
-//     bypasses existing handlers." → both tools delegate validation
-//     to LocationNameValidator (production-wired to
-//     *api.AILocationNameValidator, which mirrors the same trimming +
-//     length + control-character rules a future canonical save
-//     handler will enforce). A draft accepted here is byte-equivalent
-//     to a draft a future canonical save handler would accept.
+//   - Every mutation proposal flows through typed DTO validation. Both
+//     tools delegate validation to LocationNameValidator, production-wired
+//     to *api.AILocationNameValidator. A draft accepted here is
+//     byte-equivalent to a draft the canonical save handler would accept.
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle. The
 //     evidence envelope is built from a narrow LocationSource
@@ -54,9 +46,8 @@
 //     the by-ID lookup) — the same read surface the GET
 //     /api/v1/locations baseline handler already exposes.
 //
-//   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; the evidence is a pure read of
-//     existing aggregates.
+//   - No duplicate write paths: there is no save_*, update_*, or
+//     delete_* tool; evidence is a pure read of existing aggregates.
 //
 //   - Privacy: the LLM is shown the address_name string as a
 //     redaction-tagged value (the PolicyAutoNameUnnamedLocations
@@ -83,9 +74,8 @@ import (
 // *tripdb.VisitedLocationRepo with a by-ID drive lookup; tests
 // substitute deterministic fakes.
 //
-// The interface MUST stay read-only — adding a Save / Update method
-// here would defeat the propose-only contract that ADR-015 §I3 +
-// the slice prompt mandate.
+// The interface must stay read-only; adding Save or Update would defeat
+// the propose-only contract in ADR-015 §I3.
 type LocationSource interface {
 	// LoadVisitedLocation returns the visited-location aggregate
 	// for locationID, or (nil, error) if it does not exist or is
@@ -105,9 +95,8 @@ type LocationSource interface {
 // the same trimming + length rules a future canonical save handler
 // will enforce); tests substitute deterministic fakes.
 //
-// The interface MUST stay validation-only — adding a Save or Update
-// method here would defeat the propose-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// The interface must stay validation-only; adding Save or Update would
+// defeat the propose-only contract in ADR-015 §I3.
 type LocationNameValidator interface {
 	// ValidateLocationName reports whether proposed would be
 	// accepted by the canonical save path for loc. Returns nil
@@ -144,13 +133,12 @@ type locationNameDraftInput struct {
 // locationNameEvidence is the read-only context envelope the
 // draft_location_name tool returns alongside the validated draft.
 // The LLM is expected to ground its follow-up rationale in these
-// fields. Numeric units are SI-canonical (seconds for duration) per
-// Phase-48 — the frontend converts to user-preferred display units
-// at the render boundary.
+// fields. Numeric units are SI-canonical; the frontend converts to
+// user-preferred display units at the render boundary.
 type locationNameEvidence struct {
 	// CurrentAddressName is the geocoder's last-known label for
 	// this location. May be empty / "Unknown" / coord-shaped for
-	// the unnamed locations this slice targets; the LLM uses the
+	// the unnamed locations this tool targets; the LLM uses the
 	// presence/absence of this string to decide how aggressively
 	// to propose a renaming versus simply confirming the current
 	// label.
@@ -453,11 +441,9 @@ type AutoNameUnnamedLocationsSources struct {
 	Validator LocationNameValidator
 }
 
-// RegisterAutoNameUnnamedLocationsTools installs the
-// auto-name-unnamed-locations slice's tools on r. Called from
-// router.go AFTER the previous slice's tool registrations so the
-// registry's alphabetical Names list grows deterministically without
-// disturbing earlier registrations or any builtin-names pin tests.
+// RegisterAutoNameUnnamedLocationsTools installs the auto-name-unnamed-
+// locations tools on r. Router wiring keeps registration order
+// deterministic so builtin-name pin tests remain stable.
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first

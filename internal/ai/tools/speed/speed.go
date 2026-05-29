@@ -1,6 +1,4 @@
-// Phase-50 / 0022 — D2 Speed-profile insights.
-//
-// speed_profile.go ships TWO new read-only tools:
+// speed_profile.go ships two read-only tools:
 // `query_speed_profile` (SI aggregates plus a derived speed regime
 // classification from the *drivemodel.Drive row) and
 // `query_drive_context` (the drive's temporal + battery +
@@ -11,12 +9,12 @@
 // internal/ai/strategies/speed-profile-insights/strategy.go's
 // allowedTools whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." Both tools are reads — Mutates()
+//   - Tools must call existing typed handlers or services, not
+//     duplicate write paths. Both tools are reads — Mutates()
 //     returns false. The dispatcher's deny-all confirm gate refuses
-//     anything mutating; this slice ships zero mutating tools and
+//     anything mutating; this package ships zero mutating tools and
 //     adds nothing to the drive ingestion or aggregation pipeline.
 //
 //   - "No new SQL written." Both tools call the existing
@@ -39,8 +37,8 @@
 //     analytics handler (internal/api/speed_profile_handler.go,
 //     `CASE WHEN avg_speed_mps < 13.4112 THEN City ELSE …`) so the
 //     LLM uses the SAME canonical bucket the deterministic chart
-//     uses. Threshold values are SI-canonical from the Phase-48
-//     migration; a future change to one MUST update the other in
+//     uses. Threshold values are SI canonical; a future change to
+//     one MUST update the other in
 //     lockstep, enforced by the unit test
 //     TestQuerySpeedProfile_RegimeThresholdsMatchAnalytics.
 //
@@ -85,8 +83,8 @@
 //	  "has_route_coordinates": bool,         // true iff lat/lon endpoints are stored
 //	}
 //
-// All numeric speed/power/energy fields are SI canonical (Phase-48
-// contract). Derived `kwh_per_100km` / `*_kmh` / `*_mph` are
+// All numeric speed/power/energy fields are SI canonical. Derived
+// `kwh_per_100km` / `*_kmh` / `*_mph` are
 // dimensioned for human-readable narration but are still derived
 // from SI inputs; the frontend's useUnits() at the display boundary
 // reformats to mi/kWh or kWh/100mi for US users.
@@ -435,17 +433,17 @@ func buildDriveContext(d *drivemodel.Drive) map[string]any {
 	}
 
 	// Cabin temp + ended status — pass-through (already nullable).
-	// InsideTempAvgC is intentionally excluded: it's nil on every
-	// row by ADR-001 / Phase-42 (column dropped) and surfacing it
-	// would mislead the LLM about its availability.
+	// InsideTempAvgC is intentionally excluded: the column was
+	// dropped under ADR-001, and surfacing it would mislead the LLM
+	// about its availability.
 	out["outside_temp_avg_c"] = tools.DerefFloat64Ptr(d.OutsideTempAvgC)
 	out["outside_temp_avg_f"] = tools.CToFPtr(d.OutsideTempAvgC)
 	out["ended_status"] = tools.DerefStringPtr(d.EndedStatus)
 
 	// Privacy: presence-only flags. The actual strings + lat/lon
-	// are NEVER returned by this tool. The slice's redaction
-	// policy (ClassVehicleName only) is a second line of defence
-	// — this in-tool exclusion is the first.
+	// are NEVER returned by this tool. The redaction policy
+	// (ClassVehicleName only) is a second line of defence; this
+	// in-tool exclusion is the first.
 	out["has_start_address"] = d.StartAddress != nil && *d.StartAddress != ""
 	out["has_end_address"] = d.EndAddress != nil && *d.EndAddress != ""
 	out["has_route_coordinates"] = d.StartLat != nil && d.StartLon != nil && d.EndLat != nil && d.EndLon != nil
@@ -471,16 +469,11 @@ type SpeedProfileInsightsSources struct {
 	Drives tools.DriveSource
 }
 
-// RegisterSpeedProfileInsightsTools installs the
-// speed-profile-insights slice's tools on r. Called from router.go
-// AFTER Register12Builtins + RegisterDigestTools +
-// RegisterYearReviewTools + RegisterAnomalyTools +
-// RegisterAlertBuilderTools + RegisterAutomationBuilderTools +
-// RegisterSearchTools + RegisterDriveCoachingTools +
-// RegisterChargingDiagnosisTools + RegisterRagHelpTools +
-// RegisterNLDriveSearchReplayTools so the registry's alphabetical
-// Names list continues to grow deterministically without disturbing
-// the BuiltinNames pin test or any earlier registration.
+// RegisterSpeedProfileInsightsTools installs the speed-profile-insights
+// tools on r. Called from router.go after earlier tool registrations
+// so the registry's alphabetical Names list continues to grow
+// deterministically without disturbing the BuiltinNames pin test or
+// any earlier registration.
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.

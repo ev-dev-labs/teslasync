@@ -1,12 +1,6 @@
-// Phase-50 / 0053 — P2 Helix quiet-hours suggestion advisor.
-//
-// Unit tests for the quiet-hours-suggestion Strategy. Mirrors
-// the shape of pii-redaction-shared-exports' strategy_test.go
-// (the immediate precedent slice). The Strategy is a pure value
-// (no internal state, no IO) so the tests are tight: pin the
-// feature ID + system prompt + tool whitelist + redaction policy
-// shape so a future edit that breaks the contract surfaces here
-// before the dispatcher silently changes behaviour.
+// Unit tests for the quiet-hours-suggestion Strategy. They pin the
+// feature ID, system prompt, tool whitelist, and redaction policy so
+// contract changes fail before dispatcher behavior changes silently.
 
 package quiethourssuggestion
 
@@ -53,17 +47,12 @@ func TestStrategy_System(t *testing.T) {
 		"NEVER invent a timezone",
 		"NEVER invent a weekday set",
 		"NEVER propose disabling notifications entirely",
-		// Honest validation-required directive — slice 0053
-		// load-bearing rule. The narrator MUST refuse to
-		// produce a final recommendation when the validator
-		// returns ok=false and surface the validator's
-		// errors[] verbatim.
+		// The narrator must refuse a final recommendation when
+		// validation returns ok=false, then surface errors[] verbatim.
 		"if validate_quiet_hours_window returns ok=false you MUST REFUSE",
 		"surface the validator's errors[] verbatim",
-		// Honest "descriptive replay, not a forecast"
-		// disclosure — slice 0053 load-bearing rule. The
-		// phrase "based on your recent notification history"
-		// MUST appear in the narration.
+		// The narration must disclose that it describes recent
+		// notification history, not a forecast.
 		"based on your recent notification history",
 		"not a forecast of future traffic",
 		`The phrase "based on your recent notification history" MUST appear`,
@@ -148,7 +137,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-locale or
+// future version needs preferred-locale or
 // preferred-quiet-hours preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -164,14 +153,14 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyAlertBuilder proves the strategy
 // hands the dispatcher PolicyAlertBuilder wrapped through the
-// F4↔F8 adapter. PolicyAlertBuilder's Allow=nil deny-by-default
+// strategy redaction adapter. PolicyAlertBuilder's Allow=nil deny-by-default
 // policy means EVERY PII class (vehicle name included) is tagged
 // round-trip before the message reaches the provider — the
 // aggregated history envelope the tools return is PII-free by
 // construction (per-hour counts, not raw titles) so no class
 // needs to be allowed in cleartext.
 //
-// The slice prompt explicitly mandates:
+// The strategy contract requires:
 //
 //	"Policy:              PolicyAlertBuilder from internal/ai/redact/policies.go
 //	 Allowed classes:     none; notification history is aggregated before prompting

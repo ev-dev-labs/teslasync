@@ -48,9 +48,8 @@ func TestNoRedactionImplementsPolicy(t *testing.T) {
 	_ = p // compile-time check is the assertion
 }
 
-// pinned: redaction policies live in the strategy package so
-// the dispatcher can pass them around without an import cycle
-// when F8 ships.
+// Redaction policies live in the strategy package so the dispatcher
+// can pass them around without an import cycle.
 type localFakePolicy struct{}
 
 func (localFakePolicy) policyMarker() {}

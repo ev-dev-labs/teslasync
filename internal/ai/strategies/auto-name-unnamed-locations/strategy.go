@@ -1,29 +1,29 @@
-// Package autonameunnamedlocations is the Phase-50 / G1 strategy for
+// Package autonameunnamedlocations is the strategy for
 // the LLM-assisted "auto-name unnamed locations" surface.
 //
 // The strategy declares:
 //
-//   - the system prompt that frames the suggestion as a propose-only
-//     assistant — produce a structured location-name proposal via the
-//     F4 tools, do NOT save anything, NEVER write SQL, refuse
-//     cross-location / cross-user requests, refuse to modify existing
-//     location labels without explicit confirmation;
-//   - the two propose-only tools the LLM is allowed to call —
-//     `draft_location_name` and `validate_location_name` — both of
-//     which read the *geomodel.VisitedLocation aggregate and run a
-//     deterministic name-validation pass. The actual persistence
-//     flows through the user's explicit confirmation in the
-//     LocationsPage UI (the slice prompt: "while requiring explicit
-//     user confirmation"), which lands as the user clicks the
-//     baseline geofence-create button — this strategy ships zero
-//     write paths;
-//   - the redaction policy (`PolicyAutoNameUnnamedLocations`) which
-//     allows ClassVehicleName so the proposed name can reasonably
-//     include a vehicle reference (e.g. "Roadie's home"); every
-//     other PII class — VIN, lat/long, street addresses, place
-//     names that the location's address_name happens to encode — is
-//     redacted via round-trip tags so a leaked transcript does not
-//     reveal the user's home/work locations or exact coordinates.
+//	the system prompt that frames the suggestion as a propose-only
+//	  assistant — produce a structured location-name proposal via the
+//	  typed tools, do NOT save anything, NEVER write SQL, refuse
+//	  cross-location / cross-user requests, refuse to modify existing
+//	  location labels without explicit confirmation;
+//	the two propose-only tools the LLM is allowed to call —
+//	  `draft_location_name` and `validate_location_name` — both of
+//	  which read the *geomodel.VisitedLocation aggregate and run a
+//	  deterministic name-validation pass. The actual persistence
+//	  flows through the user's explicit confirmation in the
+//	  LocationsPage UI (the feature spec: "while requiring explicit
+//	  user confirmation"), which lands as the user clicks the
+//	  baseline geofence-create button — this strategy ships zero
+//	  write paths;
+//	the redaction policy (`PolicyAutoNameUnnamedLocations`) which
+//	  allows ClassVehicleName so the proposed name can reasonably
+//	  include a vehicle reference (e.g. "Roadie's home"); every
+//	  other PII class — VIN, lat/long, street addresses, place
+//	  names that the location's address_name happens to encode — is
+//	  redacted via round-trip tags so a leaked transcript does not
+//	  reveal the user's home/work locations or exact coordinates.
 //
 // The strategy is consumed by the AI HTTP handler at
 // `internal/api/ai_auto_name_unnamed_locations_handler.go` which
@@ -35,23 +35,23 @@
 // baseline; off-mode users never see the AI surface at all
 // (ADR-015 §I3, §I5, §I6).
 //
-// Service-worker chunks: this slice's frontend code is loaded
+// Service-worker chunks: this feature's frontend code is loaded
 // under the page-bundle for /locations; the off-mode walker
 // validates code chunks via the `withAiFeature` HOC + the
-// AI_FEATURES map. See the slice log for the documented mapping.
+// AI_FEATURES map. See the feature log for the documented mapping.
 //
 // ADR-015 alignment:
 //
-//   - I1 default-off:    feature toggle defaults false in features.Registry.
-//   - I3 baseline intact: this strategy never replaces the manual
-//     location naming or geofence editor on /locations; it adds an
-//     opt-in suggestion panel alongside.
-//   - I7 per-feature:     the AI route is gated by
-//     guard.Wrap("auto-name-unnamed-locations").
-//   - I9 redaction:       PolicyAutoNameUnnamedLocations restricts
-//     cleartext to vehicle name only; lat/long, addresses, and
-//     place names stay tagged so a leaked transcript does not
-//     reveal the user's home/work locations or exact coordinates.
+//	I1 default-off:    feature toggle defaults false in features.Registry.
+//	I3 baseline intact: this strategy never replaces the manual
+//	  location naming or geofence editor on /locations; it adds an
+//	  opt-in suggestion panel alongside.
+//	I7 per-feature:     the AI route is gated by
+//	  guard.Wrap("auto-name-unnamed-locations").
+//	I9 redaction:       PolicyAutoNameUnnamedLocations restricts
+//	  cleartext to vehicle name only; lat/long, addresses, and
+//	  place names stay tagged so a leaked transcript does not
+//	  reveal the user's home/work locations or exact coordinates.
 package autonameunnamedlocations
 
 import (
@@ -77,35 +77,35 @@ const FeatureID = "auto-name-unnamed-locations"
 //
 // The prompt explicitly:
 //
-//   - Forces tool-first behaviour ("ALWAYS call draft_location_name
-//     FIRST"): without this, a model may answer in prose and skip
-//     the typed DTO entirely, leaving the frontend with nothing to
-//     render.
-//   - Forbids saving / mutating: the strategy is propose-only. The
-//     actual location-name persistence goes through an explicit
-//     user confirmation in the LocationsPage UI; the LLM has no
-//     tool that writes.
-//   - Forbids inventing facts: only the values returned by the
-//     tools may be quoted in the proposed name or the optional
-//     one-line rationale. The tool reply carries the location's
-//     actual visit_count / total_duration / last_visited / current
-//     address_name; inventing addresses or business names is
-//     forbidden.
-//   - Refuses cross-location / cross-user requests: the AI handler
-//     always scopes to the caller-supplied location_id from the
-//     URL; any other location ID in the user message is by
-//     definition out of scope.
-//   - Asks for short, focused output (a concise name plus an
-//     optional one-line rationale) so the surface fits inside the
-//     existing LocationsPage row layout without a scroll bomb.
-//   - Explicitly bans quoting precise coordinates or full street
-//     addresses in the proposed name: the redaction policy already
-//     strips them, but the prompt-level ban is defence-in-depth so
-//     a model that was somehow handed cleartext coordinates still
-//     refuses to repeat them back. Suggested names should be
-//     generic descriptors (e.g. "Pike Place Market", "Work",
-//     "Frequent Stop — South Lake Union") rather than coordinate
-//     pairs or numbered street addresses.
+//	Forces tool-first behaviour ("ALWAYS call draft_location_name
+//	  FIRST"): without this, a model may answer in prose and skip
+//	  the typed DTO entirely, leaving the frontend with nothing to
+//	  render.
+//	Forbids saving / mutating: the strategy is propose-only. The
+//	  actual location-name persistence goes through an explicit
+//	  user confirmation in the LocationsPage UI; the LLM has no
+//	  tool that writes.
+//	Forbids inventing facts: only the values returned by the
+//	  tools may be quoted in the proposed name or the optional
+//	  one-line rationale. The tool reply carries the location's
+//	  actual visit_count / total_duration / last_visited / current
+//	  address_name; inventing addresses or business names is
+//	  forbidden.
+//	Refuses cross-location / cross-user requests: the AI handler
+//	  always scopes to the caller-supplied location_id from the
+//	  URL; any other location ID in the user message is by
+//	  definition out of scope.
+//	Asks for short, focused output (a concise name plus an
+//	  optional one-line rationale) so the surface fits inside the
+//	  existing LocationsPage row layout without a scroll bomb.
+//	Explicitly bans quoting precise coordinates or full street
+//	  addresses in the proposed name: the redaction policy already
+//	  strips them, but the prompt-level ban is defence-in-depth so
+//	  a model that was somehow handed cleartext coordinates still
+//	  refuses to repeat them back. Suggested names should be
+//	  generic descriptors (e.g. "Pike Place Market", "Work",
+//	  "Frequent Stop — South Lake Union") rather than coordinate
+//	  pairs or numbered street addresses.
 const SystemPrompt = `You are the TeslaSync visited-location naming assistant. ` +
 	`Your job is to PROPOSE a concise, human-readable name for ONE existing visited location based on its visit evidence (current address_name, visit_count, total_duration_s, last_visited); you NEVER save anything yourself. ` +
 	`ALWAYS call draft_location_name FIRST with the location_id you were given, then call validate_location_name on the proposed name to confirm it satisfies the location-name contract. ` +
@@ -179,12 +179,12 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyAutoNameUnnamedLocations wrapped through the F4↔F8 adapter
+// PolicyAutoNameUnnamedLocations wrapped through the redaction-policy adapter
 // so the dispatcher's per-request ctx-installation step
 // (dispatch.Run installs the policy via redact.WithPolicy) sees the
 // concrete policy.
 //
-// Per the slice prompt: "Policy: PolicyDigest from
+// Per the feature spec: "Policy: PolicyDigest from
 // internal/ai/redact/policies.go. Allowed classes: ClassVehicleName
 // only; coordinates and addresses stay tagged unless restored to
 // same user". PolicyAutoNameUnnamedLocations is the per-feature

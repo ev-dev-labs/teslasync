@@ -1,22 +1,21 @@
-// Package drivecoaching is the Phase-50 / N4 strategy for the
-// LLM-narrated per-drive coaching narrative.
+// Package drivecoaching contains the LLM-narrated per-drive coaching strategy.
 //
 // The strategy declares:
 //
-//   - the system prompt that frames the narration as a calm, factual
-//     coaching summary of ONE already-completed drive — never invents
-//     samples, never proposes mutations, never generalises across
-//     drives or vehicles;
-//   - the two read-only tools the LLM is allowed to call —
-//     `query_drive_detail` (existing builtin; one *drivemodel.Drive by ID)
-//     and `query_drive_telemetry_summary` (new in this slice; a
-//     deterministic envelope of pre-aggregated drive metrics derived
-//     from the same *drivemodel.Drive row, exposing coaching-friendly
-//     derived fields such as regen_share_pct and kwh_per_100km);
-//   - the redaction policy (`PolicyDriveCoaching`) which allows
-//     ClassVehicleName so the narration can address the user's car by
-//     name; lat/long, addresses, VINs, etc. are redacted via
-//     round-trip tags.
+// - the system prompt that frames the narration as a calm, factual
+// coaching summary of ONE already-completed drive — never invents
+// samples, never proposes mutations, never generalises across
+// drives or vehicles;
+// - the two read-only tools the LLM is allowed to call —
+// `query_drive_detail` (existing builtin; one *drivemodel.Drive by ID)
+// and `query_drive_telemetry_summary` (a
+// deterministic envelope of pre-aggregated drive metrics derived
+// from the same *drivemodel.Drive row, exposing coaching-friendly
+// derived fields such as regen_share_pct and kwh_per_100km);
+// - the redaction policy (`PolicyDriveCoaching`) which allows
+// ClassVehicleName so the narration can address the user's car by
+// name; lat/long, addresses, VINs, etc. are redacted via
+// round-trip tags.
 //
 // The strategy is consumed by the AI HTTP handler at
 // `internal/api/ai_drive_coach_handler.go` which builds a
@@ -29,15 +28,15 @@
 //
 // ADR-015 alignment:
 //
-//   - I1 default-off:    feature toggle defaults false in features.Registry.
-//   - I3 baseline intact: this strategy never replaces DriveDetailPage's
-//     deterministic stat cards or charts; it adds an
-//     opt-in narrative panel alongside.
-//   - I7 per-feature:     the AI route is gated by guard.Wrap("drive-coaching").
-//   - I9 redaction:       PolicyDriveCoaching restricts cleartext to
-//     vehicle name only; lat/long and addresses
-//     stay tagged so a leaked transcript does not
-//     reveal the user's home/work locations.
+// - I1 default-off: feature toggle defaults false in features.Registry.
+// - I3 baseline intact: this strategy never replaces DriveDetailPage's
+// deterministic stat cards or charts; it adds an
+// opt-in narrative panel alongside.
+// - I7 per-feature: the AI route is gated by guard.Wrap("drive-coaching").
+// - I9 redaction: PolicyDriveCoaching restricts cleartext to
+// vehicle name only; lat/long and addresses
+// stay tagged so a leaked transcript does not
+// reveal the user's home/work locations.
 package drivecoaching
 
 import (
@@ -62,28 +61,28 @@ const FeatureID = "drive-coaching"
 //
 // The prompt explicitly:
 //
-//   - Forces tool-first behaviour ("ALWAYS call query_drive_detail
-//     AND query_drive_telemetry_summary FIRST"): without this, a
-//     model may answer from priors and hallucinate driving habits
-//     the deterministic aggregates do not actually surface.
-//   - Forbids inventing facts: only the values returned by the tools
-//     may be quoted. Per-sample ("you accelerated hard at 14:32")
-//     statements are forbidden because the tools return aggregates,
-//     not per-row telemetry events.
-//   - Forbids proposing state mutations: the coach narrates,
-//     suggests safe driving habits in plain language, and stops
-//     there. It must NOT propose changing alert thresholds,
-//     suspending notifications, scheduling charges, or any other
-//     write — separation of concerns is enforced at the prompt
-//     boundary as defence-in-depth on top of the read-only tool
-//     allowlist.
-//   - Refuses cross-vehicle or cross-drive requests: the AI handler
-//     always scopes to the caller-supplied drive_id, and the
-//     narration must refuse to discuss a different drive ID even if
-//     the user message contains one.
-//   - Asks for short, focused output (2-4 short paragraphs) so the
-//     surface fits inside the existing DriveDetailPage layout
-//     without a scroll bomb.
+// - Forces tool-first behaviour ("ALWAYS call query_drive_detail
+// AND query_drive_telemetry_summary FIRST"): without this, a
+// model may answer from priors and hallucinate driving habits
+// the deterministic aggregates do not actually surface.
+// - Forbids inventing facts: only the values returned by the tools
+// may be quoted. Per-sample ("you accelerated hard at 14:32")
+// statements are forbidden because the tools return aggregates,
+// not per-row telemetry events.
+// - Forbids proposing state mutations: the coach narrates,
+// suggests safe driving habits in plain language, and stops
+// there. It must NOT propose changing alert thresholds,
+// suspending notifications, scheduling charges, or any other
+// write — separation of concerns is enforced at the prompt
+// boundary as defence-in-depth on top of the read-only tool
+// allowlist.
+// - Refuses cross-vehicle or cross-drive requests: the AI handler
+// always scopes to the caller-supplied drive_id, and the
+// narration must refuse to discuss a different drive ID even if
+// the user message contains one.
+// - Asks for short, focused output (2-4 short paragraphs) so the
+// surface fits inside the existing DriveDetailPage layout
+// without a scroll bomb.
 const SystemPrompt = `You are the TeslaSync drive coach. ` +
 	`Your job is to narrate ONE already-completed drive in plain language, suggesting safer or more efficient driving habits where the data supports it. ` +
 	`ALWAYS call query_drive_detail AND query_drive_telemetry_summary FIRST, then answer STRICTLY from their replies — never invent, infer, or estimate facts that are not present in the tool output. ` +
@@ -101,7 +100,7 @@ const SystemPrompt = `You are the TeslaSync drive coach. ` +
 // dispatcher refuses to mount a strategy that references an
 // unknown tool.
 //
-// This slice ships zero mutating tools: drive coaching only READS
+// Drive coaching ships zero mutating tools: it only reads
 // already-aggregated drive state. A future "schedule a maintenance
 // reminder based on this drive" strategy that needs to write would
 // add its own strategy with its own confirm hook.
@@ -150,7 +149,7 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "user prefers SI vs US
 // units" preference snippet would be injected once drive coaching
-// grows that surface. Today's slice keeps Context empty so the
+// grows that surface. Today Context stays empty so the
 // dispatcher's behaviour is fully determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
@@ -162,10 +161,9 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyDigest from
-// internal/ai/redact/policies.go. Allowed classes: ClassVehicleName
-// only; route/location details stay tagged unless explicitly
-// restored to same user". PolicyDriveCoaching is the per-feature
+// Redaction requirements allow only ClassVehicleName; route and location
+// details stay tagged unless restored to the same user. PolicyDriveCoaching
+// is the per-feature
 // constructor with the same allow-list as PolicyDigest — kept as a
 // distinct identifier so a future per-feature change to drive
 // coaching's allow-list does not bleed across to the digest.

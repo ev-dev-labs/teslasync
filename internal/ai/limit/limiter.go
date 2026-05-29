@@ -9,8 +9,8 @@ import (
 )
 
 // ErrFeatureUnknown is returned by [Limiter.Allow] when the supplied
-// feature ID is not registered in [TierResolver]. Per the rubber-duck
-// recommendation we fail-loud rather than fall back to defaults so a
+// feature ID is not registered in [TierResolver]. We fail loudly rather
+// than fall back to defaults so a
 // missing-registry typo surfaces as a 4xx instead of a silent quiet
 // quota.
 var ErrFeatureUnknown = errors.New("ai/limit: feature ID not registered")
@@ -130,12 +130,12 @@ type bucket struct {
 // Allow checks whether (subject, feature) may dispatch a call right
 // now. Returns:
 //
-//   - Decision{Allowed:true} on success — caller MUST invoke the
-//     returned release() func when the call completes (success or
-//     failure) to decrement the inflight counter. Calling release()
-//     a second time is a no-op.
-//   - Decision{Allowed:false, Reason:...} on rejection — release()
-//     is a no-op on a rejected call (no inflight slot was taken).
+// - Decision{Allowed:true} on success — caller MUST invoke the
+// returned release() func when the call completes (success or
+// failure) to decrement the inflight counter. Calling release()
+// a second time is a no-op.
+// - Decision{Allowed:false, Reason:...} on rejection — release()
+// is a no-op on a rejected call (no inflight slot was taken).
 //
 // The decorator wraps the returned release in the chunk channel for
 // streaming calls so the inflight slot frees on stream close /

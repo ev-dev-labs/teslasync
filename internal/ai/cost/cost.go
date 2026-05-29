@@ -80,8 +80,8 @@ type Rate struct {
 //
 // Vendor publication source for each rate is comment-pinned so an
 // auditor can re-derive every number from the listed URL. Last
-// reviewed: Phase-50 (2026 spring). When a vendor revises a rate,
-// edit this map and bump the comment date — never silently update.
+// reviewed: 2026 spring. When a vendor revises a rate, edit this
+// map and bump the comment date — never silently update.
 //
 // The map is initialised in init() so a parallel test that pokes
 // internals cannot race with the eager `var x = map{...}` form.

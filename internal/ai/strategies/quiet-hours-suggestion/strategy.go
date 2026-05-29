@@ -1,52 +1,52 @@
-// Package quiethourssuggestion is the Phase-50 / 0053 P2
+// Package quiethourssuggestion is the P2
 // strategy for the Helix quiet-hours suggestion advisor surface.
 //
 // The strategy declares:
 //
-//   - the system prompt that frames the surface as a deterministic
-//     HISTORY-BASED RECOMMENDATION engine: propose ONE quiet-hours
-//     candidate window for the in-scope user using ONLY the
-//     aggregated trailing-30-day notification cadence the
-//     draft_quiet_hours_window tool returns; never invent a
-//     timezone, never invent a weekday outside the user's existing
-//     timezone, never propose suspending or disabling notifications
-//     entirely, refuse to narrate any candidate whose
-//     validate_quiet_hours_window reply is not ok, and explicitly
-//     disclose the descriptive-replay limit (the candidate reflects
-//     past notification cadence, not a forecast of future traffic).
+//	the system prompt that frames the surface as a deterministic
+//	  HISTORY-BASED RECOMMENDATION engine: propose ONE quiet-hours
+//	  candidate window for the in-scope user using ONLY the
+//	  aggregated trailing-30-day notification cadence the
+//	  draft_quiet_hours_window tool returns; never invent a
+//	  timezone, never invent a weekday outside the user's existing
+//	  timezone, never propose suspending or disabling notifications
+//	  entirely, refuse to narrate any candidate whose
+//	  validate_quiet_hours_window reply is not ok, and explicitly
+//	  disclose the descriptive-replay limit (the candidate reflects
+//	  past notification cadence, not a forecast of future traffic).
 //
-//   - the two read-only typed tools the LLM is allowed to call in
-//     this surface:
+//	the two read-only typed tools the LLM is allowed to call in
+//	  this surface:
 //
-//   - draft_quiet_hours_window — REQUIRED, called FIRST. Reads
-//     the trailing notification_logs window (non-critical
-//     severities only) plus existing quiet-hours windows from
-//     the QuietHoursSource port and returns a typed candidate
-//     {start_local, end_local, weekdays, timezone,
-//     bypass_severities, history_summary, assumptions, status}.
-//     The candidate-finder AGGREGATES notification timestamps
-//     into per-hour event counts BEFORE surfacing anything to
-//     the LLM — individual notification titles/messages NEVER
-//     leave the tool boundary. NO database write.
+//	draft_quiet_hours_window — REQUIRED, called FIRST. Reads
+//	  the trailing notification_logs window (non-critical
+//	  severities only) plus existing quiet-hours windows from
+//	  the QuietHoursSource port and returns a typed candidate
+//	  {start_local, end_local, weekdays, timezone,
+//	  bypass_severities, history_summary, assumptions, status}.
+//	  The candidate-finder AGGREGATES notification timestamps
+//	  into per-hour event counts BEFORE surfacing anything to
+//	  the LLM — individual notification titles/messages NEVER
+//	  leave the tool boundary. NO database write.
 //
-//   - validate_quiet_hours_window — REQUIRED, called SECOND.
-//     Accepts a candidate window and asserts every field
-//     satisfies the SAME validation rules the canonical
-//     POST /api/v1/notifications/quiet-hours handler enforces
-//     (HH:MM format, distinct start/end, valid IANA timezone,
-//     weekdays bitmask 0..127, bypass severities subset of
-//     {info, warn, critical}). Returns {ok, errors[],
-//     warnings[]}. NO database IO. The narrator MUST refuse to
-//     produce a final recommendation if
-//     validate_quiet_hours_window reports ok=false.
+//	validate_quiet_hours_window — REQUIRED, called SECOND.
+//	  Accepts a candidate window and asserts every field
+//	  satisfies the SAME validation rules the canonical
+//	  POST /api/v1/notifications/quiet-hours handler enforces
+//	  (HH:MM format, distinct start/end, valid IANA timezone,
+//	  weekdays bitmask 0..127, bypass severities subset of
+//	  {info, warn, critical}). Returns {ok, errors[],
+//	  warnings[]}. NO database IO. The narrator MUST refuse to
+//	  produce a final recommendation if
+//	  validate_quiet_hours_window reports ok=false.
 //
-//   - the redaction policy (`redact.PolicyAlertBuilder`) which
-//     allows NO PII class in cleartext. The aggregated history
-//     envelope the candidate-finder returns is PII-free by
-//     construction (per-hour counts only) so the policy is
-//     defence-in-depth in case a future edit accidentally
-//     surfaces user-supplied notification text through one of
-//     the tools.
+//	the redaction policy (`redact.PolicyAlertBuilder`) which
+//	  allows NO PII class in cleartext. The aggregated history
+//	  envelope the candidate-finder returns is PII-free by
+//	  construction (per-hour counts only) so the policy is
+//	  defence-in-depth in case a future edit accidentally
+//	  surfaces user-supplied notification text through one of
+//	  the tools.
 //
 // The strategy is consumed by the AI HTTP handler at
 // `internal/api/ai_quiet_hours_suggestion_handler.go` which
@@ -69,17 +69,17 @@
 //
 // ADR-015 alignment:
 //
-//   - I1 default-off:    feature toggle defaults false in features.Registry.
-//   - I3 baseline intact: this strategy never replaces the
-//     deterministic QuietHoursPanel CRUD form, the
-//     /api/v1/notifications/quiet-hours endpoints, or the
-//     dispatcher's defer logic; it adds an opt-in advisor
-//     section above them.
-//   - I7 per-feature:     the AI route is gated by
-//     guard.Wrap("quiet-hours-suggestion").
-//   - I9 redaction:       PolicyAlertBuilder allows zero PII
-//     classes; the aggregated history envelope is PII-free by
-//     construction so the policy is defence-in-depth.
+//	I1 default-off:    feature toggle defaults false in features.Registry.
+//	I3 baseline intact: this strategy never replaces the
+//	  deterministic QuietHoursPanel CRUD form, the
+//	  /api/v1/notifications/quiet-hours endpoints, or the
+//	  dispatcher's defer logic; it adds an opt-in advisor
+//	  section above them.
+//	I7 per-feature:     the AI route is gated by
+//	  guard.Wrap("quiet-hours-suggestion").
+//	I9 redaction:       PolicyAlertBuilder allows zero PII
+//	  classes; the aggregated history envelope is PII-free by
+//	  construction so the policy is defence-in-depth.
 package quiethourssuggestion
 
 import (
@@ -105,50 +105,50 @@ const FeatureID = "quiet-hours-suggestion"
 //
 // The prompt explicitly:
 //
-//   - Forces tool-first behaviour: the LLM MUST call
-//     draft_quiet_hours_window FIRST so the candidate is grounded
-//     in the deterministic aggregated notification cadence the
-//     advisor surfaces.
-//   - REQUIRES a follow-up validation step: the LLM MUST call
-//     validate_quiet_hours_window AFTER drafting and MUST refuse
-//     to narrate any candidate whose validation reply is ok=false
-//     — instead it surfaces the validator's errors[] verbatim and
-//     asks the user to retry.
-//   - Forbids invention: the LLM may quote ONLY the candidate
-//     window the draft tool returned (start_local, end_local,
-//     weekdays bitmask, timezone, bypass_severities) and the
-//     aggregated history summary. It MUST NOT invent a timezone,
-//     MUST NOT invent a different weekday set, MUST NOT propose
-//     a different bypass severity outside {info, warn, critical},
-//     and MUST NOT quote individual notification titles or
-//     messages because the tool never surfaces them.
-//   - REQUIRES honest "descriptive-replay, not a forecast"
-//     disclosure: every narration MUST surface the
-//     descriptive-replay limit so the user understands the
-//     candidate is derived from past notification cadence, not a
-//     forecast of future traffic. The phrase "based on your
-//     recent notification history" is load-bearing here —
-//     goldens pin it.
-//   - Refuses dangerous proposals: the narrator MUST NEVER
-//     propose disabling notifications entirely, MUST NEVER
-//     propose removing a critical severity from
-//     bypass_severities, and MUST NEVER propose a window that
-//     spans every hour of every weekday (which would silence
-//     all notifications).
-//   - Refuses cross-user requests: the AI handler scopes to the
-//     caller-supplied user; any other user mentioned in the user
-//     message is by definition out of scope and the per-request
-//     scope binding rejects any LLM-supplied user_id that does
-//     not match.
-//   - Asks for short, focused output (2-4 sentences naming the
-//     proposed window in the user's local timezone, the weekdays
-//     it covers, the bypass severities, and the
-//     descriptive-replay disclosure) so the surface fits inside
-//     the existing QuietHoursPanel layout without a scroll bomb.
-//   - Bans quoting raw notification titles/messages even though
-//     the redaction policy already strips them: the candidate-
-//     finder aggregates the history before surfacing it, so any
-//     raw title in the narration would be fabrication.
+//	Forces tool-first behaviour: the LLM MUST call
+//	  draft_quiet_hours_window FIRST so the candidate is grounded
+//	  in the deterministic aggregated notification cadence the
+//	  advisor surfaces.
+//	REQUIRES a follow-up validation step: the LLM MUST call
+//	  validate_quiet_hours_window AFTER drafting and MUST refuse
+//	  to narrate any candidate whose validation reply is ok=false
+//	  instead it surfaces the validator's errors[] verbatim and
+//	  asks the user to retry.
+//	Forbids invention: the LLM may quote ONLY the candidate
+//	  window the draft tool returned (start_local, end_local,
+//	  weekdays bitmask, timezone, bypass_severities) and the
+//	  aggregated history summary. It MUST NOT invent a timezone,
+//	  MUST NOT invent a different weekday set, MUST NOT propose
+//	  a different bypass severity outside {info, warn, critical},
+//	  and MUST NOT quote individual notification titles or
+//	  messages because the tool never surfaces them.
+//	REQUIRES honest "descriptive-replay, not a forecast"
+//	  disclosure: every narration MUST surface the
+//	  descriptive-replay limit so the user understands the
+//	  candidate is derived from past notification cadence, not a
+//	  forecast of future traffic. The phrase "based on your
+//	  recent notification history" is load-bearing here —
+//	  goldens pin it.
+//	Refuses dangerous proposals: the narrator MUST NEVER
+//	  propose disabling notifications entirely, MUST NEVER
+//	  propose removing a critical severity from
+//	  bypass_severities, and MUST NEVER propose a window that
+//	  spans every hour of every weekday (which would silence
+//	  all notifications).
+//	Refuses cross-user requests: the AI handler scopes to the
+//	  caller-supplied user; any other user mentioned in the user
+//	  message is by definition out of scope and the per-request
+//	  scope binding rejects any LLM-supplied user_id that does
+//	  not match.
+//	Asks for short, focused output (2-4 sentences naming the
+//	  proposed window in the user's local timezone, the weekdays
+//	  it covers, the bypass severities, and the
+//	  descriptive-replay disclosure) so the surface fits inside
+//	  the existing QuietHoursPanel layout without a scroll bomb.
+//	Bans quoting raw notification titles/messages even though
+//	  the redaction policy already strips them: the candidate-
+//	  finder aggregates the history before surfacing it, so any
+//	  raw title in the narration would be fabrication.
 const SystemPrompt = `You are the TeslaSync quiet-hours / Do-Not-Disturb suggestion advisor. ` +
 	`Your job is to PROPOSE ONE candidate quiet-hours window for the ONE user in scope, derived strictly from their recent notification history; you NEVER invent a timezone, you NEVER invent a weekday set, and you NEVER propose disabling notifications entirely. ` +
 	`ALWAYS call draft_quiet_hours_window FIRST with the caller-supplied user scope and ground every claim in the deterministic aggregated history envelope it returns. ` +
@@ -222,12 +222,12 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyAlertBuilder wrapped through the F4↔F8 adapter so the
+// PolicyAlertBuilder wrapped through the redaction-policy adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
+// Per the feature spec: "Policy: PolicyAlertBuilder from
 // internal/ai/redact/policies.go. Allowed classes: none;
 // notification history is aggregated before prompting. Round-
 // trip required: no." PolicyAlertBuilder's Allow=nil +

@@ -1,6 +1,4 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
-//
-// range_predictor.go ships TWO new READ-only typed tools:
+// Range prediction exposes two read-only typed tools:
 //
 //   - `train_range_model` — recomputes the per-bucket
 //     (temp_bucket × speed_bucket) learned range envelope (mean
@@ -14,16 +12,14 @@
 //     deterministic Projected Range page also uses; SampleCount
 //     remains honest). NO row in `drives` is written, NO learned
 //     envelope is persisted by this tool — the trainer is
-//     request-scoped today; a future job-tier slice (registered as
-//     JobNames=["ai_ml_range_trainer"] in the registry's RouteSet)
-//     may persist the envelope per vehicle for cross-pod reuse.
+//     request-scoped today; a future job may persist the envelope per
+//     vehicle for cross-pod reuse.
 //
 //   - `query_range_prediction` — returns the CURRENTLY-effective
 //     per-vehicle envelope the deterministic projection at
 //     internal/api/range_projection_handler.go uses today. Today,
 //     the effective envelope is the static HeuristicWhPerKm curve
-//     for EVERY bucket (this slice does not persist learned
-//     envelopes); the LLM uses this tool to ground its narrative
+//     for EVERY bucket; the LLM uses this tool to ground its narrative
 //     in the user's CURRENTLY-effective baseline before quoting
 //     the train_range_model output as a PROPOSAL.
 //
@@ -56,17 +52,15 @@
 //
 // Design constraints:
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → Both tools delegate to
+//   - Both tools delegate to
 //     internal/ml/range (Trainer.Train and CurrentEffectiveBuckets).
 //     The trainer uses a narrow DriveStatsSource interface; the
 //     production wiring (router.go) satisfies it via a thin pgx
 //     adapter over the `drives` table. No SQL is written by these
 //     tools.
-//   - "the LLM never writes raw SQL" → tools have no DB handle;
+//   - Tools have no DB handle;
 //     they pass typed inputs to the trainer.
-//   - "no duplicate write paths" → no save_*/update_*/delete_*
-//     tool exists in this slice; both tools are read-only.
+//   - No save_*/update_*/delete_* tool exists; both tools are read-only.
 
 package predict
 
@@ -107,8 +101,8 @@ type trainRangeModelInput struct {
 // queryRangePredictionInput is the typed input DTO for
 // query_range_prediction. The tool returns the CURRENTLY-effective
 // per-vehicle envelope; today every bucket is the static heuristic
-// fallback. vehicle_id is required so a future slice that persists
-// learned envelopes can scope the query.
+// fallback. vehicle_id is required so future persisted learned
+// envelopes can be scoped per vehicle.
 type queryRangePredictionInput struct {
 	// VehicleID is the per-vehicle id the query scopes to. Required; > 0.
 	VehicleID int64 `json:"vehicle_id" validate:"required,gte=1" jsonschema:"description=Per-vehicle id to fetch the currently-effective range envelope for. Required; > 0."`
@@ -300,8 +294,7 @@ type RangePredictorSources struct {
 	Trainer *mlrange.Trainer
 }
 
-// RegisterRangePredictorTools installs the range-prediction-model
-// slice's tools on r.
+// RegisterRangePredictorTools installs the range-prediction-model tools.
 //
 // Panics on duplicate registration (Registry.Register panics).
 func RegisterRangePredictorTools(r *tools.Registry, s RangePredictorSources) {

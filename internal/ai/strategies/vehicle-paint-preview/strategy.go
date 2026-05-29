@@ -1,29 +1,29 @@
-// Package vehiclepaintpreview is the Phase-50 / 0061 GEN2 strategy
+// Package vehiclepaintpreview is the GEN2 strategy
 // for the LLM-assisted vehicle paint-preview surface.
 //
 // The strategy declares:
 //
-//   - the system prompt that frames the surface as a propose-only
-//     assistant — produce a structured paint-preview IMAGE-PROMPT
-//     envelope via the F4 tools, do NOT save anything, NEVER call
-//     an external image-generation provider directly, refuse
-//     cross-vehicle requests, refuse to mutate anything;
+//	the system prompt that frames the surface as a propose-only
+//	  assistant — produce a structured paint-preview IMAGE-PROMPT
+//	  envelope via the typed tools, do NOT save anything, NEVER call
+//	  an external image-generation provider directly, refuse
+//	  cross-vehicle requests, refuse to mutate anything;
 //
-//   - the single propose-only tool the LLM is allowed to call —
-//     `draft_paint_preview_prompt` — which reads *vehiclemodel.Vehicle
-//     via VehicleSource (the same read surface the existing
-//     /api/v1/vehicles/{id} handler uses) and runs a deterministic
-//     validator pass. The actual paint-color persistence flows
-//     through the user's manual click on the existing per-vehicle
-//     "Color" setting in the SPA's VehicleConfigSection /
-//     VehicleSettingsTab; this strategy ships zero write paths;
+//	the single propose-only tool the LLM is allowed to call —
+//	  `draft_paint_preview_prompt` — which reads *vehiclemodel.Vehicle
+//	  via VehicleSource (the same read surface the existing
+//	  /api/v1/vehicles/{id} handler uses) and runs a deterministic
+//	  validator pass. The actual paint-color persistence flows
+//	  through the user's manual click on the existing per-vehicle
+//	  "Color" setting in the SPA's VehicleConfigSection /
+//	  VehicleSettingsTab; this strategy ships zero write paths;
 //
-//   - the redaction policy (`PolicyChatbot`) which allows NOTHING
-//     in cleartext. The image-prompt narrative is grounded in
-//     non-PII fields only (model, trim, current_color); the
-//     vehicle display name + VIN + lat/long + addresses MUST stay
-//     redaction-tagged so a leaked transcript reveals neither the
-//     user's home/work locations nor any identifier.
+//	the redaction policy (`PolicyChatbot`) which allows NOTHING
+//	  in cleartext. The image-prompt narrative is grounded in
+//	  non-PII fields only (model, trim, current_color); the
+//	  vehicle display name + VIN + lat/long + addresses MUST stay
+//	  redaction-tagged so a leaked transcript reveals neither the
+//	  user's home/work locations nor any identifier.
 //
 // The strategy is consumed by the AI HTTP handler at
 // `internal/api/ai_vehicle_paint_preview_handler.go` which builds a
@@ -37,17 +37,17 @@
 //
 // ADR-015 alignment:
 //
-//   - I1 default-off:     feature toggle defaults false in features.Registry.
-//   - I3 baseline intact: this strategy never replaces the existing
-//     VehicleConfigSection / VehiclePhotoGallery / manual theme
-//     surface; it adds an opt-in paint-preview image-prompt
-//     proposal alongside.
-//   - I7 per-feature:     the AI route is gated by
-//     guard.Wrap("vehicle-paint-preview").
-//   - I9 redaction:       PolicyChatbot strips every PII class so
-//     the LLM only sees redacted tags for the vehicle name + VIN +
-//     location; the proposed image prompt names only the
-//     model/trim/color from the tool evidence.
+//	I1 default-off:     feature toggle defaults false in features.Registry.
+//	I3 baseline intact: this strategy never replaces the existing
+//	  VehicleConfigSection / VehiclePhotoGallery / manual theme
+//	  surface; it adds an opt-in paint-preview image-prompt
+//	  proposal alongside.
+//	I7 per-feature:     the AI route is gated by
+//	  guard.Wrap("vehicle-paint-preview").
+//	I9 redaction:       PolicyChatbot strips every PII class so
+//	  the LLM only sees redacted tags for the vehicle name + VIN +
+//	  location; the proposed image prompt names only the
+//	  model/trim/color from the tool evidence.
 package vehiclepaintpreview
 
 import (

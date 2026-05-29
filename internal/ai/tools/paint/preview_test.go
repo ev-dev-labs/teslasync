@@ -1,5 +1,3 @@
-// Phase-50 / 0061 — GEN2 Vehicle paint preview.
-//
 // Tool tests for draft_paint_preview_prompt. The tool is a pure
 // function over input + VehicleSource so the tests stay hermetic
 // (no api or database package, no DB).

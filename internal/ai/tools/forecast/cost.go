@@ -1,13 +1,8 @@
-// Phase-50 / 0029 — C4 Cost forecast narration.
+// Cost forecast narration exposes one read-only tool:
+// `query_cost_forecast`. The cost-forecast-narration strategy is
+// allowed to call only this forecast tool.
 //
-// cost_forecast.go ships ONE new read-only tool:
-// `query_cost_forecast`. The tool is the single F4 surface the
-// cost-forecast-narration strategy is allowed to call (see
-// internal/ai/strategies/cost-forecast-narration/strategy.go's
-// allowedTools whitelist).
-//
-// Design constraints (from the slice prompt + slice 0029
-// rubber-duck critique):
+// Design constraints:
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL
 //     written.**" The production adapter (*api.AICostForecaster)
@@ -15,12 +10,11 @@
 //     existing GET /api/v1/analytics/cost-forecast handler now
 //     also calls — never a parallel re-implementation. Refactoring
 //     the canonical handler to expose the helper was a deliberate
-//     choice over duplicating the SQL/math in this slice
-//     (rubber-duck blocking finding #1).
+//     choice over duplicating the SQL and math here.
 //
 //   - The tool is a READ — Mutates() returns false. The
 //     dispatcher's deny-all confirm gate refuses anything mutating;
-//     this slice ships zero mutating tools.
+//     this toolset ships zero mutating tools.
 //
 //   - One tool, one strategy: the tool is registered on the
 //     process-wide tools.Registry alongside the 13 builtins so a
@@ -68,8 +62,8 @@
 // All cost numbers are aggregate monetary values the user already
 // sees on the chart; the per-feature redaction policy
 // (PolicyCostForecastNarration) explicitly leaves them visible to
-// the narrator so the LLM can quote them. Phase-48 SI canonical
-// energy fields (Wh) are converted to kWh at the SQL boundary by
+// the narrator so the LLM can quote them. SI canonical energy fields
+// (Wh) are converted to kWh at the SQL boundary by
 // the underlying ComputeCostForecast helper for parity with the
 // chart shape.
 
@@ -82,10 +76,6 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
-
-// ---------------------------------------------------------------------------
-// Typed envelope returned by query_cost_forecast.
-// ---------------------------------------------------------------------------
 
 // CostForecastHistoricalMonth mirrors a single row of the
 // historical[] array on the existing GET
@@ -152,8 +142,7 @@ type CostForecastGasComparison struct {
 // The honest-uncertainty fields (forecast_method,
 // uncertainty_method, uncertainty_level, assumptions,
 // historical_month_count, has_enough_data, min_required_months)
-// were added per the slice 0029 rubber-duck critique so the
-// narrator can disclose the forecast's analytical limits without
+// let the narrator disclose the forecast's analytical limits without
 // guessing.
 type CostForecast struct {
 	VehicleID            int64                         `json:"vehicle_id"`
@@ -174,10 +163,6 @@ type CostForecast struct {
 	Insights             []string                      `json:"insights"`
 }
 
-// ---------------------------------------------------------------------------
-// Narrow port to the canonical forecaster.
-// ---------------------------------------------------------------------------
-
 // CostForecaster is the narrow port the query_cost_forecast tool
 // delegates to. In production it is satisfied by
 // *api.AICostForecaster (which calls api.ComputeCostForecast); in
@@ -185,8 +170,8 @@ type CostForecast struct {
 // stay hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update
-// method here would defeat the read-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// method here would defeat the read-only contract required by ADR-015
+// §I3.
 type CostForecaster interface {
 	// ForecastCosts runs the canonical deterministic
 	// cost-forecast for vehicleID across `months` projected
@@ -199,10 +184,6 @@ type CostForecaster interface {
 	// crashing the dispatcher.
 	ForecastCosts(ctx context.Context, vehicleID int64, months int) (*CostForecast, error)
 }
-
-// ---------------------------------------------------------------------------
-// Tool: query_cost_forecast.
-// ---------------------------------------------------------------------------
 
 // queryCostForecastInput is the typed input shape for the tool.
 // The dispatcher decodes the LLM's tool-call arguments JSON into
@@ -303,10 +284,6 @@ func (t *queryCostForecast) Execute(ctx context.Context, in any) (any, error) {
 	return out, nil
 }
 
-// ---------------------------------------------------------------------------
-// Registration
-// ---------------------------------------------------------------------------
-
 // CostForecastNarrationSources bundles the narrow forecaster
 // interface RegisterCostForecastNarrationTools needs. Mirrors
 // [BatteryHealthForecastNarrativeSources].
@@ -319,9 +296,9 @@ type CostForecastNarrationSources struct {
 }
 
 // RegisterCostForecastNarrationTools installs the
-// cost-forecast-narration slice's tools on r. Called from
-// router.go AFTER the charging-curve-fingerprint-clustering tool
-// registration so the registry's alphabetical Names list grows
+// cost-forecast-narration tools on r. Called after the
+// charging-curve-fingerprint-clustering tool registration so the
+// registry's alphabetical Names list grows
 // deterministically without disturbing earlier registrations or
 // any builtin-names pin tests.
 //

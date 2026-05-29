@@ -1,5 +1,3 @@
-// Phase-50 / 0036 — A3 Cross-rule conflict detection.
-//
 // Unit tests for the cross-rule-conflict-detection Strategy.
 // Mirrors the shape of inbox-auto-categorization/strategy_test.go
 // (the closest precedent: PROPOSE-only A-tier strategy with the
@@ -160,8 +158,8 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via
 // StrategyInput.History; the strategy must not contribute extra
-// prefix messages until a future slice that needs cross-domain
-// (e.g. cross-rule + cross-automation) snippets ships.
+// prefix messages until a future feature needs cross-domain snippets
+// such as cross-rule and cross-automation context.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -180,12 +178,11 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // LLM never needs cleartext rule identifiers because the typed
 // envelope carries them through the F4 tool layer.
 //
-// The slice prompt mandates: "Allowed classes: none; rule
-// definitions are DTOs and no PII is needed. Round-trip
-// required: no". The policy's Allow list is nil and the Mode is
-// ModeRedactedTags; both are pinned so a future edit that
-// silently broadens the allow-list or downgrades the mode
-// surfaces as a test failure.
+// The feature contract allows no cleartext PII because rule
+// definitions are DTOs. The policy's Allow list is nil and the
+// Mode is ModeRedactedTags; both are pinned so a future edit that
+// silently broadens the allow-list or downgrades the mode surfaces
+// as a test failure.
 func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -199,11 +196,10 @@ func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
 	if want.Mode != redact.ModeRedactedTags {
 		t.Errorf("redact.PolicyAlertBuilder Mode = %v, want ModeRedactedTags", want.Mode)
 	}
-	// Allow list MUST be empty — this is the load-bearing
-	// "deny-all" invariant the slice prompt mandates. A future
-	// edit that adds even ClassVehicleName to the allow-list
-	// would change the threat model and break alignment with
-	// the N1/A1/A2 slices that share this policy.
+	// Allow list MUST be empty — this is the load-bearing deny-all
+	// invariant. A future edit that adds even ClassVehicleName to the
+	// allow-list would change the threat model for every strategy that
+	// shares this policy.
 	if len(want.Allow) != 0 {
 		t.Errorf("redact.PolicyAlertBuilder.Allow has %d entries; want 0 (deny-all): got=%v", len(want.Allow), want.Allow)
 	}

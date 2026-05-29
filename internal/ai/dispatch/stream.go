@@ -7,10 +7,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
 )
 
-// captureWriter is an in-memory StreamWriter useful for tests and
-// non-streaming HTTP responses. F5 will ship the SSE-backed
-// implementation; until then this is the only StreamWriter the
-// dispatcher knows about.
+// captureWriter is an in-memory StreamWriter for tests and
+// non-streaming HTTP responses.
 type captureWriter struct {
 	mu      sync.Mutex
 	deltas  []string
@@ -21,8 +19,7 @@ type captureWriter struct {
 	doneErr error
 }
 
-// NewCaptureWriter returns a fresh in-memory StreamWriter. Safe
-// for concurrent use.
+// NewCaptureWriter returns a concurrency-safe in-memory StreamWriter.
 func NewCaptureWriter() *CaptureWriter {
 	return &CaptureWriter{inner: &captureWriter{
 		tres: map[string][]json.RawMessage{},
@@ -30,8 +27,7 @@ func NewCaptureWriter() *CaptureWriter {
 	}}
 }
 
-// CaptureWriter is the public wrapper around captureWriter so tests
-// can inspect the recorded events.
+// CaptureWriter exposes recorded stream events for tests.
 type CaptureWriter struct {
 	inner *captureWriter
 }
@@ -72,8 +68,6 @@ func (c *CaptureWriter) WriteDone() error {
 	c.inner.done = true
 	return c.inner.doneErr
 }
-
-// --- inspectors ---
 
 // Deltas returns every WriteDelta payload, in order.
 func (c *CaptureWriter) Deltas() []string {
@@ -119,7 +113,7 @@ func (c *CaptureWriter) ToolErrors() map[string][]error {
 	return out
 }
 
-// Done reports whether WriteDone was called exactly once.
+// Done reports whether WriteDone was called.
 func (c *CaptureWriter) Done() bool {
 	c.inner.mu.Lock()
 	defer c.inner.mu.Unlock()

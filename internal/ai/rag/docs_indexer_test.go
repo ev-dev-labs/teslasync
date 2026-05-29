@@ -72,12 +72,9 @@ func TestIndexDocs_NoopRetriever_NoSideEffects(t *testing.T) {
 		"docs/intro.md": {Data: []byte("# Intro\n\nbody")},
 		"docs/usage.md": {Data: []byte("# Usage\n\nbody")},
 	}
-	// IndexDocs against a NoopRetriever — succeeds (each Index
-	// returns nil after validation) but writes nothing. The
-	// returned count reflects "files passed to Index", not "files
-	// actually persisted". This is fine — N6 will gate IndexDocs
-	// behind the per-feature toggle so it never runs in off mode
-	// in the first place.
+	// IndexDocs against a NoopRetriever succeeds after validation but
+	// writes nothing. The returned count reflects files passed to Index,
+	// not files actually persisted.
 	r := NoopRetriever{}
 	n, err := IndexDocs(context.Background(), r, fsys, "docs", "")
 	if err != nil {

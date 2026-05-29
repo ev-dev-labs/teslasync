@@ -24,9 +24,8 @@ type LimitError struct {
 	Decision Decision
 }
 
-// Error implements the error interface. Format is "ai/limit:
-// <reason>" — the reason is the public token; details are in
-// Decision.
+// Error formats the public rejection reason; structured details stay
+// in Decision.
 func (e *LimitError) Error() string {
 	if e == nil {
 		return "ai/limit: nil decision"
@@ -48,7 +47,7 @@ func (e *LimitError) Is(target error) bool {
 	return target == ErrLimited
 }
 
-// Unwrap returns the sentinel so errors.Unwrap walks cleanly.
+// Unwrap returns the package sentinel.
 func (e *LimitError) Unwrap() error {
 	return ErrLimited
 }

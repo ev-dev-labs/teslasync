@@ -1,11 +1,7 @@
-// Phase-50 / 0018 — N4 Per-drive coaching narrative.
-//
-// drive_coaching_test.go covers the new query_drive_telemetry_summary
-// tool + the RegisterDriveCoachingTools wiring. Mirrors the shape of
-// digest_test.go (slice 0012) and anomaly_test.go (slice 0014). Reuses
-// the shared toolstest.FakeDrives source from builtins_test.go so the
-// query_drive_detail builtin and this new tool share the same test
-// substrate.
+// drive_coaching_test.go covers query_drive_telemetry_summary and
+// RegisterDriveCoachingTools wiring. It reuses the shared
+// toolstest.FakeDrives source from builtins_test.go so
+// query_drive_detail and this tool share the same test substrate.
 
 package coaching
 

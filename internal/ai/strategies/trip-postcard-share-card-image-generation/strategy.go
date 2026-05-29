@@ -1,6 +1,4 @@
-// Package trippostcardsharecardimagegeneration is the Phase-50 /
-// 0060 GEN1 strategy for the LLM-assisted trip-postcard /
-// share-card image-generation surface.
+// Package trippostcardsharecardimagegeneration defines the LLM-assisted trip-postcard image-prompt strategy.
 //
 // The strategy declares:
 //
@@ -10,8 +8,7 @@
 //     save anything, NEVER call an external image-generation
 //     provider directly (the surface returns a typed prompt the
 //     user reviews; an actual image-generation provider call is
-//     out of scope for this slice and would land in a future
-//     wiring slice that re-uses the same propose-only DTOs),
+//     intentionally handled outside this strategy),
 //     refuse cross-trip / cross-user requests, refuse to mutate
 //     anything;
 //
@@ -107,30 +104,27 @@ type Strategy struct{}
 // New constructs the strategy.
 func New() *Strategy { return &Strategy{} }
 
-// FeatureID implements [strategy.Strategy].
 func (s *Strategy) FeatureID() string { return FeatureID }
 
-// System implements [strategy.Strategy].
 func (s *Strategy) System() string { return SystemPrompt }
 
-// Tools implements [strategy.Strategy]. Returns a defensive copy.
+// Tools returns a defensive copy of the allowed tool names.
 func (s *Strategy) Tools() []string {
 	out := make([]string, len(allowedTools))
 	copy(out, allowedTools)
 	return out
 }
 
-// Context implements [strategy.Strategy]. No extra prefix messages.
+// Context adds no extra prefix messages.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
-// RedactionPolicy implements [strategy.Strategy].
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyDigest())
 }
 
-// EvalGoldens implements [strategy.Strategy]. Goldens live in YAML.
+// EvalGoldens stays nil because goldens live in YAML.
 func (s *Strategy) EvalGoldens() []strategy.EvalGolden { return nil }
 
 // Compile-time assertion.

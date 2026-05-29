@@ -1,7 +1,4 @@
-// Phase-50 / 0056 — V2 Helix watch face natural-language response.
-//
-// watch_face_nl_response.go ships ONE new read-only typed tool
-// used by the watch-face-nl-response strategy:
+// Watch-face natural-language response tools.
 //
 //   - `query_watch_context` — typed deterministic envelope
 //     describing the user's primary vehicle as it would render
@@ -32,7 +29,7 @@
 //     is defence in depth in case a future edit widens the
 //     schema.
 //
-// Tool design (vs the slice-0055 voice-mode tools):
+// Tool design:
 //
 //   - NO per-request scope binding is needed because the
 //     primary vehicle is install-wide (one row in the
@@ -61,25 +58,17 @@
 //     the LiveStateReader's RatedRange field which is
 //     persisted in miles).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → query_watch_context delegates
-//     to two narrow read-only ports: WatchContextSource (wraps
-//     the canonical VehicleRepo + signal.LiveStateReader the
-//     existing /watch handler already uses) and
-//     AlertHistorySource (wraps the canonical
-//     NotificationRepo). NO new SQL is written. The
-//     deterministic /watch/summary handler remains the
-//     canonical baseline read path; this tool's adapter shares
-//     the same data sources without duplicating the projection.
-//
-//   - "the LLM never writes raw SQL" → tool has no DB handle.
-//     The ports hand pre-aggregated envelopes in.
-//
-//   - "no duplicate write paths" → no save_* / create_* /
-//     apply_* / submit_* tool exists in this slice; the only
-//     tool is a pure read.
+//   - query_watch_context delegates to two narrow read-only ports:
+//     WatchContextSource wraps the canonical VehicleRepo and
+//     signal.LiveStateReader used by /watch; AlertHistorySource wraps
+//     NotificationRepo. No new SQL is introduced.
+//   - The deterministic /watch/summary handler remains the canonical
+//     baseline read path; this tool shares the same data sources without
+//     duplicating the projection.
+//   - The tool has no DB handle, and no save_* / create_* / apply_* /
+//     submit_* companion exists.
 
 package nl
 
@@ -212,7 +201,7 @@ type WatchContextEnvelope struct {
 //
 // The interface MUST stay read-only — adding a Save / Update
 // method here would defeat the read-only contract that
-// ADR-015 §I3 + the slice prompt mandate.
+// ADR-015 §I3 mandates.
 type WatchContextSource interface {
 	// LoadWatchContext returns the typed envelope describing
 	// the install's primary vehicle. The adapter is
@@ -382,8 +371,7 @@ func (t *queryWatchContext) Execute(ctx context.Context, in any) (any, error) {
 
 // WatchFaceNLResponseSources bundles the narrow ports
 // RegisterWatchFaceNLResponseTools needs. Mirrors
-// [SafetySettingExplainerSources] (slice 0054) and
-// [VoiceModeSources] (slice 0055).
+// [SafetySettingExplainerSources] and [VoiceModeSources].
 //
 // Production wiring (router.go) instantiates the production
 // adapters (*api.AIWatchFaceNLContextSource and
@@ -395,7 +383,7 @@ type WatchFaceNLResponseSources struct {
 }
 
 // RegisterWatchFaceNLResponseTools installs the
-// watch-face-nl-response slice's tools on r. Called from
+// watch-face-nl-response tools on r. Called from
 // router.go AFTER all earlier RegisterXxx calls so the
 // registry's Names list continues to grow deterministically
 // without disturbing earlier registrations or any builtin-names

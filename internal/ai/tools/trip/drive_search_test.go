@@ -1,5 +1,3 @@
-// Phase-50 / 0021 — D1 Natural-language drive search and replay tests.
-//
 // Tool tests for retrieve_drive_chunks + hydrate_drive_replay. Both
 // tools are pure functions over their typed input + a narrow port
 // (rag.Retriever or DriveReplayHydrator); the tests stub each port
@@ -41,7 +39,7 @@ func (f *fakeDriveReplayHydrator) HydrateOne(_ context.Context, subject, sourceT
 }
 
 // TestRetrieveDriveChunks_HappyPath_ScopesBySubjectAndDelegates
-// proves a valid input round-trips through the F7 retriever scoped
+// proves a valid input round-trips through the RAG retriever scoped
 // to the subject from ctx, and the chunks come back in a
 // deterministic envelope.
 func TestRetrieveDriveChunks_HappyPath_ScopesBySubjectAndDelegates(t *testing.T) {
@@ -114,8 +112,8 @@ func TestRetrieveDriveChunks_DefaultK_SubstitutesFiveWhenZero(t *testing.T) {
 
 // TestRetrieveDriveChunks_AcceptsForwardCompatSourceTypes proves
 // route_segment and location_summary are accepted by the allowlist
-// even though the F7 indexer has not yet wired them — the slice
-// prompt reserves these strings for forward compatibility.
+// even though the indexer has not wired them yet; the allowlist
+// reserves these strings for forward compatibility.
 func TestRetrieveDriveChunks_AcceptsForwardCompatSourceTypes(t *testing.T) {
 	t.Parallel()
 	ret := &fakeRetriever{out: nil}

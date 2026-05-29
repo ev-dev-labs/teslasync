@@ -1,6 +1,4 @@
-// Phase-50 / 0015 — N1 Natural-language alert builder.
-//
-// alert_builder.go ships TWO new propose-only tools:
+// This file exposes two propose-only tools:
 //
 //   - `draft_alert_rule`    — accept a typed AlertRule shape and
 //                             return a normalized + validated draft
@@ -18,7 +16,7 @@
 // AlertHandler.CreateAlertRule handler AFTER the user explicitly
 // clicks Save in the AlertStudioPage UI.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Route every mutation proposal through F4 tools and existing
 //     typed DTO validation. The LLM never writes raw SQL and never
@@ -59,7 +57,7 @@ import (
 //
 // The interface MUST stay validation-only — adding a Create or Save
 // method here would defeat the propose-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// §I3 + the feature requirements mandate.
 type AlertRuleValidator interface {
 	// ValidateAlertRule reports whether rule would be accepted by
 	// the canonical typed AlertRule handler. Returns nil on
@@ -236,7 +234,7 @@ func buildDraftRule(input alertRuleDraftInput) *alertmodel.AlertRule {
 // hashes per identical-text request.
 //
 // Kept narrow on purpose: this is the curated "1.0 baseline" set of
-// safe-for-NL signal names. A future slice that wants the full
+// safe-for-NL signal names. A future feature that wants the full
 // catalog of 100+ telemetry fields can plumb a richer enumeration
 // through ContextOverrides without touching the tool's input schema.
 var allowedSignalsHint = func() string {
@@ -262,12 +260,9 @@ type draftAlertRule struct {
 	validator AlertRuleValidator
 }
 
-// Name implements [Tool].
 func (t *draftAlertRule) Name() string { return "draft_alert_rule" }
 
-// Description implements [Tool]. Used by the LLM during tool
-// selection — kept short and intent-focused, with the canonical
-// signal allowlist appended so the model picks from the curated set.
+// The description includes the canonical signal allowlist so the model picks from the curated set.
 func (t *draftAlertRule) Description() string {
 	return "Build a typed AlertRule draft from the user's natural-language description. " +
 		"PROPOSE-ONLY: the rule is NOT saved; the user reviews the draft in the UI before clicking Save. " +
@@ -276,38 +271,20 @@ func (t *draftAlertRule) Description() string {
 		"Returns {draft, status: ok|invalid, validation_error}."
 }
 
-// InputSchema implements [Tool].
 func (t *draftAlertRule) InputSchema() json.RawMessage {
 	return tools.CachedSchema(alertRuleDraftInput{})
 }
 
-// OutputSchema implements [Tool]. Nil ⇒ free-form output object;
-// the dispatcher serialises whatever Execute returns.
 func (t *draftAlertRule) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. PROPOSE-only — never returns true. The
-// tool builds + validates a DTO but does NOT touch the database.
-// The actual save flows through the existing
-// POST /api/v1/alerts/rules handler AFTER the user clicks Save.
 func (t *draftAlertRule) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty — the AI guard already
-// gates on ai_mode + per-feature toggle upstream, and the tool
-// produces no state mutation that needs an additional RBAC scope.
 func (t *draftAlertRule) RequiredScope() string { return "" }
 
-// Validate implements [Tool]. Delegates to the shared validator.
 func (t *draftAlertRule) Validate(raw json.RawMessage) (any, error) {
 	return tools.ValidateStruct[alertRuleDraftInput](raw)
 }
 
-// Execute implements [Tool]. Builds the draft, runs the canonical
-// validator, returns the envelope. Never returns an error from the
-// validator path — validation failures are surfaced as
-// status="invalid" in the envelope so the LLM's follow-up prose can
-// describe the problem rather than the dispatcher relaying an error
-// frame.
-//
 // A nil validator is a wiring bug detected at boot via constructor
 // panic; this function only nil-checks defensively for tests that
 // instantiate the tool directly.
@@ -381,40 +358,29 @@ type validateAlertRuleTool struct {
 	validator AlertRuleValidator
 }
 
-// Name implements [Tool].
 func (t *validateAlertRuleTool) Name() string { return "validate_alert_rule" }
 
-// Description implements [Tool].
 func (t *validateAlertRuleTool) Description() string {
 	return "Run the canonical AlertRule validator over a typed AlertRule shape and report whether it would be accepted by the POST /api/v1/alerts/rules handler. " +
 		"PROPOSE-ONLY: nothing is saved. Returns {status: ok|invalid, validation_error}. " +
 		"Use this AFTER draft_alert_rule to confirm a proposed draft will be accepted before narrating it to the user."
 }
 
-// InputSchema implements [Tool].
 func (t *validateAlertRuleTool) InputSchema() json.RawMessage {
 	return tools.CachedSchema(alertRuleValidateInput{})
 }
 
-// OutputSchema implements [Tool].
 func (t *validateAlertRuleTool) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. PROPOSE-only — never returns true.
 func (t *validateAlertRuleTool) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty — same rationale as
-// draft_alert_rule.
 func (t *validateAlertRuleTool) RequiredScope() string { return "" }
 
-// Validate implements [Tool]. Delegates to the shared validator.
 func (t *validateAlertRuleTool) Validate(raw json.RawMessage) (any, error) {
 	return tools.ValidateStruct[alertRuleValidateInput](raw)
 }
 
-// Execute implements [Tool]. Builds an AlertRule from the typed
-// input, runs the canonical validator, returns the verdict envelope.
-// Same error semantics as draft_alert_rule: validation failures are
-// surfaced as status="invalid", never as a returned error.
+// Validation failures are surfaced as status="invalid", matching draft_alert_rule.
 func (t *validateAlertRuleTool) Execute(_ context.Context, in any) (any, error) {
 	input := in.(alertRuleValidateInput)
 	if t.validator == nil {
@@ -423,7 +389,7 @@ func (t *validateAlertRuleTool) Execute(_ context.Context, in any) (any, error) 
 
 	// Reuse buildDraftRule's construction by adapting the input
 	// type. The two input shapes are field-equivalent today; if
-	// they diverge in a future slice, expand the conversion here.
+	// they diverge in a future feature, expand the conversion here.
 	rule := buildDraftRule(alertRuleDraftInput(input))
 
 	out := &alertRuleValidateOutput{
@@ -449,7 +415,7 @@ type AlertBuilderSources struct {
 	Validator AlertRuleValidator
 }
 
-// RegisterAlertBuilderTools installs the nl-alert-builder slice's
+// RegisterAlertBuilderTools installs the alert-builder
 // tools on r. Called from router.go AFTER Register12Builtins +
 // RegisterDigestTools + RegisterYearReviewTools + RegisterAnomalyTools
 // so the registry's alphabetical Names list grows deterministically

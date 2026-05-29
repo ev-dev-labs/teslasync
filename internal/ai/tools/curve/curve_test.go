@@ -1,4 +1,4 @@
-// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering tool tests.
+// Charging-curve fingerprint clustering tool tests.
 //
 // Tool tests for retrieve_charge_curve_chunks +
 // query_charge_curve_features. Both tools are pure functions over
@@ -33,7 +33,7 @@ import (
 // ---------------------------------------------------------------------------
 
 // TestRetrieveChargeCurveChunks_HappyPath_ScopesBySubjectAndDelegates
-// proves a valid input round-trips through the F7 retriever scoped
+// proves a valid input round-trips through the retriever scoped
 // to the subject from ctx.
 func TestRetrieveChargeCurveChunks_HappyPath_ScopesBySubjectAndDelegates(t *testing.T) {
 	t.Parallel()
@@ -100,8 +100,7 @@ func TestRetrieveChargeCurveChunks_DefaultK_When_ZeroOrMissing(t *testing.T) {
 
 // TestRetrieveChargeCurveChunks_AcceptsForwardCompatChargeCurveSourceType
 // proves the per-feature allowlist accepts the
-// forward-compat `charge_curve` source string the slice prompt
-// reserves for the future indexer fan-out. The retriever returns
+// forward-compat `charge_curve` source string reserved for a future indexer fan-out. The retriever returns
 // zero chunks today (no rows indexed); the strategy's goldens
 // already cover the zero-matches narration.
 func TestRetrieveChargeCurveChunks_AcceptsForwardCompatChargeCurveSourceType(t *testing.T) {
@@ -122,7 +121,7 @@ func TestRetrieveChargeCurveChunks_AcceptsForwardCompatChargeCurveSourceType(t *
 
 // TestRetrieveChargeCurveChunks_Validate_RejectsUnknownSourceType
 // proves the per-feature source-type allowlist refuses corpora the
-// slice prompt did not enumerate.
+// tool allowlist does not include.
 func TestRetrieveChargeCurveChunks_Validate_RejectsUnknownSourceType(t *testing.T) {
 	t.Parallel()
 	tool := &retrieveChargeCurveChunks{r: &toolstest.FakeRetriever{}}

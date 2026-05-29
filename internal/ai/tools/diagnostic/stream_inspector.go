@@ -1,6 +1,6 @@
-// Phase-50 / 0047 — S6 MQTT and SSE inspector explanations.
+// MQTT and SSE inspector explanation tools.
 //
-// mqtt_sse_inspector_explanations.go ships TWO new read-only tools:
+// This file defines two read-only tools:
 //
 //   - `query_stream_inspector` — typed deterministic envelope
 //     describing the MQTT broker + SSE hub + job-watch snapshot for
@@ -28,12 +28,12 @@
 //     before any cross-window data is loaded into the model's
 //     context.
 //
-//   - `retrieve_stream_chunks` — a thin wrapper over the F7
-//     rag.Retriever scoped to the calling user_subject, restricted
-//     to the slice's per-feature source-type allowlist
+//   - `retrieve_stream_chunks` — a thin wrapper over rag.Retriever
+//     scoped to the calling user_subject and restricted to the
+//     feature's source-type allowlist
 //     {mqtt_status, sse_status, job_status}. All three source types
-//     are reserved by string for forward-compatibility — a future
-//     slice will index per-window broker / SSE-hub / job chunks.
+//     are reserved by string for forward-compatibility; a future
+//     indexer can add per-window broker / SSE-hub / job chunks.
 //     Until then, retrieve_stream_chunks called with any of these
 //     source types simply returns zero chunks for that corpus —
 //     which is the correct behaviour: the strategy's goldens
@@ -45,32 +45,30 @@
 // is never reached in practice — defence in depth in case a future
 // edit accidentally adds a write tool.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → query_stream_inspector delegates to
+//   - query_stream_inspector delegates to
 //     a narrow StreamInspectorSource read interface satisfied at
 //     boot by a deterministic adapter that composes the same
 //     *MQTTHandler.Status snapshot the canonical baseline
 //     /api/v1/admin/mqtt/status endpoint already serves; no new
 //     SQL or new live-state mutation. retrieve_stream_chunks
-//     delegates to the F7 rag.Retriever (the single canonical
-//     retrieval entry point).
+//     delegates to rag.Retriever, the canonical retrieval entry point.
 //
-//   - "the LLM never writes raw SQL" → tools have no DB handle.
+//   - Tools have no DB handle.
 //     The envelope-building math is pure Go on the typed
 //     StreamInspectorEnvelope struct the source returns.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; both tools are pure reads. The
+//     tool exists here; both tools are pure reads. The
 //     existing telemetry-ingest path is the only mutation surface;
 //     the AI tool never touches it.
 //
 //   - Privacy: broker hostnames, SSE hub client identifiers, and
 //     vehicle VINs are operator-readable but should never leak
 //     through a transcript. The per-feature redaction policy
-//     PolicyChatbot is deny-by-default — every PII class is tagged
-//     round-trip BEFORE the message is sent to the provider (see
+//     PolicyChatbot is deny-by-default: every PII class is tagged
+//     round-trip before the message is sent to the provider (see
 //     internal/ai/provider/redact_decorator.go which walks every
 //     message in the request, tool messages included). A leaked
 //     transcript reveals nothing about the operator's environment.
@@ -78,7 +76,7 @@
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant or arbitrary string is refused), so a
 // confused LLM that asks the assistant to search e.g. "user_note"
-// cannot accidentally expose a corpus the slice did not enumerate.
+// cannot accidentally expose a corpus this feature did not enumerate.
 
 package diagnostic
 
@@ -95,32 +93,29 @@ import (
 )
 
 // streamSourceMQTTStatus is the source-type string reserved by the
-// slice prompt for the future per-window MQTT broker status
+// reserved for the future per-window MQTT broker status
 // embedding corpus. Intentionally NOT promoted to a rag.Source*
-// constant because adding to that package widens the global F7
-// contract beyond this slice's mandate. When the future indexer
-// slice lands, it should promote this string to
+// constant because adding to that package widens the global retrieval
+// contract. When the future indexer lands, it should promote this string to
 // rag.SourceMQTTStatus in one place.
 const streamSourceMQTTStatus = "mqtt_status"
 
 // streamSourceSSEStatus is the source-type string reserved by the
-// slice prompt for the future per-window SSE hub status embedding
+// reserved for the future per-window SSE hub status embedding
 // corpus. Same forward-compatibility rationale as
 // streamSourceMQTTStatus.
 const streamSourceSSEStatus = "sse_status"
 
-// streamSourceJobStatus is the source-type string reserved by the
-// slice prompt for the future per-window background-job status
-// embedding corpus. Same forward-compatibility rationale.
+// streamSourceJobStatus is reserved for the future per-window
+// background-job status embedding corpus. Same forward-compatibility rationale.
 const streamSourceJobStatus = "job_status"
 
 // streamInspectorAllowedSourceTypes is the per-feature allowlist of
 // source-type strings the mqtt-sse-inspector-explanations strategy
 // may retrieve over. Any other source type passed via the LLM's
-// typed input is refused at validation time — the slice prompt
-// explicitly enumerates these three corpora and a future slice
-// that adds a new source must add it here AND extend the strategy's
-// system prompt + goldens, not silently widen.
+// typed input is refused at validation time. A new source must be
+// added here and reflected in the strategy's system prompt and
+// goldens, not silently widened.
 //
 // Kept in lex order so error messages list a stable allowed-set.
 var streamInspectorAllowedSourceTypes = []string{
@@ -245,7 +240,7 @@ type retrievedStreamChunk struct {
 	Score      float32 `json:"score"`
 }
 
-// retrieveStreamChunks is the read-only tool that calls the F7
+// retrieveStreamChunks is the read-only tool that calls the RAG
 // retriever for the mqtt-sse-inspector-explanations domain. It is
 // the OPTIONAL secondary tool the LLM may call (per the strategy's
 // system prompt) AFTER query_stream_inspector, so the explanation
@@ -374,10 +369,9 @@ type StreamVehicleStat struct {
 	// ever been received.
 	LastReceived string `json:"last_received,omitempty"`
 
-	// Stale is true when LastReceived is older than the slice's
-	// staleness threshold (120 seconds, mirroring the SPA's
-	// MQTTInspectorPage STALE_THRESHOLD constant) OR when
-	// LastReceived is empty.
+	// Stale is true when LastReceived is older than the staleness
+	// threshold (120 seconds, mirroring the SPA's MQTTInspectorPage
+	// STALE_THRESHOLD constant) or when LastReceived is empty.
 	Stale bool `json:"stale"`
 }
 
@@ -506,9 +500,8 @@ type StreamInspectorEnvelope struct {
 // In tests we substitute deterministic fakes so the tool unit
 // tests stay hermetic.
 //
-// The interface MUST stay read-only — adding a Save / Update
-// method here would defeat the read-only contract that ADR-015 §I3
-// + the slice prompt mandate.
+// The interface MUST stay read-only; adding a Save / Update method
+// would defeat ADR-015 §I3.
 type StreamInspectorSource interface {
 	// StreamInspector returns the deterministic envelope describing
 	// the window (fromUnix, toUnix). Implementations MUST NOT
@@ -648,11 +641,10 @@ type MqttSseInspectorExplanationsSources struct {
 }
 
 // RegisterMqttSseInspectorExplanationsTools installs the
-// mqtt-sse-inspector-explanations slice's tools on r. Called from
-// router.go AFTER the Phase-50 / 0046 feedback-queue-triage
-// registration so the registry's alphabetical Names list
-// continues to grow deterministically without disturbing earlier
-// registrations or any builtin-names pin tests.
+// mqtt-sse-inspector-explanations tools on r. Called from router.go
+// after feedback-queue-triage registration so the registry's alphabetical
+// Names list continues to grow deterministically without disturbing earlier
+// registrations or builtin-name pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first

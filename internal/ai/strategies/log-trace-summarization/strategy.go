@@ -1,5 +1,4 @@
-// Package logtracesummarization is the Phase-50 / 0045 S4 strategy
-// for the LLM-backed log-trace-summarization surface.
+// Package logtracesummarization defines the LLM-backed log-trace summarization strategy.
 //
 // The strategy declares:
 //
@@ -7,7 +6,7 @@
 //     log/trace-window summarizer: produce a 3-6 sentence factual
 //     summary by routing through query_trace_window FIRST (the
 //     deterministic typed envelope for the in-scope window), then
-//     OPTIONALLY retrieve_log_chunks (F7 retrieval restricted to
+//     OPTIONALLY retrieve_log_chunks (retrieval restricted to
 //     {log_event, trace_span} source types) for per-event context.
 //     The narrative MUST be grounded strictly in the tool reply;
 //     the LLM never invents events, never claims a recurring
@@ -27,11 +26,10 @@
 //     query a window outside that scope. Defence-in-depth against
 //     prompt injection in operator-authored log messages.
 //
-//     2. `retrieve_log_chunks` — a thin wrapper over the F7
-//     rag.Retriever scoped to the calling user_subject, restricted
-//     to the slice's per-feature source-type allowlist
+//     2. `retrieve_log_chunks` — a thin wrapper over rag.Retriever
+//     scoped to the calling user_subject and restricted to the per-feature source-type allowlist
 //     {log_event, trace_span}. Both source types are reserved by
-//     string for forward-compatibility — a future slice will index
+//     string for forward-compatibility — a future indexer will add
 //     per-window log-event and trace-span chunks. Until then,
 //     retrieve_log_chunks called with either source type simply
 //     returns zero chunks for that corpus — which is the correct
@@ -39,9 +37,7 @@
 //     zero-matches narration and the system prompt instructs the
 //     LLM to answer gracefully when zero chunks are returned.
 //
-//   - the redaction policy (`PolicyChatbot`) which the slice
-//     prompt mandates ("Allowed classes: none; logs are
-//     structurally redacted before any provider call"): VIN,
+//   - the redaction policy (`PolicyChatbot`): VIN,
 //     lat/long, addresses, place names, vehicle-name, AND every
 //     other PII class remain tagged via round-trip markers so a
 //     leaked transcript reveals nothing about IPs, hostnames,
@@ -61,7 +57,7 @@
 // feature is enabled. Off-mode users never see the AI section at
 // all (ADR-015 §I3, §I5, §I6).
 //
-// ADR-015 alignment:
+// ADR-015 constraints:
 //
 //   - I1 default-off:    feature toggle defaults false in features.Registry.
 //   - I3 baseline intact: this strategy never replaces the
@@ -181,15 +177,12 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
+// PolicyChatbot wrapped through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyChatbot from
-// internal/ai/redact/policies.go. Allowed classes: none; logs are
-// structurally redacted before any provider call. Round-trip
-// required: yes." PolicyChatbot's deny-by-default stance keeps
+// PolicyChatbot's deny-by-default stance keeps
 // every PII class round-tripped to a tag before the message ever
 // reaches the provider.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {

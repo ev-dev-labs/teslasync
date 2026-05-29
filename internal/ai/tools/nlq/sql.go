@@ -1,19 +1,19 @@
-// Phase-50 / 0057 — PU1 Natural-language SQL playground.
+// Natural-language SQL playground tools.
 //
-// nl_sql_playground.go ships TWO new propose-only tools:
+// nl_sql_playground.go provides two propose-only tools:
 //
-//   - `draft_readonly_sql`    — accept a typed ReadonlySQLDraft shape
-//                               (prompt, sql, rationale) and return a
-//                               normalized + validated draft the
-//                               frontend can render for human review
-//                               in the AI side panel of the SQL
-//                               playground page.
+// - `draft_readonly_sql` — accept a typed ReadonlySQLDraft shape
+// (prompt, sql, rationale) and return a
+// normalized + validated draft the
+// frontend can render for human review
+// in the AI side panel of the SQL
+// playground page.
 //
-//   - `validate_readonly_sql` — accept the same typed shape and
-//                               return whether it would be accepted
-//                               by the canonical read-only SQL
-//                               contract, with field-level error
-//                               messages on rejection.
+// - `validate_readonly_sql` — accept the same typed shape and
+// return whether it would be accepted
+// by the canonical read-only SQL
+// contract, with field-level error
+// messages on rejection.
 //
 // Both tools are PROPOSE-ONLY: they construct or validate a
 // ReadonlySQLDraft DTO but do NOT touch the database, execute the
@@ -37,26 +37,26 @@
 // table, the scope check refuses the call before any out-of-
 // catalog query proposal can reach the SPA.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Route every mutation proposal through F4 tools and existing
-//     typed DTO validation. The LLM never writes raw SQL and never
-//     bypasses existing handlers." → both tools delegate the final
-//     ReadonlySQLDraft shape check to a narrow [ReadonlySQLValidator]
-//     port. The tool ALSO enforces a deny-by-default DML/DDL
-//     keyword filter and a SELECT/WITH-only prefix check before any
-//     validator ever runs.
+// - "Route every mutation proposal through F4 tools and existing
+// typed DTO validation. The LLM never writes raw SQL and never
+// bypasses existing handlers." → both tools delegate the final
+// ReadonlySQLDraft shape check to a narrow [ReadonlySQLValidator]
+// port. The tool ALSO enforces a deny-by-default DML/DDL
+// keyword filter and a SELECT/WITH-only prefix check before any
+// validator ever runs.
 //
-//   - "the LLM never writes raw SQL" → tools have no DB handle.
-//     The interface is intentionally narrow: a single Validate
-//     call. The tool does NOT execute the proposed SQL — it only
-//     pattern-matches the text against the read-only contract.
+// - "the LLM never writes raw SQL" → tools have no DB handle.
+// The interface is intentionally narrow: a single Validate
+// call. The tool does NOT execute the proposed SQL — it only
+// pattern-matches the text against the read-only contract.
 //
-//   - "no duplicate write paths" → the toolkit does NOT include an
-//     `apply_readonly_sql`, `execute_readonly_sql`, or any other
-//     write / execute tool. The frontend renders the draft and the
-//     user clicks the canonical baseline Run button on the SQL
-//     playground, which is what invokes any actual query.
+// - "no duplicate write paths" → the toolkit does NOT include an
+// `apply_readonly_sql`, `execute_readonly_sql`, or any other
+// write / execute tool. The frontend renders the draft and the
+// user clicks the canonical baseline Run button on the SQL
+// playground, which is what invokes any actual query.
 
 package nlq
 
@@ -101,7 +101,7 @@ type scopedSchemaCatalogKey struct{}
 // tables is defensively copied into a private set so a later
 // mutation by the caller cannot retroactively widen or narrow the
 // scope a tool already consulted. nil-safe: passing nil for the
-// tables slice installs an empty scope (the tool will refuse every
+// table wiring installs an empty scope (the tool will refuse every
 // table reference).
 //
 // Exported so internal/api can install the scope without depending
@@ -255,7 +255,7 @@ func ForbiddenReadonlySQLKeywords() []string {
 //
 // The interface MUST stay validation-only — adding an Apply or
 // Execute method here would defeat the propose-only contract that
-// ADR-015 §I3 + the slice prompt mandate.
+// ADR-015 §I3.
 type ReadonlySQLValidator interface {
 	// ValidateReadonlySQL reports whether the draft would be
 	// accepted by the canonical read-only SQL contract. Returns
@@ -332,10 +332,10 @@ type readonlySQLInput struct {
 // Status reports whether the draft would be accepted by the
 // canonical validator at the time of the tool call:
 //
-//   - "ok"      — accepted; the user can copy the draft into the
-//     baseline editor and click Run to execute.
-//   - "invalid" — rejected; ValidationError contains a one-line
-//     diagnostic suitable for showing in the UI.
+// - "ok" — accepted; the user can copy the draft into the
+// baseline editor and click Run to execute.
+// - "invalid" — rejected; ValidationError contains a one-line
+// diagnostic suitable for showing in the UI.
 //
 // Even when invalid, Draft is returned unchanged so the frontend
 // can render the partially-correct proposal and let the user fix
@@ -406,14 +406,14 @@ func extractReferencedTables(sql string) []string {
 
 // checkReadonlySQLScopeAndShape enforces:
 //
-//   - the in-scope binding installed by the AI handler is present
-//     (missing-scope ⇒ hard error)
-//   - the proposed SQL starts with SELECT or WITH (no DML/DDL)
-//   - the proposed SQL contains no semicolons (single statement)
-//   - the proposed SQL contains no forbidden DML/DDL keywords
-//     (defence in depth on top of the prefix check)
-//   - every referenced table is in the in-scope curated catalog
-//     (out-of-catalog prompt-injection ⇒ hard error)
+// - the in-scope binding installed by the AI handler is present
+// (missing-scope ⇒ hard error)
+// - the proposed SQL starts with SELECT or WITH (no DML/DDL)
+// - the proposed SQL contains no semicolons (single statement)
+// - the proposed SQL contains no forbidden DML/DDL keywords
+// (defence in depth on top of the prefix check)
+// - every referenced table is in the in-scope curated catalog
+// (out-of-catalog prompt-injection ⇒ hard error)
 //
 // Returns nil on success. A returned error is propagated as a tool
 // error frame back to the LLM so the strategy can refuse politely
@@ -673,7 +673,7 @@ type NLSqlPlaygroundSources struct {
 }
 
 // RegisterNLSqlPlaygroundTools installs the nl-sql-playground
-// slice's tools on r. Called from router.go AFTER the Phase-50 /
+// feature's tools on r. Called from router.go AFTER the /
 // 0044 signal-explorer-nl-filter registration so the registry's
 // alphabetical Names list grows deterministically without
 // disturbing earlier registrations or any builtin-names pin tests.

@@ -1,11 +1,10 @@
-// Package smartchargeschedulesuggestion is the Phase-50 / C1 strategy
-// for the LLM-assisted "smart-charge-schedule-suggestion" surface.
+// Package smartchargeschedulesuggestion defines the LLM-assisted smart-charge schedule strategy.
 //
 // The strategy declares:
 //
 //   - the system prompt that frames the surface as a propose-only
 //     charge-schedule agent — produce a structured charge schedule
-//     proposal via the F4 tools, do NOT save anything, NEVER write
+//     proposal via typed tools, do NOT save anything, NEVER write
 //     SQL, refuse cross-user requests, refuse to claim costs or
 //     rate-plan numbers the tool reply did not return;
 //   - the two propose-only tools the LLM is allowed to call —
@@ -34,11 +33,6 @@
 // — is unchanged. The heuristic optimizer remains the canonical
 // baseline; off-mode users never see the AI surface at all
 // (ADR-015 §I3, §I5, §I6).
-//
-// Service-worker chunks: this slice's frontend code is loaded under
-// the page-bundle for /charging/schedule; the off-mode walker
-// validates code chunks via the `withAiFeature` HOC + the
-// AI_FEATURES map. See the slice log for the documented mapping.
 //
 // ADR-015 alignment:
 //
@@ -173,21 +167,18 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-user "preferred rate plan" or
 // "preferred off-peak window" preference snippet would be injected
-// once smart-charge-schedule-suggestion grows that surface. Today's
-// slice keeps Context empty so the dispatcher's behaviour is fully
-// determined by [System] + History.
+// once smart-charge-schedule-suggestion grows that surface. For now,
+// [System] plus History fully determines dispatcher behaviour.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicySmartChargeScheduleSuggestion wrapped through the F4↔F8
-// adapter so the dispatcher's per-request ctx-installation step
+// PolicySmartChargeScheduleSuggestion through the redaction adapter so
+// the dispatcher's per-request ctx-installation step
 // (dispatch.Run installs the policy via redact.WithPolicy) sees the
 // concrete policy.
 //
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
-// home/work locations remain tagged. Round-trip required: yes".
 // PolicySmartChargeScheduleSuggestion is the per-feature constructor
 // with the same allow-list as PolicyDigest / PolicyTripPlannerLLMAgent
 // — kept as a distinct identifier so a future per-feature change to

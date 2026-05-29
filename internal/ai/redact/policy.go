@@ -35,8 +35,8 @@ type Policy struct {
 
 	// EnablePlate opts the plate detector into the chain. Default
 	// false because the plate regex has a high false-positive rate
-	// on alphanumeric IDs (per prompt D9.2 "opt-in via class").
-	// Features that explicitly want plates redacted set this true.
+	// on alphanumeric IDs. Features that explicitly want plates
+	// redacted set this true.
 	EnablePlate bool
 }
 
@@ -70,7 +70,7 @@ func (p Policy) AllowsAll() bool {
 
 // DefaultPolicy returns the deny-everything stance. Returned by
 // [redactadapter.From] (in internal/ai/strategy/redactadapter) when
-// the strategy returns the F4 [strategy.NoRedaction] placeholder
+// the strategy returns the [strategy.NoRedaction] placeholder
 // (which carries no policy data).
 //
 // Rationale: ADR-015 §I9 requires PII never leaks. A strategy that

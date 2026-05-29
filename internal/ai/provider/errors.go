@@ -2,9 +2,8 @@ package provider
 
 import "errors"
 
-// Sentinel errors returned by the registry + adapters. Callers compare
-// with errors.Is so wrapping in a decorator (slice F3 audit) still
-// preserves the contract.
+// Sentinel errors returned by the registry and adapters. Callers compare
+// with errors.Is so decorator wrapping still preserves the contract.
 var (
 	// ErrProviderDisabled is returned by [Registry.For] when the user's
 	// AI mode is "off" (ADR-015 §I1). The guard short-circuits before
@@ -25,14 +24,14 @@ var (
 
 	// ErrMissingConfig is returned when the resolved provider name has
 	// no configuration entry in settings.ai_provider_config. The
-	// Settings UI (slice F2) prevents this for the active mode but the
-	// registry double-checks so a corrupted settings row surfaces a
-	// clear error instead of a nil-deref.
+	// Settings UI prevents this for the active mode, but the registry
+	// double-checks so a corrupted settings row surfaces a clear error
+	// instead of a nil-deref.
 	ErrMissingConfig = errors.New("ai/provider: missing provider configuration")
 
 	// ErrLocalModeViolation is returned by [ValidateLocal] when the
 	// configured base_url is not on a private (RFC1918 / loopback /
-	// link-local / ULA) network. This is the R3 mitigation guard.
+	// link-local / ULA) network.
 	ErrLocalModeViolation = errors.New("ai/provider: local mode rejects non-private host")
 
 	// ErrCapabilityNotSupported is returned by an adapter when the

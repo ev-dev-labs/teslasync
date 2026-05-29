@@ -408,7 +408,7 @@ func (a *auditedProvider) baseRecord(ctx context.Context, req ChatRequest, start
 		FinishedAt:     finished,
 		LatencyMs:      int(finished.Sub(started).Milliseconds()),
 		RequestHash:    hash,
-		RedactedDigest: hash, // F8 redaction will diverge once it ships.
+		RedactedDigest: hash, // Redaction may diverge from the raw request hash.
 	}
 }
 

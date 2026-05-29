@@ -1,6 +1,4 @@
-// Phase-50 / 0035 — A2 Inbox auto-categorization.
-//
-// inbox_auto_categorization.go ships TWO new propose-only tools:
+// Inbox auto-categorization exposes two propose-only tools:
 //
 //   - `draft_alert_categories` — accept an inbox scope
 //     (vehicle_id?, severities?[], rule_ids?[], window_days?),
@@ -27,9 +25,9 @@
 // therefore never reached in practice — defence in depth in
 // case a future edit accidentally adds a write tool.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Route every mutation proposal through F4 tools and existing
+//   - "Route every mutation proposal through existing
 //     typed DTO validation. The LLM never writes raw SQL and
 //     never bypasses existing handlers." → the tools delegate to
 //     the InboxCategorizationSource port (a narrow read-only
@@ -81,7 +79,7 @@ import (
 //
 // Adding a new category requires:
 //
-//  1. extending this slice;
+//  1. extending this taxonomy;
 //  2. extending categoryForSignal below to map at least one
 //     signal_name into it;
 //  3. extending goldens.yaml so the eval harness exercises the
@@ -251,14 +249,14 @@ const maxSampleRuleIDs = 5
 // inboxCategorizationDefaultMinEvents is the default minimum
 // number of notification_logs rows required in the window
 // before HasEnoughHistory flips true. Mirrors the
-// alert-tuning-suggestions slice's threshold so both surfaces
+// alert-tuning-suggestions threshold so both surfaces
 // behave consistently when the user has just connected a
 // vehicle.
 const inboxCategorizationDefaultMinEvents = 10
 
 // inboxCategorizationDefaultWindowDays is the default lookback
 // window when the LLM does not specify window_days. 7 mirrors
-// the canonical "recent" window used elsewhere in Phase-50.
+// the canonical recent window used by adjacent inbox features.
 const inboxCategorizationDefaultWindowDays = 7
 
 // inboxCategorizationMaxWindowDays caps the lookback so a
@@ -280,7 +278,7 @@ const inboxCategorizationMaxWindowDays = 90
 //
 // The interface MUST stay read-only — adding a Save / Update
 // method here would defeat the read-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// §I3 contract.
 type InboxCategorizationSource interface {
 	// LoadCategoryCounts reads the notification_logs window
 	// matching f, joins each row to its alert_rule.signal_name
@@ -370,7 +368,6 @@ type draftAlertCategories struct {
 	source InboxCategorizationSource
 }
 
-// Name implements [Tool].
 func (t *draftAlertCategories) Name() string { return "draft_alert_categories" }
 
 // Description implements [Tool]. Used by the LLM during tool
@@ -385,26 +382,24 @@ func (t *draftAlertCategories) Description() string {
 		"NEVER propose archiving, deleting, marking-read, or re-classifying notifications; this tool only DRAFTS the suggested filter."
 }
 
-// InputSchema implements [Tool].
 func (t *draftAlertCategories) InputSchema() json.RawMessage {
 	return tools.CachedSchema(alertCategoriesDraftInput{})
 }
 
-// OutputSchema implements [Tool]. Nil ⇒ free-form output object;
-// the dispatcher serialises whatever Execute returns.
+// Output is a free-form object; the dispatcher serialises
+// whatever Execute returns.
 func (t *draftAlertCategories) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. PROPOSE-only — never returns true.
+// Propose-only: never mutates state.
 // The tool reads + composes a DTO but does NOT touch the
 // database. The actual Apply flow happens AFTER the user
 // clicks the chip in the UI; the SPA copies the suggested
 // rule_ids into the existing NotificationFilterBar URL state.
 func (t *draftAlertCategories) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty — the AI guard already
-// gates on ai_mode + per-feature toggle upstream, and the tool
-// produces no state mutation that needs an additional RBAC
-// scope.
+// No additional RBAC scope is needed because the upstream AI
+// guard gates ai_mode and the per-feature toggle, and this tool
+// does not mutate state.
 func (t *draftAlertCategories) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared
@@ -413,8 +408,7 @@ func (t *draftAlertCategories) RequiredScope() string { return "" }
 // rules can't reach through *int / *int64 pointers (it falls
 // through the numeric switch when v.Kind() is reflect.Ptr), so
 // each optional numeric pointer field gets a manual range
-// check here. Mirrors the alert-tuning-suggestions slice's
-// pattern.
+// check here. Mirrors the alert-tuning-suggestions pattern.
 func (t *draftAlertCategories) Validate(raw json.RawMessage) (any, error) {
 	parsed, err := tools.ValidateStruct[alertCategoriesDraftInput](raw)
 	if err != nil {
@@ -549,10 +543,8 @@ type alertCategoryValidateOutput struct {
 // InboxCategoryLabels.
 type validateAlertCategory struct{}
 
-// Name implements [Tool].
 func (t *validateAlertCategory) Name() string { return "validate_alert_category" }
 
-// Description implements [Tool].
 func (t *validateAlertCategory) Description() string {
 	return "Validate one or more proposed inbox category labels against the closed taxonomy. " +
 		"PROPOSE-ONLY: this tool returns {ok, invalid_labels, allowed_taxonomy, source}; it does NOT save or apply labels. " +
@@ -560,18 +552,16 @@ func (t *validateAlertCategory) Description() string {
 		"Either pass `label` (single) or `labels` (batch); at least one must be non-empty after trimming."
 }
 
-// InputSchema implements [Tool].
 func (t *validateAlertCategory) InputSchema() json.RawMessage {
 	return tools.CachedSchema(alertCategoryValidateInput{})
 }
 
-// OutputSchema implements [Tool]. Nil ⇒ free-form.
+// Output is free-form.
 func (t *validateAlertCategory) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. PROPOSE-only.
+// Propose-only: never mutates state.
 func (t *validateAlertCategory) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty.
 func (t *validateAlertCategory) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator
@@ -732,7 +722,7 @@ type InboxAutoCategorizationSources struct {
 }
 
 // RegisterInboxAutoCategorizationTools installs the
-// inbox-auto-categorization slice's tools on r. Called from
+// inbox-auto-categorization tools on r. Called from
 // router.go AFTER RegisterAlertTuningSuggestionsTools so the
 // alphabetical Names list grows deterministically without
 // disturbing earlier registrations.
@@ -743,7 +733,7 @@ type InboxAutoCategorizationSources struct {
 //
 // Note: this function registers BOTH new tools
 // (`draft_alert_categories` + `validate_alert_category`); both
-// are NEW for this slice. Future inbox-related slices may
+// are new for this feature. Future inbox-related features may
 // REUSE `validate_alert_category` from this registration.
 func RegisterInboxAutoCategorizationTools(r *tools.Registry, s InboxAutoCategorizationSources) {
 	r.Register(&draftAlertCategories{source: s.Source})

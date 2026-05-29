@@ -1,4 +1,4 @@
-// Phase-50 / 0013 — U3 Year-in-review narration.
+// Year-in-review narration strategy tests.
 //
 // Unit tests for the yir-narration Strategy. The Strategy is a
 // pure value (no internal state, no IO) so the tests are tight: pin
@@ -85,8 +85,8 @@ func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 }
 
 // TestStrategy_ToolsIncludesNoMutators asserts the whitelist is
-// READ-ONLY. The narrator ships zero mutating tools (per the prompt
-// + ADR-015 — read-only state queries only). A future edit that
+// READ-ONLY. The narrator ships zero mutating tools (ADR-015 —
+// read-only state queries only). A future edit that
 // accidentally adds a write tool will fail this test before the
 // dispatcher's confirm hook protects the user.
 func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
@@ -104,7 +104,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs RAG-backed YIR context ships.
+// future feature that needs RAG-backed YIR context ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -118,7 +118,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyYearInReview proves the strategy hands
-// the dispatcher PolicyYearInReview wrapped through the F4↔F8
+// the dispatcher PolicyYearInReview wrapped through the redaction
 // adapter. PolicyYearInReview allows ClassVehicleName so the
 // narration can name the user's car; every other PII class is
 // redacted to a round-trip tag.

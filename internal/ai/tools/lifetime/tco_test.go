@@ -1,5 +1,3 @@
-// Phase-50 / 0050 — M2 TCO narration.
-//
 // Unit tests for the query_tco_summary tool. The tool wraps a
 // narrow [TCOSummarizer] port; tests substitute a deterministic
 // fake so the unit tests stay hermetic.
@@ -46,8 +44,8 @@ func TestQueryTCOSummary_Name(t *testing.T) {
 }
 
 // TestQueryTCOSummary_PropOnlyContract pins the read-only
-// metadata. ADR-015 §I3 + the slice prompt mandate read-only for
-// this slice. The description MUST disclose the four limiting
+// metadata. ADR-015 §I3 requires this tool to stay read-only.
+// The description MUST disclose the four limiting
 // assumptions so the LLM treats the envelope as operating-cost
 // only.
 func TestQueryTCOSummary_PropOnlyContract(t *testing.T) {

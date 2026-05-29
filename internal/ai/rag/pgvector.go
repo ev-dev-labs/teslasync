@@ -16,7 +16,7 @@ import (
 // ProviderResolver is the narrow view of [provider.Registry] the
 // retriever depends on. The registry implements [For] which returns
 // a fully decorated provider (audit + trace + redact + rate-limit +
-// cost-cap once F8/F9 land); going through this interface ensures
+// cost-cap when enabled); going through this interface ensures
 // EVERY embed call lands in ai_call_log and respects the per-feature
 // gate — the retriever can never bypass the audit chain by holding a
 // stale provider reference.
@@ -260,8 +260,8 @@ func (p *PgvectorRetriever) Retrieve(
 // Pre-querying hashes avoids paying for embed calls on unchanged
 // chunks — important for the docs indexer which would otherwise
 // re-embed every doc on every boot. The UPSERT's WHERE clause is a
-// belt-and-braces guard against a concurrent writer; F7 has only
-// one indexer per (subject, source) so the race is theoretical.
+// belt-and-braces guard against a concurrent writer; there is only
+// one indexer per (subject, source), so the race is theoretical.
 func (p *PgvectorRetriever) Index(
 	ctx context.Context,
 	userSubject string,
@@ -455,8 +455,8 @@ type staticResolver struct{ p provider.Provider }
 // NewStaticResolver wraps p in a [ProviderResolver] that ignores the
 // featureID argument. The production registry is the preferred
 // resolver; this is a focused helper for tests and for the indexer
-// goroutine in N6 which has already resolved the provider once and
-// wants to avoid re-resolving on every chunk.
+// goroutine that has already resolved the provider once and wants
+// to avoid re-resolving on every chunk.
 func NewStaticResolver(p provider.Provider) ProviderResolver {
 	if p == nil {
 		panic("rag: NewStaticResolver called with nil provider")

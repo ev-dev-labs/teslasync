@@ -1,4 +1,3 @@
-// Phase-50 / 0061 — GEN2 Vehicle paint preview.
 package vehiclepaintpreview
 
 import (
@@ -92,9 +91,8 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot asserts that the strategy uses
-// PolicyChatbot (Allow: nil) — the strictest redaction policy in the
-// Phase-50 policy library. The vehicle paint-preview surface MUST NOT
-// leak the vehicle display name, VIN, lat/long, addresses, or any
+// PolicyChatbot (Allow: nil). The vehicle paint-preview surface must
+// not leak the vehicle display name, VIN, lat/long, addresses, or any
 // other PII class into the upstream LLM transcript.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()

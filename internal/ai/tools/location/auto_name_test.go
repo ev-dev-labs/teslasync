@@ -1,6 +1,4 @@
-// Phase-50 / 0037 — G1 Auto-name unnamed locations.
-//
-// Tool tests for draft_location_name + validate_location_name. Both
+// Tool tests for draft_location_name and validate_location_name. Both
 // tools are pure functions over input + LocationSource +
 // LocationNameValidator interfaces; the tests stub both with
 // deterministic fakes so the tests stay hermetic (no api or
@@ -241,7 +239,6 @@ func TestValidateLocationName_HappyPath_OK(t *testing.T) {
 	}
 }
 
-// TestValidateLocationName_ValidatorFailureSurfacesAsInvalid.
 func TestValidateLocationName_ValidatorFailureSurfacesAsInvalid(t *testing.T) {
 	t.Parallel()
 	locations := newTestLocationFixtures()

@@ -1,5 +1,3 @@
-// Phase-50 / 0029 — C4 Cost forecast narration.
-//
 // Unit tests for the query_cost_forecast tool. The tool wraps a
 // narrow [CostForecaster] port; tests substitute a deterministic
 // fake so the unit tests stay hermetic.
@@ -52,8 +50,7 @@ func TestQueryCostForecast_Name(t *testing.T) {
 }
 
 // TestQueryCostForecast_PropOnlyContract pins the read-only
-// metadata. ADR-015 §I3 + the slice prompt mandate read-only for
-// this slice.
+// metadata. ADR-015 §I3 requires this tool to stay read-only.
 func TestQueryCostForecast_PropOnlyContract(t *testing.T) {
 	t.Parallel()
 	tool := &queryCostForecast{}
@@ -71,9 +68,8 @@ func TestQueryCostForecast_PropOnlyContract(t *testing.T) {
 	}
 	// Honest-uncertainty pin: the description MUST disclose
 	// the band is APPROXIMATE, not strict 95% CI. The
-	// rubber-duck critique flagged "95% CI" as too strong;
-	// the description guards against a future edit
-	// reintroducing the overclaim.
+	// the description avoids overclaiming a strict 95% confidence
+	// interval.
 	desc := tool.Description()
 	if !strings.Contains(desc, "APPROXIMATE prediction interval") {
 		t.Errorf("Description() missing APPROXIMATE-prediction-interval qualifier: %q", desc)

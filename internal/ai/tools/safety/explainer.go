@@ -1,72 +1,12 @@
-// Phase-50 / 0054 — P3 Helix safety setting explainer.
+// Package safety contains the read-only AI tool for explaining safety settings.
 //
-// safety_setting_explainer.go ships ONE new read-only typed
-// Tool used by the safety-setting-explainer strategy:
+// query_safety_settings returns a deterministic envelope from the canonical
+// settings table and never writes data. The tool has an empty input schema so
+// the LLM cannot scope the read to a hidden subset, and the feature guard still
+// blocks access when AI mode or the feature toggle is off.
 //
-//   - `query_safety_settings` — typed deterministic envelope
-//     describing every safety-related TeslaSync setting
-//     currently stored in the `settings` table. The envelope is
-//     keyed by the setting's canonical JSON-tag key (e.g.
-//     "quiet_hours_enabled", "alert_digest_mode") and each
-//     entry carries the short metadata bundle the LLM needs to
-//     produce an honest plain-English explanation: current
-//     value, default value, allowed values (when the setting is
-//     a closed enum), a one-line short_description, and a
-//     docs_anchor pointing the user at the canonical
-//     documentation chunk. NO database write is performed by
-//     this Tool.
-//
-//     Privacy: the safety-related settings are scalar global
-//     toggles only (booleans, enum strings, HH:MM strings); no
-//     PII (vehicle names, addresses, GPS, VINs, emails)
-//     crosses the Tool boundary. The per-feature redaction
-//     policy `PolicyChatbot` allows ZERO PII classes — every
-//     PII class is tagged round-trip BEFORE the message
-//     reaches the provider, so a leaked transcript reveals
-//     nothing beyond the public scalar setting state. This is
-//     defence in depth in case a future edit widens the
-//     envelope's schema.
-//
-// Tool design (vs the slice-0053 quiet-hours-suggestion tools):
-//
-//   - NO per-request scope binding is needed because the
-//     settings are GLOBAL to the install (one row per setting
-//     in the canonical `settings` table — not per-user — see
-//     internal/database/settings_repo.go's Get(ctx) signature).
-//     There is no "in-scope user" to bind, so the
-//     prompt-injection-defence scope-check pattern from
-//     quiet_hours_suggestion.go is not applicable here. The AI
-//     handler still runs the per-feature guard
-//     (`ai.GuardedHandler` with `safety-setting-explainer`)
-//     so a user with `ai_mode='off'` or the per-feature toggle
-//     off NEVER reaches this Tool.
-//
-//   - The Tool's input schema is intentionally empty: the LLM
-//     calls `query_safety_settings` with no arguments and
-//     receives the full safety-setting envelope. There is no
-//     per-setting-key filter because (a) the envelope is small
-//     (~7 entries) and (b) hiding entries from the LLM would
-//     break the strategy's "refuse out-of-scope" directive —
-//     the LLM needs to see the FULL safety envelope so it can
-//     honestly say "X is not in this envelope" when asked
-//     about an unrelated setting.
-//
-// Design constraints (from the slice prompt):
-//
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → query_safety_settings
-//     delegates to a narrow read-only port `SafetySettingsSource`
-//     that wraps the canonical `*settingsdb.SettingsRepo` Get
-//     method. NO new SQL is written. The deterministic
-//     POST /api/v1/settings handler remains the canonical
-//     baseline write path; this Tool NEVER triggers a save.
-//
-//   - "the LLM never writes raw SQL" → Tool has no DB handle.
-//     The port hands a pre-aggregated envelope in.
-//
-//   - "no duplicate write paths" → no save_* / create_* /
-//     apply_* / submit_* Tool exists in this slice; the only
-//     Tool is a pure read.
+// The envelope contains scalar global settings only. Redaction remains in place
+// as defense in depth if future settings add user-provided text.
 
 package safety
 
@@ -158,7 +98,7 @@ type SafetySettingsEnvelope struct {
 //
 // The interface MUST stay read-only — adding a Save / Update
 // method here would defeat the read-only contract that
-// ADR-015 §I3 + the slice prompt mandate.
+// ADR-015 §I3 mandate.
 type SafetySettingsSource interface {
 	// LoadSafetySettings returns the typed envelope
 	// describing every safety-related setting currently
@@ -284,7 +224,7 @@ func (t *querySafetySettings) Execute(ctx context.Context, in any) (any, error) 
 
 // SafetySettingExplainerSources bundles the narrow port
 // RegisterSafetySettingExplainerTools needs. Mirrors
-// [QuietHoursSuggestionSources] (slice 0053).
+// [QuietHoursSuggestionSources].
 //
 // Production wiring (router.go) instantiates the production
 // adapter (*api.AISafetySettingExplainerSource); tests substitute
@@ -294,7 +234,7 @@ type SafetySettingExplainerSources struct {
 }
 
 // RegisterSafetySettingExplainerTools installs the
-// safety-setting-explainer slice's tools on r. Called from
+// safety-setting-explainer tools on r. Called from
 // router.go AFTER RegisterQuietHoursSuggestionTools so the
 // tools.Registry's Names list continues to grow deterministically
 // without disturbing earlier registrations or any builtin-names

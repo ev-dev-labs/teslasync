@@ -1,13 +1,12 @@
-// Package nl carves the natural-language draft/validate tool family out of
-// the parent internal/ai/tools/ flat package per ADR-011 §3 + ADR-015-amend
-// (AI subsystem in scope for Phase R, file-move-only).
+// Package nl contains the natural-language draft/validate AI tool family.
+// ADR-011 §3 keeps bounded-context AI tools in subpackages.
 //
 // All three tools follow the "LLM drafts a typed payload → deterministic
 // validator hardens it" pattern (the "two-step NL contract"): the LLM
 // produces a free-form JSON envelope; a second tool replays the envelope
 // through a Go validator that rejects anything outside the canonical
-// schema/allowlist. This shape is the AI-Off Contract surface area —
-// ADR-015 §I12 — preserved verbatim from the pre-R6.10 parent-pkg version.
+// schema/allowlist. This shape is the ADR-015 §I12 AI-Off Contract
+// surface area and must remain stable.
 //
 //	signal_filter.go — RegisterSignalExplorerNlFilterTools (NL-to-SignalFilter
 //	                   contract; WithScopedSignalCatalog context-injection

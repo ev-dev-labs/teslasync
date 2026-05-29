@@ -1,4 +1,4 @@
-// Package cost is part of the TeslaSync platform layer.
+// Package cost computes provider usage costs for AI calls.
 //
 // Layer: platform
 package cost

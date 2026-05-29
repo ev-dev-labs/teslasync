@@ -9,7 +9,7 @@ import (
 // generic Strategy on the fly when no real Strategy implementation
 // has been registered yet.
 //
-// Future feature slices that ship a real Strategy MAY register it via
+// Future features that ship a real Strategy MAY register it via
 // [RegisterStrategy]; the runner prefers the registered Strategy over
 // the GenericStrategy built from this spec.
 type FeatureSpec struct {
@@ -137,9 +137,8 @@ const (
 	// ModeFast uses the canned mock only. Missing canned ⇒ failure.
 	ModeFast Mode = iota
 
-	// ModeFull is identical to ModeFast in F6; reserved for the
-	// "block on >5pt drop" semantics the prompt's CI section
-	// describes (delegated to the workflow gate).
+	// ModeFull is identical to ModeFast; reserved for the
+	// "block on >5pt drop" semantics delegated to the workflow gate.
 	ModeFull
 
 	// ModeJudged invokes the LLM-as-judge after each canned-pass

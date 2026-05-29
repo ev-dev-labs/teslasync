@@ -1,4 +1,4 @@
-// Package autonameunnamedlocations is part of the TeslaSync adapter layer.
+// Package autonameunnamedlocations suggests names for frequently visited locations.
 //
 // Layer: adapter
 package autonameunnamedlocations

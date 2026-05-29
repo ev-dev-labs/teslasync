@@ -1,5 +1,4 @@
-// Package raghelp is the Phase-50 / N6 strategy for the RAG-backed
-// app help assistant.
+// Package raghelp implements the RAG-backed app help assistant.
 //
 // The strategy declares:
 //
@@ -14,19 +13,17 @@
 //     retriever's output;
 //
 //   - the two read-only tools the LLM is allowed to call —
-//     `retrieve_docs` (a thin wrapper over the F7 rag.Retriever
-//     scoped to the global docs corpus) and `cite_help_chunk` (a
+//     `retrieve_docs` (a thin wrapper over rag.Retriever scoped to
+//     the global docs corpus) and `cite_help_chunk` (a
 //     pure formatter that converts a chunk reference into a
 //     deterministic citation label without any external lookup).
 //     Neither tool touches the database write path — they
 //     exclusively READ from existing canonical retrieval layers;
 //
 //   - the redaction policy (`PolicyChatbot`) which allows nothing in
-//     cleartext. The slice prompt's evidence section explicitly
-//     names PolicyChatbot and notes that "app docs and i18n keys
-//     contain no user PII" — the deny-all stance is therefore
-//     trivially satisfied today, but the policy is wired anyway as
-//     defence-in-depth in case a future docs corpus accidentally
+//     cleartext. App docs and i18n keys should contain no user PII,
+//     but the deny-all policy is still wired as defence-in-depth in
+//     case a future docs corpus accidentally
 //     includes a user-sourced runbook that mentions a VIN, address,
 //     or other identifier.
 //
@@ -52,7 +49,7 @@
 //     the curated links point at; the AI only
 //     proposes a NARRATIVE over already-retrieved
 //     chunks.
-//   - I4 zero egress:    all retrieval is local (F7 pgvector against
+//   - I4 zero egress:    all retrieval is local (pgvector against
 //     a self-hosted database); the LLM call itself
 //     only fires when ai_mode != 'off' AND the
 //     per-feature toggle is on.
@@ -95,7 +92,7 @@ const FeatureID = "rag-help"
 //   - Forbids saving / mutating: this strategy is read-only; the
 //     LLM has no write tool.
 //   - Restricts the source-type allowlist: the assistant may only
-//     search docs, runbooks, and i18n (the three corpora the F7
+//     search docs, runbooks, and i18n (the three corpora the
 //     retriever serves for this feature; see
 //     internal/ai/tools/help.go for the enforced allowlist).
 //   - Asks for short, focused output with explicit citations: the
@@ -115,7 +112,7 @@ const SystemPrompt = `You are the TeslaSync application help assistant. ` +
 // dispatcher construction time — the dispatcher refuses to mount a
 // strategy that references an unknown tool.
 //
-// Both tools are READ-ONLY: retrieve_docs calls the F7 retriever
+// Both tools are READ-ONLY: retrieve_docs calls the retriever
 // (pgvector cosine similarity over the global docs|runbooks|i18n
 // corpora); cite_help_chunk is a pure deterministic formatter with
 // no external dependencies. The dispatcher's deny-all confirm gate
@@ -167,27 +164,23 @@ func (s *Strategy) Tools() []string {
 // Future work: this is where the SPA route the user is currently on
 // (e.g. "user is on /charging-curve") would be injected as
 // scoping context once the frontend wiring grows that surface.
-// Today's slice keeps Context empty so the dispatcher's behaviour
-// is fully determined by [System] + History.
+// Context stays empty so the dispatcher's behaviour is fully
+// determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the dispatcher's
+// PolicyChatbot wrapped through the redaction adapter so the dispatcher's
 // per-request ctx-installation step (dispatch.Run installs the policy
 // via redact.WithPolicy) sees the concrete deny-all policy.
 //
-// Per the slice prompt: "Policy: PolicyChatbot from
-// internal/ai/redact/policies.go. Allowed classes: none; app docs
-// and i18n keys contain no user PII; round-trip required: no". The
-// policy's Allow list is nil, so every PII class — VIN, lat/long,
-// vehicle name, addresses, phone numbers, emails — is redacted to a
-// round-trip tag before the prompt + tool outputs reach the
-// provider. In practice the docs corpus carries no PII so the
-// policy is a defence-in-depth contract pin rather than an active
-// redaction surface; if a future docs revision accidentally adds a
-// VIN or address, the redactor catches it.
+// PolicyChatbot's Allow list is nil, so every PII class — VIN,
+// lat/long, vehicle name, addresses, phone numbers, emails — is
+// redacted to a round-trip tag before the prompt and tool outputs
+// reach the provider. The docs corpus should carry no PII; if a
+// future docs revision accidentally adds a VIN or address, the
+// redactor catches it.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyChatbot())
 }

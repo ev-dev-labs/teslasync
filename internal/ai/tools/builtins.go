@@ -1,22 +1,17 @@
-// Built-in starter tools (12 read-only tools).
+// Built-in read-only tools.
 //
 // Each tool wraps an existing repository method via a narrow domain
-// interface (VehicleSource / DriveSource / ...). Tools NEVER write
-// new SQL — the prompt is explicit: "thin Tool wrapper over an
-// existing handler. **No new SQL written.**"
+// interface (VehicleSource / DriveSource / ...). Tools never write SQL.
 //
 // The narrow interfaces serve two purposes:
 //
 //  1. Tests can substitute deterministic in-memory fakes without
 //     spinning up Postgres + Timescale.
-//  2. Production wiring (in a later slice that mounts the dispatcher)
-//     can pass the real *database.* repos directly — every method
-//     signature here matches an existing repo method.
+//  2. Production wiring can pass the real *database.* repos directly
+//     because every method signature here matches an existing repo method.
 //
-// Mutating tools are NOT shipped in this slice — they belong with
-// the features that use them (N1, N2, etc.). Every tool here is
-// read-only (Mutates() returns false) so the dispatcher's confirm
-// gate is exercised only by tests.
+// Every tool here is read-only (Mutates returns false); mutating tools
+// belong with the features that use them.
 
 package tools
 

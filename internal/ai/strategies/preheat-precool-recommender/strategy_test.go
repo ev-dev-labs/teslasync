@@ -1,13 +1,5 @@
-// Phase-50 / 0031 — T1 Preheat and precool recommender.
-//
-// Unit tests for the preheat-precool-recommender Strategy. Mirrors
-// the shape of vampire-drain-explanation's strategy_test.go (the
-// closest precedent: single propose/narrate strategy with a small
-// tool whitelist). The Strategy is a pure value (no internal state,
-// no IO) so the tests are tight: pin the feature ID + system prompt
-// + tool whitelist + redaction policy shape so a future edit that
-// breaks the contract surfaces here before the dispatcher silently
-// changes behaviour.
+// Unit tests pin the preheat and precool recommender strategy's public
+// contract: feature ID, system prompt, tool whitelist, and redaction policy.
 
 package preheatprecoolrecommender
 
@@ -53,10 +45,8 @@ func TestStrategy_System(t *testing.T) {
 		"validate_climate_schedule",
 		"Do NOT invent schedules",
 		"never invent cabin or outside temperatures",
-		// Confirmation contract — the slice prompt's
-		// verbatim mandate is "requiring confirmation
-		// before creating any schedule"; the prompt MUST
-		// say so.
+		// Confirmation contract — the prompt must require user confirmation
+		// before creating any schedule.
 		"ALWAYS require the user to CONFIRM",
 		"PROPOSE-only",
 		// Refusal directive — cross-vehicle requests are out
@@ -140,7 +130,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-preheat-temperature
+// future change that needs preferred-preheat-temperature
 // preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -156,11 +146,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyPreheatPrecoolRecommender proves the
 // strategy hands the dispatcher PolicyPreheatPrecoolRecommender
-// wrapped through the F4↔F8 adapter.
+// wrapped through the redaction adapter.
 // PolicyPreheatPrecoolRecommender allows ClassVehicleName so the
 // narration can address the user's car; every other PII class is
-// redacted to a round-trip tag. The slice prompt explicitly
-// mandates a PolicyDigest-shaped allow-list with round-trip tags.
+// redacted to a round-trip tag. The policy intentionally mirrors the digest allow-list with round-trip tags.
 func TestStrategy_RedactionPolicyPreheatPrecoolRecommender(t *testing.T) {
 	t.Parallel()
 	s := New()

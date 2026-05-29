@@ -1,4 +1,4 @@
-// Phase-50 / 0048 — S7 State-machine debugger narrator.
+// State-machine debugger narrator tool tests.
 //
 // Unit tests for the retrieve_fsm_chunks + query_fsm_trace tools.
 // Both tools wrap narrow ports (rag.Retriever / FSMTraceSource);
@@ -6,7 +6,7 @@
 // hermetic.
 //
 // The query_fsm_trace tool also enforces the per-request scope
-// binding the slice prompt's security model relies on (defence
+// binding the security model relies on (defence
 // against prompt-injection exfiltration). The scope-binding tests
 // pin the contract: missing scope ⇒ refuse; mismatched scope ⇒
 // refuse; matched scope ⇒ delegate. A future edit that bypasses
@@ -141,11 +141,10 @@ func TestRetrieveFSMChunks_Validate_RejectsUnknownSourceType(t *testing.T) {
 
 func TestRetrieveFSMChunks_Validate_RejectsMqttStatus(t *testing.T) {
 	t.Parallel()
-	// The mqtt-sse-inspector-explanations allowlist has
-	// mqtt_status; the state-machine-debugger-narrator
-	// allowlist explicitly does NOT. This test guards against a
-	// copy-paste mistake from the sister slice that would
-	// silently widen the surface.
+	// The mqtt-sse-inspector-explanations allowlist has mqtt_status;
+	// this allowlist explicitly does NOT. This test guards against a
+	// copy-paste mistake from the adjacent feature that would silently
+	// widen the surface.
 	tool := &retrieveFSMChunks{}
 	raw := json.RawMessage(`{"query": "hi", "source_types": ["mqtt_status"]}`)
 	if _, err := tool.Validate(raw); err == nil {

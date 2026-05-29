@@ -1,5 +1,5 @@
 // Package mock implements a deterministic [provider.Provider] for tests
-// and the F6 eval harness.
+// and the eval harness.
 //
 // Responses are keyed by sha256(request) so the same input yields the
 // same output across runs — the eval harness can assert "model produced
@@ -60,10 +60,8 @@ func New(caps provider.Capabilities) *Mock {
 	}
 }
 
-// Name implements [provider.Provider].
 func (m *Mock) Name() string { return provider.NameMock }
 
-// Capabilities implements [provider.Provider].
 func (m *Mock) Capabilities() provider.Capabilities { return m.caps }
 
 // SetReplyByPrompt scripts a reply when the last user message in the
@@ -92,7 +90,6 @@ func HashRequest(req provider.ChatRequest) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Chat implements [provider.Provider].
 func (m *Mock) Chat(ctx context.Context, req provider.ChatRequest) (*provider.ChatResponse, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
@@ -105,9 +102,9 @@ func (m *Mock) Chat(ctx context.Context, req provider.ChatRequest) (*provider.Ch
 	return &resp, nil
 }
 
-// Stream implements [provider.Provider]. Streams the canned response's
-// Content one rune per chunk so tests can assert backpressure behaviour
-// without coupling to the exact frame boundary of any real provider.
+// Stream emits the canned response one rune per chunk so tests can
+// assert backpressure behaviour without coupling to a provider's frame
+// boundaries.
 func (m *Mock) Stream(ctx context.Context, req provider.ChatRequest) (<-chan provider.Chunk, error) {
 	if !m.caps.Streaming {
 		return nil, provider.ErrCapabilityNotSupported
@@ -141,9 +138,9 @@ func (m *Mock) Stream(ctx context.Context, req provider.ChatRequest) (<-chan pro
 	return out, nil
 }
 
-// Embed implements [provider.Provider]. Returns the Reply.Embedding
-// from the matched canned reply; if none, returns a deterministic
-// 8-dim vector per input derived from sha256 so tests can assert
+// Embed returns the Reply.Embedding from the matched canned reply.
+// If none exists, it returns a deterministic 8-dim vector per input
+// derived from sha256 so tests can assert
 // repeatability without specifying exact floats.
 func (m *Mock) Embed(ctx context.Context, req provider.EmbedRequest) (*provider.EmbedResponse, error) {
 	if !m.caps.Embeddings {

@@ -1,13 +1,6 @@
-// Phase-50 / 0037 — G1 Auto-name unnamed locations.
-//
-// Unit tests for the auto-name-unnamed-locations Strategy. Mirrors
-// the shape of auto-trip-naming's strategy_test.go (the precedent
-// using draft_*/validate_* tools rather than query_*/retrieve_*).
-// The Strategy is a pure value (no internal state, no IO) so the
-// tests are tight: pin the feature ID + system prompt + tool
-// whitelist + redaction policy shape so a future edit that breaks
-// the contract surfaces here before the dispatcher silently changes
-// behaviour.
+// Unit tests for the auto-name-unnamed-locations Strategy. They pin the
+// feature ID, system prompt, tool whitelist, and redaction policy so
+// contract changes fail before dispatcher behavior changes silently.
 
 package autonameunnamedlocations
 
@@ -135,7 +128,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs naming-style preferences ships.
+// future version needs naming-style preferences.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -150,10 +143,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyAutoNameUnnamedLocations proves the
 // strategy hands the dispatcher PolicyAutoNameUnnamedLocations
-// wrapped through the F4↔F8 adapter. PolicyAutoNameUnnamedLocations
+// wrapped through the strategy redaction adapter. PolicyAutoNameUnnamedLocations
 // allows ClassVehicleName so the proposed name can address the
 // user's car; every other PII class is redacted to a round-trip
-// tag. The slice prompt explicitly mandates a PolicyDigest-shaped
+// tag. The strategy contract requires a PolicyDigest-shaped
 // allow-list and "coordinates and addresses stay tagged unless
 // restored to same user".
 func TestStrategy_RedactionPolicyAutoNameUnnamedLocations(t *testing.T) {
@@ -186,7 +179,7 @@ func TestStrategy_RedactionPolicyAutoNameUnnamedLocations(t *testing.T) {
 	// or street addresses — the proposed name describes the
 	// location by generic descriptor or current address_name
 	// (when human-readable), not by exact coordinates, and the
-	// slice prompt says "coordinates and addresses stay tagged
+	// contract says "coordinates and addresses stay tagged
 	// unless restored to same user".
 	for _, c := range want.Allow {
 		switch c {

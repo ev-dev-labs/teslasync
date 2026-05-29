@@ -1,6 +1,4 @@
-// Phase-50 / 0052 — P1 Helix export redaction advisor.
-//
-// export_redaction_plan.go ships TWO new read-only typed tools:
+// Export redaction advising exposes two read-only typed tools:
 //
 //   - `draft_export_redaction_plan` — typed deterministic envelope
 //     describing the PII classes typically present in the in-scope
@@ -44,7 +42,7 @@
 // defence in depth in case a future edit accidentally adds a
 // write tool.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → both tools delegate to a STATIC
@@ -59,7 +57,7 @@
 //     Go on the typed plan the LLM proposes.
 //
 //   - "no duplicate write paths" → no save_* / create_* / apply_*
-//     / submit_* tool exists in this slice; both tools are pure
+//     / submit_* tool exists here; both tools are pure
 //     reads / pure validators. The existing
 //     POST /api/v1/export/jobs handler is the only mutation
 //     surface; the AI tool never touches it.
@@ -94,11 +92,11 @@ import (
 )
 
 // sharedExportRedactionSourceManifest is the source-type string
-// reserved by the slice prompt for the future per-export-type
+// reserved for the future per-export-type
 // manifest embedding corpus. Intentionally NOT promoted to a
 // rag.Source* constant because adding to that package widens the
-// global F7 contract beyond this slice's mandate; this slice does
-// not yet ship a retrieve tool. When a future slice adds one, it
+// global RAG contract beyond this feature's mandate; this feature
+// does not yet ship a retrieve tool. When future work adds one, it
 // should promote this string to rag.SourceExportManifest in one
 // place.
 const sharedExportRedactionSourceManifest = "export_manifest"
@@ -110,10 +108,10 @@ const sharedExportRedactionSourceManifest = "export_manifest"
 const sharedExportRedactionSourceReport = "redaction_report"
 
 // SharedExportRedactionReservedSourceTypes returns a defensive
-// copy of the source-type strings reserved for the future F7
-// retrieve_export_redaction_guidance tool. Exposed so the
-// future slice + tests can reference the SAME strings; this
-// slice itself does not register a retrieve tool.
+// copy of the source-type strings reserved for a future
+// retrieve_export_redaction_guidance tool. Exposed so future code
+// and tests can reference the same strings; this feature itself
+// does not register a retrieve tool.
 //
 // Sorted lexicographically so callers see a stable order.
 func SharedExportRedactionReservedSourceTypes() []string {
@@ -459,10 +457,8 @@ type draftExportRedactionPlanInput struct {
 // the static catalog entry for the in-scope export_type.
 type draftExportRedactionPlan struct{}
 
-// Name implements [Tool].
 func (t *draftExportRedactionPlan) Name() string { return "draft_export_redaction_plan" }
 
-// Description implements [Tool].
 func (t *draftExportRedactionPlan) Description() string {
 	return "Return the deterministic catalog-based PII redaction recommendation for ONE in-scope export_type. " +
 		"Reports export_type, classes ([{class, recommended_mode, priority, rationale}]) listing the PII classes typically present in this export type plus per-class recommendations, " +
@@ -474,7 +470,6 @@ func (t *draftExportRedactionPlan) Description() string {
 		"The export_type MUST match the in-scope export_type installed by the AI handler; cross-export_type requests are refused at the tool boundary."
 }
 
-// InputSchema implements [Tool].
 func (t *draftExportRedactionPlan) InputSchema() json.RawMessage {
 	return tools.CachedSchema(draftExportRedactionPlanInput{})
 }
@@ -485,7 +480,6 @@ func (t *draftExportRedactionPlan) OutputSchema() json.RawMessage { return nil }
 // Mutates implements [Tool]. Read-only.
 func (t *draftExportRedactionPlan) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty.
 func (t *draftExportRedactionPlan) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared
@@ -604,10 +598,8 @@ type validateExportRedactionPlanResult struct {
 // validateExportRedactionPlan is the read-only validator tool.
 type validateExportRedactionPlan struct{}
 
-// Name implements [Tool].
 func (t *validateExportRedactionPlan) Name() string { return "validate_export_redaction_plan" }
 
-// Description implements [Tool].
 func (t *validateExportRedactionPlan) Description() string {
 	return "Validate a candidate PII redaction plan against the deterministic catalog for ONE in-scope export_type. " +
 		"Accepts {export_type, classes: [{class, mode}]} and returns {ok, errors, warnings}: " +
@@ -619,7 +611,6 @@ func (t *validateExportRedactionPlan) Description() string {
 		"The export_type MUST match the in-scope export_type installed by the AI handler; cross-export_type requests are refused at the tool boundary."
 }
 
-// InputSchema implements [Tool].
 func (t *validateExportRedactionPlan) InputSchema() json.RawMessage {
 	return tools.CachedSchema(validateExportRedactionPlanInput{})
 }
@@ -630,7 +621,6 @@ func (t *validateExportRedactionPlan) OutputSchema() json.RawMessage { return ni
 // Mutates implements [Tool]. Read-only.
 func (t *validateExportRedactionPlan) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty.
 func (t *validateExportRedactionPlan) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator
@@ -776,9 +766,8 @@ func catalogClassNamesHint(entry SharedExportPIICatalogEntry) string {
 // ---------------------------------------------------------------------------
 
 // RegisterPiiRedactionSharedExportsTools installs the
-// pii-redaction-shared-exports slice's tools on r. Called from
-// router.go AFTER the Phase-50 / 0051 software-update-changelog-
-// summarizer registration so the registry's Names list continues
+// pii-redaction-shared-exports tools on r. Called after the
+// software-update-changelog-summarizer registration so the registry's Names list continues
 // to grow deterministically without disturbing earlier
 // registrations or any builtin-names pin tests.
 //

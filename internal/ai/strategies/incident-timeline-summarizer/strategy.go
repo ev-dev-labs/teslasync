@@ -1,5 +1,5 @@
-// Package incidenttimelinesummarizer is the Phase-50 / 0042 S1 strategy
-// for the LLM-backed incident-timeline summarizer surface.
+// Package incidenttimelinesummarizer provides the LLM-backed
+// incident-timeline summarizer surface.
 //
 // The strategy declares:
 //
@@ -24,20 +24,19 @@
 //     URL incident ID via context — the LLM cannot exfiltrate a
 //     different incident's timeline by passing a different ID.
 //
-//     2. `retrieve_system_chunks` — F7 RAG retrieval over the
+//     2. `retrieve_system_chunks` — RAG retrieval over the
 //     per-feature source-type allowlist {system_event, audit_log}.
 //     Both source types are reserved by string for forward-
-//     compatibility — a future slice will index per-incident
+//     compatibility — future work will index per-incident
 //     system-event and audit-log chunks. Until then, any
 //     source_types entry that includes either simply returns zero
 //     additional chunks for that corpus — which is the correct
 //     behaviour: the strategy's goldens already cover the zero-
 //     matches narration;
 //
-//   - the redaction policy (`PolicyChatbot`) which the slice prompt
-//     mandates ("Allowed classes: none; logs are redacted before
-//     summarization"): VIN, lat/long, addresses, place names,
-//     vehicle-name, AND every other PII class remain tagged via
+//   - the redaction policy (`PolicyChatbot`): VIN, lat/long,
+//     addresses, place names, vehicle-name, AND every other PII
+//     class remain tagged via
 //     round-trip markers so a leaked transcript reveals nothing
 //     about the operator's environment, hostnames, IPs, or any
 //     value an operator pasted into an incident update message.
@@ -141,7 +140,7 @@ const SystemPrompt = `You are the TeslaSync incident-timeline summarizer. ` +
 // database write path. query_incident_timeline composes the SAME
 // database.IncidentRepo.Get path that backs the canonical baseline
 // GET /api/v1/status/incidents/{id} handler; retrieve_system_chunks
-// goes through the F7 retrieval entry point and only issues SELECTs
+// goes through the RAG retrieval entry point and only issues SELECTs
 // against the embeddings table. The dispatcher's deny-all confirm
 // gate is therefore never reached in practice — defence in depth in
 // case a future edit accidentally adds a write tool.
@@ -192,13 +191,12 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
+// PolicyChatbot wrapped through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Allowed classes: none; logs are redacted
-// before summarization. Round-trip required: yes." PolicyChatbot is
+// PolicyChatbot is
 // the deny-by-default policy from internal/ai/redact/policies.go
 // (Allow=nil, Mode=ModeRedactedTags) — the same policy the U1
 // chatbot-llm and X2 lifetime-stats-qa strategies use. The choice

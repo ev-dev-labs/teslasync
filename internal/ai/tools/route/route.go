@@ -1,13 +1,13 @@
-// Phase-50 / 0023 — D3 Route-efficiency suggestions.
+// Route-efficiency suggestion tools.
 //
-// route_efficiency.go ships TWO new read-only tools:
+// This file defines two read-only tools:
 //
-//   - `retrieve_route_chunks` — a thin wrapper over the F7
-//     rag.Retriever scoped to the calling user_subject, restricted
-//     to the route-efficiency slice's per-feature source-type
+//   - `retrieve_route_chunks` — a thin wrapper over rag.Retriever
+//     scoped to the calling user_subject and restricted to the
+//     route-efficiency feature's source-type
 //     allowlist {drive_summary, route_efficiency, weather_context}.
-//     Only drive_summary is wired into the F7 indexer today (slice
-//     0008); route_efficiency and weather_context are reserved by
+//     Only drive_summary is indexed today; route_efficiency and weather_context
+//     are reserved by
 //     string for forward-compatibility — the future
 //     `ai_route_indexer` job (registered as JobNames=["ai_route_indexer"]
 //     in the registry) will fan-out into those corpora once wired.
@@ -40,25 +40,22 @@
 // metric bars; the AI surface is an opt-in suggestion panel layered
 // alongside (ADR-015 §I3).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → retrieve_route_chunks delegates to
-//     the F7 rag.Retriever (the single canonical retrieval entry
-//     point); query_route_efficiency delegates to a narrow
+//   - retrieve_route_chunks delegates to rag.Retriever, the canonical
+//     retrieval entry point; query_route_efficiency delegates to a narrow
 //     tools.DriveSource read interface satisfied at boot by an adapter
 //     wrapping the existing *drivedb.DriveRepo (no new SQL).
 //
-//   - "the LLM never writes raw SQL" → tools have no DB handle. The
+//   - Tools have no DB handle. The
 //     route-aggregation math is pure Go on a *drivemodel.Drive slice.
 //
-//   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; aggregation is a pure read.
+//   - No save_* / update_* / delete_* tool exists here; aggregation is a pure read.
 //
 //   - Privacy: route identifiers (start/end place names) are the
 //     natural key for a "route", so the tool returns them verbatim.
 //     The PolicyRouteEfficiencySuggestions allow-list does NOT
-//     include ClassStreetAddr — the F8 redact decorator therefore
+//     include ClassStreetAddr, so the redaction decorator
 //     converts each place name into a round-trip tag (e.g.
 //     `<addr id='1'/>`) before the LLM call; the addresses are
 //     restored only in the final SSE frame returned to the same
@@ -69,14 +66,12 @@
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant is refused), so a confused LLM that
 // asks the assistant to search e.g. "user_note" cannot accidentally
-// expose a corpus the slice did not enumerate.
+// expose a corpus this feature did not enumerate.
 //
-// Forward-compat note: the slice prompt enumerates three source
-// types — drive_summary, route_efficiency, weather_context. Only
-// drive_summary is wired into the F7 indexer today (see
+// Forward-compat note: drive_summary is indexed today (see
 // internal/ai/rag/rag.go SourceDriveSummary). route_efficiency and
-// weather_context are reserved by string so a future indexer slice
-// can register them without re-touching the tool boundary.
+// weather_context are reserved by string so a future indexer can
+// register them without re-touching the tool boundary.
 
 package route
 
@@ -98,11 +93,11 @@ import (
 )
 
 // routeEffSourceRouteEfficiency / routeEffSourceWeatherContext are
-// the two source-type strings reserved by the slice prompt that
-// have no F7 indexer today. They are intentionally NOT exported as
+// reserved source-type strings that are not indexed today. They are
+// intentionally NOT exported as
 // rag.Source* constants because adding to that package widens the
-// global F7 contract beyond this slice's mandate. When a future
-// slice adds the indexer it should promote these strings to
+// global retrieval contract. When a future indexer adds support, it
+// should promote these strings to
 // rag.SourceRouteEfficiency / rag.SourceWeatherContext in one
 // place.
 const (
@@ -113,10 +108,9 @@ const (
 // routeEffAllowedSourceTypes is the per-feature allowlist of
 // source-type strings the route-efficiency-suggestions strategy may
 // retrieve over. Any other source type passed via the LLM's typed
-// input is refused at validation time — the slice prompt explicitly
-// enumerates these three corpora and a future slice that adds a new
-// source must add it here AND extend the strategy's system prompt +
-// goldens, not silently widen.
+// input is refused at validation time. A new source must be added here
+// and reflected in the strategy's system prompt and goldens, not
+// silently widened.
 //
 // Kept in lex order so error messages list a stable allowed-set.
 var routeEffAllowedSourceTypes = []string{
@@ -194,8 +188,8 @@ type retrievedRouteChunk struct {
 	Score      float32 `json:"score"`
 }
 
-// retrieveRouteChunks is the read-only tool that calls the F7
-// retriever for the route-efficiency domain. It is the FIRST tool
+// retrieveRouteChunks is the read-only tool that calls the retriever
+// for the route-efficiency domain. It is the first tool
 // the LLM is expected to call (per the strategy's system prompt)
 // before query_route_efficiency, so the suggestions are grounded
 // in retrieved context rather than the model's priors.
@@ -259,7 +253,7 @@ func (t *retrieveRouteChunks) Validate(raw json.RawMessage) (any, error) {
 }
 
 // Execute implements [Tool]. Resolves user_subject from the ctx the
-// AI handler installed via provider.WithSubject, then calls the F7
+// AI handler installed via provider.WithSubject, then calls the
 // retriever. Returns a deterministic envelope with explicit JSON
 // tags so the dispatcher's serialisation path is uniform across
 // runs.
@@ -626,12 +620,11 @@ type RouteEfficiencySuggestionsSources struct {
 	Drives    tools.DriveSource
 }
 
-// RegisterRouteEfficiencySuggestionsTools installs the
-// route-efficiency-suggestions slice's tools on r. Called from
-// router.go AFTER RegisterSpeedProfileInsightsTools so the
-// registry's alphabetical Names list continues to grow
-// deterministically without disturbing the BuiltinNames pin test
-// or any earlier registration.
+// RegisterRouteEfficiencySuggestionsTools installs the route-efficiency
+// suggestion tools on r. Called after RegisterSpeedProfileInsightsTools
+// so the registry's alphabetical Names list continues to grow
+// deterministically without disturbing the BuiltinNames pin test or any
+// earlier registration.
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first

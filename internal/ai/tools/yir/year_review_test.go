@@ -1,4 +1,4 @@
-// Phase-50 / 0013 — U3 Year-in-review narration.
+// Year-in-review narration tests.
 //
 // year_review_test.go covers the new query_year_in_review_context
 // tool + the RegisterYearReviewTools wiring. The fakes (toolstest.FakeDrives,
@@ -142,7 +142,7 @@ func TestQueryYearInReviewContext_ValidateAcceptsCanonical(t *testing.T) {
 // behavioural test: build a small in-memory year of drives +
 // charges and assert the SI sums the tool returns are correct.
 //
-// All numeric fields are SI canonical (Phase-48 contract). A
+// All numeric fields are SI canonical. A
 // regression that drops the EnergyUsedWh nil-skip would silently
 // mis-sum energy and the user's narration would lie — this test
 // catches that.

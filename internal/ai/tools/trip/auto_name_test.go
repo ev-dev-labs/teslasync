@@ -1,5 +1,3 @@
-// Phase-50 / 0024 — D4 Auto trip naming.
-//
 // Tool tests for draft_trip_name + validate_trip_name. Both tools are
 // pure functions over input + TripSource / TripDetailSource /
 // TripNameValidator interfaces; the tests stub all three with
@@ -284,7 +282,6 @@ func TestValidateTripName_HappyPath_OK(t *testing.T) {
 	}
 }
 
-// TestValidateTripName_ValidatorFailureSurfacesAsInvalid.
 func TestValidateTripName_ValidatorFailureSurfacesAsInvalid(t *testing.T) {
 	t.Parallel()
 	trips, _ := newTestTripFixtures()

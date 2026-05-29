@@ -1,13 +1,11 @@
-// Phase-50 / 0018 — N4 Per-drive coaching narrative.
-//
-// drive_coaching.go ships ONE new read-only tool:
+// This file exposes one read-only tool:
 // `query_drive_telemetry_summary`. Combined with the existing
 // `query_drive_detail` builtin (see builtins.go), it forms the
 // two-tool whitelist the drive-coaching strategy is allowed to call
 // (see internal/ai/strategies/drive-coaching/strategy.go's
 // allowedTools whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL written.**"
 //     The tool reads ONE *drivemodel.Drive row via the existing
@@ -16,11 +14,11 @@
 //     derived fields (regen_share_pct, kwh_per_100km,
 //     battery_consumed_pct) from the aggregates already persisted
 //     on the drive row. No SQL is added, modified, or duplicated by
-//     this slice.
+//     this tool.
 //
 //   - The tool is a READ — Mutates() returns false. The dispatcher's
-//     deny-all confirm gate refuses anything mutating; this slice
-//     ships zero mutating tools and adds nothing to the drive
+//     deny-all confirm gate refuses anything mutating; this tool
+//     provides no mutating tools and adds nothing to the drive
 //     ingestion or aggregation pipeline. The coach only NARRATES
 //     already-aggregated drive state; it never writes.
 //
@@ -56,7 +54,7 @@
 //	  "ended_status":          string  | null,
 //	}
 //
-// All numeric fields are SI canonical (Phase-48 contract). The
+// All numeric fields are SI canonical. The
 // derived `kwh_per_100km` / `regen_share_pct` are dimensioned for
 // human-readable narration but are still derived from SI inputs;
 // the frontend's useUnits()/useFormatting() at the display boundary
@@ -98,11 +96,8 @@ type queryDriveTelemetrySummary struct {
 	src tools.DriveSource
 }
 
-// Name implements [Tool].
 func (t *queryDriveTelemetrySummary) Name() string { return "query_drive_telemetry_summary" }
 
-// Description implements [Tool]. Used by the LLM during tool
-// selection — kept short and intent-focused, NOT a usage tutorial.
 func (t *queryDriveTelemetrySummary) Description() string {
 	return "Return a coaching-friendly aggregate envelope for ONE drive: distance, duration, " +
 		"avg/max speed, energy used vs regen recovered (with a derived regen_share_pct and " +
@@ -112,30 +107,21 @@ func (t *queryDriveTelemetrySummary) Description() string {
 		"iterate by calling this multiple times for the same drive."
 }
 
-// InputSchema implements [Tool].
 func (t *queryDriveTelemetrySummary) InputSchema() json.RawMessage {
 	return tools.CachedSchema(queryDriveTelemetrySummaryInput{})
 }
 
-// OutputSchema implements [Tool]. Nil ⇒ free-form output object;
-// the dispatcher serialises whatever Execute returns.
 func (t *queryDriveTelemetrySummary) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. Read-only — never returns true.
 func (t *queryDriveTelemetrySummary) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty — readable by any
-// authenticated user (the AI guard already gates on ai_mode +
-// per-feature toggle upstream).
 func (t *queryDriveTelemetrySummary) RequiredScope() string { return "" }
 
-// Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryDriveTelemetrySummary) Validate(raw json.RawMessage) (any, error) {
 	return tools.ValidateStruct[queryDriveTelemetrySummaryInput](raw)
 }
 
-// Execute implements [Tool]. One repo round-trip then in-memory
-// derivation; no SQL is written by this method.
+// Execute performs one repo read and then derives the envelope in memory.
 //
 // A nil drive (drive not found) is surfaced as an explicit error so
 // the dispatcher emits a tool-error frame the LLM can handle —
@@ -229,7 +215,7 @@ func summariseDriveForCoaching(d *drivemodel.Drive) map[string]any {
 
 	// Cabin temp + ended status — pass-through (already nullable).
 	// InsideTempAvgC is intentionally excluded: it's nil on every
-	// row by ADR-001 / Phase-42 (column dropped) and surfacing it
+	// row by ADR-001 (column dropped), and surfacing it
 	// would mislead the LLM about its availability.
 	out["outside_temp_avg_c"] = tools.DerefFloat64Ptr(d.OutsideTempAvgC)
 	out["outside_temp_avg_f"] = tools.CToFPtr(d.OutsideTempAvgC)
@@ -238,10 +224,6 @@ func summariseDriveForCoaching(d *drivemodel.Drive) map[string]any {
 	return out
 }
 
-// cToFPtr returns the Fahrenheit conversion of *p, or typed nil any
-// when p is nil. Provided alongside derefFloat64Ptr so every tool
-// that surfaces a Celsius reading can ALSO emit a pre-computed
-// Fahrenheit field — letting the LLM lift whichever the user prefers
 // DriveCoachingSources bundles the narrow read interfaces
 // RegisterDriveCoachingTools needs. Mirrors [DigestSources] /
 // [AnomalySources] but exposes only the surface the
@@ -255,7 +237,7 @@ type DriveCoachingSources struct {
 	Drives tools.DriveSource
 }
 
-// RegisterDriveCoachingTools installs the drive-coaching slice's
+// RegisterDriveCoachingTools installs the drive-coaching
 // tools on r. Called from router.go AFTER Register12Builtins +
 // RegisterDigestTools + RegisterYearReviewTools + RegisterAnomalyTools
 // + RegisterAlertBuilderTools + RegisterAutomationBuilderTools +

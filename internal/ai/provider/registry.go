@@ -46,8 +46,8 @@ type Registry struct {
 
 // NewRegistry constructs a Registry that reads from settings and
 // applies the supplied decorators (in slice order, outer-to-inner) to
-// every returned provider. Pass [WithTrace] in F1; F3/F8/F9 add more
-// decorators upstream of the construction call.
+// every returned provider. Pass decorators at construction time as
+// tracing, audit, redaction, or health concerns are enabled.
 func NewRegistry(settings SettingsReader, decorators ...Decorator) *Registry {
 	if settings == nil {
 		panic("ai/provider: NewRegistry called with nil SettingsReader")
@@ -182,7 +182,7 @@ func (r *Registry) ProviderForName(name string, cfg ProviderConfig) (Provider, e
 }
 
 // ActiveProviderInfo bundles the active provider's diagnostic info for
-// the F1 debug endpoint. Returned by [Registry.HealthSnapshot].
+// the provider-health debug endpoint. Returned by [Registry.HealthSnapshot].
 type ActiveProviderInfo struct {
 	Mode         string       `json:"mode"`
 	Name         string       `json:"name"`

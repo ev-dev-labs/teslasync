@@ -1,6 +1,4 @@
-// Package nlq carves the NL-to-query/composer tool family out of the parent
-// internal/ai/tools/ flat package per ADR-011 §3 + ADR-015-amend (AI
-// subsystem in scope for Phase R, file-move-only).
+// Package nlq contains the NL-to-query and composer tool family.
 //
 // All three tools share the NL "two-step" pattern with sibling nl/ but
 // specifically deal with COMPOSITIONAL OUTPUTS — the LLM drafts a

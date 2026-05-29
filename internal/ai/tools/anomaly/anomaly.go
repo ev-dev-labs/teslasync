@@ -1,23 +1,20 @@
-// Phase-50 / 0014 — U4 Anomaly explanation narration.
-//
-// anomaly.go ships ONE new read-only tool:
-// `query_anomaly_context`. The tool is the single F4 surface the
+// Anomaly explanation narration exposes one read-only tool:
+// `query_anomaly_context`. The tool is the single surface the
 // anomaly-explanations strategy is allowed to call (see
 // internal/ai/strategies/anomaly-explanations/strategy.go's
 // allowedTools whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL written.**"
 //     The tool does not query Postgres directly — it calls
 //     [AnomalySource.DetectAnomalies], which is satisfied at boot by
 //     the existing *apianomaly.Handler whose Z-score / range / trend
-//     SQL is unchanged from the pre-refactor handler. The Phase-50/0014
-//     refactor extracted those SQL queries into a method without
-//     adding, modifying, or duplicating any of them.
+//     SQL is unchanged from the original handler; it was extracted
+//     without adding, modifying, or duplicating queries.
 //
 //   - The tool is a READ — Mutates() returns false. The dispatcher's
-//     deny-all confirm gate refuses anything mutating; this slice
+//     deny-all confirm gate refuses anything mutating; this feature
 //     ships zero mutating tools and adds nothing to the alerting or
 //     detection pipeline. The narrator only EXPLAINS already-detected
 //     anomalies; it never CREATES, MUTATES, or SUPPRESSES them.
@@ -137,7 +134,6 @@ type queryAnomalyContext struct {
 	src AnomalySource
 }
 
-// Name implements [Tool].
 func (t *queryAnomalyContext) Name() string { return "query_anomaly_context" }
 
 // Description implements [Tool]. Used by the LLM during tool
@@ -148,13 +144,12 @@ func (t *queryAnomalyContext) Description() string {
 		"Numeric fields are detector-canonical (z_score is dimensionless; value/baseline are in the signal's native unit)."
 }
 
-// InputSchema implements [Tool].
 func (t *queryAnomalyContext) InputSchema() json.RawMessage {
 	return tools.CachedSchema(queryAnomalyContextInput{})
 }
 
-// OutputSchema implements [Tool]. Nil ⇒ free-form output object;
-// the dispatcher serialises whatever Execute returns.
+// Output is a free-form object; the dispatcher serialises
+// whatever Execute returns.
 func (t *queryAnomalyContext) OutputSchema() json.RawMessage { return nil }
 
 // Mutates implements [Tool]. Read-only — never returns true.
@@ -226,8 +221,8 @@ type AnomalySources struct {
 	Anomaly AnomalySource
 }
 
-// RegisterAnomalyTools installs the anomaly-explanations slice's
-// tools on r. Called from router.go AFTER Register12Builtins +
+// RegisterAnomalyTools installs the anomaly-explanations tools on r.
+// Called from router.go after Register12Builtins +
 // RegisterDigestTools + RegisterYearReviewTools so the registry's
 // alphabetical Names list ends with `query_anomaly_context` without
 // disturbing the BuiltinNames pin test or any earlier registration.

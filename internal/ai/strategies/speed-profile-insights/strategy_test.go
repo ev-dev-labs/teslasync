@@ -1,5 +1,3 @@
-// Phase-50 / 0022 — D2 Speed-profile insights.
-//
 // Unit tests for the speed-profile-insights Strategy. Mirrors the
 // shape of drive-coaching / charging-diagnosis strategy_test.go. The
 // Strategy is a pure value (no internal state, no IO) so the tests
@@ -101,7 +99,7 @@ func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 
 // TestStrategy_ToolsIncludesNoMutators asserts the whitelist is
 // READ-ONLY. Speed-profile insights ships zero mutating tools (per
-// the slice prompt + ADR-015 — read-only state queries only). A
+// ADR-015: read-only state queries only. A
 // future edit that accidentally adds a write tool will fail this
 // test before the dispatcher's confirm hook protects the user.
 func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
@@ -119,7 +117,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs RAG-backed speed-profile context ships.
+// future feature needs RAG-backed speed-profile context.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -136,9 +134,9 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // strategy hands the dispatcher PolicySpeedProfileInsights wrapped
 // through the F4↔F8 adapter. PolicySpeedProfileInsights allows
 // ClassVehicleName so the narration can name the user's car; every
-// other PII class is redacted to a round-trip tag. The slice prompt
-// explicitly mandates a PolicyDigest-shaped allow-list and "precise
-// route coordinates remain tagged".
+// other PII class is redacted to a round-trip tag. This policy keeps
+// the PolicyDigest-shaped allow-list while precise route coordinates
+// remain tagged.
 func TestStrategy_RedactionPolicySpeedProfileInsights(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -167,8 +165,7 @@ func TestStrategy_RedactionPolicySpeedProfileInsights(t *testing.T) {
 	}
 	// Defence-in-depth: the allow-list must NOT include lat/long or
 	// addresses — the insights narrate the speed regime, not exact
-	// coordinates, and the slice prompt says "precise route
-	// coordinates remain tagged".
+	// coordinates. Precise route coordinates must remain tagged.
 	for _, c := range want.Allow {
 		switch c {
 		case redact.ClassLatLong, redact.ClassStreetAddr:

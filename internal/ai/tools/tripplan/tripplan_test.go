@@ -1,10 +1,6 @@
-// Phase-50 / 0025 — D5 Trip planner LLM agent tool tests.
-//
-// Tool tests for query_chargers_along_route + query_user_charge_dwells
-// + draft_trip_plan. All three tools are pure functions over their
-// typed input + a narrow port (ChargeSource or TripPlanComputer);
-// the tests stub each port with a deterministic fake so the tests
-// stay hermetic (no DB, no canonical-planner round-trip).
+// Tool tests for query_chargers_along_route, query_user_charge_dwells,
+// and draft_trip_plan. Each tool is a pure function over typed input
+// and a narrow port, so deterministic fakes keep the tests hermetic.
 //
 // Reuses the shared `toolstest.FakeCharges` source from builtins_test.go so
 // the existing charging-domain tools and these new tools share the
@@ -25,18 +21,15 @@ import (
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
 
-// fixedNowFn returns a deterministic `func() time.Time` clock for
-// the trip-planner tool's lookback-window tests so the goldens stay
-// stable across CI runs. Distinct from `fixedNow()` (used by the
-// route-efficiency tool tests) so the package compiles cleanly.
-// 2025-01-15 12:00:00 UTC is well past the Phase-42 cutover so the
-// charging-session model fields are all SI-canonical.
+// fixedNowFn returns a deterministic clock for lookback-window tests.
+// It is distinct from fixedNow(), used by route-efficiency tests, so
+// the package compiles cleanly. The timestamp is after the SI cutover,
+// so charging-session model fields are SI-canonical.
 func fixedNowFn() func() time.Time {
 	t := time.Date(2025, 1, 15, 12, 0, 0, 0, time.UTC)
 	return func() time.Time { return t }
 }
 
-// *chargingmodel.ChargingSession.
 // ---------------------------------------------------------------------------
 // query_chargers_along_route
 // ---------------------------------------------------------------------------

@@ -1,5 +1,3 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
-//
 // learned_anomaly_baseline_test.go covers:
 //
 //  1. train_anomaly_baseline.Validate rejects non-positive

@@ -1,8 +1,5 @@
-// Phase-50 / 0061 — GEN2 Vehicle paint preview.
-//
-// paint_preview.go ships ONE propose-only tool used by the
-// vehicle-paint-preview strategy
-// (internal/ai/strategies/vehicle-paint-preview):
+// This file exposes one propose-only tool for the
+// vehicle-paint-preview strategy:
 //
 //   - `draft_paint_preview_prompt` — accept a vehicle_id, a
 //     proposed paint color name, and an optional style hint, and
@@ -14,12 +11,12 @@
 //     generated, uploaded, or saved; no external image-generation
 //     provider is ever called.
 //
-// Design constraints (from the slice prompt + ADR-015):
+// Design constraints:
 //
 //   - "produces preview prompt DTOs for opted-in image provider" —
-//     this slice ships ONLY the typed DTO. An actual image-bytes
-//     generation call is out of scope for slice 0061 and would
-//     land in a future wiring slice that re-uses the same
+//     this tool returns only the typed DTO. An actual image-bytes
+//     generation call is intentionally out of scope and would
+//     land in future wiring that reuses the same
 //     propose-only DTO through the same per-feature toggle.
 //   - "The LLM never writes raw SQL and never bypasses existing
 //     handlers." → the tool delegates the vehicle read to the
@@ -27,7 +24,7 @@
 //     *vehicledb.VehicleRepo, the same read path the GET
 //     /api/v1/vehicles handlers already use). No new SQL.
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; the evidence is a pure read. The
+//     tool exists here; the evidence is a pure read. The
 //     actual paint persistence flows through the existing manual
 //     per-vehicle Color setting in VehicleConfigSection /
 //     VehicleSettingsTab AFTER the user explicitly clicks Save.
@@ -215,10 +212,8 @@ type draftPaintPreviewPrompt struct {
 	vehicles tools.VehicleSource
 }
 
-// Name implements [Tool].
 func (t *draftPaintPreviewPrompt) Name() string { return "draft_paint_preview_prompt" }
 
-// Description implements [Tool].
 func (t *draftPaintPreviewPrompt) Description() string {
 	return "Build a paint-preview image-prompt envelope for the given vehicle and proposed paint color. " +
 		"PROPOSE-ONLY: nothing is generated, uploaded, or saved. Returns " +
@@ -227,29 +222,21 @@ func (t *draftPaintPreviewPrompt) Description() string {
 		"Call with the vehicle_id you were given AND your proposed paint color name AND an optional style hint."
 }
 
-// InputSchema implements [Tool].
 func (t *draftPaintPreviewPrompt) InputSchema() json.RawMessage {
 	return tools.CachedSchema(paintPreviewDraftInput{})
 }
 
-// OutputSchema implements [Tool].
 func (t *draftPaintPreviewPrompt) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. PROPOSE-only — never returns true.
 func (t *draftPaintPreviewPrompt) Mutates() bool { return false }
 
-// RequiredScope implements [Tool].
 func (t *draftPaintPreviewPrompt) RequiredScope() string { return "" }
 
-// Validate implements [Tool].
 func (t *draftPaintPreviewPrompt) Validate(raw json.RawMessage) (any, error) {
 	return tools.ValidateStruct[paintPreviewDraftInput](raw)
 }
 
-// Execute implements [Tool]. Validation failures (proposed color or
-// style hint shape) surface as Status="invalid", never as a returned
-// error. A missing vehicle is returned as an error so the LLM can
-// retry with the correct vehicle_id.
+// Validation failures surface as Status="invalid". A missing vehicle returns an error so the LLM can retry with the correct vehicle_id.
 func (t *draftPaintPreviewPrompt) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(paintPreviewDraftInput)
 	if t.vehicles == nil {
@@ -301,7 +288,7 @@ type VehiclePaintPreviewSources struct {
 }
 
 // RegisterVehiclePaintPreviewTools installs the vehicle-paint-preview
-// slice's tool on r. Called from router.go AFTER the previous slice's
+// tool on r. Called from router.go after the earlier
 // tool registrations so the registry's alphabetical Names list grows
 // deterministically.
 //

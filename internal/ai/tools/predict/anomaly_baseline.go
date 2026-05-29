@@ -1,6 +1,6 @@
-// Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
+// Learned per-vehicle anomaly baseline tools.
 //
-// learned_anomaly_baseline.go ships TWO new READ-only typed tools:
+// This file defines two read-only typed tools:
 //
 //   - `train_anomaly_baseline` — recomputes the per-signal learned
 //     anomaly envelope (mean / stddev / p5 / p95 per signal, clamped
@@ -12,17 +12,15 @@
 //     the static safeRanges entry the deterministic detector also
 //     uses; SampleCount remains honest). NO row in signal_log is
 //     written, NO learned envelope is persisted by this tool — the
-//     trainer is request-scoped today; a future job-tier slice
-//     (registered as JobNames=["ai_ml_anomaly_trainer"] in the
-//     registry's RouteSet) may persist the envelope per vehicle for
+//     trainer is request-scoped today; a future background job
+//     (`ai_ml_anomaly_trainer`) may persist the envelope per vehicle for
 //     cross-pod reuse.
 //
 //   - `query_anomaly_baseline` — returns the CURRENTLY-effective
 //     per-vehicle envelope the deterministic anomaly detector at
 //     internal/api/anomaly_handler.go uses today. Today, the
 //     effective envelope is the static safeRanges fallback for
-//     EVERY signal (this slice does not persist learned
-//     envelopes); the LLM uses this tool to ground its narrative
+//     EVERY signal because learned envelopes are not persisted yet; the LLM uses this tool to ground its narrative
 //     in the user's CURRENTLY-effective baseline before quoting
 //     the train_anomaly_baseline output as a PROPOSAL.
 //
@@ -64,7 +62,7 @@
 //   - "the LLM never writes raw SQL" → tools have no DB handle;
 //     they pass typed inputs to the trainer.
 //   - "no duplicate write paths" → no save_*/update_*/delete_*
-//     tool exists in this slice; both tools are read-only.
+//     tool exists here; both tools are read-only.
 
 package predict
 
@@ -104,8 +102,7 @@ type trainAnomalyBaselineInput struct {
 // queryAnomalyBaselineInput is the typed input DTO for
 // query_anomaly_baseline. The tool returns the CURRENTLY-effective
 // per-vehicle envelope; today every signal is the static
-// safeRanges fallback. vehicle_id is required so a future slice
-// that persists learned envelopes can scope the query.
+// safeRanges fallback. vehicle_id is required so future persisted learned envelopes can be scoped.
 type queryAnomalyBaselineInput struct {
 	// VehicleID is the per-vehicle id the query scopes to. Required; > 0.
 	VehicleID int64 `json:"vehicle_id" validate:"required,gte=1" jsonschema:"description=Per-vehicle id to fetch the currently-effective anomaly envelope for. Required; > 0."`
@@ -298,7 +295,7 @@ type LearnedAnomalyBaselineSources struct {
 }
 
 // RegisterLearnedAnomalyBaselineTools installs the
-// learned-per-vehicle-anomaly-baselines slice's tools on r.
+// learned per-vehicle anomaly baseline tools on r.
 //
 // Panics on duplicate registration (Registry.Register panics).
 func RegisterLearnedAnomalyBaselineTools(r *tools.Registry, s LearnedAnomalyBaselineSources) {

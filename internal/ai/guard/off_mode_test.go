@@ -1,4 +1,4 @@
-// Phase-50 / 0001 — F0 AI-Off Contract.
+// AI-off contract tests.
 //
 // This test is the canonical Go-side proof of ADR-015 §I6 ("off mode
 // handlers return 404") for every feature in the registry. It walks
@@ -106,7 +106,7 @@ func TestGuard_OffModeReturns404(t *testing.T) {
 // ai_mode is non-off, each feature must be individually opted in
 // before its route returns anything other than 404.
 func TestGuard_PerFeatureOptInRequired(t *testing.T) {
-	// local mode but no per-feature flags set
+	// Local mode still requires an explicit per-feature opt-in.
 	g := New(&fakeSettings{mode: "local", enabled: map[string]bool{}})
 	hits := &atomic.Int32{}
 

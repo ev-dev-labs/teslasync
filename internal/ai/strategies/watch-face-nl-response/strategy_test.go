@@ -1,5 +1,3 @@
-// Phase-50 / 0056 — V2 Helix watch-face natural-language response.
-//
 // Unit tests for the watch-face-nl-response Strategy. The
 // Strategy is a pure value (no internal state, no IO) so the
 // tests are tight: pin the feature ID + system prompt + tool
@@ -84,10 +82,8 @@ func TestStrategy_System(t *testing.T) {
 // tools block (the eval harness loads tool names from the YAML;
 // the dispatcher loads them from here).
 //
-// The slice prompt mandates exactly one tool — "Implement or
-// register only the tools listed for this feature:
-// query_watch_context." — so the whitelist length is a
-// contract pin.
+// The watch-face surface has exactly one tool, so the whitelist
+// length is a contract pin.
 func TestStrategy_Tools(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -159,7 +155,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands
-// the dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
+// the dispatcher PolicyChatbot through the redaction-policy adapter.
 // PolicyChatbot's Allow=nil deny-by-default policy means EVERY
 // PII class is tagged round-trip before the message reaches the
 // provider — the typed envelope omits PII by construction, but
@@ -167,12 +163,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // the user typed, a name the user dictated), and the round-trip
 // ModeRedactedTags policy strips them before the provider sees
 // the message and restores them in the user-visible reply.
-//
-// The slice prompt explicitly mandates:
-//
-//	"Policy:              PolicyChatbot from internal/ai/redact/policies.go
-//	 Allowed classes:     none; watch responses use tagged vehicle state and no secrets
-//	 Round-trip required: yes"
+
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()

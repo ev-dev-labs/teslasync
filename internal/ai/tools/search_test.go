@@ -1,9 +1,6 @@
-// Phase-50 / 0017 — N3 Natural-language search tests.
-//
-// Tool tests for retrieve_chunks + hydrate_search_result. Both tools
-// are pure functions over their typed input + a narrow port (rag.Retriever
-// or Hydrator); the tests stub each port with a deterministic fake so
-// the tests stay hermetic (no DB, no embedding API).
+// Tool tests for retrieve_chunks and hydrate_search_result. Both tools
+// are pure functions over typed input plus a narrow port, and the tests
+// use deterministic fakes to stay hermetic.
 
 package tools
 
@@ -70,9 +67,8 @@ func (f *fakeHydrator) HydrateOne(_ context.Context, subject, sourceType, source
 }
 
 // TestRetrieveChunks_HappyPath_ScopesBySubjectAndDelegates proves a
-// valid input round-trips through the F7 retriever scoped to the
-// subject from ctx, and the chunks come back in a deterministic
-// envelope.
+// valid input round-trips through the retriever scoped to the subject
+// from ctx, and the chunks come back in a deterministic envelope.
 func TestRetrieveChunks_HappyPath_ScopesBySubjectAndDelegates(t *testing.T) {
 	t.Parallel()
 	ret := &fakeRetriever{

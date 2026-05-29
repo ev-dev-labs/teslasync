@@ -1,13 +1,10 @@
-// Phase-50 / 0045 — S4 Log and trace summarization.
-//
 // Unit tests for the retrieve_log_chunks + query_trace_window
 // tools. Both tools wrap narrow ports (rag.Retriever /
 // TraceWindowSource); tests substitute deterministic fakes so the
 // unit tests stay hermetic.
 //
 // The query_trace_window tool also enforces the per-request scope
-// binding the slice prompt's security model relies on (defence
-// against prompt-injection exfiltration). The scope-binding tests
+// binding that prevents prompt-injection exfiltration. The scope-binding tests
 // pin the contract: missing scope ⇒ refuse; mismatched scope ⇒
 // refuse; matched scope ⇒ delegate. A future edit that bypasses
 // any of these gates would surface here.
@@ -25,9 +22,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
-// ---------------------------------------------------------------------------
 // retrieve_log_chunks
-// ---------------------------------------------------------------------------
 
 // fakeLogTraceRetriever is a hermetic stand-in for rag.Retriever.
 // Records the request and returns either a canned chunk slice or
@@ -135,7 +130,7 @@ func TestRetrieveLogChunks_Validate_RejectsSystemEvent(t *testing.T) {
 	// The incident-timeline-summarizer allowlist has system_event;
 	// the log-trace-summarization allowlist explicitly does NOT.
 	// This test guards against a copy-paste mistake from the
-	// sister slice that would silently widen the surface.
+	// related feature that would silently widen the surface.
 	tool := &retrieveLogChunks{}
 	raw := json.RawMessage(`{"query": "hi", "source_types": ["system_event"]}`)
 	if _, err := tool.Validate(raw); err == nil {
@@ -225,9 +220,7 @@ func TestRetrieveLogChunks_Execute_NoRetrieverWired(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
 // query_trace_window
-// ---------------------------------------------------------------------------
 
 // fakeTraceWindowSource is a hermetic stand-in for
 // TraceWindowSource. Records the request and returns either a
@@ -500,9 +493,7 @@ func TestScopedLogTraceWindowRoundTrip(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
 // Registration + helpers
-// ---------------------------------------------------------------------------
 
 func TestRegisterLogTraceSummarizerTools_RegistersBoth(t *testing.T) {
 	t.Parallel()

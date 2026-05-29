@@ -1,13 +1,13 @@
-// Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
+// Tire-pressure trend reasoning tool.
 //
-// tire_pressure_trend.go ships ONE new read-only tool:
-// `query_tire_pressure_trend`. The tool is the single F4 surface
+// This file defines one read-only tool:
+// `query_tire_pressure_trend`. The tool is the single surface
 // the tire-pressure-trend-reasoning strategy is allowed to call
 // (see
 // internal/ai/strategies/tire-pressure-trend-reasoning/strategy.go's
 // allowedTools whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "thin Tool wrapper over an existing handler". The
 //     production adapter (*api.AITirePressureTrendSource) calls
@@ -24,7 +24,7 @@
 //
 //   - The tool is a READ — Mutates() returns false. The
 //     dispatcher's deny-all confirm gate refuses anything
-//     mutating; this slice ships zero mutating tools.
+//     mutating; this feature ships zero mutating tools.
 //
 //   - One tool, one strategy: the tool is registered on the
 //     process-wide tools.Registry alongside the builtins so a
@@ -169,8 +169,7 @@ type TirePressureTrend struct {
 // deterministic fakes so the tool unit tests stay hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update
-// method here would defeat the read-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// method here would defeat the read-only contract that the read-only contract mandates.
 type TirePressureTrendSource interface {
 	// QueryTirePressureTrend runs the canonical deterministic
 	// tire-pressure trend aggregator for vehicleID and returns
@@ -281,7 +280,7 @@ type TirePressureTrendReasoningSources struct {
 }
 
 // RegisterTirePressureTrendReasoningTools installs the
-// tire-pressure-trend-reasoning slice's tools on r. Called from
+// tire-pressure-trend-reasoning tools on r. Called from
 // router.go AFTER the cabin-temperature-impact-narrative tool
 // registration so the registry's alphabetical Names list grows
 // deterministically without disturbing earlier registrations or

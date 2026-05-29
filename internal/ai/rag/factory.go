@@ -27,27 +27,27 @@ const AIModeOff = "off"
 // New constructs a [Retriever] honouring the global AI gate.
 //
 // The returned retriever is:
-//   - [NoopRetriever] when ai_mode='off' OR the settings read fails
-//     (fail-closed semantics — a degraded settings table MUST NOT
-//     accidentally enable network egress; see ADR-015 §I1).
-//   - [PgvectorRetriever] when ai_mode is on and the model is known.
+// - [NoopRetriever] when ai_mode='off' OR the settings read fails
+// (fail-closed semantics — a degraded settings table MUST NOT
+// accidentally enable network egress; see ADR-015 §I1).
+// - [PgvectorRetriever] when ai_mode is on and the model is known.
 //
 // The factory is invoked at construction time (typically from
-// app.New() or from a feature constructor in N3/N6/D2/D5/C4). It
+// app.New() or a feature constructor). It
 // reads the mode ONCE at construction; live mode flips that happen
 // later are caught by the per-call [ProviderResolver.For] gate
 // inside PgvectorRetriever (see ADR-015 §I12 — background jobs and
 // long-lived caches re-check the mode at execution).
 //
 // Pre-conditions and error cases:
-//   - settings : non-nil. Programmer error → panic.
-//   - db       : non-nil when not in off-mode. (When off-mode, db
-//     may be nil — the noop never touches it.)
-//   - resolver : non-nil when not in off-mode. Same rationale.
-//   - featureID: non-empty when not in off-mode. PgvectorRetriever
-//     requires it to stamp the audit log row.
-//   - model    : when not in off-mode, must be present in
-//     [modelDims]. Returns [ErrUnknownModel] otherwise.
+// - settings : non-nil. Programmer error → panic.
+// - db : non-nil when not in off-mode. (When off-mode, db
+// may be nil — the noop never touches it.)
+// - resolver : non-nil when not in off-mode. Same rationale.
+// - featureID: non-empty when not in off-mode. PgvectorRetriever
+// requires it to stamp the audit log row.
+// - model : when not in off-mode, must be present in
+// [modelDims]. Returns [ErrUnknownModel] otherwise.
 //
 // Why fail-closed on settings error: an admin who flipped AI off
 // expects no further AI calls. If we returned an error and the

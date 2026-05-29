@@ -1,11 +1,11 @@
 // Package location hosts the AI tool implementations that propose
 // human-readable names for places — currently:
 //
-//   - auto_name_unnamed_locations: drafts a friendly name for a
-//     VisitedLocation that has no user-assigned label yet.
-//   - suggest_new_geofences: drafts a Geofence (centroid + radius +
-//     name) when a cluster of visits looks like a place the user
-//     might want to track.
+//	auto_name_unnamed_locations: drafts a friendly name for a
+//	  VisitedLocation that has no user-assigned label yet.
+//	suggest_new_geofences: drafts a Geofence (centroid + radius +
+//	  name) when a cluster of visits looks like a place the user
+//	  might want to track.
 //
 // Both tools share the LocationSource port (the canonical read-only
 // adapter into the VisitedLocation/Geofence catalog) and the
@@ -14,7 +14,7 @@
 // per-tool granularity when the tools share a non-trivial helper
 // surface.
 //
-// Carved out of internal/ai/tools (R6.6). The exported symbols
+// Moved out of internal/ai/tools. The exported symbols
 // (LocationSource, LocationNameValidator, GeofenceValidator,
 // AutoNameUnnamedLocationsSources, SuggestNewGeofencesSources,
 // RegisterAutoNameUnnamedLocationsTools, RegisterSuggestNewGeofencesTools)
@@ -28,7 +28,7 @@
 // `locationaitools`. At single-import callsites no alias is
 // required.
 //
-// ADR-015 §I12 contract preservation: FILE-MOVE-ONLY refactor.
+// ADR-015 §I12 contract preservation: Import paths moved without changing behavior.
 // No AI strategy or tool logic changed. Both /api/v1/ai/auto-name-
 // unnamed-locations and /api/v1/ai/suggest-new-geofences routes
 // still re-check ai_mode + per-feature toggles on every tick and

@@ -1,4 +1,4 @@
-// Phase-50 / 0016 — N2 Natural-language automation builder.
+// Natural-language automation builder strategy tests.
 //
 // Unit tests for the nl-automation-builder Strategy. Mirrors the
 // shape of nl-alert-builder / anomaly-explanations / yir-narration's
@@ -125,7 +125,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs RAG-backed geofence-catalog context ships.
+// future feature needs RAG-backed geofence-catalog context.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -142,7 +142,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // hands the dispatcher PolicyAutomationBuilder wrapped through the
 // F4↔F8 adapter. PolicyAutomationBuilder allows NOTHING — vehicle,
 // place, and channel identifiers flow through the typed F4 tools,
-// not through prose. The slice prompt explicitly mandates
+// not through prose. The feature requirements explicitly mandate
 // PolicyAutomationBuilder reuse.
 func TestStrategy_RedactionPolicyAutomationBuilder(t *testing.T) {
 	t.Parallel()

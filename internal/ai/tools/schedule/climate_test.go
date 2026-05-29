@@ -1,4 +1,4 @@
-// Phase-50 / 0031 — T1 Preheat and precool recommender.
+// Preheat and precool recommender tool tests.
 //
 // Unit tests for draft_climate_schedule + validate_climate_schedule.
 // Both tools are propose-only and hermetic — the tests substitute a

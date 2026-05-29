@@ -243,7 +243,7 @@ func encodeMessagesRequest(cfg provider.ProviderConfig, req provider.ChatRequest
 			if m.Content != "" {
 				blocks = append(blocks, anthropicWireBlock{Type: "text", Text: m.Content})
 			}
-			// Legacy singular field (pre-Phase-50 callers / tests).
+			// Preserve support for callers that still send the singular tool field.
 			if m.Tool != nil {
 				blocks = append(blocks, anthropicWireBlock{
 					Type:  "tool_use",

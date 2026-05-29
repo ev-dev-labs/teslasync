@@ -32,20 +32,13 @@
 // the alias is not required — `feedback.RegisterFeedbackQueueTriageTools(...)`
 // reads cleanly.
 //
-// ADR-015 amendment (Phase R6) contract preserved verbatim across
-// the carve:
+// Contract notes:
 //
-//   - pure file relocation. No tool name (Name() return value)
-//     changed. No InputSchema / OutputSchema JSON changed.
-//     No Validate / Execute body semantics changed.
-//   - the AI guard wrapping (the dispatcher's per-request scope
-//     installation via WithScopedFeedback, the AI handler's
-//     panic-on-nil wiring) is unchanged. `make ai-vet` MUST
-//     continue to pass after every R6 ai/tools commit.
-//   - tool registration ordering is preserved — the parent
-//     internal/api/router.go still calls
-//     RegisterFeedbackQueueTriageTools at the same point in the
-//     boot sequence; the underlying Registry.Register order
-//     determines the LLM tool-call manifest order and MUST NOT
-//     drift.
+//   - tool names, JSON schemas, validation, and Execute semantics must
+//     stay stable because the AI manifest and UI mirror depend on them.
+//   - the dispatcher's per-request scope installation via
+//     WithScopedFeedback and the handler's nil wiring guard must remain
+//     intact.
+//   - registration order matters because Registry.Register determines the
+//     LLM tool-call manifest order.
 package feedback

@@ -28,10 +28,9 @@ type CostRepo interface {
 // CapLookup is the function the [CostCap] consults to learn the
 // user's daily cap (in cents — matches the
 // [models.AppSettings.AICostCapCents] type). Returning 0 means
-// "unset" and skips the check; a non-nil error fails-closed (per
-// rubber-duck #4) with Decision.Reason="settings_unavailable" so a
-// settings-store outage doesn't silently bill the user past their
-// intended limit.
+// "unset" and skips the check; a non-nil error fails closed with
+// Decision.Reason="settings_unavailable" so a settings-store outage does not
+// silently bill the user past their intended limit.
 type CapLookup func(ctx context.Context, subject string) (capCents int, err error)
 
 // CostCap enforces a per-subject daily cost ceiling. The ceiling

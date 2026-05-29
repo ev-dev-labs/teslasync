@@ -1,6 +1,4 @@
-// Phase-50 / 0051 — M3 Software update changelog summarizer.
-//
-// software_update_summary.go ships TWO new read-only tools:
+// Software update changelog summarizer tools.
 //
 //   - `query_vehicle_software` — typed deterministic envelope
 //     describing the in-scope vehicle's recorded firmware update
@@ -29,13 +27,12 @@
 //     check refuses the call before any cross-vehicle data is
 //     loaded into the model's context.
 //
-//   - `retrieve_update_notes` — a thin wrapper over the F7
-//     rag.Retriever scoped to the calling user_subject,
-//     restricted to the slice's per-feature source-type
-//     allowlist {software_update, docs}. The software_update
+//   - `retrieve_update_notes` — a thin wrapper over rag.Retriever
+//     scoped to the calling user_subject,
+//     restricted to the per-feature source-type allowlist {software_update, docs}. The software_update
 //     source type is reserved by string for forward-
-//     compatibility — the future ai_update_notes_indexer slice
-//     will index per-version release-note chunks. Until then,
+//     compatibility. A future ai_update_notes_indexer will index
+//     per-version release-note chunks. Until then,
 //     retrieve_update_notes called with software_update simply
 //     returns zero chunks, and the strategy's no_release_notes_
 //     honesty golden pins the narration to disclose the gap
@@ -45,7 +42,7 @@
 //     implicit: the tool's input schema does NOT accept a
 //     vehicle_id, so the LLM cannot ask the retriever for
 //     another vehicle's chunks. Per-vehicle separation is
-//     handled by the F7 retriever's per-subject filter and the
+//     handled by the retriever's per-subject filter and the
 //     source-type allowlist; widening the input to accept a
 //     vehicle id would expose a prompt-injection exfiltration
 //     surface that the omission closes.
@@ -54,28 +51,18 @@
 // gate is therefore never reached in practice — defence in depth
 // in case a future edit accidentally adds a write tool.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → query_vehicle_software delegates
-//     to a narrow VehicleSoftwareSource read interface satisfied
-//     at boot by an adapter that wraps the SAME
-//     systemdb.SoftwareUpdateRepo.GetByVehicle reader the
-//     canonical baseline GET /api/v1/vehicles/{id}/software-updates
-//     handler already serves; no new SQL.
-//     retrieve_update_notes delegates to the F7 rag.Retriever
-//     (the single canonical retrieval entry point).
-//
-//   - "the LLM never writes raw SQL" → tools have no DB handle.
-//     The envelope-building math (cadence, current version) is
-//     pure Go on the typed entries the source returns.
-//
-//   - "no duplicate write paths" → no save_* / update_* /
-//     install_* / schedule_* tool exists in this slice; both
-//     tools are pure reads. The existing telemetry-driven
-//     write path (via SoftwareUpdateRepo.InsertIfChanged from
-//     the MQTT pipeline) is the only mutation surface; the AI
-//     tool never touches it.
+//   - query_vehicle_software delegates to a narrow VehicleSoftwareSource
+//     read interface backed by the same systemdb.SoftwareUpdateRepo.GetByVehicle
+//     reader served by GET /api/v1/vehicles/{id}/software-updates; no new SQL.
+//   - retrieve_update_notes delegates to rag.Retriever, the single canonical
+//     retrieval entry point.
+//   - Tools have no DB handle; envelope-building math is pure Go on typed
+//     entries returned by the source.
+//   - No save_* / update_* / install_* / schedule_* tool exists. The
+//     telemetry-driven SoftwareUpdateRepo.InsertIfChanged path remains the
+//     only mutation surface; the AI tool never touches it.
 //
 //   - Privacy: VIN, lat/long, place names, IPs are NOT carried
 //     in the envelope (the software_updates table itself does
@@ -90,7 +77,7 @@
 // (any other rag.Source* constant or arbitrary string is
 // refused), so a confused LLM that asks the assistant to search
 // e.g. "user_note" cannot accidentally expose a corpus the
-// slice did not enumerate.
+// feature did not enumerate.
 
 package summary
 
@@ -107,15 +94,11 @@ import (
 )
 
 // softwareUpdateSourceUpdate is the source-type string reserved
-// by the slice prompt for the future per-firmware-version
-// release-note embedding corpus produced by the
-// ai_update_notes_indexer cron job (the corresponding
-// internal/jobs/ai_update_notes_indexer.go ships as a fail-
-// closed stub in this slice; the actual indexer is a future
-// slice). Intentionally NOT promoted to a rag.Source* constant
-// because adding to that package widens the global F7 contract
-// beyond this slice's mandate. When the future indexer slice
-// lands, it should promote this string to
+// for the future per-firmware-version release-note embedding corpus
+// produced by the ai_update_notes_indexer cron job. Intentionally NOT
+// promoted to a rag.Source* constant because adding to that package
+// widens the global RAG contract beyond this feature's mandate. When
+// the indexer lands, it should promote this string to
 // rag.SourceSoftwareUpdate in one place.
 const softwareUpdateSourceUpdate = "software_update"
 
@@ -130,10 +113,8 @@ const softwareUpdateSourceDocs = "docs"
 // allowlist of source-type strings the software-update-
 // changelog-summarizer strategy may retrieve over. Any other
 // source type passed via the LLM's typed input is refused at
-// validation time — the slice prompt explicitly enumerates
-// these two corpora and a future slice that adds a new source
-// must add it here AND extend the strategy's system prompt +
-// goldens, not silently widen.
+// validation time. A future source must be added here and extend
+// the strategy's system prompt and goldens, not silently widen.
 //
 // Kept in lex order so error messages list a stable allowed-set.
 var softwareUpdateChangelogAllowedSourceTypes = []string{
@@ -246,8 +227,8 @@ func ScopedSoftwareUpdateChangelogWindowFromContext(ctx context.Context) (Scoped
 // runs.
 //
 // Note the deliberate absence of vehicle_id: per-vehicle
-// separation is handled by the F7 retriever's per-subject
-// filter (the calling operator's session). Widening the input
+// separation is handled by the retriever's per-subject filter.
+// Widening the input
 // to accept vehicle_id would expose a prompt-injection
 // exfiltration surface that the omission closes.
 type retrieveUpdateNotesInput struct {
@@ -282,7 +263,7 @@ type retrievedUpdateNotesChunk struct {
 	Score      float32 `json:"score"`
 }
 
-// retrieveUpdateNotes is the read-only tool that calls the F7
+// retrieveUpdateNotes is the read-only tool that calls the RAG
 // retriever for the software-update-changelog domain. It is the
 // OPTIONAL secondary tool the LLM may call (per the strategy's
 // system prompt) AFTER query_vehicle_software, so the narration
@@ -464,7 +445,7 @@ type VehicleSoftwareEnvelope struct {
 //
 // The interface MUST stay read-only — adding a Save / Update /
 // Install method here would defeat the read-only contract
-// that ADR-015 §I3 + the slice prompt mandate.
+// that ADR-015 §I3 mandates.
 type VehicleSoftwareSource interface {
 	// VehicleSoftware returns the deterministic envelope
 	// describing the in-scope vehicleID. Implementations
@@ -617,10 +598,9 @@ type SoftwareUpdateChangelogSummarizerSources struct {
 }
 
 // RegisterSoftwareUpdateChangelogSummarizerTools installs the
-// software-update-changelog-summarizer slice's tools on r.
-// Called from router.go AFTER the Phase-50 / 0050 tco-narration
-// registration so the registry's alphabetical Names list
-// continues to grow deterministically without disturbing
+// software-update-changelog-summarizer tools on r. Called from
+// router.go after the TCO narration tools so the registry's
+// alphabetical Names list continues to grow deterministically without disturbing
 // earlier registrations or any builtin-names pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) —

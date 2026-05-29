@@ -1,5 +1,3 @@
-// Phase-50 / 0032 — T2 Cabin temperature impact narrative.
-//
 // Unit tests for the query_temperature_impact tool. The tool
 // wraps a narrow [TemperatureImpactSource] port; tests substitute
 // a deterministic fake so the unit tests stay hermetic.
@@ -47,8 +45,7 @@ func TestQueryTemperatureImpact_Name(t *testing.T) {
 }
 
 // TestQueryTemperatureImpact_PropOnlyContract pins the read-only
-// metadata. ADR-015 §I3 + the slice prompt mandate read-only for
-// this slice.
+// metadata. ADR-015 §I3 requires this tool to stay read-only.
 func TestQueryTemperatureImpact_PropOnlyContract(t *testing.T) {
 	t.Parallel()
 	tool := &queryTemperatureImpact{}

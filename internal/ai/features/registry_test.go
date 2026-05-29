@@ -6,8 +6,7 @@ import "testing"
 // Registry has populated surface metadata, the map-key invariant
 // holds, and DefaultOn is false everywhere (ADR-015 §I7).
 //
-// A new feature slice that adds an entry without populating Routes,
-// Name, Tier, or that flips DefaultOn=true, fails this test.
+// Any feature missing Routes, Name, Tier, or using DefaultOn=true fails this test.
 func TestCoverageOK(t *testing.T) {
 	if err := CoverageOK(); err != nil {
 		t.Fatalf("registry CoverageOK: %v", err)

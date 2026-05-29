@@ -1,11 +1,6 @@
-// Phase-50 / 0056 — V2 Helix watch-face natural-language response.
-//
-// Unit tests for the query_watch_context tool. The tool wraps
-// two narrow ports (WatchContextSource + AlertHistorySource); in
-// production those wrap the canonical VehicleRepo +
-// signal.LiveStateReader + NotificationRepo, but the test
-// substitutes hermetic fakes so the tool unit tests stay free
-// of database / Redis IO.
+// Unit tests for the query_watch_context tool. The production tool wraps
+// vehicle state and alert-history ports; these tests use fakes to avoid
+// database and Redis IO.
 
 package nl
 

@@ -1,5 +1,3 @@
-// Phase-50 / 0049 — M1 Predictive maintenance.
-//
 // Unit tests for the retrieve_maintenance_chunks +
 // query_maintenance_context tools. Both tools wrap narrow ports
 // (rag.Retriever / MaintenancePredictionContextSource); tests
@@ -7,7 +5,7 @@
 // hermetic.
 //
 // The query_maintenance_context tool also enforces the per-
-// request scope binding the slice prompt's security model
+// request scope binding the feature requirements's security model
 // relies on (defence against prompt-injection exfiltration via
 // operator-authored service-record description / provider
 // strings). The scope-binding tests pin the contract: missing
@@ -34,7 +32,7 @@ import (
 
 // fakeMaintenanceRetriever is a hermetic stand-in for
 // rag.Retriever. Records the request and returns either a
-// canned chunk slice or a forced error.
+// canned chunks or a forced error.
 type fakeMaintenanceRetriever struct {
 	calls []struct {
 		subject     string
@@ -160,9 +158,9 @@ func TestRetrieveMaintenanceChunks_Validate_RejectsUnknownSourceType(t *testing.
 }
 
 // TestRetrieveMaintenanceChunks_Validate_RejectsFSMTransition guards
-// against a copy-paste mistake from the sister slice 0048
-// state-machine-debugger-narrator (whose allowlist includes
-// fsm_transition) silently widening this slice's surface.
+// against a copy-paste mistake from the state-machine debugger
+// narrator (whose allowlist includes
+// fsm_transition) silently widening this feature's surface.
 func TestRetrieveMaintenanceChunks_Validate_RejectsFSMTransition(t *testing.T) {
 	t.Parallel()
 	tool := &retrieveMaintenanceChunks{}
@@ -429,7 +427,7 @@ func TestQueryMaintenanceContext_Execute_NilEnvelopeIsError(t *testing.T) {
 // vehicle than the in-scope one (e.g. a prompt-injection attack
 // via an operator-authored service-record description /
 // provider string) is REJECTED at the tool boundary before any
-// source is touched. The fake source's calls slice MUST stay
+// source is touched. The fake source's calls list MUST stay
 // empty on a rejected call.
 func TestQueryMaintenanceContext_Execute_RefusesMismatchedScopeVehicle(t *testing.T) {
 	t.Parallel()

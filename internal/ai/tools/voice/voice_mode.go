@@ -1,7 +1,4 @@
-// Phase-50 / 0055 — V1 Helix voice mode.
-//
-// voice_mode.go ships ONE new read-only typed tool used by the
-// voice-mode strategy:
+// Voice mode exposes one read-only typed tool:
 //
 //   - `stream_chatbot_response` — typed deterministic envelope
 //     bundling the recent chat history for the in-scope session
@@ -25,7 +22,7 @@
 //     tags as ClassVehicleName), and a short last_drive_summary
 //     cross the tool boundary.
 //
-// Tool design (vs the slice-0053 quiet-hours-suggestion tools):
+// Tool design:
 //
 //   - Per-request SESSION-scope binding is used: the AI handler
 //     installs the request body's session_id in ctx via
@@ -43,12 +40,10 @@
 //     so no vehicle_id is in the input — the snapshot is the
 //     same for every call within a request.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Implement or register only the tools listed for this
-//     feature: stream_chatbot_response." → exactly one tool
-//     ships in this file. The strategy's allowedTools is
-//     {stream_chatbot_response} only.
+//   - Exactly one tool is registered here. The strategy's allowedTools
+//     is {stream_chatbot_response} only.
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → stream_chatbot_response
@@ -63,8 +58,7 @@
 //     The ports hand pre-aggregated envelopes in.
 //
 //   - "no duplicate write paths" → no save_* / create_* /
-//     apply_* / submit_* tool exists in this slice; the only
-//     tool is a pure read. The user/assistant turn persistence
+//     apply_* / submit_* tool exists here; the only tool is a pure read. The user/assistant turn persistence
 //     is performed by the AI handler (matching the chatbot
 //     handler's pattern), NOT by any tool.
 
@@ -189,9 +183,8 @@ type VoiceModeEnvelope struct {
 // substitute deterministic fakes so the tool unit tests stay
 // hermetic.
 //
-// The interface MUST stay read-only — adding a Save / Update
-// method here would defeat the read-only contract that ADR-015 §I3
-// + the slice prompt mandate.
+// The interface must stay read-only; adding Save or Update would defeat
+// the read-only contract in ADR-015 §I3.
 type ChatContextSource interface {
 	// LoadRecentTurns returns the most-recent `limit` chat
 	// turns for `sessionID`, sorted oldest-first (ASC). An
@@ -469,7 +462,7 @@ func (t *streamChatbotResponse) Execute(ctx context.Context, in any) (any, error
 
 // VoiceModeSources bundles the narrow ports
 // RegisterVoiceModeTools needs. Mirrors
-// [SafetySettingExplainerSources] (slice 0054).
+// [SafetySettingExplainerSources].
 //
 // Production wiring (router.go) instantiates the production
 // adapters (*api.AIVoiceModeChatContextSource +
@@ -480,11 +473,9 @@ type VoiceModeSources struct {
 	Vehicle VehicleSnapshotSource
 }
 
-// RegisterVoiceModeTools installs the voice-mode slice's tools
-// on r. Called from router.go AFTER
-// RegisterSafetySettingExplainerTools so the registry's Names
-// list continues to grow deterministically without disturbing
-// earlier registrations or any builtin-names pin tests.
+// RegisterVoiceModeTools installs the voice-mode tools on r. Router
+// wiring keeps registration order deterministic so builtin-name pin
+// tests remain stable.
 //
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first

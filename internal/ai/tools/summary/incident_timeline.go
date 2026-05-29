@@ -1,6 +1,4 @@
-// Phase-50 / 0042 — S1 Incident timeline summarizer.
-//
-// incident_timeline_summarizer.go ships TWO new read-only tools:
+// Incident timeline summarization exposes two read-only tools:
 //
 //   - `query_incident_timeline` — typed envelope derived from the
 //     SAME deterministic database.IncidentRepo.Get path that backs
@@ -22,11 +20,11 @@
 //     scope check refuses the call before any cross-incident
 //     timeline data is loaded into the model's context.
 //
-//   - `retrieve_system_chunks` — a thin wrapper over the F7
+//   - `retrieve_system_chunks` — a thin wrapper over the RAG
 //     rag.Retriever scoped to the calling user_subject, restricted
-//     to the slice's per-feature source-type allowlist
+//     to this feature's source-type allowlist
 //     {system_event, audit_log}. Both source types are reserved by
-//     string for forward-compatibility — a future slice will index
+//     string for forward-compatibility — future work will index
 //     per-incident system-event and audit-log chunks. Until then,
 //     retrieve_system_chunks called with either source type simply
 //     returns zero chunks for that corpus — which is the correct
@@ -38,14 +36,14 @@
 // is never reached in practice — defence in depth in case a future
 // edit accidentally adds a write tool.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → query_incident_timeline delegates to
 //     a narrow IncidentTimelineSource read interface satisfied at
 //     boot by *api.AIIncidentTimelineSource which calls the SAME
 //     shared database.IncidentRepo.Get path that backs the baseline
-//     handler. retrieve_system_chunks delegates to the F7
+//     handler. retrieve_system_chunks delegates to the RAG
 //     rag.Retriever (the single canonical retrieval entry point).
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle.
@@ -53,7 +51,7 @@
 //     database.Incident struct the repo already returns.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; both tools are pure reads. The
+//     tool exists here; both tools are pure reads. The
 //     existing IncidentsHandler.AppendUpdate is the only write
 //     path; the AI surface never touches it.
 //
@@ -69,7 +67,7 @@
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant or arbitrary string is refused), so a
 // confused LLM that asks the assistant to search e.g. "user_note"
-// cannot accidentally expose a corpus the slice did not enumerate.
+// cannot accidentally expose a corpus this feature did not enumerate.
 
 package summary
 
@@ -87,16 +85,16 @@ import (
 )
 
 // incidentTimelineSourceSystemEvent is the source-type string
-// reserved by the slice prompt for the future per-incident system-
+// reserved for the future per-incident system-
 // event embedding corpus. Intentionally NOT promoted to a
 // rag.Source* constant because adding to that package widens the
-// global F7 contract beyond this slice's mandate. When the future
-// indexer slice lands, it should promote this string to
+// global RAG contract beyond this feature's mandate. When the future
+// indexer lands, it should promote this string to
 // rag.SourceSystemEvent in one place.
 const incidentTimelineSourceSystemEvent = "system_event"
 
 // incidentTimelineSourceAuditLog is the source-type string reserved
-// by the slice prompt for the future per-incident audit-log
+// for the future per-incident audit-log
 // embedding corpus. Same forward-compatibility rationale as
 // incidentTimelineSourceSystemEvent.
 const incidentTimelineSourceAuditLog = "audit_log"
@@ -104,9 +102,8 @@ const incidentTimelineSourceAuditLog = "audit_log"
 // incidentTimelineAllowedSourceTypes is the per-feature allowlist
 // of source-type strings the incident-timeline-summarizer strategy
 // may retrieve over. Any other source type passed via the LLM's
-// typed input is refused at validation time — the slice prompt
-// explicitly enumerates these two corpora and a future slice that
-// adds a new source must add it here AND extend the strategy's
+// typed input is refused at validation time. A future source must
+// be added here AND in the strategy's
 // system prompt + goldens, not silently widen.
 //
 // Kept in lex order so error messages list a stable allowed-set.
@@ -213,7 +210,7 @@ type retrievedSystemChunk struct {
 	Score      float32 `json:"score"`
 }
 
-// retrieveSystemChunks is the read-only tool that calls the F7
+// retrieveSystemChunks is the read-only tool that calls the RAG
 // retriever for the incident-timeline-summarizer domain. It is the
 // OPTIONAL secondary tool the LLM may call (per the strategy's
 // system prompt) after query_incident_timeline, so the summary is
@@ -223,10 +220,8 @@ type retrieveSystemChunks struct {
 	r rag.Retriever
 }
 
-// Name implements [Tool].
 func (t *retrieveSystemChunks) Name() string { return "retrieve_system_chunks" }
 
-// Description implements [Tool].
 func (t *retrieveSystemChunks) Description() string {
 	return "Find the top-k nearest chunks to a natural-language query across the calling user's " +
 		"system-event / audit-log history via the F7 RAG retriever. " +
@@ -235,7 +230,6 @@ func (t *retrieveSystemChunks) Description() string {
 		"Returns {chunks: [{source_type, source_id, chunk_idx, text, score}]}; an empty list means no match — DO NOT fabricate a system event or audit-log entry to fill the void."
 }
 
-// InputSchema implements [Tool].
 func (t *retrieveSystemChunks) InputSchema() json.RawMessage {
 	return tools.CachedSchema(retrieveSystemChunksInput{})
 }
@@ -246,12 +240,11 @@ func (t *retrieveSystemChunks) OutputSchema() json.RawMessage { return nil }
 // Mutates implements [Tool]. READ-only.
 func (t *retrieveSystemChunks) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty.
 func (t *retrieveSystemChunks) RequiredScope() string { return "" }
 
 // Validate implements [Tool]. Delegates to the shared validator,
 // then enforces the per-feature source-type allowlist that the
-// validator's `oneof` tag cannot express for slice fields.
+// validator's `oneof` tag cannot express for slices.
 func (t *retrieveSystemChunks) Validate(raw json.RawMessage) (any, error) {
 	v, err := tools.ValidateStruct[retrieveSystemChunksInput](raw)
 	if err != nil {
@@ -358,9 +351,8 @@ type IncidentTimelineEnvelope struct {
 // database.IncidentRepo.Get); in tests we substitute deterministic
 // fakes so the tool unit tests stay hermetic.
 //
-// The interface MUST stay read-only — adding a Save / Update method
-// here would defeat the read-only contract that ADR-015 §I3 + the
-// slice prompt mandate.
+// The interface MUST stay read-only; adding a Save or Update method
+// here would defeat the ADR-015 §I3 contract.
 type IncidentTimelineSource interface {
 	// IncidentTimeline returns the deterministic incident envelope
 	// for incidentID. Implementations SHOULD call the SAME shared
@@ -385,10 +377,8 @@ type queryIncidentTimeline struct {
 	src IncidentTimelineSource
 }
 
-// Name implements [Tool].
 func (t *queryIncidentTimeline) Name() string { return "query_incident_timeline" }
 
-// Description implements [Tool].
 func (t *queryIncidentTimeline) Description() string {
 	return "Return the SAME deterministic incident-timeline envelope the canonical baseline " +
 		"GET /api/v1/status/incidents/{id} handler serves for ONE incident. " +
@@ -401,7 +391,6 @@ func (t *queryIncidentTimeline) Description() string {
 		"refused at the tool boundary."
 }
 
-// InputSchema implements [Tool].
 func (t *queryIncidentTimeline) InputSchema() json.RawMessage {
 	return tools.CachedSchema(queryIncidentTimelineInput{})
 }
@@ -412,7 +401,6 @@ func (t *queryIncidentTimeline) OutputSchema() json.RawMessage { return nil }
 // Mutates implements [Tool]. Read-only.
 func (t *queryIncidentTimeline) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty.
 func (t *queryIncidentTimeline) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
@@ -475,9 +463,8 @@ type IncidentTimelineSummarizerSources struct {
 }
 
 // RegisterIncidentTimelineSummarizerTools installs the
-// incident-timeline-summarizer slice's tools on r. Called from
-// router.go AFTER the Phase-50 / 0041 lifetime-stats-qa
-// registration so the registry's alphabetical Names list continues
+// incident-timeline-summarizer tools on r. Called after
+// lifetime-stats-qa registration so the registry's alphabetical Names list continues
 // to grow deterministically without disturbing earlier
 // registrations or any builtin-names pin tests.
 //

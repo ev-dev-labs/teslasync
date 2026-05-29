@@ -8,11 +8,10 @@
 // diagnostic, …, anomaly, drive_coaching, route_efficiency, …) can
 // import it from THEIR _test.go files. A _test.go file can only be
 // referenced by tests inside the same package, so the only way to
-// share these fakes across the post-R6 carved subpackage tree is to
+// share these fakes across the carved subpackage tree is to
 // promote them into a normal importable package.
 //
-// Rationale per Phase R6 sequencing (see plan.md §16 + ADR-011 §3):
-// the 11 remaining ai/tools/* clusters (anomaly, automation_builder,
+// Rationale: several ai/tools/* clusters (anomaly, automation_builder,
 // charge_curve_clustering, charging_diagnosis, digest, drive_coaching,
 // paint_preview, route_efficiency, speed_profile, trip_planner_llm_agent,
 // year_review) were blocked on shared test-fixture coupling
@@ -25,7 +24,7 @@
 // files continue to use their existing unexported local fakes
 // verbatim — toolstest is the EXPORTED parallel for carved subpkg
 // tests, NOT a forced replacement for the parent. When all 11 blocked
-// clusters are carved out (R6.21..R6.31), the parent's local fakes
+// clusters are carved out, the parent's local fakes
 // can be deleted in a final cleanup.
 //
 // Layer: domain

@@ -284,7 +284,7 @@ func encodeChatRequest(cfg provider.ProviderConfig, req provider.ChatRequest, st
 	wireMsgs := make([]openAIWireMsg, 0, len(req.Messages))
 	for _, m := range req.Messages {
 		wm := openAIWireMsg{Role: m.Role, Content: m.Content, Name: m.Name, ToolCallID: m.ToolID}
-		// Legacy singular tool field (pre-Phase-50 callers / tests).
+		// Legacy singular tool field (legacy callers and tests).
 		if m.Tool != nil {
 			tc := openAIWireToolCall{ID: m.Tool.ID, Type: "function"}
 			tc.Function.Name = m.Tool.Name

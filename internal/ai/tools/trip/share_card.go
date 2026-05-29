@@ -1,6 +1,5 @@
-// Phase-50 / 0060 — GEN1 Trip postcard and share-card image generation.
-//
-// share_card_image.go ships TWO new propose-only tools used by the
+// Trip postcard and share-card image generation exposes two
+// propose-only tools used by the
 // trip-postcard-share-card-image-generation strategy
 // (internal/ai/strategies/trip-postcard-share-card-image-generation):
 //
@@ -23,20 +22,20 @@
 //                                    leakage in cleartext, no claims
 //                                    of having shared/saved/published
 //                                    anything). Both tools are
-//                                    PROPOSE-ONLY: they construct or
+//                                    propose-only: they construct or
 //                                    validate share-card image-prompt
 //                                    DTOs but do NOT touch the
 //                                    database, never call an external
 //                                    image provider, and never persist
 //                                    anything.
 //
-// Design constraints (from the slice prompt + ADR-015):
+// Design constraints:
 //
 //   - "produces image prompt DTOs and invokes configured image
-//     provider only when enabled" — this slice ships ONLY the typed
+//     provider only when enabled" — this feature ships only the typed
 //     DTO. An actual provider call (image bytes generation) is out
-//     of scope for slice 0060 and would land in a future wiring
-//     slice that re-uses the same propose-only DTOs through the
+//     of scope here and would land in future wiring that reuses the
+//     same propose-only DTOs through the
 //     same per-feature toggle.
 //   - "The LLM never writes raw SQL and never bypasses existing
 //     handlers." → both tools delegate read of the trip detail to a
@@ -44,7 +43,7 @@
 //     *tripdb.TripsDetailRepo, the same read path the GET
 //     /api/v1/trips/{id} baseline handler already uses).
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; the evidence is a pure read.
+//     tool exists here; the evidence is a pure read.
 //   - Privacy: the strategy uses redact.PolicyDigest (allow
 //     ClassVehicleName only); the validator in render_share_card_preview
 //     additionally refuses obvious lat/long / street-address-shaped
@@ -67,9 +66,9 @@ import (
 )
 
 // Hard caps on the typed share-card draft fields. The values mirror
-// the slice prompt's narrative caps ("a single short share-card
-// title (capped at 100 characters; ideally 24-60)" and
-// "one image-generation prompt (capped at 500 characters)") so the
+// the narrative caps ("a single short share-card
+// title capped at 100 characters and one image-generation prompt
+// capped at 500 characters, so the
 // runtime contract and the system prompt agree.
 const (
 	shareCardMaxTitleLen       = 100
@@ -82,9 +81,9 @@ const (
 // shareCardImageEvidence is the read-only context envelope the
 // share-card-image tools return alongside the typed draft / preview.
 // The LLM is expected to ground its title + image prompt in these
-// fields. Numeric units are SI-canonical (meters, seconds) per
-// Phase-48 — the frontend converts to user-preferred display units
-// at the render boundary.
+// fields. Numeric units are SI-canonical (meters, seconds); the
+// frontend converts to user-preferred display units at the render
+// boundary.
 type shareCardImageEvidence struct {
 	StartPlace  *string `json:"start_place,omitempty"`
 	EndPlace    *string `json:"end_place,omitempty"`
@@ -175,8 +174,8 @@ type shareCardImagePreview struct {
 // Heuristic detectors for cleartext PII the redaction policy is
 // supposed to strip but the validator should still refuse if it
 // somehow reaches the tool input. Defence-in-depth per ADR-015 §I9
-// + the slice prompt's "Never quote precise street addresses, GPS
-// coordinates, ..." clause.
+// and the prompt's "Never quote precise street addresses, GPS
+// coordinates" clause.
 //
 // The patterns intentionally err on the side of false positives —
 // the LLM can re-issue with a tag-style reference or a generic
@@ -298,10 +297,8 @@ type draftImagePrompt struct {
 	details TripDetailSource
 }
 
-// Name implements [Tool].
 func (t *draftImagePrompt) Name() string { return "draft_image_prompt" }
 
-// Description implements [Tool].
 func (t *draftImagePrompt) Description() string {
 	return "Build a share-card image-prompt seed envelope for the given trip. " +
 		"PROPOSE-ONLY: nothing is generated, uploaded, or saved. Returns " +
@@ -311,7 +308,6 @@ func (t *draftImagePrompt) Description() string {
 		"Call FIRST, then call render_share_card_preview with a refined proposed_title + image_prompt."
 }
 
-// InputSchema implements [Tool].
 func (t *draftImagePrompt) InputSchema() json.RawMessage {
 	return tools.CachedSchema(shareCardImageDraftInput{})
 }
@@ -319,7 +315,7 @@ func (t *draftImagePrompt) InputSchema() json.RawMessage {
 // OutputSchema implements [Tool].
 func (t *draftImagePrompt) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. PROPOSE-only — never returns true.
+// Propose-only: never mutates state.
 func (t *draftImagePrompt) Mutates() bool { return false }
 
 // RequiredScope implements [Tool].
@@ -371,10 +367,8 @@ type renderShareCardPreview struct {
 	details TripDetailSource
 }
 
-// Name implements [Tool].
 func (t *renderShareCardPreview) Name() string { return "render_share_card_preview" }
 
-// Description implements [Tool].
 func (t *renderShareCardPreview) Description() string {
 	return "Validate a share-card preview proposal (proposed_title + image_prompt + optional subtitle/style/palette) and return a render-ready envelope. " +
 		"PROPOSE-ONLY: nothing is generated, uploaded, or saved. " +
@@ -383,7 +377,6 @@ func (t *renderShareCardPreview) Description() string {
 		"Use AFTER draft_image_prompt to confirm the proposal will render before narrating it to the user."
 }
 
-// InputSchema implements [Tool].
 func (t *renderShareCardPreview) InputSchema() json.RawMessage {
 	return tools.CachedSchema(shareCardImagePreviewInput{})
 }
@@ -391,7 +384,7 @@ func (t *renderShareCardPreview) InputSchema() json.RawMessage {
 // OutputSchema implements [Tool].
 func (t *renderShareCardPreview) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. PROPOSE-only — never returns true.
+// Propose-only: never mutates state.
 func (t *renderShareCardPreview) Mutates() bool { return false }
 
 // RequiredScope implements [Tool].
@@ -483,10 +476,9 @@ type TripPostcardShareCardImageGenerationSources struct {
 }
 
 // RegisterTripPostcardShareCardImageGenerationTools installs the
-// trip-postcard-share-card-image-generation slice's tools on r.
-// Called from router.go AFTER the previous slice's tool
-// registrations so the registry's alphabetical Names list grows
-// deterministically.
+// trip-postcard-share-card-image-generation tools on r. Called after
+// earlier tool registrations so the registry's alphabetical Names
+// list grows deterministically.
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.

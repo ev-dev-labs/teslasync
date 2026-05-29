@@ -1,9 +1,6 @@
-// Phase-50 / 0030 — C5 Vampire-drain explanation.
-//
-// Unit tests for the retrieve_idle_drain_chunks +
-// query_vampire_drain_windows tools. Both tools wrap narrow ports
-// (rag.Retriever / VampireDrainSource); tests substitute
-// deterministic fakes so the unit tests stay hermetic.
+// Unit tests for the retrieve_idle_drain_chunks and query_vampire_drain_windows
+// tools. Tests use deterministic fakes for the RAG retriever and drain source
+// so the suite stays hermetic.
 
 package lifetime
 

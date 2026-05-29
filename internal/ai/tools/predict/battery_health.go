@@ -1,13 +1,13 @@
-// Phase-50 / 0027 — C2 Battery health forecast narrative.
+// Battery health forecast narrative tool.
 //
 // battery_health_forecast.go ships ONE new read-only tool:
-// `query_battery_health_forecast`. The tool is the single F4
+// `query_battery_health_forecast`. The tool is the only
 // surface the battery-health-forecast-narrative strategy is
 // allowed to call (see
 // internal/ai/strategies/battery-health-forecast-narrative/strategy.go's
 // allowedTools whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL
 //     written.**" We compose existing helpers
@@ -21,7 +21,7 @@
 //     SAME deterministic forecast model the chart renders.
 //
 //   - The tool is a READ — Mutates() returns false. The dispatcher's
-//     deny-all confirm gate refuses anything mutating; this slice
+//     deny-all confirm gate refuses anything mutating; this feature
 //     ships zero mutating tools.
 //
 //   - One tool, one strategy: the tool is registered on the
@@ -63,7 +63,7 @@
 //	  ]
 //	}
 //
-// All fields are SI canonical (Phase-48 contract). The frontend's
+// All fields are SI canonical. The frontend's
 // useUnits()/useFormatting() at the display boundary converts to
 // the user's preferred units before rendering.
 
@@ -146,8 +146,7 @@ type BatteryHealthForecast struct {
 // hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update method
-// here would defeat the read-only contract that ADR-015 §I3 + the
-// slice prompt mandate.
+// here would defeat the read-only contract required by ADR-015 §I3.
 type BatteryHealthForecaster interface {
 	// ForecastBatteryHealth runs the canonical deterministic
 	// forecast for vehicleID and returns the typed envelope. Any
@@ -253,7 +252,7 @@ type BatteryHealthForecastNarrativeSources struct {
 }
 
 // RegisterBatteryHealthForecastNarrativeTools installs the
-// battery-health-forecast-narrative slice's tools on r. Called
+// battery-health-forecast-narrative tools on r. Called
 // from router.go AFTER the smart-charge-schedule-suggestion tool
 // registration so the registry's alphabetical Names list grows
 // deterministically without disturbing earlier registrations or

@@ -1,5 +1,4 @@
-// Package schedule carves the time-window draft/validate tool family out of
-// the parent internal/ai/tools/ flat package per ADR-011 §3 + ADR-015-amend.
+// Package schedule hosts time-window draft/validate tools.
 //
 // All three tools follow the "LLM drafts a typed time window → Go
 // validator hardens it against historical signals / cost rates / quiet
@@ -21,10 +20,8 @@
 //	                   Window context-injection — replaces middleware that
 //	                   used to live in the parent pkg)
 //
-// Cross-cluster contract preserved verbatim per ADR-015 §I12. Each tool's
-// JSON schema, validate rules, and Execute payload shape are unchanged
-// from the pre-R6.11 parent-pkg version. ai-vet mirror at
-// web/src/ai/features.ts confirms parity at gate time.
+// Each tool's JSON schema, validation rules, and Execute payload shape
+// are part of the AI contract mirrored by web/src/ai/features.ts.
 //
 // Alias convention (ADR-011 §3): callsites importing this alongside other
 // clusters MAY alias as `scheduleaitools` (collision-prone short name).

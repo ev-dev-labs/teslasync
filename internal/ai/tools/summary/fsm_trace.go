@@ -1,6 +1,4 @@
-// Phase-50 / 0048 — S7 State-machine debugger narrator.
-//
-// state_machine_debugger_narrator.go ships TWO new read-only tools:
+// State-machine debugger narration exposes two read-only tools:
 //
 //   - `query_fsm_trace` — typed deterministic envelope describing
 //     the FSM transitions for the in-scope (vehicle_id, from_unix,
@@ -28,10 +26,10 @@
 //
 //   - `retrieve_fsm_chunks` — a thin wrapper over the F7
 //     rag.Retriever scoped to the calling user_subject,
-//     restricted to the slice's per-feature source-type
+//     restricted to this feature's source-type
 //     allowlist {fsm_transition, signal_history_summary}. Both
 //     source types are reserved by string for forward-
-//     compatibility — a future slice will index per-transition
+//     compatibility — a future indexer will add per-transition
 //     and per-signal-history chunks. Until then,
 //     retrieve_fsm_chunks called with either source type simply
 //     returns zero chunks for that corpus — which is the
@@ -44,7 +42,7 @@
 // is never reached in practice — defence in depth in case a future
 // edit accidentally adds a write tool.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → query_fsm_trace delegates to a
@@ -61,7 +59,7 @@
 //     FSMTraceEnvelope struct the source returns.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; both tools are pure reads. The
+//     tool exists for this feature; both tools are pure reads. The
 //     existing FSM-transition writer is the only mutation
 //     surface; the AI tool never touches it.
 //
@@ -77,7 +75,7 @@
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant or arbitrary string is refused), so a
 // confused LLM that asks the assistant to search e.g. "user_note"
-// cannot accidentally expose a corpus the slice did not enumerate.
+// cannot accidentally expose a corpus this feature did not enumerate.
 
 package summary
 
@@ -93,29 +91,25 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
-// fsmSourceTransition is the source-type string reserved by the
-// slice prompt for the future per-transition FSM embedding
-// corpus. Intentionally NOT promoted to a rag.Source* constant
-// because adding to that package widens the global F7 contract
-// beyond this slice's mandate. When the future indexer slice
-// lands, it should promote this string to rag.SourceFSMTransition
-// in one place.
+// fsmSourceTransition reserves the future per-transition FSM embedding
+// corpus. It is intentionally not promoted to a rag.Source* constant
+// because adding to that package widens the global F7 contract beyond
+// this feature. When the future indexer lands, promote this string to
+// rag.SourceFSMTransition in one place.
 const fsmSourceTransition = "fsm_transition"
 
-// fsmSourceSignalHistorySummary is the source-type string
-// reserved by the slice prompt for the future per-window
-// signal-history summary embedding corpus. Same
-// forward-compatibility rationale as fsmSourceTransition.
+// fsmSourceSignalHistorySummary reserves the future per-window
+// signal-history summary embedding corpus. Same forward-compatibility
+// rationale as fsmSourceTransition.
 const fsmSourceSignalHistorySummary = "signal_history_summary"
 
 // fsmTraceAllowedSourceTypes is the per-feature allowlist of
 // source-type strings the state-machine-debugger-narrator
 // strategy may retrieve over. Any other source type passed via
 // the LLM's typed input is refused at validation time — the
-// slice prompt explicitly enumerates these two corpora and a
-// future slice that adds a new source must add it here AND
-// extend the strategy's system prompt + goldens, not silently
-// widen.
+// feature explicitly enumerates these two corpora. Future sources
+// must be added here and in the strategy's system prompt and goldens;
+// do not silently widen access.
 //
 // Kept in lex order so error messages list a stable allowed-set.
 var fsmTraceAllowedSourceTypes = []string{
@@ -453,8 +447,7 @@ type FSMTraceEnvelope struct {
 // tests stay hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update
-// method here would defeat the read-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// method here would defeat the ADR-015 §I3 read-only contract.
 type FSMTraceSource interface {
 	// FSMTrace returns the deterministic envelope describing
 	// the (vehicleID, fromUnix, toUnix) tuple. Implementations
@@ -603,10 +596,9 @@ type StateMachineDebuggerNarratorSources struct {
 }
 
 // RegisterStateMachineDebuggerNarratorTools installs the
-// state-machine-debugger-narrator slice's tools on r. Called
-// from router.go AFTER the Phase-50 / 0047
-// mqtt-sse-inspector-explanations registration so the
-// registry's alphabetical Names list continues to grow
+// state-machine-debugger-narrator tools on r. Called after the
+// mqtt-sse-inspector-explanations registration so the registry's
+// alphabetical Names list continues to grow
 // deterministically without disturbing earlier registrations or
 // any builtin-names pin tests.
 //

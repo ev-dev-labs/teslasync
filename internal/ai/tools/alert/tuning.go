@@ -1,6 +1,4 @@
-// Phase-50 / 0034 — A1 Alert tuning suggestions.
-//
-// alert_tuning.go ships ONE new propose-only tool:
+// Alert tuning suggestions expose one propose-only tool:
 //
 //   - `draft_alert_rule_patch` — accept a rule_id + typed patch
 //     fields, read the existing rule via the AlertTuningSource
@@ -10,7 +8,7 @@
 //     can render for human review.
 //
 // The strategy ALSO consumes `validate_alert_rule` from the
-// nl-alert-builder (slice 0015) toolkit — REUSED here verbatim;
+// nl-alert-builder toolkit — reused here verbatim;
 // no duplicate registration. The dispatcher resolves the tool
 // from the same process-wide registry both strategies share.
 //
@@ -23,7 +21,7 @@
 // handler AFTER the user explicitly clicks Save in the
 // AlertStudioPage UI.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Route every mutation proposal through F4 tools and existing
 //     typed DTO validation. The LLM never writes raw SQL and
@@ -96,7 +94,7 @@ type AlertRuleFiringHistory struct {
 	// across vehicles", "assumes the proposed threshold
 	// applies to the same signal stream as the original
 	// rule"). Mirrors the TirePressureTrend.Assumptions
-	// pattern from slice 0033.
+	// pattern from the companion alert-analysis tool.
 	Assumptions []string `json:"assumptions"`
 }
 
@@ -147,8 +145,7 @@ type AlertRulePatchProposal struct {
 // deterministic fakes so the tool unit tests stay hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update
-// method here would defeat the read-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// method here would defeat the ADR-015 §I3 read-only contract.
 type AlertTuningSource interface {
 	// LoadRule returns the rule's current shape. Returns
 	// (nil, nil) when no rule exists — the tool surfaces this
@@ -454,11 +451,10 @@ type AlertTuningSuggestionsSources struct {
 }
 
 // RegisterAlertTuningSuggestionsTools installs the
-// alert-tuning-suggestions slice's tools on r. Called from
-// router.go AFTER RegisterAlertBuilderTools so the existing
-// `validate_alert_rule` tool (REUSED by this strategy) is already
-// in the registry — and AFTER the Phase-50 / 0033 tool
-// registration so the registry's alphabetical Names list grows
+// alert-tuning-suggestions tools on r. Called from router.go after
+// RegisterAlertBuilderTools so the existing `validate_alert_rule`
+// tool is already in the registry, and after the companion
+// alert-analysis tool so the registry's alphabetical Names list grows
 // deterministically without disturbing earlier registrations.
 //
 // Panics on duplicate registration (Registry.Register panics) —
@@ -467,8 +463,8 @@ type AlertTuningSuggestionsSources struct {
 //
 // Note: this function ONLY registers the NEW tool
 // `draft_alert_rule_patch`. The strategy's other allowed tool
-// (`validate_alert_rule`) is registered by
-// RegisterAlertBuilderTools (slice 0015) and is REUSED here.
+// (`validate_alert_rule`) is registered by RegisterAlertBuilderTools
+// and reused here.
 // The dispatcher's per-strategy whitelist gates which strategies
 // can call which tool.
 func RegisterAlertTuningSuggestionsTools(r *tools.Registry, s AlertTuningSuggestionsSources) {

@@ -1,4 +1,4 @@
-// Phase-50 / 0018 — N4 Per-drive coaching narrative.
+// Per-drive coaching narrative.
 //
 // Unit tests for the drive-coaching Strategy. Mirrors the shape of
 // anomaly-explanations / nl-search strategy_test.go. The Strategy is
@@ -80,7 +80,7 @@ func TestStrategy_Tools(t *testing.T) {
 }
 
 // TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy —
-// a caller that mutates the slice does NOT leak the mutation back
+// a caller that mutates the feature does NOT leak the mutation back
 // into the strategy. Dispatcher safety relies on this.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
@@ -94,7 +94,7 @@ func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 }
 
 // TestStrategy_ToolsIncludesNoMutators asserts the whitelist is
-// READ-ONLY. The coach ships zero mutating tools (per the slice
+// READ-ONLY. The coach ships zero mutating tools (per the feature
 // prompt + ADR-015 — read-only state queries only). A future edit
 // that accidentally adds a write tool will fail this test before
 // the dispatcher's confirm hook protects the user.
@@ -113,7 +113,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs RAG-backed coaching context ships.
+// future feature that needs RAG-backed coaching context ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -128,9 +128,9 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 
 // TestStrategy_RedactionPolicyDriveCoaching proves the strategy
 // hands the dispatcher PolicyDriveCoaching wrapped through the
-// F4↔F8 adapter. PolicyDriveCoaching allows ClassVehicleName so
+// redaction-policy adapter. PolicyDriveCoaching allows ClassVehicleName so
 // the coach can name the user's car; every other PII class is
-// redacted to a round-trip tag. The slice prompt explicitly
+// redacted to a round-trip tag. The feature spec explicitly
 // mandates a PolicyDigest-shaped allow-list and route/location
 // details staying tagged.
 func TestStrategy_RedactionPolicyDriveCoaching(t *testing.T) {
@@ -160,7 +160,7 @@ func TestStrategy_RedactionPolicyDriveCoaching(t *testing.T) {
 	}
 	// Defence-in-depth: the allow-list must NOT include lat/long or
 	// addresses — the coach narrates trends, not exact coordinates,
-	// and the slice prompt says "route/location details stay tagged
+	// and the feature spec says "route/location details stay tagged
 	// unless explicitly restored to same user".
 	for _, c := range want.Allow {
 		switch c {

@@ -1,4 +1,4 @@
-// Phase-50 / 0035 — A2 Inbox auto-categorization.
+// Inbox auto-categorization tool tests.
 //
 // Tool tests for draft_alert_categories + validate_alert_category.
 // Both tools are pure functions over their input + (for

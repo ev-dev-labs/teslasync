@@ -1,5 +1,4 @@
-// Package predictivemaintenance is the Phase-50 / 0049 M1
-// strategy for the LLM-backed predictive-maintenance surface.
+// Package predictivemaintenance defines the LLM-backed predictive-maintenance strategy.
 //
 // The strategy declares:
 //
@@ -33,10 +32,10 @@
 //
 //     2. `retrieve_maintenance_chunks` — a thin wrapper over the
 //     F7 rag.Retriever scoped to the calling user_subject,
-//     restricted to the slice's per-feature source-type
-//     allowlist {maintenance_event, vehicle_state, ml_anomaly}.
+//     restricted to this feature's source-type allowlist
+//     {maintenance_event, vehicle_state, ml_anomaly}.
 //     All three source types are reserved by string for
-//     forward-compatibility — future indexer slices will index
+//     forward-compatibility — future indexers will add
 //     per-service-event, per-state-summary, and per-ML-anomaly
 //     chunks. Until then, retrieve_maintenance_chunks called
 //     with any of those source types simply returns zero chunks
@@ -45,10 +44,8 @@
 //     narration and the system prompt instructs the LLM to
 //     answer gracefully when zero chunks are returned.
 //
-//   - the redaction policy (`PolicyDigest`) which the slice
-//     prompt mandates ("Allowed classes: ClassVehicleName only;
-//     service history is user-visible and sensitive text is
-//     tagged"): vehicle-name is allowed so the narration can
+//   - the redaction policy (`PolicyDigest`): vehicle-name is
+//     allowed so the narration can
 //     address the user's car by name; VIN, lat/long, addresses,
 //     place names, IPs, emails, phone numbers, and MAC addresses
 //     remain tagged via round-trip markers so a leaked
@@ -160,24 +157,21 @@ func New() *Strategy {
 	return &Strategy{}
 }
 
-// FeatureID implements [strategy.Strategy]. Returns the
-// canonical registry key.
+// FeatureID returns the canonical registry key.
 func (s *Strategy) FeatureID() string { return FeatureID }
 
-// System implements [strategy.Strategy]. Returns the
-// deterministic system prompt.
+// System returns the deterministic system prompt.
 func (s *Strategy) System() string { return SystemPrompt }
 
-// Tools implements [strategy.Strategy]. Returns a defensive copy
-// of the allowed tool names so a caller cannot mutate the
-// package-level allowlist.
+// Tools returns a defensive copy of the allowed tool names so callers
+// cannot mutate the package-level allowlist.
 func (s *Strategy) Tools() []string {
 	out := make([]string, len(allowedTools))
 	copy(out, allowedTools)
 	return out
 }
 
-// Context implements [strategy.Strategy]. The dispatcher seeds
+// Context relies on the dispatcher seeding
 // the conversation from StrategyInput.LastMessage / History, and
 // the AI handler builds the synthesised "advise on the in-scope
 // vehicle's maintenance risk" prompt before the call, so the
@@ -187,16 +181,12 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 	return nil, nil
 }
 
-// RedactionPolicy implements [strategy.Strategy]. Returns
+// RedactionPolicy returns
 // PolicyDigest wrapped through the F4↔F8 adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyDigest from
-// internal/ai/redact/policies.go. Allowed classes:
-// ClassVehicleName only; service history is user-visible and
-// sensitive text is tagged. Round-trip required: yes."
 // PolicyDigest allows vehicle-name so the advisory can address
 // the user's car by name; every other PII class is
 // round-tripped to a tag before the message ever reaches the
@@ -205,7 +195,7 @@ func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyDigest())
 }
 
-// EvalGoldens implements [strategy.Strategy]. The eval harness
+// EvalGoldens stays nil because the eval harness
 // loads goldens from
 // `internal/ai/strategies/predictive-maintenance/goldens.yaml`
 // directly (see internal/ai/eval/golden.go LoadAllGoldens) — the

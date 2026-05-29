@@ -1,11 +1,10 @@
-// Package nldashboardcomposer is the Phase-50 / 0059 PU3 strategy
-// for the LLM-backed nl-dashboard-composer surface.
+// Package nldashboardcomposer implements the LLM-backed dashboard composer strategy.
 //
 // The strategy declares:
 //
 //   - the system prompt that frames the surface as a propose-only
 //     dashboard layout drafter: produce a typed
-//     DashboardLayoutDraft DTO via the F4 tools constrained to the
+//     DashboardLayoutDraft DTO via tools constrained to the
 //     per-request scope-bound curated panel catalog (a finite set
 //     of named pre-validated panel templates) that the handler
 //     installs server-side; the LLM does NOT invent panels — it
@@ -29,9 +28,8 @@
 //     draft envelope. Used by the LLM to confirm a draft is
 //     acceptable before narrating it to the user.
 //
-//   - the redaction policy (`PolicyAlertBuilder`) which the slice
-//     prompt mandates ("Allowed classes: none; widget catalog and
-//     aggregate metadata only"): VIN, lat/long, addresses, place
+//   - the redaction policy (`PolicyAlertBuilder`): VIN, lat/long,
+//     addresses, place
 //     names, vehicle-name, AND every other PII class remain tagged
 //     via round-trip markers so a leaked transcript reveals
 //     nothing about the operator's environment, vehicle
@@ -195,14 +193,11 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyAlertBuilder wrapped through the F4↔F8 adapter so the
+// PolicyAlertBuilder through the redaction-policy adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; widget
-// catalog and aggregate metadata only. Round-trip required: no."
 // PolicyAlertBuilder's deny-by-default stance keeps every PII
 // class round-tripped to a tag before the message ever reaches
 // the provider — defence in depth against an operator-authored

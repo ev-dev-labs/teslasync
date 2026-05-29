@@ -1,5 +1,5 @@
-// Package vampiredrainexplanation is the Phase-50 / 0030 C5 strategy
-// for the LLM-narrated vampire-drain (idle-energy-loss) explanation.
+// Package vampiredrainexplanation provides the LLM-narrated
+// vampire-drain (idle-energy-loss) explanation.
 //
 // The strategy declares:
 //
@@ -20,18 +20,18 @@
 //     canonical baseline GET /vampire-drain + GET
 //     /vampire-drain/stats handlers. The AI narration is grounded
 //     in the same numbers the chart renders, never a parallel
-//     re-implementation. No new SQL is added by this slice.
+//     re-implementation. No new SQL is added.
 //
-//     2. `retrieve_idle_drain_chunks` — F7 RAG retrieval over the
+//     2. `retrieve_idle_drain_chunks` — RAG retrieval over the
 //     per-feature source-type allowlist {idle_drain,
 //     vehicle_state, climate_state}. None of the three is wired
-//     into the F7 indexer today (slice 0008 only indexes
-//     drive_summary + charge_session); they are reserved by
-//     string for forward-compatibility — the gated
+//     into the indexer today (only drive_summary and charge_session
+//     are indexed); they are reserved by
+//     string for forward-compatibility. The gated
 //     `ai_idle_drain_indexer` job (registered via
 //     features.Registry["vampire-drain-explanation"].Routes.JobNames)
-//     will fan out into the idle-drain corpus once a future
-//     slice wires the per-event embeddings. Until then the
+//     will fan out into the idle-drain corpus once per-event
+//     embeddings are wired. Until then the
 //     retriever simply returns zero chunks for these source
 //     types — which is the correct behaviour: the strategy's
 //     goldens already cover the zero-matches narration;
@@ -51,11 +51,10 @@
 // drain-sessions table, tips panel — is unchanged. Off-mode users
 // never see the AI surface at all (ADR-015 §I3, §I5, §I6).
 //
-// Service-worker chunks: this slice's frontend code is loaded
-// under the page-bundle for /vampire-drain (and the aliased
-// /charging/vampire-drain); the off-mode walker validates code
-// chunks via the `withAiFeature` HOC + the AI_FEATURES map. See
-// the slice log for the documented mapping.
+// Service-worker chunks: frontend code for this feature is loaded
+// under the page bundle for /vampire-drain and the aliased
+// /charging/vampire-drain; the off-mode walker validates chunks
+// via the `withAiFeature` HOC and AI_FEATURES map.
 //
 // ADR-015 alignment:
 //
@@ -154,7 +153,7 @@ const SystemPrompt = `You are the TeslaSync vampire-drain narrator. ` +
 // SAME *drivedb.VampireDrainRepo Events / Stats methods that back
 // the canonical baseline GET /vampire-drain + GET
 // /vampire-drain/stats handlers; retrieve_idle_drain_chunks goes
-// through the F7 retrieval entry point and only issues SELECTs
+// through the RAG retrieval entry point and only issues SELECTs
 // against the embeddings table. The dispatcher's deny-all confirm
 // gate is therefore never reached in practice — defence in depth
 // in case a future edit accidentally adds a write tool.
@@ -203,23 +202,20 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "preferred parking
 // pattern" preference snippet would be injected once
-// vampire-drain-explanation grows that surface. Today's slice keeps
-// Context empty so the dispatcher's behaviour is fully determined
-// by [System] + History.
+// vampire-drain-explanation grows that surface. Context stays empty
+// so the dispatcher's behaviour is fully determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyVampireDrainExplanation wrapped through the F4↔F8 adapter
+// PolicyVampireDrainExplanation wrapped through the redaction adapter
 // so the dispatcher's per-request ctx-installation step
 // (dispatch.Run installs the policy via redact.WithPolicy) sees
 // the concrete policy.
 //
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
-// locations and schedules remain tagged. Round-trip required:
-// yes". PolicyVampireDrainExplanation is the per-feature
-// constructor with the same allow-list as PolicyDigest /
+// PolicyVampireDrainExplanation is the per-feature constructor with
+// the same allow-list as PolicyDigest /
 // PolicyCostForecastNarration — kept as a distinct identifier so
 // a future per-feature change to vampire-drain-explanation's
 // allow-list does not bleed across the other read-only narrators.

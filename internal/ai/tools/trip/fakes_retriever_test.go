@@ -1,10 +1,7 @@
-// Phase-R / R6.14 — local fakeRetriever fixture for the trip subpackage.
-//
-// fakeRetriever is duplicated here from the parent internal/ai/tools
-// package because the carve into bounded-context subpackages cannot
-// import test-only fixtures across package boundaries. A future
-// internal/ai/tools/toolstest exported fixture package (deferred per
-// Lesson 6 R6.7) will eliminate this duplication.
+// fakeRetriever is duplicated here because bounded-context subpackages
+// cannot import test-only fixtures across package boundaries. A future
+// internal/ai/tools/toolstest fixture package can eliminate this
+// duplication.
 
 package trip
 

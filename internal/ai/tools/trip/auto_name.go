@@ -1,6 +1,4 @@
-// Phase-50 / 0024 — D4 Auto trip naming.
-//
-// auto_trip_naming.go ships TWO new propose-only tools:
+// auto_trip_naming.go ships two propose-only tools:
 //
 //   - `draft_trip_name`    — accept a trip_id + an LLM-proposed name
 //                            and return a normalized + validated draft
@@ -21,30 +19,27 @@
 // confirm gate is therefore never triggered — defence in depth in
 // case a future edit accidentally adds a write tool. The actual
 // trip-name persistence flows through an explicit user confirmation
-// in the TripDetailPage UI (out of scope for this slice — the slice
-// prompt mandates "explicit user confirmation before saving"); the
-// LLM has no tool that writes.
+// in the TripDetailPage UI; the LLM has no tool that writes.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Route every mutation proposal through F4 tools and existing
-//     typed DTO validation. The LLM never writes raw SQL and never
-//     bypasses existing handlers." → both tools delegate validation
+//   - Mutation proposals route through typed tools and existing DTO
+//     validation. The LLM never writes raw SQL or bypasses existing
+//     handlers; both tools delegate validation
 //     to TripNameValidator (production-wired to
 //     *api.AITripNameValidator, which mirrors the canonical
 //     name-validation rules a future trip-update handler will
 //     enforce). A draft accepted here is byte-equivalent to a draft
 //     a future canonical save handler would accept.
 //
-//   - "the LLM never writes raw SQL" → tools have no DB handle. The
-//     evidence envelope is built from a narrow TripDetailSource
+//   - Tools have no DB handle. The evidence envelope is built from a
+//     narrow TripDetailSource
 //     interface (production: *tripdb.TripsDetailRepo) — the same
 //     read path the GET /api/v1/trips/{id} baseline handler already
 //     uses.
 //
-//   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; the evidence is a pure read of the
-//     existing TripDetail aggregate.
+//   - No save_* / update_* / delete_* tool exists; the evidence is a
+//     pure read of the existing TripDetail aggregate.
 //
 //   - Privacy: the LLM is shown start_place / end_place strings as
 //     redaction-tagged values (the PolicyAutoTripNaming allow-list
@@ -72,8 +67,8 @@ import (
 // deterministic fakes.
 //
 // The interface MUST stay read-only — adding a Save / Update method
-// here would defeat the propose-only contract that ADR-015 §I3 +
-// the slice prompt mandate.
+// here would defeat the propose-only contract required by
+// ADR-015 §I3.
 type TripSource interface {
 	// GetTripByID returns the trip header for tripID, or
 	// (nil, error) if it does not exist or is not visible to the
@@ -102,8 +97,8 @@ type TripDetailSource interface {
 // enforce); tests substitute deterministic fakes.
 //
 // The interface MUST stay validation-only — adding a Save or Update
-// method here would defeat the propose-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// method here would defeat the propose-only contract required by
+// ADR-015 §I3.
 type TripNameValidator interface {
 	// ValidateTripName reports whether proposed would be accepted
 	// by the canonical trip-update path for trip. Returns nil on
@@ -140,9 +135,9 @@ type tripNameDraftInput struct {
 // tripNameEvidence is the read-only context envelope the
 // draft_trip_name tool returns alongside the validated draft. The
 // LLM is expected to ground its follow-up rationale in these
-// fields. Numeric units are SI-canonical (meters, seconds) per
-// Phase-48 — the frontend converts to user-preferred display units
-// at the render boundary.
+// fields. Numeric units are SI canonical (meters, seconds); the
+// frontend converts to user-preferred display units at the render
+// boundary.
 type tripNameEvidence struct {
 	StartPlace  *string `json:"start_place,omitempty"`
 	EndPlace    *string `json:"end_place,omitempty"`
@@ -453,11 +448,10 @@ type AutoTripNamingSources struct {
 	Validator TripNameValidator
 }
 
-// RegisterAutoTripNamingTools installs the auto-trip-naming slice's
-// tools on r. Called from router.go AFTER the previous slice's tool
-// registrations so the registry's alphabetical Names list grows
-// deterministically without disturbing earlier registrations or any
-// builtin-names pin tests.
+// RegisterAutoTripNamingTools installs the auto-trip-naming tools on
+// r. Called from router.go after earlier tool registrations so the
+// registry's alphabetical Names list grows deterministically without
+// disturbing earlier registrations or builtin-name pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first request.

@@ -1,11 +1,7 @@
-// Phase-50 / 0015 — N1 Natural-language alert builder.
-//
-// Unit tests for the nl-alert-builder Strategy. Mirrors the shape of
-// anomaly-explanations / yir-narration's strategy_test.go. The
-// Strategy is a pure value (no internal state, no IO) so the tests
-// are tight: pin the feature ID + system prompt + tool whitelist +
-// redaction policy shape so a future edit that breaks the contract
-// surfaces here before the dispatcher silently changes behaviour.
+// Unit tests for the nl-alert-builder Strategy. The strategy is a pure
+// value, so these tests pin the feature ID, system prompt, tool
+// whitelist, and redaction policy before dispatcher behavior can change
+// silently.
 
 package nlalertbuilder
 
@@ -122,8 +118,8 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
-// the strategy must not contribute extra prefix messages until a
-// future slice that needs RAG-backed signal-catalog context ships.
+// the strategy must not contribute extra prefix messages unless
+// RAG-backed signal-catalog context is added later.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -137,10 +133,9 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyAlertBuilder proves the strategy hands
-// the dispatcher PolicyAlertBuilder wrapped through the F4↔F8
-// adapter. PolicyAlertBuilder allows NOTHING — alert IDs and
-// selectors flow through the typed F4 tools, not through prose. The
-// slice prompt explicitly mandates PolicyAlertBuilder reuse.
+// the dispatcher PolicyAlertBuilder through the redaction adapter.
+// PolicyAlertBuilder allows nothing: alert IDs and selectors flow
+// through typed tools, not prose.
 func TestStrategy_RedactionPolicyAlertBuilder(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -177,8 +172,6 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 		t.Fatalf("EvalGoldens() = %v, want nil (goldens live in YAML)", g)
 	}
 }
-
-// --- helpers ---------------------------------------------------------
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

@@ -1,11 +1,9 @@
-// Phase-50 / 0012 — U2 Weekly digest narration.
-//
-// digest.go ships ONE new read-only tool: `query_weekly_digest_context`.
+// This file exposes one read-only tool: `query_weekly_digest_context`.
 // The tool is the single F4 surface the digest-narration strategy is
 // allowed to call (see internal/ai/strategies/digest-narration/strategy.go's
 // allowedTools whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "thin Tool wrapper over an existing handler. **No new SQL written.**"
 //     We compose the existing tools.DriveSource.GetByVehicle and
@@ -13,8 +11,8 @@
 //     query_drives_recent / query_charges_recent.
 //
 //   - The tool is a READ — Mutates() returns false. The dispatcher's
-//     deny-all confirm gate refuses anything mutating; this slice
-//     ships zero mutating tools.
+//     deny-all confirm gate refuses anything mutating; this tool
+//     provides no mutating tools.
 //
 //   - One tool, multiple strategies: the tool is registered on the
 //     process-wide tools.Registry alongside the 12 builtins so a
@@ -37,7 +35,7 @@
 //	  "charges_energy_added_wh": float64, // sum of *ChargingSession.TotalEnergyAddedWh
 //	}
 //
-// All fields are SI canonical (Phase-48 contract). The frontend's
+// All fields are SI canonical. The frontend's
 // useUnits()/useFormatting() at the display boundary converts to
 // the user's preferred units before rendering.
 
@@ -85,41 +83,29 @@ type queryWeeklyDigestContext struct {
 	charges tools.ChargeSource
 }
 
-// Name implements [Tool].
 func (t *queryWeeklyDigestContext) Name() string { return "query_weekly_digest_context" }
 
-// Description implements [Tool]. Used by the LLM during tool
-// selection — kept short and intent-focused, NOT a usage tutorial.
 func (t *queryWeeklyDigestContext) Description() string {
 	return "Return a one-week aggregate (drives + charging sessions) for a vehicle. " +
 		"All numeric fields are SI canonical (meters, seconds, watt-hours). " +
 		"Use this for weekly digest narration; do not iterate by calling this multiple times for the same week."
 }
 
-// InputSchema implements [Tool].
 func (t *queryWeeklyDigestContext) InputSchema() json.RawMessage {
 	return tools.CachedSchema(queryWeeklyDigestContextInput{})
 }
 
-// OutputSchema implements [Tool]. Nil ⇒ free-form output object;
-// the dispatcher serialises whatever Execute returns.
 func (t *queryWeeklyDigestContext) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. Read-only — never returns true.
 func (t *queryWeeklyDigestContext) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty — readable by any
-// authenticated user (the AI guard already gates on ai_mode +
-// per-feature toggle upstream).
 func (t *queryWeeklyDigestContext) RequiredScope() string { return "" }
 
-// Validate implements [Tool]. Delegates to the shared validator.
 func (t *queryWeeklyDigestContext) Validate(raw json.RawMessage) (any, error) {
 	return tools.ValidateStruct[queryWeeklyDigestContextInput](raw)
 }
 
-// Execute implements [Tool]. Two repo round-trips (drives + charges)
-// then in-memory aggregation; no SQL is written by this method.
+// Execute performs the repo reads and then aggregates in memory.
 //
 // Errors from either repo abort the whole tool — partial aggregates
 // would silently mislead the LLM about the week's state.
@@ -158,8 +144,7 @@ func (t *queryWeeklyDigestContext) Execute(ctx context.Context, in any) (any, er
 	return agg, nil
 }
 
-// aggregateWeeklyDigest is a pure helper: given the slices the
-// repos returned, compute the deterministic aggregate envelope.
+// aggregateWeeklyDigest is a pure helper: given the repo results,
 // Extracted so the unit test can call it directly without spinning
 // up a fake tools.DriveSource / tools.ChargeSource and so the body of Execute
 // stays focused on IO + error wrapping.
@@ -231,7 +216,7 @@ func isoWeekWindowUTC(now time.Time, offsetWeeks int) (start, end time.Time) {
 // DigestSources bundles the narrow read interfaces RegisterDigestTools
 // needs. Mirrors [Sources] but exposes only the surfaces the digest
 // tool actually consumes — keeping the call-site explicit about
-// which repos this slice depends on.
+// which repos this feature depends on.
 //
 // Production wiring (router.go) reuses the same DriveRepo /
 // ChargingRepo instances passed to [Register12Builtins]; tests
@@ -241,7 +226,7 @@ type DigestSources struct {
 	Charges tools.ChargeSource
 }
 
-// RegisterDigestTools installs the digest-narration slice's tools on
+// RegisterDigestTools installs the digest-narration tools on
 // r. Called from router.go AFTER Register12Builtins so the registry's
 // alphabetical Names list ends with `query_weekly_digest_context`
 // without disturbing the BuiltinNames pin test.

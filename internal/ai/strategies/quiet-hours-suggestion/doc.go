@@ -1,4 +1,4 @@
-// Package quiethourssuggestion is part of the TeslaSync adapter layer.
+// Package quiethourssuggestion suggests notification quiet hours.
 //
 // Layer: adapter
 package quiethourssuggestion

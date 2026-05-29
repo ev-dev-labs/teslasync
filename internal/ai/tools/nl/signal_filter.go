@@ -1,6 +1,4 @@
-// Phase-50 / 0044 — S3 Signal explorer NL filter.
-//
-// signal_explorer_nl_filter.go ships TWO new propose-only tools:
+// Signal explorer natural-language filtering exposes two propose-only tools:
 //
 //   - `draft_signal_filter`    — accept a typed SignalFilter shape
 //                                (vehicle_id, signals, range_preset,
@@ -40,7 +38,7 @@
 // check refuses the call before any cross-vehicle proposal can
 // reach the SPA.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Route every mutation proposal through F4 tools and existing
 //     typed DTO validation. The LLM never writes raw SQL and never
@@ -268,9 +266,8 @@ func AllowedSignalFilterPerPage() []int {
 // would be accepted by the baseline form. Tests substitute
 // deterministic fakes.
 //
-// The interface MUST stay validation-only — adding an Apply or
-// Save method here would defeat the propose-only contract that
-// ADR-015 §I3 + the slice prompt mandate.
+// The interface MUST stay validation-only; adding an Apply or Save
+// method would defeat the ADR-015 §I3 propose-only contract.
 type SignalFilterValidator interface {
 	// ValidateSignalFilter reports whether the filter would be
 	// accepted by the canonical SignalExplorerPage form. Returns
@@ -656,12 +653,9 @@ type SignalExplorerNlFilterSources struct {
 	Validator SignalFilterValidator
 }
 
-// RegisterSignalExplorerNlFilterTools installs the
-// signal-explorer-nl-filter slice's tools on r. Called from
-// router.go AFTER the Phase-50 / 0043 data-repair-suggestions
-// registration so the registry's alphabetical Names list grows
-// deterministically without disturbing earlier registrations or
-// any builtin-names pin tests.
+// RegisterSignalExplorerNlFilterTools installs the signal-explorer-nl-filter tools.
+// Registration order is stable so the registry's alphabetical Names list
+// grows deterministically without disturbing existing pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first

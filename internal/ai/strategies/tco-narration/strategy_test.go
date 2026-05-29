@@ -1,4 +1,4 @@
-// Phase-50 / 0050 — M2 TCO narration.
+// TCO narration.
 //
 // Unit tests for the tco-narration Strategy. Mirrors the shape of
 // cost-forecast-narration's strategy_test.go (the closest
@@ -41,7 +41,7 @@ func TestStrategy_FeatureID(t *testing.T) {
 // these substrings disappeared from the prompt.
 //
 // The four limiting-assumption substrings are the rubber-duck
-// blocking finding for slice 0050: an LLM that does not name
+// blocking finding for the existing feature: an LLM that does not name
 // these explicitly will overclaim "Total Cost of Ownership"
 // when the math is operating-cost only.
 func TestStrategy_System(t *testing.T) {
@@ -56,7 +56,7 @@ func TestStrategy_System(t *testing.T) {
 		"EXPLAIN the deterministic operating-cost envelope",
 		"ALWAYS call query_tco_summary FIRST",
 		"never invent an alternate dollar amount",
-		// Limiting-assumption directives — slice 0050
+		// Limiting-assumption directives — the existing feature
 		// rubber-duck blocking finding. The narrator MUST
 		// disclose all four caveats so the user is not misled
 		// into treating this as full TCO.
@@ -70,7 +70,7 @@ func TestStrategy_System(t *testing.T) {
 		// the narrator MUST say so rather than invent a
 		// savings story.
 		"not yet enough history",
-		// Negative-savings honesty — slice 0050 rubber-duck
+		// Negative-savings honesty — the existing feature rubber-duck
 		// blocking finding. The narrator must NOT cheerlead
 		// when EV cost > gas equivalent, and MUST NOT
 		// recommend buying a gas vehicle.
@@ -115,7 +115,7 @@ func TestStrategy_Tools(t *testing.T) {
 }
 
 // TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy
-// — a caller that mutates the slice does NOT leak the mutation
+// a caller that mutates the feature does NOT leak the mutation
 // back into the strategy. Dispatcher safety relies on this.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
@@ -154,7 +154,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-currency or
+// future feature that needs preferred-currency or
 // preferred-mileage-window preferences ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -169,10 +169,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyDigest proves the strategy hands
-// the dispatcher PolicyDigest wrapped through the F4↔F8 adapter.
+// the dispatcher PolicyDigest wrapped through the redaction-policy adapter.
 // PolicyDigest allows ClassVehicleName so the narration can
 // address the user's car; every other PII class is redacted to
-// a round-trip tag. The slice prompt explicitly mandates a
+// a round-trip tag. The feature spec explicitly mandates a
 // PolicyDigest allow-list with round-trip tags.
 func TestStrategy_RedactionPolicyDigest(t *testing.T) {
 	t.Parallel()

@@ -1,17 +1,15 @@
-// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
-//
-// charge_curve_clustering.go ships TWO new read-only tools:
+// Charging-curve fingerprint clustering exposes two read-only tools:
 //
 //   - `retrieve_charge_curve_chunks` — a thin wrapper over the F7
 //     rag.Retriever scoped to the calling user_subject, restricted
-//     to the slice's per-feature source-type allowlist
+//     to this feature's source-type allowlist
 //     {charge_curve, charge_session}. Only `charge_session`
 //     (rag.SourceChargeSession) is wired into the F7 indexer today
-//     (slice 0008); `charge_curve` is reserved by string for
+//     today; `charge_curve` is reserved by string for
 //     forward-compatibility — the gated `ai_charge_curve_indexer`
 //     job (registered as JobNames=["ai_charge_curve_indexer"] in
 //     the registry) will fan-out into that corpus once a future
-//     slice wires the per-curve fingerprint embeddings. Until then,
+//     feature wires the per-curve fingerprint embeddings. Until then,
 //     retrieve_charge_curve_chunks called with
 //     source_types=["charge_curve"] returns zero chunks — which is
 //     the correct behaviour: the retriever simply has nothing
@@ -41,7 +39,7 @@
 // TimeToChargeSection; the AI surface is an opt-in narrator panel
 // rendered above (ADR-015 §I3).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → retrieve_charge_curve_chunks
@@ -56,7 +54,7 @@
 //     slice.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; aggregation is a pure read.
+//     tool exists for this feature; aggregation is a pure read.
 //
 //   - Privacy: charging-location identifiers (start_place names,
 //     lat/long, addresses) are NOT in the
@@ -69,7 +67,7 @@
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant is refused), so a confused LLM that
 // asks the assistant to search e.g. "user_note" cannot accidentally
-// expose a corpus the slice did not enumerate.
+// expose a corpus this feature did not enumerate.
 
 package curve
 
@@ -92,22 +90,19 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
-// chargeCurveSourceCurve is the source-type string reserved by the
-// slice prompt for the future per-curve-fingerprint corpus. It is
-// intentionally NOT exported as a rag.Source* constant because
-// adding to that package widens the global F7 contract beyond this
-// slice's mandate. When the future ai_charge_curve_indexer slice
-// lands, it should promote this string to rag.SourceChargeCurve in
-// one place.
+// chargeCurveSourceCurve reserves the future per-curve-fingerprint
+// corpus. It is intentionally not exported as a rag.Source* constant
+// because adding to that package widens the global F7 contract beyond
+// this feature. When ai_charge_curve_indexer lands, promote this
+// string to rag.SourceChargeCurve in one place.
 const chargeCurveSourceCurve = "charge_curve"
 
 // chargeCurveAllowedSourceTypes is the per-feature allowlist of
 // source-type strings the charging-curve-fingerprint-clustering
 // strategy may retrieve over. Any other source type passed via the
-// LLM's typed input is refused at validation time — the slice prompt
-// explicitly enumerates these two corpora and a future slice that
-// adds a new source must add it here AND extend the strategy's
-// system prompt + goldens, not silently widen.
+// LLM's typed input is refused at validation time. Future source
+// types must be added here and in the strategy's system prompt and
+// goldens; do not silently widen access.
 //
 // Kept in lex order so error messages list a stable allowed-set.
 var chargeCurveAllowedSourceTypes = []string{
@@ -708,7 +703,7 @@ type ChargingCurveFingerprintClusteringSources struct {
 }
 
 // RegisterChargingCurveFingerprintClusteringTools installs the
-// charging-curve-fingerprint-clustering slice's tools on r. Called
+// charging-curve-fingerprint-clustering tools on r. Called
 // from router.go AFTER RegisterRouteEfficiencySuggestionsTools so
 // the registry's alphabetical Names list continues to grow
 // deterministically.

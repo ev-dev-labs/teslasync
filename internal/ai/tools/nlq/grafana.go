@@ -1,15 +1,15 @@
-// Phase-50 / 0058 — PU2 Natural-language Grafana panel.
+// Natural-language Grafana panel.
 //
 // nl_grafana_panel.go ships TWO new propose-only tools:
 //
-//   - `draft_grafana_panel`    — accept a typed GrafanaPanelDraft
+//   `draft_grafana_panel`    — accept a typed GrafanaPanelDraft
 //                                shape (prompt, panel, rationale)
 //                                and return a normalized + validated
 //                                draft the frontend can render for
 //                                human review in the AI side panel
 //                                of the Grafana panel-builder page.
 //
-//   - `validate_grafana_panel` — accept the same typed shape and
+//   `validate_grafana_panel` — accept the same typed shape and
 //                                return whether it would be
 //                                accepted by the canonical
 //                                Grafana-panel contract, with
@@ -38,9 +38,9 @@
 // an out-of-scope table or panel type, the scope check refuses
 // the call before any out-of-catalog proposal can reach the SPA.
 //
-// Design constraints (from the slice prompt):
+// Design constraints (from the feature spec):
 //
-//   - "Route every mutation proposal through F4 tools and existing
+//   "Route every mutation proposal through typed tools and existing
 //     typed DTO validation. The LLM never writes raw SQL and never
 //     bypasses existing handlers." → both tools delegate the final
 //     GrafanaPanelDraft shape check to a narrow [GrafanaPanelValidator]
@@ -49,7 +49,7 @@
 //     deny-DML/DDL + table-scope checks the nl-sql-playground tool
 //     uses) before any validator method runs.
 //
-//   - "no duplicate write paths" → the toolkit does NOT include an
+//   "no duplicate write paths" → the toolkit does NOT include an
 //     `apply_grafana_panel`, `push_grafana_panel`, or any other
 //     write tool. The frontend renders the draft and the user
 //     clicks the canonical baseline Copy-to-clipboard button on
@@ -99,11 +99,11 @@ type grafanaPanelScopeKey struct{}
 // loop is started. The dispatcher then propagates ctx unchanged
 // through every Tool.Execute call.
 //
-// Each input slice is defensively copied into a private set so a
+// Each input feature is defensively copied into a private set so a
 // later mutation by the caller cannot retroactively widen or
 // narrow the scope a tool already consulted. Names are normalised
 // to lower-case so case-insensitive comparisons work uniformly
-// downstream. nil-safe: passing nil for any slice installs an
+// downstream. nil-safe: passing nil for any feature installs an
 // empty scope for that dimension (the tool will refuse every
 // member of that dimension).
 //
@@ -178,12 +178,12 @@ const grafanaPanelMaxPromqlLen = 2000
 // nl-grafana-panel tools need. In production it is satisfied by
 // *api.AINLGrafanaValidator (a thin wrapper around the same shape
 // + scope checks the tool runs, kept separate so future extensions
-// — e.g. a per-folder Grafana ACL check — can plug in without
+// e.g. a per-folder Grafana ACL check — can plug in without
 // touching tool code). Tests substitute deterministic fakes.
 //
 // The interface MUST stay validation-only — adding an Apply or
 // Execute method here would defeat the propose-only contract that
-// ADR-015 §I3 + the slice prompt mandate.
+// ADR-015 §I3 + the feature spec mandate.
 type GrafanaPanelValidator interface {
 	// ValidateGrafanaPanel reports whether the draft would be
 	// accepted by the canonical Grafana-panel contract. Returns
@@ -225,7 +225,7 @@ type GrafanaPanelDraft struct {
 }
 
 // GrafanaPanelEnvelope is the panel-shape subset of Grafana's
-// JSON-model the slice cares about. The full Grafana panel schema
+// JSON-model the feature cares about. The full Grafana panel schema
 // is enormous; we expose the fields the AI agent is allowed to
 // propose and let Grafana's own importer fill in the rest with
 // defaults when the user pastes the JSON in.
@@ -341,11 +341,11 @@ type grafanaPanelInputGridPos struct {
 // Status reports whether the draft would be accepted by the
 // canonical validator at the time of the tool call:
 //
-//   - "ok"      — accepted; the user can copy the draft into the
-//     baseline editor and click Copy to clipboard to paste it
-//     into their Grafana dashboard.
-//   - "invalid" — rejected; ValidationError contains a one-line
-//     diagnostic suitable for showing in the UI.
+//	"ok"      — accepted; the user can copy the draft into the
+//	  baseline editor and click Copy to clipboard to paste it
+//	  into their Grafana dashboard.
+//	"invalid" — rejected; ValidationError contains a one-line
+//	  diagnostic suitable for showing in the UI.
 //
 // Even when invalid, Draft is returned unchanged so the frontend
 // can render the partially-correct proposal and let the user fix
@@ -417,19 +417,19 @@ func buildGrafanaPanelDraft(input grafanaPanelInput) *GrafanaPanelDraft {
 
 // checkGrafanaPanelScopeAndShape enforces:
 //
-//   - the in-scope binding installed by the AI handler is present
-//     (missing-scope ⇒ hard error)
-//   - the panel.type is in the in-scope curated panel-type catalog
-//   - the datasource.type is in the in-scope curated
-//     datasource-type catalog
-//   - per-target shape: postgres ⇒ rawSql required + expr forbidden;
-//     prometheus ⇒ expr required + rawSql forbidden
-//   - postgres rawSql passes the same read-only contract the
-//     nl-sql-playground tool enforces (SELECT/WITH-only,
-//     single-statement, no DML/DDL keywords, every referenced
-//     table in the in-scope curated catalog)
-//   - prometheus expr is non-empty + length-bounded + no semicolons
-//   - gridPos stays inside the dashboard grid bounds
+//	the in-scope binding installed by the AI handler is present
+//	  (missing-scope ⇒ hard error)
+//	the panel.type is in the in-scope curated panel-type catalog
+//	the datasource.type is in the in-scope curated
+//	  datasource-type catalog
+//	per-target shape: postgres ⇒ rawSql required + expr forbidden;
+//	  prometheus ⇒ expr required + rawSql forbidden
+//	postgres rawSql passes the same read-only contract the
+//	  nl-sql-playground tool enforces (SELECT/WITH-only,
+//	  single-statement, no DML/DDL keywords, every referenced
+//	  table in the in-scope curated catalog)
+//	prometheus expr is non-empty + length-bounded + no semicolons
+//	gridPos stays inside the dashboard grid bounds
 //
 // Returns nil on success. A returned error is propagated as a tool
 // error frame back to the LLM so the strategy can refuse politely
@@ -507,7 +507,7 @@ func checkGrafanaPanelScopeAndShape(ctx context.Context, draft *GrafanaPanelDraf
 // nl-sql-playground tool enforces: SELECT/WITH-only,
 // single-statement, no DML/DDL keywords, every referenced table in
 // the in-scope curated catalog. Re-using the same package-private
-// regexes guarantees the two slices stay in lock-step on what
+// regexes guarantees the two features stay in lock-step on what
 // counts as a safe read-only postgres query.
 func checkPostgresTargetSQL(scope *grafanaPanelScope, i int, sql string) error {
 	if !readonlySQLPrefixRe.MatchString(sql) {
@@ -735,8 +735,8 @@ type NLGrafanaPanelSources struct {
 }
 
 // RegisterNLGrafanaPanelTools installs the nl-grafana-panel
-// slice's tools on r. Called from router.go AFTER the Phase-50 /
-// 0057 nl-sql-playground registration so the registry's
+// feature's tools on r. Called from router.go after the
+// nl-sql-playground registration so the registry's
 // alphabetical Names list grows deterministically without
 // disturbing earlier registrations or any builtin-names pin tests.
 //

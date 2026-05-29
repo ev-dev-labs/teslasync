@@ -1,6 +1,4 @@
-// Package statemachinedebuggernarrator is the Phase-50 / 0048 S7
-// strategy for the LLM-backed state-machine-debugger-narrator
-// surface.
+// Package statemachinedebuggernarrator contains the LLM-backed state-machine-debugger-narrator strategy.
 //
 // The strategy declares:
 //
@@ -34,11 +32,11 @@
 //
 //     2. `retrieve_fsm_chunks` — a thin wrapper over the F7
 //     rag.Retriever scoped to the calling user_subject,
-//     restricted to the slice's per-feature source-type
-//     allowlist {fsm_transition, signal_history_summary}. Both
-//     source types are reserved by string for forward-
-//     compatibility — a future slice will index per-transition
-//     and per-signal-history chunks. Until then,
+//     restricted to the per-feature source-type allowlist
+//     {fsm_transition, signal_history_summary}. Both source types
+//     are reserved by string for forward-compatibility — a future
+//     indexer will add per-transition and per-signal-history chunks.
+//     Until then,
 //     retrieve_fsm_chunks called with either source type simply
 //     returns zero chunks for that corpus — which is the
 //     correct behaviour: the strategy's goldens already cover
@@ -197,11 +195,7 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyDigest from
-// internal/ai/redact/policies.go. Allowed classes:
-// ClassVehicleName only; transition details are user-visible and
-// VINs remain tagged. Round-trip required: yes." PolicyDigest
-// allows vehicle-name so the narration can address the user's
+// PolicyDigest allows vehicle-name so the narration can address the user's
 // car by name; every other PII class is round-tripped to a tag
 // before the message ever reaches the provider.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {

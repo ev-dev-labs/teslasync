@@ -1,35 +1,35 @@
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering statistical model.
+// Charging-curve fingerprint clustering statistical model.
 //
-// charge_curve_clusters.go ships TWO new READ-only typed tools:
+// This file provides two read-only typed tools:
 //
-//   - `train_charge_curve_clusters` — recomputes the per-cluster
-//     (L1 overnight / L2 workplace / DC fast / unknown) learned
-//     charging-curve envelope (mean peak power plus stddev / p5 / p95
-//     per cluster, mean avg power, mean total energy, mean duration,
-//     mean ramp shape, dominant charger type, with explicit Source
-//     label per entry) for ONE vehicle over a recent
-//     `charging_sessions` window using the deterministic
-//     statistical trainer at internal/ml/chargingcurves. Per-cluster
-//     Source label is either "learned" (>=
-//     mlchargingcurves.DefaultMinSessionsPerCluster sessions in
-//     window) or "rule_label_fallback" (< MinSessions sessions ⇒
-//     envelope drops back to the deterministic L1/L2/DC rule label
-//     without per-cluster statistics; SessionCount remains honest).
-//     NO row in `charging_sessions` is written, NO learned envelope
-//     is persisted by this tool — the trainer is request-scoped
-//     today; a future job-tier slice (registered as
-//     JobNames=["ai_ml_charge_curve_trainer"] in the registry's
-//     RouteSet) may persist the envelope per vehicle for cross-pod
-//     reuse.
+// - `train_charge_curve_clusters` — recomputes the per-cluster
+// (L1 overnight / L2 workplace / DC fast / unknown) learned
+// charging-curve envelope (mean peak power plus stddev / p5 / p95
+// per cluster, mean avg power, mean total energy, mean duration,
+// mean ramp shape, dominant charger type, with explicit Source
+// label per entry) for ONE vehicle over a recent
+// `charging_sessions` window using the deterministic
+// statistical trainer at internal/ml/chargingcurves. Per-cluster
+// Source label is either "learned" (>=
+// mlchargingcurves.DefaultMinSessionsPerCluster sessions in
+// window) or "rule_label_fallback" (< MinSessions sessions ⇒
+// envelope drops back to the deterministic L1/L2/DC rule label
+// without per-cluster statistics; SessionCount remains honest).
+// NO row in `charging_sessions` is written, NO learned envelope
+// is persisted by this tool — the trainer is request-scoped
+// today; a future job-tier worker (registered as
+// JobNames=["ai_ml_charge_curve_trainer"] in the registry's
+// RouteSet) may persist the envelope per vehicle for cross-pod
+// reuse.
 //
-//   - `query_charge_curve_clusters` — returns the
-//     CURRENTLY-effective per-vehicle envelope the deterministic
-//     Charging Curve page uses today. Today, the effective envelope
-//     is the rule label for EVERY cluster (this slice does not
-//     persist learned envelopes); the LLM uses this tool to ground
-//     its narrative in the user's CURRENTLY-effective baseline
-//     before quoting the train_charge_curve_clusters output as a
-//     PROPOSAL.
+// - `query_charge_curve_clusters` — returns the
+// CURRENTLY-effective per-vehicle envelope the deterministic
+// Charging Curve page uses today. Today, the effective envelope
+// is the rule label for every cluster (this tool does not
+// persist learned envelopes); the LLM uses this tool to ground
+// its narrative in the user's CURRENTLY-effective baseline
+// before quoting the train_charge_curve_clusters output as a
+// PROPOSAL.
 //
 // Both tools are Mutates=false. The dispatcher's deny-all confirm
 // gate (the AI handler injects a denyAllConfirm) is never reached
@@ -38,12 +38,12 @@
 //
 // Tool-call ordering (enforced by the strategy's system prompt):
 //
-//  1. train_charge_curve_clusters — produces the PROPOSED learned
-//     envelope per cluster, with explicit Source per entry.
-//  2. query_charge_curve_clusters — produces the
-//     CURRENTLY-effective envelope (today: all-rule-label).
-//  3. Narrate the diff: which clusters would refine with learned
-//     bounds, which fell back, which already match.
+// 1. train_charge_curve_clusters — produces the PROPOSED learned
+// envelope per cluster, with explicit Source per entry.
+// 2. query_charge_curve_clusters — produces the
+// CURRENTLY-effective envelope (today: all-rule-label).
+// 3. Narrate the diff: which clusters would refine with learned
+// bounds, which fell back, which already match.
 //
 // The strategy's Description in goldens.yaml + system prompt MUST
 // match this ordering exactly — the prompt's Action Steps list the
@@ -52,44 +52,43 @@
 //
 // Privacy:
 //
-//   - vehicle_id is the only PII either tool consumes; the
-//     LearnedCluster DTO surfaces only cluster IDs + numeric
-//     statistics + dominant_charger_type (a free-form opaque label).
-//   - PolicyChatbot (deny-all redaction) is applied on top by the
-//     AI handler before the request hits the provider, so even the
-//     vehicle_id is round-trip-tagged in the LLM's view.
+// - vehicle_id is the only PII either tool consumes; the
+// LearnedCluster DTO surfaces only cluster IDs + numeric
+// statistics + dominant_charger_type (a free-form opaque label).
+// - PolicyChatbot (deny-all redaction) is applied on top by the
+// AI handler before the request hits the provider, so even the
+// vehicle_id is round-trip-tagged in the LLM's view.
 //
-// Distinction from the C3 sibling slice 0028's
-// retrieve_charge_curve_clusters tool in
+// Distinction from the sibling retrieve_charge_curve_clusters tool in
 // internal/ai/tools/charge_curve_clustering.go:
 //
-//   - C3's retrieve_charge_curve_clusters is an aggregator: it
-//     groups sessions by power tier and reports per-cluster
-//     averages but does NOT compute stddev / p5 / p95 and does NOT
-//     distinguish a learned envelope from a rule-label fallback.
+// - retrieve_charge_curve_clusters is an aggregator: it
+// groups sessions by power tier and reports per-cluster
+// averages but does NOT compute stddev / p5 / p95 and does NOT
+// distinguish a learned envelope from a rule-label fallback.
 //
-//   - ML3's train_charge_curve_clusters (this file) is a STATISTICAL
-//     trainer: it computes per-cluster mean / stddev / p5 / p95 and
-//     explicitly labels Source=learned vs Source=rule_label_fallback
-//     per cluster. The narrator surfaces the diff between the
-//     proposed learned envelope and the rule-label baseline.
+// - train_charge_curve_clusters is a statistical
+// trainer: it computes per-cluster mean / stddev / p5 / p95 and
+// explicitly labels Source=learned vs Source=rule_label_fallback
+// per cluster. The narrator surfaces the diff between the
+// proposed learned envelope and the rule-label baseline.
 //
-// Both tools coexist in the registry; a slice that consumes one
+// Both tools coexist in the registry; a feature that consumes one
 // does not interfere with the other.
 //
 // Design constraints:
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → Both tools delegate to
-//     internal/ml/chargingcurves (Trainer.Train and
-//     CurrentEffectiveClusters). The trainer uses a narrow
-//     SessionSource interface; the production wiring (router.go)
-//     satisfies it via a thin adapter over the existing
-//     ChargingRepo. No SQL is written by these tools.
-//   - "the LLM never writes raw SQL" → tools have no DB handle;
-//     they pass typed inputs to the trainer.
-//   - "no duplicate write paths" → no save_*/update_*/delete_*
-//     tool exists in this slice; both tools are read-only.
+// - "Tools must call existing typed handlers or services; no
+// duplicate write paths." → Both tools delegate to
+// internal/ml/chargingcurves (Trainer.Train and
+// CurrentEffectiveClusters). The trainer uses a narrow
+// SessionSource interface; the production wiring (router.go)
+// satisfies it via a thin adapter over the existing
+// ChargingRepo. No SQL is written by these tools.
+// - "the LLM never writes raw SQL" → tools have no DB handle;
+// they pass typed inputs to the trainer.
+// - "no duplicate write paths" → no save_*/update_*/delete_*
+// tool exists here; both tools are read-only.
 
 package charge
 
@@ -133,7 +132,7 @@ type trainChargeCurveClustersInput struct {
 // query_charge_curve_clusters. The tool returns the
 // CURRENTLY-effective per-vehicle envelope; today every cluster is
 // the rule-label fallback. vehicle_id is required so a future
-// slice that persists learned envelopes can scope the query.
+// future persisted envelope can scope the query.
 type queryChargeCurveClustersInput struct {
 	// VehicleID is the per-vehicle id the query scopes to.
 	// Required; > 0.
@@ -334,8 +333,8 @@ type ChargeCurveClustersSources struct {
 	Trainer *mlchargingcurves.Trainer
 }
 
-// RegisterChargeCurveClustersTools installs the
-// ml-charging-curve-clustering slice's tools on r.
+// RegisterChargeCurveClustersTools installs the charging-curve clustering
+// tools on r.
 //
 // Panics on duplicate registration (Registry.Register panics).
 func RegisterChargeCurveClustersTools(r *tools.Registry, s ChargeCurveClustersSources) {

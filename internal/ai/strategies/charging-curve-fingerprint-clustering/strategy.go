@@ -1,62 +1,15 @@
-// Package chargingcurvefingerprintclustering is the Phase-50 / C3
-// strategy for the LLM-named-and-explained charging-curve
-// fingerprint clusters surface.
+// Package chargingcurvefingerprintclustering names and explains deterministic
+// charging-curve fingerprint clusters.
 //
-// The strategy declares:
+// The strategy is a narrator only: it never changes cluster bucketing or
+// fabricates session counts, power values, or charger types. It must call the
+// retrieval and feature tools before narrating, refuses cross-vehicle requests,
+// and keeps charging-location identifiers redaction-tagged except for the same
+// authenticated user.
 //
-//   - the system prompt that frames the surface as a deterministic
-//     cluster-namer + driver-explainer: NAME each cluster the
-//     deterministic feature tool returns and EXPLAIN what makes the
-//     sessions in it cohere using ONLY the values returned by the
-//     tools, never change the cluster bucketing itself, never
-//     fabricate session counts or peak power numbers, and refuse
-//     cross-vehicle requests;
-//
-//   - the two read-only tools the LLM is allowed to call —
-//     `retrieve_charge_curve_chunks` (F7 RAG retrieval scoped to the
-//     calling user_subject over an allowlist of corpora
-//     {charge_curve, charge_session}) and
-//     `query_charge_curve_features` (returns the SI-canonical
-//     deterministic per-cluster feature envelope for ONE vehicle);
-//
-//   - the redaction policy
-//     (`PolicyChargingCurveFingerprintClustering`) which allows
-//     ClassVehicleName only; charging-location identifiers
-//     (start_place, lat/long, addresses) remain tagged via
-//     round-trip markers and are restored only for the same
-//     authenticated user.
-//
-// The statistical clustering mechanics (k-means, fingerprint
-// similarity model, etc.) are owned by the ML3 sibling slice — this
-// C3 surface ONLY adds a human-readable narrator over the
-// already-computed buckets. The deterministic ChargingCurvePage
-// charts (SummaryStatsGrid, SessionCurveChart, SessionComparisonChart,
-// ChargerTypeChart, SpeedTrendChart, TimeToChargeSection) and the
-// existing session label heuristic in
-// web/src/features/charging/components/charging-curve/helpers.ts
-// remain the canonical baseline visible to every user. Off-mode users
-// never see this AI surface at all (ADR-015 §I3, §I5, §I6).
-//
-// Service-worker chunks: this slice's frontend code is loaded under
-// the page-bundle for /charging-curve (and the aliased
-// /charging/curves the slice prompt registers); the off-mode walker
-// validates code chunks via the `withAiFeature` HOC + the
-// AI_FEATURES map. See the slice log for the documented mapping.
-//
-// ADR-015 alignment:
-//
-//   - I1 default-off:    feature toggle defaults false in features.Registry.
-//   - I3 baseline intact: this strategy never replaces the
-//     deterministic ChargingCurvePage charts or the
-//     `sessionLabel` heuristic; it adds an opt-in narrative section
-//     alongside.
-//   - I7 per-feature:     the AI route is gated by
-//     guard.Wrap("charging-curve-fingerprint-clustering").
-//   - I9 redaction:       PolicyChargingCurveFingerprintClustering
-//     restricts cleartext to vehicle name only; charging-location
-//     identifiers (start_place, lat/long, street addresses) stay
-//     tagged so a leaked transcript does not reveal where the user
-//     charges.
+// The deterministic ChargingCurvePage charts and session-label heuristic remain
+// the baseline. The AI surface is opt-in and gated by the
+// charging-curve-fingerprint-clustering feature flag.
 package chargingcurvefingerprintclustering
 
 import (
@@ -122,7 +75,7 @@ const SystemPrompt = `You are the TeslaSync charging-curve fingerprint cluster n
 // dispatcher refuses to mount a strategy that references an unknown
 // tool.
 //
-// This slice ships zero mutating tools: cluster narration only READS
+// This strategy ships zero mutating tools: cluster narration only READS
 // the user's existing charging history from the same charging_sessions
 // table the deterministic baseline already renders from. A future
 // "create an automation when this cluster pattern repeats" strategy
@@ -173,21 +126,18 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "preferred cluster
 // granularity" preference snippet would be injected once
-// charging-curve-fingerprint-clustering grows that surface. Today's
-// slice keeps Context empty so the dispatcher's behaviour is fully
+// charging-curve-fingerprint-clustering grows that surface. Context stays empty today so the dispatcher's behaviour is fully
 // determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChargingCurveFingerprintClustering wrapped through the F4↔F8
-// adapter so the dispatcher's per-request ctx-installation step
-// (dispatch.Run installs the policy via redact.WithPolicy) sees the
-// concrete policy.
+// PolicyChargingCurveFingerprintClustering through the redaction adapter so
+// dispatch.Run can install the concrete policy with redact.WithPolicy.
 //
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
-// charging location remains tagged. Round-trip required: yes".
+// This policy allows ClassVehicleName only; charging locations remain tagged
+// and round-tripped.
 // PolicyChargingCurveFingerprintClustering is the per-feature
 // constructor with the same allow-list as PolicyDigest /
 // PolicyBatteryHealthForecastNarrative — kept as a distinct

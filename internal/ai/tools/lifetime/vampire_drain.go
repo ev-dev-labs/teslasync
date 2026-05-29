@@ -1,17 +1,15 @@
-// Phase-50 / 0030 — C5 Vampire-drain explanation.
+// Vampire-drain explanation tools.
 //
-// vampire_drain_explanation.go ships TWO new read-only tools:
-//
-//   - `retrieve_idle_drain_chunks` — a thin wrapper over the F7
-//     rag.Retriever scoped to the calling user_subject, restricted
-//     to the slice's per-feature source-type allowlist
+//   - `retrieve_idle_drain_chunks` — a thin wrapper over rag.Retriever
+//     scoped to the calling user_subject and restricted to the
+//     per-feature source-type allowlist
 //     {idle_drain, vehicle_state, climate_state}. NONE of the three
-//     is wired into the F7 indexer today (slice 0008 only indexes
-//     drive_summary + charge_session); they are reserved by string
-//     for forward-compatibility — the gated `ai_idle_drain_indexer`
-//     job (registered as JobNames=["ai_idle_drain_indexer"] in the
-//     registry) will fan out into the idle-drain corpus once a
-//     future slice wires the per-event embeddings. Until then,
+//     is indexed today beyond drive_summary and charge_session; they
+//     are reserved by string for forward-compatibility. The gated
+//     `ai_idle_drain_indexer` job (registered as
+//     JobNames=["ai_idle_drain_indexer"] in the registry) will fan out
+//     into the idle-drain corpus once per-event embeddings are wired.
+//     Until then,
 //     retrieve_idle_drain_chunks called with any of the allowed
 //     source types returns zero chunks — which is the correct
 //     behaviour: the retriever simply has nothing indexed yet, and
@@ -38,23 +36,16 @@
 // bar chart, drain-sessions table, and tips panel; the AI surface
 // is an opt-in narrator panel rendered above (ADR-015 §I3).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → retrieve_idle_drain_chunks
-//     delegates to the F7 rag.Retriever (the single canonical
-//     retrieval entry point); query_vampire_drain_windows delegates
-//     to a narrow VampireDrainSource read interface satisfied at
-//     boot by an adapter wrapping the existing
-//     *drivedb.VampireDrainRepo (no new SQL).
-//
-//   - "the LLM never writes raw SQL" → tools have no DB handle.
-//     The envelope-building math is pure Go on the typed
-//     VampireDrainEvent / VampireDrainStats structs the repo
-//     already returns.
-//
-//   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; both tools are pure reads.
+//   - retrieve_idle_drain_chunks delegates to rag.Retriever, the single
+//     canonical retrieval entry point.
+//   - query_vampire_drain_windows delegates to a narrow
+//     VampireDrainSource read interface backed by *drivedb.VampireDrainRepo;
+//     no new SQL is introduced.
+//   - Tools have no DB handle; envelope-building math is pure Go on
+//     VampireDrainEvent / VampireDrainStats structs the repo already returns.
+//   - No save_* / update_* / delete_* tool exists; both tools are pure reads.
 //
 //   - Privacy: vampire-drain windows do NOT carry start_place /
 //     lat/long / address strings (the deterministic envelope only
@@ -67,7 +58,7 @@
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant is refused), so a confused LLM that
 // asks the assistant to search e.g. "user_note" cannot accidentally
-// expose a corpus the slice did not enumerate.
+// expose a corpus this feature did not enumerate.
 
 package lifetime
 
@@ -89,11 +80,11 @@ import (
 
 // vampireDrainSourceIdleDrain / vampireDrainSourceVehicleState /
 // vampireDrainSourceClimateState are the source-type strings reserved
-// by the slice prompt for the future per-event embedding corpora.
-// They are intentionally NOT exported as rag.Source* constants
-// because adding to that package widens the global F7 contract beyond
-// this slice's mandate. When the future ai_idle_drain_indexer slice
-// lands, it should promote these strings to rag.SourceIdleDrain /
+// for future per-event embedding corpora. They are intentionally NOT
+// exported as rag.Source* constants because adding to that package widens
+// the global RAG contract beyond this feature's mandate. When the
+// ai_idle_drain_indexer implementation lands, it should promote these
+// strings to rag.SourceIdleDrain /
 // rag.SourceVehicleState / rag.SourceClimateState in one place.
 const (
 	vampireDrainSourceIdleDrain    = "idle_drain"
@@ -104,9 +95,8 @@ const (
 // vampireDrainAllowedSourceTypes is the per-feature allowlist of
 // source-type strings the vampire-drain-explanation strategy may
 // retrieve over. Any other source type passed via the LLM's typed
-// input is refused at validation time — the slice prompt explicitly
-// enumerates these three corpora and a future slice that adds a new
-// source must add it here AND extend the strategy's system prompt +
+// input is refused at validation time. A future source must be added
+// here AND extend the strategy's system prompt +
 // goldens, not silently widen.
 //
 // Kept in lex order so error messages list a stable allowed-set.
@@ -176,7 +166,7 @@ type retrievedIdleDrainChunk struct {
 	Score      float32 `json:"score"`
 }
 
-// retrieveIdleDrainChunks is the read-only tool that calls the F7
+// retrieveIdleDrainChunks is the read-only tool that calls the RAG
 // retriever for the vampire-drain domain. It is the OPTIONAL
 // secondary tool the LLM may call (per the strategy's system prompt)
 // after query_vampire_drain_windows, so the narration is grounded
@@ -303,8 +293,7 @@ const vampireDrainWindowsStatsLimit = 1000
 // fakes so the tool unit tests stay hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update method
-// here would defeat the read-only contract that ADR-015 §I3 + the
-// slice prompt mandate.
+// here would defeat the read-only contract that ADR-015 §I3 mandates.
 type VampireDrainSource interface {
 	// Events returns drain events for vehicleID since
 	// windowStart, capped at limit rows (ordered started_at
@@ -561,7 +550,7 @@ type VampireDrainExplanationSources struct {
 }
 
 // RegisterVampireDrainExplanationTools installs the
-// vampire-drain-explanation slice's tools on r. Called from
+// vampire-drain-explanation tools on r. Called from
 // router.go AFTER RegisterCostForecastNarrationTools so the
 // registry's alphabetical Names list continues to grow
 // deterministically without disturbing earlier registrations or any

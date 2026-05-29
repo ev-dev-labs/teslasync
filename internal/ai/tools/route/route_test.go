@@ -1,4 +1,4 @@
-// Phase-50 / 0023 — D3 Route-efficiency suggestions tool tests.
+// Route-efficiency suggestion tool tests.
 //
 // Tool tests for retrieve_route_chunks + query_route_efficiency.
 // Both tools are pure functions over their typed input + a narrow
@@ -187,12 +187,12 @@ func TestRetrieveRouteChunks_Execute_NilRetriever(t *testing.T) {
 }
 
 // TestRetrieveRouteChunks_Validate_RejectsForwardCompatTypesWhenIndexerOff
-// is the slice's documented behaviour: route_efficiency and
+// is the feature's documented behaviour: route_efficiency and
 // weather_context are RESERVED source types that pass validation
 // (they're in the allowlist) but the F7 indexer has nothing for
 // them yet, so a real Execute call returns zero chunks. This test
 // just pins that the source types pass validation today so a
-// future indexer slice can light them up without touching the
+// future indexer can populate them without touching the
 // allowlist.
 func TestRetrieveRouteChunks_Validate_AcceptsForwardCompatTypes(t *testing.T) {
 	t.Parallel()

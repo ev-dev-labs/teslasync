@@ -1,4 +1,4 @@
-// Phase-50 / 0040 — X1 Period compare narration.
+// Period compare narration.
 //
 // Unit tests for the query_period_compare tool. The tool wraps a
 // narrow [PeriodComparator] port; tests substitute a deterministic
@@ -56,8 +56,8 @@ func TestQueryPeriodCompare_Name(t *testing.T) {
 }
 
 // TestQueryPeriodCompare_PropOnlyContract pins the read-only
-// metadata. ADR-015 §I3 + the slice prompt mandate read-only for
-// this slice.
+// metadata. ADR-015 §I3 + the feature spec mandate read-only for
+// this feature.
 func TestQueryPeriodCompare_PropOnlyContract(t *testing.T) {
 	t.Parallel()
 	tool := &queryPeriodCompare{}

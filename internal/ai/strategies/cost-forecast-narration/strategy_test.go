@@ -1,5 +1,3 @@
-// Phase-50 / 0029 — C4 Cost forecast narration.
-//
 // Unit tests for the cost-forecast-narration Strategy. Mirrors the
 // shape of battery-health-forecast-narrative's strategy_test.go
 // (the closest precedent: single read-only narrator strategy with
@@ -52,7 +50,7 @@ func TestStrategy_System(t *testing.T) {
 		"ALWAYS call query_cost_forecast FIRST",
 		"never invent alternate slopes",
 		"never fabricate a projected dollar amount",
-		// Honest-uncertainty directives — the slice prompt's
+		// Honest-uncertainty directives — the feature requirements's
 		// rubber-duck critique flagged that "95% CI" was too
 		// strong; the prompt MUST insist on the approximate
 		// nature of the band so the LLM does not overclaim.
@@ -99,9 +97,7 @@ func TestStrategy_Tools(t *testing.T) {
 	}
 }
 
-// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a copy
-// — a caller that mutates the slice does NOT leak the mutation
-// back into the strategy. Dispatcher safety relies on this.
+// TestStrategy_ToolsIsDefensiveCopy proves Tools() returns a defensive copy.
 func TestStrategy_ToolsIsDefensiveCopy(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -142,7 +138,7 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
 // the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-forecast-horizon preferences
+// future feature that needs preferred-forecast-horizon preferences
 // ships.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
@@ -161,7 +157,7 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 // wrapped through the F4↔F8 adapter.
 // PolicyCostForecastNarration allows ClassVehicleName so the
 // narration can address the user's car; every other PII class is
-// redacted to a round-trip tag. The slice prompt explicitly
+// redacted to a round-trip tag. The feature requirements explicitly
 // mandates a PolicyDigest-shaped allow-list with round-trip tags.
 func TestStrategy_RedactionPolicyCostForecastNarration(t *testing.T) {
 	t.Parallel()

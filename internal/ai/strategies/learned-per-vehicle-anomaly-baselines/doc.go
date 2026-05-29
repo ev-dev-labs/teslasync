@@ -1,4 +1,4 @@
-// Package learnedpervehicleanomalybaselines is part of the TeslaSync adapter layer.
+// Package learnedpervehicleanomalybaselines learns per-vehicle anomaly baselines.
 //
 // Layer: adapter
 package learnedpervehicleanomalybaselines

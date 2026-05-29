@@ -1,6 +1,4 @@
-// Phase-50 / 0036 — A3 Cross-rule conflict detection.
-//
-// cross_rule_conflict.go ships TWO new propose-only tools:
+// Cross-rule conflict detection tools.
 //
 //   - `query_alert_rules` — accept an optional rule scope
 //     (vehicle_id?, signal_name?, rule_ids?, enabled_only?,
@@ -27,26 +25,15 @@
 // therefore never reached in practice — defence in depth in
 // case a future edit accidentally adds a write tool.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Route every mutation proposal through F4 tools and existing
-//     typed DTO validation. The LLM never writes raw SQL and
-//     never bypasses existing handlers." → both tools delegate
-//     to the CrossRuleConflictSource port (a narrow read-only
-//     view of AlertRuleRepo). There is NO write surface on the
-//     port.
-//
-//   - "the LLM never writes raw SQL" → every read happens
-//     through the canonical AlertRuleRepo.GetAll path via the
-//     port; the structural conflict detection is pure-functional
-//     Go.
-//
-//   - "no duplicate write paths" → there is no `merge_rules`,
-//     `delete_rule`, or `disable_rule` tool. The frontend
-//     renders the conflict list and the user clicks "Review
-//     rule" which selects the offending rule in the existing
-//     baseline AlertStudio sidebar list — same selection state
-//     the user has always had.
+//   - Both tools delegate to CrossRuleConflictSource, a narrow read-only
+//     view of AlertRuleRepo with no write surface.
+//   - Every read happens through the canonical AlertRuleRepo.GetAll path;
+//     structural conflict detection is pure Go.
+//   - There is no `merge_rules`, `delete_rule`, or `disable_rule` tool.
+//     The frontend renders the conflict list and the user clicks "Review
+//     rule", selecting the offending rule in the existing AlertStudio list.
 
 package diagnostic
 
@@ -73,7 +60,7 @@ import (
 //
 // Cut from the original 4-kind taxonomy (overlapping_threshold,
 // shadowed_severity, redundant_duplicate, contradictory_operator)
-// to TWO per the rubber-duck critique:
+// to two to avoid false positives:
 //
 //   - shadowed_severity was cut because it depends on runtime
 //     suppression semantics the AI engine cannot prove from
@@ -172,8 +159,7 @@ type AlertRuleListEnvelope struct {
 //     subsumes rule 2 (battery_level<15) for vehicle 1").
 //   - SeverityMismatch / CooldownMismatch / TriggerModeMismatch:
 //     METADATA flags the SPA renders as supplementary chips on
-//     the conflict card. Per the rubber-duck critique these are
-//     explicitly NOT separate conflict kinds.
+//     the conflict card. These are explicitly NOT separate conflict kinds.
 //   - Subsumes: true when one rule's predicate is a strict
 //     superset of the other (the broader rule fires whenever
 //     the narrower would). Stays as METADATA, not a conflict
@@ -225,7 +211,7 @@ type RuleConflictEnvelope struct {
 //
 // The interface MUST stay read-only — adding a Save / Update /
 // Delete method here would defeat the read-only contract that
-// ADR-015 §I3 + the slice prompt mandate.
+// ADR-015 §I3 mandates.
 //
 // The filter is intentionally narrow (no offset, no time
 // range): conflict detection works against the CURRENT rule
@@ -289,7 +275,7 @@ const crossRuleConflictDefaultLimit = 500
 
 // crossRuleConflictMaxLimit is the absolute hard cap the input
 // validator enforces. 1000 mirrors the NotificationRepo limit
-// used by the A2 inbox-categorization slice.
+// used by inbox categorization.
 const crossRuleConflictMaxLimit = 1000
 
 // crossRuleConflictMinRules is the minimum number of enabled
@@ -766,8 +752,7 @@ func predicatesByteEqual(a, b *alertmodel.AlertRule) bool {
 // Returns (false, false, false) when either rule has a non-
 // numeric op, a missing required value pointer, or any other
 // degeneracy that prevents interval comparison — false-positives
-// are worse than missed conflicts here per the rubber-duck
-// critique.
+// are worse than missed conflicts here.
 func numericIntervalsOverlap(a, b *alertmodel.AlertRule) (overlap, aSubsumesB, bSubsumesA bool) {
 	ia, okA := numericIntervalForRule(a)
 	ib, okB := numericIntervalForRule(b)
@@ -996,7 +981,7 @@ func boolPtrEqual(a, b *bool) bool {
 //     trigger_mode_mismatch) reflecting whether the two rules
 //     differ on those axes — surfaced so the SPA can render
 //     supplementary chips, NOT as standalone conflict kinds
-//     (per the rubber-duck critique).
+//     to avoid false positives.
 //  6. Sort conflicts by (Kind ASC, RuleAID ASC, RuleBID ASC)
 //     so the report is reproducible across calls.
 //
@@ -1177,7 +1162,7 @@ type CrossRuleConflictDetectionSources struct {
 }
 
 // RegisterCrossRuleConflictDetectionTools installs the
-// cross-rule-conflict-detection slice's tools on r. Called
+// cross-rule-conflict-detection tools on r. Called
 // from router.go AFTER RegisterInboxAutoCategorizationTools
 // so the alphabetical Names list grows deterministically
 // without disturbing earlier registrations.
@@ -1186,9 +1171,8 @@ type CrossRuleConflictDetectionSources struct {
 // — a second call is a wiring bug detected at boot, not at
 // first request.
 //
-// Note: this function registers BOTH new tools
-// (`query_alert_rules` + `detect_rule_conflicts`); both are
-// NEW for this slice.
+// Note: this function registers both cross-rule tools:
+// `query_alert_rules` and `detect_rule_conflicts`.
 func RegisterCrossRuleConflictDetectionTools(r *tools.Registry, s CrossRuleConflictDetectionSources) {
 	r.Register(&queryAlertRules{source: s.Source})
 	r.Register(&detectRuleConflicts{source: s.Source})

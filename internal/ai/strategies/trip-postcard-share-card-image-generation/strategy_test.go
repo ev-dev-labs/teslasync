@@ -1,4 +1,3 @@
-// Phase-50 / 0060 — GEN1 Trip postcard and share-card image generation.
 package trippostcardsharecardimagegeneration
 
 import (

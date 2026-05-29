@@ -1,32 +1,32 @@
-// Package learnedpervehicleanomalybaselines is the Phase-50 / 0062
+// Package learnedpervehicleanomalybaselines is the
 // (ML1) strategy for the LLM-narrated learned per-vehicle anomaly
 // baselines surface.
 //
 // The strategy declares:
 //
-//   - the system prompt that frames the surface as a deterministic
-//     baseline-narrator: COMPUTE the per-signal learned envelope by
-//     calling the trainer tool, FETCH the currently-effective
-//     baseline by calling the query tool, and EXPLAIN the diff in
-//     plain language. The narrator NEVER changes the deterministic
-//     Z-score detector, NEVER persists a learned envelope, and
-//     NEVER invents bounds the trainer did not return;
+//	the system prompt that frames the surface as a deterministic
+//	  baseline-narrator: COMPUTE the per-signal learned envelope by
+//	  calling the trainer tool, FETCH the currently-effective
+//	  baseline by calling the query tool, and EXPLAIN the diff in
+//	  plain language. The narrator NEVER changes the deterministic
+//	  Z-score detector, NEVER persists a learned envelope, and
+//	  NEVER invents bounds the trainer did not return;
 //
-//   - the two read-only tools the LLM is allowed to call —
-//     `train_anomaly_baseline` (recomputes the per-signal learned
-//     envelope from signal_log; returns mean / stddev / p5 / p95
-//     per signal with explicit Source label per entry) and
-//     `query_anomaly_baseline` (returns the currently-effective
-//     per-vehicle envelope the deterministic detector uses today —
-//     all-static safeRanges fallback). Both are Mutates=false.
-//     Tool-call ordering: train FIRST (proposed envelope), THEN
-//     query (effective envelope), THEN narrate the diff;
+//	the two read-only tools the LLM is allowed to call —
+//	  `train_anomaly_baseline` (recomputes the per-signal learned
+//	  envelope from signal_log; returns mean / stddev / p5 / p95
+//	  per signal with explicit Source label per entry) and
+//	  `query_anomaly_baseline` (returns the currently-effective
+//	  per-vehicle envelope the deterministic detector uses today —
+//	  all-static safeRanges fallback). Both are Mutates=false.
+//	  Tool-call ordering: train FIRST (proposed envelope), THEN
+//	  query (effective envelope), THEN narrate the diff;
 //
-//   - the redaction policy (`PolicyChatbot`, the deny-all tagged
-//     redactor) — the slice prompt mandates "Allowed classes:
-//     none; model training uses local stored data and no provider
-//     call in off mode". Every PII class is round-trip tagged so
-//     the LLM never sees cleartext beyond the vehicle_id payload.
+//	the redaction policy (`PolicyChatbot`, the deny-all tagged
+//	  redactor) — the feature spec mandates "Allowed classes:
+//	  none; model training uses local stored data and no provider
+//	  call in off mode". Every PII class is round-trip tagged so
+//	  the LLM never sees cleartext beyond the vehicle_id payload.
 //
 // Statistical mechanics (mean / stddev / p5 / p95 over signal_log
 // observations, fallback to safeRanges when fewer than
@@ -38,25 +38,25 @@
 // remain the canonical baseline visible to every off-mode user
 // (ADR-015 §I3).
 //
-// Service-worker chunks: this slice's frontend code is loaded under
+// Service-worker chunks: this feature's frontend code is loaded under
 // the page-bundle for /anomaly-detection (and the aliased
-// /analytics/anomalies the slice prompt registers); the off-mode
+// /analytics/anomalies the feature spec registers); the off-mode
 // walker validates code chunks via the `withAiFeature` HOC + the
-// AI_FEATURES map. See the slice log for the documented mapping.
+// AI_FEATURES map. See the feature log for the documented mapping.
 //
 // ADR-015 alignment:
 //
-//   - I1 default-off:    feature toggle defaults false in features.Registry.
-//   - I3 baseline intact: this strategy never replaces the
-//     deterministic Z-score detector; it adds an opt-in narrator
-//     surface alongside.
-//   - I4 zero egress:    no provider call is reachable when
-//     ai_mode='off' (the AI handler returns 404 via guard.Wrap).
-//   - I7 per-feature:    the AI route is gated by
-//     guard.Wrap("learned-per-vehicle-anomaly-baselines").
-//   - I9 redaction:      PolicyChatbot tags every PII class so the
-//     LLM never sees cleartext (the user_subject restoration step
-//     is per-request and per-user).
+//	I1 default-off:    feature toggle defaults false in features.Registry.
+//	I3 baseline intact: this strategy never replaces the
+//	  deterministic Z-score detector; it adds an opt-in narrator
+//	  surface alongside.
+//	I4 zero egress:    no provider call is reachable when
+//	  ai_mode='off' (the AI handler returns 404 via guard.Wrap).
+//	I7 per-feature:    the AI route is gated by
+//	  guard.Wrap("learned-per-vehicle-anomaly-baselines").
+//	I9 redaction:      PolicyChatbot tags every PII class so the
+//	  LLM never sees cleartext (the user_subject restoration step
+//	  is per-request and per-user).
 package learnedpervehicleanomalybaselines
 
 import (
@@ -82,37 +82,37 @@ const FeatureID = "learned-per-vehicle-anomaly-baselines"
 //
 // The prompt explicitly:
 //
-//   - Forces tool-first behaviour AND tool ORDER: the LLM MUST call
-//     train_anomaly_baseline FIRST then query_anomaly_baseline so
-//     the narration grounds the PROPOSED learned envelope against
-//     the CURRENTLY-effective baseline before diffing. The slice
-//     prompt's Action Steps list the tools in this exact order
-//     (`train_anomaly_baseline;query_anomaly_baseline`); reversing
-//     them silently produces a confused narration that quotes the
-//     fallback as if it were the learned proposal.
-//   - Forbids changing the detector: this is a NARRATOR over the
-//     trainer's output, not a re-trainer. The LLM may quote signal
-//     names, source labels, sample counts, lower/upper bounds,
-//     mean/stddev/p5/p95 from the tool reply; it MUST NOT invent
-//     alternate bounds, alternate sample counts, or claim the
-//     learned envelope is "live" (this slice does not persist
-//     learned envelopes).
-//   - Refuses cross-vehicle requests: the AI handler always scopes
-//     to the caller-supplied vehicle_id from the body; any other
-//     vehicle ID in the user message is by definition out of scope.
-//   - Asks for short, focused output (one short labelled paragraph
-//     per signal class — battery, thermal, tires — max three
-//     paragraphs total) so the surface fits inside the existing
-//     Anomaly Detection page layout.
-//   - Bans claiming the learned envelope has been APPLIED to the
-//     detector (today it has not — the slice does not persist).
-//     The narrator must say "proposed" or "would tighten" rather
-//     than "now using".
-//   - Honestly reports per-signal fallback: when the tool returns
-//     source="safe_ranges_fallback" for a signal, the narrator
-//     MUST say so plainly (e.g. "Tire-pressure FL has only 12
-//     samples this window — falling back to the static envelope")
-//     rather than quoting the static bound as if it were learned.
+//	Forces tool-first behaviour AND tool ORDER: the LLM MUST call
+//	  train_anomaly_baseline FIRST then query_anomaly_baseline so
+//	  the narration grounds the PROPOSED learned envelope against
+//	  the CURRENTLY-effective baseline before diffing. The feature
+//	  prompt's Action Steps list the tools in this exact order
+//	  (`train_anomaly_baseline;query_anomaly_baseline`); reversing
+//	  them silently produces a confused narration that quotes the
+//	  fallback as if it were the learned proposal.
+//	Forbids changing the detector: this is a NARRATOR over the
+//	  trainer's output, not a re-trainer. The LLM may quote signal
+//	  names, source labels, sample counts, lower/upper bounds,
+//	  mean/stddev/p5/p95 from the tool reply; it MUST NOT invent
+//	  alternate bounds, alternate sample counts, or claim the
+//	  learned envelope is "live" (this feature does not persist
+//	  learned envelopes).
+//	Refuses cross-vehicle requests: the AI handler always scopes
+//	  to the caller-supplied vehicle_id from the body; any other
+//	  vehicle ID in the user message is by definition out of scope.
+//	Asks for short, focused output (one short labelled paragraph
+//	  per signal class — battery, thermal, tires — max three
+//	  paragraphs total) so the surface fits inside the existing
+//	  Anomaly Detection page layout.
+//	Bans claiming the learned envelope has been APPLIED to the
+//	  detector (today it has not — the feature does not persist).
+//	  The narrator must say "proposed" or "would tighten" rather
+//	  than "now using".
+//	Honestly reports per-signal fallback: when the tool returns
+//	  source="safe_ranges_fallback" for a signal, the narrator
+//	  MUST say so plainly (e.g. "Tire-pressure FL has only 12
+//	  samples this window — falling back to the static envelope")
+//	  rather than quoting the static bound as if it were learned.
 const SystemPrompt = `You are the TeslaSync learned per-vehicle anomaly baseline narrator. ` +
 	`Your job is to EXPLAIN the per-signal LEARNED anomaly envelope (mean / stddev / p5 / p95 per signal, clamped to the static safe-range envelope) for ONE vehicle in scope; you NEVER change the deterministic Z-score detector and NEVER persist a learned envelope. ` +
 	`ALWAYS call train_anomaly_baseline FIRST with the caller-supplied vehicle_id and an optional days knob in [1,30]; then call query_anomaly_baseline with the same vehicle_id; then narrate the DIFF between the proposed learned envelope and the currently-effective baseline. ` +
@@ -130,13 +130,13 @@ const SystemPrompt = `You are the TeslaSync learned per-vehicle anomaly baseline
 // RegisterLearnedAnomalyBaselineTools at boot. The dispatcher
 // refuses to mount a strategy that references an unknown tool.
 //
-// ORDER MATTERS: the slice prompt's Action Steps list the tools in
+// ORDER MATTERS: the feature spec's Action Steps list the tools in
 // exactly this order ("train_anomaly_baseline;query_anomaly_baseline").
 // Reversing them silently produces a confused narration that quotes
 // the fallback as if it were the learned proposal — the goldens
 // pin the order via the assistant's tool_calls sequence.
 //
-// This slice ships zero mutating tools: anomaly narration only READS
+// This feature ships zero mutating tools: anomaly narration only READS
 // the user's existing signal_log observations. A future "create an
 // anomaly automation when this learned envelope is exceeded" surface
 // would add its own strategy with its own confirm hook.
@@ -188,11 +188,11 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the dispatcher's
+// PolicyChatbot wrapped through the redaction-policy adapter so the dispatcher's
 // per-request ctx-installation step (dispatch.Run installs the policy
 // via redact.WithPolicy) sees the concrete policy.
 //
-// Per the slice prompt: "Allowed classes: none; model training uses
+// Per the feature spec: "Allowed classes: none; model training uses
 // local stored data and no provider call in off mode". PolicyChatbot
 // is the project-wide deny-all-tagged policy (Allow: nil, Mode:
 // ModeRedactedTags) — every PII class is converted into a round-trip

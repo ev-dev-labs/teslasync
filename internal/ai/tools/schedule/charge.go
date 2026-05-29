@@ -1,7 +1,4 @@
-// Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
-//
-// smart_charge_schedule_suggestion.go ships TWO new propose-only
-// tools for the smart-charge-schedule-suggestion LLM strategy:
+// Smart-charge schedule suggestions expose two propose-only tools:
 //
 //   - `draft_charge_schedule` — delegates to the canonical
 //     *ChargePlannerHandler.computeSchedule path via a narrow
@@ -34,7 +31,7 @@
 // schedule save flows through an explicit user confirmation in the
 // SmartChargePage UI; the LLM has no tool that writes.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → draft_charge_schedule delegates to
@@ -47,7 +44,7 @@
 //     envelope.
 //
 //   - "no duplicate write paths" → no create_* / update_* /
-//     delete_* / save_* tool exists in this slice; both tools are
+//     delete_* / save_* tool exists for this feature; both tools are
 //     propose-only and draft_charge_schedule reuses the canonical
 //     compute path.
 
@@ -142,7 +139,7 @@ type ChargeScheduleComputeResult struct {
 //
 // The interface MUST stay read-only — adding a Save / Update method
 // here would defeat the propose-only contract that ADR-015 §I3 +
-// the slice prompt mandate.
+// the feature contract requires.
 type ChargeScheduleComputer interface {
 	// ComputeChargeSchedule delegates to the canonical
 	// *ChargePlannerHandler.computeSchedule path and returns
@@ -417,8 +414,8 @@ type SmartChargeScheduleSuggestionSources struct {
 }
 
 // RegisterSmartChargeScheduleSuggestionTools installs the
-// smart-charge-schedule-suggestion slice's tools on r. Called from
-// router.go AFTER the trip-planner-llm-agent tool registration so
+// smart-charge-schedule-suggestion tools on r. Called from router.go
+// after the trip-planner-llm-agent tool registration so
 // the registry's alphabetical Names list grows deterministically
 // without disturbing earlier registrations or any builtin-names
 // pin tests.

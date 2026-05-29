@@ -1,11 +1,11 @@
-// Phase-50 / 0020 — N6 RAG-backed app help.
+// RAG-backed app help tools.
 //
 // help.go ships TWO new read-only tools:
 //
 //   - `retrieve_docs`     — accept a typed natural-language query
 //                            + a small list of source types and
 //                            return the top-k nearest chunks via
-//                            the F7 rag.Retriever scoped to the
+//                            rag.Retriever scoped to the
 //                            global help corpus (docs|runbooks|i18n).
 //   - `cite_help_chunk`   — accept a typed (source_type, source_id,
 //                            chunk_idx) reference and return a
@@ -21,10 +21,10 @@
 // AI handler opens; this tool just feeds the LLM grounding chunks
 // + a stable citation format.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
-//     duplicate write paths." → retrieve_docs delegates to the F7
+//     duplicate write paths." → retrieve_docs delegates to
 //     rag.Retriever (the single canonical retrieval entry point);
 //     cite_help_chunk is a pure formatter that touches nothing
 //     beyond its typed input.
@@ -34,13 +34,12 @@
 //     Retrieve / Index / Forget; cite_help_chunk has no port at all.
 //
 //   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; citation is a pure read.
+//     tool exists here; citation is a pure read.
 //
 // The source-type allowlist is enforced at the tool boundary (any
 // other rag.Source* constant is refused), so a confused LLM that
 // asks the assistant to retrieve e.g. "user_note" cannot accidentally
-// expose a corpus the slice did not enumerate. The allowlist mirrors
-// the slice prompt's RAG block: docs, runbooks, i18n.
+// expose a corpus outside the help contract. The allowlist covers docs, runbooks, and i18n.
 
 package tools
 
@@ -55,19 +54,17 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 )
 
-// Help-corpus source-type literals. The F7 rag.Retriever takes
+// Help-corpus source-type literals. rag.Retriever takes
 // arbitrary string source types — the constants below are the ones
-// the rag-help slice's tools recognise. `SourceHelpDocs` aliases
-// `rag.SourceDocs` so the existing IndexDocs path under the F7
-// docs_indexer remains the single source of truth for the docs
+// the rag-help tools recognise. `SourceHelpDocs` aliases
+// `rag.SourceDocs` so the existing IndexDocs path under the docs indexer remains the single source of truth for the docs
 // corpus; `SourceHelpRunbooks` and `SourceHelpI18n` are new corpora
 // keyed off these literal strings (no matching constant in
 // internal/ai/rag/rag.go because that package is outside this
-// slice's allowed-files list — the literals here are the canonical
-// definition for the help corpora).
+// help corpora literals are defined here).
 const (
 	// SourceHelpDocs aliases rag.SourceDocs so retrieve_docs reads
-	// from the same logical corpus the F7 docs_indexer writes to.
+	// from the same logical corpus the docs indexer writes to.
 	SourceHelpDocs = rag.SourceDocs
 
 	// SourceHelpRunbooks is the corpus for operator runbooks. The
@@ -86,10 +83,7 @@ const (
 // ragHelpAllowedSourceTypes is the per-feature allowlist of source
 // types the rag-help strategy may retrieve over. Any other source
 // type passed via the LLM's typed input is refused at validation
-// time — the slice prompt explicitly enumerates these three corpora
-// and a future slice that adds a new help source must add it here
-// AND extend the strategy's system prompt + goldens, not silently
-// widen.
+// time. The help contract enumerates these three corpora; new sources must update this allowlist, the strategy prompt, and goldens together.
 //
 // Kept in lex order so error messages list a stable allowed-set.
 var ragHelpAllowedSourceTypes = []string{
@@ -110,7 +104,7 @@ var ragHelpAllowedSourceTypeSet = func() map[string]struct{} {
 }()
 
 // ragHelpMaxK is the per-call upper bound on the retriever's k
-// parameter. The F7 retriever's hard ceiling is rag.MaxK (100); we
+// parameter. The retriever's hard ceiling is rag.MaxK (100); we
 // clamp tighter here because a help answer rarely benefits from
 // >12 chunks (the LLM's narration won't cite them all and the
 // chunk text inflates the context window cost).
@@ -169,7 +163,7 @@ type helpChunk struct {
 	Score      float32 `json:"score"`
 }
 
-// retrieveDocs is the read-only tool that calls the F7 retriever
+// retrieveDocs is the read-only tool that calls the retriever
 // over the help corpus. It is the FIRST tool the LLM is expected to
 // call (per the strategy's system prompt).
 //
@@ -230,8 +224,7 @@ func (t *retrieveDocs) Validate(raw json.RawMessage) (any, error) {
 }
 
 // Execute implements [Tool]. Resolves user_subject from the ctx the
-// AI handler installed via provider.WithSubject, then calls the F7
-// retriever. Returns a deterministic envelope with explicit JSON
+// AI handler installed via provider.WithSubject, then calls the retriever. Returns a deterministic envelope with explicit JSON
 // tags so the dispatcher's serialisation path is uniform across
 // runs.
 //
@@ -239,10 +232,8 @@ func (t *retrieveDocs) Validate(raw json.RawMessage) (any, error) {
 // panic; this function only nil-checks defensively for tests that
 // instantiate the tool directly.
 //
-// The help corpus is GLOBAL — the slice prompt's evidence section
-// states "app docs and i18n keys contain no user PII" — so we
-// pass user_subject="" to retrieve from the global corpus
-// (matches the F7 docs_indexer's userSubject="" convention). The
+// The help corpus is global, so we pass user_subject="" to retrieve from the global corpus
+// (matches the docs indexer's userSubject="" convention). The
 // per-tenant scoping enforced by other strategies (nl-search) does
 // not apply here.
 func (t *retrieveDocs) Execute(ctx context.Context, in any) (any, error) {
@@ -256,11 +247,9 @@ func (t *retrieveDocs) Execute(ctx context.Context, in any) (any, error) {
 		k = ragHelpDefaultK
 	}
 
-	// Help corpus is global; pass empty subject so the retriever
-	// reads from the user_subject="" rows the F7 docs_indexer
-	// writes. This is intentionally distinct from the per-user
-	// scoping nl-search uses (its corpora are user_subject-scoped
-	// per-tenant private data).
+	// Help corpus is global; pass empty subject so the retriever reads
+	// from the user_subject="" rows the docs indexer writes. This is
+	// intentionally distinct from nl-search's per-user scoping.
 	const helpCorpusSubject = ""
 
 	chunks, err := t.r.Retrieve(ctx, helpCorpusSubject, input.Query, input.SourceTypes, k)
@@ -413,13 +402,13 @@ func (t *citeHelpChunk) Execute(_ context.Context, in any) (any, error) {
 // because cite_help_chunk is a pure formatter.
 //
 // Production wiring (router.go) instantiates a real rag.Retriever
-// shared with the F7 docs_indexer; tests substitute a deterministic
+// shared with the docs indexer; tests substitute a deterministic
 // fake.
 type HelpSources struct {
 	Retriever rag.Retriever
 }
 
-// RegisterHelpTools installs the rag-help slice's tools on r.
+// RegisterHelpTools installs the rag-help tools on r.
 // Called from router.go AFTER RegisterChargingDiagnosisTools so the
 // registry's alphabetical Names list grows deterministically without
 // disturbing earlier registrations or the BuiltinNames pin test.

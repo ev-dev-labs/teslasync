@@ -21,8 +21,8 @@ import (
 )
 
 // Compile-time assert: every stream.Writer is a dispatch.StreamWriter.
-// If this fails to compile, the F4 dispatcher cannot use the F5 SSE
-// writer and the slice is broken at the type level.
+// If this fails to compile, the dispatcher cannot use the SSE writer
+// through its streaming port.
 var _ dispatch.StreamWriter = (*stream.Writer)(nil)
 
 // --- minimal flushable recorder ----------------------------------

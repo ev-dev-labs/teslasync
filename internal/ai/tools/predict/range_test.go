@@ -1,6 +1,4 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
-//
-// range_predictor_test.go covers:
+// Range predictor tool tests cover:
 //
 //  1. train_range_model.Validate rejects non-positive vehicle_id,
 //     days outside [1,30], and missing vehicle_id.

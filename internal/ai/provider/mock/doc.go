@@ -1,4 +1,4 @@
-// Package mock is part of the TeslaSync adapter layer.
+// Package mock contains deterministic AI provider fakes for tests.
 //
 // Layer: adapter
 package mock

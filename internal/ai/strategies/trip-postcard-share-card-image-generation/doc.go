@@ -1,4 +1,4 @@
-// Package trippostcardsharecardimagegeneration is part of the TeslaSync adapter layer.
+// Package trippostcardsharecardimagegeneration implements trip postcard image prompts.
 //
 // Layer: adapter
 package trippostcardsharecardimagegeneration

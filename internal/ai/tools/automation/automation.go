@@ -1,46 +1,12 @@
-// Phase-50 / 0016 — N2 Natural-language automation builder.
+// Package automation provides propose-only tools for drafting and validating
+// automation graphs from natural-language requests.
 //
-// automation_builder.go ships TWO new propose-only tools:
+// The tools return typed drafts for human review and never write to the
+// database. Persistence remains the responsibility of the existing
+// POST /api/v1/automations handler after the user explicitly saves.
 //
-//   - `draft_automation_graph`    — accept a typed Automation graph
-//                                   shape (one trigger + 0..N
-//                                   conditions + 1..N actions) and
-//                                   return a normalized + validated
-//                                   draft the frontend can render
-//                                   for human review.
-//   - `validate_automation_graph` — accept a typed Automation graph
-//                                   shape and return whether it
-//                                   would be accepted by the
-//                                   canonical
-//                                   POST /api/v1/automations
-//                                   handler, with an error message
-//                                   on rejection.
-//
-// Both tools are PROPOSE-ONLY: they construct or validate Automation
-// graph DTOs but do NOT touch the database. The dispatcher's
-// deny-all confirm gate is therefore never triggered — defence in
-// depth in case a future edit accidentally adds a write tool. The
-// actual mutation flows through the existing typed
-// POST /api/v1/automations AutomationHandler.Create handler AFTER
-// the user explicitly clicks Save in the AutomationBuilderPage UI.
-//
-// Design constraints (from the slice prompt):
-//
-//   - "Route every mutation proposal through F4 tools and existing
-//     typed DTO validation. The LLM never writes raw SQL and never
-//     bypasses existing handlers." → both tools delegate validation
-//     to AutomationGraphValidator (satisfied by the same
-//     decodeAutomationInputDTO function that the canonical
-//     AutomationHandler uses), so a draft accepted here is
-//     byte-equivalent to a draft accepted by the POST handler.
-//
-//   - "the LLM never writes raw SQL" → tools have no DB handle. The
-//     interface is intentionally narrow: a single Validate call.
-//
-//   - "no duplicate write paths" → the toolkit does NOT include a
-//     `save_automation` tool. The frontend renders the draft and
-//     the user clicks Save, which fires the existing
-//     useCreateAutomation* mutation against POST /api/v1/automations.
+// Both tools delegate to the canonical typed DTO validation path so accepted
+// drafts match what the AutomationHandler would accept.
 
 package automation
 
@@ -66,7 +32,7 @@ import (
 //
 // The interface MUST stay validation-only — adding a Create or Save
 // method here would defeat the propose-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// §I3 read-only contract.
 type AutomationGraphValidator interface {
 	// ValidateAutomationWire reports whether the given automation
 	// wire-JSON payload would be accepted by the canonical typed
@@ -603,8 +569,7 @@ type AutomationBuilderSources struct {
 }
 
 // RegisterAutomationBuilderTools installs the
-// nl-automation-builder slice's tools on r. Called from router.go
-// AFTER RegisterAlertBuilderTools so the registry's alphabetical
+// natural-language automation builder tools on r. Router wiring calls this after RegisterAlertBuilderTools so the registry's alphabetical
 // Names list grows deterministically without disturbing earlier
 // registrations or the BuiltinNames pin test.
 //

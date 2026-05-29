@@ -15,31 +15,16 @@
 // ADR-011 §2 — bounded-context grouping wins over per-tool
 // granularity when tools share non-trivial helper surface.
 //
-// Carved out of internal/ai/tools (R6.7). The exported symbols
-// (AlertRuleValidator, AlertRuleFiringHistory, AlertRulePatchProposal,
-// AlertTuningSource, AlertBuilderSources, AlertTuningSuggestionsSources,
-// RegisterAlertBuilderTools, RegisterAlertTuningSuggestionsTools) keep
-// their verbatim names for git bisectability — only the import path
-// moved.
-//
 // Layer: adapter
 //
 // ADR-011 §3 alias convention: callers importing this package
 // alongside the parent ai/tools should use the alias `alertaitools`.
 // At single-import callsites no alias is required.
 //
-// ADR-015 §I12 contract preservation: FILE-MOVE-ONLY refactor. No
-// AI strategy or tool logic changed. Both /api/v1/ai/alert-builder
-// and /api/v1/ai/alert-tuning-suggestions routes still re-check
-// ai_mode + per-feature toggles on every tick and still return
-// {Skipped: 1} with zero side effects when AI is off. Verified by
-// `make ai-vet` (PASS) at the cluster commit.
+// Both /api/v1/ai/alert-builder and /api/v1/ai/alert-tuning-suggestions
+// re-check ai_mode and per-feature toggles before running, returning a skipped
+// result with no side effects when AI is off.
 //
-// Test-helper note: a tiny `ptrFloat64(v) *float64` helper was
-// inlined into tuning_test.go (was previously shared in the parent
-// package's route_efficiency_test.go). When the next shared-fixture
-// cluster carve hits (automation/charging/drive/digest tests use
-// Register12Builtins + fakeVehicles + fakeState + ...), promote the
-// shared helpers to a proper `internal/ai/tools/toolstest` exported
-// fixture package rather than inlining.
+// Shared test fixtures belong in internal/ai/tools/toolstest instead of being
+// inlined repeatedly across tool packages.
 package alert

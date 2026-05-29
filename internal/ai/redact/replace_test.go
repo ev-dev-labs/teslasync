@@ -116,7 +116,7 @@ func TestApply_NoPII(t *testing.T) {
 
 func TestApply_DistinctClassesNoDuplicates(t *testing.T) {
 	t.Parallel()
-	// Two VINs in one text — classes slice should still report VIN
+	// Two VINs in one text should still report VIN once.
 	// once.
 	text := "VIN 5YJ3E1EA2JF000316 and VIN 1HGCM82633A004352"
 	_, m, classes := Apply(text, DefaultPolicy())

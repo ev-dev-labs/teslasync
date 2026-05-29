@@ -1,22 +1,20 @@
-// Phase-50 / 0013 — U3 Year-in-review narration.
+// Year-in-review narration tool.
 //
-// year_review.go ships ONE new read-only tool:
-// `query_year_in_review_context`. The tool is the single F4 surface
+// This file defines one read-only tool, `query_year_in_review_context`.
+// The tool is the only surface
 // the yir-narration strategy is allowed to call (see
 // internal/ai/strategies/yir-narration/strategy.go's allowedTools
 // whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "thin Tool wrapper over an existing handler. **No new SQL written.**"
-//     We compose the existing tools.DriveSource.GetByVehicle and
+//   - We compose the existing tools.DriveSource.GetByVehicle and
 //     tools.ChargeSource.GetByVehicle methods (already used by the 12
 //     builtins) and aggregate in-process — no new SQL columns,
 //     joins, or migrations.
 //
-//   - The tool is a READ — Mutates() returns false. The dispatcher's
-//     deny-all confirm gate refuses anything mutating; this slice
-//     ships zero mutating tools.
+//   - The tool is read-only. Mutates() returns false, and the
+//     dispatcher's deny-all confirm gate refuses mutating tools.
 //
 //   - One tool, multiple strategies: the tool is registered on the
 //     process-wide tools.Registry alongside the 12 builtins + the
@@ -40,9 +38,8 @@
 //	  "charges_energy_added_wh": float64, // sum of *ChargingSession.TotalEnergyAddedWh
 //	}
 //
-// All fields are SI canonical (Phase-48 contract). The frontend's
-// useUnits() / useFormatting() at the display boundary converts to
-// the user's preferred units before rendering.
+// All fields are SI canonical. The frontend's useUnits() / useFormatting()
+// converts to the user's preferred units at the display boundary.
 
 package yir
 
@@ -241,7 +238,7 @@ type YearReviewSources struct {
 	Charges tools.ChargeSource
 }
 
-// RegisterYearReviewTools installs the yir-narration slice's tools
+// RegisterYearReviewTools installs the year-in-review narration tools
 // on r. Called from router.go AFTER Register12Builtins +
 // RegisterDigestTools so the registry's alphabetical Names list ends
 // with `query_year_in_review_context` without disturbing the

@@ -1,59 +1,59 @@
-// Phase-50 / 0040 — X1 Period compare narration.
+// Period-over-period comparison narration tool.
 //
-// period_compare.go ships ONE new read-only tool:
+// period_compare.go provides one read-only tool:
 // `query_period_compare`. The tool is the single F4 surface the
 // period-compare-narration strategy is allowed to call (see
 // internal/ai/strategies/period-compare-narration/strategy.go's
 // allowedTools whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "thin Tool wrapper over an existing handler. **No new SQL
-//     written.**" The production adapter
-//     (*api.AIPeriodCompareSource) calls the SHARED
-//     api.ComputePeriodStats helper that the existing GET
-//     /api/v1/analytics/period-stats handler now also calls —
-//     never a parallel re-implementation. Refactoring the
-//     canonical handler to expose the helper was a deliberate
-//     choice over duplicating the SQL/math in this slice.
+// - "thin Tool wrapper over an existing handler. **No new SQL
+// written.**" The production adapter
+// (*api.AIPeriodCompareSource) calls the SHARED
+// api.ComputePeriodStats helper that the existing GET
+// /api/v1/analytics/period-stats handler now also calls —
+// never a parallel re-implementation. Refactoring the
+// canonical handler to expose the helper was a deliberate
+// choice over duplicating the SQL/math.
 //
-//   - The tool is a READ — Mutates() returns false. The
-//     dispatcher's deny-all confirm gate refuses anything mutating;
-//     this slice ships zero mutating tools.
+// - The tool is a READ — Mutates() returns false. The
+// dispatcher's deny-all confirm gate refuses anything mutating;
+// this tool set ships zero mutating tools.
 //
-//   - One tool, one strategy: the tool is registered on the
-//     process-wide tools.Registry alongside the prior builtins so
-//     a future strategy that wants the same envelope can declare
-//     it too. The dispatcher's per-strategy whitelist still gates
-//     which strategies can call it.
+// - One tool, one strategy: the tool is registered on the
+// process-wide tools.Registry alongside the prior builtins so
+// a future strategy that wants the same envelope can declare
+// it too. The dispatcher's per-strategy whitelist still gates
+// which strategies can call it.
 //
 // The tool's output is a deterministic typed envelope (all numeric
 // metrics + minimal labels — no free-form prose) constructed by
 // the production adapter:
 //
 //	{
-//	  "vehicle_id":   int64,
-//	  "period_a": {
-//	    "days":                      int,
-//	    "total_distance_km":         float64,
-//	    "total_drives":              int,
-//	    "energy_used_kwh":           float64,
-//	    "avg_efficiency_wh_per_km":  float64,
-//	    "total_cost":                float64,
-//	    "co2_saved_kg":              float64
-//	  },
-//	  "period_b": { ... same shape ... },
-//	  "deltas": [
-//	    {"metric":"total_distance_km","delta":float64,"percent_change":*float64,"direction":string},
-//	    ...
-//	  ]
+//	 "vehicle_id": int64,
+//	 "period_a": {
+//	 "days": int,
+//	 "total_distance_km": float64,
+//	 "total_drives": int,
+//	 "energy_used_kwh": float64,
+//	 "avg_efficiency_wh_per_km": float64,
+//	 "total_cost": float64,
+//	 "co2_saved_kg": float64
+//	 },
+//	 "period_b": { ... same shape ... },
+//	 "deltas": [
+//	 {"metric":"total_distance_km","delta":float64,"percent_change":*float64,"direction":string},
+//	 ...
+//	 ]
 //	}
 //
 // All distance / drives / energy / efficiency / cost / CO2 numbers
 // are aggregate user-visible values the chart on /period-compare
 // already renders; the per-feature redaction policy
 // (PolicyPeriodCompareNarration) explicitly leaves them visible
-// to the narrator so the LLM can quote them. Phase-48 SI canonical
+// to the narrator so the LLM can quote them. SI canonical
 // distance + energy fields are converted to km / kWh at the
 // underlying ComputePeriodStats boundary for parity with the
 // chart shape. percent_change is nullable (*float64) when the
@@ -86,14 +86,14 @@ import (
 // /api/v1/analytics/period-stats response shape that the
 // PeriodComparePage chart consumes):
 //
-//   - total_distance_km:         display-unit km
-//   - total_drives:              count
-//   - energy_used_kwh:           display-unit kWh
-//   - avg_efficiency_wh_per_km:  display-unit Wh/km
-//   - total_cost:                best-effort monetary; may mix
-//     currencies (the system prompt
-//     discloses this caveat)
-//   - co2_saved_kg:              display-unit kg
+// - total_distance_km: display-unit km
+// - total_drives: count
+// - energy_used_kwh: display-unit kWh
+// - avg_efficiency_wh_per_km: display-unit Wh/km
+// - total_cost: best-effort monetary; may mix
+// currencies (the system prompt
+// discloses this caveat)
+// - co2_saved_kg: display-unit kg
 type PeriodComparePeriod struct {
 	Days                 int     `json:"days"`
 	TotalDistanceKm      float64 `json:"total_distance_km"`
@@ -148,7 +148,7 @@ type PeriodCompare struct {
 //
 // The interface MUST stay read-only — adding a Save / Update
 // method here would defeat the read-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// §I3.
 type PeriodComparator interface {
 	// ComparePeriods runs the canonical deterministic
 	// period-stats helper for vehicleID twice (once per
@@ -377,7 +377,7 @@ type PeriodCompareNarrationSources struct {
 }
 
 // RegisterPeriodCompareNarrationTools installs the
-// period-compare-narration slice's tools on r. Called from
+// period-compare-narration feature's tools on r. Called from
 // router.go AFTER the cost-forecast-narration tool registration
 // so the registry's alphabetical Names list grows deterministically
 // without disturbing earlier registrations or any builtin-names

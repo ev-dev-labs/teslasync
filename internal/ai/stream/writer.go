@@ -35,16 +35,15 @@ const (
 // covers a typical 4 KB LLM response (one frame per token, ~1 frame
 // per ms on a fast local model) with headroom for tool-call bursts.
 // A network stall lasting longer than ~64ms before stallTimeout
-// fires is what triggers the explicit stall failure mode. R4: do
-// NOT raise this without re-evaluating the trade-off — a deeper
-// buffer hides upstream stalls instead of surfacing them.
+// fires is what triggers the explicit stall failure mode. Do not raise
+// this without re-evaluating the trade-off: a deeper buffer hides
+// upstream stalls instead of surfacing them.
 const channelCapacity = 64
 
 // defaultStallTimeout is the per-Send wait limit before the Writer
-// declares the consumer stuck and tears the stream down. 5s matches
-// the prompt's design and is a balance between accommodating a slow
-// 4G client (~2s round-trip on a chunky frame) and surfacing a
-// genuine wedge before the SPA hits its own timeout.
+// declares the consumer stuck and tears the stream down. Five seconds
+// balances slow 4G clients with surfacing a genuine wedge before the
+// SPA hits its own timeout.
 const defaultStallTimeout = 5 * time.Second
 
 // Sentinel errors. Use errors.Is for inspection — decorators may wrap
@@ -117,10 +116,10 @@ func WithFeatureID(id string) Option {
 // torn down by [Close] (or implicitly by [WriteDone]) when the
 // handler returns.
 //
-// All Send/Write* methods are safe for concurrent use, but the F4
-// dispatcher contract is single-producer (one goroutine drives the
-// chat loop). Multiple producers would interleave frames and
-// require frame-level ordering guarantees we don't make.
+// All Send/Write* methods are safe for concurrent use, but the dispatcher
+// contract is single-producer: one goroutine drives the chat loop. Multiple
+// producers would interleave frames and require frame-level ordering guarantees
+// we don't make.
 type Writer struct {
 	httpW        http.ResponseWriter
 	flusher      http.Flusher
@@ -298,9 +297,9 @@ func (w *Writer) WriteToolError(name string, err error) error {
 
 // WriteConfirmRequest pauses the stream for a user mutating-tool
 // confirmation. The continuationID is the persistent key the SPA
-// will POST back to /ai/_internal/continue to resume. NOT part of
-// the dispatch.StreamWriter interface — the dispatcher's confirm
-// round-trip lives in the handler layer (slice U1+).
+// will POST back to /ai/_internal/continue to resume. This is not
+// part of dispatch.StreamWriter; confirm round-trips live in the
+// handler layer.
 func (w *Writer) WriteConfirmRequest(continuationID, toolName string, args json.RawMessage, summary string) error {
 	return w.Send(EventConfirmRequest, confirmRequestPayload{
 		ContinuationID: continuationID,
@@ -408,9 +407,9 @@ type LimitDecisionPayload struct {
 //     a deferred [WriteDone]) are no-ops returning nil — see
 //     [WriteDoneFull] for the idempotency contract.
 //
-// payload.BaselineAvailable=true is the F9 default — exhaustion of
-// AI MUST NOT break the app per ADR-015 §I3. Strategies for which
-// no baseline exists override this at the decorator wiring layer.
+// payload.BaselineAvailable=true preserves ADR-015 §I3: AI exhaustion
+// must not break the app. Strategies without a baseline override this
+// at the decorator wiring layer.
 func (w *Writer) WriteLimitError(message string, payload LimitDecisionPayload) error {
 	if w.closed.Load() {
 		return ErrWriterClosed
@@ -638,9 +637,9 @@ type limitErrorPayload struct {
 //
 // All metrics are labelled by feature_id so ops can attribute a stall
 // or a cancel back to the AI feature that caused it. Cardinality is
-// bounded by the registry (~40 features in Phase-50). NO drop counter
-// — drops are forbidden by R4; if the system needs to drop frames
-// the answer is to fail the stream loudly via stall.
+// bounded by the registry. There is no drop counter: drops are
+// forbidden; if the system needs to drop frames, fail the stream
+// loudly via stall.
 
 var streamOpenTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Namespace: "teslasync",

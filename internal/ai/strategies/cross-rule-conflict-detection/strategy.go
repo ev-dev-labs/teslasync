@@ -1,6 +1,5 @@
-// Package crossruleconflictdetection is the Phase-50 / 0036 A3
-// strategy for the LLM-assisted cross-rule conflict-detection
-// surface.
+// Package crossruleconflictdetection implements the LLM-assisted
+// cross-rule conflict detection surface.
 //
 // The strategy declares:
 //
@@ -19,20 +18,19 @@
 //     editor + clicks Save);
 //
 //   - the two tools the LLM is allowed to call —
-//     `query_alert_rules` (NEW for this slice) and
-//     `detect_rule_conflicts` (NEW for this slice). Both tools are
+//     `query_alert_rules` and `detect_rule_conflicts`. Both tools are
 //     PROPOSE-ONLY pure-functional DTO transforms that read
 //     existing alert_rules state but do NOT touch the database
 //     write path. No rule is created, updated, or deleted by this
-//     slice; the "Review rule" mechanism in the SPA copies the
+//     AI flow; the "Review rule" mechanism in the SPA copies the
 //     offending rule_id into the existing baseline editor's
 //     selection state (a SPA-local URL/query state copy, not a
 //     server-side mutation);
 //
 //   - the redaction policy (`PolicyAlertBuilder`, REUSED from N1
 //     /A1/A2) which allows nothing — alert IDs, signal names,
-//     thresholds, and vehicle scopes flow through the typed F4
-//     tool envelope, not through prompt prose. Every PII class is
+//     thresholds, and vehicle scopes flow through the typed tool
+//     envelope, not through prompt prose. Every PII class is
 //     redacted via round-trip tags before the prompt reaches the
 //     provider.
 //
@@ -208,7 +206,7 @@ func (s *Strategy) Tools() []string {
 // Future work: this is where a per-vehicle "current automation
 // catalog" snippet would be injected once conflict detection
 // grows that surface (e.g. for cross-rule + cross-automation
-// suggestion hints). Today's slice keeps Context empty so the
+// suggestion hints). The current strategy keeps Context empty so the
 // dispatcher's behaviour is fully determined by [System] +
 // History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
@@ -216,24 +214,22 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyAlertBuilder wrapped through the F4↔F8 adapter so the
+// PolicyAlertBuilder wrapped through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; rule
-// definitions are DTOs and no PII is needed. Round-trip
-// required: no". The policy's Allow list is nil, so every PII
+// PolicyAlertBuilder allows no cleartext PII: rule definitions are
+// DTOs, and no PII is needed. The policy's Allow list is nil, so every PII
 // class — VIN, lat/long, vehicle name, addresses, phone numbers,
 // notification text — is redacted to a round-trip tag before the
-// prompt reaches the provider. The policy is REUSED from N1
-// (nl-alert-builder), 0034 (alert-tuning-suggestions), and 0035
-// (inbox-auto-categorization) intentionally: all four surfaces
+// prompt reaches the provider. The policy is shared with
+// alert builder, alert tuning, and inbox categorization because all
+// four surfaces
 // have the same threat model (the LLM never needs cleartext
 // alert/notification content; the typed envelope carries
-// rule_ids + signal names through the F4 tool layer). Sharing
-// the policy keeps the F8 redaction surface small and easier to
+// rule_ids and signal names through typed tool envelopes). Sharing
+// the policy keeps the redaction surface small and easier to
 // audit.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyAlertBuilder())

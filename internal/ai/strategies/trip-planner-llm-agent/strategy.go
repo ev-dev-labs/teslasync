@@ -1,5 +1,5 @@
-// Package tripplannerllmagent is the Phase-50 / D5 strategy for the
-// LLM-assisted "trip-planner-llm-agent" surface.
+// Package tripplannerllmagent implements the LLM-assisted trip-planner
+// strategy.
 //
 // The strategy declares:
 //
@@ -34,10 +34,9 @@
 // remains the canonical baseline; off-mode users never see the AI
 // surface at all (ADR-015 §I3, §I5, §I6).
 //
-// Service-worker chunks: this slice's frontend code is loaded under
-// the page-bundle for /trip-planner; the off-mode walker validates
-// code chunks via the `withAiFeature` HOC + the AI_FEATURES map.
-// See the slice log for the documented mapping.
+// Service-worker chunks for this frontend surface load under the
+// /trip-planner page bundle. The off-mode walker validates code
+// chunks via the `withAiFeature` HOC and the AI_FEATURES map.
 //
 // ADR-015 alignment:
 //
@@ -178,8 +177,8 @@ func (s *Strategy) Tools() []string {
 // Future work: this is where a per-user "favoured route style"
 // preference snippet (faster-vs-cheaper, prefer-superchargers) would
 // be injected once trip-planner-llm-agent grows that surface.
-// Today's slice keeps Context empty so the dispatcher's behaviour
-// is fully determined by [System] + History.
+// Context stays empty so dispatcher behaviour is fully determined by
+// [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
@@ -190,14 +189,11 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
-// start/end locations are tagged and restored only to same user.
-// Round-trip required: yes". PolicyTripPlannerLLMAgent is the
-// per-feature constructor with the same allow-list as
-// PolicyAutoTripNaming and PolicyRouteEfficiencySuggestions — kept
-// as a distinct identifier so a future per-feature change to
-// trip-planner-llm-agent's allow-list does not bleed across the
-// other read-only narrators.
+// This policy allows only ClassVehicleName in cleartext. Start and
+// end locations are tagged and restored only for the same user.
+// PolicyTripPlannerLLMAgent intentionally stays separate from similar
+// read-only narrator policies so future allow-list changes remain
+// scoped to this feature.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyTripPlannerLLMAgent())
 }

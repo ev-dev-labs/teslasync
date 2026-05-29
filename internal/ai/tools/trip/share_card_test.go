@@ -1,4 +1,4 @@
-// Phase-50 / 0060 — GEN1 Trip postcard and share-card image generation.
+// Trip postcard and share-card image generation tool tests.
 //
 // Tool tests for draft_image_prompt + render_share_card_preview.
 // Both tools are pure functions over input + TripDetailSource so
@@ -277,8 +277,7 @@ func TestRenderShareCardPreview_RejectsControlChars(t *testing.T) {
 }
 
 // TestRenderShareCardPreview_RejectsLongTitle proves the validator
-// caps the title at 100 chars (mirrors the slice prompt's narrative
-// cap).
+// caps the title at 100 chars to match the narrative cap.
 func TestRenderShareCardPreview_RejectsLongTitle(t *testing.T) {
 	t.Parallel()
 	details := &stubTripDetailSource{byID: map[int64]*tripdb.TripDetail{101: newShareCardTestDetail()}}

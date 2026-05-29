@@ -1,12 +1,7 @@
-// Phase-50 / 0019 — N5 Per-charging-session diagnosis.
-//
-// charging_diagnosis_test.go covers the new query_charge_session +
-// query_charging_aggregation tools + the
-// RegisterChargingDiagnosisTools wiring. Mirrors the shape of
-// drive_coaching_test.go (slice 0018) and digest_test.go (slice
-// 0012). Reuses the shared toolstest.FakeCharges source from builtins_test.go
-// so the query_charge_detail builtin and the new charging-diagnosis
-// tools share the same test substrate.
+// These tests cover query_charge_session, query_charging_aggregation,
+// and RegisterChargingDiagnosisTools. They reuse toolstest.FakeCharges
+// so query_charge_detail and the charging-diagnosis tools share the
+// same test substrate.
 
 package diagnosis
 
@@ -51,9 +46,8 @@ func TestRegisterChargingDiagnosisTools_RegistersBoth(t *testing.T) {
 }
 
 // TestRegisterChargingDiagnosisTools_DoesNotShadowBuiltins proves
-// that installing the charging-diagnosis tools AFTER the 12
-// builtins + earlier slice tools keeps every previously-registered
-// tool reachable. Defends against an accidental same-name collision.
+// that installing charging-diagnosis tools keeps existing builtins
+// reachable. Defends against accidental same-name collisions.
 func TestRegisterChargingDiagnosisTools_DoesNotShadowBuiltins(t *testing.T) {
 	t.Parallel()
 	r := tools.NewRegistry()
@@ -343,11 +337,9 @@ func TestQueryChargingAggregation_InProgressSession(t *testing.T) {
 }
 
 // TestQueryChargingAggregation_ThresholdsMatchFrontend pins the
-// detection thresholds to the EXACT numbers in
-// web/src/lib/chargingAggregation.ts → DEFAULT_THRESHOLDS. The
-// slice prompt's "without changing how flags are computed"
-// mandate is enforced here: a future PR that drifts one without
-// the other will fail this test.
+// detection thresholds to the exact numbers in
+// web/src/lib/chargingAggregation.ts → DEFAULT_THRESHOLDS. A future
+// PR that drifts one without the other will fail this test.
 func TestQueryChargingAggregation_ThresholdsMatchFrontend(t *testing.T) {
 	t.Parallel()
 	cases := map[string]float64{

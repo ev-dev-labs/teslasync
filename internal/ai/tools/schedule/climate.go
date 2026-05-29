@@ -1,6 +1,4 @@
-// Phase-50 / 0031 — T1 Preheat and precool recommender.
-//
-// preheat_precool_recommender.go ships TWO new propose-only
+// Preheat and precool recommendations expose two propose-only
 // tools for the preheat-precool-recommender LLM strategy:
 //
 //   - `draft_climate_schedule` — delegates to a narrow
@@ -36,7 +34,7 @@
 // existing canonical climate controls UI; the LLM has no tool that
 // writes.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." → draft_climate_schedule delegates to
@@ -50,7 +48,7 @@
 //     envelope.
 //
 //   - "no duplicate write paths" → no create_* / update_* /
-//     delete_* / save_* tool exists in this slice; both tools are
+//     delete_* / save_* tool exists here; both tools are
 //     propose-only and draft_climate_schedule reuses the canonical
 //     deterministic heuristic.
 
@@ -73,7 +71,7 @@ import (
 // ClimateScheduleDraftRequest is the typed request envelope
 // draft_climate_schedule passes to the [ClimateScheduleAdvisor] port.
 //
-// All temperatures are in Celsius (SI canonical — Phase-48). All
+// All temperatures are in Celsius. All
 // timestamps are RFC3339. SOC is unused by the deterministic
 // heuristic today (cabin temperature delta + outside temperature
 // determine the warm-up / cool-down rate, not battery state) but
@@ -111,9 +109,8 @@ type ClimateScheduleDraftResult struct {
 // satisfied by *api.AIClimateScheduleAdvisor; tests substitute
 // deterministic fakes so the tool unit tests stay hermetic.
 //
-// The interface MUST stay read-only — adding a Save / Apply method
-// here would defeat the propose-only contract that ADR-015 §I3 +
-// the slice prompt mandate.
+// The interface MUST stay read-only; adding a Save or Apply method
+// here would defeat the ADR-015 §I3 propose-only contract.
 type ClimateScheduleAdvisor interface {
 	// DraftClimateSchedule runs the deterministic departure
 	// heuristic and returns a typed envelope describing the
@@ -162,10 +159,8 @@ type draftClimateSchedule struct {
 	advisor ClimateScheduleAdvisor
 }
 
-// Name implements [Tool].
 func (t *draftClimateSchedule) Name() string { return "draft_climate_schedule" }
 
-// Description implements [Tool].
 func (t *draftClimateSchedule) Description() string {
 	return "Build a typed preheat/precool schedule proposal by delegating to the canonical deterministic departure heuristic. " +
 		"PROPOSE-ONLY: the schedule is NOT saved; the user reviews the draft in the UI before clicking the " +
@@ -174,7 +169,6 @@ func (t *draftClimateSchedule) Description() string {
 		"status, source}. Call this FIRST in the tool sequence, before validate_climate_schedule."
 }
 
-// InputSchema implements [Tool].
 func (t *draftClimateSchedule) InputSchema() json.RawMessage {
 	return tools.CachedSchema(draftClimateScheduleInput{})
 }
@@ -182,10 +176,9 @@ func (t *draftClimateSchedule) InputSchema() json.RawMessage {
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
 func (t *draftClimateSchedule) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. PROPOSE-only — never returns true.
+// Propose-only: never mutates state.
 func (t *draftClimateSchedule) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty.
 func (t *draftClimateSchedule) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
@@ -263,10 +256,8 @@ type validateClimateScheduleOutput struct {
 // are internally consistent).
 type validateClimateSchedule struct{}
 
-// Name implements [Tool].
 func (t *validateClimateSchedule) Name() string { return "validate_climate_schedule" }
 
-// Description implements [Tool].
 func (t *validateClimateSchedule) Description() string {
 	return "Validate that a drafted climate-schedule envelope is internally consistent: start_time < end_time, " +
 		"end_time <= depart_by, target_cabin_temp_c in [10,32]°C, and mode (preheat | precool) matches the " +
@@ -275,7 +266,6 @@ func (t *validateClimateSchedule) Description() string {
 		"Call this SECOND in the tool sequence, after draft_climate_schedule."
 }
 
-// InputSchema implements [Tool].
 func (t *validateClimateSchedule) InputSchema() json.RawMessage {
 	return tools.CachedSchema(validateClimateScheduleInput{})
 }
@@ -283,10 +273,9 @@ func (t *validateClimateSchedule) InputSchema() json.RawMessage {
 // OutputSchema implements [Tool]. Nil ⇒ free-form output object.
 func (t *validateClimateSchedule) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. PROPOSE-only — never returns true.
+// Propose-only: never mutates state.
 func (t *validateClimateSchedule) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty.
 func (t *validateClimateSchedule) RequiredScope() string { return "" }
 
 // Validate implements [Tool].
@@ -380,7 +369,7 @@ type PreheatPrecoolRecommenderSources struct {
 }
 
 // RegisterPreheatPrecoolRecommenderTools installs the
-// preheat-precool-recommender slice's tools on r. Called from
+// preheat-precool-recommender tools on r. Called from
 // router.go AFTER the vampire-drain-explanation tool registration
 // so the registry's alphabetical Names list grows deterministically
 // without disturbing earlier registrations or any builtin-names

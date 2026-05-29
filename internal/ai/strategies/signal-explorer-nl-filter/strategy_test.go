@@ -1,13 +1,7 @@
-// Phase-50 / 0044 — S3 Signal explorer NL filter.
-//
-// Unit tests for the signal-explorer-nl-filter Strategy. Mirrors the
-// shape of data-repair-suggestions's strategy_test.go (the closest
-// precedent: a propose-only DTO drafter strategy with a deny-all
-// redaction policy and exactly two tools — draft + validate). The
-// Strategy is a pure value (no internal state, no IO) so the tests
-// are tight: pin the feature ID + system prompt + tool whitelist +
-// redaction policy shape so a future edit that breaks the contract
-// surfaces here before the dispatcher silently changes behaviour.
+// Unit tests for the signal-explorer-nl-filter Strategy. The strategy
+// is a pure value, so these tests pin the feature ID, system prompt,
+// tool whitelist, and redaction policy before dispatcher behavior can
+// change silently.
 
 package signalexplorernlfilter
 
@@ -131,9 +125,8 @@ func TestStrategy_ToolsIncludesNoMutators(t *testing.T) {
 
 // TestStrategy_ContextReturnsNil pins the empty-context contract.
 // The dispatcher seeds the user message via StrategyInput.History;
-// the strategy must not contribute extra prefix messages until a
-// future slice that needs preferred-greeting or per-vehicle
-// preferences ships.
+// the strategy must not contribute extra prefix messages unless
+// preferred greetings or per-vehicle preferences are added later.
 func TestStrategy_ContextReturnsNil(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -147,12 +140,10 @@ func TestStrategy_ContextReturnsNil(t *testing.T) {
 }
 
 // TestStrategy_RedactionPolicyChatbot proves the strategy hands
-// the dispatcher PolicyChatbot wrapped through the F4↔F8 adapter.
-// PolicyChatbot is a DENY-BY-DEFAULT policy: Allow == nil so EVERY
-// PII class — VIN, lat/long, addresses, place names, AND
-// vehicle-name — is tagged round-trip. The slice prompt explicitly
-// mandates "Allowed classes: none; vehicle identifiers flow through
-// tools and query DTOs."
+// the dispatcher PolicyChatbot through the redaction adapter.
+// PolicyChatbot is deny-by-default: Allow == nil, so every PII class
+// is tagged round-trip and vehicle identifiers flow through tools and
+// query DTOs.
 func TestStrategy_RedactionPolicyChatbot(t *testing.T) {
 	t.Parallel()
 	s := New()
@@ -181,8 +172,6 @@ func TestStrategy_EvalGoldensReturnsNil(t *testing.T) {
 		t.Fatalf("EvalGoldens() = %v, want nil (goldens live in YAML)", g)
 	}
 }
-
-// --- helpers ---------------------------------------------------------
 
 func contains(s, sub string) bool {
 	return len(s) >= len(sub) && (s == sub || indexOf(s, sub) >= 0)

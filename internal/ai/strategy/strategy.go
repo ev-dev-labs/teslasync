@@ -6,7 +6,7 @@
 // passing.
 //
 // One Strategy = one feature. Implementations live next to the
-// feature slice that owns them (chatbot, summarisation, etc.).
+// feature that owns them (chatbot, summarisation, etc.).
 // The dispatcher (internal/ai/dispatch) orchestrates the chat loop
 // and uses Strategy as a pure provider of per-feature configuration.
 //
@@ -14,10 +14,6 @@
 // system prompts or pick tools. The dispatcher refuses to run
 // without one. This guarantees a single accountable site per
 // feature for every AI behaviour.
-//
-// F4 ships the interface only — no implementations. Each later
-// feature slice (N1, N2, U1, ...) ships exactly one Strategy
-// implementation.
 package strategy
 
 import (
@@ -56,15 +52,11 @@ type Strategy interface {
 	Context(ctx context.Context, in StrategyInput) ([]provider.Message, error)
 
 	// RedactionPolicy returns the redaction rules to apply to
-	// outbound and inbound messages. F8 will define the concrete
-	// policy type; F4 ships the placeholder so Dispatcher.Run
-	// has somewhere to call into.
+	// outbound and inbound messages.
 	RedactionPolicy() RedactionPolicy
 
 	// EvalGoldens returns the deterministic test cases this
-	// feature must keep passing. F6 (eval harness) reads them via
-	// the strategy registry so adding a feature automatically
-	// adds it to CI.
+	// feature must keep passing.
 	EvalGoldens() []EvalGolden
 }
 
@@ -85,35 +77,24 @@ type StrategyInput struct {
 	History []provider.Message
 }
 
-// RedactionPolicy is a forward-declared placeholder for the F8
-// redaction policy type. The interface is intentionally empty —
-// F4 only requires that Strategy can return SOMETHING that the
-// dispatcher can pass through. F8 will widen this with a concrete
-// Apply(...) method (or replace it with a struct alias).
-//
-// Until F8 lands, return NoRedaction{} from your Strategy.
+// RedactionPolicy is a marker interface for strategy-specific redaction
+// rules. Concrete adapters interpret the marker at dispatch time.
 type RedactionPolicy interface {
-	// policyMarker is a non-exported marker so that no caller
-	// outside this package can synthesise a "wrong" policy. F8
-	// will add Apply(...) here.
+	// policyMarker prevents callers outside this package from
+	// synthesising an arbitrary policy.
 	policyMarker()
 }
 
-// NoRedaction is the zero-value placeholder policy: pass everything
-// through unchanged. Returned by features that have no redaction
-// requirements (e.g., the F4 starter tools that touch only
-// non-PII numeric data).
+// NoRedaction is the zero-value policy for features with no redaction
+// requirements.
 type NoRedaction struct{}
 
 func (NoRedaction) policyMarker() {}
 
-// EvalGolden is a forward-declared placeholder for the F6 eval
-// harness's golden test type. The interface is intentionally
-// minimal — F6 will widen it. Strategies that have no goldens to
-// declare yet may return nil.
+// EvalGolden is the minimal marker for a strategy evaluation case.
+// Strategies that have no goldens to declare may return nil.
 type EvalGolden interface {
-	// goldenMarker is a non-exported marker so that no caller
-	// outside this package can synthesise a "wrong" golden. F6
-	// will add fields/methods here.
+	// goldenMarker prevents callers outside this package from
+	// synthesising arbitrary goldens.
 	goldenMarker()
 }

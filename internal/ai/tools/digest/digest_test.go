@@ -1,9 +1,7 @@
-// Phase-50 / 0012 — U2 Weekly digest narration.
-//
-// digest_test.go covers the new query_weekly_digest_context tool +
-// the RegisterDigestTools wiring. The fakes (toolstest.FakeDrives, toolstest.FakeCharges)
-// live in builtins_test.go; this file is in the same package so it
-// reuses them directly.
+// digest_test.go covers query_weekly_digest_context and
+// RegisterDigestTools wiring. The fakes (toolstest.FakeDrives,
+// toolstest.FakeCharges) live in builtins_test.go; this file is in
+// the same package so it reuses them directly.
 
 package digest
 
@@ -142,10 +140,9 @@ func TestQueryWeeklyDigestContext_ValidateAcceptsCanonical(t *testing.T) {
 // behavioural test: build a small in-memory week of drives +
 // charges and assert the SI sums the tool returns are correct.
 //
-// All numeric fields are SI canonical (Phase-48 contract). A
-// regression that drops the EnergyUsedWh nil-skip would silently
-// mis-sum energy and the user's narration would lie — this test
-// catches that.
+// All numeric fields are SI canonical. A regression that drops the
+// EnergyUsedWh nil-skip would silently mis-sum energy and the user's
+// narration would lie — this test catches that.
 func TestQueryWeeklyDigestContext_ExecuteAggregates(t *testing.T) {
 	t.Parallel()
 	used1 := float64(8000)

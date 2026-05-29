@@ -1,4 +1,4 @@
-// Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
+// Smart-charge schedule suggestion tool tests.
 //
 // Unit tests for draft_charge_schedule + validate_charge_schedule.
 // Both tools are propose-only and hermetic — the tests substitute a

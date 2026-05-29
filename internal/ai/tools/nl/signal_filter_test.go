@@ -1,5 +1,3 @@
-// Phase-50 / 0044 — S3 Signal explorer NL filter.
-//
 // Tool tests for draft_signal_filter + validate_signal_filter.
 // Both tools are pure functions over input + scope context +
 // SignalFilterValidator interface; the tests stub the validator
@@ -36,7 +34,7 @@ func scopedSignalCtx(vehicleID int64, signals []string) context.Context {
 	return WithScopedSignalCatalog(context.Background(), vehicleID, signals)
 }
 
-// --- draft_signal_filter happy paths -------------------------------
+// draft_signal_filter happy paths.
 
 // TestDraftSignalFilter_HappyPath_OK proves a valid LLM payload
 // yields status="ok" with the filter exactly mirrored back.
@@ -119,7 +117,7 @@ func TestDraftSignalFilter_MultipleSignals_OK(t *testing.T) {
 	}
 }
 
-// --- scope-binding refusals ----------------------------------------
+// Scope-binding refusals.
 
 // TestDraftSignalFilter_NoScope_Refuses proves the missing-scope
 // case is a hard error, not a silent permit.
@@ -239,7 +237,7 @@ func TestDraftSignalFilter_DuplicateSignal_Refuses(t *testing.T) {
 	}
 }
 
-// --- shape-check refusals ------------------------------------------
+// Shape-check refusals.
 
 // TestDraftSignalFilter_BadRangePreset_Refuses proves an unsupported
 // range preset is refused at scope-check time (defence in depth on
@@ -287,7 +285,7 @@ func TestDraftSignalFilter_BadPerPage_Refuses(t *testing.T) {
 	}
 }
 
-// --- validator delegation ------------------------------------------
+// Validator delegation.
 
 // TestDraftSignalFilter_ValidatorReject_StatusInvalid proves a
 // validator rejection surfaces as status="invalid" in the envelope
@@ -345,7 +343,7 @@ func TestDraftSignalFilter_NilValidator_Errors(t *testing.T) {
 	}
 }
 
-// --- validate_signal_filter happy path -----------------------------
+// validate_signal_filter happy path.
 
 // TestValidateSignalFilter_HappyPath_OK proves the validate tool
 // produces the same envelope shape as the draft tool (both share
@@ -404,7 +402,7 @@ func TestValidateSignalFilter_OutOfScope_Refuses(t *testing.T) {
 	}
 }
 
-// --- bad input rejected at Validate-stage --------------------------
+// Bad input rejected at Validate-stage.
 
 // TestDraftSignalFilter_BadInput_RejectedAtValidate proves the
 // per-field validator-tag enforcement happens BEFORE Execute is
@@ -443,7 +441,7 @@ func TestDraftSignalFilter_BadInput_RejectedAtValidate(t *testing.T) {
 	}
 }
 
-// --- tool metadata -------------------------------------------------
+// Tool metadata.
 
 // TestSignalFilterTools_Mutates_AlwaysFalse pins the propose-only
 // invariant: neither tool may report Mutates=true. A future edit
@@ -493,7 +491,7 @@ func TestSignalFilterTools_Descriptions_MentionEnumerations(t *testing.T) {
 	}
 }
 
-// --- scope round-trip helpers --------------------------------------
+// Scope round-trip helpers.
 
 // TestScopedSignalCatalog_RoundTrip proves the WithScopedSignalCatalog
 // + ScopedSignalCatalogFromContext pair installs and reads back the
@@ -546,7 +544,7 @@ func TestScopedSignalCatalog_Missing(t *testing.T) {
 	}
 }
 
-// --- registration --------------------------------------------------
+// Registration.
 
 // TestRegisterSignalExplorerNlFilterTools_RegistersBoth proves the
 // helper registers BOTH tools on the registry — a regression where
@@ -566,7 +564,7 @@ func TestRegisterSignalExplorerNlFilterTools_RegistersBoth(t *testing.T) {
 	}
 }
 
-// --- defensive copies ----------------------------------------------
+// Defensive copies.
 
 // TestAllowedSignalFilterRangePresets_DefensiveCopy proves the
 // exported allowlist accessor returns a copy — a caller that

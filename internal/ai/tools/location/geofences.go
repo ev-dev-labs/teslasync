@@ -1,6 +1,6 @@
-// Phase-50 / 0038 — G2 Suggest new geofences.
+// Suggest-new-geofences AI tools.
 //
-// suggest_new_geofences.go ships TWO new propose-only tools:
+// This file defines two propose-only tools:
 //
 //   - `draft_geofence`    — accept a location_id + an LLM-proposed name
 //                           + radius_m and return a normalized + validated
@@ -32,8 +32,7 @@
 // to form" which copies the proposed name + centroid + radius into
 // the existing baseline Add Geofence modal, then SAVES IT THEMSELVES
 // via the canonical baseline POST /api/v1/geofences (out of scope
-// for this slice's write surface; the slice prompt mandates "without
-// creating them autonomously"); the LLM has no tool that writes.
+// for this AI surface); the LLM has no tool that writes.
 //
 // "Unfenced" interpretation: the strategy targets visited-location
 // aggregates that have no overlapping geofence in the database. The
@@ -43,27 +42,23 @@
 // request a geofence around a less-visited spot too (e.g. a
 // scheduled appointment location).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Route every mutation proposal through F4 tools and existing
-//     typed DTO validation. The LLM never writes raw SQL and never
-//     bypasses existing handlers." → both tools delegate validation
-//     to GeofenceValidator (production-wired to
+//   - Both tools delegate validation to GeofenceValidator (production-wired to
 //     *api.AISuggestGeofenceValidator, which mirrors the same
 //     trimming + length + control-character + radius rules the
 //     canonical POST /api/v1/geofences handler enforces). A draft
 //     accepted here is byte-equivalent to a draft the canonical save
 //     handler would accept.
 //
-//   - "the LLM never writes raw SQL" → tools have no DB handle. The
+//   - Tools have no DB handle. The
 //     evidence envelope is built from the same narrow LocationSource
 //     interface auto-name-unnamed-locations already exposes
 //     (production: *api.AILocationSource which composes a
 //     drives-table read for the by-ID lookup) — the same read
 //     surface the GET /api/v1/locations baseline handler uses.
 //
-//   - "no duplicate write paths" → no save_* / update_* / delete_*
-//     tool exists in this slice; the evidence is a pure read of
+//   - No save_* / update_* / delete_* tool exists here; the evidence is a pure read of
 //     existing aggregates.
 //
 //   - Privacy: the LLM is shown the address_name string as a
@@ -71,10 +66,10 @@
 //     allow-list intentionally excludes ClassStreetAddr +
 //     ClassLatLong); the round-trip tags are restored only in the
 //     final SSE frame returned to the same authenticated user.
-//     The centroid lat/lon flows through the typed F4 envelope in
-//     the tool reply (not through prompt prose) to the SPA, where
-//     the user confirms the values inside the existing Add
-//     Geofence form before clicking Save.
+//     The centroid lat/lon flows through the typed tool envelope,
+//     not through prompt prose, to the SPA, where
+//     the user confirms the values inside the existing Add Geofence
+//     form before clicking Save.
 
 package location
 
@@ -99,8 +94,7 @@ import (
 // fakes.
 //
 // The interface MUST stay validation-only — adding a Save or Update
-// method here would defeat the propose-only contract that ADR-015 §I3
-// + the slice prompt mandate.
+// method here would defeat the propose-only contract required by ADR-015 §I3.
 type GeofenceValidator interface {
 	// ValidateGeofence reports whether the proposed name + radius
 	// would be accepted by the canonical save path for loc.
@@ -155,12 +149,12 @@ type geofenceDraftInput struct {
 // draft_geofence tool returns alongside the validated draft. The LLM
 // is expected to ground its follow-up rationale in these fields.
 // Numeric units are SI-canonical (meters for radius, seconds for
-// duration) per Phase-48 — the frontend converts to user-preferred
-// display units at the render boundary.
+// duration); the frontend converts to user-preferred display units
+// at the render boundary.
 type geofenceEvidence struct {
 	// CurrentAddressName is the geocoder's last-known label for
 	// this location. May be empty / "Unknown" / coord-shaped for
-	// the unfenced locations this slice targets; the LLM uses the
+	// the unfenced locations this tool targets; the LLM uses the
 	// presence/absence of this string to decide whether to
 	// reference the existing label or propose a generic descriptor
 	// like "Frequent Stop".
@@ -553,20 +547,17 @@ func (t *validateGeofenceTool) Execute(ctx context.Context, in any) (any, error)
 // interfaces RegisterSuggestNewGeofencesTools needs. Mirrors
 // [AutoNameUnnamedLocationsSources] / [AutoTripNamingSources].
 //
-// Production wiring (router.go) instantiates the two production
-// adapters (*api.AILocationSource — already exists from slice 0037 —
-// + *api.AISuggestGeofenceValidator); tests substitute deterministic
-// fakes.
+// Production wiring instantiates *api.AILocationSource and
+// *api.AISuggestGeofenceValidator; tests substitute deterministic fakes.
 type SuggestNewGeofencesSources struct {
 	Locations LocationSource
 	Validator GeofenceValidator
 }
 
 // RegisterSuggestNewGeofencesTools installs the suggest-new-geofences
-// slice's tools on r. Called from router.go AFTER the previous
-// slice's tool registrations so the registry's alphabetical Names
-// list grows deterministically without disturbing earlier
-// registrations or any builtin-names pin tests.
+// tools on r. Called from router.go after earlier tool registrations so
+// the registry's alphabetical Names list grows deterministically without
+// disturbing earlier registrations or builtin-name pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first

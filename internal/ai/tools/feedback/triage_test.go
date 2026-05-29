@@ -1,10 +1,6 @@
-// Phase-50 / 0046 — S5 Feedback queue triage.
-//
-// Tool tests for draft_feedback_triage + validate_feedback_triage +
-// retrieve_feedback_chunks. All three tools are pure functions over
-// input + scope context + narrow read-only ports; the tests stub
-// the source / retriever with deterministic fakes so the tests
-// stay hermetic (no api package import, no DB).
+// Tool tests for draft_feedback_triage, validate_feedback_triage,
+// and retrieve_feedback_chunks. The tests use deterministic fakes
+// for the read-only ports so they stay hermetic.
 
 package feedback
 

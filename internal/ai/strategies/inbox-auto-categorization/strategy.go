@@ -1,6 +1,4 @@
-// Package inboxautocategorization is the Phase-50 / 0035 A2
-// strategy for the LLM-assisted inbox auto-categorization
-// surface.
+// Package inboxautocategorization defines the LLM-assisted inbox categorization strategy.
 //
 // The strategy declares:
 //
@@ -22,18 +20,17 @@
 //     in the UI;
 //
 //   - the two tools the LLM is allowed to call —
-//     `draft_alert_categories` (NEW for this slice) and
-//     `validate_alert_category` (NEW for this slice; reused
-//     by future inbox-related slices). Both tools are
+//     `draft_alert_categories` and `validate_alert_category`.
+//     Both tools are
 //     PROPOSE-ONLY pure-functional DTO transforms that read
 //     existing notification_logs + alert_rules state but do
 //     NOT touch the database write path. Notifications are
 //     never updated, archived, deleted, or re-classified by
-//     this slice; the filter handoff is a SPA URL state copy,
+//     this flow; the filter handoff is a SPA URL state copy,
 //     not a server-side mutation;
 //
-//   - the redaction policy (`PolicyAlertBuilder`, REUSED from
-//     N1) which allows nothing — alert IDs, rule names, signal
+//   - the redaction policy (`PolicyAlertBuilder`) which allows
+//     nothing — alert IDs, rule names, signal
 //     names, and notification text flow through the typed F4
 //     tool envelope, not through prompt prose. Every PII class
 //     is redacted via round-trip tags before the prompt reaches
@@ -174,24 +171,21 @@ func New() *Strategy {
 	return &Strategy{}
 }
 
-// FeatureID implements [strategy.Strategy]. Returns the
-// canonical registry key.
+// FeatureID returns the canonical registry key.
 func (s *Strategy) FeatureID() string { return FeatureID }
 
-// System implements [strategy.Strategy]. Returns the
-// deterministic system prompt.
+// System returns the deterministic system prompt.
 func (s *Strategy) System() string { return SystemPrompt }
 
-// Tools implements [strategy.Strategy]. Returns a defensive copy
-// of the allowed tool names so a caller cannot mutate the
-// package-level allowlist.
+// Tools returns a defensive copy of the allowed tool names so callers
+// cannot mutate the package-level allowlist.
 func (s *Strategy) Tools() []string {
 	out := make([]string, len(allowedTools))
 	copy(out, allowedTools)
 	return out
 }
 
-// Context implements [strategy.Strategy]. The dispatcher seeds
+// Context relies on the dispatcher seeding
 // the conversation from StrategyInput.LastMessage / History,
 // and the AI handler builds the synthesised "categorize the
 // inbox for vehicle V over N days" prompt before the call, so
@@ -201,36 +195,32 @@ func (s *Strategy) Tools() []string {
 // Future work: this is where a per-vehicle "current rule
 // catalog" snippet would be injected once categorization grows
 // that surface (e.g. for cross-rule de-dup category hints).
-// Today's slice keeps Context empty so the dispatcher's
-// behaviour is fully determined by [System] + History.
+// Context stays empty so dispatcher behavior is fully determined by
+// [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
-// RedactionPolicy implements [strategy.Strategy]. Returns
+// RedactionPolicy returns
 // PolicyAlertBuilder wrapped through the F4↔F8 adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
-// internal/ai/redact/policies.go. Allowed classes: none; alert
-// payloads are redacted and category proposals are
-// user-confirmed. Round-trip required: no". The policy's Allow
+// PolicyAlertBuilder allows no cleartext PII; alert payloads are
+// redacted and category proposals are user-confirmed. The policy's Allow
 // list is nil, so every PII class — VIN, lat/long, vehicle
 // name, addresses, phone numbers, notification text — is
 // redacted to a round-trip tag before the prompt reaches the
-// provider. The policy is REUSED from N1 (nl-alert-builder)
-// and 0034 (alert-tuning-suggestions) intentionally: all three
-// surfaces have the same threat model (the LLM never needs
-// cleartext alert/notification content; the typed envelope
-// carries category counts and rule_ids). Sharing the policy
+// provider. This strategy shares the alert-builder threat model:
+// the LLM never needs cleartext alert or notification content;
+// the typed envelope carries category counts and rule_ids. Sharing the policy
 // keeps the F8 redaction surface small and easier to audit.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {
 	return redactadapter.Wrap(redact.PolicyAlertBuilder())
 }
 
-// EvalGoldens implements [strategy.Strategy]. The eval harness
+// EvalGoldens stays nil because the eval harness
 // loads goldens from
 // `internal/ai/strategies/inbox-auto-categorization/goldens.yaml`
 // directly (see internal/ai/eval/golden.go LoadAllGoldens) —

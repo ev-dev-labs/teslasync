@@ -1,15 +1,13 @@
-// Phase-50 / 0032 — T2 Cabin temperature impact narrative.
-//
-// temperature_impact.go ships ONE new read-only tool:
-// `query_temperature_impact`. The tool is the single F4 surface
+// temperature_impact.go ships one read-only tool:
+// `query_temperature_impact`. The tool is the only surface
 // the cabin-temperature-impact-narrative strategy is allowed to
 // call (see
 // internal/ai/strategies/cabin-temperature-impact-narrative/strategy.go's
 // allowedTools whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "thin Tool wrapper over an existing handler". The
+//   - The tool is a thin wrapper over an existing handler. The
 //     production adapter (*api.AITemperatureImpactSource) calls
 //     the SHARED api.ComputeTemperatureImpact helper that returns
 //     the SAME deterministic temperature-impact aggregates the
@@ -20,7 +18,7 @@
 //
 //   - The tool is a READ — Mutates() returns false. The
 //     dispatcher's deny-all confirm gate refuses anything
-//     mutating; this slice ships zero mutating tools.
+//     mutating; this package ships zero mutating tools.
 //
 //   - One tool, one strategy: the tool is registered on the
 //     process-wide tools.Registry alongside the builtins so a
@@ -140,8 +138,8 @@ type TemperatureImpact struct {
 // deterministic fakes so the tool unit tests stay hermetic.
 //
 // The interface MUST stay read-only — adding a Save / Update
-// method here would defeat the read-only contract that ADR-015
-// §I3 + the slice prompt mandate.
+// method here would defeat the read-only contract required by
+// ADR-015 §I3.
 type TemperatureImpactSource interface {
 	// QueryTemperatureImpact runs the canonical deterministic
 	// temperature-impact aggregator for vehicleID and returns
@@ -250,11 +248,10 @@ type CabinTemperatureImpactNarrativeSources struct {
 }
 
 // RegisterCabinTemperatureImpactNarrativeTools installs the
-// cabin-temperature-impact-narrative slice's tools on r. Called
-// from router.go AFTER the preheat-precool-recommender tool
-// registration so the registry's alphabetical Names list grows
-// deterministically without disturbing earlier registrations or
-// any builtin-names pin tests.
+// cabin-temperature-impact-narrative tools on r. Called from
+// router.go after the preheat-precool-recommender registration so
+// the registry's alphabetical Names list grows deterministically
+// without disturbing earlier registrations or builtin-name pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) —
 // a second call is a wiring bug detected at boot, not at first

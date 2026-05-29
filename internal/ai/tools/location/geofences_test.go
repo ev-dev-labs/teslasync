@@ -1,4 +1,4 @@
-// Phase-50 / 0038 — G2 Suggest new geofences.
+// Suggested geofence tool tests.
 //
 // Tool tests for draft_geofence + validate_geofence. Both tools are
 // pure functions over input + LocationSource + GeofenceValidator

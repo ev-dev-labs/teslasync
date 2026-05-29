@@ -81,7 +81,7 @@ func TestCompute_OpenAIRates(t *testing.T) {
 
 // TestCompute_AnthropicRates pins the Anthropic rate table the same
 // way TestCompute_OpenAIRates pins OpenAI's. Numbers reviewed against
-// https://www.anthropic.com/pricing during Phase-50.
+// https://www.anthropic.com/pricing.
 func TestCompute_AnthropicRates(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

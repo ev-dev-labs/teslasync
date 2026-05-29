@@ -7,11 +7,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/limit"
 )
 
-// WithCostCap returns the decorator that runs every Chat / Stream /
-// Embed call through the [limit.CostCap] gate. The decorator sits
-// OUTSIDE the rate-limit decorator (closer to the dispatcher) per
-// the F9 prompt design D10.3 — cost-cap is the cheaper check (LRU
-// hit) and a cost-cap reject must NOT consume rate-limit budget.
+// WithCostCap runs every Chat, Stream, and Embed call through the
+// [limit.CostCap] gate. It should wrap outside the rate limiter because
+// cost-cap checks are cheaper and rejects must not consume rate-limit
+// budget.
 //
 // The cap is constructed at boot via [limit.NewCostCap] with the
 // user's settings-store-backed [limit.CapLookup] already wired in.
@@ -33,8 +32,7 @@ import (
 //     rung outwards) writes the authoritative number to ai_call_log
 //     and the next 30s cache refresh picks it up.
 //
-// nil cap is allowed (acts as a passthrough). A build that omits F9
-// wiring has zero overhead.
+// A nil cap is allowed and acts as a passthrough.
 func WithCostCap(costCap *limit.CostCap) Decorator {
 	return func(p Provider) Provider {
 		if costCap == nil {
@@ -68,8 +66,7 @@ func (c *costCappedProvider) Chat(ctx context.Context, req ChatRequest) (*ChatRe
 
 	resp, callErr := c.inner.Chat(ctx, req)
 	if callErr != nil {
-		// Failed call - still release with 0 actual; the audit row
-		// will record 0 cost too.
+		// Failed calls release the reservation with zero actual cost.
 		release(0)
 		return resp, callErr
 	}

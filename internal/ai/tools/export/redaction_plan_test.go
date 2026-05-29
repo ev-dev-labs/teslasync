@@ -1,12 +1,12 @@
-// Phase-50 / 0052 — P1 Helix export redaction advisor.
+// Export redaction advisor tool tests.
 //
 // Unit tests for the draft_export_redaction_plan +
 // validate_export_redaction_plan tools. Both tools wrap a STATIC
 // in-process Go catalog and a pure-Go validator; the unit tests
 // stay hermetic by construction (no fakes needed).
 //
-// The tools also enforce the per-request scope binding the slice
-// prompt's security model relies on (defence against
+// The tools also enforce per-request scope binding as a defence
+// against
 // prompt-injection exfiltration via operator-authored
 // description strings). The scope-binding tests pin the
 // contract: missing scope ⇒ refuse; mismatched scope ⇒ refuse;
@@ -120,10 +120,9 @@ func TestSharedExportTypes_StableExportedAllowSet(t *testing.T) {
 }
 
 // TestSharedExportRedactionReservedSourceTypes_StableForwardCompat
-// pins the reserved F7 source-type strings. The slice prompt
-// reserves them for a future retrieve tool; a future slice that
-// adds the tool MUST use the same strings or the system prompt
-// + goldens will drift.
+// pins reserved source-type strings for a future retrieve tool.
+// Any future tool MUST use the same strings or the system prompt
+// and goldens will drift.
 func TestSharedExportRedactionReservedSourceTypes_StableForwardCompat(t *testing.T) {
 	t.Parallel()
 	got := SharedExportRedactionReservedSourceTypes()

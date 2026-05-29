@@ -1,10 +1,9 @@
-// Package nlalertbuilder is the Phase-50 / N1 strategy for the
-// LLM-assisted "natural-language alert builder".
+// Package nlalertbuilder defines the LLM-assisted natural-language alert builder strategy.
 //
 // The strategy declares:
 //
 //   - the system prompt that frames the builder as a propose-only
-//     assistant — produce a typed AlertRule DTO via the F4 tools,
+//     assistant — produce a typed AlertRule DTO via the tools,
 //     do NOT save anything, NEVER write SQL, refuse cross-vehicle
 //     requests, refuse to suspend or disable rules;
 //   - the two read-only tools the LLM is allowed to call —
@@ -14,7 +13,7 @@
 //     POST /api/v1/alerts/rules typed handler AFTER the user
 //     explicitly clicks Save in the AlertStudioPage UI;
 //   - the redaction policy (`PolicyAlertBuilder`) which allows
-//     nothing — alert IDs and selectors flow through the typed F4
+//     nothing — alert IDs and selectors flow through the typed
 //     tools, not through prose. Every PII class is redacted via
 //     round-trip tags.
 //
@@ -142,19 +141,19 @@ func (s *Strategy) Tools() []string {
 // Future work: this is where a per-vehicle "current signal catalog
 // snippet" or "user's existing rules summary" would be injected once
 // alert drafting grows that surface (e.g. for de-duplication). The
-// current slice keeps Context empty so the dispatcher's behaviour is
+// Context stays empty so the dispatcher's behaviour is
 // fully determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyAlertBuilder wrapped through the F4↔F8 adapter so the
+// PolicyAlertBuilder wrapped through the strategy redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyAlertBuilder from
+// Policy contract: "Policy: PolicyAlertBuilder from
 // internal/ai/redact/policies.go. Allowed classes: none;
 // identifiers flow through tools, not prompt text". The policy's
 // Allow list is nil, so every PII class — VIN, lat/long, vehicle

@@ -1,5 +1,3 @@
-// Phase-50 / 0015 — N1 Natural-language alert builder.
-//
 // Tool tests for draft_alert_rule + validate_alert_rule. Both tools
 // are pure functions over input + AlertRuleValidator interface; the
 // tests stub the validator with a deterministic fake so the tests

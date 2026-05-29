@@ -1,12 +1,6 @@
-// Phase-50 / 0022 — D2 Speed-profile insights.
-//
-// speed_profile_test.go covers the new query_speed_profile +
-// query_drive_context tools and the RegisterSpeedProfileInsightsTools
-// wiring. Mirrors the shape of drive_coaching_test.go and
-// charging_diagnosis_test.go. Reuses the shared toolstest.FakeDrives source
-// from builtins_test.go and the failingDrivesImpl from
-// drive_coaching_test.go so the existing drive-domain tools and
-// these new tools share the same test substrate.
+// Tests cover query_speed_profile, query_drive_context, and registry wiring.
+// They reuse the shared drive fakes so speed-profile tools and other
+// drive-domain tools share the same test substrate.
 
 package speed
 
@@ -23,10 +17,8 @@ import (
 )
 
 // failingDrivesImpl is a local test-only DriveSource that returns
-// getByIDErr on every GetByID call. Originally lived in
-// drive_coaching_test.go; duplicated here after the R6.25 carve of
-// drive_coaching → coaching/ (this parent test cannot import the
-// subpkg without inducing a parent→child→parent test cycle).
+// getByIDErr on every GetByID call. Kept local because this parent
+// package cannot import child tool packages without creating a test cycle.
 type failingDrivesImpl struct {
 	toolstest.FakeDrives
 	getByIDErr error
@@ -37,7 +29,7 @@ func (f *failingDrivesImpl) GetByID(_ context.Context, _ int64) (*drivemodel.Dri
 }
 
 // TestRegisterSpeedProfileInsightsTools_RegistersBothTools proves
-// the wiring helper installs the two new tools on a fresh registry.
+// the wiring helper installs the two tools on a fresh registry.
 // Mirrors the existing RegisterDriveCoachingTools test pattern.
 func TestRegisterSpeedProfileInsightsTools_RegistersBothTools(t *testing.T) {
 	t.Parallel()
@@ -51,8 +43,8 @@ func TestRegisterSpeedProfileInsightsTools_RegistersBothTools(t *testing.T) {
 }
 
 // TestRegisterSpeedProfileInsightsTools_DoesNotShadowBuiltins proves
-// that installing the new tools AFTER the 12 builtins + the
-// digest/year-review/anomaly/drive-coaching tools keeps every
+// that installing these tools after the builtins and other
+// drive-domain tools keeps every
 // previously-registered tool reachable. Defends against an
 // accidental same-name collision.
 func TestRegisterSpeedProfileInsightsTools_DoesNotShadowBuiltins(t *testing.T) {

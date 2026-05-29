@@ -1,80 +1,13 @@
-// Package mqttsseinspectorexplanations is the Phase-50 / 0047 S6
-// strategy for the LLM-backed mqtt-sse-inspector-explanations
-// surface.
+// Package mqttsseinspectorexplanations explains MQTT, SSE, and background-job
+// stream state from deterministic diagnostics.
 //
-// The strategy declares:
+// The strategy must query the scoped stream-inspector window before narrating
+// and may retrieve matching stream context. It never invents broker events,
+// vehicle states, job runs, or root causes beyond what the typed envelope
+// reports, and it refuses windows outside the request scope.
 //
-//   - the system prompt that frames the surface as a propose-only
-//     stream-state explainer: produce a 3-6 sentence factual
-//     explanation by routing through query_stream_inspector FIRST
-//     (the deterministic typed envelope for the in-scope window),
-//     then OPTIONALLY retrieve_stream_chunks (F7 retrieval
-//     restricted to {mqtt_status, sse_status, job_status} source
-//     types) for per-event context. The narrative MUST be grounded
-//     strictly in the tool reply; the LLM never invents broker
-//     events, never claims a vehicle is online the envelope does
-//     not record as such, and never speculates about root cause
-//     beyond what the envelope explicitly states.
-//
-//   - the two read-only tools the LLM is allowed to call:
-//
-//     1. `query_stream_inspector` — accept a typed
-//     {from_unix, to_unix} input and return the deterministic
-//     [diagnostic.StreamInspectorEnvelope] (window bounds, broker
-//     connectivity + uptime + topic patterns, per-vehicle stream
-//     stats with stale flag, SSE hub state, background-job
-//     freshness). The tool is per-request scope-bound to the
-//     (from_unix, to_unix) tuple the handler installed via
-//     diagnostic.WithScopedStreamInspectorWindow; the LLM CANNOT
-//     query a window outside that scope. Defence-in-depth
-//     against prompt injection in operator-readable VINs / topic
-//     names / broker hostnames.
-//
-//     2. `retrieve_stream_chunks` — a thin wrapper over the F7
-//     rag.Retriever scoped to the calling user_subject,
-//     restricted to the slice's per-feature source-type
-//     allowlist {mqtt_status, sse_status, job_status}. All three
-//     source types are reserved by string for forward-
-//     compatibility — a future slice will index per-window
-//     broker / SSE-hub / job chunks. Until then,
-//     retrieve_stream_chunks called with any of these source
-//     types simply returns zero chunks for that corpus — which
-//     is the correct behaviour: the strategy's goldens already
-//     cover the zero-matches narration and the system prompt
-//     instructs the LLM to answer gracefully when zero chunks
-//     are returned.
-//
-//   - the redaction policy (`PolicyChatbot`) which the slice
-//     prompt mandates ("Allowed classes: none; broker and stream
-//     details are redacted where needed"): VIN, lat/long,
-//     addresses, place names, vehicle-name, AND every other PII
-//     class remain tagged via round-trip markers so a leaked
-//     transcript reveals nothing about broker hostnames, ports,
-//     SSE client identifiers, or VINs.
-//
-// The strategy is consumed by the AI HTTP handler at
-// `internal/api/ai_mqtt_sse_inspector_explanations_handler.go`
-// which builds a dispatcher, a stream.Writer (SSE), and runs a
-// one-shot generation loop scoped to the per-request (from_unix,
-// to_unix) tuple. The non-AI baseline rendered by the SPA route
-// /mqtt-inspector — the deterministic broker-status snapshot
-// table — is unchanged. The registry's Frontend coverage anchor
-// is `/system/streams`; the AI section is rendered inside the
-// canonical MQTTInspectorPage when the feature is enabled.
-// Off-mode users never see the AI section at all (ADR-015 §I3,
-// §I5, §I6).
-//
-// ADR-015 alignment:
-//
-//   - I1 default-off:    feature toggle defaults false in features.Registry.
-//   - I3 baseline intact: this strategy never replaces the
-//     deterministic MQTT broker-status snapshot or its per-vehicle
-//     table.
-//   - I7 per-feature:    the AI route is gated by
-//     guard.Wrap("mqtt-sse-inspector-explanations").
-//   - I9 redaction:      PolicyChatbot redacts EVERY PII class so
-//     a confused LLM cannot leak a hostname, IP, VIN, or any
-//     pasted value to the model.
+// The deterministic /system/streams baseline remains unchanged; this strategy
+// only adds an opt-in explanation panel when the feature is enabled.
 package mqttsseinspectorexplanations
 
 import (
@@ -188,15 +121,13 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 }
 
 // RedactionPolicy implements [strategy.Strategy]. Returns
-// PolicyChatbot wrapped through the F4↔F8 adapter so the
+// PolicyChatbot wrapped through the redaction adapter so the
 // dispatcher's per-request ctx-installation step (dispatch.Run
 // installs the policy via redact.WithPolicy) sees the concrete
 // policy.
 //
-// Per the slice prompt: "Policy: PolicyChatbot from
-// internal/ai/redact/policies.go. Allowed classes: none; broker
-// and stream details are redacted where needed. Round-trip
-// required: yes." PolicyChatbot's deny-by-default stance keeps
+// This policy allows no cleartext PII; broker and stream details remain
+// tagged and round-tripped where needed. PolicyChatbot's deny-by-default stance keeps
 // every PII class round-tripped to a tag before the message ever
 // reaches the provider.
 func (s *Strategy) RedactionPolicy() strategy.RedactionPolicy {

@@ -1,6 +1,4 @@
-// Phase-50 / 0043 — S2 Data repair suggestions.
-//
-// data_repair_suggestions.go ships TWO new propose-only tools:
+// Data repair suggestions expose two propose-only tools:
 //
 //   - `draft_data_repair_plan`   — accept a typed RepairPlan shape
 //                                  (target_kind, target_id, action,
@@ -37,15 +35,12 @@
 // the tool with the wrong ID, the scope check refuses the call
 // before any cross-row mutation can be proposed.
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
-//   - "Route every mutation proposal through F4 tools and existing
-//     typed DTO validation. The LLM never writes raw SQL and never
-//     bypasses existing handlers." → both tools delegate the per-
-//     kind allowed-update-key check to the SAME field allowlists
-//     the canonical chargingRepo.PartialUpdate / driveRepo.
-//     PartialUpdate use, exposed via the narrow
-//     [DataRepairPlanValidator] port.
+//   - Every mutation proposal flows through typed DTO validation. Both
+//     tools delegate the per-kind allowed-update-key check to the same
+//     field allowlists used by chargingRepo.PartialUpdate and
+//     driveRepo.PartialUpdate, exposed via [DataRepairPlanValidator].
 //
 //   - "the LLM never writes raw SQL" → tools have no DB handle.
 //     The interface is intentionally narrow: a single Validate
@@ -300,9 +295,8 @@ func AllowedDataRepairDriveUpdateKeys() []string {
 // accepted by the canonical PUT /api/v1/data-repair/{kind}/{id}
 // handler. Tests substitute deterministic fakes.
 //
-// The interface MUST stay validation-only — adding an Apply or
-// Save method here would defeat the propose-only contract that
-// ADR-015 §I3 + the slice prompt mandate.
+// The interface must stay validation-only; adding Apply or Save would
+// defeat the propose-only contract in ADR-015 §I3.
 type DataRepairPlanValidator interface {
 	// ValidateDataRepairPlan reports whether the plan would be
 	// accepted by the canonical typed handler for its action +
@@ -698,12 +692,10 @@ type DataRepairSuggestionsSources struct {
 	Validator DataRepairPlanValidator
 }
 
-// RegisterDataRepairSuggestionsTools installs the
-// data-repair-suggestions slice's tools on r. Called from
-// router.go AFTER the Phase-50 / 0042 incident-timeline-summarizer
-// registration so the registry's alphabetical Names list grows
-// deterministically without disturbing earlier registrations or
-// any builtin-names pin tests.
+// RegisterDataRepairSuggestionsTools installs the data-repair-suggestions
+// tools on r. Router wiring keeps registration order deterministic so
+// the registry's alphabetical Names list does not disturb earlier
+// builtin-name pin tests.
 //
 // Panics on duplicate registration (Registry.Register panics) — a
 // second call is a wiring bug detected at boot, not at first

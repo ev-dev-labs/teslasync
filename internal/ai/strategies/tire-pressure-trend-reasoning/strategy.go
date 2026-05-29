@@ -1,5 +1,4 @@
-// Package tirepressuretrendreasoning is the Phase-50 / 0033 T3
-// strategy for the LLM-narrated tire-pressure trend reasoner.
+// Package tirepressuretrendreasoning implements LLM-narrated tire-pressure trend reasoning.
 //
 // The strategy declares:
 //
@@ -48,10 +47,10 @@
 // the per-tire history remain the canonical baseline; off-mode
 // users never see the AI surface at all (ADR-015 §I3, §I5, §I6).
 //
-// Service-worker chunks: this slice's frontend code is loaded
+// Service-worker chunks: this feature's frontend code is loaded
 // under the page-bundle for /tire-pressure; the off-mode walker
 // validates code chunks via the `withAiFeature` HOC + the
-// AI_FEATURES map. See the slice log for the documented mapping.
+// AI_FEATURES map.
 //
 // ADR-015 alignment:
 //
@@ -185,7 +184,7 @@ func (s *Strategy) Tools() []string {
 //
 // Future work: this is where a per-vehicle "preferred trend window"
 // preference snippet would be injected once the surface grows that
-// knob. Today's slice keeps Context empty so the dispatcher's
+// knob. Context stays empty so the dispatcher's
 // behaviour is fully determined by [System] + History.
 func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provider.Message, error) {
 	return nil, nil
@@ -197,7 +196,7 @@ func (s *Strategy) Context(_ context.Context, _ strategy.StrategyInput) ([]provi
 // (dispatch.Run installs the policy via redact.WithPolicy) sees
 // the concrete policy.
 //
-// Per the slice prompt: "Allowed classes: ClassVehicleName only;
+// Per the feature requirements: "Allowed classes: ClassVehicleName only;
 // pressure values are user-visible telemetry. Round-trip required:
 // yes". PolicyTirePressureTrendReasoning is the per-feature
 // constructor with the same allow-list as PolicyDigest /

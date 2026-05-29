@@ -1,6 +1,4 @@
-// Phase-50 / 0019 — N5 Per-charging-session diagnosis.
-//
-// charging_diagnosis.go ships TWO new read-only tools:
+// Charging diagnosis exposes two read-only tools:
 // `query_charge_session` (single ChargingSession by ID) and
 // `query_charging_aggregation` (deterministic flag-detection
 // envelope mirroring the frontend
@@ -11,12 +9,12 @@
 // internal/ai/strategies/charging-diagnosis/strategy.go's
 // allowedTools whitelist).
 //
-// Design constraints (from the slice prompt):
+// Design constraints:
 //
 //   - "Tools must call existing typed handlers or services; no
 //     duplicate write paths." Both tools are reads — Mutates()
 //     returns false. The dispatcher's deny-all confirm gate refuses
-//     anything mutating; this slice ships zero mutating tools and
+//     anything mutating; these tools expose no mutation path and
 //     adds nothing to the charging ingestion or aggregation
 //     pipeline.
 //
@@ -63,8 +61,8 @@
 //	  "thresholds":        map,             // pinned thresholds the flags above were evaluated against
 //	}
 //
-// All numeric power/energy fields are SI canonical (Phase-48
-// contract). Derived `avg_power_kw` / `kwh_added` / `cost_per_kwh`
+// All numeric power/energy fields follow the SI storage contract.
+// Derived `avg_power_kw` / `kwh_added` / `cost_per_kwh`
 // are dimensioned for human-readable narration but are still
 // derived from SI inputs; the frontend's useUnits()/useFormatting()
 // at the display boundary handles user-preferred unit conversion.
@@ -79,10 +77,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 )
-
-// ---------------------------------------------------------------------------
-// query_charge_session
-// ---------------------------------------------------------------------------
 
 // queryChargeSessionInput is the typed input shape for the
 // query_charge_session tool. The dispatcher decodes the LLM's
@@ -114,39 +108,35 @@ type queryChargeSession struct {
 	src tools.ChargeSource
 }
 
-// Name implements [Tool].
 func (t *queryChargeSession) Name() string { return "query_charge_session" }
 
-// Description implements [Tool].
 func (t *queryChargeSession) Description() string {
 	return "Return ONE charging session by its numeric ID, including SI energy/power/cost fields. " +
 		"Use this BEFORE query_charging_aggregation to surface the raw session metrics; the " +
 		"aggregation envelope adds the deterministic flag-detection layer on top."
 }
 
-// InputSchema implements [Tool].
 func (t *queryChargeSession) InputSchema() json.RawMessage {
 	return tools.CachedSchema(queryChargeSessionInput{})
 }
 
-// OutputSchema implements [Tool]. Nil ⇒ free-form output object.
+// OutputSchema is nil because the output is a free-form object.
 func (t *queryChargeSession) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. Read-only — never returns true.
+// Mutates stays false because the tool is read-only.
 func (t *queryChargeSession) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty — readable by any
-// authenticated user (the AI guard already gates on ai_mode +
-// per-feature toggle upstream).
+// RequiredScope stays empty because ai_mode and the feature toggle
+// already gate access upstream.
 func (t *queryChargeSession) RequiredScope() string { return "" }
 
-// Validate implements [Tool]. Delegates to the shared validator.
+// Validate uses the shared struct validator.
 func (t *queryChargeSession) Validate(raw json.RawMessage) (any, error) {
 	return tools.ValidateStruct[queryChargeSessionInput](raw)
 }
 
-// Execute implements [Tool]. One repo round-trip; no SQL is
-// written by this method. A nil session (not found) is surfaced as
+// Execute performs one repo round-trip and writes no SQL. A nil session
+// (not found) is surfaced as
 // an explicit error so the dispatcher emits a tool-error frame the
 // LLM can handle — silently returning nil would let the diagnosis
 // fabricate plausible-but-wrong narration.
@@ -165,10 +155,6 @@ func (t *queryChargeSession) Execute(ctx context.Context, in any) (any, error) {
 	return c, nil
 }
 
-// ---------------------------------------------------------------------------
-// query_charging_aggregation
-// ---------------------------------------------------------------------------
-
 // queryChargingAggregationInput mirrors queryChargeSessionInput in
 // shape so the LLM can call both tools with the same JSON object
 // (it just renames the field across two different schema cache
@@ -183,8 +169,7 @@ type queryChargingAggregationInput struct {
 // page, with the SAME thresholds, in the SAME priority order, then
 // returns them in a typed envelope the LLM can quote.
 //
-// The slice prompt's "without changing how flags are computed"
-// mandate is satisfied by:
+// The tool preserves frontend flag behavior by:
 //
 //  1. Replicating the thresholds verbatim (default 0.50 USD/kWh,
 //     5 kW trickle ceiling, 360 minute trickle floor).
@@ -217,10 +202,8 @@ const (
 	chargingFlagBadPowerMinDur       = 30.0  // minutes
 )
 
-// Name implements [Tool].
 func (t *queryChargingAggregation) Name() string { return "query_charging_aggregation" }
 
-// Description implements [Tool].
 func (t *queryChargingAggregation) Description() string {
 	return "Return the deterministic flag-detection envelope for ONE charging session: any of " +
 		"trickle, expensive, low-power (bad_power), interrupted (telemetry_gap), or cost_zero, " +
@@ -230,28 +213,25 @@ func (t *queryChargingAggregation) Description() string {
 		"multiple times for the same session."
 }
 
-// InputSchema implements [Tool].
 func (t *queryChargingAggregation) InputSchema() json.RawMessage {
 	return tools.CachedSchema(queryChargingAggregationInput{})
 }
 
-// OutputSchema implements [Tool]. Nil ⇒ free-form output object.
+// OutputSchema is nil because the output is a free-form object.
 func (t *queryChargingAggregation) OutputSchema() json.RawMessage { return nil }
 
-// Mutates implements [Tool]. Read-only.
+// Mutates stays false because the tool is read-only.
 func (t *queryChargingAggregation) Mutates() bool { return false }
 
-// RequiredScope implements [Tool]. Empty — readable by any
-// authenticated user.
+// RequiredScope stays empty for authenticated users.
 func (t *queryChargingAggregation) RequiredScope() string { return "" }
 
-// Validate implements [Tool].
 func (t *queryChargingAggregation) Validate(raw json.RawMessage) (any, error) {
 	return tools.ValidateStruct[queryChargingAggregationInput](raw)
 }
 
-// Execute implements [Tool]. One repo round-trip then in-memory
-// derivation; no SQL is written by this method.
+// Execute performs one repo round-trip, then in-memory derivation;
+// no SQL is written by this method.
 func (t *queryChargingAggregation) Execute(ctx context.Context, in any) (any, error) {
 	input := in.(queryChargingAggregationInput)
 	if t.src == nil {
@@ -488,8 +468,7 @@ func detectChargingFlags(c *chargingmodel.ChargingSession, durMin *float64, kwhA
 
 	// telemetry_gap — energyKwh < 0.1 AND duration > 5 min.
 	// Mirrors the frontend's "0 kWh added in {dur} — telemetry
-	// gap?" message. Maps to the slice prompt's "interrupted"
-	// flag family.
+	// gap?" message and the interrupted flag family.
 	if kwh < chargingFlagTelemetryGapKwhFloor && dur > chargingFlagTelemetryGapMinDur {
 		flags = append(flags, "telemetry_gap")
 	}
@@ -506,7 +485,7 @@ func detectChargingFlags(c *chargingmodel.ChargingSession, durMin *float64, kwhA
 	}
 
 	// bad_power — DC charger AND duration > 30 min AND avg power
-	// < 3 kW. Maps to the slice prompt's "low-power" flag family.
+	// < 3 kW. Maps to the low-power flag family.
 	if chargerCategory == "dc" && dur > chargingFlagBadPowerMinDur && power < chargingFlagBadPowerKw {
 		flags = append(flags, "bad_power")
 	}
@@ -606,9 +585,7 @@ func strContains(s, sub string) bool {
 	return false
 }
 
-// ---------------------------------------------------------------------------
 // Registration
-// ---------------------------------------------------------------------------
 
 // ChargingDiagnosisSources bundles the narrow read interfaces
 // RegisterChargingDiagnosisTools needs. Mirrors [DriveCoachingSources]
@@ -622,8 +599,8 @@ type ChargingDiagnosisSources struct {
 	Charges tools.ChargeSource
 }
 
-// RegisterChargingDiagnosisTools installs the charging-diagnosis
-// slice's tools on r. Called from router.go AFTER Register12Builtins
+// RegisterChargingDiagnosisTools installs charging-diagnosis tools on r.
+// Called from router.go after Register12Builtins
 // + RegisterDigestTools + RegisterYearReviewTools + RegisterAnomalyTools
 // + RegisterAlertBuilderTools + RegisterAutomationBuilderTools +
 // RegisterSearchTools + RegisterDriveCoachingTools so the registry's
