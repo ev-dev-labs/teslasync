@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-29T08:40:29Z",
+  "generated_at": "2026-05-29T08:46:36Z",
   "go_version": "go1.26.1",
-  "commit_sha": "8fbb4be316348db0d3b0c0c7536f72eb9996f595",
+  "commit_sha": "aa66bea75befea4d2825c20f66406c8f1ba227f8",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2516,7 +2516,7 @@
       "path": "internal/api",
       "go_files": 23,
       "test_files": 22,
-      "loc": 11163,
+      "loc": 11015,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -4639,18 +4639,23 @@
     },
     {
       "path": "internal/api/audit",
-      "go_files": 2,
-      "test_files": 0,
-      "loc": 180,
+      "go_files": 3,
+      "test_files": 1,
+      "loc": 342,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
+        "internal/api/apiparams",
         "internal/api/httpx",
-        "internal/database/audit"
+        "internal/database",
+        "internal/database/audit",
+        "internal/models/system"
       ],
       "files": [
         "doc.go",
-        "handler.go"
+        "handler.go",
+        "log_handler.go",
+        "log_handler_test.go"
       ]
     },
     {
@@ -11048,7 +11053,8 @@
     ],
     "internal/api/audit": [
       "doc.go",
-      "handler.go"
+      "handler.go",
+      "log_handler.go"
     ],
     "internal/api/auth": [
       "doc.go",

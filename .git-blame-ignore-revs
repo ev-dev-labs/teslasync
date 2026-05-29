@@ -420,3 +420,6 @@ d28c62b95a4568f248349dd1c4b7b05fb48def0b
 
 # R2d.177 carve telemetry cluster into internal/api/telemetry subpackage
 8fbb4be316348db0d3b0c0c7536f72eb9996f595
+
+# R2d.178 move AuditHandler into internal/api/audit subpackage
+aa66bea75befea4d2825c20f66406c8f1ba227f8

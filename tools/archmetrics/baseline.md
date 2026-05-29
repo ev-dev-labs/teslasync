@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-29T08:40:30Z, Go go1.26.1, commit 8fbb4be316348db0d3b0c0c7536f72eb9996f595_
+_Generated 2026-05-29T08:46:37Z, Go go1.26.1, commit aa66bea75befea4d2825c20f66406c8f1ba227f8_
 
 ## Summary
 
 - Packages: 479
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 383158
+- Total non-blank LOC under cmd/+internal/+tools/: 383172
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-29T08:40:30Z, Go go1.26.1, commit 8fbb4be316348db0d3b0c0c7536
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 23 | 22 | 11163 | yes | handler |
+| internal/api | 23 | 22 | 11015 | yes | handler |
 | internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
 | internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
 | internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
@@ -241,7 +241,7 @@ _Generated 2026-05-29T08:40:30Z, Go go1.26.1, commit 8fbb4be316348db0d3b0c0c7536
 | internal/api/apiparams | 2 | 1 | 363 | yes | handler |
 | internal/api/apitest | 2 | 0 | 137 | yes | handler |
 | internal/api/apperror | 3 | 1 | 508 | yes | handler |
-| internal/api/audit | 2 | 0 | 180 | yes | handler |
+| internal/api/audit | 3 | 1 | 342 | yes | handler |
 | internal/api/auth | 2 | 0 | 152 | yes | handler |
 | internal/api/authsession | 2 | 1 | 365 | yes | handler |
 | internal/api/automation | 11 | 1 | 4620 | yes | handler |
