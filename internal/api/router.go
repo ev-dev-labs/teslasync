@@ -39,6 +39,7 @@ import (
 	aigeofautom "github.com/ev-dev-labs/teslasync/internal/api/aigeofautom"
 	aiinboxcat "github.com/ev-dev-labs/teslasync/internal/api/aiinboxcat"
 	aiincident "github.com/ev-dev-labs/teslasync/internal/api/aiincident"
+	ailifetime "github.com/ev-dev-labs/teslasync/internal/api/ailifetime"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -1427,13 +1428,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// SQL is written by this slice.
 	lifetime.RegisterLifetimeStatsQATools(aiToolRegistry, lifetime.LifetimeStatsQASources{
 		Retriever:     aiAnalyticsRetriever,
-		LifetimeStats: NewAILifetimeStatsSource(db),
+		LifetimeStats: ailifetime.NewLifetimeStatsSource(db),
 	})
 	// lifetime-stats-qa handler. One per process; stateless beyond
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiLifetimeStatsQAHandler := NewAILifetimeStatsQAHandler(
+	aiLifetimeStatsQAHandler := ailifetime.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		lifetimestatsqa.New(),

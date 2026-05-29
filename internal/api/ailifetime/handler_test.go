@@ -12,10 +12,11 @@
 // F6 eval harness (`go run ./cmd/ai-eval -feature lifetime-stats-qa`);
 // duplicating that here would require a live database fixture.
 
-package api
+package ailifetime
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -25,6 +26,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestLifetimeStatsQAAIOffHidesQuestionBox is the load-bearing
 // off-mode contract proof for slice 0041. It mounts the AI
@@ -122,22 +141,22 @@ func TestLifetimeStatsQAAIOffHidesQuestionBox(t *testing.T) {
 	}
 }
 
-// TestAILifetimeStatsQAHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first request.
-func TestAILifetimeStatsQAHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAILifetimeStatsQAHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAILifetimeStatsQAHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -145,11 +164,11 @@ func TestAILifetimeStatsQAHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAILifetimeStatsQAHandler_RejectsBadBody asserts the handler
+// TestHandler_RejectsBadBody asserts the handler
 // validates the JSON body BEFORE opening the SSE stream — a
 // missing, unparseable, or out-of-range body must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAILifetimeStatsQAHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -182,9 +201,9 @@ func TestAILifetimeStatsQAHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAILifetimeStatsQAHandler_AcceptsCanonicalBody proves the
+// TestHandler_AcceptsCanonicalBody proves the
 // parser does NOT bounce the happy-path shapes.
-func TestAILifetimeStatsQAHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -219,15 +238,15 @@ func TestAILifetimeStatsQAHandler_AcceptsCanonicalBody(t *testing.T) {
 	}
 }
 
-// TestAILifetimeStatsSource_PanicsOnNilDB asserts the production
+// TestLifetimeStatsSource_PanicsOnNilDB asserts the production
 // adapter constructor refuses a nil *database.DB — the wiring bug
 // must surface at boot, not as a nil-deref on first AI request.
-func TestAILifetimeStatsSource_PanicsOnNilDB(t *testing.T) {
+func TestLifetimeStatsSource_PanicsOnNilDB(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatalf("NewAILifetimeStatsSource(nil) did not panic")
+			t.Fatalf("NewLifetimeStatsSource(nil) did not panic")
 		}
 	}()
-	NewAILifetimeStatsSource(nil)
+	NewLifetimeStatsSource(nil)
 }

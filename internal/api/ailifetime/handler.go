@@ -1,4 +1,4 @@
-package api
+package ailifetime
 
 // Phase-50 / 0041 — X2 Lifetime stats Q&A.
 //
@@ -61,6 +61,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -92,13 +93,21 @@ type aiLifetimeStatsQARequest struct {
 	Question  string `json:"question"`
 }
 
-// AILifetimeStatsQAHandler is the HTTP handler for
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Handler is the HTTP handler for
 // POST /api/v1/ai/analytics/lifetime/qa.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AILifetimeStatsQAHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -106,7 +115,7 @@ type AILifetimeStatsQAHandler struct {
 	maxIters   int
 }
 
-// NewAILifetimeStatsQAHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -119,21 +128,21 @@ type AILifetimeStatsQAHandler struct {
 //
 // strat:      the lifetime-stats-qa Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAILifetimeStatsQAHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AILifetimeStatsQAHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAILifetimeStatsQAHandler: nil provider.Registry")
+		panic("api: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAILifetimeStatsQAHandler: nil tools.Registry")
+		panic("api: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAILifetimeStatsQAHandler: nil strategy.Strategy")
+		panic("api: NewHandler: nil strategy.Strategy")
 	}
-	return &AILifetimeStatsQAHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -184,7 +193,7 @@ func parseLifetimeStatsQABody(w http.ResponseWriter, r *http.Request) (*aiLifeti
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AILifetimeStatsQAHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
 	body, ok := parseLifetimeStatsQABody(w, r)
 	if !ok {
@@ -269,8 +278,8 @@ func (h *AILifetimeStatsQAHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// Compile-time assertion: AILifetimeStatsQAHandler satisfies http.Handler.
-var _ http.Handler = (*AILifetimeStatsQAHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -281,7 +290,7 @@ var _ http.Handler = (*AILifetimeStatsQAHandler)(nil)
 // pattern.
 // ---------------------------------------------------------------------
 
-// AILifetimeStatsSource is the production lifetime.LifetimeStatsSource.
+// LifetimeStatsSource is the production lifetime.LifetimeStatsSource.
 // It delegates to the SHARED api.ComputeLifetimeStats helper that
 // also backs the canonical baseline GET /api/v1/analytics/lifetime
 // handler so the AI Q&A is grounded in the SAME deterministic
@@ -295,18 +304,18 @@ var _ http.Handler = (*AILifetimeStatsQAHandler)(nil)
 //
 // The struct holds *database.DB; the constructor panics on a nil so
 // a wiring bug surfaces at boot.
-type AILifetimeStatsSource struct {
+type LifetimeStatsSource struct {
 	db *database.DB
 }
 
-// NewAILifetimeStatsSource constructs the adapter. Panics on a nil
+// NewLifetimeStatsSource constructs the adapter. Panics on a nil
 // *database.DB so a wiring mistake surfaces at boot rather than as
 // a nil-deref on first AI request.
-func NewAILifetimeStatsSource(db *database.DB) *AILifetimeStatsSource {
+func NewLifetimeStatsSource(db *database.DB) *LifetimeStatsSource {
 	if db == nil {
-		panic("api: NewAILifetimeStatsSource: nil *database.DB")
+		panic("api: NewLifetimeStatsSource: nil *database.DB")
 	}
-	return &AILifetimeStatsSource{db: db}
+	return &LifetimeStatsSource{db: db}
 }
 
 // LifetimeStats implements lifetime.LifetimeStatsSource. Composes the
@@ -322,7 +331,7 @@ func NewAILifetimeStatsSource(db *database.DB) *AILifetimeStatsSource {
 // carries an UnlockedAt timestamp because the canonical handler is
 // the only path that records unlocks and emits SSE celebration
 // events (the read-only AI tool path must not have side effects).
-func (a *AILifetimeStatsSource) LifetimeStats(ctx context.Context, vehicleID int64) (*lifetime.LifetimeStatsEnvelope, error) {
+func (a *LifetimeStatsSource) LifetimeStats(ctx context.Context, vehicleID int64) (*lifetime.LifetimeStatsEnvelope, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai lifetime-stats-qa: vehicle_id must be > 0")
 	}
@@ -386,6 +395,6 @@ func (a *AILifetimeStatsSource) LifetimeStats(ctx context.Context, vehicleID int
 	}, nil
 }
 
-// Compile-time assertion: AILifetimeStatsSource satisfies
+// Compile-time assertion: LifetimeStatsSource satisfies
 // lifetime.LifetimeStatsSource.
-var _ lifetime.LifetimeStatsSource = (*AILifetimeStatsSource)(nil)
+var _ lifetime.LifetimeStatsSource = (*LifetimeStatsSource)(nil)
