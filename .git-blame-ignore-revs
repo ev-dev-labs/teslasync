@@ -396,3 +396,6 @@ b26fab2c8f0c3a2c417b1df94827822191006492 # fix(R2d): resolve duplicate wiring li
 
 # R2d.169 batch 13 — aiusage carve (ai_usage + ai_admin)
 ce1bd32de3a75f0a863758b6a885819b87a35b7c # refactor(R2d.169): carve internal/api/aiusage subpackage (ai_usage + ai_admin)
+
+# R2d.170 batch 13 — aisettingsvalidate carve
+a46da7f356cffe6c79b7596229c1d9f7cfc0c09b # refactor(R2d.170): carve internal/api/aisettingsvalidate subpackage

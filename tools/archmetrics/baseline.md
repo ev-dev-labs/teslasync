@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-29T07:44:00Z, Go go1.26.1, commit ce1bd32de3a75f0a863758b6a885819b87a35b7c_
+_Generated 2026-05-29T07:49:21Z, Go go1.26.1, commit a46da7f356cffe6c79b7596229c1d9f7cfc0c09b_
 
 ## Summary
 
-- Packages: 472
+- Packages: 473
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 383059
+- Total non-blank LOC under cmd/+internal/+tools/: 383079
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-29T07:44:00Z, Go go1.26.1, commit ce1bd32de3a75f0a863758b6a88
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 50 | 33 | 23735 | yes | handler |
+| internal/api | 49 | 33 | 22923 | yes | handler |
 | internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
 | internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
 | internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
@@ -214,6 +214,7 @@ _Generated 2026-05-29T07:44:00Z, Go go1.26.1, commit ce1bd32de3a75f0a863758b6a88
 | internal/api/airouteeff | 2 | 1 | 490 | yes | handler |
 | internal/api/aisafetyexp | 2 | 1 | 818 | yes | handler |
 | internal/api/aisearch | 3 | 1 | 704 | yes | handler |
+| internal/api/aisettingsvalidate | 2 | 1 | 832 | yes | handler |
 | internal/api/aisignalnl | 2 | 1 | 829 | yes | handler |
 | internal/api/aismartcharge | 2 | 1 | 568 | yes | handler |
 | internal/api/aispeedprof | 2 | 1 | 474 | yes | handler |
@@ -528,7 +529,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 50 / 33 | 59 | 34 | 25 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 49 / 33 | 59 | 34 | 25 |
 
 ### `internal/models` detail
 
