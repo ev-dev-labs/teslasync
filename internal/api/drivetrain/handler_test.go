@@ -1,4 +1,4 @@
-package api
+package drivetrain
 
 import (
 	"context"
@@ -12,9 +12,36 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
+type signalAtCallRecord struct {
+	vehicleID int64
+	name      string
+	at        time.Time
+}
+
+type fakeStateReader struct {
+	signalAtFn func(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error)
+}
+
+func (f *fakeStateReader) State(context.Context, int64, time.Time) (signal.State, error) {
+	return signal.State{}, nil
+}
+
+func (f *fakeStateReader) SignalAt(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error) {
+	if f.signalAtFn == nil {
+		return nil, nil
+	}
+	return f.signalAtFn(ctx, vehicleID, name, at)
+}
+
+func (f *fakeStateReader) Timeline(context.Context, int64, []signal.FieldMapping, time.Time, time.Time, signal.TimelineOptions) ([]signal.TimelineRow, error) {
+	return nil, nil
+}
+
+var _ signal.StateReader = (*fakeStateReader)(nil)
+
 // newDrivetrainHealthRequest builds a GET /drivetrain/health request
 // with the supplied vehicle_id query parameter. The handler reads the
-// vehicle ID via r.URL.Query().Get("vehicle_id") + parseInt64, so this
+// vehicle ID via r.URL.Query().Get("vehicle_id") + strconv.ParseInt, so this
 // mirrors the production transport.
 func newDrivetrainHealthRequest(t *testing.T, vehicleID string) *http.Request {
 	t.Helper()

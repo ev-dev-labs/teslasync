@@ -1,15 +1,15 @@
-package api
+package drivetrain
 
 import (
 	"math"
 	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/rs/zerolog/log"
 )
 
 // DrivetrainHealthHandler serves drivetrain health analytics.
@@ -43,12 +43,12 @@ func NewDrivetrainHealthHandler(db *database.DB, state signal.StateReader) *Driv
 func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
-	vehicleID, err := parseInt64(vehicleIDStr)
+	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -64,22 +64,22 @@ func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 		val, err := h.state.SignalAt(ctx, vehicleID, "ModuleTempMax", now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMax").Msg("drivetrain: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read drivetrain state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read drivetrain state")
 			return
 		}
 		if val != nil {
-			if v, ok := toFloatOk(val); ok {
+			if v, ok := signal.Float64(val); ok {
 				moduleTempMax = &v
 			}
 		}
 		val, err = h.state.SignalAt(ctx, vehicleID, "ModuleTempMin", now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMin").Msg("drivetrain: failed to read signal state")
-			writeError(w, http.StatusInternalServerError, "failed to read drivetrain state")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read drivetrain state")
 			return
 		}
 		if val != nil {
-			if v, ok := toFloatOk(val); ok {
+			if v, ok := signal.Float64(val); ok {
 				moduleTempMin = &v
 			}
 		}
@@ -164,7 +164,7 @@ func (h *DrivetrainHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 		motorStatus = "Idle"
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"front_motor_temp_c": frontMotorTemp,
 		"rear_motor_temp_c":  rearMotorTemp,
 		"inverter_temp_c":    inverterTemp,

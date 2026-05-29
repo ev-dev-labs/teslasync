@@ -40,6 +40,7 @@ import (
 	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
 	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
 	apidrivedyn "github.com/ev-dev-labs/teslasync/internal/api/drivedyn"
+	apidrivetrain "github.com/ev-dev-labs/teslasync/internal/api/drivetrain"
 	apienergyflow "github.com/ev-dev-labs/teslasync/internal/api/energyflow"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
@@ -770,7 +771,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	routeEfficiencyHandler := NewRouteEfficiencyHandler(db)
 	batteryCellsHandler := NewBatteryCellsHandler(db, alertLiveSignalStore, stateReader, signalLogReader)
 	rangeProjectionHandler := NewRangeProjectionHandler(db, stateReader)
-	drivetrainHealthHandler := NewDrivetrainHealthHandler(db, stateReader)
+	drivetrainHealthHandler := apidrivetrain.NewDrivetrainHealthHandler(db, stateReader)
 	maintenanceHandler := NewMaintenanceHandler(db)
 	periodStatsHandler := apiperiod.NewHandler(db)
 	drivingCoachHandler := NewDrivingCoachHandler(db)
