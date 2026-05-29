@@ -1,32 +1,20 @@
-// Package api — Phase-46 / Prompt 32.
-//
 // MaskedRevealHandler powers POST /api/v1/audit/reveal.
 //
 // The route is the server-side leg of the `<MaskedValue>` privacy
 // primitive: every time an operator clicks the eye toggle to reveal
 // a sensitive value (API token, VIN, lat/lng, email, etc.) the SPA
 // fires a fire-and-forget POST here so the action lands in
-// `audit_logs` for after-the-fact review. The frontend never blocks
-// on the response — failures are silent — but the backend must never
-// 500 the path either, since a misbehaving audit pipeline must not
-// degrade the user-visible UX.
-//
-// Wiring status (Phase-46 / Prompt 32): the handler and repo are
-// implemented and unit-buildable in this prompt. The chi route
-// registration in `internal/api/router.go` is gated behind a
-// follow-up prompt (router.go is outside this prompt's allowed file
-// set per the gate's git_status guard). Until the route is mounted
-// the SPA's POSTs will 404 and the `.catch(() => {})` in
-// MaskedValue.tsx will swallow them — the visible mask is the
-// primary protection per the prompt's Blocked Path.
-package api
+// `audit_logs` for after-the-fact review.
+package audit
 
 import (
 	"encoding/json"
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 
 	"github.com/rs/zerolog/log"
@@ -94,33 +82,29 @@ func NewMaskedRevealHandler(repo *auditdb.AuditRepo, forwardAuthHeader string) *
 	}
 }
 
-// Reveal is the chi-compatible HTTP handler. Wiring (in a follow-up
-// prompt) looks like:
-//
-//	r.Post("/audit/reveal", maskedRevealHandler.Reveal)
-//
-// and lives behind the same auth gate as every other /audit/* route.
+// Reveal is the chi-compatible HTTP handler for POST /api/v1/audit/reveal.
+// It lives behind the same auth gate as every other /api/v1 route.
 func (h *MaskedRevealHandler) Reveal(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.repo == nil {
-		writeError(w, http.StatusInternalServerError, "audit pipeline not configured")
+		httpx.WriteError(w, http.StatusInternalServerError, "audit pipeline not configured")
 		return
 	}
 
 	body, err := decodeRevealAuditBody(r)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if _, ok := AllowedRevealVariants[body.Variant]; !ok {
-		writeError(w, http.StatusBadRequest, "unknown reveal variant")
+		httpx.WriteError(w, http.StatusBadRequest, "unknown reveal variant")
 		return
 	}
 
 	// `kind` is optional but, when non-empty, must be a known value.
 	if body.Kind != "" {
 		if _, ok := AllowedRevealKinds[body.Kind]; !ok {
-			writeError(w, http.StatusBadRequest, "unknown reveal kind")
+			httpx.WriteError(w, http.StatusBadRequest, "unknown reveal kind")
 			return
 		}
 	}
@@ -137,7 +121,7 @@ func (h *MaskedRevealHandler) Reveal(w http.ResponseWriter, r *http.Request) {
 		// Log at warn (not error) — audit failures should be visible
 		// to operators but never page on-call.
 		if errors.Is(err, auditdb.ErrAuditRevealVariantRequired) {
-			writeError(w, http.StatusBadRequest, err.Error())
+			httpx.WriteError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		log.Warn().
@@ -149,7 +133,7 @@ func (h *MaskedRevealHandler) Reveal(w http.ResponseWriter, r *http.Request) {
 		// (it `.catch(() => {})`s the entire promise) but emitting a
 		// 500 here means Prometheus / log aggregation will surface
 		// the failure — which is exactly what we want.
-		writeError(w, http.StatusInternalServerError, "failed to record audit event")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to record audit event")
 		return
 	}
 
@@ -179,4 +163,32 @@ func decodeRevealAuditBody(r *http.Request) (revealAuditRequest, error) {
 		return body, errors.New("variant is required")
 	}
 	return body, nil
+}
+
+func actorFromRequest(r *http.Request, headerName string) string {
+	if r == nil || headerName == "" {
+		return ""
+	}
+	return strings.TrimSpace(r.Header.Get(headerName))
+}
+
+func clientIP(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	if xff := r.Header.Get("X-Forwarded-For"); xff != "" {
+		if i := strings.IndexByte(xff, ','); i >= 0 {
+			xff = xff[:i]
+		}
+		if ip := strings.TrimSpace(xff); ip != "" {
+			return ip
+		}
+	}
+	if r.RemoteAddr == "" {
+		return ""
+	}
+	if host, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
+		return host
+	}
+	return r.RemoteAddr
 }
