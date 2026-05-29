@@ -1,4 +1,4 @@
-package api
+package aimqttsse
 
 // Phase-50 / 0047 — S6 MQTT and SSE inspector explanations.
 //
@@ -89,6 +89,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/diagnostic"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -128,14 +129,14 @@ type aiMqttSseInspectorExplanationsRequest struct {
 	ToUnix int64 `json:"to_unix"`
 }
 
-// AIMqttSseInspectorExplanationsHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/system/streams/explain.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AIMqttSseInspectorExplanationsHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -144,7 +145,7 @@ type AIMqttSseInspectorExplanationsHandler struct {
 	maxIters   int
 }
 
-// NewAIMqttSseInspectorExplanationsHandler constructs the
+// NewHandler constructs the
 // handler. All non-pointer arguments are required; the
 // constructor panics on a nil so the wiring bug surfaces at
 // boot, not at first request.
@@ -165,7 +166,7 @@ type AIMqttSseInspectorExplanationsHandler struct {
 //
 // source:     the production diagnostic.StreamInspectorSource
 //
-//	(currently AIStreamInspectorSource — a
+//	(currently StreamInspectorSource — a
 //	deterministic empty adapter; the canonical
 //	baseline /api/v1/admin/mqtt/status surface remains
 //	reachable to the operator at all times).
@@ -173,24 +174,24 @@ type AIMqttSseInspectorExplanationsHandler struct {
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAIMqttSseInspectorExplanationsHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	source diagnostic.StreamInspectorSource,
 	headerName string,
-) *AIMqttSseInspectorExplanationsHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIMqttSseInspectorExplanationsHandler: nil provider.Registry")
+		panic("aimqttsse: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIMqttSseInspectorExplanationsHandler: nil tools.Registry")
+		panic("aimqttsse: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIMqttSseInspectorExplanationsHandler: nil strategy.Strategy")
+		panic("aimqttsse: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAIMqttSseInspectorExplanationsHandler: nil diagnostic.StreamInspectorSource")
+		panic("aimqttsse: NewHandler: nil diagnostic.StreamInspectorSource")
 	}
-	return &AIMqttSseInspectorExplanationsHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -198,6 +199,24 @@ func NewAIMqttSseInspectorExplanationsHandler(
 		headerName: headerName,
 		maxIters:   aiMqttSseInspectorExplanationsMaxIterations,
 	}
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+func bytesTrim(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] == '\r' || b[0] == '\n') {
+		b = b[1:]
+	}
+	for len(b) > 0 && (b[len(b)-1] == ' ' || b[len(b)-1] == '\t' || b[len(b)-1] == '\r' || b[len(b)-1] == '\n') {
+		b = b[:len(b)-1]
+	}
+	return b
 }
 
 // parseMqttSseInspectorExplanationsRequest drains the body. Both
@@ -251,7 +270,7 @@ func parseMqttSseInspectorExplanationsRequest(w http.ResponseWriter, r *http.Req
 // writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
-func (h *AIMqttSseInspectorExplanationsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseMqttSseInspectorExplanationsRequest(w, r)
 	if !ok {
@@ -352,9 +371,9 @@ func buildMqttSseInspectorExplanationsUserMessage(fromUnix, toUnix int64) string
 	)
 }
 
-// Compile-time assertion: AIMqttSseInspectorExplanationsHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AIMqttSseInspectorExplanationsHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -364,7 +383,7 @@ var _ http.Handler = (*AIMqttSseInspectorExplanationsHandler)(nil)
 // AILogTraceWindowSource pattern.
 // ---------------------------------------------------------------------
 
-// AIStreamInspectorSource is the production
+// StreamInspectorSource is the production
 // diagnostic.StreamInspectorSource. The canonical baseline
 // /api/v1/admin/mqtt/status surface remains reachable to the
 // operator at all times — this adapter intentionally returns a
@@ -378,13 +397,13 @@ var _ http.Handler = (*AIMqttSseInspectorExplanationsHandler)(nil)
 // values the handler installed and stringifies them so the LLM
 // sees a recognisable window without having to format Unix
 // seconds itself.
-type AIStreamInspectorSource struct{}
+type StreamInspectorSource struct{}
 
-// NewAIStreamInspectorSource constructs the deterministic empty
+// NewStreamInspectorSource constructs the deterministic empty
 // adapter. No deps. Returned by-pointer for symmetry with the
 // other AI* source types.
-func NewAIStreamInspectorSource() *AIStreamInspectorSource {
-	return &AIStreamInspectorSource{}
+func NewStreamInspectorSource() *StreamInspectorSource {
+	return &StreamInspectorSource{}
 }
 
 // StreamInspector implements diagnostic.StreamInspectorSource.
@@ -394,12 +413,12 @@ func NewAIStreamInspectorSource() *AIStreamInspectorSource {
 // The envelope's slices are non-nil (empty-but-allocated) so
 // JSON marshalling renders [] rather than null — keeping the
 // LLM's tool-reply parsing predictable.
-func (a *AIStreamInspectorSource) StreamInspector(_ context.Context, fromUnix, toUnix int64) (*diagnostic.StreamInspectorEnvelope, error) {
+func (a *StreamInspectorSource) StreamInspector(_ context.Context, fromUnix, toUnix int64) (*diagnostic.StreamInspectorEnvelope, error) {
 	if fromUnix <= 0 {
-		return nil, fmt.Errorf("api ai mqtt-sse-inspector-explanations: from_unix must be > 0")
+		return nil, fmt.Errorf("aimqttsse: from_unix must be > 0")
 	}
 	if toUnix <= fromUnix {
-		return nil, fmt.Errorf("api ai mqtt-sse-inspector-explanations: to_unix must be > from_unix")
+		return nil, fmt.Errorf("aimqttsse: to_unix must be > from_unix")
 	}
 	return &diagnostic.StreamInspectorEnvelope{
 		FromUnix:                  fromUnix,
@@ -422,6 +441,6 @@ func (a *AIStreamInspectorSource) StreamInspector(_ context.Context, fromUnix, t
 	}, nil
 }
 
-// Compile-time assertion: AIStreamInspectorSource satisfies
+// Compile-time assertion: StreamInspectorSource satisfies
 // diagnostic.StreamInspectorSource.
-var _ diagnostic.StreamInspectorSource = (*AIStreamInspectorSource)(nil)
+var _ diagnostic.StreamInspectorSource = (*StreamInspectorSource)(nil)

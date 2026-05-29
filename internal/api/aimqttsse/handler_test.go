@@ -14,10 +14,11 @@
 // mqtt-sse-inspector-explanations`); duplicating that here would
 // require a live MQTT broker fixture.
 
-package api
+package aimqttsse
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -27,6 +28,19 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestMqttSseInspectorAIOffShowsRawInspectorOnly is the
 // load-bearing off-mode contract proof for slice 0047. It mounts
@@ -141,23 +155,23 @@ func TestMqttSseInspectorAIOffShowsRawInspectorOnly(t *testing.T) {
 	}
 }
 
-// TestAIMqttSseInspectorExplanationsHandler_PanicsOnNilWiring
+// TestHandler_PanicsOnNilWiring
 // asserts the handler constructor refuses zero-valued
 // dependencies. A wiring bug at boot must surface as a panic,
 // not as a nil-deref on first request.
-func TestAIMqttSseInspectorExplanationsHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIMqttSseInspectorExplanationsHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIMqttSseInspectorExplanationsHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -165,12 +179,12 @@ func TestAIMqttSseInspectorExplanationsHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIMqttSseInspectorExplanationsHandler_RejectsBadBody
+// TestHandler_RejectsBadBody
 // asserts the handler validates the body BEFORE opening the SSE
 // stream — a missing, unparseable, or out-of-range field must
 // surface as a JSON 400, not a half-opened stream that confuses
 // the frontend.
-func TestAIMqttSseInspectorExplanationsHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -236,15 +250,15 @@ func TestBuildMqttSseInspectorExplanationsUserMessage(t *testing.T) {
 	}
 }
 
-// TestAIStreamInspectorSource_ReturnsDeterministicEmptyEnvelope
+// TestStreamInspectorSource_ReturnsDeterministicEmptyEnvelope
 // pins the production source adapter contract: the canonical
 // baseline /api/v1/admin/mqtt/status surface remains the only
 // live broker-status reader; the AI source returns a
 // deterministic empty envelope so the strategy's zero-data
 // goldens stay in sync with the runtime.
-func TestAIStreamInspectorSource_ReturnsDeterministicEmptyEnvelope(t *testing.T) {
+func TestStreamInspectorSource_ReturnsDeterministicEmptyEnvelope(t *testing.T) {
 	t.Parallel()
-	src := NewAIStreamInspectorSource()
+	src := NewStreamInspectorSource()
 	env, err := src.StreamInspector(nil, 1700000000, 1700001800)
 	if err != nil {
 		t.Fatalf("StreamInspector err = %v", err)
@@ -273,11 +287,11 @@ func TestAIStreamInspectorSource_ReturnsDeterministicEmptyEnvelope(t *testing.T)
 	}
 }
 
-// TestAIStreamInspectorSource_RejectsInvalidWindow pins the
+// TestStreamInspectorSource_RejectsInvalidWindow pins the
 // adapter's argument validation contract.
-func TestAIStreamInspectorSource_RejectsInvalidWindow(t *testing.T) {
+func TestStreamInspectorSource_RejectsInvalidWindow(t *testing.T) {
 	t.Parallel()
-	src := NewAIStreamInspectorSource()
+	src := NewStreamInspectorSource()
 	cases := []struct {
 		name             string
 		fromUnix, toUnix int64

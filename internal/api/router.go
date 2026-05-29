@@ -44,6 +44,7 @@ import (
 	aimlanom "github.com/ev-dev-labs/teslasync/internal/api/aimlanom"
 	aimlchargcv "github.com/ev-dev-labs/teslasync/internal/api/aimlchargcv"
 	aimlrange "github.com/ev-dev-labs/teslasync/internal/api/aimlrange"
+	aimqttsse "github.com/ev-dev-labs/teslasync/internal/api/aimqttsse"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2226,11 +2227,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// rule as the other slice tools above: must be registered
 	// before the handler constructor below so the strategy's
 	// allowedTools resolve at boot. The Source is the production
-	// AIStreamInspectorSource adapter that returns a
+	// StreamInspectorSource adapter that returns a
 	// deterministic empty envelope describing the bound window;
 	// the canonical baseline /api/v1/admin/mqtt/status surface
 	// remains reachable to the operator at all times.
-	aiStreamInspectorSource := NewAIStreamInspectorSource()
+	aiStreamInspectorSource := aimqttsse.NewStreamInspectorSource()
 	diagnostic.RegisterMqttSseInspectorExplanationsTools(aiToolRegistry, diagnostic.MqttSseInspectorExplanationsSources{
 		Retriever:       aiMqttSseInspectorExplanationsRetriever,
 		StreamInspector: aiStreamInspectorSource,
@@ -2239,7 +2240,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiMqttSseInspectorExplanationsHandler := NewAIMqttSseInspectorExplanationsHandler(
+	aiMqttSseInspectorExplanationsHandler := aimqttsse.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		mqttsseinspectorexplanations.New(),
