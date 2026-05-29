@@ -40,12 +40,10 @@ func writeErrorCode(w http.ResponseWriter, status int, msg, code string) {
 	httpx.WriteErrorCode(w, status, msg, code)
 }
 
-// writeTeslaTokenExpired is a transitional wrapper around
-// httpx.WriteTeslaTokenExpired. See writeJSON for the broader
-// transitional plan.
-func writeTeslaTokenExpired(w http.ResponseWriter) {
-	httpx.WriteTeslaTokenExpired(w)
-}
+// writeTeslaTokenExpired drained to zero callers by R2d batch 8 (carves
+// drained all token-issuing handlers into resource subpackages, which call
+// httpx.WriteTeslaTokenExpired directly). Wrapper deleted per the carve
+// playbook — see writeJSON for the broader transitional plan.
 
 // writeAppError was the transitional wrapper around apperror.Write.
 // Drained to zero callers by R2c (vehicle subpkg carve) — the last
@@ -76,11 +74,9 @@ func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
 	return apiparams.ParseDateRange(r)
 }
 
-// nullableTime is a transitional wrapper around apiparams.NullableTime.
-// See pagination for the broader transitional plan.
-func nullableTime(use bool, t time.Time) interface{} {
-	return apiparams.NullableTime(use, t)
-}
+// nullableTime drained to zero callers by R2d batch 8 — the last users
+// (carved into resource subpackages) call apiparams.NullableTime
+// directly. Wrapper deleted per the carve playbook.
 
 func firstNonEmpty(values ...string) string {
 	for _, v := range values {
