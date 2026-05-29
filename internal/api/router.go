@@ -61,6 +61,7 @@ import (
 	aismartcharge "github.com/ev-dev-labs/teslasync/internal/api/aismartcharge"
 	aispeedprof "github.com/ev-dev-labs/teslasync/internal/api/aispeedprof"
 	aisuggeo "github.com/ev-dev-labs/teslasync/internal/api/aisuggeo"
+	aiswupd "github.com/ev-dev-labs/teslasync/internal/api/aiswupd"
 	aitempimpact "github.com/ev-dev-labs/teslasync/internal/api/aitempimpact"
 	aitirepress "github.com/ev-dev-labs/teslasync/internal/api/aitirepress"
 	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
@@ -2435,7 +2436,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// canonical baseline GET /api/v1/vehicles/{id}/software-updates
 	// handler already serves; the canonical baseline surface
 	// remains reachable to the operator at all times.
-	aiVehicleSoftwareSource := NewAIVehicleSoftwareSource(systemdb.NewSoftwareUpdateRepo(db))
+	aiVehicleSoftwareSource := aiswupd.NewVehicleSoftwareSource(systemdb.NewSoftwareUpdateRepo(db))
 	summary.RegisterSoftwareUpdateChangelogSummarizerTools(aiToolRegistry, summary.SoftwareUpdateChangelogSummarizerSources{
 		Retriever:       aiSoftwareUpdateChangelogSummarizerRetriever,
 		VehicleSoftware: aiVehicleSoftwareSource,
@@ -2445,7 +2446,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at
 	// boot.
-	aiSoftwareUpdateChangelogSummarizerHandler := NewAISoftwareUpdateChangelogSummarizerHandler(
+	aiSoftwareUpdateChangelogSummarizerHandler := aiswupd.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		softwareupdatechangelogsummarizer.New(),

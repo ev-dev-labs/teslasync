@@ -1,4 +1,4 @@
-package api
+package aiswupd
 
 // Phase-50 / 0051 — M3 Software update changelog summarizer.
 //
@@ -45,7 +45,7 @@ package api
 //
 // The handler requires a JSON body with vehicle_id > 0; the
 // limit field is optional (defaults to
-// aiSoftwareUpdateChangelogSummarizerDefaultLimit). The
+// softwareUpdateChangelogSummarizerDefaultLimit). The
 // vehicle_id is computed by the SPA from the page's active
 // vehicle selector when the operator clicks the AI button on
 // the SoftwareUpdatesPage; the body is the simplest place to
@@ -76,6 +76,7 @@ package api
 //     added or modified by this slice.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -96,57 +97,66 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/summary"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 )
 
-// aiSoftwareUpdateChangelogSummarizerMaxIterations bounds the
+// softwareUpdateChangelogSummarizerMaxIterations bounds the
 // dispatcher's tool-loop. The strategy is at most
 // query_vehicle_software → (optional) retrieve_update_notes →
 // answer (with optional retries on transient tool error). A
 // hard ceiling of 8 is generous, matching the other narrator
 // handlers.
-const aiSoftwareUpdateChangelogSummarizerMaxIterations = 8
+const softwareUpdateChangelogSummarizerMaxIterations = 8
 
-// aiSoftwareUpdateChangelogSummarizerMaxBodyBytes caps the
+// softwareUpdateChangelogSummarizerMaxBodyBytes caps the
 // request body. The body is small (1-2 numeric fields); bound
 // it cheaply. 16 KiB matches the other body-driven AI handlers.
-const aiSoftwareUpdateChangelogSummarizerMaxBodyBytes = 16 * 1024
+const softwareUpdateChangelogSummarizerMaxBodyBytes = 16 * 1024
 
-// aiSoftwareUpdateChangelogSummarizerDefaultLimit is the value
+// softwareUpdateChangelogSummarizerDefaultLimit is the value
 // used when the request body omits limit. Mirrors the tool's
 // per-call default so the LLM and the handler land on the same
 // row count.
-const aiSoftwareUpdateChangelogSummarizerDefaultLimit = 20
+const softwareUpdateChangelogSummarizerDefaultLimit = 20
 
-// aiSoftwareUpdateChangelogSummarizerMaxLimit is the upper
+// softwareUpdateChangelogSummarizerMaxLimit is the upper
 // bound the handler accepts. Mirrors the tool's per-call max so
 // the validator catches an over-cap request before the
 // dispatcher is invoked.
-const aiSoftwareUpdateChangelogSummarizerMaxLimit = 50
+const softwareUpdateChangelogSummarizerMaxLimit = 50
 
-// aiSoftwareUpdateChangelogSummarizerRequest is the typed body
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// softwareUpdateChangelogSummarizerRequest is the typed body
 // shape. The required field is vehicle_id; limit is optional.
-type aiSoftwareUpdateChangelogSummarizerRequest struct {
+type softwareUpdateChangelogSummarizerRequest struct {
 	// VehicleID identifies the vehicle the summary covers.
 	// Required + positive.
 	VehicleID int64 `json:"vehicle_id"`
 
 	// Limit bounds the per-call recent_updates list. Optional;
-	// defaults to aiSoftwareUpdateChangelogSummarizerDefaultLimit
+	// defaults to softwareUpdateChangelogSummarizerDefaultLimit
 	// when zero. Bounded to
-	// [0, aiSoftwareUpdateChangelogSummarizerMaxLimit].
+	// [0, softwareUpdateChangelogSummarizerMaxLimit].
 	Limit int `json:"limit,omitempty"`
 }
 
-// AISoftwareUpdateChangelogSummarizerHandler is the HTTP handler
+// Handler is the HTTP handler
 // for POST /api/v1/ai/software-updates/summarize.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AISoftwareUpdateChangelogSummarizerHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -155,7 +165,7 @@ type AISoftwareUpdateChangelogSummarizerHandler struct {
 	maxIters   int
 }
 
-// NewAISoftwareUpdateChangelogSummarizerHandler constructs the
+// NewHandler constructs the
 // handler. All non-pointer arguments are required; the
 // constructor panics on a nil so the wiring bug surfaces at
 // boot, not at first request.
@@ -177,7 +187,7 @@ type AISoftwareUpdateChangelogSummarizerHandler struct {
 //
 // source:     the production summary.VehicleSoftwareSource
 //
-//	(currently AIVehicleSoftwareSource — wraps the
+//	(currently VehicleSoftwareSource — wraps the
 //	SAME systemdb.SoftwareUpdateRepo.GetByVehicle the
 //	canonical baseline GET
 //	/api/v1/vehicles/{id}/software-updates handler
@@ -187,52 +197,52 @@ type AISoftwareUpdateChangelogSummarizerHandler struct {
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAISoftwareUpdateChangelogSummarizerHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	source summary.VehicleSoftwareSource,
 	headerName string,
-) *AISoftwareUpdateChangelogSummarizerHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAISoftwareUpdateChangelogSummarizerHandler: nil provider.Registry")
+		panic("aiswupd: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAISoftwareUpdateChangelogSummarizerHandler: nil tools.Registry")
+		panic("aiswupd: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAISoftwareUpdateChangelogSummarizerHandler: nil strategy.Strategy")
+		panic("aiswupd: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAISoftwareUpdateChangelogSummarizerHandler: nil summary.VehicleSoftwareSource")
+		panic("aiswupd: NewHandler: nil summary.VehicleSoftwareSource")
 	}
-	return &AISoftwareUpdateChangelogSummarizerHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		source:     source,
 		headerName: headerName,
-		maxIters:   aiSoftwareUpdateChangelogSummarizerMaxIterations,
+		maxIters:   softwareUpdateChangelogSummarizerMaxIterations,
 	}
 }
 
 // parseSoftwareUpdateChangelogSummarizerRequest drains the body.
 // vehicle_id must be > 0; limit (optional) is bounded to
-// [0, aiSoftwareUpdateChangelogSummarizerMaxLimit]. Absence /
+// [0, softwareUpdateChangelogSummarizerMaxLimit]. Absence /
 // invalid values surface as JSON 400 with a stable error key
 // the SPA can localise. Returns (req, true) when the body is
 // acceptable.
-func parseSoftwareUpdateChangelogSummarizerRequest(w http.ResponseWriter, r *http.Request) (aiSoftwareUpdateChangelogSummarizerRequest, bool) {
-	var req aiSoftwareUpdateChangelogSummarizerRequest
+func parseSoftwareUpdateChangelogSummarizerRequest(w http.ResponseWriter, r *http.Request) (softwareUpdateChangelogSummarizerRequest, bool) {
+	var req softwareUpdateChangelogSummarizerRequest
 	if r.Body == nil {
 		writeError(w, http.StatusBadRequest, "missing body")
 		return req, false
 	}
 	defer r.Body.Close()
-	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiSoftwareUpdateChangelogSummarizerMaxBodyBytes))
+	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, softwareUpdateChangelogSummarizerMaxBodyBytes))
 	if readErr != nil {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
-	if len(bytesTrim(bodyBytes)) == 0 {
+	if len(bytes.TrimSpace(bodyBytes)) == 0 {
 		writeError(w, http.StatusBadRequest, "empty body")
 		return req, false
 	}
@@ -250,8 +260,8 @@ func parseSoftwareUpdateChangelogSummarizerRequest(w http.ResponseWriter, r *htt
 		writeError(w, http.StatusBadRequest, "limit must be >= 0")
 		return req, false
 	}
-	if req.Limit > aiSoftwareUpdateChangelogSummarizerMaxLimit {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("limit must be <= %d", aiSoftwareUpdateChangelogSummarizerMaxLimit))
+	if req.Limit > softwareUpdateChangelogSummarizerMaxLimit {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("limit must be <= %d", softwareUpdateChangelogSummarizerMaxLimit))
 		return req, false
 	}
 	return req, true
@@ -263,7 +273,7 @@ func parseSoftwareUpdateChangelogSummarizerRequest(w http.ResponseWriter, r *htt
 // writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
-func (h *AISoftwareUpdateChangelogSummarizerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseSoftwareUpdateChangelogSummarizerRequest(w, r)
 	if !ok {
@@ -276,7 +286,7 @@ func (h *AISoftwareUpdateChangelogSummarizerHandler) ServeHTTP(w http.ResponseWr
 	// clamp the LLM's per-call request to it.
 	limit := req.Limit
 	if limit == 0 {
-		limit = aiSoftwareUpdateChangelogSummarizerDefaultLimit
+		limit = softwareUpdateChangelogSummarizerDefaultLimit
 	}
 
 	// 2) Resolve provider via the registry. Per-request
@@ -369,9 +379,9 @@ func buildSoftwareUpdateChangelogSummarizerUserMessage(vehicleID int64, limit in
 	)
 }
 
-// Compile-time assertion: AISoftwareUpdateChangelogSummarizerHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AISoftwareUpdateChangelogSummarizerHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -381,7 +391,7 @@ var _ http.Handler = (*AISoftwareUpdateChangelogSummarizerHandler)(nil)
 // AIPredictiveMaintenanceContextSource pattern.
 // ---------------------------------------------------------------------
 
-// AIVehicleSoftwareSource is the production
+// VehicleSoftwareSource is the production
 // summary.VehicleSoftwareSource. The canonical baseline
 // /api/v1/vehicles/{id}/software-updates surface remains
 // reachable to the operator at all times — this adapter wraps
@@ -392,19 +402,19 @@ var _ http.Handler = (*AISoftwareUpdateChangelogSummarizerHandler)(nil)
 // existing GetByVehicle method on SoftwareUpdateRepo. The
 // install_cadence_days field is computed in pure Go from the
 // installed_at timestamps the existing query returns.
-type AIVehicleSoftwareSource struct {
+type VehicleSoftwareSource struct {
 	repo *systemdb.SoftwareUpdateRepo
 }
 
-// NewAIVehicleSoftwareSource constructs the production adapter.
+// NewVehicleSoftwareSource constructs the production adapter.
 // The repo is required; the constructor panics on a nil so a
 // wiring mistake surfaces at boot rather than as a nil-deref on
 // first AI request.
-func NewAIVehicleSoftwareSource(repo *systemdb.SoftwareUpdateRepo) *AIVehicleSoftwareSource {
+func NewVehicleSoftwareSource(repo *systemdb.SoftwareUpdateRepo) *VehicleSoftwareSource {
 	if repo == nil {
-		panic("api: NewAIVehicleSoftwareSource: nil *systemdb.SoftwareUpdateRepo")
+		panic("aiswupd: NewVehicleSoftwareSource: nil *systemdb.SoftwareUpdateRepo")
 	}
-	return &AIVehicleSoftwareSource{repo: repo}
+	return &VehicleSoftwareSource{repo: repo}
 }
 
 // VehicleSoftware implements summary.VehicleSoftwareSource.
@@ -423,17 +433,17 @@ func NewAIVehicleSoftwareSource(repo *systemdb.SoftwareUpdateRepo) *AIVehicleSof
 // fewer than two installed rows are present, distinguishing
 // "not enough data to compute" from "back-to-back installs on
 // the same day".
-func (a *AIVehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID int64, limit int) (*summary.VehicleSoftwareEnvelope, error) {
+func (a *VehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID int64, limit int) (*summary.VehicleSoftwareEnvelope, error) {
 	if vehicleID <= 0 {
-		return nil, fmt.Errorf("api ai software-update-changelog-summarizer: vehicle_id must be > 0")
+		return nil, fmt.Errorf("aiswupd software-update-changelog-summarizer: vehicle_id must be > 0")
 	}
 	if limit <= 0 {
-		limit = aiSoftwareUpdateChangelogSummarizerDefaultLimit
+		limit = softwareUpdateChangelogSummarizerDefaultLimit
 	}
 
 	rows, err := a.repo.GetByVehicle(ctx, vehicleID, limit, time.Time{}, time.Time{})
 	if err != nil {
-		return nil, fmt.Errorf("api ai software-update-changelog-summarizer: GetByVehicle: %w", err)
+		return nil, fmt.Errorf("aiswupd software-update-changelog-summarizer: GetByVehicle: %w", err)
 	}
 
 	entries := make([]summary.SoftwareUpdateEntry, 0, len(rows))
@@ -528,6 +538,6 @@ func computeInstallCadenceDays(installedTimes []time.Time) *float64 {
 	return &mean
 }
 
-// Compile-time assertion: AIVehicleSoftwareSource satisfies
+// Compile-time assertion: VehicleSoftwareSource satisfies
 // summary.VehicleSoftwareSource.
-var _ summary.VehicleSoftwareSource = (*AIVehicleSoftwareSource)(nil)
+var _ summary.VehicleSoftwareSource = (*VehicleSoftwareSource)(nil)

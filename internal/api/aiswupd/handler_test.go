@@ -14,10 +14,11 @@
 // software-update-changelog-summarizer`); duplicating that here
 // would require a live software_updates fixture.
 
-package api
+package aiswupd
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,6 +31,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly is the
 // load-bearing off-mode contract proof for slice 0051. It
@@ -159,23 +176,23 @@ func TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly(t *testing.T) {
 	}
 }
 
-// TestAISoftwareUpdateChangelogSummarizerHandler_PanicsOnNilWiring
+// TestHandler_PanicsOnNilWiring
 // asserts the handler constructor refuses zero-valued
 // dependencies. A wiring bug at boot must surface as a panic,
 // not as a nil-deref on first request.
-func TestAISoftwareUpdateChangelogSummarizerHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAISoftwareUpdateChangelogSummarizerHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAISoftwareUpdateChangelogSummarizerHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -183,12 +200,12 @@ func TestAISoftwareUpdateChangelogSummarizerHandler_PanicsOnNilWiring(t *testing
 	}
 }
 
-// TestAISoftwareUpdateChangelogSummarizerHandler_RejectsBadBody
+// TestHandler_RejectsBadBody
 // asserts the handler validates the body BEFORE opening the
 // SSE stream — a missing, unparseable, or out-of-range field
 // must surface as a JSON 400, not a half-opened stream that
 // confuses the frontend.
-func TestAISoftwareUpdateChangelogSummarizerHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -256,17 +273,17 @@ func TestBuildSoftwareUpdateChangelogSummarizerUserMessage(t *testing.T) {
 	}
 }
 
-// TestNewAIVehicleSoftwareSource_PanicsOnNilRepo asserts the
+// TestNewVehicleSoftwareSource_PanicsOnNilRepo asserts the
 // production source constructor refuses a nil repo. Wiring
 // bugs surface at boot, not as nil-derefs on first request.
-func TestNewAIVehicleSoftwareSource_PanicsOnNilRepo(t *testing.T) {
+func TestNewVehicleSoftwareSource_PanicsOnNilRepo(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAIVehicleSoftwareSource(nil) did not panic")
+			t.Fatal("NewVehicleSoftwareSource(nil) did not panic")
 		}
 	}()
-	NewAIVehicleSoftwareSource(nil)
+	NewVehicleSoftwareSource(nil)
 }
 
 // TestSoftwareUpdateModelToEntry pins the model→envelope
