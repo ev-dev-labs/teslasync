@@ -93,6 +93,7 @@ import (
 	apitotp "github.com/ev-dev-labs/teslasync/internal/api/totp"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
 	apitripsd "github.com/ev-dev-labs/teslasync/internal/api/tripsdetail"
+	apiuserpref "github.com/ev-dev-labs/teslasync/internal/api/userpref"
 	apivamp "github.com/ev-dev-labs/teslasync/internal/api/vampiredrain"
 	apiveh "github.com/ev-dev-labs/teslasync/internal/api/vehicle"
 	apivehaccess "github.com/ev-dev-labs/teslasync/internal/api/vehicleaccess"
@@ -749,7 +750,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	vehicleConfigHandler := apivehconfig.NewHandler(stateReader, liveStateReader)
 	locationSnapshotHandler := apilocsnap.NewLocationSnapshotHandler(stateReader, liveStateReader)
 	safetyHandler := apisafety.NewSafetyHandler(stateReader, liveStateReader)
-	userPreferenceHandler := NewUserPreferenceHandler(stateReader, liveStateReader)
+	userPreferenceHandler := apiuserpref.NewUserPreferenceHandler(stateReader, liveStateReader)
 	softwareUpdateHandler := apisoftupd.NewHandler(db)
 	tcoHandler := apitco.NewHandler(db)
 	sleepHandler := NewSleepHandler(db)
