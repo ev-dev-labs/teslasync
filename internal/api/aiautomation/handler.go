@@ -1,8 +1,8 @@
-package api
+package aiautomation
 
 // Phase-50 / 0016 — N2 Natural-language automation builder.
 //
-// ai_automation_handler.go implements the LLM-backed handler at
+// handler.go implements the LLM-backed handler at
 // POST /api/v1/ai/automations/draft. The flow mirrors the
 // nl-alert-builder handler from slice 0015 — same dispatch+stream
 // loop, same propose-only contract, no persistence (one-shot
@@ -53,6 +53,7 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -67,31 +68,32 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	apiautomation "github.com/ev-dev-labs/teslasync/internal/api/automation"
+	apihttpx "github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiAutomationBuilderMaxIterations bounds the dispatcher's tool-loop.
+// builderMaxIterations bounds the dispatcher's tool-loop.
 // The nl-automation-builder strategy is a two-tool sequence (draft,
 // then validate), with at most one retry if validate rejects the
 // first draft — a hard ceiling of 6 is generous for an LLM that
 // occasionally re-drafts twice before settling. Mirrors
 // aiAlertBuilderMaxIterations from slice 0015.
-const aiAutomationBuilderMaxIterations = 6
+const builderMaxIterations = 6
 
-// aiAutomationBuilderMaxPromptChars bounds the user-supplied
+// builderMaxPromptChars bounds the user-supplied
 // natural-language prompt at the HTTP boundary. Generous for a
 // multi-sentence rule description; defensive against an enormous
 // payload that would inflate the LLM's context window cost without
 // any plausible legitimate use.
-const aiAutomationBuilderMaxPromptChars = 4096
+const builderMaxPromptChars = 4096
 
-// AIAutomationHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/automations/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIAutomationHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -99,7 +101,7 @@ type AIAutomationHandler struct {
 	maxIters   int
 }
 
-// NewAIAutomationHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -111,37 +113,37 @@ type AIAutomationHandler struct {
 //
 // strat:      the nl-automation-builder Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIAutomationHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIAutomationHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIAutomationHandler: nil provider.Registry")
+		panic("aiautomation: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIAutomationHandler: nil tools.Registry")
+		panic("aiautomation: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIAutomationHandler: nil strategy.Strategy")
+		panic("aiautomation: NewHandler: nil strategy.Strategy")
 	}
-	return &AIAutomationHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiAutomationBuilderMaxIterations,
+		maxIters:   builderMaxIterations,
 	}
 }
 
-// aiAutomationBuilderRequest is the wire shape for
+// builderRequest is the wire shape for
 // POST /api/v1/ai/automations/draft.
 //
 // VehicleID is required and must be > 0 — the AI handler scopes the
 // drafting to a single vehicle. Prompt is the user's plain-language
 // description of the automation they want, capped at
-// aiAutomationBuilderMaxPromptChars.
-type aiAutomationBuilderRequest struct {
+// builderMaxPromptChars.
+type builderRequest struct {
 	VehicleID int64  `json:"vehicle_id"`
 	Prompt    string `json:"prompt"`
 }
@@ -151,9 +153,9 @@ type aiAutomationBuilderRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIAutomationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
-	var body aiAutomationBuilderRequest
+	var body builderRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -167,8 +169,8 @@ func (h *AIAutomationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
-	if len(prompt) > aiAutomationBuilderMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiAutomationBuilderMaxPromptChars))
+	if len(prompt) > builderMaxPromptChars {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", builderMaxPromptChars))
 		return
 	}
 
@@ -255,31 +257,40 @@ func (h *AIAutomationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-// Compile-time assertion: AIAutomationHandler satisfies http.Handler.
-var _ http.Handler = (*AIAutomationHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
-// AIAutomationGraphValidator is the production implementation of
+func writeError(w http.ResponseWriter, status int, msg string) {
+	apihttpx.WriteError(w, status, msg)
+}
+
+// denyAllConfirm rejects every mutating tool as defence-in-depth.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// GraphValidator is the production implementation of
 // automationtool.AutomationGraphValidator. It is a thin wrapper around the
 // automation subpackage's canonical typed payload validator so the AI tool
 // registration path can wire the same validation path used by the manual
 // save endpoint.
 //
 // One per process; stateless.
-type AIAutomationGraphValidator struct{}
+type GraphValidator struct{}
 
-// NewAIAutomationGraphValidator returns a ready-to-use validator
+// NewGraphValidator returns a ready-to-use validator
 // wrapper. Exists as a constructor (rather than a value) so a future
 // change that adds wiring (e.g. a custom signal allowlist) does not
 // force every call site to update.
-func NewAIAutomationGraphValidator() *AIAutomationGraphValidator {
-	return &AIAutomationGraphValidator{}
+func NewGraphValidator() *GraphValidator {
+	return &GraphValidator{}
 }
 
 // ValidateAutomationWire implements [automationtool.AutomationGraphValidator].
 // Delegates to the canonical automation input validator — same code path the
 // POST /api/v1/automations handler runs, so a draft accepted here is
 // byte-equivalent to a draft accepted by the canonical handler.
-func (v *AIAutomationGraphValidator) ValidateAutomationWire(wireJSON json.RawMessage) error {
+func (v *GraphValidator) ValidateAutomationWire(wireJSON json.RawMessage) error {
 	if len(wireJSON) == 0 {
 		return fmt.Errorf("empty wire payload")
 	}

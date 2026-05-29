@@ -20,6 +20,7 @@ import (
 	aialert "github.com/ev-dev-labs/teslasync/internal/api/aialert"
 	aialerttune "github.com/ev-dev-labs/teslasync/internal/api/aialerttune"
 	aianomaly "github.com/ev-dev-labs/teslasync/internal/api/aianomaly"
+	aiautomation "github.com/ev-dev-labs/teslasync/internal/api/aiautomation"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -858,16 +859,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 	// Phase-50 / N2 (slice 0016) nl-automation-builder. Mirrors the
-	// alert-builder wiring above. AIAutomationGraphValidator is a
+	// alert-builder wiring above. aiautomation.GraphValidator is a
 	// thin wrapper around the automation subpackage validator in
 	// internal/api/automation/decode.go — same code path the canonical
 	// POST /api/v1/automations handler uses. Drafts
 	// accepted by the AI tool are byte-equivalent to drafts accepted
 	// by the canonical handler (ADR-015 §I3 baseline-intact).
 	automationtool.RegisterAutomationBuilderTools(aiToolRegistry, automationtool.AutomationBuilderSources{
-		Validator: NewAIAutomationGraphValidator(),
+		Validator: aiautomation.NewGraphValidator(),
 	})
-	aiAutomationHandler := NewAIAutomationHandler(
+	aiAutomationHandler := aiautomation.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlautomationbuilder.New(),
@@ -1814,7 +1815,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// handler. The strategy REUSES the slice-0016
 	// nl-automation-builder tool pair (draft_automation_graph +
 	// validate_automation_graph) registered earlier in this file
-	// for the AIAutomationHandler — re-registering would panic on
+	// for the aiautomation.Handler — re-registering would panic on
 	// duplicate name. The handler ALSO needs read access to the
 	// user's existing geofence catalog so it can inject a
 	// deterministic id+name+category list into the synthesised

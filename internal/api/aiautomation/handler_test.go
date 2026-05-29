@@ -13,9 +13,10 @@
 // F6 eval harness (`go run ./cmd/ai-eval --feature nl-automation-builder`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aiautomation
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -27,6 +28,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks is the
 // load-bearing off-mode contract proof for slice 0016. It mounts the
@@ -136,22 +155,22 @@ func TestNLAutomationBuilderAIOffHidesPanelAndManualBuilderWorks(t *testing.T) {
 	}
 }
 
-// TestAIAutomationHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at boot
 // must surface as a panic, not as a nil-deref on first request.
-func TestAIAutomationHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIAutomationHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIAutomationHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -159,12 +178,12 @@ func TestAIAutomationHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIAutomationHandler_RejectsBadInput asserts the handler
+// TestHandler_RejectsBadInput asserts the handler
 // validates the request body BEFORE opening the SSE stream — a
 // missing vehicle_id, missing prompt, or oversized prompt must
 // surface as a JSON 400, not a half-opened stream that confuses the
 // frontend.
-func TestAIAutomationHandler_RejectsBadInput(t *testing.T) {
+func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -179,7 +198,7 @@ func TestAIAutomationHandler_RejectsBadInput(t *testing.T) {
 		{"missing prompt", `{"vehicle_id":1}`},
 		{"empty prompt", `{"vehicle_id":1,"prompt":""}`},
 		{"whitespace prompt", `{"vehicle_id":1,"prompt":"   "}`},
-		{"prompt too large", fmt.Sprintf(`{"vehicle_id":1,"prompt":%q}`, strings.Repeat("a", aiAutomationBuilderMaxPromptChars+1))},
+		{"prompt too large", fmt.Sprintf(`{"vehicle_id":1,"prompt":%q}`, strings.Repeat("a", builderMaxPromptChars+1))},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -193,16 +212,16 @@ func TestAIAutomationHandler_RejectsBadInput(t *testing.T) {
 	}
 }
 
-// TestAIAutomationHandler_AcceptsCanonicalInput proves the validator
+// TestHandler_AcceptsCanonicalInput proves the validator
 // does NOT bounce the happy-path shapes — vehicle_id + a
 // normal-length prompt, plus a prompt at the size boundary.
-func TestAIAutomationHandler_AcceptsCanonicalInput(t *testing.T) {
+func TestHandler_AcceptsCanonicalInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []string{
 		`{"vehicle_id":1,"prompt":"start charging when I get home"}`,
 		`{"vehicle_id":1,"prompt":"a"}`,
-		fmt.Sprintf(`{"vehicle_id":1,"prompt":%q}`, strings.Repeat("a", aiAutomationBuilderMaxPromptChars)),
+		fmt.Sprintf(`{"vehicle_id":1,"prompt":%q}`, strings.Repeat("a", builderMaxPromptChars)),
 	}
 	for _, body := range cases {
 		t.Run(body[:min(len(body), 60)], func(t *testing.T) {
@@ -216,7 +235,7 @@ func TestAIAutomationHandler_AcceptsCanonicalInput(t *testing.T) {
 	}
 }
 
-// TestAIAutomationGraphValidator_DelegatesToCanonical asserts the
+// TestGraphValidator_DelegatesToCanonical asserts the
 // production wrapper delegates to the canonical
 // decodeAutomationInputDTO function — same code path the typed
 // handler uses, so a draft accepted by the AI tool is byte-equivalent
@@ -224,9 +243,9 @@ func TestAIAutomationHandler_AcceptsCanonicalInput(t *testing.T) {
 // obviously-bad payload and confirm the wrapper surfaces the
 // canonical layer's diagnostic; we then pass a known-good payload
 // and confirm acceptance.
-func TestAIAutomationGraphValidator_DelegatesToCanonical(t *testing.T) {
+func TestGraphValidator_DelegatesToCanonical(t *testing.T) {
 	t.Parallel()
-	v := NewAIAutomationGraphValidator()
+	v := NewGraphValidator()
 
 	if err := v.ValidateAutomationWire(nil); err == nil {
 		t.Error("ValidateAutomationWire(nil) err = nil, want non-nil")
@@ -251,11 +270,11 @@ func TestAIAutomationGraphValidator_DelegatesToCanonical(t *testing.T) {
 }
 
 // validateAutomationBuilderOnly mirrors the pre-stream validator
-// branch of AIAutomationHandler.ServeHTTP. Kept as a same-package
+// branch of Handler.ServeHTTP. Kept as a same-package
 // helper so the test does not need to construct a full handler with
 // stub deps.
 func validateAutomationBuilderOnly(w http.ResponseWriter, r *http.Request) {
-	var body aiAutomationBuilderRequest
+	var body builderRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -269,8 +288,8 @@ func validateAutomationBuilderOnly(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
-	if len(prompt) > aiAutomationBuilderMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiAutomationBuilderMaxPromptChars))
+	if len(prompt) > builderMaxPromptChars {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", builderMaxPromptChars))
 		return
 	}
 	w.WriteHeader(http.StatusOK)
