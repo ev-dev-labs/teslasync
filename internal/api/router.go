@@ -42,6 +42,7 @@ import (
 	aiincident "github.com/ev-dev-labs/teslasync/internal/api/aiincident"
 	ailifetime "github.com/ev-dev-labs/teslasync/internal/api/ailifetime"
 	aimlanom "github.com/ev-dev-labs/teslasync/internal/api/aimlanom"
+	aimlchargcv "github.com/ev-dev-labs/teslasync/internal/api/aimlchargcv"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -1908,7 +1909,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// ml-charging-curve-clustering (Phase-50 / ML3, slice 0064) tools —
 	// train_charge_curve_clusters + query_charge_curve_clusters.
 	// Both READ-only; the trainer reads the `charging_sessions`
-	// table via the AIChargingSessionSource adapter (SI columns
+	// table via the aimlchargcv.ChargingSessionSource adapter (SI columns
 	// peak_power_w / avg_power_w / total_energy_wh / duration_min /
 	// charger_type / start_time / etc per migration 000185) and
 	// returns a per-cluster (L1/L2/DC/unknown) learned envelope
@@ -1920,13 +1921,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// handler is constructed so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
 	charge.RegisterChargeCurveClustersTools(aiToolRegistry, charge.ChargeCurveClustersSources{
-		Trainer: mlchargingcurves.NewTrainer(NewAIChargingSessionSource(chargingdb.NewChargingRepo(db))),
+		Trainer: mlchargingcurves.NewTrainer(aimlchargcv.NewChargingSessionSource(chargingdb.NewChargingRepo(db))),
 	})
 	// ml-charging-curve-clustering handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiMLChargingCurveClusteringHandler := NewAIMLChargingCurveHandler(
+	aiMLChargingCurveClusteringHandler := aimlchargcv.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		mlchargingcurveclustering.New(),

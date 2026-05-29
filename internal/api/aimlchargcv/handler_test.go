@@ -17,10 +17,10 @@
 // ml-charging-curve-clustering`); duplicating that here would
 // require a live database fixture.
 
-package api
+package aimlchargcv
 
 import (
-	"encoding/json"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -30,6 +30,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly is the
 // load-bearing off-mode contract proof for slice 0064. It mounts
@@ -124,28 +142,28 @@ func TestMLChargingCurveClusteringAIOffUsesRuleLabelsOnly(t *testing.T) {
 	}
 }
 
-// TestAIMLChargingCurveHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIMLChargingCurveHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatal("NewAIMLChargingCurveHandler(nil,nil,nil,\"\") did not panic")
+			t.Fatal("NewHandler(nil,nil,nil,\"\") did not panic")
 		}
 	}()
-	NewAIMLChargingCurveHandler(nil, nil, nil, "")
+	NewHandler(nil, nil, nil, "")
 }
 
-// TestAIMLChargingCurveHandler_RejectsBadRequestBodies pins the
+// TestHandler_RejectsBadRequestBodies pins the
 // request-validation contract: missing vehicle_id, non-positive
 // vehicle_id, and out-of-range lookback_days must surface as 4xx
 // BEFORE the dispatcher is reached (so a confused caller cannot
 // waste a provider call). The baseline-coexistence test above
 // already proves the off-mode 404; this test pins the on-mode
 // validator.
-func TestAIMLChargingCurveHandler_RejectsBadRequestBodies(t *testing.T) {
+func TestHandler_RejectsBadRequestBodies(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
@@ -177,32 +195,12 @@ func TestAIMLChargingCurveHandler_RejectsBadRequestBodies(t *testing.T) {
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/ml/charging-curves/cluster",
 				strings.NewReader(tc.body))
-			validateMLChargingCurveRequest(rec, req)
+			if _, ok := parseClusterRequest(rec, req); ok {
+				t.Fatalf("parseClusterRequest unexpectedly accepted body %q", tc.body)
+			}
 			if rec.Code != tc.want {
 				t.Fatalf("status = %d, want %d (body=%q)", rec.Code, tc.want, rec.Body.String())
 			}
 		})
 	}
-}
-
-// validateMLChargingCurveRequest mirrors the pre-dispatch
-// validation block in (*AIMLChargingCurveHandler).ServeHTTP. Kept
-// in the test file (not exported from the production handler) so a
-// future change to ServeHTTP's validation must update both —
-// surfacing the divergence rather than letting it drift.
-func validateMLChargingCurveRequest(w http.ResponseWriter, r *http.Request) {
-	var body aiMLChargingCurveRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
-		return
-	}
-	if body.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
-		return
-	}
-	if body.LookbackDays < 0 || body.LookbackDays > aiMLChargingCurveMaxDays {
-		writeError(w, http.StatusBadRequest, "lookback_days must be in 0..365 (0 = default)")
-		return
-	}
-	w.WriteHeader(http.StatusOK)
 }
