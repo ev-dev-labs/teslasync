@@ -15,10 +15,11 @@
 // predictive-maintenance`); duplicating that here would require
 // a live maintenance-items fixture.
 
-package api
+package aipredmaint
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,6 +29,22 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestPredictiveMaintenanceAIOffShowsThresholdReminders is the
 // load-bearing off-mode contract proof for slice 0049. It
@@ -157,23 +174,23 @@ func TestPredictiveMaintenanceAIOffShowsThresholdReminders(t *testing.T) {
 	}
 }
 
-// TestAIPredictiveMaintenanceHandler_PanicsOnNilWiring asserts
+// TestHandler_PanicsOnNilWiring asserts
 // the handler constructor refuses zero-valued dependencies. A
 // wiring bug at boot must surface as a panic, not as a
 // nil-deref on first request.
-func TestAIPredictiveMaintenanceHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIPredictiveMaintenanceHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIPredictiveMaintenanceHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -181,12 +198,12 @@ func TestAIPredictiveMaintenanceHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIPredictiveMaintenanceHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the body BEFORE opening the SSE stream — a
 // missing, unparseable, or out-of-range field must surface as a
 // JSON 400, not a half-opened stream that confuses the
 // frontend.
-func TestAIPredictiveMaintenanceHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -247,16 +264,16 @@ func TestBuildPredictiveMaintenanceUserMessage(t *testing.T) {
 	}
 }
 
-// TestAIPredictiveMaintenanceContextSource_NoRedisReportsUnknownMileage
+// TestContextSource_NoRedisReportsUnknownMileage
 // pins the production source contract: when no Redis cache is
 // wired (test env, deploy without Redis), the source must
 // report current_mileage as nil — NOT 0. Sentinel 0 would
 // silently conflate "unread odometer" with "brand-new vehicle"
 // and the strategy's "if current_mileage is null, prefer
 // time-based reasoning" directive would never trigger.
-func TestAIPredictiveMaintenanceContextSource_NoRedisReportsUnknownMileage(t *testing.T) {
+func TestContextSource_NoRedisReportsUnknownMileage(t *testing.T) {
 	t.Parallel()
-	src := NewAIPredictiveMaintenanceContextSource(nil, nil)
+	src := NewContextSource(nil, nil)
 	env, err := src.MaintenanceContext(nil, 42)
 	if err != nil {
 		t.Fatalf("MaintenanceContext err = %v", err)
@@ -299,11 +316,11 @@ func TestAIPredictiveMaintenanceContextSource_NoRedisReportsUnknownMileage(t *te
 	}
 }
 
-// TestAIPredictiveMaintenanceContextSource_RejectsInvalidVehicleID
+// TestContextSource_RejectsInvalidVehicleID
 // pins the adapter's argument validation contract.
-func TestAIPredictiveMaintenanceContextSource_RejectsInvalidVehicleID(t *testing.T) {
+func TestContextSource_RejectsInvalidVehicleID(t *testing.T) {
 	t.Parallel()
-	src := NewAIPredictiveMaintenanceContextSource(nil, nil)
+	src := NewContextSource(nil, nil)
 	cases := []struct {
 		name      string
 		vehicleID int64
@@ -321,14 +338,14 @@ func TestAIPredictiveMaintenanceContextSource_RejectsInvalidVehicleID(t *testing
 	}
 }
 
-// TestAIPredictiveMaintenanceContextSource_ItemsCarryStatusAndCategory
+// TestContextSource_ItemsCarryStatusAndCategory
 // pins that the typed translation preserves the operator-facing
 // fields the LLM needs to ground the advisory. A future edit
 // that drops one of these fields silently degrades the
 // advisory.
-func TestAIPredictiveMaintenanceContextSource_ItemsCarryStatusAndCategory(t *testing.T) {
+func TestContextSource_ItemsCarryStatusAndCategory(t *testing.T) {
 	t.Parallel()
-	src := NewAIPredictiveMaintenanceContextSource(nil, nil)
+	src := NewContextSource(nil, nil)
 	env, err := src.MaintenanceContext(nil, 42)
 	if err != nil {
 		t.Fatalf("MaintenanceContext err = %v", err)

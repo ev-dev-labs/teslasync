@@ -1,4 +1,4 @@
-package api
+package aipredmaint
 
 // Phase-50 / 0049 — M1 Predictive maintenance.
 //
@@ -82,6 +82,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/rs/zerolog/log"
 
@@ -92,6 +93,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/maintenance"
+	apihttpx "github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -117,14 +119,14 @@ type aiPredictiveMaintenanceRequest struct {
 	VehicleID int64 `json:"vehicle_id"`
 }
 
-// AIPredictiveMaintenanceHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/maintenance/predict.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AIPredictiveMaintenanceHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -133,7 +135,7 @@ type AIPredictiveMaintenanceHandler struct {
 	maxIters   int
 }
 
-// NewAIPredictiveMaintenanceHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first
 // request.
@@ -156,7 +158,7 @@ type AIPredictiveMaintenanceHandler struct {
 // source:     the production
 //
 //	maintenance.MaintenancePredictionContextSource
-//	(currently AIPredictiveMaintenanceContextSource —
+//	(currently ContextSource —
 //	wraps the SAME default-items + Redis-odometer
 //	reader the canonical baseline GET
 //	/api/v1/maintenance handler already serves; the
@@ -166,24 +168,24 @@ type AIPredictiveMaintenanceHandler struct {
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAIPredictiveMaintenanceHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	source maintenance.MaintenancePredictionContextSource,
 	headerName string,
-) *AIPredictiveMaintenanceHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIPredictiveMaintenanceHandler: nil provider.Registry")
+		panic("api/aipredmaint: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIPredictiveMaintenanceHandler: nil tools.Registry")
+		panic("api/aipredmaint: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIPredictiveMaintenanceHandler: nil strategy.Strategy")
+		panic("api/aipredmaint: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAIPredictiveMaintenanceHandler: nil maintenance.MaintenancePredictionContextSource")
+		panic("api/aipredmaint: NewHandler: nil maintenance.MaintenancePredictionContextSource")
 	}
-	return &AIPredictiveMaintenanceHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -232,7 +234,7 @@ func parsePredictiveMaintenanceRequest(w http.ResponseWriter, r *http.Request) (
 // writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
-func (h *AIPredictiveMaintenanceHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parsePredictiveMaintenanceRequest(w, r)
 	if !ok {
@@ -332,9 +334,9 @@ func buildPredictiveMaintenanceUserMessage(vehicleID int64) string {
 	)
 }
 
-// Compile-time assertion: AIPredictiveMaintenanceHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AIPredictiveMaintenanceHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -344,32 +346,27 @@ var _ http.Handler = (*AIPredictiveMaintenanceHandler)(nil)
 // AIFSMTraceSource pattern.
 // ---------------------------------------------------------------------
 
-// AIPredictiveMaintenanceContextSource is the production
+// ContextSource is the production
 // maintenance.MaintenancePredictionContextSource. The canonical
 // baseline /api/v1/maintenance surface remains reachable to the
 // operator at all times — this adapter wraps the SAME
 // default-items + Redis-odometer reader the canonical
 // MaintenanceHandler.List handler serves, so the LLM and the
 // operator see the SAME maintenance items list. No new SQL is
-// issued by this adapter; the read paths are the existing
-// in-package methods on MaintenanceHandler.
+// issued by this adapter; the deterministic builder mirrors
+// the canonical maintenance handler's item list.
 //
 // A future slice that wires a per-vehicle persistent
 // maintenance-items table (replacing the current hard-coded
 // default-items list with a live read) can replace the underlying
 // MaintenanceHandler implementation without changing the tool /
 // handler / strategy contract.
-type AIPredictiveMaintenanceContextSource struct {
+type ContextSource struct {
 	db         *database.DB
 	redisCache *signal.RedisSignalCache
-	// items is the in-package handle to the deterministic items
-	// builder. We keep a *MaintenanceHandler reference so that
-	// any future refactor of defaultItems naturally flows
-	// through to this adapter without code duplication.
-	items *MaintenanceHandler
 }
 
-// NewAIPredictiveMaintenanceContextSource constructs the
+// NewContextSource constructs the
 // production adapter. The db is required (the canonical
 // MaintenanceHandler.List handler uses it to look up the
 // first-vehicle id; the adapter doesn't do that lookup itself
@@ -378,15 +375,10 @@ type AIPredictiveMaintenanceContextSource struct {
 // per-vehicle persistent-items reads). The redisCache is
 // optional — when nil, the adapter reports current_mileage as
 // unknown (nil pointer).
-func NewAIPredictiveMaintenanceContextSource(db *database.DB, redisCache *signal.RedisSignalCache) *AIPredictiveMaintenanceContextSource {
-	mh := NewMaintenanceHandler(db)
-	if redisCache != nil {
-		mh = mh.WithRedisCache(redisCache)
-	}
-	return &AIPredictiveMaintenanceContextSource{
+func NewContextSource(db *database.DB, redisCache *signal.RedisSignalCache) *ContextSource {
+	return &ContextSource{
 		db:         db,
 		redisCache: redisCache,
-		items:      mh,
 	}
 }
 
@@ -394,7 +386,7 @@ func NewAIPredictiveMaintenanceContextSource(db *database.DB, redisCache *signal
 // maintenance.MaintenancePredictionContextSource. Returns a typed
 // envelope for the in-scope vehicleID. No state is mutated.
 // No SQL is issued by this method (the underlying
-// MaintenanceHandler.defaultItems is a pure-functional builder
+// defaultItems is a pure-functional builder
 // keyed on (vehicleID, currentOdometer)); the only IO is a
 // best-effort Redis read for the live odometer, which falls
 // back to "unknown" on miss / error.
@@ -402,7 +394,7 @@ func NewAIPredictiveMaintenanceContextSource(db *database.DB, redisCache *signal
 // The envelope's slices are non-nil (empty-but-allocated) so
 // JSON marshalling renders [] rather than null — keeping the
 // LLM's tool-reply parsing predictable.
-func (a *AIPredictiveMaintenanceContextSource) MaintenanceContext(ctx context.Context, vehicleID int64) (*maintenance.MaintenancePredictionContextEnvelope, error) {
+func (a *ContextSource) MaintenanceContext(ctx context.Context, vehicleID int64) (*maintenance.MaintenancePredictionContextEnvelope, error) {
 	if vehicleID <= 0 {
 		return nil, fmt.Errorf("api ai predictive-maintenance: vehicle_id must be > 0")
 	}
@@ -432,7 +424,7 @@ func (a *AIPredictiveMaintenanceContextSource) MaintenanceContext(ctx context.Co
 	if currentMileage != nil {
 		od = *currentMileage
 	}
-	raw := a.items.defaultItems(vehicleID, od)
+	raw := defaultItems(vehicleID, od)
 
 	// Translate the map[string]interface{} default-items shape
 	// (legacy pre-Phase-48 baseline; the existing operator
@@ -515,6 +507,86 @@ func (a *AIPredictiveMaintenanceContextSource) MaintenanceContext(ctx context.Co
 	}, nil
 }
 
-// Compile-time assertion: AIPredictiveMaintenanceContextSource
+func writeError(w http.ResponseWriter, status int, msg string) {
+	apihttpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+func bytesTrim(b []byte) []byte {
+	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] == '\r' || b[0] == '\n') {
+		b = b[1:]
+	}
+	for len(b) > 0 && (b[len(b)-1] == ' ' || b[len(b)-1] == '\t' || b[len(b)-1] == '\r' || b[len(b)-1] == '\n') {
+		b = b[:len(b)-1]
+	}
+	return b
+}
+
+func defaultItems(vehicleID int64, currentOdometer float64) []map[string]interface{} {
+	now := time.Now()
+	return []map[string]interface{}{
+		{
+			"id": 1, "vehicle_id": vehicleID, "category": "filters",
+			"name": "Cabin Air Filter", "description": "Replace cabin air filter (HEPA)",
+			"due_date": now.AddDate(0, 6, 0).Format("2006-01-02"), "due_mileage": nil,
+			"current_mileage": currentOdometer, "last_service_date": nil, "last_service_mileage": nil,
+			"interval_months": 24, "interval_miles": nil, "status": "good", "created_at": now.Format(time.RFC3339),
+		},
+		{
+			"id": 2, "vehicle_id": vehicleID, "category": "tires",
+			"name": "Tire Rotation", "description": "Rotate tires for even wear",
+			"due_date": nil, "due_mileage": currentOdometer + 10000,
+			"current_mileage": currentOdometer, "last_service_date": nil, "last_service_mileage": nil,
+			"interval_months": nil, "interval_miles": 10000, "status": "good", "created_at": now.Format(time.RFC3339),
+		},
+		{
+			"id": 3, "vehicle_id": vehicleID, "category": "brakes",
+			"name": "Brake Fluid Check", "description": "Test brake fluid for moisture content",
+			"due_date": now.AddDate(0, 12, 0).Format("2006-01-02"), "due_mileage": nil,
+			"current_mileage": currentOdometer, "last_service_date": nil, "last_service_mileage": nil,
+			"interval_months": 24, "interval_miles": nil, "status": "good", "created_at": now.Format(time.RFC3339),
+		},
+		{
+			"id": 4, "vehicle_id": vehicleID, "category": "battery",
+			"name": "Battery Coolant", "description": "Check battery coolant level and condition",
+			"due_date": now.AddDate(2, 0, 0).Format("2006-01-02"), "due_mileage": nil,
+			"current_mileage": currentOdometer, "last_service_date": nil, "last_service_mileage": nil,
+			"interval_months": 48, "interval_miles": nil, "status": "good", "created_at": now.Format(time.RFC3339),
+		},
+		{
+			"id": 5, "vehicle_id": vehicleID, "category": "fluids",
+			"name": "Windshield Washer Fluid", "description": "Top up windshield washer fluid",
+			"due_date": nil, "due_mileage": nil,
+			"current_mileage": currentOdometer, "last_service_date": nil, "last_service_mileage": nil,
+			"interval_months": 6, "interval_miles": nil, "status": "good", "created_at": now.Format(time.RFC3339),
+		},
+		{
+			"id": 6, "vehicle_id": vehicleID, "category": "wipers",
+			"name": "Wiper Blades", "description": "Inspect and replace wiper blades if worn",
+			"due_date": now.AddDate(0, 3, 0).Format("2006-01-02"), "due_mileage": nil,
+			"current_mileage": currentOdometer, "last_service_date": nil, "last_service_mileage": nil,
+			"interval_months": 12, "interval_miles": nil, "status": "good", "created_at": now.Format(time.RFC3339),
+		},
+		{
+			"id": 7, "vehicle_id": vehicleID, "category": "alignment",
+			"name": "Wheel Alignment", "description": "Check and adjust wheel alignment",
+			"due_date": nil, "due_mileage": currentOdometer + 20000,
+			"current_mileage": currentOdometer, "last_service_date": nil, "last_service_mileage": nil,
+			"interval_months": nil, "interval_miles": 20000, "status": "good", "created_at": now.Format(time.RFC3339),
+		},
+		{
+			"id": 8, "vehicle_id": vehicleID, "category": "brakes",
+			"name": "Brake Caliper Cleaning", "description": "Clean and lubricate brake calipers",
+			"due_date": nil, "due_mileage": nil,
+			"current_mileage": currentOdometer, "last_service_date": nil, "last_service_mileage": nil,
+			"interval_months": 12, "interval_miles": 20000, "status": "good", "created_at": now.Format(time.RFC3339),
+		},
+	}
+}
+
+// Compile-time assertion: ContextSource
 // satisfies maintenance.MaintenancePredictionContextSource.
-var _ maintenance.MaintenancePredictionContextSource = (*AIPredictiveMaintenanceContextSource)(nil)
+var _ maintenance.MaintenancePredictionContextSource = (*ContextSource)(nil)

@@ -51,6 +51,7 @@ import (
 	aiperiodcmp "github.com/ev-dev-labs/teslasync/internal/api/aiperiodcmp"
 	aipiiredact "github.com/ev-dev-labs/teslasync/internal/api/aipiiredact"
 	aipostcard "github.com/ev-dev-labs/teslasync/internal/api/aipostcard"
+	aipredmaint "github.com/ev-dev-labs/teslasync/internal/api/aipredmaint"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2334,7 +2335,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// rule as the other slice tools above: must be registered
 	// before the handler constructor below so the strategy's
 	// allowedTools resolve at boot. The Source is the production
-	// AIPredictiveMaintenanceContextSource adapter that wraps the
+	// aipredmaint.ContextSource adapter that wraps the
 	// SAME default-items + Redis-odometer reader the canonical
 	// baseline /api/v1/maintenance handler already serves; the
 	// canonical baseline surface remains reachable to the
@@ -2351,7 +2352,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			aiPredictiveMaintenanceRedisCache = signal.NewRedisSignalCache(rdb)
 		}
 	}
-	aiPredictiveMaintenanceContextSource := NewAIPredictiveMaintenanceContextSource(db, aiPredictiveMaintenanceRedisCache)
+	aiPredictiveMaintenanceContextSource := aipredmaint.NewContextSource(db, aiPredictiveMaintenanceRedisCache)
 	maintenance.RegisterPredictiveMaintenanceTools(aiToolRegistry, maintenance.PredictiveMaintenanceSources{
 		Retriever:          aiPredictiveMaintenanceRetriever,
 		MaintenanceContext: aiPredictiveMaintenanceContextSource,
@@ -2360,7 +2361,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiPredictiveMaintenanceHandler := NewAIPredictiveMaintenanceHandler(
+	aiPredictiveMaintenanceHandler := aipredmaint.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		predictivemaintenance.New(),
