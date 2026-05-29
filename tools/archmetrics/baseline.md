@@ -1,13 +1,13 @@
 # TeslaSync architecture metrics — baseline
 
-_Generated 2026-05-29T07:17:57Z, Go go1.26.1, commit f3b158d22a2cf596c9b13587fdd5abdcfd6e2ccb_
+_Generated 2026-05-29T07:39:00Z, Go go1.26.1, commit b26fab2c8f0c3a2c417b1df94827822191006492_
 
 ## Summary
 
-- Packages: 465
+- Packages: 471
 - doc.go coverage: 100.0%
 - Forbidden edges detected: 1
-- Total non-blank LOC under cmd/+internal/+tools/: 382703
+- Total non-blank LOC under cmd/+internal/+tools/: 383052
 
 ## cmd/* main.go LOC
 
@@ -170,7 +170,7 @@ _Generated 2026-05-29T07:17:57Z, Go go1.26.1, commit f3b158d22a2cf596c9b13587fdd
 | internal/ai/tools/voice | 2 | 0 | 476 | yes | domain |
 | internal/ai/tools/yir | 2 | 1 | 568 | yes | domain |
 | internal/alertmsg | 3 | 1 | 981 | yes | domain |
-| internal/api | 58 | 37 | 26751 | yes | handler |
+| internal/api | 52 | 35 | 24488 | yes | handler |
 | internal/api/adminfeedback | 2 | 1 | 680 | yes | handler |
 | internal/api/adminlogstream | 2 | 1 | 688 | yes | handler |
 | internal/api/adminmaintenance | 2 | 1 | 604 | yes | handler |
@@ -245,8 +245,10 @@ _Generated 2026-05-29T07:17:57Z, Go go1.26.1, commit f3b158d22a2cf596c9b13587fdd
 | internal/api/automation | 11 | 1 | 4620 | yes | handler |
 | internal/api/backup | 3 | 1 | 530 | yes | handler |
 | internal/api/battery | 2 | 1 | 418 | yes | handler |
+| internal/api/batterycells | 2 | 1 | 459 | yes | handler |
 | internal/api/chargeheatmap | 2 | 0 | 161 | yes | handler |
 | internal/api/chargeopt | 4 | 0 | 578 | yes | handler |
+| internal/api/chargeplanner | 5 | 3 | 996 | yes | handler |
 | internal/api/chargetelem | 2 | 1 | 319 | yes | handler |
 | internal/api/charging | 3 | 1 | 767 | yes | handler |
 | internal/api/chartannotation | 2 | 1 | 827 | yes | handler |
@@ -282,6 +284,7 @@ _Generated 2026-05-29T07:17:57Z, Go go1.26.1, commit f3b158d22a2cf596c9b13587fdd
 | internal/api/ingestxray | 2 | 1 | 429 | yes | handler |
 | internal/api/lifetime | 2 | 1 | 878 | yes | handler |
 | internal/api/locsnap | 2 | 1 | 538 | yes | handler |
+| internal/api/maintenance | 2 | 0 | 119 | yes | handler |
 | internal/api/media | 2 | 1 | 427 | yes | handler |
 | internal/api/middleware | 4 | 2 | 763 | yes | handler |
 | internal/api/mileage | 2 | 1 | 1267 | yes | handler |
@@ -320,6 +323,7 @@ _Generated 2026-05-29T07:17:57Z, Go go1.26.1, commit f3b158d22a2cf596c9b13587fdd
 | internal/api/synthetic | 2 | 0 | 40 | yes | handler |
 | internal/api/sysauthmode | 2 | 1 | 339 | yes | handler |
 | internal/api/tco | 3 | 1 | 506 | yes | handler |
+| internal/api/tempimpact | 2 | 0 | 240 | yes | handler |
 | internal/api/teslachargehist | 2 | 0 | 269 | yes | handler |
 | internal/api/teslachargesess | 2 | 0 | 221 | yes | handler |
 | internal/api/teslaenergyhist | 4 | 0 | 468 | yes | handler |
@@ -343,10 +347,12 @@ _Generated 2026-05-29T07:17:57Z, Go go1.26.1, commit f3b158d22a2cf596c9b13587fdd
 | internal/api/vehiclesettings | 2 | 1 | 850 | yes | handler |
 | internal/api/vehiclestates | 2 | 1 | 758 | yes | handler |
 | internal/api/visitedlocation | 2 | 0 | 64 | yes | handler |
+| internal/api/watch | 2 | 0 | 343 | yes | handler |
 | internal/api/weberrors | 2 | 1 | 483 | yes | handler |
 | internal/api/webhookreceiver | 2 | 1 | 291 | yes | handler |
 | internal/api/webvitals | 2 | 1 | 356 | yes | handler |
 | internal/api/weeklydigest | 2 | 0 | 92 | yes | handler |
+| internal/api/yearreview | 2 | 0 | 455 | yes | handler |
 | internal/apilog | 4 | 1 | 496 | yes | platform |
 | internal/app | 6 | 1 | 1849 | yes | app |
 | internal/app/adminobssvc | 3 | 0 | 169 | yes | app |
@@ -521,7 +527,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 | `internal/ai/tools` | R6 | 109 | 11 / 7 | 13 | 8 | 5 |
 | `internal/database` | R4 | 143 | 12 / 9 | 22 | 17 | 5 |
 | `internal/handler/v1` | R3 | 12 | 11 / 1 | 9 | 0 | 9 |
-| `internal/api` | R2 (waves R2a-R2e) | 434 | 58 / 37 | 59 | 31 | 28 |
+| `internal/api` | R2 (waves R2a-R2e) | 434 | 52 / 35 | 59 | 34 | 25 |
 
 ### `internal/models` detail
 
@@ -639,6 +645,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/regen`
 - `internal/api/vampiredrain`
 - `internal/api/tco`
+- `internal/api/tempimpact`
 - `internal/api/routeeff`
 - `internal/api/dataquality`
 - `internal/api/search`
@@ -659,6 +666,8 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/exports`
 - `internal/api/safety`
 - `internal/api/audit`
+- `internal/api/maintenance`
+- `internal/api/watch`
 - `internal/api/webvitals`
 
 **Planned but not yet on disk:**
@@ -666,7 +675,6 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/health`
 - `internal/api/sse`
 - `internal/api/observability`
-- `internal/api/tempimpact`
 - `internal/api/speed`
 - `internal/api/signal`
 - `internal/api/fsm`
@@ -686,9 +694,7 @@ _Per ADR-011 (`docs/architecture/adr/011-bounded-context-subpackages.md`). This 
 - `internal/api/geo`
 - `internal/api/bulk`
 - `internal/api/api_call_log`
-- `internal/api/maintenance`
 - `internal/api/software_update`
-- `internal/api/watch`
 - `internal/api/webhook`
 
 **Shared-helper subpackages (extracted in prep sub-phase):**

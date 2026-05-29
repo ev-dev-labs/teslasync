@@ -384,3 +384,12 @@ af332539326a7a9e5c8caf1ff87032cac17560ec # refactor(R2d.160): carve internal/api
 6cfc001bf1436d9d51bc25caa504bfda31c497aa # refactor(R2d.162): carve internal/api/aivoice subpackage
 bb7f75962d208bca7f6c6fa81be5c76321bc31d7 # refactor(R2d.161): carve internal/api/aiwatchnl subpackage
 f3b158d22a2cf596c9b13587fdd5abdcfd6e2ccb # fix(R2d): resolve cross-carve conflicts (ainlgrafana/ainlsql, aiautoname/aisuggeo)
+
+# R2d.163-168 batch 12 — 6 non-AI handler subpackage carves + cherry-pick wiring fix
+2e7cefc4fb34b01960fd6d2bf2cfc5420616a650 # refactor(R2d.163): carve internal/api/maintenance subpackage
+7239a625eff242bcb49628523b2b04a46f459b80 # refactor(R2d.164): carve internal/api/batterycells subpackage
+241ab9447d2f66e3063fa09d1c0c997917d9c54f # refactor(R2d.165): carve internal/api/chargeplanner subpackage
+29265295b963da3a854dd884527c59d3293e0b94 # refactor(R2d.166): carve internal/api/watch subpackage
+9270cecd692cee20a9eec3fc84863c1fc5af8bc9 # refactor(R2d.167): carve internal/api/yearreview subpackage
+3d108eb0fae845223d4cca8cc0d7cdf1e81de408 # refactor(R2d.168): carve internal/api/tempimpact subpackage
+b26fab2c8f0c3a2c417b1df94827822191006492 # fix(R2d): resolve duplicate wiring lines from batch 12 cherry-pick (chargeplanner/yearreview)

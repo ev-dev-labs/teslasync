@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-29T07:17:43Z",
+  "generated_at": "2026-05-29T07:38:59Z",
   "go_version": "go1.26.1",
-  "commit_sha": "f3b158d22a2cf596c9b13587fdd5abdcfd6e2ccb",
+  "commit_sha": "b26fab2c8f0c3a2c417b1df94827822191006492",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 58,
-      "test_files": 37,
-      "loc": 26751,
+      "go_files": 52,
+      "test_files": 35,
+      "loc": 24488,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2691,8 +2691,10 @@
         "internal/api/automation",
         "internal/api/backup",
         "internal/api/battery",
+        "internal/api/batterycells",
         "internal/api/chargeheatmap",
         "internal/api/chargeopt",
+        "internal/api/chargeplanner",
         "internal/api/chargetelem",
         "internal/api/charging",
         "internal/api/chartannotation",
@@ -2726,6 +2728,7 @@
         "internal/api/ingestxray",
         "internal/api/lifetime",
         "internal/api/locsnap",
+        "internal/api/maintenance",
         "internal/api/media",
         "internal/api/middleware",
         "internal/api/mileage",
@@ -2763,6 +2766,7 @@
         "internal/api/synthetic",
         "internal/api/sysauthmode",
         "internal/api/tco",
+        "internal/api/tempimpact",
         "internal/api/teslachargehist",
         "internal/api/teslachargesess",
         "internal/api/teslaenergyhist",
@@ -2785,10 +2789,12 @@
         "internal/api/vehiclesettings",
         "internal/api/vehiclestates",
         "internal/api/visitedlocation",
+        "internal/api/watch",
         "internal/api/weberrors",
         "internal/api/webhookreceiver",
         "internal/api/webvitals",
         "internal/api/weeklydigest",
+        "internal/api/yearreview",
         "internal/apilog",
         "internal/app/adminobssvc",
         "internal/app/auditviewersvc",
@@ -2900,8 +2906,6 @@
         "apperror_bridge_test.go",
         "audit.go",
         "audit_test.go",
-        "battery_cells_handler.go",
-        "battery_cells_handler_test.go",
         "battery_degradation_handler.go",
         "battery_degradation_handler_calculations.go",
         "battery_degradation_handler_dtos.go",
@@ -2910,10 +2914,8 @@
         "bulk_handlers_test.go",
         "bulk_helpers.go",
         "bulk_helpers_bridge_test.go",
-        "charge_planner_handler.go",
         "charge_planner_handler_compute.go",
         "charge_planner_handler_dtos.go",
-        "charge_planner_handler_test.go",
         "computed_metric_evaluator.go",
         "computed_metrics.go",
         "converters.go",
@@ -2932,7 +2934,6 @@
         "health_test.go",
         "helpers.go",
         "helpers_extra_test.go",
-        "maintenance_handler.go",
         "metrics.go",
         "middleware.go",
         "middleware_test.go",
@@ -2970,10 +2971,7 @@
         "telemetry_sessions_recovery_test.go",
         "telemetry_sessions_signal_helpers.go",
         "telemetry_sessions_test.go",
-        "temp_impact_handler.go",
-        "tire_pressure_mappings.go",
-        "watch_handler.go",
-        "year_review_handler.go"
+        "tire_pressure_mappings.go"
       ]
     },
     {
@@ -4795,6 +4793,25 @@
       ]
     },
     {
+      "path": "internal/api/batterycells",
+      "go_files": 2,
+      "test_files": 1,
+      "loc": 459,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/signal",
+        "internal/signal"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go",
+        "handler_test.go"
+      ]
+    },
+    {
       "path": "internal/api/chargeheatmap",
       "go_files": 2,
       "test_files": 0,
@@ -4826,6 +4843,35 @@
         "doc.go",
         "dtos.go",
         "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/chargeplanner",
+      "go_files": 5,
+      "test_files": 3,
+      "loc": 996,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/ai/tools/schedule",
+        "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/config",
+        "internal/database",
+        "internal/database/charging",
+        "internal/database/vehicle",
+        "internal/signal",
+        "internal/tesla"
+      ],
+      "files": [
+        "compute.go",
+        "converters.go",
+        "doc.go",
+        "dtos.go",
+        "handler.go",
+        "handler_test.go",
+        "signal_at_call_record_test.go",
+        "state_reader_test.go"
       ]
     },
     {
@@ -5525,6 +5571,23 @@
         "doc.go",
         "handler.go",
         "handler_test.go"
+      ]
+    },
+    {
+      "path": "internal/api/maintenance",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 119,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database",
+        "internal/signal"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
       ]
     },
     {
@@ -6242,6 +6305,22 @@
       ]
     },
     {
+      "path": "internal/api/tempimpact",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 240,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
       "path": "internal/api/teslachargehist",
       "go_files": 2,
       "test_files": 0,
@@ -6680,6 +6759,27 @@
       ]
     },
     {
+      "path": "internal/api/watch",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 343,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
+        "internal/api/httpx",
+        "internal/database",
+        "internal/database/settings",
+        "internal/database/vehicle",
+        "internal/enums",
+        "internal/signal",
+        "internal/tesla"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
       "path": "internal/api/weberrors",
       "go_files": 2,
       "test_files": 1,
@@ -6739,6 +6839,22 @@
       "layer": "handler",
       "imports": [
         "internal/api/apiparams",
+        "internal/api/httpx",
+        "internal/database"
+      ],
+      "files": [
+        "doc.go",
+        "handler.go"
+      ]
+    },
+    {
+      "path": "internal/api/yearreview",
+      "go_files": 2,
+      "test_files": 0,
+      "loc": 455,
+      "has_doc_go": true,
+      "layer": "handler",
+      "imports": [
         "internal/api/httpx",
         "internal/database"
       ],
@@ -10462,12 +10578,10 @@
       "api_call_log_middleware.go",
       "apikey_middleware.go",
       "audit.go",
-      "battery_cells_handler.go",
       "battery_degradation_handler.go",
       "battery_degradation_handler_calculations.go",
       "battery_degradation_handler_dtos.go",
       "bulk_helpers.go",
-      "charge_planner_handler.go",
       "charge_planner_handler_compute.go",
       "charge_planner_handler_dtos.go",
       "computed_metric_evaluator.go",
@@ -10484,7 +10598,6 @@
       "fsm_handler_query.go",
       "health.go",
       "helpers.go",
-      "maintenance_handler.go",
       "metrics.go",
       "middleware.go",
       "router.go",
@@ -10507,10 +10620,7 @@
       "telemetry_sessions_flush_backfill.go",
       "telemetry_sessions_recovery.go",
       "telemetry_sessions_signal_helpers.go",
-      "temp_impact_handler.go",
-      "tire_pressure_mappings.go",
-      "watch_handler.go",
-      "year_review_handler.go"
+      "tire_pressure_mappings.go"
     ],
     "internal/api/adminfeedback": [
       "doc.go",
@@ -10828,12 +10938,23 @@
       "doc.go",
       "handler.go"
     ],
+    "internal/api/batterycells": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/chargeheatmap": [
       "doc.go",
       "handler.go"
     ],
     "internal/api/chargeopt": [
       "compute.go",
+      "doc.go",
+      "dtos.go",
+      "handler.go"
+    ],
+    "internal/api/chargeplanner": [
+      "compute.go",
+      "converters.go",
       "doc.go",
       "dtos.go",
       "handler.go"
@@ -10989,6 +11110,10 @@
       "handler.go"
     ],
     "internal/api/locsnap": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/maintenance": [
       "doc.go",
       "handler.go"
     ],
@@ -11156,6 +11281,10 @@
       "handler.go",
       "summary.go"
     ],
+    "internal/api/tempimpact": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/teslachargehist": [
       "doc.go",
       "handler.go"
@@ -11252,6 +11381,10 @@
       "doc.go",
       "handler.go"
     ],
+    "internal/api/watch": [
+      "doc.go",
+      "handler.go"
+    ],
     "internal/api/weberrors": [
       "doc.go",
       "handler.go"
@@ -11265,6 +11398,10 @@
       "handler.go"
     ],
     "internal/api/weeklydigest": [
+      "doc.go",
+      "handler.go"
+    ],
+    "internal/api/yearreview": [
       "doc.go",
       "handler.go"
     ],
@@ -12379,8 +12516,8 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 58,
-      "flat_parent_test_files": 37,
+      "flat_parent_go_files": 52,
+      "flat_parent_test_files": 35,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
         "openapi",
@@ -12393,6 +12530,7 @@
         "regen",
         "vampiredrain",
         "tco",
+        "tempimpact",
         "routeeff",
         "dataquality",
         "search",
@@ -12413,6 +12551,8 @@
         "exports",
         "safety",
         "audit",
+        "maintenance",
+        "watch",
         "webvitals"
       ],
       "missing_subpkgs": [
@@ -12420,7 +12560,6 @@
         "health",
         "sse",
         "observability",
-        "tempimpact",
         "speed",
         "signal",
         "fsm",
@@ -12440,9 +12579,7 @@
         "geo",
         "bulk",
         "api_call_log",
-        "maintenance",
         "software_update",
-        "watch",
         "webhook"
       ],
       "shared_subpkgs": [
