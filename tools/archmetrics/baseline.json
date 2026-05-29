@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-05-29T08:17:45Z",
+  "generated_at": "2026-05-29T08:21:01Z",
   "go_version": "go1.26.1",
-  "commit_sha": "8a2a2e6d2449655db2f15072c62e0edc8a8a5bbb",
+  "commit_sha": "444f1182853849c1889c5af331f783d7d0eb3abe",
   "packages": [
     {
       "path": "cmd/ai-eval",
@@ -2514,9 +2514,9 @@
     },
     {
       "path": "internal/api",
-      "go_files": 40,
+      "go_files": 38,
       "test_files": 29,
-      "loc": 19641,
+      "loc": 19463,
       "has_doc_go": true,
       "layer": "handler",
       "imports": [
@@ -2907,8 +2907,6 @@
         "bulk_handlers_test.go",
         "bulk_helpers.go",
         "bulk_helpers_bridge_test.go",
-        "charge_planner_handler_compute.go",
-        "charge_planner_handler_dtos.go",
         "computed_metric_evaluator.go",
         "computed_metrics.go",
         "converters.go",
@@ -10703,8 +10701,6 @@
       "apikey_middleware.go",
       "audit.go",
       "bulk_helpers.go",
-      "charge_planner_handler_compute.go",
-      "charge_planner_handler_dtos.go",
       "computed_metric_evaluator.go",
       "computed_metrics.go",
       "converters.go",
@@ -12664,7 +12660,7 @@
       "parent": "internal/api",
       "owner": "R2 (waves R2a-R2e)",
       "file_count_at_r0": 434,
-      "flat_parent_go_files": 40,
+      "flat_parent_go_files": 38,
       "flat_parent_test_files": 29,
       "planned_subpkgs": 59,
       "existing_subpkgs": [
