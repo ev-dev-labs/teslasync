@@ -40,132 +40,90 @@ import (
 // Adding a new AI route MUST go through this function so tools/aivet
 // can statically prove every AI route is wrapped by guard.Wrap.
 //
-// Parameters:
-//   - r          : the parent chi router (the /api/v1 subroute).
-//   - g          : the AI feature guard (mode + per-feature toggle).
-//   - registry   : the provider registry (Phase-50 / F1, slice 0002).
-//   - sudoMW     : RequireSudo middleware factory baked with the live
-//     sudoStore + sudoCfg. Wrapped around ops-only routes
-//     like /_internal/health so an attacker who somehow
-//     opens the feature toggle still needs a fresh sudo
-//     token to reach the diagnostic.
-//   - aiChatbot  : the real LLM-backed handler from
-//     internal/api/ai_chatbot_handler.go (Phase-50 / U1).
-//     May be nil during early bring-up; nil falls back to
-//     the F0 501 stub so the off-mode 404 invariant still
-//     holds.
-//   - aiDigest   : the real LLM-backed handler for the weekly digest
-//     narration (Phase-50 / U2). May be nil during early
-//     bring-up; nil falls back to the same 501 stub.
-//   - aiYIR      : the real LLM-backed handler for the year-in-review
-//     narration (Phase-50 / U3, slice 0013). Same nil
-//     fallback as the chatbot/digest handlers.
-//   - aiAnomaly  : the real LLM-backed handler for the anomaly
-//     explanation narration (Phase-50 / U4, slice 0014).
-//     Same nil fallback pattern.
-//   - aiAlert    : the real LLM-backed handler for the natural-language
-//     alert builder (Phase-50 / N1, slice 0015). Same nil
-//     fallback pattern.
-//   - aiAutomation: the real LLM-backed handler for the natural-language
-//     automation builder (Phase-50 / N2, slice 0016). Same
-//     nil fallback pattern.
-//   - aiSearch   : the real LLM-backed handler for the natural-language
-//     search across drives, charges, and alerts
-//     (Phase-50 / N3, slice 0017). Same nil fallback pattern.
-//   - aiDriveCoach: the real LLM-backed handler for the per-drive
-//     coaching narrative (Phase-50 / N4, slice 0018). Same
-//     nil fallback pattern.
-//   - aiChargingDiagnosis: the real LLM-backed handler for the per-charging-
-//     session diagnosis (Phase-50 / N5, slice 0019). Same
-//     nil fallback pattern.
-//   - aiRagHelp  : the real LLM-backed handler for the RAG-backed app
-//     help assistant (Phase-50 / N6, slice 0020). Same
-//     nil fallback pattern.
-//   - aiDriveSearch: the real LLM-backed handler for the natural-language
-//     drive search and replay assistant (Phase-50 / D1,
-//     slice 0021). Same nil fallback pattern.
-//   - aiSpeedProfileInsights: the real LLM-backed handler for the per-drive
-//     speed-profile insights narrative (Phase-50 / D2,
-//     slice 0022). Same nil fallback pattern.
-//   - aiRouteEfficiencySuggestions: the real LLM-backed handler for the
-//     route-efficiency suggestions narrative (Phase-50 / D3,
-//     slice 0023). Same nil fallback pattern.
-//   - aiAutoTripName: the real LLM-backed handler for the auto trip
-//     naming suggestion (Phase-50 / D4, slice 0024). Same
-//     nil fallback pattern.
-//   - aiTripPlannerLLM: the real LLM-backed handler for the
-//     trip-planner LLM agent (Phase-50 / D5, slice 0025).
-//     Same nil fallback pattern.
-//   - aiSmartChargeSchedule: the real LLM-backed handler for the
-//     smart-charge schedule suggestion (Phase-50 / C1,
-//     slice 0026). Same nil fallback pattern.
-//   - aiBatteryHealth: the real LLM-backed handler for the battery
-//     health forecast narrative (Phase-50 / C2,
-//     slice 0027). Same nil fallback pattern.
-//   - aiChargingCurveClustering: the real LLM-backed handler for
-//     the charging-curve fingerprint clustering
-//     narrator (Phase-50 / C3, slice 0028). Same nil
-//     fallback pattern.
+// All AI feature handlers are bundled into the AIHandlers field-bag (see
+// the struct definition immediately below) — each field is independently
+// nil-safe and falls back to a 501 stub so the off-mode 404 invariant
+// (ADR-015 §I6) is held by the guard regardless of partial wiring.
+//
+// AIHandlers bundles every AI feature handler wired into mountAIRoutes.
+//
+// Each field is independently nil-safe — the matching 501 stub handler
+// runs when the field is nil so the off-mode 404 invariant
+// (ADR-015 §I6) is held by the guard regardless of partial wiring.
+//
+// Adding a new AI handler? Add a field here (typed as http.Handler so
+// later carves can move the concrete type to a subpackage without
+// touching this file), plus one route block inside mountAIRoutes, plus
+// one stub function at the bottom of this file. Then assign the
+// constructed handler to the matching field at the single call site in
+// router.go. This struct exists so parallel subpackage carves (R2d.*)
+// can move concrete handler types into subpkgs WITHOUT re-touching the
+// mountAIRoutes signature on every carve — only the router.go field
+// assignment changes, which already conflicts on every carve.
+type AIHandlers struct {
+	Chatbot                                http.Handler
+	Digest                                 http.Handler
+	YIR                                    http.Handler
+	Anomaly                                http.Handler
+	Alert                                  http.Handler
+	Automation                             http.Handler
+	Search                                 http.Handler
+	DriveCoach                             http.Handler
+	ChargingDiagnosis                      http.Handler
+	RagHelp                                http.Handler
+	DriveSearch                            http.Handler
+	SpeedProfileInsights                   http.Handler
+	RouteEfficiencySuggestions             http.Handler
+	AutoTripName                           http.Handler
+	TripPlannerLLM                         http.Handler
+	SmartChargeSchedule                    http.Handler
+	BatteryHealth                          http.Handler
+	ChargingCurveClustering                http.Handler
+	CostForecastNarration                  http.Handler
+	VampireDrainExplanation                http.Handler
+	PreheatPrecoolRecommender              http.Handler
+	CabinTemperatureImpactNarrative        http.Handler
+	TirePressureTrendReasoning             http.Handler
+	AlertTuning                            http.Handler
+	InboxCategorize                        http.Handler
+	CrossRuleConflict                      http.Handler
+	AutoNameUnnamedLocations               http.Handler
+	SuggestNewGeofences                    http.Handler
+	GeofenceAwareAutomation                http.Handler
+	LearnedAnomalyBaselines                http.Handler
+	RangePrediction                        http.Handler
+	MLChargingCurveClustering              http.Handler
+	PeriodCompareNarration                 http.Handler
+	LifetimeStatsQA                        http.Handler
+	IncidentTimelineSummarizer             http.Handler
+	DataRepairSuggestions                  http.Handler
+	SignalExplorerNlFilter                 http.Handler
+	LogTraceSummarization                  http.Handler
+	FeedbackQueueTriage                    http.Handler
+	MqttSseInspectorExplanations           http.Handler
+	StateMachineDebuggerNarrator           http.Handler
+	PredictiveMaintenance                  http.Handler
+	TCONarration                           http.Handler
+	SoftwareUpdateChangelogSummarizer      http.Handler
+	PiiRedactionSharedExports              http.Handler
+	QuietHoursSuggestion                   http.Handler
+	SafetySettingExplainer                 http.Handler
+	VoiceMode                              http.Handler
+	WatchFaceNLResponse                    http.Handler
+	NLSqlPlayground                        http.Handler
+	NLGrafanaPanel                         http.Handler
+	NLDashboardComposer                    http.Handler
+	TripPostcardShareCardImageGeneration   http.Handler
+	VehiclePaintPreview                    http.Handler
+}
+
 func mountAIRoutes(
 	r chi.Router,
 	g *guard.Guard,
 	registry *provider.Registry,
 	settingsRepo *settingsdb.SettingsRepo,
 	sudoMW func(http.Handler) http.Handler,
-	aiChatbot *AIChatbotHandler,
-	aiDigest *AIDigestHandler,
-	aiYIR *AIYearReviewHandler,
-	aiAnomaly *AIAnomalyHandler,
-	aiAlert *AIAlertHandler,
-	aiAutomation *AIAutomationHandler,
-	aiSearch *AISearchHandler,
-	aiDriveCoach *AIDriveCoachHandler,
-	aiChargingDiagnosis *AIChargingDiagnosisHandler,
-	aiRagHelp *AIRAGHelpHandler,
-	aiDriveSearch *AIDriveSearchHandler,
-	aiSpeedProfileInsights *AISpeedProfileInsightsHandler,
-	aiRouteEfficiencySuggestions *AIRouteEfficiencySuggestionsHandler,
-	aiAutoTripName *AIAutoTripNameHandler,
-	aiTripPlannerLLM *AITripPlannerLLMHandler,
-	aiSmartChargeSchedule *AISmartChargeScheduleHandler,
-	aiBatteryHealth *AIBatteryHealthHandler,
-	aiChargingCurveClustering *AIChargingCurveClusteringHandler,
-	aiCostForecastNarration *AICostForecastNarrationHandler,
-	aiVampireDrainExplanation *AIVampireDrainHandler,
-	aiPreheatPrecoolRecommender *AIClimateScheduleHandler,
-	aiCabinTemperatureImpactNarrative *AICabinTemperatureImpactHandler,
-	aiTirePressureTrendReasoning *AITirePressureTrendHandler,
-	aiAlertTuning *AIAlertTuningHandler,
-	aiInboxCategorize *AIInboxCategorizationHandler,
-	aiCrossRuleConflict *AICrossRuleConflictHandler,
-	aiAutoNameUnnamedLocations *AIAutoNameUnnamedLocationsHandler,
-	aiSuggestNewGeofences *AISuggestNewGeofencesHandler,
-	aiGeofenceAwareAutomation *AIGeofenceAwareAutomationHandler,
-	aiLearnedAnomalyBaselines *AILearnedAnomalyBaselineHandler,
-	aiRangePrediction *AIRangePredictionHandler,
-	aiMLChargingCurveClustering *AIMLChargingCurveHandler,
-	aiPeriodCompareNarration *AIPeriodCompareNarrationHandler,
-	aiLifetimeStatsQA *AILifetimeStatsQAHandler,
-	aiIncidentTimelineSummarizer *AIIncidentTimelineSummarizerHandler,
-	aiDataRepairSuggestions *AIDataRepairSuggestionsHandler,
-	aiSignalExplorerNlFilter *AISignalExplorerNlFilterHandler,
-	aiLogTraceSummarization *AILogTraceSummarizationHandler,
-	aiFeedbackQueueTriage *AIFeedbackQueueTriageHandler,
-	aiMqttSseInspectorExplanations *AIMqttSseInspectorExplanationsHandler,
-	aiStateMachineDebuggerNarrator *AIStateMachineDebuggerNarratorHandler,
-	aiPredictiveMaintenance *AIPredictiveMaintenanceHandler,
-	aiTCONarration *AITCONarrationHandler,
-	aiSoftwareUpdateChangelogSummarizer *AISoftwareUpdateChangelogSummarizerHandler,
-	aiPiiRedactionSharedExports *AIPiiRedactionSharedExportsHandler,
-	aiQuietHoursSuggestion *AIQuietHoursSuggestionHandler,
-	aiSafetySettingExplainer *AISafetySettingExplainerHandler,
-	aiVoiceMode *AIVoiceModeHandler,
-	aiWatchFaceNLResponse *AIWatchFaceNLResponseHandler,
-	aiNLSqlPlayground *AINLSQLPlaygroundHandler,
-	aiNLGrafanaPanel *AINLGrafanaPanelHandler,
-	aiNLDashboardComposer *AINLDashboardComposerHandler,
-	aiTripPostcardShareCardImageGeneration *AITripPostcardShareCardImageGenerationHandler,
-	aiVehiclePaintPreview *AIVehiclePaintPreviewHandler,
+	h AIHandlers,
 ) {
 	r.Route("/ai", func(r chi.Router) {
 		// Phase-50 / units honour — install the global Application
@@ -184,8 +142,8 @@ func mountAIRoutes(
 		// boot still yields a non-nil http.Handler whose 404 in
 		// off mode is provable by the guard.
 		var chatbotHandler http.HandlerFunc = aiChatbotStubHandler
-		if aiChatbot != nil {
-			chatbotHandler = aiChatbot.ServeHTTP
+		if h.Chatbot != nil {
+			chatbotHandler = h.Chatbot.ServeHTTP
 		}
 		r.Post("/chatbot", g.Wrap("chatbot-llm", chatbotHandler))
 
@@ -195,8 +153,8 @@ func mountAIRoutes(
 		// invariant still holds because guard.Wrap returns 404
 		// BEFORE the handler runs in off mode.
 		var digestHandler http.HandlerFunc = aiDigestStubHandler
-		if aiDigest != nil {
-			digestHandler = aiDigest.ServeHTTP
+		if h.Digest != nil {
+			digestHandler = h.Digest.ServeHTTP
 		}
 		r.Post("/digests/weekly/narrate", g.Wrap("digest-narration", digestHandler))
 
@@ -206,8 +164,8 @@ func mountAIRoutes(
 		// invariant still holds because guard.Wrap returns 404
 		// BEFORE the handler runs in off mode.
 		var yirHandler http.HandlerFunc = aiYIRStubHandler
-		if aiYIR != nil {
-			yirHandler = aiYIR.ServeHTTP
+		if h.YIR != nil {
+			yirHandler = h.YIR.ServeHTTP
 		}
 		r.Post("/analytics/year-in-review/narrate", g.Wrap("yir-narration", yirHandler))
 
@@ -217,8 +175,8 @@ func mountAIRoutes(
 		// off-mode 404 invariant still holds because guard.Wrap
 		// returns 404 BEFORE the handler runs in off mode.
 		var anomalyHandler http.HandlerFunc = aiAnomalyStubHandler
-		if aiAnomaly != nil {
-			anomalyHandler = aiAnomaly.ServeHTTP
+		if h.Anomaly != nil {
+			anomalyHandler = h.Anomaly.ServeHTTP
 		}
 		r.Post("/anomalies/explain", g.Wrap("anomaly-explanations", anomalyHandler))
 
@@ -232,8 +190,8 @@ func mountAIRoutes(
 		// surface is namespaced and can be removed in one route
 		// block if the feature is ever decommissioned.
 		var alertHandler http.HandlerFunc = aiAlertStubHandler
-		if aiAlert != nil {
-			alertHandler = aiAlert.ServeHTTP
+		if h.Alert != nil {
+			alertHandler = h.Alert.ServeHTTP
 		}
 		r.Post("/alerts/rules/draft", g.Wrap("nl-alert-builder", alertHandler))
 
@@ -247,8 +205,8 @@ func mountAIRoutes(
 		// is namespaced and can be removed in one route block if
 		// the feature is ever decommissioned.
 		var automationHandler http.HandlerFunc = aiAutomationStubHandler
-		if aiAutomation != nil {
-			automationHandler = aiAutomation.ServeHTTP
+		if h.Automation != nil {
+			automationHandler = h.Automation.ServeHTTP
 		}
 		r.Post("/automations/draft", g.Wrap("nl-automation-builder", automationHandler))
 
@@ -262,8 +220,8 @@ func mountAIRoutes(
 		// so the AI surface is namespaced and can be removed in
 		// one route block if the feature is ever decommissioned.
 		var searchHandler http.HandlerFunc = aiSearchStubHandler
-		if aiSearch != nil {
-			searchHandler = aiSearch.ServeHTTP
+		if h.Search != nil {
+			searchHandler = h.Search.ServeHTTP
 		}
 		r.Post("/search/query", g.Wrap("nl-search", searchHandler))
 
@@ -280,8 +238,8 @@ func mountAIRoutes(
 		// it (positive int64) and rejects 0 / negative / non-numeric
 		// values with a 400 BEFORE opening the SSE stream.
 		var driveCoachHandler http.HandlerFunc = aiDriveCoachStubHandler
-		if aiDriveCoach != nil {
-			driveCoachHandler = aiDriveCoach.ServeHTTP
+		if h.DriveCoach != nil {
+			driveCoachHandler = h.DriveCoach.ServeHTTP
 		}
 		r.Post("/drives/{driveID}/coach", g.Wrap("drive-coaching", driveCoachHandler))
 
@@ -310,8 +268,8 @@ func mountAIRoutes(
 		// canonical baseline route at
 		// POST /api/v1/charge-planner/optimize is unchanged.
 		var smartChargeScheduleHandler http.HandlerFunc = aiSmartChargeScheduleStubHandler
-		if aiSmartChargeSchedule != nil {
-			smartChargeScheduleHandler = aiSmartChargeSchedule.ServeHTTP
+		if h.SmartChargeSchedule != nil {
+			smartChargeScheduleHandler = h.SmartChargeSchedule.ServeHTTP
 		}
 		r.Post("/charging/schedule/draft", g.Wrap("smart-charge-schedule-suggestion", smartChargeScheduleHandler))
 
@@ -328,8 +286,8 @@ func mountAIRoutes(
 		// GET /api/v1/analytics/battery-health and
 		// GET /api/v1/analytics/battery-degradation are unchanged.
 		var batteryHealthHandler http.HandlerFunc = aiBatteryHealthStubHandler
-		if aiBatteryHealth != nil {
-			batteryHealthHandler = aiBatteryHealth.ServeHTTP
+		if h.BatteryHealth != nil {
+			batteryHealthHandler = h.BatteryHealth.ServeHTTP
 		}
 		r.Post("/battery/health/narrate", g.Wrap("battery-health-forecast-narrative", batteryHealthHandler))
 
@@ -346,8 +304,8 @@ func mountAIRoutes(
 		// in off mode. The canonical baseline route at
 		// GET /api/v1/charging is unchanged.
 		var chargingCurveClusteringHandler http.HandlerFunc = aiChargingCurveClusteringStubHandler
-		if aiChargingCurveClustering != nil {
-			chargingCurveClusteringHandler = aiChargingCurveClustering.ServeHTTP
+		if h.ChargingCurveClustering != nil {
+			chargingCurveClusteringHandler = h.ChargingCurveClustering.ServeHTTP
 		}
 		r.Post("/charging/curves/clusters/explain", g.Wrap("charging-curve-fingerprint-clustering", chargingCurveClusteringHandler))
 
@@ -364,8 +322,8 @@ func mountAIRoutes(
 		// canonical baseline route at
 		// GET /api/v1/analytics/cost-forecast is unchanged.
 		var costForecastNarrationHandler http.HandlerFunc = aiCostForecastNarrationStubHandler
-		if aiCostForecastNarration != nil {
-			costForecastNarrationHandler = aiCostForecastNarration.ServeHTTP
+		if h.CostForecastNarration != nil {
+			costForecastNarrationHandler = h.CostForecastNarration.ServeHTTP
 		}
 		r.Post("/charging/costs/forecast/narrate", g.Wrap("cost-forecast-narration", costForecastNarrationHandler))
 
@@ -383,8 +341,8 @@ func mountAIRoutes(
 		// baseline route at GET /api/v1/analytics/period-stats
 		// is unchanged.
 		var periodCompareNarrationHandler http.HandlerFunc = aiPeriodCompareNarrationStubHandler
-		if aiPeriodCompareNarration != nil {
-			periodCompareNarrationHandler = aiPeriodCompareNarration.ServeHTTP
+		if h.PeriodCompareNarration != nil {
+			periodCompareNarrationHandler = h.PeriodCompareNarration.ServeHTTP
 		}
 		r.Post("/analytics/period-compare/narrate", g.Wrap("period-compare-narration", periodCompareNarrationHandler))
 
@@ -401,8 +359,8 @@ func mountAIRoutes(
 		// mode. The canonical baseline route at
 		// GET /api/v1/analytics/lifetime is unchanged.
 		var lifetimeStatsQAHandler http.HandlerFunc = aiLifetimeStatsQAStubHandler
-		if aiLifetimeStatsQA != nil {
-			lifetimeStatsQAHandler = aiLifetimeStatsQA.ServeHTTP
+		if h.LifetimeStatsQA != nil {
+			lifetimeStatsQAHandler = h.LifetimeStatsQA.ServeHTTP
 		}
 		r.Post("/analytics/lifetime/qa", g.Wrap("lifetime-stats-qa", lifetimeStatsQAHandler))
 
@@ -420,8 +378,8 @@ func mountAIRoutes(
 		// handler runs in off mode. The canonical baseline route at
 		// GET /api/v1/status/incidents/{id} is unchanged.
 		var incidentTimelineSummarizerHandler http.HandlerFunc = aiIncidentTimelineSummarizerStubHandler
-		if aiIncidentTimelineSummarizer != nil {
-			incidentTimelineSummarizerHandler = aiIncidentTimelineSummarizer.ServeHTTP
+		if h.IncidentTimelineSummarizer != nil {
+			incidentTimelineSummarizerHandler = h.IncidentTimelineSummarizer.ServeHTTP
 		}
 		r.Post("/system/incidents/{incidentID}/summarize", g.Wrap("incident-timeline-summarizer", incidentTimelineSummarizerHandler))
 
@@ -441,8 +399,8 @@ func mountAIRoutes(
 		// PUT/POST/DELETE /api/v1/data-repair/{kind}/{id}{...}
 		// are unchanged.
 		var dataRepairSuggestionsHandler http.HandlerFunc = aiDataRepairSuggestionsStubHandler
-		if aiDataRepairSuggestions != nil {
-			dataRepairSuggestionsHandler = aiDataRepairSuggestions.ServeHTTP
+		if h.DataRepairSuggestions != nil {
+			dataRepairSuggestionsHandler = h.DataRepairSuggestions.ServeHTTP
 		}
 		r.Post("/system/data-repair/draft", g.Wrap("data-repair-suggestions", dataRepairSuggestionsHandler))
 
@@ -462,8 +420,8 @@ func mountAIRoutes(
 		// GET /api/v1/signals/{vehicleID}/{signalName}/history
 		// are unchanged.
 		var signalExplorerNlFilterHandler http.HandlerFunc = aiSignalExplorerNlFilterStubHandler
-		if aiSignalExplorerNlFilter != nil {
-			signalExplorerNlFilterHandler = aiSignalExplorerNlFilter.ServeHTTP
+		if h.SignalExplorerNlFilter != nil {
+			signalExplorerNlFilterHandler = h.SignalExplorerNlFilter.ServeHTTP
 		}
 		r.Post("/signals/filter/draft", g.Wrap("signal-explorer-nl-filter", signalExplorerNlFilterHandler))
 
@@ -480,8 +438,8 @@ func mountAIRoutes(
 		// in off mode. The canonical baseline route at
 		// GET /api/v1/admin/logs/stream is unchanged.
 		var logTraceSummarizationHandler http.HandlerFunc = aiLogTraceSummarizationStubHandler
-		if aiLogTraceSummarization != nil {
-			logTraceSummarizationHandler = aiLogTraceSummarization.ServeHTTP
+		if h.LogTraceSummarization != nil {
+			logTraceSummarizationHandler = h.LogTraceSummarization.ServeHTTP
 		}
 		r.Post("/system/logs/summarize", g.Wrap("log-trace-summarization", logTraceSummarizationHandler))
 
@@ -502,8 +460,8 @@ func mountAIRoutes(
 		// runs in off mode. The canonical baseline route at
 		// PATCH /api/v1/admin/feedback/{id} is unchanged.
 		var feedbackQueueTriageHandler http.HandlerFunc = aiFeedbackQueueTriageStubHandler
-		if aiFeedbackQueueTriage != nil {
-			feedbackQueueTriageHandler = aiFeedbackQueueTriage.ServeHTTP
+		if h.FeedbackQueueTriage != nil {
+			feedbackQueueTriageHandler = h.FeedbackQueueTriage.ServeHTTP
 		}
 		r.Post("/feedback/triage/draft", g.Wrap("feedback-queue-triage", feedbackQueueTriageHandler))
 
@@ -524,8 +482,8 @@ func mountAIRoutes(
 		// baseline route at GET /api/v1/admin/mqtt/status is
 		// unchanged.
 		var mqttSseInspectorExplanationsHandler http.HandlerFunc = aiMqttSseInspectorExplanationsStubHandler
-		if aiMqttSseInspectorExplanations != nil {
-			mqttSseInspectorExplanationsHandler = aiMqttSseInspectorExplanations.ServeHTTP
+		if h.MqttSseInspectorExplanations != nil {
+			mqttSseInspectorExplanationsHandler = h.MqttSseInspectorExplanations.ServeHTTP
 		}
 		r.Post("/system/streams/explain", g.Wrap("mqtt-sse-inspector-explanations", mqttSseInspectorExplanationsHandler))
 
@@ -546,8 +504,8 @@ func mountAIRoutes(
 		// in off mode. The canonical baseline route at GET
 		// /api/v1/fsm/transitions is unchanged.
 		var stateMachineDebuggerNarratorHandler http.HandlerFunc = aiStateMachineDebuggerNarratorStubHandler
-		if aiStateMachineDebuggerNarrator != nil {
-			stateMachineDebuggerNarratorHandler = aiStateMachineDebuggerNarrator.ServeHTTP
+		if h.StateMachineDebuggerNarrator != nil {
+			stateMachineDebuggerNarratorHandler = h.StateMachineDebuggerNarrator.ServeHTTP
 		}
 		r.Post("/system/fsm/narrate", g.Wrap("state-machine-debugger-narrator", stateMachineDebuggerNarratorHandler))
 
@@ -570,8 +528,8 @@ func mountAIRoutes(
 		// routes at GET /api/v1/maintenance and
 		// /api/v1/maintenance/records are unchanged.
 		var predictiveMaintenanceHandler http.HandlerFunc = aiPredictiveMaintenanceStubHandler
-		if aiPredictiveMaintenance != nil {
-			predictiveMaintenanceHandler = aiPredictiveMaintenance.ServeHTTP
+		if h.PredictiveMaintenance != nil {
+			predictiveMaintenanceHandler = h.PredictiveMaintenance.ServeHTTP
 		}
 		r.Post("/maintenance/predict", g.Wrap("predictive-maintenance", predictiveMaintenanceHandler))
 
@@ -589,8 +547,8 @@ func mountAIRoutes(
 		// off mode. The canonical baseline route at
 		// GET /api/v1/analytics/tco is unchanged.
 		var tcoNarrationHandler http.HandlerFunc = aiTCONarrationStubHandler
-		if aiTCONarration != nil {
-			tcoNarrationHandler = aiTCONarration.ServeHTTP
+		if h.TCONarration != nil {
+			tcoNarrationHandler = h.TCONarration.ServeHTTP
 		}
 		r.Post("/analytics/tco/narrate", g.Wrap("tco-narration", tcoNarrationHandler))
 
@@ -608,8 +566,8 @@ func mountAIRoutes(
 		// canonical baseline route at
 		// GET /api/v1/vehicles/{id}/software-updates is unchanged.
 		var softwareUpdateChangelogSummarizerHandler http.HandlerFunc = aiSoftwareUpdateChangelogSummarizerStubHandler
-		if aiSoftwareUpdateChangelogSummarizer != nil {
-			softwareUpdateChangelogSummarizerHandler = aiSoftwareUpdateChangelogSummarizer.ServeHTTP
+		if h.SoftwareUpdateChangelogSummarizer != nil {
+			softwareUpdateChangelogSummarizerHandler = h.SoftwareUpdateChangelogSummarizer.ServeHTTP
 		}
 		r.Post("/software-updates/summarize", g.Wrap("software-update-changelog-summarizer", softwareUpdateChangelogSummarizerHandler))
 
@@ -626,8 +584,8 @@ func mountAIRoutes(
 		// at GET/POST /api/v1/export/jobs (the deterministic
 		// export pipeline) are unchanged.
 		var piiRedactionSharedExportsHandler http.HandlerFunc = aiPiiRedactionSharedExportsStubHandler
-		if aiPiiRedactionSharedExports != nil {
-			piiRedactionSharedExportsHandler = aiPiiRedactionSharedExports.ServeHTTP
+		if h.PiiRedactionSharedExports != nil {
+			piiRedactionSharedExportsHandler = h.PiiRedactionSharedExports.ServeHTTP
 		}
 		r.Post("/exports/redaction/draft", g.Wrap("pii-redaction-shared-exports", piiRedactionSharedExportsHandler))
 
@@ -647,8 +605,8 @@ func mountAIRoutes(
 		// hands its typed candidate to the user via "Apply to
 		// form" in the SPA.
 		var quietHoursSuggestionHandler http.HandlerFunc = aiQuietHoursSuggestionStubHandler
-		if aiQuietHoursSuggestion != nil {
-			quietHoursSuggestionHandler = aiQuietHoursSuggestion.ServeHTTP
+		if h.QuietHoursSuggestion != nil {
+			quietHoursSuggestionHandler = h.QuietHoursSuggestion.ServeHTTP
 		}
 		r.Post("/settings/quiet-hours/draft", g.Wrap("quiet-hours-suggestion", quietHoursSuggestionHandler))
 
@@ -668,8 +626,8 @@ func mountAIRoutes(
 		// and never proposes a value — it explains the values
 		// the user has already configured.
 		var safetySettingExplainerHandler http.HandlerFunc = aiSafetySettingExplainerStubHandler
-		if aiSafetySettingExplainer != nil {
-			safetySettingExplainerHandler = aiSafetySettingExplainer.ServeHTTP
+		if h.SafetySettingExplainer != nil {
+			safetySettingExplainerHandler = h.SafetySettingExplainer.ServeHTTP
 		}
 		r.Post("/settings/safety/explain", g.Wrap("safety-setting-explainer", safetySettingExplainerHandler))
 
@@ -693,8 +651,8 @@ func mountAIRoutes(
 		// bytes ever cross this handler. The request body is
 		// text-only, just like /chatbot. (ADR-015 §I12.)
 		var voiceModeHandler http.HandlerFunc = aiVoiceModeStubHandler
-		if aiVoiceMode != nil {
-			voiceModeHandler = aiVoiceMode.ServeHTTP
+		if h.VoiceMode != nil {
+			voiceModeHandler = h.VoiceMode.ServeHTTP
 		}
 		r.Post("/voice/chat", g.Wrap("voice-mode", voiceModeHandler))
 
@@ -726,8 +684,8 @@ func mountAIRoutes(
 		// remain the only command path. (ADR-015 §I3 + §I5 +
 		// §I6.)
 		var watchFaceNLResponseHandler http.HandlerFunc = aiWatchFaceNLResponseStubHandler
-		if aiWatchFaceNLResponse != nil {
-			watchFaceNLResponseHandler = aiWatchFaceNLResponse.ServeHTTP
+		if h.WatchFaceNLResponse != nil {
+			watchFaceNLResponseHandler = h.WatchFaceNLResponse.ServeHTTP
 		}
 		r.Post("/watch/respond", g.Wrap("watch-face-nl-response", watchFaceNLResponseHandler))
 
@@ -748,8 +706,8 @@ func mountAIRoutes(
 		// surface NEVER replaces the deterministic editor — it
 		// COEXISTS with it. (ADR-015 §I3 + §I5 + §I6.)
 		var nlSqlPlaygroundHandler http.HandlerFunc = aiNLSqlPlaygroundStubHandler
-		if aiNLSqlPlayground != nil {
-			nlSqlPlaygroundHandler = aiNLSqlPlayground.ServeHTTP
+		if h.NLSqlPlayground != nil {
+			nlSqlPlaygroundHandler = h.NLSqlPlayground.ServeHTTP
 		}
 		r.Post("/power/sql/draft", g.Wrap("nl-sql-playground", nlSqlPlaygroundHandler))
 
@@ -774,8 +732,8 @@ func mountAIRoutes(
 		// deterministic editor — it COEXISTS with it.
 		// (ADR-015 §I3 + §I5 + §I6.)
 		var nlGrafanaPanelHandler http.HandlerFunc = aiNLGrafanaPanelStubHandler
-		if aiNLGrafanaPanel != nil {
-			nlGrafanaPanelHandler = aiNLGrafanaPanel.ServeHTTP
+		if h.NLGrafanaPanel != nil {
+			nlGrafanaPanelHandler = h.NLGrafanaPanel.ServeHTTP
 		}
 		r.Post("/power/grafana-panel/draft", g.Wrap("nl-grafana-panel", nlGrafanaPanelHandler))
 
@@ -801,8 +759,8 @@ func mountAIRoutes(
 		// replaces the deterministic composer — it COEXISTS with
 		// it. (ADR-015 §I3 + §I5 + §I6.)
 		var nlDashboardComposerHandler http.HandlerFunc = aiNLDashboardComposerStubHandler
-		if aiNLDashboardComposer != nil {
-			nlDashboardComposerHandler = aiNLDashboardComposer.ServeHTTP
+		if h.NLDashboardComposer != nil {
+			nlDashboardComposerHandler = h.NLDashboardComposer.ServeHTTP
 		}
 		r.Post("/power/dashboard/draft", g.Wrap("nl-dashboard-composer", nlDashboardComposerHandler))
 
@@ -823,8 +781,8 @@ func mountAIRoutes(
 		// BEFORE the handler runs in off mode. (ADR-015 §I3 + §I5
 		// + §I6.)
 		var tripPostcardShareCardImageGenerationHandler http.HandlerFunc = aiTripPostcardShareCardImageGenerationStubHandler
-		if aiTripPostcardShareCardImageGeneration != nil {
-			tripPostcardShareCardImageGenerationHandler = aiTripPostcardShareCardImageGeneration.ServeHTTP
+		if h.TripPostcardShareCardImageGeneration != nil {
+			tripPostcardShareCardImageGenerationHandler = h.TripPostcardShareCardImageGeneration.ServeHTTP
 		}
 		r.Post("/share-cards/trip-image/draft", g.Wrap("trip-postcard-share-card-image-generation", tripPostcardShareCardImageGenerationHandler))
 
@@ -848,8 +806,8 @@ func mountAIRoutes(
 		// BEFORE the handler runs in off mode. (ADR-015 §I3 + §I5
 		// + §I6.)
 		var vehiclePaintPreviewHandler http.HandlerFunc = aiVehiclePaintPreviewStubHandler
-		if aiVehiclePaintPreview != nil {
-			vehiclePaintPreviewHandler = aiVehiclePaintPreview.ServeHTTP
+		if h.VehiclePaintPreview != nil {
+			vehiclePaintPreviewHandler = h.VehiclePaintPreview.ServeHTTP
 		}
 		r.Post("/vehicles/{vehicleID}/paint-preview/draft", g.Wrap("vehicle-paint-preview", vehiclePaintPreviewHandler))
 
@@ -872,8 +830,8 @@ func mountAIRoutes(
 		// disambiguates the static `/charging/vampire-drain/explain`
 		// path before the wildcard.
 		var vampireDrainExplanationHandler http.HandlerFunc = aiVampireDrainExplanationStubHandler
-		if aiVampireDrainExplanation != nil {
-			vampireDrainExplanationHandler = aiVampireDrainExplanation.ServeHTTP
+		if h.VampireDrainExplanation != nil {
+			vampireDrainExplanationHandler = h.VampireDrainExplanation.ServeHTTP
 		}
 		r.Post("/charging/vampire-drain/explain", g.Wrap("vampire-drain-explanation", vampireDrainExplanationHandler))
 
@@ -892,8 +850,8 @@ func mountAIRoutes(
 		// is PROPOSE-only and the user MUST click the existing manual
 		// climate controls UI to apply.
 		var preheatPrecoolRecommenderHandler http.HandlerFunc = aiPreheatPrecoolRecommenderStubHandler
-		if aiPreheatPrecoolRecommender != nil {
-			preheatPrecoolRecommenderHandler = aiPreheatPrecoolRecommender.ServeHTTP
+		if h.PreheatPrecoolRecommender != nil {
+			preheatPrecoolRecommenderHandler = h.PreheatPrecoolRecommender.ServeHTTP
 		}
 		r.Post("/climate/schedule/draft", g.Wrap("preheat-precool-recommender", preheatPrecoolRecommenderHandler))
 
@@ -914,8 +872,8 @@ func mountAIRoutes(
 		// the narration is read-only and never modifies the
 		// aggregates the chart renders.
 		var cabinTemperatureImpactNarrativeHandler http.HandlerFunc = aiCabinTemperatureImpactNarrativeStubHandler
-		if aiCabinTemperatureImpactNarrative != nil {
-			cabinTemperatureImpactNarrativeHandler = aiCabinTemperatureImpactNarrative.ServeHTTP
+		if h.CabinTemperatureImpactNarrative != nil {
+			cabinTemperatureImpactNarrativeHandler = h.CabinTemperatureImpactNarrative.ServeHTTP
 		}
 		r.Post("/climate/temperature-impact/narrate", g.Wrap("cabin-temperature-impact-narrative", cabinTemperatureImpactNarrativeHandler))
 
@@ -937,8 +895,8 @@ func mountAIRoutes(
 		// is unchanged; the narration is read-only and never
 		// modifies the gauges or thresholds the SPA renders.
 		var tirePressureTrendReasoningHandler http.HandlerFunc = aiTirePressureTrendReasoningStubHandler
-		if aiTirePressureTrendReasoning != nil {
-			tirePressureTrendReasoningHandler = aiTirePressureTrendReasoning.ServeHTTP
+		if h.TirePressureTrendReasoning != nil {
+			tirePressureTrendReasoningHandler = h.TirePressureTrendReasoning.ServeHTTP
 		}
 		r.Post("/tire-pressure/trends/explain", g.Wrap("tire-pressure-trend-reasoning", tirePressureTrendReasoningHandler))
 
@@ -959,8 +917,8 @@ func mountAIRoutes(
 		// applies it via the canonical Save button which calls
 		// alertHandler.UpdateRule (ADR-015 §I3 + §I8).
 		var alertTuningHandler http.HandlerFunc = aiAlertTuningStubHandler
-		if aiAlertTuning != nil {
-			alertTuningHandler = aiAlertTuning.ServeHTTP
+		if h.AlertTuning != nil {
+			alertTuningHandler = h.AlertTuning.ServeHTTP
 		}
 		r.Post("/alerts/rules/{ruleID}/tune/draft", g.Wrap("alert-tuning-suggestions", alertTuningHandler))
 
@@ -986,8 +944,8 @@ func mountAIRoutes(
 		// rule_id filter on the existing baseline list endpoint
 		// (ADR-015 §I3 + §I8).
 		var inboxCategorizationHandler http.HandlerFunc = aiInboxCategorizationStubHandler
-		if aiInboxCategorize != nil {
-			inboxCategorizationHandler = aiInboxCategorize.ServeHTTP
+		if h.InboxCategorize != nil {
+			inboxCategorizationHandler = h.InboxCategorize.ServeHTTP
 		}
 		r.Post("/alerts/inbox/categorize", g.Wrap("inbox-auto-categorization", inboxCategorizationHandler))
 
@@ -1011,8 +969,8 @@ func mountAIRoutes(
 		// edits it via the canonical typed editor + Save button
 		// (ADR-015 §I3 + §I8).
 		var crossRuleConflictHandler http.HandlerFunc = aiCrossRuleConflictStubHandler
-		if aiCrossRuleConflict != nil {
-			crossRuleConflictHandler = aiCrossRuleConflict.ServeHTTP
+		if h.CrossRuleConflict != nil {
+			crossRuleConflictHandler = h.CrossRuleConflict.ServeHTTP
 		}
 		r.Post("/alerts/rules/conflicts", g.Wrap("cross-rule-conflict-detection", crossRuleConflictHandler))
 
@@ -1032,8 +990,8 @@ func mountAIRoutes(
 		// baseline route (GET /api/v1/locations) is unchanged
 		// (ADR-015 §I3 + §I8).
 		var autoNameUnnamedLocationsHandler http.HandlerFunc = aiAutoNameUnnamedLocationsStubHandler
-		if aiAutoNameUnnamedLocations != nil {
-			autoNameUnnamedLocationsHandler = aiAutoNameUnnamedLocations.ServeHTTP
+		if h.AutoNameUnnamedLocations != nil {
+			autoNameUnnamedLocationsHandler = h.AutoNameUnnamedLocations.ServeHTTP
 		}
 		r.Post("/locations/{locationID}/name/draft", g.Wrap("auto-name-unnamed-locations", autoNameUnnamedLocationsHandler))
 
@@ -1064,8 +1022,8 @@ func mountAIRoutes(
 		// `{"location_id": <int64>}` in the JSON body. The
 		// handler clamps the id BEFORE opening the SSE stream.
 		var suggestNewGeofencesHandler http.HandlerFunc = aiSuggestNewGeofencesStubHandler
-		if aiSuggestNewGeofences != nil {
-			suggestNewGeofencesHandler = aiSuggestNewGeofences.ServeHTTP
+		if h.SuggestNewGeofences != nil {
+			suggestNewGeofencesHandler = h.SuggestNewGeofences.ServeHTTP
 		}
 		r.Post("/geofences/draft", g.Wrap("suggest-new-geofences", suggestNewGeofencesHandler))
 
@@ -1102,8 +1060,8 @@ func mountAIRoutes(
 		// JSON body. The handler clamps the id and trims the
 		// prompt BEFORE opening the SSE stream.
 		var geofenceAwareAutomationHandler http.HandlerFunc = aiGeofenceAwareAutomationStubHandler
-		if aiGeofenceAwareAutomation != nil {
-			geofenceAwareAutomationHandler = aiGeofenceAwareAutomation.ServeHTTP
+		if h.GeofenceAwareAutomation != nil {
+			geofenceAwareAutomationHandler = h.GeofenceAwareAutomation.ServeHTTP
 		}
 		r.Post("/geofences/automations/draft", g.Wrap("geofence-aware-automation-suggestions", geofenceAwareAutomationHandler))
 
@@ -1124,8 +1082,8 @@ func mountAIRoutes(
 		// holds because guard.Wrap returns 404 BEFORE the handler
 		// runs in off mode (ADR-015 §I3 + §I6).
 		var learnedAnomalyBaselinesHandler http.HandlerFunc = aiLearnedAnomalyBaselinesStubHandler
-		if aiLearnedAnomalyBaselines != nil {
-			learnedAnomalyBaselinesHandler = aiLearnedAnomalyBaselines.ServeHTTP
+		if h.LearnedAnomalyBaselines != nil {
+			learnedAnomalyBaselinesHandler = h.LearnedAnomalyBaselines.ServeHTTP
 		}
 		r.Post("/ml/anomaly-baselines/train", g.Wrap("learned-per-vehicle-anomaly-baselines", learnedAnomalyBaselinesHandler))
 
@@ -1146,8 +1104,8 @@ func mountAIRoutes(
 		// guard.Wrap returns 404 BEFORE the handler runs in off
 		// mode (ADR-015 §I3 + §I6).
 		var rangePredictionHandler http.HandlerFunc = aiRangePredictionStubHandler
-		if aiRangePrediction != nil {
-			rangePredictionHandler = aiRangePrediction.ServeHTTP
+		if h.RangePrediction != nil {
+			rangePredictionHandler = h.RangePrediction.ServeHTTP
 		}
 		r.Post("/ml/range/train", g.Wrap("range-prediction-model", rangePredictionHandler))
 
@@ -1167,15 +1125,15 @@ func mountAIRoutes(
 		// holds because guard.Wrap returns 404 BEFORE the handler
 		// runs in off mode (ADR-015 §I3 + §I6).
 		var mlChargingCurveClusteringHandler http.HandlerFunc = aiMLChargingCurveClusteringStubHandler
-		if aiMLChargingCurveClustering != nil {
-			mlChargingCurveClusteringHandler = aiMLChargingCurveClustering.ServeHTTP
+		if h.MLChargingCurveClustering != nil {
+			mlChargingCurveClusteringHandler = h.MLChargingCurveClustering.ServeHTTP
 		}
 		r.Post("/ml/charging-curves/cluster", g.Wrap("ml-charging-curve-clustering", mlChargingCurveClusteringHandler))
 
 		// charging-diagnosis (Phase-50 / N4, slice 0018).
 		var chargingDiagnosisHandler http.HandlerFunc = aiChargingDiagnosisStubHandler
-		if aiChargingDiagnosis != nil {
-			chargingDiagnosisHandler = aiChargingDiagnosis.ServeHTTP
+		if h.ChargingDiagnosis != nil {
+			chargingDiagnosisHandler = h.ChargingDiagnosis.ServeHTTP
 		}
 		r.Post("/charging/{sessionID}/diagnose", g.Wrap("charging-diagnosis", chargingDiagnosisHandler))
 
@@ -1191,8 +1149,8 @@ func mountAIRoutes(
 		// can be removed in one route block if the feature is
 		// ever decommissioned.
 		var ragHelpHandler http.HandlerFunc = aiRagHelpStubHandler
-		if aiRagHelp != nil {
-			ragHelpHandler = aiRagHelp.ServeHTTP
+		if h.RagHelp != nil {
+			ragHelpHandler = h.RagHelp.ServeHTTP
 		}
 		r.Post("/help/query", g.Wrap("rag-help", ragHelpHandler))
 
@@ -1210,8 +1168,8 @@ func mountAIRoutes(
 		// natural-language prompt and streams SSE frames that cite
 		// drive replay anchors (/drives/{id}/replay).
 		var driveSearchHandler http.HandlerFunc = aiDriveSearchStubHandler
-		if aiDriveSearch != nil {
-			driveSearchHandler = aiDriveSearch.ServeHTTP
+		if h.DriveSearch != nil {
+			driveSearchHandler = h.DriveSearch.ServeHTTP
 		}
 		r.Post("/drives/search", g.Wrap("nl-drive-search-replay", driveSearchHandler))
 
@@ -1230,8 +1188,8 @@ func mountAIRoutes(
 		// and rejects 0 / negative / non-numeric values with a 400
 		// BEFORE opening the SSE stream.
 		var speedProfileInsightsHandler http.HandlerFunc = aiSpeedProfileInsightsStubHandler
-		if aiSpeedProfileInsights != nil {
-			speedProfileInsightsHandler = aiSpeedProfileInsights.ServeHTTP
+		if h.SpeedProfileInsights != nil {
+			speedProfileInsightsHandler = h.SpeedProfileInsights.ServeHTTP
 		}
 		r.Post("/drives/{driveID}/speed-profile/insights", g.Wrap("speed-profile-insights", speedProfileInsightsHandler))
 
@@ -1253,8 +1211,8 @@ func mountAIRoutes(
 		// 0 / negative / non-numeric values are rejected with a
 		// 400 BEFORE opening the SSE stream.
 		var routeEfficiencySuggestionsHandler http.HandlerFunc = aiRouteEfficiencySuggestionsStubHandler
-		if aiRouteEfficiencySuggestions != nil {
-			routeEfficiencySuggestionsHandler = aiRouteEfficiencySuggestions.ServeHTTP
+		if h.RouteEfficiencySuggestions != nil {
+			routeEfficiencySuggestionsHandler = h.RouteEfficiencySuggestions.ServeHTTP
 		}
 		r.Post("/routes/{routeID}/efficiency/suggest", g.Wrap("route-efficiency-suggestions", routeEfficiencySuggestionsHandler))
 
@@ -1274,8 +1232,8 @@ func mountAIRoutes(
 		// through an explicit user confirmation in the
 		// TripDetailPage UI (out of scope for this slice).
 		var autoTripNameHandler http.HandlerFunc = aiAutoTripNameStubHandler
-		if aiAutoTripName != nil {
-			autoTripNameHandler = aiAutoTripName.ServeHTTP
+		if h.AutoTripName != nil {
+			autoTripNameHandler = h.AutoTripName.ServeHTTP
 		}
 		r.Post("/trips/{tripID}/name/draft", g.Wrap("auto-trip-naming", autoTripNameHandler))
 
@@ -1303,8 +1261,8 @@ func mountAIRoutes(
 		// trip-planner-llm-agent route, `/trips/42/name/draft`
 		// matches the auto-trip-naming route.
 		var tripPlannerLLMHandler http.HandlerFunc = aiTripPlannerLLMStubHandler
-		if aiTripPlannerLLM != nil {
-			tripPlannerLLMHandler = aiTripPlannerLLM.ServeHTTP
+		if h.TripPlannerLLM != nil {
+			tripPlannerLLMHandler = h.TripPlannerLLM.ServeHTTP
 		}
 		r.Post("/trips/plan/draft", g.Wrap("trip-planner-llm-agent", tripPlannerLLMHandler))
 
