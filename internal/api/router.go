@@ -57,6 +57,7 @@ import (
 	apimedia "github.com/ev-dev-labs/teslasync/internal/api/media"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apimileage "github.com/ev-dev-labs/teslasync/internal/api/mileage"
+	apimotor "github.com/ev-dev-labs/teslasync/internal/api/motor"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
 	apionboard "github.com/ev-dev-labs/teslasync/internal/api/onboarding"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
@@ -733,7 +734,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
-	motorHandler := NewMotorHandler(stateReader, liveStateReader)
+	motorHandler := apimotor.NewMotorHandler(stateReader, liveStateReader)
 	driveDynamicsHandler := apidrivedyn.NewDriveDynamicsHandler(stateReader, liveStateReader)
 	climateHandler := apiclimate.NewClimateHandler(stateReader, liveStateReader)
 	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
