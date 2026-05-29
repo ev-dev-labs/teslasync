@@ -1,4 +1,4 @@
-package api
+package battery
 
 import (
 	"net/http"
@@ -8,8 +8,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
@@ -36,9 +37,9 @@ func NewBatteryHandler(db *database.DB, state signal.StateReader) *BatteryHandle
 }
 
 func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
-	vehicleID, err := urlParamInt64(r, "vehicleID")
+	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
 
@@ -50,7 +51,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	// the legacy live-state behavior exactly.
 	queryTime, hasAsOf, asOfErr := signal.ParseAsOf(r.URL.Query(), time.Now())
 	if asOfErr != nil {
-		writeError(w, http.StatusBadRequest, asOfErr.Error())
+		httpx.WriteError(w, http.StatusBadRequest, asOfErr.Error())
 		return
 	}
 	if !hasAsOf {
@@ -69,11 +70,11 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 			val, err := h.state.SignalAt(r.Context(), vehicleID, "EnergyRemaining", queryTime)
 			if err != nil {
 				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery: failed to read signal state")
-				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
 			if val != nil {
-				if v, ok := toFloatOk(val); ok && v > 0 {
+				if v, ok := signal.Float64(val); ok && v > 0 {
 					capacityWh = v
 					healthScore = (capacityWh / nominalCapacity) * 100
 					if healthScore > 100 {
@@ -85,11 +86,11 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 			val, err = h.state.SignalAt(r.Context(), vehicleID, "EstBatteryRange", queryTime)
 			if err != nil {
 				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery: failed to read signal state")
-				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
 			if val != nil {
-				if v, ok := toFloatOk(val); ok && v > 0 {
+				if v, ok := signal.Float64(val); ok && v > 0 {
 					estRange = v
 				}
 			}
@@ -97,19 +98,19 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 			valMax, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMax", queryTime)
 			if err != nil {
 				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMax").Msg("battery: failed to read signal state")
-				writeError(w, http.StatusInternalServerError, "failed to read battery state")
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
 			if valMax != nil {
-				if tempMax, ok := toFloatOk(valMax); ok {
+				if tempMax, ok := signal.Float64(valMax); ok {
 					valMin, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMin", queryTime)
 					if err != nil {
 						log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMin").Msg("battery: failed to read signal state")
-						writeError(w, http.StatusInternalServerError, "failed to read battery state")
+						httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 						return
 					}
 					if valMin != nil {
-						if tempMin, okMin := toFloatOk(valMin); okMin {
+						if tempMin, okMin := signal.Float64(valMin); okMin {
 							avg := (tempMax + tempMin) / 2
 							avgTemp = &avg
 						}
@@ -216,5 +217,5 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		// banner. Phase-46 / Prompt 64.
 		resp["as_of"] = queryTime.Format(time.RFC3339)
 	}
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }

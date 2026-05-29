@@ -26,6 +26,7 @@ import (
 	apiauth "github.com/ev-dev-labs/teslasync/internal/api/auth"
 	apiauths "github.com/ev-dev-labs/teslasync/internal/api/authsession"
 	apibackup "github.com/ev-dev-labs/teslasync/internal/api/backup"
+	apibattery "github.com/ev-dev-labs/teslasync/internal/api/battery"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	apichargetelem "github.com/ev-dev-labs/teslasync/internal/api/chargetelem"
@@ -658,7 +659,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	guardHandler := apiguard.NewGuardHandler(systemdb.NewGuardRepo(db.Pool), vehicledb.NewVehicleRepo(db), teslaClient, cfg)
 	energyHandler := NewEnergyHandler(energySvc)
 	signalLogReader := signaldb.NewSignalLogReader(db)
-	batteryHandler := NewBatteryHandler(db, stateReader)
+	batteryHandler := apibattery.NewBatteryHandler(db, stateReader)
 	analyticsHandler := NewAnalyticsHandler(db, stateReader)
 	notificationHandler := apinotif.NewHandler(db)
 	notificationChannelHandler := apinotif.NewChannelHandler(db)
