@@ -2,59 +2,10 @@ package airouteeff
 
 // Phase-50 / 0023 — D3 Route-efficiency suggestions.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/routes/{routeID}/efficiency/suggest. The flow
-// mirrors the speed-profile-insights / drive-coaching / YIR /
-// digest / anomaly narration handlers — same dispatch+stream loop,
-// no persistence (one-shot narration; no conversation to record):
-//
-//	URL  /api/v1/ai/routes/{routeID}/efficiency/suggest
-//	  ↓
-//	resolve provider via *provider.Registry.For("route-efficiency-suggestions")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("route-efficiency-suggestions", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard returns
-// 404 BEFORE this handler ever sees the request (ADR-015 §I6).
-//
-// Like the speed-profile-insights handler (slice 0022), this
-// handler takes `routeID` from the URL path. Unlike a drive_id, a
-// route does not have a stable primary key in the existing schema
-// — the deterministic baseline groups by (start_place, end_place).
-// The routeID is therefore treated as an OPAQUE positive integer
-// anchor that the LLM embeds in its user message; the LLM then
-// calls query_route_efficiency with the vehicle_id (read from the
-// caller's session/profile via the user message) to fetch the
-// SI-canonical per-route aggregates and selects the route by its
-// ordinal in the trip_count-DESC ordering. This keeps the URL
-// shape consistent with the rest of the AI surface
-// (`/{noun}/{numericID}/...`) without inventing a new natural-key
-// route table or accepting a free-form route descriptor in the
-// URL.
-//
-// There is no JSON body; an empty body is accepted.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic RouteCards,
-//     kWh/100mi metric bars, and per-route
-//     best/worst summaries rendered by
-//     RouteEfficiencyPage at /analytics/route-efficiency
-//     are unchanged. This handler is an OPT-IN add-on;
-//     off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("route-efficiency-suggestions").
-//   - I9 redaction:       PolicyRouteEfficiencySuggestions (allows
-//     ClassVehicleName only; lat/long, addresses,
-//     and place names stay tagged) is installed by
-//     dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     JSON shape is added or modified by this slice.
+// POST /api/v1/ai/routes/{routeID}/efficiency/suggest streams a one-shot
+// narration without persistence. routeID is only an opaque positive anchor: the
+// existing schema has no stable route primary key, so tools resolve owned route
+// aggregates from the caller context while guard.Wrap enforces ADR-015 gating.
 
 import (
 	"context"

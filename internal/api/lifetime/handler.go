@@ -15,14 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Handler serves all-time aggregated statistics with achievements.
-//
-// Phase-40 / Prompt 63: in addition to computing achievements, the handler
-// detects locked → unlocked transitions and broadcasts them on the SSE event
-// hub so the frontend can fire a celebration toast in real time. Persisted
-// unlock timestamps are stored in the `achievement_unlocks` table; the SSE
-// event is fire-and-forget — failure to broadcast does not roll back the
-// stats response.
+// Handler serves all-time aggregates and owns achievement unlock side effects.
 type Handler struct {
 	db       *database.DB
 	unlocks  achievementUnlockStore
@@ -97,7 +90,6 @@ type achievementDef struct {
 }
 
 var achievementDefs = []achievementDef{
-	// Distance milestones
 	{ID: "first-drive", Name: "First Drive", Desc: "Complete your first drive", Icon: "🚗", Target: 1, Field: "drives"},
 	{ID: "century", Name: "Century Club", Desc: "Drive 100 km total", Icon: "💯", Target: 100, Field: "distance_km"},
 	{ID: "thousand", Name: "Road Warrior", Desc: "Drive 1,000 km total", Icon: "⚔️", Target: 1000, Field: "distance_km"},
@@ -105,36 +97,23 @@ var achievementDefs = []achievementDef{
 	{ID: "fifty-thousand", Name: "Nomad", Desc: "Drive 50,000 km total", Icon: "🌍", Target: 50000, Field: "distance_km"},
 	{ID: "hundred-thousand", Name: "Legend", Desc: "Drive 100,000 km total", Icon: "👑", Target: 100000, Field: "distance_km"},
 
-	// Charging milestones
 	{ID: "first-charge", Name: "Plugged In", Desc: "Complete first charging session", Icon: "🔌", Target: 1, Field: "charge_sessions"},
 	{ID: "megawatt", Name: "Megawatt Club", Desc: "Charge 1,000 kWh total", Icon: "⚡", Target: 1000, Field: "energy_kwh"},
 	{ID: "gigawatt", Name: "Gigawatt Club", Desc: "Charge 10,000 kWh total", Icon: "🔋", Target: 10000, Field: "energy_kwh"},
 
-	// Savings milestones
 	{ID: "hundred-saved", Name: "Penny Wise", Desc: "Save $100 vs gas", Icon: "💰", Target: 100, Field: "savings"},
 	{ID: "thousand-saved", Name: "Money Maker", Desc: "Save $1,000 vs gas", Icon: "💎", Target: 1000, Field: "savings"},
 	{ID: "five-thousand-saved", Name: "Investment Paid Off", Desc: "Save $5,000 vs gas", Icon: "🏆", Target: 5000, Field: "savings"},
 
-	// Environmental
 	{ID: "ton-co2", Name: "Eco Warrior", Desc: "Offset 1 ton of CO₂", Icon: "🌱", Target: 1000, Field: "co2_kg"},
 	{ID: "tree-planter", Name: "Tree Planter", Desc: "Equivalent of planting 10 trees", Icon: "🌳", Target: 10, Field: "trees"},
 
-	// Fun
 	{ID: "marathon", Name: "Marathon Runner", Desc: "Complete 100 drives", Icon: "🏃", Target: 100, Field: "drives"},
 	{ID: "earth-orbit", Name: "Around the World", Desc: "Drive the Earth's circumference (40,075 km)", Icon: "🌎", Target: 40075, Field: "distance_km"},
 	{ID: "supercharger", Name: "Supercharger Fan", Desc: "Complete 50 charging sessions", Icon: "⚡", Target: 50, Field: "charge_sessions"},
 }
 
-// LifetimeStatsResult is the typed envelope returned by ComputeLifetimeStats.
-//
-// Phase-50 / Prompt 0041: extracted so the AI strategy `lifetime-stats-qa`
-// can reuse the deterministic SQL + math without duplicating any queries.
-// The canonical handler `GetLifetimeStats` builds an HTTP JSON response
-// from the same struct and additionally persists/broadcasts achievement
-// unlocks; the AI tool path does NOT persist or broadcast (read-only).
-//
-// Field layout mirrors the pre-existing JSON response keys 1:1 so the
-// frontend contract is unchanged.
+// LifetimeStatsResult lets HTTP and AI callers share typed aggregates without JSON round trips.
 type LifetimeStatsResult struct {
 	// Driving aggregates
 	TotalDrives       int     `json:"total_drives"`
@@ -185,15 +164,7 @@ type PersonalRecord struct {
 	Date  *string `json:"date"`
 }
 
-// ComputeLifetimeStats runs every SQL aggregate the canonical lifetime
-// stats endpoint depends on and returns a typed envelope.
-//
-// vehicleID == 0 means "fleet-wide" (no vehicle filter applied). Any
-// negative ID returns an error.
-//
-// This helper is read-only: it does NOT persist achievement unlocks or
-// broadcast SSE events. The canonical handler layers persistence on top.
-// The AI strategy `lifetime-stats-qa` calls this helper directly.
+// ComputeLifetimeStats is read-only; Handler owns achievement persistence and SSE side effects.
 func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64) (*LifetimeStatsResult, error) {
 	if db == nil {
 		return nil, errLifetimeNilDB
@@ -454,9 +425,8 @@ func ComputeLifetimeStats(ctx context.Context, db *database.DB, vehicleID int64)
 	}, nil
 }
 
-// computeAchievementsList computes the achievement progress list from
-// the supplied field values WITHOUT persisting unlocks. The canonical
-// handler layers persistence + SSE broadcast on top.
+// computeAchievementsList computes progress without persistence; the
+// canonical handler adds unlock storage and SSE broadcast.
 func computeAchievementsList(fieldValues map[string]float64) []Achievement {
 	achievements := make([]Achievement, 0, len(achievementDefs))
 	for _, def := range achievementDefs {
@@ -501,7 +471,6 @@ var (
 func (h *Handler) GetLifetimeStats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Optional vehicle filter
 	var vehicleID int64
 	if v := r.URL.Query().Get("vehicle_id"); v != "" {
 		parsed, err := strconv.ParseInt(v, 10, 64)
@@ -539,7 +508,6 @@ func (h *Handler) GetLifetimeStats(w http.ResponseWriter, r *http.Request) {
 	// Preserve the legacy JSON shape exactly (key names + ordering are
 	// unchanged from the pre-refactor handler).
 	result := map[string]interface{}{
-		// Driving
 		"total_drives":         stats.TotalDrives,
 		"total_distance_km":    stats.TotalDistanceKm,
 		"total_driving_hours":  stats.TotalDrivingHours,
@@ -547,36 +515,30 @@ func (h *Handler) GetLifetimeStats(w http.ResponseWriter, r *http.Request) {
 		"highest_speed_kmh":    stats.HighestSpeedKmh,
 		"avg_efficiency_wh_km": stats.AvgEfficiencyWhKm,
 
-		// Charging
 		"total_charge_sessions": stats.TotalChargeSessions,
 		"total_energy_kwh":      stats.TotalEnergyKwh,
 		"total_charging_hours":  stats.TotalChargingHours,
 		"total_charging_cost":   stats.TotalChargingCost,
 
-		// Savings
 		"gas_equivalent_cost": stats.GasEquivalentCost,
 		"total_savings":       stats.TotalSavings,
 		"co2_offset_kg":       stats.CO2OffsetKg,
 		"trees_equivalent":    stats.TreesEquivalent,
 
-		// Fun facts
 		"earth_circumferences":  stats.EarthCircumferences,
 		"moon_trips":            stats.MoonTrips,
 		"days_on_road":          stats.DaysOnRoad,
 		"homes_equivalent_days": stats.HomesEquivalentDays,
 
-		// Timeline
 		"first_drive_date":        stats.FirstDriveDate,
 		"ownership_days":          stats.OwnershipDays,
 		"most_active_day_of_week": stats.MostActiveDayOfWeek,
 		"most_active_hour":        stats.MostActiveHour,
 
-		// Personal records
 		"longest_drive_record": stats.LongestDriveRecord,
 		"highest_speed_record": stats.HighestSpeedRecord,
 		"max_charge_record":    stats.MaxChargeRecord,
 
-		// Achievements
 		"achievements": stats.Achievements,
 	}
 

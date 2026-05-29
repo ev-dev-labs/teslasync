@@ -1,15 +1,7 @@
-// Phase-44b — runtime smoke tests for SSE BroadcastWithContext span
-// emission. Verifies that:
-//
-//  1. Every call to BroadcastWithContext produces exactly one sse.broadcast
-//     span with the expected attributes (event_type, delivered/dropped counts).
-//  2. The span is a child of the caller's ctx — i.e. parent linkage works
-//     end-to-end so MQTT → normalize → SSE renders as one trace in Tempo.
-//  3. The deprecated Broadcast shim still emits a root span (back-compat).
-//
-// Uses tracetest.SpanRecorder to capture spans in-memory without requiring
-// an OTel collector. Each test restores the global TracerProvider via
-// t.Cleanup so suites running in parallel don't leak state.
+// Phase-44b — runtime smoke tests for SSE BroadcastWithContext span emission.
+// These pin per-broadcast attributes, parent linkage, and deprecated Broadcast root-span behavior.
+// tracetest.SpanRecorder keeps the checks in-memory and restores the global provider via t.Cleanup.
+
 package sse
 
 import (

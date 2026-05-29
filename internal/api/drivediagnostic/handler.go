@@ -1,36 +1,5 @@
-// Drive-end diagnostic HTTP handler.
-//
-// Phase-44 / observability-batch / Prompt F10.
-//
-// Endpoint:
-//
-//	GET /api/v1/drives/{driveID}/why-ended
-//	    ?window=60s  (default; supports 30s, 60s, 5m, 15m)
-//
-// Response:
-//
-//	{
-//	  "drive_id": 42,
-//	  "vehicle_id": 1,
-//	  "end_ts": "..." | null,
-//	  "ended_status": "..." | null,
-//	  "window": "60s",
-//	  "fsm_transitions": [...],
-//	  "signal_window": [...]
-//	}
-//
-// What the operator gets:
-//
-//   - The fsm_transitions in a window centered on end_ts. The
-//     drive-end transition (drive→stopped) + neighboring transitions
-//     (gear→P, ignition off, speed→0) explain "why".
-//   - The signal_log values for Gear / VehicleSpeed / Odometer in the
-//     same window so the operator can spot a sensor blip that
-//     triggered the FSM.
-//
-// In-progress drives (end_ts NULL) return 200 with end_ts:null and
-// signal_window covering [now-window, now] — the operator can still
-// inspect "what's it doing right now".
+// Drive-end diagnostics explain why a drive stopped by pairing nearby FSM transitions with signal_log evidence.
+// In-progress drives use a recent window so operators can inspect current behavior.
 
 package drivediagnostic
 

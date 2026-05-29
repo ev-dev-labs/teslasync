@@ -27,16 +27,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
 )
 
-// pipelineDispatcher is the interface seam through which Handler
-// dispatches pre-decoded telemetry batches to the unified normalize.Pipeline.
-// Production wiring substitutes the concrete *normalize.Pipeline (which
-// satisfies this interface via its public ProcessAtomics method, added in
-// Phase-42a/0060). Tests substitute a recording fake to assert dispatch
-// behaviour without standing up the full pipeline + writers + observers.
-//
-// The interface lives here (not in the normalize package) so the api
-// package owns the seam — normalize.Pipeline must not know about its
-// callers per ADR-004 #2's "single pipeline, two adapters" shape.
+// pipelineDispatcher is Handler's seam to the unified normalize.Pipeline.
+// Keeping the interface here lets API tests fake dispatch without teaching normalize about its callers.
 type pipelineDispatcher interface {
 	ProcessAtomics(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) error
 }
@@ -66,7 +58,7 @@ type Handler struct {
 	liveSignalStore       signal.LiveSignalStore
 	startTime             time.Time
 
-	// Cancellable context for background goroutines ╬ô├ç├╢ cancelled on Shutdown()
+	// Cancellable context for background goroutines; cancelled on Shutdown().
 	bgCtx    context.Context
 	bgCancel context.CancelFunc
 
@@ -78,7 +70,7 @@ type Handler struct {
 	lastWriteMu sync.Mutex
 	lastWriteAt map[string]time.Time // keyed by VIN
 
-	// Per-vehicle signal accumulator ╬ô├ç├╢ merges signals across batches within throttle window
+	// Per-vehicle signal accumulator merges batches within the throttle window.
 	accumulatedSignalsMu sync.Mutex
 	accumulatedSignals   map[string]map[string]interface{} // keyed by VIN
 
@@ -105,16 +97,8 @@ type Handler struct {
 	// Redis cache used for SSE Pub/Sub and as L2 when attached to LiveSignalStore.
 	redisCache *signal.RedisSignalCache
 
-	// pipeline is THE unified ingest dispatcher (Phase-42a/0060). HTTP
-	// webhook batches and (post-0050) MQTT batches both terminate in
-	// normalize.Pipeline.ProcessAtomics so ADR-004 #2's "single pipeline,
-	// every value visited exactly once" invariant holds across both
-	// ingress paths. Wired by cmd/teslasync via SetPipeline AFTER
-	// normalize.New is constructed; nil while the dispatcher is being
-	// stood up at process start. ProcessBatch returns a "pipeline not
-	// wired" error if invoked before SetPipeline has run, so a
-	// misconfigured production deployment fails loud rather than
-	// silently swallowing batches.
+	// pipeline is the unified ingest dispatcher for HTTP and MQTT telemetry batches.
+	// It is wired after normalize.New; ProcessBatch fails loudly while nil.
 	pipeline pipelineDispatcher
 }
 
@@ -187,8 +171,6 @@ func (h *Handler) IsVehicleStreaming(vin string) bool {
 	return time.Since(state.LastReceived) < h.staleTimeout
 }
 
-// trackTirePressure stores tire pressure snapshots when TPMS signals arrive.
-
 // StreamingVINs returns the set of VINs currently receiving live telemetry data.
 func (h *Handler) StreamingVINs() map[string]bool {
 	h.mu.RLock()
@@ -222,14 +204,12 @@ func (h *Handler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
 	streamingVehicles := h.GetStreamingState()
 	connected := h.mqttClient != nil && h.mqttClient.IsConnected()
 
-	// Build vehicles map keyed by VIN (frontend expects Record<string, VehicleStreamState>)
 	vehicleMap := make(map[string]interface{}, len(streamingVehicles))
 	var totalSignals int64
 	var totalBatches int64
 	var avgRate float64
 	var streamingCount int
 
-	// Index connection FSMs by VIN for enriching the status response
 	h.connFSMMu.Lock()
 	connFSMByVIN := make(map[string]*telemetryfsm.ConnectionFSM, len(h.connFSMs))
 	for _, cfsm := range h.connFSMs {
@@ -263,7 +243,6 @@ func (h *Handler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Broker URL and topic patterns from MQTT client
 	var broker string
 	var topics []string
 	if h.mqttClient != nil {
@@ -298,7 +277,7 @@ func (h *Handler) TelemetryStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func toFloat(v interface{}) float64 {
-	// Unwrap {"value": X, ...} envelopes from wrapped telemetry payloads
+	// Wrapped telemetry payloads carry the numeric value in the "value" field.
 	if m, ok := v.(map[string]interface{}); ok {
 		if inner, has := m["value"]; has {
 			v = inner
@@ -317,7 +296,6 @@ func toFloat(v interface{}) float64 {
 		f, _ := val.Float64()
 		return f
 	case string:
-		// Some signals come as string numbers
 		var f float64
 		fmt.Sscanf(val, "%f", &f)
 		return f

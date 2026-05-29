@@ -76,7 +76,6 @@ func (h *EnergySiteHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return fresh data from DB
 	stored, err := h.repo.GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list energy sites after refresh")
@@ -168,7 +167,6 @@ func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Return the freshly stored data
 	siteInfoJSON, fetchedAt, err := h.repo.GetSiteInfo(r.Context(), siteID)
 	if err != nil || siteInfoJSON == nil {
 		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to read back site info after save")
@@ -238,7 +236,6 @@ func parseProductsResponse(body []byte) ([]*teslamodel.TeslaEnergySite, error) {
 	var sites []*teslamodel.TeslaEnergySite
 
 	for _, raw := range envelope.Response {
-		// Peek at resource_type to filter out vehicles
 		var peek struct {
 			ResourceType string `json:"resource_type"`
 		}

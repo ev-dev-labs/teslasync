@@ -1,28 +1,9 @@
 package settings
 
-// Phase-46 / Prompt 36 — Settings import endpoint.
-//
-//   POST /api/v1/settings/import
-//
-// Body shape:
-//
-//   {
-//     "dry_run":  true | false,
-//     "bundle":   <SettingsBundle>     // schema_version + sections{...}
-//   }
-//
-// On dry_run=true the handler returns the diff the apply path WOULD
-// perform (added/updated/skipped per section). On dry_run=false the
-// apply runs section-by-section, additively (sections missing from
-// the bundle are not touched, items missing from a present section
-// are NOT deleted — see the serializer docstring for the full
-// idempotency contract).
-//
-// The route is gated by RequireSudo at the router so destructive
-// applies (large alert-rule replays, bulk geofence rewrites, etc.)
-// always carry a fresh credential. Dry-run requests pass through the
-// same gate so the cached step-up token is reused for the subsequent
-// apply — opening the dialog twice would be confusing.
+// Phase-46 / Prompt 36 — settings import endpoint.
+// Imports are additive: omitted sections and missing items are left untouched.
+// RequireSudo gates dry-run and apply so the same step-up token covers review
+// and confirmation.
 
 import (
 	"encoding/json"
@@ -65,15 +46,8 @@ type settingsImportRequest struct {
 	Bundle *settingsdb.SettingsBundle `json:"bundle"`
 }
 
-// Import decodes the request, validates the schema_version, and
-// dispatches to the serializer. Returns the per-section
-// {added, updated, skipped} summary as JSON.
-//
-// Status codes:
-//   - 200 OK on dry_run=true with a valid bundle
-//   - 200 OK on dry_run=false after a successful apply
-//   - 400 BAD_REQUEST on decode failure or unsupported schema_version
-//   - 500 INTERNAL_ERROR on serializer / database failure
+// Import validates the bundle and returns the per-section add/update/skip
+// summary. Decode and schema errors are 400; serializer failures are 500.
 func (h *SettingsImportHandler) Import(w http.ResponseWriter, r *http.Request) {
 	if h.serializer == nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "settings import: serializer not configured")

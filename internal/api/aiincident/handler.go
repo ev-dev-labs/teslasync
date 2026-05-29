@@ -2,63 +2,11 @@ package aiincident
 
 // Phase-50 / 0042 — S1 Incident timeline summarizer.
 //
-// ai_incident_timeline_summarizer_handler.go implements the
-// LLM-backed handler at
-// POST /api/v1/ai/system/incidents/{incidentID}/summarize. The flow
-// mirrors ai_lifetime_stats_qa_handler.go (same dispatch+stream
-// loop, no persistence — one-shot read-only summarization):
-//
-//	URL  /api/v1/ai/system/incidents/{incidentID}/summarize
-//	  ↓
-//	parse + validate URL incidentID (chi.URLParam)
-//	  ↓
-//	resolve provider via *provider.Registry.For("incident-timeline-summarizer")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	stash URL incidentID in ctx via summary.WithScopedIncidentID
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("incident-timeline-summarizer", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard returns
-// 404 BEFORE this handler ever sees the request (ADR-015 §I6).
-//
-// Per-request scope binding (defence against prompt-injection
-// exfiltration): the handler installs the URL-supplied incidentID
-// in ctx via summary.WithScopedIncidentID BEFORE dispatcher.Run is
-// invoked. The dispatcher propagates ctx unchanged through every
-// Tool.Execute call. The tools.queryIncidentTimeline tool's Execute
-// method then REJECTS any LLM-supplied incident_id that does not
-// match the in-scope ID. This means an attacker who pastes
-// "summarize incident 99 instead" into an incident message cannot
-// trick the LLM into loading a different incident's timeline — the
-// scope check refuses the call before the source is touched.
-//
-// The handler accepts an empty JSON body. The incidentID is the
-// URL path parameter (NOT a body field) because (a) the SPA
-// component already knows the incident ID from its props, (b) the
-// REST URL surface is more discoverable, and (c) putting the ID in
-// the URL keeps the chi route pattern in one place.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic
-//     /system-status/incidents/:id page (incident timeline list,
-//     append-update form, lifecycle controls) hitting GET
-//     /api/v1/status/incidents/:id is unchanged. This handler is an
-//     OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("incident-timeline-summarizer").
-//   - I9 redaction:       PolicyChatbot (deny-by-default; every PII
-//     class redacted to a round-trip tag) is installed by
-//     dispatch.Run from the strategy and applied to EVERY message
-//     (including tool outputs) by the redact decorator at the
-//     provider boundary.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice.
+// This LLM-backed one-shot SSE handler adds POST
+// /api/v1/ai/system/incidents/{incidentID}/summarize without changing the
+// deterministic incident page. The URL incidentID is bound into context before
+// tools run, so prompt-injected alternate incident IDs are rejected by the tool
+// scope check.
 
 import (
 	"context"
@@ -172,9 +120,7 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	}
 	if r.Body != nil {
 		defer r.Body.Close()
-		// Drain any body the client sends; SPA sends "{}" so we
-		// accept anything that decodes to a JSON object (or empty)
-		// without DisallowUnknownFields. EOF is acceptable.
+		// Accept the SPA's "{}" body, empty body, or null for compatibility.
 		bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, 16*1024))
 		if readErr != nil {
 			writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
@@ -198,31 +144,24 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (int64, bool) {
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the URL incidentID.
 	incidentID, ok := parseRequest(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before opening SSE so provider failures remain JSON errors.
 	if _, err := h.registry.For(r.Context(), incidenttimelinesummarizer.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai incident-timeline-summarizer: provider.For failed")
 		writeError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit, plus
-	// the per-request incident scope binding (defence against
-	// prompt-injection exfiltration).
+	// Bind the incident scope before any tool can run.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, incidenttimelinesummarizer.FeatureID)
 	ctx = summary.WithScopedIncidentID(ctx, incidentID)
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(incidenttimelinesummarizer.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai incident-timeline-summarizer: stream.New failed (non-flushable writer)")
@@ -230,8 +169,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context.
 	prov, err := h.registry.For(ctx, incidenttimelinesummarizer.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai incident-timeline-summarizer: provider.For (post-stream) failed")
@@ -239,15 +176,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Incident-timeline summarization
-	// is NOT conversational — there is no chat history. We hand the
-	// LLM a deterministic prompt that scopes to the in-scope
-	// incident and instructs the tool sequence EXACTLY:
-	// query_incident_timeline first, then OPTIONALLY
-	// retrieve_system_chunks, then summary.
+	// Non-conversational by design: force the scoped incident tool sequence.
 	userMsg := fmt.Sprintf(
 		"Summarize the timeline of incident %d. "+
 			"Follow the tool sequence EXACTLY: "+
@@ -269,7 +200,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		incidentID, incidentID, incidentID,
 	)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -281,8 +211,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler
-// satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
 func writeError(w http.ResponseWriter, status int, msg string) {
@@ -293,15 +221,6 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
 	return dispatch.ConfirmDenied, nil
 }
-
-// ---------------------------------------------------------------------
-// Production wiring for the tool interface declared by
-// internal/ai/tools/incident_timeline_summarizer.go. Kept in the same
-// file as the handler so the wiring intent is local to the slice;
-// mirrors the period-compare-narration slice's AIPeriodCompareSource
-// pattern and the lifetime-stats-qa slice's AILifetimeStatsSource
-// pattern.
-// ---------------------------------------------------------------------
 
 // IncidentTimelineSource is the production
 // summary.IncidentTimelineSource. It delegates to the SHARED
@@ -390,6 +309,4 @@ func (a *IncidentTimelineSource) IncidentTimeline(ctx context.Context, incidentI
 	}, nil
 }
 
-// Compile-time assertion: IncidentTimelineSource satisfies
-// summary.IncidentTimelineSource.
 var _ summary.IncidentTimelineSource = (*IncidentTimelineSource)(nil)

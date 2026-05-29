@@ -1,19 +1,11 @@
 // Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
 //
-// Off-mode + baseline-coexistence tests for the AI
-// tire-pressure-trend-reasoning handler. The off-mode test
-// (TestTirePressureReasoningAIOffShowsThresholdsOnly) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that the
-// AI route returns 404 when settings.ai_mode='off' even when the
-// per-feature toggle is on, AND that the deterministic
-// tire-pressure aggregate served at the canonical
-// GET /api/v1/tire-pressure handler remains the unconditional
-// baseline path (ADR-015 §I3, §I6).
+// Off-mode and baseline-coexistence tests. The off-mode test is the
+// load-bearing proof that AI mode off hides the AI route while deterministic
+// tire-pressure thresholds stay reachable (ADR-015 §I3, §I6).
 //
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness
-// (`go run ./cmd/ai-eval -feature tire-pressure-trend-reasoning`);
-// duplicating that here would require a live database fixture.
+// Streaming coverage lives in the F6 eval harness because it needs a live
+// database fixture.
 
 package aitirepress
 
@@ -75,7 +67,6 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 func TestTirePressureReasoningAIOffShowsThresholdsOnly(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"tire-pressure-trend-reasoning": true}, // toggle on; mode trumps it

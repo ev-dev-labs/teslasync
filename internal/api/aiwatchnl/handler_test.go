@@ -1,23 +1,8 @@
 // Phase-50 / 0056 — V2 Helix watch face natural-language response.
 //
-// Off-mode + projection + wiring tests for the AI watch-face NL
-// response handler. The load-bearing off-mode test
-// (TestWatchFaceNLAIOffUsesFixedCardsOnly) is the slice's
-// AI-OFF contract proof: it asserts that the AI route returns
-// 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, AND that the deterministic /api/v1/watch/summary
-// canonical baseline surface remains reachable (ADR-015 §I3, §I6).
-//
-// The SPA-side off-mode proof (the React render-tree absence of
-// the ai-feature-watch-face-nl-response-root marker and the
-// baseline fixed cards / tap commands rendering unchanged) lives
-// at
-// web/src/features/watch/__tests__/TestWatchFaceNLAIOffUsesFixedCardsOnly.test.tsx.
-//
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness (`go run ./cmd/ai-eval -feature
-// watch-face-nl-response`); duplicating that here would require
-// a live mock-provider stack.
+// Off-mode tests prove TestWatchFaceNLAIOffUsesFixedCardsOnly keeps AI hidden while
+// GET /api/v1/watch/summary remains the deterministic baseline (ADR-015 §I3, §I6).
+// SPA rendering coverage lives in TestWatchFaceNLAIOffUsesFixedCardsOnly.test.tsx.
 
 package aiwatchnl
 

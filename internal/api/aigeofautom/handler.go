@@ -2,58 +2,11 @@ package aigeofautom
 
 // Phase-50 / 0039 — G3 Geofence-aware automation suggestions.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/geofences/automations/draft. The flow
-// mirrors ai_automation_handler.go (slice 0016 nl-automation-builder
-// — same dispatch+stream loop, no persistence — one-shot proposal)
-// BUT with a deterministic geofence catalog injected into the
-// synthesised user message so the LLM picks `place_id` from the
-// user's existing geofences rather than hallucinating one:
-//
-//	BODY POST /api/v1/ai/geofences/automations/draft
-//	     {"vehicle_id": <int64>, "prompt": "<string>"}
-//	  ↓
-//	resolve provider via *provider.Registry.For("geofence-aware-automation-suggestions")
-//	  ↓
-//	load geofence catalog via *geofencedb.GeofenceRepo.GetAll
-//	  (id + name + category — NO lat/lon; PolicyAlertBuilder denies
-//	  every PII class so coordinates are NEVER emitted in prose)
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("geofence-aware-automation-suggestions", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard returns
-// 404 BEFORE this handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body is parsed + validated BEFORE opening the SSE stream
-// so a malformed input surfaces as a plain JSON 400 (rather than a
-// streamed error frame the SPA's QueryError will struggle to render
-// meaningfully). vehicle_id MUST be > 0; prompt MUST be non-empty
-// after trimming and ≤ maxPromptLen runes.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic AutomationBuilder
-//     graph editor + validators + the canonical
-//     POST /api/v1/automations save path (typed
-//     AutomationHandler.Create + decodeAutomationInputDTO + per-step
-//     validators at internal/api/automation_handler_decode.go) are
-//     unaffected. This handler is an OPT-IN add-on; off-mode users
-//     never see it. The actual save flow remains the canonical
-//     typed write path — the LLM has NO write tool.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("geofence-aware-automation-suggestions").
-//   - I9 redaction:       PolicyAlertBuilder (denies every PII
-//     class — vehicle, place, channel identifiers flow through the
-//     typed F4 envelope, NOT through prose) is installed by
-//     dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     /api/v1/automations JSON shape is added or modified by this
-//     slice.
+// POST /api/v1/ai/geofences/automations/draft mirrors the propose-only
+// automation flow, but injects a deterministic geofence catalog so the LLM must
+// choose an existing place_id without seeing coordinates. The request is
+// validated before SSE starts so malformed input remains a plain JSON 400, and
+// guard.Wrap enforces ADR-015 off-mode and per-feature gating before entry.
 
 import (
 	"context"

@@ -1,25 +1,8 @@
 // Feature flags HTTP handler.
 //
-// Phase-44 / observability-batch / Prompt F8.
-//
-// Endpoints (mounted under /api/v1):
-//
-//	GET    /system/flags                — list all flags + their current values
-//	GET    /system/flags/{key}          — one flag (404 if absent)
-//	PUT    /system/flags/{key}          — set value (sudo-gated, audited)
-//	DELETE /system/flags/{key}          — delete (sudo-gated, audited)
-//	GET    /system/flags/changes        — global audit feed
-//	GET    /system/flags/{key}/changes  — audit feed for one key
-//
-// PUT body: {"value": "string", "reason": "optional rationale"}
-//
-// Audit:
-//   - Every Set/Delete writes a feature_flag_changes row capturing
-//     before AND after value. Audit failures do NOT replace the write
-//     outcome (the store update has already happened); they surface
-//     via audit_id=0 in the response + a repo-level log line.
-//   - Reads are NOT audited (hot-path; forward-auth identity is the
-//     accountability surface).
+// Serves /system/flags read/write endpoints and their audit feed. Set/Delete
+// attempts write feature_flag_changes rows, but audit failures never replace
+// the store outcome; reads are intentionally not audited on the hot path.
 
 package apiflagsh
 
@@ -202,9 +185,7 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 
 	status := http.StatusOK
 	if !hadPrev {
-		// Deleting an absent key is allowed (idempotent) but we
-		// signal it via 200 + Deleted=false so the SPA can show
-		// "nothing changed".
+		// Idempotent delete: 200 with Deleted=false lets the SPA show "nothing changed".
 	}
 	httpx.WriteJSON(w, status, FlagWriteResponse{
 		Key:      key,
@@ -235,8 +216,6 @@ func (h *Handler) Changes(w http.ResponseWriter, r *http.Request) {
 		"rows":     rows,
 	})
 }
-
-// --- helpers ---
 
 func (h *Handler) tryAudit(r *http.Request, in auditdb.FeatureFlagChangeInsert) int64 {
 	if h == nil || h.audit == nil {

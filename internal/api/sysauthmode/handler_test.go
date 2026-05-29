@@ -1,21 +1,7 @@
-// Phase-46 / Prompt 57 — Handler unit tests.
+// Phase-46 / Prompt 57 — handler unit tests.
 //
-// Covers:
-//
-//   - Open mode (no FORWARD_AUTH_HEADER configured) returns
-//     mode=open, omits subject_header + subject + provider_hint
-//     (when empty), and reports every capability as false.
-//   - Forward-auth mode without the header on the request returns
-//     mode=forward_auth, surfaces subject_header, omits subject, and
-//     reports every capability as true.
-//   - Forward-auth mode with the header set returns the trimmed
-//     subject value alongside the canonical capability matrix.
-//   - provider_hint round-trips when configured.
-//   - The handler trims surrounding whitespace from headerName /
-//     providerHint at construction.
-//   - The endpoint always 200s — there is no auth-failure path here,
-//     because the contract endpoint MUST stay reachable even when
-//     downstream auth is broken.
+// Covers open mode, forward-auth with and without a subject header, provider
+// hints, constructor trimming, and the always-200 contract the SPA relies on.
 package sysauthmode
 
 import (

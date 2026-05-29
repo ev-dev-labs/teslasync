@@ -2,43 +2,9 @@ package aimlanom
 
 // Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
 //
-// ai_ml_anomaly_baseline_handler.go implements the LLM-backed handler
-// at POST /api/v1/ai/ml/anomaly-baselines/train. The flow mirrors
-// the U4 anomaly-explanations handler — same dispatch+stream loop,
-// no persistence (one-shot narration; no conversation to record).
-//
-//   request JSON {vehicle_id, days?}
-//     ↓
-//   resolve provider via *provider.Registry.For("learned-per-vehicle-anomaly-baselines")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("learned-per-vehicle-anomaly-baselines", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard returns
-// 404 BEFORE this handler ever sees the request (ADR-015 §I6).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic Z-score detector + static
-//     safeRanges-based explanation served by
-//     GET /api/v1/analytics/anomalies (rendered via the SPA route
-//     /anomaly-detection) is unchanged. This handler is an OPT-IN
-//     add-on; off-mode users never see it.
-//   - I4 zero egress:    when ai_mode='off' the guard returns 404
-//                        before any provider call is made; the
-//                        deterministic trainer at internal/ml/anomaly
-//                        is reachable only via the AI tool path.
-//   - I7 per-feature:    the route is gated by
-//                        guard.Wrap("learned-per-vehicle-anomaly-baselines").
-//   - I9 redaction:      PolicyChatbot (deny-all tagged redaction) is
-//                        installed by dispatch.Run from the strategy.
-//   - I10 type system:   the AI surface lives entirely under
-//                        /api/v1/ai/*; no field on the existing
-//                        baseline JSON shape is added or modified by
-//                        this slice.
+// This is the opt-in LLM narration layer for POST /api/v1/ai/ml/anomaly-baselines/train.
+// The guard returns 404 before this handler runs when AI or the feature is disabled (ADR-015 §I6).
+// The deterministic anomaly detector remains the baseline path.
 
 import (
 	"context"
@@ -152,7 +118,6 @@ type aiLearnedAnomalyRequest struct {
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Decode + validate request body.
 	var body aiLearnedAnomalyRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -181,7 +146,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	// SubjectFromRequest returns "" if the header is absent; that's
 	// the open-mode value the audit log treats as "anonymous".
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
@@ -229,8 +193,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body.VehicleID, days, body.VehicleID, days, body.VehicleID,
 	)
 
-	// 8) Run the dispatcher. The deferred WriteDone in dispatch.Run
-	// closes the SSE stream cleanly on any path.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,

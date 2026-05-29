@@ -41,8 +41,7 @@ type vehicleStatesRepository interface {
 // time.Now().UTC().
 type vehicleStatesClock func() time.Time
 
-// Handler serves the two endpoints. Hold a repo + clock;
-// no other dependencies needed.
+// Handler serves the timeline and summary endpoints with an injectable clock.
 type Handler struct {
 	repo  vehicleStatesRepository
 	clock vehicleStatesClock
@@ -95,10 +94,7 @@ func (h *Handler) parseVehicleStatesParams(w http.ResponseWriter, r *http.Reques
 			return 0, 0, false
 		}
 		if v > vehicleStatesMaxDays {
-			// Decision #4 requires a structured "days exceeds maximum"
-			// payload that the frontend can surface verbatim. The
-			// shared writeError helper would emit only {error, code};
-			// we hand-write the JSON to add the `max` field.
+			// Hand-write JSON to include the Decision #4 max field.
 			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "days exceeds maximum",
 				"max":   vehicleStatesMaxDays,

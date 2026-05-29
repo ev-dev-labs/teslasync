@@ -1,58 +1,11 @@
 package aidrivesearch
 
-// Phase-50 / 0021 — D1 Natural-language drive search and replay.
+// Phase-50 / 0021 — D1 natural-language drive search and replay.
 //
-// ai_drive_search_handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/drives/search. The flow mirrors the nl-search
-// handler from slice 0017 — same dispatch+stream loop, same
-// propose-only-via-read-only-tools contract, no persistence
-// (one-shot search; no conversation to record):
-//
-//   request JSON {prompt}
-//     ↓
-//   resolve provider via *provider.Registry.For("nl-drive-search-replay")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("nl-drive-search-replay", …) so when ai_mode='off' or
-// the per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// READ-only contract (slice prompt + ADR-015 §I3):
-//
-//   - Both tools the strategy declares (retrieve_drive_chunks,
-//     hydrate_drive_replay) are READ-only ports — the F7
-//     rag.Retriever for the corpus lookup, a narrow
-//     DriveReplayHydrator port for one-by-one detail rendering.
-//     Neither writes any state.
-//   - The deterministic /drives baseline (DrivesListPage typed
-//     filters: range picker, vehicle select, search input, anomaly
-//     callouts) AND the existing /drives/:id/replay TripReplayPage
-//     controls remain the canonical baseline path for any user
-//     with `ai_mode='off'`.
-//   - The cited entities link back to the same SPA detail pages
-//     (/drives/:id) and the same replay scrubber
-//     (/drives/:id/replay) the typed baseline already exposes —
-//     no new entity-detail surface is introduced by this slice.
-//
-// ADR-015 alignment:
-//
-//   - I1 default-off:    the feature toggle defaults false in
-//     features.Registry; the guard fails closed.
-//   - I3 baseline intact: this handler never replaces the typed
-//     DrivesListPage filters or the TripReplayPage controls. The
-//     baseline GET /drives + GET /drives/:id read paths are
-//     untouched.
-//   - I7 per-feature:     the AI route is gated by
-//     guard.Wrap("nl-drive-search-replay").
-//   - I9 redaction:       PolicyChatbot (deny-all, ModeRedactedTags)
-//     is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice.
+// This AI route is read-only: it retrieves drive chunks, hydrates replay links,
+// and streams narration without replacing the typed /drives and /drives/:id/replay
+// surfaces. guard.Wrap("nl-drive-search-replay", …) hides it when AI is off
+// (ADR-015 §I3, §I6).
 
 import (
 	"context"
@@ -73,19 +26,12 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiDriveSearchMaxIterations bounds the dispatcher's tool-loop. The
-// nl-drive-search-replay strategy is typically a 1-3 step sequence
-// (one retrieve_drive_chunks call, then 0-2 hydrate_drive_replay
-// calls for the top hits, then narrate with replay anchors). A hard
-// ceiling of 6 is generous for an LLM that occasionally hydrates
-// several drives before settling. Mirrors aiSearchMaxIterations.
+// aiDriveSearchMaxIterations allows retrieval plus a few replay hydrations while
+// keeping the read-only tool loop bounded.
 const aiDriveSearchMaxIterations = 6
 
-// aiDriveSearchMaxPromptChars bounds the user-supplied
-// natural-language query at the HTTP boundary. Generous for a
-// multi-sentence search prompt; defensive against an enormous
-// payload that would inflate the LLM's context window cost without
-// any plausible legitimate use.
+// aiDriveSearchMaxPromptChars allows multi-sentence prompts while capping token
+// cost from accidental or hostile paste payloads.
 const aiDriveSearchMaxPromptChars = 4096
 
 // Handler is the HTTP handler for
@@ -157,7 +103,6 @@ type aiDriveSearchRequest struct {
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Decode + validate request body.
 	var body aiDriveSearchRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -173,25 +118,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before opening SSE so provider failures remain plain JSON 502s.
 	if _, err := h.registry.For(r.Context(), nldrivesearchreplay.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai drive search: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, nldrivesearchreplay.FeatureID)
 
-	// 4) Open the SSE writer. Stream.New writes the SSE response
-	// headers, starts the consumer goroutine, and returns a child
-	// ctx that cancels on stall — we pass that ctx to the
-	// dispatcher so a stalled consumer kills the upstream call.
+	// Pass the stream's child context into dispatch so client stalls cancel upstream work.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nldrivesearchreplay.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai drive search: stream.New failed (non-flushable writer)")
@@ -199,9 +137,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context. The decorator chain reads the subject + feature-id
-	// off the ctx for audit + rate limit accounting.
+	// Resolve again after annotations so decorators see subject and feature ID.
 	prov, err := h.registry.For(ctx, nldrivesearchreplay.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai drive search: provider.For (post-stream) failed")
@@ -209,24 +145,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook. The
-	// nl-drive-search-replay strategy declares only READ-only tools
-	// (retrieve_drive_chunks, hydrate_drive_replay); neither writes
-	// any state. The confirm hook is wired anyway as
-	// defence-in-depth: if a future edit accidentally adds a
-	// mutating tool, the dispatcher will REJECT it instead of
-	// silently mutating fleet state.
+	// Deny confirmations defensively; this surface should only ever read.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. We hand the LLM:
-	//    - the verbatim user prompt;
-	//    - the deterministic call-sequence directive
-	//      (retrieve_drive_chunks first, then hydrate_drive_replay
-	//      for each cited drive) so the model exercises both tools
-	//      in the canonical order, with replay anchors in the
-	//      final narration.
-	// The strategy's system prompt does the rest of the framing
-	// (refuse cross-user, no SQL, no fabrication, etc.).
+	// Keep the tool order deterministic so cited drives are hydrated before narration.
 	userMsg := fmt.Sprintf(
 		"Search the user's drive history for: %q. Call retrieve_drive_chunks first with the "+
 			"appropriate source_types from {drive_summary, route_segment, location_summary}, then "+
@@ -238,8 +160,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		prompt,
 	)
 
-	// 8) Run the dispatcher. The deferred WriteDone in dispatch.Run
-	// closes the SSE stream cleanly on any path.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,

@@ -1,21 +1,9 @@
 package settings
 
-// Phase-46 / Prompt 36 — Settings export endpoint.
-//
-//   GET /api/v1/settings/export
-//
-// Returns a JSON bundle containing the user-discoverable preference
-// surface (settings, alert rules, geofences, quiet-hours windows).
-// Sensitive items (Tesla refresh tokens, API keys, TOTP secrets,
-// password hashes, notification-channel webhook URLs / SMTP passwords
-// / bot tokens) are NEVER part of the bundle — see the file-level
-// docstring on internal/database/settings_serializer.go for the full
-// list of excluded sections + rationale.
-//
-// The response has Content-Disposition: attachment so the SPA's
-// fetch-and-trigger-download flow renders the user a save-as dialog.
-// The filename includes a UTC date so multiple exports stay
-// distinguishable in the user's downloads folder.
+// Phase-46 / Prompt 36 — settings export endpoint.
+// Exports only user-discoverable preferences; credentials, tokens, and webhook
+// secrets are deliberately excluded by the serializer contract. The attachment
+// filename includes a UTC date so repeated downloads remain distinguishable.
 
 import (
 	"encoding/json"
@@ -50,14 +38,9 @@ func actorFromRequest(r *http.Request, headerName string) string {
 	return strings.TrimSpace(r.Header.Get(headerName))
 }
 
-// Export builds the bundle and streams it as application/json with a
-// Content-Disposition header. Uses encoding/json's Indent encoder so
-// the file is human-diffable in the user's git repo.
-//
-// Errors are surfaced as the standard {error, code} JSON envelope.
-// Concrete error mapping:
-//   - serializer error → 500 INTERNAL_ERROR
-//   - missing serializer (router wired wrong) → 500 INTERNAL_ERROR
+// Export streams an indented settings bundle as an attachment so users can
+// diff it outside the app. Serializer and wiring failures use the standard
+// error envelope.
 func (h *SettingsExportHandler) Export(w http.ResponseWriter, r *http.Request) {
 	if h.serializer == nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "settings export: serializer not configured")

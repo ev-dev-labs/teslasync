@@ -39,10 +39,6 @@ func NewTeslaEnergyHistoryHandler(tc *tesla.Client, db *database.DB) *TeslaEnerg
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Energy History (calendar_history kind=energy)
-// ---------------------------------------------------------------------------
-
 // EnergyHistory returns stored energy measurements from DB.
 // Query params: period (day|week|month|year), since, until (YYYY-MM-DD).
 func (h *TeslaEnergyHistoryHandler) EnergyHistory(w http.ResponseWriter, r *http.Request) {
@@ -126,7 +122,6 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 
 	log.Info().Int("fetched", len(entries)).Int("upserted", upserted).Msg("energy history refresh complete")
 
-	// Return fresh data from DB
 	since, until := energyDateRange(r)
 	limit := energyLimit(r)
 	stored, err := h.energyRepo.GetByRange(r.Context(), siteID, period, since, until, limit)
@@ -143,10 +138,6 @@ func (h *TeslaEnergyHistoryHandler) RefreshEnergyHistory(w http.ResponseWriter, 
 		"upserted": upserted,
 	})
 }
-
-// ---------------------------------------------------------------------------
-// Backup History (calendar_history kind=backup)
-// ---------------------------------------------------------------------------
 
 // BackupHistory returns stored backup events from DB.
 func (h *TeslaEnergyHistoryHandler) BackupHistory(w http.ResponseWriter, r *http.Request) {
@@ -237,10 +228,6 @@ func (h *TeslaEnergyHistoryHandler) RefreshBackupHistory(w http.ResponseWriter, 
 	})
 }
 
-// ---------------------------------------------------------------------------
-// WC Charging History (telemetry_history kind=charge)
-// ---------------------------------------------------------------------------
-
 // ChargingHistory returns stored wall connector charging records from DB.
 func (h *TeslaEnergyHistoryHandler) ChargingHistory(w http.ResponseWriter, r *http.Request) {
 	siteID, err := parseSiteID(r)
@@ -321,20 +308,15 @@ func (h *TeslaEnergyHistoryHandler) RefreshChargingHistory(w http.ResponseWriter
 	})
 }
 
-// ---------------------------------------------------------------------------
-// Request helpers
-// ---------------------------------------------------------------------------
-
 // parseSiteID extracts {siteID} URL parameter as int64.
 func parseSiteID(r *http.Request) (int64, error) {
 	return strconv.ParseInt(chi.URLParam(r, "siteID"), 10, 64)
 }
 
-// energyDateRange extracts since/until from query params with sensible defaults.
-// Defaults to last 30 days if not provided.
+// energyDateRange extracts since/until and defaults to the last 30 days.
 func energyDateRange(r *http.Request) (since, until time.Time) {
 	now := time.Now().UTC()
-	since = now.AddDate(0, -1, 0) // default: 30 days ago
+	since = now.AddDate(0, -1, 0)
 	until = now
 
 	if s := r.URL.Query().Get("since"); s != "" {
@@ -344,7 +326,7 @@ func energyDateRange(r *http.Request) (since, until time.Time) {
 	}
 	if s := r.URL.Query().Get("until"); s != "" {
 		if t, err := time.Parse("2006-01-02", s); err == nil {
-			until = t.Add(24*time.Hour - time.Second) // end of day
+			until = t.Add(24*time.Hour - time.Second)
 		}
 	}
 	return

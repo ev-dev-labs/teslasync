@@ -1,51 +1,14 @@
 package aisuggeo
 
-// Phase-50 / 0038 — G2 Suggest new geofences.
+// Phase-50 / 0038 — G2 suggest new geofences.
 //
-// ai_suggest_new_geofences_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/geofences/draft. The flow mirrors
-// ai_auto_name_unnamed_locations_handler.go (URL-scoped propose-only
-// labeller — same dispatch+stream loop, no persistence — one-shot
-// proposal) BUT with the location_id sourced from the JSON body
-// rather than from the URL: the slice's registered backend route is
-// flat (`POST /api/v1/ai/geofences/draft`) per the slice prompt's
-// Off-mode contract impact section, so the SPA picks the candidate
-// visited-location at click time and ships it in the body.
+// This opt-in POST /api/v1/ai/geofences/draft surface streams one-shot
+// geofence drafts for a body-supplied location_id. The guard in ai_routes.go
+// enforces ADR-015 off-mode/per-feature gating, and validation happens before
+// SSE opens so malformed input returns a normal JSON 400.
 //
-//	BODY POST /api/v1/ai/geofences/draft  {"location_id": <int64>}
-//	  ↓
-//	resolve provider via *provider.Registry.For("suggest-new-geofences")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("suggest-new-geofences", …) so when ai_mode='off' or
-// the per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// The location_id JSON field is parsed + validated as a positive
-// int64 BEFORE opening the SSE stream so a malformed input surfaces
-// as a plain JSON 400 (rather than a streamed error frame the SPA's
-// QueryError will struggle to render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic geofence list, Add
-//     Geofence modal, and map rendered by GeofencesPage at /geofences
-//     are unchanged. This handler is an OPT-IN add-on; off-mode users
-//     never see it. The actual save flow remains POST /api/v1/geofences
-//     — the LLM has NO write tool.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("suggest-new-geofences").
-//   - I9 redaction:       PolicySuggestNewGeofences (allows
-//     ClassVehicleName only; lat/long, addresses, and place names
-//     stay tagged) is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     /api/v1/geofences JSON shape is added or modified by this
-//     slice.
+// The AI surface is propose-only: deterministic geofence CRUD remains the
+// baseline save path, and the LLM has no write tool.
 
 import (
 	"context"
@@ -73,34 +36,21 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiSuggestNewGeofencesMaxIterations bounds the dispatcher's
-// tool-loop. The strategy is at most draft-then-validate-then-answer
-// (with optional retries) — a hard ceiling of 6 is generous. Mirrors
-// aiAutoNameUnnamedLocationsMaxIterations.
+// aiSuggestNewGeofencesMaxIterations leaves room for draft/validate retries
+// while bounding the tool loop.
 const aiSuggestNewGeofencesMaxIterations = 6
 
-// aiSuggestNewGeofencesMaxBodyBytes caps the JSON body to a few
-// hundred bytes — the only field is a single int64. Mirrors the
-// defensive caps the rest of the AI handlers apply to bodies that
-// are otherwise tiny (the dispatcher's per-provider rate-limit
-// decorator is the second line of defence).
+// aiSuggestNewGeofencesMaxBodyBytes keeps the single-id JSON body tiny; the
+// provider rate limiter is the second line of defense.
 const aiSuggestNewGeofencesMaxBodyBytes = 1 << 10 // 1 KiB
 
-// suggestNewGeofencesMaxNameLen is the production cap on the
-// proposed name's rune-length. Mirrors the geofence-name 200-char
-// cap the canonical baseline geofence_handler.go's validateGeofence
-// already enforces, so an AI draft is byte-equivalent to a manual
-// Add Geofence form submission.
+// suggestNewGeofencesMaxNameLen mirrors the manual geofence validator so AI
+// drafts and form submissions share the same cap.
 const suggestNewGeofencesMaxNameLen = 200
 
-// suggestNewGeofencesMinRadiusM / suggestNewGeofencesMaxRadiusM
-// bound the proposed circle radius. Same bounds the
-// internal/ai/tools/suggest_new_geofences.go validator helper
-// enforces (so a draft accepted by the tool is also accepted by
-// the production validator wrapper). The lower bound rejects
-// accidental zero-radius envelopes; the upper bound is generous
-// enough to cover a parking lot or a small block but tight enough
-// to prevent "geofence the entire metro area" mistakes.
+// suggestNewGeofencesMinRadiusM / suggestNewGeofencesMaxRadiusM mirror the
+// tool validator: large enough for a parking lot, small enough to reject
+// metro-area drafts.
 const (
 	suggestNewGeofencesMinRadiusM = 50.0
 	suggestNewGeofencesMaxRadiusM = 1000.0
@@ -154,19 +104,9 @@ type suggestNewGeofencesBody struct {
 	LocationID int64 `json:"location_id"`
 }
 
-// parseSuggestNewGeofencesBody decodes + validates the request
-// body. Pulled out so the off-mode test can exercise the parsing
-// without constructing a full handler with stub deps. The function
-// writes a 400 on failure and returns the (id, ok) pair so the
-// caller can early-return.
-//
-// Rules:
-//
-//   - body MUST be valid JSON capped at 1 KiB;
-//   - location_id MUST be a positive integer.
-//
-// An empty / nil body is REJECTED — the SPA always carries the
-// location_id; a missing field is a wiring bug, not a default.
+// parseSuggestNewGeofencesBody decodes and validates the body before SSE
+// starts, returning plain JSON 400s for malformed input. A missing location_id
+// is rejected because the SPA must choose the candidate explicitly.
 func parseSuggestNewGeofencesBody(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	if r.Body == nil {
 		httpx.WriteError(w, http.StatusBadRequest, "request body is required (location_id)")
@@ -211,7 +151,6 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 // either writes a structured frame onto the SSE stream (when the
 // writer has been opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the body. URL has no path params.
 	locationID, ok := parseSuggestNewGeofencesBody(w, r)
 	if !ok {
 		return
@@ -227,12 +166,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, suggestnewgeofences.FeatureID)
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(suggestnewgeofences.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai suggest-new-geofences: stream.New failed (non-flushable writer)")
@@ -249,16 +186,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook —
-	// suggest-new-geofences has no write tools, so the deny-all
-	// confirm path is unreachable in normal operation; defence in
-	// depth against a future edit that accidentally adds one.
+	// Deny-all confirmation is defense in depth if a future edit adds a
+	// mutating tool by mistake.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. suggest-new-geofences is
-	// NOT conversational — there is no chat history. We hand the
-	// LLM a deterministic prompt that asks it to call the two
-	// propose-only tools and narrate the result.
+	// Use a deterministic one-shot prompt; this surface has no chat history.
 	userMsg := fmt.Sprintf(
 		"Propose a geofence for visited location %d. "+
 			"Call draft_geofence FIRST with the location_id, your proposed concise human-readable name "+
@@ -276,7 +208,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		int(suggestNewGeofencesMaxRadiusM),
 	)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -292,33 +223,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
-// ---------------------------------------------------------------------
-// Production wiring for the tool interfaces declared by
-// internal/ai/tools/suggest_new_geofences.go. Kept in the same file
-// as the handler so the wiring intent is local to the slice;
-// mirrors the auto-name-unnamed-locations LocationNameValidator
-// pattern.
-//
-// The LocationSource interface is satisfied by the existing
-// *aiautoname.LocationSource adapter wired by slice 0037 — the same
-// drives-table read produces the same *geomodel.VisitedLocation
-// aggregate this slice consumes. We do NOT add a duplicate adapter
-// here; router.go reuses the slice-0037 instance for both
-// strategies, which is the correct behaviour because the underlying
-// data is the same.
-// ---------------------------------------------------------------------
+// Production wiring stays next to the handler so the slice's tool-port intent
+// is local. router.go reuses the slice-0037 LocationSource because both
+// strategies consume the same VisitedLocation aggregate.
 
-// SuggestGeofenceValidator is the production
-// location.GeofenceValidator. It enforces the same trimming + length +
-// control-character + radius rules that the canonical baseline
-// geofence_handler.go's validateGeofence enforces, so a draft
-// accepted by the AI tool is byte-equivalent to a draft that would
-// be accepted by the canonical save handler.
-//
-// The struct is intentionally empty — the validator is a pure
-// function. The receiver is kept so the production wiring is a noun
-// ("the validator") in router.go and tests can substitute a fake by
-// satisfying the location.GeofenceValidator interface.
+// SuggestGeofenceValidator enforces the same shape rules as the baseline
+// geofence save handler. The empty receiver keeps production wiring and tests
+// behind the location.GeofenceValidator interface.
 type SuggestGeofenceValidator struct{}
 
 // NewSuggestGeofenceValidator constructs the validator.
@@ -326,20 +237,9 @@ func NewSuggestGeofenceValidator() *SuggestGeofenceValidator {
 	return &SuggestGeofenceValidator{}
 }
 
-// ValidateGeofence implements location.GeofenceValidator.
-//
-// Rules (pinned by tests on both sides — production wrapper +
-// in-tool helper):
-//
-//   - rune-trimmed name must be 1-200 chars;
-//   - no control characters (Unicode category Cc) anywhere;
-//   - leading / trailing whitespace is rejected;
-//   - radius_m must be 50-1000 (inclusive); NaN / Inf rejected.
-//
-// The loc argument is currently unused by the validator — the rule
-// is shape-only — but kept on the interface so a future per-location
-// rule (e.g. "name must not equal another geofence's name on the
-// same vehicle") can be added without rewiring callers.
+// ValidateGeofence implements location.GeofenceValidator. The loc argument is
+// reserved for future per-location rules; today's checks are shape-only and
+// match the in-tool helper.
 func (v *SuggestGeofenceValidator) ValidateGeofence(_ *geomodel.VisitedLocation, proposed string, radiusM float64) error {
 	if proposed == "" {
 		return errors.New("geofence name must not be empty")

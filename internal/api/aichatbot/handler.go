@@ -2,37 +2,11 @@ package aichatbot
 
 // Phase-50 / 0011 — U1 Chatbot LLM upgrade.
 //
-// handler.go implements the real LLM-backed handler that
-// replaces the F0 stub at POST /api/v1/ai/chatbot. The flow is:
-//
-//   request JSON {message, session_id}
-//     ↓
-//   persist user message via *dbnotif.ChatRepo
-//     ↓
-//   load recent history via *dbnotif.ChatRepo
-//     ↓
-//   resolve provider via *provider.Registry.For("chatbot-llm")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, recordingWriter)
-//     ↓
-//   persist accumulated assistant text via *dbnotif.ChatRepo
-//
-// The recordingWriter wraps the SSE writer so the assistant's full
-// response text (delta-by-delta) is captured for persistence. The
-// inner SSE writer streams to the user verbatim — no buffering.
-//
-// ADR-015 alignment:
-//
-//   - The route is mounted via guard.Wrap("chatbot-llm", …) so when
-//     ai_mode='off' the guard returns 404 BEFORE this handler runs.
-//   - Tools are filtered by the strategy; the LLM cannot indirectly
-//     invoke a tool that chatbot-llm did not declare.
-//   - ConfirmFn denies every mutating tool call; chatbot-llm declares
-//     zero mutating tools so this is defence-in-depth.
-//   - Redaction policy is installed by dispatch.Run from the strategy;
-//     PolicyChatbot allows nothing in cleartext to the provider.
+// POST /api/v1/ai/chatbot persists the user turn, streams the LLM
+// response over SSE, and stores the completed assistant reply. ADR-015
+// guard wrapping keeps the AI route hidden in off-mode, while strategy
+// tool filtering, deny-all confirmation, and PolicyChatbot redaction
+// bound what reaches the provider.
 
 import (
 	"context"
@@ -57,24 +31,13 @@ import (
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 )
 
-// historyLimit is the upper bound on how many prior messages
-// we hand to the LLM as context. Picked to balance:
-//
-//   - Token budget: ~16 messages × ~80 tokens average ≈ 1.3K input
-//     tokens. Comfortably under every supported provider's context.
-//   - Conversational continuity: typical Tesla questions ("what's my
-//     battery now?", "how about yesterday?") fit in the last few turns.
-//
-// History older than this is silently dropped. The full record is
-// always kept in the chatbot_messages table for audit and the
-// /chatbot/history endpoint.
+// historyLimit bounds LLM context while keeping enough recent turns for
+// follow-up questions. Older messages remain in chatbot_messages for audit
+// and the /chatbot/history endpoint.
 const historyLimit = 16
 
-// maxIterations bounds the dispatcher's tool-loop. The
-// chatbot is one-question-one-answer plus optional tool round-trips;
-// a hard ceiling of 6 protects against pathological model loops
-// without truncating any realistic conversation. Tested in
-// TestHandler_OnPathDispatches.
+// maxIterations bounds the dispatcher tool loop; six covers normal chat
+// plus optional tool turns without allowing pathological model loops.
 const maxIterations = 6
 
 // Handler is the HTTP handler for POST /api/v1/ai/chatbot.
@@ -93,15 +56,8 @@ type Handler struct {
 	historyN   int
 }
 
-// NewHandler constructs the handler. All non-pointer
-// arguments are required; the constructor panics on a nil so the
-// wiring bug surfaces at boot, not at first request.
-//
-// chat:          persistence for user/assistant turns.
-// registry:      AI provider registry (decorator chain already applied).
-// toolReg:       process-wide tool registry (Register12Builtins-populated).
-// strat:         the chatbot-llm Strategy (one per process).
-// headerName:    forward-auth header name; used to extract subject for audit.
+// NewHandler constructs the handler and panics on nil dependencies so
+// wiring bugs fail at boot instead of the first AI request.
 func NewHandler(
 	chat *dbnotif.ChatRepo,
 	registry *provider.Registry,
@@ -144,7 +100,6 @@ type request struct {
 // frame onto the SSE stream (when the writer has been opened) or a
 // plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Decode + validate request body.
 	var body request
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -172,10 +127,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Str("session_id", body.SessionID).Msg("ai chatbot: failed to persist user message")
 	}
 
-	// 3) Load conversation history (oldest-first). The current
-	// ChatRepo.GetHistory returns ASC order, which is what the
-	// dispatcher's StrategyInput.History expects (NEWEST LAST).
-	// We cap at historyN so the LLM context budget stays bounded.
+	// ChatRepo returns ASC order, which matches the dispatcher's newest-last history contract.
 	rawHistory, err := h.chat.GetHistory(r.Context(), body.SessionID, h.historyN)
 	if err != nil {
 		log.Warn().Err(err).Str("session_id", body.SessionID).Msg("ai chatbot: failed to load history; continuing with empty context")
@@ -193,9 +145,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Subject + feature-id annotations for audit/rate-limit.
-	// SubjectFromRequest returns "" if the header is absent; that's
-	// the open-mode value the audit log treats as "anonymous".
+	// An empty subject is the open-mode value recorded as anonymous.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, chatbotllm.FeatureID)
@@ -230,8 +180,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// will REJECT it instead of silently mutating.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 9) Capture deltas while streaming so we can persist the
-	// assistant's full reply after the dispatcher returns.
+	// Capture streamed deltas so the completed assistant reply can be persisted.
 	rec := &recordingStreamWriter{inner: sseW}
 
 	// 10) Run the dispatcher. The deferred WriteDone in
@@ -282,8 +231,7 @@ func historyToProviderMessages(rows []*chatbotmodel.ChatMessage, currentUserMess
 	}
 	out := make([]provider.Message, 0, len(rows))
 	for i, m := range rows {
-		// Drop the just-persisted user turn (it's the last entry
-		// in ASC order and matches the inbound message).
+		// Avoid replaying the current user turn twice.
 		if i == len(rows)-1 && m.Role == "user" && m.Content == currentUserMessage {
 			continue
 		}
@@ -322,9 +270,7 @@ type recordingStreamWriter struct {
 	buf   strings.Builder
 }
 
-// WriteDelta records the fragment + forwards. An error from the
-// inner writer is propagated; the dispatcher will then short-circuit
-// the chat loop.
+// WriteDelta records the fragment and forwards writer errors to the dispatcher.
 func (r *recordingStreamWriter) WriteDelta(s string) error {
 	r.buf.WriteString(s)
 	return r.inner.WriteDelta(s)
@@ -337,12 +283,10 @@ func (r *recordingStreamWriter) WriteToolCall(call provider.ToolCall) error {
 	return r.inner.WriteToolCall(call)
 }
 
-// WriteToolResult forwards.
 func (r *recordingStreamWriter) WriteToolResult(name string, result json.RawMessage) error {
 	return r.inner.WriteToolResult(name, result)
 }
 
-// WriteToolError forwards.
 func (r *recordingStreamWriter) WriteToolError(name string, err error) error {
 	return r.inner.WriteToolError(name, err)
 }

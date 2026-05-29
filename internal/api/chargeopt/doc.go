@@ -1,6 +1,4 @@
-// Package chargeopt serves GET /api/v1/analytics/charging-optimizer,
-// deriving charging schedule, cost, battery-health, and recommendation
-// summaries from charging session history for the SPA analytics page.
+// Package chargeopt derives charging schedule, cost, health, and recommendation summaries for the optimizer endpoint.
 //
 // Layer: handler
 package chargeopt

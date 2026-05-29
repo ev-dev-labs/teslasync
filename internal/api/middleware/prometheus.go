@@ -26,7 +26,6 @@ func Prometheus(next http.Handler) http.Handler {
 		duration := time.Since(start).Seconds()
 		status := strconv.Itoa(ww.Status())
 
-		// Normalize path to avoid high-cardinality label explosion
 		path := normalizePath(r.URL.Path)
 
 		metrics.HTTPRequestsTotal.WithLabelValues(r.Method, path, status).Inc()
@@ -39,7 +38,6 @@ func Prometheus(next http.Handler) http.Handler {
 // to prevent high-cardinality metric label explosion. Used by both Prometheus
 // (legacy series label) and routeLabel as the unrouted-path fallback.
 func normalizePath(path string) string {
-	// Keep known static paths as-is, replace IDs in dynamic segments
 	switch {
 	case len(path) > 20 && path[:15] == "/api/v1/drives/":
 		return "/api/v1/drives/:id"

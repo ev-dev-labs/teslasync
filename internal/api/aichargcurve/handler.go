@@ -1,48 +1,11 @@
 package aichargcurve
 
-// Phase-50 / 0028 — C3 Charging-curve fingerprint clustering.
+// Phase-50 / 0028 — C3 charging-curve fingerprint clustering.
 //
-// handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/charging/curves/clusters/explain. The
-// flow mirrors ai_battery_health_handler.go (same dispatch+stream
-// loop, no persistence — one-shot read-only narration):
-//
-//	URL  /api/v1/ai/charging/curves/clusters/explain
-//	  ↓
-//	resolve provider via *provider.Registry.For("charging-curve-fingerprint-clustering")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("charging-curve-fingerprint-clustering", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard returns
-// 404 BEFORE this handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body (vehicle_id) is parsed BEFORE opening the SSE
-// stream so a malformed input surfaces as a plain JSON 400 (rather
-// than a streamed error frame the SPA's QueryError will struggle
-// to render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /charging-curve page
-//     (SummaryStatsGrid, SessionCurveChart, SessionComparisonChart,
-//     ChargerTypeChart, SpeedTrendChart, TimeToChargeSection) and
-//     the client-side `sessionLabel` heuristic in
-//     web/src/features/charging/components/charging-curve/helpers.ts
-//     are unchanged. This handler is an OPT-IN add-on; off-mode
-//     users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("charging-curve-fingerprint-clustering").
-//   - I9 redaction:       PolicyChargingCurveFingerprintClustering
-//     (allows ClassVehicleName only; lat/long, addresses, place
-//     names stay tagged) is installed by dispatch.Run from the
-//     strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice.
+// Serves the opt-in SSE narrator for charging-curve clusters. The guard
+// returns 404 before this handler runs when AI mode or this feature is off;
+// request validation happens before opening SSE so bad input stays a JSON 400.
+// The deterministic charging-curve page and response shape remain unchanged.
 
 import (
 	"context"
@@ -62,19 +25,10 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// maxIterations bounds the dispatcher's
-// tool-loop. The strategy is at most retrieve_charge_curve_chunks →
-// query_charge_curve_features → answer (with optional retries). A
-// hard ceiling of 8 is generous, matching the other read-only
-// narrators.
+// maxIterations bounds the read-only tool loop with room for retries.
 const maxIterations = 8
 
-// explainRequest is the JSON body shape
-// this handler accepts. Mirrors the
-// /api/v1/analytics/charging-curve query-string contract —
-// vehicle_id is the only required field — kept as a JSON body so
-// the SPA can post from the same form state the deterministic UI
-// already binds to.
+// explainRequest keeps the AI body aligned with deterministic charging-curve filters.
 type explainRequest struct {
 	VehicleID int64 `json:"vehicle_id"`
 }
@@ -93,22 +47,8 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the handler. All
-// non-pointer arguments are required; the constructor panics on a
-// nil so the wiring bug surfaces at boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	retrieve_charge_curve_chunks AND query_charge_curve_features
-//	(both registered by
-//	tools.RegisterChargingCurveFingerprintClusteringTools in
-//	router.go).
-//
-// strat:      the charging-curve-fingerprint-clustering Strategy.
-// headerName: forward-auth header name; used to extract subject
-//
-//	for audit.
+// NewHandler wires required AI dependencies and panics on nil so boot fails fast.
+// toolReg must contain retrieve_charge_curve_chunks and query_charge_curve_features.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -132,11 +72,7 @@ func NewHandler(
 	}
 }
 
-// parseExplainBody decodes + validates the
-// JSON body. Pulled out so the validator-only test can exercise the
-// same parsing without constructing a full handler with stub deps.
-// The function writes a 400 on failure and returns the (req, ok)
-// pair so the caller can early-return.
+// parseExplainBody validates input before SSE headers are written.
 func parseExplainBody(w http.ResponseWriter, r *http.Request) (*explainRequest, bool) {
 	if r.Body == nil {
 		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
@@ -167,28 +103,22 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the JSON body.
 	body, ok := parseExplainBody(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before SSE so provider failures remain plain JSON.
 	if _, err := h.registry.For(r.Context(), chargingcurvefingerprintclustering.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai charging-curve-fingerprint-clustering: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, chargingcurvefingerprintclustering.FeatureID)
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(chargingcurvefingerprintclustering.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai charging-curve-fingerprint-clustering: stream.New failed (non-flushable writer)")
@@ -196,8 +126,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context.
 	prov, err := h.registry.For(ctx, chargingcurvefingerprintclustering.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai charging-curve-fingerprint-clustering: provider.For (post-stream) failed")
@@ -205,15 +133,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook —
-	// belt-and-braces against a future write tool sneaking past
-	// review.
+	// Deny-all confirm is defense-in-depth if a mutating tool is ever added.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Cluster narration is NOT
-	// conversational here — there is no chat history. We hand the
-	// LLM a deterministic prompt that asks it to follow the
-	// retrieve-then-query tool sequence and narrate the result.
+	// No chat history exists here; this prompt forces the deterministic tool sequence.
 	userMsg := fmt.Sprintf(
 		"Name and explain the charging-curve fingerprint clusters for vehicle %d. "+
 			"Follow the tool sequence EXACTLY: "+
@@ -232,7 +155,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body.VehicleID, body.VehicleID,
 	)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -244,6 +166,4 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler
-// satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)

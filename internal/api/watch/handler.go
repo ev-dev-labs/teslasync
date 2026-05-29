@@ -53,7 +53,7 @@ type Handler struct {
 	redisCache   *signal.RedisSignalCache
 }
 
-// NewHandler creates a new Handler.
+// NewHandler wires watch endpoints to vehicle/settings repos and Tesla commands.
 func NewHandler(db *database.DB, tc *tesla.Client) *Handler {
 	return &Handler{
 		db:           db,
@@ -98,7 +98,7 @@ func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
 	summary, err := h.queryWatchSummary(r.Context(), vehicleID)
 	if err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("no live state for watch summary")
-		// Return basic info from vehicle record when no live state exists
+		// Fall back to durable vehicle metadata when live state is unavailable.
 		httpx.WriteJSON(w, http.StatusOK, WatchSummary{
 			VehicleName: vehicle.DisplayName,
 			State:       "unknown",
@@ -123,7 +123,6 @@ func (h *Handler) Complication(w http.ResponseWriter, r *http.Request) {
 
 	summary, err := h.queryWatchSummary(r.Context(), vehicleID)
 	if err != nil {
-		// Fallback: get basic vehicle info
 		vehicle, vErr := h.vehicleRepo.GetByID(r.Context(), vehicleID)
 		if vErr != nil || vehicle == nil {
 			httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
@@ -149,14 +148,12 @@ func (h *Handler) Complication(w http.ResponseWriter, r *http.Request) {
 
 // Command executes a simplified vehicle command from a watch.
 func (h *Handler) Command(w http.ResponseWriter, r *http.Request) {
-	// Check API key permissions — commands require read-write or admin
 	perms, _ := r.Context().Value(apiKeyPermCtxKey{}).(string)
 	if perms != "read-write" && perms != "admin" {
 		httpx.WriteError(w, http.StatusForbidden, "API key requires read-write or admin permissions for commands")
 		return
 	}
 
-	// Check if API is suspended
 	if suspended, _ := h.settingsRepo.IsAPISuspended(r.Context()); suspended {
 		httpx.WriteError(w, http.StatusConflict, "Tesla API calls are suspended")
 		return
@@ -183,7 +180,6 @@ func (h *Handler) Command(w http.ResponseWriter, r *http.Request) {
 
 	vehicleID := body.VehicleID
 	if vehicleID == 0 {
-		// Try to resolve default vehicle
 		vehicles, err := h.vehicleRepo.GetAll(r.Context())
 		if err != nil || len(vehicles) == 0 {
 			httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
@@ -244,7 +240,7 @@ func (h *Handler) queryWatchSummary(ctx context.Context, vehicleID int64) (*Watc
 
 	batteryLevel, _ := signalInt(signals, "BatteryLevel")
 
-	// RatedRange from Fleet Telemetry is in miles — convert to km
+	// Watch clients currently expect kilometers while RatedRange is legacy miles.
 	ratedRange, _ := signalFloat(signals, "RatedRange")
 	rangeKm := ratedRange * 1.60934
 
@@ -252,11 +248,11 @@ func (h *Handler) queryWatchSummary(ctx context.Context, vehicleID int64) (*Watc
 	outsideTemp, _ := signalFloat(signals, "OutsideTemp")
 	chargeRate, _ := signalFloat(signals, "ChargeRateMilePerHour")
 
-	// TimeToFullCharge is in hours — convert to minutes
+	// Watch clients display TimeToFullCharge in minutes.
 	ttf, _ := signalFloat(signals, "TimeToFullCharge")
 	ttfMinutes := ttf * 60
 
-	// Locked: default to true (safe assumption) when unknown
+	// Default to locked when freshness is unknown.
 	locked := true
 	if v, ok := signals["Locked"]; ok && v != nil {
 		switch b := v.(type) {
@@ -269,7 +265,6 @@ func (h *Handler) queryWatchSummary(ctx context.Context, vehicleID int64) (*Watc
 		}
 	}
 
-	// SentryMode
 	sentryMode := false
 	if v, ok := signals["SentryMode"]; ok && v != nil {
 		switch b := v.(type) {
@@ -282,7 +277,7 @@ func (h *Handler) queryWatchSummary(ctx context.Context, vehicleID int64) (*Watc
 		}
 	}
 
-	// HvacPower is an enum ("On"/"Off") or bool
+	// HvacPower may be an enum, bool, or numeric cache value.
 	isClimateOn := false
 	if v, ok := signals["HvacPower"]; ok {
 		switch hv := v.(type) {
@@ -323,7 +318,6 @@ func resolveWatchVehicleID(r *http.Request, repo *vehicledb.VehicleRepo) (int64,
 		}
 		return vid, nil
 	}
-	// Default to first vehicle
 	vehicles, err := repo.GetAll(r.Context())
 	if err != nil || len(vehicles) == 0 {
 		return 0, fmt.Errorf("no vehicles found")

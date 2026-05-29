@@ -57,8 +57,6 @@ func NewTripPlannerHandler(db *database.DB, cache *cache.Store, state signal.Sta
 	return &TripPlannerHandler{db: db, cache: cache, state: state}
 }
 
-// ── Handlers ────────────────────────────────────────────────────────────
-
 // Plan handles POST /trip-planner/plan
 func (h *TripPlannerHandler) Plan(w http.ResponseWriter, r *http.Request) {
 	var req tripPlanRequest
@@ -126,7 +124,6 @@ func (h *TripPlannerHandler) Plan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Apply defaults
 	if req.CurrentSOC <= 0 {
 		req.CurrentSOC = 80
 	}

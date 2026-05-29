@@ -17,16 +17,7 @@ import (
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 
-	// Side-effect import: registers the
-	// tesla_normalize_unit_context_missing_total counter against
-	// prometheus.DefaultRegisterer at package init time so
-	// MissingUnitDrops below sees the metric family on every API
-	// process — including binaries that do not yet wire
-	// normalize.Pipeline as the live ingest path. Phase-42 wiring
-	// prompts will eventually plumb the Pipeline into the API
-	// binary; until then this import keeps the diagnostics endpoint
-	// returning a real (zero-valued) family rather than 404-equivalent
-	// "metric not registered".
+	// Side-effect import registers the pgx/v5 migrate driver selected by URL scheme.
 	_ "github.com/ev-dev-labs/teslasync/internal/tesla/normalize"
 )
 
@@ -81,7 +72,6 @@ func (h *FleetTelemetryErrorHandler) RefreshErrorVINs(w http.ResponseWriter, r *
 		return
 	}
 
-	// Parse Tesla response: {"response": {"vins": [...], "updated_at": "..."}}
 	var envelope struct {
 		Response struct {
 			VINs      []string `json:"vins"`
@@ -105,7 +95,6 @@ func (h *FleetTelemetryErrorHandler) RefreshErrorVINs(w http.ResponseWriter, r *
 		return
 	}
 
-	// Return fresh data from DB
 	stored, err := h.repo.GetActiveErrorVINs(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list error vins after refresh")
@@ -161,7 +150,6 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 		return
 	}
 
-	// Parse Tesla response: {"response": {"errors": [...], "updated_at": "..."}}
 	var envelope struct {
 		Response struct {
 			Errors []struct {
@@ -181,7 +169,6 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 
 	now := time.Now().UTC()
 
-	// Parse Tesla's updated_at
 	var teslaUpdatedAt *time.Time
 	if envelope.Response.UpdatedAt != "" {
 		if t, err := time.Parse(time.RFC3339, envelope.Response.UpdatedAt); err == nil {
@@ -190,7 +177,6 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 		}
 	}
 
-	// Convert parsed errors to model structs
 	var modelErrors []*telemetrymodel.TeslaFleetTelemetryError
 	for _, e := range envelope.Response.Errors {
 		m := &telemetrymodel.TeslaFleetTelemetryError{
@@ -236,32 +222,15 @@ func (h *FleetTelemetryErrorHandler) RefreshErrors(w http.ResponseWriter, r *htt
 	httpx.WriteJSON(w, http.StatusOK, stored)
 }
 
-// missingUnitDropsResponse describes the
-// tesla_normalize_unit_context_missing_total counter snapshot served by
-// the Settings/Diagnostics "missing-unit drops" indicator.
-//
-// Total is the running sum across every Field label since the API
-// process started; ByField is the per-Field breakdown (empty when no
-// drops have been recorded). The counter is monotonic, so a non-zero
-// Total combined with a flat slope on subsequent polls is a healthy
-// "old drift, now resolved" signal — the frontend renders both Total
-// and a recent-rate window over polled samples.
+// missingUnitDropsResponse is the narrow admin contract for unit-drop diagnostics.
 type missingUnitDropsResponse struct {
 	Total   float64            `json:"total"`
 	ByField map[string]float64 `json:"by_field"`
 }
 
-// MissingUnitDrops returns the running count of normalize-pipeline drops
-// caused by an empty vehicle_unit_history at the atomic's EmittedAt.
-// Sourced from the tesla_normalize_unit_context_missing_total counter
-// registered by internal/tesla/normalize.Pipeline.
+// MissingUnitDrops reports normalize-pipeline drops where unit metadata was missing.
 //
-// Phase-42 prompt 0068 replaces the legacy
-// fleet_telemetry_subscriptions-derived health indicator with this
-// metric-derived one (per ADR-004 #2: live pipeline metrics, not
-// snapshot tables, are the source of truth for ingest health).
-//
-// GET /api/v1/tesla/fleet-telemetry/missing-unit-drops
+// The counter is in-memory by design: it is an operational health signal, not an audit log.
 func (h *FleetTelemetryErrorHandler) MissingUnitDrops(w http.ResponseWriter, r *http.Request) {
 	families, err := prometheus.DefaultGatherer.Gather()
 	if err != nil {
@@ -293,7 +262,6 @@ func (h *FleetTelemetryErrorHandler) MissingUnitDrops(w http.ResponseWriter, r *
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
-// truncateBody returns the first 500 bytes of a response body for logging.
 func truncateBody(b []byte) string {
 	if len(b) > 500 {
 		return string(b[:500])

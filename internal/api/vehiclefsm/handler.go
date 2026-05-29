@@ -15,8 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Handler owns the new FSM-based vehicle state management.
-// Manages vehicle FSM + drive/charge sub-FSMs.
+// Handler owns vehicle, drive, and charge FSM state.
 type Handler struct {
 	mu          sync.Mutex
 	machines    map[int64]*fsm.VehicleFSM
@@ -25,7 +24,6 @@ type Handler struct {
 	vehicleRepo *vehicledb.VehicleRepo
 	transRepo   *dbobs.FSMTransitionRepo
 
-	// Reconciliation
 	localSignals  *signal.Store // set by SetSignalStore() — prompt 02b
 	reconcileStop chan struct{}
 	lastProcessed map[int64]time.Time
@@ -83,12 +81,6 @@ func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.S
 	}
 	_ = keep // retained for future best-effort write fan-out
 
-	// 1. State is now tracked in the Redis signal cache and in-memory signal store.
-	// The live-state repo is the single source of truth for current vehicle state.
-
-	// 2. Gear capability is now derived from the signal store, not stored on the vehicle row.
-
-	// 3. Log transition to fsm_transitions
 	if a.transRepo != nil {
 		details := map[string]interface{}{
 			"is_gear_capable": sctx.IsGearCapable,
@@ -116,7 +108,6 @@ func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.S
 		}
 	}
 
-	// 6. Manage sub-FSM lifecycle based on state transitions
 	a.handler.manageSubFSMs(ctx, vehicleID, from, to, sctx)
 
 	return firstErr
@@ -127,15 +118,13 @@ func (h *Handler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	// Entering Driving → create drive sub-FSM
 	if to == fsm.Driving && from != fsm.Driving {
-		// Finalize any active charge first (unplug-and-go)
+		// Unplug-and-go: close any active charge before starting a drive.
 		if chargeFSM, ok := h.charges[vehicleID]; ok {
 			chargeFSM.TriggerEnding(sctx.Signals, true)
 			delete(h.charges, vehicleID)
 			log.Info().Int64("vehicle_id", vehicleID).Msg("fsm: force-completed charge (drive started)")
 		}
-		// Create drive sub-FSM
 		driveFSM := drive.NewSessionFSM(vehicleID, "", 0) // driveID will be set by session tracker
 		if sctx.Signals != nil {
 			driveFSM.ProcessSignals(sctx.Signals)
@@ -144,7 +133,6 @@ func (h *Handler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm
 		log.Info().Int64("vehicle_id", vehicleID).Msg("fsm: drive sub-FSM created")
 	}
 
-	// Exiting Driving → finalize drive sub-FSM
 	if from == fsm.Driving && to != fsm.Driving {
 		if driveFSM, ok := h.drives[vehicleID]; ok {
 			driveFSM.TriggerEnding(sctx.Signals)
@@ -160,9 +148,7 @@ func (h *Handler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm
 		}
 	}
 
-	// Entering Charging → create charge sub-FSM
 	if to == fsm.Charging && from != fsm.Charging {
-		// Finalize any active drive first
 		if driveFSM, ok := h.drives[vehicleID]; ok {
 			driveFSM.TriggerEnding(sctx.Signals)
 			if !driveFSM.IsCompleted() {
@@ -179,7 +165,6 @@ func (h *Handler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm
 		log.Info().Int64("vehicle_id", vehicleID).Msg("fsm: charge sub-FSM created")
 	}
 
-	// Exiting Charging → finalize charge sub-FSM
 	if from == fsm.Charging && to != fsm.Charging {
 		if chargeFSM, ok := h.charges[vehicleID]; ok {
 			chargeFSM.TriggerEnding(sctx.Signals, false)
@@ -222,9 +207,6 @@ func (h *Handler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehicle
 	}
 	m = fsm.NewVehicleFSM(initial, action)
 
-	// Gear capability is now derived from the signal store.
-	// No need to rehydrate from the vehicle row.
-
 	h.machines[vehicleID] = m
 
 	log.Info().Int64("vehicle_id", vehicleID).Str("state", string(initial)).Msg("fsm: initialized vehicle FSM (default)")
@@ -261,7 +243,6 @@ func (h *Handler) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals
 
 	m := h.getOrCreate(ctx, vehicleID)
 
-	// Wake vehicle from asleep/offline when any signal arrives
 	if state := m.Current(); state == fsm.Asleep || state == fsm.Offline {
 		if err := m.HandleSignalReceived(ctx, vehicleID); err != nil {
 			outcome := "error"
@@ -276,7 +257,6 @@ func (h *Handler) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals
 		}
 	}
 
-	// Run vehicle FSM (may trigger sub-FSM creation/finalization via fsmAction)
 	if err := m.ProcessSignalsAt(ctx, vehicleID, signals, payloadTs); err != nil {
 		outcome := "error"
 		if ctx.Err() == context.DeadlineExceeded {
@@ -311,7 +291,6 @@ func (h *Handler) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals
 			Msg("fsm: CheckPending error")
 	}
 
-	// Forward signals to active sub-FSMs for accumulation
 	h.mu.Lock()
 	activeDrive := h.drives[vehicleID]
 	activeCharge := h.charges[vehicleID]

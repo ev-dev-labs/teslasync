@@ -65,11 +65,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 SI canonical drives (migration 000185): ambient_temp_c_avg
-	// (Celsius), distance_m (meters), duration_s (seconds),
-	// start_soc_pct/end_soc_pct (REAL). avg_distance_km computed in SQL,
-	// avg_duration_s is read directly from duration_s. The
-	// `> 2 miles` filter becomes `distance_m > 3218.688`.
+	// Phase-42 stores drives in SI; SQL converts only the legacy km response fields.
 	effRows, err := h.db.Pool.Query(ctx, `
 		SELECT
 		  CASE
@@ -126,15 +122,10 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Phase-42 (prompt 0077): vampire drain vs temperature was removed
-	// with the vampire_drain_events table. The frontend key is preserved
-	// as an empty array so the response shape is unchanged. Restoring
-	// this metric requires a follow-on prompt that reconstructs per-park
-	// drain from typed signal_log.
+	// vampire_drain_events was removed in Phase-42; keep the response key empty until signal_log reconstruction exists.
 	vampireDrain := make([]vampireDrainBucket, 0)
 
-	// Phase-42 SI canonical drives. Distance returned in km via SQL division
-	// to keep the legacy `total_distance` semantics (km).
+	// SQL returns distance in km to preserve the legacy total_distance response semantics.
 	trendRows, err := h.db.Pool.Query(ctx, `
 		SELECT DATE_TRUNC('month', started_at) as month,
 		       AVG(ambient_temp_c_avg) as avg_temp,
@@ -165,7 +156,6 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan monthly trend")
 			return
 		}
-		// DATE_TRUNC returns a time.Time; format to "2006-01"
 		if mt, ok := monthTime.(interface{ Format(string) string }); ok {
 			t.Month = mt.Format("2006-01")
 		}
@@ -189,14 +179,10 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	if efficiency == nil {
 		efficiency = []tempEfficiencyBucket{}
 	}
-	// vampireDrain is initialised to a non-nil empty slice at the top of
-	// the handler (see Phase-42 comment) so the response shape is stable;
-	// no nil-guard needed here.
 	if monthlyTrend == nil {
 		monthlyTrend = []monthlyTempTrend{}
 	}
 
-	// Per-drive scatter data for the frontend
 	type drivePoint struct {
 		OutsideTemp    float64 `json:"outside_temp"`
 		EfficiencyWhKm float64 `json:"efficiency_wh_km"`
@@ -204,7 +190,7 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		DriveDate      string  `json:"drive_date"`
 	}
 
-	// Phase-42 SI canonical drives. distance_km computed in SQL.
+	// distance_km is derived in SQL from SI distance_m.
 	pointRows, err := h.db.Pool.Query(ctx, `
 		SELECT ambient_temp_c_avg,
 		       CASE WHEN distance_m > 0

@@ -74,7 +74,6 @@ func (h *Handler) Optimize(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Validate required fields
 	if req.VehicleID <= 0 {
 		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
 		return
@@ -221,10 +220,9 @@ func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, depart
 		return nil, fmt.Errorf("current SOC (%d%%) already meets target (%d%%)", currentSOC, req.TargetSOC)
 	}
 
-	// Calculate charging requirements
 	kwhNeeded := float64(req.TargetSOC-currentSOC) / 100.0 * req.BatteryCapacity
 	chargeRateKW := float64(req.ChargerVoltage) * float64(req.MaxAmps) / 1000.0
-	// Add ~10% for charging losses
+	// Add a conservative charging-loss margin.
 	kwhWithLoss := kwhNeeded * 1.10
 	durationHours := kwhWithLoss / chargeRateKW
 	durationCeilHours := int(math.Ceil(durationHours))
@@ -233,7 +231,6 @@ func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, depart
 		durationCeilHours = 1
 	}
 
-	// Check if there's enough time before departure
 	hoursUntilDepart := departBy.Sub(now).Hours()
 	if float64(durationCeilHours) > hoursUntilDepart {
 		return nil, fmt.Errorf(
@@ -242,12 +239,10 @@ func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, depart
 		)
 	}
 
-	// Build per-hour rates for the relevant season
 	seasonName := seasonForDate(plan, departBy)
 	season := plan.Seasons[seasonName]
 	rates := buildHourlyRates(season)
 
-	// Find cheapest contiguous window of durationCeilHours before depart_by
 	type candidate struct {
 		startHour    int
 		cost         float64
@@ -257,12 +252,9 @@ func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, depart
 
 	nowHour := now.Hour()
 
-	// Build candidate list: all possible start hours
 	var candidates []candidate
 	for startH := 0; startH < 24; startH++ {
-		// Simple feasibility: the window must not start before now or end after depart_by
 		startTime := time.Date(departBy.Year(), departBy.Month(), departBy.Day(), startH, 0, 0, 0, departBy.Location())
-		// If start is after depart_by, try previous day
 		if startTime.After(departBy) {
 			startTime = startTime.AddDate(0, 0, -1)
 		}
@@ -274,7 +266,6 @@ func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, depart
 
 		cost, avgRate := costForWindow(rates, startH, durationCeilHours, kwhNeeded)
 
-		// Determine the dominant tier
 		tierCounts := make(map[string]int)
 		for i := 0; i < durationCeilHours; i++ {
 			h := (startH + i) % 24
@@ -301,14 +292,12 @@ func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, depart
 		return nil, fmt.Errorf("no valid charging window found before departure")
 	}
 
-	// Sort by cost ascending
 	sort.Slice(candidates, func(i, j int) bool {
 		return candidates[i].cost < candidates[j].cost
 	})
 
 	best := candidates[0]
 
-	// Calculate "charge now" cost
 	chargeNowCost, _ := costForWindow(rates, nowHour, durationCeilHours, kwhNeeded)
 
 	savings := chargeNowCost - best.cost
@@ -317,14 +306,12 @@ func (h *Handler) computeSchedule(_ context.Context, req optimizeRequest, depart
 		savingsPct = (savings / chargeNowCost) * 100.0
 	}
 
-	// Build schedule times
 	bestStart := time.Date(departBy.Year(), departBy.Month(), departBy.Day(), best.startHour, 0, 0, 0, departBy.Location())
 	if bestStart.After(departBy) {
 		bestStart = bestStart.AddDate(0, 0, -1)
 	}
 	bestEnd := bestStart.Add(time.Duration(float64(time.Hour) * durationHours))
 
-	// Build alternatives (up to 3, excluding best)
 	var alternatives []chargeWindow
 	for i := 1; i < len(candidates) && len(alternatives) < 3; i++ {
 		c := candidates[i]
@@ -398,7 +385,6 @@ func (h *Handler) Apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Look up vehicle VIN
 	vehicleRepo := vehicledb.NewVehicleRepo(h.db)
 	vehicle, err := vehicleRepo.GetByID(ctx, plan.VehicleID)
 	if err != nil || vehicle == nil {
@@ -425,7 +411,6 @@ func (h *Handler) Apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3. Update plan status
 	now := time.Now().UTC()
 	if err := planRepo.UpdateStatus(ctx, plan.ID, "scheduled", &now, nil); err != nil {
 		log.Error().Err(err).Int64("plan_id", plan.ID).Msg("failed to update plan status")

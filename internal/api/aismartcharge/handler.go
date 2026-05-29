@@ -2,45 +2,7 @@ package aismartcharge
 
 // Phase-50 / 0026 — C1 Smart-charge schedule suggestion.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/charging/schedule/draft. The flow
-// mirrors ai_trip_planner_llm_handler.go (same dispatch+stream loop,
-// no persistence — one-shot proposal):
-//
-//	URL  /api/v1/ai/charging/schedule/draft
-//	  ↓
-//	resolve provider via *provider.Registry.For("smart-charge-schedule-suggestion")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("smart-charge-schedule-suggestion", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard returns
-// 404 BEFORE this handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body (vehicle_id, target_soc, depart_by, rate_plan_id,
-// optional knobs, current_soc) is parsed BEFORE opening the SSE
-// stream so a malformed input surfaces as a plain JSON 400 (rather
-// than a streamed error frame the SPA's QueryError will struggle to
-// render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /smart-charge page —
-//     manual form + canonical Schedule button hitting
-//     POST /api/v1/charge-planner/optimize — is unchanged. This
-//     handler is an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("smart-charge-schedule-suggestion").
-//   - I9 redaction:       PolicySmartChargeScheduleSuggestion
-//     (allows ClassVehicleName only; lat/long, addresses, and place
-//     names stay tagged) is installed by dispatch.Run from the
-//     strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape is
-//     added or modified by this slice.
+// POST /api/v1/ai/charging/schedule/draft streams a propose-only schedule draft grounded in the canonical charge planner. The AI-gated route validates the form-shaped JSON body before opening SSE, never persists changes, and leaves the deterministic /smart-charge flow unchanged.
 
 import (
 	"context"
@@ -290,14 +252,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 // Compile-time assertion: Handler satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
-
-// ---------------------------------------------------------------------
-// Production wiring for the tool interface declared by
-// internal/ai/tools/schedule/charge.go. Kept in the same file as
-// the handler so the wiring intent is local to
-// the slice; mirrors the trip-planner-llm-agent slice's
-// AITripPlanComputer pattern.
-// ---------------------------------------------------------------------
 
 // AIChargeScheduleComputer is the production schedule.ChargeScheduleComputer
 // wrapper used by the smart-charge schedule suggestion tools. It

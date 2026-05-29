@@ -1,7 +1,5 @@
 package chargeopt
 
-// ── Response types ───────────────────────────────────────────
-
 type optimizerResponse struct {
 	CurrentSchedule    currentSchedule `json:"current_schedule"`
 	CostAnalysis       costAnalysis    `json:"cost_analysis"`

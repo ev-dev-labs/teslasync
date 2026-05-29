@@ -1,19 +1,7 @@
 // Phase-50 / 0034 — A1 Alert tuning suggestions.
 //
-// Off-mode + baseline-coexistence tests for the AI alert tuning
-// handler. The off-mode test
-// (TestAlertTuningSuggestionsAIOffManualTuningWorks) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that
-// the AI route returns 404 when settings.ai_mode='off' even when
-// the per-feature toggle is on, AND that the deterministic
-// PUT /api/v1/alerts/rules/{id} handler that the AlertStudio's
-// manual tuning form already uses remains the unconditional
-// baseline path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness
-// (`go run ./cmd/ai-eval --feature alert-tuning-suggestions`);
-// duplicating that here would require a live database fixture.
+// Off-mode tests prove the AI route fails closed while the deterministic AlertStudio tuning path stays available.
+// Streaming coverage lives in the F6 eval harness; duplicating it here would require a live DB fixture.
 
 package aialerttune
 
@@ -29,8 +17,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
 
-// stubGuardSettings is a minimal in-memory guard.Settings used to
-// drive the off-mode contract test without a real DB.
 type stubGuardSettings struct {
 	mode string
 	on   map[string]bool
@@ -47,34 +33,11 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on[id], nil
 }
 
-// TestAlertTuningSuggestionsAIOffManualTuningWorks is the
-// load-bearing off-mode contract proof for slice 0034. It mounts
-// the AI alert-tuning route through the guard with ai_mode='off'
-// and proves:
-//
-//   - The /api/v1/ai/alerts/rules/{ruleID}/tune/draft route
-//     returns 404 (the guard fails closed even when the
-//     per-feature toggle is on).
-//   - The 404 body does not leak feature metadata or rule
-//     identifiers.
-//   - A baseline AlertStudio mutation route serving the
-//     deterministic per-rule PUT /api/v1/alerts/rules/{id}
-//     content remains reachable under the same router — proof
-//     that the slice does NOT replace the manual-tuning path
-//     (ADR-015 §I3).
-//
-// The test name MUST stay
-// TestAlertTuningSuggestionsAIOffManualTuningWorks — the slice
-// prompt's verification command runs
-// `go test … -run TestAlertTuningSuggestionsAIOffManualTuningWorks`
-// AND
-// `npm test -- --run TestAlertTuningSuggestionsAIOffManualTuningWorks`,
-// so both the Go and React off-mode proofs must answer to the
-// same test-name pattern.
+// TestAlertTuningSuggestionsAIOffManualTuningWorks is the slice 0034 off-mode contract proof.
+// The name is pinned by Go and React verification commands, so keep it stable.
 func TestAlertTuningSuggestionsAIOffManualTuningWorks(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"alert-tuning-suggestions": true}, // toggle on; mode trumps it
@@ -83,23 +46,14 @@ func TestAlertTuningSuggestionsAIOffManualTuningWorks(t *testing.T) {
 
 	router := chi.NewRouter()
 	router.Route("/api/v1", func(r chi.Router) {
-		// AI route under the guard. Inner handler always-500: the
-		// guard MUST short-circuit before we are reached. A
-		// non-404 status here is a guard-bypass bug.
+		// The guarded handler must not be reached in off mode.
 		r.Route("/ai", func(r chi.Router) {
 			r.Post("/alerts/rules/{ruleID}/tune/draft", g.Wrap("alert-tuning-suggestions", func(w http.ResponseWriter, _ *http.Request) {
 				http.Error(w, "GUARD_BYPASSED — handler should not have been called in off mode", http.StatusInternalServerError)
 			}))
 		})
 
-		// Baseline AlertStudio mutation route — NOT guarded by
-		// the AI guard. Returns the canonical updated AlertRule
-		// shape with the `"ai":false` marker and the
-		// `"surface":"baseline_manual_tuning"` envelope marker
-		// the canonical AlertHandler.UpdateAlertRule path
-		// produces (under test conditions; the production
-		// handler returns a real alertmodel.AlertRule). We mock it
-		// here so the test stays hermetic (no DB).
+		// Mock the baseline mutation route so the test stays hermetic while proving manual tuning still works.
 		r.Put("/alerts/rules/{ruleID}", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -107,7 +61,6 @@ func TestAlertTuningSuggestionsAIOffManualTuningWorks(t *testing.T) {
 		})
 	})
 
-	// 1) Probe the AI route — MUST be 404.
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/alerts/rules/42/tune/draft", nil)
 	router.ServeHTTP(rec, req)
@@ -118,21 +71,14 @@ func TestAlertTuningSuggestionsAIOffManualTuningWorks(t *testing.T) {
 	if strings.Contains(rec.Body.String(), "GUARD_BYPASSED") {
 		t.Fatalf("AI route guard was bypassed in off mode: body=%q", rec.Body.String())
 	}
-	// Defence-in-depth: the 404 body must not leak feature
-	// metadata (ADR-015 §I9 — provider/feature info must be
-	// invisible in off mode). chi's http.NotFound emits "404
-	// page not found\n".
+	// Off-mode 404s must not leak provider or feature metadata.
 	for _, leaked := range []string{"alert-tuning-suggestions", "feature", "strategy", "provider", "tune", "draft"} {
 		if strings.Contains(strings.ToLower(rec.Body.String()), leaked) {
 			t.Errorf("AI route 404 body leaks %q: %q", leaked, rec.Body.String())
 		}
 	}
 
-	// 2) Probe the baseline AlertStudio mutation route — MUST
-	// return 200 + the deterministic AlertRule shape the
-	// PUT /api/v1/alerts/rules/{id} handler produces, regardless
-	// of the AI guard's state. This is the load-bearing proof
-	// that the slice did NOT replace the manual-tuning path.
+	// Baseline manual tuning must remain reachable regardless of AI guard state.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodPut, "/api/v1/alerts/rules/42", strings.NewReader(`{"value_num":15,"cooldown_min":30}`))
 	reqBaseline.Header.Set("Content-Type", "application/json")
@@ -155,10 +101,7 @@ func TestAlertTuningSuggestionsAIOffManualTuningWorks(t *testing.T) {
 	}
 }
 
-// TestHandler_PanicsOnNilWiring asserts the handler
-// constructor refuses zero-valued dependencies. A wiring bug at
-// boot must surface as a panic, not as a nil-deref on first
-// request.
+// TestHandler_PanicsOnNilWiring proves wiring bugs fail at boot.
 func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -179,8 +122,7 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIAlertTuningSource_PanicsOnNilWiring mirrors the handler
-// nil-deps proof for the production AlertTuningSource adapter.
+// TestAIAlertTuningSource_PanicsOnNilWiring mirrors the handler nil-dependency check.
 func TestAIAlertTuningSource_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -201,17 +143,7 @@ func TestAIAlertTuningSource_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestHandler_RejectsBadRuleID asserts the handler
-// validates the URL path parameter BEFORE opening the SSE stream
-// — a missing, non-numeric, zero, or negative ruleID must
-// surface as a JSON 400, not a half-opened stream that confuses
-// the frontend.
-//
-// We mount the parser branch directly via parseAlertTuningURL so
-// the test does not need to construct a full handler with stub
-// deps. NewHandler panics on nil deps, and the
-// parser runs BEFORE touching any of them, so we can inline the
-// parser without losing coverage.
+// TestHandler_RejectsBadRuleID proves invalid ruleID values return JSON 400 before SSE starts.
 func TestHandler_RejectsBadRuleID(t *testing.T) {
 	t.Parallel()
 
@@ -245,9 +177,7 @@ func TestHandler_RejectsBadRuleID(t *testing.T) {
 	}
 }
 
-// TestHandler_AcceptsCanonicalRuleID proves the
-// parser does NOT bounce the happy-path shapes — small int,
-// large int, max int64.
+// TestHandler_AcceptsCanonicalRuleID proves valid int64 path IDs are accepted.
 func TestHandler_AcceptsCanonicalRuleID(t *testing.T) {
 	t.Parallel()
 
@@ -280,10 +210,7 @@ func TestHandler_AcceptsCanonicalRuleID(t *testing.T) {
 	}
 }
 
-// TestHandler_BodyParser_AcceptsEmpty proves an
-// empty body is allowed (vehicle_id is optional). The
-// AlertStudio's frontend POSTs the AI draft request without a
-// body when no vehicle scope is selected.
+// TestHandler_BodyParser_AcceptsEmpty proves vehicle_id is optional.
 func TestHandler_BodyParser_AcceptsEmpty(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()
@@ -300,8 +227,7 @@ func TestHandler_BodyParser_AcceptsEmpty(t *testing.T) {
 	}
 }
 
-// TestHandler_BodyParser_AcceptsVehicleID proves a
-// body with a valid vehicle_id surfaces the value to the handler.
+// TestHandler_BodyParser_AcceptsVehicleID proves valid vehicle_id reaches the handler.
 func TestHandler_BodyParser_AcceptsVehicleID(t *testing.T) {
 	t.Parallel()
 	rec := httptest.NewRecorder()
@@ -316,9 +242,7 @@ func TestHandler_BodyParser_AcceptsVehicleID(t *testing.T) {
 	}
 }
 
-// TestHandler_BodyParser_RejectsBadVehicleID proves
-// a body with a non-positive vehicle_id is rejected with a 400
-// (preserves the canonical "vehicle_id > 0" invariant).
+// TestHandler_BodyParser_RejectsBadVehicleID preserves the vehicle_id > 0 invariant.
 func TestHandler_BodyParser_RejectsBadVehicleID(t *testing.T) {
 	t.Parallel()
 	cases := []string{
@@ -340,9 +264,7 @@ func TestHandler_BodyParser_RejectsBadVehicleID(t *testing.T) {
 	}
 }
 
-// TestHandler_BodyParser_RejectsBadJSON proves a
-// malformed body is rejected with a 400 instead of a half-opened
-// stream.
+// TestHandler_BodyParser_RejectsBadJSON proves malformed bodies return JSON 400.
 func TestHandler_BodyParser_RejectsBadJSON(t *testing.T) {
 	t.Parallel()
 	cases := []string{

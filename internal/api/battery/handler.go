@@ -58,7 +58,6 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		queryTime = time.Now()
 	}
 
-	// Derive battery health from signal_log (no more battery_snapshots table)
 	var healthScore, capacityWh, degradation, estRange float64
 	var avgTemp *float64
 	var cycleCount int
@@ -94,7 +93,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 					estRange = v
 				}
 			}
-			// Derive avgTemp from ModuleTempMax/ModuleTempMin — nil means "no data"
+			// nil means "no data" when either module temperature is absent.
 			valMax, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMax", queryTime)
 			if err != nil {
 				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMax").Msg("battery: failed to read signal state")
@@ -139,7 +138,6 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Build monthly trend from snapshots
 	type trendPoint struct {
 		Month       string  `json:"month"`
 		CapacityPct float64 `json:"capacity_pct"`
@@ -150,7 +148,6 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	}
 	var trend []trendPoint
 
-	// Query cagg_battery_daily for battery trend
 	trendDays := 90
 	if d := r.URL.Query().Get("days"); d != "" {
 		if parsed, parseErr := strconv.Atoi(d); parseErr == nil && parsed > 0 && parsed <= 3650 {
@@ -193,8 +190,7 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Model Y Long Range nominal range ~531 km (330 mi)
-	const nominalRangeKm = 531.0
+	const nominalRangeKm = 531.0 // Model Y Long Range nominal range.
 
 	resp := map[string]interface{}{
 		"vehicle_id":                 vehicleID,

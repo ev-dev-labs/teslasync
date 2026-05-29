@@ -1,15 +1,8 @@
-// Package visitedlocation serves GET /api/v1/locations which returns a
-// list of locations the fleet has visited.
+// Package visitedlocation serves read-only visited-location queries at
+// GET /api/v1/locations, optionally scoped by vehicle_id.
 //
-// The handler delegates to internal/database/trip.VisitedLocationRepo
-// for storage. Two query modes are supported:
-//
-//   - no query string ........... GetAll across all vehicles
-//   - vehicle_id=<int64> ........ GetByVehicle scoped to one vehicle
-//
-// The endpoint is read-only and intentionally narrow; place-level enrichment
-// (POI naming, geofence matching, etc.) lives in higher-level handlers /
-// the trip-detail endpoints.
+// Place-level enrichment such as POI naming and geofence matching belongs in
+// higher-level trip handlers, not this narrow listing endpoint.
 //
 // Layer: handler
 package visitedlocation

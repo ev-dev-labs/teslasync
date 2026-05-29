@@ -18,9 +18,7 @@ func NewChargingOptimizerHandler(db *database.DB) *ChargingOptimizerHandler {
 	return &ChargingOptimizerHandler{db: db}
 }
 
-// ── Handler ──────────────────────────────────────────────────
-
-// GetOptimization handles GET /analytics/charging-optimizer?vehicle_id=X
+// GetOptimization serves optimizer metrics for a single vehicle.
 func (h *ChargingOptimizerHandler) GetOptimization(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {

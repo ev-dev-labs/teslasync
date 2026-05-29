@@ -40,7 +40,6 @@ func defaultEfficiency(tempC, speedKmh int) float64 {
 func buildRangeFactors(avgTemp, avgSpeed, avgEff *float64) []rangeFactor {
 	var factors []rangeFactor
 
-	// Temperature impact
 	if avgTemp != nil {
 		temp := *avgTemp
 		impact := 0.0
@@ -63,7 +62,6 @@ func buildRangeFactors(avgTemp, avgSpeed, avgEff *float64) []rangeFactor {
 		})
 	}
 
-	// Speed impact
 	if avgSpeed != nil {
 		speed := *avgSpeed
 		impact := 0.0
@@ -83,12 +81,10 @@ func buildRangeFactors(avgTemp, avgSpeed, avgEff *float64) []rangeFactor {
 		})
 	}
 
-	// HVAC estimate
 	factors = append(factors, rangeFactor{
 		Name: "hvac", ImpactPct: -3, Description: "Climate control active",
 	})
 
-	// Driving style from efficiency
 	if avgEff != nil {
 		eff := *avgEff
 		impact := 0.0
@@ -108,7 +104,6 @@ func buildRangeFactors(avgTemp, avgSpeed, avgEff *float64) []rangeFactor {
 		})
 	}
 
-	// Elevation placeholder
 	factors = append(factors, rangeFactor{
 		Name: "elevation", ImpactPct: -1, Description: "Minor elevation changes",
 	})

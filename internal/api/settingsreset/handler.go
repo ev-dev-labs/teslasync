@@ -2,31 +2,8 @@ package settingsreset
 
 // Phase-46 / Prompt 50 — Settings reset endpoint.
 //
-//   POST /api/v1/settings/reset
-//
-// Body shape:
-//
-//   {}                          -> reset every whitelisted section
-//   { "section": "alert_rules" } -> reset just that section
-//
-// Returns ImportResult-shaped JSON:
-//
-//   {
-//     "reset":    37,
-//     "sections": [{ "section": "alert_rules", "reset": 37 }]
-//   }
-//
-// The route is sudo-gated by RequireSudo at the router so a misclick
-// always carries a fresh credential. Per-vehicle settings (Phase-46
-// / Prompt 43) are NOT touched here; the per-vehicle reset flow has
-// its own endpoint.
-//
-// Error contract:
-//   - 400 BAD_REQUEST          → unknown section / deny-listed /
-//                                payload too large / malformed JSON
-//   - 401 MISSING_IDENTITY     → quiet_hours requested but ForwardAuth
-//                                header is empty (open mode)
-//   - 500 INTERNAL_ERROR       → orchestrator / database failure
+// POST /api/v1/settings/reset resets either every whitelisted section or one named section.
+// The route is sudo-gated, leaves per-vehicle settings to their own endpoint, and returns ImportResult-shaped JSON.
 
 import (
 	"context"

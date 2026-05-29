@@ -2,48 +2,13 @@ package aitirepress
 
 // Phase-50 / 0033 — T3 Tire-pressure trend reasoning.
 //
-// ai_tire_pressure_trend_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/tire-pressure/trends/explain. The
-// flow mirrors ai_temperature_impact_handler.go (same
-// dispatch+stream loop, no persistence — one-shot read-only
-// narration):
+// LLM-backed POST /api/v1/ai/tire-pressure/trends/explain. The guard in
+// ai_routes.go fails closed before this handler when AI mode or the feature
+// toggle is off (ADR-015 §I6).
 //
-//	URL  /api/v1/ai/tire-pressure/trends/explain
-//	  ↓
-//	resolve provider via *provider.Registry.For("tire-pressure-trend-reasoning")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("tire-pressure-trend-reasoning", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard
-// returns 404 BEFORE this handler ever sees the request
-// (ADR-015 §I6).
-//
-// The JSON body (vehicle_id) is parsed BEFORE opening the SSE
-// stream so a malformed input surfaces as a plain JSON 400.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /tire-pressure page
-//     (radial gauges, warning banner, summary cards, history
-//     chart, history table) hitting GET /api/v1/tire-pressure is
-//     unchanged. This handler is an OPT-IN add-on; off-mode
-//     users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("tire-pressure-trend-reasoning").
-//   - I9 redaction:       PolicyTirePressureTrendReasoning
-//     (allows ClassVehicleName only; lat/long, addresses, and
-//     place names stay tagged) is installed by dispatch.Run
-//     from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice. The tool envelope's
-//     extra honest-method fields live in the AI-only typed
-//     [maintenance.TirePressureTrend] envelope, not on the baseline
-//     /tire-pressure response.
+// The vehicle_id body is parsed before opening SSE so bad input returns JSON
+// 400. The surface is opt-in and read-only; AI-only method fields stay out of
+// the baseline /tire-pressure contract (ADR-015 §I3, §I9-I10).
 
 import (
 	"context"
@@ -210,12 +175,8 @@ func parseTirePressureTrendBody(w http.ResponseWriter, r *http.Request) (*reques
 	return &req, true
 }
 
-// ServeHTTP implements [http.Handler]. The body is decoded, the
-// dispatcher is invoked, and the SSE stream is closed via the
-// dispatcher's deferred WriteDone. Every error path either
-// writes a structured frame onto the SSE stream (when the
-// writer has been opened) or a plain JSON 4xx/5xx (before it
-// has).
+// ServeHTTP implements [http.Handler]. Provider errors before SSE opens stay
+// plain JSON; later failures are emitted as stream frames.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	body, ok := parseTirePressureTrendBody(w, r)
 	if !ok {
@@ -248,13 +209,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// Synthesise the user message. Tire-pressure-trend
-	// reasoning is NOT conversational here — there is no chat
-	// history. We hand the LLM a deterministic prompt that
-	// asks it to call the single read-only tool in scope and
-	// narrate the result, with explicit honest-method cues so
-	// the narration discloses the descriptive-aggregate
-	// nature of the surface.
+	// Use a deterministic prompt with honest-method cues; this is a descriptive
+	// aggregate, not a forecast.
 	userMsg := fmt.Sprintf(
 		"Narrate the recent 30-day tire-pressure trend for vehicle %d. "+
 			"Follow the tool sequence EXACTLY: "+
@@ -285,8 +241,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler satisfies
-// http.Handler.
+// Compile-time assertion: Handler satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
@@ -352,9 +307,7 @@ func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, 
 	to := time.Now()
 	from := to.AddDate(0, 0, -windowDays)
 
-	// Project the 4 TPMS corners + OutsideTemp across the
-	// 30-day window in chart mode (one row per emission, no
-	// collapsing).
+	// Chart mode keeps one row per emission across TPMS corners and OutsideTemp.
 	mappings := append([]signal.FieldMapping(nil), tirePressureMappings...)
 	mappings = append(mappings, signal.FieldMapping{Signal: tireOutsideTempSignal, Field: "outside_temp_c"})
 
@@ -403,9 +356,7 @@ func (a *AITirePressureTrendSource) QueryTirePressureTrend(ctx context.Context, 
 		summary := summariseCorner(c.pos, c.label, series)
 		envelope.Tires = append(envelope.Tires, summary)
 		totalReadings += summary.ReadingCount
-		// Index a pointer to the slice element (NOT a copy of
-		// summary) so down-stream classification mutates the
-		// envelope's slice in place.
+		// Point at the slice element, not the loop copy, so later classification mutates the envelope.
 		cornerByPos[c.pos] = &envelope.Tires[len(envelope.Tires)-1]
 	}
 
@@ -547,13 +498,9 @@ func extractOutsideTempSummary(rows []signal.TimelineRow) *maintenance.TireOutsi
 	}
 }
 
-// summariseCorner reduces a per-corner [timelinePoint] series
-// to the typed maintenance.TirePressureCorner envelope: latest,
-// average, min, max, rate-of-change-per-day, and the
-// deterministic threshold-driven status. RateePaPerDay is the
-// least-squares slope (in Pa/day) of the points; when fewer
-// than 2 points are available it is 0 and the
-// DaysUntilSoftLowEstimate is nil.
+// summariseCorner computes the per-corner aggregate and threshold status.
+// RatePaPerDay is a least-squares Pa/day slope; fewer than two points produce
+// a zero slope and no soft-low estimate.
 func summariseCorner(pos, label string, series []timelinePoint) maintenance.TirePressureCorner {
 	out := maintenance.TirePressureCorner{
 		Position:                 pos,
@@ -582,9 +529,7 @@ func summariseCorner(pos, label string, series []timelinePoint) maintenance.Tire
 	out.RatePaPerDay = math.Round(linearSlopePaPerDay(series))
 	out.Status = classifyTirePressureStatus(out.LatestPa)
 	if out.RatePaPerDay < 0 && out.LatestPa > tirePressureSoftLowPa {
-		// At the current slope (Pa/day, negative for a leak),
-		// project days until the corner crosses the soft-low
-		// threshold. Round half-up.
+		// Negative slopes estimate days until the soft-low threshold.
 		days := (out.LatestPa - tirePressureSoftLowPa) / -out.RatePaPerDay
 		if days > 0 && !math.IsNaN(days) && !math.IsInf(days, 0) {
 			d := int(math.Round(days))
@@ -718,8 +663,7 @@ func buildTirePressureLikelyCauses(tires []maintenance.TirePressureCorner, outsi
 	}
 	out := make([]string, 0, 2)
 
-	// All four trending down + cold ambient → cold-weather
-	// correlation.
+	// All four tires trending down in cold air implies seasonal contraction.
 	allDown := true
 	for _, t := range tires {
 		if t.RatePaPerDay >= 0 {
@@ -732,7 +676,7 @@ func buildTirePressureLikelyCauses(tires []maintenance.TirePressureCorner, outsi
 			fmt.Sprintf("All four tires are losing pressure together while the rolling average outside temperature is %.1f°C — most likely deterministic driver is seasonal contraction (cold-weather correlation), NOT a puncture.", outside.AvgTempC))
 	}
 
-	// Single-corner outlier → slow-leak signature.
+	// Single-corner outliers imply a slow-leak signature.
 	if leak, label := detectSingleCornerLeak(tires); leak {
 		out = append(out,
 			fmt.Sprintf("The %s corner is losing pressure materially faster than the other three — single-corner anomaly fits a slow-leak signature, NOT seasonal contraction.", label))
@@ -798,9 +742,7 @@ func buildTirePressureInsights(tires []maintenance.TirePressureCorner, _ mainten
 	}
 	out := make([]string, 0, 3)
 
-	// Crossings: any corner currently below soft-low or above
-	// soft-high — the narrator should call this out as
-	// actionable.
+	// Threshold crossings are the actionable insights.
 	for _, t := range tires {
 		if t.LatestPa > 0 && t.LatestPa < tirePressureSoftLowPa {
 			out = append(out,
@@ -814,8 +756,7 @@ func buildTirePressureInsights(tires []maintenance.TirePressureCorner, _ mainten
 		}
 	}
 
-	// Slowest leak with a finite days-until-soft-low estimate
-	// — surfaced once.
+	// Surface the soonest finite soft-low estimate once.
 	soonest := -1
 	for i, t := range tires {
 		if t.DaysUntilSoftLowEstimate == nil {

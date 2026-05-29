@@ -1,9 +1,6 @@
-// Package authsession serves the ForwardAuth session-info endpoint
-// consumed by the SPA session monitor.
+// Package authsession serves session metadata for the SPA monitor.
 //
-// GET /api/v1/auth/session is mounted outside the ForwardAuth-protected
-// API subrouter and always returns 200 OK so an expired upstream session
-// cannot send the polling hook into an infinite expired-session loop.
+// GET /api/v1/auth/session stays outside ForwardAuth and always returns 200 so an expired upstream session cannot trap the polling hook in a loop.
 //
 // Layer: handler
 package authsession

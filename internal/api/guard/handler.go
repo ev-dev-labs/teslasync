@@ -1,31 +1,10 @@
-// Phase-43a / Prompt 0006 — GuardHandler restores the
-// /vehicles/{vehicleID}/guard, /guard/events,
-// /guard/events/{eventID}/acknowledge and /guard/panic endpoints
-// deleted by Phase-42 prompt 0077.
+// Phase-43a / Prompt 0006 — GuardHandler restores the guard route family
+// removed during Phase-42: status, events, acknowledge, and panic.
 //
-// Scope and shape are governed by the prompt's locked Decisions:
-//
-//   - Decision #1 — Status: { vehicle_id, sentry_mode_active,
-//     last_state, last_state_at, recent_event_count_24h }. Derived
-//     from the latest security_events row with event_type='sentry_mode'
-//     plus a 24h count over all security_events rows. SentryMode IS
-//     routed to dest:security_event in routing.yaml line 799 — the
-//     escape hatch authorising security_events as the sentry-state
-//     source applies (see GuardRepo doc for details).
-//   - Decision #2 — Events: { vehicle_id, events: [...] }. Most-recent-
-//     first; default 100, max 1000.
-//   - Decision #3 — Acknowledge: POST with no body, UPDATE security_events
-//     SET acknowledged_at=now(), acknowledged_by=actorFromRequest(r);
-//     404 if event_id is unknown OR belongs to a different vehicle.
-//   - Decision #5 — Panic: 501 "Tesla command proxy not configured" if
-//     cfg.Tesla.CommandProxyURL is empty; otherwise sends sentry_on +
-//     honk_horn + flash_lights via the existing tesla.Client. Partial
-//     failures return 502 with detail of which command failed.
-//   - Decision #6 — Auth: all four require auth; panic additionally
-//     wears RequireSudo (router-level wiring), acknowledge stays IP
-//     rate-limited (soft mark-read).
-//
-// Frontend hook: web/src/api/hooks/useGuard.ts
+// Sentry status intentionally reads security_events because SentryMode is
+// routed there by routing.yaml, and acknowledge returns generic 404s to avoid
+// cross-vehicle event enumeration. Panic sends sentry_on before honk/flash and
+// relies on router-level auth/sudo enforcement.
 package guard
 
 import (
@@ -48,11 +27,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
-// guardRepository is the minimal repo surface GuardHandler needs.
-// Defined as an interface so handler tests can supply a fake without
-// a database — the codebase has no pgxmock harness (see prior phase
-// memories — vampire_drain_handler / mileage_handler / vehicle_states_handler
-// follow the same pattern).
+// guardRepository is narrow so handler tests can use fakes without a database.
 type guardRepository interface {
 	VehicleExists(ctx context.Context, vehicleID int64) (bool, error)
 	Status(ctx context.Context, vehicleID int64, now time.Time) (systemdb.GuardStatus, error)
@@ -257,15 +232,8 @@ func (h *GuardHandler) Events(w http.ResponseWriter, r *http.Request) {
 }
 
 // Acknowledge serves POST /vehicles/{vehicleID}/guard/events/{eventID}/acknowledge.
-//
-// 404 (with a generic message) when the event id is unknown OR when it
-// belongs to a different vehicle — leaking the difference would be an
-// authorisation side-channel.
-//
-// Re-acknowledgement (a second POST against an already-acked row)
-// overwrites acknowledged_at + acknowledged_by per the literal SQL in
-// Decision #3, so an audit trail of the most-recent operator is
-// preserved.
+// Unknown and cross-vehicle event IDs both return 404 to avoid an authorization
+// side channel. Re-acknowledgement records the most recent operator.
 func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 	vehicleID, ok := h.parseVehicleID(w, r)
 	if !ok {
@@ -284,10 +252,7 @@ func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	// VehicleExists FIRST so a 404 disambiguates "vehicle is unknown"
-	// from "vehicle exists but has no event with that id". Both
-	// ultimately respond with 404 to the operator, but the log trail
-	// distinguishes them for ops triage.
+	// Probe the vehicle first so logs can distinguish vehicle misses from event misses.
 	exists, err := h.repo.VehicleExists(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("guard.ack: existence probe failed")
@@ -299,9 +264,7 @@ func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// actorFromRequest returns "" when no ForwardAuth header is
-	// configured (open-mode installs) — store the empty string verbatim
-	// rather than fabricating a "system" / "anonymous" identity.
+	// In open mode, store the empty actor instead of inventing an identity.
 	actor := actorFromRequest(r, h.authHdr)
 
 	updated, err := h.repo.Acknowledge(ctx, vehicleID, eventID, actor)
@@ -322,11 +285,8 @@ func (h *GuardHandler) Acknowledge(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
-// guardPanicCommands is the fixed sequence Panic dispatches when the
-// proxy is configured. sentry_on FIRST so the vehicle starts recording
-// and uploading clips before the audible/visible alerts; honk + flash
-// last so the dashboard reflects "Sentry on" state regardless of
-// whether the operator is in audible range.
+// guardPanicCommands starts Sentry before audible/visible alerts so recording
+// is active even if honk or flash later fails.
 var guardPanicCommands = []string{
 	"sentry_on",
 	"honk_horn",
@@ -351,27 +311,10 @@ type GuardPanicResult struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// Panic serves POST /vehicles/{vehicleID}/guard/panic.
-//
-// Behaviour matrix:
-//
-//	Proxy not configured    → 501 with explicit message; no commands sent.
-//	Vehicle unknown         → 404; no commands sent.
-//	All commands succeed    → 200 with results=[{ok:true},{ok:true},{ok:true}].
-//	Any command fails       → 502 with results capturing per-command status.
-//	                          Subsequent commands STILL run so the SPA
-//	                          can show which of sentry/honk/flash worked.
-//
-// Notes on safety:
-//
-//   - We do NOT persist a row in security_events for the panic event.
-//     security_events is the telemetry-derived table; mixing
-//     user-initiated commands into it would corrupt every analytic
-//     that consumes it. A future "command_log" surface (separate table)
-//     is the right home for that audit trail and is out of scope here.
-//   - RequireSudo middleware at the router enforces sudo confirmation
-//     in production deployments; this handler trusts that the request
-//     is authorised by the time it reaches Panic.
+// Panic serves POST /vehicles/{vehicleID}/guard/panic. It keeps running later
+// commands after a failure so the SPA can show which of sentry/honk/flash
+// worked. It does not write security_events because that table is
+// telemetry-derived; command audit belongs in a future separate surface.
 func (h *GuardHandler) Panic(w http.ResponseWriter, r *http.Request) {
 	vehicleID, ok := h.parseVehicleID(w, r)
 	if !ok {

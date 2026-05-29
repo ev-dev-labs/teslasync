@@ -1,18 +1,7 @@
 // Phase-50 / 0051 — M3 Software update changelog summarizer.
 //
-// Off-mode + baseline-coexistence tests for the AI software-
-// update-changelog-summarizer handler. The off-mode test
-// (TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that
-// the AI route returns 404 when settings.ai_mode='off' even
-// when the per-feature toggle is on, AND that the deterministic
-// firmware history served at the canonical baseline route
-// remains reachable (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness (`go run ./cmd/ai-eval -feature
-// software-update-changelog-summarizer`); duplicating that here
-// would require a live software_updates fixture.
+// Off-mode tests prove the AI route fails closed while raw firmware history stays available.
+// Streaming coverage lives in the F6 eval harness; duplicating it here would require a live fixture.
 
 package aiswupd
 
@@ -48,35 +37,11 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on[id], nil
 }
 
-// TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly is the
-// load-bearing off-mode contract proof for slice 0051. It
-// mounts the AI software-update-changelog-summarizer route
-// through the guard with ai_mode='off' and proves:
-//
-//   - The /api/v1/ai/software-updates/summarize route returns
-//     404 (the guard fails closed even when the per-feature
-//     toggle is on).
-//   - The 404 body does not leak feature metadata or route
-//     identifiers.
-//   - A baseline GET /api/v1/vehicles/{id}/software-updates
-//     route serving the deterministic firmware history (the
-//     raw changelog the operator sees on the
-//     SoftwareUpdatesPage) remains reachable under the same
-//     router — proof that the slice does NOT replace the
-//     deterministic firmware-history surface (ADR-015 §I3).
-//
-// The test name MUST stay
-// TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly — the
-// slice prompt's verification command runs `go test … -run
-// TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly` AND
-// `npm test -- --run
-// TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly`, so
-// both the Go and React off-mode proofs answer to the same
-// test-name pattern.
+// TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly is the slice 0051 off-mode contract proof.
+// The name is pinned by Go and React verification commands, so keep it stable.
 func TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"software-update-changelog-summarizer": true}, // toggle on; mode trumps it
@@ -85,25 +50,14 @@ func TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly(t *testing.T) {
 
 	router := chi.NewRouter()
 	router.Route("/api/v1", func(r chi.Router) {
-		// AI route under the guard. Inner handler always-500: the
-		// guard MUST short-circuit before we are reached. A
-		// non-404 status here is a guard-bypass bug.
+		// The guarded handler must not be reached in off mode.
 		r.Route("/ai", func(r chi.Router) {
 			r.Post("/software-updates/summarize", g.Wrap("software-update-changelog-summarizer", func(w http.ResponseWriter, _ *http.Request) {
 				http.Error(w, "GUARD_BYPASSED — handler should not have been called in off mode", http.StatusInternalServerError)
 			}))
 		})
 
-		// Baseline canonical route — NOT guarded by the AI
-		// guard. Returns a deterministic envelope marker we
-		// can pin so the test proves the firmware-history
-		// path coexists. We mock it here so the test stays
-		// hermetic (no live database). The marker mirrors the
-		// shape the SoftwareUpdatesPage actually consumes (an
-		// array of software-update entries with id, version,
-		// status, installed_at, scheduled_at, created_at) so
-		// the "ShowsRawChangelogOnly" half of the test name
-		// is defensible.
+		// Mock the baseline firmware-history route so the test stays hermetic while proving raw changelog access.
 		r.Get("/vehicles/{vehicleID}/software-updates", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -115,7 +69,6 @@ func TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly(t *testing.T) {
 		})
 	})
 
-	// 1) Probe the AI route — MUST be 404.
 	body := []byte(`{"vehicle_id":42}`)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/software-updates/summarize", bytes.NewReader(body))
@@ -128,27 +81,14 @@ func TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly(t *testing.T) {
 	if strings.Contains(rec.Body.String(), "GUARD_BYPASSED") {
 		t.Fatalf("AI route guard was bypassed in off mode: body=%q", rec.Body.String())
 	}
-	// Defence-in-depth: the 404 body must not leak feature
-	// metadata (ADR-015 §I9 — provider/feature info must be
-	// invisible in off mode). chi's http.NotFound emits "404
-	// page not found\n".
+	// Off-mode 404s must not leak provider or feature metadata.
 	for _, leaked := range []string{"software-update-changelog-summarizer", "feature", "strategy", "provider", "agent"} {
 		if strings.Contains(strings.ToLower(rec.Body.String()), leaked) {
 			t.Errorf("AI route 404 body leaks %q: %q", leaked, rec.Body.String())
 		}
 	}
 
-	// 2) Probe the baseline software-updates route — MUST
-	// return 200 + deterministic baseline content, regardless
-	// of the AI guard's state. This is the load-bearing proof
-	// that the slice did NOT replace the deterministic
-	// SoftwareUpdatesPage firmware-history surface. The
-	// response MUST include the version field-set the
-	// SoftwareUpdatesPage renders (id, version, status,
-	// installed_at, created_at) so the
-	// "ShowsRawChangelogOnly" half of the test name is
-	// defensible — the deterministic raw changelog IS
-	// reachable to the user even when AI is off.
+	// Baseline firmware history must remain reachable and renderable regardless of AI guard state.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodGet, "/api/v1/vehicles/42/software-updates", nil)
 	router.ServeHTTP(recBaseline, reqBaseline)
@@ -156,11 +96,7 @@ func TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly(t *testing.T) {
 	if recBaseline.Code != http.StatusOK {
 		t.Fatalf("baseline route status = %d, want 200 (body=%q)", recBaseline.Code, recBaseline.Body.String())
 	}
-	// Pin the version entries are present so the
-	// "ShowsRawChangelogOnly" half of the test name is
-	// defensible — the canonical firmware history (the
-	// version strings + install timestamps) is written to
-	// the user even when AI is off.
+	// Pin version entries so the raw changelog claim is testable.
 	for _, must := range []string{
 		`"version":"2024.32.10"`,
 		`"version":"2024.26.5"`,
@@ -176,10 +112,7 @@ func TestSoftwareUpdateSummaryAIOffShowsRawChangelogOnly(t *testing.T) {
 	}
 }
 
-// TestHandler_PanicsOnNilWiring
-// asserts the handler constructor refuses zero-valued
-// dependencies. A wiring bug at boot must surface as a panic,
-// not as a nil-deref on first request.
+// TestHandler_PanicsOnNilWiring proves wiring bugs fail at boot.
 func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -200,11 +133,7 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestHandler_RejectsBadBody
-// asserts the handler validates the body BEFORE opening the
-// SSE stream — a missing, unparseable, or out-of-range field
-// must surface as a JSON 400, not a half-opened stream that
-// confuses the frontend.
+// TestHandler_RejectsBadBody proves invalid bodies return JSON 400 before SSE starts.
 func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
@@ -243,10 +172,7 @@ func TestHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestBuildSoftwareUpdateChangelogSummarizerUserMessage proves
-// the synthesised user message includes the in-scope vehicle,
-// the explicit tool-sequence hint the strategy expects the
-// LLM to follow, and the load-bearing honesty directives.
+// TestBuildSoftwareUpdateChangelogSummarizerUserMessage pins the scope and honesty directives.
 func TestBuildSoftwareUpdateChangelogSummarizerUserMessage(t *testing.T) {
 	t.Parallel()
 	got := buildSoftwareUpdateChangelogSummarizerUserMessage(42, 20)

@@ -12,13 +12,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Web Vitals ingest handler (Phase 45 / Prompt 12).
-//
-// Accepts batches of Core Web Vitals samples reported by the React SPA
-// (LCP, INP, CLS, FCP, TTFB) and records them as Prometheus histograms
-// labelled by metric name, browser-assigned rating, and normalised route.
-// This is the measurement half of the engineering-guideline performance
-// budget (FCP < 1.5 s on 4G) — without it those targets are aspirations.
+// Phase 45 / Prompt 12 — Web Vitals ingest records SPA Core Web Vitals as
+// bounded Prometheus histograms, making the frontend performance budget
+// measurable instead of aspirational.
 
 const (
 	// Hard cap on batch size to bound memory + label-cardinality blast
@@ -63,16 +59,8 @@ var allowedRatings = map[string]struct{}{
 	"poor":              {},
 }
 
-// webVitalsHistogram is the single Prometheus surface exposed by this
-// handler. Buckets straddle two value scales:
-//
-//   - Time-based metrics (LCP, INP, FCP, TTFB) are reported in milliseconds
-//     and span ~10 ms .. ~10 s.
-//   - CLS is unitless (typical 0 .. 1).
-//
-// One histogram covers both because Prometheus histogram_quantile() is
-// computed per label set; the {name="CLS"} bucket distribution is
-// unaffected by the {name="LCP"} samples.
+// webVitalsHistogram uses one bucket set for time metrics and CLS because
+// Prometheus quantiles are computed per metric-name label set.
 var webVitalsHistogram = promauto.NewHistogramVec(
 	prometheus.HistogramOpts{
 		Namespace: "teslasync",
@@ -171,35 +159,24 @@ func (h *Handler) Ingest(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// idLikeSegment matches segments that should be replaced with `:id` to
-// keep label cardinality bounded:
-//
-//   - Pure integer IDs (drives, charging sessions, vehicles).
-//   - UUID-like 32+ hex strings (with or without dashes).
-//   - Long opaque tokens (>=20 chars, mix of digits + letters).
+// idLikeSegment replaces integer, UUID-like, and long opaque path segments to
+// keep route label cardinality bounded.
 var (
 	intSegmentRE  = regexp.MustCompile(`^\d+$`)
 	uuidSegmentRE = regexp.MustCompile(`^[0-9a-fA-F]{8}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{4}-?[0-9a-fA-F]{12}$`)
 	hexBlobRE     = regexp.MustCompile(`^[0-9a-fA-F]{20,}$`)
 )
 
-// NormalizeRoute strips ID-like path segments so the metric label
-// cardinality stays bounded. /drives/123 → /drives/:id, /vehicles/abc/state →
-// /vehicles/abc/state (kept — short, alphabetic), /charging/uuid → /charging/:id.
-//
-// The result is always lower-cased, stripped of trailing slashes (except
-// for the bare root), and capped at maxRouteLabelLength characters.
-//
-// Distinct from saved_views_handler.normalizeRoute, which validates a
-// router-known route against an allow-list and returns ok=false on
-// mismatch — this one is more permissive because it labels arbitrary
-// pathnames captured from real browsers.
+// NormalizeRoute bounds metric-cardinality by replacing ID-like path segments,
+// lower-casing, trimming trailing slashes, and length-capping labels. It is more
+// permissive than saved-view route validation because browsers report arbitrary
+// SPA pathnames.
 func NormalizeRoute(p string) string {
 	if p == "" {
 		return "/"
 	}
 
-	// Drop fragment + query — clients shouldn't send them, but be defensive.
+	// Be defensive even though clients should send pathnames only.
 	if i := strings.IndexAny(p, "?#"); i >= 0 {
 		p = p[:i]
 	}

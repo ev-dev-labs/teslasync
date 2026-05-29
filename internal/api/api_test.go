@@ -33,10 +33,6 @@ func setupTestRouter() http.Handler {
 // parent wrappers were retained (only 40 call sites in 2 files, so
 // the mass-rewrite was preferable to drained-wrapper dead code).
 
-// ---------------------------------------------------------------------------
-// Health endpoint tests
-// ---------------------------------------------------------------------------
-
 func TestHealthz_ReturnsOK(t *testing.T) {
 	handler := setupTestRouter()
 	rec := apitest.DoRequest(handler, "GET", "/healthz", "")
@@ -58,10 +54,6 @@ func TestReadyz_ReturnsOK(t *testing.T) {
 		t.Errorf("expected status ok, got %v", body["status"])
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Security headers middleware tests
-// ---------------------------------------------------------------------------
 
 func TestSecurityHeadersMiddleware(t *testing.T) {
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -87,8 +79,6 @@ func TestSecurityHeadersMiddleware(t *testing.T) {
 			t.Errorf("header %s: expected %q, got %q", header, want, got)
 		}
 	}
-
-	// CSP and Permissions-Policy should be present (just check non-empty)
 	if csp := rec.Header().Get("Content-Security-Policy"); csp == "" {
 		t.Error("expected Content-Security-Policy header to be set")
 	}
@@ -114,10 +104,6 @@ func TestSecurityHeadersMiddleware_PassesThrough(t *testing.T) {
 	}
 	apitest.AssertStatus(t, rec, http.StatusTeapot)
 }
-
-// ---------------------------------------------------------------------------
-// Recovery middleware tests
-// ---------------------------------------------------------------------------
 
 func TestRecoveryMiddleware_NoPanic(t *testing.T) {
 	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -149,36 +135,21 @@ func TestRecoveryMiddleware_CatchesPanic(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// writeJSON / writeError helper tests
 //
 // Phase R2.0a (2026-05-28): TestWriteJSON, TestWriteJSON_NilData,
 // TestWriteJSON_CustomStatus, TestWriteError, TestWriteError_AllCodes,
 // TestWriteErrorCode were relocated to internal/api/httpx/json_test.go
 // alongside the canonical exported helpers they exercise.
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// Pagination helper tests
 //
 // Phase R2.0c (2026-05-28): TestPagination_Defaults / CustomValues /
 // InvalidValues / ExceedsMax / ZeroLimit relocated to
 // internal/api/apiparams/params_test.go alongside the canonical
 // exported apiparams.Pagination helper.
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// parseDateRange tests
 //
 // Phase R2.0c (2026-05-28): TestParseDateRange_ValidDates / NoDates /
 // InvalidFormat relocated to internal/api/apiparams/params_test.go
 // alongside the canonical exported apiparams.ParseDateRange helper.
-// ---------------------------------------------------------------------------
-
-// ---------------------------------------------------------------------------
-// EventHub (SSE) tests
 //
 // Phase R2d.175 (2026-05-29): TestEventHub_SubscribeAndBroadcast /
 // Unsubscribe / MultipleClients relocated to internal/api/sse/hub_test.go
 // alongside the carved-out EventHub type.
-// ---------------------------------------------------------------------------

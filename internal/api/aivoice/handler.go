@@ -1,76 +1,7 @@
 package aivoice
 
-// Phase-50 / 0055 — V1 Helix voice mode.
-//
-// ai_voice_mode_handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/voice/chat. The flow is a CHAT-style streaming
-// turn (mirroring ai_chatbot_handler.go) — voice-mode is a
-// conversation: each user utterance is one turn that takes recent
-// history into account.
-//
-//	URL  /api/v1/ai/voice/chat
-//	  ↓
-//	read JSON body {message: string (<= aiVoiceModeMaxMessageLen),
-//	                session_id: string}
-//	  ↓
-//	persist user turn via *dbnotif.ChatRepo (best-effort)
-//	  ↓
-//	load recent history via *dbnotif.ChatRepo (oldest-first)
-//	  ↓
-//	resolve provider via *provider.Registry.For("voice-mode")
-//	  ↓
-//	install per-request voice-mode session scope on ctx
-//	  (so stream_chatbot_response refuses cross-session calls)
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	build dispatcher with deny-all confirm (strategy declares
-//	  zero mutating tools — defence in depth)
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, recordingWriter)
-//	  ↓
-//	persist accumulated assistant text via *dbnotif.ChatRepo
-//
-// The recordingWriter wraps the SSE writer so the assistant's
-// full reply text (delta-by-delta) is captured for persistence.
-// The inner SSE writer streams to the user verbatim — no
-// buffering. The browser-side AIVoiceMode component buffers
-// deltas at sentence boundaries before handing each sentence to
-// the browser's SpeechSynthesis engine.
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("voice-mode", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// Per-request scope binding (defence in depth vs prompt
-// injection): the handler installs the body's session_id into
-// ctx via voice.WithScopedVoiceModeSession. The strategy's only
-// allowed tool (stream_chatbot_response) refuses any call whose
-// `session_id` argument differs from the bound value — so an
-// attacker who tries to coax the LLM into "fetch history for
-// session_id=admin-1" cannot exfiltrate another user's
-// transcript.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic text /chatbot
-//     handler + its /chatbot/history endpoint are unchanged.
-//     This handler is an OPT-IN add-on; off-mode users never
-//     see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("voice-mode").
-//   - I9 redaction:       PolicyChatbot (Allow=nil, Mode=
-//     ModeRedactedTags — every PII class round-tripped) is
-//     installed by dispatch.Run from the strategy and applied
-//     to EVERY message (including the user message and tool
-//     outputs) by the redact decorator at the provider boundary.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline /chatbot
-//     JSON shape is added or modified by this slice.
-//   - I12 client/bg:      browser STT/TTS is the only audio
-//     path. NO raw audio bytes ever cross this handler — the
-//     request body is text-only, just like /chatbot.
+// Voice mode streams a chatbot turn from text produced by the browser STT layer.
+// The handler persists chat turns best-effort and binds the session in context so tools cannot cross-read transcripts.
 
 import (
 	"context"
@@ -341,18 +272,11 @@ func parseVoiceModeRequest(w http.ResponseWriter, r *http.Request) (aiVoiceModeR
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Decode + validate request body.
 	req, ok := parseVoiceModeRequest(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Persist the user turn BEFORE calling the LLM. If
-	// the LLM fails midway, the user's message is preserved
-	// in history so they can see what they asked. Best-
-	// effort — a save failure is logged but does not abort
-	// the response (matches the existing /chatbot baseline's
-	// behaviour).
 	userMsg := &chatbotmodel.ChatMessage{
 		SessionID: req.SessionID,
 		Role:      "user",
@@ -362,11 +286,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Str("session_id", req.SessionID).Msg("ai voice-mode: failed to persist user message")
 	}
 
-	// 3) Load conversation history (oldest-first). The
-	// current ChatRepo.GetHistory returns ASC order, which
-	// is what the dispatcher's StrategyInput.History expects
-	// (NEWEST LAST). We cap at historyN so the LLM context
-	// budget stays bounded.
 	rawHistory, err := h.chat.GetHistory(r.Context(), req.SessionID, h.historyN)
 	if err != nil {
 		log.Warn().Err(err).Str("session_id", req.SessionID).Msg("ai voice-mode: failed to load history; continuing with empty context")
@@ -374,40 +293,21 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	history := historyToProviderMessages(rawHistory, req.Message)
 
-	// 4) Resolve provider via the registry. Per-request
-	// resolution honours mid-flight settings changes (model
-	// swap, mode flip) without restart. A resolve failure
-	// must NOT open the SSE stream — emit JSON 502 so the
-	// frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), voicemode.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai voice-mode: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 5) Subject + feature-id annotations for audit/rate-
-	// limit. SubjectFromRequest returns "" if the header is
-	// absent; that's the open-mode value the audit log
-	// treats as "anonymous".
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, voicemode.FeatureID)
 
-	// 6) Install the per-request voice-mode session scope
-	// BEFORE the dispatcher loop begins. The
-	// stream_chatbot_response tool refuses any call whose
-	// `session_id` argument differs from the bound value —
-	// defence in depth vs prompt injection.
 	ctx = voice.WithScopedVoiceModeSession(ctx, voice.ScopedVoiceModeSession{
 		SessionID:    req.SessionID,
 		HistoryLimit: h.historyN / 2,
 	})
 
-	// 7) Open the SSE writer. Stream.New writes the SSE
-	// response headers, starts the consumer goroutine, and
-	// returns a child ctx that cancels on stall — we pass
-	// that ctx to the dispatcher so a stalled consumer kills
-	// the upstream call.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(voicemode.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai voice-mode: stream.New failed (non-flushable writer)")
@@ -415,10 +315,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 8) Resolve the per-feature provider from the (now-
-	// annotated) context. The decorator chain reads the
-	// subject + feature-id off the ctx for audit + rate
-	// limit accounting.
 	prov, err := h.registry.For(ctx, voicemode.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai voice-mode: provider.For (post-stream) failed")
@@ -426,20 +322,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 9) Build the dispatcher with a deny-all confirm hook.
-	// The voice-mode strategy declares only read-only tools,
-	// so the confirm hook never fires — but defence in
-	// depth: if a future strategy edit adds a mutating tool
-	// by mistake, the dispatcher will REJECT it instead of
-	// silently mutating.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 10) Capture deltas while streaming so we can persist
-	// the assistant's full reply after the dispatcher
-	// returns.
 	rec := &recordingStreamWriter{inner: sseW}
 
-	// 11) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: req.Message,
 		History:     history,
@@ -451,10 +337,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Msg("ai voice-mode: dispatcher returned error")
 	}
 
-	// 12) Persist the assistant turn (best-effort, like the
-	// user turn). An empty string is allowed: it surfaces in
-	// /chatbot/history as evidence that a turn happened but
-	// produced no text.
 	assistantText := strings.TrimSpace(rec.text())
 	if assistantText != "" {
 		assistantMsg := &chatbotmodel.ChatMessage{

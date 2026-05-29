@@ -1,41 +1,9 @@
 package aiyir
 
-// Phase-50 / 0013 — U3 Year-in-review narration.
+// Phase-50 AI handler.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/analytics/year-in-review/narrate. The flow is the
-// same dispatch+stream loop the chatbot/digest handlers use, minus
-// any persistence (a year-in-review narration is one-shot — there's
-// no conversation to record):
-//
-//   request JSON {vehicle_id, year}
-//     ↓
-//   resolve provider via *provider.Registry.For("yir-narration")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("yir-narration", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic template year-in-review
-//     served by GET /api/v1/analytics/year-review (rendered via the
-//     SPA route /year-review/:year) is unchanged. This handler is an
-//     OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by guard.Wrap("yir-narration").
-//   - I9 redaction:       PolicyYearInReview (allows ClassVehicleName
-//                         only) is installed by dispatch.Run from the
-//                         strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//                         /api/v1/ai/*; no field on the existing
-//                         baseline JSON shape is added or modified by
-//                         this slice.
-
+// This endpoint runs an opt-in, guarded dispatch+SSE flow without persistence.
+// ADR-015 baseline routes remain canonical when AI is off or disabled.
 import (
 	"context"
 	"encoding/json"

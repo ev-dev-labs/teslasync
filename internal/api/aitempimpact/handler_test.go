@@ -1,19 +1,7 @@
-// Phase-50 / 0032 — T2 Cabin temperature impact narrative.
+// Phase-50 / 0032 — T2 cabin temperature impact narrative.
 //
-// Off-mode + baseline-coexistence tests for the AI
-// cabin-temperature-impact-narrative handler. The off-mode test
-// (TestCabinTemperatureNarrativeAIOffShowsChartsOnly) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that the
-// AI route returns 404 when settings.ai_mode='off' even when the
-// per-feature toggle is on, AND that the deterministic
-// temperature-impact aggregate served at the canonical
-// GET /api/v1/analytics/temperature-impact handler remains the
-// unconditional baseline path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness
-// (`go run ./cmd/ai-eval -feature cabin-temperature-impact-narrative`);
-// duplicating that here would require a live database fixture.
+// These tests pin ADR-015 edges: off-mode hides AI, baseline analytics stay
+// reachable, bad bodies fail before SSE, and bucket selection stays stable.
 
 package aitempimpact
 
@@ -49,29 +37,8 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on[id], nil
 }
 
-// TestCabinTemperatureNarrativeAIOffShowsChartsOnly is the
-// load-bearing off-mode contract proof for slice 0032. It mounts
-// the AI cabin-temperature-impact-narrative route through the
-// guard with ai_mode='off' and proves:
-//
-//   - The /api/v1/ai/climate/temperature-impact/narrate route
-//     returns 404 (the guard fails closed even when the
-//     per-feature toggle is on).
-//   - The 404 body does not leak feature metadata or route
-//     identifiers.
-//   - A baseline GET /api/v1/analytics/temperature-impact route
-//     serving the deterministic aggregate remains reachable under
-//     the same router — proof that the slice does NOT replace the
-//     deterministic charts on /temperature-impact
-//     (TemperatureImpactPage) (ADR-015 §I3).
-//
-// The test name MUST stay
-// TestCabinTemperatureNarrativeAIOffShowsChartsOnly — the slice
-// prompt's verification command runs
-// `go test … -run TestCabinTemperatureNarrativeAIOffShowsChartsOnly`
-// AND `npm test -- --run TestCabinTemperatureNarrativeAIOffShowsChartsOnly`,
-// so both the Go and React off-mode proofs answer to the same
-// test-name pattern.
+// TestCabinTemperatureNarrativeAIOffShowsChartsOnly pins the off-mode contract:
+// AI narration is hidden while deterministic temperature-impact analytics work.
 func TestCabinTemperatureNarrativeAIOffShowsChartsOnly(t *testing.T) {
 	t.Parallel()
 

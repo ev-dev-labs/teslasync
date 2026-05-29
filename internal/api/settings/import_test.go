@@ -158,13 +158,11 @@ func TestSettingsImportHandler_RoundTrip_ExportThenImportYieldsSkip(t *testing.T
 		},
 	}
 
-	// Export
 	bundle, err := ser.ExportSettings(context.Background(), "alice@example.com")
 	if err != nil {
 		t.Fatalf("export: %v", err)
 	}
 
-	// Reimport (apply mode)
 	h := NewSettingsImportHandler(ser, "X-Forwarded-User")
 	rec := postSettingsImport(t, h, map[string]any{"dry_run": false, "bundle": bundle}, "alice@example.com")
 	if rec.Code != http.StatusOK {
@@ -249,8 +247,7 @@ func TestSettingsImportHandler_NilSerializer(t *testing.T) {
 func TestSettingsImportHandler_BodyTooLarge(t *testing.T) {
 	ser, _, _, _, _ := newTestSettingsSerializer()
 	h := NewSettingsImportHandler(ser, "")
-	// Build a payload > MaxSettingsImportBodyBytes by stuffing the
-	// bundle's sections.alert_rules with many copies of a long rule.
+	// An opaque oversize body is sufficient; decode should fail before schema validation.
 	payload := bytes.Repeat([]byte("a"), int(MaxSettingsImportBodyBytes+1024))
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/settings/import", bytes.NewReader(payload))
 	rec := httptest.NewRecorder()

@@ -1,55 +1,11 @@
 package aialert
 
-// Phase-50 / 0015 — N1 Natural-language alert builder.
+// Phase-50 / 0015 — N1 natural-language alert builder.
 //
-// ai_alert_handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/alerts/rules/draft. The flow mirrors the
-// digest / yir / anomaly narration handlers — same dispatch+stream
-// loop, no persistence (one-shot drafting; no conversation to
-// record):
-//
-//   request JSON {vehicle_id, prompt}
-//     ↓
-//   resolve provider via *provider.Registry.For("nl-alert-builder")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("nl-alert-builder", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// PROPOSE-ONLY contract (slice prompt + ADR-015 §I3):
-//
-//   - Both tools the strategy declares (draft_alert_rule,
-//     validate_alert_rule) are pure-functional DTO transforms that
-//     do NOT touch the database.
-//   - The actual save flows through the existing typed
-//     POST /api/v1/alerts/rules handler AFTER the user explicitly
-//     clicks Save in the AlertStudioPage UI.
-//   - The deterministic AlertStudioPage form +
-//     validateAlertRule validator at
-//     `internal/api/alerts/alert_rules.go` remain the canonical
-//     baseline for any user with `ai_mode='off'`. The save path
-//     is unchanged.
-//
-// ADR-015 alignment:
-//
-//   - I1 default-off:    the feature toggle defaults false in
-//                         features.Registry; the guard fails closed.
-//   - I3 baseline intact: this handler never replaces the typed
-//                         AlertHandler.CreateAlertRule path or the
-//                         AlertStudioPage manual form.
-//   - I7 per-feature:     the AI route is gated by
-//                         guard.Wrap("nl-alert-builder").
-//   - I9 redaction:       PolicyAlertBuilder (deny-all) is installed
-//                         by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//                         /api/v1/ai/*; no field on the existing
-//                         baseline JSON shape is added or modified
-//                         by this slice.
+// This read-only AI route drafts alert rules through propose-only tools; the
+// existing POST /api/v1/alerts/rules path remains the only persistence path.
+// guard.Wrap("nl-alert-builder", …) keeps the surface hidden when AI is off
+// (ADR-015 §I3, §I6).
 
 import (
 	"context"
@@ -73,20 +29,12 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// builderMaxIterations bounds the dispatcher's tool-loop. The
-// nl-alert-builder strategy is a two-tool sequence (draft, then
-// validate), with at most one retry if validate rejects the first
-// draft — a hard ceiling of 6 is generous for an LLM that
-// occasionally re-drafts twice before settling. Mirrors
-// aiAnomalyMaxIterations from slice 0014 in spirit (small,
-// per-feature cap rather than the dispatcher's DefaultMaxIterations).
+// builderMaxIterations allows draft/validate plus a small retry budget without
+// falling back to the dispatcher's broader default.
 const builderMaxIterations = 6
 
-// builderMaxPromptChars bounds the user-supplied
-// natural-language prompt at the HTTP boundary. Generous for a
-// multi-sentence rule description; defensive against an enormous
-// payload that would inflate the LLM's context window cost without
-// any plausible legitimate use.
+// builderMaxPromptChars allows multi-sentence rule descriptions while capping
+// token-cost amplification from accidental or hostile paste payloads.
 const builderMaxPromptChars = 4096
 
 func writeError(w http.ResponseWriter, status int, msg string) {
@@ -164,7 +112,6 @@ type builderRequest struct {
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Decode + validate request body.
 	var body builderRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -184,27 +131,19 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before opening SSE so provider failures remain plain JSON 502s.
 	if _, err := h.registry.For(r.Context(), nlalertbuilder.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai alert builder: provider.For failed")
 		writeError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
-	// SubjectFromRequest returns "" if the header is absent; that's
-	// the open-mode value the audit log treats as "anonymous".
+	// Empty subject is the open-mode audit value ("anonymous").
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, nlalertbuilder.FeatureID)
 
-	// 4) Open the SSE writer. Stream.New writes the SSE response
-	// headers, starts the consumer goroutine, and returns a child
-	// ctx that cancels on stall — we pass that ctx to the
-	// dispatcher so a stalled consumer kills the upstream call.
+	// Pass the stream's child context into dispatch so client stalls cancel upstream work.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nlalertbuilder.FeatureID))
 	if err != nil {
 		// Non-flushable response writer (test recorder, etc.).
@@ -214,9 +153,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context. The decorator chain reads the subject + feature-id
-	// off the ctx for audit + rate limit accounting.
+	// Resolve again after annotations so decorators see subject and feature ID.
 	prov, err := h.registry.For(ctx, nlalertbuilder.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai alert builder: provider.For (post-stream) failed")
@@ -224,23 +161,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook. The
-	// nl-alert-builder strategy declares only PROPOSE-only tools
-	// (draft_alert_rule, validate_alert_rule) — neither writes any
-	// state. The confirm hook is wired anyway as defence-in-depth:
-	// if a future edit accidentally adds a mutating tool, the
-	// dispatcher will REJECT it instead of silently mutating fleet
-	// state.
+	// Deny confirmations defensively; this surface should only ever propose drafts.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. We hand the LLM:
-	//    - the caller's vehicle ID (so the typed clamp in
-	//      buildDraftRule sees the correct scope);
-	//    - the verbatim user prompt;
-	//    - the deterministic call sequence directive so the model
-	//      always exercises both tools in the canonical order.
-	// The strategy's system prompt does the rest of the framing
-	// (refuse cross-vehicle, propose-only, no SQL, etc.).
+	// Keep the tool order deterministic so every draft is validated before narration.
 	userMsg := fmt.Sprintf(
 		"Draft an AlertRule for vehicle %d. The user describes the rule as follows: %q. "+
 			"Call draft_alert_rule first with vehicle_id=%d, then call validate_alert_rule on the proposed draft, "+
@@ -249,8 +173,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body.VehicleID, prompt, body.VehicleID,
 	)
 
-	// 8) Run the dispatcher. The deferred WriteDone in dispatch.Run
-	// closes the SSE stream cleanly on any path.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,

@@ -1,43 +1,7 @@
-// Package adminlogstream — handler.go
+// Package adminlogstream exposes the admin log-tail SSE endpoint.
 //
-// Phase-46 / Prompt 34 — Live log tail viewer.
-//
-// AdminLogStreamHandler exposes GET /api/v1/admin/logs/stream as a
-// Server-Sent Events feed of the global zerolog stream. Operators
-// previously had to SSH into the API container and `tail -f` the
-// stdout log to debug live issues; this endpoint collapses that loop
-// to a browser refresh away from the rest of the admin UI.
-//
-// AUTH MODEL.
-//
-// The endpoint is mounted under /api/v1/admin and inherits the parent
-// ForwardAuth middleware that protects every authenticated route. We
-// intentionally do NOT chain RequireSudo here: the prompt's reference
-// to "RequireSudo middleware" predates the discovery that the browser
-// `EventSource` API cannot attach custom headers (so it cannot send
-// `X-Sudo-Token`), and `fetch` + ReadableStream is the only viable
-// transport for sudo-gated SSE. The frontend in this prompt uses
-// `fetch` + manual SSE parsing precisely so the X-Sudo-Token round-trip
-// keeps working — the `RequireSudo` middleware below is therefore
-// applied on the route chain in router.go without breaking the SPA.
-//
-// BACKPRESSURE.
-//
-// Each connected client owns a bounded subscriber channel (default
-// 1024 events). When the client buffer fills (slow network, large
-// payloads, paused tab) the registry drops events and increments a
-// per-subscriber counter. The handler periodically forwards the drop
-// count to the client as `event: drop` so the UI can surface "you
-// missed N events" without losing the stream entirely.
-//
-// SAFETY.
-//
-// • `grep` is compiled with `regexp.Compile` and rejected with 400 on
-//   syntax errors — never `MustCompile` against user input.
-// • The SSE content-type + CSP-friendly headers are set BEFORE the
-//   first flush so a misconfigured proxy cannot buffer the stream.
-// • Request context cancellation tears down the subscriber so the
-//   registry never leaks slots.
+// It keeps filtering server-side but reports subscriber drops instead of
+// blocking slow clients; router.go owns auth and zerolog tap wiring.
 
 package adminlogstream
 
@@ -94,23 +58,10 @@ func NewAdminLogStreamHandler(registry *platform.LogSubscriberRegistry) *AdminLo
 	}
 }
 
-// ServeHTTP fulfils GET /api/v1/admin/logs/stream.
+// ServeHTTP streams server-filtered admin logs.
 //
-// Query parameters:
-//
-//   - level=debug|info|warn|error  (default: info)  — minimum level
-//     forwarded to the client. Lower levels are dropped at the
-//     subscriber edge so the wire bandwidth scales with the filter.
-//   - grep=<regex>                 (optional)        — server-side
-//     regex applied to the JSON payload as a string. Invalid regex →
-//     400 BAD_REQUEST. Per-event match: payload bytes are coerced to
-//     a string with one allocation; the regex is compiled once per
-//     connection.
-//
-// Other UX-level filters (vehicle_id, fields, severity grouping) are
-// the SPA's responsibility — the server intentionally does not do
-// JSON-decode-per-event filtering because the throughput cost (~3x
-// the current write path) would dwarf the bandwidth saving.
+// The server handles level and regex filters but leaves JSON-level UX filters
+// to the SPA to avoid decoding every event on the hot path.
 func (h *AdminLogStreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if h == nil || h.registry == nil {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "log stream not configured")
@@ -160,10 +111,7 @@ func (h *AdminLogStreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	sub := h.registry.Subscribe(level)
 	defer sub.Close()
 
-	// Connection-open envelope echoes the active filters back so the
-	// SPA can confirm what the server agreed to before painting any
-	// events. Useful when ForwardAuth or rate-limiters mutate query
-	// params upstream.
+	// Echo active filters so the SPA can detect upstream query mutation.
 	connectedPayload := struct {
 		Level string `json:"level"`
 		Grep  string `json:"grep,omitempty"`
@@ -176,9 +124,7 @@ func (h *AdminLogStreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	heartbeat := time.NewTicker(adminLogStreamHeartbeatInterval)
 	defer heartbeat.Stop()
 
-	// Drop-tick is emitted whenever the subscriber's drop counter
-	// changes. We poll every second rather than wiring an event so
-	// the registry stays decoupled from the SSE wire shape.
+	// Poll drops so the registry stays decoupled from the SSE wire shape.
 	dropCheck := time.NewTicker(time.Second)
 	defer dropCheck.Stop()
 
@@ -213,9 +159,7 @@ func (h *AdminLogStreamHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 			}
 		case evt, ok := <-sub.Events():
 			if !ok {
-				// Defensive — registry never closes Events but
-				// guard so a future change does not silently
-				// loop here.
+				// Defensive: avoid a silent spin if the registry ever closes Events.
 				return
 			}
 			if grepRe != nil && !grepRe.Match(evt.Payload) {
@@ -262,24 +206,14 @@ func parseLogStreamLevel(raw string) (zerolog.Level, string, error) {
 func writeSSEEvent(w http.ResponseWriter, event string, data interface{}) bool {
 	payload, err := json.Marshal(data)
 	if err != nil {
-		// Marshalling our own struct should never fail; if it does
-		// we cannot recover mid-stream so fall back to closing.
+		// Cannot recover mid-stream; close on unexpected marshal failure.
 		return false
 	}
 	return writeSSERaw(w, event, payload)
 }
 
-// writeSSERaw writes a pre-marshalled JSON payload as an SSE event.
-// This avoids re-encoding the zerolog JSON for the hot `log` path —
-// payload is sent verbatim to the wire EXCEPT for trailing newlines.
-//
-// zerolog terminates every emitted JSON object with `\n`. Per the SSE
-// spec, a `\n` inside a `data:` line terminates the data field, so we
-// must strip trailing newlines before formatting; the caller's
-// `fmt.Fprintf` then re-adds the protocol-level `\n\n` terminator.
-// Embedded newlines (which zerolog never produces but which a future
-// log marshaller might) are escaped as `\ndata: ` so the entire JSON
-// arrives in one logical SSE event.
+// writeSSERaw preserves pre-marshalled JSON and prefixes each physical line
+// so future multi-line payloads remain valid SSE.
 func writeSSERaw(w http.ResponseWriter, event string, payload []byte) bool {
 	for len(payload) > 0 && payload[len(payload)-1] == '\n' {
 		payload = payload[:len(payload)-1]

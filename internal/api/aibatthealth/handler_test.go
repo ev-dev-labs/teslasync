@@ -1,20 +1,8 @@
 // Phase-50 / 0027 — C2 Battery health forecast narrative.
 //
-// Off-mode + baseline-coexistence tests for the AI
-// battery-health-forecast-narrative handler. The off-mode test
-// (TestBatteryHealthNarrativeAIOffShowsChartOnly) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, AND that the deterministic battery-degradation
-// aggregate served at the canonical
-// GET /api/v1/analytics/battery-degradation handler remains the
-// unconditional baseline path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness
-// (`go run ./cmd/ai-eval -feature battery-health-forecast-narrative`);
-// duplicating that here would require a live database + signal
-// store fixture.
+// Covers the AI-off contract and proves the deterministic battery-degradation
+// route remains reachable (ADR-015 §I3, §I6). Streaming coverage lives in the
+// F6 eval harness to avoid a live DB + signal-store fixture here.
 
 package aibatthealth
 

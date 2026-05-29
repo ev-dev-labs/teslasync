@@ -18,8 +18,6 @@ func acceptanceRouter() http.Handler {
 
 	r.Use(apimw.SecurityHeaders)
 	r.Use(apimw.Recovery)
-
-	// Health endpoints — self-contained, no DB needed
 	r.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
@@ -27,8 +25,6 @@ func acceptanceRouter() http.Handler {
 	r.Get("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})
-
-	// Minimal API v1 routes for acceptance testing
 	r.Route("/api/v1", func(r chi.Router) {
 		r.Get("/auth/status", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]interface{}{
@@ -48,10 +44,6 @@ func acceptanceRouter() http.Handler {
 	return r
 }
 
-// ---------------------------------------------------------------------------
-// Acceptance: Health endpoints
-// ---------------------------------------------------------------------------
-
 func TestAcceptance_HealthzReturns200(t *testing.T) {
 	r := acceptanceRouter()
 	rec := apitest.DoRequest(r, "GET", "/healthz", "")
@@ -68,10 +60,6 @@ func TestAcceptance_ReadyzReturns200(t *testing.T) {
 	apitest.AssertStatus(t, rec, http.StatusOK)
 }
 
-// ---------------------------------------------------------------------------
-// Acceptance: Auth status returns valid response structure
-// ---------------------------------------------------------------------------
-
 func TestAcceptance_AuthStatusStructure(t *testing.T) {
 	r := acceptanceRouter()
 	rec := apitest.DoRequest(r, "GET", "/api/v1/auth/status", "")
@@ -82,10 +70,6 @@ func TestAcceptance_AuthStatusStructure(t *testing.T) {
 		t.Error("expected 'authenticated' field in response")
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Acceptance: Unknown API paths return 404 (chi default)
-// ---------------------------------------------------------------------------
 
 func TestAcceptance_UnknownPath_Returns404(t *testing.T) {
 	r := acceptanceRouter()
@@ -99,29 +83,17 @@ func TestAcceptance_UnknownTopLevelPath_Returns404(t *testing.T) {
 	apitest.AssertStatus(t, rec, http.StatusNotFound)
 }
 
-// ---------------------------------------------------------------------------
-// Acceptance: Method not allowed returns 405
-// ---------------------------------------------------------------------------
-
 func TestAcceptance_MethodNotAllowed_Returns405(t *testing.T) {
 	r := acceptanceRouter()
-
-	// /healthz only accepts GET; POST should be 405
 	rec := apitest.DoRequest(r, "POST", "/healthz", "")
 	apitest.AssertStatus(t, rec, http.StatusMethodNotAllowed)
 }
 
 func TestAcceptance_MethodNotAllowed_VehiclesSync(t *testing.T) {
 	r := acceptanceRouter()
-
-	// /api/v1/vehicles/sync only accepts POST; GET should be 405
 	rec := apitest.DoRequest(r, "GET", "/api/v1/vehicles/sync", "")
 	apitest.AssertStatus(t, rec, http.StatusMethodNotAllowed)
 }
-
-// ---------------------------------------------------------------------------
-// Acceptance: Security headers on all responses
-// ---------------------------------------------------------------------------
 
 func TestAcceptance_SecurityHeaders_OnAllResponses(t *testing.T) {
 	r := acceptanceRouter()
@@ -140,10 +112,6 @@ func TestAcceptance_SecurityHeaders_OnAllResponses(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// Acceptance: Recovery middleware catches panics in chi router
-// ---------------------------------------------------------------------------
-
 func TestAcceptance_PanicRecovery(t *testing.T) {
 	r := chi.NewRouter()
 	r.Use(apimw.Recovery)
@@ -161,10 +129,6 @@ func TestAcceptance_PanicRecovery(t *testing.T) {
 		t.Errorf("expected 'internal server error', got %v", body["error"])
 	}
 }
-
-// ---------------------------------------------------------------------------
-// Acceptance: Content-Type is JSON for API responses
-// ---------------------------------------------------------------------------
 
 func TestAcceptance_ContentTypeJSON(t *testing.T) {
 	r := acceptanceRouter()

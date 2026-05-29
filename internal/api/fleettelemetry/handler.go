@@ -101,21 +101,7 @@ type coverageResponse struct {
 	OrphanFields      []string           `json:"orphan_fields,omitempty"`
 }
 
-// Coverage returns the per-category routing destination map. The frontend
-// uses this to surface "what's actively ingested" — every entry in the
-// embedded routing.yaml is keyed by its protomodel Category (or, for
-// codec-flattened compound children like "LocationLatitude", the parent
-// compound's Category, matching the algorithm in
-// internal/tesla/router/coverage_test.go).
-//
-// The Subscribed flag on each field reflects whether
-// teslaconfig.Builder would currently include the field's parent in the
-// subscription body. Routed-but-not-subscribed entries indicate a field
-// we have a writer for but Tesla is not currently pushing — useful
-// signal for the Diagnostics page when investigating "writer registered
-// but no rows landing".
-//
-// GET /api/v1/tesla/fleet-telemetry/coverage
+// Coverage returns a stable per-category destination map without exposing routing-rule internals.
 func (h *FleetTelemetryHandler) Coverage(w http.ResponseWriter, r *http.Request) {
 	routes, err := router.LoadMap()
 	if err != nil {

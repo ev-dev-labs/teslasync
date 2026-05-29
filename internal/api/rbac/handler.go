@@ -1,22 +1,8 @@
 // Phase-46 / Prompt 44 — RBAC matrix admin handler.
 //
-// Two endpoints back the SPA's <RbacMatrixPage>:
-//
-//	GET  /api/v1/admin/rbac/matrix       → roles + permissions + matrix + effective-for-me
-//	PUT  /api/v1/admin/rbac/matrix       → upsert a batch of (role, perm, allowed) cells
-//
-// Provider-agnostic. Roles come from a TeslaSync-local concept — the
-// in-process auth.Permission catalog plus whatever group names the
-// upstream proxy forwards via the configured TESLASYNC_RBAC_GROUPS_HEADER
-// header. We never call out to the upstream IdP's admin API.
-//
-// Auth-mode awareness. In open mode (no FORWARD_AUTH_HEADER configured)
-// every endpoint returns 501 with code AUTH_MODE_OPEN so the SPA's
-// useRbacMatrix hook can render the inline placeholder without a noisy
-// 401 loop. The PUT route is wrapped in RequireSudo upstream — that
-// middleware is itself a passthrough in open mode, so the open-mode
-// check below intentionally fires before any database work and never
-// depends on the sudo middleware running.
+// The matrix is TeslaSync-local: roles come from forwarded proxy groups and
+// local bindings, never from the upstream IdP admin API. Open mode returns
+// AUTH_MODE_OPEN before DB work so the SPA can render a quiet placeholder.
 package rbac
 
 import (
@@ -70,14 +56,7 @@ type RBACHandler struct {
 	groupsHeader string // TESLASYNC_RBAC_GROUPS_HEADER value; empty == default-only.
 }
 
-// NewRBACHandler builds the handler. headerName is the trimmed
-// FORWARD_AUTH_HEADER value (typically "X-Forwarded-User"); empty puts
-// every endpoint into open-mode (501 AUTH_MODE_OPEN) responses.
-//
-// The groups-header name is read from os.Getenv at construction
-// rather than via cfg, because adding a new env var to internal/config
-// is outside the allowed-files regex for this prompt; a future config
-// pass should hoist it onto cfg.Auth alongside ForwardAuthHeader.
+// NewRBACHandler builds the handler and normalizes the forwarded group header name.
 func NewRBACHandler(store RBACMatrixStore, headerName string) *RBACHandler {
 	return &RBACHandler{
 		store:        store,
@@ -151,25 +130,7 @@ func writeOpenModeNotImplementedRBAC(w http.ResponseWriter) {
 		"RBAC matrix requires forward-auth mode", tsauth.AuthModeOpenCode)
 }
 
-// GetMatrix implements GET /api/v1/admin/rbac/matrix.
-//
-// Open mode: 501 AUTH_MODE_OPEN.
-// Forward-auth, missing header: 401 MISSING_IDENTITY.
-// Forward-auth, header set: 200 with the catalog + bindings + the
-//
-//	caller's effective-for-me grant map.
-//
-// Roles are derived from:
-//
-//   - The implicit DefaultRoleID, ALWAYS present at index 0.
-//   - Every distinct group forwarded by the upstream proxy via the
-//     configured groups header (empty string disables this source).
-//   - Every distinct role_id with at least one binding row in the
-//     repo (so an operator can edit a role's column even when no one
-//     currently in the request claims that role).
-//
-// The union is sorted alphabetically (DefaultRoleID first) so column
-// order is stable across requests.
+// GetMatrix returns AUTH_MODE_OPEN in local/open mode because no trusted group source exists.
 func (h *RBACHandler) GetMatrix(w http.ResponseWriter, r *http.Request) {
 	subject, openMode := h.resolveSubject(r)
 	if openMode {
@@ -222,8 +183,7 @@ func (h *RBACHandler) GetMatrix(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if len(row) == 0 {
-			// Keep the role row in the response so the matrix UI
-			// still renders the column; just leave the bucket empty.
+			// Keep the column visible even after stale permissions are stripped.
 			matrix[role] = map[string]bool{}
 		}
 	}
@@ -248,18 +208,7 @@ func (h *RBACHandler) GetMatrix(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
-// UpsertMatrix implements PUT /api/v1/admin/rbac/matrix.
-//
-// Open mode: 501 AUTH_MODE_OPEN.
-// Forward-auth, missing header: 401 MISSING_IDENTITY.
-// Bad body: 400 INVALID_BODY.
-// Unknown permission_id: 400 INVALID_PERMISSION.
-// Empty role_id: 400 INVALID_ROLE.
-// Too many cells: 400 INVALID_BODY.
-// Success: 204 No Content.
-//
-// Sudo gating happens via RequireSudo middleware mounted in router.go;
-// this handler trusts the middleware ran before it.
+// UpsertMatrix validates the JSON contract even though router.go enforces sudo.
 func (h *RBACHandler) UpsertMatrix(w http.ResponseWriter, r *http.Request) {
 	subject, openMode := h.resolveSubject(r)
 	if openMode {
@@ -334,8 +283,7 @@ func decodeRBACUpsertBody(r *http.Request) (rbacUpsertRequest, error) {
 	if err := dec.Decode(&body); err != nil {
 		return body, errors.New("invalid request body")
 	}
-	// Reject trailing junk after the JSON value — same defence as
-	// the per-vehicle settings handler.
+	// Reject trailing junk after the JSON value.
 	if dec.More() {
 		return body, errors.New("trailing junk after json")
 	}

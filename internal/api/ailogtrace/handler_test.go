@@ -1,18 +1,11 @@
 // Phase-50 / 0045 — S4 Log and trace summarization.
 //
-// Off-mode + baseline-coexistence tests for the AI
-// log-trace-summarization handler. The off-mode test
-// (TestLogTraceSummarizationAIOffShowsRawLogsOnly) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the
-// per-feature toggle is on, AND that the deterministic SSE-backed
-// log-tail surface served at the canonical baseline route remains
-// reachable (ADR-015 §I3, §I6).
+// Off-mode and baseline-coexistence tests. The off-mode test is the
+// load-bearing proof that AI mode off hides the AI route while the raw log tail
+// stays reachable (ADR-015 §I3, §I6).
 //
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness (`go run ./cmd/ai-eval -feature
-// log-trace-summarization`); duplicating that here would require
-// a live database fixture.
+// Streaming coverage lives in the F6 eval harness because it needs a live
+// database fixture.
 
 package ailogtrace
 
@@ -68,7 +61,6 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 func TestLogTraceSummarizationAIOffShowsRawLogsOnly(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"log-trace-summarization": true}, // toggle on; mode trumps it

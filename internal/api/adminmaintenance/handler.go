@@ -18,27 +18,10 @@ import (
 
 // Phase-46 / Prompt 04 — admin maintenance handler.
 //
-// POST /api/v1/admin/maintenance lets an authenticated operator set the
-// service-mode banner shown by the SPA (mode=ok|degraded|maintenance,
-// optional message + RFC3339 until). The request lands inside the
-// ForwardAuth-protected /api/v1 subrouter, so caller identity is
-// captured via the configured forward-auth header and persisted in the
-// audit_logs table.
-//
-// AUTHZ NOTE: TeslaSync is provider-agnostic — there is no "admin
-// role" concept beyond ForwardAuth presence. Any authenticated user
-// can call this endpoint; the audit row is the accountability surface.
-// A future RBAC layer can wrap this handler without changing the
-// shape; the existing `/admin/web-errors/summary` endpoint follows the
-// same convention.
-//
-// EFFECTIVE-STATE PRECEDENCE: the env vars TESLASYNC_SYSTEM_MODE/
-// TESLASYNC_SYSTEM_MAINTENANCE_MESSAGE/TESLASYNC_SYSTEM_MAINTENANCE_UNTIL
-// override the DB row when the env mode is non-empty. POST writes
-// always succeed and update the DB, but the resolver still serves the
-// env value to /system/health while the override is active. The
-// response includes `source: "env"` in that case so the admin UI can
-// surface a "DB write succeeded but env override is active" warning.
+// Authenticated operators can update the service-mode banner; the audit row is
+// the accountability surface until a future RBAC layer exists. Env system-mode
+// settings shadow the DB row in effective health/status responses, so admin
+// responses include source metadata when a DB write is currently overridden.
 
 const (
 	adminMaintenanceBodyLimit = 8 * 1024
@@ -334,9 +317,6 @@ func parseEnvUntil(raw string) *time.Time {
 	return &t
 }
 
-// jsonSafeIntStr renders an int for embedding in audit detail strings
-// without pulling strconv into the hot path. Kept inline so the file
-// has no extra deps.
 func jsonSafeIntStr(n int) string {
 	if n == 0 {
 		return "0"

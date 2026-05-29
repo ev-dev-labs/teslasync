@@ -1,17 +1,8 @@
-// Phase-50 / 0038 — G2 Suggest new geofences.
+// Phase-50 / 0038 — G2 suggest new geofences.
 //
-// Off-mode + baseline-coexistence tests for the AI
-// suggest-new-geofences handler. The off-mode test
-// (TestSuggestGeofencesAIOffManualGeofenceWorks) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, AND that the deterministic geofence CRUD surface
-// served at the canonical /api/v1/geofences handler remains the
-// unconditional baseline path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval -feature suggest-new-geofences`);
-// duplicating that here would require a live database fixture.
+// These tests pin ADR-015 off-mode behavior: the AI draft route fails closed
+// while deterministic geofence CRUD remains reachable. Streaming coverage lives
+// in the F6 eval harness, which requires live data.
 
 package aisuggeo
 
@@ -46,27 +37,10 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on != nil && s.on[id], nil
 }
 
-// TestSuggestGeofencesAIOffManualGeofenceWorks is the load-bearing
-// off-mode contract proof for slice 0038. It mounts the AI
-// suggest-new-geofences route through the guard with ai_mode='off'
-// and proves:
-//
-//   - The /api/v1/ai/geofences/draft route returns 404 (the guard
-//     fails closed even when the per-feature toggle is on).
-//   - The 404 body does not leak feature metadata or route
-//     identifiers.
-//   - A baseline /api/v1/geofences route serving the deterministic
-//     geofence list remains reachable under the same router — proof
-//     that the slice does NOT replace the deterministic geofence
-//     CRUD path (ADR-015 §I3).
-//
-// The test name MUST stay
-// TestSuggestGeofencesAIOffManualGeofenceWorks — the slice prompt's
-// verification command runs
-// `go test … -run TestSuggestGeofencesAIOffManualGeofenceWorks` AND
-// `npm test -- --run TestSuggestGeofencesAIOffManualGeofenceWorks`,
-// so both the Go and React off-mode proofs must answer to the same
-// test-name pattern.
+// TestSuggestGeofencesAIOffManualGeofenceWorks is the load-bearing off-mode
+// contract for slice 0038: guard returns 404 without leaking route metadata,
+// and deterministic geofence CRUD still works. The name is referenced by both
+// Go and React verification commands.
 func TestSuggestGeofencesAIOffManualGeofenceWorks(t *testing.T) {
 	t.Parallel()
 

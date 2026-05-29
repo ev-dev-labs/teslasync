@@ -94,7 +94,6 @@ func pollEnginePredictions(engine *enginepolling.PollEngine) http.HandlerFunc {
 
 		vin := r.URL.Query().Get("vin")
 		if vin == "" {
-			// Return all patterns
 			states := engine.GetAllVehicleStates()
 			result := make(map[string]interface{}, len(states))
 			for v, vs := range states {
@@ -145,7 +144,6 @@ func pollEngineConfig(engine *enginepolling.PollEngine) http.HandlerFunc {
 			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"enabled": false})
 			return
 		}
-		// Return the engine config (read-only view)
 		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"enabled": true,
 			"engine":  "adaptive_polling_v1",
@@ -171,7 +169,6 @@ func pollEngineDemo(engine *enginepolling.PollEngine) http.HandlerFunc {
 
 		demoVIN := "5YJ3E1EA7PF000001"
 
-		// Simulate an idle vehicle with charger plugged in
 		idleData := &tesla.VehicleDataResponse{
 			VIN:         demoVIN,
 			DisplayName: "Demo Model 3",
@@ -199,12 +196,10 @@ func pollEngineDemo(engine *enginepolling.PollEngine) http.HandlerFunc {
 			},
 		}
 
-		// Run 3 assessments to build up decision history and idle backoff
 		engine.Assess(demoVIN, idleData)
 		engine.Assess(demoVIN, idleData)
 		engine.Assess(demoVIN, idleData)
 
-		// Simulate some cost savings
 		ct := engine.CostTracker()
 		for i := 0; i < 50; i++ {
 			ct.RecordBaselineTick()

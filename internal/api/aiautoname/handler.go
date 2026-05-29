@@ -2,47 +2,7 @@ package aiautoname
 
 // Phase-50 / 0037 — G1 Auto-name unnamed locations.
 //
-// ai_auto_name_unnamed_locations_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/locations/{locationID}/name/draft. The
-// flow mirrors ai_auto_trip_name_handler.go (URL-scoped propose-only
-// labeller — same dispatch+stream loop, no persistence — one-shot
-// proposal):
-//
-//	URL  POST /api/v1/ai/locations/{locationID}/name/draft
-//	  ↓
-//	resolve provider via *provider.Registry.For("auto-name-unnamed-locations")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("auto-name-unnamed-locations", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// The locationID URL param is parsed + validated as a positive int64
-// BEFORE opening the SSE stream so a malformed input surfaces as a
-// plain JSON 400 (rather than a streamed error frame the SPA's
-// QueryError will struggle to render meaningfully).
-//
-// There is no JSON body; an empty body is accepted.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic visit-frequency stat
-//     cards, bar charts, and paginated list rendered by
-//     LocationsPage at /locations are unchanged. This handler is an
-//     OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("auto-name-unnamed-locations").
-//   - I9 redaction:       PolicyAutoNameUnnamedLocations (allows
-//     ClassVehicleName only; lat/long, addresses, and place names
-//     stay tagged) is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     /api/v1/locations JSON shape is added or modified by this
-//     slice.
+// POST /api/v1/ai/locations/{locationID}/name/draft streams a propose-only location-name draft. The AI-gated route validates locationID before opening SSE, never persists changes, and leaves the deterministic /locations baseline untouched.
 
 import (
 	"context"
@@ -255,16 +215,8 @@ var _ http.Handler = (*Handler)(nil)
 // is byte-equivalent. Pinned by tests on both sides.
 const autoNameUnnamedLocationsMaxNameLen = 200
 
-// LocationNameValidator is the production
-// location.LocationNameValidator. It enforces the same trimming +
-// length + control-character rules that a future canonical save
-// handler will enforce, so a draft accepted by the AI tool is
-// byte-equivalent to a draft accepted by the canonical save handler.
-//
-// The struct is intentionally empty — the validator is a pure
-// function. The receiver is kept so the production wiring is a
-// noun ("the validator") in router.go and tests can substitute a
-// fake by satisfying the location.LocationNameValidator interface.
+// LocationNameValidator enforces the save-path name shape so AI drafts match canonical validation.
+// The empty receiver keeps router wiring substitutable while the rules remain pure.
 type LocationNameValidator struct{}
 
 // NewLocationNameValidator constructs the validator.
@@ -306,26 +258,9 @@ func (v *LocationNameValidator) ValidateLocationName(_ *geomodel.VisitedLocation
 	return nil
 }
 
-// LocationSource is the production location.LocationSource. It
-// composes the canonical drives table read path so the AI projection
-// is grounded in the SAME aggregate the deterministic
-// /api/v1/locations baseline serves. No write path is invoked.
-//
-// The legacy `visited_locations` table was dropped in Phase-42 /
-// Prompt 0076; visited-location aggregates are derived on demand
-// from the SI canonical `drives` table by grouping on (vehicle_id,
-// end_place). The synthetic locationID is `MIN(d.id) per
-// (vehicle_id, end_place)` — the same ID the
-// VisitedLocationRepo.GetByVehicle aggregate emits and the
-// LocationsPage list rows carry. Because the by-ID lookup is a
-// natural join (id → vehicle, end_place → aggregate), this adapter
-// runs a single grouped SELECT against the drives table
-// (read-only). The shape it returns matches *geomodel.VisitedLocation
-// field-for-field so the existing location.LocationSource +
-// location.LocationNameValidator interfaces stay vendor-agnostic.
-//
-// The struct holds a *database.DB for the parameterised query; the
-// constructor panics on a nil so a wiring bug surfaces at boot.
+// LocationSource reads the same derived drives aggregate served by /api/v1/locations; no write path is invoked.
+// Since Phase-42 dropped visited_locations, the synthetic locationID is the MIN(d.id) for each (vehicle_id, end_place) group, matching the list rows the SPA already carries.
+// The constructor panics on nil DB so wiring bugs fail at boot.
 type LocationSource struct {
 	db *database.DB
 }

@@ -15,24 +15,9 @@ import (
 
 // Phase-43a / Prompt 0004 — HTTP tests for Handler.
 //
-// Coverage map vs Decision #7:
-//   (a) Monthly grouping correctness  -> TestMileage_Monthly_GroupingPassThrough
-//   (b) Months clamp 24/120/121 -> 400 -> TestMileage_Monthly_MonthsClamp
-//   (c) Stats lifetime = sum of monthly -> TestMileage_Stats_LifetimeMatchesMonthlySum
-//   (d) Stats last_7d = drives in last 7d -> TestMileage_Stats_WindowsPassThrough
-//   (e) NULL distance handled (skipped not erroring) -> TestMileage_Monthly_EmptyVehicle_200
-//                                                       + TestMileage_Stats_EmptyVehicle_200
-//
-// Plus Decision #6 + extras:
-//   - vehicle_id missing / non-numeric / zero / negative
-//   - VehicleExists runs FIRST (defends against dangling drives rows
-//     after vehicle deletion — no FK on drives.vehicle_id per mig 000185)
-//   - Repo error -> 500
-//   - JSON shape pin (snake_case keys frontend types depend on)
-//   - year_month formatting (YYYY-MM)
-//   - first/last_drive_at JSON null when nil
-
-// ---------- fake repo ----------
+// These pin Decision #7 coverage plus key edge cases: vehicle_id validation,
+// VehicleExists before repo reads, repo failures, snake_case JSON, YYYY-MM
+// buckets, and nil first/last drive timestamps.
 
 type fakeMileageRepo struct {
 	exists    map[int64]bool
@@ -118,8 +103,6 @@ func mileageRequest(target string) *http.Request {
 func mileagePtrFloat(v float64) *float64    { return &v }
 func mileagePtrTime(t time.Time) *time.Time { return &t }
 
-// ---------- (b) months clamp ----------
-
 func TestMileage_Monthly_MonthsClamp(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
@@ -171,8 +154,6 @@ func TestMileage_Monthly_MonthsClamp(t *testing.T) {
 		})
 	}
 }
-
-// ---------- vehicle_id validation (both endpoints) ----------
 
 func TestMileage_BadVehicleID(t *testing.T) {
 	t.Parallel()

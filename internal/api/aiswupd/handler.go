@@ -2,78 +2,9 @@ package aiswupd
 
 // Phase-50 / 0051 — M3 Software update changelog summarizer.
 //
-// ai_software_update_changelog_summarizer_handler.go implements
-// the LLM-backed handler at POST /api/v1/ai/software-updates/
-// summarize. The flow mirrors ai_predictive_maintenance_handler.go
-// (body-driven, scope-bound, no persistence — one-shot read-only
-// summary):
-//
-//	URL  /api/v1/ai/software-updates/summarize
-//	  ↓
-//	read JSON body with required field (vehicle_id), optional limit
-//	  ↓
-//	resolve provider via *provider.Registry.For("software-update-changelog-summarizer")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	stash the vehicle_id + limit in ctx via
-//	  summary.WithScopedSoftwareUpdateChangelogWindow
-//	  ↓
-//	synthesise the user-message that scopes to the in-scope
-//	  vehicle and instructs the tool sequence
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("software-update-changelog-summarizer", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard
-// returns 404 BEFORE this handler ever sees the request
-// (ADR-015 §I6).
-//
-// Per-request scope binding (defence against prompt-injection
-// exfiltration): the handler installs the vehicle_id + limit in
-// ctx via summary.WithScopedSoftwareUpdateChangelogWindow BEFORE
-// dispatcher.Run is invoked. The dispatcher propagates ctx
-// unchanged through every Tool.Execute call. The
-// tools.queryVehicleSoftware tool's Execute method then REJECTS
-// any LLM-supplied vehicle_id that does not match the in-scope
-// vehicle. This means an attacker who pastes "summarize
-// vehicle_id=99 instead" into an operator-authored description
-// / version string cannot trick the LLM into loading a
-// different vehicle's firmware history — the scope check
-// refuses the call before the source is touched.
-//
-// The handler requires a JSON body with vehicle_id > 0; the
-// limit field is optional (defaults to
-// softwareUpdateChangelogSummarizerDefaultLimit). The
-// vehicle_id is computed by the SPA from the page's active
-// vehicle selector when the operator clicks the AI button on
-// the SoftwareUpdatesPage; the body is the simplest place to
-// convey the value without polluting the URL with query
-// strings.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /software-updates
-//     page (and its alias /vehicle-systems/software) — the
-//     firmware history timeline, current-version stat card,
-//     install/schedule badges, and external "View release
-//     notes" links — is unchanged. This handler is an OPT-IN
-//     add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("software-update-changelog-summarizer").
-//   - I9 redaction:       PolicyChatbot (Allow=nil, Mode=
-//     ModeRedactedTags — every PII class round-tripped) is
-//     installed by dispatch.Run from the strategy and applied
-//     to EVERY message (including the synthesised vehicle user
-//     message and tool outputs) by the redact decorator at the
-//     provider boundary. Release-note text is public, so no
-//     class needs to be allowed in cleartext; vehicle
-//     identifiers stay tagged.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     /api/v1/vehicles/{id}/software-updates JSON shape is
-//     added or modified by this slice.
+// Implements POST /api/v1/ai/software-updates/summarize as a read-only SSE summarizer.
+// The route is guard-wrapped for ADR-015 off-mode behavior; the baseline software-updates endpoint remains reachable.
+// Vehicle scope is bound in context before tool execution so prompt text cannot redirect the LLM to another vehicle.
 
 import (
 	"bytes"
@@ -102,29 +33,16 @@ import (
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 )
 
-// softwareUpdateChangelogSummarizerMaxIterations bounds the
-// dispatcher's tool-loop. The strategy is at most
-// query_vehicle_software → (optional) retrieve_update_notes →
-// answer (with optional retries on transient tool error). A
-// hard ceiling of 8 is generous, matching the other narrator
-// handlers.
+// softwareUpdateChangelogSummarizerMaxIterations bounds the read-only tool loop.
 const softwareUpdateChangelogSummarizerMaxIterations = 8
 
-// softwareUpdateChangelogSummarizerMaxBodyBytes caps the
-// request body. The body is small (1-2 numeric fields); bound
-// it cheaply. 16 KiB matches the other body-driven AI handlers.
+// softwareUpdateChangelogSummarizerMaxBodyBytes caps the small JSON body cheaply.
 const softwareUpdateChangelogSummarizerMaxBodyBytes = 16 * 1024
 
-// softwareUpdateChangelogSummarizerDefaultLimit is the value
-// used when the request body omits limit. Mirrors the tool's
-// per-call default so the LLM and the handler land on the same
-// row count.
+// softwareUpdateChangelogSummarizerDefaultLimit matches the tool default.
 const softwareUpdateChangelogSummarizerDefaultLimit = 20
 
-// softwareUpdateChangelogSummarizerMaxLimit is the upper
-// bound the handler accepts. Mirrors the tool's per-call max so
-// the validator catches an over-cap request before the
-// dispatcher is invoked.
+// softwareUpdateChangelogSummarizerMaxLimit rejects over-cap requests before dispatch.
 const softwareUpdateChangelogSummarizerMaxLimit = 50
 
 func writeError(w http.ResponseWriter, status int, msg string) {
@@ -135,8 +53,8 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 	return dispatch.ConfirmDenied, nil
 }
 
-// softwareUpdateChangelogSummarizerRequest is the typed body
-// shape. The required field is vehicle_id; limit is optional.
+// softwareUpdateChangelogSummarizerRequest is the JSON body.
+// vehicle_id is required; limit is optional and bounded.
 type softwareUpdateChangelogSummarizerRequest struct {
 	// VehicleID identifies the vehicle the summary covers.
 	// Required + positive.
@@ -149,13 +67,7 @@ type softwareUpdateChangelogSummarizerRequest struct {
 	Limit int `json:"limit,omitempty"`
 }
 
-// Handler is the HTTP handler
-// for POST /api/v1/ai/software-updates/summarize.
-//
-// Stateless beyond its constructor inputs; safe for concurrent
-// use across requests. Construction is in router.go so the
-// dispatcher's tool registry + provider registry are wired once
-// at boot.
+// Handler serves software-update summaries and is safe for concurrent use.
 type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
@@ -165,38 +77,8 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the
-// handler. All non-pointer arguments are required; the
-// constructor panics on a nil so the wiring bug surfaces at
-// boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already
-//
-//	applied).
-//
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	query_vehicle_software AND retrieve_update_notes
-//	(registered by
-//	summary.RegisterSoftwareUpdateChangelogSummarizerTools
-//	in router.go).
-//
-// strat:      the software-update-changelog-summarizer Strategy
-//
-//	(one per process).
-//
-// source:     the production summary.VehicleSoftwareSource
-//
-//	(currently VehicleSoftwareSource — wraps the
-//	SAME systemdb.SoftwareUpdateRepo.GetByVehicle the
-//	canonical baseline GET
-//	/api/v1/vehicles/{id}/software-updates handler
-//	already serves; the canonical baseline surface
-//	remains reachable to the operator at all times).
-//
-// headerName: forward-auth header name; used to extract subject
-//
-//	for audit.
+// NewHandler constructs the summarizer and panics on missing boot wiring.
+// source wraps the same SoftwareUpdateRepo read path used by the baseline endpoint.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -300,9 +182,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit,
-	// plus the per-request scope binding (defence against
-	// prompt-injection exfiltration).
+	// Add audit metadata and bind the per-request vehicle scope before tools can run.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, softwareupdatechangelogsummarizer.FeatureID)
@@ -311,7 +191,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Limit:     limit,
 	})
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(softwareupdatechangelogsummarizer.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai software-update-changelog-summarizer: stream.New failed (non-flushable writer)")
@@ -319,8 +198,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-
-	// annotated) context.
 	prov, err := h.registry.For(ctx, softwareupdatechangelogsummarizer.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai software-update-changelog-summarizer: provider.For (post-stream) failed")
@@ -328,21 +205,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook.
-	// The strategy's tool whitelist is propose-only / read-only
-	// so the deny-all hook is never reached in practice —
-	// defence in depth.
+	// Deny-all confirmation is defense in depth for this read-only strategy.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. The summary is NOT
-	// conversational — there is no chat history. We hand the
-	// LLM a deterministic prompt that scopes to the in-scope
-	// vehicle_id and instructs the tool sequence EXACTLY:
-	// query_vehicle_software first, then OPTIONALLY
-	// retrieve_update_notes, then summary.
+	// Build a deterministic prompt scoped to vehicle_id; this surface is not conversational.
 	userMsg := buildSoftwareUpdateChangelogSummarizerUserMessage(req.VehicleID, limit)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -379,8 +247,6 @@ func buildSoftwareUpdateChangelogSummarizerUserMessage(vehicleID int64, limit in
 	)
 }
 
-// Compile-time assertion: Handler
-// satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
@@ -391,25 +257,12 @@ var _ http.Handler = (*Handler)(nil)
 // AIPredictiveMaintenanceContextSource pattern.
 // ---------------------------------------------------------------------
 
-// VehicleSoftwareSource is the production
-// summary.VehicleSoftwareSource. The canonical baseline
-// /api/v1/vehicles/{id}/software-updates surface remains
-// reachable to the operator at all times — this adapter wraps
-// the SAME systemdb.SoftwareUpdateRepo.GetByVehicle the
-// canonical Handler.GetByVehicle already serves,
-// so the LLM and the operator see the SAME firmware history.
-// No new SQL is issued by this adapter; the read path is the
-// existing GetByVehicle method on SoftwareUpdateRepo. The
-// install_cadence_days field is computed in pure Go from the
-// installed_at timestamps the existing query returns.
+// VehicleSoftwareSource wraps the baseline SoftwareUpdateRepo read and computes cadence in Go.
 type VehicleSoftwareSource struct {
 	repo *systemdb.SoftwareUpdateRepo
 }
 
-// NewVehicleSoftwareSource constructs the production adapter.
-// The repo is required; the constructor panics on a nil so a
-// wiring mistake surfaces at boot rather than as a nil-deref on
-// first AI request.
+// NewVehicleSoftwareSource panics on nil repo so wiring bugs fail at boot.
 func NewVehicleSoftwareSource(repo *systemdb.SoftwareUpdateRepo) *VehicleSoftwareSource {
 	if repo == nil {
 		panic("aiswupd: NewVehicleSoftwareSource: nil *systemdb.SoftwareUpdateRepo")
@@ -417,22 +270,8 @@ func NewVehicleSoftwareSource(repo *systemdb.SoftwareUpdateRepo) *VehicleSoftwar
 	return &VehicleSoftwareSource{repo: repo}
 }
 
-// VehicleSoftware implements summary.VehicleSoftwareSource.
-// Returns a typed envelope for the in-scope vehicleID. No
-// state is mutated. The only IO is the existing
-// SoftwareUpdateRepo.GetByVehicle SELECT, which is the SAME
-// query the canonical baseline handler uses.
-//
-// The envelope's recent_updates slice is non-nil (empty-but-
-// allocated) so JSON marshalling renders [] rather than null —
-// keeping the LLM's tool-reply parsing predictable. The
-// current_version field is empty when no installed row is
-// present (the LLM is instructed via the system prompt to
-// surface "no firmware history yet" plainly when the envelope
-// is degenerate). install_cadence_days is nil (not 0) when
-// fewer than two installed rows are present, distinguishing
-// "not enough data to compute" from "back-to-back installs on
-// the same day".
+// VehicleSoftware returns a non-mutating envelope for the in-scope vehicle.
+// Empty slices and nil cadence preserve the distinction between no history and zero-day cadence.
 func (a *VehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID int64, limit int) (*summary.VehicleSoftwareEnvelope, error) {
 	if vehicleID <= 0 {
 		return nil, fmt.Errorf("aiswupd software-update-changelog-summarizer: vehicle_id must be > 0")
@@ -452,14 +291,10 @@ func (a *VehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID i
 	for _, u := range rows {
 		entry := softwareUpdateModelToEntry(u)
 		entries = append(entries, entry)
-		// Track the most recently installed version. rows are
-		// ordered DESC by created_at, so the FIRST row we see
-		// with status=="installed" is the most recently
-		// observed installed version.
+		// Rows are newest-first; the first installed row is the current version.
 		if currentVersion == "" && entry.Status == "installed" && entry.Version != "" {
 			currentVersion = entry.Version
 		}
-		// Collect installed_at timestamps for cadence math.
 		if u.InstalledAt != nil && !u.InstalledAt.IsZero() {
 			installedTimes = append(installedTimes, *u.InstalledAt)
 		}
@@ -476,11 +311,7 @@ func (a *VehicleSoftwareSource) VehicleSoftware(ctx context.Context, vehicleID i
 	}, nil
 }
 
-// softwareUpdateModelToEntry converts a *vehiclemodel.SoftwareUpdate
-// into a summary.SoftwareUpdateEntry, marshalling timestamps as
-// RFC3339 strings (empty string for nil pointers / zero time).
-// Pulled out so unit tests can exercise the conversion without
-// going through the repo.
+// softwareUpdateModelToEntry converts DB rows to tool entries with RFC3339 timestamps.
 func softwareUpdateModelToEntry(u *vehiclemodel.SoftwareUpdate) summary.SoftwareUpdateEntry {
 	entry := summary.SoftwareUpdateEntry{
 		ID:        u.ID,
@@ -497,25 +328,13 @@ func softwareUpdateModelToEntry(u *vehiclemodel.SoftwareUpdate) summary.Software
 	return entry
 }
 
-// computeInstallCadenceDays returns the mean number of days
-// between consecutive installed_at timestamps in installedTimes,
-// or nil when fewer than two installed rows are present. The
-// caller is responsible for ordering — we accept the slice as-is
-// (rows arrive newest-first from the DB) and sort defensively
-// so the gaps are always positive.
-//
-// Returns nil rather than 0 to distinguish "not enough data to
-// compute" from "back-to-back installs on the same day": a
-// single install legitimately yields no cadence; a stack of
-// same-day installs would yield 0 days, which we want to be
-// distinguishable from the not-enough-data case at the
-// envelope level.
+// computeInstallCadenceDays returns the mean gap between installed_at timestamps.
+// Nil means too little data, distinct from a legitimate zero-day cadence.
 func computeInstallCadenceDays(installedTimes []time.Time) *float64 {
 	if len(installedTimes) < 2 {
 		return nil
 	}
-	// Sort ascending so consecutive gaps are positive. We
-	// avoid sort.Slice to keep the dependency surface tiny.
+	// Sort ascending so consecutive gaps are positive.
 	times := make([]time.Time, len(installedTimes))
 	copy(times, installedTimes)
 	for i := 1; i < len(times); i++ {

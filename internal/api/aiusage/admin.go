@@ -2,27 +2,9 @@ package aiusage
 
 // Phase-50 / 0009 — F8 AI Admin Handler.
 //
-// One GET endpoint that surfaces the per-(feature, provider) redaction
-// bypass summary written by the redact decorator
-// (internal/ai/provider/redact_decorator.go) into ai_call_log via the
-// repo's RedactionBypassByFeature query:
-//
-//   GET /api/v1/ai/admin/redaction-bypass — bypass summary over a window
-//
-// Routing is mounted by MountAdminRoutes immediately after
-// mountAIUsageRoutes in router.go so the same /api/v1 middleware stack
-// (auth, logging, rate limiting, tracing) wraps both.
-//
-// Gating semantics (the special-case __redaction_bypass__ feature):
-//   - Off mode: the wrapper makes the per-feature toggle look "off" so
-//     guard.Wrap returns 404 — symmetrical to ADR-015 §I6 + §I12.
-//   - Non-off mode: the wrapper short-circuits the per-feature toggle
-//     so an operator sees the report without flipping a separate
-//     toggle. Mirrors the __usage__ wiring exactly.
-//
-// The handler intentionally does NOT scope to user_subject — the
-// report is a cross-tenant operator view, gated by the off-mode check
-// above plus the standard admin role middleware.
+// /api/v1/ai/admin/redaction-bypass reports redaction bypasses across tenants for
+// operators. The __redaction_bypass__ meta-feature mirrors __usage__: off-mode
+// returns 404, while any non-off mode bypasses nonexistent per-feature toggles.
 
 import (
 	"context"

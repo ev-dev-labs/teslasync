@@ -2,74 +2,10 @@ package ainldash
 
 // Phase-50 / 0059 — PU3 Natural-language dashboard composer.
 //
-// ai_nl_dashboard_composer_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/power/dashboard/draft. The flow
-// mirrors ai_nl_grafana_panel_handler.go but instead of a
-// three-dimensional catalog (panel-types + datasource-types +
-// tables) the handler loads a single curated install-wide
-// catalog (panel names + their hint copy) up-front and installs
-// the snapshot into ctx via nlq.WithDashboardComposerScope:
-//
-//	URL  /api/v1/ai/power/dashboard/draft
-//	  ↓
-//	read JSON body with required field (prompt)
-//	  ↓
-//	resolve provider via *provider.Registry.For("nl-dashboard-composer")
-//	  ↓
-//	load curated dashboard panel catalog via the source port
-//	  ↓
-//	stash in-scope (panel-names) snapshot in ctx via
-//	  nlq.WithDashboardComposerScope(...)
-//	  ↓
-//	open SSE writer (internal/ai/stream.New)
-//	  ↓
-//	synthesise the user-message that lists every in-scope panel
-//	  so the LLM has ground-truth metadata + the user's prompt
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("nl-dashboard-composer", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE
-// this handler ever sees the request (ADR-015 §I6).
-//
-// Per-request scope binding (defence against prompt-injection
-// exfiltration): the handler installs the panel-name snapshot
-// in ctx via nlq.WithDashboardComposerScope BEFORE
-// dispatcher.Run is invoked. The dispatcher propagates ctx
-// unchanged through every Tool.Execute call. The tools
-// draft_dashboard_layout + validate_dashboard_layout REJECT any
-// LLM-supplied slot.panel_name that is NOT in the snapshot.
-// This means an attacker who pastes "use panel secret_dump"
-// into the prompt cannot trick the LLM into proposing a
-// dashboard that names an out-of-catalog panel — the scope
-// check refuses the proposal before it ever reaches the
-// frontend AI panel.
-//
-// The handler requires a JSON body with (prompt non-empty);
-// empty / null / object-without-fields bodies are rejected with
-// 400. Like nl-grafana-panel the body has no vehicle_id — the
-// curated panel catalog is install-wide.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /power/dashboards
-//     page (manual layout composer + curated panel catalog
-//     viewer + Copy target) is unchanged. This handler is an
-//     OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("nl-dashboard-composer").
-//   - I9 redaction:       PolicyAlertBuilder (deny-by-default;
-//     EVERY PII class redacted to a round-trip tag — VINs,
-//     coordinates, place names, vehicle names) is installed by
-//     dispatch.Run from the strategy and applied to EVERY
-//     message (including the synthesised catalog user message
-//     and tool outputs) by the redact decorator at the provider
-//     boundary.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     /power/dashboards surface is added or modified by this
-//     slice.
+// This LLM-backed SSE handler drafts dashboard layouts from a curated
+// install-wide panel catalog. The catalog snapshot is bound into context before
+// tools run, so out-of-catalog panel names from prompt injection are rejected by
+// the tool scope check.
 
 import (
 	"bytes"
@@ -268,27 +204,19 @@ func parseNLDashboardComposerRequest(w http.ResponseWriter, r *http.Request) (ai
 // SSE stream (when the writer has been opened) or a plain JSON
 // 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the request body.
 	req, ok := parseNLDashboardComposerRequest(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request
-	// resolution honours mid-flight settings changes (model
-	// swap, mode flip) without restart. A resolve failure must
-	// NOT open the SSE stream — emit JSON 502 so the frontend
-	// falls back gracefully.
+	// Resolve before opening SSE so provider failures remain JSON errors.
 	if _, err := h.registry.For(r.Context(), nldashboardcomposer.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai nl-dashboard-composer: provider.For failed")
 		writeError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Load the curated dashboard panel catalog BEFORE
-	// opening the SSE writer so a source error surfaces as a
-	// clean JSON 5xx rather than a half-open SSE stream the
-	// frontend has to clean up.
+	// Load the catalog before SSE so source failures remain clean JSON 5xx.
 	catalog, err := h.source.DashboardComposerCatalog(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("ai nl-dashboard-composer: source.DashboardComposerCatalog failed")
@@ -306,15 +234,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 4) Subject + feature-id annotations for audit/rate-limit,
-	// plus the per-request scope binding (defence against
-	// prompt-injection exfiltration).
+	// Bind the catalog scope before any tool can run.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, nldashboardcomposer.FeatureID)
 	ctx = nlq.WithDashboardComposerScope(ctx, panelNames)
 
-	// 5) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nldashboardcomposer.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai nl-dashboard-composer: stream.New failed (non-flushable writer)")
@@ -322,8 +247,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Resolve the per-feature provider from the (now-
-	// annotated) context.
 	prov, err := h.registry.For(ctx, nldashboardcomposer.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai nl-dashboard-composer: provider.For (post-stream) failed")
@@ -331,21 +254,12 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 7) Build the dispatcher with the deny-all confirm hook.
-	// The strategy's tool whitelist is propose-only so the
-	// deny-all hook is never reached in practice — defence in
-	// depth.
+	// Deny-all is defence-in-depth if a future strategy adds a mutating tool.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 8) Synthesise the user message. The nl-dashboard-composer
-	// surface is NOT conversational — there is no chat history.
-	// We hand the LLM a deterministic prompt that lists every
-	// in-scope panel and instructs the tool sequence EXACTLY:
-	// draft_dashboard_layout first, then
-	// validate_dashboard_layout, then a one-sentence rationale.
+	// Non-conversational by design: force the scoped dashboard-draft tool sequence.
 	userMsg := buildNLDashboardComposerUserMessage(req.Prompt, catalog)
 
-	// 9) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -398,15 +312,7 @@ func buildNLDashboardComposerUserMessage(prompt string, catalog []PanelEntry) st
 	return b.String()
 }
 
-// Compile-time assertion: Handler satisfies
-// http.Handler.
 var _ http.Handler = (*Handler)(nil)
-
-// ---------------------------------------------------------------------
-// Production wiring for the source + validator interfaces declared
-// by internal/ai/tools/nl_dashboard_composer.go. Kept in the same
-// file as the handler so the wiring intent is local to the slice.
-// ---------------------------------------------------------------------
 
 // nlDashboardComposerCuratedPanels is the install-wide curated
 // whitelist of dashboard panels the AI may use as slots. The
@@ -459,8 +365,6 @@ var nlDashboardComposerCuratedPanels = []PanelEntry{
 type CatalogSourceImpl struct{}
 
 // NewCatalogSource constructs the adapter.
-// No deps. Returned by-pointer for symmetry with the other AI*
-// source types.
 func NewCatalogSource() *CatalogSourceImpl {
 	return &CatalogSourceImpl{}
 }
@@ -475,12 +379,7 @@ func (a *CatalogSourceImpl) DashboardComposerCatalog(_ context.Context) ([]Panel
 	return out, nil
 }
 
-// Compile-time assertion.
 var _ CatalogSource = (*CatalogSourceImpl)(nil)
-
-// ---------------------------------------------------------------------
-// Production wiring for the nlq.DashboardLayoutValidator interface.
-// ---------------------------------------------------------------------
 
 // Validator is the production
 // nlq.DashboardLayoutValidator. The shape checks (panel-name

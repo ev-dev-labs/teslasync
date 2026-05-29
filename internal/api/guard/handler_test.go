@@ -20,26 +20,9 @@ import (
 
 // Phase-43a / Prompt 0006 — HTTP tests for GuardHandler.
 //
-// Coverage map vs Decision #7:
-//   (a) Status with active+inactive sentry → TestGuard_Status_*
-//   (b) Events list ordering DESC + limit clamp →
-//       TestGuard_Events_LimitClamp + TestGuard_Events_PreservesRepoOrder
-//   (c) Acknowledge sets columns + 404 on cross-vehicle →
-//       TestGuard_Acknowledge_Success + TestGuard_Acknowledge_NotFound
-//   (d) Panic returns 501 when proxy unconfigured →
-//       TestGuard_Panic_NotImplementedWhenProxyUnconfigured
-//   (e) Migration up + down idempotency → migration_test.go (covered by
-//       the codebase's existing `go test ./internal/database -run Migrations`
-//       suite which iterates every up/down/up file pair).
-//
-// Plus extras:
-//   - vehicle_id validation (non-numeric / zero / negative)
-//   - VehicleExists FIRST (probes `vehicles` before any guard query —
-//     security_events has no FK on vehicle_id per mig 000183)
-//   - Repo errors → 500
-//   - Acknowledge actor is sourced from ForwardAuth header
-//   - Panic returns 502 with per-command results on partial failure
-//   - Panic command sequence pinned to sentry_on → honk_horn → flash_lights
+// These tests pin Decision #7 coverage: status, event ordering/limit clamping,
+// acknowledge behavior, unconfigured panic handling, validation, error paths,
+// actor sourcing, and the sentry_on → honk_horn → flash_lights sequence.
 
 // ---------- fakes ----------
 

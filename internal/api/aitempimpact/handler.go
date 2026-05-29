@@ -1,51 +1,10 @@
 package aitempimpact
 
-// Phase-50 / 0032 — T2 Cabin temperature impact narrative.
+// Phase-50 / 0032 — T2 cabin temperature impact narrative.
 //
-// handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/climate/temperature-impact/narrate.
-// The flow mirrors ai_cost_forecast_narration_handler.go (same
-// dispatch+stream loop, no persistence — one-shot read-only
-// narration):
-//
-//	URL  /api/v1/ai/climate/temperature-impact/narrate
-//	  ↓
-//	resolve provider via *provider.Registry.For("cabin-temperature-impact-narrative")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("cabin-temperature-impact-narrative", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard
-// returns 404 BEFORE this handler ever sees the request
-// (ADR-015 §I6).
-//
-// The JSON body (vehicle_id) is parsed BEFORE opening the SSE
-// stream so a malformed input surfaces as a plain JSON 400
-// (rather than a streamed error frame the SPA's QueryError will
-// struggle to render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /temperature-impact
-//     page (scatter, bucket bars, optimal-range panel, seasonal
-//     trend, tips) hitting GET
-//     /api/v1/analytics/temperature-impact is unchanged. This
-//     handler is an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("cabin-temperature-impact-narrative").
-//   - I9 redaction:       PolicyCabinTemperatureImpactNarrative
-//     (allows ClassVehicleName only; lat/long, addresses, and
-//     place names stay tagged) is installed by dispatch.Run from
-//     the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice. The tool envelope's
-//     extra honest-method fields live in the AI-only typed
-//     [forecast.TemperatureImpact] envelope, not on the baseline
-//     /analytics/temperature-impact response.
+// This opt-in AI handler streams a read-only narration over the same
+// deterministic aggregates rendered by /temperature-impact. The body is
+// validated before SSE opens so malformed input stays a plain JSON 400.
 
 import (
 	"context"
@@ -244,31 +203,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler
-// satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
 func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
 	return dispatch.ConfirmDenied, nil
 }
 
-// ---------------------------------------------------------------------
-// Production wiring for the tool interface declared by
-// internal/ai/tools/temperature_impact.go. Kept in the same file
-// as the handler so the wiring intent is local to the slice;
-// mirrors the cost-forecast-narration slice's AICostForecaster
-// pattern.
-// ---------------------------------------------------------------------
-
-// AITemperatureImpactSource is the production
-// forecast.TemperatureImpactSource. It runs the same deterministic
-// SQL aggregation that backs the canonical GET
-// /api/v1/analytics/temperature-impact handler so the AI
-// narration is grounded in the SAME numbers the chart on
-// /temperature-impact renders. No write path is invoked.
-//
-// The struct holds *database.DB; the constructor panics on a
-// nil so a wiring bug surfaces at boot.
+// AITemperatureImpactSource reuses the canonical aggregates charted by the baseline page.
 type AITemperatureImpactSource struct {
 	db *database.DB
 }
@@ -283,22 +224,8 @@ func NewAITemperatureImpactSource(db *database.DB) *AITemperatureImpactSource {
 	return &AITemperatureImpactSource{db: db}
 }
 
-// QueryTemperatureImpact implements
-// forecast.TemperatureImpactSource. Composes the SAME bucket /
-// seasonal-trend SQL the canonical TempImpactHandler.Get runs so
-// the returned envelope is numerically identical (modulo
-// rounding) to what the chart on /temperature-impact renders —
-// the AI surface is grounded in the SAME deterministic
-// aggregates the baseline page already shows.
-//
-// The function does NOT recompute or override anything the
-// canonical handler computes; it only reshapes the existing
-// output into the typed [forecast.TemperatureImpact] envelope the
-// LLM can quote. Best/worst bucket selection, sample-size +
-// has_enough_data flagging, and deterministic insight generation
-// are added on top — they are pure pure-functional derivations
-// of the bucket aggregate that the chart's "optimal range" panel
-// also computes (in JS) on the SPA.
+// QueryTemperatureImpact returns a transparent bucketed/correlation envelope
+// without route geometry, addresses, VINs, or place names.
 func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, vehicleID int64) (*forecast.TemperatureImpact, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai cabin-temperature-impact-narrative: vehicle_id must be > 0")
@@ -429,15 +356,7 @@ func (a *AITemperatureImpactSource) QueryTemperatureImpact(ctx context.Context, 
 	return envelope, nil
 }
 
-// pickBestWorstBuckets returns the buckets with the LOWEST and
-// HIGHEST avg_battery_pct_per_100km respectively (i.e. the most
-// and least efficient bucket). Returns (nil, nil) when
-// hasEnoughData is false so the narrator does not invent a
-// best/worst classification on a noisy sample.
-//
-// The selection ignores buckets with zero drives or
-// non-positive avg_battery_pct_per_100km — both are degenerate
-// cases that produce a meaningless "best" classification.
+// pickBestWorstBuckets returns the lowest- and highest-efficiency buckets.
 func pickBestWorstBuckets(buckets []forecast.TemperatureImpactBucket, hasEnoughData bool) (*forecast.TemperatureImpactBucket, *forecast.TemperatureImpactBucket) {
 	if !hasEnoughData || len(buckets) == 0 {
 		return nil, nil
@@ -486,6 +405,4 @@ func buildTemperatureImpactInsights(env *forecast.TemperatureImpact) []string {
 	return insights
 }
 
-// Compile-time assertion: AITemperatureImpactSource satisfies
-// forecast.TemperatureImpactSource.
 var _ forecast.TemperatureImpactSource = (*AITemperatureImpactSource)(nil)

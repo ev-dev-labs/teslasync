@@ -1,17 +1,8 @@
 // Phase-50 / 0011 — U1 Chatbot LLM upgrade.
 //
-// Off-mode + baseline-coexistence tests for the AI chatbot. The
-// off-mode test (TestChatbotAIOffUsesBaselineAndAiRoute404) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that the AI
-// route returns 404 when settings.ai_mode='off' even when the
-// per-feature toggle is on, and that the BaselineResponder seam — the
-// type that wraps the existing heuristic chatbot — is well-formed
-// and remains the unconditional baseline path.
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`make ai-eval-fast`); duplicating that here would
-// require a live database fixture (the AI handler persists turns via
-// *dbnotif.ChatRepo, which is not interface-segregated yet).
+// These tests pin the AI-off contract: guarded AI routes return 404 while the
+// BaselineResponder seam keeps the heuristic chatbot reachable. Full streaming
+// coverage lives in the F6 eval harness because this handler persists turns.
 
 package aichatbot
 
@@ -63,7 +54,6 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 func TestChatbotAIOffUsesBaselineAndAiRoute404(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"chatbot-llm": true}, // toggle on, mode trumps it
@@ -102,8 +92,6 @@ func TestChatbotAIOffUsesBaselineAndAiRoute404(t *testing.T) {
 		}
 	}
 
-	// --- baseline coexistence proof ------------------------------------
-	//
 	// The unconditional baseline route at POST /chatbot is wired in
 	// router.go to ChatbotHandler.Chat → processQuery (the heuristic).
 	// The Phase-50 ChatResponder seam adds BaselineResponder as a

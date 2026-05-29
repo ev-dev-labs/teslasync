@@ -1,21 +1,7 @@
-// Phase-50 / 0063 — ML2 Range-prediction model.
+// Phase-50 / 0063 — ML2 range-prediction model.
 //
-// Off-mode + baseline-coexistence + validation tests for the AI
-// range-prediction-model narrator at
-// POST /api/v1/ai/ml/range/train.
-//
-// The off-mode test
-// (TestRangePredictionModelAIOffUsesHeuristicOnly) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, and that the deterministic Projected Range page
-// served at GET /api/v1/vehicles/{id}/range/projection remains the
-// unconditional baseline path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval --feature
-// range-prediction-model`); duplicating that here would require a
-// live database fixture.
+// These tests pin ADR-015 edges: off-mode hides AI, baseline projected range
+// remains reachable, bad bodies fail before SSE, and tool inputs stay stable.
 
 package aimlrange
 
@@ -49,22 +35,8 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on[id], nil
 }
 
-// TestRangePredictionModelAIOffUsesHeuristicOnly is the load-bearing
-// off-mode contract proof for slice 0063. It mounts the AI
-// range-prediction-model route through the guard with ai_mode='off'
-// and proves:
-//
-//   - The /api/v1/ai/ml/range/train route returns 404 (the guard
-//     fails closed even when the per-feature toggle is on).
-//   - The 404 body does not leak feature metadata.
-//   - A baseline range-projection route serving deterministic
-//     heuristic content remains reachable under the same router —
-//     proof that the slice does NOT replace the deterministic
-//     Projected Range page (ADR-015 §I3).
-//
-// The test name MUST stay TestRangePredictionModelAIOffUsesHeuristicOnly
-// — the slice prompt's verification command runs
-// `go test … -run TestRangePredictionModelAIOffUsesHeuristicOnly`.
+// TestRangePredictionModelAIOffUsesHeuristicOnly pins the off-mode contract:
+// AI training is hidden while the deterministic projected-range route works.
 func TestRangePredictionModelAIOffUsesHeuristicOnly(t *testing.T) {
 	t.Parallel()
 

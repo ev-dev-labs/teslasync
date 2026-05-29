@@ -1,19 +1,6 @@
-// Phase-50 / 0049 — M1 Predictive maintenance.
-//
-// Off-mode + baseline-coexistence tests for the AI predictive-
-// maintenance handler. The off-mode test
-// (TestPredictiveMaintenanceAIOffShowsThresholdReminders) is
-// the slice's load-bearing AI-OFF contract proof: it asserts
-// that the AI route returns 404 when settings.ai_mode='off'
-// even when the per-feature toggle is on, AND that the
-// deterministic maintenance items + threshold reminders served
-// at the canonical baseline route remain reachable (ADR-015
-// §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness (`go run ./cmd/ai-eval -feature
-// predictive-maintenance`); duplicating that here would require
-// a live maintenance-items fixture.
+// Phase-50 / 0049 - M1 Predictive maintenance.
+// These tests pin AI-off guard behavior, baseline coexistence, and local adapter contracts.
+// The streaming path remains covered by `go run ./cmd/ai-eval -feature predictive-maintenance`.
 
 package aipredmaint
 

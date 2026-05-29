@@ -24,7 +24,7 @@ type Handler struct {
 	vehicleRepo *vehicledb.VehicleRepo
 }
 
-// NewHandler creates a new handler.
+// NewHandler wires Tesla account metadata dependencies.
 func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
 	return &Handler{
 		teslaClient: tc,

@@ -29,8 +29,6 @@ func NewDrivingCoachHandler(db *database.DB) *DrivingCoachHandler {
 	return &DrivingCoachHandler{db: db}
 }
 
-// ── Response types ───────────────────────────────────────────
-
 type coachResponse struct {
 	OverallScore        int                   `json:"overall_score"`
 	EfficiencyWhKm      float64               `json:"efficiency_wh_km"`
@@ -73,7 +71,6 @@ type driveScoreEntry struct {
 	Distance   float64 `json:"distance"`
 }
 
-// Internal per-drive analysis (not serialised).
 type driveAnalysis struct {
 	id            int64
 	date          time.Time
@@ -90,8 +87,6 @@ type driveAnalysis struct {
 	style         string
 	score         int
 }
-
-// ── Handler ──────────────────────────────────────────────────
 
 // GetCoaching handles GET /analytics/driving-coach?vehicle_id=X&days=30
 func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request) {
@@ -160,7 +155,6 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		drives = append(drives, d)
 	}
 
-	// Empty response when no qualifying drives exist
 	if len(drives) == 0 {
 		httpx.WriteJSON(w, http.StatusOK, coachResponse{
 			StyleBreakdown:  map[string]int{"efficient": 0, "moderate": 0, "aggressive": 0},
@@ -172,7 +166,6 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// ── Per-drive efficiency & style ─────────────────────────
 	bestEfficiency := math.MaxFloat64
 	for i := range drives {
 		d := &drives[i]
@@ -188,7 +181,6 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		bestEfficiency = 0
 	}
 
-	// ── Per-drive score ──────────────────────────────────────
 	for i := range drives {
 		d := &drives[i]
 		if d.efficiency > 0 && bestEfficiency > 0 {
@@ -196,7 +188,6 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		}
 	}
 
-	// ── Aggregate efficiency (exponential moving average) ────
 	avgEfficiency := 0.0
 	weightSum := 0.0
 	for i, d := range drives {
@@ -211,13 +202,11 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		avgEfficiency /= weightSum
 	}
 
-	// ── Style breakdown ──────────────────────────────────────
 	styleCounts := map[string]int{"efficient": 0, "moderate": 0, "aggressive": 0}
 	for _, d := range drives {
 		styleCounts[d.style]++
 	}
 
-	// ── Pattern detection ────────────────────────────────────
 	n := float64(len(drives))
 	var hardAccel, hardBrake, highway, shortTrip, coldStart int
 	for _, d := range drives {
@@ -246,7 +235,6 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		ColdStartPct: pct(coldStart),
 	}
 
-	// ── Overall score (EMA-weighted) ─────────────────────────
 	overallScore := 0
 	scoreW := 0.0
 	scoreSum := 0.0
@@ -262,7 +250,6 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		overallScore = int(math.Round(scoreSum / scoreW))
 	}
 
-	// ── Weekly trends ────────────────────────────────────────
 	type weekAcc struct {
 		totalScore      int
 		totalEfficiency float64
@@ -299,10 +286,8 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 		return weeklyTrends[i].Week < weeklyTrends[j].Week
 	})
 
-	// ── Recommendations ──────────────────────────────────────
 	recommendations := buildDrivingRecommendations(patterns, avgEfficiency)
 
-	// ── Per-drive table (most recent 50) ─────────────────────
 	limit := 50
 	if len(drives) < limit {
 		limit = len(drives)
@@ -332,8 +317,6 @@ func (h *DrivingCoachHandler) GetCoaching(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// ── Helpers ──────────────────────────────────────────────────
-
 func classifyDrivingStyle(powerMax, powerMin, speedMax, speedAvg float64, hasPowerRange bool) string {
 	if powerMax > 150 || speedMax > 130 {
 		return "aggressive"
@@ -348,7 +331,6 @@ func classifyDrivingStyle(powerMax, powerMin, speedMax, speedAvg float64, hasPow
 			return "efficient"
 		}
 	} else {
-		// Without regen data, classify based on speed patterns only
 		if powerMax < 80 && speedSpread < 30 {
 			return "efficient"
 		}

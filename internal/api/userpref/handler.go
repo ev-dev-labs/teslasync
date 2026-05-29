@@ -12,33 +12,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// UserPreferenceHandler serves user preference endpoints backed by the
-// signal-log change feed via signal.StateReader (ADR-002 / phase-39).
-//
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (raw pivot +
-// snapshot helpers) has been replaced with the canonical
-// signal.StateReader.
-//
-// User preferences (units, 24-hour clock, charge/distance/temperature/
-// tire-pressure unit selections) are USER-PINNED settings that emit
-// once when the driver picks them in the UI and then NEVER re-emit
-// until the driver changes them again — Fleet Telemetry only emits a
-// value when both the interval has elapsed AND the value has changed.
-// In practice these signals can sit unchanged for MONTHS or YEARS.
-//
-// Under the legacy raw pivot, a /user-preference/latest call against a
-// vehicle whose owner has not touched their unit settings within the
-// lookback window would project NULL for every unit field, even though
-// the values are perfectly known and stable. With StateReader.State
-// forward-folding the change feed, the most recent emission of every
-// signal is carried forward to the requested timestamp, so the latest
-// preferences endpoint always returns the user's actual current
-// settings.
-//
-// This is critical: unit preferences drive every formatted value on
-// the dashboard (km vs mi, °C vs °F, psi vs bar, 24h vs 12h clock).
-// A NULL unit here would cause the frontend to fall back to defaults,
-// silently flipping a metric-units owner's whole UI to imperial.
+// UserPreferenceHandler serves preference endpoints from forward-folded signal state.
+// Unit preferences may not re-emit for months, so latest reads must use StateReader/LiveStateReader instead of raw lookback pivots; otherwise known settings can appear null and flip the UI to defaults.
 type UserPreferenceHandler struct {
 	state signal.StateReader
 	live  signal.LiveStateReader

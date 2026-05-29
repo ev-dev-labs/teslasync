@@ -1,19 +1,7 @@
-// Phase-50 / 0043 — S2 Data repair suggestions.
+// Phase-50 / 0043 — S2 data repair suggestions.
 //
-// Off-mode + baseline-coexistence tests for the AI
-// data-repair-suggestions handler. The off-mode test
-// (TestDataRepairSuggestionsAIOffManualRunbookWorks) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, AND that the deterministic stale-session list +
-// per-row repair endpoints served at the canonical
-// /api/v1/data-repair/* handlers remain the unconditional baseline
-// path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval -feature
-// data-repair-suggestions`); duplicating that here would require a
-// live database fixture.
+// These tests pin ADR-015 edges: AI off-mode hides the route, baseline repair
+// remains reachable, bad bodies fail before SSE, and prompt shape is stable.
 
 package aidatarep
 
@@ -52,29 +40,9 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on[id], nil
 }
 
-// TestDataRepairSuggestionsAIOffManualRunbookWorks is the load-
-// bearing off-mode contract proof for slice 0043. It mounts the AI
-// data-repair-suggestions route through the guard with
-// ai_mode='off' and proves:
-//
-//   - The /api/v1/ai/system/data-repair/draft route returns 404
-//     (the guard fails closed even when the per-feature toggle is
-//     on).
-//   - The 404 body does not leak feature metadata or route
-//     identifiers.
-//   - Baseline GET /api/v1/data-repair/stale-sessions and
-//     PUT/POST/DELETE /api/v1/data-repair/{kind}/{id}{...} routes
-//     remain reachable under the same router — proof that the slice
-//     does NOT replace the deterministic stale-session manual-
-//     runbook flow on /system/data-repair (DataRepairPage)
-//     (ADR-015 §I3).
-//
-// The test name MUST stay TestDataRepairSuggestionsAIOffManualRunbookWorks
-// — the slice prompt's verification command runs
-// `go test … -run TestDataRepairSuggestionsAIOffManualRunbookWorks`
-// AND `npm test -- --run TestDataRepairSuggestionsAIOffManualRunbookWorks`,
-// so both the Go and React off-mode proofs answer to the same
-// test-name pattern.
+// TestDataRepairSuggestionsAIOffManualRunbookWorks pins the load-bearing
+// ADR-015 contract: AI off-mode hides only the AI route while baseline repair
+// endpoints still behave normally.
 func TestDataRepairSuggestionsAIOffManualRunbookWorks(t *testing.T) {
 	t.Parallel()
 

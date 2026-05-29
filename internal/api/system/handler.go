@@ -86,7 +86,6 @@ func VersionHandler(appVersion string, cfg *config.Config) http.HandlerFunc {
 			"require_cookie_consent": cfg != nil && cfg.RequireCookieConsent,
 		}
 
-		// Endpoint configuration (read-only, from Helm/env)
 		endpoints := map[string]string{}
 		if v := os.Getenv("API_ENDPOINT"); v != "" {
 			endpoints["api"] = v
@@ -125,7 +124,7 @@ func UpdateCheckHandler() http.HandlerFunc {
 			return
 		}
 
-		// Cache for 1 hour to avoid hammering GitHub API
+		// Avoid hammering the GitHub API on dashboard refresh.
 		if cache != nil && time.Since(cache.checkedAt) < time.Hour {
 			httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 				"current":          currentChart,
@@ -136,7 +135,6 @@ func UpdateCheckHandler() http.HandlerFunc {
 			return
 		}
 
-		// Check GitHub releases
 		client := httputil.NewClient(httputil.ClientConfig{
 			Name:          "github-releases",
 			Timeout:       5 * time.Second,
@@ -168,7 +166,6 @@ func UpdateCheckHandler() http.HandlerFunc {
 		}
 
 		latest := release.TagName
-		// Strip "v" prefix for comparison
 		latestClean := latest
 		if len(latestClean) > 0 && latestClean[0] == 'v' {
 			latestClean = latestClean[1:]

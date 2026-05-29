@@ -11,10 +11,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
-// ---------------------------------------------------------------------------
-// Database endpoints
-// ---------------------------------------------------------------------------
-
 // DatabaseStats returns public table names, row counts, and database size.
 func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 	if h.db == nil {
@@ -25,7 +21,6 @@ func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) 
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
 
-	// Fetch public tables.
 	rows, err := h.db.Pool.Query(ctx,
 		"SELECT schemaname, tablename FROM pg_tables WHERE schemaname = 'public'")
 	if err != nil {
@@ -54,7 +49,6 @@ func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// Get row counts for each table.
 	for i := range tables {
 		query := fmt.Sprintf("SELECT COUNT(*) FROM %q.%q", tables[i].Schema, tables[i].Name)
 		if err := h.db.Pool.QueryRow(ctx, query).Scan(&tables[i].RowCount); err != nil {
@@ -62,7 +56,6 @@ func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	// Get total database size.
 	var dbSize int64
 	if err := h.db.Pool.QueryRow(ctx,
 		"SELECT pg_database_size(current_database())").Scan(&dbSize); err != nil {

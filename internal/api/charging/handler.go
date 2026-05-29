@@ -193,7 +193,6 @@ func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *chargin
 		return fmt.Errorf("current snapshot: %w", err)
 	}
 
-	// Battery levels
 	if startBat, ok := signalFloat(startSnap, "BatteryLevel"); ok {
 		v := startBat
 		session.StartSocPct = &v
@@ -207,7 +206,6 @@ func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *chargin
 		}
 	}
 
-	// Energy added from ACChargingEnergyIn delta
 	startEnergy, startOk := signalFloat(startSnap, "ACChargingEnergyIn")
 	currentEnergy, currentOk := signalFloat(currentSnap, "ACChargingEnergyIn")
 	if startOk && currentOk && currentEnergy > startEnergy {
@@ -215,7 +213,6 @@ func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *chargin
 		session.TotalEnergyAddedWh = &delta
 	}
 
-	// Current charging power
 	if power, ok := signalFloat(currentSnap, "ACChargingPower"); ok {
 		v := safeFloat(power)
 		session.PeakPowerW = &v

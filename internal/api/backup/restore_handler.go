@@ -42,8 +42,6 @@ func NewRestoreHandler(db *database.DB) *RestoreHandler {
 	}
 }
 
-// ── Config CRUD ─────────────────────────────────────────
-
 func (h *RestoreHandler) ListConfigs(w http.ResponseWriter, r *http.Request) {
 	configs, err := h.cfgRepo.List(r.Context())
 	if err != nil {
@@ -131,9 +129,7 @@ func (h *RestoreHandler) DeleteConfig(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
-// clampConfigBounds applies the create/update validation rules in one
-// place (was duplicated in CreateConfig + UpdateConfig in the flat
-// parent file; R2a consolidates).
+// clampConfigBounds keeps create/update bounds aligned.
 func clampConfigBounds(cfg *backupmodel.BackupConfig) {
 	if cfg.FrequencyDays < 1 {
 		cfg.FrequencyDays = 1
@@ -148,8 +144,6 @@ func clampConfigBounds(cfg *backupmodel.BackupConfig) {
 		cfg.MaxRetention = 100
 	}
 }
-
-// ── Run management ──────────────────────────────────────
 
 func (h *RestoreHandler) ListRuns(w http.ResponseWriter, r *http.Request) {
 	limit := 50
@@ -217,8 +211,7 @@ func (h *RestoreHandler) TriggerBackup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Run async — uses a detached background context because the
-	// request's context will be cancelled as soon as we return below.
+	// Detach from the request context because the run continues after response.
 	go h.processor.RunBackup(context.Background(), cfg, run)
 
 	httpx.WriteJSON(w, http.StatusAccepted, run)
@@ -250,8 +243,6 @@ func (h *RestoreHandler) TriggerQuickBackup(w http.ResponseWriter, r *http.Reque
 	go h.processor.RunBackup(context.Background(), cfg, run)
 	httpx.WriteJSON(w, http.StatusAccepted, run)
 }
-
-// ── Download / Verify / Restore ────────────────────────────
 
 // DownloadBackup streams the backup file to the client.
 func (h *RestoreHandler) DownloadBackup(w http.ResponseWriter, r *http.Request) {
@@ -368,12 +359,8 @@ func (h *RestoreHandler) PreviewRestore(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// providerConfigForRun resolves the provider-config blob to hand to a
-// storage provider: if the run is associated with a saved config, use
-// that config's ProviderConfig; otherwise fall back to the default
-// `{"path": "/data/backups"}` for the local provider. Factored out of
-// DownloadBackup/VerifyBackup/PreviewRestore which all needed the
-// same lookup.
+// providerConfigForRun uses the saved config when present, otherwise the local
+// provider default shared by download, verify, and preview.
 func (h *RestoreHandler) providerConfigForRun(ctx context.Context, run *backupmodel.BackupRun) json.RawMessage {
 	providerConfig := json.RawMessage(`{"path": "/data/backups"}`)
 	if run.ConfigID != nil {

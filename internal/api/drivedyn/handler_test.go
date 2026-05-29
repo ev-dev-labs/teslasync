@@ -21,25 +21,8 @@ func newDriveDynamicsRequest(vehicleID, target string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, target, nil)
 }
 
-// TestDriveDynamicsHandler_Latest_ReturnsLiveState pins the contract that
-// the handler:
-//
-//  1. Calls LiveStateReader.LiveState exactly once with the requested
-//     vehicle_id (NOT StateReader.State — this is the live-layer path,
-//     not a wall-clock signal_log lookup).
-//  2. Projects every driveDynamicsMappings signal present in the State
-//     under its mapped Field name (lateral_acceleration,
-//     longitudinal_acceleration, pedal_position, brake_pedal_position,
-//     brake_pedal_active).
-//  3. Omits signals NOT present in the State (so a vehicle whose
-//     BrakePedal has never emitted has no `brake_pedal_active` key).
-//  4. Does NOT leak the raw Tesla signal names into the response body —
-//     only the snake_case Field side of the mapping appears.
-//
-// This is the bug-fix regression: pre-fix, GForcePanel + PedalUsage
-// called /signals/observations which returns 404 (table dropped),
-// painting a permanent "No telemetry received yet" empty state even
-// when LiveState had all 5 signals.
+// TestDriveDynamicsHandler_Latest_ReturnsLiveState pins the live-layer response contract.
+// It proves mapped signals are projected under snake_case fields, unmapped or absent signals are omitted, and raw Tesla names do not leak into the payload.
 func TestDriveDynamicsHandler_Latest_ReturnsLiveState(t *testing.T) {
 	var gotVehicleID int64
 	fake := &fakeStateReader{
@@ -51,10 +34,7 @@ func TestDriveDynamicsHandler_Latest_ReturnsLiveState(t *testing.T) {
 				"PedalPosition":            42.5,
 				"BrakePedalPos":            7.25,
 				"BrakePedal":               true,
-				// Extra signals NOT in driveDynamicsMappings — these
-				// must be filtered out so the wire payload stays a
-				// driving-dynamics surface, not a kitchen-sink
-				// passthrough of every Tesla signal in LiveState.
+				// Extra live signals must not leak into the driving-dynamics surface.
 				"DiStateF": "DRIVE",
 				"Gear":     "D",
 			}, nil
@@ -77,8 +57,6 @@ func TestDriveDynamicsHandler_Latest_ReturnsLiveState(t *testing.T) {
 		t.Fatalf("decode: %v; body=%s", err, rec.Body.String())
 	}
 
-	// All 5 mapped signals present must be projected under their
-	// snake_case Field name.
 	if v, ok := got["lateral_acceleration"].(float64); !ok || v != 0.12 {
 		t.Fatalf("lateral_acceleration = %#v, want 0.12", got["lateral_acceleration"])
 	}
@@ -95,9 +73,6 @@ func TestDriveDynamicsHandler_Latest_ReturnsLiveState(t *testing.T) {
 		t.Fatalf("brake_pedal_active = %#v, want true", got["brake_pedal_active"])
 	}
 
-	// Extra signals from LiveState that are NOT in driveDynamicsMappings
-	// must be filtered out — the response body is a driving-dynamics
-	// surface, not a passthrough of every signal in the live cache.
 	if _, present := got["DiStateF"]; present {
 		t.Fatalf("raw signal DiStateF leaked into response; got=%v", got)
 	}

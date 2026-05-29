@@ -141,8 +141,7 @@ func (h *SecurityHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
-// timelineRowsToFlat converts the canonical signal.StateReader timeline shape
-// into the flat map[string]interface{} JSON-row shape the security endpoints emit.
+// timelineRowsToFlat preserves the legacy flat JSON-row response shape.
 func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(rows))
 	for _, tr := range rows {

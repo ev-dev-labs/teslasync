@@ -1,53 +1,11 @@
 package aidrivesearch
 
-// Phase-50 / 0021 — D1 Natural-language drive search and replay.
+// Phase-50 / 0021 — D1 natural-language drive search and replay.
 //
-// ai_drive_search_hydrator.go implements trip.DriveReplayHydrator
-// using the existing canonical pgSearcher backend. The slice's
-// DriveReplayHydrator port resolves a (sourceType, sourceID)
-// reference from a RAG chunk into a human-friendly envelope (title,
-// subtitle, url, replay_url, when) suitable for citation in the
-// LLM's narration, WITH the replay anchor the user can jump to.
-//
-// Why pgSearcher and not bespoke per-source repos:
-//
-//   - pgSearcher already implements SearchDrives with deterministic
-//     title / subtitle / url renderers — the same renderers the
-//     typed GET /api/v1/search baseline uses. Reusing the renderers
-//     means a hydrated AI citation is byte-equivalent to a typed
-//     search hit (ADR-015 §I3 baseline-intact: no duplicate read
-//     path, no risk of UI drift).
-//
-//   - We need ONLY the renderer's idHint match path: when q parses
-//     as an int64, the underlying SQL adds an exact-ID match bonus
-//     and ranks the matching row first. Calling SearchDrives with
-//     the source_id as both q and idHint, limit=1, returns the
-//     apisearch.SearchHit for that drive in O(1) — no new SQL, no new repo.
-//
-// Replay URL derivation:
-//
-//   - apisearch.SearchHit.URL is the SPA detail route ("/drives/{id}"). The
-//     canonical replay route on the SPA side is
-//     "/drives/{id}/replay" (see web/src/router/routeRegistry.ts —
-//     TripReplayPage is mounted at "/drives/:id/replay"). We
-//     derive the replay URL by appending "/replay" to the existing
-//     URL renderer's output. This keeps the SPA path in ONE source
-//     of truth (the renderer); when a future refactor renames the
-//     detail route, the replay anchor follows automatically.
-//
-//   - route_segment and location_summary source types have no
-//     dedicated drive-replay surface — they are forward-compat
-//     reservations per the slice prompt. The hydrator returns a
-//     not_found for them today; the strategy's narration falls
-//     back to a generic "no replay anchor for this source type"
-//     phrasing.
-//
-// Constraint: the apisearch.Searcher interface does not currently scope by
-// user_subject (per-install single-tenant assumption). The
-// hydrator accepts a userSubject parameter for future-compat —
-// when per-user scoping is added to the existing apisearch.Searcher, the
-// hydrator's signature already matches and no caller has to
-// change. Same pattern as aiSearchHydrator from slice 0017.
+// This hydrator reuses the canonical search renderer so AI drive citations match
+// typed /search results and inherit route changes. route_segment and
+// location_summary remain forward-compatible reservations and return not_found
+// until a canonical replay surface exists for them.
 
 import (
 	"context"
@@ -82,22 +40,11 @@ func newHydrator(s apisearch.Searcher) *hydrator {
 	return &hydrator{s: s}
 }
 
-// HydrateOne implements [trip.DriveReplayHydrator]. Delegates to
-// the canonical pgSearcher's SearchDrives method using the
-// source_id as both query and idHint, with limit=1, so the
-// underlying SQL's exact-ID match bonus selects the target row in
-// O(1).
-//
-// Returns [trip.ErrDriveReplayHydratorNotFound] when no row
-// matches the (subject, type, id) tuple — the AI tool surfaces
-// this as a status="not_found" envelope so the LLM can adapt its
-// narration without retrying.
+// HydrateOne implements [trip.DriveReplayHydrator]. It uses the canonical search
+// exact-ID path, returning not_found envelopes instead of retryable tool errors
+// when a cited source cannot produce a replay anchor.
 func (h *hydrator) HydrateOne(ctx context.Context, _userSubject, sourceType, sourceID string) (*trip.HydratedDriveReplay, error) {
-	// route_segment and location_summary are forward-compat
-	// reservations per the slice prompt — no canonical replay
-	// surface today. Surface as not_found so the LLM can adapt
-	// without retrying; a future indexer slice that lights up
-	// these sources should add per-type cases here.
+	// Reserved source types have no canonical replay surface yet.
 	if sourceType != rag.SourceDriveSummary {
 		// Defence in depth: validate the type IS in the allowed
 		// set; an unknown type is also not_found.

@@ -1,58 +1,10 @@
 package aisearch
 
-// Phase-50 / 0017 — N3 Natural-language search across drives, charges,
-// and alerts.
+// Phase-50 / 0017 — N3 natural-language search.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/search/query. The flow mirrors the
-// nl-automation-builder handler from slice 0016 — same
-// dispatch+stream loop, same propose-only-via-read-only-tools
-// contract, no persistence (one-shot search; no conversation to
-// record):
-//
-//   request JSON {prompt}
-//     ↓
-//   resolve provider via *provider.Registry.For("nl-search")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("nl-search", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// READ-only contract (slice prompt + ADR-015 §I3):
-//
-//   - Both tools the strategy declares (retrieve_chunks,
-//     hydrate_search_result) are READ-only ports — the F7
-//     rag.Retriever for the corpus lookup, a narrow Hydrator port
-//     for one-by-one detail rendering. Neither writes any state.
-//   - The deterministic /search baseline + SearchHandler.Search at
-//     internal/api/search_handler.go remains the canonical typed
-//     search path for any user with `ai_mode='off'`.
-//   - The cited entities link back to the same SPA detail pages
-//     (/drives/:id, /charging/:id, /notifications/:id) the typed
-//     baseline already exposes — no new entity-detail surface is
-//     introduced by this slice.
-//
-// ADR-015 alignment:
-//
-//   - I1 default-off:    the feature toggle defaults false in
-//                         features.Registry; the guard fails closed.
-//   - I3 baseline intact: this handler never replaces the typed
-//                         GET /api/v1/search path served by
-//                         SearchHandler.Search.
-//   - I7 per-feature:     the AI route is gated by
-//                         guard.Wrap("nl-search").
-//   - I9 redaction:       PolicyChatbot (deny-all, ModeRedactedTags)
-//                         is installed by dispatch.Run from the
-//                         strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//                         /api/v1/ai/*; no field on the existing
-//                         baseline JSON shape is added or modified
-//                         by this slice.
+// Serves the opt-in SSE search narrator using read-only RAG retrieval and
+// hydration tools. The AI guard fails closed before this handler runs, and
+// the deterministic /search endpoint remains the canonical typed baseline.
 
 import (
 	"context"
@@ -73,12 +25,7 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// maxIterations bounds the dispatcher's tool-loop. The
-// nl-search strategy is typically a 1-3 step sequence (one
-// retrieve_chunks call, then 0-2 hydrate_search_result calls for the
-// top hits, then narrate). A hard ceiling of 6 is generous for an
-// LLM that occasionally hydrates several results before settling.
-// Mirrors aiAutomationBuilderMaxIterations from slice 0016.
+// maxIterations bounds the read-only search tool loop with room for retries.
 const maxIterations = 6
 
 // maxPromptChars bounds the user-supplied natural-language
@@ -102,18 +49,8 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the handler. All non-pointer
-// arguments are required; the constructor panics on a nil so the
-// wiring bug surfaces at boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	retrieve_chunks + hydrate_search_result
-//	(registered by tools.RegisterSearchTools in router.go).
-//
-// strat:      the nl-search Strategy (one per process).
-// headerName: forward-auth header name; used to extract subject for audit.
+// NewHandler wires required AI dependencies and panics on nil so boot fails fast.
+// toolReg must contain retrieve_chunks and hydrate_search_result.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -157,7 +94,6 @@ type queryRequest struct {
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Decode + validate request body.
 	var body queryRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
@@ -173,31 +109,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before SSE so provider failures remain plain JSON.
 	if _, err := h.registry.For(r.Context(), nlsearch.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai search: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
-	// SubjectFromRequest returns "" if the header is absent; that's
-	// the open-mode value the audit log treats as "anonymous".
+	// Empty subject is the open-mode audit identity.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, nlsearch.FeatureID)
 
-	// 4) Open the SSE writer. Stream.New writes the SSE response
-	// headers, starts the consumer goroutine, and returns a child
-	// ctx that cancels on stall — we pass that ctx to the
-	// dispatcher so a stalled consumer kills the upstream call.
+	// The stream context cancels upstream work when the SSE consumer stalls.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(nlsearch.FeatureID))
 	if err != nil {
-		// Non-flushable response writer (test recorder, etc.).
-		// Emit a plain JSON 500 — the SSE headers were not sent.
+		// SSE headers were not sent, so a plain JSON 500 is still safe.
 		log.Error().Err(err).Msg("ai search: stream.New failed (non-flushable writer)")
 		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
@@ -260,5 +187,4 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 	return dispatch.ConfirmDenied, nil
 }
 
-// Compile-time assertion: Handler satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)

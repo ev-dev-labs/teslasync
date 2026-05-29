@@ -21,43 +21,8 @@ func newUserPreferenceRequest(vehicleID, target string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, target, nil)
 }
 
-// TestUserPreference_History_CarriesForwardUnits is the carry-forward
-// proof for the phase-39 user_preference_handler migration's List
-// endpoint.
-//
-// User preferences are USER-PINNED settings (24-hour clock, charge /
-// distance / temperature / tire-pressure unit selections). Tesla Fleet
-// Telemetry only emits a value when both the interval has elapsed AND
-// the value has changed — so once the owner picks "miles" + "°F" +
-// "psi" + "kWh" + "12-hour clock" at delivery, those signals do NOT
-// re-emit until the owner changes one in the UI. They can sit
-// unchanged for MONTHS or YEARS.
-//
-// Under the legacy raw-pivot SignalTracePivotFlat, a /user-preference
-// history call against such a vehicle would project NULL for every
-// unit field on every row in the lookback window, even though the
-// values are perfectly known. With StateReader.Timeline forward-folding
-// the change feed, the most recent emission of every signal carries
-// forward to every later row.
-//
-// This test asserts:
-//
-//  1. The handler invokes Timeline exactly once with the full
-//     userPrefMappings projection.
-//  2. The handler asks for CHART MODE (empty CollapseBy) so every
-//     change-feed emission becomes one row. A non-empty CollapseBy
-//     would coalesce consecutive identical-preference rows into a
-//     single "still the same" row and break the per-emission resolution
-//     of the preference-history view.
-//  3. The handler does NOT strip, drop, or filter rows that carry
-//     forward-folded values — every TimelineRow becomes one response
-//     row with the legacy created_at / id aliases preserved.
-//  4. Forward-folded unit values appear on every row even when they
-//     did not re-emit in that bucket — a vehicle whose owner has not
-//     touched their settings in months still produces a fully-populated
-//     history, never NULL units. Silently flipping units to defaults
-//     in a chart row would silently mislead the owner about their own
-//     past preferences.
+// TestUserPreference_History_CarriesForwardUnits proves chart-mode history carries stable unit preferences forward.
+// User-pinned settings can go months without re-emitting; every TimelineRow must retain folded unit values and legacy created_at/id aliases instead of reverting to null/default units.
 func TestUserPreference_History_CarriesForwardUnits(t *testing.T) {
 	t0 := time.Date(2026, 4, 30, 9, 0, 0, 0, time.UTC)
 	folded := []signal.TimelineRow{

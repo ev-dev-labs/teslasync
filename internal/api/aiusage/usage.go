@@ -2,29 +2,9 @@ package aiusage
 
 // Phase-50 / 0004 — F3 AI Usage Handler.
 //
-// Three GET endpoints under /api/v1/ai/usage/* that surface the
-// per-call audit log written by the audit decorator:
-//
-//   GET /api/v1/ai/usage/today        — aggregate of "today" calls
-//   GET /api/v1/ai/usage/by-feature   — per-feature breakdown
-//   GET /api/v1/ai/usage/recent       — last N calls for the user
-//
-// Routing is mounted by MountUsageRoutes immediately after
-// mountAIRoutes in router.go so the same /api/v1 middleware stack
-// (auth, logging, rate limiting, tracing) wraps both.
-//
-// Gating semantics (the special-case __usage__ feature):
-//   - Off mode (ai_mode='off'): the wrapper below makes the per-feature
-//     toggle look "off" so guard.Wrap returns 404. Symmetrical to the
-//     ADR-015 §I6 contract every other AI route follows.
-//   - Non-off mode: the wrapper short-circuits the per-feature toggle
-//     check to true so the user sees their usage card without having
-//     to flip a separate "show usage" toggle. The prompt is explicit:
-//     "no per-feature toggle".
-//
-// The wrapper is a tiny adapter — guard.Wrap itself is unchanged so
-// the off-mode invariant test (offMode.invariant.test.tsx) still holds
-// for every other AI route.
+// /api/v1/ai/usage/* exposes the per-call audit log through the same guarded
+// middleware stack as other AI routes. The __usage__ meta-feature opens whenever
+// ai_mode is non-off, leaving guard.Wrap unchanged for all real features.
 
 import (
 	"context"

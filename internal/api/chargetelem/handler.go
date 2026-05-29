@@ -105,8 +105,7 @@ func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request
 			result[m.Field] = v
 		}
 	}
-	// Merge DC power: for DC fast-charging, DCChargingPower is the active value.
-	// Override charger_power_w (from ACChargingPower) when DC power is positive.
+	// DC fast-charging reports DCChargingPower; override the AC field only when positive.
 	if dcVal, ok := snap["DCChargingPower"]; ok {
 		if dc, dcOk := signal.Float64(dcVal); dcOk && dc > 0 {
 			result["charger_power_w"] = dcVal
@@ -115,9 +114,7 @@ func (h *ChargingTelemetryHandler) Latest(w http.ResponseWriter, r *http.Request
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
-// timelineRowsToFlat converts ordered TimelineRows into the legacy
-// []map[string]interface{} flat-pivot shape ({"ts": ts, "<field>": value, ...}).
-// Duplicated locally until the parent drive detail helper is carved/shared.
+// timelineRowsToFlat preserves the legacy flat-pivot response shape.
 func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
 	out := make([]map[string]interface{}, 0, len(rows))
 	for _, tr := range rows {

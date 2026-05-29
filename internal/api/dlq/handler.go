@@ -1,29 +1,5 @@
-// DLQ inspector HTTP handler.
-//
-// Phase-44 / observability-batch / Prompt F4.
-//
-// Endpoints (mounted under /api/v1):
-//
-//	GET    /system/dlq                       — list ring entries, newest first
-//	GET    /system/dlq/{id}                  — fetch full payload + parsed envelope
-//	POST   /system/dlq/{id}/replay           — re-publish to original source topic
-//	GET    /system/dlq/audit                 — recent replay audit rows
-//	GET    /system/dlq/{id}/audit            — recent replay audit rows for one dlq_id
-//
-// Authentication / authorization:
-//   - Listing + audit reading: protected by the global forward-auth
-//     middleware (no extra gating). Any authenticated operator can read.
-//   - Replay: requires X-Sudo-Token (RequireSudo at router) AND the
-//     DLQ_REPLAY_ENABLED env opt-in. ERR_DLQ_REPLAY_DISABLED surfaces
-//     a clear "configuration disabled" response distinct from auth errors.
-//
-// Rate limits applied at the router via httprate. See router.go.
-//
-// Every replay code path (success / publish_failed / disabled /
-// unparseable / not_found) writes a dlq_replay_audit row so a
-// post-incident forensic trail survives the inspector ring rotation
-// and the API server restart. Audit failures are swallowed (logged at
-// the repo) — they MUST NOT replace the actual replay outcome.
+// DLQ inspector endpoints list, inspect, replay, and audit dead-letter entries.
+// Replay remains gated by sudo routing plus DLQ_REPLAY_ENABLED, and every replay outcome writes audit evidence.
 
 package dlq
 

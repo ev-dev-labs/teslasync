@@ -1,24 +1,7 @@
-// Phase-43a / Prompt 0005 — VampireDrainHandler restores the
-// /vampire-drain + /vampire-drain/stats endpoints deleted by Phase-42
-// prompt 0077 (which dropped the vampire_drain_events table). Both
-// shapes are now derived live from fsm_transitions (mig 000187) +
-// signal_log (mig 000186, BatteryLevel + ChargeState fields).
-//
-// Frontend hooks (still pointed at these URLs, currently 404ing per
-// useEnergy.ts comments):
-//
-//   - useVampireDrainEvents (web/src/api/hooks/useEnergy.ts)
-//   - useVampireDrainStats  (web/src/api/hooks/useEnergy.ts)
-//
-// Response shapes follow the prompt-locked Decisions #2 + #3 (snake_case
-// JSON keys). The legacy frontend types in web/src/types/energy.ts
-// (camelCase startDate / batteryLost / drainRate) belong to the deleted
-// handler; updating them and the consumers is out-of-scope for this
-// prompt's allowed-files boundary. The events list endpoint returns an
-// envelope `{vehicle_id, events: [...]}` rather than a bare array, so
-// `useVampireDrainEvents` (which currently uses `select: safeArray`)
-// will need a follow-up to extract the `events` field — same pattern as
-// the Phase-43a / Prompt 0003 follow-up note for useStateSummary.
+// Phase-43a / Prompt 0005 — VampireDrainHandler restores /vampire-drain and
+// /vampire-drain/stats after the vampire_drain_events table was dropped.
+// Events and rollups are derived from fsm_transitions plus signal_log; frontend
+// hook shape fixes remain outside this prompt's allowed-files boundary.
 package vampiredrain
 
 import (
@@ -48,8 +31,7 @@ type vampireDrainRepository interface {
 // time.Now().UTC().
 type vampireDrainClock func() time.Time
 
-// VampireDrainHandler serves the two endpoints. Holds a repo + clock;
-// no other dependencies needed.
+// VampireDrainHandler serves the two endpoints with an injectable clock for tests.
 type VampireDrainHandler struct {
 	repo  vampireDrainRepository
 	clock vampireDrainClock
@@ -115,11 +97,7 @@ func (h *VampireDrainHandler) parseEventsParams(w http.ResponseWriter, r *http.R
 			return 0, 0, false
 		}
 		if v > vampireDrainMaxLimit {
-			// Decision #2 requires a structured "limit exceeds maximum"
-			// payload that the frontend can surface verbatim. Mirrors
-			// the Phase-43a / Prompt 0003+0004 envelope: writeError
-			// would emit only {error, code}; we hand-write the JSON
-			// to add the `max` field.
+			// Hand-write JSON to include the Decision #2 max field.
 			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "limit exceeds maximum",
 				"max":   vampireDrainMaxLimit,

@@ -11,7 +11,6 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
-
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"

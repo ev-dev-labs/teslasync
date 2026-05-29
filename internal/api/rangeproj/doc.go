@@ -1,7 +1,5 @@
-// Package rangeproj contains the range projection API handler carved out of internal/api.
-//
-// The package preserves the public HTTP behavior for range projection routes
-// while keeping routing composition in the parent api package.
+// Package rangeproj contains the carved-out range projection API handler.
+// Public HTTP behavior remains owned by the parent API routing composition.
 //
 // Layer: handler
 package rangeproj

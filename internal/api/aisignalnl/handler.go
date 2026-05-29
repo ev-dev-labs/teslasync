@@ -1,79 +1,7 @@
 package aisignalnl
 
-// Phase-50 / 0044 — S3 Signal explorer NL filter.
-//
-// ai_signal_explorer_nl_filter_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/signals/filter/draft. The flow mirrors
-// ai_data_repair_handler.go but instead of an inventory snapshot the
-// handler loads the per-vehicle signal catalog (the SAME catalog the
-// SPA's GET /api/v1/signals/{vehicleID}/available endpoint returns)
-// up-front and installs the snapshot of (vehicleID, signal-name set)
-// into ctx via nl.WithScopedSignalCatalog:
-//
-//	URL  /api/v1/ai/signals/filter/draft
-//	  ↓
-//	read JSON body with required fields (vehicle_id, prompt)
-//	  ↓
-//	resolve provider via *provider.Registry.For("signal-explorer-nl-filter")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New)
-//	  ↓
-//	load per-vehicle signal catalog via the source port
-//	  ↓
-//	stash in-scope (vehicleID, catalog) snapshot in ctx via
-//	  nl.WithScopedSignalCatalog(vehicleID, signals)
-//	  ↓
-//	synthesise the user-message that lists the in-scope catalog
-//	  (signal name + value_kind per row) so the LLM has
-//	  ground-truth signal metadata + the user's prompt
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("signal-explorer-nl-filter", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE
-// this handler ever sees the request (ADR-015 §I6).
-//
-// Per-request scope binding (defence against prompt-injection
-// exfiltration): the handler installs the (vehicleID, signal-set)
-// snapshot in ctx via nl.WithScopedSignalCatalog BEFORE
-// dispatcher.Run is invoked. The dispatcher propagates ctx
-// unchanged through every Tool.Execute call. The tools
-// draft_signal_filter + validate_signal_filter REJECT any
-// LLM-supplied signal name that is NOT in the snapshot, and any
-// LLM-supplied vehicle_id that does not match the bound vehicle.
-// This means an attacker who pastes "show me odometer for vehicle
-// 99 instead" into the prompt cannot trick the LLM into proposing
-// a filter for a different vehicle or out-of-catalog signal — the
-// scope check refuses the proposal before it ever reaches the
-// frontend AI panel.
-//
-// The handler requires a JSON body with (vehicle_id > 0, prompt
-// non-empty); empty / null / object-without-fields bodies are
-// rejected with 400. The vehicle_id appears in the URL of the
-// canonical baseline signal-explorer page
-// (/signals/explorer?vehicle_id=N), and the SPA passes it through
-// the AI request body so the handler can scope-bind it.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /signals/explorer page
-//     (SignalSelector + RangePicker + per-page select + Explore
-//     button + Live toggle hitting
-//     GET /api/v1/signals/{vehicleID}/{signalName}/history) is
-//     unchanged. This handler is an OPT-IN add-on; off-mode users
-//     never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("signal-explorer-nl-filter").
-//   - I9 redaction:       PolicyChatbot (deny-by-default; EVERY
-//     PII class redacted to a round-trip tag — VINs, coordinates,
-//     place names, vehicle names) is installed by dispatch.Run from
-//     the strategy and applied to EVERY message (including the
-//     synthesised catalog user message and tool outputs) by the
-//     redact decorator at the provider boundary.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline signal-
-//     explorer JSON shape is added or modified by this slice.
+// Signal Explorer NL filter streams a one-shot draft filter scoped to one vehicle's catalog.
+// The handler binds the catalog into context before dispatch so tools reject out-of-scope signals.
 
 import (
 	"context"
@@ -300,26 +228,17 @@ func bytesTrim(b []byte) []byte {
 // (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the request body.
 	req, ok := parseSignalExplorerNlFilterRequest(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), signalexplorernlfilter.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai signal-explorer-nl-filter: provider.For failed")
 		writeError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Load the per-vehicle signal catalog BEFORE opening the
-	// SSE writer so a source error surfaces as a clean JSON 5xx
-	// rather than a half-open SSE stream the frontend has to
-	// clean up.
 	catalog, err := h.source.SignalCatalog(r.Context(), req.VehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Msg("ai signal-explorer-nl-filter: source.SignalCatalog failed")
@@ -341,15 +260,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// 4) Subject + feature-id annotations for audit/rate-limit,
-	// plus the per-request scope binding (defence against
-	// prompt-injection exfiltration).
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, signalexplorernlfilter.FeatureID)
 	ctx = nl.WithScopedSignalCatalog(ctx, req.VehicleID, signalNames)
 
-	// 5) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(signalexplorernlfilter.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai signal-explorer-nl-filter: stream.New failed (non-flushable writer)")
@@ -357,8 +272,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Resolve the per-feature provider from the (now-annotated)
-	// context.
 	prov, err := h.registry.For(ctx, signalexplorernlfilter.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai signal-explorer-nl-filter: provider.For (post-stream) failed")
@@ -366,20 +279,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 7) Build the dispatcher with the deny-all confirm hook. The
-	// strategy's tool whitelist is propose-only so the deny-all
-	// hook is never reached in practice — defence in depth.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 8) Synthesise the user message. The signal-explorer-nl-filter
-	// surface is NOT conversational — there is no chat history.
-	// We hand the LLM a deterministic prompt that lists the in-
-	// scope per-vehicle catalog and instructs the tool sequence
-	// EXACTLY: draft_signal_filter first, then
-	// validate_signal_filter, then a one-sentence rationale.
 	userMsg := buildSignalExplorerNlFilterUserMessage(req.VehicleID, req.Prompt, catalog)
 
-	// 9) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,

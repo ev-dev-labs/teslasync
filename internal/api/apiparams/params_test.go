@@ -8,10 +8,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 )
 
-// ---------------------------------------------------------------------------
-// Pagination — relocated from internal/api/{api_test,handlers_test,helpers_extra_test}.go
-// in Phase R2.0c (2026-05-28).
-// ---------------------------------------------------------------------------
+// Pagination tests were relocated from parent api tests in Phase R2.0c.
 
 func TestPagination_DefaultsAndBounds(t *testing.T) {
 	tests := []struct {
@@ -99,10 +96,7 @@ func TestPagination_BoundaryAtMax(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// ParseDateRange — relocated from internal/api/helpers_extra_test.go
-// in Phase R2.0c (2026-05-28).
-// ---------------------------------------------------------------------------
+// ParseDateRange tests were relocated from parent api tests in Phase R2.0c.
 
 func TestParseDateRange_Partial(t *testing.T) {
 	r := httptest.NewRequest("GET", "/test?start=2024-06-15", nil)
@@ -179,11 +173,7 @@ func TestParseDateRange_LegacyEndOfDay(t *testing.T) {
 	}
 }
 
-// ---------------------------------------------------------------------------
-// NullableTime — new test in the carve. The pgx-typed-interface-nil
-// contract (`interface{}(nil)` vs zero time.Time) is subtle enough
-// that a sentinel test pays for itself.
-// ---------------------------------------------------------------------------
+// NullableTime pins the subtle pgx interface-nil contract.
 
 func TestNullableTime_FalseReturnsTypedNil(t *testing.T) {
 	got := apiparams.NullableTime(false, time.Now())

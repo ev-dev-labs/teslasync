@@ -56,7 +56,6 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Look up vehicle-specific battery capacity
 	capacityWh, capacitySource := lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 
 	// Per-drive regen stats. Phase-42 SI canonical drives schema (migration
@@ -211,7 +210,6 @@ func (h *RegenHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		regenRatio = totalRegenWh / totalDriveWh * 100
 	}
 
-	// Monthly average regen power
 	var monthlyAvgRegen float64
 	if len(monthly) > 0 {
 		sum := 0.0

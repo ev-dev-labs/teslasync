@@ -12,27 +12,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// SafetyHandler serves safety / ADAS snapshot endpoints backed by the
-// signal-log change feed via signal.StateReader (ADR-002 / phase-39).
-//
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (the old pivot
-// + snapshot helpers) has been replaced with the canonical
-// signal.StateReader.
-//
-// ADAS / Autopilot enable flags (AutomaticEmergencyBrakingOff,
-// LaneDepartureAvoidance, ForwardCollisionWarning, PinToDriveEnabled, …)
-// are user-configured driver-assist toggles that VERY rarely change —
-// often once at vehicle delivery and never again, sometimes never. Under
-// the legacy raw-pivot implementation, every chart row whose bucket did
-// not contain a fresh emission for one of these flags rendered that
-// column as NULL, leaving the safety history table almost entirely
-// blank for any vehicle that had stable ADAS settings. With
-// StateReader.Timeline forward-folding (chart mode — empty CollapseBy so
-// every change-feed emission becomes one row), every row carries the
-// most-recently-observed value of every projected signal, fixing the
-// carry-forward gap end-to-end. This is critically important for the
-// safety domain because the absence of a recent emission MUST NOT be
-// misread as the feature being disabled.
+// SafetyHandler serves safety / ADAS endpoints via the canonical StateReader
+// stack (ADR-002 / phase-39). Forward-folding is required because stable ADAS
+// toggles rarely re-emit, but absence of a recent emission must not mean disabled.
 type SafetyHandler struct {
 	state signal.StateReader
 	live  signal.LiveStateReader
@@ -60,12 +42,8 @@ func NewSafetyHandler(state signal.StateReader, live signal.LiveStateReader) *Sa
 	return &SafetyHandler{state: state, live: live}
 }
 
-// List returns safety / ADAS history from the signal-log change feed via
-// StateReader.Timeline in CHART MODE (empty CollapseBy). Each emission
-// becomes one row; forward-folding ensures the rarely-emitted ADAS enable
-// flags carry their most-recent values across rows where they did not
-// re-emit, so the safety history table never blanks a column simply
-// because the user has not toggled that setting recently.
+// List returns chart-mode safety history. Forward-folding keeps rarely emitted
+// ADAS toggles populated across rows where the value did not re-emit.
 func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -99,10 +77,8 @@ func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
-// Latest returns the most recent safety / ADAS values, derived from the
-// forward-folded signal-log state at time.Now() via StateReader.State.
-// Every safetyMappings entry whose Signal is present in State is projected
-// under its mapped Field name; absent signals are omitted.
+// Latest returns forward-folded live safety / ADAS values projected to the
+// existing response field names.
 func (h *SafetyHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {

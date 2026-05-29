@@ -48,28 +48,10 @@ func newDrivetrainHealthRequest(t *testing.T, vehicleID string) *http.Request {
 	return httptest.NewRequest(http.MethodGet, "/drivetrain/health?vehicle_id="+vehicleID, nil)
 }
 
-// TestDrivetrainHealth_AllSignalsCarryForward verifies that the handler
-// derives all four projected drivetrain temperatures
-// (front_motor_temp_c, rear_motor_temp_c, inverter_temp_c,
-// battery_temp_c) from forward-folded SignalAt reads of ModuleTempMax /
-// ModuleTempMin. The fake returns last-known values for both signals
-// (emulating StateReader's forward-fold semantics where unchanged
-// signals carry their prior emitted value rather than disappearing —
-// motor module temps are exactly the kind of signal that change rarely
-// while parked). The test asserts every downstream projection field
-// renders the carried-forward value: rear_motor_temp_c == ModuleTempMax,
-// front_motor_temp_c == ModuleTempMin, inverter_temp_c == ModuleTempMax
-// + 7 (the handler's "inverter runs ~7°C above battery module" heuristic),
-// and battery_temp_c == mean(ModuleTempMax, ModuleTempMin).
-//
-// The legacy raw-snapshot path returned zero for any signal that had no
-// fresh emission inside the window; this contract test pins the new
-// behavior so a regression that re-introduces a "fresh-only" filter
-// (and freezes the Drivetrain Health panel at zero on a parked vehicle)
-// is caught immediately. The test also pins both expected signal names
-// (ModuleTempMax, ModuleTempMin) and the at-anchor (≈ time.Now()) so a
-// regression that drops a signal name, queries a different signal, or
-// anchors the read to a stale timestamp is also caught.
+// TestDrivetrainHealth_AllSignalsCarryForward pins StateReader's forward-fold
+// semantics: stale-but-current ModuleTempMax/Min values still drive every
+// projected temperature. It also pins the signal names and near-now anchor so a
+// fresh-only or stale-anchor regression is caught.
 func TestDrivetrainHealth_AllSignalsCarryForward(t *testing.T) {
 	const (
 		vid           = int64(42)
@@ -156,17 +138,9 @@ func TestDrivetrainHealth_AllSignalsCarryForward(t *testing.T) {
 	}
 }
 
-// TestDrivetrainHealth_PropagatesError verifies that a
-// StateReader.SignalAt transport error (e.g. pgx connection drop)
-// becomes a 500 to the client. The legacy
-// *signaldb.SignalLogReader-backed handler silently swallowed SignalAt
-// errors and returned a partial payload with zero-valued temps, which
-// is indistinguishable on the frontend from "vehicle truly idle /
-// brand-new vehicle with no signal_log history". This phase-39
-// migration tightens error handling so the frontend can surface the
-// failure rather than silently rendering a "drivetrain looks dead"
-// panel. A future regression that reverts to the silent-swallow
-// behavior is caught here.
+// TestDrivetrainHealth_PropagatesError pins the phase-39 change from silently
+// swallowing SignalAt transport errors to surfacing a 500, avoiding misleading
+// zero-temperature health panels.
 func TestDrivetrainHealth_PropagatesError(t *testing.T) {
 	wantErr := errors.New("simulated pgx connection lost")
 	fake := &fakeStateReader{

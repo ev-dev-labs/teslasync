@@ -188,37 +188,23 @@ var (
 // ErrorCatalog returns the full list of defined application errors for documentation.
 func ErrorCatalog() []*AppError {
 	return []*AppError{
-		// Auth
 		ErrInvalidCredentials, ErrTokenExpired, ErrTokenInvalid, ErrTokenMissing,
 		ErrAPIKeyInvalid, ErrAPIKeyExpired, ErrAPIKeyRevoked, ErrInsufficientPerms,
-		// Vehicle
 		ErrVehicleNotFound, ErrVehicleOffline, ErrVehicleAsleep, ErrVehicleBusy,
-		// Drives/Charging/Trips
 		ErrDriveNotFound, ErrChargeNotFound, ErrTripNotFound, ErrSessionActive, ErrSessionNotFound,
-		// Tesla API
 		ErrTeslaAPIUnavailable, ErrTeslaAPISuspended, ErrTeslaAPIRateLimit,
 		ErrTeslaAPITimeout, ErrTeslaAPIAuth, ErrTeslaNotConnected, ErrTeslaEndpointDisabled,
-		// Database
 		ErrDBConnection, ErrDBQuery, ErrDBTransaction, ErrDBNotFound, ErrDBDuplicate,
-		// Validation
 		ErrInvalidInput, ErrInvalidJSON, ErrMissingField, ErrInvalidRange,
 		ErrInvalidID, ErrPayloadTooLarge,
-		// Geofence
 		ErrGeofenceNotFound, ErrGeofenceInvalidCoords, ErrGeofenceInvalidRadius,
-		// Commands
 		ErrCommandNotSupported, ErrCommandFailed, ErrCommandTimeout,
-		// Backup
 		ErrBackupConfigNotFound, ErrBackupRunNotFound, ErrBackupFailed,
 		ErrBackupStorageError, ErrRestoreFailed,
-		// Notifications
 		ErrChannelNotFound, ErrChannelTestFail,
-		// Telemetry
 		ErrTelemetryIngestFail, ErrMQTTUnavailable,
-		// Export
 		ErrExportFailed, ErrExportNotFound, ErrExportInvalidFmt,
-		// Rate limit
 		ErrRateLimited,
-		// Internal
 		ErrInternal, ErrServiceUnavailable, ErrNotImplemented,
 	}
 }

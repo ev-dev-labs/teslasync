@@ -71,8 +71,7 @@ func TestWebErrorsIngest_RejectsUnknownFields(t *testing.T) {
 }
 
 func TestWebErrorsIngest_BodyTooLargeRejected(t *testing.T) {
-	// Build a payload larger than webErrorsRequestBodyLimit. http.MaxBytesReader
-	// surfaces an error during decode → handler returns 400 invalid payload.
+	// http.MaxBytesReader surfaces the oversized body during decode.
 	huge := strings.Repeat("A", webErrorsRequestBodyLimit+1024)
 	body := `{"name":"Error","message":"` + huge + `","route":"/"}`
 	req := httptest.NewRequest(http.MethodPost, "/web-errors", strings.NewReader(body))
@@ -178,9 +177,7 @@ func TestWebErrorsIngest_RouteNormalisedForLabelCardinality(t *testing.T) {
 }
 
 func TestWebErrorsSummary_RollingWindowEvictsOldEntries(t *testing.T) {
-	// Inject a fake clock so we can step forward past the rolling window
-	// and assert that an entry recorded "an hour ago" no longer appears
-	// in the summary.
+	// Fake clock lets the test step past the rolling window deterministically.
 	now := time.Now()
 	h := &Handler{now: func() time.Time { return now }}
 
@@ -206,7 +203,6 @@ func TestWebErrorsSummary_TopNAndOrdering(t *testing.T) {
 	now := time.Now()
 	h := &Handler{now: func() time.Time { return now }}
 
-	// 3 distinct (name, route) buckets with different counts.
 	for i := 0; i < 5; i++ {
 		h.recordRolling("TypeError", "/dashboard")
 	}

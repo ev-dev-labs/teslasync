@@ -1,17 +1,8 @@
-// Phase-50 / 0014 — U4 Anomaly explanation narration.
+// Phase-50 / 0014 — U4 anomaly explanation narration.
 //
-// Off-mode + baseline-coexistence tests for the AI anomaly narrator.
-// The off-mode test (TestAnomalyDashboardAIOffUsesStaticExplanation)
-// is the slice's load-bearing AI-OFF contract proof: it asserts that
-// the AI route returns 404 when settings.ai_mode='off' even when the
-// per-feature toggle is on, and that the deterministic Z-score
-// detector + safe-range explanation served at
-// GET /api/v1/analytics/anomalies remains the unconditional baseline
-// path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval --feature anomaly-explanations`);
-// duplicating that here would require a live database fixture.
+// These tests pin ADR-015 off-mode behavior: the AI route fails closed while
+// the deterministic /api/v1/analytics/anomalies baseline remains reachable.
+// Streaming coverage lives in the F6 eval harness, which requires live data.
 
 package aianomaly
 
@@ -47,21 +38,10 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on[id], nil
 }
 
-// TestAnomalyDashboardAIOffUsesStaticExplanation is the load-bearing
-// off-mode contract proof for slice 0014. It mounts the AI anomaly
-// route through the guard with ai_mode='off' and proves:
-//
-//   - The /api/v1/ai/anomalies/explain route returns 404 (the guard
-//     fails closed even when the per-feature toggle is on).
-//   - The 404 body does not leak feature metadata.
-//   - A baseline anomaly route serving deterministic Z-score +
-//     safe-range content remains reachable under the same router —
-//     proof that the slice does NOT replace the deterministic
-//     detector/explanation path (ADR-015 §I3).
-//
-// The test name MUST stay TestAnomalyDashboardAIOffUsesStaticExplanation —
-// the slice prompt's verification command runs
-// `go test … -run TestAnomalyDashboardAIOffUsesStaticExplanation`.
+// TestAnomalyDashboardAIOffUsesStaticExplanation is the load-bearing off-mode
+// contract for slice 0014: guard returns 404 without leaking feature metadata,
+// and the deterministic anomaly route still works. The name is referenced by
+// the slice prompt's verification command.
 func TestAnomalyDashboardAIOffUsesStaticExplanation(t *testing.T) {
 	t.Parallel()
 

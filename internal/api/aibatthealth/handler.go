@@ -2,46 +2,13 @@ package aibatthealth
 
 // Phase-50 / 0027 — C2 Battery health forecast narrative.
 //
-// ai_battery_health_handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/battery/health/narrate. The flow mirrors
-// ai_smart_charge_schedule_handler.go (same dispatch+stream loop,
-// no persistence — one-shot read-only narration):
+// Serves the opt-in SSE narrator at POST /api/v1/ai/battery/health/narrate.
+// The route stays behind guard.Wrap("battery-health-forecast-narrative") so
+// off-mode users keep the deterministic battery-health surface unchanged
+// (ADR-015 §I3, §I6).
 //
-//	URL  /api/v1/ai/battery/health/narrate
-//	  ↓
-//	resolve provider via *provider.Registry.For("battery-health-forecast-narrative")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("battery-health-forecast-narrative", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard returns
-// 404 BEFORE this handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body (vehicle_id) is parsed BEFORE opening the SSE
-// stream so a malformed input surfaces as a plain JSON 400 (rather
-// than a streamed error frame the SPA's QueryError will struggle to
-// render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /battery page —
-//     hero metric cards, "Capacity Trend & Prediction" chart, range
-//     trend chart, charge level distribution, insights panel,
-//     recommendations panel hitting GET /api/v1/analytics/battery-health
-//     and GET /api/v1/analytics/battery-degradation — is unchanged.
-//     This handler is an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("battery-health-forecast-narrative").
-//   - I9 redaction:       PolicyBatteryHealthForecastNarrative
-//     (allows ClassVehicleName only; lat/long, addresses, and place
-//     names stay tagged) is installed by dispatch.Run from the
-//     strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape is
-//     added or modified by this slice.
+// The JSON body is parsed before opening SSE so malformed requests return a
+// plain JSON 400 instead of a streamed error frame.
 
 import (
 	"context"

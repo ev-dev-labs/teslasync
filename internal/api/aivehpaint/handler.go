@@ -2,49 +2,13 @@ package aivehpaint
 
 // Phase-50 / 0061 — GEN2 Vehicle paint preview.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft.
-// The flow mirrors auto-trip-naming / route-efficiency-
-// suggestions / drive-coaching narration handlers — same
-// dispatch+stream loop, no persistence (one-shot proposal; no
-// conversation to record):
+// Serves the opt-in SSE draft route at
+// POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft. The route stays
+// behind guard.Wrap("vehicle-paint-preview") so off-mode users keep the
+// deterministic vehicle-config surface unchanged (ADR-015 §I3, §I6).
 //
-//	URL  POST /api/v1/ai/vehicles/{vehicleID}/paint-preview/draft
-//	body {style_hint?: string}  (optional; empty body accepted)
-//	  ↓
-//	resolve provider via *provider.Registry.For("vehicle-paint-preview")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("vehicle-paint-preview", …) so when ai_mode='off' or
-// the per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// The vehicleID URL param is parsed + validated as a positive int64
-// BEFORE opening the SSE stream so a malformed input surfaces as a
-// plain JSON 400 (rather than a streamed error frame the SPA's
-// QueryError will struggle to render meaningfully).
-//
-// The request body cap is 16 KiB — generous for an optional
-// {style_hint} envelope; defends against amplification attempts.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the existing VehicleConfigSection (model,
-//     trim, current exterior color, etc.) and the manual theme/
-//     appearance settings on /vehicles/:vehicleId are unchanged.
-//     This handler is an OPT-IN add-on; off-mode users never see
-//     it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("vehicle-paint-preview").
-//   - I9 redaction:       PolicyChatbot (allows NOTHING in
-//     cleartext) is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice.
+// The vehicleID and optional body are validated before opening SSE, and the
+// 16 KiB body cap prevents amplification through style_hint.
 
 import (
 	"context"

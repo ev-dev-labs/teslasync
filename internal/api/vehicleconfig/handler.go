@@ -99,8 +99,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 			row["created_at"] = ts
 		}
 		row["id"] = i + 1
-		// VehicleConfig is a compound JSONB signal — flatten to top level
-		// so the wire shape matches the legacy pivoted response.
+		// Preserve the legacy flat response shape for the frontend.
 		if configVal, ok := row["config"]; ok {
 			if configMap, ok := configVal.(map[string]interface{}); ok {
 				for k, v := range configMap {
@@ -143,7 +142,7 @@ func (h *Handler) Latest(w http.ResponseWriter, r *http.Request) {
 	result := make(map[string]interface{})
 	for _, m := range vehicleConfigMappings {
 		if v, ok := snap[m.Signal]; ok {
-			// VehicleConfig is a compound JSONB signal — flatten to top level.
+			// Preserve the legacy flat response shape for the frontend.
 			if configMap, ok := v.(map[string]interface{}); ok {
 				for k, val := range configMap {
 					result[k] = val

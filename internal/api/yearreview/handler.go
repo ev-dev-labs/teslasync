@@ -18,7 +18,7 @@ type Handler struct {
 	db *database.DB
 }
 
-// NewHandler creates a new Handler.
+// NewHandler creates an annual report handler.
 func NewHandler(db *database.DB) *Handler {
 	return &Handler{db: db}
 }
@@ -56,7 +56,6 @@ func roundYR(v float64, decimals int) float64 {
 func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Parse required vehicle_id
 	vidStr := r.URL.Query().Get("vehicle_id")
 	if vidStr == "" {
 		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
@@ -68,7 +67,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse year (default: current year)
 	year := time.Now().Year()
 	if y := r.URL.Query().Get("year"); y != "" {
 		parsed, err := strconv.Atoi(y)
@@ -84,7 +82,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	yearStart := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
 	yearEnd := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
 
-	// ── Vehicle info ──
 	var vDisplayName, vModel string
 	err = h.db.Pool.QueryRow(ctx,
 		`SELECT display_name, COALESCE(model, '') FROM vehicles WHERE id = $1`, vehicleID,
@@ -99,7 +96,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ── Driving aggregates ──
 	// Phase-42 SI canonical drives (000185): distance_m, duration_s,
 	// max_speed_mps, ambient_temp_c_avg, started_at / ended_at. Convert at
 	// the SELECT boundary so the in-memory totals carry display units.
@@ -147,7 +143,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: failed to get efficiency")
 	}
 
-	// ── Charging aggregates ──
 	// Phase-42 SI canonical charging_sessions (000184): total_energy_added_wh,
 	// cost_decimal NUMERIC, started_at / ended_at.
 	var totalChargeSessions int
@@ -169,7 +164,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ── Gas savings ──
 	var gasPrice, gasEffMPG float64
 	err = h.db.Pool.QueryRow(ctx,
 		`SELECT
@@ -199,7 +193,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	// CO₂ offset: avg ICE emits ~192g CO₂/km
 	co2OffsetKg := totalDistKm * 0.192
 
-	// ── Drive highlights (extremes) ──
 	scanHighlight := func(query string, args ...interface{}) *driveHighlight {
 		var dh driveHighlight
 		var startDate time.Time
@@ -243,13 +236,11 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	var mostEfficient *driveHighlight
 	var leastEfficient *driveHighlight
 
-	// ── Monthly breakdown (always 12 entries) ──
 	monthlyMap := make(map[int]*monthStat)
 	for m := 1; m <= 12; m++ {
 		monthlyMap[m] = &monthStat{Month: m}
 	}
 
-	// Drives per month — convert distance_m → km in SELECT.
 	driveMonthRows, err := h.db.Pool.Query(ctx, `
 		SELECT EXTRACT(MONTH FROM started_at)::int AS m, COUNT(*),
 		       COALESCE(SUM(distance_m) / 1000.0, 0)
@@ -273,7 +264,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		driveMonthRows.Close()
 	}
 
-	// Charging per month — convert total_energy_added_wh → kWh; cost_decimal::float8.
 	chargeMonthRows, err := h.db.Pool.Query(ctx, `
 		SELECT EXTRACT(MONTH FROM started_at)::int AS m,
 		       COALESCE(SUM(total_energy_added_wh) / 1000.0, 0),
@@ -303,7 +293,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		monthlyStats = append(monthlyStats, *monthlyMap[m])
 	}
 
-	// ── Patterns: day of week, hour ──
 	mostActiveDOW := ""
 	var dowIdx, dowCnt int
 	if err := h.db.Pool.QueryRow(ctx, `
@@ -333,12 +322,10 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		mostActiveHour = hrIdx
 	}
 
-	// Average drives per week
 	var avgDrivesPerWeek float64
 	weeksInYear := 52.0
 	now := time.Now().UTC()
 	if yearEnd.After(now) {
-		// Partial year — compute weeks elapsed
 		elapsed := now.Sub(yearStart)
 		if elapsed > 0 {
 			weeksInYear = elapsed.Hours() / (24 * 7)
@@ -356,7 +343,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		avgDistPerDrive = totalDistKm / float64(totalDrives)
 	}
 
-	// ── Charging habits breakdown ──
 	// Phase-42 SI canonical charging_sessions has charger_type only (no
 	// fast_charger_brand). Supercharger detection uses charger_type ILIKE
 	// 'Tesla%'; dc_fast = any other non-NULL charger_type; ac_other = NULL.
@@ -413,7 +399,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		vehicleID, yearStart, yearEnd,
 	).Scan(&avgChargeStartSOC)
 
-	// ── Fun comparisons ──
 	km := totalDistKm
 	comparisons := []comparison{
 		{Label: "Paris round-trips", Value: fmt.Sprintf("%.1f", km/1085), Emoji: "🗼"},
@@ -432,7 +417,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		)
 	}
 
-	// ── Build response ──
 	result := map[string]interface{}{
 		"year": year,
 		"vehicle": map[string]interface{}{
@@ -441,7 +425,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 			"model":        vModel,
 		},
 
-		// Headline stats
 		"total_drives":          totalDrives,
 		"total_distance_km":     roundYR(totalDistKm, 1),
 		"total_energy_kwh":      roundYR(totalEnergyKwh, 1),
@@ -451,7 +434,6 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		"gas_savings":           roundYR(gasSavings, 2),
 		"co2_offset_kg":         roundYR(co2OffsetKg, 1),
 
-		// Extremes
 		"longest_drive":         longestDrive,
 		"shortest_drive":        shortestDrive,
 		"most_efficient_drive":  mostEfficient,
@@ -460,10 +442,8 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		"coldest_drive_temp_c":  roundYR(derefFloat(coldestTemp), 1),
 		"hottest_drive_temp_c":  roundYR(derefFloat(hottestTemp), 1),
 
-		// Monthly breakdown
 		"monthly_stats": monthlyStats,
 
-		// Patterns
 		"most_active_day_of_week":   mostActiveDOW,
 		"most_active_hour":          mostActiveHour,
 		"avg_drives_per_week":       roundYR(avgDrivesPerWeek, 1),

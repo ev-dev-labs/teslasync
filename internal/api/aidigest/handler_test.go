@@ -1,16 +1,7 @@
-// Phase-50 / 0012 — U2 Weekly digest narration.
+// Phase-50 / 0012 — U2 weekly digest narration.
 //
-// Off-mode + baseline-coexistence tests for the AI digest narrator.
-// The off-mode test (TestWeeklyDigestAIOffUsesTemplateNarrator) is
-// the slice's load-bearing AI-OFF contract proof: it asserts that
-// the AI route returns 404 when settings.ai_mode='off' even when
-// the per-feature toggle is on, and that the deterministic
-// template renderer at GET /api/v1/vehicles/{id}/weekly-digest
-// remains the unconditional baseline path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval --feature digest-narration`);
-// duplicating that here would require a live database fixture.
+// These tests pin ADR-015 edges: off-mode hides AI while baseline digest stays
+// reachable, and bad bodies fail before SSE opens.
 
 package aidigest
 
@@ -27,20 +18,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
-// TestWeeklyDigestAIOffUsesTemplateNarrator is the load-bearing
-// off-mode contract proof for slice 0012. It mounts the AI digest
-// route through the guard with ai_mode='off' and proves:
-//
-//   - The /api/v1/ai/digests/weekly/narrate route returns 404 (the
-//     guard fails closed even when the per-feature toggle is on).
-//   - The 404 body does not leak feature metadata.
-//   - A baseline weekly-digest route serving deterministic template
-//     content remains reachable under the same router — proof that
-//     the slice does NOT replace the template narrator (ADR-015 §I3).
-//
-// The test name MUST stay TestWeeklyDigestAIOffUsesTemplateNarrator —
-// the slice prompt's verification command runs
-// `go test … -run TestWeeklyDigestAIOffUsesTemplateNarrator`.
+// TestWeeklyDigestAIOffUsesTemplateNarrator pins the off-mode contract:
+// AI narration is hidden while the deterministic weekly digest still works.
 func TestWeeklyDigestAIOffUsesTemplateNarrator(t *testing.T) {
 	t.Parallel()
 
@@ -145,15 +124,7 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
 
-	// We mount the handler WITHOUT the guard so the validator runs.
-	// The off-mode 404 is proven by the previous test; here we
-	// prove the on-mode validator catches malformed input.
-	//
-	// We don't need a real provider/tools/strategy for the malformed-
-	// body case because the validator returns BEFORE touching them.
-	// But NewHandler panics on nil deps — so we mount the
-	// handler indirectly through a thin shim that calls the validator
-	// path directly via httptest.
+	// Mount without the guard so the validator path is tested directly.
 	cases := []struct {
 		name string
 		body string

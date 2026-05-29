@@ -18,24 +18,10 @@ import (
 
 // Handler handles battery degradation prediction HTTP requests.
 //
-// Phase-39 migration: the four per-signal "value as of now" lookups in
-// the Predict and Health fallback branches (EnergyRemaining and
-// EstBatteryRange in each) now resolve through the canonical
-// signal.StateReader (ADR-002 / phase-39) instead of the legacy
-// signaldb.SignalLogReader's per-signal helper. The historical
-// signal_log trace aggregation in synthesizeBatterySnapshots
-// (signaldb.SignalLogReader.SignalTrace) is a SignalLogReader-only
-// capability with no StateReader equivalent and is intentionally
-// retained side-by-side; only the per-signal at-or-before lookup path
-// is migrated here.
-//
-// As part of this migration, transport errors from state.SignalAt now
-// propagate to the caller as a 500 instead of being silently swallowed
-// into a partial / zero-valued payload. The legacy silent-swallow
-// behavior was indistinguishable on the frontend from "vehicle truly
-// idle / brand-new vehicle with no signal_log history" and rendered
-// the Battery Degradation panel as "battery looks dead" even when the
-// underlying read had genuinely failed.
+// Point-in-time fallback reads use signal.StateReader (ADR-002), while historical
+// trace aggregation remains on signaldb.SignalLogReader because StateReader has
+// no raw change-feed equivalent. StateReader transport errors return 500 so the
+// UI does not confuse read failures with a genuinely empty battery history.
 type Handler struct {
 	db              *database.DB
 	state           signal.StateReader
@@ -60,8 +46,7 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Look up vehicle-specific battery capacity (nil-safe; falls back to
-	// the same default that lookupVehicleCapacityWh uses on lookup error).
+	// Capacity lookup falls back to the same default as lookupVehicleCapacityWh.
 	capacityWh := 75000.0
 	capacitySource := "default"
 	if h.db != nil {
@@ -71,7 +56,6 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 	// Battery health history — reconstruct from signal_log
 	var snapshots []batterySnapshotData
 	if h.signalLogReader != nil {
-		// Query BatteryLevel + EnergyRemaining + EstBatteryRange over all time
 		from := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 		to := time.Now()
 		entries, err := h.signalLogReader.SignalTrace(ctx, vehicleID,
@@ -87,10 +71,8 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		snapshots = []batterySnapshotData{}
 	}
 
-	// Monthly averages — aggregated from synthesized snapshots
 	monthlyData := aggregateMonthlyTrends(snapshots)
 
-	// Charging habits that affect battery
 	type chargingHabits struct {
 		FastChargeCount     int     `json:"fast_charge_count"`
 		SlowChargeCount     int     `json:"slow_charge_count"`
@@ -127,13 +109,11 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 			&habits.TotalCount)
 		if err != nil {
 			log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("failed to get charging habits")
-			// Non-fatal
 		}
 		habits.AvgEnergyPerSession = avgEnergyWh / 1000.0
 	}
 	habits.AvgEnergyPerSession = math.Round(habits.AvgEnergyPerSession*10) / 10
 
-	// Current health
 	var currentHealth, currentCapacity, currentDegradation, currentRange, currentTemp float64
 	var currentCycles int
 	if len(snapshots) > 0 {
@@ -146,7 +126,7 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		currentTemp = latest.AvgCellTempC
 	}
 
-	// Fallback: derive from signal_log when no snapshots exist
+	// Fallback keeps brand-new vehicles from rendering an empty health panel.
 	if currentHealth == 0 {
 		var energy, rng *float64
 		if h.state != nil {
@@ -197,7 +177,6 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		// Synthesize a snapshot so the page has something to show
 		if currentHealth > 0 {
 			snapshots = []batterySnapshotData{{
 				HealthScore:    currentHealth,
@@ -210,10 +189,8 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Linear regression to predict when health reaches 80%
 	result := h.predictDegradation(snapshots)
 
-	// Stress level assessment
 	totalCharges := habits.FastChargeCount + habits.SlowChargeCount
 	fastChargeRatio := 0.0
 	if totalCharges > 0 {
@@ -226,7 +203,6 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		stressLevel = "Medium"
 	}
 
-	// Risk factor scoring
 	ageMonths := 0
 	if len(snapshots) > 0 {
 		ageMonths = int(time.Since(snapshots[0].CreatedAt).Hours() / (24 * 30.44))
@@ -254,35 +230,31 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 	recommendations := generateRecommendations(riskFactors)
 
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		// Existing fields (backward compatible)
-		"vehicle_id":          vehicleID,
-		"current_health":      currentHealth,
-		"current_capacity":    currentCapacity,
-		"current_degradation": currentDegradation,
-		"current_range":       currentRange,
-		"current_cycles":      currentCycles,
-		"current_temp":        currentTemp,
-		"monthly_trend":       monthlyData,
-		"snapshots":           snapshots,
-		"charging_habits":     habits,
-		"prediction":          result.Prediction,
-		"stress_level":        stressLevel,
-		"fast_charge_ratio":   math.Round(fastChargeRatio*10) / 10,
-		// New predictive fields
+		"vehicle_id":                     vehicleID,
+		"current_health":                 currentHealth,
+		"current_capacity":               currentCapacity,
+		"current_degradation":            currentDegradation,
+		"current_range":                  currentRange,
+		"current_cycles":                 currentCycles,
+		"current_temp":                   currentTemp,
+		"monthly_trend":                  monthlyData,
+		"snapshots":                      snapshots,
+		"charging_habits":                habits,
+		"prediction":                     result.Prediction,
+		"stress_level":                   stressLevel,
+		"fast_charge_ratio":              math.Round(fastChargeRatio*10) / 10,
 		"current_health_pct":             currentHealth,
 		"degradation_rate_pct_per_month": math.Round(result.RatePerMonth*1000) / 1000,
 		"projected_80pct_date":           result.Prediction.PredictedDate,
 		"projections":                    result.Projections,
 		"risk_factors":                   riskFactors,
 		"recommendations":                recommendations,
-		// Capacity estimate metadata
-		"battery_capacity_wh": capacityWh,
-		"capacity_source":     capacitySource,
+		"battery_capacity_wh":            capacityWh,
+		"capacity_source":                capacitySource,
 	})
 }
 
-// Health handles GET /analytics/battery-health?vehicle_id=X
-// Returns data shaped for the BatteryDegradationPage frontend.
+// Health handles GET /analytics/battery-health?vehicle_id=X for BatteryDegradationPage.
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
@@ -305,7 +277,6 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		capacityWh, capacitySource = lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 	}
 
-	// Battery history — reconstruct from signal_log
 	type histEntry struct {
 		Date       string  `json:"date"`
 		Odometer   float64 `json:"odometer"`
@@ -350,7 +321,6 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Fallback from signal_log
 	if latestSOH == 0 {
 		var energy, rng *float64
 		if h.state != nil {
@@ -409,9 +379,7 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Charging habit stats. Phase-42 SI charging_sessions schema (000184):
-	// peak_power_w (Watts; 50000W == 50kW DC fast threshold), start_soc_pct
-	// and end_soc_pct (DOUBLE PRECISION).
+	// Phase-42 SI schema: peak_power_w is W; start/end SOC are percentages.
 	var fastCount, slowCount, deepDischarge, fullCharge int
 	if h.db != nil {
 		_ = h.db.Pool.QueryRow(ctx, `
@@ -432,7 +400,6 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		fullChargePct = float64(fullCharge) / float64(totalCharges) * 100
 	}
 
-	// Calculate scores
 	chargeHabitsScore := 100.0
 	if fastChargePct > 50 {
 		chargeHabitsScore -= 30
@@ -453,13 +420,11 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		chargeHabitsScore = 0
 	}
 
-	// Age
 	ageMonths := 0
 	if !firstDate.IsZero() {
 		ageMonths = int(time.Since(firstDate).Hours() / (24 * 30.44))
 	}
 
-	// Degradation rate per year
 	degradationRate := 0.0
 	if ageMonths > 0 && latestSOH > 0 && latestSOH < 100 {
 		degradationRate = (100 - latestSOH) / (float64(ageMonths) / 12)
@@ -482,7 +447,6 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		history = []histEntry{}
 	}
 
-	// Compute temp exposure score from actual ModuleTempMax signal data
 	var tempExposureScore interface{}
 	var tempExposureReason interface{}
 	if h.signalLogReader != nil && h.db != nil {
@@ -531,9 +495,8 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 		"temp_exposure_score":    tempExposureScore,
 		"temp_exposure_reason":   tempExposureReason,
 		"history":                history,
-		// Capacity estimate metadata
-		"battery_capacity_wh": capacityWh,
-		"capacity_source":     capacitySource,
+		"battery_capacity_wh":    capacityWh,
+		"capacity_source":        capacitySource,
 	})
 }
 

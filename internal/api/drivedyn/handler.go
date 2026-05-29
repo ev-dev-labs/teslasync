@@ -12,48 +12,16 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// DriveDynamicsHandler serves the live driving-dynamics surface (G-force +
-// pedal usage) for the Driving Dynamics page. Backed by the signal-log
-// change feed via signal.StateReader (history) and the live L1+L2 cache
-// via signal.LiveStateReader (latest), matching the established
-// per-subsystem pattern (motor / climate / security / tire-pressure).
-//
-// Why this handler exists at all
-// ------------------------------
-// The Phase-42 routing.yaml refactor moved every signal in this set
-// (LateralAcceleration / LongitudinalAcceleration / PedalPosition /
-// BrakePedalPos / BrakePedal) to the typed drive_telemetry table.
-// Per ADR-005 and the LiveStateReader contract, "current" reads
-// must go through LiveSignalStore (with a signal_log fallback), NOT
-// through a typed-table SELECT-LIMIT-1 — the latter would return a
-// row that has only one of the five columns populated whenever a
-// per-field MQTT payload landed alone, painting the panel as empty
-// even when the other four signals were freshly observed.
-//
-// The frontend GForcePanel and PedalUsage previously called the
-// Phase-42-deprecated /signals/observations endpoint (the
-// signal_observations table no longer exists), so both panels
-// rendered "No telemetry received yet" forever. This handler is
-// the migration target: a dedicated /drive-dynamics/latest route
-// the panels can switch to.
+// DriveDynamicsHandler serves G-force and pedal surfaces from signal state.
+// Latest reads must use LiveStateReader, not SELECT-LIMIT-1 from sparse typed telemetry rows, because per-field MQTT payloads can leave sibling columns empty even when live state has fresh values.
+// It replaces the removed /signals/observations path for the Driving Dynamics panels.
 type DriveDynamicsHandler struct {
 	state signal.StateReader
 	live  signal.LiveStateReader
 }
 
-// driveDynamicsMappings projects the 5 driving-dynamics signals into the
-// JSON shape the GForcePanel + PedalUsage components consume. Field
-// names are snake_case; the frontend camelCaseKeys transform produces
-// matching camelCase keys (e.g. lateral_acceleration → lateralAcceleration).
-//
-// Units intentionally mirror the proto signal types:
-//   - LateralAcceleration / LongitudinalAcceleration are float (g, NOT
-//     m/s²; the Tesla telemetry contract emits g already even though
-//     the typed-table column is `_mps2` — a unit-name drift the
-//     frontend already compensates for via fmtNumber('g'). Do NOT
-//     multiply by 9.81 here without auditing the existing UI).
-//   - PedalPosition / BrakePedalPos are 0..100 (%).
-//   - BrakePedal is bool (active / inactive indicator).
+// driveDynamicsMappings projects Tesla signal names into the snake_case JSON fields consumed by GForcePanel and PedalUsage.
+// Acceleration values are already in g despite the typed-table `_mps2` naming drift; do not multiply by 9.81 without auditing the UI.
 var driveDynamicsMappings = []signal.FieldMapping{
 	{Signal: "LateralAcceleration", Field: "lateral_acceleration"},
 	{Signal: "LongitudinalAcceleration", Field: "longitudinal_acceleration"},

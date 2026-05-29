@@ -16,11 +16,8 @@ type AuditHandler struct {
 	forwardAuthHeader string
 }
 
-// NewAuditHandler creates a new AuditHandler.
-//
-// forwardAuthHeader is the request header (e.g. X-Forwarded-User) injected by
-// the reverse-proxy auth provider. When empty, the per-user activity endpoint
-// returns 503 — there is no reliable way to scope rows to a single caller.
+// NewAuditHandler creates an AuditHandler. Without a ForwardAuth header,
+// per-user activity returns 503 because rows cannot be scoped safely.
 func NewAuditHandler(db *database.DB, forwardAuthHeader string) *AuditHandler {
 	return &AuditHandler{db: db, forwardAuthHeader: forwardAuthHeader}
 }
@@ -35,8 +32,7 @@ func (h *AuditHandler) List(w http.ResponseWriter, r *http.Request) {
 	rows, err := h.db.Pool.Query(r.Context(),
 		`SELECT id, ts, actor, action, entity_type, entity_id, detail FROM audit_logs ORDER BY ts DESC LIMIT $1`, limit)
 	if err != nil {
-		// Table may not exist yet — return empty array instead of 500
-		// to avoid tripping the frontend circuit breaker
+		// Early installs may not have audit_logs yet; keep the dashboard degraded, not broken.
 		httpx.WriteJSON(w, http.StatusOK, []systemmodel.AuditLog{})
 		return
 	}
@@ -113,8 +109,7 @@ func (h *AuditHandler) UserActivity(w http.ResponseWriter, r *http.Request) {
 		  LIMIT $4 OFFSET $5`,
 		actor, start, end, limit, offset)
 	if err != nil {
-		// Table may not exist yet — return empty array rather than 500
-		// to keep the frontend circuit breaker closed.
+		// Early installs may not have audit_logs yet; keep the dashboard degraded, not broken.
 		httpx.WriteJSON(w, http.StatusOK, []userActivityEntry{})
 		return
 	}

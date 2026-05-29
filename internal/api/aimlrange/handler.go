@@ -1,44 +1,10 @@
 package aimlrange
 
-// Phase-50 / 0063 — ML2 Range-prediction model.
+// Phase-50 / 0063 — ML2 range-prediction model.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/ml/range/train. The flow mirrors the
-// learned-per-vehicle-anomaly-baselines handler from slice 0062 —
-// same dispatch+stream loop, no persistence (one-shot narration; no
-// conversation to record).
-//
-//   request JSON {vehicle_id, days?}
-//     ↓
-//   resolve provider via *provider.Registry.For("range-prediction-model")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("range-prediction-model", …) so when ai_mode='off' or
-// the per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic Projected Range page
-//     served by GET /api/v1/vehicles/{id}/range/projection (rendered
-//     via the SPA route /projected-range) is unchanged. This handler
-//     is an OPT-IN add-on; off-mode users never see it.
-//   - I4 zero egress:    when ai_mode='off' the guard returns 404
-//                        before any provider call is made; the
-//                        deterministic trainer at internal/ml/range
-//                        is reachable only via the AI tool path.
-//   - I7 per-feature:    the route is gated by
-//                        guard.Wrap("range-prediction-model").
-//   - I9 redaction:      PolicyChatbot (deny-all tagged redaction) is
-//                        installed by dispatch.Run from the strategy.
-//   - I10 type system:   the AI surface lives entirely under
-//                        /api/v1/ai/*; no field on the existing
-//                        baseline JSON shape is added or modified by
-//                        this slice.
+// This LLM-backed SSE handler trains and narrates a one-shot range model
+// without changing the deterministic projected-range baseline. guard.Wrap
+// enforces ADR-015 feature gating and zero egress when AI is disabled.
 
 import (
 	"context"
@@ -93,18 +59,7 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the handler. All
-// non-pointer arguments are required; the constructor panics on a
-// nil so the wiring bug surfaces at boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	train_range_model + query_range_prediction (registered
-//	by predict.RegisterRangePredictorTools in router.go).
-//
-// strat:      the range-prediction-model Strategy (one per process).
-// headerName: forward-auth header name; used to extract subject for audit.
+// NewHandler constructs the handler and panics on boot-time wiring bugs.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -252,7 +207,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
 // denyAllConfirm rejects every mutating tool as defence-in-depth for
@@ -261,15 +215,7 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 	return dispatch.ConfirmDenied, nil
 }
 
-// DriveStatsSource is the production *database.DB-backed adapter
-// that satisfies mlrange.DriveStatsSource. It runs ONE pgx query
-// scoped to the requested vehicle and lookback cutoff; rows are
-// converted in-memory into the DriveSample slice the trainer
-// expects (Wh/km, km/h, °C). No new SQL semantics — the same SI
-// columns the deterministic RangeProjectionHandler at
-// internal/api/range_projection_handler.go already reads
-// (distance_m, energy_used_wh, avg_speed_mps, ambient_temp_c_avg
-// per migration 000185).
+// DriveStatsSource supplies typed drive samples without raw location or VIN data.
 type DriveStatsSource struct {
 	db *database.DB
 }
@@ -283,29 +229,9 @@ func NewDriveStatsSource(db *database.DB) *DriveStatsSource {
 	return &DriveStatsSource{db: db}
 }
 
-// SamplesForVehicle implements mlrange.DriveStatsSource. Returns
-// drive sample slice (Wh/km, km/h, °C) for the requested vehicle
-// scoped to the lookback cutoff.
+// SamplesForVehicle returns bounded newest-first aggregate drive features.
 //
-// Implementation notes:
-//
-//   - Filter `distance_m > 8046.72` (5 miles) drops sub-5-mile
-//     drives whose Wh/km is dominated by climate preconditioning
-//     and not representative of the steady-state efficiency we
-//     want to learn. Mirrors the existing RangeProjectionHandler's
-//     scenario-projection floor.
-//   - Filter `start_soc_pct > end_soc_pct` drops drives where the
-//     vehicle gained net charge (e.g. regenerative-only short
-//     downhill) which would produce negative Wh/km after the
-//     `energy_used_wh / distance_km` math.
-//   - Filter `energy_used_wh > 0` and `avg_speed_mps IS NOT NULL`
-//     and `ambient_temp_c_avg IS NOT NULL` ensures the trainer's
-//     per-bucket math has all three SI inputs.
-//   - Conversion: avg_speed_mps × 3.6 = km/h; energy_used_wh /
-//     (distance_m / 1000.0) = Wh/km.
-//   - The cutoff time is computed by the trainer (Go-side
-//     `time.Now().UTC() - days*24h`); we pass it through verbatim
-//     so the test fake's deterministic clock seam stays tight.
+// Keep raw coordinates, addresses, VINs, and place names out of the AI input.
 func (s *DriveStatsSource) SamplesForVehicle(ctx context.Context, vehicleID int64, cutoff time.Time) ([]mlrange.DriveSample, error) {
 	if vehicleID <= 0 {
 		return []mlrange.DriveSample{}, nil
@@ -351,5 +277,4 @@ func (s *DriveStatsSource) SamplesForVehicle(ctx context.Context, vehicleID int6
 	return out, nil
 }
 
-// Compile-time assertion: DriveStatsSource satisfies mlrange.DriveStatsSource.
 var _ mlrange.DriveStatsSource = (*DriveStatsSource)(nil)

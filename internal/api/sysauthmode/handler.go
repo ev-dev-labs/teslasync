@@ -1,30 +1,12 @@
 // Phase-46 / Prompt 57 — Auth-mode contract endpoint.
 //
-// Exposes a single read-only endpoint the SPA polls to discover:
+// Exposes the deployment auth mode, subject header, optional subject, provider
+// hint, and capability matrix the SPA needs to mount auth-coupled sections.
+// The endpoint is deliberately unguarded and always answers in both open and
+// forward-auth modes, even when the proxy strips the subject header.
 //
-//  1. Whether the deployment is in open mode or behind a ForwardAuth
-//     provider.
-//  2. The exact header name TeslaSync reads (so the SPA never has to
-//     hard-code "X-Forwarded-User").
-//  3. The current request's resolved subject value (or null in open
-//     mode / when the proxy stripped the header).
-//  4. An operator-supplied free-text provider hint (Authentik /
-//     Authelia / oauth2-proxy / Keycloak / …) used purely as
-//     copy in the SPA — never as a routing key, never to dispatch
-//     vendor-specific admin API calls.
-//  5. A capability matrix the SPA uses to decide which sections to
-//     mount vs. replace with the inline "feature requires
-//     authentication" placeholder.
-//
-// The endpoint is deliberately UNGUARDED — it must answer in open
-// mode without a sudo token, and it must answer in forward-auth mode
-// even when the upstream proxy stripped the header (so the SPA can
-// surface a coherent error instead of looping on an opaque 401). It
-// is mounted inside the /api/v1 group below the per-IP rate
-// middleware so an aggressive client can't busy-loop it.
-//
-// Provider-agnostic: TeslaSync never speaks to the upstream IdP's
-// admin API. The provider hint is operator-supplied free text.
+// Provider hints are operator-supplied display text only; TeslaSync never calls
+// the upstream IdP admin API from this endpoint.
 package sysauthmode
 
 import (

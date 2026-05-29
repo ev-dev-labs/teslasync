@@ -78,19 +78,9 @@ func (h *RouteEfficiencyHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Phase-42 SI canonical drives (migration 000185): start_place/end_place
-	// for grouping, distance_m/duration_s/avg_speed_mps for metrics,
-	// start_soc_pct/end_soc_pct for SoC, ambient_temp_c_avg for temperature.
-	// Durations and speeds are returned in SI units. Optional date range
-	// follows the regen-handler canonical pattern (`$N::timestamptz IS NULL
-	// OR started_at BETWEEN $N AND $N+1`).
-	//
-	// Place-name fallback: when reverse-geocoding hasn't filled in
-	// start_place/end_place yet (the BackfillAddresses worker is rate-
-	// limited to 1 req/sec per Nominatim policy, so historical drives lag
-	// the geocoded set), group + label by coordinates rounded to ~3
-	// decimal places (~110 m precision) so routes still appear in the
-	// summary instead of silently disappearing.
+	// Phase-42 drive metrics are SI canonical. When reverse geocoding lags,
+	// rounded coordinates keep routes visible instead of silently dropping them
+	// from the summary.
 	rows, err := h.db.Pool.Query(ctx, `
 		WITH labeled AS (
 		  SELECT

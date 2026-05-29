@@ -11,25 +11,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// ChatbotHandler handles heuristic chatbot queries against fleet data.
+// ChatbotHandler answers heuristic fleet questions.
 //
-// Phase-39 migration: ChatbotHandler now depends on signal.StateReader so
-// "where is my car?" / location-style questions read forward-folded values
-// from the signal_log change feed instead of querying the snapshot
-// `positions` table directly.
-//
-// A parked Tesla emits Latitude/Longitude exactly once when it parks and
-// then NEVER re-emits them until the vehicle moves again — Fleet Telemetry
-// only writes a value when both the interval has elapsed AND the value has
-// changed. A naive `SELECT lat, lon ... ORDER BY ts DESC LIMIT 1` against
-// the snapshot table for a vehicle that has been parked for more than the
-// lookback window returns NO row (or a very stale one), so the chatbot
-// would tell the user "I don't know where your car is" for a vehicle that
-// has been sitting in the driveway all day. signal.StateReader.State
-// forward-folds the change feed, so the most recent emission of every
-// signal is carried forward to the requested timestamp and a parked
-// vehicle always reports its real last-known position. See ADR-002 and
-// the layered live-state contract in .github/ARCHITECTURE.md.
+// Location questions use StateProvider's folded live state, not raw position
+// tables or signal_log scans, preserving the phase-42 live-state contract.
 type ChatbotHandler struct {
 	chat       *dbnotif.ChatRepo
 	db         *database.DB
@@ -48,17 +33,8 @@ func NewChatbotHandler(db *database.DB, vehicleSvc *service.VehicleService, stat
 	}
 }
 
-// vehicleLocationLine renders one markdown line summarising the most recent
-// known location for vehicleID. The values are read via the layered
-// LiveStateReader (L1+L2 with signal_log fallback) so a parked car that
-// has not re-emitted Latitude / Longitude in hours still reports its real
-// last-known coordinates — the absence of a recent emission must NEVER be
-// confused with "no location" (which would cause the chatbot to falsely
-// answer "I don't know where your car is" for a vehicle in the driveway).
-//
-// A non-nil error from the reader is propagated so the orchestrating
-// caller can present a single user-facing failure message instead of
-// silently skipping the row.
+// vehicleLocationLine uses folded live state so cold-start or stale reads are
+// visible as unknown values instead of silently falling back to raw tables.
 func (h *ChatbotHandler) vehicleLocationLine(ctx context.Context, vehicleID int64, name string) (string, error) {
 	if h.live == nil {
 		return "", errors.New("chatbot: live state reader not configured")

@@ -2,51 +2,9 @@ package aiperiodcmp
 
 // Phase-50 / 0040 — X1 Period compare narration.
 //
-// ai_period_compare_narration_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/analytics/period-compare/narrate.
-// The flow mirrors ai_cost_forecast_narration_handler.go (same
-// dispatch+stream loop, no persistence — one-shot read-only
-// narration):
-//
-//	URL  /api/v1/ai/analytics/period-compare/narrate
-//	  ↓
-//	resolve provider via *provider.Registry.For("period-compare-narration")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("period-compare-narration", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE
-// this handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body (vehicle_id + optional days_a + optional days_b)
-// is parsed BEFORE opening the SSE stream so a malformed input
-// surfaces as a plain JSON 400 (rather than a streamed error
-// frame the SPA's QueryError will struggle to render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /period-compare page
-//     (and its alias /analytics/compare) — vehicle/period
-//     selectors, the disambiguation banner, six MetricCards
-//     (distance, drives, energy, efficiency, cost, CO2), the
-//     side-by-side BarChart, the comparison DataTable, and the
-//     deterministic insights bullets — hitting GET
-//     /api/v1/analytics/period-stats — is unchanged. This handler
-//     is an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("period-compare-narration").
-//   - I9 redaction:       PolicyPeriodCompareNarration (allows
-//     ClassVehicleName only; lat/long, addresses, and place names
-//     stay tagged) is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice. The tool envelope's
-//     extra per-metric delta block lives in the AI-only typed
-//     [forecast.PeriodCompare] envelope, not on the baseline
-//     /analytics/period-stats response.
+// Implements POST /api/v1/ai/analytics/period-compare/narrate as a read-only SSE narrator.
+// The route is guard-wrapped for ADR-015 off-mode behavior; the deterministic period-stats endpoint remains the baseline.
+// The JSON body is validated before streaming so malformed input returns a plain JSON 400.
 
 import (
 	"context"
@@ -70,47 +28,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// maxIterations bounds the dispatcher's
-// tool-loop. The strategy is at most query_period_compare → answer
-// (with optional retries). A hard ceiling of 8 is generous,
-// matching aiCostForecastNarrationMaxIterations.
+// maxIterations bounds the read-only tool loop; 8 matches cost-forecast narration.
 const maxIterations = 8
 
-// defaultDaysA / DaysB are the default
-// trailing-day windows when the request body omits them. Mirrors
-// the SPA's PeriodComparePage selector defaults (Period A=30d,
-// Period B=90d). Kept as named constants so a future tuning lives
-// in one place rather than duplicated across the parser + the
-// tool's Execute default.
+// Defaults mirror the PeriodComparePage selectors.
 const defaultDaysA = 30
 const defaultDaysB = 90
 
-// maxDays is the upper bound on the
-// trailing-day window. Mirrors the canonical handler's lack of an
-// explicit cap (the SPA selectors top out at 365 + a "all time"
-// option which sends days=0); 3650 ≈ 10 years caps an LLM
-// nonsense value before any SQL runs.
+// maxDays caps LLM nonsense values before any SQL runs.
 const maxDays = 3650
 
-// request is the JSON body shape this
-// handler accepts. The shape mirrors the
-// /api/v1/analytics/period-stats?vehicle_id=&days= query-string
-// contract — vehicle_id is required, days_a / days_b are optional
-// — kept as a JSON body so the SPA can post from the same form
-// state the period-compare page already uses.
+// request mirrors /api/v1/analytics/period-stats but travels as a JSON body.
 type request struct {
 	VehicleID int64 `json:"vehicle_id"`
 	DaysA     int   `json:"days_a,omitempty"`
 	DaysB     int   `json:"days_b,omitempty"`
 }
 
-// Handler is the HTTP handler for
-// POST /api/v1/ai/analytics/period-compare/narrate.
-//
-// Stateless beyond its constructor inputs; safe for concurrent
-// use across requests. Construction is in router.go so the
-// dispatcher's tool registry + provider registry are wired once
-// at boot.
+// Handler serves period-compare narration and is safe for concurrent use.
 type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
@@ -119,18 +54,7 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the handler. All
-// non-pointer arguments are required; the constructor panics on
-// a nil so the wiring bug surfaces at boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	query_period_compare (registered by
-//	forecast.RegisterPeriodCompareNarrationTools in router.go).
-//
-// strat:      the period-compare-narration Strategy (one per process).
-// headerName: forward-auth header name; used to extract subject for audit.
+// NewHandler constructs the handler and panics on missing boot wiring.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -154,26 +78,8 @@ func NewHandler(
 	}
 }
 
-// parsePeriodCompareNarrationBody decodes + validates the JSON
-// body. Pulled out so the validator-only test can exercise the
-// same parsing without constructing a full handler with stub
-// deps. The function writes a 400 on failure and returns the
-// (req, ok) pair so the caller can early-return.
-//
-// The days_a / days_b fields default to
-// defaultDaysA / DaysB when omitted (or
-// zero AND omitted; an explicit "0" means "all time" — mirrored
-// by the underlying ComputePeriodStats helper that drops the
-// date filter when days <= 0). The bound is [0,
-// maxDays] so an out-of-range value
-// lands as a 400 before any SSE stream is opened.
-//
-// Note on zero handling: because the SPA selectors include a
-// "0 = all time" value, we cannot use raw `if d == 0 { default }`
-// without a presence indicator. We use a custom unmarshaller-
-// backed approach: if the field is OMITTED entirely (raw bytes
-// don't include "days_a"), default to 30; if explicitly set to
-// 0, treat as "all time" and pass through.
+// parsePeriodCompareNarrationBody validates the body before SSE starts.
+// Omitted days fields use defaults; an explicit 0 means "all time," matching the SPA selector.
 func parsePeriodCompareNarrationBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 	if r.Body == nil {
 		writeError(w, http.StatusBadRequest, "request body is required")
@@ -181,9 +87,7 @@ func parsePeriodCompareNarrationBody(w http.ResponseWriter, r *http.Request) (*r
 	}
 	defer r.Body.Close()
 
-	// Decode into a typed-presence map first so we can tell
-	// "field omitted entirely" from "field explicitly set to 0".
-	// "all time" is a real selector value the SPA sends.
+	// Decode through RawMessage so omitted days and explicit 0 remain distinguishable.
 	var raw map[string]json.RawMessage
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
@@ -215,9 +119,7 @@ func parsePeriodCompareNarrationBody(w http.ResponseWriter, r *http.Request) (*r
 			return nil, false
 		}
 	}
-	// Reject any other keys — DisallowUnknownFields only kicks
-	// in when decoding into a typed struct; with a map[string]
-	// json.RawMessage we have to manually check.
+	// DisallowUnknownFields does not protect map decodes, so reject unknown keys manually.
 	for k := range raw {
 		switch k {
 		case "vehicle_id", "days_a", "days_b":
@@ -266,12 +168,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, periodcomparenarration.FeatureID)
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(periodcomparenarration.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai period-compare-narration: stream.New failed (non-flushable writer)")
@@ -279,8 +179,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the
-	// (now-annotated) context.
 	prov, err := h.registry.For(ctx, periodcomparenarration.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai period-compare-narration: provider.For (post-stream) failed")
@@ -288,15 +186,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Period-compare narration
-	// is NOT conversational here — there is no chat history.
-	// We hand the LLM a deterministic prompt that asks it to
-	// call the single read-only tool in scope and narrate the
-	// result, with explicit honest-direction cues so the
-	// narration is keyed to the percent_change SIGN.
+	// Build a deterministic, non-conversational prompt keyed to the delta sign.
 	userMsg := fmt.Sprintf(
 		"Narrate the period comparison for vehicle %d between Period A (last %d days) and Period B (last %d days). "+
 			"Follow the tool sequence EXACTLY: "+
@@ -313,7 +205,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body.VehicleID, body.DaysA, body.DaysB, body.VehicleID, body.DaysA, body.DaysB,
 	)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -327,8 +218,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler
-// satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
@@ -339,27 +228,12 @@ var _ http.Handler = (*Handler)(nil)
 // pattern.
 // ---------------------------------------------------------------------
 
-// PeriodCompareSource is the production forecast.PeriodComparator.
-// It delegates to the SHARED apiperiod.ComputePeriodStats helper that
-// also backs the canonical GET /api/v1/analytics/period-stats
-// handler so the AI narration is grounded in the SAME
-// deterministic aggregate the chart on /period-compare renders.
-// No new SQL is added by this slice.
-//
-// Refactoring the existing PeriodStatsHandler.Get to pull its
-// core into the package-level ComputePeriodStats helper (and
-// having both call sites use it) was the deliberate choice over
-// duplicating the SQL/math here.
-//
-// The struct holds *database.DB; the constructor panics on a
-// nil so a wiring bug surfaces at boot.
+// PeriodCompareSource reuses ComputePeriodStats so AI narration matches the deterministic chart data.
 type PeriodCompareSource struct {
 	db *database.DB
 }
 
-// NewPeriodCompareSource constructs the adapter. Panics on a
-// nil *database.DB so a wiring mistake surfaces at boot rather
-// than as a nil-deref on first AI request.
+// NewPeriodCompareSource panics on nil DB so wiring bugs fail at boot.
 func NewPeriodCompareSource(db *database.DB) *PeriodCompareSource {
 	if db == nil {
 		panic("aiperiodcmp: NewPeriodCompareSource: nil *database.DB")
@@ -367,18 +241,8 @@ func NewPeriodCompareSource(db *database.DB) *PeriodCompareSource {
 	return &PeriodCompareSource{db: db}
 }
 
-// ComparePeriods implements forecast.PeriodComparator. Composes the
-// SAME apiperiod.ComputePeriodStats helper *periodstats.Handler.Get uses
-// (called once per period window) so the returned envelope is
-// numerically identical (modulo rounding) to what GET
-// /api/v1/analytics/period-stats produces — the AI surface is
-// grounded in the SAME deterministic model the chart renders.
-//
-// The function does NOT recompute or override anything the
-// canonical handler computes; it only reshapes the existing
-// output into the typed [forecast.PeriodCompare] envelope the LLM
-// can quote, and computes the per-metric deltas via the shared
-// forecast.ComputePeriodCompareDeltas helper.
+// ComparePeriods composes the same ComputePeriodStats helper used by the baseline endpoint.
+// It only reshapes results and computes shared deltas for the AI envelope.
 func (a *PeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID int64, daysA, daysB int) (*forecast.PeriodCompare, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai period-compare-narration: vehicle_id must be > 0")

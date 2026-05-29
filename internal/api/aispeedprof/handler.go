@@ -1,50 +1,9 @@
 package aispeedprof
 
-// Phase-50 / 0022 — D2 Speed-profile insights.
+// Phase-50 AI handler.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/drives/{driveID}/speed-profile/insights. The flow
-// mirrors the drive-coaching / YIR / digest / anomaly narration
-// handlers — same dispatch+stream loop, no persistence (one-shot
-// narration; no conversation to record):
-//
-//	URL  /api/v1/ai/drives/{driveID}/speed-profile/insights
-//	  ↓
-//	resolve provider via *provider.Registry.For("speed-profile-insights")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("speed-profile-insights", …) so when ai_mode='off' or
-// the per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// Like the drive-coaching handler (slice 0018) but unlike the
-// YIR/digest/anomaly handlers, this handler takes `driveID` from
-// the URL path — the AI surface attaches to a specific drive's
-// detail page (/drives/:id) so the URL is the natural place for it.
-// There is no JSON body; an empty body is accepted.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic SpeedHistogramChart,
-//     summary metrics, hero gauges, energy
-//     summary, and other panels rendered by
-//     DriveDetailPage at /drives/:id are unchanged.
-//     This handler is an OPT-IN add-on; off-mode users
-//     never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("speed-profile-insights").
-//   - I9 redaction:       PolicySpeedProfileInsights (allows
-//     ClassVehicleName only; lat/long and addresses
-//     stay tagged) is installed by dispatch.Run from
-//     the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     JSON shape is added or modified by this slice.
-
+// This endpoint runs an opt-in, guarded dispatch+SSE flow without persistence.
+// ADR-015 baseline routes remain canonical when AI is off or disabled.
 import (
 	"context"
 	"fmt"

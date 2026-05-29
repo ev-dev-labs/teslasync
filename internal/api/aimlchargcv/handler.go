@@ -1,57 +1,9 @@
 package aimlchargcv
 
-// Phase-50 / 0064 — ML3 Charging-curve fingerprint clustering statistical model.
-//
-// ai_ml_charging_curve_handler.go implements the LLM-backed handler
-// at POST /api/v1/ai/ml/charging-curves/cluster. The flow mirrors
-// the range-prediction-model handler from slice 0063 — same
-// dispatch+stream loop, no persistence (one-shot narration; no
-// conversation to record).
-//
-//   request JSON {vehicle_id, lookback_days?}
-//     ↓
-//   resolve provider via *provider.Registry.For("ml-charging-curve-clustering")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("ml-charging-curve-clustering", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard returns
-// 404 BEFORE this handler ever sees the request (ADR-015 §I6).
-//
-// Coexistence with C3 (slice 0028,
-// charging-curve-fingerprint-clustering): both surfaces live on
-// the same /charging/curves page but have distinct backend routes
-// (POST /api/v1/ai/charging/curves/clusters/explain for C3 vs
-// POST /api/v1/ai/ml/charging-curves/cluster for ML3), distinct
-// feature IDs, distinct UI test IDs, and distinct per-feature
-// toggles. A user can opt into one or both independently. The two
-// off-mode invariant tests exercise the two routes independently.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic Charging Curve page
-//     served by the existing charging-curve handlers and the
-//     charts and rule-based labels in
-//     web/src/features/charging/components/charging-curve/helpers.ts
-//     remain unchanged. This handler is an OPT-IN add-on; off-mode
-//     users never see it.
-//   - I4 zero egress:    when ai_mode='off' the guard returns 404
-//                        before any provider call is made; the
-//                        deterministic trainer at
-//                        internal/ml/chargingcurves is reachable
-//                        only via the AI tool path.
-//   - I7 per-feature:    the route is gated by
-//                        guard.Wrap("ml-charging-curve-clustering").
-//   - I9 redaction:      PolicyChatbot (deny-all tagged redaction)
-//                        is installed by dispatch.Run from the
-//                        strategy.
-//   - I10 type system:   the AI surface lives entirely under
-//                        /api/v1/ai/*; no field on the existing
-//                        baseline JSON shape is added or modified
-//                        by this slice.
+// Phase-50 / 0064 — ML charging-curve clustering narration.
+// This opt-in AI handler streams one-shot cluster narration for the charging
+// curves page; guard.Wrap enforces ADR-015 off-mode and per-feature gating before
+// any provider or trainer path runs.
 
 import (
 	"context"
@@ -191,7 +143,6 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 // a structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Decode + validate request body.
 	body, ok := parseClusterRequest(w, r)
 	if !ok {
 		return
@@ -201,17 +152,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		days = defaultLookbackDays
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before opening SSE so provider failures remain ordinary JSON 502s.
 	if _, err := h.registry.For(r.Context(), mlchargingcurveclustering.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai ml-charging-curve-clustering: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	// SubjectFromRequest returns "" if the header is absent;
 	// that's the open-mode value the audit log treats as
 	// "anonymous".
@@ -219,10 +166,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, mlchargingcurveclustering.FeatureID)
 
-	// 4) Open the SSE writer. Stream.New writes the SSE response
-	// headers, starts the consumer goroutine, and returns a child
-	// ctx that cancels on stall — we pass that ctx to the
-	// dispatcher so a stalled consumer kills the upstream call.
+	// The child ctx cancels on consumer stalls, stopping upstream provider work.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(mlchargingcurveclustering.FeatureID))
 	if err != nil {
 		// Non-flushable response writer (test recorder, etc.).
@@ -232,9 +176,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context. The decorator chain reads the subject + feature-id
-	// off the ctx for audit + rate limit accounting.
+	// Resolve again with subject and feature annotations for decorators.
 	prov, err := h.registry.For(ctx, mlchargingcurveclustering.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai ml-charging-curve-clustering: provider.For (post-stream) failed")
@@ -242,26 +184,16 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook. The
-	// ml-charging-curve-clustering strategy declares only
-	// read-only tools, so the confirm hook never fires — but
-	// defence-in-depth: if a future strategy edit adds a mutating
-	// tool by mistake, the dispatcher will REJECT it instead of
-	// silently mutating fleet state.
+	// Deny-all confirmation keeps future accidental mutating tools read-only.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Cluster narration is NOT
-	// conversational — there is no chat history. We hand the LLM
-	// a deterministic prompt that asks it to call the two tools in
-	// the prescribed order and narrate the diff.
+	// Cluster narration is non-conversational; force the two-tool sequence.
 	userMsg := fmt.Sprintf(
 		"Explain the learned charging clusters for vehicle %d over the last %d days. "+
 			"Call train_charge_curve_clusters FIRST with vehicle_id=%d lookback_days=%d, then call query_charge_curve_clusters with vehicle_id=%d, then narrate the diff strictly from the tool replies.",
 		body.VehicleID, days, body.VehicleID, days, body.VehicleID,
 	)
 
-	// 8) Run the dispatcher. The deferred WriteDone in dispatch.Run
-	// closes the SSE stream cleanly on any path.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,

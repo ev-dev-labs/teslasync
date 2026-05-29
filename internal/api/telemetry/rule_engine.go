@@ -1,4 +1,4 @@
-// Package api provides alert rule evaluation against real-time telemetry signals.
+// Package telemetry evaluates alert rules against real-time telemetry signals.
 package telemetry
 
 import (
@@ -33,13 +33,7 @@ type RuleStateStore interface {
 	ClearLatch(ctx context.Context, ruleID, vehicleID int64, now time.Time) error
 }
 
-// defaultMaxFiresPerHour is the engine-level safety cap that limits how
-// many times a single (rule, vehicle) pair can fire inside any rolling
-// 1h window. It supersedes the legacy CooldownFSM hourly limit (also 4)
-// merged into the engine in Phase-49 / Slice 0004. A rule that exceeds
-// it gets suppressed even if cooldown_min and max_fires_per_resolution
-// would otherwise allow the fire — this is the last-line defence against
-// notification storms from a flapping signal.
+// defaultMaxFiresPerHour is the last-line defense against notification storms from a flapping signal.
 const defaultMaxFiresPerHour = 4
 
 // RuleEngine evaluates alert rules against incoming telemetry signals.
@@ -118,12 +112,7 @@ func (e *RuleEngine) SetMaxFiresPerHour(n int) {
 	e.maxFiresPerHour = n
 }
 
-// HydrateFromDB loads every persisted (rule, vehicle) state row into the
-// in-memory cache. Must be called once at engine boot, before MQTT
-// subscribers start dispatching telemetry. No-op when stateRepo is nil.
-//
-// Errors are logged but NOT fatal — degraded behavior (no latch
-// persistence) is preferable to refusing to start.
+// HydrateFromDB loads persisted latch state at boot; errors degrade to an empty cache rather than aborting startup.
 func (e *RuleEngine) HydrateFromDB(ctx context.Context) {
 	e.mu.RLock()
 	repo := e.stateRepo
@@ -182,8 +171,7 @@ type EvalResult struct {
 	Context map[string]any
 }
 
-// Evaluate checks a single rule against the current signal batch.
-// Returns whether the rule triggered and the rendered message.
+// Evaluate checks one rule against the current signal batch.
 func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signals map[string]interface{}) EvalResult {
 	// Snooze takes precedence over cooldown, condition, and trigger mode.
 	// While snoozed, no state is changed (no prev-signal updates) so the
@@ -193,7 +181,6 @@ func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signa
 		return EvalResult{}
 	}
 
-	// Cooldown check.
 	key := ruleKey{RuleID: rule.ID, VehicleID: vehicleID}
 	e.mu.RLock()
 	st, hasState := e.state[key]
@@ -240,7 +227,6 @@ func (e *RuleEngine) Evaluate(rule *alertmodel.AlertRule, vehicleID int64, signa
 		}
 	}
 
-	// Evaluate typed rule fields.
 	matched := evalRule(rule, signals, prevSignals)
 
 	if !matched {

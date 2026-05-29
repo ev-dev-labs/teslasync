@@ -1,7 +1,7 @@
-// Package aidatarep contains the AI data-repair suggestions draft handler.
+// Package aidatarep serves the AI data-repair suggestion draft handler.
 //
-// It serves POST /api/v1/ai/system/data-repair/draft through the shared AI guard
-// and keeps deterministic data-repair mutations on the baseline handlers.
+// The shared AI guard protects narration, while deterministic repair mutations
+// stay on the baseline handlers.
 //
 // Layer: handler
 package aidatarep

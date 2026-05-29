@@ -182,8 +182,6 @@ func newPinnedRequest(method, target, body string, idParam string) *http.Request
 	return req
 }
 
-// ── List ────────────────────────────────────────────────────────────────────
-
 func TestPinned_List_RequiresType(t *testing.T) {
 	handler := newHandlerForTest(newFakePinnedRepo())
 	rec := httptest.NewRecorder()
@@ -249,8 +247,6 @@ func TestPinned_List_FiltersByContext(t *testing.T) {
 		t.Fatalf("expected battery widget only, got %#v", out)
 	}
 }
-
-// ── Create ──────────────────────────────────────────────────────────────────
 
 func TestPinned_Create_Success(t *testing.T) {
 	repo := newFakePinnedRepo()
@@ -347,8 +343,6 @@ func TestPinned_Create_ShiftsExistingPinsDown(t *testing.T) {
 	}
 }
 
-// ── Update ──────────────────────────────────────────────────────────────────
-
 func TestPinned_Update_Success(t *testing.T) {
 	repo := newFakePinnedRepo()
 	must := func(err error) {
@@ -426,8 +420,6 @@ func TestPinned_Update_RequiresPosition(t *testing.T) {
 		t.Fatalf("status = %d, want 400", rec.Code)
 	}
 }
-
-// ── Delete ──────────────────────────────────────────────────────────────────
 
 func TestPinned_Delete_Success(t *testing.T) {
 	repo := newFakePinnedRepo()

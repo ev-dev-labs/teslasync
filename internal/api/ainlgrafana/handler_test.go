@@ -1,19 +1,7 @@
 // Phase-50 / 0058 — PU2 Natural-language Grafana panel.
 //
-// Off-mode + baseline-coexistence tests for the AI nl-grafana-panel
-// handler. The off-mode test
-// (TestNLGrafanaPanelAIOffManualEditorWorks) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, AND that the deterministic /power/grafana page
-// (manual JSON editor + curated panel-builder catalog viewer + Copy
-// to clipboard target) remains the unconditional baseline path
-// (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval -feature
-// nl-grafana-panel`); duplicating that here would require a live
-// database fixture.
+// Off-mode tests prove the AI route fails closed while the deterministic Grafana editor catalog stays available.
+// Streaming coverage lives in the F6 eval harness; duplicating it here would require a live DB fixture.
 
 package ainlgrafana
 
@@ -47,32 +35,11 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on[id], nil
 }
 
-// TestNLGrafanaPanelAIOffManualEditorWorks is the load-bearing
-// off-mode contract proof for slice 0058. It mounts the AI
-// nl-grafana-panel route through the guard with ai_mode='off' and
-// proves:
-//
-//   - The /api/v1/ai/power/grafana-panel/draft route returns 404
-//     (the guard fails closed even when the per-feature toggle is
-//     on).
-//   - The 404 body does not leak feature metadata or route
-//     identifiers.
-//   - A baseline /power/grafana backplane (the curated panel-builder
-//     catalog viewer the SPA renders alongside the manual JSON
-//     editor) is reachable in off mode through a non-AI route —
-//     proof that the slice does NOT replace the deterministic
-//     manual JSON editor flow on /power/grafana (ADR-015 §I3).
-//
-// The test name MUST stay TestNLGrafanaPanelAIOffManualEditorWorks
-// — the slice prompt's verification command runs
-// `go test … -run TestNLGrafanaPanelAIOffManualEditorWorks` AND
-// `npm test -- --run TestNLGrafanaPanelAIOffManualEditorWorks`,
-// so both the Go and React off-mode proofs answer to the same
-// test-name pattern.
+// TestNLGrafanaPanelAIOffManualEditorWorks is the slice 0058 off-mode contract proof.
+// The name is pinned by Go and React verification commands, so keep it stable.
 func TestNLGrafanaPanelAIOffManualEditorWorks(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route -----------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"nl-grafana-panel": true}, // toggle on; mode trumps it
@@ -81,22 +48,14 @@ func TestNLGrafanaPanelAIOffManualEditorWorks(t *testing.T) {
 
 	router := chi.NewRouter()
 	router.Route("/api/v1", func(r chi.Router) {
-		// AI route under the guard. Inner handler always-500: the
-		// guard MUST short-circuit before we are reached. A
-		// non-404 status here is a guard-bypass bug.
+		// The guarded handler must not be reached in off mode.
 		r.Route("/ai", func(r chi.Router) {
 			r.Post("/power/grafana-panel/draft", g.Wrap("nl-grafana-panel", func(w http.ResponseWriter, _ *http.Request) {
 				http.Error(w, "GUARD_BYPASSED — handler should not have been called in off mode", http.StatusInternalServerError)
 			}))
 		})
 
-		// Baseline /power/grafana backplane — NOT guarded by the
-		// AI guard. The SPA renders a deterministic curated
-		// panel-builder catalog viewer + manual JSON editor at
-		// /power/grafana; in a hermetic test we mock the catalog
-		// endpoint here so the test stays without a live DB. The
-		// "ai":false marker + "surface":"baseline_..." envelope
-		// shape proves the deterministic baseline path coexists.
+		// Mock the baseline catalog route so the test stays hermetic while proving the manual editor still works.
 		r.Get("/power/grafana/catalog", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -104,7 +63,6 @@ func TestNLGrafanaPanelAIOffManualEditorWorks(t *testing.T) {
 		})
 	})
 
-	// 1) Probe the AI route — MUST be 404.
 	body := []byte(`{"prompt":"daily drives this month"}`)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/power/grafana-panel/draft", bytes.NewReader(body))
@@ -117,21 +75,14 @@ func TestNLGrafanaPanelAIOffManualEditorWorks(t *testing.T) {
 	if strings.Contains(rec.Body.String(), "GUARD_BYPASSED") {
 		t.Fatalf("AI route guard was bypassed in off mode: body=%q", rec.Body.String())
 	}
-	// Defence-in-depth: the 404 body must not leak feature
-	// metadata (ADR-015 §I9 — provider/feature info must be
-	// invisible in off mode). chi's http.NotFound emits "404 page
-	// not found\n".
+	// Off-mode 404s must not leak provider or feature metadata.
 	for _, leaked := range []string{"nl-grafana-panel", "feature", "strategy", "provider", "agent"} {
 		if strings.Contains(strings.ToLower(rec.Body.String()), leaked) {
 			t.Errorf("AI route 404 body leaks %q: %q", leaked, rec.Body.String())
 		}
 	}
 
-	// 2) Probe the baseline catalog endpoint — MUST return 200 +
-	// deterministic baseline content, regardless of the AI guard's
-	// state. This is the load-bearing proof that the slice did NOT
-	// replace the deterministic manual JSON editor flow on
-	// /power/grafana.
+	// Baseline catalog data must remain reachable regardless of AI guard state.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodGet, "/api/v1/power/grafana/catalog", nil)
 	router.ServeHTTP(recBaseline, reqBaseline)
@@ -145,10 +96,7 @@ func TestNLGrafanaPanelAIOffManualEditorWorks(t *testing.T) {
 	if !strings.Contains(recBaseline.Body.String(), `"surface":"baseline_curated_grafana_catalog"`) {
 		t.Errorf("baseline catalog body missing baseline_curated_grafana_catalog marker: %q", recBaseline.Body.String())
 	}
-	// Pin that the catalog rows are present so the
-	// "ManualEditorWorks" half of the test name is defensible —
-	// the user CAN see the curated panel types, datasource types,
-	// and tables even when AI is off.
+	// Pin catalog rows so the manual-editor claim is testable.
 	for _, must := range []string{
 		`"name":"timeseries"`,
 		`"name":"stat"`,
@@ -163,10 +111,7 @@ func TestNLGrafanaPanelAIOffManualEditorWorks(t *testing.T) {
 	}
 }
 
-// TestHandler_PanicsOnNilWiring asserts the handler
-// constructor refuses zero-valued dependencies. A wiring bug at
-// boot must surface as a panic, not as a nil-deref on first
-// request.
+// TestHandler_PanicsOnNilWiring proves wiring bugs fail at boot.
 func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -187,10 +132,7 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestHandler_RejectsBadBody asserts the handler
-// validates the body BEFORE doing anything else — a body that fails
-// to decode as JSON object MUST surface as a JSON 400, not a
-// half-opened stream that confuses the frontend.
+// TestHandler_RejectsBadBody proves invalid bodies return JSON 400 before SSE starts.
 func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
@@ -224,13 +166,7 @@ func TestHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestBuildNLGrafanaPanelUserMessage_DeterministicShape pins the
-// synthesised user message's exact shape so the goldens stay
-// stable across boots. The format is sort-by-name within each of
-// the three catalog sections with the prompt appended last. A
-// change to any of these breaks the deterministic prompt-hash
-// caching that providers rely on, so the test must catch it before
-// the goldens silently drift.
+// TestBuildNLGrafanaPanelUserMessage_DeterministicShape pins prompt ordering for stable goldens.
 func TestBuildNLGrafanaPanelUserMessage_DeterministicShape(t *testing.T) {
 	t.Parallel()
 	catalog := NLGrafanaPanelCatalog{

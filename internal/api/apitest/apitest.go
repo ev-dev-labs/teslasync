@@ -9,18 +9,9 @@ import (
 	"testing"
 )
 
-// DoRequest performs an HTTP request against the given handler and
-// returns the response recorder. If body is non-empty it is sent as
-// the request body with Content-Type "application/json".
-//
-// This is the standard "fire one request at a chi/http.ServeMux router
-// fixture" helper used by acceptance + handler tests across
-// internal/api. It deliberately stays narrow:
-//   - JSON-only Content-Type (every internal/api endpoint takes JSON)
-//   - String body (callers do their own json.Marshal — keeps the call
-//     site explicit about what JSON shape is being sent)
-//   - No header overrides (tests that need custom headers build the
-//     httptest.NewRequest themselves)
+// DoRequest performs a JSON request against handler and returns the recorder.
+// It deliberately omits header overrides so specialized tests build requests
+// explicitly.
 func DoRequest(handler http.Handler, method, path, body string) *httptest.ResponseRecorder {
 	var bodyReader io.Reader
 	if body != "" {
@@ -43,14 +34,8 @@ func AssertStatus(t *testing.T, rec *httptest.ResponseRecorder, expected int) {
 	}
 }
 
-// AssertJSON decodes the recorded response body as a generic JSON
-// object and returns it. Tests then assert against the resulting
-// map[string]interface{} (e.g. body["status"] == "ok"). Decoding
-// failures are fatal because they almost always indicate a serious
-// wire-shape regression that subsequent assertions would crash on.
-//
-// Use this only for flat-object responses. Array/scalar/typed-struct
-// responses should be decoded inline in the test with a typed target.
+// AssertJSON decodes a flat JSON object response. Use typed decoding inline for
+// arrays, scalars, or struct-shaped responses.
 func AssertJSON(t *testing.T, rec *httptest.ResponseRecorder) map[string]interface{} {
 	t.Helper()
 	var result map[string]interface{}
@@ -60,13 +45,8 @@ func AssertJSON(t *testing.T, rec *httptest.ResponseRecorder) map[string]interfa
 	return result
 }
 
-// AssertContentType fails the test if the recorded response's
-// Content-Type header does not CONTAIN expected. We use Contains
-// rather than equality so that "application/json" matches
-// "application/json; charset=utf-8" — callers that need byte-exact
-// matching on the full header value should assert on
-// rec.Header().Get("Content-Type") directly (see
-// internal/api/httpx/json_test.go for the exact-spelling pin).
+// AssertContentType uses substring matching so "application/json" accepts the
+// charset suffix; byte-exact tests should assert on the header directly.
 func AssertContentType(t *testing.T, rec *httptest.ResponseRecorder, expected string) {
 	t.Helper()
 	ct := rec.Header().Get("Content-Type")

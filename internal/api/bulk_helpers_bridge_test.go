@@ -8,16 +8,9 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 )
 
-// This file pins the parent-package bridge in internal/api/bulk_helpers.go
-// to the canonical implementations in internal/api/apibulk. The bridge is
-// Phase R2.0f's mechanism for keeping ~9 in-parent bulk handlers compiling
-// against the historic symbols (MaxBulkIDs, bulkOperationResult,
-// decodeBulkIDsRequest, ...) without per-call-site edits during the R2
-// wave's incremental resource-handler carve.
-//
-// If any test in this file fails, the bridge has drifted from apibulk
-// and consumers of the parent symbols may see surprising behaviour.
-// Fix the drift in bulk_helpers.go — do not change the assertions here.
+// These tests pin the parent-package bulk bridge to internal/api/apibulk.
+// The bridge keeps legacy parent handlers compiling during the R2 carve; failures
+// mean bulk_helpers.go drifted and should be fixed instead of loosening tests.
 
 func TestBulkBridge_ConstAlias_MaxBulkIDs(t *testing.T) {
 	if MaxBulkIDs != apibulk.MaxIDs {

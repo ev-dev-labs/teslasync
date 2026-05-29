@@ -2,49 +2,11 @@ package aichargdiag
 
 // Phase-50 / 0019 — N5 Per-charging-session diagnosis.
 //
-// handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/charging/{sessionID}/diagnose. The
-// flow mirrors the YIR / digest / anomaly / drive-coach
-// narration handlers — same dispatch+stream loop, no persistence
-// (one-shot diagnosis; no conversation to record):
-//
-//   URL  /api/v1/ai/charging/{sessionID}/diagnose
-//     ↓
-//   resolve provider via *provider.Registry.For("charging-diagnosis")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("charging-diagnosis", …) so when ai_mode='off' or
-// the per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// Like the N4 drive-coach handler immediately preceding this one,
-// this handler takes its primary identifier (`sessionID`) from
-// the URL path — the AI surface attaches to a specific charging
-// session's detail page (/charging/:id) so the URL is the natural
-// place for it. There is no JSON body; an empty body is accepted.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic charging stat cards,
-//     hero gauges, charge curve, battery progress,
-//     and existing flag badges (trickle / expensive
-//     / low-power / interrupted) rendered by
-//     ChargingDetailPage at /charging/:id are
-//     unchanged. This handler is an OPT-IN add-on;
-//     off-mode users never see it.
-//   - I7 per-feature:     the route is gated by guard.Wrap("charging-diagnosis").
-//   - I9 redaction:       PolicyChargingDiagnosis (allows ClassVehicleName
-//     only; lat/long, charging-location names,
-//     and addresses stay tagged) is installed by
-//     dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing
-//     baseline JSON shape is added or modified
-//     by this slice.
+// This LLM-backed one-shot SSE handler adds POST
+// /api/v1/ai/charging/{sessionID}/diagnose without changing the deterministic
+// charging detail page. The route is gated by guard.Wrap("charging-diagnosis"),
+// uses the URL sessionID as its only input, and relies on ADR-015 redaction and
+// per-feature controls.
 
 import (
 	"context"
@@ -160,36 +122,25 @@ func parseChargingDiagnosisURL(w http.ResponseWriter, r *http.Request) (int64, b
 // (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate URL parameters. Body is intentionally
-	// ignored; this endpoint takes its only input from the URL.
+	// Body is intentionally ignored; the URL sessionID is the only input.
 	sessionID, ok := parseChargingDiagnosisURL(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before opening SSE so provider failures remain JSON errors.
 	if _, err := h.registry.For(r.Context(), chargingdiagnosis.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai charging diagnosis: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
-	// SubjectFromRequest returns "" if the header is absent;
-	// that's the open-mode value the audit log treats as
-	// "anonymous".
+	// Missing subject is the open-mode "anonymous" audit value.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, chargingdiagnosis.FeatureID)
 
-	// 4) Open the SSE writer. Stream.New writes the SSE response
-	// headers, starts the consumer goroutine, and returns a
-	// child ctx that cancels on stall — we pass that ctx to
-	// the dispatcher so a stalled consumer kills the upstream
-	// call.
+	// Stream.New returns a stall-canceling child context for the dispatcher.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(chargingdiagnosis.FeatureID))
 	if err != nil {
 		// Non-flushable response writer (test recorder, etc.).
@@ -199,9 +150,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context. The decorator chain reads the subject + feature-id
-	// off the ctx for audit + rate limit accounting.
+	// Resolve again with annotated context for audit and rate-limit decorators.
 	prov, err := h.registry.For(ctx, chargingdiagnosis.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai charging diagnosis: provider.For (post-stream) failed")
@@ -209,27 +158,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook. The
-	// charging-diagnosis strategy declares only read-only tools,
-	// so the confirm hook never fires — but defence-in-depth:
-	// if a future strategy edit adds a mutating tool by mistake,
-	// the dispatcher will REJECT it instead of silently mutating
-	// fleet state.
+	// Deny-all is defence-in-depth if a future strategy adds a mutating tool.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Charging diagnosis is NOT
-	// conversational — there is no chat history. We hand the
-	// LLM a deterministic prompt that asks it to call its two
-	// tools and narrate the result.
-	//
-	// Note: vehicle_id is intentionally NOT included here. The
-	// LLM learns the vehicle from the tool reply
-	// (query_charge_session returns the *chargingmodel.ChargingSession
-	// whose VehicleID field is the authoritative source).
-	// Including a user-controllable vehicle hint in the prompt
-	// would risk cross-tenant leak via prompt injection —
-	// keeping the session_id as the sole identifier removes
-	// that vector entirely.
+	// Keep vehicle_id out of the prompt; the scoped session tool reply is the
+	// authoritative source and avoids user-controlled cross-tenant hints.
 	userMsg := fmt.Sprintf(
 		"Diagnose charging session %d. Call query_charge_session and "+
 			"query_charging_aggregation first, then explain any flags raised "+
@@ -238,8 +171,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		sessionID,
 	)
 
-	// 8) Run the dispatcher. The deferred WriteDone in
-	// dispatch.Run closes the SSE stream cleanly on any path.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -258,6 +189,4 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 	return dispatch.ConfirmDenied, nil
 }
 
-// Compile-time assertion: Handler satisfies
-// http.Handler.
 var _ http.Handler = (*Handler)(nil)

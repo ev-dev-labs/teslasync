@@ -2,46 +2,9 @@ package aidrivecoach
 
 // Phase-50 / 0018 — N4 Per-drive coaching narrative.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/drives/{driveID}/coach. The flow mirrors the YIR
-// / digest / anomaly narration handlers — same dispatch+stream
-// loop, no persistence (one-shot narration; no conversation to
-// record):
-//
-//   URL  /api/v1/ai/drives/{driveID}/coach
-//     ↓
-//   resolve provider via *provider.Registry.For("drive-coaching")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("drive-coaching", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// Unlike the other AI narration handlers (YIR/digest/anomaly) which
-// take their primary identifier from the JSON body, this handler
-// takes `driveID` from the URL path — the AI surface attaches to a
-// specific drive's detail page (/drives/:id) so the URL is the
-// natural place for it. There is no JSON body; an empty body is
-// accepted.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic stat cards, hero gauges,
-//     energy summary, and other panels rendered by
-//     DriveDetailPage at /drives/:id are unchanged.
-//     This handler is an OPT-IN add-on; off-mode users
-//     never see it.
-//   - I7 per-feature:     the route is gated by guard.Wrap("drive-coaching").
-//   - I9 redaction:       PolicyDriveCoaching (allows ClassVehicleName
-//     only; lat/long and addresses stay tagged) is
-//     installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     JSON shape is added or modified by this slice.
+// This is the opt-in LLM narration layer for POST /api/v1/ai/drives/{driveID}/coach.
+// The guard returns 404 before this handler runs when AI or the feature is disabled (ADR-015 §I6).
+// The drive ID stays in the URL because the surface is anchored to one drive detail page.
 
 import (
 	"context"
@@ -153,8 +116,6 @@ func parseDriveCoachURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate URL parameters. Body is intentionally
-	// ignored; this endpoint takes its only input from the URL.
 	driveID, ok := parseDriveCoachURL(w, r)
 	if !ok {
 		return
@@ -170,7 +131,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	// SubjectFromRequest returns "" if the header is absent; that's
 	// the open-mode value the audit log treats as "anonymous".
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
@@ -224,8 +184,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		driveID,
 	)
 
-	// 8) Run the dispatcher. The deferred WriteDone in dispatch.Run
-	// closes the SSE stream cleanly on any path.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,

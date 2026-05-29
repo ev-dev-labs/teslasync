@@ -2,67 +2,9 @@ package aiwatchnl
 
 // Phase-50 / 0056 — V2 Helix watch face natural-language response.
 //
-// ai_watch_face_nl_response_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/watch/respond. The flow mirrors
-// ai_safety_setting_explainer_handler.go (the closest predecessor
-// — body-driven, one-shot read-only narration, no chat-history
-// persistence):
-//
-//	URL  /api/v1/ai/watch/respond
-//	  ↓
-//	read JSON body (optional field: message string [<=1000 char]) —
-//	  the field falls back to a deterministic "what is my watch
-//	  face showing?" prompt so the SPA can post {} for the most
-//	  common case
-//	  ↓
-//	resolve provider via *provider.Registry.For("watch-face-nl-response")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	synthesise the user-message that scopes the question to the
-//	  watch-face envelope and instructs the tool sequence
-//	  (query_watch_context → narrate)
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("watch-face-nl-response", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE
-// this handler ever sees the request (ADR-015 §I6).
-//
-// No per-request scope binding is needed: the watch face is
-// install-scoped (primary vehicle is install-wide). The handler
-// still reads the forward-auth subject for audit/rate-limit
-// annotations, but the tool reads no per-user data so a
-// missing subject does NOT prevent the request from running
-// (the strategy + tool surface the install's primary vehicle
-// state).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /api/v1/watch/summary
-//     handler + the existing /watch SPA page are unchanged. This
-//     handler is an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("watch-face-nl-response").
-//   - I9 redaction:       PolicyChatbot (Allow=nil, Mode=
-//     ModeRedactedTags — every PII class round-tripped) is
-//     installed by dispatch.Run from the strategy and applied
-//     to EVERY message (including the synthesised user message
-//     and tool outputs) by the redact decorator at the provider
-//     boundary. The typed envelope the tool returns is PII-free
-//     by construction (scalar vehicle-state values only, alert
-//     entries are the {severity, age_seconds} pair only); this
-//     policy is defence-in-depth.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     /api/v1/watch/summary JSON shape is added or modified by
-//     this slice.
-//   - I12 client/bg:      no client storage keys, no service-
-//     worker chunks, no background jobs added by this slice;
-//     the registered PushKind 'ai_watch_response' is reserved
-//     for the off-mode push-kind filter and is not emitted
-//     yet.
+// This is the opt-in LLM narration layer for POST /api/v1/ai/watch/respond.
+// The guard returns 404 before this handler runs when AI or the feature is disabled (ADR-015 §I6).
+// The watch face is install-scoped, so a missing forward-auth subject does not block read-only narration.
 
 import (
 	"context"

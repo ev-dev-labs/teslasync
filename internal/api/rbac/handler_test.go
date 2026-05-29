@@ -1,18 +1,7 @@
 // Phase-46 / Prompt 44 — RBACHandler unit tests.
 //
-// Covers:
-//   - Open mode (no FORWARD_AUTH_HEADER) → 501 AUTH_MODE_OPEN on every
-//     endpoint, no store calls.
-//   - Forward-auth + missing header → 401 MISSING_IDENTITY.
-//   - GET /admin/rbac/matrix returns the full catalog + the caller's
-//     effective permissions union across roles.
-//   - GET surfaces roles that exist in the store but not in the
-//     caller's claims.
-//   - PUT /admin/rbac/matrix happy-path returns 204 + propagates the
-//     batch to the store.
-//   - PUT rejects an unknown permission_id with 400 INVALID_PERMISSION.
-//   - PUT rejects an empty role_id with 400 INVALID_ROLE.
-//   - PUT rejects a body exceeding MaxRBACUpsertCells with 400 INVALID_BODY.
+// These handler-level tests isolate open-mode behavior, local matrix assembly,
+// batch validation, repository calls, and current-user permission projection.
 
 package rbac
 

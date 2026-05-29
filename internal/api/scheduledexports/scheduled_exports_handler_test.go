@@ -1,13 +1,8 @@
-// Phase-46 / Prompt 65 — Scheduled exports HTTP handler tests.
+// Phase-46 / Prompt 65 — scheduled exports HTTP handler tests.
 //
-// These tests pin the auth boundary contract that the gate's
-// AUTH_GUARD_CHECK relies on: owner_subject is taken from the
-// configured forward-auth header ONLY, and any owner_subject field
-// in the request body is silently ignored (DisallowUnknownFields
-// surfaces the rejection as a 400 the moment a client tries it).
-//
-// The store stub is intentionally hand-rolled instead of leaning on
-// gomock so the tests document the protocol in plain Go.
+// These pin AUTH_GUARD_CHECK's boundary: owner_subject comes only from the
+// configured ForwardAuth header, and body-supplied owner_subject is rejected
+// by DisallowUnknownFields. The hand-rolled store keeps the protocol visible.
 package scheduledexports
 
 import (
@@ -27,10 +22,6 @@ import (
 
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 )
-
-// ---------------------------------------------------------------
-// In-memory stub store
-// ---------------------------------------------------------------
 
 type fakeScheduledExportStore struct {
 	mu     sync.Mutex
@@ -164,10 +155,6 @@ func (s *fakeScheduledExportStore) SetNextRunAt(_ context.Context, id int64, own
 	row.NextRunAt = &when
 	return nil
 }
-
-// ---------------------------------------------------------------
-// Test scaffolding
-// ---------------------------------------------------------------
 
 const testForwardAuthHeader = "X-Forward-User"
 

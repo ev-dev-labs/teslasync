@@ -102,7 +102,6 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Parse optional date range
 	var startDate, endDate *time.Time
 	if req.Start != "" {
 		t, err := time.Parse("2006-01-02", req.Start)
@@ -267,7 +266,6 @@ func (h *ExportHandler) SubmitImportJob(w http.ResponseWriter, r *http.Request) 
 	jobID := fmt.Sprintf("imp-%d", time.Now().UnixNano())
 	now := time.Now().UTC()
 
-	// Create job with the file data stored directly
 	job := &exportmodel.ExportJob{
 		ID:        jobID,
 		Type:      importType,

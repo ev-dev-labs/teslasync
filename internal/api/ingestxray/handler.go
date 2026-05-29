@@ -1,32 +1,8 @@
 // Per-vehicle ingest X-Ray HTTP handler.
 //
-// Phase-44 / observability-batch / Prompt F6.
-//
-// Endpoint:
-//
-//	GET /api/v1/system/ingest-xray/{vehicleID}
-//	    ?window=1h          (default; supports 5m, 15m, 1h, 6h, 24h)
-//	    ?bucket=1m          (default; supports 30s, 1m, 5m, 15m, 1h)
-//	    ?limit=200          (per-field rows; clamped 1..1000)
-//
-// Response:
-//
-//	{
-//	  "vehicle_id": 123,
-//	  "now": "...",
-//	  "window_start": "...",
-//	  "window": "1h",
-//	  "bucket": "1m",
-//	  "last_seen_at": "..." | null,
-//	  "freshness_seconds": 42 | null,
-//	  "total_samples": 12345,
-//	  "fields": [{"field": "VehicleSpeed", "sample_count": 100, "last_seen_at": "...", "value_kind": 5}, ...],
-//	  "buckets": [{"bucket_start": "...", "count": 50}, ...]
-//	}
-//
-// Why two windowed scans: per-field counts answer "what am I getting?";
-// per-minute buckets answer "is it still flowing?". Both are read-only
-// signal_log queries, no JOINs, indexed by (vehicle_id, ts).
+// GET /api/v1/system/ingest-xray/{vehicleID} exposes recent signal_log flow for
+// operators. It uses two bounded indexed scans: per-field counts answer what is
+// arriving, while bucket counts show whether ingestion is still flowing.
 
 package ingestxray
 

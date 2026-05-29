@@ -1,57 +1,9 @@
 package aicrossrule
 
-// Phase-50 / 0036 — A3 Cross-rule conflict detection.
-//
-// ai_cross_rule_conflict_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/alerts/rules/conflicts. The flow
-// mirrors ai_inbox_categorization_handler.go (body-decoded
-// scope + dispatch+stream loop, no persistence — one-shot
-// propose-only conflict report):
-//
-//	URL  POST /api/v1/ai/alerts/rules/conflicts
-//	  ↓
-//	resolve provider via *provider.Registry.For("cross-rule-conflict-detection")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("cross-rule-conflict-detection", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard
-// returns 404 BEFORE this handler ever sees the request
-// (ADR-015 §I6).
-//
-// The handler takes its rule scope from the JSON body (no URL
-// path parameters): vehicle_id?, signal_name?, rule_ids?[],
-// enabled_only?, limit?. All fields are optional; an empty
-// body asks the LLM to detect conflicts across the user's
-// entire rule set with EnabledOnly=true. The frontend's
-// AlertStudioPage composes the body from the current rule
-// list + selected vehicle filter so the AI sees the same
-// scope the user is looking at.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic AlertStudio rule
-//     list + manual per-rule editing + the existing
-//     validateAlertRule single-rule validator that the
-//     canonical PUT /api/v1/alerts/rules/{id} handler already
-//     uses are unaffected. This handler is an OPT-IN add-on;
-//     off-mode users never see it. The "Review rule" mechanism
-//     in the SPA copies the offending rule_id into the
-//     existing baseline AlertStudio editor's selection state
-//     — same baseline write/state path the user has always
-//     had.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("cross-rule-conflict-detection").
-//   - I9 redaction:       PolicyAlertBuilder (denies every PII
-//     class — alert IDs, signal names, and notification text
-//     flow through the typed F4 tool envelope) is installed by
-//     dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON
-//     shape is added or modified by this slice.
+// Phase-50 / 0036 — A3 cross-rule conflict detection.
+// This opt-in AI handler streams propose-only conflict analysis for the current
+// AlertStudio rule scope; guard.Wrap enforces ADR-015 off-mode and per-feature
+// gating before provider resolution.
 
 import (
 	"context"

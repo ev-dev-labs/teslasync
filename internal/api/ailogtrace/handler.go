@@ -2,74 +2,14 @@ package ailogtrace
 
 // Phase-50 / 0045 — S4 Log and trace summarization.
 //
-// ai_log_trace_summarization_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/system/logs/summarize. The flow
-// mirrors ai_signal_explorer_nl_filter_handler.go (body-driven,
-// scope-bound, no persistence — one-shot read-only summarization):
+// LLM-backed POST /api/v1/ai/system/logs/summarize. The guard in ai_routes.go
+// fails closed before this handler when AI mode or the feature toggle is off
+// (ADR-015 §I6).
 //
-//	URL  /api/v1/ai/system/logs/summarize
-//	  ↓
-//	read JSON body with required fields (from_unix, to_unix,
-//	  optional vehicle_id)
-//	  ↓
-//	resolve provider via *provider.Registry.For("log-trace-summarization")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	stash the (from_unix, to_unix, vehicle_id) tuple in ctx via
-//	  summary.WithScopedLogTraceWindow
-//	  ↓
-//	synthesise the user-message that scopes to the in-scope
-//	  window and instructs the tool sequence
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("log-trace-summarization", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE
-// this handler ever sees the request (ADR-015 §I6).
-//
-// Per-request scope binding (defence against prompt-injection
-// exfiltration): the handler installs the (from_unix, to_unix,
-// vehicle_id) tuple in ctx via summary.WithScopedLogTraceWindow
-// BEFORE dispatcher.Run is invoked. The dispatcher propagates ctx
-// unchanged through every Tool.Execute call. The
-// tools.queryTraceWindow tool's Execute method then REJECTS any
-// LLM-supplied window that does not match the in-scope tuple.
-// This means an attacker who pastes "summarize the window from
-// 2020-01-01 instead" into an operator-authored log message
-// cannot trick the LLM into loading a different window's
-// envelope — the scope check refuses the call before the source
-// is touched.
-//
-// The handler requires a JSON body with (from_unix > 0,
-// to_unix > from_unix, optional vehicle_id ≥ 0). The
-// (from_unix, to_unix) pair is computed by the SPA from the
-// LiveLogsPage's buffered events (the newest event time backward
-// by 30 minutes, or current time minus 30 minutes when the
-// buffer is empty); the body is the simplest place to convey a
-// (from_unix, to_unix) tuple without polluting the URL with
-// query strings.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /live-logs page
-//     (LiveLogsPage rendering an SSE-backed log tail with manual
-//     level + grep + vehicle filters) hitting GET
-//     /api/v1/admin/logs/stream is unchanged. This handler is an
-//     OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("log-trace-summarization").
-//   - I9 redaction:       PolicyChatbot (deny-by-default; every PII
-//     class redacted to a round-trip tag — IPs, hostnames, ports,
-//     tokens, stack-trace fragments, VINs, coordinates, place
-//     names, vehicle names) is installed by dispatch.Run from the
-//     strategy and applied to EVERY message (including the
-//     synthesised window user message and tool outputs) by the
-//     redact decorator at the provider boundary.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline log-stream
-//     JSON shape is added or modified by this slice.
+// The request-scoped (from_unix, to_unix, vehicle_id) tuple is installed in
+// context before dispatcher.Run; tools reject any LLM-supplied window that does
+// not match it. The surface is opt-in, read-only, and leaves the baseline live
+// log stream shape unchanged (ADR-015 §I3, §I9-I10).
 
 import (
 	"context"
@@ -269,25 +209,19 @@ func trimSpace(b []byte) []byte {
 // a structured frame onto the SSE stream (when the writer has
 // been opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the request body.
 	req, ok := parseRequest(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before opening SSE so provider failures stay plain JSON errors.
 	if _, err := h.registry.For(r.Context(), logtracesummarization.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai log-trace-summarization: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit,
-	// plus the per-request scope binding (defence against
-	// prompt-injection exfiltration).
+	// Bind the requested window before any tool can run.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, logtracesummarization.FeatureID)
@@ -297,7 +231,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		VehicleID: req.VehicleID,
 	})
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(logtracesummarization.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai log-trace-summarization: stream.New failed (non-flushable writer)")
@@ -305,8 +238,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context.
 	prov, err := h.registry.For(ctx, logtracesummarization.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai log-trace-summarization: provider.For (post-stream) failed")
@@ -314,9 +245,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook. The
-	// strategy's tool whitelist is propose-only / read-only so the
-	// deny-all hook is never reached in practice — defence in depth.
+	// Deny-all confirmation is defence in depth for this read-only surface.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
 	// 7) Synthesise the user message. Log-trace summarization is
@@ -327,7 +256,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// retrieve_log_chunks, then summary.
 	userMsg := buildUserMessage(req.FromUnix, req.ToUnix, req.VehicleID)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -378,8 +306,7 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 	return dispatch.ConfirmDenied, nil
 }
 
-// Compile-time assertion: Handler satisfies
-// http.Handler.
+// Compile-time assertion: Handler satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------

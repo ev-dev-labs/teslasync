@@ -4,24 +4,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 )
 
-// This file is the parent-side BRIDGE to internal/api/apibulk (Phase R2.0f).
-//
-// Every symbol declared here re-exports the canonical apibulk equivalent
-// using Go's native type/const/var alias machinery, plus 1-line wrapper
-// functions for the helpers. The bridge exists so that the ~9 parent-
-// package bulk handlers (alerts, automations, charging, drives,
-// exports, geofences/bulk, push, saved_views, ...) keep compiling
-// against `MaxBulkIDs`, `bulkOperationResult`, `decodeBulkIDsRequest`,
-// etc. without per-call-site edits while the Phase R2 wave carves
-// resource handlers into subpackages one by one.
-//
-// New handlers — and any handler being moved into a resource
-// subpackage — MUST import `internal/api/apibulk` and call its
-// exported API directly. Adding new callers of the wrappers here
-// extends the bridge's lifetime unnecessarily.
-//
-// Deletion of this bridge is gated on every bulk handler living in a
-// resource subpackage at the end of Phase R2.
+// This file is the parent-side bridge to internal/api/apibulk (Phase R2.0f).
+// It keeps legacy parent bulk handlers compiling during the resource-package
+// carve; new or moved handlers must import apibulk directly. Delete this bridge
+// once every bulk handler lives in a resource subpackage.
 
 // MaxBulkIDs is a TRUE const alias for apibulk.MaxIDs. New code should
 // reference apibulk.MaxIDs directly.

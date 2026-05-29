@@ -1,50 +1,9 @@
 package aitconar
 
 // Phase-50 / 0050 — M2 TCO narration.
-//
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/analytics/tco/narrate. The flow mirrors
-// ai_cost_forecast_narration_handler.go (same dispatch+stream
-// loop, no persistence — one-shot read-only narration):
-//
-//	URL  /api/v1/ai/analytics/tco/narrate
-//	  ↓
-//	resolve provider via *provider.Registry.For("tco-narration")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("tco-narration", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body (vehicle_id) is parsed BEFORE opening the SSE
-// stream so a malformed input surfaces as a plain JSON 400
-// (rather than a streamed error frame the SPA's QueryError will
-// struggle to render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /tco page (and its
-//     alias /analytics/tco) — TrueCostPage with TCOHero,
-//     TCOSummaryCards, CostOverTimeChart, MonthlyBreakdownTable,
-//     AssumptionsPanel hitting GET /api/v1/analytics/tco — is
-//     unchanged. This handler is an OPT-IN add-on; off-mode
-//     users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("tco-narration").
-//   - I9 redaction:       PolicyTCONarration (allows
-//     ClassVehicleName only; lat/long, addresses, place names
-//     stay tagged) is installed by dispatch.Run from the
-//     strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON
-//     shape is added or modified by this slice. The tool
-//     envelope's extra honest-scope `assumptions` array lives
-//     in the AI-only typed [lifetime.TCOSummary] envelope, not on
-//     the baseline /analytics/tco response.
+// This opt-in AI handler streams narration over the deterministic TCO summary;
+// guard.Wrap enforces ADR-015 off-mode and per-feature gating before provider
+// resolution.
 
 import (
 	"context"
@@ -166,29 +125,22 @@ func parseNarrationBody(w http.ResponseWriter, r *http.Request) (*tcoNarrationRe
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the JSON body.
 	body, ok := parseNarrationBody(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request
-	// resolution honours mid-flight settings changes (model
-	// swap, mode flip) without restart. A resolve failure
-	// must NOT open the SSE stream — emit JSON 502 so the
-	// frontend falls back gracefully.
+	// Resolve before opening SSE so provider failures remain ordinary JSON 502s.
 	if _, err := h.registry.For(r.Context(), tconarration.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai tco-narration: provider.For failed")
 		writeError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, tconarration.FeatureID)
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(tconarration.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai tco-narration: stream.New failed (non-flushable writer)")
@@ -196,8 +148,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the
-	// (now-annotated) context.
+	// Resolve again with subject and feature annotations for decorators.
 	prov, err := h.registry.For(ctx, tconarration.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai tco-narration: provider.For (post-stream) failed")
@@ -205,16 +156,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. TCO narration is NOT
-	// conversational here — there is no chat history. We
-	// hand the LLM a deterministic prompt that asks it to
-	// call the single read-only tool in scope and narrate
-	// the result, with explicit limiting-assumption cues so
-	// the narration discloses the four caveats baked into
-	// the deterministic envelope.
+	// TCO narration is non-conversational; the prompt forces the read-only tool
+	// path and repeats the limiting assumptions from the deterministic envelope.
 	userMsg := fmt.Sprintf(
 		"Narrate the operating-cost envelope for vehicle %d. "+
 			"Follow the tool sequence EXACTLY: "+
@@ -230,7 +175,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body.VehicleID, body.VehicleID,
 	)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -261,22 +205,9 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 // the cost-forecast-narration slice's AICostForecaster pattern.
 // ---------------------------------------------------------------------
 
-// TCOSummarizer is the production lifetime.TCOSummarizer. It
-// delegates to the SHARED tco.ComputeTCOSummary helper that
-// also backs the canonical GET /api/v1/analytics/tco handler so
-// the AI narration is grounded in the SAME deterministic
-// envelope the chart on /tco renders. No new SQL is added by
-// this slice.
-//
-// Refactoring the existing TCOHandler.GetTCO to pull its core
-// into the package-level ComputeTCOSummary helper (and having
-// both call sites use it) was the deliberate choice over
-// duplicating the SQL/math here — the slice 0050 rubber-duck
-// critique flagged duplicated SQL as a blocking issue, mirroring
-// the slice 0029 cost-forecast precedent.
-//
-// The struct holds *database.DB; the constructor panics on a
-// nil so a wiring bug surfaces at boot.
+// TCOSummarizer adapts the shared tco.ComputeTCOSummary helper for AI tools so
+// narration stays grounded in the same deterministic envelope the chart renders.
+// The constructor panics on nil DB to surface wiring bugs at boot.
 type TCOSummarizer struct {
 	db *database.DB
 }
@@ -291,28 +222,9 @@ func NewTCOSummarizer(db *database.DB) *TCOSummarizer {
 	return &TCOSummarizer{db: db}
 }
 
-// SummarizeTCO implements lifetime.TCOSummarizer. Composes the SAME
-// tco.ComputeTCOSummary helper *TCOHandler.GetTCO uses so the
-// returned envelope is numerically identical (modulo rounding)
-// to what GET /api/v1/analytics/tco produces — the AI surface
-// is grounded in the SAME deterministic model the chart
-// renders.
-//
-// The function does NOT recompute or override anything the
-// canonical handler computes; it only reshapes the existing
-// output into the typed [lifetime.TCOSummary] envelope the LLM can
-// quote, then attaches the four limiting-assumption strings the
-// system prompt also names (defence in depth — the tool reply
-// itself disclaims, so a future drift in the prompt does not
-// silently lose the disclosure).
-//
-// Currency is left empty for now: the existing baseline
-// response does not surface a currency code, and Phase-48's
-// SI-canonical migration left cost_currency on charging_sessions
-// but the aggregated `cost_decimal` already mixes currencies at
-// the row level. Surfacing a single currency for the aggregate
-// would require a separate query + assumption layer that lives
-// outside this slice.
+// SummarizeTCO implements lifetime.TCOSummarizer without recomputing TCO math.
+// It reshapes the canonical summary for the LLM and attaches explicit caveats;
+// currency remains blank because the baseline aggregate has no single currency.
 func (a *TCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*lifetime.TCOSummary, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("aitconar: vehicle_id must be > 0")

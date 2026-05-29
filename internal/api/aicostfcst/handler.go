@@ -2,50 +2,9 @@ package aicostfcst
 
 // Phase-50 / 0029 — C4 Cost forecast narration.
 //
-// ai_cost_forecast_narration_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/charging/costs/forecast/narrate. The
-// flow mirrors ai_battery_health_handler.go (same dispatch+stream
-// loop, no persistence — one-shot read-only narration):
-//
-//	URL  /api/v1/ai/charging/costs/forecast/narrate
-//	  ↓
-//	resolve provider via *provider.Registry.For("cost-forecast-narration")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("cost-forecast-narration", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE
-// this handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body (vehicle_id + optional months) is parsed BEFORE
-// opening the SSE stream so a malformed input surfaces as a plain
-// JSON 400 (rather than a streamed error frame the SPA's
-// QueryError will struggle to render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /cost-analysis page
-//     (and its alias /charging/costs) — CostSummaryCards,
-//     MonthlyCostChart, CostPerKwhChart, ChargerTypeBreakdown,
-//     SavingsCalculator, MonthlyCostTable, TimeOfUseAnalysis,
-//     CostForecastSection, LifetimeSummary, EnvironmentalImpact
-//     hitting GET /api/v1/analytics/cost-forecast — is unchanged.
-//     This handler is an OPT-IN add-on; off-mode users never see
-//     it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("cost-forecast-narration").
-//   - I9 redaction:       PolicyCostForecastNarration (allows
-//     ClassVehicleName only; lat/long, addresses, and place names
-//     stay tagged) is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice. The tool envelope's
-//     extra honest-uncertainty fields live in the AI-only typed
-//     [forecast.CostForecast] envelope, not on the baseline
-//     /analytics/cost-forecast response.
+// This is the opt-in LLM narration layer for POST /api/v1/ai/charging/costs/forecast/narrate.
+// The guard returns 404 before this handler runs when AI or the feature is disabled (ADR-015 §I6).
+// Body validation happens before SSE opens so malformed input remains a plain JSON 400.
 
 import (
 	"context"
@@ -192,7 +151,6 @@ func parseBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 // a structured frame onto the SSE stream (when the writer has
 // been opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the JSON body.
 	body, ok := parseBody(w, r)
 	if !ok {
 		return
@@ -209,7 +167,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, costforecastnarration.FeatureID)

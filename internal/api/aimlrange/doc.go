@@ -1,8 +1,7 @@
 // Package aimlrange serves the AI range-prediction narrative endpoint.
 //
-// It owns the LLM narration handler and the read-only drive-stat adapter used by
-// query_range_prediction while preserving the deterministic range-projection
-// endpoint as the canonical baseline.
+// It owns the LLM handler and read-only drive-stat adapter while leaving the
+// deterministic range projection as the baseline.
 //
 // Layer: handler
 package aimlrange

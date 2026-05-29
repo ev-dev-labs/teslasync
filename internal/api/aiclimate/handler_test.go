@@ -1,17 +1,11 @@
 // Phase-50 / 0031 — T1 Preheat and precool recommender.
 //
-// Off-mode + body-parser + advisor tests for the AI
-// preheat-precool-recommender handler. The off-mode test
-// (TestPreheatPrecoolAIOffManualClimateWorks) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, AND that a deterministic baseline climate-state
-// route remains the unconditional baseline path (ADR-015 §I3 §I6).
+// Off-mode, body-parser, and advisor tests. The off-mode test is the
+// load-bearing proof that AI mode off hides the AI route while the baseline
+// manual climate path stays reachable (ADR-015 §I3, §I6).
 //
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval -feature
-// preheat-precool-recommender`); duplicating that here would require
-// a live database + signal store fixture.
+// Streaming coverage lives in the F6 eval harness because it needs live DB and
+// signal-store fixtures.
 
 package aiclimate
 
@@ -72,7 +66,6 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 func TestPreheatPrecoolAIOffManualClimateWorks(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"preheat-precool-recommender": true}, // toggle on; mode trumps it

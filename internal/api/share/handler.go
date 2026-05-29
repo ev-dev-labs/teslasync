@@ -20,7 +20,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// ShareHandler handles share link creation and public access.
+// ShareHandler handles authenticated share management and public share views.
 type ShareHandler struct {
 	shareRepo   *sharing.TokenRepo
 	driveRepo   *drivedb.DriveRepo
@@ -37,7 +37,7 @@ func NewShareHandler(db *database.DB) *ShareHandler {
 	}
 }
 
-// ── Public DTOs — allowlisted fields only, no PII ──────────────────
+// Public DTOs expose only allowlisted fields, never VINs or vehicle IDs.
 
 type publicDriveInfo struct {
 	Date          string   `json:"date"`
@@ -91,8 +91,6 @@ type publicShareResponse struct {
 	Telemetry        []publicTelemetryPoint `json:"telemetry,omitempty"`
 }
 
-// ── Create share link (authenticated) ──────────────────────────────
-
 type createShareRequest struct {
 	Title            string `json:"title"`
 	Description      string `json:"description"`
@@ -110,7 +108,6 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 
-	// Verify drive exists
 	drive, err := h.driveRepo.GetByID(ctx, driveID)
 	if err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("share: failed to get drive")
@@ -172,8 +169,6 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ── List shares for a drive (authenticated) ────────────────────────
-
 func (h *ShareHandler) List(w http.ResponseWriter, r *http.Request) {
 	driveID, err := apiparams.URLParamInt64(r, "driveID")
 	if err != nil {
@@ -193,8 +188,6 @@ func (h *ShareHandler) List(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, tokens)
 }
 
-// ── Revoke share link (authenticated) ──────────────────────────────
-
 func (h *ShareHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	if token == "" {
@@ -211,8 +204,6 @@ func (h *ShareHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	log.Info().Str("token", token[:8]+"...").Msg("share link revoked")
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
 }
-
-// ── Public share view (NO authentication) ──────────────────────────
 
 func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
@@ -234,18 +225,16 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Check expiry
 	if share.ExpiresAt != nil && share.ExpiresAt.Before(time.Now().UTC()) {
 		httpx.WriteError(w, http.StatusGone, "share link has expired")
 		return
 	}
 
-	// Increment view counter synchronously
+	// Synchronous count keeps public-share analytics monotonic.
 	if err := h.shareRepo.IncrementViews(ctx, share.ID); err != nil {
 		log.Warn().Err(err).Int64("shareID", share.ID).Msg("share: failed to increment views")
 	}
 
-	// Fetch drive
 	drive, err := h.driveRepo.GetByID(ctx, share.DriveID)
 	if err != nil || drive == nil {
 		log.Error().Err(err).Int64("driveID", share.DriveID).Msg("share: drive not found")
@@ -253,14 +242,7 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Build public drive info (no PII).
-	// Decision #3 (phase-48 methodology): convert SI canonical Drive fields
-	// to true km / min / km/h for the existing publicDriveInfo JSON shape.
-	// Pre-Phase-48 the field names said "km" but the values were silently
-	// miles; Slice 4 will rename the JSON keys to SI canonical and bump the
-	// payload `version` field. Numbers in newly issued share links jump by
-	// a factor of ~1.609× compared to old links — that is the correct
-	// behaviour.
+	// Public drive info is PII-filtered and uses SI canonical values.
 	info := publicDriveInfo{
 		Date:         drive.StartTs.Format("2006-01-02"),
 		DistanceM:    drive.DistanceM,
@@ -282,7 +264,7 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Approximate efficiency: battery % delta per km → Wh/km
+	// Efficiency is approximate because share payloads intentionally omit pack capacity.
 	if drive.StartBatteryPct != nil && drive.EndBatteryPct != nil && drive.DistanceM > 2000 {
 		battUsed := float64(*drive.StartBatteryPct - *drive.EndBatteryPct)
 		if battUsed > 0 {
@@ -298,7 +280,7 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 		Drive:          info,
 	}
 
-	// Fetch vehicle info (model and color only — no VIN, no IDs)
+	// Vehicle info is limited to model and color: no VIN or IDs.
 	vehicle, err := h.vehicleRepo.GetByID(ctx, drive.VehicleID)
 	if err == nil && vehicle != nil {
 		resp.Vehicle = &publicVehicle{
@@ -307,12 +289,10 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Build map, elevation, and speed profiles from positions/telemetry
 	if share.IncludeMap || share.IncludeSpeed || share.IncludeTelemetry {
 		h.buildPublicProfiles(ctx, &resp, drive, share)
 	}
 
-	// Cache the response for 5 minutes
 	w.Header().Set("Cache-Control", "public, max-age=300")
 	httpx.WriteJSON(w, http.StatusOK, resp)
 }
@@ -321,7 +301,6 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 // from drive positions/telemetry. It clips the first and last few points to
 // hide exact start/end locations.
 func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShareResponse, drive *drivemodel.Drive, share *drivemodel.ShareToken) {
-	// Drive telemetry repo removed — fall back to positions only.
 	if drive.EndTs != nil {
 		positions, _ := h.posRepo.ListByVehicle(ctx, drive.VehicleID, drive.StartTs, *drive.EndTs)
 		if len(positions) > 0 {
@@ -330,7 +309,7 @@ func (h *ShareHandler) buildPublicProfiles(ctx context.Context, resp *publicShar
 	}
 }
 
-const clipPoints = 3 // number of points to clip from start/end for privacy
+const clipPoints = 3 // clip exact start/end locations for privacy
 
 func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions []telemetrymodel.Position, share *drivemodel.ShareToken) {
 	n := len(positions)
@@ -375,8 +354,6 @@ func (h *ShareHandler) buildFromPositions(resp *publicShareResponse, positions [
 		}
 	}
 }
-
-// ── Helpers ────────────────────────────────────────────────────────
 
 func safeDeref(s *string, fallback string) string {
 	if s != nil {

@@ -1,19 +1,5 @@
-// Phase-50 / 0044 — S3 Signal explorer NL filter.
-//
-// Off-mode + baseline-coexistence tests for the AI
-// signal-explorer-nl-filter handler. The off-mode test
-// (TestSignalExplorerNLAIOffManualFiltersWork) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, AND that the deterministic per-vehicle signal
-// catalog + per-signal history endpoints served at the canonical
-// /api/v1/signals/* handlers remain the unconditional baseline path
-// (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval -feature
-// signal-explorer-nl-filter`); duplicating that here would require
-// a live database fixture.
+// Phase-50 / 0044 - S3 Signal explorer NL filter.
+// These tests pin AI-off guard behavior, baseline coexistence, and catalog-scoped prompt contracts.
 
 package aisignalnl
 

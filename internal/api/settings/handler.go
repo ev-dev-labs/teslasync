@@ -41,23 +41,9 @@ func (h *SettingsHandler) Get(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get settings")
 		return
 	}
-	// ADR-015 §I9 — provider keys never leak in off mode.
-	// In off mode the SPA never displays previously-saved provider
-	// config (even masked) and never includes it in any export
-	// bundle. The keys remain in the DB so re-enabling AI does not
-	// lose them — we just never hand them to the frontend in this
-	// state. The `omitempty` JSON tag on AIProviderConfig combined
-	// with the nil-map below means the field disappears entirely
-	// from the response body.
-	//
-	// Phase-50 / 0003 / F2 — `ai_features_archived` is also redacted
-	// in off mode. The archive only becomes meaningful again once
-	// the user is in the Settings → AI panel actively switching to
-	// local/cloud, at which point ai_mode is no longer 'off' and
-	// the field is returned so the UI can offer the explicit
-	// "Restore previous selection?" panel. This avoids leaking a
-	// snapshot of historical AI choices to a client who has the
-	// app fully off.
+	// ADR-015 §I9: off mode never exposes saved provider config or the archived
+	// feature map. They stay persisted so a later explicit re-enable can restore
+	// state without leaking historical AI choices while AI is off.
 	if s.AIMode == "off" {
 		s.AIProviderConfig = nil
 		s.AIFeaturesArchived = nil
@@ -144,17 +130,8 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ADR-015 §I9 — provider keys never leak in off mode AND must
-	// survive a re-enable. The Get handler redacts AIProviderConfig
-	// when ai_mode='off', so a SPA round-trip submits a body without
-	// that field. Preserve the stored value so toggling AI off and
-	// back on does not silently lose the user's saved keys.
-	//
-	// Phase-50 / 0003 / F2 — same logic for AIFeaturesArchived. The
-	// Get handler redacts it in off mode so a SPA editing in off
-	// mode submits a body without the field; preserve the stored
-	// archive across the round-trip so it survives until the user
-	// explicitly Confirms or Declines the restore.
+	// ADR-015 §I9: Get redacts AI secrets and archived feature state in off mode,
+	// so preserve stored values across SPA round-trips that omit those fields.
 	if s.AIProviderConfig == nil || s.AIFeaturesArchived == nil {
 		if existing, err := h.settingsRepo.Get(r.Context()); err == nil && existing != nil {
 			if s.AIProviderConfig == nil {
@@ -166,17 +143,8 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Phase-50 / 0003 / F2 — archive on mode→off transition.
-	//
-	// ADR-015 §I7 mandates that flipping the top-level mode off
-	// disables every per-feature toggle so a subsequent re-enable
-	// cannot silently restore the prior selection. We achieve that
-	// by clearing AIFeatures *and* preserving the prior map under
-	// AIFeaturesArchived so the UI can offer an explicit
-	// "Restore previous selection?" panel later. The pure helper
-	// `applyAIArchiveOnModeFlip` lets the policy be unit-tested
-	// without a DB; it is a no-op when the incoming mode is not
-	// 'off' or the prior state had nothing to archive.
+	// Phase-50 / F2: switching AI off clears active toggles but archives the prior
+	// enabled set so a later restore is explicit, not automatic.
 	if s.AIMode == "off" {
 		existing, err := h.settingsRepo.Get(r.Context())
 		if err == nil && existing != nil {
@@ -196,10 +164,8 @@ func (h *SettingsHandler) Update(w http.ResponseWriter, r *http.Request) {
 		oldSettings, _ := h.settingsRepo.Get(r.Context())
 		if oldSettings == nil || oldSettings.GasPricePerUnit != s.GasPricePerUnit ||
 			oldSettings.GasUnit != s.GasUnit || oldSettings.GasEfficiencyMPG != s.GasEfficiencyMPG {
-			// Close previous period
 			h.db.Pool.Exec(r.Context(),
 				`UPDATE gas_price_history SET effective_to = NOW() WHERE effective_to IS NULL`)
-			// Insert new period
 			h.db.Pool.Exec(r.Context(),
 				`INSERT INTO gas_price_history (price_per_unit, unit, efficiency_mpg, effective_from) VALUES ($1, $2, $3, NOW())`,
 				s.GasPricePerUnit, s.GasUnit, s.GasEfficiencyMPG)
@@ -275,8 +241,7 @@ type dashboardLayoutsResponse struct {
 // maxDashboardLayoutSize is the maximum allowed body size for layout storage (1 MB).
 const maxDashboardLayoutSize = 1 << 20
 
-// GetDashboardLayouts returns the persisted dashboard layout data.
-// GET /settings/dashboard-layouts
+// GetDashboardLayouts returns persisted dashboard layouts.
 func (h *SettingsHandler) GetDashboardLayouts(w http.ResponseWriter, r *http.Request) {
 	raw, err := h.settingsRepo.GetDashboardLayouts(r.Context())
 	if err != nil {
@@ -292,7 +257,6 @@ func (h *SettingsHandler) GetDashboardLayouts(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	// Return the stored JSON as-is (it was validated on write).
 	var stored dashboardLayoutsResponse
 	if err := json.Unmarshal([]byte(raw), &stored); err != nil {
 		// Corrupted data — return empty default rather than 500.
@@ -319,7 +283,6 @@ func (h *SettingsHandler) UpdateDashboardLayouts(w http.ResponseWriter, r *http.
 		return
 	}
 
-	// Validate JSON structure
 	var payload dashboardLayoutsResponse
 	if err := json.Unmarshal(body, &payload); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
@@ -328,13 +291,11 @@ func (h *SettingsHandler) UpdateDashboardLayouts(w http.ResponseWriter, r *http.
 	if payload.ActiveID == "" {
 		payload.ActiveID = "default"
 	}
-	// Validate that dashboards is a JSON array
 	if len(payload.Dashboards) == 0 || payload.Dashboards[0] != '[' {
 		httpx.WriteError(w, http.StatusBadRequest, "dashboards must be a JSON array")
 		return
 	}
 
-	// Re-marshal the validated payload for storage
 	canonical, err := json.Marshal(payload)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to serialize dashboard layouts")
@@ -387,46 +348,18 @@ func isValidIANATimezone(s string) bool {
 	return err == nil
 }
 
-// applyAIArchiveOnModeFlip implements the Phase-50 / F2 archive-on-off
-// policy in a testable, dependency-free form.
-//
-// Inputs:
-//   - existing: the prior persisted settings (read via SettingsRepo.Get).
-//   - incoming: the in-flight settings struct being persisted by Update.
-//     This function mutates `incoming.AIFeatures` and
-//     `incoming.AIFeaturesArchived` in place.
-//
-// Policy:
-//
-//  1. Triggers ONLY when `incoming.AIMode == "off"`. Off→off, off→local,
-//     and off→cloud are all no-ops.
-//  2. When the prior mode was non-off AND the prior AIFeatures map had
-//     at least one true-valued entry, that map (filtered to true-only
-//     entries, defensively cloned to defeat aliasing) replaces
-//     `incoming.AIFeaturesArchived`. The prior archive is therefore
-//     overwritten on every off-flip — by design, because the most
-//     recent active selection is the one the user most likely wants to
-//     restore.
-//  3. `incoming.AIFeatures` is unconditionally cleared to an empty
-//     non-nil map so the persisted document satisfies "off means off"
-//     even when the request body forgot to clear it.
-//
-// The function is intentionally permissive on the incoming side: if
-// `incoming.AIFeaturesArchived` was already non-nil (e.g. the request
-// body carried it from a round-trip), the archive replaces it on a
-// fresh archive event but is left alone otherwise.
+// applyAIArchiveOnModeFlip enforces the Phase-50 / F2 off-mode transition.
+// It clears active features whenever incoming.AIMode is "off" and, on a fresh
+// non-off→off transition, stores a true-only clone of the prior feature map.
 func applyAIArchiveOnModeFlip(existing, incoming *systemmodel.Settings) {
 	if incoming == nil || incoming.AIMode != "off" {
 		return
 	}
-	// Always clear toggles in off mode — off means off.
 	incoming.AIFeatures = map[string]bool{}
 	if existing == nil || existing.AIMode == "off" {
 		return
 	}
-	// Filter to true-valued entries and defensively clone so a
-	// subsequent mutation to `existing` cannot affect the archive
-	// we hand back to the caller.
+	// Clone only enabled entries so later mutations to existing cannot alias the archive.
 	archive := make(map[string]bool, len(existing.AIFeatures))
 	for k, v := range existing.AIFeatures {
 		if v {

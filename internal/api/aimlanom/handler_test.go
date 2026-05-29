@@ -1,21 +1,8 @@
 // Phase-50 / 0062 — ML1 Learned per-vehicle anomaly baselines.
 //
-// Off-mode + baseline-coexistence + validation tests for the AI
-// learned-anomaly-baseline narrator at
-// POST /api/v1/ai/ml/anomaly-baselines/train.
-//
-// The off-mode test
-// (TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI route
-// returns 404 when settings.ai_mode='off' even when the per-feature
-// toggle is on, and that the deterministic Z-score detector +
-// safe-range explanation served at GET /api/v1/analytics/anomalies
-// remains the unconditional baseline path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval --feature
-// learned-per-vehicle-anomaly-baselines`); duplicating that here
-// would require a live database fixture.
+// Off-mode tests prove TestLearnedAnomalyBaselineAIOffUsesSafeRangesOnly keeps AI hidden while
+// GET /api/v1/analytics/anomalies remains the deterministic baseline (ADR-015 §I3, §I6).
+// Streaming coverage stays in the F6 eval harness because it needs a live fixture.
 
 package aimlanom
 

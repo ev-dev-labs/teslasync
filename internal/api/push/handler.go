@@ -21,10 +21,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
 )
 
-// pushSubscriptionsRepo is the slice of *dbnotif.PushSubscriptionsRepo
-// the handler depends on. Defined as an interface so unit tests can drop
-// in an in-memory fake (mirrors the SavedViewsHandler / PinnedHandler
-// pattern from earlier Phase 40 prompts).
+// pushSubscriptionsRepo is the narrow repository surface needed by the handler.
+// Keeping it as an interface lets tests use an in-memory fake.
 type pushSubscriptionsRepo interface {
 	Upsert(ctx context.Context, s *models.PushSubscription) error
 	ListAll(ctx context.Context) ([]*models.PushSubscription, error)
@@ -32,9 +30,7 @@ type pushSubscriptionsRepo interface {
 	DeleteByEndpoint(ctx context.Context, userID *int64, endpoint string) error
 }
 
-// pushKeySource is the slice of webpush.Service the handler needs. It
-// just exposes the public key + enabled flag — the handler never calls
-// Send directly (that's the notification worker's job).
+// pushKeySource exposes only VAPID readiness; sending remains a notification-worker concern.
 type pushKeySource interface {
 	IsEnabled() bool
 	PublicKey() string
@@ -230,8 +226,6 @@ func (h *PushHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	h.audit(r, "push.unsubscribe", nil, pushAuditDetail(endpoint, nil))
 	w.WriteHeader(http.StatusNoContent)
 }
-
-// ── helpers ─────────────────────────────────────────────────────────────────
 
 type pushBodyError struct {
 	status int

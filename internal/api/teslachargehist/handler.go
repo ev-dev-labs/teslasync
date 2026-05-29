@@ -22,7 +22,7 @@ type TeslaChargingHistoryHandler struct {
 	repo        *tesladb.TeslaChargingHistoryRepo
 }
 
-// NewTeslaChargingHistoryHandler creates a new handler with the given Tesla client and DB.
+// NewTeslaChargingHistoryHandler wires Tesla charging history dependencies.
 func NewTeslaChargingHistoryHandler(tc *tesla.Client, db *database.DB) *TeslaChargingHistoryHandler {
 	return &TeslaChargingHistoryHandler{
 		teslaClient: tc,
@@ -65,7 +65,7 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 	startTime := r.URL.Query().Get("start_time")
 	endTime := r.URL.Query().Get("end_time")
 
-	// Default to last 90 days if no date range specified
+	// Match Tesla history's common default window when the caller omits dates.
 	if startTime == "" {
 		startTime = time.Now().UTC().AddDate(0, -3, 0).Format(time.RFC3339)
 	}

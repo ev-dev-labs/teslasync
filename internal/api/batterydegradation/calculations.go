@@ -20,7 +20,6 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 
 	pred.HasEnoughData = true
 
-	// Simple linear regression: health_score vs time (in years from first snapshot)
 	firstTime := snapshots[0].CreatedAt
 	n := float64(len(snapshots))
 	var sumX, sumY, sumXY, sumX2 float64
@@ -49,7 +48,6 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 	pred.SlopePerYear = math.Round(slope*100) / 100
 	res.RatePerMonth = math.Abs(slope) / 12
 
-	// Residual standard error for confidence intervals
 	var sse float64
 	for _, s := range snapshots {
 		x := s.CreatedAt.Sub(firstTime).Hours() / (24 * 365.25)
@@ -61,13 +59,11 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 		se = math.Sqrt(sse / (n - 2))
 	}
 
-	// t-value for 95% prediction interval (approximate)
 	tValue := 2.0
 	if n > 30 {
 		tValue = 1.96
 	}
 
-	// Predict when health reaches 80%
 	if slope < 0 {
 		yearsTo80 := (80 - intercept) / slope
 		currentYears := time.Since(firstTime).Hours() / (24 * 365.25)
@@ -79,7 +75,6 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 		}
 	}
 
-	// Generate projection points (36 months / 3 years forward)
 	currentYears := time.Since(firstTime).Hours() / (24 * 365.25)
 
 	type projPoint struct {
@@ -105,7 +100,6 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 			Health: math.Round(health*10) / 10,
 		})
 
-		// Prediction interval width at this point
 		xDev := futureYears - xBar
 		piWidth := 0.0
 		if ssx > 1e-10 && n > 2 {
@@ -139,7 +133,6 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, deepDischargePct float64) []riskFactor {
 	factors := make([]riskFactor, 0, 5)
 
-	// 1. Fast charge ratio
 	fastScore := int(math.Min(100, fastChargePct*1.4))
 	factors = append(factors, riskFactor{
 		Name:   "fast_charge_ratio",
@@ -148,7 +141,6 @@ func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, 
 		Detail: fmt.Sprintf("%.0f%% of sessions are DC fast charge", fastChargePct),
 	})
 
-	// 2. High SOC charging (sessions ending above 90%)
 	socScore := int(math.Min(100, highSocPct*1.3))
 	factors = append(factors, riskFactor{
 		Name:   "high_soc_charging",
@@ -157,7 +149,6 @@ func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, 
 		Detail: fmt.Sprintf("%.0f%% of sessions charge above 90%%", highSocPct),
 	})
 
-	// 3. Temperature exposure
 	tempScore := 10
 	switch {
 	case avgCellTemp > 45:
@@ -176,7 +167,7 @@ func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, 
 		Detail: fmt.Sprintf("Average cell temperature: %.1f°C", avgCellTemp),
 	})
 
-	// 4. Cycle count rate (vs ~25 cycles/month typical baseline)
+	// Baseline is roughly 25 cycles/month.
 	cycleScore := 15
 	switch {
 	case cyclesPerMonth > 40:
@@ -193,7 +184,6 @@ func computeRiskFactors(fastChargePct, highSocPct, avgCellTemp, cyclesPerMonth, 
 		Detail: fmt.Sprintf("%.0f cycles/month vs ~25 typical", cyclesPerMonth),
 	})
 
-	// 5. Deep discharge frequency (sessions starting below 10% SOC)
 	deepScore := int(math.Min(100, deepDischargePct*4))
 	factors = append(factors, riskFactor{
 		Name:   "deep_discharge_frequency",
@@ -253,7 +243,6 @@ func synthesizeBatterySnapshots(entries []signaldb.SignalTraceEntry, nominalCapa
 		return nil
 	}
 
-	// Group entries by timestamp (rounded to the nearest second)
 	type group struct {
 		ts              time.Time
 		batteryLevel    *float64
@@ -295,7 +284,6 @@ func synthesizeBatterySnapshots(entries []signaldb.SignalTraceEntry, nominalCapa
 		g := groupMap[key]
 		idCounter++
 
-		// Derive health_score from EnergyRemaining / nominal
 		capacityWh := nominalCapacity
 		healthScore := 100.0
 		if g.energyRemain != nil && *g.energyRemain > 0 {

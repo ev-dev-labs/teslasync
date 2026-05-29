@@ -25,8 +25,6 @@ func NewHandler(db *database.DB) *Handler {
 	return &Handler{db: db}
 }
 
-// ── Response types ───────────────────────────────────────────
-
 type costForecastResponse struct {
 	Historical    []historicalMonth `json:"historical"`
 	Forecast      []forecastMonth   `json:"forecast"`
@@ -71,19 +69,9 @@ type gasComparison struct {
 	LifetimeSavings float64 `json:"lifetime_savings"`
 }
 
-// ── Handler ──────────────────────────────────────────────────
-
-// CostForecastMeta carries the analytic metadata that the deterministic
-// cost-forecast computation produces alongside the wire-shape response.
-// Slice phase-50/0029 (cost-forecast-narration): the AI narrator strategy
-// reads these fields to honestly explain how the forecast was produced and
-// what its uncertainty really represents (no inflated "95% CI" claims).
-//
-// The wire response shape (costForecastResponse) is intentionally not
-// extended: the chart page is locked to the existing JSON contract. The
-// metadata struct lives here so that BOTH the existing GetForecast handler
-// AND the AI cost-forecast adapter can call ComputeCostForecast and reuse
-// the SAME deterministic computation — never two copies of the SQL.
+// CostForecastMeta carries analytic context for AI narration without extending
+// the chart wire shape. Both REST and AI call ComputeCostForecast so they share
+// one deterministic SQL/computation path.
 type CostForecastMeta struct {
 	HistoricalMonthCount int
 	MinRequiredMonths    int
@@ -96,16 +84,9 @@ type CostForecastMeta struct {
 	Assumptions          []string
 }
 
-// ComputeCostForecast is the canonical deterministic cost forecast used by
-// both the existing GET /analytics/cost-forecast handler and the
-// phase-50/0029 AI narrator. The wire-shape response and analytic metadata
-// are produced from a single SQL/computation path so that the AI narration
-// is grounded in the same numbers the chart renders.
-//
-// The minimum-data threshold (3 monthly aggregates) matches the silent
-// short-circuit inside computeForecast; surfacing it here lets the AI
-// narrator refuse to project on insufficient data instead of inventing a
-// trend.
+// ComputeCostForecast is the shared deterministic forecast for REST and AI.
+// Surfacing the minimum-data threshold lets narration refuse insufficient data
+// instead of inventing a trend.
 func ComputeCostForecast(ctx context.Context, db *database.DB, vehicleID int64, months int) (costForecastResponse, CostForecastMeta, error) {
 	const minRequiredMonths = 3
 
@@ -166,10 +147,8 @@ func ComputeCostForecast(ctx context.Context, db *database.DB, vehicleID int64, 
 	return resp, meta, nil
 }
 
-// loadCostHistorical runs the canonical monthly-aggregation query used by
-// both the deterministic forecast and the AI narrator's tool. Extracted
-// from GetForecast so a single SQL/scan path produces the historical[]
-// slice both call sites consume.
+// loadCostHistorical is shared by REST and AI so both consume the same monthly
+// aggregation rows.
 func loadCostHistorical(ctx context.Context, db *database.DB, vehicleID int64) ([]historicalMonth, error) {
 	rows, err := db.Pool.Query(ctx, `
 		SELECT DATE_TRUNC('month', started_at)                                AS month,
@@ -238,8 +217,6 @@ func (h *Handler) GetForecast(w http.ResponseWriter, r *http.Request) {
 
 	httpx.WriteJSON(w, http.StatusOK, resp)
 }
-
-// ── Forecast computation ─────────────────────────────────────
 
 func (h *Handler) computeForecast(historical []historicalMonth, months int) []forecastMonth {
 	if len(historical) < 3 {

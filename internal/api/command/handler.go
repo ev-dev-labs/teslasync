@@ -183,23 +183,18 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Marshal params for logging
 	paramsJSON, _ := json.Marshal(body.Params)
-
-	// Track command lifecycle via FSM
 	fsm := cmdFSM.NewExecutionFSM(0, vehicleID, body.Command)
 
-	// Check wake state from Redis signal cache
 	if h.redisCache != nil {
 		if shift, err := h.redisCache.GetSignal(r.Context(), vehicleID, "ShiftState"); err == nil && shift != nil {
 			fsm.MarkVehicleAwake()
 		}
 	} else {
-		// No Redis — assume awake; Tesla client handles wake internally
+		// Without Redis freshness, leave wake handling to the Tesla client.
 		fsm.MarkVehicleAwake()
 	}
 
-	// Execute command via Tesla API
 	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VIN, body.Command, body.Params)
 
 	// Phase-45 / Prompt 30 — propagate Tesla third-party token expiry as a
@@ -250,7 +245,6 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		Str("fsm_state", string(fsm.State())).Str("status_msg", fsm.StatusMessage()).
 		Msg("command executed via FSM")
 
-	// Log the command
 	cl := &vehiclemodel.CommandLog{
 		VehicleID: vehicleID,
 		Command:   body.Command,

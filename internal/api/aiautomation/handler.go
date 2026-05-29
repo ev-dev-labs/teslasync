@@ -1,56 +1,9 @@
 package aiautomation
 
-// Phase-50 / 0016 — N2 Natural-language automation builder.
+// Phase-50 AI handler.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/automations/draft. The flow mirrors the
-// nl-alert-builder handler from slice 0015 — same dispatch+stream
-// loop, same propose-only contract, no persistence (one-shot
-// drafting; no conversation to record):
-//
-//   request JSON {vehicle_id, prompt}
-//     ↓
-//   resolve provider via *provider.Registry.For("nl-automation-builder")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("nl-automation-builder", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// PROPOSE-ONLY contract (slice prompt + ADR-015 §I3):
-//
-//   - Both tools the strategy declares (draft_automation_graph,
-//     validate_automation_graph) are pure-functional DTO transforms
-//     that do NOT touch the database.
-//   - The actual save flows through the existing typed
-//     POST /api/v1/automations handler AFTER the user explicitly
-//     clicks Save in the AutomationBuilderPage UI.
-//   - The deterministic AutomationBuilderPage form +
-//     automation.ValidateAutomationInput validator at
-//     `internal/api/automation/decode.go` remain the canonical
-//     baseline for any user with `ai_mode='off'`. The save path is
-//     unchanged.
-//
-// ADR-015 alignment:
-//
-//   - I1 default-off:    the feature toggle defaults false in
-//                         features.Registry; the guard fails closed.
-//   - I3 baseline intact: this handler never replaces the typed
-//                         AutomationHandler.Create path or the
-//                         AutomationBuilderPage manual form.
-//   - I7 per-feature:     the AI route is gated by
-//                         guard.Wrap("nl-automation-builder").
-//   - I9 redaction:       PolicyAutomationBuilder (deny-all) is
-//                         installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//                         /api/v1/ai/*; no field on the existing
-//                         baseline JSON shape is added or modified
-//                         by this slice.
-
+// This endpoint runs an opt-in, guarded dispatch+SSE flow without persistence.
+// ADR-015 baseline routes remain canonical when AI is off or disabled.
 import (
 	"bytes"
 	"context"

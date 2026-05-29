@@ -68,7 +68,6 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 
 	ctx := r.Context()
 
-	// Look up vehicle-specific battery capacity
 	batteryCapacityWh, capacitySource := lookupVehicleCapacityWh(ctx, h.db, vehicleID)
 
 	// Time in each vehicle state — derived from fsm_transitions (000187).
@@ -149,7 +148,6 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	}
 	recentEvents := make([]drainEvent, 0)
 
-	// Get settings for cost calculations
 	var baseCostPerKWh float64
 	err = h.db.Pool.QueryRow(ctx,
 		`SELECT COALESCE((SELECT value_num FROM settings WHERE key = 'base_cost_per_kwh'), 0.12)`,
@@ -164,7 +162,7 @@ func (h *SleepHandler) GetSleepAnalytics(w http.ResponseWriter, r *http.Request)
 	// Estimate sentry monthly cost — preserved as zero-valued cost since
 	// sentryOnDrainRate/sentryOffDrainRate are 0 until per-park drain
 	// reconstruction is reintroduced.
-	hoursPerMonth := 730.0 // avg hours in a month
+	hoursPerMonth := 730.0
 	sentryMonthlyKWh := sentryOnDrainRate / 100 * (batteryCapacityWh / 1000.0) * hoursPerMonth
 	sentryMonthlyCost := sentryMonthlyKWh * baseCostPerKWh
 

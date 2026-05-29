@@ -57,15 +57,8 @@ type revealAuditRequest struct {
 	Variant string `json:"variant"`
 }
 
-// MaskedRevealHandler is the HTTP handler for POST /audit/reveal.
-//
-// It depends on:
-//   - a `*auditdb.AuditRepo` for the actual write,
-//   - the configured ForwardAuth header so the actor identity can be
-//     resolved (when AUTH is enabled).
-//
-// The handler is constructed once during router setup and shared
-// across all requests; it holds no per-request state.
+// MaskedRevealHandler is shared across requests and records masked-value
+// reveal events with the configured ForwardAuth actor when present.
 type MaskedRevealHandler struct {
 	repo              *auditdb.AuditRepo
 	forwardAuthHeader string
@@ -129,16 +122,12 @@ func (h *MaskedRevealHandler) Reveal(w http.ResponseWriter, r *http.Request) {
 			Str("variant", body.Variant).
 			Str("kind", body.Kind).
 			Msg("masked-reveal audit insert failed")
-		// Per the prompt's contract the SPA never observes this 500
-		// (it `.catch(() => {})`s the entire promise) but emitting a
-		// 500 here means Prometheus / log aggregation will surface
-		// the failure — which is exactly what we want.
+		// The SPA ignores this response, but 500s keep audit-pipeline failures visible to telemetry.
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to record audit event")
 		return
 	}
 
-	// 204 because the body would otherwise be empty; matches every
-	// other "fire-and-forget" endpoint in the codebase.
+	// Fire-and-forget endpoint: 204 keeps the empty response explicit.
 	w.WriteHeader(http.StatusNoContent)
 }
 

@@ -10,10 +10,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
-// ---------------------------------------------------------------------------
-// WriteJSON
-// ---------------------------------------------------------------------------
-
 func TestWriteJSON(t *testing.T) {
 	rec := httptest.NewRecorder()
 	httpx.WriteJSON(rec, http.StatusOK, map[string]string{"key": "value"})
@@ -76,10 +72,6 @@ func TestWriteJSON_ContentTypeExactSpelling(t *testing.T) {
 		t.Errorf("Content-Type = %q, want %q", got, want)
 	}
 }
-
-// ---------------------------------------------------------------------------
-// WriteError + WriteErrorCode + HTTPStatusCode
-// ---------------------------------------------------------------------------
 
 func TestWriteError(t *testing.T) {
 	rec := httptest.NewRecorder()

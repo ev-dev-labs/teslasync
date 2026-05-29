@@ -127,7 +127,6 @@ func Metrics(next http.Handler) http.Handler {
 func observeDurationWithExemplar(ctx context.Context, method, route string, duration float64) {
 	obs, err := redHTTPRequestDurationSeconds.GetMetricWithLabelValues(method, route)
 	if err != nil {
-		// Should never happen — labels match the metric definition.
 		return
 	}
 	sc := trace.SpanContextFromContext(ctx)
@@ -161,7 +160,6 @@ func Logger(next http.Handler) http.Handler {
 			duration := time.Since(start)
 			status := ww.Status()
 
-			// Add response time header for API consumers
 			ww.Header().Set("X-Response-Time", fmt.Sprintf("%dms", duration.Milliseconds()))
 
 			logger := log.Info()

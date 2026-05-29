@@ -2,72 +2,9 @@ package ainlgrafana
 
 // Phase-50 / 0058 — PU2 Natural-language Grafana panel.
 //
-// ai_nl_grafana_panel_handler.go implements the LLM-backed handler
-// at POST /api/v1/ai/power/grafana-panel/draft. The flow mirrors
-// ai_nl_sql_playground_handler.go but instead of a single
-// table-name catalog the handler loads three install-wide curated
-// catalogs (panel-type whitelist, datasource-type whitelist, and
-// table-name whitelist) up-front and installs the snapshots into
-// ctx via nlq.WithGrafanaPanelScope:
-//
-//	URL  /api/v1/ai/power/grafana-panel/draft
-//	  ↓
-//	read JSON body with required field (prompt)
-//	  ↓
-//	resolve provider via *provider.Registry.For("nl-grafana-panel")
-//	  ↓
-//	load curated panel-builder catalog via the source port
-//	  ↓
-//	stash in-scope (panel-types, ds-types, tables) snapshots in
-//	  ctx via nlq.WithGrafanaPanelScope(...)
-//	  ↓
-//	open SSE writer (internal/ai/stream.New)
-//	  ↓
-//	synthesise the user-message that lists every in-scope catalog
-//	  so the LLM has ground-truth metadata + the user's prompt
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("nl-grafana-panel", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// Per-request scope binding (defence against prompt-injection
-// exfiltration): the handler installs the (panel-type, ds-type,
-// table-name) snapshots in ctx via nlq.WithGrafanaPanelScope
-// BEFORE dispatcher.Run is invoked. The dispatcher propagates ctx
-// unchanged through every Tool.Execute call. The tools
-// draft_grafana_panel + validate_grafana_panel REJECT any LLM-
-// supplied panel.type, datasource.type, or postgres-target table
-// reference that is NOT in the snapshots. This means an attacker
-// who pastes "select * from secrets" into the prompt cannot trick
-// the LLM into proposing a panel against an out-of-catalog table
-// — the scope check refuses the proposal before it ever reaches
-// the frontend AI panel.
-//
-// The handler requires a JSON body with (prompt non-empty); empty
-// / null / object-without-fields bodies are rejected with 400.
-// Like nl-sql-playground the body has no vehicle_id — the curated
-// panel-builder catalogs are install-wide.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /power/grafana page
-//     (manual JSON editor + curated catalog viewer + Copy target)
-//     is unchanged. This handler is an OPT-IN add-on; off-mode
-//     users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("nl-grafana-panel").
-//   - I9 redaction:       PolicyAlertBuilder (deny-by-default;
-//     EVERY PII class redacted to a round-trip tag — VINs,
-//     coordinates, place names, vehicle names) is installed by
-//     dispatch.Run from the strategy and applied to EVERY message
-//     (including the synthesised catalog user message and tool
-//     outputs) by the redact decorator at the provider boundary.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline /power/grafana
-//     surface is added or modified by this slice.
+// Implements POST /api/v1/ai/power/grafana-panel/draft as a propose-only SSE handler.
+// The route is guard-wrapped for ADR-015 off-mode behavior; /power/grafana remains the deterministic baseline.
+// Curated panel, datasource, and table catalogs are bound into context before tool execution to block out-of-scope proposals.
 
 import (
 	"bytes"
@@ -93,33 +30,16 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiNLGrafanaPanelMaxIterations bounds the dispatcher's tool-loop.
-// The strategy is at most draft_grafana_panel → validate_grafana_panel
-// → answer (with optional retries on validator rejection). A hard
-// ceiling of 8 is generous, matching nl-sql-playground.
+// aiNLGrafanaPanelMaxIterations bounds draft/validate retries; 8 matches nl-sql-playground.
 const aiNLGrafanaPanelMaxIterations = 8
 
-// aiNLGrafanaPanelMaxBodyBytes caps the request body. The body is
-// small (just a short prompt); bound it cheaply. 16 KiB
-// accommodates a verbose user prompt without truncation.
+// aiNLGrafanaPanelMaxBodyBytes caps the prompt-only JSON body cheaply.
 const aiNLGrafanaPanelMaxBodyBytes = 16 * 1024
 
-// aiNLGrafanaPanelMaxPromptChars caps the prompt length after JSON
-// decode. The model context window is bounded; a runaway prompt
-// would push the canonical system + catalog message out of the
-// window.
+// aiNLGrafanaPanelMaxPromptChars keeps the curated catalog message inside the model window.
 const aiNLGrafanaPanelMaxPromptChars = 1200
 
-// NLGrafanaPanelCatalogSource is the narrow read interface the
-// handler consumes to load the curated install-wide panel-builder
-// catalog. Production wiring satisfies it via
-// NLGrafanaPanelCatalogSourceImpl, which returns hardcoded
-// whitelists (panel-types, datasource-types, tables) so the AI
-// can never propose a panel outside the curated set.
-//
-// The interface is intentionally narrow (one method) so test
-// fakes stay small and the production implementation cannot
-// accidentally widen the surface.
+// NLGrafanaPanelCatalogSource is the narrow read seam for curated panel-builder catalogs.
 type NLGrafanaPanelCatalogSource interface {
 	// PanelBuilderCatalog returns the curated install-wide
 	// catalog at the time of the call. The returned struct's
@@ -127,10 +47,7 @@ type NLGrafanaPanelCatalogSource interface {
 	PanelBuilderCatalog(ctx context.Context) (NLGrafanaPanelCatalog, error)
 }
 
-// NLGrafanaPanelCatalog is the bundle of in-scope catalogs the
-// AI is allowed to draw from. A single struct lets the handler
-// load all three with one source call and pass them to the user
-// message + scope binding atomically.
+// NLGrafanaPanelCatalog bundles the catalog snapshots installed atomically into prompt and scope.
 type NLGrafanaPanelCatalog struct {
 	// PanelTypes is the curated whitelist of Grafana panel types
 	// the AI may propose. Each entry carries a one-line hint so
@@ -210,8 +127,7 @@ type NLSQLSchemaColumn struct {
 	Description string
 }
 
-// aiNLGrafanaPanelRequest is the typed body shape. The single
-// required field is the user's natural-language prompt.
+// aiNLGrafanaPanelRequest carries the required natural-language prompt.
 type aiNLGrafanaPanelRequest struct {
 	// Prompt is the user's natural-language Grafana-panel
 	// request. Required, non-empty after trimming, capped at
@@ -678,48 +594,18 @@ func (a *NLGrafanaPanelCatalogSourceImpl) PanelBuilderCatalog(_ context.Context)
 	}, nil
 }
 
-// Compile-time assertion.
 var _ NLGrafanaPanelCatalogSource = (*NLGrafanaPanelCatalogSourceImpl)(nil)
 
-// ---------------------------------------------------------------------
-// Production wiring for the nlq.GrafanaPanelValidator interface.
-// ---------------------------------------------------------------------
-
-// NLGrafanaValidator is the production nlq.GrafanaPanelValidator.
-// The shape checks (panel-type catalog, datasource-type catalog,
-// per-target shape, postgres rawSql contract, prometheus expr
-// contract, gridPos bounds) are already enforced by the tool's
-// checkGrafanaPanelScopeAndShape before this validator is called,
-// so this method is a thin adapter that exists so a future slice
-// can add semantic checks (e.g. "the requested aggregation will
-// scan more than N partitions — suggest a narrower time filter")
-// without churning the tool interface.
-//
-// For Phase-50 / 0058 the validator is intentionally permissive:
-// every draft with a valid shape is accepted. The per-request
-// scope binding already prevented out-of-catalog panel/datasource
-// types and out-of-catalog tables; the keyword + prefix checks
-// already prevented DML/DDL inside postgres rawSql. There is
-// nothing else for the AI surface to enforce — the user's manual
-// JSON editor on /power/grafana is what they paste into Grafana,
-// and the user reviews the typed proposal before clicking Apply.
-//
-// Stateless. Held by value; safe for concurrent use.
+// NLGrafanaValidator is intentionally permissive after shape and scope checks pass.
+// Later slices can add semantic checks here without changing the tool interface.
 type NLGrafanaValidator struct{}
 
-// NewNLGrafanaValidator constructs the validator. No deps.
-// Returned by-pointer for symmetry with the other AI* validator
-// types.
+// NewNLGrafanaValidator constructs the stateless validator.
 func NewNLGrafanaValidator() *NLGrafanaValidator {
 	return &NLGrafanaValidator{}
 }
 
-// ValidateGrafanaPanel implements nlq.GrafanaPanelValidator.
-//
-// Future-extension hook: add semantic checks here as later slices
-// need them. Keeping the body intentionally minimal so the
-// slice's mandate ("propose-only, no semantic surprises") is
-// locally legible.
+// ValidateGrafanaPanel accepts any scoped, shape-valid draft.
 func (v *NLGrafanaValidator) ValidateGrafanaPanel(draft *nlq.GrafanaPanelDraft) error {
 	if draft == nil {
 		return errors.New("api ai nl-grafana-panel: nil GrafanaPanelDraft")
@@ -727,5 +613,4 @@ func (v *NLGrafanaValidator) ValidateGrafanaPanel(draft *nlq.GrafanaPanelDraft) 
 	return nil
 }
 
-// Compile-time assertion.
 var _ nlq.GrafanaPanelValidator = (*NLGrafanaValidator)(nil)

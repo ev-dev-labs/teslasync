@@ -42,11 +42,8 @@ type Handler struct {
 	repo   onboardingStatusReader
 }
 
-// NewHandler constructs the handler with the production
-// dependencies. The optional encryptor is forwarded to TokenRepo so
-// the stored OAuth token can be decrypted before the existence check
-// — though for "is the account connected" all we actually need is
-// presence, not contents.
+// NewHandler wires production dependencies; the optional encryptor lets TokenRepo
+// read stored OAuth tokens before the connected-account check.
 func NewHandler(db *database.DB, enc ...*crypto.Encryptor) *Handler {
 	var e *crypto.Encryptor
 	if len(enc) > 0 {

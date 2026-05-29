@@ -2,75 +2,11 @@ package aifsmnar
 
 // Phase-50 / 0048 — S7 State-machine debugger narrator.
 //
-// ai_state_machine_debugger_narrator_handler.go implements the
-// LLM-backed handler at POST /api/v1/ai/system/fsm/narrate. The
-// flow mirrors ai_mqtt_sse_inspector_explanations_handler.go
-// (body-driven, scope-bound, no persistence — one-shot read-only
-// narration):
-//
-//	URL  /api/v1/ai/system/fsm/narrate
-//	  ↓
-//	read JSON body with required fields (vehicle_id, from_unix, to_unix)
-//	  ↓
-//	resolve provider via *provider.Registry.For("state-machine-debugger-narrator")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	stash the (vehicle_id, from_unix, to_unix) tuple in ctx via
-//	  summary.WithScopedFSMTraceWindow
-//	  ↓
-//	synthesise the user-message that scopes to the in-scope
-//	  window and instructs the tool sequence
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("state-machine-debugger-narrator", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard
-// returns 404 BEFORE this handler ever sees the request
-// (ADR-015 §I6).
-//
-// Per-request scope binding (defence against prompt-injection
-// exfiltration): the handler installs the (vehicle_id, from_unix,
-// to_unix) tuple in ctx via summary.WithScopedFSMTraceWindow BEFORE
-// dispatcher.Run is invoked. The dispatcher propagates ctx
-// unchanged through every Tool.Execute call. The
-// tools.queryFSMTrace tool's Execute method then REJECTS any
-// LLM-supplied tuple that does not match the in-scope tuple.
-// This means an attacker who pastes "narrate vehicle_id=99
-// instead" into an operator-readable trigger string or FSM name
-// cannot trick the LLM into loading a different vehicle's /
-// window's trace — the scope check refuses the call before the
-// source is touched.
-//
-// The handler requires a JSON body with (vehicle_id > 0,
-// from_unix > 0, to_unix > from_unix). The (vehicle_id, from_unix,
-// to_unix) triple is computed by the SPA from the page's active
-// vehicle selector + (startInstant, endInstantExclusive) time
-// range when the operator clicks the AI button on the
-// StateMachineDebuggerPage; the body is the simplest place to
-// convey the triple without polluting the URL with query
-// strings.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /state-debugger page
-//     (StateMachineDebuggerPage rendering the transition table,
-//     state diagram, FSM health panel, and timeline chart) is
-//     unchanged. This handler is an OPT-IN add-on; off-mode
-//     users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("state-machine-debugger-narrator").
-//   - I9 redaction:       PolicyDigest (Allow=[ClassVehicleName])
-//     is installed by dispatch.Run from the strategy and applied
-//     to EVERY message (including the synthesised window user
-//     message and tool outputs) by the redact decorator at the
-//     provider boundary. Transition details are user-visible to
-//     the operator already, so narration is unaffected.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     /api/v1/fsm/transitions JSON shape is added or modified
-//     by this slice.
+// POST /api/v1/ai/system/fsm/narrate streams one-shot FSM narration for
+// a body-scoped (vehicle_id, from_unix, to_unix) window. The scoped window
+// is installed in context before dispatch so tool calls cannot be steered
+// to another vehicle or interval; ADR-015 guard wrapping keeps the route
+// hidden in off-mode without changing the deterministic debugger page.
 
 import (
 	"context"
@@ -106,16 +42,9 @@ const aiStateMachineDebuggerNarratorMaxIterations = 8
 // 16 KiB matches the other body-driven AI handlers.
 const aiStateMachineDebuggerNarratorMaxBodyBytes = 16 * 1024
 
-// aiStateMachineDebuggerNarratorMaxWindowSeconds caps the window
-// the caller may request. 7 days matches the SPA's
-// StateMachineDebuggerPage default range preset ('7d' — see the
-// useRangeState defaultPresetId in
-// web/src/features/system/pages/StateMachineDebuggerPage.tsx),
-// so the default operator workflow (open page → click "Ask Helix")
-// no longer trips the cap with a stream_http_400. The previous
-// 24-hour cap silently rejected every default-range request and
-// bounds the size of the envelope the source has to compute even
-// at the wider 7-day window.
+// aiStateMachineDebuggerNarratorMaxWindowSeconds matches the SPA's 7-day
+// default range so the normal "Ask Helix" workflow does not self-reject,
+// while still bounding the source envelope.
 const aiStateMachineDebuggerNarratorMaxWindowSeconds = 7 * 24 * 60 * 60
 
 // aiStateMachineDebuggerNarratorMaxFromUnix is a sanity upper
@@ -123,19 +52,12 @@ const aiStateMachineDebuggerNarratorMaxWindowSeconds = 7 * 24 * 60 * 60
 // 9999). Set to year 2100 in Unix seconds.
 const aiStateMachineDebuggerNarratorMaxFromUnix = int64(4102444800)
 
-// aiStateMachineDebuggerNarratorRequest is the typed body shape.
-// All three fields are required.
+// aiStateMachineDebuggerNarratorRequest is the required JSON body.
 type aiStateMachineDebuggerNarratorRequest struct {
-	// VehicleID identifies the vehicle the trace covers.
-	// Required + positive.
 	VehicleID int64 `json:"vehicle_id"`
 
-	// FromUnix is the inclusive start of the window in Unix
-	// seconds. Required + positive.
 	FromUnix int64 `json:"from_unix"`
 
-	// ToUnix is the inclusive end of the window in Unix
-	// seconds. Required + strictly greater than FromUnix.
 	ToUnix int64 `json:"to_unix"`
 }
 
@@ -175,35 +97,9 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the
-// handler. All non-pointer arguments are required; the
-// constructor panics on a nil so the wiring bug surfaces at
-// boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already
-//
-//	applied).
-//
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	query_fsm_trace AND retrieve_fsm_chunks
-//	(registered by summary.RegisterStateMachineDebuggerNarratorTools
-//	in router.go).
-//
-// strat:      the state-machine-debugger-narrator Strategy (one
-//
-//	per process).
-//
-// source:     the production summary.FSMTraceSource (currently
-//
-//	FSMTraceSource — a deterministic empty adapter;
-//	the canonical baseline /api/v1/fsm/transitions
-//	surface remains reachable to the operator at all
-//	times).
-//
-// headerName: forward-auth header name; used to extract subject
-//
-//	for audit.
+// NewHandler constructs the handler and panics on nil dependencies so
+// wiring bugs fail at boot instead of the first AI request. toolReg must
+// contain query_fsm_trace and retrieve_fsm_chunks.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -287,7 +183,6 @@ func parseStateMachineDebuggerNarratorRequest(w http.ResponseWriter, r *http.Req
 // writer has been opened) or a plain JSON 4xx/5xx (before it
 // has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the request body.
 	req, ok := parseStateMachineDebuggerNarratorRequest(w, r)
 	if !ok {
 		return
@@ -324,8 +219,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-
-	// annotated) context.
 	prov, err := h.registry.For(ctx, statemachinedebuggernarrator.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai state-machine-debugger-narrator: provider.For (post-stream) failed")
@@ -347,7 +240,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// OPTIONALLY retrieve_fsm_chunks, then narration.
 	userMsg := buildStateMachineDebuggerNarratorUserMessage(req.VehicleID, req.FromUnix, req.ToUnix)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -389,17 +281,10 @@ func buildStateMachineDebuggerNarratorUserMessage(vehicleID, fromUnix, toUnix in
 	)
 }
 
-// Compile-time assertion: Handler
-// satisfies http.Handler.
+// Compile-time assertion: Handler satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
-// ---------------------------------------------------------------------
-// Production wiring for the tool interface declared by
-// internal/ai/tools/state_machine_debugger_narrator.go. Kept in
-// the same file as the handler so the wiring intent is local to
-// the slice; mirrors the mqtt-sse-inspector-explanations slice's
-// AIStreamInspectorSource pattern.
-// ---------------------------------------------------------------------
+// Production wiring for the summary.FSMTraceSource adapter.
 
 // FSMTraceSource is the production summary.FSMTraceSource. The
 // canonical baseline /api/v1/fsm/transitions surface remains
@@ -419,19 +304,12 @@ var _ http.Handler = (*Handler)(nil)
 type FSMTraceSource struct{}
 
 // NewFSMTraceSource constructs the deterministic empty adapter.
-// No deps. Returned by-pointer for symmetry with the other AI*
-// source types.
 func NewFSMTraceSource() *FSMTraceSource {
 	return &FSMTraceSource{}
 }
 
-// FSMTrace implements summary.FSMTraceSource. Returns a
-// deterministic empty envelope describing the bound tuple. No
-// SQL is issued. No state is mutated.
-//
-// The envelope's slices are non-nil (empty-but-allocated) so
-// JSON marshalling renders [] rather than null — keeping the
-// LLM's tool-reply parsing predictable.
+// FSMTrace returns a deterministic, side-effect-free empty envelope. Slices
+// are allocated so JSON renders [] rather than null for predictable tool replies.
 func (a *FSMTraceSource) FSMTrace(_ context.Context, vehicleID, fromUnix, toUnix int64) (*summary.FSMTraceEnvelope, error) {
 	if vehicleID <= 0 {
 		return nil, fmt.Errorf("api ai state-machine-debugger-narrator: vehicle_id must be > 0")
@@ -456,6 +334,5 @@ func (a *FSMTraceSource) FSMTrace(_ context.Context, vehicleID, fromUnix, toUnix
 	}, nil
 }
 
-// Compile-time assertion: FSMTraceSource satisfies
-// summary.FSMTraceSource.
+// Compile-time assertion: FSMTraceSource satisfies summary.FSMTraceSource.
 var _ summary.FSMTraceSource = (*FSMTraceSource)(nil)

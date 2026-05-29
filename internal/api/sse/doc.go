@@ -1,8 +1,5 @@
-// Package sse hosts the Server-Sent Events fan-out hub (EventHub) and the
-// SSEHandler HTTP endpoint used to stream live signal/state changes to the
-// SPA. Producers (telemetry ingest, alert evaluator, export worker) broadcast
-// through the hub; carved-out handler subpackages depend on it via their own
-// local EventBroadcaster interfaces, so the concrete type lives here.
+// Package sse hosts the Server-Sent Events fan-out hub and HTTP endpoint.
+// Producers broadcast through this concrete hub while carved-out handlers depend on local interfaces.
 //
 // Layer: handler
 package sse

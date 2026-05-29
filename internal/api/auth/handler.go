@@ -76,7 +76,6 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Redirect to frontend after successful auth
 	http.Redirect(w, r, "/?auth=success", http.StatusTemporaryRedirect)
 }
 
@@ -160,7 +159,6 @@ func (h *Handler) Disconnect(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to disconnect")
 		return
 	}
-	// Clear in-memory tokens so the client stops making API calls
 	h.teslaClient.SetTokens("", "", time.Time{})
 	log.Info().Msg("Tesla account disconnected")
 	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "disconnected"})

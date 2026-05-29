@@ -1,30 +1,8 @@
-// Phase-46 / Prompt 46 — Admin impersonation handler.
+// Phase-46 / Prompt 46 — admin impersonation handler.
 //
-// Four endpoints back the SPA's impersonation flow:
-//
-//	GET  /api/v1/admin/impersonate            → current state for the banner
-//	POST /api/v1/admin/impersonate            → start (sudo-gated upstream)
-//	POST /api/v1/admin/impersonate/end        → end + clear cookie
-//	GET  /api/v1/admin/impersonate/candidates → distinct subjects (excluding actor)
-//
-// Provider-agnostic. The candidate list comes from
-// `auth_sessions.subject DISTINCT WHERE revoked_at IS NULL` because
-// prompt 57 (auth_subjects + RequireSubjectMiddleware) has not yet
-// shipped. When prompt 57 lands, swap the candidates query to read
-// from `auth_subjects` directly.
-//
-// Auth-mode awareness. In open mode (no FORWARD_AUTH_HEADER configured)
-// every endpoint returns 501 with code AUTH_MODE_OPEN so the SPA's
-// useImpersonation hook can render the inline placeholder without a
-// noisy 401 loop. The POST start route is wrapped in RequireSudo
-// upstream — that middleware is itself a passthrough in open mode, so
-// the open-mode check below intentionally fires before any database
-// work and never depends on the sudo middleware running.
-//
-// Audit. Every successful start AND end writes a row to audit_logs
-// via the AuditRepo. Cookie expiry does NOT fire an end row — only an
-// explicit POST /admin/impersonate/end does — so the count of end
-// rows is a precise "manually ended" metric.
+// The endpoints expose current state, start, end, and candidate lookup for the
+// SPA banner. Open-mode installs return AUTH_MODE_OPEN before DB work; successful
+// explicit start/end operations write audit rows, while cookie expiry does not.
 package impersonate
 
 import (

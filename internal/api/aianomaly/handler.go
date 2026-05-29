@@ -1,41 +1,11 @@
 package aianomaly
 
-// Phase-50 / 0014 — U4 Anomaly explanation narration.
+// Phase-50 / 0014 — U4 anomaly explanation narration.
 //
-// ai_anomaly_handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/anomalies/explain. The flow mirrors the YIR /
-// digest narration handlers — same dispatch+stream loop, no
-// persistence (one-shot narration; no conversation to record):
-//
-//   request JSON {vehicle_id, days?}
-//     ↓
-//   resolve provider via *provider.Registry.For("anomaly-explanations")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("anomaly-explanations", …) so when ai_mode='off' or
-// the per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic Z-score detector +
-//     static safeRanges-based explanation served by
-//     GET /api/v1/analytics/anomalies (rendered via the SPA route
-//     /anomaly-detection) is unchanged. This handler is an OPT-IN
-//     add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//                         guard.Wrap("anomaly-explanations").
-//   - I9 redaction:       PolicyDigest (allows ClassVehicleName only)
-//                         is installed by dispatch.Run from the
-//                         strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//                         /api/v1/ai/*; no field on the existing
-//                         baseline JSON shape is added or modified by
-//                         this slice.
+// This opt-in POST /api/v1/ai/anomalies/explain surface streams a one-shot
+// LLM explanation through the shared dispatcher. The guard in ai_routes.go
+// enforces ADR-015 off-mode/per-feature gating before this handler runs, so
+// the deterministic /api/v1/analytics/anomalies baseline remains unchanged.
 
 import (
 	"context"
@@ -55,17 +25,12 @@ import (
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// maxIterations bounds the dispatcher's tool-loop. Anomaly
-// narration is one-tool-call-then-answer; a hard ceiling of 4 is
-// generous for a model that occasionally retries the tool call once
-// before settling. Mirrors aiYearReviewMaxIterations from slice 0013.
+// maxIterations leaves room for one retry while keeping one-shot anomaly
+// narration bounded.
 const maxIterations = 4
 
-// defaultDays mirrors the baseline anomaly handler default
-// (and the tools.queryAnomalyContext.defaultAnomalyDays). Kept here
-// as a separate const so the HTTP-input default is independently
-// readable from the tool default — a future change that shifts the
-// dashboard window won't silently shift the AI window.
+// defaultDays intentionally stays separate from tool defaults so dashboard
+// window changes do not silently shift the AI narration window.
 const defaultDays = 7
 
 // maxDays is the upper bound that mirrors the tool's
@@ -87,18 +52,9 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the handler. All non-pointer
-// arguments are required; the constructor panics on a nil so the
-// wiring bug surfaces at boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	query_anomaly_context (registered by
-//	tools.RegisterAnomalyTools in router.go).
-//
-// strat:      the anomaly-explanations Strategy (one per process).
-// headerName: forward-auth header name; used to extract subject for audit.
+// NewHandler constructs the handler and panics on nil dependencies so wiring
+// bugs fail at boot instead of on the first request. toolReg must include
+// query_anomaly_context from tools.RegisterAnomalyTools.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -140,7 +96,6 @@ type request struct {
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Decode + validate request body.
 	var body request
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -169,21 +124,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
-	// SubjectFromRequest returns "" if the header is absent; that's
-	// the open-mode value the audit log treats as "anonymous".
+	// Empty subject is the open-mode audit value.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, anomalyexplanations.FeatureID)
 
-	// 4) Open the SSE writer. Stream.New writes the SSE response
-	// headers, starts the consumer goroutine, and returns a child
-	// ctx that cancels on stall — we pass that ctx to the
-	// dispatcher so a stalled consumer kills the upstream call.
+	// The stream context cancels upstream provider work if the client stalls.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(anomalyexplanations.FeatureID))
 	if err != nil {
-		// Non-flushable response writer (test recorder, etc.).
-		// Emit a plain JSON 500 — the SSE headers were not sent.
 		log.Error().Err(err).Msg("ai anomaly: stream.New failed (non-flushable writer)")
 		writeError(w, http.StatusInternalServerError, "streaming not supported")
 		return
@@ -199,34 +147,23 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook. The
-	// anomaly strategy declares only the read-only anomaly tool, so
-	// the confirm hook never fires — but defence-in-depth: if a
-	// future strategy edit adds a mutating tool by mistake, the
-	// dispatcher will REJECT it instead of silently mutating fleet
-	// state.
+	// Deny-all confirmation is defense in depth if a future strategy adds a
+	// mutating tool by mistake.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Anomaly narration is NOT
-	// conversational — there is no chat history. We hand the LLM a
-	// deterministic prompt that asks it to call the one tool it has
-	// and narrate the result.
+	// Use a deterministic one-shot prompt; this surface has no chat history.
 	userMsg := fmt.Sprintf(
 		"Explain anomalies for vehicle %d over the last %d days. "+
 			"Call query_anomaly_context first, then narrate the result strictly from its reply.",
 		body.VehicleID, days,
 	)
 
-	// 8) Run the dispatcher. The deferred WriteDone in dispatch.Run
-	// closes the SSE stream cleanly on any path.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
 	}
 	if err := d.Run(ctx, h.strategy, in, sseW); err != nil {
-		// Errors are also surfaced on the SSE wire by the
-		// dispatcher's terminal frame (WriteError or
-		// EmitLimitError on the underlying writer); we just log.
+		// The dispatcher has already emitted the terminal SSE frame.
 		log.Error().Err(err).
 			Int64("vehicle_id", body.VehicleID).
 			Int("days", days).

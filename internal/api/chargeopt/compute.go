@@ -7,8 +7,6 @@ import (
 	"time"
 )
 
-// ── Internal types ───────────────────────────────────────────
-
 type sessionRow struct {
 	id           int64
 	startDate    time.Time
@@ -21,8 +19,6 @@ type sessionRow struct {
 	lon          float64
 	outsideTemp  float64
 }
-
-// ── Schedule analysis ────────────────────────────────────────
 
 func analyzeSchedule(sessions []sessionRow) currentSchedule {
 	hourCount := make(map[int]int)
@@ -45,7 +41,6 @@ func analyzeSchedule(sessions []sessionRow) currentSchedule {
 		}
 	}
 
-	// Most common hour
 	bestHour := 0
 	bestCount := 0
 	for h, c := range hourCount {
@@ -60,7 +55,6 @@ func analyzeSchedule(sessions []sessionRow) currentSchedule {
 		commonDay = "weekend"
 	}
 
-	// Average sessions per week
 	var first, last time.Time
 	if len(sessions) > 0 {
 		last = sessions[0].startDate
@@ -85,14 +79,12 @@ func analyzeSchedule(sessions []sessionRow) currentSchedule {
 	}
 }
 
-// ── Home detection ───────────────────────────────────────────
-
 func detectHome(sessions []sessionRow) (homeCount int, homePct float64) {
 	if len(sessions) == 0 {
 		return 0, 0
 	}
 
-	// Cluster locations: find most frequent within 0.001° (~100m)
+	// Treat coordinates within roughly 100 m as the same charging location.
 	type locCluster struct {
 		lat, lon float64
 		count    int
@@ -120,14 +112,11 @@ func detectHome(sessions []sessionRow) (homeCount int, homePct float64) {
 		return 0, 0
 	}
 
-	// Largest cluster = home
 	sort.Slice(clusters, func(i, j int) bool { return clusters[i].count > clusters[j].count })
 	homeCount = clusters[0].count
 	homePct = float64(homeCount) / float64(len(sessions)) * 100
 	return homeCount, homePct
 }
-
-// ── Cost analysis ────────────────────────────────────────────
 
 func analyzeCosts(sessions []sessionRow, homeCount int) ([]heatmapEntry, costAnalysis) {
 	type hourBucket struct {
@@ -136,7 +125,6 @@ func analyzeCosts(sessions []sessionRow, homeCount int) ([]heatmapEntry, costAna
 		sessions  int
 	}
 
-	// Build 7×24 heatmap + per-hour cost aggregation
 	grid := make(map[[2]int]*hourBucket) // [day, hour] → bucket
 	hourAgg := make(map[int]*hourBucket) // hour → bucket (for peak detection)
 
@@ -160,7 +148,6 @@ func analyzeCosts(sessions []sessionRow, homeCount int) ([]heatmapEntry, costAna
 		hourAgg[hour].sessions++
 	}
 
-	// Build heatmap entries
 	heatmap := make([]heatmapEntry, 0, len(grid))
 	for key, b := range grid {
 		avgCPK := 0.0
@@ -181,7 +168,6 @@ func analyzeCosts(sessions []sessionRow, homeCount int) ([]heatmapEntry, costAna
 		return heatmap[i].Hour < heatmap[j].Hour
 	})
 
-	// Find peak and off-peak from actual data
 	type hourCost struct {
 		hour int
 		cpk  float64
@@ -201,7 +187,6 @@ func analyzeCosts(sessions []sessionRow, homeCount int) ([]heatmapEntry, costAna
 	var offpeakCPK, peakCPK float64
 
 	if len(hourCosts) > 0 {
-		// Cheapest 30% = off-peak, most expensive 30% = peak
 		offCut := len(hourCosts) / 3
 		if offCut < 1 {
 			offCut = 1
@@ -229,7 +214,6 @@ func analyzeCosts(sessions []sessionRow, homeCount int) ([]heatmapEntry, costAna
 		}
 	}
 
-	// Sessions during peak %
 	peakSet := make(map[int]bool)
 	for _, h := range peakHours {
 		peakSet[h] = true
@@ -245,7 +229,6 @@ func analyzeCosts(sessions []sessionRow, homeCount int) ([]heatmapEntry, costAna
 		peakPct = float64(peakSessions) / float64(len(sessions)) * 100
 	}
 
-	// Potential savings: shift peak home sessions to off-peak
 	var monthlyHomeKwh float64
 	var first, last time.Time
 	if len(sessions) > 0 {
@@ -278,8 +261,6 @@ func analyzeCosts(sessions []sessionRow, homeCount int) ([]heatmapEntry, costAna
 	return heatmap, ca
 }
 
-// ── Battery health score ─────────────────────────────────────
-
 func computeBatteryHealthScore(sessions []sessionRow) int {
 	if len(sessions) == 0 {
 		return 100
@@ -305,7 +286,6 @@ func computeBatteryHealthScore(sessions []sessionRow) int {
 		}
 	}
 
-	// Deductions
 	fullPct := float64(fullChargeCount) / n * 100
 	if fullPct > 50 {
 		score -= 25
@@ -329,7 +309,6 @@ func computeBatteryHealthScore(sessions []sessionRow) int {
 		score -= 8
 	}
 
-	// Bonuses
 	homePct := float64(homeStyleCount) / n * 100
 	if homePct > 70 {
 		score += 5
@@ -344,12 +323,9 @@ func computeBatteryHealthScore(sessions []sessionRow) int {
 	return int(math.Round(score))
 }
 
-// ── Recommendations ──────────────────────────────────────────
-
 func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healthScore int, sessions []sessionRow) []optimizerRec {
 	recs := make([]optimizerRec, 0, 5)
 
-	// Peak charging shift
 	if ca.SessionsDuringPeakPct > 20 && ca.PotentialMonthlySavings > 5 {
 		prio := "medium"
 		if ca.PotentialMonthlySavings > 15 {
@@ -367,7 +343,6 @@ func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healt
 		})
 	}
 
-	// Charge limit
 	if sched.AvgChargeToPct > 90 {
 		recs = append(recs, optimizerRec{
 			Type:     "limit",
@@ -380,7 +355,6 @@ func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healt
 		})
 	}
 
-	// Pre-conditioning
 	morningCount := 0
 	for _, s := range sessions {
 		h := s.startDate.Hour()
@@ -389,7 +363,6 @@ func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healt
 		}
 	}
 	if len(sessions) > 0 && float64(morningCount)/float64(len(sessions))*100 < 20 {
-		// User doesn't charge in morning → likely departs morning
 		recs = append(recs, optimizerRec{
 			Type:     "precondition",
 			Priority: "low",
@@ -398,7 +371,6 @@ func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healt
 		})
 	}
 
-	// DC fast charging frequency
 	dcCount := 0
 	for _, s := range sessions {
 		if s.power > 50 {
@@ -417,7 +389,6 @@ func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healt
 		}
 	}
 
-	// Home charging encouragement
 	if sched.HomeChargingPct < 50 && sched.HomeChargingPct > 0 {
 		recs = append(recs, optimizerRec{
 			Type:     "cost",
@@ -436,7 +407,6 @@ func buildOptimizerRecommendations(sched currentSchedule, ca costAnalysis, healt
 		})
 	}
 
-	// Sort by priority: high → medium → low
 	prioOrder := map[string]int{"high": 0, "medium": 1, "low": 2}
 	sort.Slice(recs, func(i, j int) bool {
 		return prioOrder[recs[i].Priority] < prioOrder[recs[j].Priority]

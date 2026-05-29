@@ -2,47 +2,13 @@ package aiclimate
 
 // Phase-50 / 0031 — T1 Preheat and precool recommender.
 //
-// ai_climate_schedule_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/climate/schedule/draft. The flow
-// mirrors ai_smart_charge_schedule_handler.go (same dispatch+stream
-// loop, no persistence — one-shot proposal):
+// LLM-backed POST /api/v1/ai/climate/schedule/draft. The guard in
+// ai_routes.go fails closed before this handler when AI mode or the feature
+// toggle is off (ADR-015 §I6).
 //
-//	URL  /api/v1/ai/climate/schedule/draft
-//	  ↓
-//	resolve provider via *provider.Registry.For("preheat-precool-recommender")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("preheat-precool-recommender", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard returns
-// 404 BEFORE this handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body (vehicle_id, depart_by, current_cabin_temp_c,
-// outside_temp_c, target_cabin_temp_c) is parsed BEFORE opening the
-// SSE stream so a malformed input surfaces as a plain JSON 400
-// (rather than a streamed error frame the SPA's QueryError will
-// struggle to render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /climate /
-//     /climate-control page — HVAC banner, status cards, manual
-//     departure-time heuristic — is unchanged. This handler is an
-//     OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("preheat-precool-recommender").
-//   - I8 propose-only:    the schedule is rendered in the AI panel
-//     and the user must click the existing manual climate-controls
-//     UI to apply. The AI never persists.
-//   - I9 redaction:       PolicyPreheatPrecoolRecommender (allows
-//     ClassVehicleName only; lat/long, addresses, and place names
-//     stay tagged) is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice.
+// The body is parsed before opening SSE so bad input returns a plain JSON 400.
+// This AI surface is opt-in and propose-only: it never changes the baseline
+// climate-control response or persists a schedule (ADR-015 §I3, §I8-I10).
 
 import (
 	"context"
@@ -229,28 +195,22 @@ func parseClimateScheduleDraftBody(w http.ResponseWriter, r *http.Request) (*dra
 // a structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the JSON body.
 	body, ok := parseClimateScheduleDraftBody(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before opening SSE so provider failures stay plain JSON errors.
 	if _, err := h.registry.For(r.Context(), preheatprecoolrecommender.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai preheat-precool-recommender: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, preheatprecoolrecommender.FeatureID)
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(preheatprecoolrecommender.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai preheat-precool-recommender: stream.New failed (non-flushable writer)")
@@ -258,8 +218,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context.
 	prov, err := h.registry.For(ctx, preheatprecoolrecommender.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai preheat-precool-recommender: provider.For (post-stream) failed")
@@ -267,7 +225,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
 	// 7) Synthesise the user message. Climate-scheduling is NOT
@@ -297,7 +254,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body.TargetCabinTempC,
 	)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -437,8 +393,7 @@ func (a *Advisor) DraftClimateSchedule(_ context.Context, req schedule.ClimateSc
 	}, nil
 }
 
-// now returns the wall clock with the tests-inject-a-stable-clock
-// fallback. Kept private so external callers cannot bypass it.
+// now returns the injected test clock or the production UTC clock.
 func (a *Advisor) now() time.Time {
 	if a.Now != nil {
 		return a.Now().UTC()

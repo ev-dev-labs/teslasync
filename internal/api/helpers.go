@@ -192,7 +192,6 @@ func EstimateBatteryCapacityWh(vin string, model string) (float64, string) {
 			return 100000.0, "vin_estimate"
 		}
 	}
-	// Fallback: model name heuristic
 	m := strings.ToLower(model)
 	if strings.Contains(m, "model s") || strings.Contains(m, "model x") {
 		return 100000.0, "model_estimate"

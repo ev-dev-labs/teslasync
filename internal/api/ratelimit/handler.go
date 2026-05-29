@@ -1,41 +1,9 @@
 // Phase-46 / Prompt 40 — Rate-limit status endpoint.
 //
-// GET /api/v1/system/rate-limits returns a fixed-shape list of
-// ScopeBudget rows so the admin status panel can show operators how
-// close they are to each rate-limited resource. The endpoint is
-// read-only and intentionally cheap — no DB queries, no Redis round
-// trips — so it can be polled at the panel's 30-second auto-refresh
-// cadence without measurable overhead.
-//
-// Scopes shipped:
-//
-//   - tesla.fleet_api.burst       — current bucket state of the
-//     CLIENT-SIDE x/time/rate.Limiter inside tesla.Client. Tesla's
-//     SERVER-SIDE per-account daily quota is not surfaced by Fleet
-//     API responses; the client-side burst is the closest proxy and
-//     is what callers actually observe at request time.
-//   - api.internal.minute         — rolling 60-second count of every
-//     /api/v1 request handled by the process. Limit is the most
-//     permissive httprate.LimitByIP cap configured in router.go (10×
-//     1/min for the strictest single-handler caps, ramping up via
-//     subrouter middlewares — we expose a conservative aggregate cap).
-//   - api.write.minute            — same window as above but only
-//     POST/PUT/PATCH/DELETE methods. Useful for spotting runaway
-//     dashboards that post in a tight loop.
-//
-// MQTT/Fleet-Telemetry RPS is intentionally out of scope (see
-// Blocked Path in the prompt — `internal/mqtt/subscriber.go` is
-// outside the allowed-files regex for this prompt and instrumenting
-// it would require a follow-up).
-//
-// Severity ladder is calibrated against PercentUsed:
-//
-//   ok       — under 50% of limit
-//   warn     — 50–80% of limit
-//   critical — over 80% of limit
-//
-// Frontend renders the colour band based on Severity directly, so
-// future calibration changes only need a backend ship.
+// GET /api/v1/system/rate-limits returns cheap, process-local ScopeBudget rows
+// for the admin status panel. Fleet Telemetry RPS remains out of scope here; the
+// exposed scopes cover Tesla client burst, all /api/v1 traffic, and mutating API
+// traffic with the shared ok/warn/critical severity ladder.
 
 package ratelimit
 

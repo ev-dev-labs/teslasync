@@ -26,7 +26,7 @@ type Handler struct {
 	vehicleRepo *vehicledb.VehicleRepo
 }
 
-// NewHandler creates a new handler.
+// NewHandler wires Tesla share-access dependencies.
 func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
 	return &Handler{
 		teslaClient: tc,
@@ -50,8 +50,6 @@ func (h *Handler) resolveVehicle(r *http.Request) (*vehiclemodel.Vehicle, error)
 	}
 	return vehicle, nil
 }
-
-// ---------- Drivers ----------
 
 // ListDrivers returns stored drivers for a vehicle.
 // GET /api/v1/vehicles/{vehicleID}/drivers
@@ -169,11 +167,8 @@ func (h *Handler) RemoveDriver(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Refresh drivers list from Tesla to reflect the change
 	h.RefreshDrivers(w, r)
 }
-
-// ---------- Invitations ----------
 
 // ListInvitations returns stored invitations for a vehicle.
 // GET /api/v1/vehicles/{vehicleID}/invitations
@@ -279,7 +274,6 @@ func (h *Handler) CreateInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse and store the single invitation from the create response
 	inv, err := parseCreateInvitationResponse(body, vehicle.ID, vehicle.VIN)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to parse create invitation response")
@@ -331,11 +325,8 @@ func (h *Handler) RevokeInvitation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Refresh invitations from Tesla to reflect the change
 	h.RefreshInvitations(w, r)
 }
-
-// ---------- Response parsers ----------
 
 func parseDriversResponse(body []byte, vehicleID int64, vin string) ([]*teslamodel.TeslaVehicleDriver, error) {
 	var envelope struct {

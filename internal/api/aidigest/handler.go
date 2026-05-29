@@ -1,36 +1,10 @@
 package aidigest
 
-// Phase-50 / 0012 — U2 Weekly digest narration.
+// Phase-50 / 0012 — U2 weekly digest narration.
 //
-// ai_digest_handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/digests/weekly/narrate. The flow is the same
-// dispatch+stream loop the chatbot uses, minus the persistence (a
-// digest narration is one-shot — there's no conversation to record):
-//
-//   request JSON {vehicle_id, week_offset_weeks?}
-//     ↓
-//   resolve provider via *provider.Registry.For("digest-narration")
-//     ↓
-//   open SSE writer (internal/ai/stream.New) to the HTTP response
-//     ↓
-//   run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("digest-narration", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic template digest at
-//     GET /api/v1/vehicles/{id}/weekly-digest is unchanged. This
-//     handler is an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by guard.Wrap("digest-narration").
-//   - I9 redaction:       PolicyDigest (allows ClassVehicleName only)
-//                         is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under /api/v1/ai/*;
-//                         no field on the existing baseline JSON shape
-//                         is added or modified by this slice.
+// This LLM-backed SSE handler is an opt-in AI surface; the deterministic
+// weekly digest endpoint remains the baseline path when AI is disabled.
+// guard.Wrap("digest-narration") owns ADR-015 feature gating.
 
 import (
 	"context"
@@ -70,18 +44,7 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the handler. All non-pointer
-// arguments are required; the constructor panics on a nil so the
-// wiring bug surfaces at boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	query_weekly_digest_context (registered by
-//	digest.RegisterDigestTools in router.go).
-//
-// strat:      the digest-narration Strategy (one per process).
-// headerName: forward-auth header name; used to extract subject for audit.
+// NewHandler constructs the handler and panics on boot-time wiring bugs.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -205,7 +168,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
 // denyAllConfirm is the dispatcher's user-confirm hook. Digest narration

@@ -2,73 +2,9 @@ package ainlsql
 
 // Phase-50 / 0057 — PU1 Natural-language SQL playground.
 //
-// ai_nl_sql_playground_handler.go implements the LLM-backed handler
-// at POST /api/v1/ai/power/sql/draft. The flow mirrors
-// ai_signal_explorer_nl_filter_handler.go but instead of a per-
-// vehicle signal catalog the handler loads an install-wide curated
-// schema catalog (a hardcoded whitelist of safe read-only table
-// names — drives, charging_sessions, vehicles, alerts, and
-// signal_log_view) up-front and installs the snapshot of table-
-// names into ctx via nlq.WithScopedSchemaCatalog:
+// POST /api/v1/ai/power/sql/draft streams an LLM-proposed read-only SQL draft for the manual SQL playground. Before dispatch, the handler binds a curated install-wide schema snapshot into context so tools reject any table outside the whitelist, even if prompt injection asks for it.
 //
-//	URL  /api/v1/ai/power/sql/draft
-//	  ↓
-//	read JSON body with required field (prompt)
-//	  ↓
-//	resolve provider via *provider.Registry.For("nl-sql-playground")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New)
-//	  ↓
-//	load curated schema catalog via the source port
-//	  ↓
-//	stash in-scope (table-set) snapshot in ctx via
-//	  nlq.WithScopedSchemaCatalog(tableNames)
-//	  ↓
-//	synthesise the user-message that lists the in-scope catalog
-//	  (table name + column list per row) so the LLM has
-//	  ground-truth schema metadata + the user's prompt
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("nl-sql-playground", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// Per-request scope binding (defence against prompt-injection
-// exfiltration): the handler installs the (table-name set)
-// snapshot in ctx via nlq.WithScopedSchemaCatalog BEFORE
-// dispatcher.Run is invoked. The dispatcher propagates ctx
-// unchanged through every Tool.Execute call. The tools
-// draft_readonly_sql + validate_readonly_sql REJECT any LLM-
-// supplied SQL that references a table NOT in the snapshot. This
-// means an attacker who pastes "select * from secrets" into the
-// prompt cannot trick the LLM into proposing a query against an
-// out-of-catalog table — the scope check refuses the proposal
-// before it ever reaches the frontend AI panel.
-//
-// The handler requires a JSON body with (prompt non-empty); empty
-// / null / object-without-fields bodies are rejected with 400.
-// Unlike signal-explorer-nl-filter the body has no vehicle_id —
-// the curated schema catalog is install-wide.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /power/sql page (manual
-//     SQL editor + curated catalog viewer + Apply target) is
-//     unchanged. This handler is an OPT-IN add-on; off-mode users
-//     never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("nl-sql-playground").
-//   - I9 redaction:       PolicyAlertBuilder (deny-by-default;
-//     EVERY PII class redacted to a round-trip tag — VINs,
-//     coordinates, place names, vehicle names) is installed by
-//     dispatch.Run from the strategy and applied to EVERY message
-//     (including the synthesised catalog user message and tool
-//     outputs) by the redact decorator at the provider boundary.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline /power/sql
-//     surface is added or modified by this slice.
+// The route is AI-gated (ADR-015 §I6), accepts only a non-empty prompt, and leaves the deterministic /power/sql page unchanged.
 
 import (
 	"context"
@@ -112,17 +48,8 @@ const aiNLSqlPlaygroundMaxBodyBytes = 16 * 1024
 // the window.
 const aiNLSqlPlaygroundMaxPromptChars = 1200
 
-// SchemaCatalogSource is the narrow read interface the
-// handler consumes to load the curated install-wide schema
-// catalog. Production wiring satisfies it via
-// SchemaCatalogSourceImpl, which returns a hardcoded
-// whitelist of safe read-only tables (drives, charging_sessions,
-// vehicles, alerts, signal_log_view) so the AI can never propose
-// a query against tables outside the curated set.
-//
-// The interface is intentionally narrow (one method) so test
-// fakes stay small and the production implementation cannot
-// accidentally widen the surface.
+// SchemaCatalogSource loads the curated install-wide schema catalog.
+// It stays narrow so tests can fake it and production code cannot widen the AI's table surface accidentally.
 type SchemaCatalogSource interface {
 	// SchemaCatalog returns the curated install-wide schema
 	// catalog as a list of (name, description, columns) entries
@@ -131,12 +58,8 @@ type SchemaCatalogSource interface {
 	SchemaCatalog(ctx context.Context) ([]SchemaCatalogEntry, error)
 }
 
-// SchemaCatalogEntry describes one curated table the LLM
-// is allowed to reference in a draft. Name + Columns are
-// authoritative; Description is human-readable hint copy that
-// steers the LLM toward the right table for the user's prompt
-// (e.g. "trips a vehicle has driven, including distance and
-// energy used").
+// SchemaCatalogEntry describes one curated table the LLM may reference.
+// Name and Columns are authoritative; Description is hint copy for table selection.
 type SchemaCatalogEntry struct {
 	// Name is the canonical table name as it appears in the
 	// physical schema. Lower-case to match Postgres folding.
@@ -440,36 +363,8 @@ var _ http.Handler = (*Handler)(nil)
 // the handler so the wiring intent is local to the slice.
 // ---------------------------------------------------------------------
 
-// nlSqlPlaygroundCuratedCatalog is the install-wide curated
-// whitelist of read-only-safe tables the AI may reference. The
-// catalog is INTENTIONALLY narrow — restricting the LLM to a
-// hand-picked set is the strongest defence against prompt-
-// injection exfiltration. Adding a table here is a deliberate
-// per-prompt decision, not a default.
-//
-// Tables present:
-//
-//   - drives:             Per-trip aggregates (start/end times,
-//     distance, energy used, average power).
-//   - charging_sessions:  Per-charge aggregates (start/end times,
-//     energy added, cost, charger info).
-//   - vehicles:           Vehicle metadata (id, vin, display_name,
-//     model, color).
-//   - alerts:             User-defined alerts that fired
-//     (vehicle_id, alert_id, fired_at, level).
-//   - signal_log_view:    Telemetry signal history (vehicle_id,
-//     signal_name, ts, num_value, str_value)
-//     exposed via a view that hides the raw
-//     hypertable details.
-//
-// Each entry carries a small column list — enough for the LLM to
-// pick correct WHERE filters and aggregation columns without
-// pretending to know columns that aren't there.
-//
-// Kept here (not in a YAML file) so the catalog is locally
-// reviewable in the same file as the handler that consumes it,
-// and so a registry-renaming refactor cannot silently desync the
-// catalog from the handler.
+// nlSqlPlaygroundCuratedCatalog is the narrow read-only table whitelist exposed to the AI.
+// Keeping it local makes schema-surface changes reviewable beside the handler and prevents prompt injection from reaching unapproved tables.
 var nlSqlPlaygroundCuratedCatalog = []SchemaCatalogEntry{
 	{
 		Name:        "drives",

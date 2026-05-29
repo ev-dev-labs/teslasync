@@ -132,7 +132,6 @@ func (h *TeslaChargingSessionHandler) Refresh(w http.ResponseWriter, r *http.Req
 
 	log.Info().Int("fetched", len(allSessions)).Int("upserted", upserted).Msg("tesla charging sessions refresh complete")
 
-	// Return fresh data
 	dbLimit, dbOffset := apiparams.Pagination(r)
 	sessions, err := h.repo.GetAll(r.Context(), vin, dbLimit, dbOffset)
 	if err != nil {
@@ -158,8 +157,6 @@ func (h *TeslaChargingSessionHandler) Refresh(w http.ResponseWriter, r *http.Req
 		"upserted": upserted,
 	})
 }
-
-// --- Tesla API response types ---
 
 type teslaChargingSessionsResponse struct {
 	Response struct {

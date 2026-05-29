@@ -14,13 +14,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// Handler serves Tesla user order data.
+// Handler serves stored Tesla account order data and refreshes it from Tesla.
 type Handler struct {
 	teslaClient *tesla.Client
 	orderRepo   *tesladb.TeslaUserOrderRepo
 }
 
-// NewHandler creates a new handler.
+// NewHandler wires Tesla order refresh dependencies.
 func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
 	return &Handler{
 		teslaClient: tc,
@@ -79,7 +79,6 @@ func (h *Handler) RefreshOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse Tesla envelope → array of orders
 	var envelope struct {
 		Response []json.RawMessage `json:"response"`
 	}
@@ -126,6 +125,6 @@ func (h *Handler) RefreshOrders(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Return the freshly saved data via the standard read path
+	// Reuse the read path so refresh and list responses stay identical.
 	h.Orders(w, r)
 }

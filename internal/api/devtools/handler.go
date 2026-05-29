@@ -87,8 +87,7 @@ func WithSignalStore(s *signal.Store) DevToolsOption {
 	return func(h *DevToolsHandler) { h.signalStore = s }
 }
 
-// NewDevToolsHandler creates a new developer tools handler.
-// Accepts optional functional options for backward compatibility.
+// NewDevToolsHandler creates a developer tools handler with optional dependencies.
 func NewDevToolsHandler(tc *tesla.Client, opts ...DevToolsOption) *DevToolsHandler {
 	h := &DevToolsHandler{teslaClient: tc}
 	for _, opt := range opts {
@@ -100,10 +99,6 @@ func NewDevToolsHandler(tc *tesla.Client, opts ...DevToolsOption) *DevToolsHandl
 	}
 	return h
 }
-
-// ---------------------------------------------------------------------------
-// Existing endpoints
-// ---------------------------------------------------------------------------
 
 // DetectRegion calls the Tesla Fleet API to detect the user's region.
 func (h *DevToolsHandler) DetectRegion(w http.ResponseWriter, r *http.Request) {
@@ -134,7 +129,6 @@ func (h *DevToolsHandler) RegisterPartner(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Get a partner (client_credentials) token
 	partnerToken, err := h.teslaClient.GetPartnerToken(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get partner token")
@@ -145,19 +139,17 @@ func (h *DevToolsHandler) RegisterPartner(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Use the partner token to register
 	data, status, err := h.teslaClient.RegisterPartner(r.Context(), partnerToken, req.Domain)
 	if err != nil {
 		log.Warn().Err(err).Int("status", status).Msg("partner registration failed")
 	}
 
-	// Return raw Tesla response
 	w.Header().Set("Content-Type", "application/json")
 	if data != nil && isJSON(data) {
 		w.WriteHeader(status)
 		w.Write(data)
 	} else {
-		// Tesla may return HTML on auth errors — wrap it cleanly
+		// Tesla may return HTML on auth errors; wrap it for the SPA.
 		errMsg := "Registration request failed"
 		details := "Tesla returned a non-JSON response (likely an auth redirect or error page)"
 		if err != nil {
@@ -191,7 +183,6 @@ func (h *DevToolsHandler) PartnerPublicKey(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 	if data != nil && isJSON(data) {
-		// Try to compare with the locally stored public key
 		var envelope struct {
 			Response struct {
 				PublicKey string `json:"public_key"`
@@ -219,7 +210,6 @@ func (h *DevToolsHandler) PartnerPublicKey(w http.ResponseWriter, r *http.Reques
 			matchResult["remote_key_found"] = false
 		}
 
-		// Merge comparison into the Tesla response
 		var raw map[string]interface{}
 		if json.Unmarshal(data, &raw) == nil {
 			raw["verification"] = matchResult
@@ -260,10 +250,6 @@ func (h *DevToolsHandler) FleetAPIInfo(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 }
-
-// ---------------------------------------------------------------------------
-// Tesla API endpoints
-// ---------------------------------------------------------------------------
 
 // TestAPIConnectivity tests whether the Tesla Fleet API base URL is reachable.
 func (h *DevToolsHandler) TestAPIConnectivity(w http.ResponseWriter, r *http.Request) {
@@ -321,10 +307,6 @@ func (h *DevToolsHandler) TokenInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// MQTT endpoints
-// ---------------------------------------------------------------------------
-
 // MQTTTest publishes a test message and reports MQTT connectivity status.
 func (h *DevToolsHandler) MQTTTest(w http.ResponseWriter, r *http.Request) {
 	if h.mqttClient == nil {
@@ -352,10 +334,6 @@ func (h *DevToolsHandler) MQTTTest(w http.ResponseWriter, r *http.Request) {
 		"message":   "test message published",
 	})
 }
-
-// ---------------------------------------------------------------------------
-// System endpoints
-// ---------------------------------------------------------------------------
 
 // requiredEnvVars is the list of environment variables checked by EnvCheck.
 var requiredEnvVars = []string{
@@ -426,10 +404,6 @@ func (h *DevToolsHandler) RuntimeInfo(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// ---------------------------------------------------------------------------
-// Tesla Public Key Management
-// ---------------------------------------------------------------------------
-
 // GenerateKeypair generates an ECDSA P-256 keypair, stores the public key in DB,
 // and returns the private key ONE TIME (never stored).
 func (h *DevToolsHandler) GenerateKeypair(w http.ResponseWriter, r *http.Request) {
@@ -438,14 +412,12 @@ func (h *DevToolsHandler) GenerateKeypair(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Generate ECDSA P-256 key
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to generate keypair")
 		return
 	}
 
-	// Encode private key to PEM
 	privBytes, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to marshal private key")
@@ -453,7 +425,6 @@ func (h *DevToolsHandler) GenerateKeypair(w http.ResponseWriter, r *http.Request
 	}
 	privPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
 
-	// Encode public key to PEM
 	pubBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to marshal public key")
@@ -461,11 +432,9 @@ func (h *DevToolsHandler) GenerateKeypair(w http.ResponseWriter, r *http.Request
 	}
 	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubBytes})
 
-	// Calculate fingerprint (SHA-256 of DER-encoded public key)
 	hash := sha256.Sum256(pubBytes)
 	fingerprint := fmt.Sprintf("%x", hash)
 
-	// Store public key in DB (upsert)
 	_, err = h.db.Pool.Exec(r.Context(),
 		`INSERT INTO tesla_public_key (id, public_key_pem, fingerprint, created_at)
 		 VALUES (1, $1, $2, NOW())
@@ -501,7 +470,6 @@ func (h *DevToolsHandler) UploadPublicKey(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Validate it's a valid PEM public key
 	block, _ := pem.Decode([]byte(req.PublicKeyPEM))
 	if block == nil {
 		httpx.WriteError(w, http.StatusBadRequest, "invalid PEM format")
@@ -513,13 +481,11 @@ func (h *DevToolsHandler) UploadPublicKey(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// Verify it's an EC key
 	if _, ok := pubKey.(*ecdsa.PublicKey); !ok {
 		httpx.WriteError(w, http.StatusBadRequest, "key must be an ECDSA public key (P-256)")
 		return
 	}
 
-	// Calculate fingerprint
 	hash := sha256.Sum256(block.Bytes)
 	fingerprint := fmt.Sprintf("%x", hash)
 
@@ -629,7 +595,6 @@ func (h *DevToolsHandler) PairVehicleKey(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	// Get stored public key
 	var pubPEM string
 	err := h.db.Pool.QueryRow(r.Context(),
 		`SELECT public_key_pem FROM tesla_public_key WHERE id = 1`,
@@ -688,12 +653,10 @@ emyPxgcYxn/eR44/KJ4EBs+lVDR3veyJm+kXQ99b21/+jh5Xos1AnX5iItreGCc=
 -----END CERTIFICATE-----`
 }
 
-// isJSON returns true if the data looks like a JSON response.
 func isJSON(data []byte) bool {
 	if len(data) == 0 {
 		return false
 	}
-	// Trim whitespace and check first character
 	for _, b := range data {
 		if b == ' ' || b == '\t' || b == '\n' || b == '\r' {
 			continue
@@ -702,10 +665,6 @@ func isJSON(data []byte) bool {
 	}
 	return false
 }
-
-// ──────────────────────────────────────────────────────────────────
-// Fleet Telemetry Configuration
-// ──────────────────────────────────────────────────────────────────
 
 // FleetTelemetrySubscribe configures vehicles to stream telemetry data.
 // POST /api/v1/dev-tools/fleet-telemetry-subscribe
@@ -733,7 +692,6 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		return
 	}
 	if req.Hostname == "" {
-		// Fall back to config
 		if h.cfg != nil && h.cfg.FleetTelemetry.Host != "" {
 			req.Hostname = h.cfg.FleetTelemetry.Host
 		} else {
@@ -752,10 +710,8 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		req.Interval = 10
 	}
 
-	// Build fields map
 	fields := make(map[string]tesla.FleetTelemetryField)
 	if len(req.Fields) == 0 {
-		// Default essential fields
 		req.Fields = []string{
 			"VehicleSpeed", "Odometer", "Soc", "BatteryLevel",
 			"Location", "GpsHeading",
@@ -771,7 +727,6 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 	}
 
 	for _, f := range req.Fields {
-		// Per-signal interval from UI takes priority, otherwise use global interval
 		interval := req.Interval
 		if perSignal, ok := req.FieldIntervals[f]; ok {
 			interval = perSignal
@@ -787,8 +742,7 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 	if ca := strings.TrimSpace(req.CA); ca != "" {
 		caValue = ca
 	} else {
-		// Auto-fetch CA from the fleet telemetry TLS certificate
-		// For Let's Encrypt, use the ISRG Root X1 certificate
+		// Tesla requires the Fleet Telemetry server's trusted root CA.
 		caValue = letsEncryptCA()
 	}
 

@@ -9,13 +9,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
-// MaxIDs caps the size of a single bulk request. Operations that exceed
-// this should be paginated client-side; staying synchronous keeps the
-// transaction short and avoids long-running locks (Phase-40 / Prompt 51).
-//
-// Per-resource handlers MAY declare a different cap when there is a
-// historical contract that disagrees (notifications.bulkIDsRequest caps
-// at 1000 for back-compat). New endpoints should adopt this default.
+// MaxIDs keeps synchronous bulk transactions short. Resource handlers may use a
+// legacy cap, but new endpoints should adopt this default.
 const MaxIDs = 500
 
 // IDsBody is the canonical request body for delete-only bulk endpoints
@@ -64,14 +59,9 @@ var (
 	ErrIDsTooMany  = fmt.Errorf("ids exceeds %d cap", MaxIDs)
 )
 
-// DecodeIDsRequest reads a JSON body of the shape `{"ids":[1,2,3]}` and
-// validates the cap. Returns a deduplicated slice of ids.
-//
-// Errors are pre-categorized as sentinels so the caller can map them to
-// specific HTTP status codes without parsing the message text:
-//   - ErrBodyInvalid → 400 (JSON parse failure / unknown field)
-//   - ErrIDsEmpty    → 400 (zero-length list)
-//   - ErrIDsTooMany  → 400 (over MaxIDs)
+// DecodeIDsRequest reads `{"ids":[...]}`, validates the cap, and returns
+// deduplicated ids. Sentinel errors let callers map failures to HTTP status
+// without parsing message text.
 func DecodeIDsRequest(r *http.Request) ([]int64, error) {
 	var body IDsBody
 	dec := json.NewDecoder(r.Body)
@@ -88,13 +78,8 @@ func DecodeIDsRequest(r *http.Request) ([]int64, error) {
 	return DedupeInt64s(body.IDs), nil
 }
 
-// DecodeOpBody parses + validates the request body for op-driven bulk
-// endpoints (e.g. /automations/bulk, /geofences/bulk). Reuses the same
-// MaxIDs cap and dedupe behaviour as DecodeIDsRequest so the contract
-// is consistent across delete-only and op-driven endpoints.
-//
-// The Op field is returned verbatim — the resource handler is
-// responsible for allowlisting which op values are legal.
+// DecodeOpBody validates op-driven bulk bodies with the same cap and dedupe
+// contract as DecodeIDsRequest. The resource handler allowlists Op values.
 func DecodeOpBody(r *http.Request) (OpBody, error) {
 	var body OpBody
 	dec := json.NewDecoder(r.Body)

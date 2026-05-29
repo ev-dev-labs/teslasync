@@ -1,48 +1,7 @@
 package aiautotripname
 
-// Phase-50 / 0024 — D4 Auto trip naming.
-//
-// ai_auto_trip_name_handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/trips/{tripID}/name/draft. The flow mirrors the
-// route-efficiency-suggestions / speed-profile-insights / drive-coaching
-// narration handlers — same dispatch+stream loop, no persistence
-// (one-shot proposal; no conversation to record):
-//
-//	URL  /api/v1/ai/trips/{tripID}/name/draft
-//	  ↓
-//	resolve provider via *provider.Registry.For("auto-trip-naming")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("auto-trip-naming", …) so when ai_mode='off' or the
-// per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// The tripID URL param is parsed + validated as a positive int64
-// BEFORE opening the SSE stream so a malformed input surfaces as a
-// plain JSON 400 (rather than a streamed error frame the SPA's
-// QueryError will struggle to render meaningfully).
-//
-// There is no JSON body; an empty body is accepted.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic stat cards, KVList of
-//     trip metadata, drive list, and manual trip-name field
-//     rendered by TripDetailPage at /trips/:id are unchanged.
-//     This handler is an OPT-IN add-on; off-mode users never see
-//     it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("auto-trip-naming").
-//   - I9 redaction:       PolicyAutoTripNaming (allows
-//     ClassVehicleName only; lat/long, addresses, and place names
-//     stay tagged) is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice.
+// AI auto-trip-naming streams a one-shot draft name for a trip.
+// The route is guard-wrapped, validates the tripID before opening SSE, and never persists the proposal.
 
 import (
 	"context"
@@ -164,30 +123,21 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate URL parameters. Body is intentionally
-	// ignored; this endpoint takes its only input from the URL.
 	tripID, ok := parseURL(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back
-	// gracefully.
 	if _, err := h.registry.For(r.Context(), autotripnaming.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai auto-trip-naming: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, autotripnaming.FeatureID)
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(autotripnaming.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai auto-trip-naming: stream.New failed (non-flushable writer)")
@@ -195,8 +145,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context.
 	prov, err := h.registry.For(ctx, autotripnaming.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai auto-trip-naming: provider.For (post-stream) failed")
@@ -204,13 +152,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Auto-trip-naming is NOT
-	// conversational — there is no chat history. We hand the LLM
-	// a deterministic prompt that asks it to call the two
-	// propose-only tools and narrate the result.
 	userMsg := fmt.Sprintf(
 		"Propose a concise human-readable name for trip %d. "+
 			"Call draft_trip_name FIRST with the trip_id and your proposed name, then call "+
@@ -222,7 +165,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		tripID,
 	)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,

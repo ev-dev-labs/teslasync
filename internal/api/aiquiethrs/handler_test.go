@@ -1,18 +1,8 @@
 // Phase-50 / 0053 — P2 Helix quiet-hours suggestion advisor.
 //
-// Off-mode + baseline-coexistence tests for the AI
-// quiet-hours-suggestion handler. The off-mode test
-// (TestQuietHoursSuggestionAIOffManualSettingsWork) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that
-// the AI route returns 404 when settings.ai_mode='off' even
-// when the per-feature toggle is on, AND that the
-// deterministic /api/v1/notifications/quiet-hours canonical
-// CRUD surface remains reachable (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness (`go run ./cmd/ai-eval -feature
-// quiet-hours-suggestion`); duplicating that here would
-// require a live mock-provider stack.
+// Covers the AI-off contract and proves the deterministic quiet-hours CRUD
+// route remains reachable (ADR-015 §I3, §I6). Streaming coverage lives in the
+// F6 eval harness to avoid a live provider stack here.
 
 package aiquiethrs
 

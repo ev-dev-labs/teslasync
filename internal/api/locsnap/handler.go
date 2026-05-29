@@ -12,27 +12,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// LocationSnapshotHandler serves location endpoints backed by the
-// signal-log change feed via signal.StateReader (ADR-002 / phase-39).
-//
-// Phase-39 migration: the legacy *signaldb.SignalLogReader (raw pivot +
-// snapshot helpers) has been replaced with the canonical
-// signal.StateReader.
-//
-// A parked Tesla emits Latitude / Longitude / Elevation / GpsHeading
-// once at park and then NEVER re-emits those fields until the vehicle
-// moves again — Fleet Telemetry only emits a value when both the
-// interval has elapsed AND the value has changed. Under the legacy raw
-// pivot, a /location/latest call against a vehicle that has been parked
-// for more than the lookback window would project NULL for lat / lon /
-// heading / elevation, even though those values are perfectly known and
-// stable. With StateReader.State forward-folding the change feed, the
-// most recent emission of every signal is carried forward to the
-// requested timestamp, so a parked vehicle always reports its real
-// last-known position. This is critical: the location snapshot is the
-// data source for the dashboard map pin, geofence checks, and the
-// "where is my car?" view; a NULL lat / lon there would render the
-// car as missing from the map.
+// LocationSnapshotHandler serves location endpoints via the canonical
+// StateReader/live-state stack (ADR-002 / phase-39). Forward-folding is required
+// because parked vehicles may not re-emit stable coordinates for hours, yet the
+// dashboard map and geofence checks still need the last-known position.
 type LocationSnapshotHandler struct {
 	state signal.StateReader
 	live  signal.LiveStateReader
@@ -75,12 +58,8 @@ func NewLocationSnapshotHandler(state signal.StateReader, live signal.LiveStateR
 	return &LocationSnapshotHandler{state: state, live: live}
 }
 
-// List returns location history from the signal-log change feed via
-// StateReader.Timeline in CHART MODE (empty CollapseBy). Each
-// change-feed emission becomes one row; forward-folding ensures the
-// rarely-emitted GPS / route signals carry their most-recent values
-// across rows where they did not re-emit, so the location-history
-// panel is never blank simply because the vehicle has been stationary.
+// List returns chart-mode location history. Empty CollapseBy preserves every
+// emission, while forward-folding keeps stable GPS and route fields populated.
 func (h *LocationSnapshotHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
@@ -115,14 +94,8 @@ func (h *LocationSnapshotHandler) List(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
-// Latest returns the most recent location values, derived from the
-// forward-folded signal-log state at time.Now() via StateReader.State.
-// Because State forward-folds the change feed, a parked vehicle that
-// has not emitted Latitude / Longitude in hours still reports its
-// real last-known coordinates — the absence of a recent emission must
-// NEVER be misread as "no location" (which would blank the map pin).
-// Every locationMappings entry whose Signal is present in State is
-// projected under its mapped Field name; absent signals are omitted.
+// Latest returns forward-folded live location values. A missing recent GPS
+// emission must not blank the map pin when the last-known coordinates are stable.
 func (h *LocationSnapshotHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {

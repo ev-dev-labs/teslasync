@@ -94,7 +94,6 @@ func (h *Handler) defaultItems(vehicleID int64, currentOdometer float64) []map[s
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	// Get first vehicle ID
 	var vehicleID int64
 	err := h.db.Pool.QueryRow(ctx,
 		`SELECT id FROM vehicles ORDER BY id LIMIT 1`,

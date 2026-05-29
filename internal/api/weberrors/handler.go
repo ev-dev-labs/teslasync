@@ -17,23 +17,10 @@ import (
 
 // Web Errors ingest handler (Phase 46 / Prompt 01).
 //
-// Accepts individual frontend error reports captured by the SPA's
-// global reporter (window.onerror, window.onunhandledrejection, the
-// React <ErrorBoundary>, and TanStack Query failures) and increments a
-// Prometheus counter labelled by error name + normalised route. Operators
-// scrape /metrics and alert on `teslasync_web_errors_total`; the
-// adjacent /api/v1/admin/web-errors/summary endpoint surfaces a tiny
-// last-hour rolling view in the admin UI.
-//
-// The handler maintains an in-memory rolling map (last hour) ONLY for
-// the admin-summary endpoint. The Prometheus counter is the durable
-// surface; the rolling map is best-effort and resets on restart.
-//
-// Public ingest endpoint contract: this route MUST stay reachable even
-// when a user's auth token is expired so we can capture login-loop bugs.
-// It is wired in router.go OUTSIDE the ForwardAuth-protected /api/v1
-// subrouter, alongside /api/v1/web-vitals. Abuse is bounded by a tight
-// per-IP rate limit at the route level (50 / minute / IP).
+// Accepts SPA error reports, observes bounded Prometheus labels, and keeps a
+// best-effort last-hour summary for the admin UI. The ingest route intentionally
+// sits outside ForwardAuth so expired-token and login-loop failures can report;
+// route-level rate limiting bounds abuse.
 
 const (
 	maxWebErrorMessageLen     = 500
@@ -108,8 +95,7 @@ type Handler struct {
 	now     func() time.Time
 }
 
-// NewHandler constructs a stateless ingest + summary handler.
-// `now` is injectable for deterministic tests; nil falls back to time.Now.
+// NewHandler constructs an ingest + summary handler.
 func NewHandler() *Handler {
 	return &Handler{now: time.Now}
 }
@@ -237,10 +223,7 @@ func (h *Handler) callNow() time.Time {
 	return time.Now()
 }
 
-// normalizeWebErrorName clamps the error name to the allow-list so the
-// {name} label cardinality stays bounded; unknown names bucket to "Other".
-// Empty / whitespace-only names also bucket to "Other" — a frontend that
-// reports a typed error MUST set name explicitly.
+// normalizeWebErrorName clamps {name} label cardinality; unknown or empty names bucket to "Other".
 func normalizeWebErrorName(name string) string {
 	name = strings.TrimSpace(name)
 	if name == "" {

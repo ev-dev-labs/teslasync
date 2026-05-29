@@ -44,15 +44,13 @@ type mileageRepository interface {
 // time.Now().UTC().
 type mileageClock func() time.Time
 
-// Handler serves the two endpoints. Holds a repo + clock; no
-// other dependencies needed.
+// Handler serves mileage endpoints with an injectable clock for tests.
 type Handler struct {
 	repo  mileageRepository
 	clock mileageClock
 }
 
-// NewHandler binds the handler to a repo. clock is production-
-// defaulted; tests construct via newHandlerForTest.
+// NewHandler binds the handler to the production repo.
 func NewHandler(repo *drivedb.MileageRepo) *Handler {
 	return &Handler{repo: repo}
 }
@@ -105,11 +103,7 @@ func (h *Handler) parseMonthlyParams(w http.ResponseWriter, r *http.Request) (ve
 			return 0, 0, false
 		}
 		if v > mileageMaxMonths {
-			// Decision #3 requires a structured "months exceeds maximum"
-			// payload that the frontend can surface verbatim. Mirrors
-			// the Phase-43a / Prompt 0003 envelope: the shared
-			// httpx.WriteError would emit only {error, code}; we
-			// hand-write the JSON to add the `max` field.
+			// Decision #3 requires a structured max field; httpx.WriteError cannot include it.
 			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
 				"error": "months exceeds maximum",
 				"max":   mileageMaxMonths,

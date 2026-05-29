@@ -2,51 +2,7 @@ package aipostcard
 
 // Phase-50 / 0060 — GEN1 Trip postcard and share-card image generation.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/share-cards/trip-image/draft.
-// The flow mirrors the auto-trip-naming / route-efficiency-
-// suggestions / drive-coaching narration handlers — same
-// dispatch+stream loop, no persistence (one-shot proposal; no
-// conversation to record):
-//
-//	URL  POST /api/v1/ai/share-cards/trip-image/draft
-//	body {trip_id: int64, style_hint?: string}
-//	  ↓
-//	resolve provider via *provider.Registry.For("trip-postcard-share-card-image-generation")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("trip-postcard-share-card-image-generation", …) so
-// when ai_mode='off' or the per-feature toggle is off the guard
-// returns 404 BEFORE this handler ever sees the request
-// (ADR-015 §I6).
-//
-// The trip_id is parsed from the JSON body BEFORE opening the SSE
-// stream so a malformed input surfaces as a plain JSON 400 (rather
-// than a streamed error frame the SPA's QueryError will struggle
-// to render meaningfully).
-//
-// The request body cap is 16 KiB — generous for a typed payload
-// of {trip_id, style_hint}; defends against amplification attempts.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the existing static share-card / shared-
-//     drive route (/s/:token, SharedDrivePage) and the manual
-//     share-link controls (generate static link, copy link, list
-//     active links, revoke) are unchanged. This handler is an
-//     OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("trip-postcard-share-card-image-generation").
-//   - I9 redaction:       PolicyDigest (allows ClassVehicleName
-//     only; lat/long, addresses, and place names stay tagged) is
-//     installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice.
+// POST /api/v1/ai/share-cards/trip-image/draft streams a propose-only title and image-prompt draft for an existing trip. The AI-gated route validates the small JSON body before opening SSE, never saves or publishes anything, and leaves static share-card routes unchanged.
 
 import (
 	"context"

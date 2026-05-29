@@ -1,36 +1,9 @@
 package tco
 
 // Phase-50 / 0050 — M2 TCO narration.
-//
-// tco_summary.go extracts the deterministic Total-Cost-of-Ownership
-// computation that *Handler.GetTCO previously performed inline,
-// into a package-level pure-functional helper [ComputeTCOSummary].
-// The HTTP handler now parses + validates + writes; the math lives
-// here and is shared by:
-//
-//   - the canonical GET /api/v1/analytics/tco handler (existing,
-//     consumed by the deterministic TrueCostPage chart), AND
-//   - the new AI surface POST /api/v1/ai/analytics/tco/narrate via the
-//     [lifetime.TCOSummarizer] adapter in package aitconar (new).
-//
-// Why extract instead of duplicating the SQL in the AI adapter:
-// duplicating ~80 lines of SQL + math would create a parity hazard —
-// the chart and the narrator would silently disagree as either side
-// drifted. The slice 0029 cost-forecast-narration precedent
-// (api.ComputeCostForecast) handles the same shared-helper pattern
-// for the same reason, and the rubber-duck critique on this slice
-// flagged duplication as a blocking risk.
-//
-// Wire-shape stability: the canonical /api/v1/analytics/tco JSON
-// shape consumed by TrueCostPage.tsx MUST remain byte-identical.
-// All math.Round + safeF guards therefore live INSIDE the helper, so
-// the AI envelope and the chart see the SAME rounded numbers (the
-// LLM cannot be handed an unrounded float that disagrees with what
-// the user sees on the chart). The HTTP wire shape is reproduced
-// verbatim from the pre-refactor `writeJSON(w, http.StatusOK,
-// map[string]interface{}{...})` call site — every snake_case JSON
-// tag, every safeF/math.Round usage, and the empty-not-null guard
-// for monthly_breakdown are all preserved.
+// The deterministic TCO math lives here so the HTTP chart endpoint and AI
+// narration use one SQL/computation path. Keep the JSON wire shape byte-stable;
+// summary_test.go::TestComputeTCOSummary_StructFieldsPinWireShape pins it.
 
 import (
 	"context"
@@ -43,12 +16,8 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// TCOMonthlyEntry is one row of the monthly_breakdown[] array on
-// the /api/v1/analytics/tco JSON wire shape. Promoted to a
-// package-level type (it was an inline anonymous struct in the
-// original handler) so the AI adapter can produce the SAME shape
-// without redeclaring it. JSON tags are unchanged from the
-// pre-refactor inline declaration.
+// TCOMonthlyEntry is one monthly_breakdown row. JSON tags mirror the original
+// handler shape so AI narration and the chart share one contract.
 type TCOMonthlyEntry struct {
 	Month        string  `json:"month"`
 	EVCost       float64 `json:"ev_cost"`
@@ -58,26 +27,9 @@ type TCOMonthlyEntry struct {
 	EnergyWh     float64 `json:"energy_wh"`
 }
 
-// TCOSummary is the typed envelope ComputeTCOSummary returns. The
-// JSON tags MUST stay byte-identical with the pre-refactor inline
-// `map[string]interface{}` literal in [Handler.GetTCO] — the
-// deterministic TrueCostPage chart consumes every field listed
-// here by snake_case key. A future field addition to the canonical
-// wire shape MUST land here AND in the chart's TS interface.
-//
-// All numeric fields are post-rounded + safeF-guarded inside
-// ComputeTCOSummary so the JSON encoder never sees NaN/Inf and
-// the AI narrator quotes the same numbers the chart renders.
-//
-// Phase-48 SI-canonical note: the canonical /api/v1/analytics/tco
-// wire shape predates the SI-canonical migration. The legacy
-// snake_case keys (`total_wh`, `total_km`, `cost_per_km_ev`,
-// `cost_per_km_ice`, `gas_efficiency_mpg`, `base_cost_per_kwh`)
-// are MIRRORED here for chart-parity ONLY — this slice does NOT
-// add new legacy-unit fields beyond the existing endpoint shape.
-// A future SI-cutover of the wire contract would require a
-// coordinated migration of the chart + the AI envelope + the
-// strategy goldens; out of scope for the M2 narration slice.
+// TCOSummary is the typed envelope written by the TCO handler and wrapped by AI
+// narration. Its JSON tags intentionally mirror the existing endpoint contract,
+// including legacy key names, until a coordinated SI wire-contract cutover.
 type TCOSummary struct {
 	VehicleID                  int64             `json:"vehicle_id"`
 	TotalChargingCost          float64           `json:"total_charging_cost"`
@@ -99,33 +51,9 @@ type TCOSummary struct {
 	MonthlyBreakdown           []TCOMonthlyEntry `json:"monthly_breakdown"`
 }
 
-// ComputeTCOSummary runs the deterministic Total-Cost-of-Ownership
-// aggregation for a single vehicle and returns the typed envelope
-// the HTTP handler writes verbatim AND the AI tool envelope wraps.
-//
-// Behaviour MUST stay byte-identical with the pre-refactor inline
-// computation in [Handler.GetTCO]:
-//
-//   - The same three pgx queries (charging-totals, mileage-range,
-//     settings-defaults) run in the same order against the same
-//     tables/columns.
-//   - The same /api/v1/settings defaults (0.12 $/kWh, $3.50/gal,
-//     25 MPG) apply when the row is missing or non-positive.
-//   - The same ownership-window math (months >= 1; date diff /
-//     30.44) applies.
-//   - The same maintenance heuristic ($50/month flat) applies.
-//   - All float64 outputs are rounded with the SAME math.Round
-//     scaling (×100/100 for dollars, ×10000/10000 for cost-per-km,
-//     ×10/10 for months) and safeF-guarded so JSON encoding never
-//     sees NaN/Inf.
-//   - monthly_breakdown is `[]TCOMonthlyEntry{}` (empty) rather
-//     than nil so the JSON output is `[]` not `null` — the chart
-//     iterates without a null guard.
-//
-// vehicleID > 0 is required; a non-positive value returns an
-// error so the HTTP handler can surface a 400 BEFORE opening the
-// SSE stream and the AI tool can refuse the call before any SQL
-// runs.
+// ComputeTCOSummary runs the deterministic TCO aggregation shared by the HTTP
+// endpoint and AI tool. It preserves the pre-refactor query order, defaults,
+// rounding, safeF guards, and empty-not-null monthly_breakdown contract.
 func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (TCOSummary, error) {
 	if db == nil {
 		return TCOSummary{}, errors.New("api: ComputeTCOSummary: nil *database.DB")
@@ -134,7 +62,6 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 		return TCOSummary{}, fmt.Errorf("api: ComputeTCOSummary: vehicle_id must be > 0 (got %d)", vehicleID)
 	}
 
-	// 1) Charging-cost / energy / session-count totals.
 	var totalChargingCost, totalWh float64
 	var totalSessions int
 	if err := db.Pool.QueryRow(ctx,
@@ -147,7 +74,6 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 		return TCOSummary{}, fmt.Errorf("api: ComputeTCOSummary: charging totals: %w", err)
 	}
 
-	// 2) Mileage + ownership-window range.
 	var totalKm float64
 	var firstDate, lastDate *time.Time
 	if err := db.Pool.QueryRow(ctx,
@@ -159,7 +85,6 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 		return TCOSummary{}, fmt.Errorf("api: ComputeTCOSummary: mileage range: %w", err)
 	}
 
-	// 3) Gas-price / efficiency / electricity-rate defaults.
 	var baseCostPerKWh, gasPrice, gasEfficiencyMPG float64
 	if err := db.Pool.QueryRow(ctx,
 		`SELECT
@@ -181,7 +106,6 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 		gasPrice = 3.50
 	}
 
-	// 4) Ownership-window months (clamped to >=1).
 	var monthsOfOwnership float64 = 1
 	if firstDate != nil && lastDate != nil && !firstDate.IsZero() && !lastDate.IsZero() {
 		days := lastDate.Sub(*firstDate).Hours() / 24
@@ -193,7 +117,6 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 		}
 	}
 
-	// 5) Cost-per-km comparisons + total/monthly savings.
 	var costPerKmEV, costPerKmICE, totalSavings, monthlySavings float64
 	if totalKm > 0 {
 		costPerKmEV = totalChargingCost / totalKm
@@ -208,7 +131,6 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 	// Heuristic operating-cost-only maintenance estimate ($50/mo).
 	maintenanceSavingsEstimate := monthsOfOwnership * 50
 
-	// 6) Monthly EV-vs-gas breakdown.
 	rows, err := db.Pool.Query(ctx,
 		`SELECT TO_CHAR(started_at, 'YYYY-MM') as month,
 		        COALESCE(SUM(cost_decimal::float8), 0) as monthly_cost,
@@ -230,14 +152,8 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 		if err := rows.Scan(&month, &monthlyCost, &monthlyWh); err != nil {
 			continue
 		}
-		// Estimate equivalent gas cost for this month's
-		// driving from the energy consumed. The estimator
-		// converts kWh → estimated km via the overall
-		// efficiency, then km → miles → gallons → cost. The
-		// "estimated km from energy" path mirrors the
-		// pre-refactor handler's heuristic verbatim — there
-		// is intentionally NO per-month distance lookup
-		// because the chart matches this contract.
+		// Keep the pre-refactor heuristic: infer monthly distance from energy instead
+		// of adding a per-month distance lookup, because the chart pins this contract.
 		equivGas := 0.0
 		if baseCostPerKWh > 0 && gasEfficiencyMPG > 0 {
 			kmPerKWh := 0.0
@@ -266,7 +182,6 @@ func ComputeTCOSummary(ctx context.Context, db *database.DB, vehicleID int64) (T
 		return monthlyBreakdown[i].Month < monthlyBreakdown[j].Month
 	})
 
-	// 7) Equivalent-gas-cost total (mirrors per-row calc).
 	equivalentGasCostTotal := 0.0
 	if totalKm > 0 {
 		totalMiles := totalKm / 1.60934

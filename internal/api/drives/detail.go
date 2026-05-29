@@ -205,7 +205,7 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	telemetry := timelineRowsToFlat(telemetryRows)
-	// Rename "ts" → "created_at" to match the old DriveTelemetryReading JSON shape.
+	// Preserve the old DriveTelemetryReading timestamp key.
 	for _, row := range telemetry {
 		if ts, ok := row["ts"]; ok {
 			row["created_at"] = ts
@@ -217,7 +217,6 @@ func (h *driveDetailHandler) Get(w http.ResponseWriter, r *http.Request) {
 	// would render a flat line at 0 without this step.
 	derivePowerKw(telemetry)
 
-	// Positions: chart mode (empty CollapseBy).
 	positionRows, err := h.state.Timeline(ctx,
 		drive.VehicleID, drivePositionFieldMappings, drive.StartTs, endTs, signal.TimelineOptions{})
 	if err != nil {
@@ -456,14 +455,14 @@ func (h *driveDetailHandler) TelemetryReadings(w http.ResponseWriter, r *http.Re
 		return
 	}
 	rows := timelineRowsToFlat(rowsTL)
-	// Rename "ts" → "created_at" to match the old DriveTelemetryReading JSON shape.
+	// Preserve the old DriveTelemetryReading timestamp key.
 	for _, row := range rows {
 		if ts, ok := row["ts"]; ok {
 			row["created_at"] = ts
 			delete(row, "ts")
 		}
 	}
-	// Derive per-row power (kW) — see derivePowerKw doc comment for rationale.
+
 	derivePowerKw(rows)
 	writeJSON(w, http.StatusOK, rows)
 }

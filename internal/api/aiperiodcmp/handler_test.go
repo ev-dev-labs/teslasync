@@ -1,19 +1,7 @@
 // Phase-50 / 0040 — X1 Period compare narration.
 //
-// Off-mode + baseline-coexistence tests for the AI
-// period-compare-narration handler. The off-mode test
-// (TestPeriodCompareNarrationAIOffShowsCardsOnly) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI
-// route returns 404 when settings.ai_mode='off' even when the
-// per-feature toggle is on, AND that the deterministic
-// period-stats aggregate served at the canonical
-// GET /api/v1/analytics/period-stats handler remains the
-// unconditional baseline path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness
-// (`go run ./cmd/ai-eval -feature period-compare-narration`);
-// duplicating that here would require a live database fixture.
+// Off-mode tests prove the AI route fails closed while deterministic period-stats cards stay available.
+// Streaming coverage lives in the F6 eval harness; duplicating it here would require a live DB fixture.
 
 package aiperiodcmp
 
@@ -31,8 +19,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 )
 
-// stubGuardSettings is a minimal in-memory guard.Settings used to
-// drive the off-mode contract test without a real DB.
 type stubGuardSettings struct {
 	mode string
 	on   map[string]bool
@@ -49,33 +35,11 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 	return s.on[id], nil
 }
 
-// TestPeriodCompareNarrationAIOffShowsCardsOnly is the
-// load-bearing off-mode contract proof for slice 0040. It mounts
-// the AI period-compare-narration route through the guard with
-// ai_mode='off' and proves:
-//
-//   - The /api/v1/ai/analytics/period-compare/narrate route
-//     returns 404 (the guard fails closed even when the
-//     per-feature toggle is on).
-//   - The 404 body does not leak feature metadata or route
-//     identifiers.
-//   - A baseline GET /api/v1/analytics/period-stats route
-//     serving the deterministic period-over-period aggregate
-//     remains reachable under the same router — proof that the
-//     slice does NOT replace the deterministic chart on
-//     /period-compare (PeriodComparePage) (ADR-015 §I3).
-//
-// The test name MUST stay
-// TestPeriodCompareNarrationAIOffShowsCardsOnly — the slice
-// prompt's verification command runs
-// `go test … -run TestPeriodCompareNarrationAIOffShowsCardsOnly`
-// AND `npm test -- --run TestPeriodCompareNarrationAIOffShowsCardsOnly`,
-// so both the Go and React off-mode proofs answer to the same
-// test-name pattern.
+// TestPeriodCompareNarrationAIOffShowsCardsOnly is the slice 0040 off-mode contract proof.
+// The name is pinned by Go and React verification commands, so keep it stable.
 func TestPeriodCompareNarrationAIOffShowsCardsOnly(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"period-compare-narration": true}, // toggle on; mode trumps it
@@ -84,21 +48,14 @@ func TestPeriodCompareNarrationAIOffShowsCardsOnly(t *testing.T) {
 
 	router := chi.NewRouter()
 	router.Route("/api/v1", func(r chi.Router) {
-		// AI route under the guard. Inner handler always-500: the
-		// guard MUST short-circuit before we are reached. A
-		// non-404 status here is a guard-bypass bug.
+		// The guarded handler must not be reached in off mode.
 		r.Route("/ai", func(r chi.Router) {
 			r.Post("/analytics/period-compare/narrate", g.Wrap("period-compare-narration", func(w http.ResponseWriter, _ *http.Request) {
 				http.Error(w, "GUARD_BYPASSED — handler should not have been called in off mode", http.StatusInternalServerError)
 			}))
 		})
 
-		// Baseline canonical route — NOT guarded by the AI guard.
-		// Returns a deterministic period-stats envelope with the
-		// `"ai":false` marker and a `surface` envelope shape that
-		// names the deterministic baseline, so the test can prove
-		// the deterministic period-stats path coexists. We mock
-		// it here so the test stays hermetic (no DB).
+		// Mock the baseline period-stats route so the test stays hermetic while proving chart data still works.
 		r.Get("/analytics/period-stats", func(w http.ResponseWriter, _ *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
@@ -106,7 +63,6 @@ func TestPeriodCompareNarrationAIOffShowsCardsOnly(t *testing.T) {
 		})
 	})
 
-	// 1) Probe the AI route — MUST be 404.
 	body := []byte(`{"vehicle_id":42,"days_a":30,"days_b":90}`)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/analytics/period-compare/narrate", bytes.NewReader(body))
@@ -119,20 +75,14 @@ func TestPeriodCompareNarrationAIOffShowsCardsOnly(t *testing.T) {
 	if strings.Contains(rec.Body.String(), "GUARD_BYPASSED") {
 		t.Fatalf("AI route guard was bypassed in off mode: body=%q", rec.Body.String())
 	}
-	// Defence-in-depth: the 404 body must not leak feature
-	// metadata (ADR-015 §I9 — provider/feature info must be
-	// invisible in off mode). chi's http.NotFound emits "404 page
-	// not found\n".
+	// Off-mode 404s must not leak provider or feature metadata.
 	for _, leaked := range []string{"period-compare-narration", "feature", "strategy", "provider", "agent"} {
 		if strings.Contains(strings.ToLower(rec.Body.String()), leaked) {
 			t.Errorf("AI route 404 body leaks %q: %q", leaked, rec.Body.String())
 		}
 	}
 
-	// 2) Probe the baseline period-stats route — MUST return
-	// 200 + deterministic baseline content, regardless of the AI
-	// guard's state. This is the load-bearing proof that the
-	// slice did NOT replace the deterministic period-stats.
+	// Baseline period-stats must remain reachable regardless of AI guard state.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodGet, "/api/v1/analytics/period-stats?vehicle_id=42&days=30", nil)
 	router.ServeHTTP(recBaseline, reqBaseline)
@@ -148,10 +98,7 @@ func TestPeriodCompareNarrationAIOffShowsCardsOnly(t *testing.T) {
 	}
 }
 
-// TestHandler_PanicsOnNilWiring asserts the
-// handler constructor refuses zero-valued dependencies. A wiring
-// bug at boot must surface as a panic, not as a nil-deref on
-// first request.
+// TestHandler_PanicsOnNilWiring proves wiring bugs fail at boot.
 func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -172,11 +119,7 @@ func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestHandler_RejectsBadBody asserts the
-// handler validates the JSON body BEFORE opening the SSE stream
-// — a missing, unparseable, or out-of-range body must surface as
-// a JSON 400, not a half-opened stream that confuses the
-// frontend.
+// TestHandler_RejectsBadBody proves invalid bodies return JSON 400 before SSE starts.
 func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
@@ -211,11 +154,7 @@ func TestHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestHandler_AcceptsCanonicalBody proves
-// the parser does NOT bounce the happy-path shapes. Includes a
-// vehicle-id-only shape (days defaults applied) AND
-// vehicle-id+days_a+days_b explicit, AND the explicit days=0
-// "all time" shape the SPA selectors emit.
+// TestHandler_AcceptsCanonicalBody covers defaults, explicit windows, and all-time (0) selectors.
 func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
@@ -256,10 +195,7 @@ func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	}
 }
 
-// TestPeriodCompareSource_PanicsOnNilDB asserts the production
-// adapter constructor refuses a nil *database.DB — a wiring bug
-// at boot must surface as a panic, not as a nil-deref on first
-// AI request.
+// TestPeriodCompareSource_PanicsOnNilDB proves adapter wiring fails at boot.
 func TestPeriodCompareSource_PanicsOnNilDB(t *testing.T) {
 	t.Parallel()
 	defer func() {

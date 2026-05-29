@@ -19,9 +19,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-// TelemetrySessionTracker detects drive starts/ends and charge starts/ends
-// from streaming Fleet Telemetry signals. Tracks comprehensive telemetry
-// data throughout sessions for analytics.
+// TelemetrySessionTracker detects drive and charge boundaries from streaming Fleet Telemetry.
 type TelemetrySessionTracker struct {
 	db                  *database.DB
 	driveRepo           *drivedb.DriveRepo
@@ -41,7 +39,7 @@ type TelemetrySessionTracker struct {
 	activeCharges map[int64]*streamingCharge // vehicleID → active charge
 }
 
-// NewTelemetrySessionTracker creates a session tracker with comprehensive data tracking.
+// NewTelemetrySessionTracker creates a tracker with its repository dependencies.
 func NewTelemetrySessionTracker(db *database.DB, eventBus *events.Bus, geocoder geocoding.Geocoder, store *signal.Store) *TelemetrySessionTracker {
 	t := &TelemetrySessionTracker{
 		db:            db,
@@ -70,7 +68,6 @@ func (t *TelemetrySessionTracker) SetSignalLogReader(r *signaldb.SignalLogReader
 // this window so each row has complete data instead of mostly NULLs.
 const telemetryWriteInterval = 5 * time.Second
 
-// accumulateSignals merges incoming signals into the accumulator map.
 func accumulateSignals(acc map[string]interface{}, signals map[string]interface{}) map[string]interface{} {
 	if acc == nil {
 		acc = make(map[string]interface{}, len(signals))
@@ -81,31 +78,14 @@ func accumulateSignals(acc map[string]interface{}, signals map[string]interface{
 	return acc
 }
 
-// ProcessSignals evaluates incoming telemetry signals for drive/charge transitions.
-// accumulatedSignals contains the merged set of all signals seen in the handler's
-// current accumulation window — used to fill in start values (battery, odometer,
-// location) that may not be in the current batch.
-//
-// Legacy entry point for callers without event-time information; defers to
-// ProcessSignalsAt with empty payloadTs/fieldTs so the helpers fall back to
-// time.Now().UTC() — the historical wall-clock behavior.
+// ProcessSignals preserves the legacy wall-clock path for callers without event timestamps.
+// accumulatedSignals supplies start values that may have arrived in earlier batches within the throttle window.
 func (t *TelemetrySessionTracker) ProcessSignals(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}) {
 	t.ProcessSignalsAt(ctx, vehicleID, vin, signals, accumulatedSignals, time.Time{}, nil)
 }
 
-// ProcessSignalsAt is the event-time-aware variant. payloadTs is the
-// largest EmittedAt across the batch (provided by the AtomicsObserver
-// pipeline); fieldTs maps each Field to its per-atomic EmittedAt for
-// per-field-derived timestamp attribution (e.g. drive-start at the
-// Gear=D atomic's EmittedAt rather than the batch high-water mark).
-// A zero payloadTs preserves the legacy wall-clock behavior — used by
-// the legacy ProcessSignals wrapper plus the recovery / flush
-// callers that have no signal payload.
-//
-// Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix) —
-// without this thread, replaying a 24-minute window produces drives
-// stamped with the replay-runner's clock instead of the original
-// event window.
+// ProcessSignalsAt attributes session transitions to telemetry event time when available.
+// This keeps replayed windows stamped with original event times instead of the replay runner clock.
 func (t *TelemetrySessionTracker) ProcessSignalsAt(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
 	t.trackDriving(ctx, vehicleID, vin, signals, accumulatedSignals, payloadTs, fieldTs)
 	t.trackCharging(ctx, vehicleID, vin, signals, accumulatedSignals, payloadTs, fieldTs)

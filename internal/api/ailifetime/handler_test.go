@@ -1,16 +1,8 @@
 // Phase-50 / 0041 — X2 Lifetime stats Q&A.
 //
-// Off-mode + baseline-coexistence tests for the AI lifetime-stats-qa
-// handler. The off-mode test (TestLifetimeStatsQAAIOffHidesQuestionBox)
-// is the slice's load-bearing AI-OFF contract proof: it asserts that
-// the AI route returns 404 when settings.ai_mode='off' even when the
-// per-feature toggle is on, AND that the deterministic lifetime-stats
-// envelope served at the canonical GET /api/v1/analytics/lifetime
-// handler remains the unconditional baseline path (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by the
-// F6 eval harness (`go run ./cmd/ai-eval -feature lifetime-stats-qa`);
-// duplicating that here would require a live database fixture.
+// These tests pin the AI-off contract: guarded Q&A returns 404 while the
+// deterministic lifetime-stats endpoint remains reachable. Full streaming
+// coverage lives in the F6 eval harness because it needs a database fixture.
 
 package ailifetime
 
@@ -68,7 +60,6 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 func TestLifetimeStatsQAAIOffHidesQuestionBox(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"lifetime-stats-qa": true}, // toggle on; mode trumps it
@@ -99,7 +90,6 @@ func TestLifetimeStatsQAAIOffHidesQuestionBox(t *testing.T) {
 		})
 	})
 
-	// 1) Probe the AI route — MUST be 404.
 	body := []byte(`{"vehicle_id":42,"question":"How far have I driven?"}`)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/analytics/lifetime/qa", bytes.NewReader(body))
@@ -122,10 +112,7 @@ func TestLifetimeStatsQAAIOffHidesQuestionBox(t *testing.T) {
 		}
 	}
 
-	// 2) Probe the baseline lifetime-stats route — MUST return
-	// 200 + deterministic baseline content, regardless of the AI
-	// guard's state. This is the load-bearing proof that the
-	// slice did NOT replace the deterministic envelope.
+	// Baseline must stay reachable even when AI Q&A is off.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodGet, "/api/v1/analytics/lifetime?vehicle_id=42", nil)
 	router.ServeHTTP(recBaseline, reqBaseline)

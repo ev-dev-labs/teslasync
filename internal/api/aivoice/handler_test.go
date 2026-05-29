@@ -1,24 +1,5 @@
-// Phase-50 / 0055 — V1 Helix voice mode.
-//
-// Off-mode + baseline-coexistence tests for the AI voice-mode
-// handler. The off-mode test
-// (TestVoiceModeAIOffNoVoiceControlsOrStorage) is the slice's
-// load-bearing AI-OFF contract proof: it asserts that the AI
-// route returns 404 when settings.ai_mode='off' even when the
-// per-feature toggle is on, AND that the deterministic
-// /api/v1/chatbot canonical baseline surface remains reachable
-// (ADR-015 §I3, §I6).
-//
-// The SPA-side off-mode proof (the React render-tree absence of
-// the ai-feature-voice-mode-root marker, the localStorage key
-// being untouched, the baseline text /chatbot rendering
-// unchanged) lives at
-// web/src/features/system/__tests__/TestVoiceModeAIOffNoVoiceControlsOrStorage.test.tsx.
-//
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness (`go run ./cmd/ai-eval -feature
-// voice-mode`); duplicating that here would require a live
-// mock-provider stack.
+// Phase-50 / 0055 - V1 Helix voice mode.
+// These tests pin AI-off guard behavior, baseline coexistence, and voice-mode adapter contracts.
 
 package aivoice
 

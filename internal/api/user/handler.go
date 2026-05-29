@@ -59,7 +59,6 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Simple admin account — in a future release this will query a users table.
 	if body.Username != "admin" {
 		httpx.WriteError(w, http.StatusUnauthorized, "invalid credentials")
 		return
@@ -142,7 +141,7 @@ func (h *Handler) OptionalAuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-// signToken produces a base64-encoded token: payload.signature
+// signToken produces payload.signature using HMAC-SHA256.
 func (h *Handler) signToken(c userClaims) (string, error) {
 	payload, err := json.Marshal(c)
 	if err != nil {

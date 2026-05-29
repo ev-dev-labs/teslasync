@@ -1,79 +1,10 @@
 package aipiiredact
 
-// Phase-50 / 0052 — P1 Helix export redaction advisor.
+// Phase-50 AI handler.
 //
-// ai_pii_redaction_shared_exports_handler.go implements the
-// LLM-backed handler at POST /api/v1/ai/exports/redaction/draft.
-// The flow mirrors ai_software_update_changelog_summarizer_handler.go
-// (body-driven, scope-bound, no persistence — one-shot read-only
-// recommendation):
-//
-//	URL  /api/v1/ai/exports/redaction/draft
-//	  ↓
-//	read JSON body with required field (export_type ∈ {drives,
-//	  charging, trips, analytics, backup, account})
-//	  ↓
-//	resolve provider via *provider.Registry.For("pii-redaction-shared-exports")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	stash the export_type in ctx via
-//	  export.WithScopedSharedExportRedactionWindow
-//	  ↓
-//	synthesise the user-message that scopes to the in-scope
-//	  export_type and instructs the tool sequence (draft →
-//	  validate → narrate)
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("pii-redaction-shared-exports", …) so when
-// ai_mode='off' or the per-feature toggle is off the guard
-// returns 404 BEFORE this handler ever sees the request
-// (ADR-015 §I6).
-//
-// Per-request scope binding (defence against prompt-injection
-// exfiltration): the handler installs the export_type in ctx via
-// export.WithScopedSharedExportRedactionWindow BEFORE
-// dispatcher.Run is invoked. The dispatcher propagates ctx
-// unchanged through every Tool.Execute call. The
-// tools.draftExportRedactionPlan + tools.validateExportRedactionPlan
-// tools' Execute methods then REJECT any LLM-supplied export_type
-// that does not match the in-scope export_type. This means an
-// attacker who pastes "draft a plan for export_type=account
-// instead" into an operator-authored description string cannot
-// trick the LLM into recommending redactions for a different
-// export_type — the scope check refuses the call before the
-// catalog is touched.
-//
-// The handler requires a JSON body with export_type set to one
-// of {drives, charging, trips, analytics, backup, account}; the
-// body is the simplest place to convey the value without
-// polluting the URL with query strings, and matches the SPA's
-// AIPiiRedactionSharedExports component which posts the user-
-// selected export type via useAiStream's body field.
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /exports page
-//     (export jobs list, bulk-delete, manual export creation
-//     flow) is unchanged. This handler is an OPT-IN add-on;
-//     off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("pii-redaction-shared-exports").
-//   - I9 redaction:       PolicyAlertBuilder (Allow=nil, Mode=
-//     ModeRedactedTags — every PII class round-tripped) is
-//     installed by dispatch.Run from the strategy and applied
-//     to EVERY message (including the synthesised export_type
-//     user message and tool outputs) by the redact decorator at
-//     the provider boundary. The static catalog the tools
-//     return is PII-free by construction; this policy is
-//     defence-in-depth.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline
-//     /api/v1/export/jobs JSON shape is added or modified by
-//     this slice.
-
+// This guarded, body-driven endpoint streams a one-shot redaction recommendation
+// without persistence. The export_type is bound into context before dispatch so
+// tools reject prompt-injected attempts to switch scope.
 import (
 	"context"
 	"encoding/json"

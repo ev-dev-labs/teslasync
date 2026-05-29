@@ -242,8 +242,6 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// ── helpers ─────────────────────────────────────────────────────────────────
-
 type pinnedBodyError struct {
 	status int
 	msg    string

@@ -1,18 +1,8 @@
 // Phase-50 / 0048 — S7 State-machine debugger narrator.
 //
-// Off-mode + baseline-coexistence tests for the AI state-machine-
-// debugger-narrator handler. The off-mode test
-// (TestStateMachineNarratorAIOffShowsDebuggerOnly) is the
-// slice's load-bearing AI-OFF contract proof: it asserts that
-// the AI route returns 404 when settings.ai_mode='off' even when
-// the per-feature toggle is on, AND that the deterministic FSM
-// transition snapshot served at the canonical baseline route
-// remains reachable (ADR-015 §I3, §I6).
-//
-// The on-path streaming integration is exercised end-to-end by
-// the F6 eval harness (`go run ./cmd/ai-eval -feature
-// state-machine-debugger-narrator`); duplicating that here would
-// require a live FSM-transition fixture.
+// These tests pin the AI-off contract: guarded narration returns 404 while the
+// deterministic FSM transition snapshot remains reachable. Full streaming
+// coverage lives in the F6 eval harness because it needs FSM fixtures.
 
 package aifsmnar
 
@@ -70,7 +60,6 @@ func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool
 func TestStateMachineNarratorAIOffShowsDebuggerOnly(t *testing.T) {
 	t.Parallel()
 
-	// --- off-mode AI route ---------------------------------------------
 	guardSettings := &stubGuardSettings{
 		mode: "off",
 		on:   map[string]bool{"state-machine-debugger-narrator": true}, // toggle on; mode trumps it
@@ -100,7 +89,6 @@ func TestStateMachineNarratorAIOffShowsDebuggerOnly(t *testing.T) {
 		})
 	})
 
-	// 1) Probe the AI route — MUST be 404.
 	body := []byte(`{"vehicle_id":42,"from_unix":1700000000,"to_unix":1700001800}`)
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/system/fsm/narrate", bytes.NewReader(body))
@@ -123,15 +111,7 @@ func TestStateMachineNarratorAIOffShowsDebuggerOnly(t *testing.T) {
 		}
 	}
 
-	// 2) Probe the baseline fsm-transition snapshot route — MUST
-	// return 200 + deterministic baseline content, regardless of
-	// the AI guard's state. This is the load-bearing proof that
-	// the slice did NOT replace the deterministic
-	// StateMachineDebuggerPage transition surface. The response
-	// MUST include the FSM-snapshot field-set the
-	// StateMachineDebuggerPage renders so the "ShowsDebuggerOnly"
-	// half of the test name is defensible — the deterministic
-	// raw debugger IS reachable to the user even when AI is off.
+	// Baseline must stay reachable even when AI narration is off.
 	recBaseline := httptest.NewRecorder()
 	reqBaseline := httptest.NewRequest(http.MethodGet, "/api/v1/fsm/transitions", nil)
 	router.ServeHTTP(recBaseline, reqBaseline)

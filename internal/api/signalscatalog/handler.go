@@ -1,18 +1,5 @@
-// Phase-43a / Prompt 0007 — Handler restores the
-// /signals/catalog + /signals/observations endpoints deleted by
-// Phase-42 prompt 0077, backed by routing.yaml (catalog spine) +
-// signal_log (mig 000186, aggregates + observations).
-//
-// Frontend hooks (still pointed at these URLs, currently 404ing):
-//
-//   - useSignalCatalog       (web/src/api/hooks/useTelemetry.ts L254)
-//   - useSignalObservations  (web/src/api/hooks/useTelemetry.ts L273)
-//
-// Response shapes follow the prompt-locked decisions; the legacy
-// frontend types in web/src/types/signals.ts (SignalCatalogEntry +
-// SignalObservation) describe the dropped endpoint and will need a
-// follow-up update outside this prompt's allowed-files boundary.
-// The 404 -> 200 transition is the win this prompt ships.
+// Handler restores the global signal catalog and observations endpoints from routing.yaml plus signal_log.
+// Response shapes stay prompt-locked so frontend hook updates can happen separately.
 package signalscatalog
 
 import (

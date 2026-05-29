@@ -277,13 +277,9 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Speed discipline score
 	speedDiscipline := math.Round(float64(disciplinedCount) / float64(totalDrives) * 100)
-
-	// Overall weighted average
 	overall := math.Round(efficiency*0.4 + smoothness*0.3 + speedDiscipline*0.3)
 
-	// Clamp scores to 0-100
 	clamp := func(v float64) float64 {
 		if v < 0 {
 			return 0
@@ -298,7 +294,6 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 	smoothness = clamp(smoothness)
 	speedDiscipline = clamp(speedDiscipline)
 
-	// Grade
 	grade := "F"
 	switch {
 	case overall > 95:
@@ -313,7 +308,7 @@ func (h *DriveHandler) Score(w http.ResponseWriter, r *http.Request) {
 		grade = "D"
 	}
 
-	// Trend: compare last 10 vs previous 10 drives
+	// Trend compares the last 10 completed drives against the previous 10.
 	trend := "flat"
 	if totalDrives >= 10 {
 		scoreForBatch := func(offset int) float64 {

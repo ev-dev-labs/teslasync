@@ -12,25 +12,10 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// DrivetrainHealthHandler serves drivetrain health analytics.
-//
-// Phase-39 migration: the legacy signaldb.SignalLogReader's per-signal
-// helper has been replaced with the canonical signal.StateReader
-// (ADR-002 / phase-39). Both per-signal lookups (ModuleTempMax,
-// ModuleTempMin) resolve "value as of now" — a forward-folded read at
-// time.Now() — so they map 1:1 onto StateReader.SignalAt with identical
-// semantics. We retain the per-signal pattern (rather than a single
-// StateReader.State call) to preserve the existing behavior where each
-// individual signal's absence falls through independently to its zero
-// fallback in the derived rear-motor / front-motor / inverter / battery
-// temp projections.
-//
-// As part of this migration, transport errors from state.SignalAt now
-// propagate to the caller as a 500 instead of being silently swallowed.
-// The legacy silent-swallow returned a payload with zero-valued temps,
-// which is indistinguishable on the frontend from "vehicle truly idle /
-// brand-new vehicle with no signal_log history" — masking a real
-// signal-store / pgx outage behind a "drivetrain looks dead" panel.
+// DrivetrainHealthHandler serves drivetrain health analytics from the canonical
+// signal.StateReader. It keeps per-signal forward-folded reads so each missing
+// signal falls back independently, and transport errors now surface as 500s
+// instead of masquerading as zero-temperature drivetrain data.
 type DrivetrainHealthHandler struct {
 	db    *database.DB
 	state signal.StateReader

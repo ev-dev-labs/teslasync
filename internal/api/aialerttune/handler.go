@@ -2,47 +2,9 @@ package aialerttune
 
 // Phase-50 / 0034 — A1 Alert tuning suggestions.
 //
-// ai_alert_tuning_handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft. The flow
-// mirrors ai_charging_diagnosis_handler.go (URL-path-id +
-// dispatch+stream loop, no persistence — one-shot
-// propose-only patch generation):
-//
-//	URL  /api/v1/ai/alerts/rules/{ruleID}/tune/draft
-//	  ↓
-//	resolve provider via *provider.Registry.For("alert-tuning-suggestions")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("alert-tuning-suggestions", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE
-// this handler ever sees the request (ADR-015 §I6).
-//
-// The handler takes its primary identifier (`ruleID`) from the
-// URL path — the AI surface attaches to a specific alert rule's
-// editor in /alerts/studio so the URL is the natural place for
-// it. The optional JSON body carries `vehicle_id` for vehicle
-// scope but no other parameters (the LLM has the rule ID + the
-// firing-history window length baked into the prompt).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic AlertStudio (manual
-//     threshold tuning + the existing alert analytics) hitting
-//     PUT /api/v1/alerts/rules/{id} is unchanged. This handler
-//     is an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("alert-tuning-suggestions").
-//   - I9 redaction:       PolicyAlertBuilder (denies every PII
-//     class — alert IDs, signal names, and thresholds flow
-//     through the typed F4 tool envelope) is installed by
-//     dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON
-//     shape is added or modified by this slice.
+// Implements POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft as a propose-only SSE handler.
+// The route is guard-wrapped for ADR-015 off-mode behavior; AlertStudio's deterministic PUT path remains the baseline.
+// The rule ID comes from the URL, and vehicle_id is only an optional scoping hint.
 
 import (
 	"context"
@@ -72,47 +34,21 @@ import (
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 )
 
-// maxIterations bounds the dispatcher's tool-loop.
-// The strategy is at most draft_alert_rule_patch ->
-// validate_alert_rule -> answer (with optional retries). A hard
-// ceiling of 8 is generous and matches the other A-tier
-// propose-only handlers (drive-coach, charging-diagnosis).
+// maxIterations bounds the propose-only tool loop; 8 matches sibling AI handlers.
 const maxIterations = 8
 
-// windowDays is the trailing-window length the
-// production AlertTuningSource adapter projects across when
-// reading the recent firing history from notification_logs.
-// 30 days mirrors the slice prompt's "recent firing window"
-// framing AND the deterministic analytics dashboard's default
-// preset on AlertStudioPage.
+// windowDays matches AlertStudio's recent firing window.
 const windowDays = 30
 
-// minFires is the minimum total firing-event count
-// (across the trailing window) the adapter requires before it
-// lets the narrator quote a "would have fired N times after
-// patch" projection. Below this threshold has_enough_history
-// flips false and the narrator says so plainly. 5 firings is the
-// minimum sample for a meaningful descriptive replay — the
-// SOlder the sample the more sensitive the projection becomes
-// to a single outlier.
+// minFires avoids quoting replay projections from samples too small to be meaningful.
 const minFires = 5
 
-// request is the JSON body shape this handler
-// accepts. Body is OPTIONAL (an empty body is accepted; the
-// handler resolves vehicle scope from the alert rule itself when
-// vehicle_id is absent). Mirrors how the AlertStudio's typed PUT
-// handler handles the same field.
+// request is optional; absent vehicle_id means the rule owns vehicle scope.
 type request struct {
 	VehicleID *int64 `json:"vehicle_id,omitempty"`
 }
 
-// Handler is the HTTP handler for
-// POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft.
-//
-// Stateless beyond its constructor inputs; safe for concurrent
-// use across requests. Construction is in router.go so the
-// dispatcher's tool registry + provider registry are wired once
-// at boot.
+// Handler serves POST /api/v1/ai/alerts/rules/{ruleID}/tune/draft and is safe for concurrent use.
 type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
@@ -121,22 +57,8 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the handler. All non-pointer
-// arguments are required; the constructor panics on a nil so the
-// wiring bug surfaces at boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	draft_alert_rule_patch (registered by
-//	alert.RegisterAlertTuningSuggestionsTools) AND
-//	validate_alert_rule (registered by
-//	alert.RegisterAlertBuilderTools — REUSED from N1).
-//
-// strat:      the alert-tuning-suggestions Strategy (one per process).
-// headerName: forward-auth header name; used to extract subject
-//
-//	for audit.
+// NewHandler constructs the handler and panics on missing boot wiring.
+// toolReg must include draft_alert_rule_patch and validate_alert_rule.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -164,16 +86,7 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 	return dispatch.ConfirmDenied, nil
 }
 
-// parseAlertTuningURL extracts and validates the ruleID URL
-// parameter. Pulled out so the off-mode test and the
-// validator-only test can exercise the same parsing without
-// constructing a full handler with stub deps. The function writes
-// a 400 on failure and returns the (id, ok) pair so the caller
-// can early-return.
-//
-// ruleID MUST be a positive integer; zero or negative values are
-// rejected with a 400 because they cannot identify a real
-// alert_rules row.
+// parseAlertTuningURL validates the positive ruleID path parameter before any SSE stream opens.
 func parseAlertTuningURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "ruleID")
 	if raw == "" {
@@ -192,11 +105,7 @@ func parseAlertTuningURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	return id, true
 }
 
-// parseAlertTuningBody decodes the OPTIONAL JSON body. An empty
-// body is accepted and surfaces as a zero-value request. Pulled
-// out so the validator-only test can exercise the same parsing.
-// Returns (req, ok); on parse failure writes a 400 and returns
-// (nil, false).
+// parseAlertTuningBody accepts an empty optional body and rejects malformed vehicle_id input with JSON 400.
 func parseAlertTuningBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 	req := &request{}
 	if r.Body == nil {
@@ -221,15 +130,8 @@ func parseAlertTuningBody(w http.ResponseWriter, r *http.Request) (*request, boo
 	return req, true
 }
 
-// ServeHTTP implements [http.Handler]. The ruleID is parsed from
-// the URL, the optional body is decoded, the dispatcher is
-// invoked, and the SSE stream is closed via the dispatcher's
-// deferred WriteDone. Every error path either writes a structured
-// frame onto the SSE stream (when the writer has been opened) or
-// a plain JSON 4xx/5xx (before it has).
+// ServeHTTP validates inputs before opening SSE; later failures are written as stream frames.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate URL parameters. Body is decoded next;
-	//    a malformed body fails fast with a JSON 400.
 	ruleID, ok := parseAlertTuningURL(w, r)
 	if !ok {
 		return
@@ -239,27 +141,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request
-	//    resolution honours mid-flight settings changes (model
-	//    swap, mode flip) without restart. A resolve failure
-	//    must NOT open the SSE stream — emit JSON 502 so the
-	//    frontend falls back gracefully.
+	// Resolve before opening SSE so provider misconfiguration can return a plain JSON 502.
 	if _, err := h.registry.For(r.Context(), alerttuningsuggestions.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai alert-tuning-suggestions: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, alerttuningsuggestions.FeatureID)
 
-	// 4) Open the SSE writer. Stream.New writes the SSE response
-	//    headers, starts the consumer goroutine, and returns a
-	//    child ctx that cancels on stall — we pass that ctx to
-	//    the dispatcher so a stalled consumer kills the upstream
-	//    call.
+	// Stream.New returns a child context that cancels the upstream dispatcher if the client stalls.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(alerttuningsuggestions.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai alert-tuning-suggestions: stream.New failed (non-flushable writer)")
@@ -267,8 +160,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the
-	//    (now-annotated) context.
 	prov, err := h.registry.For(ctx, alerttuningsuggestions.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai alert-tuning-suggestions: provider.For (post-stream) failed")
@@ -276,26 +167,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook.
-	//    Both tools the strategy can call (draft_alert_rule_patch
-	//    + validate_alert_rule) are PROPOSE-only — Mutates() is
-	//    false on both — so the confirm hook never fires. But
-	//    defence-in-depth: if a future strategy edit accidentally
-	//    adds a mutating tool, the dispatcher will REJECT it
-	//    instead of silently mutating fleet state.
+	// Deny-all confirmation keeps future accidental mutating tools from changing fleet state.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Tuning is NOT
-	//    conversational — there is no chat history. We hand the
-	//    LLM a deterministic prompt that asks it to call its two
-	//    propose-only tools in sequence and narrate the result.
-	//
-	//    The prompt INCLUDES the ruleID in the synthesised
-	//    message so the LLM has the canonical scope baked in.
-	//    The body's optional vehicle_id is mentioned only as a
-	//    hint — the rule itself owns its vehicle scope (sticky-
-	//    all or explicit subset), which the LLM reads from the
-	//    draft_alert_rule_patch reply.
+	// Build a deterministic, non-conversational prompt scoped by ruleID; vehicle_id is only a UI hint.
 	vehicleHint := ""
 	if body.VehicleID != nil {
 		vehicleHint = fmt.Sprintf(" The user is currently viewing vehicle %d as their selected scope.", *body.VehicleID)
@@ -315,8 +190,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ruleID, vehicleHint, ruleID,
 	)
 
-	// 8) Run the dispatcher. The deferred WriteDone in
-	//    dispatch.Run closes the SSE stream cleanly on any path.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -328,34 +201,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler satisfies
-// http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
-// ---------------------------------------------------------------------
-// Production wiring for the AlertTuningSource port declared by
-// internal/ai/tools/alert_tuning.go. Kept in the same file as the
-// handler so the wiring intent is local to the slice; mirrors the
-// AITirePressureTrendSource pattern from slice 0033.
-// ---------------------------------------------------------------------
-
-// AIAlertTuningSource is the production
-// alert.AlertTuningSource. It composes the canonical
-// AlertRuleRepo (read) + NotificationRepo (read) so the AI
-// projection is grounded in the SAME alert_rules + notification_logs
-// rows the deterministic AlertStudio + alert analytics dashboard
-// already render. No write path is invoked.
-//
-// The struct holds two narrow read interfaces; the constructor
-// panics on a nil so a wiring bug surfaces at boot.
+// AIAlertTuningSource grounds suggestions in the same alert_rules and notification_logs rows the deterministic UI uses.
 type AIAlertTuningSource struct {
 	rules         *dbalert.AlertRuleRepo
 	notifications *dbnotif.NotificationRepo
 }
 
-// NewAIAlertTuningSource constructs the adapter. Panics on a nil
-// repo so a wiring mistake surfaces at boot rather than as a
-// nil-deref on first AI request.
+// NewAIAlertTuningSource panics on missing repositories so wiring bugs fail at boot.
 func NewAIAlertTuningSource(rules *dbalert.AlertRuleRepo, notifications *dbnotif.NotificationRepo) *AIAlertTuningSource {
 	if rules == nil {
 		panic("aialerttune: NewAIAlertTuningSource: nil *dbalert.AlertRuleRepo")
@@ -366,11 +220,7 @@ func NewAIAlertTuningSource(rules *dbalert.AlertRuleRepo, notifications *dbnotif
 	return &AIAlertTuningSource{rules: rules, notifications: notifications}
 }
 
-// LoadRule implements alert.AlertTuningSource. Returns the rule
-// as the canonical AlertRuleRepo.GetByID would — same code path
-// the deterministic AlertStudio's PUT handler uses to read the
-// rule before applying the patch. Returns (nil, nil) when the
-// rule does not exist so the tool can surface "rule_not_found".
+// LoadRule uses the canonical repo semantics, including (nil, nil) for missing rules.
 func (a *AIAlertTuningSource) LoadRule(ctx context.Context, ruleID int64) (*alertmodel.AlertRule, error) {
 	if ruleID <= 0 {
 		return nil, errors.New("api ai alert-tuning-suggestions: rule_id must be > 0")
@@ -379,28 +229,12 @@ func (a *AIAlertTuningSource) LoadRule(ctx context.Context, ruleID int64) (*aler
 	if err != nil {
 		return nil, fmt.Errorf("api ai alert-tuning-suggestions: load rule: %w", err)
 	}
-	// AlertRuleRepo.GetByID returns (nil, nil) on missing rows
-	// — propagate that verbatim so the propose-only path can
-	// surface "rule_not_found" instead of crashing the
-	// dispatcher.
+	// Preserve missing-rule semantics so the propose-only tool can report rule_not_found.
 	return rule, nil
 }
 
-// LoadFiringHistory implements alert.AlertTuningSource. Returns
-// the rolling firing-event summary for ruleID across the recent
-// trailing window. The projection counts notification_logs rows
-// filtered by alert_id (the canonical firing record) and
-// computes the would_have_fired_*_after_patch projections by
-// re-evaluating the proposed predicate against the same row set.
-//
-// IMPORTANT: the projection is a DESCRIPTIVE replay of the
-// recent firing window — it is NOT a forecast or a predictive
-// model. The narrator's system prompt requires this method to
-// be surfaced honestly in the prose.
-//
-// proposed is the merged patched rule (NOT the original) so the
-// would_have_fired_*_after_patch counts reflect the LLM's
-// proposal, not the current state.
+// LoadFiringHistory replays recent notification_logs rows against the proposed rule.
+// The result is descriptive, not predictive, and the narrator must say so.
 func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int64, proposed *alertmodel.AlertRule) (*alert.AlertRuleFiringHistory, error) {
 	if ruleID <= 0 {
 		return nil, errors.New("api ai alert-tuning-suggestions: rule_id must be > 0")
@@ -412,23 +246,14 @@ func (a *AIAlertTuningSource) LoadFiringHistory(ctx context.Context, ruleID int6
 		RuleIDs: []int64{ruleID},
 		From:    from,
 		To:      now,
-		// Limit large enough to capture every fire in the
-		// 30-day window for any reasonable rule. The
-		// canonical filter caps Limit at 1000; rules
-		// firing more than 1000 times in 30 days have
-		// bigger problems than tuning advice.
+		// Capture every fire in the 30-day window for any reasonably configured rule.
 		Limit: 1000,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("api ai alert-tuning-suggestions: load firing history: %w", err)
 	}
 
-	// Buckets: count fires within the trailing 7-day and
-	// 30-day windows — the 30-day count is the trailing
-	// window total, the 7-day count is the more-recent
-	// sub-window. Both projections are computed by replaying
-	// the SAME notification_logs rows through the proposed
-	// predicate (described abstractly below).
+	// Replay the same recent rows for the 7-day and 30-day projection buckets.
 	cutoff7d := now.Add(-7 * 24 * time.Hour)
 	total7d := 0
 	total30d := 0

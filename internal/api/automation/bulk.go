@@ -27,24 +27,11 @@ func (h *AutomationHandler) automationBulkRepo() automationBulkStore {
 	return h.bulkRepo
 }
 
-// automationBulkBody (the request shape for /automations/bulk) and
-// decodeAutomationBulkBody (its parser) now live in
-// internal/api/bulk_helpers.go as a bridge to apibulk.OpBody /
-// apibulk.DecodeOpBody (Phase R2.0f).
+// /automations/bulk uses the parent bulk_helpers.go bridge to apibulk.
 
-// BulkUpdate runs an allowlisted bulk operation across multiple automations
-// inside a single transaction.
-//
-// Contract:
-//   - Body: {"ids":[1,2,3],"op":"enable"|"disable"|"delete"}
-//   - `ids` empty / over MaxBulkIDs → 400.
-//   - Unknown `op` → 400.
-//   - Response: {"updated"|"deleted": N, "failed": [{"id":X,"reason":"not_found"}]}.
-//   - Pre-validates membership via FilterExistingIDs so partial failures
-//     are surfaced per-id without parsing detail strings.
-//   - All writes happen in a single Postgres transaction; mid-batch failure
-//     rolls back any partially-applied writes.
-//   - Audit-logged once with op + cardinality in detail.
+// BulkUpdate runs allowlisted automation bulk operations in one transaction.
+// It pre-validates membership so per-id misses are returned in failed[] and
+// mid-batch write failures roll back the whole operation.
 func (h *AutomationHandler) BulkUpdate(w http.ResponseWriter, r *http.Request) {
 	store := h.automationBulkRepo()
 	if store == nil {

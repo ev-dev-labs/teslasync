@@ -2,44 +2,9 @@ package aitripplanllm
 
 // Phase-50 / 0025 — D5 Trip planner LLM agent.
 //
-// ai_trip_planner_llm_handler.go implements the LLM-backed handler
-// at POST /api/v1/ai/trips/plan/draft. The flow mirrors the
-// auto-trip-naming / route-efficiency-suggestions narration handlers
-// — same dispatch+stream loop, no persistence (one-shot proposal;
-// no conversation to record):
-//
-//	URL  /api/v1/ai/trips/plan/draft
-//	  ↓
-//	resolve provider via *provider.Registry.For("trip-planner-llm-agent")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("trip-planner-llm-agent", …) so when ai_mode='off' or
-// the per-feature toggle is off the guard returns 404 BEFORE this
-// handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body (origin, destination, current_soc, optional knobs)
-// is parsed BEFORE opening the SSE stream so a malformed input
-// surfaces as a plain JSON 400 (rather than a streamed error frame
-// the SPA's QueryError will struggle to render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /trip-planner page —
-//     manual form + canonical Plan button hitting
-//     POST /api/v1/trip-planner/plan — is unchanged. This handler is
-//     an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("trip-planner-llm-agent").
-//   - I9 redaction:       PolicyTripPlannerLLMAgent (allows
-//     ClassVehicleName only; lat/long, addresses, and place names
-//     stay tagged) is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice.
+// This LLM-backed one-shot SSE handler drafts trip plans without changing the
+// deterministic /trip-planner flow. The JSON body is validated before opening
+// SSE so malformed input remains a plain JSON 400.
 
 import (
 	"context"
@@ -215,28 +180,22 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the JSON body.
 	body, ok := parseDraftBody(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request resolution
-	// honours mid-flight settings changes (model swap, mode flip)
-	// without restart. A resolve failure must NOT open the SSE
-	// stream — emit JSON 502 so the frontend falls back gracefully.
+	// Resolve before opening SSE so provider failures remain JSON errors.
 	if _, err := h.registry.For(r.Context(), tripplannerllmagent.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai trip-planner-llm-agent: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, tripplannerllmagent.FeatureID)
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(tripplannerllmagent.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai trip-planner-llm-agent: stream.New failed (non-flushable writer)")
@@ -244,8 +203,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the (now-annotated)
-	// context.
 	prov, err := h.registry.For(ctx, tripplannerllmagent.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai trip-planner-llm-agent: provider.For (post-stream) failed")
@@ -253,13 +210,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Trip-planning is NOT
-	// conversational here — there is no chat history. We hand the
-	// LLM a deterministic prompt that asks it to call the three
-	// propose-only tools in order and narrate the result.
+	// Non-conversational by design: force the propose-only trip-planning tool sequence.
 	userMsg := fmt.Sprintf(
 		"Draft a trip plan for vehicle %d from (%.6f, %.6f) %q to (%.6f, %.6f) %q. "+
 			"Starting SOC is %.1f%% (charge_limit=%.1f%%, min_arrival=%.1f%%, speed_factor=%.2f). "+
@@ -281,7 +234,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body.CurrentSOC, body.ChargeLimitSOC, body.MinArrivalSOC, body.SpeedFactor,
 	)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -293,15 +245,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
-
-// ---------------------------------------------------------------------
-// Production wiring for the tool interface declared by
-// internal/ai/tools/trip_planner_llm_agent.go. Kept in the same file
-// as the handler so the wiring intent is local to the slice; mirrors
-// the auto-trip-naming slice's AITripNameValidator pattern.
-// ---------------------------------------------------------------------
 
 // AITripPlanComputer is the production tripplantool.TripPlanComputer. It
 // delegates to the canonical tripplanner ComputePlan path so a plan proposed
@@ -414,5 +358,4 @@ func (a *AITripPlanComputer) ComputeTripPlan(ctx context.Context, req tripplanto
 	return out, nil
 }
 
-// Compile-time assertion: AITripPlanComputer satisfies the tool port.
 var _ tripplantool.TripPlanComputer = (*AITripPlanComputer)(nil)

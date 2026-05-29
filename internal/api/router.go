@@ -358,7 +358,7 @@ import (
 	mlchargingcurves "github.com/ev-dev-labs/teslasync/internal/ml/chargingcurves"
 	mlrange "github.com/ev-dev-labs/teslasync/internal/ml/range"
 
-	// New hexagonal architecture packages
+	// Hexagonal adapters used by legacy route composition.
 	pgadapter "github.com/ev-dev-labs/teslasync/internal/adapter/postgres"
 	"github.com/ev-dev-labs/teslasync/internal/app/adminobssvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/auditviewersvc"
@@ -395,8 +395,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if len(opts) > 0 {
 		opt = opts[0]
 	}
-
-	// SSE event hub for real-time updates
 	eventHub := sse.NewEventHub()
 
 	// Error tracker for centralized error aggregation. apperror.Write
@@ -404,8 +402,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// into this tracker via apperror.SetTracker; see internal/api/apperror.
 	errorTracker := NewErrorTracker(200)
 	apperror.SetTracker(errorTracker)
-
-	// Global middleware
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(apimw.Tracing)
@@ -453,8 +449,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		AllowCredentials: cfg.CORSOrigins != "",
 		MaxAge:           300,
 	}))
-
-	// Security headers (clickjacking, MIME sniffing, CSP, HSTS, etc.)
 	r.Use(apimw.SecurityHeaders)
 
 	// Request body size limit (1 MB default). The vehicle photo
@@ -473,8 +467,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			next.ServeHTTP(w, req)
 		})
 	})
-
-	// Services
 	vehicleSvc := service.NewVehicleService(db)
 	energySvc := service.NewEnergyService(db)
 
@@ -498,8 +490,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		liveSignalStore = signal.NewNoopLiveSignalStore()
 	}
 	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
-
-	// Handlers
 	vehicleHandler := apiveh.NewHandler(vehicleSvc, teslaClient, stateReader)
 	driveHandler := apidrives.NewDriveDetail(db, stateReader, liveStateReader)
 	chargingHandler := apicharging.NewChargingHandler(db, stateReader, liveStateReader)
@@ -593,25 +583,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	aiGuard := guard.New(aiSettingsRepo)
 
 	// Phase-50 / 0002 — F1 Provider Abstraction.
-	//
-	// The provider registry composes adapter factories with the
-	// standard decorator chain (currently only OTel WithTrace; F3
-	// adds audit, F8 adds redaction, F9 adds rate/cost cap). The
-	// registry reads settings on every For() call so a Settings
-	// save takes effect on the next request without restart.
-	//
-	// SettingsReader is satisfied by aiSettingsReader below — the
-	// existing *settingsdb.SettingsRepo already implements
-	// AIMode + AIFeatureEnabled but does not yet expose a typed
-	// AIProviderConfig accessor; the inline adapter pulls the
-	// JSONB column out of Get() so F1 does not have to mutate
-	// the repo (R5 mitigation — keep settings repo single-purpose).
-	//
-	// Phase-50 / 0004 — F3 inserts the audit decorator into the
-	// chain. The async writer wraps the AICallLogRepo (which
-	// satisfies provider.AuditSink) and survives for the lifetime
-	// of the process; a buffer of 1024 absorbs short bursts and
-	// drops the oldest entry on overflow with a Prometheus counter.
+	// The registry composes adapter factories with decorators and rereads settings
+	// on each For() call so saves take effect without restart. aiSettingsReader
+	// adapts SettingsRepo without widening the repo surface; F3 adds async audit.
 	aiCallLogRepo := aidb.NewAICallLogRepo(db)
 	aiAuditWriter := provider.NewAsyncAuditWriter(context.Background(), aiCallLogRepo, 1024)
 	aiRegistry := provider.NewRegistry(
@@ -762,19 +736,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	quietHoursHandler := apiquiet.NewHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := apichatbot.NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 
-	// Phase-50 / 0011 — U1 Chatbot LLM upgrade. Construct the
-	// shared tool registry + the chatbot strategy + the AI HTTP
-	// handler. The tool registry is process-wide (one per boot)
-	// and shared across every future AI feature handler; the
-	// strategy is per-feature and is paired with the dispatcher
-	// inside the AI handler.
-	//
-	// Sources are the existing typed repos. ai/tools.VehicleStateSource
-	// expects SignalAt(...) (any, error); signal.StateReader returns
-	// (signal.SignalValue, error) and signal.SignalValue is a defined
-	// type whose underlying type is any — Go interface satisfaction is
-	// by identity, so a small wrapping adapter (aiToolsStateAdapter
-	// below) bridges the two without leaking types across packages.
+	// Phase-50 / 0011 — U1 Chatbot LLM upgrade.
+	// The tool registry is process-wide; the chatbot strategy is per-feature and
+	// paired with its dispatcher in the handler. aiToolsStateAdapter bridges the
+	// SignalAt return type without leaking signal types into ai/tools.
 	aiToolRegistry := tools.NewRegistry()
 	tools.Register12Builtins(aiToolRegistry, tools.Sources{
 		Vehicles:      vehicledb.NewVehicleRepo(db),
@@ -1873,17 +1838,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 
-	// Phase-50 / 0039 — G3 geofence-aware-automation-suggestions
-	// handler. The strategy REUSES the slice-0016
-	// nl-automation-builder tool pair (draft_automation_graph +
-	// validate_automation_graph) registered earlier in this file
-	// for the aiautomation.Handler — re-registering would panic on
-	// duplicate name. The handler ALSO needs read access to the
-	// user's existing geofence catalog so it can inject a
-	// deterministic id+name+category list into the synthesised
-	// user message; the LLM never sees lat/lon (PolicyAlertBuilder
-	// denies coordinate prose). One per process; stateless beyond
-	// constructor inputs.
+	// Phase-50 / 0039 — G3 geofence-aware automation suggestions.
+	// Reuse the slice-0016 automation tools because re-registering duplicate names
+	// would panic. The handler injects only deterministic geofence id/name/category;
+	// lat/lon stays out of LLM context by policy.
 	aiGeofenceAwareAutomationHandler := aigeofautom.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
@@ -2071,8 +2029,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// Wire telemetry handler into settings handler for capture toggle sync
 	settingsHandler.SetTelemetryHandler(telemetryHandler)
-
-	// Health check
 	r.Get("/healthz", HealthHandler(db))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
 
@@ -2081,8 +2037,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Post("/internal/flush", func(w http.ResponseWriter, req *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "flushed"})
 	})
-
-	// Metrics
 	r.Handle("/metrics", MetricsHandler())
 
 	// Public: Automation webhook receiver (no auth — token IS the auth).
@@ -2809,8 +2763,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	if queueHeartbeatStore == nil {
 		queueHeartbeatStore = workerdb.NewMemoryWorkerStatusStore()
 	}
-
-	// API v1 routes
 	r.Route("/api/v1", func(r chi.Router) {
 		// Phase-46 / Prompt 40 — count every /api/v1 request and every
 		// write-method request before any rate-limit middleware so the
@@ -2941,8 +2893,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// frontend polls this endpoint and routes the user to
 		// <OnboardingPage> until is_complete flips to true.
 		r.Get("/onboarding/status", onboardingHandler.Status)
-
-		// Vehicles
 		r.Route("/vehicles", func(r chi.Router) {
 			r.Get("/", vehicleHandler.List)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
@@ -3035,8 +2985,6 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/photo/{size}", vehiclePhotoHandler.GetFile)
 			})
 		})
-
-		// Drives
 		r.Route("/drives", func(r chi.Router) {
 			r.Get("/", driveHandler.ListByVehicle)
 			r.Get("/stats", driveHandler.Stats)
@@ -3069,17 +3017,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Share link revocation (by token, not by drive)
 		r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/shares/{token}", shareHandler.Revoke)
-
-		// Drivetrain Health
 		r.Get("/drivetrain/health", drivetrainHealthHandler.Get)
-
-		// Maintenance
 		r.Route("/maintenance", func(r chi.Router) {
 			r.Get("/", maintenanceHandler.List)
 			r.Get("/records", maintenanceHandler.Records)
 		})
-
-		// Charging
 		r.Route("/charging", func(r chi.Router) {
 			r.Get("/", chargingHandler.ListByVehicle)
 			// Bulk delete (Phase-40 / Prompt 51)

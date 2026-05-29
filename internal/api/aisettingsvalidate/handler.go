@@ -3,41 +3,14 @@ package aisettingsvalidate
 // Phase-50 / 0003 — F2 Settings UI for AI.
 // Phase-50 / Azure adapter — extended for cloud-probe validation.
 //
-// This file mounts POST /api/v1/settings/ai/validate-config — the
-// pre-flight provider validation endpoint the F2 Settings UI calls
-// before saving an AI configuration. The route lives on the SETTINGS
-// sub-tree, NOT on /api/v1/ai/*, for two intentional reasons:
+// Mounts POST /api/v1/settings/ai/validate-config outside /api/v1/ai/* so users
+// can validate while opting in and tools/aivet can keep the invariant that all
+// AI routes are guard-wrapped (ADR-015 §I6).
 //
-//  1. ADR-015 §I6 says every /api/v1/ai/* route returns 404 when
-//     ai_mode='off'. The validate endpoint must be reachable WHILE
-//     the user is opting in (ai_mode='off' at the moment of the
-//     pre-flight call), so it cannot live on the AI sub-tree.
-//  2. Mounting on /api/v1/settings/ai/* keeps tools/aivet's invariant
-//     ("every /api/v1/ai/* is wrapped by guard.Wrap") clean — a
-//     parallel WrapValidating helper would create two ways to mount
-//     AI routes and complicate the static analysis.
-//
-// LOCAL mode does no network I/O beyond DNS resolution (via
-// provider.ValidateLocalCtx, which uses net.DefaultResolver). It
-// never reaches out to a provider's API surface — that would
-// constitute "egress in off mode" and violate ADR-015 §I4.
-//
-// CLOUD mode, by contrast, performs a real one-shot probe against the
-// supplied (or saved) API endpoint with a 1-token chat completion. The
-// probe is the only reliable way to confirm that base_url + api_key +
-// flavor + deployment + api_version all line up — purely-syntactic
-// validation cannot tell a typo'd deployment name from a valid one.
-// The probe is allowed because the user has explicitly opted in to a
-// cloud provider at the moment of the click; ADR-015 §I4 only forbids
-// egress while ai_mode='off' and this handler is gated on the SPA
-// supplying mode='cloud' explicitly.
-//
-// API-key handling: the request body MAY include `api_key`. If empty,
-// the handler falls back to the saved value in
-// settings.ai_provider_config[provider].api_key — this keeps the UX
-// reasonable when the user is editing a saved config and doesn't want
-// to re-type the secret. The probe only ever sends the key to the
-// configured upstream over TLS; nothing is logged.
+// Local mode only resolves DNS and enforces local-address rules. Cloud mode
+// performs a one-token probe because syntax checks cannot validate provider,
+// endpoint, deployment, API version, and key alignment; saved API keys may be
+// reused for the probe and are never logged.
 
 import (
 	"context"

@@ -30,7 +30,7 @@ func NewHandler(tc *tesla.Client, db *database.DB) *Handler {
 	}
 }
 
-// LiveStatus returns the latest live status snapshot from DB.
+// LiveStatus returns the latest cached live-status snapshot.
 func (h *Handler) LiveStatus(w http.ResponseWriter, r *http.Request) {
 	siteID, err := apiparams.URLParamInt64(r, "siteID")
 	if err != nil {
@@ -64,7 +64,7 @@ func (h *Handler) LiveStatusHistory(w http.ResponseWriter, r *http.Request) {
 
 	since, until := energyDateRange(r)
 	limit := energyLimit(r)
-	// Allow higher limit for live status history (more granular data)
+
 	if v := r.URL.Query().Get("limit"); v != "" {
 		if l, err := fmt.Sscanf(v, "%d", &limit); err == nil && l > 0 {
 			_ = l
@@ -83,7 +83,7 @@ func (h *Handler) LiveStatusHistory(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, entries)
 }
 
-// RefreshLiveStatus fetches live status from Tesla, inserts to DB, and returns fresh data.
+// RefreshLiveStatus fetches Tesla power-flow data, stores it, and returns it.
 func (h *Handler) RefreshLiveStatus(w http.ResponseWriter, r *http.Request) {
 	siteID, err := apiparams.URLParamInt64(r, "siteID")
 	if err != nil {
@@ -122,7 +122,6 @@ func (h *Handler) RefreshLiveStatus(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, entry)
 }
 
-// parseLiveStatusResponse parses the Tesla live_status API response into our model.
 func parseLiveStatusResponse(body []byte, siteID int64) (*teslamodel.TeslaEnergyLiveStatus, error) {
 	var resp struct {
 		Response json.RawMessage `json:"response"`
@@ -173,8 +172,6 @@ func parseLiveStatusResponse(body []byte, siteID int64) (*teslamodel.TeslaEnergy
 	}, nil
 }
 
-// energyDateRange extracts since/until from query params with sensible defaults.
-// Defaults to last 30 days if not provided.
 func energyDateRange(r *http.Request) (since, until time.Time) {
 	now := time.Now().UTC()
 	since = now.AddDate(0, -1, 0)
@@ -193,7 +190,6 @@ func energyDateRange(r *http.Request) (since, until time.Time) {
 	return
 }
 
-// energyLimit extracts limit with a default of 500.
 func energyLimit(r *http.Request) int {
 	limit := 500
 	if v := r.URL.Query().Get("limit"); v != "" {
@@ -204,7 +200,6 @@ func energyLimit(r *http.Request) int {
 	return limit
 }
 
-// truncateBody returns the first 500 bytes of a response body for logging.
 func truncateBody(b []byte) string {
 	if len(b) > 500 {
 		return string(b[:500])

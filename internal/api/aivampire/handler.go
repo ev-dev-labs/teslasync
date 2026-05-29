@@ -1,49 +1,10 @@
 package aivampire
 
-// Phase-50 / 0030 — C5 Vampire-drain explanation.
+// Phase-50 / 0030 — C5 vampire-drain explanation.
 //
-// handler.go implements the LLM-backed handler at
-// POST /api/v1/ai/charging/vampire-drain/explain. The flow mirrors
-// ai_cost_forecast_narration_handler.go (same dispatch+stream loop,
-// no persistence — one-shot read-only narration):
-//
-//	URL  /api/v1/ai/charging/vampire-drain/explain
-//	  ↓
-//	resolve provider via *provider.Registry.For("vampire-drain-explanation")
-//	  ↓
-//	open SSE writer (internal/ai/stream.New) to the HTTP response
-//	  ↓
-//	run dispatch.Dispatcher.Run(ctx, strategy, input, sseWriter)
-//
-// The handler is mounted from internal/api/ai_routes.go via
-// guard.Wrap("vampire-drain-explanation", …) so when ai_mode='off'
-// or the per-feature toggle is off the guard returns 404 BEFORE
-// this handler ever sees the request (ADR-015 §I6).
-//
-// The JSON body (vehicle_id + optional lookback_days) is parsed
-// BEFORE opening the SSE stream so a malformed input surfaces as a
-// plain JSON 400 (rather than a streamed error frame the SPA's
-// QueryError will struggle to render meaningfully).
-//
-// ADR-015 alignment:
-//
-//   - I3 baseline intact: the deterministic /vampire-drain page
-//     (and its alias /charging/vampire-drain) — summary cards,
-//     drain-rate trend chart, daily-drain bar chart, drain-sessions
-//     table, tips panel hitting GET /api/v1/vampire-drain +
-//     /api/v1/vampire-drain/stats — is unchanged. This handler is
-//     an OPT-IN add-on; off-mode users never see it.
-//   - I7 per-feature:     the route is gated by
-//     guard.Wrap("vampire-drain-explanation").
-//   - I9 redaction:       PolicyVampireDrainExplanation (allows
-//     ClassVehicleName only; lat/long, addresses, and place names
-//     stay tagged) is installed by dispatch.Run from the strategy.
-//   - I10 type system:    the AI surface lives entirely under
-//     /api/v1/ai/*; no field on the existing baseline JSON shape
-//     is added or modified by this slice. The tool envelope's
-//     extra fields live in the AI-only typed envelope returned by
-//     query_vampire_drain_windows, not on the baseline
-//     /vampire-drain response.
+// Serves the opt-in SSE narrator for vampire-drain windows. The guard returns
+// 404 before this handler runs when AI is off, and body validation happens
+// before SSE so malformed input stays a JSON 400.
 
 import (
 	"context"
@@ -67,12 +28,7 @@ import (
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 )
 
-// maxIterations bounds the dispatcher's tool-loop.
-// The strategy is at most query_vampire_drain_windows →
-// (optional) retrieve_idle_drain_chunks → answer (with optional
-// retries). A hard ceiling of 8 is generous, matching
-// aiCostForecastNarrationMaxIterations /
-// aiBatteryHealthMaxIterations.
+// maxIterations bounds the read-only vampire-drain tool loop with room for retries.
 const maxIterations = 8
 
 // defaultLookbackDays is the default lookback when
@@ -114,19 +70,8 @@ type Handler struct {
 	maxIters   int
 }
 
-// NewHandler constructs the handler. All non-pointer
-// arguments are required; the constructor panics on a nil so the
-// wiring bug surfaces at boot, not at first request.
-//
-// registry:   AI provider registry (decorator chain already applied).
-// toolReg:    process-wide tool registry. MUST contain
-//
-//	query_vampire_drain_windows + retrieve_idle_drain_chunks
-//	(registered by lifetime.RegisterVampireDrainExplanationTools
-//	in router.go).
-//
-// strat:      the vampire-drain-explanation Strategy (one per process).
-// headerName: forward-auth header name; used to extract subject for audit.
+// NewHandler wires required AI dependencies and panics on nil so boot fails fast.
+// toolReg must contain query_vampire_drain_windows and retrieve_idle_drain_chunks.
 func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
@@ -150,16 +95,8 @@ func NewHandler(
 	}
 }
 
-// parseBody decodes + validates the JSON body. Pulled
-// out so the validator-only test can exercise the same parsing
-// without constructing a full handler with stub deps. The function
-// writes a 400 on failure and returns the (req, ok) pair so the
-// caller can early-return.
-//
-// The lookback_days field defaults to
-// defaultLookbackDays when omitted (or zero) and is
-// bounded to [1, maxLookbackDays] so an out-of-range
-// value lands as a 400 before any SSE stream is opened.
+// parseBody validates input before SSE headers are written.
+// lookback_days defaults when omitted and is bounded before any SQL runs.
 func parseBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 	if r.Body == nil {
 		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
@@ -201,29 +138,22 @@ func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.Conf
 // a structured frame onto the SSE stream (when the writer has
 // been opened) or a plain JSON 4xx/5xx (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// 1) Parse + validate the JSON body.
 	body, ok := parseBody(w, r)
 	if !ok {
 		return
 	}
 
-	// 2) Resolve provider via the registry. Per-request
-	// resolution honours mid-flight settings changes (model
-	// swap, mode flip) without restart. A resolve failure
-	// must NOT open the SSE stream — emit JSON 502 so the
-	// frontend falls back gracefully.
+	// Resolve before SSE so provider failures remain plain JSON.
 	if _, err := h.registry.For(r.Context(), vampiredrainexplanation.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai vampire-drain-explanation: provider.For failed")
 		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
-	// 3) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, vampiredrainexplanation.FeatureID)
 
-	// 4) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(vampiredrainexplanation.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai vampire-drain-explanation: stream.New failed (non-flushable writer)")
@@ -231,8 +161,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 5) Resolve the per-feature provider from the
-	// (now-annotated) context.
 	prov, err := h.registry.For(ctx, vampiredrainexplanation.FeatureID)
 	if err != nil {
 		log.Error().Err(err).Msg("ai vampire-drain-explanation: provider.For (post-stream) failed")
@@ -240,16 +168,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 6) Build the dispatcher with the deny-all confirm hook.
+	// Deny-all confirm is defense-in-depth if a mutating tool is ever added.
 	d := dispatch.New(h.tools, prov, denyAllConfirm, h.maxIters)
 
-	// 7) Synthesise the user message. Vampire-drain narration
-	// is NOT conversational here — there is no chat history.
-	// We hand the LLM a deterministic prompt that asks it to
-	// call the read-only tools in scope and narrate the
-	// result, with explicit honest-uncertainty cues so the
-	// narration discloses the correlational nature of the
-	// per-event driver attribution.
+	// No chat history exists here; this prompt forces read-only tools and honest uncertainty.
 	userMsg := fmt.Sprintf(
 		"Narrate the recent vampire drain (idle energy loss) for vehicle %d over the past %d days. "+
 			"Follow the tool sequence EXACTLY: "+
@@ -271,7 +193,6 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		body.VehicleID, body.LookbackDays, body.VehicleID, body.LookbackDays,
 	)
 
-	// 8) Run the dispatcher.
 	in := strategy.StrategyInput{
 		LastMessage: userMsg,
 		History:     nil,
@@ -284,33 +205,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: Handler satisfies http.Handler.
 var _ http.Handler = (*Handler)(nil)
 
-// ---------------------------------------------------------------------
-// Production wiring for the tool interface declared by
-// internal/ai/tools/vampire_drain_explanation.go. Kept in the same
-// file as the handler so the wiring intent is local to the slice;
-// mirrors the cost-forecast-narration slice's AICostForecaster
-// pattern.
-// ---------------------------------------------------------------------
+// Production wiring for the vampire-drain tool port stays local to this slice.
 
-// Source is the production lifetime.VampireDrainSource.
-// It delegates to the SHARED *drivedb.VampireDrainRepo that also
-// backs the canonical baseline GET /vampire-drain + GET
-// /vampire-drain/stats handlers so the AI narration is grounded in
-// the SAME deterministic envelope the chart on /vampire-drain
-// renders. No new SQL is added by this slice.
-//
-// The struct holds *drivedb.VampireDrainRepo; the constructor
-// panics on a nil so a wiring bug surfaces at boot.
+// Source delegates to the same repo used by the deterministic vampire-drain endpoints.
+// That keeps AI narration grounded in the chart data without adding SQL.
 type Source struct {
 	repo *drivedb.VampireDrainRepo
 }
 
-// NewSource constructs the adapter. Panics on a nil
-// *drivedb.VampireDrainRepo so a wiring mistake surfaces at boot
-// rather than as a nil-deref on first AI request.
+// NewSource panics on nil so wiring mistakes surface at boot.
 func NewSource(repo *drivedb.VampireDrainRepo) *Source {
 	if repo == nil {
 		panic("aivampire: NewSource: nil *drivedb.VampireDrainRepo")
