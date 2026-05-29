@@ -1,4 +1,4 @@
-package api
+package aiusage
 
 // Phase-50 / 0004 — F3 AI Usage Handler tests.
 //
@@ -196,31 +196,31 @@ func TestParseUsageLimit(t *testing.T) {
 	}
 }
 
-// TestNewAIUsageHandler_NilRepoPanics pins the construction-time guard.
-func TestNewAIUsageHandler_NilRepoPanics(t *testing.T) {
+// TestNewUsageHandler_NilRepoPanics pins the construction-time guard.
+func TestNewUsageHandler_NilRepoPanics(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if recover() == nil {
 			t.Fatal("expected panic on nil repo")
 		}
 	}()
-	_ = NewAIUsageHandler(nil, "")
+	_ = NewUsageHandler(nil, "")
 }
 
-// TestAIUsageHandler_ResponseShapes_TodaySmokes does a minimal
+// TestUsageHandler_ResponseShapes_TodaySmokes does a minimal
 // integration: construct the handler with a real (empty) repo backed
 // by a nil pool to avoid the SQL path; replace the repo's pool calls
 // with a sentinel by calling Today against a context that's already
 // cancelled. The 500 response body proves the handler shape +
 // content-type are wired correctly even on the failure path.
-func TestAIUsageHandler_TodayReturns500OnRepoError(t *testing.T) {
+func TestUsageHandler_TodayReturns500OnRepoError(t *testing.T) {
 	t.Parallel()
 	// Repo with nil pool — any Today() call panics or errors. We use
 	// a request whose context is already cancelled so the pool call
 	// (if it ran) would short-circuit; but the nil pool dereference
 	// happens first. Both paths land us in the 500 branch.
 	repo := &aidb.AICallLogRepo{} // nil pool
-	h := &AIUsageHandler{repo: repo, headerName: ""}
+	h := &UsageHandler{repo: repo, headerName: ""}
 
 	req := httptest.NewRequest(http.MethodGet, "/ai/usage/today", nil)
 	rec := httptest.NewRecorder()

@@ -1,4 +1,4 @@
-package api
+package aiusage
 
 // Phase-50 / 0009 — F8 AI Admin Handler tests.
 //
@@ -137,12 +137,12 @@ func TestParseAdminSince_RejectsGarbage(t *testing.T) {
 	}
 }
 
-func TestNewAIAdminHandler_NilRepoPanics(t *testing.T) {
+func TestNewAdminHandler_NilRepoPanics(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
 			t.Error("expected panic on nil repo")
 		}
 	}()
-	NewAIAdminHandler(nil)
+	NewAdminHandler(nil)
 }

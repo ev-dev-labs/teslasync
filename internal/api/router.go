@@ -66,6 +66,7 @@ import (
 	aitempimpact "github.com/ev-dev-labs/teslasync/internal/api/aitempimpact"
 	aitirepress "github.com/ev-dev-labs/teslasync/internal/api/aitirepress"
 	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
+	"github.com/ev-dev-labs/teslasync/internal/api/aiusage"
 	aivampire "github.com/ev-dev-labs/teslasync/internal/api/aivampire"
 	"github.com/ev-dev-labs/teslasync/internal/api/aivehpaint"
 	aivoice "github.com/ev-dev-labs/teslasync/internal/api/aivoice"
@@ -4477,7 +4478,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// __usage__ meta-feature has no toggle of its own) but
 		// still 404 in off mode (ADR-015 §I6) — the wrapper inside
 		// mountAIUsageRoutes carves out the exception precisely.
-		mountAIUsageRoutes(r, aiSettingsRepo, aiCallLogRepo, cfg.Auth.ForwardAuthHeader)
+		aiusage.MountUsageRoutes(r, aiSettingsRepo, aiCallLogRepo, cfg.Auth.ForwardAuthHeader)
 
 		// Phase-50 / 0009 — F8 AI Admin endpoints (redaction-bypass report).
 		//
@@ -4489,7 +4490,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// own) but still 404s in off mode (ADR-015 §I6) — the
 		// wrapper inside mountAIAdminRoutes carves out the
 		// exception precisely.
-		mountAIAdminRoutes(r, aiSettingsRepo, aiCallLogRepo)
+		aiusage.MountAdminRoutes(r, aiSettingsRepo, aiCallLogRepo)
 
 		// Watch endpoints — lightweight API key auth for wearable devices
 		r.Route("/watch", func(r chi.Router) {

@@ -1,4 +1,4 @@
-package api
+package aiusage
 
 // Phase-50 / 0009 — F8 AI Admin Handler.
 //
@@ -9,7 +9,7 @@ package api
 //
 //   GET /api/v1/ai/admin/redaction-bypass — bypass summary over a window
 //
-// Routing is mounted by mountAIAdminRoutes immediately after
+// Routing is mounted by MountAdminRoutes immediately after
 // mountAIUsageRoutes in router.go so the same /api/v1 middleware stack
 // (auth, logging, rate limiting, tracing) wraps both.
 //
@@ -33,6 +33,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 )
 
@@ -81,32 +82,32 @@ func (a adminGuardSettings) AIFeatureEnabled(ctx context.Context, featureID stri
 	return a.inner.AIFeatureEnabled(ctx, featureID)
 }
 
-// AIAdminHandler bundles the admin endpoints with their dependencies.
-type AIAdminHandler struct {
+// AdminHandler bundles the admin endpoints with their dependencies.
+type AdminHandler struct {
 	repo *aidb.AICallLogRepo
 }
 
-// NewAIAdminHandler constructs the handler. repo is required and MUST
+// NewAdminHandler constructs the handler. repo is required and MUST
 // be the same instance the audit decorator writes to so reads see
 // recent writes promptly.
-func NewAIAdminHandler(repo *aidb.AICallLogRepo) *AIAdminHandler {
+func NewAdminHandler(repo *aidb.AICallLogRepo) *AdminHandler {
 	if repo == nil {
-		panic("api: NewAIAdminHandler called with nil repo")
+		panic("api: NewAdminHandler called with nil repo")
 	}
-	return &AIAdminHandler{repo: repo}
+	return &AdminHandler{repo: repo}
 }
 
-// mountAIAdminRoutes registers /ai/admin/* under parent. Currently the
+// MountAdminRoutes registers /ai/admin/* under parent. Currently the
 // only route is /redaction-bypass. Adding new admin routes MUST go
 // through this function so tools/aivet can statically prove the
 // /ai/admin subtree stays guarded.
-func mountAIAdminRoutes(
+func MountAdminRoutes(
 	r chi.Router,
 	settings guard.Settings,
 	repo *aidb.AICallLogRepo,
 ) {
 	adminGuard := guard.New(adminGuardSettings{inner: settings})
-	h := NewAIAdminHandler(repo)
+	h := NewAdminHandler(repo)
 
 	r.Route("/ai/admin", func(r chi.Router) {
 		r.Get("/redaction-bypass", adminGuard.Wrap(AIAdminRedactionBypassFeatureID, h.RedactionBypass))
@@ -118,19 +119,19 @@ func mountAIAdminRoutes(
 // timestamp or a Go duration string ("24h", "168h"). Defaults to
 // seven days. Reuses parseUsageSince so ?since semantics stay
 // identical to /ai/usage/by-feature.
-func (h *AIAdminHandler) RedactionBypass(w http.ResponseWriter, r *http.Request) {
+func (h *AdminHandler) RedactionBypass(w http.ResponseWriter, r *http.Request) {
 	since, err := parseAdminSince(r.URL.Query().Get("since"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid since parameter: "+err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, "invalid since parameter: "+err.Error())
 		return
 	}
 	rows, err := h.repo.RedactionBypassByFeature(r.Context(), since)
 	if err != nil {
 		log.Error().Err(err).Msg("ai_admin RedactionBypass failed")
-		writeError(w, http.StatusInternalServerError, "ai admin redaction-bypass failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "ai admin redaction-bypass failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"since": since.UTC().Format(time.RFC3339),
 		"rows":  rows,
 	})

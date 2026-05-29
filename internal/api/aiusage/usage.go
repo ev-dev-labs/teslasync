@@ -1,4 +1,4 @@
-package api
+package aiusage
 
 // Phase-50 / 0004 — F3 AI Usage Handler.
 //
@@ -9,7 +9,7 @@ package api
 //   GET /api/v1/ai/usage/by-feature   — per-feature breakdown
 //   GET /api/v1/ai/usage/recent       — last N calls for the user
 //
-// Routing is mounted by mountAIUsageRoutes immediately after
+// Routing is mounted by MountUsageRoutes immediately after
 // mountAIRoutes in router.go so the same /api/v1 middleware stack
 // (auth, logging, rate limiting, tracing) wraps both.
 //
@@ -36,6 +36,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	aidb "github.com/ev-dev-labs/teslasync/internal/database/ai"
 )
@@ -88,24 +89,24 @@ func (u usageGuardSettings) AIFeatureEnabled(ctx context.Context, featureID stri
 	return u.inner.AIFeatureEnabled(ctx, featureID)
 }
 
-// AIUsageHandler bundles the three usage endpoints with the dependencies
+// UsageHandler bundles the three usage endpoints with the dependencies
 // they need.
-type AIUsageHandler struct {
+type UsageHandler struct {
 	repo       *aidb.AICallLogRepo
 	headerName string // FORWARD_AUTH_HEADER name; "" in open mode.
 }
 
-// NewAIUsageHandler constructs the handler. Both repo and headerName
+// NewUsageHandler constructs the handler. Both repo and headerName
 // are required; repo MUST be the same instance the audit decorator
 // writes to so reads see the writes promptly.
-func NewAIUsageHandler(repo *aidb.AICallLogRepo, headerName string) *AIUsageHandler {
+func NewUsageHandler(repo *aidb.AICallLogRepo, headerName string) *UsageHandler {
 	if repo == nil {
-		panic("api: NewAIUsageHandler called with nil repo")
+		panic("api: NewUsageHandler called with nil repo")
 	}
-	return &AIUsageHandler{repo: repo, headerName: headerName}
+	return &UsageHandler{repo: repo, headerName: headerName}
 }
 
-// mountAIUsageRoutes registers the /ai/usage/* endpoints under the
+// MountUsageRoutes registers the /ai/usage/* endpoints under the
 // supplied parent router (typically the /api/v1 subroute). The routes
 // are wrapped by a usage-aware guard so off-mode returns 404 and any
 // non-off mode returns the user's data without requiring a separate
@@ -113,14 +114,14 @@ func NewAIUsageHandler(repo *aidb.AICallLogRepo, headerName string) *AIUsageHand
 //
 // Adding a new usage route MUST go through this function so tools/aivet
 // can statically prove the /ai/usage subtree stays guarded.
-func mountAIUsageRoutes(
+func MountUsageRoutes(
 	r chi.Router,
 	settings guard.Settings,
 	repo *aidb.AICallLogRepo,
 	headerName string,
 ) {
 	usageGuard := guard.New(usageGuardSettings{inner: settings})
-	h := NewAIUsageHandler(repo, headerName)
+	h := NewUsageHandler(repo, headerName)
 
 	r.Route("/ai/usage", func(r chi.Router) {
 		r.Get("/today", usageGuard.Wrap(AIUsageFeatureID, h.Today))
@@ -132,34 +133,34 @@ func mountAIUsageRoutes(
 // Today returns the user's aggregate spend + volume since 00:00 UTC.
 // Open mode reads the empty-subject rows; forward-auth mode scopes by
 // the FORWARD_AUTH_HEADER subject value.
-func (h *AIUsageHandler) Today(w http.ResponseWriter, r *http.Request) {
+func (h *UsageHandler) Today(w http.ResponseWriter, r *http.Request) {
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	agg, err := h.repo.Today(r.Context(), subject)
 	if err != nil {
 		log.Error().Err(err).Msg("ai_usage Today failed")
-		writeError(w, http.StatusInternalServerError, "ai usage today failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "ai usage today failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, agg)
+	httpx.WriteJSON(w, http.StatusOK, agg)
 }
 
 // ByFeature returns the per-feature breakdown over a configurable
 // window. ?since accepts either an RFC3339 timestamp or a Go duration
 // string ("24h", "7d-equivalent like 168h"). Defaults to seven days.
-func (h *AIUsageHandler) ByFeature(w http.ResponseWriter, r *http.Request) {
+func (h *UsageHandler) ByFeature(w http.ResponseWriter, r *http.Request) {
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	since, err := parseUsageSince(r.URL.Query().Get("since"))
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid since parameter: "+err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, "invalid since parameter: "+err.Error())
 		return
 	}
 	rows, err := h.repo.ByFeature(r.Context(), subject, since)
 	if err != nil {
 		log.Error().Err(err).Msg("ai_usage ByFeature failed")
-		writeError(w, http.StatusInternalServerError, "ai usage by-feature failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "ai usage by-feature failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"since": since.UTC().Format(time.RFC3339),
 		"rows":  rows,
 	})
@@ -169,16 +170,16 @@ func (h *AIUsageHandler) ByFeature(w http.ResponseWriter, r *http.Request) {
 // ?limit defaults to usageDefaultRecentLimit and is clamped server-
 // side to AICallRecentMax so a misbehaving client cannot pump the row
 // count.
-func (h *AIUsageHandler) Recent(w http.ResponseWriter, r *http.Request) {
+func (h *UsageHandler) Recent(w http.ResponseWriter, r *http.Request) {
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
 	limit := parseUsageLimit(r.URL.Query().Get("limit"))
 	rows, err := h.repo.Recent(r.Context(), subject, limit)
 	if err != nil {
 		log.Error().Err(err).Msg("ai_usage Recent failed")
-		writeError(w, http.StatusInternalServerError, "ai usage recent failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "ai usage recent failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{
+	httpx.WriteJSON(w, http.StatusOK, map[string]any{
 		"limit": limit,
 		"rows":  rows,
 	})
