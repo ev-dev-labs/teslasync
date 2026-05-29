@@ -11,6 +11,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/vehiclefsm"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
@@ -80,7 +81,7 @@ type TelemetryHandler struct {
 	accumulatedSignals   map[string]map[string]interface{} // keyed by VIN
 
 	// FSM-based vehicle state tracking
-	fsmHandler *FSMHandler
+	fsmHandler *vehiclefsm.Handler
 
 	// Raw telemetry capture (optional, backed by MongoDB)
 	rawTelemetryRepo *telemetrydb.RawTelemetryRepo

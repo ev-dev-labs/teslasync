@@ -6,6 +6,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/vehiclefsm"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
@@ -59,7 +60,7 @@ func NewTelemetryHandler(db *database.DB, mc *mqtt.Client, hub *EventHub, staleT
 		lastWriteAt:           make(map[string]time.Time),
 		accumulatedSignals:    make(map[string]map[string]interface{}),
 		connFSMs:              make(map[int64]*telemetryfsm.ConnectionFSM),
-		fsmHandler:            NewFSMHandler(vehicledb.NewVehicleRepo(db), dbobs.NewFSMTransitionRepo(db)),
+		fsmHandler:            vehiclefsm.NewHandler(vehicledb.NewVehicleRepo(db), dbobs.NewFSMTransitionRepo(db)),
 	}
 }
 
@@ -167,7 +168,7 @@ func (h *TelemetryHandler) SetSignalHistoryWriter(w *signaldb.SignalHistoryWrite
 }
 
 // FSMHandler returns the FSM handler for status/stats queries.
-func (h *TelemetryHandler) FSMHandler() *FSMHandler {
+func (h *TelemetryHandler) FSMHandler() *vehiclefsm.Handler {
 	return h.fsmHandler
 }
 

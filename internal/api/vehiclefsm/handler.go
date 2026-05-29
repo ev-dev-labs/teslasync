@@ -1,4 +1,4 @@
-package api
+package vehiclefsm
 
 import (
 	"context"
@@ -15,9 +15,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// FSMHandler owns the new FSM-based vehicle state management.
+// Handler owns the new FSM-based vehicle state management.
 // Manages vehicle FSM + drive/charge sub-FSMs.
-type FSMHandler struct {
+type Handler struct {
 	mu          sync.Mutex
 	machines    map[int64]*fsm.VehicleFSM
 	drives      map[int64]*drive.SessionFSM  // active drive sub-FSMs per vehicle
@@ -31,7 +31,7 @@ type FSMHandler struct {
 	lastProcessed map[int64]time.Time
 }
 
-// NewFSMHandler creates an authoritative FSM handler.
+// NewHandler creates an authoritative FSM handler.
 //
 // Phase-42 (prompt 0077): the legacy *database.VehicleStateRepo dependency
 // was removed. Vehicle current state is now sourced from the in-memory FSM
@@ -39,8 +39,8 @@ type FSMHandler struct {
 // transitions are durably logged via transRepo.Insert into fsm_transitions
 // (000187 schema). Cold-start initial state defaults to fsm.Online and
 // converges to the correct state within seconds of incoming telemetry.
-func NewFSMHandler(vehicleRepo *vehicledb.VehicleRepo, transRepo *dbobs.FSMTransitionRepo) *FSMHandler {
-	return &FSMHandler{
+func NewHandler(vehicleRepo *vehicledb.VehicleRepo, transRepo *dbobs.FSMTransitionRepo) *Handler {
+	return &Handler{
 		machines:      make(map[int64]*fsm.VehicleFSM),
 		drives:        make(map[int64]*drive.SessionFSM),
 		charges:       make(map[int64]*charge.SessionFSM),
@@ -53,8 +53,8 @@ func NewFSMHandler(vehicleRepo *vehicledb.VehicleRepo, transRepo *dbobs.FSMTrans
 
 // SetSignalStore wires the signal store dependency for reconciliation.
 // Called after construction because the signal store may not exist yet at
-// FSMHandler creation time.
-func (h *FSMHandler) SetSignalStore(store *signal.Store) {
+// Handler creation time.
+func (h *Handler) SetSignalStore(store *signal.Store) {
 	h.localSignals = store
 }
 
@@ -65,7 +65,7 @@ func (h *FSMHandler) SetSignalStore(store *signal.Store) {
 // history now lives only in fsm_transitions, and the per-vehicle current
 // state is derived from the in-memory FSM.
 type fsmAction struct {
-	handler     *FSMHandler
+	handler     *Handler
 	vehicleRepo *vehicledb.VehicleRepo
 	transRepo   *dbobs.FSMTransitionRepo
 }
@@ -123,7 +123,7 @@ func (a *fsmAction) Execute(ctx context.Context, vehicleID int64, from, to fsm.S
 }
 
 // manageSubFSMs creates/finalizes drive and charge sub-FSMs on state transitions.
-func (h *FSMHandler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm.State, sctx *fsm.SignalContext) {
+func (h *Handler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm.State, sctx *fsm.SignalContext) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -197,7 +197,7 @@ func (h *FSMHandler) manageSubFSMs(_ context.Context, vehicleID int64, from, to 
 }
 
 // getOrCreate returns the FSM for a vehicle, creating it if needed.
-func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.VehicleFSM {
+func (h *Handler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.VehicleFSM {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -234,7 +234,7 @@ func (h *FSMHandler) getOrCreate(ctx context.Context, vehicleID int64) *fsm.Vehi
 // ProcessSignals runs the FSM on a signal batch and forwards to active sub-FSMs.
 // Legacy entry point for callers without event-time information; defers to
 // ProcessSignalsAt with empty payloadTs/fieldTs (wall-clock fallback).
-func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
+func (h *Handler) ProcessSignals(ctx context.Context, vehicleID int64, signals map[string]interface{}) {
 	h.ProcessSignalsAt(ctx, vehicleID, signals, time.Time{}, nil)
 }
 
@@ -248,7 +248,7 @@ func (h *FSMHandler) ProcessSignals(ctx context.Context, vehicleID int64, signal
 // which fires from a wall-clock timer with no signal payload.
 //
 // Phase-42a/0030.bis (commit C2 of v3.4 prod-replay accuracy fix).
-func (h *FSMHandler) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]interface{}, payloadTs time.Time, _ map[string]time.Time) {
+func (h *Handler) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals map[string]interface{}, payloadTs time.Time, _ map[string]time.Time) {
 	signalNames := make([]string, 0, len(signals))
 	for k := range signals {
 		signalNames = append(signalNames, k)
@@ -333,7 +333,7 @@ func (h *FSMHandler) ProcessSignalsAt(ctx context.Context, vehicleID int64, sign
 }
 
 // HandleTimeout transitions a vehicle to offline/asleep when telemetry stops.
-func (h *FSMHandler) HandleTimeout(ctx context.Context, vehicleID int64) {
+func (h *Handler) HandleTimeout(ctx context.Context, vehicleID int64) {
 	m := h.getOrCreate(ctx, vehicleID)
 	if err := m.HandleTimeout(ctx, vehicleID); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: HandleTimeout error")
@@ -341,7 +341,7 @@ func (h *FSMHandler) HandleTimeout(ctx context.Context, vehicleID int64) {
 }
 
 // HandleSignalReceived wakes a vehicle from asleep/offline state.
-func (h *FSMHandler) HandleSignalReceived(ctx context.Context, vehicleID int64) {
+func (h *Handler) HandleSignalReceived(ctx context.Context, vehicleID int64) {
 	m := h.getOrCreate(ctx, vehicleID)
 	if err := m.HandleSignalReceived(ctx, vehicleID); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("fsm: HandleSignalReceived error")
@@ -354,7 +354,7 @@ const reconcileInterval = 15 * time.Second
 // StartReconcileLoop begins the periodic reconciliation goroutine.
 // It compares the FSM state of each known vehicle against the signal store
 // and replays signals when a mismatch is detected.
-func (h *FSMHandler) StartReconcileLoop() {
+func (h *Handler) StartReconcileLoop() {
 	go func() {
 		ticker := time.NewTicker(reconcileInterval)
 		defer ticker.Stop()
@@ -371,7 +371,7 @@ func (h *FSMHandler) StartReconcileLoop() {
 }
 
 // StopReconcileLoop stops the periodic reconciliation goroutine.
-func (h *FSMHandler) StopReconcileLoop() {
+func (h *Handler) StopReconcileLoop() {
 	select {
 	case h.reconcileStop <- struct{}{}:
 	default:
@@ -379,7 +379,7 @@ func (h *FSMHandler) StopReconcileLoop() {
 }
 
 // reconcileAll iterates over all vehicles in the signal store and reconciles each.
-func (h *FSMHandler) reconcileAll() {
+func (h *Handler) reconcileAll() {
 	if h.localSignals == nil {
 		return
 	}
@@ -394,7 +394,7 @@ func (h *FSMHandler) reconcileAll() {
 
 // reconcileVehicle checks one vehicle's FSM state against the signal-derived
 // expected state and replays signals through ProcessSignals if a mismatch is found.
-func (h *FSMHandler) reconcileVehicle(vehicleID int64, now time.Time) {
+func (h *Handler) reconcileVehicle(vehicleID int64, now time.Time) {
 	// Derive expected state from signal store
 	result := fsm.DeriveExpectedState(vehicleID, h.localSignals, now)
 

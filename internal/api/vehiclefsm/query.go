@@ -1,10 +1,11 @@
-package api
+package vehiclefsm
 
 import (
 	"net/http"
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/fsm"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/charge"
 	"github.com/ev-dev-labs/teslasync/internal/fsm/drive"
@@ -12,7 +13,7 @@ import (
 )
 
 // CurrentState returns the FSM state for a vehicle.
-func (h *FSMHandler) CurrentState(vehicleID int64) string {
+func (h *Handler) CurrentState(vehicleID int64) string {
 	h.mu.Lock()
 	m, exists := h.machines[vehicleID]
 	h.mu.Unlock()
@@ -23,7 +24,7 @@ func (h *FSMHandler) CurrentState(vehicleID int64) string {
 }
 
 // ActiveDrive returns the drive sub-FSM context for a vehicle, if active.
-func (h *FSMHandler) ActiveDrive(vehicleID int64) *drive.Context {
+func (h *Handler) ActiveDrive(vehicleID int64) *drive.Context {
 	h.mu.Lock()
 	d, ok := h.drives[vehicleID]
 	h.mu.Unlock()
@@ -35,7 +36,7 @@ func (h *FSMHandler) ActiveDrive(vehicleID int64) *drive.Context {
 }
 
 // ActiveDriveState returns the state and context of the active drive sub-FSM.
-func (h *FSMHandler) ActiveDriveState(vehicleID int64) (string, *drive.Context) {
+func (h *Handler) ActiveDriveState(vehicleID int64) (string, *drive.Context) {
 	h.mu.Lock()
 	d, ok := h.drives[vehicleID]
 	h.mu.Unlock()
@@ -47,7 +48,7 @@ func (h *FSMHandler) ActiveDriveState(vehicleID int64) (string, *drive.Context) 
 }
 
 // ActiveCharge returns the charge sub-FSM context for a vehicle, if active.
-func (h *FSMHandler) ActiveCharge(vehicleID int64) *charge.Context {
+func (h *Handler) ActiveCharge(vehicleID int64) *charge.Context {
 	h.mu.Lock()
 	c, ok := h.charges[vehicleID]
 	h.mu.Unlock()
@@ -59,7 +60,7 @@ func (h *FSMHandler) ActiveCharge(vehicleID int64) *charge.Context {
 }
 
 // ActiveChargeState returns the state and context of the active charge sub-FSM.
-func (h *FSMHandler) ActiveChargeState(vehicleID int64) (string, *charge.Context) {
+func (h *Handler) ActiveChargeState(vehicleID int64) (string, *charge.Context) {
 	h.mu.Lock()
 	c, ok := h.charges[vehicleID]
 	h.mu.Unlock()
@@ -71,7 +72,7 @@ func (h *FSMHandler) ActiveChargeState(vehicleID int64) (string, *charge.Context
 }
 
 // Stats returns the number of active FSM instances.
-func (h *FSMHandler) Stats() map[string]int {
+func (h *Handler) Stats() map[string]int {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	return map[string]int{
@@ -82,7 +83,7 @@ func (h *FSMHandler) Stats() map[string]int {
 }
 
 // VehicleSnapshots returns one snapshot per known vehicle FSM.
-func (h *FSMHandler) VehicleSnapshots() []VehicleFSMSnapshot {
+func (h *Handler) VehicleSnapshots() []VehicleFSMSnapshot {
 	h.mu.Lock()
 	machines := make(map[int64]*fsm.VehicleFSM, len(h.machines))
 	for id, m := range h.machines {
@@ -106,11 +107,11 @@ func (h *FSMHandler) VehicleSnapshots() []VehicleFSMSnapshot {
 }
 
 // HandleDebug returns diagnostic FSM information for a vehicle.
-func (h *FSMHandler) HandleDebug(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HandleDebug(w http.ResponseWriter, r *http.Request) {
 	vehicleIDStr := chi.URLParam(r, "vehicleID")
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
@@ -123,7 +124,7 @@ func (h *FSMHandler) HandleDebug(w http.ResponseWriter, r *http.Request) {
 	h.mu.Unlock()
 
 	if m == nil {
-		writeError(w, http.StatusNotFound, "no FSM for vehicle")
+		httpx.WriteError(w, http.StatusNotFound, "no FSM for vehicle")
 		return
 	}
 
@@ -151,5 +152,5 @@ func (h *FSMHandler) HandleDebug(w http.ResponseWriter, r *http.Request) {
 		resp.Reconciliation = rd
 	}
 
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
