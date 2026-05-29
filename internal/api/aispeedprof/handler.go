@@ -1,8 +1,8 @@
-package api
+package aispeedprof
 
 // Phase-50 / 0022 — D2 Speed-profile insights.
 //
-// ai_speed_profile_handler.go implements the LLM-backed handler at
+// handler.go implements the LLM-backed handler at
 // POST /api/v1/ai/drives/{driveID}/speed-profile/insights. The flow
 // mirrors the drive-coaching / YIR / digest / anomaly narration
 // handlers — same dispatch+stream loop, no persistence (one-shot
@@ -46,6 +46,7 @@ package api
 //     JSON shape is added or modified by this slice.
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -59,24 +60,25 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiSpeedProfileInsightsMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most two-tool-calls-then-answer; a
 // hard ceiling of 6 is generous for a model that occasionally
 // retries one of the tool calls before settling. Mirrors
 // aiDriveCoachMaxIterations from slice 0018 — same shape, two
 // read-only tools.
-const aiSpeedProfileInsightsMaxIterations = 6
+const maxIterations = 6
 
-// AISpeedProfileInsightsHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/drives/{driveID}/speed-profile/insights.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AISpeedProfileInsightsHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -84,7 +86,7 @@ type AISpeedProfileInsightsHandler struct {
 	maxIters   int
 }
 
-// NewAISpeedProfileInsightsHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -97,26 +99,26 @@ type AISpeedProfileInsightsHandler struct {
 //
 // strat:      the speed-profile-insights Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAISpeedProfileInsightsHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AISpeedProfileInsightsHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAISpeedProfileInsightsHandler: nil provider.Registry")
+		panic("aispeedprof: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAISpeedProfileInsightsHandler: nil tools.Registry")
+		panic("aispeedprof: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAISpeedProfileInsightsHandler: nil strategy.Strategy")
+		panic("aispeedprof: NewHandler: nil strategy.Strategy")
 	}
-	return &AISpeedProfileInsightsHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiSpeedProfileInsightsMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -138,16 +140,16 @@ func NewAISpeedProfileInsightsHandler(
 func parseSpeedProfileInsightsURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "driveID")
 	if raw == "" {
-		writeError(w, http.StatusBadRequest, "driveID URL parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "driveID URL parameter is required")
 		return 0, false
 	}
 	id, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("driveID must be a positive integer (got %q)", raw))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("driveID must be a positive integer (got %q)", raw))
 		return 0, false
 	}
 	if id <= 0 {
-		writeError(w, http.StatusBadRequest, "driveID must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "driveID must be > 0")
 		return 0, false
 	}
 	return id, true
@@ -158,7 +160,7 @@ func parseSpeedProfileInsightsURL(w http.ResponseWriter, r *http.Request) (int64
 // via the dispatcher's deferred WriteDone. Every error path either
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AISpeedProfileInsightsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate URL parameters. Body is intentionally
 	// ignored; this endpoint takes its only input from the URL.
 	driveID, ok := parseSpeedProfileInsightsURL(w, r)
@@ -172,7 +174,7 @@ func (h *AISpeedProfileInsightsHandler) ServeHTTP(w http.ResponseWriter, r *http
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), speedprofileinsights.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai speed-profile insights: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -192,7 +194,7 @@ func (h *AISpeedProfileInsightsHandler) ServeHTTP(w http.ResponseWriter, r *http
 		// Non-flushable response writer (test recorder, etc.).
 		// Emit a plain JSON 500 — the SSE headers were not sent.
 		log.Error().Err(err).Msg("ai speed-profile insights: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -249,5 +251,10 @@ func (h *AISpeedProfileInsightsHandler) ServeHTTP(w http.ResponseWriter, r *http
 	}
 }
 
-// Compile-time assertion: AISpeedProfileInsightsHandler satisfies http.Handler.
-var _ http.Handler = (*AISpeedProfileInsightsHandler)(nil)
+// denyAllConfirm rejects mutating tool calls for this read-only strategy.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
