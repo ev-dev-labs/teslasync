@@ -1,15 +1,17 @@
-package api
+package charging
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
-
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/go-chi/chi/v5"
 )
@@ -26,6 +28,51 @@ type fakeChargingByIDFetcher struct {
 func (f *fakeChargingByIDFetcher) GetByID(_ context.Context, _ int64) (*chargingmodel.ChargingSession, error) {
 	f.calls++
 	return f.session, f.err
+}
+
+type stateCallRecord struct {
+	vehicleID int64
+	at        time.Time
+}
+
+type fakeStateReader struct {
+	stateFn    func(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error)
+	signalAtFn func(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error)
+	timelineFn func(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error)
+
+	gotTimelineOpts   signal.TimelineOptions
+	gotTimelineFields []signal.FieldMapping
+	gotTimelineCalls  int
+}
+
+func (f *fakeStateReader) State(ctx context.Context, vehicleID int64, at time.Time) (signal.State, error) {
+	if f.stateFn == nil {
+		return signal.State{}, nil
+	}
+	return f.stateFn(ctx, vehicleID, at)
+}
+
+func (f *fakeStateReader) SignalAt(ctx context.Context, vehicleID int64, name string, at time.Time) (signal.SignalValue, error) {
+	if f.signalAtFn == nil {
+		return nil, nil
+	}
+	return f.signalAtFn(ctx, vehicleID, name, at)
+}
+
+func (f *fakeStateReader) Timeline(ctx context.Context, vehicleID int64, fields []signal.FieldMapping, from, to time.Time, opts signal.TimelineOptions) ([]signal.TimelineRow, error) {
+	f.gotTimelineCalls++
+	f.gotTimelineOpts = opts
+	f.gotTimelineFields = fields
+	if f.timelineFn == nil {
+		return nil, nil
+	}
+	return f.timelineFn(ctx, vehicleID, fields, from, to, opts)
+}
+
+var _ signal.StateReader = (*fakeStateReader)(nil)
+
+func newTestLiveStateReader(state signal.StateReader) signal.LiveStateReader {
+	return signal.MustNewLiveStateReader(signal.NewNoopLiveSignalStore(), state)
 }
 
 // newChargingRequest builds an *http.Request with the chi route context wired
@@ -232,5 +279,96 @@ func TestChargingHandler_Latest_PropagatesError(t *testing.T) {
 	}
 	if stateCalls < 2 {
 		t.Fatalf("State call count = %d, want >= 2 (start succeeds, current fails)", stateCalls)
+	}
+}
+
+// fakeChargingBulkStore mirrors the root package drive bulk store for charging handler tests.
+type fakeChargingBulkStore struct {
+	existing       map[int64]bool
+	deleteErr      error
+	bulkDeleteArgs [][]int64
+}
+
+func (f *fakeChargingBulkStore) FilterExistingIDs(_ context.Context, ids []int64) ([]int64, error) {
+	out := make([]int64, 0, len(ids))
+	for _, id := range ids {
+		if f.existing[id] {
+			out = append(out, id)
+		}
+	}
+	return out, nil
+}
+
+func (f *fakeChargingBulkStore) BulkDelete(_ context.Context, ids []int64) (int64, error) {
+	cp := append([]int64(nil), ids...)
+	f.bulkDeleteArgs = append(f.bulkDeleteArgs, cp)
+	if f.deleteErr != nil {
+		return 0, f.deleteErr
+	}
+	return int64(len(ids)), nil
+}
+
+func newBulkRequest(t *testing.T, method, path string, body any) *http.Request {
+	t.Helper()
+	var buf bytes.Buffer
+	if body != nil {
+		if s, ok := body.(string); ok {
+			buf.WriteString(s)
+		} else if err := json.NewEncoder(&buf).Encode(body); err != nil {
+			t.Fatalf("encode body: %v", err)
+		}
+	}
+	req := httptest.NewRequest(method, path, &buf)
+	req.Header.Set("Content-Type", "application/json")
+	return req
+}
+
+func decodeBulkResult(t *testing.T, body []byte) apibulk.OperationResult {
+	t.Helper()
+	var got apibulk.OperationResult
+	if err := json.Unmarshal(body, &got); err != nil {
+		t.Fatalf("unmarshal response: %v; body=%s", err, string(body))
+	}
+	return got
+}
+
+func TestChargingBulkDelete_HappyPath(t *testing.T) {
+	store := &fakeChargingBulkStore{existing: map[int64]bool{10: true, 20: true, 30: true}}
+	h := &ChargingHandler{bulkOverride: store}
+
+	rec := httptest.NewRecorder()
+	h.BulkDelete(rec, newBulkRequest(t, http.MethodDelete, "/charging/bulk", map[string]any{"ids": []int64{10, 20, 30}}))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	got := decodeBulkResult(t, rec.Body.Bytes())
+	if got.Deleted == nil || *got.Deleted != 3 {
+		t.Fatalf("Deleted = %v, want 3", got.Deleted)
+	}
+	if len(got.Failed) != 0 {
+		t.Fatalf("Failed = %d, want 0 when all ids exist", len(got.Failed))
+	}
+}
+
+func TestChargingBulkDelete_AllMissing_ReturnsZeroDeleted(t *testing.T) {
+	store := &fakeChargingBulkStore{existing: map[int64]bool{}}
+	h := &ChargingHandler{bulkOverride: store}
+
+	rec := httptest.NewRecorder()
+	h.BulkDelete(rec, newBulkRequest(t, http.MethodDelete, "/charging/bulk", map[string]any{"ids": []int64{1, 2}}))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (partial failure is not an error); body=%s", rec.Code, rec.Body.String())
+	}
+	got := decodeBulkResult(t, rec.Body.Bytes())
+	if got.Deleted == nil || *got.Deleted != 0 {
+		t.Fatalf("Deleted = %v, want 0", got.Deleted)
+	}
+	if len(got.Failed) != 2 {
+		t.Fatalf("Failed = %d, want 2", len(got.Failed))
+	}
+	if len(store.bulkDeleteArgs) != 1 || len(store.bulkDeleteArgs[0]) != 0 {
+		t.Fatalf("BulkDelete must be invoked with empty slice when no ids exist; got %#v", store.bulkDeleteArgs)
 	}
 }
