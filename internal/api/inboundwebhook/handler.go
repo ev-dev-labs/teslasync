@@ -1,9 +1,10 @@
-package api
+package inboundwebhook
 
 import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/rs/zerolog/log"
 )
 
@@ -27,12 +28,12 @@ func (h *WebhookHandler) InboundWebhook(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON payload")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON payload")
 		return
 	}
 
 	if payload.Event == "" {
-		writeError(w, http.StatusBadRequest, "event field is required")
+		httpx.WriteError(w, http.StatusBadRequest, "event field is required")
 		return
 	}
 
@@ -50,13 +51,13 @@ func (h *WebhookHandler) InboundWebhook(w http.ResponseWriter, r *http.Request) 
 			Str("message", payload.Message).
 			Str("vehicle", payload.Vehicle).
 			Msg("webhook: external alert received")
-		writeJSON(w, http.StatusCreated, map[string]interface{}{"status": "alert_logged"})
+		httpx.WriteJSON(w, http.StatusCreated, map[string]interface{}{"status": "alert_logged"})
 
 	case "note":
 		log.Info().Str("title", payload.Title).Str("message", payload.Message).Msg("webhook: note received")
-		writeJSON(w, http.StatusOK, map[string]string{"status": "noted"})
+		httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "noted"})
 
 	default:
-		writeJSON(w, http.StatusOK, map[string]interface{}{"status": "received", "event": payload.Event})
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"status": "received", "event": payload.Event})
 	}
 }
