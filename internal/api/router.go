@@ -56,6 +56,7 @@ import (
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
 	apiexports "github.com/ev-dev-labs/teslasync/internal/api/exports"
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
+	apifleettelem "github.com/ev-dev-labs/teslasync/internal/api/fleettelemetry"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
@@ -1159,14 +1160,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)
 	teslaEnergyLiveStatusHandler := apitels.NewHandler(teslaClient, db)
 	energySiteHandler := apienergysite.NewEnergySiteHandler(teslaClient, db)
-	fleetTelemetryErrorHandler := NewFleetTelemetryErrorHandler(teslaClient, db)
+	fleetTelemetryErrorHandler := apifleettelem.NewFleetTelemetryErrorHandler(teslaClient, db)
 	// Phase-43a/0002 — wire the package-derived Fleet Telemetry coverage
 	// handler authored by Phase-42 prompt 0068. It is intentionally
 	// DB-free: the routing snapshot comes from the embedded routing.yaml
 	// via router.LoadMap() and the subscription view comes from
 	// teslaconfig.Builder. The handler is mounted inside the existing
 	// /tesla/fleet-telemetry route block below.
-	fleetTelemetryHandler := NewFleetTelemetryHandler(cfg)
+	fleetTelemetryHandler := apifleettelem.NewFleetTelemetryHandler(cfg)
 	teslaUserConfigHandler := apituc.NewHandler(teslaClient, db)
 	teslaUserOrderHandler := apituo.NewHandler(teslaClient, db)
 	teslaUserProfileHandler := apitup.NewHandler(teslaClient, db)

@@ -1,4 +1,4 @@
-package api
+package fleettelemetry
 
 import (
 	"encoding/json"
