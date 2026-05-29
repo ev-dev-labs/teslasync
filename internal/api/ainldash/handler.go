@@ -1,4 +1,4 @@
-package api
+package ainldash
 
 // Phase-50 / 0059 — PU3 Natural-language dashboard composer.
 //
@@ -72,6 +72,7 @@ package api
 //     slice.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -90,6 +91,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
+	apihttpx "github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -111,27 +113,27 @@ const aiNLDashboardComposerMaxBodyBytes = 16 * 1024
 // message out of the window.
 const aiNLDashboardComposerMaxPromptChars = 1200
 
-// AINLDashboardComposerCatalogSource is the narrow read
+// CatalogSource is the narrow read
 // interface the handler consumes to load the curated install-
 // wide dashboard panel catalog. Production wiring satisfies it
-// via AINLDashboardComposerCatalogSourceImpl, which returns a
+// via CatalogSourceImpl, which returns a
 // hardcoded whitelist of pre-validated panel templates so the
 // AI can never name a panel outside the curated set.
 //
 // The interface is intentionally narrow (one method) so test
 // fakes stay small and the production implementation cannot
 // accidentally widen the surface.
-type AINLDashboardComposerCatalogSource interface {
+type CatalogSource interface {
 	// DashboardComposerCatalog returns the curated install-wide
 	// catalog at the time of the call. The returned slice MUST
 	// be safe for the caller to retain.
-	DashboardComposerCatalog(ctx context.Context) ([]AINLDashboardComposerPanelEntry, error)
+	DashboardComposerCatalog(ctx context.Context) ([]PanelEntry, error)
 }
 
-// AINLDashboardComposerPanelEntry describes one curated
+// PanelEntry describes one curated
 // dashboard panel the LLM is allowed to use as a slot.
 // Mirrors the SPA's CuratedDashboardPanel type 1:1.
-type AINLDashboardComposerPanelEntry struct {
+type PanelEntry struct {
 	// Name is the canonical panel slug used as the
 	// slot.panel_name when the LLM proposes a layout. Lower-
 	// case to match Grafana folding.
@@ -151,23 +153,23 @@ type aiNLDashboardComposerRequest struct {
 	Prompt string `json:"prompt"`
 }
 
-// AINLDashboardComposerHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/power/dashboard/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AINLDashboardComposerHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
-	source     AINLDashboardComposerCatalogSource
+	source     CatalogSource
 	headerName string
 	maxIters   int
 }
 
-// NewAINLDashboardComposerHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first
 // request.
@@ -186,31 +188,31 @@ type AINLDashboardComposerHandler struct {
 //
 //	process).
 //
-// source:     the production AINLDashboardComposerCatalogSource
+// source:     the production CatalogSource
 //
-//	(AINLDashboardComposerCatalogSourceImpl in router.go).
+//	(CatalogSourceImpl in router.go).
 //
 // headerName: forward-auth header name; used to extract subject
 //
 //	for audit.
-func NewAINLDashboardComposerHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
-	source AINLDashboardComposerCatalogSource,
+	source CatalogSource,
 	headerName string,
-) *AINLDashboardComposerHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAINLDashboardComposerHandler: nil provider.Registry")
+		panic("ainldash: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAINLDashboardComposerHandler: nil tools.Registry")
+		panic("ainldash: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAINLDashboardComposerHandler: nil strategy.Strategy")
+		panic("ainldash: NewHandler: nil strategy.Strategy")
 	case source == nil:
-		panic("api: NewAINLDashboardComposerHandler: nil AINLDashboardComposerCatalogSource")
+		panic("ainldash: NewHandler: nil CatalogSource")
 	}
-	return &AINLDashboardComposerHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
@@ -236,7 +238,7 @@ func parseNLDashboardComposerRequest(w http.ResponseWriter, r *http.Request) (ai
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
 		return req, false
 	}
-	if len(bytesTrim(bodyBytes)) == 0 {
+	if len(bytes.TrimSpace(bodyBytes)) == 0 {
 		writeError(w, http.StatusBadRequest, "empty body")
 		return req, false
 	}
@@ -265,7 +267,7 @@ func parseNLDashboardComposerRequest(w http.ResponseWriter, r *http.Request) (ai
 // Every error path either writes a structured frame onto the
 // SSE stream (when the writer has been opened) or a plain JSON
 // 4xx/5xx (before it has).
-func (h *AINLDashboardComposerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the request body.
 	req, ok := parseNLDashboardComposerRequest(w, r)
 	if !ok {
@@ -365,7 +367,7 @@ func (h *AINLDashboardComposerHandler) ServeHTTP(w http.ResponseWriter, r *http.
 // only the bare ground-truth metadata keeps the transcript
 // volume minimal AND makes the goldens stable across catalog
 // churn.
-func buildNLDashboardComposerUserMessage(prompt string, catalog []AINLDashboardComposerPanelEntry) string {
+func buildNLDashboardComposerUserMessage(prompt string, catalog []PanelEntry) string {
 	var b strings.Builder
 
 	b.WriteString("Suggest a single typed DashboardLayoutDraft that satisfies the user's request below. ")
@@ -377,7 +379,7 @@ func buildNLDashboardComposerUserMessage(prompt string, catalog []AINLDashboardC
 	b.WriteString("Do NOT claim the dashboard was created, applied, exported, or pushed — the user reviews the proposal in the AI side panel and clicks the Apply to editor button to copy the draft into the manual dashboard composer on /power/dashboards, then clicks Copy to clipboard to paste it into their existing Grafana dashboard editor.")
 
 	// Sort panels by name for deterministic prompt hashing.
-	panels := append([]AINLDashboardComposerPanelEntry(nil), catalog...)
+	panels := append([]PanelEntry(nil), catalog...)
 	sort.Slice(panels, func(i, j int) bool { return panels[i].Name < panels[j].Name })
 	if len(panels) == 0 {
 		b.WriteString("\n\nIn-scope curated panel catalog: NONE.\n")
@@ -396,9 +398,9 @@ func buildNLDashboardComposerUserMessage(prompt string, catalog []AINLDashboardC
 	return b.String()
 }
 
-// Compile-time assertion: AINLDashboardComposerHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AINLDashboardComposerHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the source + validator interfaces declared
@@ -419,7 +421,7 @@ var _ http.Handler = (*AINLDashboardComposerHandler)(nil)
 // generated via nl-grafana-panel (slice 0058) OR a stock starter
 // the install ships with; the dashboard composer just picks
 // among them and arranges them on the grid.
-var nlDashboardComposerCuratedPanels = []AINLDashboardComposerPanelEntry{
+var nlDashboardComposerCuratedPanels = []PanelEntry{
 	{
 		Name:        "drives_per_day_timeseries",
 		Description: "Timeseries panel: SUM(distance_m)/day from the drives table",
@@ -446,41 +448,41 @@ var nlDashboardComposerCuratedPanels = []AINLDashboardComposerPanelEntry{
 	},
 }
 
-// AINLDashboardComposerCatalogSourceImpl is the production
-// AINLDashboardComposerCatalogSource. It returns the hardcoded
+// CatalogSourceImpl is the production
+// CatalogSource. It returns the hardcoded
 // curated whitelist so the AI can never name a panel outside
 // the curated set.
 //
 // No DB query — the catalog is hand-maintained. A future slice
 // that needs per-tenant catalog gating can swap this out without
 // churning the handler.
-type AINLDashboardComposerCatalogSourceImpl struct{}
+type CatalogSourceImpl struct{}
 
-// NewAINLDashboardComposerCatalogSource constructs the adapter.
+// NewCatalogSource constructs the adapter.
 // No deps. Returned by-pointer for symmetry with the other AI*
 // source types.
-func NewAINLDashboardComposerCatalogSource() *AINLDashboardComposerCatalogSourceImpl {
-	return &AINLDashboardComposerCatalogSourceImpl{}
+func NewCatalogSource() *CatalogSourceImpl {
+	return &CatalogSourceImpl{}
 }
 
 // DashboardComposerCatalog implements
-// AINLDashboardComposerCatalogSource. Returns a defensive copy
+// CatalogSource. Returns a defensive copy
 // of the curated whitelist so a caller cannot retroactively
 // mutate the source-of-truth slice.
-func (a *AINLDashboardComposerCatalogSourceImpl) DashboardComposerCatalog(_ context.Context) ([]AINLDashboardComposerPanelEntry, error) {
-	out := make([]AINLDashboardComposerPanelEntry, len(nlDashboardComposerCuratedPanels))
+func (a *CatalogSourceImpl) DashboardComposerCatalog(_ context.Context) ([]PanelEntry, error) {
+	out := make([]PanelEntry, len(nlDashboardComposerCuratedPanels))
 	copy(out, nlDashboardComposerCuratedPanels)
 	return out, nil
 }
 
 // Compile-time assertion.
-var _ AINLDashboardComposerCatalogSource = (*AINLDashboardComposerCatalogSourceImpl)(nil)
+var _ CatalogSource = (*CatalogSourceImpl)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the nlq.DashboardLayoutValidator interface.
 // ---------------------------------------------------------------------
 
-// AINLDashboardComposerValidator is the production
+// Validator is the production
 // nlq.DashboardLayoutValidator. The shape checks (panel-name
 // catalog, slot count, per-slot grid bounds, duplicate-panel
 // detector, overlap detector) are already enforced by the
@@ -501,13 +503,13 @@ var _ AINLDashboardComposerCatalogSource = (*AINLDashboardComposerCatalogSourceI
 // the user reviews the typed proposal before clicking Apply.
 //
 // Stateless. Held by value; safe for concurrent use.
-type AINLDashboardComposerValidator struct{}
+type Validator struct{}
 
-// NewAINLDashboardComposerValidator constructs the validator.
+// NewValidator constructs the validator.
 // No deps. Returned by-pointer for symmetry with the other AI*
 // validator types.
-func NewAINLDashboardComposerValidator() *AINLDashboardComposerValidator {
-	return &AINLDashboardComposerValidator{}
+func NewValidator() *Validator {
+	return &Validator{}
 }
 
 // ValidateDashboardLayout implements
@@ -517,12 +519,21 @@ func NewAINLDashboardComposerValidator() *AINLDashboardComposerValidator {
 // slices need them. Keeping the body intentionally minimal so
 // the slice's mandate ("propose-only, no semantic surprises")
 // is locally legible.
-func (v *AINLDashboardComposerValidator) ValidateDashboardLayout(draft *nlq.DashboardLayoutDraft) error {
+func (v *Validator) ValidateDashboardLayout(draft *nlq.DashboardLayoutDraft) error {
 	if draft == nil {
-		return errors.New("api ai nl-dashboard-composer: nil DashboardLayoutDraft")
+		return errors.New("ainldash: nil DashboardLayoutDraft")
 	}
 	return nil
 }
 
 // Compile-time assertion.
-var _ nlq.DashboardLayoutValidator = (*AINLDashboardComposerValidator)(nil)
+var _ nlq.DashboardLayoutValidator = (*Validator)(nil)
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	apihttpx.WriteError(w, status, msg)
+}
+
+// denyAllConfirm rejects every mutating tool as defence-in-depth.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}

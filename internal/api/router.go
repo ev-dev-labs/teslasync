@@ -45,6 +45,7 @@ import (
 	aimlchargcv "github.com/ev-dev-labs/teslasync/internal/api/aimlchargcv"
 	aimlrange "github.com/ev-dev-labs/teslasync/internal/api/aimlrange"
 	aimqttsse "github.com/ev-dev-labs/teslasync/internal/api/aimqttsse"
+	ainldash "github.com/ev-dev-labs/teslasync/internal/api/ainldash"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -2683,12 +2684,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// permissive (shape checks already in the tool); kept as an
 	// adapter for future semantic checks. The curated install-
 	// wide panel catalog (six install-wide panel templates) is
-	// hardcoded in AINLDashboardComposerCatalogSourceImpl —
+	// hardcoded in ainldash.CatalogSourceImpl —
 	// adding a panel is a deliberate per-prompt decision, not a
 	// default. Registered AFTER nl-grafana-panel above so the
 	// registry's Names list grows deterministically.
-	aiNLDashboardComposerCatalogSource := NewAINLDashboardComposerCatalogSource()
-	aiNLDashboardComposerValidator := NewAINLDashboardComposerValidator()
+	aiNLDashboardComposerCatalogSource := ainldash.NewCatalogSource()
+	aiNLDashboardComposerValidator := ainldash.NewValidator()
 	nlq.RegisterNLDashboardComposerTools(aiToolRegistry, nlq.NLDashboardComposerSources{
 		Validator: aiNLDashboardComposerValidator,
 	})
@@ -2696,7 +2697,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// beyond constructor inputs. Must be constructed AFTER the
 	// tool registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiNLDashboardComposerHandler := NewAINLDashboardComposerHandler(
+	aiNLDashboardComposerHandler := ainldash.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nldashboardcomposer.New(),

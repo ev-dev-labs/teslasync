@@ -15,7 +15,7 @@
 // nl-dashboard-composer`); duplicating that here would require
 // a live database fixture.
 
-package api
+package ainldash
 
 import (
 	"bytes"
@@ -30,6 +30,22 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
 )
+
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestNLDashboardComposerAIOffManualComposerWorks is the
 // load-bearing off-mode contract proof for slice 0059. It
@@ -148,23 +164,23 @@ func TestNLDashboardComposerAIOffManualComposerWorks(t *testing.T) {
 	}
 }
 
-// TestAINLDashboardComposerHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAINLDashboardComposerHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAINLDashboardComposerHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAINLDashboardComposerHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -172,11 +188,11 @@ func TestAINLDashboardComposerHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAINLDashboardComposerHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the body BEFORE doing anything else — a body
 // that fails to decode as JSON object MUST surface as a JSON
 // 400, not a half-opened stream that confuses the frontend.
-func TestAINLDashboardComposerHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -218,7 +234,7 @@ func TestAINLDashboardComposerHandler_RejectsBadBody(t *testing.T) {
 // before the goldens silently drift.
 func TestBuildNLDashboardComposerUserMessage_DeterministicShape(t *testing.T) {
 	t.Parallel()
-	catalog := []AINLDashboardComposerPanelEntry{
+	catalog := []PanelEntry{
 		{Name: "vehicles_table", Description: "vehicles overview"},
 		{Name: "alerts_count_stat", Description: "alerts in 7d"},
 		{Name: "drives_per_day_timeseries", Description: "distance per day"},
@@ -268,13 +284,13 @@ func TestBuildNLDashboardComposerUserMessage_EmptyCatalog(t *testing.T) {
 	}
 }
 
-// TestAINLDashboardComposerValidator_AcceptsValidDraft pins the
+// TestValidator_AcceptsValidDraft pins the
 // validator's accept path: a well-formed DashboardLayoutDraft
 // returns nil. Future slices that add semantic checks will need
 // to update this test.
-func TestAINLDashboardComposerValidator_AcceptsValidDraft(t *testing.T) {
+func TestValidator_AcceptsValidDraft(t *testing.T) {
 	t.Parallel()
-	v := NewAINLDashboardComposerValidator()
+	v := NewValidator()
 	drafts := []*nlq.DashboardLayoutDraft{
 		{
 			Prompt: "give me an overview dashboard",
@@ -301,24 +317,24 @@ func TestAINLDashboardComposerValidator_AcceptsValidDraft(t *testing.T) {
 	}
 }
 
-// TestAINLDashboardComposerValidator_RejectsNil pins the
+// TestValidator_RejectsNil pins the
 // defensive nil check.
-func TestAINLDashboardComposerValidator_RejectsNil(t *testing.T) {
+func TestValidator_RejectsNil(t *testing.T) {
 	t.Parallel()
-	v := NewAINLDashboardComposerValidator()
+	v := NewValidator()
 	if err := v.ValidateDashboardLayout(nil); err == nil {
 		t.Error("ValidateDashboardLayout(nil) err = nil, want error")
 	}
 }
 
-// TestAINLDashboardComposerCatalogSourceImpl_ReturnsCuratedCatalog
+// TestCatalogSourceImpl_ReturnsCuratedCatalog
 // proves the production source returns the hardcoded curated
 // catalog with non-empty Name + Description per entry. The
 // catalog MUST include the canonical 6 panel templates so the
 // goldens stay valid.
-func TestAINLDashboardComposerCatalogSourceImpl_ReturnsCuratedCatalog(t *testing.T) {
+func TestCatalogSourceImpl_ReturnsCuratedCatalog(t *testing.T) {
 	t.Parallel()
-	src := NewAINLDashboardComposerCatalogSource()
+	src := NewCatalogSource()
 	got, err := src.DashboardComposerCatalog(context.Background())
 	if err != nil {
 		t.Fatalf("DashboardComposerCatalog err = %v, want nil", err)
@@ -352,14 +368,14 @@ func TestAINLDashboardComposerCatalogSourceImpl_ReturnsCuratedCatalog(t *testing
 	}
 }
 
-// TestAINLDashboardComposerCatalogSourceImpl_ReturnsDefensiveCopy
+// TestCatalogSourceImpl_ReturnsDefensiveCopy
 // proves the production source returns defensive copies — a
 // caller that mutates the returned slice does NOT leak the
 // mutation back into the source-of-truth catalog. Subsequent
 // calls return the original entries.
-func TestAINLDashboardComposerCatalogSourceImpl_ReturnsDefensiveCopy(t *testing.T) {
+func TestCatalogSourceImpl_ReturnsDefensiveCopy(t *testing.T) {
 	t.Parallel()
-	src := NewAINLDashboardComposerCatalogSource()
+	src := NewCatalogSource()
 	got, _ := src.DashboardComposerCatalog(context.Background())
 	if len(got) == 0 {
 		t.Fatal("DashboardComposerCatalog returned empty list")
