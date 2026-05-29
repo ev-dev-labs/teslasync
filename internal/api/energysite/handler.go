@@ -1,14 +1,15 @@
-package api
+package energysite
 
 import (
 	"encoding/json"
 	"fmt"
 	"net/http"
 
-	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -32,19 +33,19 @@ func (h *EnergySiteHandler) List(w http.ResponseWriter, r *http.Request) {
 	sites, err := h.repo.GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list energy sites")
-		writeError(w, http.StatusInternalServerError, "failed to list energy sites")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list energy sites")
 		return
 	}
 	if sites == nil {
 		sites = []*teslamodel.TeslaEnergySite{}
 	}
-	writeJSON(w, http.StatusOK, sites)
+	httpx.WriteJSON(w, http.StatusOK, sites)
 }
 
 // Refresh fetches products from Tesla, filters to energy products, saves to DB, and returns them.
 func (h *EnergySiteHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -53,25 +54,25 @@ func (h *EnergySiteHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	body, status, err := h.teslaClient.GetProducts(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("tesla products API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch products from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch products from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla products non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
 	sites, err := parseProductsResponse(body)
 	if err != nil {
 		log.Error().Err(err).Msg("failed to parse products response")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
 	if err := h.repo.ReplaceAll(r.Context(), sites); err != nil {
 		log.Error().Err(err).Msg("failed to save energy sites")
-		writeError(w, http.StatusInternalServerError, "failed to save energy sites")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save energy sites")
 		return
 	}
 
@@ -79,7 +80,7 @@ func (h *EnergySiteHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	stored, err := h.repo.GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list energy sites after refresh")
-		writeError(w, http.StatusInternalServerError, "failed to list energy sites")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list energy sites")
 		return
 	}
 	if stored == nil {
@@ -87,26 +88,26 @@ func (h *EnergySiteHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	log.Info().Int("count", len(stored)).Msg("energy sites refresh complete")
-	writeJSON(w, http.StatusOK, stored)
+	httpx.WriteJSON(w, http.StatusOK, stored)
 }
 
 // SiteInfo returns stored site_info JSON from DB for a given energy site.
 func (h *EnergySiteHandler) SiteInfo(w http.ResponseWriter, r *http.Request) {
-	siteID, err := parseSiteID(r)
+	siteID, err := apiparams.URLParamInt64(r, "siteID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid site ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid site ID")
 		return
 	}
 
 	siteInfoJSON, fetchedAt, err := h.repo.GetSiteInfo(r.Context(), siteID)
 	if err != nil {
 		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to get site info")
-		writeError(w, http.StatusInternalServerError, "failed to fetch site info")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch site info")
 		return
 	}
 
 	if siteInfoJSON == nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"data":       nil,
 			"fetched_at": nil,
 		})
@@ -121,14 +122,14 @@ func (h *EnergySiteHandler) SiteInfo(w http.ResponseWriter, r *http.Request) {
 
 // RefreshSiteInfo fetches site_info from Tesla, saves to DB, and returns the data.
 func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Request) {
-	siteID, err := parseSiteID(r)
+	siteID, err := apiparams.URLParamInt64(r, "siteID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid site ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid site ID")
 		return
 	}
 
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -137,12 +138,12 @@ func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Reque
 	body, status, err := h.teslaClient.GetEnergySiteInfo(r.Context(), siteID)
 	if err != nil {
 		log.Error().Err(err).Msg("tesla energy site info API error")
-		writeError(w, http.StatusBadGateway, "failed to fetch site info from Tesla")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to fetch site info from Tesla")
 		return
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla energy site info non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
@@ -152,7 +153,7 @@ func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Reque
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
 		log.Error().Err(err).Msg("failed to parse site info envelope")
-		writeError(w, http.StatusInternalServerError, "failed to parse Tesla response")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 		return
 	}
 
@@ -163,7 +164,7 @@ func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Reque
 
 	if err := h.repo.UpdateSiteInfo(r.Context(), siteID, innerJSON); err != nil {
 		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to save site info")
-		writeError(w, http.StatusInternalServerError, "failed to save site info")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save site info")
 		return
 	}
 
@@ -171,7 +172,7 @@ func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Reque
 	siteInfoJSON, fetchedAt, err := h.repo.GetSiteInfo(r.Context(), siteID)
 	if err != nil || siteInfoJSON == nil {
 		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to read back site info after save")
-		writeError(w, http.StatusInternalServerError, "failed to read site info after save")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read site info after save")
 		return
 	}
 
@@ -183,14 +184,14 @@ func (h *EnergySiteHandler) RefreshSiteInfo(w http.ResponseWriter, r *http.Reque
 
 // UpdateTOUSettings proxies a time-of-use rate plan update to the Tesla API.
 func (h *EnergySiteHandler) UpdateTOUSettings(w http.ResponseWriter, r *http.Request) {
-	siteID, err := parseSiteID(r)
+	siteID, err := apiparams.URLParamInt64(r, "siteID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid site ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid site ID")
 		return
 	}
 
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusUnauthorized, "not authenticated with Tesla")
+		httpx.WriteError(w, http.StatusUnauthorized, "not authenticated with Tesla")
 		return
 	}
 
@@ -199,7 +200,7 @@ func (h *EnergySiteHandler) UpdateTOUSettings(w http.ResponseWriter, r *http.Req
 	body, status, err := h.teslaClient.SetEnergySiteTOUSettings(r.Context(), siteID, r.Body)
 	if err != nil {
 		log.Error().Err(err).Int64("site_id", siteID).Msg("failed to update TOU settings")
-		writeError(w, http.StatusBadGateway, "failed to update TOU settings")
+		httpx.WriteError(w, http.StatusBadGateway, "failed to update TOU settings")
 		return
 	}
 
@@ -214,7 +215,7 @@ func (h *EnergySiteHandler) UpdateTOUSettings(w http.ResponseWriter, r *http.Req
 	}
 	if status < 200 || status >= 300 {
 		log.Error().Int("status", status).Str("body", truncateBody(body)).Msg("tesla TOU settings non-2xx")
-		writeError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
+		httpx.WriteError(w, http.StatusBadGateway, fmt.Sprintf("Tesla API returned status %d", status))
 		return
 	}
 
@@ -297,4 +298,12 @@ func parseProductsResponse(body []byte) ([]*teslamodel.TeslaEnergySite, error) {
 	}
 
 	return sites, nil
+}
+
+// truncateBody returns the first 500 bytes of a response body for logging.
+func truncateBody(b []byte) string {
+	if len(b) > 500 {
+		return string(b[:500])
+	}
+	return string(b)
 }

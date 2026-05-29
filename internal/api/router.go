@@ -43,6 +43,7 @@ import (
 	apidrivetrain "github.com/ev-dev-labs/teslasync/internal/api/drivetrain"
 	apidrivingcoach "github.com/ev-dev-labs/teslasync/internal/api/drivingcoach"
 	apienergyflow "github.com/ev-dev-labs/teslasync/internal/api/energyflow"
+	apienergysite "github.com/ev-dev-labs/teslasync/internal/api/energysite"
 	apiexpcol "github.com/ev-dev-labs/teslasync/internal/api/exportcolumns"
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
@@ -1137,7 +1138,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	teslaChargingSessionHandler := NewTeslaChargingSessionHandler(teslaClient, db)
 	teslaEnergyHistoryHandler := NewTeslaEnergyHistoryHandler(teslaClient, db)
 	teslaEnergyLiveStatusHandler := apitels.NewHandler(teslaClient, db)
-	energySiteHandler := NewEnergySiteHandler(teslaClient, db)
+	energySiteHandler := apienergysite.NewEnergySiteHandler(teslaClient, db)
 	fleetTelemetryErrorHandler := NewFleetTelemetryErrorHandler(teslaClient, db)
 	// Phase-43a/0002 — wire the package-derived Fleet Telemetry coverage
 	// handler authored by Phase-42 prompt 0068. It is intentionally
