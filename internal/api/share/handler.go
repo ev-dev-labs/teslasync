@@ -1,21 +1,21 @@
-package api
+package share
 
 import (
 	"context"
 	"encoding/json"
+	"math"
 	"net/http"
 	"time"
 
-	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
-
-	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
-
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	"github.com/ev-dev-labs/teslasync/internal/database/sharing"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
@@ -102,9 +102,9 @@ type createShareRequest struct {
 }
 
 func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
-	driveID, err := urlParamInt64(r, "driveID")
+	driveID, err := apiparams.URLParamInt64(r, "driveID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid drive ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
@@ -114,17 +114,17 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 	drive, err := h.driveRepo.GetByID(ctx, driveID)
 	if err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("share: failed to get drive")
-		writeError(w, http.StatusInternalServerError, "failed to get drive")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get drive")
 		return
 	}
 	if drive == nil {
-		writeError(w, http.StatusNotFound, "drive not found")
+		httpx.WriteError(w, http.StatusNotFound, "drive not found")
 		return
 	}
 
 	var req createShareRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
@@ -156,7 +156,7 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.shareRepo.Create(ctx, st); err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("share: failed to create")
-		writeError(w, http.StatusInternalServerError, "failed to create share link")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to create share link")
 		return
 	}
 
@@ -165,7 +165,7 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 		Int64("drive_id", driveID).
 		Msg("share link created")
 
-	writeJSON(w, http.StatusCreated, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusCreated, map[string]interface{}{
 		"token": st.Token,
 		"url":   "/s/" + st.Token,
 		"id":    st.ID,
@@ -175,22 +175,22 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 // ── List shares for a drive (authenticated) ────────────────────────
 
 func (h *ShareHandler) List(w http.ResponseWriter, r *http.Request) {
-	driveID, err := urlParamInt64(r, "driveID")
+	driveID, err := apiparams.URLParamInt64(r, "driveID")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid drive ID")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
 
 	tokens, err := h.shareRepo.ListByDrive(r.Context(), driveID)
 	if err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("share: failed to list")
-		writeError(w, http.StatusInternalServerError, "failed to list shares")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list shares")
 		return
 	}
 	if tokens == nil {
 		tokens = make([]*drivemodel.ShareToken, 0)
 	}
-	writeJSON(w, http.StatusOK, tokens)
+	httpx.WriteJSON(w, http.StatusOK, tokens)
 }
 
 // ── Revoke share link (authenticated) ──────────────────────────────
@@ -198,18 +198,18 @@ func (h *ShareHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *ShareHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	if token == "" {
-		writeError(w, http.StatusBadRequest, "token required")
+		httpx.WriteError(w, http.StatusBadRequest, "token required")
 		return
 	}
 
 	if err := h.shareRepo.Delete(r.Context(), token); err != nil {
 		log.Error().Err(err).Str("token", token[:8]+"...").Msg("share: failed to revoke")
-		writeError(w, http.StatusNotFound, "share link not found")
+		httpx.WriteError(w, http.StatusNotFound, "share link not found")
 		return
 	}
 
 	log.Info().Str("token", token[:8]+"...").Msg("share link revoked")
-	writeJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]string{"status": "revoked"})
 }
 
 // ── Public share view (NO authentication) ──────────────────────────
@@ -217,7 +217,7 @@ func (h *ShareHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 	token := chi.URLParam(r, "token")
 	if token == "" {
-		writeError(w, http.StatusNotFound, "not found")
+		httpx.WriteError(w, http.StatusNotFound, "not found")
 		return
 	}
 
@@ -226,17 +226,17 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 	share, err := h.shareRepo.GetByToken(ctx, token)
 	if err != nil {
 		log.Error().Err(err).Msg("share: failed to get token")
-		writeError(w, http.StatusInternalServerError, "internal error")
+		httpx.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 	if share == nil {
-		writeError(w, http.StatusNotFound, "share not found or expired")
+		httpx.WriteError(w, http.StatusNotFound, "share not found or expired")
 		return
 	}
 
 	// Check expiry
 	if share.ExpiresAt != nil && share.ExpiresAt.Before(time.Now().UTC()) {
-		writeError(w, http.StatusGone, "share link has expired")
+		httpx.WriteError(w, http.StatusGone, "share link has expired")
 		return
 	}
 
@@ -249,7 +249,7 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 	drive, err := h.driveRepo.GetByID(ctx, share.DriveID)
 	if err != nil || drive == nil {
 		log.Error().Err(err).Int64("driveID", share.DriveID).Msg("share: drive not found")
-		writeError(w, http.StatusNotFound, "shared drive no longer exists")
+		httpx.WriteError(w, http.StatusNotFound, "shared drive no longer exists")
 		return
 	}
 
@@ -314,7 +314,7 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 
 	// Cache the response for 5 minutes
 	w.Header().Set("Cache-Control", "public, max-age=300")
-	writeJSON(w, http.StatusOK, resp)
+	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // buildPublicProfiles populates map points, elevation, speed, and telemetry
@@ -383,4 +383,18 @@ func safeDeref(s *string, fallback string) string {
 		return *s
 	}
 	return fallback
+}
+
+func haversineKm(lat1, lng1, lat2, lng2 float64) float64 {
+	const earthRadiusKm = 6371.0
+
+	dLat := (lat2 - lat1) * math.Pi / 180
+	dLng := (lng2 - lng1) * math.Pi / 180
+	lat1Rad := lat1 * math.Pi / 180
+	lat2Rad := lat2 * math.Pi / 180
+
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1Rad)*math.Cos(lat2Rad)*math.Sin(dLng/2)*math.Sin(dLng/2)
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+	return earthRadiusKm * c
 }
