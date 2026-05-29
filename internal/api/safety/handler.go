@@ -1,13 +1,15 @@
-package api
+package safety
 
 import (
 	"net/http"
 	"strconv"
 	"time"
 
-	"github.com/rs/zerolog/log"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+
+	"github.com/rs/zerolog/log"
 )
 
 // SafetyHandler serves safety / ADAS snapshot endpoints backed by the
@@ -67,13 +69,13 @@ func NewSafetyHandler(state signal.StateReader, live signal.LiveStateReader) *Sa
 func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	from := time.Now().AddDate(0, 0, -7)
 	to := time.Now()
-	if start, end := parseDateRange(r); !start.IsZero() {
+	if start, end := apiparams.ParseDateRange(r); !start.IsZero() {
 		from = start
 		if !end.IsZero() {
 			to = end
@@ -84,7 +86,7 @@ func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
 		vehicleID, safetyMappings, from, to, signal.TimelineOptions{})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get safety data from signal_log")
-		writeError(w, http.StatusInternalServerError, "failed to get safety data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get safety data")
 		return
 	}
 	rows := timelineRowsToFlat(timelineRows)
@@ -94,7 +96,7 @@ func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
 		}
 		row["id"] = i + 1
 	}
-	writeJSON(w, http.StatusOK, rows)
+	httpx.WriteJSON(w, http.StatusOK, rows)
 }
 
 // Latest returns the most recent safety / ADAS values, derived from the
@@ -104,14 +106,14 @@ func (h *SafetyHandler) List(w http.ResponseWriter, r *http.Request) {
 func (h *SafetyHandler) Latest(w http.ResponseWriter, r *http.Request) {
 	vehicleID, err := strconv.ParseInt(r.URL.Query().Get("vehicle_id"), 10, 64)
 	if err != nil || vehicleID == 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id required")
 		return
 	}
 
 	snap, err := h.live.LiveState(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("failed to get latest safety data")
-		writeError(w, http.StatusInternalServerError, "failed to get latest safety data")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get latest safety data")
 		return
 	}
 
@@ -121,5 +123,20 @@ func (h *SafetyHandler) Latest(w http.ResponseWriter, r *http.Request) {
 			result[m.Field] = v
 		}
 	}
-	writeJSON(w, http.StatusOK, result)
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+// timelineRowsToFlat converts signal timeline rows into the flat JSON row shape
+// expected by existing safety history consumers.
+func timelineRowsToFlat(rows []signal.TimelineRow) []map[string]interface{} {
+	out := make([]map[string]interface{}, 0, len(rows))
+	for _, row := range rows {
+		m := make(map[string]interface{}, len(row.Fields)+1)
+		m["ts"] = row.Timestamp
+		for key, value := range row.Fields {
+			m[key] = value
+		}
+		out = append(out, m)
+	}
+	return out
 }
