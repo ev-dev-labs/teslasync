@@ -1,9 +1,9 @@
-package api
+package airouteeff
 
 // Phase-50 / 0023 — D3 Route-efficiency suggestions.
 //
-// ai_route_efficiency_handler.go implements the LLM-backed handler
-// at POST /api/v1/ai/routes/{routeID}/efficiency/suggest. The flow
+// handler.go implements the LLM-backed handler at
+// POST /api/v1/ai/routes/{routeID}/efficiency/suggest. The flow
 // mirrors the speed-profile-insights / drive-coaching / YIR /
 // digest / anomaly narration handlers — same dispatch+stream loop,
 // no persistence (one-shot narration; no conversation to record):
@@ -57,6 +57,7 @@ package api
 //     JSON shape is added or modified by this slice.
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -70,22 +71,21 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiRouteEfficiencySuggestionsMaxIterations bounds the dispatcher's
-// tool-loop. The strategy is at most retrieve-then-query-then-answer
-// (with optional retries) — a hard ceiling of 6 is generous.
-// Mirrors aiSpeedProfileInsightsMaxIterations from slice 0022.
-const aiRouteEfficiencySuggestionsMaxIterations = 6
+// maxIterations bounds the dispatcher's tool-loop. The strategy is at
+// most retrieve-then-query-then-answer (with optional retries) — a hard
+// ceiling of 6 is generous.
+const maxIterations = 6
 
-// AIRouteEfficiencySuggestionsHandler is the HTTP handler for
-// POST /api/v1/ai/routes/{routeID}/efficiency/suggest.
+// Handler is the HTTP handler for POST /api/v1/ai/routes/{routeID}/efficiency/suggest.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIRouteEfficiencySuggestionsHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -93,10 +93,9 @@ type AIRouteEfficiencySuggestionsHandler struct {
 	maxIters   int
 }
 
-// NewAIRouteEfficiencySuggestionsHandler constructs the handler.
-// All non-pointer arguments are required; the constructor panics
-// on a nil so the wiring bug surfaces at boot, not at first
-// request.
+// NewHandler constructs the handler. All non-pointer arguments are
+// required; the constructor panics on a nil so the wiring bug surfaces
+// at boot, not at first request.
 //
 // registry:   AI provider registry (decorator chain already applied).
 // toolReg:    process-wide tool registry. MUST contain
@@ -107,26 +106,26 @@ type AIRouteEfficiencySuggestionsHandler struct {
 //
 // strat:      the route-efficiency-suggestions Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIRouteEfficiencySuggestionsHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIRouteEfficiencySuggestionsHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIRouteEfficiencySuggestionsHandler: nil provider.Registry")
+		panic("airouteeff: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIRouteEfficiencySuggestionsHandler: nil tools.Registry")
+		panic("airouteeff: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIRouteEfficiencySuggestionsHandler: nil strategy.Strategy")
+		panic("airouteeff: NewHandler: nil strategy.Strategy")
 	}
-	return &AIRouteEfficiencySuggestionsHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiRouteEfficiencySuggestionsMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -139,7 +138,7 @@ func NewAIRouteEfficiencySuggestionsHandler(
 //
 // routeID MUST be a positive integer; zero or negative values are
 // rejected with a 400. The integer is an OPAQUE anchor — see the
-// package doc-comment — but it must still be well-formed.
+// file-level comment — but it must still be well-formed.
 //
 // Kept distinct from parseSpeedProfileInsightsURL (slice 0022) so
 // a future per-feature change to one parser does not silently
@@ -148,16 +147,16 @@ func NewAIRouteEfficiencySuggestionsHandler(
 func parseRouteEfficiencySuggestionsURL(w http.ResponseWriter, r *http.Request) (int64, bool) {
 	raw := chi.URLParam(r, "routeID")
 	if raw == "" {
-		writeError(w, http.StatusBadRequest, "routeID URL parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "routeID URL parameter is required")
 		return 0, false
 	}
 	id, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("routeID must be a positive integer (got %q)", raw))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("routeID must be a positive integer (got %q)", raw))
 		return 0, false
 	}
 	if id <= 0 {
-		writeError(w, http.StatusBadRequest, "routeID must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "routeID must be > 0")
 		return 0, false
 	}
 	return id, true
@@ -168,7 +167,7 @@ func parseRouteEfficiencySuggestionsURL(w http.ResponseWriter, r *http.Request) 
 // via the dispatcher's deferred WriteDone. Every error path either
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIRouteEfficiencySuggestionsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate URL parameters. Body is intentionally
 	// ignored; this endpoint takes its only input from the URL.
 	routeID, ok := parseRouteEfficiencySuggestionsURL(w, r)
@@ -183,7 +182,7 @@ func (h *AIRouteEfficiencySuggestionsHandler) ServeHTTP(w http.ResponseWriter, r
 	// gracefully.
 	if _, err := h.registry.For(r.Context(), routeefficiencysuggestions.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai route-efficiency suggestions: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -202,7 +201,7 @@ func (h *AIRouteEfficiencySuggestionsHandler) ServeHTTP(w http.ResponseWriter, r
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(routeefficiencysuggestions.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai route-efficiency suggestions: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -263,6 +262,12 @@ func (h *AIRouteEfficiencySuggestionsHandler) ServeHTTP(w http.ResponseWriter, r
 	}
 }
 
-// Compile-time assertion: AIRouteEfficiencySuggestionsHandler
-// satisfies http.Handler.
-var _ http.Handler = (*AIRouteEfficiencySuggestionsHandler)(nil)
+// denyAllConfirm is the dispatcher's user-confirm hook. The strategy declares
+// only read-only tools, so this is never called in practice; if a future edit
+// accidentally adds a mutating tool, the dispatcher rejects it.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)

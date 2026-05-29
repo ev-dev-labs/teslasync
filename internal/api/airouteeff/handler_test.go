@@ -15,7 +15,7 @@
 // (`go run ./cmd/ai-eval -feature route-efficiency-suggestions`);
 // duplicating that here would require a live database fixture.
 
-package api
+package airouteeff
 
 import (
 	"context"
@@ -28,6 +28,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestRouteEfficiencySuggestionsAIOffShowsMetricsOnly is the
 // load-bearing off-mode contract proof for slice 0023. It mounts
@@ -126,23 +144,23 @@ func TestRouteEfficiencySuggestionsAIOffShowsMetricsOnly(t *testing.T) {
 	}
 }
 
-// TestAIRouteEfficiencySuggestionsHandler_PanicsOnNilWiring asserts
+// TestHandler_PanicsOnNilWiring asserts
 // the handler constructor refuses zero-valued dependencies. A
 // wiring bug at boot must surface as a panic, not as a nil-deref
 // on first request.
-func TestAIRouteEfficiencySuggestionsHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIRouteEfficiencySuggestionsHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIRouteEfficiencySuggestionsHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -150,7 +168,7 @@ func TestAIRouteEfficiencySuggestionsHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIRouteEfficiencySuggestionsHandler_RejectsBadRouteID
+// TestHandler_RejectsBadRouteID
 // asserts the handler validates the URL path parameter BEFORE
 // opening the SSE stream — a missing, non-numeric, zero, or
 // negative routeID must surface as a JSON 400, not a half-opened
@@ -159,10 +177,10 @@ func TestAIRouteEfficiencySuggestionsHandler_PanicsOnNilWiring(t *testing.T) {
 // We mount the parser branch directly via
 // parseRouteEfficiencySuggestionsURL so the test does not need to
 // construct a full handler with stub deps.
-// NewAIRouteEfficiencySuggestionsHandler panics on nil deps, and
+// NewHandler panics on nil deps, and
 // the parser runs BEFORE touching any of them, so we can inline
 // the parser without losing coverage.
-func TestAIRouteEfficiencySuggestionsHandler_RejectsBadRouteID(t *testing.T) {
+func TestHandler_RejectsBadRouteID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -199,10 +217,10 @@ func TestAIRouteEfficiencySuggestionsHandler_RejectsBadRouteID(t *testing.T) {
 	}
 }
 
-// TestAIRouteEfficiencySuggestionsHandler_AcceptsCanonicalRouteID
+// TestHandler_AcceptsCanonicalRouteID
 // proves the parser does NOT bounce the happy-path shapes — small
 // int, large int, max int64.
-func TestAIRouteEfficiencySuggestionsHandler_AcceptsCanonicalRouteID(t *testing.T) {
+func TestHandler_AcceptsCanonicalRouteID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
