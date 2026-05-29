@@ -15,7 +15,7 @@
 // (`go run ./cmd/ai-eval --feature charging-diagnosis`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aichargdiag
 
 import (
 	"context"
@@ -28,6 +28,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags is the
 // load-bearing off-mode contract proof for slice 0019. It mounts
@@ -128,23 +146,23 @@ func TestChargingDiagnosisAIOffShowsOnlyDeterministicFlags(t *testing.T) {
 	}
 }
 
-// TestAIChargingDiagnosisHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAIChargingDiagnosisHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIChargingDiagnosisHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIChargingDiagnosisHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -152,7 +170,7 @@ func TestAIChargingDiagnosisHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIChargingDiagnosisHandler_RejectsBadSessionID asserts the
+// TestHandler_RejectsBadSessionID asserts the
 // handler validates the URL path parameter BEFORE opening the
 // SSE stream — a missing, non-numeric, zero, or negative
 // sessionID must surface as a JSON 400, not a half-opened stream
@@ -160,10 +178,10 @@ func TestAIChargingDiagnosisHandler_PanicsOnNilWiring(t *testing.T) {
 //
 // We mount the parser branch directly via parseChargingDiagnosisURL
 // so the test does not need to construct a full handler with stub
-// deps. NewAIChargingDiagnosisHandler panics on nil deps, and the
+// deps. NewHandler panics on nil deps, and the
 // parser runs BEFORE touching any of them, so we can inline the
 // parser without losing coverage.
-func TestAIChargingDiagnosisHandler_RejectsBadSessionID(t *testing.T) {
+func TestHandler_RejectsBadSessionID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -200,10 +218,10 @@ func TestAIChargingDiagnosisHandler_RejectsBadSessionID(t *testing.T) {
 	}
 }
 
-// TestAIChargingDiagnosisHandler_AcceptsCanonicalSessionID proves
+// TestHandler_AcceptsCanonicalSessionID proves
 // the parser does NOT bounce the happy-path shapes — small int,
 // large int, max int64.
-func TestAIChargingDiagnosisHandler_AcceptsCanonicalSessionID(t *testing.T) {
+func TestHandler_AcceptsCanonicalSessionID(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
