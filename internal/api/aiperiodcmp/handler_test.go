@@ -15,10 +15,11 @@
 // (`go run ./cmd/ai-eval -feature period-compare-narration`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aiperiodcmp
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -29,6 +30,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestPeriodCompareNarrationAIOffShowsCardsOnly is the
 // load-bearing off-mode contract proof for slice 0040. It mounts
@@ -129,23 +148,23 @@ func TestPeriodCompareNarrationAIOffShowsCardsOnly(t *testing.T) {
 	}
 }
 
-// TestAIPeriodCompareNarrationHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAIPeriodCompareNarrationHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIPeriodCompareNarrationHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIPeriodCompareNarrationHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -153,12 +172,12 @@ func TestAIPeriodCompareNarrationHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIPeriodCompareNarrationHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the JSON body BEFORE opening the SSE stream
 // — a missing, unparseable, or out-of-range body must surface as
 // a JSON 400, not a half-opened stream that confuses the
 // frontend.
-func TestAIPeriodCompareNarrationHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -192,12 +211,12 @@ func TestAIPeriodCompareNarrationHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAIPeriodCompareNarrationHandler_AcceptsCanonicalBody proves
+// TestHandler_AcceptsCanonicalBody proves
 // the parser does NOT bounce the happy-path shapes. Includes a
 // vehicle-id-only shape (days defaults applied) AND
 // vehicle-id+days_a+days_b explicit, AND the explicit days=0
 // "all time" shape the SPA selectors emit.
-func TestAIPeriodCompareNarrationHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -237,30 +256,30 @@ func TestAIPeriodCompareNarrationHandler_AcceptsCanonicalBody(t *testing.T) {
 	}
 }
 
-// TestAIPeriodCompareSource_PanicsOnNilDB asserts the production
+// TestPeriodCompareSource_PanicsOnNilDB asserts the production
 // adapter constructor refuses a nil *database.DB — a wiring bug
 // at boot must surface as a panic, not as a nil-deref on first
 // AI request.
-func TestAIPeriodCompareSource_PanicsOnNilDB(t *testing.T) {
+func TestPeriodCompareSource_PanicsOnNilDB(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatalf("NewAIPeriodCompareSource(nil db) did not panic")
+			t.Fatalf("NewPeriodCompareSource(nil db) did not panic")
 		}
 	}()
-	NewAIPeriodCompareSource(nil)
+	NewPeriodCompareSource(nil)
 }
 
-// TestAIPeriodCompareSource_SatisfiesInterface is a compile-time +
+// TestPeriodCompareSource_SatisfiesInterface is a compile-time +
 // runtime assertion that the production adapter implements
 // forecast.PeriodComparator. The compile-time `var _` line in the
 // handler file gives the same guarantee, but this test fails with
 // a clear message if a future refactor accidentally narrows the
 // interface contract.
-func TestAIPeriodCompareSource_SatisfiesInterface(t *testing.T) {
+func TestPeriodCompareSource_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
-	var iface forecast.PeriodComparator = (*AIPeriodCompareSource)(nil)
+	var iface forecast.PeriodComparator = (*PeriodCompareSource)(nil)
 	if iface == nil {
-		t.Logf("AIPeriodCompareSource satisfies forecast.PeriodComparator (nil cast)")
+		t.Logf("PeriodCompareSource satisfies forecast.PeriodComparator (nil cast)")
 	}
 }

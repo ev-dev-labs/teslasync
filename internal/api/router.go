@@ -48,6 +48,7 @@ import (
 	ainldash "github.com/ev-dev-labs/teslasync/internal/api/ainldash"
 	ainlgrafana "github.com/ev-dev-labs/teslasync/internal/api/ainlgrafana"
 	ainlsql "github.com/ev-dev-labs/teslasync/internal/api/ainlsql"
+	aiperiodcmp "github.com/ev-dev-labs/teslasync/internal/api/aiperiodcmp"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -1389,13 +1390,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// envelope the chart on /period-compare (and its alias
 	// /analytics/compare) renders (no duplicated SQL).
 	forecast.RegisterPeriodCompareNarrationTools(aiToolRegistry, forecast.PeriodCompareNarrationSources{
-		Comparator: NewAIPeriodCompareSource(db),
+		Comparator: aiperiodcmp.NewPeriodCompareSource(db),
 	})
 	// period-compare-narration handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiPeriodCompareNarrationHandler := NewAIPeriodCompareNarrationHandler(
+	aiPeriodCompareNarrationHandler := aiperiodcmp.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		periodcomparenarration.New(),

@@ -1,4 +1,4 @@
-package api
+package aiperiodcmp
 
 // Phase-50 / 0040 — X1 Period compare narration.
 //
@@ -64,53 +64,54 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/forecast"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// aiPeriodCompareNarrationMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most query_period_compare → answer
 // (with optional retries). A hard ceiling of 8 is generous,
 // matching aiCostForecastNarrationMaxIterations.
-const aiPeriodCompareNarrationMaxIterations = 8
+const maxIterations = 8
 
-// aiPeriodCompareNarrationDefaultDaysA / DaysB are the default
+// defaultDaysA / DaysB are the default
 // trailing-day windows when the request body omits them. Mirrors
 // the SPA's PeriodComparePage selector defaults (Period A=30d,
 // Period B=90d). Kept as named constants so a future tuning lives
 // in one place rather than duplicated across the parser + the
 // tool's Execute default.
-const aiPeriodCompareNarrationDefaultDaysA = 30
-const aiPeriodCompareNarrationDefaultDaysB = 90
+const defaultDaysA = 30
+const defaultDaysB = 90
 
-// aiPeriodCompareNarrationMaxDays is the upper bound on the
+// maxDays is the upper bound on the
 // trailing-day window. Mirrors the canonical handler's lack of an
 // explicit cap (the SPA selectors top out at 365 + a "all time"
 // option which sends days=0); 3650 ≈ 10 years caps an LLM
 // nonsense value before any SQL runs.
-const aiPeriodCompareNarrationMaxDays = 3650
+const maxDays = 3650
 
-// aiPeriodCompareNarrationRequest is the JSON body shape this
+// request is the JSON body shape this
 // handler accepts. The shape mirrors the
 // /api/v1/analytics/period-stats?vehicle_id=&days= query-string
 // contract — vehicle_id is required, days_a / days_b are optional
 // — kept as a JSON body so the SPA can post from the same form
 // state the period-compare page already uses.
-type aiPeriodCompareNarrationRequest struct {
+type request struct {
 	VehicleID int64 `json:"vehicle_id"`
 	DaysA     int   `json:"days_a,omitempty"`
 	DaysB     int   `json:"days_b,omitempty"`
 }
 
-// AIPeriodCompareNarrationHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/analytics/period-compare/narrate.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AIPeriodCompareNarrationHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -118,7 +119,7 @@ type AIPeriodCompareNarrationHandler struct {
 	maxIters   int
 }
 
-// NewAIPeriodCompareNarrationHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -130,26 +131,26 @@ type AIPeriodCompareNarrationHandler struct {
 //
 // strat:      the period-compare-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIPeriodCompareNarrationHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIPeriodCompareNarrationHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIPeriodCompareNarrationHandler: nil provider.Registry")
+		panic("aiperiodcmp: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIPeriodCompareNarrationHandler: nil tools.Registry")
+		panic("aiperiodcmp: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIPeriodCompareNarrationHandler: nil strategy.Strategy")
+		panic("aiperiodcmp: NewHandler: nil strategy.Strategy")
 	}
-	return &AIPeriodCompareNarrationHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiPeriodCompareNarrationMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -160,11 +161,11 @@ func NewAIPeriodCompareNarrationHandler(
 // (req, ok) pair so the caller can early-return.
 //
 // The days_a / days_b fields default to
-// aiPeriodCompareNarrationDefaultDaysA / DaysB when omitted (or
+// defaultDaysA / DaysB when omitted (or
 // zero AND omitted; an explicit "0" means "all time" — mirrored
 // by the underlying ComputePeriodStats helper that drops the
 // date filter when days <= 0). The bound is [0,
-// aiPeriodCompareNarrationMaxDays] so an out-of-range value
+// maxDays] so an out-of-range value
 // lands as a 400 before any SSE stream is opened.
 //
 // Note on zero handling: because the SPA selectors include a
@@ -173,7 +174,7 @@ func NewAIPeriodCompareNarrationHandler(
 // backed approach: if the field is OMITTED entirely (raw bytes
 // don't include "days_a"), default to 30; if explicitly set to
 // 0, treat as "all time" and pass through.
-func parsePeriodCompareNarrationBody(w http.ResponseWriter, r *http.Request) (*aiPeriodCompareNarrationRequest, bool) {
+func parsePeriodCompareNarrationBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 	if r.Body == nil {
 		writeError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
@@ -191,9 +192,9 @@ func parsePeriodCompareNarrationBody(w http.ResponseWriter, r *http.Request) (*a
 		return nil, false
 	}
 
-	req := aiPeriodCompareNarrationRequest{
-		DaysA: aiPeriodCompareNarrationDefaultDaysA,
-		DaysB: aiPeriodCompareNarrationDefaultDaysB,
+	req := request{
+		DaysA: defaultDaysA,
+		DaysB: defaultDaysB,
 	}
 
 	if v, ok := raw["vehicle_id"]; ok {
@@ -231,12 +232,12 @@ func parsePeriodCompareNarrationBody(w http.ResponseWriter, r *http.Request) (*a
 		writeError(w, http.StatusBadRequest, "vehicle_id must be > 0")
 		return nil, false
 	}
-	if req.DaysA < 0 || req.DaysA > aiPeriodCompareNarrationMaxDays {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("days_a must be between 0 and %d", aiPeriodCompareNarrationMaxDays))
+	if req.DaysA < 0 || req.DaysA > maxDays {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("days_a must be between 0 and %d", maxDays))
 		return nil, false
 	}
-	if req.DaysB < 0 || req.DaysB > aiPeriodCompareNarrationMaxDays {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("days_b must be between 0 and %d", aiPeriodCompareNarrationMaxDays))
+	if req.DaysB < 0 || req.DaysB > maxDays {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("days_b must be between 0 and %d", maxDays))
 		return nil, false
 	}
 	return &req, true
@@ -247,7 +248,7 @@ func parsePeriodCompareNarrationBody(w http.ResponseWriter, r *http.Request) (*a
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has
 // been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIPeriodCompareNarrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
 	body, ok := parsePeriodCompareNarrationBody(w, r)
 	if !ok {
@@ -326,9 +327,9 @@ func (h *AIPeriodCompareNarrationHandler) ServeHTTP(w http.ResponseWriter, r *ht
 	}
 }
 
-// Compile-time assertion: AIPeriodCompareNarrationHandler
+// Compile-time assertion: Handler
 // satisfies http.Handler.
-var _ http.Handler = (*AIPeriodCompareNarrationHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -338,7 +339,7 @@ var _ http.Handler = (*AIPeriodCompareNarrationHandler)(nil)
 // pattern.
 // ---------------------------------------------------------------------
 
-// AIPeriodCompareSource is the production forecast.PeriodComparator.
+// PeriodCompareSource is the production forecast.PeriodComparator.
 // It delegates to the SHARED apiperiod.ComputePeriodStats helper that
 // also backs the canonical GET /api/v1/analytics/period-stats
 // handler so the AI narration is grounded in the SAME
@@ -352,18 +353,18 @@ var _ http.Handler = (*AIPeriodCompareNarrationHandler)(nil)
 //
 // The struct holds *database.DB; the constructor panics on a
 // nil so a wiring bug surfaces at boot.
-type AIPeriodCompareSource struct {
+type PeriodCompareSource struct {
 	db *database.DB
 }
 
-// NewAIPeriodCompareSource constructs the adapter. Panics on a
+// NewPeriodCompareSource constructs the adapter. Panics on a
 // nil *database.DB so a wiring mistake surfaces at boot rather
 // than as a nil-deref on first AI request.
-func NewAIPeriodCompareSource(db *database.DB) *AIPeriodCompareSource {
+func NewPeriodCompareSource(db *database.DB) *PeriodCompareSource {
 	if db == nil {
-		panic("api: NewAIPeriodCompareSource: nil *database.DB")
+		panic("aiperiodcmp: NewPeriodCompareSource: nil *database.DB")
 	}
-	return &AIPeriodCompareSource{db: db}
+	return &PeriodCompareSource{db: db}
 }
 
 // ComparePeriods implements forecast.PeriodComparator. Composes the
@@ -378,7 +379,7 @@ func NewAIPeriodCompareSource(db *database.DB) *AIPeriodCompareSource {
 // output into the typed [forecast.PeriodCompare] envelope the LLM
 // can quote, and computes the per-metric deltas via the shared
 // forecast.ComputePeriodCompareDeltas helper.
-func (a *AIPeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID int64, daysA, daysB int) (*forecast.PeriodCompare, error) {
+func (a *PeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID int64, daysA, daysB int) (*forecast.PeriodCompare, error) {
 	if vehicleID <= 0 {
 		return nil, errors.New("api ai period-compare-narration: vehicle_id must be > 0")
 	}
@@ -419,6 +420,14 @@ func (a *AIPeriodCompareSource) ComparePeriods(ctx context.Context, vehicleID in
 	}, nil
 }
 
-// Compile-time assertion: AIPeriodCompareSource satisfies
+// Compile-time assertion: PeriodCompareSource satisfies
 // forecast.PeriodComparator.
-var _ forecast.PeriodComparator = (*AIPeriodCompareSource)(nil)
+var _ forecast.PeriodComparator = (*PeriodCompareSource)(nil)
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
