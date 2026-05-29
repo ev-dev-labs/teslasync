@@ -1,4 +1,4 @@
-package api
+package aianomaly
 
 // Phase-50 / 0014 — U4 Anomaly explanation narration.
 //
@@ -38,6 +38,7 @@ package api
 //                         this slice.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -50,34 +51,35 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiAnomalyMaxIterations bounds the dispatcher's tool-loop. Anomaly
+// maxIterations bounds the dispatcher's tool-loop. Anomaly
 // narration is one-tool-call-then-answer; a hard ceiling of 4 is
 // generous for a model that occasionally retries the tool call once
 // before settling. Mirrors aiYearReviewMaxIterations from slice 0013.
-const aiAnomalyMaxIterations = 4
+const maxIterations = 4
 
-// aiAnomalyDefaultDays mirrors the baseline anomaly handler default
+// defaultDays mirrors the baseline anomaly handler default
 // (and the tools.queryAnomalyContext.defaultAnomalyDays). Kept here
 // as a separate const so the HTTP-input default is independently
 // readable from the tool default — a future change that shifts the
 // dashboard window won't silently shift the AI window.
-const aiAnomalyDefaultDays = 7
+const defaultDays = 7
 
-// aiAnomalyMaxDays is the upper bound that mirrors the tool's
+// maxDays is the upper bound that mirrors the tool's
 // validate tag (lte=30). HTTP-side validation bounces obvious bad
 // input (e.g. days=365) before we ever invoke the LLM.
-const aiAnomalyMaxDays = 30
+const maxDays = 30
 
-// AIAnomalyHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/anomalies/explain.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIAnomalyHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -85,7 +87,7 @@ type AIAnomalyHandler struct {
 	maxIters   int
 }
 
-// NewAIAnomalyHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -97,37 +99,37 @@ type AIAnomalyHandler struct {
 //
 // strat:      the anomaly-explanations Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIAnomalyHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIAnomalyHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIAnomalyHandler: nil provider.Registry")
+		panic("aianomaly: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIAnomalyHandler: nil tools.Registry")
+		panic("aianomaly: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIAnomalyHandler: nil strategy.Strategy")
+		panic("aianomaly: NewHandler: nil strategy.Strategy")
 	}
-	return &AIAnomalyHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiAnomalyMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// aiAnomalyRequest is the wire shape for
+// request is the wire shape for
 // POST /api/v1/ai/anomalies/explain.
 //
 // VehicleID is required and must be > 0. Days is optional; when
-// absent or zero, defaults to aiAnomalyDefaultDays. Days must be in
-// 1..aiAnomalyMaxDays when explicitly set, mirroring the tool's
+// absent or zero, defaults to defaultDays. Days must be in
+// 1..maxDays when explicitly set, mirroring the tool's
 // validate tag.
-type aiAnomalyRequest struct {
+type request struct {
 	VehicleID int64 `json:"vehicle_id"`
 	Days      int   `json:"days,omitempty"`
 }
@@ -137,9 +139,9 @@ type aiAnomalyRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIAnomalyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
-	var body aiAnomalyRequest
+	var body request
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -148,13 +150,13 @@ func (h *AIAnomalyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
 		return
 	}
-	if body.Days < 0 || body.Days > aiAnomalyMaxDays {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("days must be in 0..%d (0 = default)", aiAnomalyMaxDays))
+	if body.Days < 0 || body.Days > maxDays {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("days must be in 0..%d (0 = default)", maxDays))
 		return
 	}
 	days := body.Days
 	if days == 0 {
-		days = aiAnomalyDefaultDays
+		days = defaultDays
 	}
 
 	// 2) Resolve provider via the registry. Per-request resolution
@@ -232,5 +234,13 @@ func (h *AIAnomalyHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: AIAnomalyHandler satisfies http.Handler.
-var _ http.Handler = (*AIAnomalyHandler)(nil)
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}

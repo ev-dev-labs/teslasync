@@ -13,9 +13,10 @@
 // F6 eval harness (`go run ./cmd/ai-eval --feature anomaly-explanations`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aianomaly
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -27,6 +28,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestAnomalyDashboardAIOffUsesStaticExplanation is the load-bearing
 // off-mode contract proof for slice 0014. It mounts the AI anomaly
@@ -117,22 +136,22 @@ func TestAnomalyDashboardAIOffUsesStaticExplanation(t *testing.T) {
 	}
 }
 
-// TestAIAnomalyHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at boot
 // must surface as a panic, not as a nil-deref on first request.
-func TestAIAnomalyHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIAnomalyHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIAnomalyHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -140,16 +159,16 @@ func TestAIAnomalyHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIAnomalyHandler_RejectsBadInput asserts the handler validates
+// TestHandler_RejectsBadInput asserts the handler validates
 // the request body BEFORE opening the SSE stream — a missing or
 // non-positive vehicle_id (or out-of-range days) must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAIAnomalyHandler_RejectsBadInput(t *testing.T) {
+func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
 
 	// We mount the validator branch directly (mirrors slice 0013's
 	// approach) so the test does not need to construct a full
-	// handler with stub deps. NewAIAnomalyHandler panics on nil
+	// handler with stub deps. NewHandler panics on nil
 	// deps, and the validator runs BEFORE touching any of them, so
 	// we can inline the validator without losing coverage.
 	cases := []struct {
@@ -176,11 +195,11 @@ func TestAIAnomalyHandler_RejectsBadInput(t *testing.T) {
 	}
 }
 
-// TestAIAnomalyHandler_AcceptsCanonicalInput proves the validator
+// TestHandler_AcceptsCanonicalInput proves the validator
 // does NOT bounce the happy-path shapes — vehicle_id alone (days
 // defaults), vehicle_id + days at boundaries (1, 30), and the
 // in-range middle (7).
-func TestAIAnomalyHandler_AcceptsCanonicalInput(t *testing.T) {
+func TestHandler_AcceptsCanonicalInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []string{
@@ -202,10 +221,10 @@ func TestAIAnomalyHandler_AcceptsCanonicalInput(t *testing.T) {
 }
 
 // validateAnomalyOnly mirrors the pre-stream validator branch of
-// AIAnomalyHandler.ServeHTTP. Kept as a same-package helper so the
+// Handler.ServeHTTP. Kept as a same-package helper so the
 // test does not need to construct a full handler with stub deps.
 func validateAnomalyOnly(w http.ResponseWriter, r *http.Request) {
-	var body aiAnomalyRequest
+	var body request
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -214,8 +233,8 @@ func validateAnomalyOnly(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "vehicle_id is required and must be > 0")
 		return
 	}
-	if body.Days < 0 || body.Days > aiAnomalyMaxDays {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("days must be in 0..%d (0 = default)", aiAnomalyMaxDays))
+	if body.Days < 0 || body.Days > maxDays {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("days must be in 0..%d (0 = default)", maxDays))
 		return
 	}
 	w.WriteHeader(http.StatusOK)

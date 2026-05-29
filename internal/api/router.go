@@ -19,6 +19,7 @@ import (
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
 	aialert "github.com/ev-dev-labs/teslasync/internal/api/aialert"
 	aialerttune "github.com/ev-dev-labs/teslasync/internal/api/aialerttune"
+	aianomaly "github.com/ev-dev-labs/teslasync/internal/api/aianomaly"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -829,7 +830,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// One per process; stateless beyond constructor inputs. Must
 	// be constructed AFTER the tool registration above so the
 	// dispatcher can resolve the strategy's allowedTools at boot.
-	aiAnomalyHandler := NewAIAnomalyHandler(
+	aiAnomalyHandler := aianomaly.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		anomalyexplanations.New(),
