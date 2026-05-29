@@ -1,8 +1,8 @@
-package api
+package aitconar
 
 // Phase-50 / 0050 — M2 TCO narration.
 //
-// ai_tco_narration_handler.go implements the LLM-backed handler at
+// handler.go implements the LLM-backed handler at
 // POST /api/v1/ai/analytics/tco/narrate. The flow mirrors
 // ai_cost_forecast_narration_handler.go (same dispatch+stream
 // loop, no persistence — one-shot read-only narration):
@@ -62,35 +62,36 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
 
-// aiTCONarrationMaxIterations bounds the dispatcher's tool-loop.
+// tcoNarrationMaxIterations bounds the dispatcher's tool-loop.
 // The strategy is at most query_tco_summary → answer (with
 // optional retries). A hard ceiling of 8 is generous, matching
 // aiCostForecastNarrationMaxIterations / aiBatteryHealthMaxIterations.
-const aiTCONarrationMaxIterations = 8
+const tcoNarrationMaxIterations = 8
 
-// aiTCONarrationRequest is the JSON body shape this handler
+// tcoNarrationRequest is the JSON body shape this handler
 // accepts. The shape mirrors the
 // /api/v1/analytics/tco?vehicle_id= query-string contract —
 // vehicle_id is the ONLY required field. Kept as a JSON body so
 // the SPA can post from the same form state TrueCostPage already
 // uses.
-type aiTCONarrationRequest struct {
+type tcoNarrationRequest struct {
 	VehicleID int64 `json:"vehicle_id"`
 }
 
-// AITCONarrationHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/analytics/tco/narrate.
 //
 // Stateless beyond its constructor inputs; safe for concurrent
 // use across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once
 // at boot.
-type AITCONarrationHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -98,7 +99,7 @@ type AITCONarrationHandler struct {
 	maxIters   int
 }
 
-// NewAITCONarrationHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on
 // a nil so the wiring bug surfaces at boot, not at first
 // request.
@@ -111,41 +112,41 @@ type AITCONarrationHandler struct {
 //
 // strat:      the tco-narration Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAITCONarrationHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AITCONarrationHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAITCONarrationHandler: nil provider.Registry")
+		panic("aitconar: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAITCONarrationHandler: nil tools.Registry")
+		panic("aitconar: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAITCONarrationHandler: nil strategy.Strategy")
+		panic("aitconar: NewHandler: nil strategy.Strategy")
 	}
-	return &AITCONarrationHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiTCONarrationMaxIterations,
+		maxIters:   tcoNarrationMaxIterations,
 	}
 }
 
-// parseTCONarrationBody decodes + validates the JSON body.
+// parseNarrationBody decodes + validates the JSON body.
 // Pulled out so the validator-only test can exercise the same
 // parsing without constructing a full handler with stub deps.
 // The function writes a 400 on failure and returns the (req, ok)
 // pair so the caller can early-return.
-func parseTCONarrationBody(w http.ResponseWriter, r *http.Request) (*aiTCONarrationRequest, bool) {
+func parseNarrationBody(w http.ResponseWriter, r *http.Request) (*tcoNarrationRequest, bool) {
 	if r.Body == nil {
 		writeError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiTCONarrationRequest
+	var req tcoNarrationRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
@@ -164,9 +165,9 @@ func parseTCONarrationBody(w http.ResponseWriter, r *http.Request) (*aiTCONarrat
 // dispatcher's deferred WriteDone. Every error path either
 // writes a structured frame onto the SSE stream (when the writer
 // has been opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AITCONarrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
-	body, ok := parseTCONarrationBody(w, r)
+	body, ok := parseNarrationBody(w, r)
 	if !ok {
 		return
 	}
@@ -241,9 +242,17 @@ func (h *AITCONarrationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	}
 }
 
-// Compile-time assertion: AITCONarrationHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AITCONarrationHandler)(nil)
+var _ http.Handler = (*Handler)(nil)
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -252,8 +261,8 @@ var _ http.Handler = (*AITCONarrationHandler)(nil)
 // the cost-forecast-narration slice's AICostForecaster pattern.
 // ---------------------------------------------------------------------
 
-// AITCOSummarizer is the production lifetime.TCOSummarizer. It
-// delegates to the SHARED api.ComputeTCOSummary helper that
+// TCOSummarizer is the production lifetime.TCOSummarizer. It
+// delegates to the SHARED tco.ComputeTCOSummary helper that
 // also backs the canonical GET /api/v1/analytics/tco handler so
 // the AI narration is grounded in the SAME deterministic
 // envelope the chart on /tco renders. No new SQL is added by
@@ -268,22 +277,22 @@ var _ http.Handler = (*AITCONarrationHandler)(nil)
 //
 // The struct holds *database.DB; the constructor panics on a
 // nil so a wiring bug surfaces at boot.
-type AITCOSummarizer struct {
+type TCOSummarizer struct {
 	db *database.DB
 }
 
-// NewAITCOSummarizer constructs the adapter. Panics on a nil
+// NewTCOSummarizer constructs the adapter. Panics on a nil
 // *database.DB so a wiring mistake surfaces at boot rather than
 // as a nil-deref on first AI request.
-func NewAITCOSummarizer(db *database.DB) *AITCOSummarizer {
+func NewTCOSummarizer(db *database.DB) *TCOSummarizer {
 	if db == nil {
-		panic("api: NewAITCOSummarizer: nil *database.DB")
+		panic("aitconar: NewTCOSummarizer: nil *database.DB")
 	}
-	return &AITCOSummarizer{db: db}
+	return &TCOSummarizer{db: db}
 }
 
 // SummarizeTCO implements lifetime.TCOSummarizer. Composes the SAME
-// api.ComputeTCOSummary helper *TCOHandler.GetTCO uses so the
+// tco.ComputeTCOSummary helper *TCOHandler.GetTCO uses so the
 // returned envelope is numerically identical (modulo rounding)
 // to what GET /api/v1/analytics/tco produces — the AI surface
 // is grounded in the SAME deterministic model the chart
@@ -304,14 +313,14 @@ func NewAITCOSummarizer(db *database.DB) *AITCOSummarizer {
 // the row level. Surfacing a single currency for the aggregate
 // would require a separate query + assumption layer that lives
 // outside this slice.
-func (a *AITCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*lifetime.TCOSummary, error) {
+func (a *TCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*lifetime.TCOSummary, error) {
 	if vehicleID <= 0 {
-		return nil, errors.New("api ai tco-narration: vehicle_id must be > 0")
+		return nil, errors.New("aitconar: vehicle_id must be > 0")
 	}
 
 	summary, err := apitco.ComputeTCOSummary(ctx, a.db, vehicleID)
 	if err != nil {
-		return nil, fmt.Errorf("api ai tco-narration: ComputeTCOSummary: %w", err)
+		return nil, fmt.Errorf("aitconar: ComputeTCOSummary: %w", err)
 	}
 
 	monthly := make([]lifetime.TCOMonthlyEntry, 0, len(summary.MonthlyBreakdown))
@@ -355,6 +364,6 @@ func (a *AITCOSummarizer) SummarizeTCO(ctx context.Context, vehicleID int64) (*l
 	}, nil
 }
 
-// Compile-time assertion: AITCOSummarizer satisfies
+// Compile-time assertion: TCOSummarizer satisfies
 // lifetime.TCOSummarizer.
-var _ lifetime.TCOSummarizer = (*AITCOSummarizer)(nil)
+var _ lifetime.TCOSummarizer = (*TCOSummarizer)(nil)

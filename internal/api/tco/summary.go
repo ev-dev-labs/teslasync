@@ -11,7 +11,7 @@ package tco
 //   - the canonical GET /api/v1/analytics/tco handler (existing,
 //     consumed by the deterministic TrueCostPage chart), AND
 //   - the new AI surface POST /api/v1/ai/analytics/tco/narrate via the
-//     [lifetime.TCOSummarizer] adapter [AITCOSummarizer] (new).
+//     [lifetime.TCOSummarizer] adapter in package aitconar (new).
 //
 // Why extract instead of duplicating the SQL in the AI adapter:
 // duplicating ~80 lines of SQL + math would create a parity hazard —

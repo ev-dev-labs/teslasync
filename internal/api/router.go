@@ -62,6 +62,7 @@ import (
 	aispeedprof "github.com/ev-dev-labs/teslasync/internal/api/aispeedprof"
 	aisuggeo "github.com/ev-dev-labs/teslasync/internal/api/aisuggeo"
 	aiswupd "github.com/ev-dev-labs/teslasync/internal/api/aiswupd"
+	aitconar "github.com/ev-dev-labs/teslasync/internal/api/aitconar"
 	aitempimpact "github.com/ev-dev-labs/teslasync/internal/api/aitempimpact"
 	aitirepress "github.com/ev-dev-labs/teslasync/internal/api/aitirepress"
 	aitripplanllm "github.com/ev-dev-labs/teslasync/internal/api/aitripplanllm"
@@ -2382,18 +2383,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// strategy. Must be registered before the handler
 	// constructor below so the strategy's allowedTools resolve
 	// at boot. The TCOSummarizer adapter delegates to the same
-	// package-level api.ComputeTCOSummary helper that also
+	// package-level tco.ComputeTCOSummary helper that also
 	// backs the canonical GET /api/v1/analytics/tco handler —
 	// the AI narrator quotes the SAME deterministic envelope
 	// the chart renders (no duplicated SQL).
 	lifetime.RegisterTCONarrationTools(aiToolRegistry, lifetime.TCONarrationSources{
-		Summarizer: NewAITCOSummarizer(db),
+		Summarizer: aitconar.NewTCOSummarizer(db),
 	})
 	// tco-narration handler. One per process; stateless beyond
 	// constructor inputs. Must be constructed AFTER the tool
 	// registration above so the dispatcher can resolve the
 	// strategy's allowedTools at boot.
-	aiTCONarrationHandler := NewAITCONarrationHandler(
+	aiTCONarrationHandler := aitconar.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		tconarration.New(),

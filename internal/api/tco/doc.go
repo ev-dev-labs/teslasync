@@ -1,8 +1,8 @@
 // Package tco serves GET /api/v1/analytics/tco (the deterministic
 // True-Cost-of-Ownership endpoint consumed by the SPA's TrueCostPage
 // chart) AND exports the SHARED pure helper [ComputeTCOSummary] +
-// [TCOSummary] envelope that the AI narration adapter
-// (api.AITCOSummarizer in ai_tco_narration_handler.go) consumes.
+// [TCOSummary] envelope that the AI narration adapter in package
+// aitconar consumes.
 //
 // Wire-shape stability: the canonical /api/v1/analytics/tco JSON shape
 // is BYTE-IDENTICAL with the pre-refactor inline literal. A contract

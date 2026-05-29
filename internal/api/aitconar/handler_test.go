@@ -15,10 +15,11 @@
 // (`go run ./cmd/ai-eval -feature tco-narration`); duplicating
 // that here would require a live database fixture.
 
-package api
+package aitconar
 
 import (
 	"bytes"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -29,6 +30,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/lifetime"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestTCONarrationAIOffShowsChartsOnly is the load-bearing
 // off-mode contract proof for slice 0050. It mounts the AI
@@ -127,23 +146,23 @@ func TestTCONarrationAIOffShowsChartsOnly(t *testing.T) {
 	}
 }
 
-// TestAITCONarrationHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on
 // first request.
-func TestAITCONarrationHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAITCONarrationHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAITCONarrationHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -151,12 +170,12 @@ func TestAITCONarrationHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAITCONarrationHandler_RejectsBadBody asserts the handler
+// TestHandler_RejectsBadBody asserts the handler
 // validates the JSON body BEFORE opening the SSE stream — a
 // missing, unparseable, or out-of-range body must surface as a
 // JSON 400, not a half-opened stream that confuses the
 // frontend.
-func TestAITCONarrationHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -176,8 +195,8 @@ func TestAITCONarrationHandler_RejectsBadBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/analytics/tco/narrate", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			if body, ok := parseTCONarrationBody(rec, req); ok {
-				t.Fatalf("parseTCONarrationBody returned ok=true for %q (body=%+v)", tc.name, body)
+			if body, ok := parseNarrationBody(rec, req); ok {
+				t.Fatalf("parseNarrationBody returned ok=true for %q (body=%+v)", tc.name, body)
 			}
 			if rec.Code != http.StatusBadRequest {
 				t.Fatalf("status = %d, want 400 (body=%q)", rec.Code, rec.Body.String())
@@ -186,9 +205,9 @@ func TestAITCONarrationHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAITCONarrationHandler_AcceptsCanonicalBody proves the
+// TestHandler_AcceptsCanonicalBody proves the
 // parser does NOT bounce the happy-path shapes.
-func TestAITCONarrationHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -206,12 +225,12 @@ func TestAITCONarrationHandler_AcceptsCanonicalBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/analytics/tco/narrate", bytes.NewBufferString(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			body, ok := parseTCONarrationBody(rec, req)
+			body, ok := parseNarrationBody(rec, req)
 			if !ok {
-				t.Fatalf("parseTCONarrationBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
+				t.Fatalf("parseNarrationBody returned ok=false for %q (status=%d, body=%q)", tc.name, rec.Code, rec.Body.String())
 			}
 			if body == nil {
-				t.Fatalf("parseTCONarrationBody returned ok=true but nil body for %q", tc.name)
+				t.Fatalf("parseNarrationBody returned ok=true but nil body for %q", tc.name)
 			}
 			if body.VehicleID != tc.wantVehicle {
 				t.Errorf("body.VehicleID = %d, want %d", body.VehicleID, tc.wantVehicle)
@@ -220,30 +239,30 @@ func TestAITCONarrationHandler_AcceptsCanonicalBody(t *testing.T) {
 	}
 }
 
-// TestAITCOSummarizer_PanicsOnNilDB asserts the production
+// TestTCOSummarizer_PanicsOnNilDB asserts the production
 // adapter constructor refuses a nil *database.DB — a wiring bug
 // at boot must surface as a panic, not as a nil-deref on first
 // AI request.
-func TestAITCOSummarizer_PanicsOnNilDB(t *testing.T) {
+func TestTCOSummarizer_PanicsOnNilDB(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Fatalf("NewAITCOSummarizer(nil db) did not panic")
+			t.Fatalf("NewTCOSummarizer(nil db) did not panic")
 		}
 	}()
-	NewAITCOSummarizer(nil)
+	NewTCOSummarizer(nil)
 }
 
-// TestAITCOSummarizer_SatisfiesInterface is a compile-time +
+// TestTCOSummarizer_SatisfiesInterface is a compile-time +
 // runtime assertion that the production adapter implements
 // lifetime.TCOSummarizer. The compile-time `var _` line in the
 // handler file gives the same guarantee, but this test fails
 // with a clear message if a future refactor accidentally narrows
 // the interface contract.
-func TestAITCOSummarizer_SatisfiesInterface(t *testing.T) {
+func TestTCOSummarizer_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
-	var iface lifetime.TCOSummarizer = (*AITCOSummarizer)(nil)
+	var iface lifetime.TCOSummarizer = (*TCOSummarizer)(nil)
 	if iface == nil {
-		t.Logf("AITCOSummarizer satisfies lifetime.TCOSummarizer (nil cast)")
+		t.Logf("TCOSummarizer satisfies lifetime.TCOSummarizer (nil cast)")
 	}
 }
