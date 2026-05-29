@@ -35,6 +35,7 @@ import (
 	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
 	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
+	apidevtools "github.com/ev-dev-labs/teslasync/internal/api/devtools"
 	apidiag "github.com/ev-dev-labs/teslasync/internal/api/diagnostic"
 	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
 	apidrived "github.com/ev-dev-labs/teslasync/internal/api/drivediagnostic"
@@ -650,10 +651,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	notificationHandler := apinotif.NewHandler(db)
 	notificationChannelHandler := apinotif.NewChannelHandler(db)
 	notifScheduleHandler := apinotif.NewScheduleHandler(db)
-	// Wire the dynamic outbound-sink lookup into the carved notification
-	// subpackage so Discord/Slack/Telegram/Webhook/Ntfy/Pushover adapters
-	// keep recording to api_call_logs through SetOutboundSink hot-reloads.
+	// Wire the dynamic outbound-sink lookup into carved subpackages so
+	// notification adapters and devtools probes keep recording to api_call_logs
+	// through SetOutboundSink hot-reloads.
 	apinotif.SinkProvider = currentOutboundSink
+	apidevtools.SinkProvider = currentOutboundSink
 	quietHoursHandler := apiquiet.NewHandler(quiethoursdb.NewQuietHoursRepo(db), cfg)
 	chatbotHandler := NewChatbotHandler(db, vehicleSvc, stateReader, liveStateReader)
 
@@ -1953,12 +1955,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		st.SetChargeStateReader(stateReader)
 		st.SetDriveStateReader(stateReader)
 	}
-	devToolsHandler := NewDevToolsHandler(teslaClient, WithDB(db), WithMQTTClient(mqttClient), WithConfig(cfg), WithSignalStore(opt.SignalStore))
-	if opt.CacheStore != nil {
-		if rdb := opt.CacheStore.Underlying(); rdb != nil {
-			devToolsHandler.redisCache = signal.NewRedisSignalCache(rdb)
-		}
-	}
+	devToolsHandler := apidevtools.NewDevToolsHandler(teslaClient,
+		apidevtools.WithDB(db),
+		apidevtools.WithMQTTClient(mqttClient),
+		apidevtools.WithConfig(cfg),
+		apidevtools.WithRedisSignalCache(redisSignalCache),
+		apidevtools.WithSignalStore(opt.SignalStore),
+	)
 
 	// Wire telemetry handler into vehicle handler for streaming-aware state
 	vehicleHandler.SetTelemetrySource(telemetryHandler)

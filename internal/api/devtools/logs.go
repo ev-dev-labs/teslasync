@@ -1,4 +1,4 @@
-package api
+package devtools
 
 // ---------------------------------------------------------------------------
 // DevTools log inspection / api-log endpoints
@@ -13,10 +13,10 @@ package api
 // This file is created so that any future devtools endpoint that surfaces
 // in-process log buffers, captured api-log rows, or structured log replays
 // has a single well-known home instead of accreting back into
-// devtools_handler.go.
+// handler.go.
 //
 // Mechanical-only contract for Phase 37 prompt 29: this split must not add or
-// remove any exported identifiers from the api package. Adding new log
+// remove any exported identifiers from the devtools package. Adding new log
 // endpoints would add identifiers and would be rejected by the gate's exports
 // invariant check, so new endpoints are deferred to a follow-up phase that
 // explicitly allows the change.

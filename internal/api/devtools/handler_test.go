@@ -3,7 +3,7 @@
 // branches the Redis Signal Viewer's structured empty-state diagnostic
 // depends on (mode-local, hybrid+L1-only, hybrid+populated, missing
 // vehicle_id, no Redis cache wired).
-package api
+package devtools
 
 import (
 	"context"

@@ -1,4 +1,4 @@
-package api
+package devtools
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
@@ -31,6 +32,18 @@ import (
 
 // devToolsStartTime records when this process started, for uptime calculation.
 var devToolsStartTime = time.Now()
+
+// SinkProvider is wired by the parent API package so devtools outbound probes
+// use the most recently configured api_call_logs sink. The nil default keeps
+// package tests and early boot paths no-op.
+var SinkProvider func() httputil.APICallSink
+
+func currentSink() httputil.APICallSink {
+	if SinkProvider == nil {
+		return nil
+	}
+	return SinkProvider()
+}
 
 // DevToolsHandler provides developer utilities for Tesla Fleet API setup.
 type DevToolsHandler struct {
@@ -95,7 +108,7 @@ func NewDevToolsHandler(tc *tesla.Client, opts ...DevToolsOption) *DevToolsHandl
 // DetectRegion calls the Tesla Fleet API to detect the user's region.
 func (h *DevToolsHandler) DetectRegion(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected. Please authenticate first.")
+		httpx.WriteError(w, http.StatusPreconditionFailed, "Tesla account not connected. Please authenticate first.")
 		return
 	}
 
@@ -117,7 +130,7 @@ func (h *DevToolsHandler) RegisterPartner(w http.ResponseWriter, r *http.Request
 		Domain string `json:"domain"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Domain == "" {
-		writeError(w, http.StatusBadRequest, "domain is required")
+		httpx.WriteError(w, http.StatusBadRequest, "domain is required")
 		return
 	}
 
@@ -125,7 +138,7 @@ func (h *DevToolsHandler) RegisterPartner(w http.ResponseWriter, r *http.Request
 	partnerToken, err := h.teslaClient.GetPartnerToken(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("failed to get partner token")
-		writeJSON(w, http.StatusBadGateway, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusBadGateway, map[string]interface{}{
 			"error":   "Failed to obtain partner token",
 			"details": err.Error(),
 		})
@@ -153,7 +166,7 @@ func (h *DevToolsHandler) RegisterPartner(w http.ResponseWriter, r *http.Request
 		if status == 0 {
 			status = http.StatusBadGateway
 		}
-		writeJSON(w, status, map[string]interface{}{
+		httpx.WriteJSON(w, status, map[string]interface{}{
 			"error":         errMsg,
 			"details":       details,
 			"partner_token": partnerToken != "",
@@ -167,7 +180,7 @@ func (h *DevToolsHandler) RegisterPartner(w http.ResponseWriter, r *http.Request
 func (h *DevToolsHandler) PartnerPublicKey(w http.ResponseWriter, r *http.Request) {
 	domain := strings.TrimSpace(r.URL.Query().Get("domain"))
 	if domain == "" {
-		writeError(w, http.StatusBadRequest, "domain query parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "domain query parameter is required")
 		return
 	}
 
@@ -225,7 +238,7 @@ func (h *DevToolsHandler) PartnerPublicKey(w http.ResponseWriter, r *http.Reques
 		if status == 0 {
 			status = http.StatusBadGateway
 		}
-		writeJSON(w, status, map[string]interface{}{
+		httpx.WriteJSON(w, status, map[string]interface{}{
 			"error":       errMsg,
 			"details":     details,
 			"status_code": status,
@@ -235,7 +248,7 @@ func (h *DevToolsHandler) PartnerPublicKey(w http.ResponseWriter, r *http.Reques
 
 // FleetAPIInfo returns current Fleet API configuration details.
 func (h *DevToolsHandler) FleetAPIInfo(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"base_url":        h.teslaClient.BaseURL(),
 		"client_id":       h.teslaClient.ClientID(),
 		"has_valid_token": h.teslaClient.HasValidToken(),
@@ -261,7 +274,7 @@ func (h *DevToolsHandler) TestAPIConnectivity(w http.ResponseWriter, r *http.Req
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, baseURL, nil)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to build request: "+err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to build request: "+err.Error())
 		return
 	}
 
@@ -272,14 +285,14 @@ func (h *DevToolsHandler) TestAPIConnectivity(w http.ResponseWriter, r *http.Req
 	probeClient := httputil.NewClient(httputil.ClientConfig{
 		Name:          "devtools-tile-probe",
 		Timeout:       10 * time.Second,
-		Sink:          currentOutboundSink(),
+		Sink:          currentSink(),
 		EnableLogging: true,
 	})
 	resp, err := probeClient.Do(req)
 	latency := time.Since(start)
 
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"reachable":  false,
 			"base_url":   baseURL,
 			"error":      err.Error(),
@@ -289,7 +302,7 @@ func (h *DevToolsHandler) TestAPIConnectivity(w http.ResponseWriter, r *http.Req
 	}
 	defer resp.Body.Close()
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"reachable":   true,
 		"base_url":    baseURL,
 		"status_code": resp.StatusCode,
@@ -302,7 +315,7 @@ func (h *DevToolsHandler) TestAPIConnectivity(w http.ResponseWriter, r *http.Req
 func (h *DevToolsHandler) TokenInfo(w http.ResponseWriter, r *http.Request) {
 	valid := h.teslaClient.HasValidToken()
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"has_valid_token": valid,
 		"client_id":       h.teslaClient.ClientID(),
 	})
@@ -315,13 +328,13 @@ func (h *DevToolsHandler) TokenInfo(w http.ResponseWriter, r *http.Request) {
 // MQTTTest publishes a test message and reports MQTT connectivity status.
 func (h *DevToolsHandler) MQTTTest(w http.ResponseWriter, r *http.Request) {
 	if h.mqttClient == nil {
-		writeError(w, http.StatusServiceUnavailable, "MQTT client not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "MQTT client not configured")
 		return
 	}
 
 	connected := h.mqttClient.IsConnected()
 	if !connected {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"connected": false,
 			"message":   "MQTT client is not connected",
 		})
@@ -332,7 +345,7 @@ func (h *DevToolsHandler) MQTTTest(w http.ResponseWriter, r *http.Request) {
 	payload := fmt.Sprintf(`{"timestamp":"%s","source":"dev-tools"}`, time.Now().UTC().Format(time.RFC3339))
 	h.mqttClient.Publish(topic, payload)
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"connected": true,
 		"topic":     topic,
 		"payload":   payload,
@@ -377,7 +390,7 @@ func (h *DevToolsHandler) EnvCheck(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"variables":   vars,
 		"total":       len(requiredEnvVars),
 		"set_count":   setCount,
@@ -392,7 +405,7 @@ func (h *DevToolsHandler) RuntimeInfo(w http.ResponseWriter, r *http.Request) {
 
 	poolStats := h.db.Pool.Stat()
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"go_version":     runtime.Version(),
 		"goroutines":     runtime.NumGoroutine(),
 		"gomaxprocs":     runtime.GOMAXPROCS(0),
@@ -421,21 +434,21 @@ func (h *DevToolsHandler) RuntimeInfo(w http.ResponseWriter, r *http.Request) {
 // and returns the private key ONE TIME (never stored).
 func (h *DevToolsHandler) GenerateKeypair(w http.ResponseWriter, r *http.Request) {
 	if h.db == nil {
-		writeError(w, http.StatusInternalServerError, "database not available")
+		httpx.WriteError(w, http.StatusInternalServerError, "database not available")
 		return
 	}
 
 	// Generate ECDSA P-256 key
 	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to generate keypair")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to generate keypair")
 		return
 	}
 
 	// Encode private key to PEM
 	privBytes, err := x509.MarshalECPrivateKey(privateKey)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to marshal private key")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to marshal private key")
 		return
 	}
 	privPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
@@ -443,7 +456,7 @@ func (h *DevToolsHandler) GenerateKeypair(w http.ResponseWriter, r *http.Request
 	// Encode public key to PEM
 	pubBytes, err := x509.MarshalPKIXPublicKey(&privateKey.PublicKey)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to marshal public key")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to marshal public key")
 		return
 	}
 	pubPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: pubBytes})
@@ -459,13 +472,13 @@ func (h *DevToolsHandler) GenerateKeypair(w http.ResponseWriter, r *http.Request
 		 ON CONFLICT (id) DO UPDATE SET public_key_pem = $1, fingerprint = $2, created_at = NOW()`,
 		string(pubPEM), fingerprint)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to store public key: "+err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to store public key: "+err.Error())
 		return
 	}
 
 	log.Info().Str("fingerprint", fingerprint).Msg("generated new Tesla keypair")
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"private_key_pem": string(privPEM),
 		"public_key_pem":  string(pubPEM),
 		"fingerprint":     fingerprint,
@@ -476,7 +489,7 @@ func (h *DevToolsHandler) GenerateKeypair(w http.ResponseWriter, r *http.Request
 // UploadPublicKey accepts a PEM-encoded public key and stores it.
 func (h *DevToolsHandler) UploadPublicKey(w http.ResponseWriter, r *http.Request) {
 	if h.db == nil {
-		writeError(w, http.StatusInternalServerError, "database not available")
+		httpx.WriteError(w, http.StatusInternalServerError, "database not available")
 		return
 	}
 
@@ -484,25 +497,25 @@ func (h *DevToolsHandler) UploadPublicKey(w http.ResponseWriter, r *http.Request
 		PublicKeyPEM string `json:"public_key_pem"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.PublicKeyPEM == "" {
-		writeError(w, http.StatusBadRequest, "public_key_pem is required")
+		httpx.WriteError(w, http.StatusBadRequest, "public_key_pem is required")
 		return
 	}
 
 	// Validate it's a valid PEM public key
 	block, _ := pem.Decode([]byte(req.PublicKeyPEM))
 	if block == nil {
-		writeError(w, http.StatusBadRequest, "invalid PEM format")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid PEM format")
 		return
 	}
 	pubKey, err := x509.ParsePKIXPublicKey(block.Bytes)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "invalid public key: "+err.Error())
+		httpx.WriteError(w, http.StatusBadRequest, "invalid public key: "+err.Error())
 		return
 	}
 
 	// Verify it's an EC key
 	if _, ok := pubKey.(*ecdsa.PublicKey); !ok {
-		writeError(w, http.StatusBadRequest, "key must be an ECDSA public key (P-256)")
+		httpx.WriteError(w, http.StatusBadRequest, "key must be an ECDSA public key (P-256)")
 		return
 	}
 
@@ -516,13 +529,13 @@ func (h *DevToolsHandler) UploadPublicKey(w http.ResponseWriter, r *http.Request
 		 ON CONFLICT (id) DO UPDATE SET public_key_pem = $1, fingerprint = $2, created_at = NOW()`,
 		req.PublicKeyPEM, fingerprint)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to store public key")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to store public key")
 		return
 	}
 
 	log.Info().Str("fingerprint", fingerprint).Msg("uploaded Tesla public key")
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"status":      "stored",
 		"fingerprint": fingerprint,
 	})
@@ -531,7 +544,7 @@ func (h *DevToolsHandler) UploadPublicKey(w http.ResponseWriter, r *http.Request
 // PublicKeyStatus returns the current public key status.
 func (h *DevToolsHandler) PublicKeyStatus(w http.ResponseWriter, r *http.Request) {
 	if h.db == nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{"configured": false})
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"configured": false})
 		return
 	}
 
@@ -542,14 +555,14 @@ func (h *DevToolsHandler) PublicKeyStatus(w http.ResponseWriter, r *http.Request
 	).Scan(&pubPEM, &fingerprint, &createdAt)
 
 	if err != nil {
-		writeJSON(w, http.StatusOK, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 			"configured":      false,
 			"well_known_path": "/.well-known/appspecific/com.tesla.3p.public-key.pem",
 		})
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"configured":      true,
 		"fingerprint":     fingerprint,
 		"created_at":      createdAt,
@@ -561,18 +574,18 @@ func (h *DevToolsHandler) PublicKeyStatus(w http.ResponseWriter, r *http.Request
 // DeletePublicKey removes the stored public key.
 func (h *DevToolsHandler) DeletePublicKey(w http.ResponseWriter, r *http.Request) {
 	if h.db == nil {
-		writeError(w, http.StatusInternalServerError, "database not available")
+		httpx.WriteError(w, http.StatusInternalServerError, "database not available")
 		return
 	}
 
 	_, err := h.db.Pool.Exec(r.Context(), `DELETE FROM tesla_public_key WHERE id = 1`)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to delete public key")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete public key")
 		return
 	}
 
 	log.Info().Msg("deleted Tesla public key")
-	writeJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted"})
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{"status": "deleted"})
 }
 
 // ServePublicKey serves the PEM at the Tesla-required .well-known path.
@@ -600,11 +613,11 @@ func (h *DevToolsHandler) ServePublicKey(w http.ResponseWriter, r *http.Request)
 // PairVehicleKey pairs the stored public key with a vehicle for command signing.
 func (h *DevToolsHandler) PairVehicleKey(w http.ResponseWriter, r *http.Request) {
 	if h.db == nil {
-		writeError(w, http.StatusInternalServerError, "database not available")
+		httpx.WriteError(w, http.StatusInternalServerError, "database not available")
 		return
 	}
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		httpx.WriteError(w, http.StatusPreconditionFailed, "Tesla account not connected")
 		return
 	}
 
@@ -612,7 +625,7 @@ func (h *DevToolsHandler) PairVehicleKey(w http.ResponseWriter, r *http.Request)
 		VIN string `json:"vin"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.VIN == "" {
-		writeError(w, http.StatusBadRequest, "vin is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vin is required")
 		return
 	}
 
@@ -622,7 +635,7 @@ func (h *DevToolsHandler) PairVehicleKey(w http.ResponseWriter, r *http.Request)
 		`SELECT public_key_pem FROM tesla_public_key WHERE id = 1`,
 	).Scan(&pubPEM)
 	if err != nil {
-		writeError(w, http.StatusPreconditionFailed, "no public key configured — generate one in Dev Tools first")
+		httpx.WriteError(w, http.StatusPreconditionFailed, "no public key configured — generate one in Dev Tools first")
 		return
 	}
 
@@ -698,7 +711,7 @@ func isJSON(data []byte) bool {
 // POST /api/v1/dev-tools/fleet-telemetry-subscribe
 func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		httpx.WriteError(w, http.StatusPreconditionFailed, "Tesla account not connected")
 		return
 	}
 
@@ -712,11 +725,11 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		FieldIntervals map[string]int `json:"field_intervals"` // per-signal interval overrides
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	if len(req.VINs) == 0 {
-		writeError(w, http.StatusBadRequest, "at least one VIN is required")
+		httpx.WriteError(w, http.StatusBadRequest, "at least one VIN is required")
 		return
 	}
 	if req.Hostname == "" {
@@ -724,7 +737,7 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		if h.cfg != nil && h.cfg.FleetTelemetry.Host != "" {
 			req.Hostname = h.cfg.FleetTelemetry.Host
 		} else {
-			writeError(w, http.StatusBadRequest, "hostname is required (or set FLEET_TELEMETRY_HOST)")
+			httpx.WriteError(w, http.StatusBadRequest, "hostname is required (or set FLEET_TELEMETRY_HOST)")
 			return
 		}
 	}
@@ -814,7 +827,7 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 		if status == 0 {
 			status = http.StatusBadGateway
 		}
-		writeJSON(w, status, map[string]interface{}{
+		httpx.WriteJSON(w, status, map[string]interface{}{
 			"error":   errMsg,
 			"details": details,
 		})
@@ -825,13 +838,13 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 // GET /api/v1/dev-tools/fleet-telemetry-config?vin=...
 func (h *DevToolsHandler) FleetTelemetryGetConfig(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		httpx.WriteError(w, http.StatusPreconditionFailed, "Tesla account not connected")
 		return
 	}
 
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
-		writeError(w, http.StatusBadRequest, "vin query parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vin query parameter is required")
 		return
 	}
 
@@ -845,7 +858,7 @@ func (h *DevToolsHandler) FleetTelemetryGetConfig(w http.ResponseWriter, r *http
 		w.WriteHeader(status)
 		w.Write(data)
 	} else {
-		writeJSON(w, http.StatusBadGateway, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusBadGateway, map[string]interface{}{
 			"error":   "Failed to fetch fleet telemetry config",
 			"details": errStringOrDefault(err, "non-JSON response from Tesla"),
 		})
@@ -856,13 +869,13 @@ func (h *DevToolsHandler) FleetTelemetryGetConfig(w http.ResponseWriter, r *http
 // DELETE /api/v1/dev-tools/fleet-telemetry-config?vin=...
 func (h *DevToolsHandler) FleetTelemetryDeleteConfig(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		httpx.WriteError(w, http.StatusPreconditionFailed, "Tesla account not connected")
 		return
 	}
 
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
-		writeError(w, http.StatusBadRequest, "vin query parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vin query parameter is required")
 		return
 	}
 
@@ -876,7 +889,7 @@ func (h *DevToolsHandler) FleetTelemetryDeleteConfig(w http.ResponseWriter, r *h
 		w.WriteHeader(status)
 		w.Write(data)
 	} else {
-		writeJSON(w, http.StatusBadGateway, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusBadGateway, map[string]interface{}{
 			"error":   "Failed to delete fleet telemetry config",
 			"details": errStringOrDefault(err, "non-JSON response from Tesla"),
 		})
@@ -887,13 +900,13 @@ func (h *DevToolsHandler) FleetTelemetryDeleteConfig(w http.ResponseWriter, r *h
 // GET /api/v1/dev-tools/fleet-telemetry-errors?vin=...
 func (h *DevToolsHandler) FleetTelemetryErrors(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		httpx.WriteError(w, http.StatusPreconditionFailed, "Tesla account not connected")
 		return
 	}
 
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
-		writeError(w, http.StatusBadRequest, "vin query parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vin query parameter is required")
 		return
 	}
 
@@ -907,7 +920,7 @@ func (h *DevToolsHandler) FleetTelemetryErrors(w http.ResponseWriter, r *http.Re
 		w.WriteHeader(status)
 		w.Write(data)
 	} else {
-		writeJSON(w, http.StatusBadGateway, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusBadGateway, map[string]interface{}{
 			"error":   "Failed to fetch fleet telemetry errors",
 			"details": errStringOrDefault(err, "non-JSON response from Tesla"),
 		})
@@ -918,7 +931,7 @@ func (h *DevToolsHandler) FleetTelemetryErrors(w http.ResponseWriter, r *http.Re
 // POST /api/v1/dev-tools/fleet-status
 func (h *DevToolsHandler) FleetStatus(w http.ResponseWriter, r *http.Request) {
 	if !h.teslaClient.HasValidToken() {
-		writeError(w, http.StatusPreconditionFailed, "Tesla account not connected")
+		httpx.WriteError(w, http.StatusPreconditionFailed, "Tesla account not connected")
 		return
 	}
 
@@ -926,7 +939,7 @@ func (h *DevToolsHandler) FleetStatus(w http.ResponseWriter, r *http.Request) {
 		VINs []string `json:"vins"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || len(req.VINs) == 0 {
-		writeError(w, http.StatusBadRequest, "vins array is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vins array is required")
 		return
 	}
 
@@ -940,7 +953,7 @@ func (h *DevToolsHandler) FleetStatus(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(status)
 		w.Write(data)
 	} else {
-		writeJSON(w, http.StatusBadGateway, map[string]interface{}{
+		httpx.WriteJSON(w, http.StatusBadGateway, map[string]interface{}{
 			"error":   "Failed to fetch fleet status",
 			"details": errStringOrDefault(err, "non-JSON response from Tesla"),
 		})
@@ -951,7 +964,7 @@ func (h *DevToolsHandler) FleetStatus(w http.ResponseWriter, r *http.Request) {
 func (h *DevToolsHandler) NearbyChargingSites(w http.ResponseWriter, r *http.Request) {
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
-		writeError(w, http.StatusBadRequest, "vin is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vin is required")
 		return
 	}
 	data, status, err := h.teslaClient.GetNearbyChargingSites(r.Context(), vin)
@@ -969,7 +982,7 @@ func (h *DevToolsHandler) NearbyChargingSites(w http.ResponseWriter, r *http.Req
 func (h *DevToolsHandler) ReleaseNotes(w http.ResponseWriter, r *http.Request) {
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
-		writeError(w, http.StatusBadRequest, "vin is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vin is required")
 		return
 	}
 	data, status, err := h.teslaClient.GetReleaseNotes(r.Context(), vin)
@@ -987,7 +1000,7 @@ func (h *DevToolsHandler) ReleaseNotes(w http.ResponseWriter, r *http.Request) {
 func (h *DevToolsHandler) RecentAlerts(w http.ResponseWriter, r *http.Request) {
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
-		writeError(w, http.StatusBadRequest, "vin is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vin is required")
 		return
 	}
 	data, status, err := h.teslaClient.GetRecentAlerts(r.Context(), vin)
@@ -1005,7 +1018,7 @@ func (h *DevToolsHandler) RecentAlerts(w http.ResponseWriter, r *http.Request) {
 func (h *DevToolsHandler) ServiceData(w http.ResponseWriter, r *http.Request) {
 	vin := r.URL.Query().Get("vin")
 	if vin == "" {
-		writeError(w, http.StatusBadRequest, "vin is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vin is required")
 		return
 	}
 	data, status, err := h.teslaClient.GetServiceData(r.Context(), vin)
@@ -1048,18 +1061,18 @@ type redisSignalsMeta struct {
 // GET /api/v1/dev-tools/redis-signals?vehicle_id=X
 func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
 	if h.redisCache == nil {
-		writeError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
 		return
 	}
 
 	vidStr := r.URL.Query().Get("vehicle_id")
 	if vidStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vidStr, 10, 64)
 	if err != nil || vehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 		return
 	}
 
@@ -1069,7 +1082,7 @@ func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
 	signals, err := h.redisCache.GetAll(ctx, vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: GetAll failed")
-		writeError(w, http.StatusServiceUnavailable, "Redis is unreachable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis is unreachable")
 		return
 	}
 
@@ -1134,7 +1147,7 @@ func (h *DevToolsHandler) RedisSignals(w http.ResponseWriter, r *http.Request) {
 		result[name] = signalEntry{Value: val, Type: sType}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id":   vehicleID,
 		"signal_count": len(result),
 		"signals":      result,
@@ -1175,7 +1188,7 @@ func newestRedisSignalTime(values map[string]*signal.Value) time.Time {
 // GET /api/v1/dev-tools/redis-signals/keys?limit=50
 func (h *DevToolsHandler) RedisSignalKeys(w http.ResponseWriter, r *http.Request) {
 	if h.redisCache == nil {
-		writeError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
 		return
 	}
 
@@ -1189,7 +1202,7 @@ func (h *DevToolsHandler) RedisSignalKeys(w http.ResponseWriter, r *http.Request
 	ids, err := h.redisCache.ScanVehicleKeys(r.Context(), limit)
 	if err != nil {
 		log.Error().Err(err).Msg("redis signal cache: ScanVehicleKeys failed")
-		writeError(w, http.StatusServiceUnavailable, "Redis is unreachable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis is unreachable")
 		return
 	}
 
@@ -1212,7 +1225,7 @@ func (h *DevToolsHandler) RedisSignalKeys(w http.ResponseWriter, r *http.Request
 		out = append(out, entry)
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"keys":  out,
 		"total": len(out),
 	})
@@ -1233,30 +1246,30 @@ func (h *DevToolsHandler) RedisSignalKeys(w http.ResponseWriter, r *http.Request
 // they don't expect cluster-wide L1 invalidation.
 func (h *DevToolsHandler) RedisSignalsPurge(w http.ResponseWriter, r *http.Request) {
 	if h.redisCache == nil {
-		writeError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
 		return
 	}
 
 	vidStr := r.URL.Query().Get("vehicle_id")
 	if vidStr == "" {
-		writeError(w, http.StatusBadRequest, "vehicle_id query parameter is required")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter is required")
 		return
 	}
 	vehicleID, err := strconv.ParseInt(vidStr, 10, 64)
 	if err != nil || vehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
 		return
 	}
 
 	purged, err := h.redisCache.Purge(r.Context(), vehicleID)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("redis signal cache: Purge failed")
-		writeError(w, http.StatusServiceUnavailable, "Redis is unreachable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis is unreachable")
 		return
 	}
 
 	log.Info().Int64("vehicle_id", vehicleID).Bool("purged", purged).Msg("redis signal cache: purged")
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"vehicle_id": vehicleID,
 		"purged":     purged,
 	})
@@ -1279,7 +1292,7 @@ func (h *DevToolsHandler) RedisSignalsPurge(w http.ResponseWriter, r *http.Reque
 // rationale).
 func (h *DevToolsHandler) RedisSignalsPurgeAll(w http.ResponseWriter, r *http.Request) {
 	if h.redisCache == nil {
-		writeError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis signal cache is not available")
 		return
 	}
 
@@ -1287,7 +1300,7 @@ func (h *DevToolsHandler) RedisSignalsPurgeAll(w http.ResponseWriter, r *http.Re
 	purged, scanned, err := h.redisCache.PurgeAll(r.Context(), limit)
 	if err != nil {
 		log.Error().Err(err).Msg("redis signal cache: PurgeAll failed")
-		writeError(w, http.StatusServiceUnavailable, "Redis is unreachable")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "Redis is unreachable")
 		return
 	}
 
@@ -1297,7 +1310,7 @@ func (h *DevToolsHandler) RedisSignalsPurgeAll(w http.ResponseWriter, r *http.Re
 		Int("scanned", scanned).
 		Bool("has_more", hasMore).
 		Msg("redis signal cache: bulk purge")
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"purged":   purged,
 		"scanned":  scanned,
 		"limit":    limit,

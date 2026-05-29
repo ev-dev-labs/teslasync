@@ -1,4 +1,4 @@
-package api
+package devtools
 
 import (
 	"context"
@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
 
 // ---------------------------------------------------------------------------
@@ -16,7 +18,7 @@ import (
 // DatabaseStats returns public table names, row counts, and database size.
 func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) {
 	if h.db == nil {
-		writeError(w, http.StatusServiceUnavailable, "database not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "database not configured")
 		return
 	}
 
@@ -27,7 +29,7 @@ func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) 
 	rows, err := h.db.Pool.Query(ctx,
 		"SELECT schemaname, tablename FROM pg_tables WHERE schemaname = 'public'")
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to list tables: "+err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list tables: "+err.Error())
 		return
 	}
 	defer rows.Close()
@@ -42,13 +44,13 @@ func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) 
 	for rows.Next() {
 		var t tableInfo
 		if err := rows.Scan(&t.Schema, &t.Name); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to scan table row: "+err.Error())
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to scan table row: "+err.Error())
 			return
 		}
 		tables = append(tables, t)
 	}
 	if err := rows.Err(); err != nil {
-		writeError(w, http.StatusInternalServerError, "row iteration error: "+err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "row iteration error: "+err.Error())
 		return
 	}
 
@@ -67,7 +69,7 @@ func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) 
 		log.Warn().Err(err).Msg("failed to get database size")
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"tables":        tables,
 		"table_count":   len(tables),
 		"database_size": dbSize,
@@ -77,7 +79,7 @@ func (h *DevToolsHandler) DatabaseStats(w http.ResponseWriter, r *http.Request) 
 // MigrationStatus returns the current schema migration version.
 func (h *DevToolsHandler) MigrationStatus(w http.ResponseWriter, r *http.Request) {
 	if h.db == nil {
-		writeError(w, http.StatusServiceUnavailable, "database not configured")
+		httpx.WriteError(w, http.StatusServiceUnavailable, "database not configured")
 		return
 	}
 
@@ -89,11 +91,11 @@ func (h *DevToolsHandler) MigrationStatus(w http.ResponseWriter, r *http.Request
 	err := h.db.Pool.QueryRow(ctx,
 		"SELECT version, dirty FROM schema_migrations ORDER BY version DESC LIMIT 1").Scan(&version, &dirty)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to read migration status: "+err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read migration status: "+err.Error())
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"version": version,
 		"dirty":   dirty,
 	})
