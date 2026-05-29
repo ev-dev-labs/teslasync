@@ -75,6 +75,7 @@ import (
 	apisaved "github.com/ev-dev-labs/teslasync/internal/api/savedviews"
 	apischedexp "github.com/ev-dev-labs/teslasync/internal/api/scheduledexports"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
+	apisecurity "github.com/ev-dev-labs/teslasync/internal/api/security"
 	apisess "github.com/ev-dev-labs/teslasync/internal/api/session"
 	apisetreset "github.com/ev-dev-labs/teslasync/internal/api/settingsreset"
 	apisignal "github.com/ev-dev-labs/teslasync/internal/api/signalinspect"
@@ -741,7 +742,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	motorHandler := apimotor.NewMotorHandler(stateReader, liveStateReader)
 	driveDynamicsHandler := apidrivedyn.NewDriveDynamicsHandler(stateReader, liveStateReader)
 	climateHandler := apiclimate.NewClimateHandler(stateReader, liveStateReader)
-	securityHandler := NewSecurityHandler(stateReader, liveStateReader)
+	securityHandler := apisecurity.NewSecurityHandler(stateReader, liveStateReader)
 	chargingTelemetryHandler := apichargetelem.NewChargingTelemetryHandler(stateReader, liveStateReader)
 	mediaHandler := apimedia.NewMediaHandler(stateReader, liveStateReader)
 	vehicleConfigHandler := apivehconfig.NewHandler(stateReader, liveStateReader)
