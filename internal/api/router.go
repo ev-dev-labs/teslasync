@@ -36,6 +36,7 @@ import (
 	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
 	aifeedtri "github.com/ev-dev-labs/teslasync/internal/api/aifeedtri"
 	aifsmnar "github.com/ev-dev-labs/teslasync/internal/api/aifsmnar"
+	aigeofautom "github.com/ev-dev-labs/teslasync/internal/api/aigeofautom"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
 	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
@@ -1844,7 +1845,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// user message; the LLM never sees lat/lon (PolicyAlertBuilder
 	// denies coordinate prose). One per process; stateless beyond
 	// constructor inputs.
-	aiGeofenceAwareAutomationHandler := NewAIGeofenceAwareAutomationHandler(
+	aiGeofenceAwareAutomationHandler := aigeofautom.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		geofenceawareautomationsuggestions.New(),

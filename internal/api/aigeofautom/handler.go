@@ -1,9 +1,9 @@
-package api
+package aigeofautom
 
 // Phase-50 / 0039 — G3 Geofence-aware automation suggestions.
 //
-// ai_geofence_aware_automation_handler.go implements the LLM-backed
-// handler at POST /api/v1/ai/geofences/automations/draft. The flow
+// handler.go implements the LLM-backed handler at
+// POST /api/v1/ai/geofences/automations/draft. The flow
 // mirrors ai_automation_handler.go (slice 0016 nl-automation-builder
 // — same dispatch+stream loop, no persistence — one-shot proposal)
 // BUT with a deterministic geofence catalog injected into the
@@ -32,7 +32,7 @@ package api
 // so a malformed input surfaces as a plain JSON 400 (rather than a
 // streamed error frame the SPA's QueryError will struggle to render
 // meaningfully). vehicle_id MUST be > 0; prompt MUST be non-empty
-// after trimming and ≤ aiGeofenceAwareAutomationMaxPromptLen runes.
+// after trimming and ≤ maxPromptLen runes.
 //
 // ADR-015 alignment:
 //
@@ -75,42 +75,51 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 )
 
-// aiGeofenceAwareAutomationMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most draft-then-validate-then-answer
 // (with optional retries) — a hard ceiling of 8 is generous and
 // matches the other propose-only N/G-tier handlers.
-const aiGeofenceAwareAutomationMaxIterations = 8
+const maxIterations = 8
 
-// aiGeofenceAwareAutomationMaxBodyBytes caps the JSON body. The
+// maxBodyBytes caps the JSON body. The
 // prompt text is the only non-trivial field; 8 KiB allows a
 // reasonably descriptive natural-language request without inviting
 // abuse. Mirrors the cap nl-automation-builder uses.
-const aiGeofenceAwareAutomationMaxBodyBytes = 1 << 13 // 8 KiB
+const maxBodyBytes = 1 << 13 // 8 KiB
 
-// aiGeofenceAwareAutomationMaxPromptLen is the rune-length cap on
+// maxPromptLen is the rune-length cap on
 // the user prompt itself. Below the body cap so a body that is
 // mostly padding still bounces. 4096 runes covers every realistic
 // natural-language request the AutomationBuilderPage UI surfaces.
-const aiGeofenceAwareAutomationMaxPromptLen = 4096
+const maxPromptLen = 4096
 
-// aiGeofenceAwareAutomationMaxCatalogEntries caps the number of
+// maxCatalogEntries caps the number of
 // geofences the handler injects into the synthesised user message.
 // The canonical GeofenceRepo.GetAll already caps at 500 rows; this
 // secondary cap protects against catastrophic prompt-bloat if the
 // upstream cap is ever raised. Mirrors the in-tool default.
-const aiGeofenceAwareAutomationMaxCatalogEntries = 50
+const maxCatalogEntries = 50
 
-// AIGeofenceAwareAutomationHandler is the HTTP handler for
+func writeError(w http.ResponseWriter, status int, msg string) {
+	httpx.WriteError(w, status, msg)
+}
+
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Handler is the HTTP handler for
 // POST /api/v1/ai/geofences/automations/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AIGeofenceAwareAutomationHandler struct {
+type Handler struct {
 	registry     *provider.Registry
 	tools        *tools.Registry
 	strategy     strategy.Strategy
@@ -129,40 +138,40 @@ type GeofenceLister interface {
 	GetAll(ctx context.Context) ([]*systemmodel.Geofence, error)
 }
 
-// NewAIGeofenceAwareAutomationHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
-func NewAIGeofenceAwareAutomationHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	geofenceRepo *geofencedb.GeofenceRepo,
 	headerName string,
-) *AIGeofenceAwareAutomationHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIGeofenceAwareAutomationHandler: nil provider.Registry")
+		panic("aigeofautom: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIGeofenceAwareAutomationHandler: nil tools.Registry")
+		panic("aigeofautom: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIGeofenceAwareAutomationHandler: nil strategy.Strategy")
+		panic("aigeofautom: NewHandler: nil strategy.Strategy")
 	case geofenceRepo == nil:
-		panic("api: NewAIGeofenceAwareAutomationHandler: nil *geofencedb.GeofenceRepo")
+		panic("aigeofautom: NewHandler: nil *geofencedb.GeofenceRepo")
 	}
-	return &AIGeofenceAwareAutomationHandler{
+	return &Handler{
 		registry:     registry,
 		tools:        toolReg,
 		strategy:     strat,
 		geofenceRepo: geofenceRepo,
 		headerName:   headerName,
-		maxIters:     aiGeofenceAwareAutomationMaxIterations,
+		maxIters:     maxIterations,
 	}
 }
 
-// aiGeofenceAwareAutomationRequest is the wire shape the SPA POSTs.
+// request is the wire shape the SPA POSTs.
 // vehicle_id and prompt are required; future fields MAY be added
 // without changing the off-mode contract.
-type aiGeofenceAwareAutomationRequest struct {
+type request struct {
 	// VehicleID is the vehicle the proposed automation will apply
 	// to. Required and positive. The handler clamps it before
 	// the LLM sees it, so a missing or nonsense ID is a wiring
@@ -171,11 +180,11 @@ type aiGeofenceAwareAutomationRequest struct {
 
 	// Prompt is the user's natural-language description of the
 	// automation they want. Required, trimmed; rune-length
-	// bounded by aiGeofenceAwareAutomationMaxPromptLen.
+	// bounded by maxPromptLen.
 	Prompt string `json:"prompt"`
 }
 
-// parseGeofenceAwareAutomationBody decodes + validates the request
+// parseBody decodes + validates the request
 // body. Pulled out so the off-mode test can exercise the parsing
 // without constructing a full handler with stub deps. The function
 // writes a 400 on failure and returns the (req, ok) pair so the
@@ -183,33 +192,33 @@ type aiGeofenceAwareAutomationRequest struct {
 //
 // Rules:
 //
-//   - body MUST be valid JSON capped at aiGeofenceAwareAutomationMaxBodyBytes;
+//   - body MUST be valid JSON capped at maxBodyBytes;
 //   - vehicle_id MUST be a positive integer;
-//   - prompt MUST be non-empty after trim and ≤ aiGeofenceAwareAutomationMaxPromptLen runes.
+//   - prompt MUST be non-empty after trim and ≤ maxPromptLen runes.
 //
 // An empty / nil body is REJECTED — the SPA always carries the
 // scope; a missing field is a wiring bug, not a default.
-func parseGeofenceAwareAutomationBody(w http.ResponseWriter, r *http.Request) (*aiGeofenceAwareAutomationRequest, bool) {
+func parseBody(w http.ResponseWriter, r *http.Request) (*request, bool) {
 	if r.Body == nil {
 		writeError(w, http.StatusBadRequest, "request body is required (vehicle_id + prompt)")
 		return nil, false
 	}
 	defer r.Body.Close()
-	limited := io.LimitReader(r.Body, aiGeofenceAwareAutomationMaxBodyBytes+1)
+	limited := io.LimitReader(r.Body, maxBodyBytes+1)
 	raw, err := io.ReadAll(limited)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "failed to read request body")
 		return nil, false
 	}
-	if int64(len(raw)) > aiGeofenceAwareAutomationMaxBodyBytes {
-		writeError(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("request body exceeds %d bytes", aiGeofenceAwareAutomationMaxBodyBytes))
+	if int64(len(raw)) > maxBodyBytes {
+		writeError(w, http.StatusRequestEntityTooLarge, fmt.Sprintf("request body exceeds %d bytes", maxBodyBytes))
 		return nil, false
 	}
 	if len(raw) == 0 {
 		writeError(w, http.StatusBadRequest, "request body is required (vehicle_id + prompt)")
 		return nil, false
 	}
-	var body aiGeofenceAwareAutomationRequest
+	var body request
 	dec := json.NewDecoder(strings.NewReader(string(raw)))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&body); err != nil {
@@ -229,8 +238,8 @@ func parseGeofenceAwareAutomationBody(w http.ResponseWriter, r *http.Request) (*
 		writeError(w, http.StatusBadRequest, "prompt must be non-empty")
 		return nil, false
 	}
-	if runes := []rune(body.Prompt); len(runes) > aiGeofenceAwareAutomationMaxPromptLen {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be ≤ %d characters", aiGeofenceAwareAutomationMaxPromptLen))
+	if runes := []rune(body.Prompt); len(runes) > maxPromptLen {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be ≤ %d characters", maxPromptLen))
 		return nil, false
 	}
 	return &body, true
@@ -242,9 +251,9 @@ func parseGeofenceAwareAutomationBody(w http.ResponseWriter, r *http.Request) (*
 // Every error path either writes a structured frame onto the SSE
 // stream (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
-func (h *AIGeofenceAwareAutomationHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the body.
-	body, ok := parseGeofenceAwareAutomationBody(w, r)
+	body, ok := parseBody(w, r)
 	if !ok {
 		return
 	}
@@ -266,14 +275,14 @@ func (h *AIGeofenceAwareAutomationHandler) ServeHTTP(w http.ResponseWriter, r *h
 	// cannot recover from. The 500-row cap inside
 	// GeofenceRepo.GetAll is the primary defence; the secondary
 	// in-handler trim caps the LLM prompt at
-	// aiGeofenceAwareAutomationMaxCatalogEntries entries.
+	// maxCatalogEntries entries.
 	geofences, err := h.geofenceRepo.GetAll(r.Context())
 	if err != nil {
 		log.Error().Err(err).Msg("ai geofence-aware-automation-suggestions: GeofenceRepo.GetAll failed")
 		writeError(w, http.StatusBadGateway, "geofence catalog unavailable")
 		return
 	}
-	catalog := buildGeofenceCatalogLine(geofences, aiGeofenceAwareAutomationMaxCatalogEntries)
+	catalog := buildCatalogLine(geofences, maxCatalogEntries)
 
 	// 4) Subject + feature-id annotations for audit/rate-limit.
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
@@ -334,7 +343,7 @@ func (h *AIGeofenceAwareAutomationHandler) ServeHTTP(w http.ResponseWriter, r *h
 	}
 }
 
-// buildGeofenceCatalogLine renders the geofence catalog as a
+// buildCatalogLine renders the geofence catalog as a
 // single-line deterministic string the LLM can read and pick
 // place_id values from. Sorted by id ASC for byte-stable goldens.
 // Capped at maxEntries so a misconfigured deployment with thousands
@@ -348,7 +357,7 @@ func (h *AIGeofenceAwareAutomationHandler) ServeHTTP(w http.ResponseWriter, r *h
 // its purpose). The LLM only needs id + name + category to pick
 // the right place_id; the canonical typed automation handler reads
 // the geometry from the database when the saved automation runs.
-func buildGeofenceCatalogLine(geofences []*systemmodel.Geofence, maxEntries int) string {
+func buildCatalogLine(geofences []*systemmodel.Geofence, maxEntries int) string {
 	if len(geofences) == 0 {
 		return "Geofence catalog is empty for this user (no place_ids to reference). Refuse the request politely and explain that the user must add at least one geofence at /geofences before this assistant can propose a geofence-aware automation."
 	}
@@ -381,6 +390,6 @@ func buildGeofenceCatalogLine(geofences []*systemmodel.Geofence, maxEntries int)
 	return b.String()
 }
 
-// Compile-time assertion: AIGeofenceAwareAutomationHandler satisfies
+// Compile-time assertion: Handler satisfies
 // http.Handler.
-var _ http.Handler = (*AIGeofenceAwareAutomationHandler)(nil)
+var _ http.Handler = (*Handler)(nil)

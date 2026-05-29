@@ -25,8 +25,8 @@
 //     flow through tools, narrative is identifier-free.
 //
 // The strategy is consumed by the AI HTTP handler at
-// `internal/api/ai_geofence_aware_automation_handler.go` which
-// builds a dispatcher, a stream.Writer (SSE), and runs a one-shot
+// `internal/api/aigeofautom/handler.go` which builds a dispatcher,
+// a stream.Writer (SSE), and runs a one-shot
 // generation loop. The non-AI baseline at POST /api/v1/automations
 // (the canonical typed AutomationHandler.Create + decode path with
 // per-step validators at `internal/api/automation_handler_decode.go`)

@@ -15,9 +15,10 @@
 // (`go run ./cmd/ai-eval -feature geofence-aware-automation-suggestions`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aigeofautom
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -29,6 +30,24 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks is
 // the load-bearing off-mode contract proof for slice 0039. It
@@ -132,23 +151,23 @@ func TestGeofenceAutomationSuggestionsAIOffManualAutomationWorks(t *testing.T) {
 	}
 }
 
-// TestAIGeofenceAwareAutomationHandler_PanicsOnNilWiring asserts
+// TestHandler_PanicsOnNilWiring asserts
 // the handler constructor refuses zero-valued dependencies. A
 // wiring bug at boot must surface as a panic, not as a nil-deref
 // on first request.
-func TestAIGeofenceAwareAutomationHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIGeofenceAwareAutomationHandler(nil, nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIGeofenceAwareAutomationHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -156,12 +175,12 @@ func TestAIGeofenceAwareAutomationHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIGeofenceAwareAutomationHandler_RejectsBadBody asserts the
+// TestHandler_RejectsBadBody asserts the
 // handler validates the JSON body BEFORE opening the SSE stream — a
 // missing, malformed, or non-positive vehicle_id, or an empty /
 // oversize prompt, must surface as a JSON 400/413, not a half-opened
 // stream that confuses the frontend.
-func TestAIGeofenceAwareAutomationHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -190,9 +209,9 @@ func TestAIGeofenceAwareAutomationHandler_RejectsBadBody(t *testing.T) {
 				strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			body, ok := parseGeofenceAwareAutomationBody(rec, req)
+			body, ok := parseBody(rec, req)
 			if ok {
-				t.Fatalf("parseGeofenceAwareAutomationBody returned ok=true for %q (body=%+v)", tc.body, body)
+				t.Fatalf("parseBody returned ok=true for %q (body=%+v)", tc.body, body)
 			}
 			if rec.Code != tc.want {
 				t.Fatalf("status = %d, want %d (body=%q)", rec.Code, tc.want, rec.Body.String())
@@ -201,10 +220,10 @@ func TestAIGeofenceAwareAutomationHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAIGeofenceAwareAutomationHandler_AcceptsCanonicalBody proves
+// TestHandler_AcceptsCanonicalBody proves
 // the parser does NOT bounce the happy-path shapes — small int,
 // large int, max int64, and the trim+UTF-8 cases.
-func TestAIGeofenceAwareAutomationHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -226,9 +245,9 @@ func TestAIGeofenceAwareAutomationHandler_AcceptsCanonicalBody(t *testing.T) {
 				strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			got, ok := parseGeofenceAwareAutomationBody(rec, req)
+			got, ok := parseBody(rec, req)
 			if !ok {
-				t.Fatalf("parseGeofenceAwareAutomationBody returned ok=false for %q (status=%d, body=%q)", tc.body, rec.Code, rec.Body.String())
+				t.Fatalf("parseBody returned ok=false for %q (status=%d, body=%q)", tc.body, rec.Code, rec.Body.String())
 			}
 			if got.VehicleID != tc.wantVehicle {
 				t.Errorf("VehicleID = %d, want %d", got.VehicleID, tc.wantVehicle)
@@ -240,17 +259,17 @@ func TestAIGeofenceAwareAutomationHandler_AcceptsCanonicalBody(t *testing.T) {
 	}
 }
 
-// TestBuildGeofenceCatalogLine pins the deterministic catalog
+// TestBuildCatalogLine pins the deterministic catalog
 // rendering. The LLM reads this line verbatim, so byte-stability
 // across builds matters for golden replay.
-func TestBuildGeofenceCatalogLine(t *testing.T) {
+func TestBuildCatalogLine(t *testing.T) {
 	t.Parallel()
 
 	homeCat := systemmodel.GeofenceCategoryHome
 	workCat := systemmodel.GeofenceCategoryWork
 
 	t.Run("empty catalog yields refusal hint", func(t *testing.T) {
-		got := buildGeofenceCatalogLine(nil, 50)
+		got := buildCatalogLine(nil, 50)
 		if !strings.Contains(got, "empty") {
 			t.Errorf("empty catalog should mention 'empty', got %q", got)
 		}
@@ -265,7 +284,7 @@ func TestBuildGeofenceCatalogLine(t *testing.T) {
 			{ID: 1, Name: "Home", Category: &homeCat, PolygonWKT: "POLYGON((10 20,30 40,50 60,10 20))"},
 			{ID: 5, Name: "Cabin", Category: nil, PolygonWKT: "POLYGON((100 200,300 400,500 600,100 200))"},
 		}
-		got := buildGeofenceCatalogLine(in, 50)
+		got := buildCatalogLine(in, 50)
 
 		// Sort order: 1, 5, 7.
 		idxHome := strings.Index(got, "id=1")
@@ -306,7 +325,7 @@ func TestBuildGeofenceCatalogLine(t *testing.T) {
 		for i := int64(1); i <= 100; i++ {
 			in = append(in, &systemmodel.Geofence{ID: i, Name: "G", Category: &homeCat})
 		}
-		got := buildGeofenceCatalogLine(in, 3)
+		got := buildCatalogLine(in, 3)
 		// id=1, 2, 3 must appear; id=4 must NOT.
 		for _, want := range []string{"id=1 ", "id=2 ", "id=3 "} {
 			if !strings.Contains(got, want) {
@@ -324,7 +343,7 @@ func TestBuildGeofenceCatalogLine(t *testing.T) {
 			{ID: 1, Name: "Home", Category: &homeCat},
 			nil,
 		}
-		got := buildGeofenceCatalogLine(in, 50)
+		got := buildCatalogLine(in, 50)
 		if !strings.Contains(got, "id=1 name=\"Home\"") {
 			t.Errorf("missing surviving entry: %q", got)
 		}
