@@ -1,4 +1,4 @@
-package api
+package importer
 
 import (
 	"encoding/csv"
@@ -7,16 +7,14 @@ import (
 	"strconv"
 	"time"
 
-	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
-
-	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
-
-	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
-
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
+	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
+	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 	"github.com/rs/zerolog/log"
 )
 
@@ -38,13 +36,13 @@ func NewImportHandler(db *database.DB) *ImportHandler {
 // Expected CSV columns: vehicle_id, start_ts, end_ts, distance_mi, duration_min, max_speed_mph
 func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid multipart form")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid multipart form")
 		return
 	}
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "missing file field")
+		httpx.WriteError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
 	defer file.Close()
@@ -52,7 +50,7 @@ func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 	reader := csv.NewReader(file)
 	// Skip header row
 	if _, err := reader.Read(); err != nil {
-		writeError(w, http.StatusBadRequest, "unable to read CSV header")
+		httpx.WriteError(w, http.StatusBadRequest, "unable to read CSV header")
 		return
 	}
 
@@ -118,20 +116,20 @@ func (h *ImportHandler) ImportDrives(w http.ResponseWriter, r *http.Request) {
 		imported++
 	}
 
-	writeJSON(w, http.StatusOK, map[string]int{"imported": imported, "errors": errors})
+	httpx.WriteJSON(w, http.StatusOK, map[string]int{"imported": imported, "errors": errors})
 }
 
 // ImportCharging imports charging session records from a CSV file upload.
 // Expected CSV columns: vehicle_id, start_ts, end_ts, energy_added_kwh, start_battery, end_battery, charger_power_kw_max, duration_min
 func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid multipart form")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid multipart form")
 		return
 	}
 
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		writeError(w, http.StatusBadRequest, "missing file field")
+		httpx.WriteError(w, http.StatusBadRequest, "missing file field")
 		return
 	}
 	defer file.Close()
@@ -139,7 +137,7 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 	reader := csv.NewReader(file)
 	// Skip header row
 	if _, err := reader.Read(); err != nil {
-		writeError(w, http.StatusBadRequest, "unable to read CSV header")
+		httpx.WriteError(w, http.StatusBadRequest, "unable to read CSV header")
 		return
 	}
 
@@ -208,7 +206,7 @@ func (h *ImportHandler) ImportCharging(w http.ResponseWriter, r *http.Request) {
 		imported++
 	}
 
-	writeJSON(w, http.StatusOK, map[string]int{"imported": imported, "errors": errors})
+	httpx.WriteJSON(w, http.StatusOK, map[string]int{"imported": imported, "errors": errors})
 }
 
 // ExportNotificationLogs exports notification delivery logs as CSV or JSON.
@@ -222,7 +220,7 @@ func ExportNotificationLogs(db *database.DB) http.HandlerFunc {
 
 		logs, err := repo.GetLogs(r.Context(), 10000, 0)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to fetch notification logs")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch notification logs")
 			return
 		}
 		if logs == nil {
@@ -232,7 +230,7 @@ func ExportNotificationLogs(db *database.DB) http.HandlerFunc {
 		if format == "json" {
 			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Content-Disposition", "attachment; filename=teslasync-notifications.json")
-			writeJSON(w, http.StatusOK, logs)
+			httpx.WriteJSON(w, http.StatusOK, logs)
 			return
 		}
 
