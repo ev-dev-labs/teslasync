@@ -1,9 +1,9 @@
-package api
+package aisearch
 
 // Phase-50 / 0017 — N3 Natural-language search across drives, charges,
 // and alerts.
 //
-// ai_search_handler.go implements the LLM-backed handler at
+// handler.go implements the LLM-backed handler at
 // POST /api/v1/ai/search/query. The flow mirrors the
 // nl-automation-builder handler from slice 0016 — same
 // dispatch+stream loop, same propose-only-via-read-only-tools
@@ -55,6 +55,7 @@ package api
 //                         by this slice.
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -68,31 +69,32 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/strategy"
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiSearchMaxIterations bounds the dispatcher's tool-loop. The
+// maxIterations bounds the dispatcher's tool-loop. The
 // nl-search strategy is typically a 1-3 step sequence (one
 // retrieve_chunks call, then 0-2 hydrate_search_result calls for the
 // top hits, then narrate). A hard ceiling of 6 is generous for an
 // LLM that occasionally hydrates several results before settling.
 // Mirrors aiAutomationBuilderMaxIterations from slice 0016.
-const aiSearchMaxIterations = 6
+const maxIterations = 6
 
-// aiSearchMaxPromptChars bounds the user-supplied natural-language
+// maxPromptChars bounds the user-supplied natural-language
 // query at the HTTP boundary. Generous for a multi-sentence search
 // prompt; defensive against an enormous payload that would inflate
 // the LLM's context window cost without any plausible legitimate
 // use. Matches the per-tool query cap so the boundaries align.
-const aiSearchMaxPromptChars = 4096
+const maxPromptChars = 4096
 
-// AISearchHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/search/query.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the dispatcher's
 // tool registry + provider registry are wired once at boot.
-type AISearchHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -100,7 +102,7 @@ type AISearchHandler struct {
 	maxIters   int
 }
 
-// NewAISearchHandler constructs the handler. All non-pointer
+// NewHandler constructs the handler. All non-pointer
 // arguments are required; the constructor panics on a nil so the
 // wiring bug surfaces at boot, not at first request.
 //
@@ -112,40 +114,40 @@ type AISearchHandler struct {
 //
 // strat:      the nl-search Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAISearchHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AISearchHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAISearchHandler: nil provider.Registry")
+		panic("aisearch: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAISearchHandler: nil tools.Registry")
+		panic("aisearch: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAISearchHandler: nil strategy.Strategy")
+		panic("aisearch: NewHandler: nil strategy.Strategy")
 	}
-	return &AISearchHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiSearchMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
-// aiSearchRequest is the wire shape for
+// queryRequest is the wire shape for
 // POST /api/v1/ai/search/query.
 //
 // Prompt is the user's plain-language search query, capped at
-// aiSearchMaxPromptChars. The slice deliberately does NOT accept a
+// maxPromptChars. The slice deliberately does NOT accept a
 // vehicle_id — the F7 retriever scopes by user_subject (the
 // authenticated principal) and has no per-vehicle filter; adding a
 // vehicle_id field to the wire shape would create a UI affordance
 // we cannot enforce server-side. See the rubber-duck critique in
 // the slice plan for the full rationale.
-type aiSearchRequest struct {
+type queryRequest struct {
 	Prompt string `json:"prompt"`
 }
 
@@ -154,20 +156,20 @@ type aiSearchRequest struct {
 // dispatcher's deferred WriteDone. Every error path either writes a
 // structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AISearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Decode + validate request body.
-	var body aiSearchRequest
+	var body queryRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	prompt := strings.TrimSpace(body.Prompt)
 	if prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
+		httpx.WriteError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
-	if len(prompt) > aiSearchMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiSearchMaxPromptChars))
+	if len(prompt) > maxPromptChars {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", maxPromptChars))
 		return
 	}
 
@@ -177,7 +179,7 @@ func (h *AISearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), nlsearch.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai search: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -197,7 +199,7 @@ func (h *AISearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// Non-flushable response writer (test recorder, etc.).
 		// Emit a plain JSON 500 — the SSE headers were not sent.
 		log.Error().Err(err).Msg("ai search: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -253,5 +255,10 @@ func (h *AISearchHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Compile-time assertion: AISearchHandler satisfies http.Handler.
-var _ http.Handler = (*AISearchHandler)(nil)
+// denyAllConfirm rejects every mutating tool call for this read-only strategy.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)

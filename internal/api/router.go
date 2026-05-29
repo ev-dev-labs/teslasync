@@ -31,6 +31,7 @@ import (
 	aidrivesearch "github.com/ev-dev-labs/teslasync/internal/api/aidrivesearch"
 	airaghelp "github.com/ev-dev-labs/teslasync/internal/api/airaghelp"
 	airouteeff "github.com/ev-dev-labs/teslasync/internal/api/airouteeff"
+	aisearch "github.com/ev-dev-labs/teslasync/internal/api/aisearch"
 	apialertmsg "github.com/ev-dev-labs/teslasync/internal/api/alertmsg"
 	apialerts "github.com/ev-dev-labs/teslasync/internal/api/alerts"
 	apianalytics "github.com/ev-dev-labs/teslasync/internal/api/analytics"
@@ -889,8 +890,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// retriever is constructed via rag.New (the F7 single
 	// retrieval entry point) which fail-closes to NoopRetriever
 	// when ai_mode='off' (ADR-015 §I1, §I4 — zero outbound egress
-	// in off mode). The Hydrator is the in-package adapter
-	// aiSearchHydrator, which delegates per-source-type lookups
+	// in off mode). The Hydrator is the aisearch package adapter,
+	// which delegates per-source-type lookups
 	// to the existing canonical pgSearcher — same code path the
 	// typed GET /api/v1/search baseline uses (ADR-015 §I3
 	// baseline-intact: no duplicate read path is introduced by
@@ -912,11 +913,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// than silently boot with a half-wired AI search surface.
 		log.Fatal().Err(err).Msg("ai search: rag.New failed during boot wiring")
 	}
-	tools.RegisterSearchTools(aiToolRegistry, tools.SearchSources{
-		Retriever: aiSearchRetriever,
-		Hydrator:  newAISearchHydrator(apisearch.NewPGSearcher(db)),
-	})
-	aiSearchHandler := NewAISearchHandler(
+	aisearch.RegisterTools(aiToolRegistry, aiSearchRetriever, apisearch.NewPGSearcher(db))
+	aiSearchHandler := aisearch.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		nlsearch.New(),

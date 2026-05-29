@@ -1,9 +1,9 @@
-package api
+package aisearch
 
 // Phase-50 / 0017 — N3 Natural-language search across drives, charges,
 // and alerts.
 //
-// ai_search_hydrator.go implements tools.Hydrator using the existing
+// hydrator.go implements tools.Hydrator using the existing
 // canonical pgSearcher backend. The slice's Hydrator port resolves a
 // (sourceType, sourceID) reference from a RAG chunk into a human-
 // friendly envelope (title, subtitle, url, when) suitable for citation
@@ -41,21 +41,30 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
 
-// aiSearchHydrator is the production tools.Hydrator implementation.
+// hydrator is the production tools.Hydrator implementation.
 // One per process; stateless beyond the apisearch.Searcher port. Safe for
 // concurrent use across requests.
-type aiSearchHydrator struct {
+type hydrator struct {
 	s apisearch.Searcher
 }
 
-// newAISearchHydrator constructs the production hydrator. The
+// newHydrator constructs the production hydrator. The
 // constructor panics on a nil apisearch.Searcher so a wiring bug surfaces at
 // boot, not at the first AI search request.
-func newAISearchHydrator(s apisearch.Searcher) *aiSearchHydrator {
+func newHydrator(s apisearch.Searcher) *hydrator {
 	if s == nil {
-		panic("api: newAISearchHydrator: nil apisearch.Searcher")
+		panic("aisearch: newHydrator: nil apisearch.Searcher")
 	}
-	return &aiSearchHydrator{s: s}
+	return &hydrator{s: s}
+}
+
+// RegisterTools installs the nl-search read-only tools on r using the
+// package-internal hydrator adapter.
+func RegisterTools(r *tools.Registry, retriever rag.Retriever, searcher apisearch.Searcher) {
+	tools.RegisterSearchTools(r, tools.SearchSources{
+		Retriever: retriever,
+		Hydrator:  newHydrator(searcher),
+	})
 }
 
 // HydrateOne implements [tools.Hydrator]. Delegates to the
@@ -67,7 +76,7 @@ func newAISearchHydrator(s apisearch.Searcher) *aiSearchHydrator {
 // (subject, type, id) tuple — the AI tool surfaces this as a
 // status="not_found" envelope so the LLM can adapt its narration
 // without retrying.
-func (h *aiSearchHydrator) HydrateOne(ctx context.Context, _userSubject, sourceType, sourceID string) (*tools.HydratedResult, error) {
+func (h *hydrator) HydrateOne(ctx context.Context, _userSubject, sourceType, sourceID string) (*tools.HydratedResult, error) {
 	idHint, err := strconv.ParseInt(sourceID, 10, 64)
 	if err != nil {
 		// Non-numeric source_id is impossible for the three corpora
@@ -123,11 +132,11 @@ func (h *aiSearchHydrator) HydrateOne(ctx context.Context, _userSubject, sourceT
 	return nil, tools.ErrHydratorNotFound
 }
 
-// Compile-time assertion: aiSearchHydrator satisfies tools.Hydrator.
-var _ tools.Hydrator = (*aiSearchHydrator)(nil)
+// Compile-time assertion: hydrator satisfies tools.Hydrator.
+var _ tools.Hydrator = (*hydrator)(nil)
 
 // _ is a compile-time guard against the package-private errors
-// import drifting. The import is genuinely required (newAISearchHydrator
+// import drifting. The import is genuinely required (newHydrator
 // could in theory return errors.New, and future additions may rely
 // on it). Pinning prevents goimports from removing it during a
 // future refactor.

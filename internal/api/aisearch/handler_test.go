@@ -13,7 +13,7 @@
 // F6 eval harness (`go run ./cmd/ai-eval --feature nl-search`);
 // duplicating that here would require a live database fixture.
 
-package api
+package aisearch
 
 import (
 	"context"
@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	apisearch "github.com/ev-dev-labs/teslasync/internal/api/search"
 	"github.com/ev-dev-labs/teslasync/internal/api/search/searchtest"
 
@@ -34,6 +35,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/rag"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestNLSearchAIOffFallsBackToTypedFilters is the load-bearing
 // off-mode contract proof for slice 0017. It mounts the AI search
@@ -130,23 +149,23 @@ func TestNLSearchAIOffFallsBackToTypedFilters(t *testing.T) {
 	}
 }
 
-// TestAISearchHandler_PanicsOnNilWiring asserts the handler
+// TestHandler_PanicsOnNilWiring asserts the handler
 // constructor refuses zero-valued dependencies. A wiring bug at
 // boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAISearchHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAISearchHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAISearchHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -154,11 +173,11 @@ func TestAISearchHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAISearchHandler_RejectsBadInput asserts the handler validates
+// TestHandler_RejectsBadInput asserts the handler validates
 // the request body BEFORE opening the SSE stream — a missing prompt,
 // whitespace prompt, or oversized prompt must surface as a JSON 400,
 // not a half-opened stream that confuses the frontend.
-func TestAISearchHandler_RejectsBadInput(t *testing.T) {
+func TestHandler_RejectsBadInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -170,7 +189,7 @@ func TestAISearchHandler_RejectsBadInput(t *testing.T) {
 		{"missing prompt", `{}`},
 		{"empty prompt", `{"prompt":""}`},
 		{"whitespace prompt", `{"prompt":"   "}`},
-		{"prompt too large", fmt.Sprintf(`{"prompt":%q}`, strings.Repeat("a", aiSearchMaxPromptChars+1))},
+		{"prompt too large", fmt.Sprintf(`{"prompt":%q}`, strings.Repeat("a", maxPromptChars+1))},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -184,16 +203,16 @@ func TestAISearchHandler_RejectsBadInput(t *testing.T) {
 	}
 }
 
-// TestAISearchHandler_AcceptsCanonicalInput proves the validator does
+// TestHandler_AcceptsCanonicalInput proves the validator does
 // NOT bounce the happy-path shapes — a normal-length prompt and a
 // prompt at the size boundary.
-func TestAISearchHandler_AcceptsCanonicalInput(t *testing.T) {
+func TestHandler_AcceptsCanonicalInput(t *testing.T) {
 	t.Parallel()
 
 	cases := []string{
 		`{"prompt":"find drives last weekend"}`,
 		`{"prompt":"a"}`,
-		fmt.Sprintf(`{"prompt":%q}`, strings.Repeat("a", aiSearchMaxPromptChars)),
+		fmt.Sprintf(`{"prompt":%q}`, strings.Repeat("a", maxPromptChars)),
 	}
 	for _, body := range cases {
 		t.Run(body[:min(len(body), 60)], func(t *testing.T) {
@@ -207,13 +226,13 @@ func TestAISearchHandler_AcceptsCanonicalInput(t *testing.T) {
 	}
 }
 
-// TestAISearchHydrator_DelegatesToSearcher proves the production
+// TestHydrator_DelegatesToSearcher proves the production
 // hydrator translates a (sourceType, sourceID) tuple into a Search
 // call against the canonical Searcher and returns a HydratedResult
 // shaped from the matching apisearch.SearchHit. Same code path the typed
 // /api/v1/search baseline uses, so a hydrated AI citation is
 // byte-equivalent to a typed search hit.
-func TestAISearchHydrator_DelegatesToSearcher(t *testing.T) {
+func TestHydrator_DelegatesToSearcher(t *testing.T) {
 	t.Parallel()
 	when := time.Date(2025, 1, 4, 14, 32, 0, 0, time.UTC)
 	fake := searchtest.NewFakeSearcher()
@@ -222,7 +241,7 @@ func TestAISearchHydrator_DelegatesToSearcher(t *testing.T) {
 		Title: "Drive #101", Subtitle: "12.4 km, 18 min",
 		URL: "/drives/101", Score: 5, When: &when,
 	}}
-	h := newAISearchHydrator(fake)
+	h := newHydrator(fake)
 
 	got, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "101")
 	if err != nil {
@@ -246,13 +265,13 @@ func TestAISearchHydrator_DelegatesToSearcher(t *testing.T) {
 	}
 }
 
-// TestAISearchHydrator_NotFoundOnNonNumericID proves a non-numeric
+// TestHydrator_NotFoundOnNonNumericID proves a non-numeric
 // source_id surfaces as ErrHydratorNotFound rather than a tool
 // error — the AI tool then surfaces this as a status="not_found"
 // envelope so the LLM can adapt without retrying.
-func TestAISearchHydrator_NotFoundOnNonNumericID(t *testing.T) {
+func TestHydrator_NotFoundOnNonNumericID(t *testing.T) {
 	t.Parallel()
-	h := newAISearchHydrator(searchtest.NewFakeSearcher())
+	h := newHydrator(searchtest.NewFakeSearcher())
 	_, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "drive-101")
 	if err == nil {
 		t.Fatalf("HydrateOne err = nil, want ErrHydratorNotFound")
@@ -262,62 +281,62 @@ func TestAISearchHydrator_NotFoundOnNonNumericID(t *testing.T) {
 	}
 }
 
-// TestAISearchHydrator_NotFoundOnNoMatch proves the hydrator
+// TestHydrator_NotFoundOnNoMatch proves the hydrator
 // surfaces an empty searcher result as ErrHydratorNotFound rather
 // than fabricating a HydratedResult.
-func TestAISearchHydrator_NotFoundOnNoMatch(t *testing.T) {
+func TestHydrator_NotFoundOnNoMatch(t *testing.T) {
 	t.Parallel()
 	fake := searchtest.NewFakeSearcher()
 	fake.Hits[apisearch.SearchTypeDrive] = nil // empty result
-	h := newAISearchHydrator(fake)
+	h := newHydrator(fake)
 	_, err := h.HydrateOne(context.Background(), "alice", rag.SourceDriveSummary, "999")
 	if !errorIsNotFound(err) {
 		t.Errorf("HydrateOne err = %v, want ErrHydratorNotFound", err)
 	}
 }
 
-// TestAISearchHydrator_NotFoundOnUnknownSourceType proves the
+// TestHydrator_NotFoundOnUnknownSourceType proves the
 // switch-default path surfaces an unknown source type as not_found
 // (defence in depth — the tool's Validate already rejects unknown
 // source types upstream).
-func TestAISearchHydrator_NotFoundOnUnknownSourceType(t *testing.T) {
+func TestHydrator_NotFoundOnUnknownSourceType(t *testing.T) {
 	t.Parallel()
-	h := newAISearchHydrator(searchtest.NewFakeSearcher())
+	h := newHydrator(searchtest.NewFakeSearcher())
 	_, err := h.HydrateOne(context.Background(), "alice", "unknown_corpus", "1")
 	if !errorIsNotFound(err) {
 		t.Errorf("HydrateOne err = %v, want ErrHydratorNotFound", err)
 	}
 }
 
-// TestAISearchHydrator_PanicsOnNilSearcher proves the constructor
+// TestHydrator_PanicsOnNilSearcher proves the constructor
 // guard fires at boot for a nil searcher rather than at first
 // request.
-func TestAISearchHydrator_PanicsOnNilSearcher(t *testing.T) {
+func TestHydrator_PanicsOnNilSearcher(t *testing.T) {
 	t.Parallel()
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("newAISearchHydrator(nil) did not panic")
+			t.Errorf("newHydrator(nil) did not panic")
 		}
 	}()
-	_ = newAISearchHydrator(nil)
+	_ = newHydrator(nil)
 }
 
 // validateSearchOnly mirrors the pre-stream validator branch of
-// AISearchHandler.ServeHTTP. Kept as a same-package helper so the
+// Handler.ServeHTTP. Kept as a same-package helper so the
 // test does not need to construct a full handler with stub deps.
 func validateSearchOnly(w http.ResponseWriter, r *http.Request) {
-	var body aiSearchRequest
+	var body queryRequest
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 	prompt := strings.TrimSpace(body.Prompt)
 	if prompt == "" {
-		writeError(w, http.StatusBadRequest, "prompt is required")
+		httpx.WriteError(w, http.StatusBadRequest, "prompt is required")
 		return
 	}
-	if len(prompt) > aiSearchMaxPromptChars {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", aiSearchMaxPromptChars))
+	if len(prompt) > maxPromptChars {
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("prompt must be at most %d characters", maxPromptChars))
 		return
 	}
 	w.WriteHeader(http.StatusOK)
