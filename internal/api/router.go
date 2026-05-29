@@ -109,6 +109,7 @@ import (
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
+	apitirepressure "github.com/ev-dev-labs/teslasync/internal/api/tirepressure"
 	apitotp "github.com/ev-dev-labs/teslasync/internal/api/totp"
 	apitrip "github.com/ev-dev-labs/teslasync/internal/api/trip"
 	apitripplanner "github.com/ev-dev-labs/teslasync/internal/api/tripplanner"
@@ -759,7 +760,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		yirnarration.New(),
 		cfg.Auth.ForwardAuthHeader,
 	)
-	tirePressureHandler := NewTirePressureHandler(stateReader, liveStateReader)
+	tirePressureHandler := apitirepressure.NewTirePressureHandler(stateReader, liveStateReader)
 	motorHandler := apimotor.NewMotorHandler(stateReader, liveStateReader)
 	driveDynamicsHandler := apidrivedyn.NewDriveDynamicsHandler(stateReader, liveStateReader)
 	climateHandler := apiclimate.NewClimateHandler(stateReader, liveStateReader)
