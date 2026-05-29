@@ -89,11 +89,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
-<<<<<<< HEAD:internal/api/ainlgrafana/handler.go
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
-=======
-	ainlsql "github.com/ev-dev-labs/teslasync/internal/api/ainlsql"
->>>>>>> d69cdffd9 (refactor(R2d.140): carve internal/api/ainlsql subpackage):internal/api/ai_nl_grafana_panel_handler.go
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
@@ -151,11 +147,7 @@ type NLGrafanaPanelCatalog struct {
 	// may reference inside a postgres-target rawSql. Same shape
 	// as nl-sql-playground's catalog so the validator + scope
 	// regexes are interchangeable.
-<<<<<<< HEAD:internal/api/ainlgrafana/handler.go
 	Tables []NLSQLSchemaCatalogEntry
-=======
-	Tables []ainlsql.SchemaCatalogEntry
->>>>>>> d69cdffd9 (refactor(R2d.140): carve internal/api/ainlsql subpackage):internal/api/ai_nl_grafana_panel_handler.go
 }
 
 // NLGrafanaPanelTypeEntry describes one curated Grafana panel
@@ -487,11 +479,7 @@ func buildNLGrafanaPanelUserMessage(prompt string, catalog NLGrafanaPanelCatalog
 	}
 
 	// Sort table catalog by name for deterministic prompt hashing.
-<<<<<<< HEAD:internal/api/ainlgrafana/handler.go
 	tables := append([]NLSQLSchemaCatalogEntry(nil), catalog.Tables...)
-=======
-	tables := append([]ainlsql.SchemaCatalogEntry(nil), catalog.Tables...)
->>>>>>> d69cdffd9 (refactor(R2d.140): carve internal/api/ainlsql subpackage):internal/api/ai_nl_grafana_panel_handler.go
 	sort.Slice(tables, func(i, j int) bool { return tables[i].Name < tables[j].Name })
 	if len(tables) == 0 {
 		b.WriteString("\nIn-scope curated table catalog (for postgres targets): NONE.\n")
@@ -500,11 +488,7 @@ func buildNLGrafanaPanelUserMessage(prompt string, catalog NLGrafanaPanelCatalog
 		b.WriteString("\nIn-scope curated table catalog (for postgres targets, table → columns):\n")
 		for _, e := range tables {
 			fmt.Fprintf(&b, "  - table=%s — %s\n", e.Name, e.Description)
-<<<<<<< HEAD:internal/api/ainlgrafana/handler.go
 			cols := append([]NLSQLSchemaColumn(nil), e.Columns...)
-=======
-			cols := append([]ainlsql.SchemaColumn(nil), e.Columns...)
->>>>>>> d69cdffd9 (refactor(R2d.140): carve internal/api/ainlsql subpackage):internal/api/ai_nl_grafana_panel_handler.go
 			sort.Slice(cols, func(i, j int) bool { return cols[i].Name < cols[j].Name })
 			for _, c := range cols {
 				fmt.Fprintf(&b, "      - column=%s type=%s — %s\n", c.Name, c.Type, c.Description)
@@ -583,7 +567,6 @@ var nlGrafanaPanelCuratedDatasourceTypes = []NLGrafanaDatasourceTypeEntry{
 // counts as an in-scope table for postgres targets, and means a
 // future schema-catalog refactor only has one source of truth to
 // update.
-<<<<<<< HEAD:internal/api/ainlgrafana/handler.go
 var nlGrafanaPanelCuratedTables = []NLSQLSchemaCatalogEntry{
 	{
 		Name:        "drives",
@@ -649,9 +632,6 @@ var nlGrafanaPanelCuratedTables = []NLSQLSchemaCatalogEntry{
 		},
 	},
 }
-=======
-var nlGrafanaPanelCuratedTables = ainlsql.CuratedCatalog()
->>>>>>> d69cdffd9 (refactor(R2d.140): carve internal/api/ainlsql subpackage):internal/api/ai_nl_grafana_panel_handler.go
 
 // NLGrafanaPanelCatalogSourceImpl is the production
 // NLGrafanaPanelCatalogSource. It returns the three hardcoded
@@ -680,19 +660,11 @@ func (a *NLGrafanaPanelCatalogSourceImpl) PanelBuilderCatalog(_ context.Context)
 	dsTypes := make([]NLGrafanaDatasourceTypeEntry, len(nlGrafanaPanelCuratedDatasourceTypes))
 	copy(dsTypes, nlGrafanaPanelCuratedDatasourceTypes)
 
-<<<<<<< HEAD:internal/api/ainlgrafana/handler.go
 	tables := make([]NLSQLSchemaCatalogEntry, len(nlGrafanaPanelCuratedTables))
 	for i, e := range nlGrafanaPanelCuratedTables {
 		cols := make([]NLSQLSchemaColumn, len(e.Columns))
 		copy(cols, e.Columns)
 		tables[i] = NLSQLSchemaCatalogEntry{
-=======
-	tables := make([]ainlsql.SchemaCatalogEntry, len(nlGrafanaPanelCuratedTables))
-	for i, e := range nlGrafanaPanelCuratedTables {
-		cols := make([]ainlsql.SchemaColumn, len(e.Columns))
-		copy(cols, e.Columns)
-		tables[i] = ainlsql.SchemaCatalogEntry{
->>>>>>> d69cdffd9 (refactor(R2d.140): carve internal/api/ainlsql subpackage):internal/api/ai_nl_grafana_panel_handler.go
 			Name:        e.Name,
 			Description: e.Description,
 			Columns:     cols,

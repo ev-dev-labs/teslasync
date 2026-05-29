@@ -29,7 +29,6 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/nlq"
-	ainlsql "github.com/ev-dev-labs/teslasync/internal/api/ainlsql"
 )
 
 type stubGuardSettings struct {
@@ -243,19 +242,11 @@ func TestBuildNLGrafanaPanelUserMessage_DeterministicShape(t *testing.T) {
 			{Name: "prometheus", UID: "tesla-prometheus", Description: "metrics"},
 			{Name: "postgres", UID: "tesla-postgres", Description: "timescaledb"},
 		},
-<<<<<<< HEAD:internal/api/ainlgrafana/handler_test.go
 		Tables: []NLSQLSchemaCatalogEntry{
 			{
 				Name:        "vehicles",
 				Description: "vehicle metadata",
 				Columns: []NLSQLSchemaColumn{
-=======
-		Tables: []ainlsql.SchemaCatalogEntry{
-			{
-				Name:        "vehicles",
-				Description: "vehicle metadata",
-				Columns: []ainlsql.SchemaColumn{
->>>>>>> d69cdffd9 (refactor(R2d.140): carve internal/api/ainlsql subpackage):internal/api/ai_nl_grafana_panel_handler_test.go
 					{Name: "id", Type: "bigint", Description: "primary key"},
 					{Name: "model", Type: "text", Description: "model code"},
 				},
@@ -263,11 +254,7 @@ func TestBuildNLGrafanaPanelUserMessage_DeterministicShape(t *testing.T) {
 			{
 				Name:        "drives",
 				Description: "per-trip aggregates",
-<<<<<<< HEAD:internal/api/ainlgrafana/handler_test.go
 				Columns: []NLSQLSchemaColumn{
-=======
-				Columns: []ainlsql.SchemaColumn{
->>>>>>> d69cdffd9 (refactor(R2d.140): carve internal/api/ainlsql subpackage):internal/api/ai_nl_grafana_panel_handler_test.go
 					{Name: "id", Type: "bigint", Description: "primary key"},
 					{Name: "started_at", Type: "timestamptz", Description: "drive start"},
 				},

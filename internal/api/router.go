@@ -1845,9 +1845,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// no leading/trailing whitespace, radius 50-1000 meters).
 	location.RegisterSuggestNewGeofencesTools(aiToolRegistry, location.SuggestNewGeofencesSources{
 		Locations: aiautoname.NewLocationSource(db),
-		Locations: NewAILocationSource(db),
 		Validator: aisuggeo.NewSuggestGeofenceValidator(),
-		Validator: NewAISuggestGeofenceValidator(),
 	})
 	// suggest-new-geofences handler. One per process; stateless
 	// beyond constructor inputs. Must be constructed AFTER the
