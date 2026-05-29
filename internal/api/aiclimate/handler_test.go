@@ -13,7 +13,7 @@
 // preheat-precool-recommender`); duplicating that here would require
 // a live database + signal store fixture.
 
-package api
+package aiclimate
 
 import (
 	"bytes"
@@ -29,6 +29,24 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/guard"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
 )
+
+// stubGuardSettings is a minimal in-memory guard.Settings used to
+// drive the off-mode contract test without a real DB.
+type stubGuardSettings struct {
+	mode string
+	on   map[string]bool
+}
+
+func (s *stubGuardSettings) AIMode(_ context.Context) (string, error) {
+	if s.mode == "" {
+		return "off", nil
+	}
+	return s.mode, nil
+}
+
+func (s *stubGuardSettings) AIFeatureEnabled(_ context.Context, id string) (bool, error) {
+	return s.on[id], nil
+}
 
 // TestPreheatPrecoolAIOffManualClimateWorks is the load-bearing
 // off-mode contract proof for slice 0031. It mounts the AI
@@ -127,23 +145,23 @@ func TestPreheatPrecoolAIOffManualClimateWorks(t *testing.T) {
 	}
 }
 
-// TestAIClimateScheduleHandler_PanicsOnNilWiring asserts the
+// TestHandler_PanicsOnNilWiring asserts the
 // handler constructor refuses zero-valued dependencies. A wiring
 // bug at boot must surface as a panic, not as a nil-deref on first
 // request.
-func TestAIClimateScheduleHandler_PanicsOnNilWiring(t *testing.T) {
+func TestHandler_PanicsOnNilWiring(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
 		name string
 		fn   func()
 	}{
-		{"all nil", func() { NewAIClimateScheduleHandler(nil, nil, nil, "") }},
+		{"all nil", func() { NewHandler(nil, nil, nil, "") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {
-					t.Fatalf("NewAIClimateScheduleHandler(%s) did not panic", tc.name)
+					t.Fatalf("NewHandler(%s) did not panic", tc.name)
 				}
 			}()
 			tc.fn()
@@ -151,11 +169,11 @@ func TestAIClimateScheduleHandler_PanicsOnNilWiring(t *testing.T) {
 	}
 }
 
-// TestAIClimateScheduleHandler_RejectsBadBody asserts the handler
+// TestHandler_RejectsBadBody asserts the handler
 // validates the JSON body BEFORE opening the SSE stream — a
 // missing, unparseable, or out-of-range body must surface as a
 // JSON 400, not a half-opened stream that confuses the frontend.
-func TestAIClimateScheduleHandler_RejectsBadBody(t *testing.T) {
+func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -192,9 +210,9 @@ func TestAIClimateScheduleHandler_RejectsBadBody(t *testing.T) {
 	}
 }
 
-// TestAIClimateScheduleHandler_AcceptsCanonicalBody proves the
+// TestHandler_AcceptsCanonicalBody proves the
 // parser does NOT bounce the happy-path shapes.
-func TestAIClimateScheduleHandler_AcceptsCanonicalBody(t *testing.T) {
+func TestHandler_AcceptsCanonicalBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
@@ -223,13 +241,13 @@ func TestAIClimateScheduleHandler_AcceptsCanonicalBody(t *testing.T) {
 	}
 }
 
-// TestAIClimateScheduleAdvisor_PreheatHappyPath proves the
+// TestAdvisor_PreheatHappyPath proves the
 // deterministic departure heuristic produces a sensible preheat
 // window for a cold-soak input.
-func TestAIClimateScheduleAdvisor_PreheatHappyPath(t *testing.T) {
+func TestAdvisor_PreheatHappyPath(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 1, 2, 6, 0, 0, 0, time.UTC) // 06:00 UTC; depart_by 07:30 UTC ⇒ 90 minutes ahead
-	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
+	a := &Advisor{Now: func() time.Time { return now }}
 	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-01-02T07:30:00Z",
@@ -257,13 +275,13 @@ func TestAIClimateScheduleAdvisor_PreheatHappyPath(t *testing.T) {
 	}
 }
 
-// TestAIClimateScheduleAdvisor_PrecoolHappyPath proves the
+// TestAdvisor_PrecoolHappyPath proves the
 // deterministic departure heuristic produces a sensible precool
 // window for a hot-soak input.
-func TestAIClimateScheduleAdvisor_PrecoolHappyPath(t *testing.T) {
+func TestAdvisor_PrecoolHappyPath(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 7, 15, 12, 0, 0, 0, time.UTC) // 12:00 UTC; depart_by 14:00 UTC ⇒ 120 minutes ahead
-	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
+	a := &Advisor{Now: func() time.Time { return now }}
 	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-07-15T14:00:00Z",
@@ -285,13 +303,13 @@ func TestAIClimateScheduleAdvisor_PrecoolHappyPath(t *testing.T) {
 	}
 }
 
-// TestAIClimateScheduleAdvisor_RejectsCabinAtTarget proves the
+// TestAdvisor_RejectsCabinAtTarget proves the
 // drafter declines to invent a schedule when the cabin is already
 // within 0.5°C of target.
-func TestAIClimateScheduleAdvisor_RejectsCabinAtTarget(t *testing.T) {
+func TestAdvisor_RejectsCabinAtTarget(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 1, 2, 6, 0, 0, 0, time.UTC)
-	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
+	a := &Advisor{Now: func() time.Time { return now }}
 	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-01-02T07:30:00Z",
@@ -304,12 +322,12 @@ func TestAIClimateScheduleAdvisor_RejectsCabinAtTarget(t *testing.T) {
 	}
 }
 
-// TestAIClimateScheduleAdvisor_RejectsDepartInPast proves the
+// TestAdvisor_RejectsDepartInPast proves the
 // drafter declines a depart_by that has already passed.
-func TestAIClimateScheduleAdvisor_RejectsDepartInPast(t *testing.T) {
+func TestAdvisor_RejectsDepartInPast(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 1, 2, 8, 0, 0, 0, time.UTC) // after depart_by 07:30
-	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
+	a := &Advisor{Now: func() time.Time { return now }}
 	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-01-02T07:30:00Z",
@@ -322,13 +340,13 @@ func TestAIClimateScheduleAdvisor_RejectsDepartInPast(t *testing.T) {
 	}
 }
 
-// TestAIClimateScheduleAdvisor_RejectsTooSoonDepart proves the
+// TestAdvisor_RejectsTooSoonDepart proves the
 // drafter declines when the depart_by leaves no room for the
 // computed window.
-func TestAIClimateScheduleAdvisor_RejectsTooSoonDepart(t *testing.T) {
+func TestAdvisor_RejectsTooSoonDepart(t *testing.T) {
 	t.Parallel()
 	now := time.Date(2099, 1, 2, 7, 25, 0, 0, time.UTC) // 5 minutes before depart_by
-	a := &AIClimateScheduleAdvisor{Now: func() time.Time { return now }}
+	a := &Advisor{Now: func() time.Time { return now }}
 	req := schedule.ClimateScheduleDraftRequest{
 		VehicleID:         42,
 		DepartBy:          "2099-01-02T07:30:00Z",
@@ -341,19 +359,19 @@ func TestAIClimateScheduleAdvisor_RejectsTooSoonDepart(t *testing.T) {
 	}
 }
 
-// TestAIClimateScheduleAdvisor_SatisfiesInterface is a compile-time
+// TestAdvisor_SatisfiesInterface is a compile-time
 // + runtime assertion that the production adapter implements
 // schedule.ClimateScheduleAdvisor. The compile-time `var _` line in
 // the handler file gives the same guarantee, but this test fails
 // with a clear message if a future refactor accidentally narrows
 // the interface contract.
-func TestAIClimateScheduleAdvisor_SatisfiesInterface(t *testing.T) {
+func TestAdvisor_SatisfiesInterface(t *testing.T) {
 	t.Parallel()
-	var iface schedule.ClimateScheduleAdvisor = (*AIClimateScheduleAdvisor)(nil)
+	var iface schedule.ClimateScheduleAdvisor = (*Advisor)(nil)
 	if iface == nil {
-		// The (*AIClimateScheduleAdvisor)(nil) cast above already
+		// The (*Advisor)(nil) cast above already
 		// proves interface satisfaction; the nil-check is defence
 		// in depth against a future generics quirk.
-		t.Logf("AIClimateScheduleAdvisor satisfies schedule.ClimateScheduleAdvisor (nil cast)")
+		t.Logf("Advisor satisfies schedule.ClimateScheduleAdvisor (nil cast)")
 	}
 }

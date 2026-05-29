@@ -26,6 +26,7 @@ import (
 	aichargcurve "github.com/ev-dev-labs/teslasync/internal/api/aichargcurve"
 	aichargdiag "github.com/ev-dev-labs/teslasync/internal/api/aichargdiag"
 	aichatbot "github.com/ev-dev-labs/teslasync/internal/api/aichatbot"
+	aiclimate "github.com/ev-dev-labs/teslasync/internal/api/aiclimate"
 	aicostfcst "github.com/ev-dev-labs/teslasync/internal/api/aicostfcst"
 	aidigest "github.com/ev-dev-labs/teslasync/internal/api/aidigest"
 	aidrivecoach "github.com/ev-dev-labs/teslasync/internal/api/aidrivecoach"
@@ -1643,13 +1644,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// climate-controls baseline runs — no parallel SQL path,
 	// no parallel write path; the LLM never persists.
 	schedule.RegisterPreheatPrecoolRecommenderTools(aiToolRegistry, schedule.PreheatPrecoolRecommenderSources{
-		Advisor: NewAIClimateScheduleAdvisor(),
+		Advisor: aiclimate.NewAdvisor(),
 	})
 	// preheat-precool-recommender handler. One per process;
 	// stateless beyond constructor inputs. Must be constructed
 	// AFTER the tool registration above so the dispatcher can
 	// resolve the strategy's allowedTools at boot.
-	aiPreheatPrecoolRecommenderHandler := NewAIClimateScheduleHandler(
+	aiPreheatPrecoolRecommenderHandler := aiclimate.NewHandler(
 		aiRegistry,
 		aiToolRegistry,
 		preheatprecoolrecommender.New(),

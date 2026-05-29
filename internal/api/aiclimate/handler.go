@@ -1,4 +1,4 @@
-package api
+package aiclimate
 
 // Phase-50 / 0031 — T1 Preheat and precool recommender.
 //
@@ -61,18 +61,19 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools"
 	"github.com/ev-dev-labs/teslasync/internal/ai/tools/schedule"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 )
 
-// aiClimateScheduleMaxIterations bounds the dispatcher's
+// maxIterations bounds the dispatcher's
 // tool-loop. The strategy is at most draft_climate_schedule →
 // validate_climate_schedule → answer (with optional retries). A
 // hard ceiling of 8 is generous. Mirrors
 // aiSmartChargeScheduleMaxIterations.
-const aiClimateScheduleMaxIterations = 8
+const maxIterations = 8
 
 // preheatRateCelsiusPerMinute is the deterministic warm-up rate
-// the AIClimateScheduleAdvisor uses to draft a preheat window.
+// the Advisor uses to draft a preheat window.
 // 0.5°C / minute matches the empirical Tesla cabin warm-up rate
 // from a cold soak (-2°C outside, 4°C cabin → 21°C cabin in ~30
 // minutes). Kept as a single named constant so a future revision
@@ -81,7 +82,7 @@ const aiClimateScheduleMaxIterations = 8
 const preheatRateCelsiusPerMinute = 0.5
 
 // precoolRateCelsiusPerMinute is the deterministic cool-down
-// rate the AIClimateScheduleAdvisor uses to draft a precool
+// rate the Advisor uses to draft a precool
 // window. 0.6°C / minute matches the empirical Tesla cabin
 // cool-down rate from a hot soak (34°C outside, 38°C cabin →
 // 22°C cabin in ~25 minutes). Kept separate from the preheat
@@ -112,13 +113,13 @@ const climateTargetMinC = 10.0
 // upper control limit (32°C / ~89°F).
 const climateTargetMaxC = 32.0
 
-// aiClimateScheduleDraftRequest is the JSON body shape this
+// draftRequest is the JSON body shape this
 // handler accepts. Temperatures are Celsius (SI canonical —
 // Phase-48); time fields are RFC3339. The shape mirrors the
 // *typed* surface area of the existing manual climate-controls
 // form so a SPA call site can construct the AI draft request from
 // the same form state.
-type aiClimateScheduleDraftRequest struct {
+type draftRequest struct {
 	VehicleID         int64   `json:"vehicle_id"`
 	DepartBy          string  `json:"depart_by"` // RFC3339
 	CurrentCabinTempC float64 `json:"current_cabin_temp_c"`
@@ -126,14 +127,14 @@ type aiClimateScheduleDraftRequest struct {
 	TargetCabinTempC  float64 `json:"target_cabin_temp_c"`
 }
 
-// AIClimateScheduleHandler is the HTTP handler for
+// Handler is the HTTP handler for
 // POST /api/v1/ai/climate/schedule/draft.
 //
 // Stateless beyond its constructor inputs; safe for concurrent use
 // across requests. Construction is in router.go so the
 // dispatcher's tool registry + provider registry are wired once at
 // boot.
-type AIClimateScheduleHandler struct {
+type Handler struct {
 	registry   *provider.Registry
 	tools      *tools.Registry
 	strategy   strategy.Strategy
@@ -141,7 +142,7 @@ type AIClimateScheduleHandler struct {
 	maxIters   int
 }
 
-// NewAIClimateScheduleHandler constructs the handler. All
+// NewHandler constructs the handler. All
 // non-pointer arguments are required; the constructor panics on a
 // nil so the wiring bug surfaces at boot, not at first request.
 //
@@ -154,26 +155,26 @@ type AIClimateScheduleHandler struct {
 //
 // strat:      the preheat-precool-recommender Strategy (one per process).
 // headerName: forward-auth header name; used to extract subject for audit.
-func NewAIClimateScheduleHandler(
+func NewHandler(
 	registry *provider.Registry,
 	toolReg *tools.Registry,
 	strat strategy.Strategy,
 	headerName string,
-) *AIClimateScheduleHandler {
+) *Handler {
 	switch {
 	case registry == nil:
-		panic("api: NewAIClimateScheduleHandler: nil provider.Registry")
+		panic("aiclimate: NewHandler: nil provider.Registry")
 	case toolReg == nil:
-		panic("api: NewAIClimateScheduleHandler: nil tools.Registry")
+		panic("aiclimate: NewHandler: nil tools.Registry")
 	case strat == nil:
-		panic("api: NewAIClimateScheduleHandler: nil strategy.Strategy")
+		panic("aiclimate: NewHandler: nil strategy.Strategy")
 	}
-	return &AIClimateScheduleHandler{
+	return &Handler{
 		registry:   registry,
 		tools:      toolReg,
 		strategy:   strat,
 		headerName: headerName,
-		maxIters:   aiClimateScheduleMaxIterations,
+		maxIters:   maxIterations,
 	}
 }
 
@@ -182,41 +183,41 @@ func NewAIClimateScheduleHandler(
 // same parsing without constructing a full handler with stub deps.
 // The function writes a 400 on failure and returns the (req, ok)
 // pair so the caller can early-return.
-func parseClimateScheduleDraftBody(w http.ResponseWriter, r *http.Request) (*aiClimateScheduleDraftRequest, bool) {
+func parseClimateScheduleDraftBody(w http.ResponseWriter, r *http.Request) (*draftRequest, bool) {
 	if r.Body == nil {
-		writeError(w, http.StatusBadRequest, "request body is required")
+		httpx.WriteError(w, http.StatusBadRequest, "request body is required")
 		return nil, false
 	}
 	defer r.Body.Close()
-	var req aiClimateScheduleDraftRequest
+	var req draftRequest
 	dec := json.NewDecoder(r.Body)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
 		return nil, false
 	}
 	if req.VehicleID <= 0 {
-		writeError(w, http.StatusBadRequest, "vehicle_id must be > 0")
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be > 0")
 		return nil, false
 	}
 	if req.DepartBy == "" {
-		writeError(w, http.StatusBadRequest, "depart_by is required")
+		httpx.WriteError(w, http.StatusBadRequest, "depart_by is required")
 		return nil, false
 	}
 	if _, err := time.Parse(time.RFC3339, req.DepartBy); err != nil {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("depart_by must be RFC3339: %v", err))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("depart_by must be RFC3339: %v", err))
 		return nil, false
 	}
 	if req.CurrentCabinTempC < -40 || req.CurrentCabinTempC > 80 {
-		writeError(w, http.StatusBadRequest, "current_cabin_temp_c must be in [-40, 80] °C")
+		httpx.WriteError(w, http.StatusBadRequest, "current_cabin_temp_c must be in [-40, 80] °C")
 		return nil, false
 	}
 	if req.OutsideTempC < -50 || req.OutsideTempC > 60 {
-		writeError(w, http.StatusBadRequest, "outside_temp_c must be in [-50, 60] °C")
+		httpx.WriteError(w, http.StatusBadRequest, "outside_temp_c must be in [-50, 60] °C")
 		return nil, false
 	}
 	if req.TargetCabinTempC < climateTargetMinC || req.TargetCabinTempC > climateTargetMaxC {
-		writeError(w, http.StatusBadRequest, fmt.Sprintf("target_cabin_temp_c must be in [%.0f, %.0f] °C", climateTargetMinC, climateTargetMaxC))
+		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("target_cabin_temp_c must be in [%.0f, %.0f] °C", climateTargetMinC, climateTargetMaxC))
 		return nil, false
 	}
 	return &req, true
@@ -227,7 +228,7 @@ func parseClimateScheduleDraftBody(w http.ResponseWriter, r *http.Request) (*aiC
 // dispatcher's deferred WriteDone. Every error path either writes
 // a structured frame onto the SSE stream (when the writer has been
 // opened) or a plain JSON 4xx/5xx (before it has).
-func (h *AIClimateScheduleHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// 1) Parse + validate the JSON body.
 	body, ok := parseClimateScheduleDraftBody(w, r)
 	if !ok {
@@ -240,7 +241,7 @@ func (h *AIClimateScheduleHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), preheatprecoolrecommender.FeatureID); err != nil {
 		log.Error().Err(err).Msg("ai preheat-precool-recommender: provider.For failed")
-		writeError(w, http.StatusBadGateway, "ai provider unavailable")
+		httpx.WriteError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
 
@@ -253,7 +254,7 @@ func (h *AIClimateScheduleHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(preheatprecoolrecommender.FeatureID))
 	if err != nil {
 		log.Error().Err(err).Msg("ai preheat-precool-recommender: stream.New failed (non-flushable writer)")
-		writeError(w, http.StatusInternalServerError, "streaming not supported")
+		httpx.WriteError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
 
@@ -308,8 +309,14 @@ func (h *AIClimateScheduleHandler) ServeHTTP(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-// Compile-time assertion: AIClimateScheduleHandler satisfies http.Handler.
-var _ http.Handler = (*AIClimateScheduleHandler)(nil)
+// denyAllConfirm is the dispatcher's user-confirm hook. The preheat/precool
+// recommender is propose-only, so any mutating tool call is rejected.
+func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
+	return dispatch.ConfirmDenied, nil
+}
+
+// Compile-time assertion: Handler satisfies http.Handler.
+var _ http.Handler = (*Handler)(nil)
 
 // ---------------------------------------------------------------------
 // Production wiring for the tool interface declared by
@@ -328,7 +335,7 @@ var _ http.Handler = (*AIClimateScheduleHandler)(nil)
 // climate-controls Apply button to persist.
 // ---------------------------------------------------------------------
 
-// AIClimateScheduleAdvisor is the production
+// Advisor is the production
 // schedule.ClimateScheduleAdvisor. It runs a pure-Go deterministic
 // departure heuristic over the typed inputs and returns a
 // proposed window.
@@ -337,17 +344,17 @@ var _ http.Handler = (*AIClimateScheduleHandler)(nil)
 // stable timestamp without monkey-patching time.Now. Production
 // uses time.Now().UTC() implicitly via the zero-value sentinel
 // (Now.IsZero() ⇒ time.Now().UTC()).
-type AIClimateScheduleAdvisor struct {
+type Advisor struct {
 	// Now is the wall-clock function. Defaults to
 	// time.Now().UTC() when nil; tests inject a stable clock.
 	Now func() time.Time
 }
 
-// NewAIClimateScheduleAdvisor constructs the production advisor.
+// NewAdvisor constructs the production advisor.
 // The constructor takes no required arguments (the heuristic is
 // pure-Go) — present for symmetry with NewAIChargeScheduleComputer.
-func NewAIClimateScheduleAdvisor() *AIClimateScheduleAdvisor {
-	return &AIClimateScheduleAdvisor{}
+func NewAdvisor() *Advisor {
+	return &Advisor{}
 }
 
 // DraftClimateSchedule implements schedule.ClimateScheduleAdvisor.
@@ -365,7 +372,7 @@ func NewAIClimateScheduleAdvisor() *AIClimateScheduleAdvisor {
 //
 // Errors are returned as Go errors; the tool wraps them into the
 // {status: "invalid"} envelope.
-func (a *AIClimateScheduleAdvisor) DraftClimateSchedule(_ context.Context, req schedule.ClimateScheduleDraftRequest) (*schedule.ClimateScheduleDraftResult, error) {
+func (a *Advisor) DraftClimateSchedule(_ context.Context, req schedule.ClimateScheduleDraftRequest) (*schedule.ClimateScheduleDraftResult, error) {
 	depart, err := time.Parse(time.RFC3339, req.DepartBy)
 	if err != nil {
 		return nil, fmt.Errorf("ai preheat-precool-recommender: depart_by parse: %w", err)
@@ -432,12 +439,12 @@ func (a *AIClimateScheduleAdvisor) DraftClimateSchedule(_ context.Context, req s
 
 // now returns the wall clock with the tests-inject-a-stable-clock
 // fallback. Kept private so external callers cannot bypass it.
-func (a *AIClimateScheduleAdvisor) now() time.Time {
+func (a *Advisor) now() time.Time {
 	if a.Now != nil {
 		return a.Now().UTC()
 	}
 	return time.Now().UTC()
 }
 
-// Compile-time assertion: AIClimateScheduleAdvisor satisfies schedule.ClimateScheduleAdvisor.
-var _ schedule.ClimateScheduleAdvisor = (*AIClimateScheduleAdvisor)(nil)
+// Compile-time assertion: Advisor satisfies schedule.ClimateScheduleAdvisor.
+var _ schedule.ClimateScheduleAdvisor = (*Advisor)(nil)
