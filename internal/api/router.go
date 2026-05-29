@@ -83,6 +83,7 @@ import (
 	apisigcat "github.com/ev-dev-labs/teslasync/internal/api/signalscatalog"
 	apislo "github.com/ev-dev-labs/teslasync/internal/api/slo"
 	apisoftupd "github.com/ev-dev-labs/teslasync/internal/api/softwareupdate"
+	apistatus "github.com/ev-dev-labs/teslasync/internal/api/status"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apiauthmode "github.com/ev-dev-labs/teslasync/internal/api/sysauthmode"
 	apitco "github.com/ev-dev-labs/teslasync/internal/api/tco"
@@ -3782,8 +3783,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			ver = "dev"
 		}
 		incidentsRepo := dbobs.NewIncidentRepo(db)
-		incidentsHandler := NewIncidentsHandler(incidentsRepo)
-		statusV1 := NewStatusV1Handler(StatusV1Config{
+		incidentsHandler := apistatus.NewStatusIncidentsHandler(incidentsRepo)
+		statusV1 := apistatus.NewStatusV1Handler(apistatus.StatusV1Config{
 			Health:           health,
 			AppVersion:       ver,
 			MaintenanceState: maintenanceProvider,

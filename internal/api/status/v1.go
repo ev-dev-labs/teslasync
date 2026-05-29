@@ -23,7 +23,7 @@
 // All endpoints inherit ForwardAuth from the parent /api/v1 group; no
 // extra auth code lives here.
 
-package api
+package status
 
 import (
 	"context"
@@ -35,9 +35,16 @@ import (
 	"sync"
 	"time"
 
+	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 )
+
+// MaintenanceView is the resolved service-mode snapshot consumed by StatusV1Handler.
+type MaintenanceView = apiadminmnt.MaintenanceView
+
+var startTime = time.Now()
 
 // StatusSnapshot is the canonical shape returned by /api/v1/status and
 // pushed by /api/v1/status/live. Stable contract — additive only.
@@ -264,13 +271,13 @@ func (h *StatusV1Handler) snapshot(ctx context.Context) StatusSnapshot {
 
 // Overall serves GET /api/v1/status.
 func (h *StatusV1Handler) Overall(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, h.snapshot(r.Context()))
+	httpx.WriteJSON(w, http.StatusOK, h.snapshot(r.Context()))
 }
 
 // Components serves GET /api/v1/status/components.
 func (h *StatusV1Handler) Components(w http.ResponseWriter, r *http.Request) {
 	snap := h.snapshot(r.Context())
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"generated_at": snap.GeneratedAt,
 		"components":   snap.Components,
 		"counts":       snap.Counts,
@@ -280,7 +287,7 @@ func (h *StatusV1Handler) Components(w http.ResponseWriter, r *http.Request) {
 // Resources serves GET /api/v1/status/resources.
 func (h *StatusV1Handler) Resources(w http.ResponseWriter, r *http.Request) {
 	snap := h.snapshot(r.Context())
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"generated_at": snap.GeneratedAt,
 		"resources":    snap.Resources,
 	})
@@ -293,7 +300,7 @@ func (h *StatusV1Handler) Resources(w http.ResponseWriter, r *http.Request) {
 // snapshot so this stays useful as a fallback.
 func (h *StatusV1Handler) Incidents(w http.ResponseWriter, r *http.Request) {
 	snap := h.snapshot(r.Context())
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"generated_at": snap.GeneratedAt,
 		"incidents":    snap.Incidents,
 	})
@@ -312,7 +319,7 @@ func (h *StatusV1Handler) Uptime(w http.ResponseWriter, r *http.Request) {
 		window = "30d"
 	}
 	if !isValidUptimeWindow(window) {
-		writeError(w, http.StatusBadRequest, "invalid window — use one of: 24h, 7d, 30d, 90d, 1y")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid window — use one of: 24h, 7d, 30d, 90d, 1y")
 		return
 	}
 	snap := h.snapshot(r.Context())
@@ -322,7 +329,7 @@ func (h *StatusV1Handler) Uptime(w http.ResponseWriter, r *http.Request) {
 	if total > 0 {
 		pct = float64(healthy) / float64(total) * 100.0
 	}
-	writeJSON(w, http.StatusOK, StatusUptimeWindow{
+	httpx.WriteJSON(w, http.StatusOK, StatusUptimeWindow{
 		Window:           window,
 		UptimePercent:    pct,
 		HealthyCount:     healthy,

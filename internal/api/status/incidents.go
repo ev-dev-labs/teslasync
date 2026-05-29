@@ -9,7 +9,7 @@
 // The repository owns validation; this handler owns shape mapping
 // and HTTP status code selection.
 
-package api
+package status
 
 import (
 	"context"
@@ -19,24 +19,25 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	"github.com/go-chi/chi/v5"
 )
 
-// IncidentsHandler wires the incidents repo to HTTP.
-type IncidentsHandler struct {
+// StatusIncidentsHandler wires the incidents repo to HTTP.
+type StatusIncidentsHandler struct {
 	repo *dbobs.IncidentRepo
 }
 
-// NewIncidentsHandler builds a handler bound to the shared pool.
-func NewIncidentsHandler(repo *dbobs.IncidentRepo) *IncidentsHandler {
-	return &IncidentsHandler{repo: repo}
+// NewStatusIncidentsHandler builds a handler bound to the shared pool.
+func NewStatusIncidentsHandler(repo *dbobs.IncidentRepo) *StatusIncidentsHandler {
+	return &StatusIncidentsHandler{repo: repo}
 }
 
 // ListActive returns active incidents — used by the StatusV1 snapshot
 // pump. Implements the StatusIncidentStore interface in
-// status_v1_handler.go so the snapshot can include incidents inline.
-func (h *IncidentsHandler) ListActive(ctx context.Context) ([]StatusIncident, error) {
+// v1.go so the snapshot can include incidents inline.
+func (h *StatusIncidentsHandler) ListActive(ctx context.Context) ([]StatusIncident, error) {
 	if h == nil || h.repo == nil {
 		return []StatusIncident{}, nil
 	}
@@ -53,7 +54,7 @@ func (h *IncidentsHandler) ListActive(ctx context.Context) ([]StatusIncident, er
 
 // List handles GET /api/v1/status/incidents?active=1 and the optional
 // ?limit=N query string.
-func (h *IncidentsHandler) List(w http.ResponseWriter, r *http.Request) {
+func (h *StatusIncidentsHandler) List(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	activeOnly := q.Get("active") == "1" || strings.EqualFold(q.Get("active"), "true")
 	limit, _ := strconv.Atoi(q.Get("limit"))
@@ -61,32 +62,32 @@ func (h *IncidentsHandler) List(w http.ResponseWriter, r *http.Request) {
 		ActiveOnly: activeOnly, Limit: limit,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]interface{}{
+	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"incidents": rows,
 		"count":     len(rows),
 	})
 }
 
 // Get handles GET /api/v1/status/incidents/{id}.
-func (h *IncidentsHandler) Get(w http.ResponseWriter, r *http.Request) {
+func (h *StatusIncidentsHandler) Get(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseInt64Param(r, "id")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 	row, err := h.repo.Get(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, dbobs.ErrIncidentNotFound) {
-			writeError(w, http.StatusNotFound, "incident not found")
+			httpx.WriteError(w, http.StatusNotFound, "incident not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, row)
+	httpx.WriteJSON(w, http.StatusOK, row)
 }
 
 // IncidentCreatePayload is the POST body shape.
@@ -100,10 +101,10 @@ type IncidentCreatePayload struct {
 }
 
 // Create handles POST /api/v1/status/incidents.
-func (h *IncidentsHandler) Create(w http.ResponseWriter, r *http.Request) {
+func (h *StatusIncidentsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	var p IncidentCreatePayload
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	created, err := h.repo.Insert(r.Context(), dbobs.IncidentInsert{
@@ -117,10 +118,10 @@ func (h *IncidentsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		InitialMessage:     p.InitialMessage,
 	})
 	if err != nil {
-		writeError(w, mapIncidentErr(err), err.Error())
+		httpx.WriteError(w, mapIncidentErr(err), err.Error())
 		return
 	}
-	writeJSON(w, http.StatusCreated, created)
+	httpx.WriteJSON(w, http.StatusCreated, created)
 }
 
 // IncidentPatchPayload is the PATCH body shape.
@@ -134,15 +135,15 @@ type IncidentPatchPayload struct {
 }
 
 // Patch handles PATCH /api/v1/status/incidents/{id}.
-func (h *IncidentsHandler) Patch(w http.ResponseWriter, r *http.Request) {
+func (h *StatusIncidentsHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseInt64Param(r, "id")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 	var p IncidentPatchPayload
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	updated, err := h.repo.Patch(r.Context(), id, dbobs.IncidentPatch{
@@ -154,10 +155,10 @@ func (h *IncidentsHandler) Patch(w http.ResponseWriter, r *http.Request) {
 		Resolved:           p.Resolved,
 	}, callerSubject(r))
 	if err != nil {
-		writeError(w, mapIncidentErr(err), err.Error())
+		httpx.WriteError(w, mapIncidentErr(err), err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 // IncidentUpdatePayload is the POST /updates body shape.
@@ -167,38 +168,38 @@ type IncidentUpdatePayload struct {
 }
 
 // AppendUpdate handles POST /api/v1/status/incidents/{id}/updates.
-func (h *IncidentsHandler) AppendUpdate(w http.ResponseWriter, r *http.Request) {
+func (h *StatusIncidentsHandler) AppendUpdate(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseInt64Param(r, "id")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 	var p IncidentUpdatePayload
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid JSON body")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
 	updated, err := h.repo.AppendUpdate(r.Context(), id, p.Message, p.Status, callerSubject(r))
 	if err != nil {
-		writeError(w, mapIncidentErr(err), err.Error())
+		httpx.WriteError(w, mapIncidentErr(err), err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, updated)
+	httpx.WriteJSON(w, http.StatusOK, updated)
 }
 
 // Delete handles DELETE /api/v1/status/incidents/{id}.
-func (h *IncidentsHandler) Delete(w http.ResponseWriter, r *http.Request) {
+func (h *StatusIncidentsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	id, ok := parseInt64Param(r, "id")
 	if !ok {
-		writeError(w, http.StatusBadRequest, "invalid id")
+		httpx.WriteError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
 	if err := h.repo.Delete(r.Context(), id); err != nil {
 		if errors.Is(err, dbobs.ErrIncidentNotFound) {
-			writeError(w, http.StatusNotFound, "incident not found")
+			httpx.WriteError(w, http.StatusNotFound, "incident not found")
 			return
 		}
-		writeError(w, http.StatusInternalServerError, err.Error())
+		httpx.WriteError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
